@@ -1,0 +1,17 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/*.jpg": true,
+        "**/*.miz": true,
+        "**/*.ogg": true,
+        "**/*.pdf": true,
+        "**/*.png": true,
+        "**/*.wav": true,
+        "dictionary": true
+    },
+    "hide-files.files": []
+}
