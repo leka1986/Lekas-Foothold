@@ -575,23 +575,27 @@ SupplyConvoy = SupplyConvoy or {
     "SupplyConvoy 3",
 }
 
+function CasAltitude() return math.random(15,25)*1000 end
+function CapAltitude() return math.random(22,32)*1000 end
+function SeadAltitude() return math.random(25,33)*1000 end
+function RunwayStrikeAltitude() return math.random(23,28)*1000 end
 
 zones.bandarabbas:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='bandar-attack-Qeshm-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Qeshm Island', Altitude = 27000}),
-	GroupCommander:new({name='bandar-attack-khasab-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Khasab', Altitude = 20000}),
-	GroupCommander:new({name='bandar-attack-Qeshm-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Qeshm Island', Altitude = 18000}),
-	GroupCommander:new({name='bandar-attack-factory-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Factory'}),
-	GroupCommander:new({name='bandar-attack-khasab-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Khasab'}),
+	GroupCommander:new({name='bandar-attack-Qeshm-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Qeshm Island', Altitude = CapAltitude()}),
+	GroupCommander:new({name='bandar-attack-khasab-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Khasab', Altitude = CapAltitude()}),
+	GroupCommander:new({name='bandar-attack-Qeshm-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Qeshm Island', Altitude = CasAltitude()}),
+	GroupCommander:new({name='bandar-attack-factory-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Factory', Altitude = CasAltitude()}),
+	GroupCommander:new({name='bandar-attack-khasab-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Khasab', Altitude = CasAltitude()}),
 	GroupCommander:new({name='bandar-attack-oil-fields-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Oil Fields'}),
 	GroupCommander:new({name='Bandar-attack-radio-tower-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Radio Tower'}),
-	GroupCommander:new({name='Bandar-attack-Khasab', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Khasab', Altitude = 27000}),
+	GroupCommander:new({name='Bandar-attack-Khasab', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Khasab', Altitude = RunwayStrikeAltitude()}),
 	-- Patrol missions
-	GroupCommander:new({name='bandar-patrol-Bandar-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='BandarAbbas', Altitude = 25000}),
-	GroupCommander:new({name='bandar-patrol-Qeshm-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Qeshm Island', Altitude = 23000}),
-	GroupCommander:new({name='bandar-patrol-khasab-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Khasab', Altitude = 15000}),
-	GroupCommander:new({name='bandar-patrol-radio-tower', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Radio Tower', Altitude = 20000}),
-	GroupCommander:new({name='bandar-patrol-Delta-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Delta', Altitude = 24000}),
+	GroupCommander:new({name='bandar-patrol-Bandar-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='BandarAbbas', Altitude = CapAltitude()}),
+	GroupCommander:new({name='bandar-patrol-Qeshm-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Qeshm Island', Altitude = CapAltitude()}),
+	GroupCommander:new({name='bandar-patrol-khasab-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Khasab', Altitude = CapAltitude()}),
+	GroupCommander:new({name='bandar-patrol-radio-tower', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Radio Tower', Altitude = CapAltitude()}),
+	GroupCommander:new({name='bandar-patrol-Delta-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Delta', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='bandar-supply-Delta', mission='supply', template='HeloSupplyTemplate', targetzone='Delta'}),
 	GroupCommander:new({name='bandar-supply-factory', mission='supply', template='HeloSupplyTemplate', targetzone='Factory'}),
@@ -603,6 +607,7 @@ zones.bandarabbas:addGroups({
 	GroupCommander:new({name='bandar-attack-Delta', template='AttackConvoy', mission='attack', targetzone='Delta', type='surface'}),
 	GroupCommander:new({name='bandar-attack-Oil Fields', template='AttackConvoy', mission='attack', targetzone='Oil Fields', type='surface'}),
 })
+
 zones.delta:addGroups({
 	-- Supply missions
 	GroupCommander:new({name='delta-supply-qeshm-island', mission='supply', template='HeloSupplyTemplate', targetzone='Qeshm Island'}),
@@ -624,7 +629,7 @@ zones.paregaan:addGroups({
 
 zones.echo:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='Echo-Attack-Delta-Cas', mission='attack', template='CasHeloTemplate', targetzone='Delta'}),
+	GroupCommander:new({name='Echo-Attack-Delta-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Delta'}),
 	-- Supply missions
 	GroupCommander:new({name='Echo-Supply-qeshm-island', mission='supply', template='HeloSupplyTemplate', targetzone='Qeshm Island'}),
 	GroupCommander:new({name='Echo-supply-Sunny', mission='supply', template='HeloSupplyTemplate', targetzone='Sunny'}),
@@ -640,14 +645,14 @@ zones.khasab:addGroups({
 	-- Attack missions
 	GroupCommander:new({name='khasab-attack-alpha-Cas', mission='attack', MissionType='CAS', template='CasHeloTemplate', targetzone='Alpha'}),
 	GroupCommander:new({name='khasab-attack-charlie-Cas', mission='attack', MissionType='CAS', template='CasHeloTemplate', targetzone='Charlie'}),
-	GroupCommander:new({name='khasab-attack-Khaima-Cap', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Ras Al Khaimah', Altitude = 26000}),
-	GroupCommander:new({name='khasab-attack-Khaima-Sead', mission='attack', MissionType='SEAD', template='SeadPlaneTemplate', targetzone='Ras Al Khaimah', Altitude = 22000}),
-	GroupCommander:new({name='Khasab-attack-Sharjah-Cap', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Sharjah', Altitude = 27000}),
+	GroupCommander:new({name='khasab-attack-Khaima-Cap', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Ras Al Khaimah', Altitude = CapAltitude()}),
+	GroupCommander:new({name='khasab-attack-Khaima-Sead', mission='attack', MissionType='SEAD', template='SeadPlaneTemplate', targetzone='Ras Al Khaimah', Altitude = SeadAltitude()}),
+	GroupCommander:new({name='Khasab-attack-Sharjah-Cap', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Sharjah', Altitude = CapAltitude()}),
 	-- Patrol missions
-	GroupCommander:new({name='khasab-patrol-khasab-Cap', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Khasab', Altitude = 26000}),
-	GroupCommander:new({name='khasab-Patrol-Convoy-Cap', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Convoy', Altitude = 23000}),
-	GroupCommander:new({name='khasab-Patrol-Alpha-Cap', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Alpha'}),
-	GroupCommander:new({name='Khasab-Patrol-Khaimah-Cap', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Ras Al Khaimah', Altitude = 24000}),
+	GroupCommander:new({name='khasab-patrol-khasab-Cap', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Khasab', Altitude = CapAltitude()}),
+	GroupCommander:new({name='khasab-Patrol-Convoy-Cap', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Convoy', Altitude = CapAltitude()}),
+	GroupCommander:new({name='khasab-Patrol-Alpha-Cap', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Alpha', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Khasab-Patrol-Khaimah-Cap', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Ras Al Khaimah', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='khasab-supply-charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Charlie'}),
 	GroupCommander:new({name='khasab-supply-bandar', mission='supply', template='HeloSupplyTemplate', targetzone='BandarAbbas'}),
@@ -662,20 +667,19 @@ zones.khasab:addGroups({
 
 zones.khaimah:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='Khaimah-attack-Sharjah', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Sharjah', Altitude = 27000}),
-	GroupCommander:new({name='Khaimah-attack-Sharjah-Cas', mission='attack', MissionType='CAS', template='CasPlaneTemplate', targetzone='Sharjah', Altitude = 18000}),
-	GroupCommander:new({name='Khaimah-attack-Al Huti-Cas', mission='attack', MissionType='CAS', template='CasPlaneTemplate', targetzone='Al Huti', Altitude = 22000}),
-	GroupCommander:new({name='Khaimah-attack-Al Huti-Sead', mission='attack', MissionType='SEAD', template='SeadPlaneTemplate', targetzone='Al Huti', Altitude = 25000}),
+	GroupCommander:new({name='Khaimah-attack-Sharjah-cap', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Sharjah', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Khaimah-attack-Sharjah-Cas', mission='attack', MissionType='CAS', template='CasPlaneTemplate', targetzone='Sharjah', Altitude = CasAltitude()}),
+	GroupCommander:new({name='Khaimah-attack-Al Huti-Cas', mission='attack', MissionType='CAS', template='CasPlaneTemplate', targetzone='Al Huti', Altitude = CasAltitude()}),
+	GroupCommander:new({name='Khaimah-attack-Al Huti-Sead', mission='attack', MissionType='SEAD', template='SeadPlaneTemplate', targetzone='Al Huti', Altitude = SeadAltitude()}),
 	-- Patrol missions
-	GroupCommander:new({name='Khaimah-Patrol-Sharjah', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Sharjah', Altitude = 28000}),
-	GroupCommander:new({name='Khaimah-Patrol-Al Minhad', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Al Minhad AFB', Altitude = 28000}),
+	GroupCommander:new({name='Khaimah-Patrol-Sharjah', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Sharjah', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Khaimah-Patrol-Al Minhad', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Al Minhad AFB', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='khaimah-Supply-Alpha', mission='supply', template='HeloSupplyTemplate', targetzone='Alpha'}),
 	GroupCommander:new({name='khaimah-Supply-Charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Charlie'}),
 	GroupCommander:new({name='khaimah-Supply-khasab', mission='supply', template='HeloSupplyTemplate', targetzone='Khasab'}),
 	GroupCommander:new({name='Khaimah-supply-Sharja', mission='supply', template='HeloSupplyTemplate', targetzone='Sharjah'}),
 	GroupCommander:new({name='Khaimah-supply-fujairah', mission='supply', template='HeloSupplyTemplate', targetzone='Fujairah Intl'}),
-
 	-- Surface missions
 	GroupCommander:new({name='Khaimah-attack-Al Dahid', mission='attack', template='AttackConvoy', targetzone='Al Dahid', type='surface'}),
 })
@@ -694,7 +698,7 @@ zones.dahid:addGroups({
 })
 zones.carrier:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='F18-CAP-carrier', mission='attack', MissioinType='CAP', targetzone='Red Carrier'}),
+	GroupCommander:new({name='F18-CAP-carrier', mission='attack', MissionType='CAP', targetzone='Red Carrier', Altitude = CapAltitude()}),
 })
 zones.factory:addGroups({
 	-- Attack missions
@@ -717,10 +721,10 @@ zones.factory:addGroups({
 
 zones.golf:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='Golf-Attack-Echo', mission='attack', template='CasHeloTemplate', targetzone='Echo'}),
-	GroupCommander:new({name='Golf-Attack-Sunny', mission='attack', template='CasHeloTemplate', targetzone='Sunny'}),
-	GroupCommander:new({name='golf-attack-foxtrot-Cas', mission='attack', template='CasHeloTemplate', targetzone='Foxtrot'}),
-	GroupCommander:new({name='golf-attack-lar-Cas', mission='attack', template='CasHeloTemplate', targetzone='Lar'}),
+	GroupCommander:new({name='Golf-Attack-Echo', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Echo'}),
+	GroupCommander:new({name='Golf-Attack-Sunny', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Sunny'}),
+	GroupCommander:new({name='golf-attack-foxtrot-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Foxtrot'}),
+	GroupCommander:new({name='golf-attack-lar-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Lar'}),
 	-- Supply missions
 	GroupCommander:new({name='golf-supply-foxtrot', mission='supply', template='HeloSupplyTemplate', targetzone='Foxtrot'}),
 	GroupCommander:new({name='golf-supply-lar', mission='supply', template='HeloSupplyTemplate', targetzone='Lar'}),
@@ -733,21 +737,24 @@ zones.golf:addGroups({
 
 zones.lar:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='lar-attack-sam-site-Sead', mission='attack', template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Qeshm Island', Altitude = 24000}),
-	GroupCommander:new({name='lar-attack-bandar-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='BandarAbbas', Altitude = 17000}),
-	GroupCommander:new({name='lar-attack-radio-tower-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Radio Tower', Altitude = 18000}),
-	GroupCommander:new({name='lar-attack-factory-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Factory', Altitude = 19000}),
-	GroupCommander:new({name='Lar-attack-Foxtrot-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Foxtrot', Altitude = 27000}),
-	GroupCommander:new({name='Lar-attack-BandarAbbas-Runway-strike', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='BandarAbbas', Altitude = 27000}),
+	GroupCommander:new({name='lar-attack-sam-site-Sead', mission='attack', template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Qeshm Island', Altitude = SeadAltitude()}),
+	GroupCommander:new({name='lar-attack-bandar-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='BandarAbbas', Altitude = CasAltitude()}),
+	GroupCommander:new({name='lar-attack-radio-tower-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Radio Tower', Altitude = CasAltitude()}),
+	GroupCommander:new({name='lar-attack-factory-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Factory', Altitude = CasAltitude()}),
+	GroupCommander:new({name='Lar-attack-Foxtrot-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Foxtrot', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Lar-attack-BandarAbbas-Runway-strike', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='BandarAbbas', Altitude = RunwayStrikeAltitude()}),
+	GroupCommander:new({name='Lar-attack-Kish-Runway-strike', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Kish intl', Altitude = RunwayStrikeAltitude()}),
+	GroupCommander:new({name='Lar-attack-Qeshm-Runway-strike', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Qeshm Island', Altitude = RunwayStrikeAltitude()}),
+	GroupCommander:new({name='Lar-attack-Qeshm-Lavan-strike', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Lavan Island', Altitude = RunwayStrikeAltitude()}),
 	-- Patrol missions
-	GroupCommander:new({name='lar-patrol-golf-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Golf', Altitude = 28000}),
-	GroupCommander:new({name='lar-patrol-delta-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Delta', Altitude = 26000}),
-	GroupCommander:new({name='lar-patrol-factory-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Factory', Altitude = 29000}),
-	GroupCommander:new({name='Shiraz-patrol-Lar-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Lar', Altitude = 25000}),
-	GroupCommander:new({name='Shiraz-patrol-Lavan-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Lavan Island', Altitude = 23000}),
-	GroupCommander:new({name='Shiraz-patrol-Sunny-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Sunny', Altitude = 26000}),
-	GroupCommander:new({name='Lar-patrol-Foxtrot-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Foxtrot', Altitude = 22000}),
-	GroupCommander:new({name='lar-patrol-ramp-kongo-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Ramp-Kongo', Altitude = 24000}),
+	GroupCommander:new({name='lar-patrol-golf-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Golf', Altitude = CapAltitude()}),
+	GroupCommander:new({name='lar-patrol-delta-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Delta', Altitude = CapAltitude()}),
+	GroupCommander:new({name='lar-patrol-factory-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Factory', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Shiraz-patrol-Lar-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Lar', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Shiraz-patrol-Lavan-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Lavan Island', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Shiraz-patrol-Sunny-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Sunny', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Lar-patrol-Foxtrot-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Foxtrot', Altitude = CapAltitude()}),
+	GroupCommander:new({name='lar-patrol-ramp-kongo-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Ramp-Kongo', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='lar-supply-golf', mission='supply', template='HeloSupplyTemplate', targetzone='Golf'}),
 	GroupCommander:new({name='lar-supply-foxtrot', mission='supply', template='HeloSupplyTemplate', targetzone='Foxtrot'}),
@@ -756,6 +763,7 @@ zones.lar:addGroups({
 	-- Surface missions
 	GroupCommander:new({name='Lar-supply-lar-defence', mission='supply', template='AttackConvoy', targetzone='Lar-Defence', type='surface'}),
 })
+
 zones.rampkongo:addGroups({
 	GroupCommander:new({name='ramp-kongo-supply-khamets', mission='supply',template='HeloSupplyTemplate', targetzone='Khamets'}),
 })
@@ -777,11 +785,11 @@ zones.oilfields:addGroups({
 })
 zones.qeshmisland:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='qeshm-island-attack-Khasab-Cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Khasab'}),
-	GroupCommander:new({name='qeshm-island-attack-Khaima-Cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Ras Al Khaimah'}),
-	GroupCommander:new({name='qeshm-island-attack-Khaima-Cap', mission='attack',template='CapPlaneTemplate', MissionType='CAP', targetzone='Ras Al Khaimah'}),
+	GroupCommander:new({name='qeshm-island-attack-Khasab-Cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Khasab', Altitude = CasAltitude()}),
+	GroupCommander:new({name='qeshm-island-attack-Khaima-Cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Ras Al Khaimah', Altitude = CasAltitude()}),
+	GroupCommander:new({name='qeshm-island-attack-Khaima-Cap', mission='attack',template='CapPlaneTemplate', MissionType='CAP', targetzone='Ras Al Khaimah', Altitude = CapAltitude()}),
 	-- Patrol missions
-	GroupCommander:new({name='qeshm-island-Patrol-Khasab-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Khasab'}),
+	GroupCommander:new({name='qeshm-island-Patrol-Khasab-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Khasab', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='qeshm-island-Supply-Bandar-Lengeh', mission='supply',template='HeloSupplyTemplate', targetzone='Bandar Lengeh'}),
 	--GroupCommander:new({name='qeshm-island-Supply-Moradi', mission='supply',template='HeloSupplyTemplate', targetzone='Moradi'}),
@@ -789,6 +797,7 @@ zones.qeshmisland:addGroups({
 	GroupCommander:new({name='qeshm-island-supply-Moradi-Convoy', mission='supply', targetzone='Moradi',template='SupplyConvoy', type='surface', spawnDelayFactor = 3}),
 	GroupCommander:new({name='qeshm-island-supply-qeshm-island-defence', mission='supply', targetzone='Qeshm-Island-Defence', type='surface'}),
 })
+
 zones.khamets:addGroups({
 	GroupCommander:new({name='Khamets-supply-samathe', mission='supply',template='HeloSupplyTemplate', targetzone='Samathe'}),
 	GroupCommander:new({name='Khamets-supply-Factory', mission='supply',template='HeloSupplyTemplate', targetzone='Factory'}),
@@ -796,20 +805,20 @@ zones.khamets:addGroups({
 })
 zones.samathe:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='HiddenGroup-attack-Lar', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Lar', Redcondition = function() return end}),
-	GroupCommander:new({name='HiddenGroup-attack-Ramp-Kongo', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Ramp-Kongo', Redcondition = function() return end}),
-	GroupCommander:new({name='HiddenGroup-attack-Samathe', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Samathe', Redcondition = function() return end}),
-	GroupCommander:new({name='Samathe-attack-Paregaan', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Paregaan', Redcondition = function() return end}),
+	GroupCommander:new({name='HiddenGroup-attack-Lar', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Lar', Altitude = CapAltitude(), Redcondition = function() return end}),
+	GroupCommander:new({name='HiddenGroup-attack-Ramp-Kongo', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Ramp-Kongo', Altitude = CapAltitude(), Redcondition = function() return end}),
+	GroupCommander:new({name='HiddenGroup-attack-Samathe', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Samathe', Altitude = CapAltitude(), Redcondition = function() return end}),
+	GroupCommander:new({name='Samathe-attack-Paregaan', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Paregaan', Altitude = CapAltitude(), Redcondition = function() return end}),
 	-- Patrol missions
-	GroupCommander:new({name='HiddenGroup-patrol-Ramp-Kongo', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Ramp-Kongo', Redcondition = function() return zones.lar.wasBlue end}),
-	GroupCommander:new({name='Samathe-patrol-Samathe', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Samathe'}),
-	GroupCommander:new({name='Samathe-patrol-OilFields', mission='patrol', MissionType='CAP', template='CapPlaneTemplate', targetzone='Oil Fields'}),
+	GroupCommander:new({name='HiddenGroup-patrol-Ramp-Kongo', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Ramp-Kongo', Altitude = CapAltitude(), Redcondition = function() return zones.lar.wasBlue end}),
+	GroupCommander:new({name='Samathe-patrol-Samathe', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Samathe', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Samathe-patrol-OilFields', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Oil Fields', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='Samathe-supply-Paegaan', mission='supply', template='HeloSupplyTemplate', targetzone='Paregaan'}),
 	-- Surface missions
 	GroupCommander:new({name='Samathe-attack-Paegaan', mission='attack', template='AttackConvoy', targetzone='Khamets', type='surface'}),
-
 })
+
 
 zones.sunny:addGroups({
 	-- Supply missions
@@ -823,7 +832,7 @@ zones.sunny:addGroups({
 
 zones.bandarlengeh:addGroups({
 	-- Patrol missions
-	GroupCommander:new({name='lengeh-patrol-qeshm-island', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Qeshm Island'}),
+	GroupCommander:new({name='lengeh-patrol-qeshm-island', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Qeshm Island', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='lengeh-supply-kish', mission='supply', template='HeloSupplyTemplate', targetzone='Kish intl'}),
 	-- Surface missions
@@ -868,16 +877,17 @@ zones.moradi:addGroups({
 
 zones.kish:addGroups({
 	-- Attack missions
-	GroupCommander:new({name='Kishi-attack-Abu-Musa', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Abu Musa Island'}),
-	GroupCommander:new({name='Kishi-attack-qeshm-island-Sead', mission='attack',template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Qeshm Island'}),
+	GroupCommander:new({name='Kishi-attack-Abu-Musa', mission='attack', MissionType='CAP', template='CapPlaneTemplate', targetzone='Abu Musa Island', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Kishi-attack-qeshm-island-Sead', mission='attack',template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Qeshm Island', Altitude = SeadAltitude()}),
 	-- Patrol missions
-	GroupCommander:new({name='Kishi-patrol-kishi', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Foxtrot'}),
-	GroupCommander:new({name='Kishi-patrol-Abu-Musa', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Abu Musa Island'}),
-	GroupCommander:new({name='Kishi-patrol-bandarlengeh', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Bandar Lengeh'}),
+	GroupCommander:new({name='Kishi-patrol-kishi', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Foxtrot', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Kishi-patrol-Abu-Musa', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Abu Musa Island', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Kishi-patrol-bandarlengeh', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Bandar Lengeh', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='Kish-supply-Foxtrot', mission='supply', template='HeloSupplyTemplate', targetzone='Foxtrot'}),
 	GroupCommander:new({name='Kish-supply-Lavan', mission='supply', template='HeloSupplyTemplate', targetzone='Lavan Island'}),
 })
+
 
 zones.minhad:addGroups({
 	-- Supply missions
@@ -890,9 +900,9 @@ zones.sharjah:addGroups({
 	-- Attack missions
 	GroupCommander:new({name='Sharjah-attack-Al Dahid', mission='attack', template='AttackConvoy', targetzone='Al Dahid', type='surface'}),
 	GroupCommander:new({name='Sharjah-attack-Al Minhad AFB', mission='attack', template='AttackConvoy', targetzone='Al Minhad AFB', type='surface'}),
-	GroupCommander:new({name='Sharjah-attack-Al Minhad AFB-Cap', mission='attack', template='CapPlaneTemplate',MissionType='CAP', targetzone='Al Minhad AFB'}),
+	GroupCommander:new({name='Sharjah-attack-Al Minhad AFB-Cap', mission='attack', template='CapPlaneTemplate',MissionType='CAP', targetzone='Al Minhad AFB', Altitude = CapAltitude()}),
 	-- Patrol missions
-	GroupCommander:new({name='Sharjah-patrol-al-minhad', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Al Minhad AFB'}),
+	GroupCommander:new({name='Sharjah-patrol-al-minhad', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Al Minhad AFB', Altitude = CapAltitude()}),
 	-- Supply missions
 	GroupCommander:new({name='Sharjah-Supply-Khaimah', mission='supply', template='HeloSupplyTemplate', targetzone='Ras Al Khaimah'}),
 	GroupCommander:new({name='Sharjah-Supply-abu-musa-blue', mission='supply', template='HeloSupplyTemplate', targetzone='Abu Musa Island'}),
@@ -1057,6 +1067,8 @@ zones.moradi.airbaseName = "Moradi"
 zones.charlie.airbaseName = "Charlie"
 zones.alpha.airbaseName = "Alpha"
 zones.lar.airbaseName = "Lar"
+zones.redcarrier.airbaseName = "CVN-73"
+zones.carrier.airbaseName = "CVN-72"
 
 AirbaseBelonging = AirbaseBelonging or {}
 AirbaseBelonging["Lar"]     = AirbaseBelonging["Lar"]     or {"Shiraz Intl"}
@@ -1863,7 +1875,7 @@ bc:registerShopItem('supplies2', 'Resupply friendly Zone', 200, function(sender)
     local upgradeZone = function(target)
         if upgradeMenu then
             local zn = bc:getZoneByName(target)
-            if zn and zn.side == 2 then
+            if zn and zn.side == 2 and not zn.suspended then
                 zn:upgrade()
             else
                 return 'Zone not friendly'
@@ -1877,7 +1889,7 @@ bc:registerShopItem('supplies2', 'Resupply friendly Zone', 200, function(sender)
     trigger.action.outTextForCoalition(2, 'Supplies prepared. Choose zone from F10 menu', 15)
 end,
 function(sender, params)
-    if params.zone and params.zone.side == 2 then
+    if params.zone and params.zone.side == 2 and not params.zone.suspended then
         params.zone:upgrade()
     else
         return 'Can only target friendly zone'
@@ -2242,7 +2254,7 @@ bc:registerShopItem('armor', 'Deploy armor (for combined arms)', 100, function(s
 	trigger.action.outTextForCoalition(2, 'Choose deploy zone from F10 menu', 15)
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 2 then
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		local zn = CustomZone:getByName(params.zone.zone)
 		zn:spawnGroup((Era == 'Coldwar') and 'ca-tanks-Coldwar' or 'ca-tanks')
 		trigger.action.outTextForCoalition(2, 'Friendly armor deployed at ' .. params.zone.zone, 15)
@@ -2270,7 +2282,7 @@ bc:registerShopItem('artillery', 'Deploy artillery (for combined arms)', 100, fu
 	trigger.action.outTextForCoalition(2, 'Choose deploy zone from F10 menu', 15)
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 2 then
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		local zn = CustomZone:getByName(params.zone.zone)
 		zn:spawnGroup('ca-arty')
 		trigger.action.outTextForCoalition(2, 'Friendly artillery deployed at ' .. params.zone.zone, 15)
@@ -2298,7 +2310,7 @@ bc:registerShopItem('recon', 'Deploy recon group (for combined arms)', 50, funct
 	trigger.action.outTextForCoalition(2, 'Choose deploy zone from F10 menu', 15)
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 2 then
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		local zn = CustomZone:getByName(params.zone.zone)
 		zn:spawnGroup('ca-recon')
 		trigger.action.outTextForCoalition(2, 'Friendly recon group deployed at ' .. params.zone.zone, 15)
@@ -2326,7 +2338,7 @@ bc:registerShopItem('airdef', 'Deploy air defence (for combined arms)', 150, fun
 	trigger.action.outTextForCoalition(2, 'Choose deploy zone from F10 menu', 15)
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 2 then
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		local zn = CustomZone:getByName(params.zone.zone)
 		zn:spawnGroup('ca-airdef')
 		trigger.action.outTextForCoalition(2, 'Friendly air defence deployed at '..params.zone.zone, 15)
@@ -2424,7 +2436,7 @@ bc:registerShopItem('intel','Intel on enemy zone',150,function(sender)
 	local pickZone = function(targetZoneName)
 		if intelMenu then
 			local zoneObj = bc:getZoneByName(targetZoneName)
-			if not zoneObj or zoneObj.side ~= 1 or zoneObj.suspended then
+			if not zoneObj or zoneObj.side ~= 1 then
 				return 'Must pick an enemy zone'
 			end
 			intelActiveZones[targetZoneName] = true
@@ -2762,7 +2774,6 @@ supplyZones = {
     'Echo',
     'Golf',
     'Carrier Group',
-    'Factory',
     'Khamets',
     'Kish intl',
     'Bandar Lengeh',
@@ -2804,9 +2815,14 @@ bc:buildConnectionMap()
 DynamicConvoy.InitTargetTails(5)
 DynamicConvoy.InitRoadPathCacheFromCommanders(GroupCommanders)
 PrecomputeLandingSpots()
+Frontline.ReindexZoneCalcs()
 SCHEDULER:New(nil, function() spawnAwacs(1,nil,10) end, {}, 4, 0)
 SCHEDULER:New(nil, function() spawnAwacs(2,nil,10) end, {}, 6, 0)
 
+AWACS_CFG = {
+    [1] = { alt=30000, speed=350, hdg=270, leg=15, sep=150 }, -- red
+    [2] = { alt=30000, speed=350, hdg=270, leg=15, sep=70 }   -- blue
+}
 
 GlobalSettings.autoSuspendNmBlue = 80   		-- suspend blue zones deeper than this nm
 GlobalSettings.autoSuspendNmRed = 120   		-- suspend red zones deeper than this nm
@@ -4162,18 +4178,17 @@ mc:trackMission({
     messageEnd = function()
         return "Mission ended: Attack " .. attackTarget end,
 	startAction = function()
-		ActiveCurrentMission[attackTarget] = ActiveCurrentMission[attackTarget] or {}
-		ActiveCurrentMission[attackTarget]["Attack"] = true
+		ActiveCurrentMission = ActiveCurrentMission or {}
+		ActiveCurrentMission.Attack = ActiveCurrentMission.Attack or {}
+		ActiveCurrentMission.Attack[attackTarget] = true
 		local z = bc:getZoneByName(attackTarget) if z then z:updateLabel() end
 		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
 			trigger.action.outSoundForCoalition(2, "cas.ogg")
 		end
 	end,
 	endAction = function()
-		local t = ActiveCurrentMission[attackTarget]
-		if t then
-			t["Attack"] = nil
-			if not next(t) then ActiveCurrentMission[attackTarget] = nil end
+		if ActiveCurrentMission and ActiveCurrentMission.Attack then
+			ActiveCurrentMission.Attack[attackTarget] = nil
 		end
 		local z = bc:getZoneByName(attackTarget) if z then z:updateLabel() end
 		attackTarget = nil
@@ -4184,7 +4199,7 @@ mc:trackMission({
     isActive = function()
         if not attackTarget then return false end
         local targetzn = bc:getZoneByName(attackTarget)
-        return targetzn.side == 1
+        return targetzn.side == 1 and not targetzn.suspended
     end
 })
 captureTarget = nil
@@ -4354,41 +4369,39 @@ mc:trackMission({
 })
 --                    End of CAS MISSION                           --
 ---------------------------------------------------------------------
-seadTarget = nil
 function generateSEADMission()
     if seadTarget then return end
     if not attackTarget then return end
 
-
     local function isSEADZone(zone)
         local lname = zone.zone:lower()
-        return zone.side == 1 and zone.active and not zone.suspended and (lname:find('sam') or lname:find('defence'))
+        return zone.side == 1 and zone.active and (not zone.suspended)
+           and (lname:find('sam') or lname:find('defence'))
+           and (not isZoneUnderSEADMission or not isZoneUnderSEADMission(zone.zone))
     end
 
-	local validSEADZones = {}
-	local attackZone = bc:getZoneByName(attackTarget)
+    local validSEADZones = {}
+    local attackZone = bc:getZoneByName(attackTarget)
 
-	if attackZone and attackZone.zone then
-		local znA = attackZone.zone
-		for _, zone in ipairs(bc.zones) do
-			local znB = zone.zone
-			local dist = ZONE_DISTANCES[znA] and ZONE_DISTANCES[znA][znB]
-			if isSEADZone(zone) and dist and dist <= 24000 then
-				table.insert(validSEADZones, zone.zone)
-			end
-		end
-	end
+    if attackZone and attackZone.zone then
+        local znA = attackZone.zone
+        for _, zone in ipairs(bc.zones) do
+            local znB = zone.zone
+            local dist = ZONE_DISTANCES[znA] and ZONE_DISTANCES[znA][znB]
+            if isSEADZone(zone) and bc:HasSeadTargets(zone.zone) and dist and dist <= 24000 then
+                table.insert(validSEADZones, zone.zone)
+            end
+        end
+    end
 
     if #validSEADZones == 0 then
         for _, connection in ipairs(bc.connections) do
-			local from, to = bc:getConnectionZones(connection)
-
-            if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 and
-			((not to.suspended) or from.suspended) then
-                if isSEADZone(from) then
+            local from, to = bc:getConnectionZones(connection)
+            if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 then
+                if isSEADZone(from) and bc:HasSeadTargets(from.zone) then
                     table.insert(validSEADZones, from.zone)
                 end
-                if isSEADZone(to) then
+                if isSEADZone(to) and bc:HasSeadTargets(to.zone) then
                     table.insert(validSEADZones, to.zone)
                 end
             end
@@ -4396,9 +4409,11 @@ function generateSEADMission()
     end
 
     if #validSEADZones == 0 then return end
-
-    seadTarget = validSEADZones[math.random(#validSEADZones)]
-    return true
+    local pick = validSEADZones[math.random(#validSEADZones)]
+    if pick then
+        seadTarget = pick
+        return true
+    end
 end
 
 mc:trackMission({
@@ -4424,24 +4439,96 @@ mc:trackMission({
     isActive = function()
         if not seadTarget then return false end
         local zn = bc:getZoneByName(seadTarget)
-        return zn and zn.side == 1
+        return zn and zn.side == 1 and not zn.suspended and bc:HasSeadTargets(seadTarget)
     end
 })
 
+deadTarget = nil
+function generateDEADMission()
+    if deadTarget then return end
+    if seadTarget then return end
+    if not attackTarget then return end
+
+    local function isDEADZone(zone)
+        local lname = zone.zone:lower()
+        return zone.side == 1 and zone.active and (lname:find('sam') or lname:find('defence'))
+    end
+
+    local validDEADZones = {}
+    local attackZone = bc:getZoneByName(attackTarget)
+
+    if attackZone and attackZone.zone then
+        local znA = attackZone.zone
+        for _, zone in ipairs(bc.zones) do
+            local znB = zone.zone
+            local dist = ZONE_DISTANCES[znA] and ZONE_DISTANCES[znA][znB]
+            if isDEADZone(zone) and not bc:HasSeadTargets(zone.zone) and dist and dist <= 24000 then
+                table.insert(validDEADZones, zone.zone)
+            end
+        end
+    end
+
+    if #validDEADZones == 0 then
+        for _, connection in ipairs(bc.connections) do
+            local from, to = bc:getConnectionZones(connection)
+            if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 and
+               ((not to.suspended) or from.suspended) then
+                if isDEADZone(from) and not bc:HasSeadTargets(from.zone) then
+                    table.insert(validDEADZones, from.zone)
+                end
+                if isDEADZone(to) and not bc:HasSeadTargets(to.zone) then
+                    table.insert(validDEADZones, to.zone)
+                end
+            end
+        end
+    end
+
+    if #validDEADZones == 0 then return end
+
+    deadTarget = validDEADZones[math.random(#validDEADZones)]
+    return true
+end
+
+mc:trackMission({
+    title = function() return "DEAD mission at " .. deadTarget end,
+    description = function() return "Destroy remaining enemy air defences at " .. deadTarget end,
+    messageStart = function() return "New DEAD mission: Destroy remaining air defences at " .. deadTarget end,
+    messageEnd = function() return "DEAD mission ended" end,
+    startAction = function()
+        local MissionType = "DEAD"
+        ActiveCurrentMission[deadTarget] = MissionType
+        local z = bc:getZoneByName(deadTarget) ; if z then z:updateLabel() end
+        if not missionCompleted then trigger.action.outSoundForCoalition(2,"ding.ogg") end
+    end,
+    endAction = function()
+        local MissionType = "DEAD"
+        if ActiveCurrentMission[deadTarget] == MissionType then
+            ActiveCurrentMission[deadTarget] = nil
+        end
+        local z = bc:getZoneByName(deadTarget) ; if z then z:updateLabel() end
+        deadTarget = nil
+        if not missionCompleted then trigger.action.outSoundForCoalition(2,"cancel.ogg") end
+    end,
+    isActive = function()
+        if not deadTarget then return false end
+        local zn = bc:getZoneByName(deadTarget)
+        return zn and zn.side == 1 and not zn.suspended and not bc:HasSeadTargets(deadTarget)
+    end
+})
 
 function generateAttackMission()
-	if missionCompleted then return end
-	if attackTarget ~= nil then return end
+    if missionCompleted then return end
+    if attackTarget ~= nil then return end
 
         local validzones = {}
         for _, v in ipairs(bc.connections) do
 			local from, to = bc:getConnectionZones(v)
 
-		local function checkValid(zone)
+        local function checkValid(zone)
 			local lname = zone.zone:lower()
-			return zone.side == 1 and zone.active and not zone.suspended and not isZoneUnderSEADMission(zone.zone)
+            return zone.side == 1 and zone.active and (not zone.suspended) and not isZoneUnderSEADMission(zone.zone)
 			and not lname:find('sam') and not lname:find('defence')
-		end
+        end
 
 	if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 then
 			if checkValid(from) then table.insert(validzones, from.zone) end
@@ -4449,11 +4536,13 @@ function generateAttackMission()
 		end
 	end
 
-	if #validzones == 0 then return end
+    if #validzones == 0 then return end
 
-	local choice = math.random(1, #validzones)
-	attackTarget = validzones[choice]
-	return true
+    local choice = math.random(1, #validzones)
+    if validzones[choice] then
+        attackTarget = validzones[choice]
+        return true
+    end
 end
 
 function generateSupplyMission()
@@ -4498,6 +4587,13 @@ timer.scheduleFunction(function(_, time)
 		return time+120
 	end
 end, {}, timer.getTime() + 120)
+timer.scheduleFunction(function(_, time)
+	if generateDEADMission() then
+		return time+300
+	else
+		return time+120
+	end
+end, {}, timer.getTime() + 140)
 timer.scheduleFunction(function(_, time)
 	if checkAndGenerateCASMission() then
 		return time+300

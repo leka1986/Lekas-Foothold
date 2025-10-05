@@ -535,29 +535,57 @@ Foothold_ctld:__Load(10)
 
 function Foothold_ctld:OnAfterLoaded(From, Event, To, LoadedGroups)
   self:I("***** Groups Loaded! *****")
+  local function normalizeName(name)
+    if type(name) ~= "string" then
+      name = tostring(name)
+    end
+    if self._NormalizeCargoName then
+      local ok, normalized = pcall(self._NormalizeCargoName, self, name)
+      if ok and normalized then
+        return normalized
+      end
+    end
+    return name:gsub("%s*%[[^%]]+%]$", "")
+  end
+
+  local maxAtSpawnByNormalized = {}
+  for rawName, limit in pairs(MAX_AT_SPAWN) do
+    local normalized = normalizeName(rawName)
+    if normalized ~= "" then
+      if maxAtSpawnByNormalized[normalized] then
+        if limit > maxAtSpawnByNormalized[normalized] then
+          maxAtSpawnByNormalized[normalized] = limit
+        end
+      else
+        maxAtSpawnByNormalized[normalized] = limit
+      end
+    end
+  end
+
   for i,_t in ipairs(LoadedGroups) do
     local gName=_t.Group:GetName() or "unknown"
     local ts=_t.TimeStamp or timer.getTime()
     local cName=tostring(_t.CargoName)
+    local normalizedName=normalizeName(cName)
     local cr=self:_FindCratesCargoObject(cName)
     if cr then
-      table.insert(GroundUnits,{groupName=gName,Timestamp=ts,Group=_t.Group,CargoName=cName,Stock=cr:GetStock() or 0})
+      table.insert(GroundUnits,{groupName=gName,Timestamp=ts,Group=_t.Group,CargoName=cName,NormalizedName=normalizedName,Stock=cr:GetStock() or 0})
     end
     local tr=self:_FindTroopsCargoObject(cName)
     if tr then
-      table.insert(TroopUnits,{groupName=gName,Timestamp=ts,Group=_t.Group,CargoName=cName,Stock=tr:GetStock() or 0})
+      table.insert(TroopUnits,{groupName=gName,Timestamp=ts,Group=_t.Group,CargoName=cName,NormalizedName=normalizedName,Stock=tr:GetStock() or 0})
     end
   end
 
   local cratesByName={}
   for _,d in ipairs(GroundUnits) do
-    local k=d.CargoName
+    local k=d.NormalizedName or normalizeName(d.CargoName)
     cratesByName[k]=cratesByName[k] or {}
     table.insert(cratesByName[k],d)
   end
-  for cName,list in pairs(cratesByName) do
+  for normName,list in pairs(cratesByName) do
     table.sort(list,function(a,b)return a.Timestamp>b.Timestamp end)
-    local maxAllowed=MAX_AT_SPAWN[cName] or 0
+    local maxAllowed=maxAtSpawnByNormalized[normName] or MAX_AT_SPAWN[normName] or 0
     local total=#list
     local excess=total-maxAllowed
     for idx,entry in ipairs(list) do
@@ -576,13 +604,13 @@ function Foothold_ctld:OnAfterLoaded(From, Event, To, LoadedGroups)
 
   local troopsByName={}
   for _,d in ipairs(TroopUnits) do
-    local k=d.CargoName
+    local k=d.NormalizedName or normalizeName(d.CargoName)
     troopsByName[k]=troopsByName[k] or {}
     table.insert(troopsByName[k],d)
   end
-  for cName,list in pairs(troopsByName) do
+  for normName,list in pairs(troopsByName) do
     table.sort(list,function(a,b)return a.Timestamp>b.Timestamp end)
-    local maxAllowed=MAX_AT_SPAWN[cName] or 0
+    local maxAllowed=maxAtSpawnByNormalized[normName] or MAX_AT_SPAWN[normName] or 0
     local total=#list
     local excess=total-maxAllowed
     for idx,entry in ipairs(list) do

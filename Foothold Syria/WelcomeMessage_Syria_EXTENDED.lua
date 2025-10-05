@@ -6,66 +6,74 @@ BASE:I("Loading Leka's special all in one script handler")
 -- most importantly it needs Moose.
 
 static = STATIC:FindByName("EventMan", true)
-
-
 local atisZones = {
-    ["Al Dhafra"] = {airbaseName = AIRBASE.PersianGulf.Al_Dhafra_AFB},
-    ["Sharjah"] = {airbaseName = AIRBASE.PersianGulf.Sharjah_Intl},
-    ["BandarAbbas"] = {airbaseName = AIRBASE.PersianGulf.Bandar_Abbas_Intl},
-    ["Khasab"] = {airbaseName = AIRBASE.PersianGulf.Khasab},
-    ["Qeshm Island"] = {airbaseName = AIRBASE.PersianGulf.Qeshm_Island},
-    ["Al Minhad AFB"] = {airbaseName = AIRBASE.PersianGulf.Al_Minhad_AFB},
-    ["Fujairah Intl"] = {airbaseName = AIRBASE.PersianGulf.Fujairah_Intl},
-    ["Ras Al Khaimah"] = {airbaseName = AIRBASE.PersianGulf.Ras_Al_Khaimah_Intl, runways={["35"]="34",["17"]="16"}},
-    ["Al Ain"] = {airbaseName = AIRBASE.PersianGulf.Al_Ain_Intl},
-    ["Kish intl"] = {airbaseName = AIRBASE.PersianGulf.Kish_Intl, runways={["28"]="27",["10"]="09"}},
-    ["Bandar Lengeh"] = {airbaseName = AIRBASE.PersianGulf.Bandar_Lengeh},
-    ["Tunb Island AFB"] = {airbaseName = AIRBASE.PersianGulf.Tunb_Island_AFB},
-    ["Abu Musa Island"] = {airbaseName = AIRBASE.PersianGulf.Abu_Musa_Island},
-    ["Sirri Island"] = {airbaseName = AIRBASE.PersianGulf.Sirri_Island},
-    ["Lavan Island"] = {airbaseName = AIRBASE.PersianGulf.Lavan_Island},
-    ["Lar"] = {airbaseName = AIRBASE.PersianGulf.Lar}
+    ["Incirlik"] 						= {airbaseName = AIRBASE.Syria.Incirlik},
+    ["Hatay"] 							= {airbaseName = AIRBASE.Syria.Hatay},
+    ["Hama"] 							= {airbaseName = AIRBASE.Syria.Hama},
+    ["Jirah"] 							= {airbaseName = AIRBASE.Syria.Jirah},
+    ["Tabqa"] 							= {airbaseName = AIRBASE.Syria.Tabqa},
+    ["Aleppo"] 							= {airbaseName = AIRBASE.Syria.Aleppo},
+    ["Palmyra"]						    = {airbaseName = AIRBASE.Syria.Palmyra},
+    ["Al Qusayr"] 						= {airbaseName = AIRBASE.Syria.Al_Qusayr},
+    ["Damascus"] 						= {airbaseName = AIRBASE.Syria.Damascus},
+    ["An Nasiriyah"] 					= {airbaseName = AIRBASE.Syria.An_Nasiriyah},
+    ["Khalkhalah"] 						= {airbaseName = AIRBASE.Syria.Khalkhalah},
+    ["Thalah"] 							= {airbaseName = AIRBASE.Syria.Tha_lah},
+    ["Muwaffaq Salti"] 					= {airbaseName = AIRBASE.Syria.Muwaffaq_Salti},
+    ["Prince Hassan"] 					= {airbaseName = AIRBASE.Syria.Prince_Hassan},
+    ["Ben Gurion"] 						= {airbaseName = AIRBASE.Syria.Ben_Gurion},
+    ["Ramat David"] 					= {airbaseName = AIRBASE.Syria.Ramat_David},
+    ["Haifa"] 							= {airbaseName = AIRBASE.Syria.Haifa},
+    ["Rosh Pina"] 						= {airbaseName = AIRBASE.Syria.Rosh_Pina},
+    ["Marka"] 							= {airbaseName = AIRBASE.Syria.Marka},
+    ["Gaziantep"] 						= {airbaseName = AIRBASE.Syria.Gaziantep},
+    ["Deir ez-Zor"]					    = {airbaseName = AIRBASE.Syria.Deir_ez_Zor},
+    ["Shayrat"] 						= {airbaseName = AIRBASE.Syria.Shayrat},
+    ["Larnaca"] 						= {airbaseName = AIRBASE.Syria.Larnaca},
+    ["Ercan"]  							= {airbaseName = AIRBASE.Syria.Ercan},
+    ["Tiyas"]							= {airbaseName = AIRBASE.Syria.Tiyas},	
+    ["Rayak"]                           = {airbaseName = AIRBASE.Syria.Rayak},
+    ["Paphos"] 							= {airbaseName = AIRBASE.Syria.Paphos},
+    ["Akrotiri"] 						= {airbaseName = AIRBASE.Syria.Akrotiri},
+    ["Pinarbashi"] 						= {airbaseName = AIRBASE.Syria.Pinarbashi},
+    ["Gecitkale"] 						= {airbaseName = AIRBASE.Syria.Gecitkale},
+    ["Rene Mouawad"] 					= {airbaseName = AIRBASE.Syria.Rene_Mouawad},
+    ["Abu al-Duhur"] 					= {airbaseName = AIRBASE.Syria.Abu_al_Duhur},
+    ["Wujah"]		 					= {airbaseName = AIRBASE.Syria.Wujah_Al_Hajar},
+    ["Bassel Al-Assad"] 				= {airbaseName = AIRBASE.Syria.Bassel_Al_Assad},
+    ["Beirut"]				 			= {airbaseName = AIRBASE.Syria.Beirut_Rafic_Hariri},
+    ["King Hussein Air College"] 		= {airbaseName = AIRBASE.Syria.King_Hussein_Air_College},
 }
-
 local atisZoneNames = {
-    ["Bandar Abbas Intl"] = {airbaseName = AIRBASE.PersianGulf.Bandar_Abbas_Intl},
-    ["Al Dhafra AFB"] = {airbaseName = AIRBASE.PersianGulf.Al_Dhafra_AFB},
-    ["Sharjah Intl"] = {airbaseName = AIRBASE.PersianGulf.Sharjah_Intl},
-    ["Ras Al Khaimah Intl"] = {airbaseName = AIRBASE.PersianGulf.Ras_Al_Khaimah_Intl},
-    ["Al Ain Intl"] = {airbaseName = AIRBASE.PersianGulf.Al_Ain_Intl},
-    ["Kish Intl"] = {airbaseName = AIRBASE.PersianGulf.Kish_Intl},
-    ["Lar"] = {airbaseName = AIRBASE.PersianGulf.Lar}
+
 }
--- Define all zones
+
 allZones = {
-    "Al Dhafra", "Sharjah", "BandarAbbas", "Khasab", "Qeshm Island", "Carrier Group",
-    "Al Huti", "Al Ain", "Fujairah Intl", "Al Minhad AFB", "Ras Al Khaimah", "Alpha", "Charlie",
-    "Convoy", "Oil Fields", "Radio Tower", "Dehbarez", "Paregaan", "Khamets", "Samathe",
-    "Bandar Lengeh", "Delta", "Sunny", "Ramp-Kongo", "Factory", "Foxtrot", "Echo", "Golf", "Lar",
-    "Kish intl", "Al Khatim", "Al Dahid", "Moradi", "Lavan Island", "Sirri Island", "Abu Musa Island",
-    "Tunb Island AFB", "Red Carrier"
+    "Incirlik", "Hatay", "Minakh", "Aleppo", "Taftanaz", "Jirah", "Tabqa", "Abu al-Duhur",
+    "Bassel Al-Assad", "Hama", "Palmyra", "Power Plant", "FOB Alpha", "Bravo", "Charlie", "Delta", 
+	"Foxtrot", "Golf", "Hotel", "India", "Juliett", "Kilo", "FOB Lima", "FOB Mike",
+    "November", "Oscar", "Papa", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Substation North",
+    "Durayhim", "Raqqa", "Dam", "TV Tower", "SA-5", "Military Base", "Carrier Group", "Red Carrier", "Refinery",
+    "Factory", "Substation West", "Radio Tower", "Akrotiri", "Paphos", "Polis", "Karavostasi",
+    "Larnaca", "Ercan", "Pinarbashi", "Rene Mouawad", "Wujah", "Beirut",
+    "Rayak", "Al Qusayr", "Tiyas", "Damascus", "An Nasiriyah", "Khalkhalah", "Thalah",
+    "King Hussein Air College", "Muwaffaq Salti", "Prince Hassan", "Ben Gurion", "Ramat David",
+    "Haifa", "Rosh Pina", "Marka", "Gaziantep", "Manbij", "Shayrat", "Gecitkale"
 }
-
-
 airbaseStatics = {
-	["Al Khatim"] = {"Khatimammo", "Khatimfuel", "Khatimtent1", "Khatimtent2", "Khatimtent3", "Khatimtent4", "Khatimcommand", "Khatimwind"},
-    ["Al Huti"] = {"Hutiammo", "FHutifuel", "Hutitent1", "Hutitent2", "Hutitent3", "Hutitent4", "Huticommand", "Hutiwind"},
-    ["Al Dahid"] = {"Dahidammo", "Dahidfuel", "Dahidtent1", "Dahidtent2", "Dahidtent3", "Dahidtent4", "Dahidcenter", "Dahidwind"},
-    ["Radio Tower"] = {"Radioammo", "Radiofuel", "Radiotent1", "Radiotent2", "Radiotent3", "Radiotent4", "Radiocenter", "Radiowind"},
-    ["FARP Delta"] = {"Deltaoammo", "Deltaofuel", "Deltatent1", "Deltatent2", "Deltatent3", "Deltatent4", "Deltaommand", "Deltawind"},
-    ["Factory"] = {"Factoryammo", "Factoryfuel", "Factorytent1", "Factorytent2", "Factorytent3", "Factorytent4", "Factorycomand", "Factorywind"},
-    ["FARP Golf"] = {"Farpgolfammo", "Farpgolffuel", "Farpgolftent1", "Farpgolftent2", "Farpgolftent3", "Farpgolftent4", "Farpgolfcommand", "Farpgolfwind"},
-    ["FARP Echo"] = {"FarpEchoammo", "FarpEchofuel", "FarpEchotent1", "FarpEchotent2", "FarpEchotent3", "FarpEchotent4", "FarpEchocommand", "FarpEchowind"},
-    ["FARP Sunny"] = {"Sunnyammo", "Sunnyfuel", "Sunnytent1", "Sunnytent2", "Sunnytent3", "Sunnytent4", "Sunnycommand", "Sunnywind"},
-    ["Ramp-Kongo"] = {"Kongoammo", "Kongofuel", "Kongotent1", "Kongotent2", "Kongotent3", "Kongotent4", "Kongocommand", "Kongowind"},
-    ["Foxtrot"] = {"Foxtrotammo", "Foxtrotfuel", "Foxtrottent1", "Foxtrottent2", "Foxtrottent3", "Foxtrottent4", "Foxtrotcommand", "Foxtrotwind"},
-    ["FARP Khamets"] = {"Khametsammo", "Khametsfuel", "Khametstent1", "Khametstent2", "Khametstent3", "Khametstent4", "Khametscommand", "Khametswind"},
-    ["Samathe"] = {"Samatheammo", "Samathefuel", "Samathetent1", "Samathetent2", "Samathetent3", "Samathetent4", "Samathecommand", "Samathewind"},
-	["Paregaan"] = {"Paregaanammo", "Paregaanfuel", "Paregaantent1", "Paregaantent2", "Paregaantent3", "Paregaantent4", "Paregaancommand", "Paregaanwind"},
-	["Moradi"] = {"Moradiammo", "Moradifuel", "Moraditent1", "Moraditent2", "Moraditent3", "Moraditent4", "Moradicommand", "Moradiwind"},
-	["Charlie"] = {"Charlieammo", "Charliefuel", "Charlietent1", "Charlietent2", "Charlietent3", "Charlietent4", "Charliecommand", "Charliewind"},
-	["Alpha"] = {"Alphaammo", "Alphafuel", "Alphatent1", "Alphatent2", "Alphatent3", "Alphatent4", "Alphacommand", "Alphawind"},
-
+    ["FOB HOTEL"] = {"FarpHotelammo", "Farphotelfuel", "Farphoteltent1", "Farphoteltent2", "Farphoteltent3", "Farphoteltent4", "Farphotelcommand", "Farphotelwind"},
+    ["FOB LIMA"] = {"Farplimaammo", "Farplimafuel", "Farplimatent1", "Farplimatent2", "Farplimatent3", "Farplimatent4", "Farplimatent5", "Farplimatent6", "Farplimatent7", "Farplimacommand", "Farplimawind"},
+    ["FOB DURAYHIM"] = {"Durayhimammo", "Durayhimfuel", "Durayhimtent1", "Durayhimtent2", "Durayhimtent3", "Durayhimtent4", "Durayhimcommand", "Durayhimwind"},
+    ["FOB INDIA"] = {"Fobindiaammo", "Fobindiafuel", "Fobindiatent1", "Fobindiatent2", "Fobindiatent3", "Fobindiatent4", "Fobindiacommand", "Fobindiawind"},
+    ["FOB MIKE"] = {"FobMikeAmmo", "FobMikeFuel", "FobMiketent1", "FobMiketent2", "FobMiketent3", "FobMiketent4", "FobMiketent5", "FobMiketent6", "FobMiketent7", 
+	"FobMiketent8", "FobMiketent9", "FobMikeTower1", "FobMikeTower2", "FobMikeTower3", "FobMikeTower4", "FobMikeHelo1", "FobMikeHelo2", "FobMikeHelo3", "FobMikeHelo4", 
+	"FobMikeWind", "FobMikeGenerator"},
+	["FOB Military Base"] = {"Millbaseammo", "Millbasefuel", "Millbasetent1", "Millbasetent2", "Millbasetent3", "Millbasetent4", "Millbasetentcommand", "Millbasetentwind"},
+	["FOB POLIS"] = {"fobtowerammo", "fobtowerfuel", "fobtowertent1", "fobtowertent2", "fobtowertent3", "fobtowertent4", "fobtowercommand", "fobtowerwind"},
+	["FOB FOXTROT"] = {"fobfoxtrotammo", "fobfoxtrotfuel", "fobfoxtrottent1", "fobfoxtrottent2", "fobfoxtrottent3", "fobfoxtrottent4", "fobfoxtrotcommand", "fobfoxtrotwind"},
+	["FOB JULIETT"] = {"fobjuliettammo", "fobjuliettfuel", "fobjulietttent1", "fobjulietttent2", "fobjulietttent3", "fobjulietttent4", "fobjuliettcommand", "fobjuliettwind"},
+	["FOB KARAVOSTASI"] = {"FOBKARAVOSTASIAmmo", "FOBKARAVOSTASIFuel", "FOBKARAVOSTASItent1", "FOBKARAVOSTASItent2", "FOBKARAVOSTASItent3", "FOBKARAVOSTASItent4", "FOBKARAVOSTAScommand", "FOBKARAVOSTASWind"},
+	
 }
 
 followID={}
@@ -1036,6 +1044,7 @@ if event.id == EVENTS.PlayerEnterAircraft and event.IniUnit and event.IniPlayerN
         end
     end
 end
+--[[ 
 function WeaponImpact(Weapon)
     local impactPos = Weapon:GetImpactVec3()
     if impactPos then
@@ -1072,7 +1081,7 @@ function static:OnEventShot(EventData)
     end
 end
 
-
+ ]]
 
 function AddEscortRequestMenu(group)
     if not group then

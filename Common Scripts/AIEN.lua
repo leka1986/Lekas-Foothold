@@ -8680,67 +8680,54 @@ local reactionsDb = {
 
 -- the functions that handles the reactions, using priorities
 local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill)
-    if gr and gr:isExist() and ownPos and tgtPos and actTbl and saTbl and skill then
+    if gr and gr:isExist() and ownPos and tgtPos and actTbl and skill then
         if actTbl and #actTbl>0 then
-            for _, aData in pairs(actTbl) do 
-                for _, dbActData in pairs(reactionsDb) do
-                    if aData.name == dbActData.name then
-                        local f = dbActData.ac_function
-                        if f then
-
-                            trigger.action.groupContinueMoving(gr)
-                            local success = f(gr, ownPos, tgtPos, dbActData.resume, saTbl, skill)
-                            if AIEN.config.AIEN_debugProcessDetail == true then
-                                env.info(("AIEN.executeReactions, action success = " .. tostring(success)))
-                            end
-                            if success and success == true then
-                                -- message feedback
-                                if AIEN.config.message_feed == true then
-
-                                    local z = bc:getZoneOfPoint(ownPos)
-                                    if z and z.zone then
-                                        local zoneName = z.zone
-                                        local threatTxt = nil
-                                        for _, s in pairs(saTbl or {}) do
-                                            local u = (s and (s.unit or s.attacker or s.target)) or s
-                                            if u and u.getDesc then
-                                                local d = u:getDesc()
-                                                local c = d and d.category
-                                                if c == 0 then threatTxt = "enemy plane!" break end
-                                                if c == 1 then threatTxt = "enemy helicopter!" break end
-                                                if c == 2 then threatTxt = "enemy ground units!" break end
-                                            end
-                                        end
-                                        local txt = ""
-                                        if threatTxt then
-                                            txt = txt .. "C2, " .. tostring(zoneName) .. " is under attack by " .. tostring(threatTxt) .. " " .. dbActData.message
-                                        else
-                                            txt = txt .. "C2, " .. tostring(zoneName) .. " is under attack! " .. dbActData.message
-                                        end
-                                        local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
-                                        multyTypeMessage(vars)
-                                    else
-                                        local lat, lon = coord.LOtoLL(ownPos)
-                                        local MGRS = coord.LLtoMGRS(coord.LOtoLL(ownPos))
-                                        if lat and lon then
-
-                                            local LL_string = tostringLL(lat, lon, 0, true)
-                                            local MGRS_string = tostringMGRS(MGRS ,4)
-
-
-                                            local txt = ""
-                                            local txt = txt .. "C2, " .. tostring(gr:getName()) .. ", report under attack. Coordinates: " .. tostring(LL_string) .. ", " .. tostring(MGRS_string) .. "." .. dbActData.message
-                                            local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
-
-                                            multyTypeMessage(vars)
-
-                                        end
-                                    end
+            for _, aData in ipairs(actTbl) do
+                local f = aData.ac_function
+                if f then
+                    local success = f(gr, ownPos, tgtPos, aData.resume, saTbl, skill)
+                    if AIEN.config.AIEN_debugProcessDetail == true then
+                        env.info(("AIEN.executeReactions, action success = " .. tostring(success)))
+                    end
+                    if success and success == true then
+                        if aData.resume == true then trigger.action.groupContinueMoving(gr) end
+                        if AIEN.config.message_feed == true then
+                            local threatTxt = nil
+                            for _, s in pairs((saTbl and saTbl.targets) or {}) do
+                                local cat = s.category or s.cat or s.objCat
+                                if type(cat) == "number" then
+                                    if cat == 0 then threatTxt = "enemy plane!" break end
+                                    if cat == 1 then threatTxt = "enemy helicopter!" break end
+                                    if cat == 2 then threatTxt = "enemy ground units!" break end
+                                    if cat == 3 then threatTxt = "enemy ship!" break end
+                                    if cat == 4 then threatTxt = "enemy structure!" break end
                                 end
-
-                                return dbActData.name
+                            end
+                            local z = bc:getZoneOfPoint(ownPos)
+                            if z and z.zone then
+                                local zoneName = z.zone
+                                local txt = ""
+                                if threatTxt then
+                                    txt = txt .. "C2, " .. tostring(zoneName) .. " is under attack by " .. tostring(threatTxt) .. " " .. tostring(aData.message or "")
+                                else
+                                    txt = txt .. "C2, " .. tostring(zoneName) .. " is under attack! " .. tostring(aData.message or "")
+                                end
+                                local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
+                                multyTypeMessage(vars)
+                            else
+                                local lat, lon = coord.LOtoLL(ownPos)
+                                local MGRS = coord.LLtoMGRS(coord.LOtoLL(ownPos))
+                                if lat and lon then
+                                    local LL_string = tostringLL(lat, lon, 0, true)
+                                    local MGRS_string = tostringMGRS(MGRS ,4)
+                                    local txt = ""
+                                    txt = txt .. "C2, " .. tostring(gr:getName()) .. ", report under attack. Coordinates: " .. tostring(LL_string) .. ", " .. tostring(MGRS_string) .. "." .. tostring(aData.message or "")
+                                    local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
+                                    multyTypeMessage(vars)
+                                end
                             end
                         end
+                        return aData.name
                     end
                 end
             end
@@ -8763,6 +8750,7 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill)
         return false
     end
 end
+
 
 -- this 'global' test function let you test a specific reaction of your choice, using the group name and the reaction name to execute. 
 -- for those action where the shooter is required for evaluation, the test function will look for the nearest target within 20 km.
@@ -10125,7 +10113,7 @@ local function event_birth(initiator)
                         --env.info((tostring(ModuleName) .. ", event_birth: s " .. tostring(s)))
                         groundgroupsDb[gp:getID()] = {group = gp, class = c, n = gpName, coa = gp:getCoalition(), detection = det, threat = thr, tasked = false, skill = s, sa = {} }
                         if c == "ARTY" or c == "MLRS" then
-                            env.info(("ARTYDBG "..tostring(gpName)))
+                            --env.info(("ARTYDBG "..tostring(gpName)))
                             phase_keys = createIterator(groundgroupsDb)
                         end                      
                     end
@@ -10149,7 +10137,7 @@ local function event_birth(initiator)
                 end
                 if c then
                     if AIEN.config.AIEN_debugProcessDetail == true then
-                        env.info((tostring(ModuleName) .. ", event_birth: adding to droneunitDb " .. tostring(gp:getName() )))
+                        --env.info((tostring(ModuleName) .. ", event_birth: adding to droneunitDb " .. tostring(gp:getName() )))
                     end
                     
                     droneunitDb[gp:getID()] = {group = gp, class = c, n = gpName, coa = gp:getCoalition(), sa = {}}

@@ -160,15 +160,16 @@ Group.getByName('CTLD_CARGO_Scout'):destroy()
 -- ZONES
 
 Foothold_ctld:AddCTLDZone("Tarawa",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,240,20)
+Foothold_ctld:AddCTLDZone("FOB ALPHA",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,240,20)
 Foothold_ctld:AddCTLDZone("CVN-72",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,240,20)
 Foothold_ctld:AddCTLDZone("CVN-73",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,240,20)
-Foothold_ctld:AddCTLDZone("CVN-74",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,240,20)
 Foothold_ctld:AddCTLDZone("CVN-59",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,240,20)
+Foothold_ctld:AddCTLDZone("CVN-74",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,240,20)
+
 
 for _, zoneObj in ipairs(bc:getZones()) do
     local zoneName = zoneObj.zone
-    if (not zoneName:lower():find("hidden")) and (not zoneName:find("Red Carrier"))
-      and (not zoneName:find("Blue Carrier")) then
+    if not zoneName:lower():find("hidden") then
         Foothold_ctld:AddCTLDZone(zoneName, CTLD.CargoZoneType.LOAD, SMOKECOLOR.Green, false, false)
         Foothold_ctld:AddCTLDZone(zoneName, CTLD.CargoZoneType.MOVE, SMOKECOLOR.Green, true, false)
     end
@@ -210,7 +211,6 @@ local scheduler = SCHEDULER:New(nil, function()
     addCTLDZonesForBlueControlled()
 end, {}, 5)
 
-
 Foothold_ctld:SetUnitCapabilities("SA342Mistral", false, true, 0, 2, 10, 400)
 Foothold_ctld:SetUnitCapabilities("SA342L", false, true, 0, 2, 10, 400)
 Foothold_ctld:SetUnitCapabilities("SA342M", false, true, 0, 2, 10, 400)
@@ -227,7 +227,6 @@ Foothold_ctld:SetUnitCapabilities("UH-60L_DAP", true, true, 2, 20, 16, 3500)
 Foothold_ctld:SetUnitCapabilities("AH-64D_BLK_II", false, false, 0, 0, 15, 400)
 Foothold_ctld:SetUnitCapabilities("CH-47Fbl1", true, true, 5, 32, 20, 10800)
 Foothold_ctld:SetUnitCapabilities("OH58D", false, false, 0, 0, 14, 400)
-
 
 local TroopUnits = {}
 local GroundUnits = {}
@@ -444,12 +443,13 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
     end
 end 
 
+
 if lfs then
 
 if Era == 'Coldwar' then  
-FarpFileName = "Foothold_CA_CTLD_FARPS_Coldwar.csv"
+FarpFileName = "Foothold_SY_Extended_CTLD_FARPS_Coldwar.csv"
 else
-FarpFileName = "Foothold_CA_CTLD_FARPS_Modern.csv"
+FarpFileName = "Foothold_SY_Extended_CTLD_FARPS_Modern.csv"
 end
 
 function SaveFARPS()
@@ -515,15 +515,16 @@ local SaveFARPTimer = TIMER:New(SaveFARPS)
 SaveFARPTimer:Start(30,300)
 
 Foothold_ctld.enableLoadSave = true -- allow auto-saving and loading of files
-Foothold_ctld.saveinterval = 300 -- save every 5 minutes
+Foothold_ctld.saveinterval = 300 -- save every 10 minutes
 if Era=='Coldwar' then
-Foothold_ctld.filename = "FootHold_CA_CTLD_Save_Coldwar.csv" -- example filename
+Foothold_ctld.filename = "FootHold_SY_Extended_CTLD_Coldwar.csv" -- example filename
 else
-Foothold_ctld.filename = "FootHold_CA_CTLD_Save_Modern.csv" -- example filename
+Foothold_ctld.filename = "FootHold_SY_Extended_CTLD_Modern.csv" -- example filename
 end
 Foothold_ctld.filepath = lfs.writedir() .. "Missions\\Saves" -- example path
 Foothold_ctld.eventoninject = true -- fire OnAfterCratesBuild and OnAfterTroopsDeployed events when loading (uses Inject functions)
 Foothold_ctld.useprecisecoordloads = true -- Instead if slightly varyiing the group position, try to maintain it as is
+
 
 function resetSaveFileAndFarp()
   -- 1) Overwrite the CTLD save file with empty data:
@@ -672,7 +673,6 @@ function Foothold_ctld:OnAfterLoaded(From, Event, To, LoadedGroups)
     end
   end
 end
-
 
 zoneSet = SET_ZONE:New()
 for _, zoneObj in ipairs(bc:getZones()) do
@@ -1038,103 +1038,5 @@ local function RefillMissingWithCountTable()
 end
 
 TIMER:New(RefillMissingWithCountTable):Start(15, 30)
-
---[[ function ScheduleDemolition(troopGroup, zoneCommander)
-
-  if not troopGroup or not troopGroup:IsAlive() then return end
-
-  local dcsGrp = Group.getByName(troopGroup:GetName());  if not dcsGrp then return end
-  local ctrl   = dcsGrp:getController();                 if not ctrl   then return end
-  ctrl:popTask()
-
-  local zoneObj = ZONE:FindByName(zoneCommander.zone);   if not zoneObj then return end
-
-  local statics = {}
-  for _, name in pairs(zoneCommander:getFilteredUpgrades()) do
-    local st = StaticObject.getByName(name)
-    if st and st:isExist() and zoneObj:IsVec3InZone(st:getPoint()) then
-      statics[#statics + 1] = { point = st:getPoint(), name = name }
-    end
-  end
-  if #statics == 0 then return end
-
-  local startCoord = troopGroup:GetCoordinate()
-  table.sort(statics, function(a, b)
-    return startCoord:Get2DDistance(COORDINATE:NewFromVec3(a.point)) <
-           startCoord:Get2DDistance(COORDINATE:NewFromVec3(b.point))
-  end)
-
-  env.info(string.format("Troops at: x=%.1f, z=%.1f", startCoord.x, startCoord.z))
-  for i, s in ipairs(statics) do
-    env.info(string.format("Static[%d] at: x=%.1f, z=%.1f", i, s.point.x, s.point.z))
-  end
-
-  local SPEED_KPH = 14
-  local function buildWP(pt, action)
-    local altGround = land.getHeight({ x = pt.x, y = pt.z })
-    return {
-      type               = "Turning Point",
-      action             = action or "Off Road",
-      x                  = pt.x,
-      y                  = pt.z,
-      alt                = altGround,
-      alt_type           = "BARO",
-      speed              = SPEED_KPH / 3.6,
-      speed_locked       = true,
-      formation_template = "",
-    }
-  end
-
-  local entry = startCoord:GetVec3()
-  local route = { buildWP(entry, "Off Road") }
-
-  for _, s in ipairs(statics) do
-    route[#route + 1] = buildWP(s.point, "Off Road")
-  end
-
-  local last = statics[#statics].point
-  local vx, vz = entry.x - last.x, entry.z - last.z
-  local len    = math.max(1, math.sqrt(vx * vx + vz * vz))
-  local exfil  = { x = last.x + vx / len * 183, z = last.z + vz / len * 183 }
-  route[#route + 1] = buildWP(exfil, "Off Road")
-
-  ctrl:setTask({
-    id     = "Mission",
-    params = { route = { points = route } }
-  })
-
-  local function plant(index)
-    if index > #statics then
-      timer.scheduleFunction(function()
-        if troopGroup and troopGroup:IsAlive() then
-          local dist = troopGroup:GetCoordinate():Get2DDistance(
-                         COORDINATE:NewFromVec3(exfil))
-          if dist <= 15 then
-            ctrl:popTask()
-            ctrl:pushTask({ id = "Hold", params = {} })
-            return
-          end
-          return timer.getTime() + 2
-        end
-      end, {}, timer.getTime() + 2)
-      return
-    end
-
-    timer.scheduleFunction(function()
-      if troopGroup and troopGroup:IsAlive() then
-        local dist = troopGroup:GetCoordinate():Get2DDistance(
-                       COORDINATE:NewFromVec3(statics[index].point))
-        if dist <= 15 then
-          trigger.action.explosion(statics[index].point, 3000)
-          plant(index + 1)
-        else
-          return timer.getTime() + 2
-        end
-      end
-    end, {}, timer.getTime() + 2)
-  end
-
-  plant(1)
-end ]]
 
 BASE:I("CTLD script initialized")
