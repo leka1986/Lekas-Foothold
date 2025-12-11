@@ -262,7 +262,7 @@ function BuildAFARP(Coordinate, stamp)
     allZones[#allZones + 1] = FName
   end
 
-  UTILS.SpawnFARPAndFunctionalStatics(FName, coord, ENUMS.FARPType.INVISIBLE, Foothold_ctld.coalition, country.id.USA, FarpNameNumber, FARPFreq, radio.modulation.AM, nil, nil, nil, 6000, 6000,1000,nil, true, true)
+    UTILS.SpawnFARPAndFunctionalStatics(FName, coord, ENUMS.FARPType.INVISIBLE, Foothold_ctld.coalition, country.id.USA, FarpNameNumber, FARPFreq, radio.modulation.AM, nil, nil, nil, 10000, 0,0,nil, true, true, 3, 80, 80)
   
   Foothold_ctld:AddCTLDZone(FName, CTLD.CargoZoneType.LOAD, SMOKECOLOR.Blue, true, false)
   MESSAGE:New(string.format("%s in operation!", FName), 15):ToBlue()
@@ -285,20 +285,20 @@ function BuildAFARP(Coordinate, stamp)
     if srcStore then
       local dstStore=STORAGE:FindByName(FName)
       if dstStore then
-        for item,qty in pairs(srcStore:GetInventory()) do
-          if qty>0 then
-            dstStore:SetItem(item,qty)
-          end
+        local aircraft,liquids,weapons=srcStore:GetInventory()
+        for item,qty in pairs(aircraft or{}) do
+          if qty>0 then dstStore:SetItem(item,qty) end
         end
+        for item,qty in pairs(weapons or{}) do
+          if qty>0 then dstStore:SetItem(item,qty) end
+        end
+		dstStore:SetItem('UH-60L_DAP',1073741823)
+		dstStore:SetItem("UH-60L",1073741823)
       end
     end
   end
 
-  if Era=='Coldwar' then
-    SCHEDULER:New(nil,CopyWarehouse,{},10)
-  else
-    CopyWarehouse()
-  end
+SCHEDULER:New(nil,CopyWarehouse,{},2)
 
   local markId     = 95000 + FARPFreq
   trigger.action.circleToAll(-1, markId, coord:GetVec3(), 150,{0,0,1,1}, {0,0,1,0.25}, 1)

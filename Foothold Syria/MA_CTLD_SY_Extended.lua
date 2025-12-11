@@ -1,15 +1,16 @@
 BASE:I("CTLD : is loading.")
 
-Foothold_ctld = CTLD:New(coalition.side.BLUE,{"CH.47", "UH.1H", "Hercules", "8MT", "Bronco.OV", "UH.60L", "Mi.24P", "OH58D", "KA.50", "AH.64D", "UH.60.DAP"},"Lufttransportbrigade I")
+Foothold_ctld = CTLD:New(coalition.side.BLUE,{"CH.47", "UH.1H", "Hercules", "8MT", "Bronco.OV", "UH.60L", "Mi.24P", "OH58D", "KA.50", "AH.64D", "UH.60.DAP","C.130J.30"},"Lufttransportbrigade I")
 local herccargo = CTLD_HERCULES:New("blue", "Hercules Test", Foothold_ctld)
 Foothold_ctld.useprefix = true
 Foothold_ctld.dropcratesanywhere = true
 Foothold_ctld.forcehoverload = false
 Foothold_ctld.CrateDistance = 65
+Foothold_ctld.maxUnitsNearby = 3
 Foothold_ctld.PackDistance = 65
 Foothold_ctld.maximumHoverHeight = 20
 Foothold_ctld.minimumHoverHeight = 3
-Foothold_ctld.smokedistance = 5000
+Foothold_ctld.smokedistance = 8000
 Foothold_ctld.enableFixedWing = true
 Foothold_ctld.FixedMinAngels = 100 -- for troop/cargo drop via chute in meters, ca 470 ft
 Foothold_ctld.FixedMaxAngels = 2000 -- for troop/cargo drop via chute in meters, ca 6000 ft
@@ -19,33 +20,27 @@ Foothold_ctld.allowcratepickupagain = true
 Foothold_ctld.nobuildinloadzones = true
 Foothold_ctld.movecratesbeforebuild = false
 Foothold_ctld.movetroopstowpzone = true
-Foothold_ctld.enableChinhookGCLoading = true
 Foothold_ctld.hoverautoloading = false
 Foothold_ctld.enableslingload = true
-Foothold_ctld.ChinookTroopCircleRadius = 5
 Foothold_ctld.usesubcats = true
 Foothold_ctld.pilotmustopendoors = true
-Foothold_ctld.TroopUnloadDistGroundHook = 15
-Foothold_ctld.enableChinookGCLoading = true
 Foothold_ctld.buildtime = 30
 Foothold_ctld.onestepmenu = true
 Foothold_ctld.showstockinmenuitems = false
 Foothold_ctld.basetype = "uh1h_cargo"
+Foothold_ctld.C130basetype = "cds_crate"
+if UseC130LoadAndUnload then
+Foothold_ctld.UseC130LoadAndUnload = true
+end
 Foothold_ctld.RadioSoundFC3 = "beaconsilent.ogg"
 Foothold_ctld.VehicleMoveFormation= {AI.Task.VehicleFormation.VEE, AI.Task.VehicleFormation.ECHELON_LEFT, AI.Task.VehicleFormation.ECHELON_RIGHT, AI.Task.VehicleFormation.RANK, AI.Task.VehicleFormation.CONE}
+Foothold_ctld.returntroopstobase = false
 Foothold_ctld:__Start(5)
 
 function priceOf(name)
-    local base = name:gsub("%s*%[[^%]]+%]$","")
-    return (CTLDPrices and (CTLDPrices[name] or CTLDPrices[base])) or CTLD_DEFAULT_PRICE or 0
+    return (CTLDPrices and CTLDPrices[name]) or CTLD_DEFAULT_PRICE or 0
 end
 
-local function pricedName(name)
-    if not CTLDCost then return name end
-    local p = CTLDPrices and CTLDPrices[name]
-    if p then return string.format("%s [%d]", name, p) end
-    return name
-end
 
 CTLDPrices = {
     ["Engineer soldier"]      = 50,
@@ -54,90 +49,100 @@ CTLDPrices = {
     ["Platoon 32"]            = 200,
     ["Anti-Air Soldiers"]     = 100,
     ["Mortar Squad"]          = 100,
-    ["Mephisto (2cr)"]       = 250,
-    ["Humvee (2cr)"]         = 250,
-    ["Bradly (2cr)"]         = 250,
-    ["L118 (1cr)"]           = 150,
-    ["Ammo Truck (2cr)"]     = 100,
-    ["Humvee scout (2cr)"]   = 100,
-    ["Linebacker (2cr)"]     = 300,
-    ["Vulcan (2cr)"]         = 300,
-    ["HAWK Site (1cr)"]      = 750,
-    ["Nasam Site (1cr)"]     = 750,
-    ["FARP (1cr)"]           = 500,
+    ["Mephisto"]              = 250,
+    ["Humvee"]                = 250,
+    ["Bradly"]                = 250,
+    ["L118"]                  = 150,
+    ["Ammo Truck"]            = 100,
+    ["Humvee scout"]          = 100,
+    ["Linebacker"]            = 300,
+    ["Vulcan"]                = 300,
+    ["HAWK Site"]             = 750,
+    ["Nasam Site"]            = 750,
+    ["FARP"]                  = 500,
+    ["IRIS T SLM STR"]        = 750,
+    ["IRIS T SLM LN"]         = 500,
+    ["IRIS T SLM C2"]         = 500,
+    ["IRIS T SLM System"]     = 1800,
+    ["C-RAM"]                 = 500,
+    ["HIMARS GMLRRS HE GUIDED"]= 1000,
+    ["FV-107 Scimitar"]       = 250,
+    ["FV-101 Scorpion"]       = 250,
+    ["Avanger"]               = 250,
 }
 CTLD_DEFAULT_PRICE = 0
 
-if CTLDCost==true then -- this portion is if stuff cost money and CTLDCost is true which is defualt.
-    Foothold_ctld:AddTroopsCargo(pricedName("Engineer soldier"), {"CTLD_TROOPS_Engineers"}, CTLD_CARGO.Enum.ENGINEERS, 1, 80, 5)
-    Foothold_ctld:AddCratesCargo(pricedName("Mephisto (2cr)"), {"CTLD_CARGO_Mephisto"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500, 5, "ANTI TANK")
-    Foothold_ctld:AddCratesCargo(pricedName("Humvee (2cr)"), {"CTLD_CARGO_HMMWV"}, CTLD_CARGO.Enum.VEHICLE, 2, 1000, 5, "ANTI TANK")
-    Foothold_ctld:AddCratesCargo(pricedName("Bradly (2cr)"), {"CTLD_CARGO_Bradly"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500, 5, "ANTI TANK")
-    Foothold_ctld:AddCratesCargo(pricedName("L118 (1cr)"), {"CTLD_CARGO_L118"}, CTLD_CARGO.Enum.VEHICLE, 1, 700, 5, "Support")
-    Foothold_ctld:AddCratesCargo(pricedName("Ammo Truck (2cr)"), {"CTLD_CARGO_AmmoTruck"}, CTLD_CARGO.Enum.VEHICLE, 2, 800, 5, "Support")
-    Foothold_ctld:AddCratesCargo(pricedName("Humvee scout (2cr)"), {"CTLD_CARGO_Scout"}, CTLD_CARGO.Enum.VEHICLE, 2, 1000, 5, "Support")
-    Foothold_ctld:AddTroopsCargo(pricedName("Squad 8"), {"CTLD_TROOPS_ATS"}, CTLD_CARGO.Enum.TROOPS, 8, 80, 5)
-    Foothold_ctld:AddTroopsCargo(pricedName("Platoon 16"), {"CTLD_TROOPS_Platon16"}, CTLD_CARGO.Enum.TROOPS, 16, 80, 5)
-    Foothold_ctld:AddTroopsCargo(pricedName("Platoon 32"), {"CTLD_TROOPS_Platon1"}, CTLD_CARGO.Enum.TROOPS, 32, 80, 5)
-    --Foothold_ctld:AddTroopsCargo(pricedName("Structure demolition expert"), {"Demolition Expert"}, CTLD_CARGO.Enum.TROOPS, 1, 80, 5)
-    Foothold_ctld:AddTroopsCargo(pricedName("Anti-Air Soldiers"), {"CTLD_TROOPS_AA"}, CTLD_CARGO.Enum.TROOPS, 5, 80, 5)
-    Foothold_ctld:AddTroopsCargo(pricedName("Mortar Squad"), {"CTLD_TROOPS_MRS"}, CTLD_CARGO.Enum.TROOPS, 6, 80, 5)
-    Foothold_ctld:AddCratesCargo(pricedName("Linebacker (2cr)"), {"CTLD_CARGO_Linebacker"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500, 5, "SAM/AAA")
-    --Foothold_ctld:AddCratesCargo(pricedName("Tank Abrahams (1cr)"), {"CTLD_CARGO_TANK"}, CTLD_CARGO.Enum.VEHICLE, 5, 1600, 1, "ANTI TANK")
-    Foothold_ctld:AddCratesCargo(pricedName("Vulcan (2cr)"), {"CTLD_CARGO_Vulcan"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500, 5, "SAM/AAA")
-    Foothold_ctld:AddCratesCargo(pricedName("HAWK Site (1cr)"), {"CTLD_CARGO_HAWKSite"}, CTLD_CARGO.Enum.FOB, 4, 1900, 5, "SAM/AAA")
-    Foothold_ctld:AddCratesCargo(pricedName("Nasam Site (1cr)"), {"CTLD_CARGO_NasamsSite"}, CTLD_CARGO.Enum.FOB, 4, 1900, 5, "SAM/AAA")
-    Foothold_ctld:AddCratesCargo(pricedName("FARP (1cr)"), {"CTLD_TROOP_FOB"}, CTLD_CARGO.Enum.FOB, 3, 1500, 9)
+-- troops
+Foothold_ctld:AddTroopsCargo("Squad 8",{"CTLD_TROOPS_ATS"},CTLD_CARGO.Enum.TROOPS,8,80,10)
+Foothold_ctld:AddTroopsCargo("Platoon 16",{"CTLD_TROOPS_Platon16"},CTLD_CARGO.Enum.TROOPS,16,80,10)
+Foothold_ctld:AddTroopsCargo("Platoon 32",{"CTLD_TROOPS_Platon1"},CTLD_CARGO.Enum.TROOPS,32,80,10)
+Foothold_ctld:AddTroopsCargo("Anti-Air Soldiers",{"CTLD_TROOPS_AA"},CTLD_CARGO.Enum.TROOPS,5,80,10)
+Foothold_ctld:AddTroopsCargo("Mortar Squad",{"CTLD_TROOPS_MRS"},CTLD_CARGO.Enum.TROOPS,6,80,10)
+-- vehicles and fobs
+Foothold_ctld:AddTroopsCargo("Engineer soldier",{"CTLD_TROOPS_Engineers"},CTLD_CARGO.Enum.ENGINEERS,1,80,10)
+Foothold_ctld:AddCratesCargo("Mephisto",{"CTLD_CARGO_Mephisto"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500,10, "ANTI TANK")
+Foothold_ctld:AddCratesCargo("Humvee",{"CTLD_CARGO_HMMWV"},CTLD_CARGO.Enum.VEHICLE,2,1000,10, "ANTI TANK")
+Foothold_ctld:AddCratesCargo("Bradly",{"CTLD_CARGO_Bradly"},CTLD_CARGO.Enum.VEHICLE,2,1500,10, "ANTI TANK")
+Foothold_ctld:AddCratesCargoNoMove("L118",{"CTLD_CARGO_L118"},CTLD_CARGO.Enum.VEHICLE,1,700,12, "Support",nil,nil,nil,"Cargos",nil,nil, "l118")
+Foothold_ctld:AddCratesCargoNoMove("Ammo Truck",{"CTLD_CARGO_AmmoTruck"},CTLD_CARGO.Enum.VEHICLE,2,800,10, "Support")
+Foothold_ctld:AddCratesCargo("Humvee scout",{"CTLD_CARGO_Scout"},CTLD_CARGO.Enum.VEHICLE,2,1000,10, "Support")
+Foothold_ctld:AddCratesCargo("Linebacker",{"CTLD_CARGO_Linebacker"},CTLD_CARGO.Enum.VEHICLE,2,1500,10, "SAM/AAA")
+Foothold_ctld:AddCratesCargo("Vulcan",{"CTLD_CARGO_Vulcan"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500,10, "SAM/AAA")
+Foothold_ctld:AddCratesCargoNoMove("HAWK Site",{"CTLD_CARGO_HAWKSite"},CTLD_CARGO.Enum.FOB,4,1900,10, "SAM/AAA",nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
+Foothold_ctld:AddCratesCargoNoMove("Nasam Site",{"CTLD_CARGO_NasamsSite"},CTLD_CARGO.Enum.FOB,4,1900,10, "SAM/AAA",nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
+Foothold_ctld:AddCratesCargo("FARP",{"CTLD_TROOP_FOB"},CTLD_CARGO.Enum.FOB,3,1500,10, "FARP",nil,nil,nil,"Cargos","ammo_cargo",nil, "cds_crate")
 
-
-else -- here if they don't cost anything and CTLDCost is set to false
-Foothold_ctld:AddTroopsCargo("Engineer soldier",{"CTLD_TROOPS_Engineers"},CTLD_CARGO.Enum.ENGINEERS,1,80,5)
-Foothold_ctld:AddCratesCargo("Mephisto (2cr)",{"CTLD_CARGO_Mephisto"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500,5, "ANTI TANK")
-Foothold_ctld:AddCratesCargo("Humvee (2cr)",{"CTLD_CARGO_HMMWV"},CTLD_CARGO.Enum.VEHICLE,2,1000,5, "ANTI TANK")
-Foothold_ctld:AddCratesCargo("Bradly (2cr)",{"CTLD_CARGO_Bradly"},CTLD_CARGO.Enum.VEHICLE,2,1500,5, "ANTI TANK")
-Foothold_ctld:AddCratesCargo("L118 (1cr)",{"CTLD_CARGO_L118"},CTLD_CARGO.Enum.VEHICLE,1,700,5, "Support")
-Foothold_ctld:AddCratesCargo("Ammo Truck (2cr)",{"CTLD_CARGO_AmmoTruck"},CTLD_CARGO.Enum.VEHICLE,2,800,5, "Support")
-Foothold_ctld:AddCratesCargo("Humvee scout (2cr)",{"CTLD_CARGO_Scout"},CTLD_CARGO.Enum.VEHICLE,2,1000,5, "Support")
-Foothold_ctld:AddTroopsCargo("Squad 8",{"CTLD_TROOPS_ATS"},CTLD_CARGO.Enum.TROOPS,8,80,5)
-Foothold_ctld:AddTroopsCargo("Platoon 16",{"CTLD_TROOPS_Platon16"},CTLD_CARGO.Enum.TROOPS,16,80,5)
-Foothold_ctld:AddTroopsCargo("Platoon 32",{"CTLD_TROOPS_Platon1"},CTLD_CARGO.Enum.TROOPS,32,80,5)
---Foothold_ctld:AddTroopsCargo("Structure demolition expert",{"Demolition Expert"},CTLD_CARGO.Enum.TROOPS,1,80,5)
-Foothold_ctld:AddTroopsCargo("Anti-Air Soldiers",{"CTLD_TROOPS_AA"},CTLD_CARGO.Enum.TROOPS,5,80,5)
-Foothold_ctld:AddTroopsCargo("Mortar Squad",{"CTLD_TROOPS_MRS"},CTLD_CARGO.Enum.TROOPS,6,80,5)
-Foothold_ctld:AddCratesCargo("Linebacker (2cr)",{"CTLD_CARGO_Linebacker"},CTLD_CARGO.Enum.VEHICLE,2,1500,5, "SAM/AAA")
---Foothold_ctld:AddCratesCargo("Tank Abrahams(1cr)",{"CTLD_CARGO_TANK"},CTLD_CARGO.Enum.VEHICLE,5,1600,1, "ANTI TANK")
-Foothold_ctld:AddCratesCargo("Vulcan (2cr)",{"CTLD_CARGO_Vulcan"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500,5, "SAM/AAA")
-Foothold_ctld:AddCratesCargo("HAWK Site (1cr)",{"CTLD_CARGO_HAWKSite"},CTLD_CARGO.Enum.FOB,4,1900,5, "SAM/AAA")
-Foothold_ctld:AddCratesCargo("Nasam Site (1cr)",{"CTLD_CARGO_NasamsSite"},CTLD_CARGO.Enum.FOB,4,1900,5, "SAM/AAA")
-Foothold_ctld:AddCratesCargo("FARP (1cr)",{"CTLD_TROOP_FOB"},CTLD_CARGO.Enum.FOB,3,1500,9)
+if Era=='Modern' then
+Foothold_ctld:AddCratesCargoNoMove("IRIS T SLM STR", {"CTLD_CARGO_IRISTSLM_STR"},CTLD_CARGO.Enum.FOB, 1, 2500, 10, "SAM/AAA",nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
+Foothold_ctld:AddCratesCargoNoMove("IRIS T SLM LN", {"CTLD_CARGO_IRISTSLM-LN"},CTLD_CARGO.Enum.FOB, 1, 3500, 15, "SAM/AAA",nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
+Foothold_ctld:AddCratesCargoNoMove("IRIS T SLM C2", {"CTLD_CARGO_IRISTSLM_C2"},CTLD_CARGO.Enum.FOB, 1, 1900, 10, "SAM/AAA",nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
+Foothold_ctld:AddCratesCargoNoMove("IRIS T SLM System", {"CTLD_CARGO_IRISTSLM_System"}, CTLD_CARGO.Enum.FOB, 3, 2800, 10, "SAM/AAA", nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
+Foothold_ctld:AddCratesCargoNoMove("C-RAM", {"CTLD_CARGO_CRAM"}, CTLD_CARGO.Enum.FOB, 2, 1000, 10, "SAM/AAA")
+Foothold_ctld:AddCratesCargoNoMove("HIMARS GMLRRS HE GUIDED",{"CTLD_CARGO_GMLRS_HE"},CTLD_CARGO.Enum.VEHICLE,2,3500,12, "Support", nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
 end
+Foothold_ctld:AddUnits("Humvee",{"CTLD_CARGO_HMMWV"},CTLD_CARGO.Enum.VEHICLE,10, "ANTI TANK")
+Foothold_ctld:AddUnits("Mephisto",{"CTLD_CARGO_Mephisto"},CTLD_CARGO.Enum.VEHICLE,10, "ANTI TANK")
+Foothold_ctld:AddUnits("Vulcan",{"CTLD_CARGO_Vulcan"}, CTLD_CARGO.Enum.VEHICLE, 10, "SAM/AAA")
+Foothold_ctld:AddUnits("Avenger",{"CTLD_CARGO_Avenger"}, CTLD_CARGO.Enum.VEHICLE, 10, "SAM/AAA")
+Foothold_ctld:AddUnits("Humvee scout",{"CTLD_CARGO_Scout"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
+Foothold_ctld:AddUnits("FV-107 Scimitar",{"CTLD_CARGO_Scimitar"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
+Foothold_ctld:AddUnits("FV-101 Scorpion",{"CTLD_CARGO_Scorpion"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
 
 -- How many of the units loaded from the save file should be spawned next time?
 -- Oldest will be deleted first.
 
 local MAX_AT_SPAWN = {
     ["Engineer soldier"]        = 0,
-    ["Mephisto (2cr)"]          = 2,
-    ["Humvee (2cr)"]            = 2,
-    ["Bradly (2cr)"]            = 2,
-    ["L118 (1cr)"]              = 3,
-    ["Ammo Truck (2cr)"]        = 3,
-    ["Humvee scout (2cr)"]      = 1,
+    ["Mephisto"]                = 2,
+    ["Humvee"]                  = 2,
+    ["Bradly"]                  = 2,
+    ["L118"]                    = 3,
+    ["Ammo Truck"]              = 3,
+    ["Humvee scout"]            = 1,
     ["Squad 8"]                 = 0,
     ["Platoon 16"]              = 0,
     ["Platoon 32"]              = 0,
     ["Anti-Air Soldiers"]       = 2,
     ["Mortar Squad"]            = 2,
-    ["Linebacker (2cr)"]        = 2,
-    ["Vulcan (2cr)"]            = 2,
-    ["HAWK Site (1cr)"]         = 3,
-    ["Nasam Site (1cr)"]        = 3,
-    ["Tank Abrahams (1cr)"]     = 0,
-    ["FARP (1cr)"]              = 3,
+    ["Linebacker"]              = 2,
+    ["Vulcan"]                  = 2,
+    ["HAWK Site"]               = 3,
+    ["Nasam Site"]              = 3,
+    ["Tank Abrahams"]           = 0,
+    ["FARP"]                    = 3,
+    ["IRIS T SLM STR"]          = 3,
+    ["IRIS T SLM LN"]           = 8,
+    ["IRIS T SLM C2"]           = 3,
+    ["IRIS T SLM System"]       = 2,
+    ["C-RAM"]                   = 4,
+    ["HIMARS GMLRRS HE GUIDED"] = 4,
+    ["FV-107 Scimitar"]         = 2,
+    ["FV-101 Scorpion"]         = 2,
+    ["Avanger"]                 = 2,
 }
 -- How many farps do you want to load? 
 -- Oldest will not be spawned if the number is exceded.
-local MAX_SAVED_FARPS      = 2
+local MAX_SAVED_FARPS      = 3
 
 Group.getByName('CTLD_TROOPS_Engineers'):destroy()
 Group.getByName('CTLD_CARGO_Mephisto'):destroy()
@@ -156,6 +161,37 @@ Group.getByName('CTLD_CARGO_HAWKSite'):destroy()
 Group.getByName('CTLD_CARGO_NasamsSite'):destroy()
 Group.getByName('CTLD_TROOP_FOB'):destroy()
 Group.getByName('CTLD_CARGO_Scout'):destroy()
+Group.getByName('CTLD_CARGO_IRISTSLM_STR'):destroy()
+Group.getByName('CTLD_CARGO_IRISTSLM-LN'):destroy()
+Group.getByName('CTLD_CARGO_IRISTSLM_C2'):destroy()
+Group.getByName('CTLD_CARGO_IRISTSLM_System'):destroy()
+Group.getByName('CTLD_CARGO_CRAM'):destroy()
+Group.getByName('CTLD_CARGO_GMLRS_HE'):destroy()
+Group.getByName('CTLD_CARGO_Scorpion'):destroy()
+Group.getByName('CTLD_CARGO_Scimitar'):destroy()
+Group.getByName('CTLD_CARGO_Avenger'):destroy()
+
+Foothold_ctld:SetUnitCapabilities("SA342Mistral", false, true, 0, 2, 10, 400)
+Foothold_ctld:SetUnitCapabilities("SA342L", false, true, 0, 2, 10, 400)
+Foothold_ctld:SetUnitCapabilities("SA342M", false, true, 0, 2, 10, 400)
+Foothold_ctld:SetUnitCapabilities("SA342Minigun", false, true, 0, 2, 10, 400)
+Foothold_ctld:SetUnitCapabilities("UH-1H", true, true, 1, 8, 15, 800)
+Foothold_ctld:SetUnitCapabilities("Mi-8MT", true, true, 2, 16, 15, 6000)
+Foothold_ctld:SetUnitCapabilities("Mi-8MTV2", true, true, 2, 18, 15, 6000)
+Foothold_ctld:SetUnitCapabilities("Ka-50", false, false, 0, 0, 15, 400)
+Foothold_ctld:SetUnitCapabilities("Mi-24P", true, true, 2, 8, 15, 1000)
+Foothold_ctld:SetUnitCapabilities("Mi-24V", true, true, 2, 8, 15, 1000)
+Foothold_ctld:SetUnitCapabilities("Hercules", true, true, 8, 20, 25, 20000)
+Foothold_ctld:SetUnitCapabilities("UH-60L", true, true, 2, 20, 16, 3500)
+Foothold_ctld:SetUnitCapabilities("UH-60L_DAP", true, true, 2, 20, 16, 3500)
+Foothold_ctld:SetUnitCapabilities("AH-64D_BLK_II", false, false, 0, 0, 15, 400)
+Foothold_ctld:SetUnitCapabilities("CH-47Fbl1", true, true, 5, 32, 20, 10800)
+Foothold_ctld:SetUnitCapabilities("OH58D", false, false, 0, 0, 14, 400)
+
+
+function Foothold_ctld:OnAfterUnitsSpawn(From, Event, To, Group, Unit, Units)
+
+end
 
 -- ZONES
 
@@ -210,23 +246,6 @@ end
 local scheduler = SCHEDULER:New(nil, function()
     addCTLDZonesForBlueControlled()
 end, {}, 5)
-
-Foothold_ctld:SetUnitCapabilities("SA342Mistral", false, true, 0, 2, 10, 400)
-Foothold_ctld:SetUnitCapabilities("SA342L", false, true, 0, 2, 10, 400)
-Foothold_ctld:SetUnitCapabilities("SA342M", false, true, 0, 2, 10, 400)
-Foothold_ctld:SetUnitCapabilities("SA342Minigun", false, true, 0, 2, 10, 400)
-Foothold_ctld:SetUnitCapabilities("UH-1H", true, true, 1, 8, 15, 800)
-Foothold_ctld:SetUnitCapabilities("Mi-8MT", true, true, 2, 16, 15, 6000)
-Foothold_ctld:SetUnitCapabilities("Mi-8MTV2", true, true, 2, 18, 15, 6000)
-Foothold_ctld:SetUnitCapabilities("Ka-50", false, false, 0, 0, 15, 400)
-Foothold_ctld:SetUnitCapabilities("Mi-24P", true, true, 2, 8, 15, 1000)
-Foothold_ctld:SetUnitCapabilities("Mi-24V", true, true, 2, 8, 15, 1000)
-Foothold_ctld:SetUnitCapabilities("Hercules", true, true, 8, 20, 15, 20000)
-Foothold_ctld:SetUnitCapabilities("UH-60L", true, true, 2, 20, 16, 3500)
-Foothold_ctld:SetUnitCapabilities("UH-60L_DAP", true, true, 2, 20, 16, 3500)
-Foothold_ctld:SetUnitCapabilities("AH-64D_BLK_II", false, false, 0, 0, 15, 400)
-Foothold_ctld:SetUnitCapabilities("CH-47Fbl1", true, true, 5, 32, 20, 10800)
-Foothold_ctld:SetUnitCapabilities("OH58D", false, false, 0, 0, 14, 400)
 
 local TroopUnits = {}
 local GroundUnits = {}
