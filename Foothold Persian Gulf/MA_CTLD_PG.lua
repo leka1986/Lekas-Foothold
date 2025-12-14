@@ -934,7 +934,7 @@ function CaptureZoneIfNeutral()
                     troopGroup:Destroy()
                   if pname then
                       if bc.playerContributions[2][pname] ~= nil then
-                          bc.playerContributions[2][pname] = (bc.playerContributions[2][pname] or 0) + 200
+                          bc:addContribution(pname, 2, 200)
                           bc:addTempStat(pname, 'Zone capture', 1)
                           zoneEvents[zoneName] = zoneEvents[zoneName] or { player = pname }
                           zoneEvents[zoneName].captured = true
@@ -945,7 +945,7 @@ function CaptureZoneIfNeutral()
                     currentZone:upgrade()
                     troopGroup:Destroy()
                   if pname then
-                      bc.playerContributions[2][pname] = (bc.playerContributions[2][pname] or 0) + 100
+                      bc:addContribution(pname, 2, 100)
                       bc:addTempStat(pname, 'Zone upgrade', 1)
                       zoneEvents[zoneName] = zoneEvents[zoneName] or { player = pname }
                       zoneEvents[zoneName].upgraded = true
