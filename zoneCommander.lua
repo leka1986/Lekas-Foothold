@@ -730,6 +730,60 @@ local formations = {
 	end
 	
 
+-- Utility functions for file system operations
+function createDirectoryRecursive(path)
+    -- Remove trailing slash if present
+    path = path:gsub("/$", "")
+    
+    -- Split path into components
+    local parts = {}
+    for part in path:gmatch("[^/\\]+") do
+        table.insert(parts, part)
+    end
+    
+    -- Create each directory level
+    local currentPath = ""
+    for _, part in ipairs(parts) do
+        currentPath = currentPath .. part .. "/"
+        pcall(function() lfs.mkdir(currentPath) end)
+    end
+end
+
+function writeToFile(filepath, content)
+    -- Extract directory path from filepath
+    local dir = filepath:match("(.*/)")
+    
+    -- Create full directory structure if needed
+    if dir then
+        createDirectoryRecursive(dir)
+    end
+    
+    -- Attempt to open file in write mode
+    local file, err = io.open(filepath, "w")
+    
+    -- Check if file opening succeeded
+    if not file then
+        env.info("Error opening file " .. filepath .. ": " .. tostring(err))
+        return false
+    end
+    
+    -- Attempt to write content
+    local success, writeErr = pcall(function()
+        file:write(content)
+    end)
+    
+    -- Always close the file, even if an error occurred
+    file:close()
+    
+    -- Check write result
+    if not success then
+        env.info("Error writing to file " .. filepath .. ": " .. tostring(writeErr))
+        return false
+    end
+    
+    return true
+end
+
 Utils = {}
 do
 
@@ -1000,7 +1054,7 @@ do
 		if type(value)=='number' or type(value)=='boolean' then
 			res = res..tostring(value)
 		elseif type(value)=='string' then
-			res = res..'\''..value..'\''
+			res = res..string.format('%q', value) -- escape the strings before serializing them (solves the problem with multilines missions descriptions)
 		elseif type(value)=='table' then
 			local pad = string.rep(' ', indent)
 			local pad2 = string.rep(' ', indent + 2)
@@ -4971,6 +5025,123 @@ function BattleCommander:getStateTable()
 	if ewrs and ewrs.exportPlayerSettings then
 		states.ewrsSettings = ewrs.exportPlayerSettings()
 	end
+
+    -- Add zone details with flavor text
+    env.info("Adding zone details to state table")
+    if not self.zonesDetails_cache then
+        env.info("Adding zone details to the cache")
+        self.zonesDetails_cache = {}
+        local zonesCount = 0
+        for i,v in ipairs(self.zones) do
+            local cleanFlavorText = nil
+            if v.flavorText then
+                -- Remove trailing newlines and whitespace from flavorText
+                cleanFlavorText = v.flavorText:gsub("[\n\r]+$", ""):gsub("^%s+", ""):gsub("%s+$", "")
+            end
+            self.zonesDetails_cache[v.zone] = {
+                flavorText = cleanFlavorText,
+                hidden     = v.isHidden or false
+            }
+            zonesCount = zonesCount + 1
+        end
+        env.info("Added zone details to " .. zonesCount .. " zones")
+    end
+    states.zonesDetails = self.zonesDetails_cache or {}
+
+    -- Add active missions
+    env.info("Adding active missions to state table")
+    if mc and mc.missions then
+		states.missions = {}
+		local activeMissionCount = 0
+        for _, mission in pairs(mc.missions) do
+            if mission.isRunning or (mission.isActive and mission:isActive()) then
+                local missionTitle = type(mission.title) == "function" and mission.title() or mission.title
+                local missionDescription = type(mission.description) == "function" and mission.description() or mission.description
+                local missionInfo = {
+                    title = missionTitle,
+                    description = missionDescription,
+                    isRunning = mission.isRunning,
+                    isEscortMission = mission.isEscortMission or false
+                }
+                table.insert(states.missions, missionInfo)
+                activeMissionCount = activeMissionCount + 1
+            end
+        end
+        env.info("Added " .. activeMissionCount .. " active missions to state table")
+    else
+        env.info("MissionCommander (mc) not available or has no missions")
+    end
+
+    -- Add connections schema
+    env.info("Adding connections schema to state table")
+    if not self.connections_cache then
+		env.info("Adding connections schema to state table cache")
+        self.connections_cache = {}
+		local connectionCount = 0
+        if self.connections then
+            for _, connection in pairs(self.connections) do
+				table.insert(self.connections_cache, {
+					from = connection.from,
+					to = connection.to
+				})
+				connectionCount = connectionCount + 1
+            end
+        end
+		env.info(string.format("Added %d connections to state table cache", connectionCount))
+    end
+    states.connections = self.connections_cache or {}
+
+    -- Add players positions
+    env.info("Adding players position to state table")
+    states.players = {}
+    local nbPlayers = 0
+    if mist and mist.DBs and mist.DBs.humansByName then
+        for _, unit in pairs(mist.DBs.humansByName) do
+			local dcsUnit = Unit.getByName(unit.unitName)
+			if dcsUnit then
+				local playerTable = {}
+				playerTable.coalition = unit.coalition
+				playerTable.playerName = dcsUnit:getPlayerName()
+				playerTable.unitType = dcsUnit:getTypeName()
+				local point = dcsUnit:getPoint()
+				if point then
+					playerTable.latitude, playerTable.longitude, playerTable.altitude = coord.LOtoLL(point)
+				end
+				table.insert(states.players, playerTable)
+				nbPlayers = nbPlayers + 1
+			end
+        end
+    end
+    env.info("Added " .. nbPlayers .. " active players to state table")
+
+    -- Add ejected pilots positions
+    env.info("Adding ejected pilots position to state table")
+    states.ejectedPilots = {}
+    local nbEjectedPilots = 0
+    if lc and lc.ejectedPilots then
+        for _, pilotData in pairs(lc.ejectedPilots) do
+			for _, ejectedPilot in pairs(lc.ejectedPilots) do
+				local ejectedPilotTable = {
+					playerName = "Unknown",
+					lostCredits = 0
+				}
+				local objectID = ejectedPilot:getObjectID()
+				local pilotData = (landedPilotOwners and landedPilotOwners[objectID]) or (ejectedPilotOwners and ejectedPilotOwners[objectID])
+				if pilotData then
+					ejectedPilotTable.playerName = pilotData.player or "Unknown"
+					ejectedPilotTable.lostCredits = pilotData.lostCredits or 0
+				end
+				local point = ejectedPilot:getPoint()
+				if point then
+					ejectedPilotTable.latitude, ejectedPilotTable.longitude, ejectedPilotTable.altitude = coord.LOtoLL(point)
+				end
+				table.insert(scanTargetSubzones.ejectedPilots, ejectedPilotTable)
+				nbEjectedPilots = nbEjectedPilots + 1
+			end
+        end
+    end
+    env.info(string.format("Added %d ejected pilots data to state table", nbEjectedPilots))
+    env.info("BattleCommander getStateTable completed")
     return states
 end
 
@@ -9064,6 +9235,20 @@ function BattleCommander:addPlayerCredits(pname, amount)
 		statedata.customFlags       = CustomFlags
 		statedata.globalExtraUnlock = self.globalExtraUnlock
 		Utils.saveTable(self.saveFile,'zonePersistance',statedata)
+		
+		-- Create SITAC status file for external tools
+		if lfs and io then
+			if self.saveFile then
+				local sitac_filename = lfs.writedir() .. [[Missions/Saves/foothold.status]]
+				local result = writeToFile(sitac_filename, self.saveFile .. "\n")
+				if result then
+					env.info("Created SITAC file in " .. sitac_filename)
+				end
+			else
+				env.info("Skipping SITAC file creation: persistence filename unavailable")
+			end
+		end
+		
 		if RankingSystem == true then
 		self:saveRanksToDisk()
 		end
