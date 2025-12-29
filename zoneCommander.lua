@@ -5032,26 +5032,17 @@ function BattleCommander:getStateTable()
         env.info("Adding zone details to the cache")
         self.zonesDetails_cache = {}
         local zonesCount = 0
-        for _, zone in ipairs(self.zones) do
-            if zone and zone.zone then
-                local flavorText = ""
-                if zone.flavorText then
-                    if type(zone.flavorText) == "function" then
-                        pcall(function()
-                            flavorText = zone.flavorText()
-                        end)
-                    else
-                        flavorText = tostring(zone.flavorText)
-                    end
-                    -- Clean up trailing whitespace and newlines
-                    flavorText = flavorText:gsub("%s+$", "")
-                end
-                self.zonesDetails_cache[zone.zone] = {
-                    flavorText = flavorText,
-                    hidden = zone.isHidden or false
-                }
-                zonesCount = zonesCount + 1
+        for i,v in ipairs(self.zones) do
+            local cleanFlavorText = nil
+            if v.flavorText then
+                -- Remove trailing newlines and whitespace from flavorText
+                cleanFlavorText = v.flavorText:gsub("[\n\r]+$", ""):gsub("^%s+", ""):gsub("%s+$", "")
             end
+            self.zonesDetails_cache[v.zone] = {
+                flavorText = cleanFlavorText,
+                hidden     = v.isHidden or false
+            }
+            zonesCount = zonesCount + 1
         end
         env.info("Added zone details to " .. zonesCount .. " zones")
     end
@@ -5059,43 +5050,20 @@ function BattleCommander:getStateTable()
 
     -- Add active missions
     env.info("Adding active missions to state table")
-    states.missions = {}
-    local activeMissionCount = 0
     if mc and mc.missions then
+		states.missions = {}
+		local activeMissionCount = 0
         for _, mission in pairs(mc.missions) do
-            if mission and (mission.isActive or mission.isRunning) then
-                local missionData = {
-                    isRunning = mission.isRunning or false,
-                    isEscortMission = mission.escortMission or false
+            if mission.isRunning or (mission.isActive and mission:isActive()) then
+                local missionTitle = type(mission.title) == "function" and mission.title() or mission.title
+                local missionDescription = type(mission.description) == "function" and mission.description() or mission.description
+                local missionInfo = {
+                    title = missionTitle,
+                    description = missionDescription,
+                    isRunning = mission.isRunning,
+                    isEscortMission = mission.isEscortMission or false
                 }
-                
-                -- Handle title (can be function or string)
-                if mission.title then
-                    if type(mission.title) == "function" then
-                        pcall(function()
-                            missionData.title = mission.title()
-                        end)
-                    else
-                        missionData.title = tostring(mission.title)
-                    end
-                else
-                    missionData.title = "Unknown Mission"
-                end
-                
-                -- Handle description (can be function or string)
-                if mission.description then
-                    if type(mission.description) == "function" then
-                        pcall(function()
-                            missionData.description = mission.description()
-                        end)
-                    else
-                        missionData.description = tostring(mission.description)
-                    end
-                else
-                    missionData.description = ""
-                end
-                
-                table.insert(states.missions, missionData)
+                table.insert(states.missions, missionInfo)
                 activeMissionCount = activeMissionCount + 1
             end
         end
@@ -5107,17 +5075,19 @@ function BattleCommander:getStateTable()
     -- Add connections schema
     env.info("Adding connections schema to state table")
     if not self.connections_cache then
+		env.info("Adding connections schema to state table cache")
         self.connections_cache = {}
+		local connectionCount = 0
         if self.connections then
             for _, connection in pairs(self.connections) do
-                if connection.from and connection.to then
-                    table.insert(self.connections_cache, {
-                        from = connection.from,
-                        to = connection.to
-                    })
-                end
+				table.insert(self.connections_cache, {
+					from = connection.from,
+					to = connection.to
+				})
+				connectionCount = connectionCount + 1
             end
         end
+		env.info(string.format("Added %d connections to state table cache", connectionCount))
     end
     states.connections = self.connections_cache or {}
 
@@ -5127,27 +5097,19 @@ function BattleCommander:getStateTable()
     local nbPlayers = 0
     if mist and mist.DBs and mist.DBs.humansByName then
         for _, unit in pairs(mist.DBs.humansByName) do
-            if unit and unit.coalition and unit.unitName and unit.players then
-                local playerName = unit.players[1]
-                if playerName then
-                    local dcsUnit = Unit.getByName(unit.unitName)
-                    if dcsUnit then
-                        local pos = dcsUnit:getPosition()
-                        if pos and pos.p then
-                            local lat, lon = coord.LOtoLL(pos.p)
-                            table.insert(states.players, {
-                                coalition = unit.coalition,
-                                playerName = playerName,
-                                unitType = dcsUnit:getTypeName(),
-                                latitude = lat,
-                                longitude = lon,
-                                altitude = pos.p.y
-                            })
-                            nbPlayers = nbPlayers + 1
-                        end
-                    end
-                end
-            end
+			local dcsUnit = Unit.getByName(unit.unitName)
+			if dcsUnit then
+				local playerTable = {}
+				playerTable.coalition = unit.coalition
+				playerTable.playerName = dcsUnit:getPlayerName()
+				playerTable.unitType = dcsUnit:getTypeName()
+				local point = dcsUnit:getPoint()
+				if point then
+					playerTable.latitude, playerTable.longitude, playerTable.altitude = coord.LOtoLL(point)
+				end
+				table.insert(states.players, playerTable)
+				nbPlayers = nbPlayers + 1
+			end
         end
     end
     env.info("Added " .. nbPlayers .. " active players to state table")
@@ -5157,33 +5119,28 @@ function BattleCommander:getStateTable()
     states.ejectedPilots = {}
     local nbEjectedPilots = 0
     if lc and lc.ejectedPilots then
-        for pilotName, pilotData in pairs(lc.ejectedPilots) do
-            if pilotData and pilotData.position then
-                local ejectedPilotData = {}
-                
-                -- Get original player name from landed or ejected pilot owners
-                local originalPlayerName = nil
-                if landedPilotOwners and landedPilotOwners[pilotName] then
-                    originalPlayerName = landedPilotOwners[pilotName]
-                elseif ejectedPilotOwners and ejectedPilotOwners[pilotName] then
-                    originalPlayerName = ejectedPilotOwners[pilotName]
-                end
-                
-                ejectedPilotData.playerName = originalPlayerName or pilotName
-                ejectedPilotData.lostCredits = pilotData.lostCredits or 0
-                
-                -- Convert position to lat/lon
-                local lat, lon = coord.LOtoLL(pilotData.position)
-                ejectedPilotData.latitude = lat
-                ejectedPilotData.longitude = lon
-                ejectedPilotData.altitude = pilotData.position.y
-                
-                table.insert(states.ejectedPilots, ejectedPilotData)
-                nbEjectedPilots = nbEjectedPilots + 1
-            end
+        for _, pilotData in pairs(lc.ejectedPilots) do
+			for _, ejectedPilot in pairs(lc.ejectedPilots) do
+				local ejectedPilotTable = {
+					playerName = "Unknown",
+					lostCredits = 0
+				}
+				local objectID = ejectedPilot:getObjectID()
+				local pilotData = (landedPilotOwners and landedPilotOwners[objectID]) or (ejectedPilotOwners and ejectedPilotOwners[objectID])
+				if pilotData then
+					ejectedPilotTable.playerName = pilotData.player or "Unknown"
+					ejectedPilotTable.lostCredits = pilotData.lostCredits or 0
+				end
+				local point = ejectedPilot:getPoint()
+				if point then
+					ejectedPilotTable.latitude, ejectedPilotTable.longitude, ejectedPilotTable.altitude = coord.LOtoLL(point)
+				end
+				table.insert(scanTargetSubzones.ejectedPilots, ejectedPilotTable)
+				nbEjectedPilots = nbEjectedPilots + 1
+			end
         end
     end
-    env.info("Added " .. nbEjectedPilots .. " ejected pilots data to state table")
+    env.info(string.format("Added %d ejected pilots data to state table", nbEjectedPilots))
     env.info("BattleCommander getStateTable completed")
     return states
 end
