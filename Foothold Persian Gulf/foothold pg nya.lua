@@ -2487,6 +2487,79 @@ local function buildAllowTable()
 	return t
 end
 
+local function buildLogisticAllowTable()
+	local allowed = {}
+	for _, z in pairs(bc:getZones()) do
+		if z.side == 2 and z.airbaseName and not z.LogisticCenter and not z.isHidden and not z.suspended then
+			allowed[z.zone] = true
+		end
+	end
+	return allowed
+end
+
+local function buildWarehouseResupplyAllowTable()
+	local allowed = {}
+	if not WarehouseLogistics then
+		return allowed
+	end
+	for _, z in pairs(bc:getZones()) do
+		if z.side == 2 and z.airbaseName and not z.LogisticCenter and not z.isHidden and not z.suspended then
+			allowed[z.zone] = true
+		end
+	end
+	return allowed
+end
+
+local function applyLogisticCenterUpgrade(zoneObj)
+	if not zoneObj or zoneObj.side ~= 2 or zoneObj.suspended then
+		return 'Must pick friendly zone'
+	end
+	if not zoneObj.airbaseName then
+		return 'Zone must have an airbase'
+	end
+	if zoneObj.LogisticCenter then
+		return 'Zone already upgraded'
+	end
+	if type(zoneObj.canRecieveSupply) == 'function' and zoneObj:canRecieveSupply() then
+		return 'The zone must be fully upgraded first!'
+	end
+
+	local ok, err = bc:addWarehouseItemsAtZone(zoneObj, 2, 500000)
+	if not ok then
+		return err or 'Unable to restock warehouse'
+	end
+
+	zoneObj.LogisticCenter = true
+	if type(zoneObj.updateLabel) == 'function' then
+		zoneObj:updateLabel()
+	end
+
+	trigger.action.outTextForCoalition(2, zoneObj.zone..' is now a Logistic Center. Warehouse restocked.', 15)
+	return true
+end
+
+local function applyWarehouseResupply(zoneObj)
+	if not WarehouseLogistics then
+		return 'Warehouse logistics is disabled'
+	end
+	if not zoneObj or zoneObj.side ~= 2 or zoneObj.suspended then
+		return 'Must pick friendly zone'
+	end
+	if not zoneObj.airbaseName then
+		return 'Zone must have an airbase'
+	end
+	if zoneObj.LogisticCenter then
+		return 'Zone already upgraded'
+	end
+	local ok, err = bc:addWarehouseItemsAtZone(zoneObj, 2, 50)
+	if not ok then
+		return err or 'Unable to restock warehouse'
+	end
+
+	trigger.action.outTextForCoalition(2, zoneObj.zone..' warehouse resupplied with 50 items.', 15)
+	return true
+end
+
 local infMenu=nil
 bc:registerShopItem('zinf','Add infantry squad to zone',500,function(sender)
 	if infMenu then
@@ -2602,6 +2675,75 @@ function(sender,params)
 	else
 		return 'Must pick friendly zone'
 	end
+end)
+
+local logiMenu=nil
+bc:registerShopItem('zlogc','Upgrade zone to logistic center',2000,function(sender)
+	if logiMenu then
+		return 'Already choosing a zone'
+	end
+	local allow = buildLogisticAllowTable()
+	if not next(allow) then
+		return 'No eligible airbase zones'
+	end
+	local pickZone=function(zName)
+		if not logiMenu then return end
+		local zoneObj = bc:getZoneByName(zName)
+		local result = applyLogisticCenterUpgrade(zoneObj)
+		if result == true then
+			missionCommands.removeItemForCoalition(2,logiMenu)
+			logiMenu=nil
+		else
+			if type(result) == 'string' then
+				trigger.action.outTextForCoalition(2,result,10)
+			end
+			return result
+		end
+	end
+	logiMenu = bc:showTargetZoneMenu(2,'Choose zone for Logistic Center',pickZone,2,nil,allow)
+	trigger.action.outTextForCoalition(2,'Select friendly fully-upgraded airbase zone from F10 menu.',15)
+end,
+function(sender,params)
+	if params.zone then
+		return applyLogisticCenterUpgrade(params.zone)
+	end
+	return 'Must pick friendly zone'
+end)
+
+local warehouseMenu=nil
+bc:registerShopItem('zwh50','Resupply warehouse with 50',500,function(sender)
+	if warehouseMenu then
+		return 'Already choosing a zone'
+	end
+	if not WarehouseLogistics then
+		return 'Warehouse logistics is disabled'
+	end
+	local allow = buildWarehouseResupplyAllowTable()
+	if not next(allow) then
+		return 'No eligible airbase zones'
+	end
+	local pickZone=function(zName)
+		if not warehouseMenu then return end
+		local zoneObj = bc:getZoneByName(zName)
+		local result = applyWarehouseResupply(zoneObj)
+		if result == true then
+			missionCommands.removeItemForCoalition(2,warehouseMenu)
+			warehouseMenu=nil
+		else
+			if type(result) == 'string' then
+				trigger.action.outTextForCoalition(2,result,10)
+			end
+			return result
+		end
+	end
+	warehouseMenu = bc:showTargetZoneMenu(2,'Choose zone to resupply warehouse',pickZone,2,nil,allow)
+	trigger.action.outTextForCoalition(2,'Select friendly airbase zone from F10 menu.',15)
+end,
+function(sender,params)
+	if params.zone then
+		return applyWarehouseResupply(params.zone)
+	end
+	return 'Must pick friendly zone'
 end)
 
 local armMenu=nil
@@ -2753,16 +2895,18 @@ bc:addShopItem(2, 'supplies', -1,14)
 bc:addShopItem(2,'zinf',-1,15)
 bc:addShopItem(2,'zarm',-1,16)
 bc:addShopItem(2,'zsam',-1,17)
-bc:addShopItem(2,'zpat',-1,18)
-bc:addShopItem(2,'gslot',1,19)
-bc:addShopItem(2, 'armor', -1,20)
-bc:addShopItem(2, 'artillery', -1,21)
-bc:addShopItem(2, 'recon', -1,22)
-bc:addShopItem(2, 'airdef', -1,23)
-bc:addShopItem(2, 'cruisemsl', 12, 24)
-bc:addShopItem(2, 'jam', -1,25)
-bc:addShopItem(2, '9lineam', -1,26)
-bc:addShopItem(2, '9linefm', -1,27)
+bc:addShopItem(2,'zlogc',-1,18)
+bc:addShopItem(2,'zwh50',-1,19)
+bc:addShopItem(2,'zpat',-1,20)
+bc:addShopItem(2,'gslot',1,21)
+bc:addShopItem(2, 'armor', -1,22)
+bc:addShopItem(2, 'artillery', -1,23)
+bc:addShopItem(2, 'recon', -1,24)
+bc:addShopItem(2, 'airdef', -1,25)
+bc:addShopItem(2, 'cruisemsl', 12, 26)
+bc:addShopItem(2, 'jam', -1,27)
+bc:addShopItem(2, '9lineam', -1,28)
+bc:addShopItem(2, '9linefm', -1,29)
 
 
 supplyZones = {
