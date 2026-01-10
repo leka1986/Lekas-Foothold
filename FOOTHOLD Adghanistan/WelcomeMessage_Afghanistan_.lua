@@ -8,91 +8,6 @@ BASE:I("Loading Leka's special all in one script handler")
 static = STATIC:FindByName("EventMan", true)
 
 
-local atisZones = {
-    ["Bagram"] = {airbaseName = AIRBASE.Afghanistan.Bagram},
-    ["Bamyan"] = {airbaseName = AIRBASE.Afghanistan.Bamyan},
-    ["Bost"] = {airbaseName = AIRBASE.Afghanistan.Bost},
-    ["Camp Bastion"] = {airbaseName = AIRBASE.Afghanistan.Camp_Bastion},
-    ["Chaghcharan"] = {airbaseName = AIRBASE.Afghanistan.Chaghcharan},
-    ["Dwyer"] = {airbaseName = AIRBASE.Afghanistan.Dwyer},
-    ["Farah"] = {airbaseName = AIRBASE.Afghanistan.Farah},
-    ["Gardez"] = {airbaseName = AIRBASE.Afghanistan.Gardez},
-	["Ghazni Heliport"] = {airbaseName = AIRBASE.Afghanistan.Ghazni_Heliport},
-	["Herat"] = {airbaseName = AIRBASE.Afghanistan.Herat},
-	["Jalalabad"] = {airbaseName = AIRBASE.Afghanistan.Jalalabad},
-	["Kabul"] = {airbaseName = AIRBASE.Afghanistan.Kabul},
-	["Kandahar"] = {airbaseName = AIRBASE.Afghanistan.Kandahar},
-	["Maymana Zahiraddin Faryabi"] = {airbaseName = AIRBASE.Afghanistan.Maymana_Zahiraddin_Faryabi},
-	["Nimroz"] = {airbaseName = AIRBASE.Afghanistan.Nimroz},
-	["Qala i Naw"] = {airbaseName = AIRBASE.Afghanistan.Qala_i_Naw},
-	["Sharana"] = {airbaseName = AIRBASE.Afghanistan.Sharana},
-	["Shindand"] = {airbaseName = AIRBASE.Afghanistan.Shindand},
-	["Tarinkot"] = {airbaseName = AIRBASE.Afghanistan.Tarinkot},
-}
-
-local atisZoneNames = {
-}
--- Define all zones
-allZones = {
-    "Kandahar",  
-	"Checkpoint Alpha", 
-	"Bost", 
-	"Camp Bastion",
-	"Dwyer", 
-	"Nimroz", 
-	"Farah", 
-	"Shindand", 
-	"Herat", 
-	"Qala i Naw", 
-	"Maymana Zahiraddin Faryabi", 
-	"Chaghcharan", 
-	"Bamyan", 
-	"Bagram", 
-	"Kabul", 
-	"Checkpoint Kabul W", 
-	"Checkpoint Kabul S", 
-	"Checkpoint Kabul E", 
-	"FOB Kunar", 
-	"Jalalabad", 
-	"Gardez", 
-	"Checkpoint Delta", 
-	"Ghazni Heliport", 
-	"Sharana", 
-	"Checkpoint Charlie", 
-	"Checkpoint Bravo", 
-	"Tarinkot",
-    "FOB-Jamsheed",
-    'FOB-Bostick',
-    'FOB-Lagman',
-    'FOB-Shank',
-    'FOB-Javid Basharat',
-    'FOB-Hamid Karzai',
-    'FOB-Ismail Khan',
-	'FOB-Ahmad Shah Massoud',
-    'FOB-Farid Basharat',
-    'FOB-Delaram',
-}
-airbaseStatics = {
-["Checkpoint Alpha"] = {"Checkpoint Alphaammo", "Checkpoint Alphafuel", "Checkpoint Alphatent1", "Checkpoint Alphatent2", "Checkpoint Alphatent3", "Checkpoint Alphatent4", "Checkpoint Alphacommand", "Checkpoint Alphawind"},
-["Checkpoint Bravo"] = {"Checkpoint Bravoammo", "Checkpoint Bravofuel", "Checkpoint Bravotent1", "Checkpoint Bravotent2", "Checkpoint Bravotent3", "Checkpoint Bravotent4", "Checkpoint Bravocommand", "Checkpoint Bravowind"},
-["Checkpoint Charlie"] = {"Checkpoint Charlieammo", "Checkpoint Charliefuel", "Checkpoint Charlietent1", "Checkpoint Charlietent2", "Checkpoint Charlietent3", "Checkpoint Charlietent4", "Checkpoint Charliecommand", "Checkpoint Charliewind"},
-["Checkpoint Delta"] = {"Checkpoint Deltaammo", "Checkpoint Deltafuel", "Checkpoint Deltatent1", "Checkpoint Deltatent2", "Checkpoint Deltatent3", "Checkpoint Deltatent4", "Checkpoint Deltacommand", "Checkpoint Deltawind"},
-["Checkpoint Kabul W"] = {"Checkpoint Kabul Wammo", "Checkpoint Kabul Wfuel", "Checkpoint Kabul Wtent1", "Checkpoint Kabul Wtent2", "Checkpoint Kabul Wtent3", "Checkpoint Kabul Wtent4", "Checkpoint Kabul Wcommand", "Checkpoint Kabul Wwind"},
-["Checkpoint Kabul S"] = {"Checkpoint Kabul Sammo", "Checkpoint Kabul Sfuel", "Checkpoint Kabul Stent1", "Checkpoint Kabul Stent2", "Checkpoint Kabul Stent3", "Checkpoint Kabul Stent4", "Checkpoint Kabul Scommand", "Checkpoint Kabul Swind"},
-["Checkpoint Kabul E"] = {"Checkpoint Kabul Eammo", "Checkpoint Kabul Efuel", "Checkpoint Kabul Etent1", "Checkpoint Kabul Etent2", "Checkpoint Kabul Etent3", "Checkpoint Kabul Etent4", "Checkpoint Kabul Ecommand", "Checkpoint Kabul Ewind"},
-["FOB Kunar"] = {"FOB Kunarammo", "FOB Kunarfuel", "FOB Kunartent1", "FOB Kunartent2", "FOB Kunartent3", "FOB Kunartent4", "FOB Kunarcommand", "FOB Kunarwind"},
-["FOB-Jamsheed"] = {"FOB-Jamsheedammo", "FOB-Jamsheedfuel", "FOB-Jamsheedtent1", "FOB-Jamsheedtent2", "FOB-Jamsheedtent3", "FOB-Jamsheedtent4", "FOB-Jamsheedcommand", "FOB-Jamsheedwind"},
-["FOB-Bostick"] = {"FOB-Bostickammo", "FOB-Bostickfuel", "FOB-Bosticktent1", "FOB-Bosticktent2", "FOB-Bosticktent3", "FOB-Bosticktent4", "FOB-Bostickcommand", "FOB-Bostickwind"},
-["FOB-Lagman"] = {"FOB-Lagmanammo", "FOB-Lagmanfuel", "FOB-Lagmantent1", "FOB-Lagmantent2", "FOB-Lagmantent3", "FOB-Lagmantent4", "FOB-Lagmancommand", "FOB-Lagmanwind"},
-["FOB-Shank"] = {"FOB-Shankammo", "FOB-Shankfuel", "FOB-Shanktent1", "FOB-Shanktent2", "FOB-Shanktent3", "FOB-Shanktent4", "FOB-Shankcommand", "FOB-Shankwind"},
-["FOB-Javid Basharat"] = {"FOB-Javid Basharatammo", "FOB-Javid Basharatfuel", "FOB-Javid Basharattent1", "FOB-Javid Basharattent2", "FOB-Javid Basharattent3", "FOB-Javid Basharattent4", "FOB-Javid Basharatcommand", "FOB-Javid Basharatwind"},
-["FOB-Hamid Karzai"] = {"FOB-Hamid Karzaiammo", "FOB-Hamid Karzaifuel", "FOB-Hamid Karzaitent1", "FOB-Hamid Karzaitent2", "FOB-Hamid Karzaitent3", "FOB-Hamid Karzaitent4", "FOB-Hamid Karzaicommand", "FOB-Hamid Karzaiwind"},
-["FOB-Ismail Khan"] = {"FOB-Ismail Khanammo", "FOB-Ismail Khanfuel", "FOB-Ismail Khantent1", "FOB-Ismail Khantent2", "FOB-Ismail Khantent3", "FOB-Ismail Khantent4", "FOB-Ismail Khancommand", "FOB-Ismail Khanwind"},
-["FOB-Ahmad Shah Massoud"] = {"FOB-Ahmad Shah Massoudammo", "FOB-Ahmad Shah Massoudfuel", "FOB-Ahmad Shah Massoudtent1", "FOB-Ahmad Shah Massoudtent2", "FOB-Ahmad Shah Massoudtent3", "FOB-Ahmad Shah Massoudtent4", "FOB-Ahmad Shah Massoudcommand", "FOB-Ahmad Shah Massoudwind"},
-["FOB-Farid Basharat"] = {"FOB-Farid Basharatammo", "FOB-Farid Basharatfuel", "FOB-Farid Basharattent1", "FOB-Farid Basharattent2", "FOB-Farid Basharattent3", "FOB-Farid Basharattent4", "FOB-Farid Basharatcommand", "FOB-Farid Basharatwind"},
-["FOB-Delaram"] = {"FOB-Delaramammo", "FOB-Delaramfuel", "FOB-Delaramtent1", "FOB-Delaramtent2", "FOB-Delaramtent3", "FOB-Delaramtent4", "FOB-Delaramcommand", "FOB-Delaramwind"},
-}
-
 followID={}
 staticDetails = {}
 spawnedGroups = {}
@@ -901,7 +816,7 @@ if event.id == EVENTS.BaseCaptured and event.Place then
 	local capturedBaseName = event.Place:GetName()  
 	local coalitionSide = event.Place:GetCoalition()
 
-	if (atisZoneNames[capturedBaseName] or atisZones[capturedBaseName]) and event.Place:GetCoalition() == coalition.side.BLUE then  
+	if atisZones[capturedBaseName] and event.Place:GetCoalition() == coalition.side.BLUE then  
 		
 			local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCoalitions("blue"):FilterAlive():FilterOnce()
 			clientSet:ForEachClient(function(client)
