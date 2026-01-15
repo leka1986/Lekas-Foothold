@@ -11628,7 +11628,7 @@ local function ac_attack(group, ownPos, tgtPos, resume, sa, skill) -- this will 
     
     if group and tgtPos then
         if sa and (sa.cls=="SAM" or sa.cls=="SHORAD"
-                or sa.cls=="AAA" or sa.cls=="ARTY"
+                --[[ or sa.cls=="AAA" ]] or sa.cls=="ARTY"
                 or sa.cls=="MLRS") then
         return false
         end
@@ -12425,7 +12425,7 @@ local reactionsDb = {
         }, 				
         ["s_cat"] = { -- unit category
             [0] = 0, -- airplane
-            [1] = 3, -- helicopter
+            [1] = 4, -- helicopter
             [2] = 2, -- ground unit
             [3] = 0, -- ship
             [4] = 2, -- structure
@@ -12443,14 +12443,14 @@ local reactionsDb = {
             [1] = 0, -- detailed shooter position known
         },     
         ["o_cls"] = {
-            ["MBT"] = 1,
-            ["ATGM"] = 1,
+            ["MBT"] = 1.2,
+            ["ATGM"] = 1.5,
             ["MLRS"] = 0,
             ["ARTY"] = 0,
             ["MISSILE"] = 0,
             ["MANPADS"] = 0,
             ["SHORAD"] = 0,
-            ["AAA"] = 1,
+            ["AAA"] = 1.5,
             ["SAM"] = 0,
             ["SAML"]= 0,
             ["SAMC"]= 0,
@@ -12520,7 +12520,7 @@ local reactionsDb = {
             ["MISSILE"] = 0,
             ["MANPADS"] = 3,
             ["SHORAD"] = 3,
-            ["AAA"] = 2,
+            ["AAA"] = 1.5,
             ["SAM"] = 0,
             ["SAML"]= 0,
             ["SAMC"]= 0,
@@ -12565,7 +12565,7 @@ local reactionsDb = {
         }, 				
         ["s_cat"] = { -- unit category
             [0] = 0, -- airplane
-            [1] = 1, -- helicopter
+            [1] = 2, -- helicopter
             [2] = 4, -- ground unit
             [3] = 0, -- ship
             [4] = 2, -- structure
@@ -12584,7 +12584,7 @@ local reactionsDb = {
         },     
         ["o_cls"] = { 
             ["MBT"] = 1,
-            ["ATGM"] = 1,
+            ["ATGM"] = 1.1,
             ["MLRS"] = 2,
             ["ARTY"] = 2,
             ["MISSILE"] = 3,
@@ -12594,10 +12594,10 @@ local reactionsDb = {
             ["SAM"] = 2,
             ["SAML"]= 1,
             ["SAMC"]= 1,
-            ["IFV"] = 1,
-            ["APC"] = 2,
+            ["IFV"] = 3.4,
+            ["APC"] = 3.5,
             ["RECCE"] = 1,
-            ["LOGI"] = 2,
+            ["LOGI"] = 4,
             ["INF"] = 3,
             ["UNKN"] = 1,
         }, 
@@ -12660,7 +12660,7 @@ local reactionsDb = {
             ["MISSILE"] = 0,
             ["MANPADS"] = 0,
             ["SHORAD"] = 0,
-            ["AAA"] = 2,
+            ["AAA"] = 1.5,
             ["SAM"] = 0,
             ["SAML"]= 0,
             ["SAMC"]= 0,

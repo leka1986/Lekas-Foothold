@@ -719,14 +719,28 @@ function RunwayStrikeAltitude() return math.random(23,28)*1000 end
 
 zones.akrotiri:addGroups({
 	GroupCommander:new({name='Akrotiri-supply-Paphos', mission='supply', template='HeloSupplyTemplate', targetzone='Paphos'}),
-	--GroupCommander:new({name='Akrotiri-supply-Larnaca', mission='supply', template='HeloSupplyTemplate', targetzone='Larnaca'}),
 	GroupCommander:new({name='Akrotiri-supply-Ercan', mission='supply', template='PlaneSupplyTemplate', targetzone='Ercan'}),
 	GroupCommander:new({name='Akrotiri-supply-Larnaca', mission='supply', template='PlaneSupplyTemplate', targetzone='Larnaca'}),
+	
 	GroupCommander:new({name='Akrotiri-patrol-Larnaca', mission='patrol', template='CapPlaneTemplate',MissionType='CAP', targetzone='Larnaca', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Akrotiri-patrol-Larnaca', mission='patrol', template='CapPlaneTemplate',MissionType='CAP', targetzone='Larnaca', Altitude = CapAltitude()}),
+	
+	
+	GroupCommander:new({name='Akrotiri-attack-Larnaca', mission='attack', template='CapPlaneTemplate',MissionType='CAP', targetzone='Larnaca', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Akrotiri-patrol-Paphos', mission='attack', template='CapPlaneTemplate',MissionType='CAP', targetzone='Paphos', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Akrotiri-patrol-Ercan', mission='attack', template='CapPlaneTemplate',MissionType='CAP', targetzone='Ercan', Altitude = CapAltitude()}),
+
+	GroupCommander:new({name='Akrotiri-attack-Paphos-Cas', mission='attack', template='CasHeloTemplate',MissionType='CAS', targetzone='Paphos'}),
+	GroupCommander:new({name='Akrotiri-attack-ercan-Cas', mission='attack', template='CasPlaneTemplate',MissionType='CAS', targetzone='ercan', Altitude = CasAltitude()}),
+	GroupCommander:new({name='Akrotiri-attack-Polis-Sead', mission='attack', template='SeadPlaneTemplate',MissionType='SEAD', targetzone='Polis', Altitude = SeadAltitude()}),
+	GroupCommander:new({name='Akrotiri-attack-ercan-Sead', mission='attack', template='SeadPlaneTemplate',MissionType='SEAD', targetzone='ercan', Altitude = SeadAltitude()}),
+
 })
 
 zones.paphos:addGroups({
-	GroupCommander:new({name='Paphos-supply-Polis', mission='supply', template='HeloSupplyTemplate', targetzone='Polis'})
+	GroupCommander:new({name='Paphos-supply-Polis', mission='supply', template='HeloSupplyTemplate', targetzone='Polis'}),
+	GroupCommander:new({name='Paphos-attack-Polis', mission='attack', template='CasHeloTemplate',MissionType='CAS', targetzone='Polis'}),
+	GroupCommander:new({name='Paphos-attack-Pinarbashi-cas', mission='supply', template='CasPlaneTemplate',MissionType='CAS', targetzone='Pinarbashi', Altitude = CasAltitude()}),
 })
 
 zones.carrier:addGroups({
@@ -742,13 +756,19 @@ zones.polis:addGroups({
 zones.karavostasi:addGroups({
 	GroupCommander:new({name='karavostasi-supply-Polis', mission='supply', template='HeloSupplyTemplate', targetzone='Polis'}),
 	GroupCommander:new({name='karavostasi-supply-Pinarbashi', mission='supply', template='HeloSupplyTemplate', targetzone='Pinarbashi'}),
+
 	GroupCommander:new({name='karavostasi-attack-Pinarbashi-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Pinarbashi'}),
+	GroupCommander:new({name='karavostasi-attack-Paphos-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Paphos'}),
+	GroupCommander:new({name='karavostasi-attack-Polis-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Polis'}),
+
+	GroupCommander:new({name='karavostasi-attack-Polis-convoy', mission='attack', template='AttackConvoy', targetzone='Polis', type='surface'}),
 })
 
 zones.pinarbashi:addGroups({
 	GroupCommander:new({name='Pinarbashi-supply-Karavostasi', mission='supply', template='HeloSupplyTemplate', targetzone='Karavostasi'}),
 	GroupCommander:new({name='Pinarbashi-supply-Ercan', mission='supply', template='HeloSupplyTemplate', targetzone='Ercan'}),
-	GroupCommander:new({name='Pinarbashi-attack-Karavostasi-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Karavostasi', diceChance = 50})
+	GroupCommander:new({name='Pinarbashi-attack-Karavostasi-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Karavostasi', diceChance = 50}),
+
 })
 
 zones.ercan:addGroups({
@@ -757,10 +777,13 @@ zones.ercan:addGroups({
 	GroupCommander:new({name='Ercan-attack-Incirlik', mission='attack', template='CapPlaneTemplate',MissionType='CAP', targetzone='Incirlik', Altitude = CapAltitude(), Bluecondition = function() return zones.redcarrier.wasBlue end}),
 	GroupCommander:new({name='Ercan-patrol-Ercan-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Ercan', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Ercan-attack-Paphos-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Paphos', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Ercan-patrol-Paphos-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Paphos', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Ercan-patrol-Karavostasi-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Karavostasi', Altitude = CapAltitude()}),
-	GroupCommander:new({name='Ercan-attack-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Paphos', Altitude = CasAltitude()}),
-	GroupCommander:new({name='Ercan-attack-Polis', mission='attack', template='AttackConvoy', targetzone='Polis', type='surface', diceChance = 30}),
-	GroupCommander:new({name='Ercan-attack-Pinarbashi', mission='attack', template='AttackConvoy', targetzone='Pinarbashi', type='surface', spawnDelayFactor = 4})
+	GroupCommander:new({name='Ercan-attack-Paphos-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Paphos', Altitude = CasAltitude()}),
+	GroupCommander:new({name='Ercan-attack-Polis-CAS', mission='attack', template='CasPlaneTemplate', targetzone='Polis',MissionType='CAS', Altitude = CasAltitude()}),
+	GroupCommander:new({name='Ercan-attack-Pinarbashi', mission='attack', template='AttackConvoy', targetzone='Pinarbashi', type='surface', spawnDelayFactor = 4}),
+	
+
 })
 
 zones.gecitkale:addGroups({
@@ -769,8 +792,14 @@ zones.gecitkale:addGroups({
 	GroupCommander:new({name='Gecitkale-supply-Larnaca', mission='supply', template='HeloSupplyTemplate', targetzone='Larnaca'}),
 	GroupCommander:new({name='Gecitkale-supply-Incirlik', mission='supply', template='PlaneSupplyTemplate', targetzone='Incirlik'}),
 	GroupCommander:new({name='Gecitkale-patrol-Red carrier', mission='patrol', template='CapPlaneTemplate',MissionType='CAP', targetzone='Red Carrier', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Gecitkale-patrol-Paphos', mission='patrol', template='CapPlaneTemplate',MissionType='CAP', targetzone='Paphos', Altitude = CapAltitude()}),
 	--GroupCommander:new({name='Gecitkale-supply-Carrier', mission='supply', template='HeloSupplyTemplate', targetzone='Red Carrier'}),
-	GroupCommander:new({name='Gecitkale-attack-Pinarbashi-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Pinarbashi', spawnDelayFactor = 3})
+	GroupCommander:new({name='Gecitkale-attack-Pinarbashi-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Pinarbashi', spawnDelayFactor = 3}),
+	GroupCommander:new({name='Gecitkale-attack-Paphos-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Paphos', Altitude = CasAltitude()}),
+	GroupCommander:new({name='Gecitkale-attack-Paphos-rwy', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Paphos', Altitude = RunwayStrikeAltitude()}),
+	GroupCommander:new({name='Gecitkale-attack-Akrotiri-rwy', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Akrotiri', Altitude = RunwayStrikeAltitude()}),
+	GroupCommander:new({name='Gecitkale-attack-Akrotiri-SEAD', mission='attack', template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Akrotiri', Altitude = SeadAltitude()}),
+	GroupCommander:new({name='Gecitkale-attack-Ercan-Convoy', mission='attack', template='AttackConvoy', targetzone='Ercan', type='surface'}),
 })
 
 zones.redcarrier:addGroups({
@@ -891,7 +920,7 @@ zones.jirah:addGroups({
 	GroupCommander:new({name='Jirah-attack-Tabqa-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tabqa'}),
 	GroupCommander:new({name='Jirah-attack-Juliett-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Juliett', Altitude = CasAltitude()}),
 	GroupCommander:new({name='Jirah-attack-Aleppo-surface', mission='attack', targetzone='Aleppo', type='surface'}),
-	GroupCommander:new({name='Jirah-attack-Durayhim', mission='attack', template='AttackConvoy', targetzone='Durayhim', type='surface'})
+	GroupCommander:new({name='Jirah-attack-Durayhim', mission='attack', targetzone='Durayhim', type='surface'})
 })
 
 zones.tabqa:addGroups({
@@ -1055,6 +1084,7 @@ zones.renemouawad:addGroups({
 zones.wujah:addGroups({
 	GroupCommander:new({name='wujah-attack-Mouawad', mission='attack', template='AttackConvoy', targetzone='Rene Mouawad', type='surface'}),
 	GroupCommander:new({name='wujah-supply-Mouawad', mission='supply', template='SupplyConvoy', targetzone='Rene Mouawad', type='surface'}),
+    GroupCommander:new({name='wujah-supply-Beirut', mission='supply', template='HeloSupplyTemplate', targetzone='Beirut', NotCargo = true}),
 
 
 })
@@ -5465,6 +5495,23 @@ for _, z in ipairs(bc:getZones()) do
 end
 
 --configure zone messages 
+
+
+airbaseStatics = {
+    ["FOB HOTEL"] = {"FarpHotelammo", "Farphotelfuel", "Farphoteltent1", "Farphoteltent2", "Farphoteltent3", "Farphoteltent4", "Farphotelcommand", "Farphotelwind"},
+    ["FOB LIMA"] = {"Farplimaammo", "Farplimafuel", "Farplimatent1", "Farplimatent2", "Farplimatent3", "Farplimatent4", "Farplimatent5", "Farplimatent6", "Farplimatent7", "Farplimacommand", "Farplimawind"},
+    ["FOB DURAYHIM"] = {"Durayhimammo", "Durayhimfuel", "Durayhimtent1", "Durayhimtent2", "Durayhimtent3", "Durayhimtent4", "Durayhimcommand", "Durayhimwind"},
+    ["FOB INDIA"] = {"Fobindiaammo", "Fobindiafuel", "Fobindiatent1", "Fobindiatent2", "Fobindiatent3", "Fobindiatent4", "Fobindiacommand", "Fobindiawind"},
+    ["FOB MIKE"] = {"FobMikeAmmo", "FobMikeFuel", "FobMiketent1", "FobMiketent2", "FobMiketent3", "FobMiketent4", "FobMiketent5", "FobMiketent6", "FobMiketent7", 
+	"FobMiketent8", "FobMiketent9", "FobMikeTower1", "FobMikeTower2", "FobMikeTower3", "FobMikeTower4", "FobMikeHelo1", "FobMikeHelo2", "FobMikeHelo3", "FobMikeHelo4", 
+	"FobMikeWind", "FobMikeGenerator"},
+	["FOB Military Base"] = {"Millbaseammo", "Millbasefuel", "Millbasetent1", "Millbasetent2", "Millbasetent3", "Millbasetent4", "Millbasetentcommand", "Millbasetentwind"},
+	["FOB POLIS"] = {"fobtowerammo", "fobtowerfuel", "fobtowertent1", "fobtowertent2", "fobtowertent3", "fobtowertent4", "fobtowercommand", "fobtowerwind"},
+	["FOB FOXTROT"] = {"fobfoxtrotammo", "fobfoxtrotfuel", "fobfoxtrottent1", "fobfoxtrottent2", "fobfoxtrottent3", "fobfoxtrottent4", "fobfoxtrotcommand", "fobfoxtrotwind"},
+	["FOB JULIETT"] = {"fobjuliettammo", "fobjuliettfuel", "fobjulietttent1", "fobjulietttent2", "fobjulietttent3", "fobjulietttent4", "fobjuliettcommand", "fobjuliettwind"},
+	["FOB KARAVOSTASI"] = {"FOBKARAVOSTASIAmmo", "FOBKARAVOSTASIFuel", "FOBKARAVOSTASItent1", "FOBKARAVOSTASItent2", "FOBKARAVOSTASItent3", "FOBKARAVOSTASItent4", "FOBKARAVOSTAScommand", "FOBKARAVOSTASWind"},
+	
+}
 
 
 env.info("Mission Setup : is completed!")

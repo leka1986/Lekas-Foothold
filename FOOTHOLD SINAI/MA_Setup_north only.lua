@@ -4395,10 +4395,4 @@ for _, z in ipairs(bc:getZones()) do
 end
 -------------------------- END OF FLAGS --------------------------
 
-airbaseStatics = {
-	["FARP Alpha"] = {"Farpalphaammo", "Farpalphafuel", "Farpalphatent1", "Farpalphatent2", "Farpalphatent3", "Farpalphatent4", "Farpalphacommand", "Farpalphawind"},
-    ["FARP Bravo"] = {"Farpkiloammo", "Farpkilofuel", "Farpkilotent1", "Farpkilotent2", "Farpkilotent3", "Farpkilotent4", "Farpkilocommand", "Farpkilowind"},
-    ["FARP Charlie"] = {"Farplimaammo", "Farplimafuel", "Farplimatent1", "Farplimatent2", "Farplimatent3", "Farplimatent4", "Farplimacommand", "Farplimawind"},
-}
-
 env.info("Mission Setup : is completed!")

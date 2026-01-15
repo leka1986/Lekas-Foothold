@@ -4558,5 +4558,34 @@ for _, z in ipairs(bc:getZones()) do
 	if c then c:getZoneBuildings() end
 end
 
+airbaseStatics = {
+
+	["Luspa"] = {"Luspacenterammo", "Luspacenterfuel", "Luspacentertent1", "Luspacentertent2", "Luspacentertent3", "Luspacentertent4", "Luspacenter", "Luspacenterwind"},
+    ["Kvikkjokk"] = {"Kvikkjokkammo", "Kvikkjokkfuel", "Kvikkjokktent1", "Kvikkjokktent2", "Kvikkjokktent3", "Kvikkjokktent4", "Kvikkjokkcenter", "Kvikkjokkwind"},
+    ["BergsBasen"] = {"BergsBasenammo", "BergsBasenfuel", "BergsBasentent1", "BergsBasentent2", "BergsBasentent3", "BergsBasentent4", "BergsBasencenter", "BergsBasenwind"},
+	["Skogsbasen"] = {"Skogsbasenammo", "Skogsbasenfuel", "Skogsbasentent1", "Skogsbasentent2", "Skogsbasentent3", "Skogsbasentent4", "Skogsbasencenter", "Skogsbasenwind"},
+	["Guovdageaidnu"] = {"Guovdageaidnuammo", "Guovdageaidnufuel", "Guovdageaidnutent1", "Guovdageaidnutent2", "Guovdageaidnutent3", "Guovdageaidnutent4", "Guovdageaidnucenter", "Guovdageaidnuwind"},
+	["Kalix"] = {"Kalixammo", "Kalixfuel", "Kalixtent1", "Kalixtent2", "Kalixtent3", "Kalixtent4", "Kalixcenter", "KalixWind"},
+	["Gallivare"] = {"Gallivareammo", "Gallivarefuel", "Gallivaretent1", "Gallivaretent2", "Gallivaretent3", "Gallivaretent4", "Gallivarecenter", "GallivareWind"},
+	["Kandalaksha"] = {"Kandalakshaammo", "Kandalakshafuel", "Kandalakshatent1", "Kandalakshatent2", "Kandalakshatent3", "Kandalakshatent4", "Kandalakshacenter", "Kandalakshawind"},
+	["Apatity"] = {"Apatityammo", "Apatityfuel", "Apatitytent1", "Apatitytent2", "Apatitytent3", "Apatitytent4", "Apatitycenter", "Apatitywind"},
+	["Loukhi"] = {"Loukhiammo", "Loukhifuel", "Loukhitent1", "Loukhitent2", "Loukhitent3", "Loukhitent4", "Loukhicenter", "Loukhiwind"},
+	["Kovdor"] = {"Kovdorammo", "Kovdorfuel", "Kovdortent1", "Kovdortent2", "Kovdortent3", "Kovdortent4", "Kovdorcenter", "Kovdorcwind"},
+	["Zapolyarnyy"] = {"Zapolyarnyyammo", "Zapolyarnyyfuel", "Zapolyarnyytent1", "Zapolyarnyytent2", "Zapolyarnyytent3", "Zapolyarnyytent4", "Zapolyarnyycenter", "Zapolyarnyywind"},
+	["Karasjok"] = {"Karasjokammo", "Karasjokfuel", "Karasjoktent1", "Karasjoktent2", "Karasjoktent3", "Karasjoktent4", "Karasjokwind", "Karasjokcenter"},
+	--["Ivalo FARP"] = {"Ivaloammo", "Ivalofuel", "Ivalotent1", "Ivalotent2", "Ivalotent3", "Ivalotent4", "Ivalowind", "Ivalocenter"},
+	["Kelloselka"] = {"Kelloselkaammo", "Kelloselkafuel", "Kelloselkatent1", "Kelloselkatent2", "Kelloselkatent3", "Kelloselkatent4", "Kelloselkawind", "Kelloselkacenter"},
+	["Buolbmat"] = {"Buolbmatammo", "Buolbmatfuel", "Buolbmattent1", "Buolbmattent2", "Buolbmattent3", "Buolbmattent4", "Buolbmatwind", "Buolbmatcenter"},
+	["Tervola"] = {"Tervolaammo", "Tervolafuel", "Tervolatent1", "Tervolatent2", "Tervolatent3", "Tervolatent4", "Tervolawind", "Tervolacenter"},
+	["Maaninkavaara"] = {"Maaninkavaaraammo", "Maaninkavaarafuel", "Maaninkavaaratent1", "Maaninkavaaratent2", "Maaninkavaaratent3", "Maaninkavaaratent4", "Maaninkavaarawind", "Maaninkavaaracenter"},
+	["Savukoski"] = {"Savukoskiammo", "Savukoskifuel", "Savukoskitent1", "Savukoskitent2", "Savukoskitent3", "Savukoskitent4", "Savukoskiwind", "Savukoskicenter"},
+	["SkogsFARP1"] = {"SkogsFARP_1ammo", "SkogsFARP_1fuel", "SkogsFARP_1tent1", "SkogsFARP_1tent2", "SkogsFARP_1tent3", "SkogsFARP_1tent4", "SkogsFARP_1wind"},
+	["SkogsFARP2"] = {"SkogsFARP_2ammo", "SkogsFARP_2fuel", "SkogsFARP_2tent1", "SkogsFARP_2tent2", "SkogsFARP_2tent3", "SkogsFARP_2tent4", "SkogsFARP_2wind"},
+	["SkogsFARP3"] = {"SkogsFARP_3ammo", "SkogsFARP_3fuel", "SkogsFARP_3tent1", "SkogsFARP_3tent2", "SkogsFARP_3tent3", "SkogsFARP_3tent4", "SkogsFARP_3wind"},
+	["SkogsFARP4"] = {"SkogsFARP_4ammo", "SkogsFARP_4fuel", "SkogsFARP_4tent1", "SkogsFARP_4tent2", "SkogsFARP_4tent3", "SkogsFARP_4tent4", "SkogsFARP_4wind"},
+    ["Alakourtti"] = {"Alakourtticenter-5", "Alakourtticenter-6", "ThouShaltNotDie"}
+    --["Prirechnyi"] = {"Prirechnyi-1", "Prirechnyi-2", "Prirechnyi-3"}
+
+}
 
 

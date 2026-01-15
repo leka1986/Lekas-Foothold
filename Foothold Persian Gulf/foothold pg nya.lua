@@ -3818,7 +3818,7 @@ evc:addEvent({
 			if t then
 				RegisterScoreTarget('StrikePort',t,1000,'Bandar Lengeh Port')
 				found = true
-				local p = tgts:GetDCSObject() and tgts:GetDCSObject():getPoint()
+				local p = t:GetDCSObject() and t:GetDCSObject():getPoint()
 				if p then
 					missionMarkId = missionMarkId + 1
 					trigger.action.markToCoalition(missionMarkId,"Strike Bandar Lengeh Port",p,2,false,false)
@@ -4887,6 +4887,27 @@ for _, z in ipairs(bc:getZones()) do
 end
 
 ----------------------- END OF FLAGS --------------------------
+
+airbaseStatics = {
+	["Al Khatim"] = {"Khatimammo", "Khatimfuel", "Khatimtent1", "Khatimtent2", "Khatimtent3", "Khatimtent4", "Khatimcommand", "Khatimwind"},
+    ["Al Huti"] = {"Hutiammo", "FHutifuel", "Hutitent1", "Hutitent2", "Hutitent3", "Hutitent4", "Huticommand", "Hutiwind"},
+    ["Al Dahid"] = {"Dahidammo", "Dahidfuel", "Dahidtent1", "Dahidtent2", "Dahidtent3", "Dahidtent4", "Dahidcenter", "Dahidwind"},
+    ["Radio Tower"] = {"Radioammo", "Radiofuel", "Radiotent1", "Radiotent2", "Radiotent3", "Radiotent4", "Radiocenter", "Radiowind"},
+    ["FARP Delta"] = {"Deltaoammo", "Deltaofuel", "Deltatent1", "Deltatent2", "Deltatent3", "Deltatent4", "Deltaommand", "Deltawind"},
+    ["Factory"] = {"Factoryammo", "Factoryfuel", "Factorytent1", "Factorytent2", "Factorytent3", "Factorytent4", "Factorycomand", "Factorywind"},
+    ["FARP Golf"] = {"Farpgolfammo", "Farpgolffuel", "Farpgolftent1", "Farpgolftent2", "Farpgolftent3", "Farpgolftent4", "Farpgolfcommand", "Farpgolfwind"},
+    ["FARP Echo"] = {"FarpEchoammo", "FarpEchofuel", "FarpEchotent1", "FarpEchotent2", "FarpEchotent3", "FarpEchotent4", "FarpEchocommand", "FarpEchowind"},
+    ["FARP Sunny"] = {"Sunnyammo", "Sunnyfuel", "Sunnytent1", "Sunnytent2", "Sunnytent3", "Sunnytent4", "Sunnycommand", "Sunnywind"},
+    ["Ramp-Kongo"] = {"Kongoammo", "Kongofuel", "Kongotent1", "Kongotent2", "Kongotent3", "Kongotent4", "Kongocommand", "Kongowind"},
+    ["Foxtrot"] = {"Foxtrotammo", "Foxtrotfuel", "Foxtrottent1", "Foxtrottent2", "Foxtrottent3", "Foxtrottent4", "Foxtrotcommand", "Foxtrotwind"},
+    ["FARP Khamets"] = {"Khametsammo", "Khametsfuel", "Khametstent1", "Khametstent2", "Khametstent3", "Khametstent4", "Khametscommand", "Khametswind"},
+    ["Samathe"] = {"Samatheammo", "Samathefuel", "Samathetent1", "Samathetent2", "Samathetent3", "Samathetent4", "Samathecommand", "Samathewind"},
+	["Paregaan"] = {"Paregaanammo", "Paregaanfuel", "Paregaantent1", "Paregaantent2", "Paregaantent3", "Paregaantent4", "Paregaancommand", "Paregaanwind"},
+	["Moradi"] = {"Moradiammo", "Moradifuel", "Moraditent1", "Moraditent2", "Moraditent3", "Moraditent4", "Moradicommand", "Moradiwind"},
+	["Charlie"] = {"Charlieammo", "Charliefuel", "Charlietent1", "Charlietent2", "Charlietent3", "Charlietent4", "Charliecommand", "Charliewind"},
+	["Alpha"] = {"Alphaammo", "Alphafuel", "Alphatent1", "Alphatent2", "Alphatent3", "Alphatent4", "Alphacommand", "Alphawind"},
+
+}
 
 env.info("ZoneSetup: is completed!")
 

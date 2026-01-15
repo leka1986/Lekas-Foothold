@@ -4252,6 +4252,34 @@ for _, z in ipairs(bc:getZones()) do
 end
 
 
+airbaseStatics = {
+    ["Duhok City"] = {"DuhikTruck", "DuhikTruck2", "DuhikTruck3", "Duhikstatic1", "Duhikstatic2", "Duhikstatic3", "Duhikstatic4", "Duhikstatic5", 
+	"Duhikstatic6", "Duhikstatic7", "Duhikstatic8", "Duhikstatic9", "Duhikstatic10", "Duhikstatic11", "Duhikstatic12", "Duhikstatic13", "Duhikstatic14", "DuhukAmmo", 
+    "DuhukFuel", "DuhikJeep", "DuhukWind"},
+	["Chamanki"] = {"ChamankiAmmo", "ChamankiFuel", "ChamankiTent1", "ChamankiTent2", "ChamankiTent3", "ChamankiTent4", "ChamankiTent5", "ChamankiTent6", 
+	"ChamankiTent7", "ChamankiTent8", "ChamankiTent9", "ChamankiWind"},
+	["OutPost"] = {"OutPostAmmo", "OutPostfuel", "OutPosttent1", "OutPosttent2", "OutPostWind"},
+	["FOB Samarra"] = {"FOBSamaraammo", "FOBSamarafuel", "FOBSamaratent1", "FOBSamaratent2", "FOBSamaratent3", "FOBSamaratent4", "FOBSamaratent5", "FOBSamaratent6", "FOBSamaratent7", 
+	"FOBSamaratent8", "FOBSamaratent9", "FOBSamaraTower1", "FOBSamaraTower2", "FOBSamaraTower3", "FOBSamaraTower4", "FOBSamaraHelo1", "FOBSamaraHelo2", "FOBSamaraHelo3", "FOBSamaraHelo4", 
+	"FOBSamaraWind", "FOBSamaraGenerator"},
+	["FOB Therethar"] = {"FOBTheretharammo", "FOBTheretharfuel", "FOBTherethartent1", "FOBTherethartent2", "FOBTherethartent3", "FOBTherethartent4", "FOBTherethartent5", "FOBTherethartent6", "FOBTherethartent7", 
+	"FOBTherethartent8", "FOBTherethartent9", "FOBTheretharTower1", "FOBTheretharTower2", "FOBTheretharTower3", "FOBTheretharTower4", "FOBTheretharHelo1", "FOBTheretharHelo2", "FOBTheretharHelo3", "FOBTheretharHelo4", 
+	"FOBTheretharWind", "FOBTheretharGenerator"},
+	["Said Sadiq"] = {"SaidSadiqammo", "SaidSadiqFuel", "SaidSadiqtent1", "SaidSadiqtent2", "SaidSadiqtent3", "SaidSadiqtent4", "SaidSadiqcommand", "SaidSadiqwind"},
+	["Maydan"] = {"Maydanammo", "MaydanFuel", "Maydantent1", "Maydantent2", "Maydantent3", "Maydantent4", "Maydancommand", "Maydanwind"},
+	["Sarqala"] = {"Sarqalaammo", "SarqalaFuel", "Sarqalatent1", "Sarqalatent2", "Sarqalatent3", "Sarqalatent4", "Sarqalacommand", "Sarqalawind"},
+	["Khormato"] = {"Khormatoammo", "KhormatoFuel", "Khormatotent1", "Khormatotent2", "Khormatotent3", "Khormatotent4", "Khormatocommand", "Khormatowind"},
+	["Al Abbasi"] = {"Abbasiammo", "AbbasiFuel", "Abbasitent1", "Abbasient2", "Abbasiwind"},
+	["Tal Afar"] = {"Talafarammo", "TalafarFuel", "Talafartent1", "Talafartent2", "Talafartent3", "Talafartent4", "Talafarcommand", "Talafarwind"},
+    ["Ramadi"] = {"Ramadiammo", "Ramadifuel", "Ramaditent1", "Ramaditent2", "Ramaditent3", "Ramaditent4", "Ramaditent5", "Ramaditent6", "Ramaditent7", 
+	"Ramaditent8", "Ramaditent9", "RamadiTower1", "RamadiTower2", "RamadiTower3", "RamadiTower4", "RamadiHelo1", "RamadiHelo2", "RamadiHelo3", "RamadiHelo4", 
+	"RamadiWind", "RamadiGenerator"},
+    ["Koya"] = {"KoyaTruck", "KoyaTruck2", "KoyaTruck3", "Koyatent", "Koyatent2", "Koyatent3", "Koyasandbag1", "Koyasandbag2", "Koyasandbag3", 
+	"Koyasandbag4", "Koyasandbag5", "Koyasandbag6", "Koyasandbag7", "Koyasandbag8", "Koyasandbag9", "Koyasandbag10", "Koyasandbag11", "KoyaAmmo", "Koyafuel", 
+	"KoyaJeep", "KoyaWind"},
+    ["Dukan"] = {"Dukantent", "Dukantent2", "DukanFuel", "DukanAmmo", "DukanWind"},
+}
+
 env.info("Mission Setup : is completed!")
 
 -- last working durrning test mission

@@ -29,34 +29,31 @@ upgrades = {
 	},
     airfield = {
         blue = { "blueInfantry", "bSamIR", "bluePD 2", "blueArmor"},
-        red = { "Enemy ground forces","Red SAM AAA", "Red Armour Group", "Red Armour Group 2", "Red SAM SA-3", "Red SAM Dog Ear SA-15", "Red SAM SHORAD SA-15 2", 
-		}
+        red = { "Enemy ground forces","Red SAM AAA", "Red Armour Group", "Red Armour Group 2", "Red SAM SA-3", "Red SAM Dog Ear SA-15", "Red SAM SHORAD SA-15 2", "Red Arty 2"}
     },
     airfield2 = {
         blue = { "blueInfantry", "blueInfantry", "bluePD 2", "blueArmor"},
-        red = { "Enemy ground forces","Red SAM AAA", "Red Armour Group", "Red Armour Group 2", "Red SAM Dog Ear SA-15", "Red SAM SHORAD SA-15 2", "Red SAM SHORAD Tor M2", 
-		}
+        red = { "Enemy ground forces","Red SAM AAA", "Red Armour Group", "Red Armour Group 2", "Red SAM Dog Ear SA-15", "Red SAM SHORAD SA-15 2", "Red SAM SHORAD Tor M2"}
     },
     airfield3 = {
         blue = { "blueInfantry", "bSamIR", "bluePD 2", "blueArmor"},
-        red = { "Enemy ground forces","Red SAM AAA", "Red Armour Group", "Red Armour Group 2",  "Red SAM SA-6", "Red SAM Dog Ear SA-15", "Red SAM SHORAD SA-15 2",  "Red SAM SHORAD Pantsir S1"
-		}
+        red = { "Enemy ground forces","Red SAM AAA", "Red Armour Group", "Red Armour Group 2",  "Red SAM SA-6", "Red SAM Dog Ear SA-15", "Red SAM SHORAD SA-15 2",  "Red SAM SHORAD Pantsir S1"}
     },
     farp = {
         blue = { "blueInfantry", "blueArmor", "bSamIR"},
-        red = { "Enemy ground forces", "Red SAM AAA", "Red SAM Dog Ear SA-19", "Red Armour Group 2", "Red Armour Group", "Red SAM AAA 3" }
+        red = { "Enemy ground forces", "Red SAM AAA", "Red SAM Dog Ear SA-19", "Red Armour Group 2", "Red Armour Group", "Red SAM AAA 3" , "Red Arty 1"}
     },
     checkpoints1 = {
         blue = { "blueArmor", "bSamIR"},
-        red = { "Enemy ground forces", "Red SAM AAA 4", "Red SAM Dog Ear SA-19", "Red Armour Group", "Red SAM AAA 3" }
+        red = { "Enemy ground forces", "Red SAM AAA 4", "Red SAM Dog Ear SA-19", "Red Armour Group", "Red SAM AAA 3" , "Red Arty 2"}
     },
     checkpoints2 = {
         blue = { "blueArmor", "bSamIR"},
-        red = { "Enemy ground forces", "Enemy ground forces", "Red SAM SHORAD SA-13", "Red SAM AAA 3", "Red SAM AAA 4" }
+        red = { "Enemy ground forces", "Enemy ground forces", "Red SAM SHORAD SA-13", "Red SAM AAA 3", "Red SAM AAA 4" , "Red Arty 3"}
     },
     checkpoints3 = {
         blue = { "blueArmor", "bSamIR"},
-        red = { "Enemy ground forces", "Red SAM AAA", "Red SAM Dog Ear SA-8", "Red SAM Dog Ear SA-19", "Red SAM AAA 2" }
+        red = { "Enemy ground forces", "Red SAM AAA", "Red SAM Dog Ear SA-8", "Red SAM Dog Ear SA-19", "Red SAM AAA 2", "Red Arty 1"}
     },
     checkpoints4 = {
         blue = { "blueArmor", "bSamIR"},
@@ -64,15 +61,15 @@ upgrades = {
     },
     checkpoints5 = {
         blue = { "blueArmor", "blueInfantry"},
-        red = { "Enemy ground forces", "Red SAM AAA", "Enemy ground forces", "Red SAM AAA 2" }
+        red = { "Enemy ground forces", "Red SAM AAA", "Enemy ground forces", "Red SAM AAA 2" , "Red Arty 3"}
     },
     checkpoints6 = {
         blue = { "blueArmor", "blueInfantry"},
-        red = { "Enemy ground forces", "Red SAM SHORAD SA-13", "Red SAM AAA 2", "Red SAM AAA" }
+        red = { "Enemy ground forces", "Red SAM SHORAD SA-13", "Red SAM AAA 2", "Red SAM AAA" , "Red Arty 2"}
     },
     farp2 = {
         blue = { "blueInfantry", "blueArmor", "bSamIR"},
-        red = { "Red SAM Dog Ear SA-8","Red SAM AAA", "Red Armour Group", "Red SAM Dog Ear SA-19", "Red Armour Group 2", "Red SAM SHORAD SA-19 2","Red SAM Dog Ear SA-15"}
+        red = { "Red SAM Dog Ear SA-8","Red SAM AAA", "Red Armour Group", "Red SAM Dog Ear SA-19", "Red Armour Group 2", "Red SAM SHORAD SA-19 2","Red SAM Dog Ear SA-15", "Red Arty 2"}
     },
     farp3 = {
         blue = { "blueInfantry","blueInfantry", "blueArmor", "bluePD 2"},
@@ -96,7 +93,7 @@ upgrades = {
 	},
 	EWRMantisNet = {
 		blue = {},
-		red = {'Red EWR Camp Bastion Fixed', 'Red EWR Nimroz Fixed', 'Red EWR Jamsheed Fixed', 'Red EWR Chaghcharan Fixed', 'Red EWR Bagram Fixed','Red EWR Sharana Fixed','Red EWR Herat Fixed'}
+		red = {'Red EWR Camp Bastion Fixed', 'Red EWR Nimroz Fixed', 'Red EWR Jamsheed Fixed', 'Red EWR Chaghcharan Fixed', 'Red EWR Bagram Fixed','Red EWR Sharana Fixed','Red EWR Farah Fixed'}
 	},
     convoy = {
         blue = { "blueInfantry" },
@@ -174,6 +171,7 @@ flavor = {
 	bostick       		  = 'FOB-Bostick\nOld border-region FOB left unmanned. Control of this site improves regional security.',
 	delaram        		  = 'FOB-Delaram\nAbandoned FOB near key transit routes. Capture to reestablish forward presence and logistics.',
 	jamsheed       		  = 'FOB-Jamsheed\nAbandoned FOB near key position and transit routes. Capture to reestablish forward presence and logistics.',
+	fenty        		  = 'FOB-Fenty\nAbandoned NATO FOB in rugged terrain in path to Tarinkot. Capture to establish northern presense and logistics.',
 	samalpha			  = 'SAM Site Alpha\nSAM site outside of Farah. Take caution.',
 	sambravo			  = 'SAM Site Bravo\nSAM site en route to Sharana. Take caution.',
 	samcharlie			  = 'SAM Site Charlie\nSAM site west of Fob Hamid Karzai. Take caution.',
@@ -280,6 +278,7 @@ supplyZones = {
 	'FOB-Ahmad Shah Massoud',  
     'FOB-Farid Basharat',  
 	'FOB-Delaram',  
+	'FOB-Fenty',
 }
 
 local function deepSwap(t,s)
@@ -372,6 +371,7 @@ zones = {
     lagman              = ZoneCommander:new({zone='FOB-Lagman',                  side=0, level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.lagman,ForceNeutral=true}),
     bostick             = ZoneCommander:new({zone='FOB-Bostick',                 side=0, level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.bostick,ForceNeutral=true}),
     delaram             = ZoneCommander:new({zone='FOB-Delaram',                 side=0, level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.delaram,ForceNeutral=true}),	
+    fenty               = ZoneCommander:new({zone='FOB-Fenty',                   side=0, level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.fenty,ForceNeutral=true}),		
 	khost               = ZoneCommander:new({zone='Khost',                       side=0, level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.khost,ForceNeutral=true}),	
 	urgoon              = ZoneCommander:new({zone='Urgoon Heliport',             side=0, level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.urgoon,ForceNeutral=true}),		
     charlie             = ZoneCommander:new({zone='Checkpoint Charlie',          side=1, level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.charlie}),
@@ -882,7 +882,7 @@ zones.campbastion:addGroups({
 zones.dwyer:addGroups({
     GroupCommander:new({name='dwyer-supply-Bost-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='Bost'}),
 
-    GroupCommander:new({name='dwyer-supply-Nimroz-plane',      mission='supply', template='PlaneSupplyTemplate', targetzone='Nimroz'}),
+    GroupCommander:new({name='dwyer-supply-Nimroz-helo',      mission='supply', template='HeloSupplyTemplate', targetzone='Nimroz'}),
 
     GroupCommander:new({name='dwyer-attack-Bost-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
     GroupCommander:new({name='dwyer-attack-Bost-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bost', Altitude = CasAltitude()}),
@@ -980,9 +980,9 @@ zones.herat:addGroups({
 
 -- QALA I NAW (airport) -> connects to: Herat, Maymana Zahiraddin Faryabi
 zones.qalainaw:addGroups({
-    GroupCommander:new({name='qalainaw-supply-Herat-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Herat'}),
-    GroupCommander:new({name='qalainaw-supply-Maymana-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi'}),
-    GroupCommander:new({name='qalainaw-supply-Herat-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Herat'}),
+    GroupCommander:new({name='qalainaw-supply-Herat-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Herat',ForceFromGround = true}),
+    GroupCommander:new({name='qalainaw-supply-Maymana-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi',ForceFromGround = true}),
+    GroupCommander:new({name='qalainaw-supply-Herat-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Herat',ForceFromGround = true}),
 
     GroupCommander:new({name='qalainaw-attack-Herat-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
     GroupCommander:new({name='qalainaw-attack-Herat-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Herat', Altitude = CasAltitude()}),
@@ -1226,9 +1226,19 @@ zones.faridbasharat.airbaseName = 'FOB-Farid Basharat'
 zones.delaram.isHeloSpawn = true
 zones.delaram.airbaseName = 'FOB-Delaram'
 
+zones.fenty.isHeloSpawn = true
+zones.fenty.airbaseName = 'FOB-Fenty'
+
 zones.khost.airbaseName = 'Khost'
 
 zones.urgoon.airbaseName = 'Urgoon Heliport'
+
+SCHEDULER:New(nil,function()
+if not CustomFlags["EWR Updated"] then
+zones.hiddenewr:MakeZoneredandupgradednow()
+CustomFlags["EWR Updated"] = true
+end
+end,{},5)
 
 --
 --------------------------------------------end Airbase definitions------------------------
@@ -3008,8 +3018,8 @@ AWACS_CFG = {
     [2] = { alt=30000, speed=350, hdg=270, leg=15, sep=70 }   -- blue
 }
 
-GlobalSettings.autoSuspendNmBlue = 100   		-- suspend blue zones deeper than this nm
-GlobalSettings.autoSuspendNmRed = 120   		-- suspend red zones deeper than this nm
+GlobalSettings.autoSuspendNmBlue = 80   		-- suspend blue zones deeper than this nm
+GlobalSettings.autoSuspendNmRed = 100   		-- suspend red zones deeper than this nm
 
 evc = EventCommander:new({ decissionFrequency=10*60, decissionVariance=10*60, skipChance = 10})
 evc:init()
@@ -3854,11 +3864,6 @@ do
 end
 end, {}, timer.getTime() + 1)
 
------------------------------------------------------------------------------------------------------------
-
-
-
-
 ----------------------------------------------- BostBuilding-----------------------------------------------
 evc:addEvent({
 	id = 'BostBuilding',
@@ -3919,13 +3924,18 @@ Elevation 2550 feet]],
 })
 
 --------------------------------------------- End of BostBuilding ---------------------------------------------
----------------------------------------------- Capture 1 ------------------------------------------------------
+
+
+
+---------------------------------------------- Capture Khost------------------------------------------------------
 mc:trackMission({
-	title = "Capture this zone",
+	title = "Capture Khost to help supply runs",
 	description =
-[[Capture this zone]],
-	messageStart = "New Capture mission: Special forces need to capture this zone",
-	messageEnd = "Strike mission ended: Capture this zone",
+[[We need supply routes for planes through Pakistan. 
+Capture Khost to assist with the supply runs. 
+Afterwards you can also use the base to fly from in times of need.]],
+	messageStart = "New Capture mission: Special forces need to capture Khost",
+	messageEnd = "Capture mission ended: Capture Khost",
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -3937,12 +3947,39 @@ mc:trackMission({
         end
 	end,
 	isActive = function()
+    if bc:getZoneByName('Urgoon Heliport').side == 0 then return false end
     if bc:getZoneByName('Gardez').side == 2 and bc:getZoneByName('Khost').side == 0 then return true end
 	return false
 	end
 })
 
----------------------------------------------- End of Capture 1 ------------------------------------------------------
+---------------------------------------------- End of Capture Khost ------------------------------------------------------
+---------------------------------------------- Capture Urgoon Heliport------------------------------------------------------
+mc:trackMission({
+	title = "Capture Urgoon Heliport to help supply runs",
+	description =
+[[We need more supply routes for Helicopters through Pakistan. 
+Capture Urgoon Heliport to assist with the supply runs. 
+Afterwards you can also use the base to fly from in times of need.]],
+	messageStart = "New Capture mission: Special forces need to capture Urgoon Heliport",
+	messageEnd = "Capture mission ended: Capture Urgoon Heliport",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "cancel.ogg")
+        end
+	end,
+	isActive = function()
+    if bc:getZoneByName('Sharana').side == 2 and bc:getZoneByName('Urgoon Heliport').side == 0 then return true end
+	return false
+	end
+})
+
+---------------------------------------------- End of Capture Urgoon ------------------------------------------------------
 ----------------------------------------------- Associates -----------------------------------------------------------
 Group.getByName('Associates'):destroy()
 Group.getByName('AssociatesConvoy'):destroy()
@@ -4026,7 +4063,413 @@ mc:trackMission({
 	return false
 	end,
 })
+--------------------------------end of associates---------------------------------
+----------------------------------------------- Bodyguards -----------------------------------------------------------
+Group.getByName('Bodyguards'):destroy()
+Group.getByName('BinLadenEscape'):destroy()
+evc:addEvent({
+	id='Bodyguards',
+	action = function()
+	RespawnGroup('Bodyguards')
+	RegisterGroupTarget('Bodyguards',500,'Kill the Bodyguards','Bodyguards')
+	end,
+	canExecute = function()
+		--if math.random(1,100) < 70 then return false end
+		if Group.getByName('Bodyguards') then return false end
+		if CustomFlags["Bodyguards"] then return false end
+		local Kabul =  bc:getZoneByName('Kabul')
+		if Kabul.side ~= 2 then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Strike the Bodyguards",
+	description =
+[[Intel indicates that Bin Ladens personal guards were spotted at this location. 
+Ensure that he and his body guards are eliminated. 
 
+Reward: 500
+
+MGRS GRID: 42 S UC 38879 58074
+Lat Long: N 33°57'03" E 67°15'23"
+Lat Long Decimal: N 33°57.050' E 67°15.383'
+
+Elevation 7952 feet]],
+	messageStart = "New strike mission: Strike the Bodyguards",
+	messageEnd = "Strike mission ended: Strike the Bodyguards",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+        RespawnGroup('BinLadenEscape')
+        trigger.action.outTextForCoalition(2,'Bin Laden is fleeing!! Kill him before he gets away',30)
+	end,
+	isActive = function()
+	if CustomFlags["Bodyguards"] then return false end
+	if IsGroupActive('Bodyguards') then return true end
+	return false
+	end,
+})
+
+
+
+evc:addEvent({
+	id='Bodyguards',
+	action = function()
+	RegisterGroupTarget('BinLadenEscape',500,'Hunt down Bin Laden','BinLadenEscape')
+	end,
+	canExecute = function()
+		--if math.random(1,100) < 70 then return false end
+		if Group.getByName('BinLadenEscape') then return false end
+		if not CustomFlags["Bodyguards"] then return false end
+        if CustomFlags["BinLadenEscape"] then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Hunt down Bin Laden",
+	description =
+[[]],
+	messageStart = "New strike mission: hunt down Bin Laden!!!!",
+	messageEnd = "Strike mission ended: hunt down Bin Laden",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+	end,
+	isActive = function()
+	if IsGroupActive('BinLadenEscape') then return true end
+	return false
+	end,
+})
+-------------------------end Bodyguards-------------------------------
+----------------------------------------------- EWRS - Camp Bastion -----------------------------------------------------------
+evc:addEvent({
+	id='Red EWR Camp Bastion Fixed',
+	action = function()
+    ActiveMission['Red EWR Camp Bastion Fixed'] = true
+	RegisterGroupTarget('Red EWR Camp Bastion Fixed',300,'Destroy the EWR at Camp Bastion','Red EWR Camp Bastion Fixed')
+	end,
+	canExecute = function()
+		if ActiveMission['Red EWR Camp Bastion Fixed'] then return false end
+		if not Group.getByName('Red EWR Camp Bastion Fixed') then return false end
+		if CustomFlags["Red EWR Camp Bastion Fixed"] then return false end
+		if bc:getZoneByName('Bost').side ~= 2 then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Destroy the EWR at Camp Bastion",
+	description =
+[[We have intelligence showing the location of an early warning radar system located near Camp Bastion.
+
+Destroy this EWRS to help with SAM site threats. 
+
+Reward: 300
+
+MGRS GRID: 41 R PR 26499 32795
+Lat Long Standard: N 31°55'26" E 64°20'17"
+Lat Long Decimal Minutes: N 31°55.441' E 64°20.285'
+
+Elevation 2916 feet]],
+	messageStart = "New strike mission: Destroy the EWR at Camp Bastion",
+	messageEnd = "Strike mission ended: Destroy the EWR at Camp Bastion",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+	end,
+	isActive = function()
+	if CustomFlags["Red EWR Camp Bastion Fixed"] then return false end
+    if ActiveMission['Red EWR Camp Bastion Fixed'] then return true end
+	return false
+	end,
+})
+
+-----------------------------------------------END EWRS - Camp Bastion -----------------------------------------------------------
+----------------------------------------------- EWRS - Nimroz -----------------------------------------------------------
+evc:addEvent({
+	id='Red EWR Nimroz Fixed',
+	action = function()
+    ActiveMission['Red EWR Nimroz Fixed'] = true
+	RegisterGroupTarget('Red EWR Nimroz Fixed',300,'Destroy the EWR at Nimroz','Red EWR Nimroz Fixed')
+	end,
+	canExecute = function()
+        if ActiveMission['Red EWR Nimroz Fixed'] then return false end
+		if not Group.getByName('Red EWR Nimroz Fixed') then return false end
+		if CustomFlags["Red EWR Nimroz Fixed"] then return false end
+		if bc:getZoneByName('Dwyer').side ~= 2 then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Destroy the EWR at Nimroz",
+	description =
+[[We have intelligence showing the location of an early warning radar system located near Nimroz.
+
+Destroy this EWRS to help with SAM site threats. 
+
+Reward: 300
+
+MGRS GRID: 41 R MQ 52934 19038
+Lat Long Standard: N 30°54'13" E 62°30'26"
+Lat Long Decimal Minutes: N 30°54.224' E 62°30.449'
+
+Elevation 2381 feet]],
+	messageStart = "New strike mission: Destroy the EWR at Nimroz",
+	messageEnd = "Strike mission ended: Destroy the EWR at Nimroz",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+	end,
+	isActive = function()
+	if CustomFlags["Red EWR Nimroz Fixed"] then return false end
+    if ActiveMission['Red EWR Nimroz Fixed'] then return true end
+	return false
+	end,
+})
+
+-----------------------------------------------END EWRS - Nimroz -----------------------------------------------------------
+----------------------------------------------- EWRS - Herat -----------------------------------------------------------
+evc:addEvent({
+	id='Red EWR Herat Fixed',
+	action = function()
+    ActiveMission['Red EWR Herat Fixed'] = true
+	RegisterGroupTarget('Red EWR Herat Fixed',300,'Destroy the EWR at Herat','Red EWR Herat Fixed')
+	end,
+	canExecute = function()
+        if ActiveMission['Red EWR Herat Fixed'] then return false end
+		--if math.random(1,100) < 70 then return false end
+		if not Group.getByName('Red EWR Nimroz Fixed') then return false end
+		if CustomFlags["Red EWR Nimroz Fixed"] then return false end
+		 if bc:getZoneByName('Shindand').side ~= 2 then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Destroy the EWR at Herat",
+	description =
+[[We have intelligence showing the location of an early warning radar system located near Herat.
+
+Destroy this EWRS to help with SAM site threats. 
+
+Reward: 300
+
+MGRS GRID: 41 S MU 35387 32028
+Lat Long Standard: N 34°37'41" E 62°17'42"
+Lat Long Decimal Minutes: N 34°37.686' E 62°17.706'
+
+Elevation 7676 feet]],
+	messageStart = "New strike mission: Destroy the EWR at Herat",
+	messageEnd = "Strike mission ended: Destroy the EWR at Herat",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+	end,
+	isActive = function()
+	if CustomFlags["Red EWR Herat Fixed"] then return false end
+	if ActiveMission['Red EWR Herat Fixed'] then return true end
+	return false
+	end,
+})
+
+-----------------------------------------------END EWRS - Herat -----------------------------------------------------------
+----------------------------------------------- EWRS - Chaghcharan -----------------------------------------------------------
+evc:addEvent({
+	id='Red EWR Chaghcharan Fixed',
+	action = function()
+    ActiveMission['Red EWR Chaghcharan Fixed'] = true
+	RegisterGroupTarget('Red EWR Chaghcharan Fixed',300,'Destroy the EWR at Chaghcharan','Red EWR Chaghcharan Fixed')
+	end,
+	canExecute = function()
+		if ActiveMission['Red EWR Chaghcharan Fixed'] then return false end
+		if not Group.getByName('Red EWR Chaghcharan Fixed') then return false end
+		if CustomFlags["Red EWR Chaghcharan Fixed"] then return false end
+		if bc:getZoneByName('Maymana Zahiraddin Faryabi').side ~= 2 then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Destroy the EWR at Chaghcharan",
+	description =
+[[We have intelligence showing the location of an early warning radar system located near Chaghcharan.
+
+Destroy this EWRS to help with SAM site threats. 
+
+Reward: 300
+
+MGRS GRID: 41 S QU 64492 81853
+Lat Long Standard: N 35°02'41" E 65°53'58"
+Lat Long Decimal Minutes: N 35°02.686' E 65°53.978'
+
+Elevation 11051 feet]],
+	messageStart = "New strike mission: Destroy the EWR at Chaghcharan",
+	messageEnd = "Strike mission ended: Destroy the EWR at Chaghcharan",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+	end,
+	isActive = function()
+	if CustomFlags["Red EWR Chaghcharan Fixed"] then return false end
+    if ActiveMission['Red EWR Chaghcharan Fixed'] then return true end
+	return false
+	end,
+})
+
+-----------------------------------------------END EWRS - Chaghcharan -----------------------------------------------------------
+----------------------------------------------- EWRS - Jamsheed -----------------------------------------------------------
+evc:addEvent({
+	id='Red EWR Jamsheed Fixed',
+	action = function()
+	ActiveMission['Red EWR Jamsheed Fixed'] = true
+	RegisterGroupTarget('Red EWR Jamsheed Fixed',300,'Destroy the EWR at Jamsheed SAM site','Red EWR Jamsheed Fixed')
+	end,                                                                          
+	canExecute = function()
+        if ActiveMission['Red EWR Jamsheed Fixed'] then return false end
+		if not Group.getByName('Red EWR Jamsheed Fixed') then return false end
+		if CustomFlags["Red EWR Jamsheed Fixed"] then return false end
+		if bc:getZoneByName('Chaghcharan').side ~= 2 then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Destroy the EWR at SAM Jamsheed",
+	description =
+[[We have intelligence showing the location of an early warning radar system located near Jamsheed SAM Site.
+
+Destroy this EWRS to help with SAM site threats. 
+
+Reward: 300
+
+MGRS GRID: 41 S PT 75189 12172
+Lat Long Standard: N 33°32'05" E 64°53'12"
+Lat Long Decimal Minutes: N 33°32.088' E 64°53.202'
+
+Elevation 12668 feet]],
+	messageStart = "New strike mission: Destroy the EWR at Jamsheed SAM site",
+	messageEnd = "Strike mission ended: Destroy the EWR at Jamsheed SAM site",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+	end,
+	isActive = function()
+	if CustomFlags["Red EWR Jamsheed Fixed"] then return false end
+    if ActiveMission['Red EWR Jamsheed Fixed'] then return true end
+	return false
+	end,
+})
+
+-----------------------------------------------END EWRS - SAM Jamsheed -----------------------------------------------------------
+----------------------------------------------- EWRS - Bagram -----------------------------------------------------------
+evc:addEvent({
+	id='Red EWR Bagram Fixed',
+	action = function()
+	ActiveMission['Red EWR Bagram Fixed'] = true
+	RegisterGroupTarget('Red EWR Bagram Fixed',300,'Destroy the EWR at Bagram','Red EWR Bagram Fixed')
+	end,
+	canExecute = function()
+        if ActiveMission['Red EWR Bagram Fixed'] then return false end
+		if not Group.getByName('Red EWR Bagram Fixed') then return false end
+		if CustomFlags["Red EWR Bagram Fixed"] then return false end
+		if bc:getZoneByName('Bamyan').side ~= 2 then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Destroy the EWR at Bagram",
+	description =
+[[We have intelligence showing the location of an early warning radar system located near Bagram.
+
+Destroy this EWRS to help with SAM site threats. 
+
+Reward: 300
+
+MGRS GRID: 42 S WD 28839 64152
+Lat Long Standard: N 34°55'09" E 69°18'56"
+Lat Long Decimal Minutes: N 34°55.165' E 69°18.944'
+
+Elevation 4814 feet]],
+	messageStart = "New strike mission: Destroy the EWR at Bagram",
+	messageEnd = "Strike mission ended: Destroy the EWR at Bagram",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+	end,
+	isActive = function()
+	if CustomFlags["Red EWR Bagram Fixed"] then return false end
+    if ActiveMission['Red EWR Bagram Fixed'] then return true end
+	return false
+	end,
+})
+
+-----------------------------------------------END EWRS - Bagram-----------------------------------------------------------
+----------------------------------------------- EWRS - Sharana -----------------------------------------------------------
+evc:addEvent({
+	id='Red EWR Sharana Fixed',
+	action = function()
+    ActiveMission['Red EWR Sharana Fixed'] = true
+	RegisterGroupTarget('Red EWR Sharana Fixed',300,'Destroy the EWR at Sharana','Red EWR Sharana Fixed')
+	end,
+	canExecute = function()
+        if ActiveMission['Red EWR Sharana Fixed'] then return false end
+        if not Group.getByName('Red EWR Sharana Fixed') then return false end
+		if CustomFlags["Red EWR Sharana Fixed"] then return false end
+		if bc:getZoneByName('Ghazni Heliport').side ~= 2 then return false end
+	return true
+end
+})
+mc:trackMission({
+	title = "Destroy the EWR at Sharana",
+	description =
+[[We have intelligence showing the location of an early warning radar system located near Sharana.
+
+Destroy this EWRS to help with SAM site threats. 
+
+Reward: 300
+
+MGRS GRID: 42 S WB 01484 67453
+Lat Long Standard: N 33°08'44" E 69°00'57"
+Lat Long Decimal Minutes: N 33°08.749' E 69°00.955'
+
+Elevation 9829 feet]],
+	messageStart = "New strike mission: Destroy the EWR at Sharana",
+	messageEnd = "Strike mission ended: Destroy the EWR at Sharana",
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+	end,
+	isActive = function()
+	if CustomFlags["Red EWR Sharana Fixed"] then return false end
+    if ActiveMission['Red EWR Sharana Fixed'] then return true end
+	return false
+	end,
+})
+
+-----------------------------------------------END EWRS - Sharana-----------------------------------------------------------
 ---------------------------------------------------- general missions -------------------------------------------------------
 
 local EscortCooldown = 1800
@@ -4523,6 +4966,31 @@ for _, z in ipairs(bc:getZones()) do
 	local c = CustomZone:getByName(z.zone)
 	if c then c:getZoneBuildings() end
 end
--------------------------- END OF FLAGS --------------------------
+
+
+-------------------------- WelcomeMessage statics ---------------------------------
+
+airbaseStatics = {
+["Checkpoint Alpha"] = {"Checkpoint Alphaammo", "Checkpoint Alphafuel", "Checkpoint Alphatent1", "Checkpoint Alphatent2", "Checkpoint Alphatent3", "Checkpoint Alphatent4", "Checkpoint Alphacommand", "Checkpoint Alphawind"},
+["Checkpoint Bravo"] = {"Checkpoint Bravoammo", "Checkpoint Bravofuel", "Checkpoint Bravotent1", "Checkpoint Bravotent2", "Checkpoint Bravotent3", "Checkpoint Bravotent4", "Checkpoint Bravocommand", "Checkpoint Bravowind"},
+["Checkpoint Charlie"] = {"Checkpoint Charlieammo", "Checkpoint Charliefuel", "Checkpoint Charlietent1", "Checkpoint Charlietent2", "Checkpoint Charlietent3", "Checkpoint Charlietent4", "Checkpoint Charliecommand", "Checkpoint Charliewind"},
+["Checkpoint Delta"] = {"Checkpoint Deltaammo", "Checkpoint Deltafuel", "Checkpoint Deltatent1", "Checkpoint Deltatent2", "Checkpoint Deltatent3", "Checkpoint Deltatent4", "Checkpoint Deltacommand", "Checkpoint Deltawind"},
+["Checkpoint Kabul W"] = {"Checkpoint Kabul Wammo", "Checkpoint Kabul Wfuel", "Checkpoint Kabul Wtent1", "Checkpoint Kabul Wtent2", "Checkpoint Kabul Wtent3", "Checkpoint Kabul Wtent4", "Checkpoint Kabul Wcommand", "Checkpoint Kabul Wwind"},
+["Checkpoint Kabul S"] = {"Checkpoint Kabul Sammo", "Checkpoint Kabul Sfuel", "Checkpoint Kabul Stent1", "Checkpoint Kabul Stent2", "Checkpoint Kabul Stent3", "Checkpoint Kabul Stent4", "Checkpoint Kabul Scommand", "Checkpoint Kabul Swind"},
+["Checkpoint Kabul E"] = {"Checkpoint Kabul Eammo", "Checkpoint Kabul Efuel", "Checkpoint Kabul Etent1", "Checkpoint Kabul Etent2", "Checkpoint Kabul Etent3", "Checkpoint Kabul Etent4", "Checkpoint Kabul Ecommand", "Checkpoint Kabul Ewind"},
+["FOB Kunar"] = {"FOB Kunarammo", "FOB Kunarfuel", "FOB Kunartent1", "FOB Kunartent2", "FOB Kunartent3", "FOB Kunartent4", "FOB Kunarcommand", "FOB Kunarwind"},
+["FOB-Jamsheed"] = {"FOB-Jamsheedammo", "FOB-Jamsheedfuel", "FOB-Jamsheedtent1", "FOB-Jamsheedtent2", "FOB-Jamsheedtent3", "FOB-Jamsheedtent4", "FOB-Jamsheedcommand", "FOB-Jamsheedwind"},
+["FOB-Bostick"] = {"FOB-Bostickammo", "FOB-Bostickfuel", "FOB-Bosticktent1", "FOB-Bosticktent2", "FOB-Bosticktent3", "FOB-Bosticktent4", "FOB-Bostickcommand", "FOB-Bostickwind"},
+["FOB-Lagman"] = {"FOB-Lagmanammo", "FOB-Lagmanfuel", "FOB-Lagmantent1", "FOB-Lagmantent2", "FOB-Lagmantent3", "FOB-Lagmantent4", "FOB-Lagmancommand", "FOB-Lagmanwind"},
+["FOB-Shank"] = {"FOB-Shankammo", "FOB-Shankfuel", "FOB-Shanktent1", "FOB-Shanktent2", "FOB-Shanktent3", "FOB-Shanktent4", "FOB-Shankcommand", "FOB-Shankwind"},
+["FOB-Javid Basharat"] = {"FOB-Javid Basharatammo", "FOB-Javid Basharatfuel", "FOB-Javid Basharattent1", "FOB-Javid Basharattent2", "FOB-Javid Basharattent3", "FOB-Javid Basharattent4", "FOB-Javid Basharatcommand", "FOB-Javid Basharatwind"},
+["FOB-Hamid Karzai"] = {"FOB-Hamid Karzaiammo", "FOB-Hamid Karzaifuel", "FOB-Hamid Karzaitent1", "FOB-Hamid Karzaitent2", "FOB-Hamid Karzaitent3", "FOB-Hamid Karzaitent4", "FOB-Hamid Karzaicommand", "FOB-Hamid Karzaiwind"},
+["FOB-Ismail Khan"] = {"FOB-Ismail Khanammo", "FOB-Ismail Khanfuel", "FOB-Ismail Khantent1", "FOB-Ismail Khantent2", "FOB-Ismail Khantent3", "FOB-Ismail Khantent4", "FOB-Ismail Khancommand", "FOB-Ismail Khanwind"},
+["FOB-Ahmad Shah Massoud"] = {"FOB-Ahmad Shah Massoudammo", "FOB-Ahmad Shah Massoudfuel", "FOB-Ahmad Shah Massoudtent1", "FOB-Ahmad Shah Massoudtent2", "FOB-Ahmad Shah Massoudtent3", "FOB-Ahmad Shah Massoudtent4", "FOB-Ahmad Shah Massoudcommand", "FOB-Ahmad Shah Massoudwind"},
+["FOB-Farid Basharat"] = {"FOB-Farid Basharatammo", "FOB-Farid Basharatfuel", "FOB-Farid Basharattent1", "FOB-Farid Basharattent2", "FOB-Farid Basharattent3", "FOB-Farid Basharattent4", "FOB-Farid Basharatcommand", "FOB-Farid Basharatwind"},
+["FOB-Delaram"] = {"FOB-Delaramammo", "FOB-Delaramfuel", "FOB-Delaramtent1", "FOB-Delaramtent2", "FOB-Delaramtent3", "FOB-Delaramtent4", "FOB-Delaramcommand", "FOB-Delaramwind"},
+["FOB-Fenty"] = {"FOB-Fentyammo", "FOB-Fentyfuel", "FOB-Fentytent1", "FOB-Fentytent2", "FOB-Fentytent3", "FOB-Fentytent4", "FOB-Fentycommand", "FOB-Fentywind"},
+}
+
 
 env.info("Mission Setup : is completed!")

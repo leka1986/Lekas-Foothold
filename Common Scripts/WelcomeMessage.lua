@@ -7,6 +7,63 @@ BASE:I("Loading Leka's special all in one script handler")
 
 static = STATIC:FindByName("EventMan", true)
 
+atisZones = {}
+
+allZones = {}
+
+local function BuildAllZonesFromFootholdZones()
+    local built = {}
+    local seen = {}
+    if type(zones) ~= "table" then
+        return built
+    end
+
+    for _, zone in pairs(zones) do
+        -- Match the previous manual list: only include the player/spawn bases.
+        if zone and zone.isHeloSpawn == true then
+            local zoneName = zone.zone
+            if type(zoneName) == "string" and zoneName ~= "" and not seen[zoneName] then
+                table.insert(built, zoneName)
+                seen[zoneName] = true
+            end
+        end
+    end
+
+    return built
+end
+
+local function InitAllZones()
+    allZones = BuildAllZonesFromFootholdZones()
+end
+
+
+local function BuildAtisZonesFromFootholdZones()
+    local built = {}
+    if type(zones) ~= "table" then
+        return built
+    end
+
+    for _, zone in pairs(zones) do
+        local airbaseName = zone and zone.airbaseName
+        if type(airbaseName) == "string" and airbaseName ~= "" then
+            local airbase = AIRBASE:FindByName(airbaseName)
+            if airbase and airbase:IsAirdrome() then
+                built[airbaseName] = { airbaseName = airbaseName }
+            end
+        end
+    end
+
+    return built
+end
+
+local function InitAtisZones()
+    atisZones = BuildAtisZonesFromFootholdZones()
+end
+
+-- Build once at script load (this file is executed after Foothold `zones` is created).
+InitAtisZones()
+InitAllZones()
+
 
 followID={}
 staticDetails = {}
@@ -922,19 +979,19 @@ function static:processPlayerSpawn(player, zoneNameOverride)
                         if isNewVisit then
                             if assignedCallsign and assignedIFF then
                                 greetingMessage = string.format("Welcome to %s, %s!\n\nYou have been assigned to %s, IFF %04d.\n\nStandby for weather information.", zoneName, rankDisplay, assignedCallsign, assignedIFF)
-                                detailedMessage = string.format("Welcome to %s, %s!\n\n%s, %s, %s.\n\nOnce airborne push Tactical on CH 3.\n\nDon't forget supplies.", zoneName, assignedCallsign, windMessage, temperatureMessage, altimeterMessage)
+                                detailedMessage = string.format("Welcome to %s, %s!\n\n%s, %s, %s.\n\nOnce airborne push Tactical on CH 3.", zoneName, assignedCallsign, windMessage, temperatureMessage, altimeterMessage)
                             else
                                 greetingMessage = string.format("Welcome to %s, %s!\n\nStandby for weather information.", zoneName, rankDisplay)
-                                detailedMessage = string.format("Welcome to %s, %s!\n\n%s, %s, %s.\n\nOnce airborne push Tactical on CH 3.\n\nDon't forget supplies.", zoneName, playerName, windMessage, temperatureMessage, altimeterMessage)
+                                detailedMessage = string.format("Welcome to %s, %s!\n\n%s, %s, %s.\n\nOnce airborne push Tactical on CH 3.", zoneName, playerName, windMessage, temperatureMessage, altimeterMessage)
                             end
 
                         else
                             if assignedCallsign and assignedIFF then
                                 greetingMessage = string.format("Welcome back to %s, %s!\n\nYou have been assigned to %s, IFF %04d.\n\nYou'll receive updated weather information shortly.", zoneName, rankDisplay, assignedCallsign, assignedIFF)
-                                detailedMessage = string.format("Welcome back to %s, %s!\n\n%s, %s, %s.\n\nOnce airborne push Tactical on CH 3.\n\nDon't forget supplies.", zoneName, assignedCallsign, windMessage, temperatureMessage, altimeterMessage)
+                                detailedMessage = string.format("Welcome back to %s, %s!\n\n%s, %s, %s.\n\nOnce airborne push Tactical on CH 3.", zoneName, assignedCallsign, windMessage, temperatureMessage, altimeterMessage)
                             else
                                 greetingMessage = string.format("Welcome back to %s, %s!\n\nStandby for updated weather information.", zoneName, rankDisplay)
-                                detailedMessage = string.format("Welcome back to %s, %s!\n\n%s, %s, %s.\n\nOnce airborne push Tactical on CH 3.\n\nDon't forget supplies.", zoneName, playerName, windMessage, temperatureMessage, altimeterMessage)
+                                detailedMessage = string.format("Welcome back to %s, %s!\n\n%s, %s, %s.\n\nOnce airborne push Tactical on CH 3.", zoneName, playerName, windMessage, temperatureMessage, altimeterMessage)
                             end
                         end
                     end
@@ -1114,7 +1171,9 @@ end
 function EscortClientGroup(clientGroup)
     local groupName = clientGroup:GetName()
     local spawnCount = spawnedGroups[groupName] and spawnedGroups[groupName].escortSpawnCount or 1
-    local alias = groupName .. "_Escort_" .. string.format("%03d", spawnCount)
+    local playerName = clientGroup:GetUnit(1):GetPlayerName() or groupName
+    local safePlayerName = playerName:gsub("%s+", "_"):gsub("[^%w_%-]", "_")
+    local alias = groupName .. "_" .. safePlayerName .. "_Escort_" .. string.format("%03d", spawnCount)
     local templateName = FindEscortTemplateWithAlias(clientGroup, alias)
 
     local clientPos = clientGroup:GetPointVec3()
@@ -1124,16 +1183,13 @@ function EscortClientGroup(clientGroup)
     local offsetX = math.cos(math.rad(clientHeading)) * distanceBehindMeters
     local offsetZ = math.sin(math.rad(clientHeading)) * distanceBehindMeters
 
-    local spawnPos = { x = clientPos.x - offsetX, y = clientPos.y, z = clientPos.z - offsetZ }
-    local coord = COORDINATE:NewFromVec3(spawnPos)
-    local heading = clientHeading
     local desiredAlt = UTILS.MetersToFeet(clientPos.y) + 10000
-    local g = Respawn.SpawnAtPoint(templateName, coord, heading, 5, desiredAlt, 220)
-    if not g then return end
+    local spawnPos = { x = clientPos.x - offsetX, y = UTILS.FeetToMeters(desiredAlt), z = clientPos.z - offsetZ }
+    local coord = COORDINATE:NewFromVec3(spawnPos)
 
-    timer.scheduleFunction(function(group, time)
-        local spawnedEscortGroup = GROUP:FindByName(group:getName())
-        escortGroup = FLIGHTGROUP:New(spawnedEscortGroup)
+    local sp = SPAWN:NewWithAlias(templateName, alias)
+    sp:OnSpawnGroup(function(g)
+        escortGroup = FLIGHTGROUP:New(g)
         escortGroup:GetGroup():CommandSetUnlimitedFuel(true):SetOptionRadarUsingForContinousSearch(true):SetOptionWaypointPassReport(false)
         escortGroups[groupName] = escortGroup
         local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, { x = -100, y = 3048, z = 100 }, 40, { "Air" })
@@ -1149,7 +1205,9 @@ function EscortClientGroup(clientGroup)
                 MESSAGE:New("Your escort group has been destroyed. Takeoff from an airfield to get a new one.", 10):ToGroup(clientGroup)
             end
         end
-    end, g, timer.getTime() + 1)
+    end)
+    sp:SpawnFromCoordinate(coord)
+
     spawnedGroups[groupName].escortSpawnCount = spawnCount + 1
 end
 function AddEscortMenu(group)
