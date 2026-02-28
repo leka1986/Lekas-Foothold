@@ -51,28 +51,29 @@ ewrs.HELO = 1
 ewrs.ATTACK = 2
 ewrs.FIGHTER = 3
 ewrs.version = "2.0.0"
-ewrs.rangeOptions = { km = {10,20,40,60,80,100,150}, nm = {5,10,20,40,60,80,100} }
+ewrs.rangeOptions = ewrs_rangeOptions or { km = {10,20,40,60,80,100,150}, nm = {5,10,20,40,60,80,100} }
 
 ----SCRIPT OPTIONS----
 
-ewrs.messageUpdateInterval = 60 --How often EWRS will update automated BRA messages (seconds)
-ewrs.messageDisplayTime = 15 --How long EWRS BRA messages will show for (seconds)
-ewrs.restrictToOneReference = false -- Disables the ability to change the BRA calls from pilot's own aircraft or bullseye. If this is true, set ewrs.defaultReference to the option you want to restrict to.
-ewrs.defaultReference = "self" --The default reference for BRA calls - can be changed via f10 radio menu if ewrs.restrictToOneReference is false (self or bulls)
-ewrs.defaultMeasurements = "imperial" --Default measurement units - can be changed via f10 radio menu (imperial or metric)
-ewrs.disableFightersBRA = false -- disables BRA messages to fighters when true
-ewrs.enableRedTeam = true -- enables / disables EWRS for the red team
-ewrs.enableBlueTeam = true -- enables / disables EWRS for the blue team
-ewrs.disableMessageWhenNoThreats = true -- disables message when no threats are detected - Thanks Rivvern - NOTE: If using ewrs.onDemand = true, this has no effect
-ewrs.useImprovedDetectionLogic = true --this makes the messages more realistic. If the radar doesn't know the type or distance to the detected threat, it will be reflected in the picture report / BRA message
-ewrs.onDemand = false --Setting to true will disable the automated messages to everyone and will add an F10 menu to get picture / BRA message.
-ewrs.maxThreatDisplay = 5 -- Max amounts of threats to display on picture report (0 will display all)
-ewrs.allowBogeyDope = true -- Allows pilots to request a bogey dope even with the automated messages running. It will display only the cloest threat, and will always reference the players own aircraft.
-ewrs.allowFriendlyPicture = true -- Allows pilots to request picture of friendly aircraft
-ewrs.maxFriendlyDisplay = 5 -- Limits the amount of friendly aircraft shown on friendly picture
-ewrs.showType = true -- if true it will show the type of the unit
-ewrs.hiddenFriendlyReportingNames = { Sentry = true }
-ewrs.specialPlaneTypes = {
+ewrs.messageUpdateInterval = ewrs_messageUpdateInterval or 60 --How often EWRS will update automated BRA messages (seconds)
+ewrs.messageDisplayTime = ewrs_messageDisplayTime or 15 --How long EWRS BRA messages will show for (seconds)
+if ewrs_restrictToOneReference ~= nil then ewrs.restrictToOneReference = ewrs_restrictToOneReference else ewrs.restrictToOneReference = false end -- Disables the ability to change the BRA calls from pilot's own aircraft or bullseye. If this is true, set ewrs.defaultReference to the option you want to restrict to.
+ewrs.defaultReference = ewrs_defaultReference or "self" --The default reference for BRA calls - can be changed via f10 radio menu if ewrs.restrictToOneReference is false (self or bulls)
+ewrs.defaultMeasurements = ewrs_defaultMeasurements or "imperial" --Default measurement units - can be changed via f10 radio menu (imperial or metric)
+if ewrs_defaultShowTankers ~= nil then ewrs.defaultShowTankers = ewrs_defaultShowTankers else ewrs.defaultShowTankers = false end -- Default show tankers in picture report (still requires Show Friendlies)
+if ewrs_disableFightersBRA ~= nil then ewrs.disableFightersBRA = ewrs_disableFightersBRA else ewrs.disableFightersBRA = false end -- disables BRA messages to fighters when true
+if ewrs_enableRedTeam ~= nil then ewrs.enableRedTeam = ewrs_enableRedTeam else ewrs.enableRedTeam = true end -- enables / disables EWRS for the red team
+if ewrs_enableBlueTeam ~= nil then ewrs.enableBlueTeam = ewrs_enableBlueTeam else ewrs.enableBlueTeam = true end -- enables / disables EWRS for the blue team
+if ewrs_disableMessageWhenNoThreats ~= nil then ewrs.disableMessageWhenNoThreats = ewrs_disableMessageWhenNoThreats else ewrs.disableMessageWhenNoThreats = true end -- disables message when no threats are detected - Thanks Rivvern - NOTE: If using ewrs.onDemand = true, this has no effect
+if ewrs_useImprovedDetectionLogic ~= nil then ewrs.useImprovedDetectionLogic = ewrs_useImprovedDetectionLogic else ewrs.useImprovedDetectionLogic = true end --this makes the messages more realistic. If the radar doesn't know the type or distance to the detected threat, it will be reflected in the picture report / BRA message
+if ewrs_onDemand ~= nil then ewrs.onDemand = ewrs_onDemand else ewrs.onDemand = false end --Setting to true will disable the automated messages to everyone and will add an F10 menu to get picture / BRA message.
+ewrs.maxThreatDisplay = ewrs_maxThreatDisplay or 5 -- Max amounts of threats to display on picture report (0 will display all)
+if ewrs_allowBogeyDope ~= nil then ewrs.allowBogeyDope = ewrs_allowBogeyDope else ewrs.allowBogeyDope = true end -- Allows pilots to request a bogey dope even with the automated messages running. It will display only the cloest threat, and will always reference the players own aircraft.
+if ewrs_allowFriendlyPicture ~= nil then ewrs.allowFriendlyPicture = ewrs_allowFriendlyPicture else ewrs.allowFriendlyPicture = true end -- Allows pilots to request picture of friendly aircraft
+ewrs.maxFriendlyDisplay = ewrs_maxFriendlyDisplay or 5 -- Limits the amount of friendly aircraft shown on friendly picture
+if ewrs_showType ~= nil then ewrs.showType = ewrs_showType else ewrs.showType = true end -- if true it will show the type of the unit
+ewrs.hiddenFriendlyReportingNames = ewrs_hiddenFriendlyReportingNames or { Sentry = true }
+ewrs.specialPlaneTypes = ewrs_specialPlaneTypes or {
   ["F-4E-45MC"] = true,
   ["MiG-29 Fulcrum"] = true,
   ["F-5E-3_FC"] = true,
@@ -160,6 +161,7 @@ local function ewrs_clonePersistentSettings(src)
     measurements = src.measurements,
     rangeLimit = src.rangeLimit,
     showFriendlies = src.showFriendlies,
+    showTankers = src.showTankers,
     maxFriendlies = src.maxFriendlies,
     messages = src.messages,
     customized = src.customized or src._hasCustomizations or false,
@@ -169,7 +171,7 @@ end
 local function ewrs_settingsEqual(a, b)
   if a == b then return true end
   if type(a) ~= "table" or type(b) ~= "table" then return false end
-  local keys = {"reference","measurements","rangeLimit","showFriendlies","maxFriendlies","messages"}
+  local keys = {"reference","measurements","rangeLimit","showFriendlies","showTankers","maxFriendlies","messages"}
   for _,key in ipairs(keys) do
     if a[key] ~= b[key] then
       return false
@@ -430,7 +432,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
       threatTable[j].aspect=aspect
     end
   end
-    if activePlayer.side==2 and ewrs.inAuto and not bogeyDope and ewrs.getGroupCategory(playerUnit)=="plane" then
+    if activePlayer.side==2 and not bogeyDope and groupSettings.showFriendlies and groupSettings.showTankers then
 
     local function addTanker(name,label)
       local g=Group.getByName(name)
@@ -903,6 +905,7 @@ function ewrs.addGroupSettings(groupID,isHelo,showFriendlies)
   ewrs.groupSettings[groupID].messages=true
   ewrs.groupSettings[groupID].rangeLimit=isHelo and 5 or 60
   ewrs.groupSettings[groupID].showFriendlies=showFriendlies and true or false
+  ewrs.groupSettings[groupID].showTankers=ewrs.defaultShowTankers
   ewrs.groupSettings[groupID].maxFriendlies=5
 end
 function ewrs.setGroupMaxFriendlies(args)
@@ -930,6 +933,16 @@ function ewrs.setGroupShowFriendlies(args)
   ewrs.persistGroupSettings(groupID)
 end
 
+function ewrs.setGroupShowTankers(args)
+  local groupID=args[1]
+  local settings=ewrs.getGroupSettingsTable(groupID)
+  settings.showTankers=args[2]
+  ewrs_flagSettingsDirty(settings)
+  local onOff=args[2] and "on" or "off"
+  trigger.action.outTextForGroup(groupID,"Tanker contacts in picture turned "..onOff,ewrs.messageDisplayTime)
+  ewrs.persistGroupSettings(groupID)
+end
+
 function ewrs.setGroupReference(args)
   local groupID = args[1]
   local settings = ewrs.getGroupSettingsTable(groupID)
@@ -946,9 +959,9 @@ function ewrs.setGroupMeasurements(args)
   local newUnits = args[2]
   if oldUnits ~= newUnits then
     if newUnits == "metric" then
-      groupSettings.rangeLimit = UTILS.Round(groupSettings.rangeLimit * 1.852, -1)
+      groupSettings.rangeLimit = UTILS.Round((groupSettings.rangeLimit or 0) * 1.852, 0)
     else
-      groupSettings.rangeLimit = UTILS.Round(groupSettings.rangeLimit / 1.852, -1)
+      groupSettings.rangeLimit = UTILS.Round((groupSettings.rangeLimit or 0) / 1.852, 0)
     end
   end
   groupSettings.measurements = newUnits
@@ -973,8 +986,13 @@ function ewrs.buildF10Menu()
     for i = 1, #ewrs.activePlayers do
       local groupID = ewrs.activePlayers[i].groupID
       local stringGroupID = tostring(groupID)
+
       if ewrs.builtF10Menus[stringGroupID] == nil then
-        local rootPath = missionCommands.addSubMenuForGroup(groupID, "EWRS")
+        local desiredParent = nil
+        if EWRS_MENU_PARENT_BY_GROUP and EWRS_MENU_PARENT_BY_GROUP[stringGroupID] then
+          desiredParent = EWRS_MENU_PARENT_BY_GROUP[stringGroupID]
+        end
+        local rootPath = missionCommands.addSubMenuForGroup(groupID, "EWRS", desiredParent)
         
         if ewrs.allowBogeyDope then
           missionCommands.addCommandForGroup(groupID, "Request Bogey Dope",rootPath,ewrs.onDemandMessage,{groupID,true})
@@ -990,12 +1008,18 @@ function ewrs.buildF10Menu()
             missionCommands.addCommandForGroup(groupID,r.." "..u,sub, function(args)
               local gid=args[1]
               local range=args[2]
+              local selectedUnit=args[3]
               local settings = ewrs.getGroupSettingsTable(gid)
+              if selectedUnit == "km" then
+                settings.measurements = "metric"
+              elseif selectedUnit == "nm" then
+                settings.measurements = "imperial"
+              end
               settings.rangeLimit = range
               ewrs_flagSettingsDirty(settings)
-              trigger.action.outTextForGroup(gid,"Range set to "..range..u,ewrs.messageDisplayTime)
+              trigger.action.outTextForGroup(gid,"Range set to "..range..selectedUnit,ewrs.messageDisplayTime)
               ewrs.persistGroupSettings(gid)
-            end, {groupID,r})
+            end, {groupID,r,u})
           end
         end
         
@@ -1013,6 +1037,10 @@ function ewrs.buildF10Menu()
         missionCommands.addCommandForGroup(groupID, "Set to Imperial (feet, knts)",measurementsSetPath,ewrs.setGroupMeasurements,{groupID, "imperial"})
         missionCommands.addCommandForGroup(groupID, "Set to Metric (meters, km/h)",measurementsSetPath,ewrs.setGroupMeasurements,{groupID, "metric"})
 
+        local showTankersPath=missionCommands.addSubMenuForGroup(groupID,"Show tankers in Picture",rootPath)
+        missionCommands.addCommandForGroup(groupID,"Show Tankers ON",showTankersPath,ewrs.setGroupShowTankers,{groupID,true})
+        missionCommands.addCommandForGroup(groupID,"Show Tankers OFF",showTankersPath,ewrs.setGroupShowTankers,{groupID,false})
+
         local showFriendliesPath=missionCommands.addSubMenuForGroup(groupID,"Show friendlies in Picture",rootPath)
         missionCommands.addCommandForGroup(groupID,"Show Friendlies ON",showFriendliesPath,ewrs.setGroupShowFriendlies,{groupID,true})
         missionCommands.addCommandForGroup(groupID,"Show Friendlies OFF",showFriendliesPath,ewrs.setGroupShowFriendlies,{groupID,false})
@@ -1029,7 +1057,7 @@ function ewrs.buildF10Menu()
           missionCommands.addCommandForGroup(groupID, "Message OFF", messageOnOffPath, ewrs.setGroupMessages, {groupID, false})
         end
 
-        ewrs.builtF10Menus[stringGroupID] = true
+        ewrs.builtF10Menus[stringGroupID] = rootPath
       end
     end
   end)

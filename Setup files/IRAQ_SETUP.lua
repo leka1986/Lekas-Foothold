@@ -28,7 +28,7 @@ upgrades = {
 	},
 	airfield1 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
-		red = {'Enemy ground forces', 'Enemy ground forces 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8 2'}
+		red = {'Enemy ground forces', 'Enemy Task forces', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8'}
 	},
 	
 	airfieldStart = {
@@ -37,43 +37,43 @@ upgrades = {
 	},
 	airfield2 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
-		red = {'Enemy ground forces','Red SAM AAA 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19 2'}
+		red = {'Enemy ground forces','Red SAM AAA 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19'}
 	},
 	airfield3 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD2', 'blueHAWK'},
-		red = {'Enemy ground forces 2', 'Red Armour Group 2', 'Red SAM AAA 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19 2', 'Red SAM SHORAD Pantsir S1'}
+		red = {'Enemy Task forces', 'Red Armour Group 2', 'Red SAM AAA 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD Pantsir S1'}
 	},
 	airfield3Sahra = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD2', 'blueHAWK'},
-		red = {'Enemy ground forces 2', 'Red SAM AAA', 'Red SAM SHORAD SA-19 Fixed Sahra', 'Red Armour Group 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19 2', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15 2'}
+		red = {'Enemy Task forces', 'Red SAM AAA', 'Red SAM SHORAD SA-19 Fixed Sahra', 'Red Armour Group 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15'}
 	},
 	airfield6 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1', 'bluePATRIOT'},
-		red = {'Enemy ground forces 2', 'Red SAM AAA 2', 'Red Armour Group 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19 2', 'Red SAM SHORAD Tor M2'}
+		red = {'Enemy Task forces', 'Red SAM AAA 2', 'Red Armour Group 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD Tor M2'}
 	},
 	airfield4 = {
 		blue = {'blueInfantry','blueArmor', 'bluePD2'},
-		red = {'Enemy ground forces 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD Tor M2', 'Red SAM SHORAD Pantsir S1', 'Red SAM AAA', 'Red SAM SHORAD SA-8'}
+		red = {'Enemy Task forces', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD Tor M2', 'Red SAM SHORAD Pantsir S1', 'Red SAM AAA', 'Red SAM SHORAD SA-8'}
 	},
 	Ramadi = {
 		blue = {'blueInfantry','blueArmor', 'bluePD2'},
-		red = {'Enemy ground forces 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD Pantsir S1', 'Red SAM AAA', 'Red SAM AAA 3 Ramadi Fixed', 'Red SAM AAA 4 Ramadi Fixed'}
+		red = {'Enemy Task forces', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD Pantsir S1', 'Red SAM AAA', 'Red SAM AAA 3', 'Red SAM AAA 4'}
 	},
 	farp1 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
-		red = {'Enemy ground forces', 'Red SAM AAA 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM AAA', 'Red SAM SHORAD SA-8 2','Red SAM SHORAD SA-8'}
+		red = {'Enemy ground forces', 'Red SAM AAA 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM AAA', 'Red SAM SHORAD SA-8','Red SAM SHORAD SA-8'}
 	},
 	farp1Koya = {
 		blue = {'bluePD1'},
-		red = {'Red Armour Group', 'Red Armour Group 2', 'Red SAM AAA 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8 2', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15 2'}
+		red = {'Red Armour Group', 'Red Armour Group 2', 'Red SAM AAA 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15'}
 	},
 	farp1Dukan = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
-		red = {'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8 2'}
+		red = {'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8'}
 	},
 	farp1San = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
-		red = {'Red SAM AAA 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8 2'}
+		red = {'Red SAM AAA 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8'}
 	},
 	farp2 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
@@ -94,7 +94,7 @@ upgrades = {
 	},
 	mission4 = {
 		blue = {'blueInfantry', 'blueArmor'},
-		red = {'Enemy ground forces 2', 'Red SAM AAA 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM AAA', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8 2'}
+		red = {'Enemy Task forces', 'Red SAM AAA 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM AAA', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-8'}
 	},	
 	BarzanGroup = {
 	    blue = {'blueInfantry'},
@@ -102,23 +102,23 @@ upgrades = {
 	},
 	SamEastGroup = {
 	    blue = {},
-		red = {'Red SAM SA-11 Fixed SAMEAST','Red SAM AAA Fixed SAMEAST 2', 'Red SAM SHORAD Tor M2 Fixed SAMEAST 2'}
+		red = {'Red SAM SA-11','Red SAM AAA', 'Red SAM SHORAD Tor M2'}
 	},
 	SamWestGroup = {
 	    blue = {},
-		red = {'Red SAM SHORAD SA-19 Fixed SAMWEST', 'Red SAM SA-3 Fixed SAMWEST', 'Red SAM SHORAD Tor M2 Fixed SAMWEST'}
+		red = {'Red SAM SHORAD SA-19', 'Red SAM SA-3', 'Red SAM SHORAD Tor M2'}
 	},
 	SamSouthGroup = {
 		blue = {},
-		red = {'Red SAM SA-11 Fixed SAMSOUTH','Red SAM SHORAD Tor M2','Red SAM AAA Fixed SAMSOUTH', 'Red SAM SHORAD SA-8'}
+		red = {'Red SAM SA-11','Red SAM SHORAD Tor M2','Red SAM AAA', 'Red SAM SHORAD SA-8'}
 	},
 	RamadiSamGroup = {
 	    blue = {},
-		red = {'Red SAM SHORAD SA-8 Fixed ramadi', 'Red SAM SA-2 Fixed Ramadi', 'Red SAM SHORAD AAA Fixed ramadi'}
+		red = {'Red SAM SHORAD SA-8', 'Red SAM SA-2', 'Red SAM SHORAD AAA'}
 	},
 	KirkukCity = {
 	    blue = {'blueInfantry', 'blueArmor', 'bluePD2', 'blueHAWK'},
-		red = {'Red SAM SA-3 Fixed KirkukCity', 'Red SAM SHORAD SA-8 Kirkuk City Fixed', 'Red SAM AAA Group Fixed', 'Kirkuk City Group Fixed2', 'Red Armour Group 2','Red SAM AAA 3 Kirkuk Fixed', 'Red SAM AAA 4 Kirkuk Fixed'}
+		red = {'Red SAM SA-3 Fixed KirkukCity', 'Red SAM SHORAD SA-8 Kirkuk City Fixed', 'Red SAM AAA Group Fixed', 'Kirkuk City Group Fixed2', 'Red Armour Group 2','Red SAM AAA 3', 'Red SAM AAA'}
 	},
 	hidden1Group = {
 		blue = {},
@@ -187,7 +187,7 @@ upgrades = {
 	},
 	erbildefence = {
 		blue = {},
-		red = {'Red SAM SA-3 Erbil Fixed-1', 'Red SAM SA-6 Erbil Fixed', 'Red SAM AAA Erbil Fixed'}
+		red = {'Red SAM SA-3 Erbil Fixed-1', 'Red SAM SA-6', 'Red SAM AAA Erbil Fixed'}
 	},
 	FaljuaCity = {
 		blue = {'bluePD1'},
@@ -195,21 +195,20 @@ upgrades = {
     },
 	BaladGroup = {
 		blue = {'blueArmor', 'bluePD1'},
-		red = {'Red SAM SA-3 Balad Fixed', 'Red SAM SA-2 Balad Fixed','Red Armour Group', 'Red SAM SHORAD SA-15 Fixed Balad', 'Red SAM SHORAD SA-19 Fixed Balad'}
+		red = {'Red SAM SA-3', 'Red SAM SA-2','Red Armour Group', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-19'}
     },
 	SahraDefence = {
 		blue = {},
-		red = {'Red SAM SHORAD SA-15 Fixed Sahra Defence', 'Red SAM Fixed Al Sahra', 'Sahra Defence Fixed Group','Red SAM AAA 3 Sahra Fixed','Red SAM AAA 4 Sahra Fixed'}
+		red = {'Red SAM SHORAD SA-15', 'Red SAM SA-11', 'Sahra Defence Fixed Group','Red SAM AAA 3 Sahra Fixed','Red SAM AAA 4 Sahra Fixed'}
     },
 	BaladDefence = {
 		blue = {},
-		red = {'Red SAM SHORAD SA-15 FIxed Balad Defence', 'Red SAM SA-11 Fixed Balad Defence', 'Red SAM AAA Balad Fixed'}
+		red = {'Red SAM SHORAD SA-15', 'Red SAM SA-11', 'Red SAM AAA'}
     },
 	borjoilFixed = {
 		blue = {},
-		red = {'Red SAM SA-6 Fixed Borj Oil production', 'Red SAM SHORAD SA-15 Oil Production','Red SAM SHORAD SA-15 Oil Production 2', 
-		'Fixed-redInfantry Borj Oil production', 'Borj Oil production_4', 'Borj Oil production_3', 'Borj Oil production_2', 'Borj Oil production_1', 
-		'Borj Oil production_5', 'Borj Oil production_6'}
+		red = {'Red SAM SA-6', 'Red SAM SHORAD SA-15','Red SAM SHORAD Tor M2', 'Enemy Task forces','Enemy ground forces', 'Borj Oil production_4', 'Borj Oil production_3', 
+		'Borj Oil production_5', 'Borj Oil production_6', 'Borj Oil production_2', 'Borj Oil production_1'}
 	},
 	ScudsCityGroup = {
 		blue = {},
@@ -307,28 +306,22 @@ end
 local cwSwap = {
 	['Red Armour Group']   	= 'Red Armor Group6',
 	['Red Armour Group 2']  = 'Red Armor Group8',
+	['Red Armour Group 3']  = 'Red Armor Group7',
 	['Armour Group Chemsite Fixed']  = 'Armour Group Chemsite Fixed-Coldwar',
 	['blueHAWK']  = 'blueHAWK-Coldwar',
 	['bluePATRIOT']  = 'bluePATRIOT-Coldwar',
 	['bluePD2']  = 'bluePD2-Coldwar',
 	['blueArmor']  = 'blueArmor-Coldwar',
 	['Red SAM SHORAD SA-15']   						= 'Red SAM SHORAD SA-8',
-	['Red SAM SHORAD SA-15 2']   					= 'Red SAM SHORAD SA-8 2',
 	['Red SAM SHORAD SA-15 Fixed Faljua']   		= 'Red SAM SHORAD SA-8 Fixed Faljua-Coldwar',
 	['Red SAM SHORAD SA-15 Fixed Faljua-2']   		= 'Red SAM SHORAD SA-8 Fixed Faljua-Coldwar-2',
-	['Red SAM SHORAD Tor M2 Fixed SAMEAST 2']  		= 'Red SAM SHORAD SA-8 Fixed SAMEAST 2',
-	['Red SAM SHORAD Tor M2 Fixed SAMWEST']   		= 'Red SAM SHORAD SA-8 Fixed SAMWEST',
-	['Red SAM SHORAD SA-15 Fixed Balad']   			= 'Red SAM SHORAD SA-8 Fixed Balad',
-	['Red SAM SHORAD SA-15 FIxed Balad Defence']   	= 'Red SAM SHORAD SA-8 FIxed Balad Defence',
 	['Red SAM SHORAD SA-15 Fixed Uranium']   		= 'Red SAM SHORAD SA-8 Fixed Uranium 2',
-	['Red SAM SHORAD SA-15 Oil Production 2']   	= 'Red SAM SHORAD SA-8 Oil Production 2',
-	['Red SAM SHORAD SA-15 Oil Production']   		= 'Red SAM SHORAD SA-8 Oil Production',
 	['Red SAM SA-15 Fixed Hiddengroup5']   			= 'Red SAM SA-8 Fixed Hiddengroup5',
 	['Red SAM SHORAD SA-15 Fixed Checksite']   		= 'Red SAM SHORAD SA-8 Fixed Checksite',
 	['Red SAM SHORAD SA-15 Hiddengroup3-Fixed2']    = 'Red SAM SHORAD SA-8 Hiddengroup3-Fixed2',
-	['Red SAM SHORAD SA-8']    						= {'Red SAM AAA 3','Red SAM AAA 4'},
-	['Red SAM SHORAD Tor M2']    					= 'Red SAM SHORAD SA-8',
-	['Red SAM SHORAD Pantsir S1']    				= 'Red SAM SHORAD SA-8',
+	--['Red SAM SHORAD SA-8']    						= {'Red SAM AAA 3','Red SAM AAA 4'},
+	['Red SAM SHORAD Tor M2']    					= 'Red SAM SHORAD SA-9',
+	['Red SAM SHORAD Pantsir S1']    				= 'Red SAM SHORAD SA-13',
 }
 
 local function deepSwap(t,s)
@@ -359,8 +352,8 @@ end
 
 local SamSwap = {
 
-	['Red SAM SA-11 Fixed SAMSOUTH']   				= 'Red SAM SA-2 Fixed SAMSOUTH',
-	['Red SAM SA-11 Fixed SAMEAST']  			  	= 'Red SAM SA-2 Fixed SAMEAST',
+	['Red SAM SA-11']   							= 'Red SAM SA-2',
+	['Red SAM SA-10']  			  					= {'Red SAM SA-6', 'Red SAM SA-2'},
 	['Red SAM SA-11 Fixed Balad Defence']   		= 'Red SAM SA-2 Fixed Balad Defence',
 
 }
@@ -386,7 +379,94 @@ if NoSA10AndSA11 == true then
 	deepSwapAgain(upgrades,SamSwap)
 end
 
-bc = BattleCommander:new(filepath, 10, 60)
+-- Randomized upgrade pools/templates (fresh start only)
+RandomRedPool = {
+	-- SAM
+	"Red SAM SA-10",
+	"Red SAM SA-11",
+	"Red SAM SA-6",
+	"Red SAM SA-2",
+	"Red SAM SA-3",
+	-- SHORAD
+	"Red SAM SHORAD Pantsir S1",
+	"Red SAM SHORAD SA-15",
+	"Red SAM SHORAD SA-19",
+	"Red SAM SHORAD SA-8",
+	"Red SAM SHORAD SA-13",
+	"Red SAM SHORAD SA-9",
+	"Red SAM SHORAD Tor M2",
+	-- AAA
+	"Red SAM AAA 2",
+	"Red SAM AAA 3",
+	"Red SAM AAA 4",
+	"Red SAM AAA",
+	-- Ground
+	"Enemy Task forces",
+	"Enemy ground forces",
+	-- Armor
+	"Red Armour Group",
+	"Red Armour Group 2",
+	"Red Armour Group 3",
+	-- Arty
+	"Red Arty",
+	"Red Arty 2",
+	"Red Arty 3",
+}
+
+RandomBluePool = {
+	"blueInfantry",
+	"blueArmor",
+	"bSamIR",
+	"bluePD",
+	"bluePD 2",
+	"bluePD1",
+	"bSamBig",
+	"bSamFinal",
+}
+
+if Era == 'Coldwar' then
+	deepSwap(RandomRedPool, cwSwap)
+	deepSwap(RandomBluePool, cwSwap)
+end
+
+if NoSA10AndSA11 == true then
+	deepSwapAgain(RandomRedPool, SamSwap)
+end
+
+ZoneSizeExclusions = {
+	small = { "sa-10", "sa-11","sa-2","pantsir","tor m2" },
+	medium = { "sa-10", "sa-11","pantsir"},
+}
+
+RandomUpgradeTemplates = {
+	small = { sam = 0, shorad = {1,2}, aaa = 2, ground = 1, armor = {1,2}, arty = {0,1}, total = {5,7} },
+	smallmedium = { sam = 0, shorad = {1,3}, aaa = 2, ground = 1, armor = {1,2}, arty = {0,1}, total = {6,8} },
+	medium = { sam = {0,1}, shorad = {1,3}, aaa = {1,3}, ground = 1, armor = {1,2}, arty = 1, total = {7,9} },
+	mediumbig = { sam = {0,1}, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10} },
+	big = { sam = 1, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {8,10} },
+	bignosam = { sam = 0, shorad = {3,4}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10} },
+	extrabig = { sam = 2, shorad = {3,4}, aaa = 2, ground = 1, armor = {1,2}, arty = 1, total = {10,12} },
+	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {5,5} },
+	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {5,6} },
+	samspecial = { sam = 3, shorad = {1,4}, aaa = {1,3}, ground = 0, armor = 0, arty = 0, total = {5,9} },
+}
+
+RandomUpgradeTemplatesBlue = {
+	small = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+	smallmedium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+	medium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+	big = { sam = 1, ground = 1, armor = 1, total = {3,4} },
+	extrabig = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
+	bignosam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
+	sam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
+	sam2 = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
+	samspecial = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
+}
+
+RandomGroundGroups = true
+RandomBlueGroups = true
+
+bc = BattleCommander:new(filepath, 13, 60)
 if RankingSystem then
 bc.rankFile = (lfs and (lfs.writedir()..'Missions/Saves/Foothold_Ranks.lua')) or 'Foothold_Ranks.lua'
 env.info('Foothold - Rank file path: '..bc.rankFile)
@@ -396,48 +476,48 @@ Hunt = true
 
 zones = {
 
-	bashurairport = ZoneCommander:new({zone='Bashur Airport', side=2, level=20, upgrades=upgrades.airfieldStart, crates={},flavorText=flavor.bashurairport}),
-	erbilairport = ZoneCommander:new({zone='Erbil Airport', side=1, level=20, upgrades=upgrades.airfield2, crates={},flavorText=flavor.erbilairport}),
-	mosulcity = ZoneCommander:new({zone='Mosul City', side=1, level=20, upgrades=upgrades.MosulCityGroup, crates={},flavorText=flavor.mosulcity}),
-	hammam = ZoneCommander:new({zone='Hammam Al Alil', side=1, level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.hammam}),
+	bashurairport = ZoneCommander:new({zone='Bashur Airport', side=2, size='big', level=20, upgrades=upgrades.airfieldStart, crates={},flavorText=flavor.bashurairport}),
+	erbilairport = ZoneCommander:new({zone='Erbil Airport', side=1, size='mediumbig', level=20, upgrades=upgrades.airfield2, crates={},flavorText=flavor.erbilairport}),
+	mosulcity = ZoneCommander:new({zone='Mosul City', side=1, size='big', level=20, upgrades=upgrades.MosulCityGroup, crates={},flavorText=flavor.mosulcity}),
+	hammam = ZoneCommander:new({zone='Hammam Al Alil', side=1, size='medium', level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.hammam}),
 	duhokcity = ZoneCommander:new({zone='Duhok City', side=1, level=20, upgrades=upgrades.DuhukCityGroup, crates={},flavorText=flavor.duhokcity}),
-	talafar = ZoneCommander:new({zone='Tal Afar', side=1, level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.talafar}),
-	altall = ZoneCommander:new({zone='Al Tall', side=1, level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.altall}),	
-	qayyarah = ZoneCommander:new({zone='Qayyarah Airfield', side=1, level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.qayyarah}),
-	alabbasi = ZoneCommander:new({zone='Al Abbasi', side=1, level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.alabbasi}),
-	kirkuk = ZoneCommander:new({zone='Kirkuk City', side=1, level=20, upgrades=upgrades.KirkukCity, crates={},flavorText=flavor.kirkuk}),
-	sulaimaniyah = ZoneCommander:new({zone='Sulaimaniyah Airport', side=1, level=20, upgrades=upgrades.airfield3, crates={},flavorText=flavor.Sulaimaniyah}),
-	saidsadiq = ZoneCommander:new({zone='Said Sadiq', side=1, level=20, upgrades=upgrades.airfield3, crates={},flavorText=flavor.saidsadiq}),
-	alsahra = ZoneCommander:new({zone='Al-Sahra Airport', side=1, level=20, upgrades=upgrades.airfield3Sahra, crates={},flavorText=flavor.alsahra}),
-	barzan = ZoneCommander:new({zone='Barzan', side=2, level=4, upgrades=upgrades.BarzanGroup, crates={},flavorText=flavor.barzan}),
-	chamanki = ZoneCommander:new({zone='Chamanki', side=1, level=20, upgrades=upgrades.farp2, crates={},flavorText=flavor.chamanki}),
-	outpost = ZoneCommander:new({zone='OutPost', side=1, level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.outpost}),
-	maydan = ZoneCommander:new({zone='Maydan', side=1, level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.maydan}),
-	sarqala = ZoneCommander:new({zone='Sarqala', side=1, level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.sarqala}),
-	khormato = ZoneCommander:new({zone='Khormato', side=1, level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.Khormato}),
-	baladairbase = ZoneCommander:new({zone='Balad Airbase', side=1, level=20, upgrades=upgrades.BaladGroup, crates={},flavorText=flavor.baladairbase}),
-	alsalamairbase = ZoneCommander:new({zone='Al-Salam Airbase', side=1, level=20, upgrades=upgrades.airfield3, crates={},flavorText=flavor.alsalamairbase}),
-	fallujah = ZoneCommander:new({zone='Fallujah', side=1, level=20, upgrades=upgrades.FaljuaCity, crates={},flavorText=flavor.fallujah}),
-	ramadi = ZoneCommander:new({zone='Ramadi', side=1, level=20, upgrades=upgrades.Ramadi, crates={},flavorText=flavor.ramadi}),
-	alasadairbase = ZoneCommander:new({zone='Al-Asad Airbase', side=1, level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.alasadairbase}),
-	koya = ZoneCommander:new({zone='Koya', side=1, level=20, upgrades=upgrades.farp1Koya, crates={},flavorText=flavor.Koya}),
-	dukan = ZoneCommander:new({zone='Dukan', side=1, level=20, upgrades=upgrades.farp1Dukan, crates={},flavorText=flavor.dukan}),
-	sangasar = ZoneCommander:new({zone='Sangasar', side=1, level=20, upgrades=upgrades.farp1San, crates={},flavorText=flavor.sangasar}),
+	talafar = ZoneCommander:new({zone='Tal Afar', side=1, size='medium', level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.talafar}),
+	altall = ZoneCommander:new({zone='Al Tall', side=1, size='medium', level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.altall}),	
+	qayyarah = ZoneCommander:new({zone='Qayyarah Airfield', side=1, size='medium', level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.qayyarah}),
+	alabbasi = ZoneCommander:new({zone='Al Abbasi', side=1, size='medium', level=20, upgrades=upgrades.mission4, crates={},flavorText=flavor.alabbasi}),
+	kirkuk = ZoneCommander:new({zone='Kirkuk City', side=1, size='medium', level=20, upgrades=upgrades.KirkukCity, crates={},flavorText=flavor.kirkuk}),
+	sulaimaniyah = ZoneCommander:new({zone='Sulaimaniyah Airport', side=1, size='big', level=20, upgrades=upgrades.airfield3, crates={},flavorText=flavor.Sulaimaniyah}),
+	saidsadiq = ZoneCommander:new({zone='Said Sadiq', side=1, size='big', level=20, upgrades=upgrades.airfield3, crates={},flavorText=flavor.saidsadiq}),
+	alsahra = ZoneCommander:new({zone='Al-Sahra Airport', side=1, size='big', level=20, upgrades=upgrades.airfield3Sahra, crates={},flavorText=flavor.alsahra}),
+	barzan = ZoneCommander:new({zone='Barzan', side=2, size='small', level=4, upgrades=upgrades.BarzanGroup, crates={},flavorText=flavor.barzan}),
+	chamanki = ZoneCommander:new({zone='Chamanki', side=1, size='smallmedium', level=20, upgrades=upgrades.farp2, crates={},flavorText=flavor.chamanki}),
+	outpost = ZoneCommander:new({zone='OutPost', side=1, size='smallmedium', level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.outpost}),
+	maydan = ZoneCommander:new({zone='Maydan', side=1, size='smallmedium', level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.maydan}),
+	sarqala = ZoneCommander:new({zone='Sarqala', side=1, size='smallmedium', level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.sarqala}),
+	khormato = ZoneCommander:new({zone='Khormato', side=1, size='smallmedium', level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.Khormato}),
+	baladairbase = ZoneCommander:new({zone='Balad Airbase', side=1, size='big', level=20, upgrades=upgrades.BaladGroup, crates={},flavorText=flavor.baladairbase}),
+	alsalamairbase = ZoneCommander:new({zone='Al-Salam Airbase', side=1, size='big', level=20, upgrades=upgrades.airfield3, crates={},flavorText=flavor.alsalamairbase}),
+	fallujah = ZoneCommander:new({zone='Fallujah', side=1, size='medium', level=20, upgrades=upgrades.FaljuaCity, crates={},flavorText=flavor.fallujah}),
+	ramadi = ZoneCommander:new({zone='Ramadi', side=1, size='medium', level=20, upgrades=upgrades.Ramadi, crates={},flavorText=flavor.ramadi}),
+	alasadairbase = ZoneCommander:new({zone='Al-Asad Airbase', side=1, size='smallmedium', level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.alasadairbase}),
+	koya = ZoneCommander:new({zone='Koya', side=1, size='smallmedium', level=20, upgrades=upgrades.farp1Koya, crates={},flavorText=flavor.Koya}),
+	dukan = ZoneCommander:new({zone='Dukan', side=1, size='smallmedium', level=20, upgrades=upgrades.farp1Dukan, crates={},flavorText=flavor.dukan}),
+	sangasar = ZoneCommander:new({zone='Sangasar', side=1, size='smallmedium', level=20, upgrades=upgrades.farp1San, crates={},flavorText=flavor.sangasar}),
 
-	fobsamarra = ZoneCommander:new({zone='FOB Samarra', side=0, level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.fobsamarra, ForceNeutral=true}),
-	fobtherethar = ZoneCommander:new({zone='FOB Therethar', side=0, level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.fobtherethar, ForceNeutral=true}),
-
-
-	erbildefence = ZoneCommander:new({zone='Erbil Defence', side=1, level=20, upgrades=upgrades.erbildefence, crates={},flavorText=flavor.erbildefence}),
-	sameast = ZoneCommander:new({zone='SAM East', side=1, level=20, upgrades=upgrades.SamEastGroup, crates={},flavorText=flavor.sameast}),
-	samwest = ZoneCommander:new({zone='SAM West', side=1, level=20, upgrades=upgrades.SamWestGroup, crates={},flavorText=flavor.samwest}),
-	samsouth = ZoneCommander:new({zone='SAM South', side=1, level=20, upgrades=upgrades.SamSouthGroup, crates={},flavorText=flavor.samsouth}),
-	sahradefence = ZoneCommander:new({zone='Sahra Defence', side=1, level=20, upgrades=upgrades.SahraDefence, crates={},flavorText=flavor.sahradefence}),
-	baladdefence = ZoneCommander:new({zone='Balad Defence', side=1, level=20, upgrades=upgrades.BaladDefence, crates={},flavorText=flavor.baladdefence}),
-	ramadisam = ZoneCommander:new({zone='Ramadi SAM', side=1, level=20, upgrades=upgrades.RamadiSamGroup, crates={},flavorText=flavor.ramadisam}),
+	fobsamarra = ZoneCommander:new({zone='FOB Samarra', side=0, size='small', level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.fobsamarra, ForceNeutral=true}),
+	fobtherethar = ZoneCommander:new({zone='FOB Therethar', side=0, size='small', level=20, upgrades=upgrades.farp1, crates={},flavorText=flavor.fobtherethar, ForceNeutral=true}),
 
 
-	oilsite = ZoneCommander:new({zone='Oil production Site', side=1, level=10, upgrades=upgrades.borjoilFixed, crates={}, flavorText=flavor.oilsite}),
+	erbildefence = ZoneCommander:new({zone='Erbil Defence', side=1, size='sam2', level=20, upgrades=upgrades.erbildefence, crates={},flavorText=flavor.erbildefence}),
+	sameast = ZoneCommander:new({zone='SAM East', side=1, size='sam2', level=20, upgrades=upgrades.SamEastGroup, crates={},flavorText=flavor.sameast}),
+	samwest = ZoneCommander:new({zone='SAM West', side=1, size='sam2', level=20, upgrades=upgrades.SamWestGroup, crates={},flavorText=flavor.samwest}),
+	samsouth = ZoneCommander:new({zone='SAM South', side=1, size='sam2', level=20, upgrades=upgrades.SamSouthGroup, crates={},flavorText=flavor.samsouth}),
+	sahradefence = ZoneCommander:new({zone='Sahra Defence', side=1, size='sam2', level=20, upgrades=upgrades.SahraDefence, crates={},flavorText=flavor.sahradefence}),
+	baladdefence = ZoneCommander:new({zone='Balad Defence', side=1, size='sam2', level=20, upgrades=upgrades.BaladDefence, crates={},flavorText=flavor.baladdefence}),
+	ramadisam = ZoneCommander:new({zone='Ramadi SAM', side=1, size='sam2', level=20, upgrades=upgrades.RamadiSamGroup, crates={},flavorText=flavor.ramadisam}),
+
+
+	oilsite = ZoneCommander:new({zone='Oil production Site', side=1, size='big', level=10, upgrades=upgrades.borjoilFixed, crates={}, flavorText=flavor.oilsite}),
 	miningfacility = ZoneCommander:new({zone='MiningFacility', side=1, level=20, upgrades=upgrades.MiningMission, crates={}, flavorText=flavor.miningfacility}),
 	insurgentcamp = ZoneCommander:new({zone='InsurgentCamp', side=1, level=20, upgrades=upgrades.mission2InsurgentCamp, crates={}, flavorText=flavor.insurgentcamp}),
 	secrettechfacility = ZoneCommander:new({zone='SecretTechFacility', side=1, level=20, upgrades=upgrades.mission3, crates={}, flavorText=flavor.secrettechfacility}),
@@ -458,56 +538,75 @@ zones = {
 }
 
 if Era == "Coldwar" then
-    CapPlaneTemplate = CapPlaneTemplate or {
-        'RED_MIG29A',
+
+    CapPlaneTemplate = {
+        'RED_MIG29A_Load1',
+        'RED_MIG29A_Load2',
         'RED_SU27_EW',
-        'RED_MIG21Bis',
+        'RED_MIG21Bis_Load1',
+        'RED_MIG21Bis_Load2',
         'RED_MIG23MLD',
         'RED_MIG25PD',
         'BLUE_HORNET_CW',
         'BLUE_F15C_CW',
         'BLUE_F14A',
     }
-    CasPlaneTemplate = CasPlaneTemplate or {
-        'RED_SU25_OneShip',
-        'RED_SU25_TwoShip',
-        'RED_SU25T_OneShip',
-        'RED_SU25T_TwoShip',
-        'RED_Mirage_F1BQ',
-        'BLUE_F4E',
+    CasPlaneTemplate = {
+		'RED_SU25_OneShip_Load1',
+		'RED_SU25_OneShip_Load2',
+		'RED_SU25_OneShip_Load3',
+        'RED_SU25_TwoShip_Load1',
+		'RED_SU25_TwoShip_Load2',
+		'RED_SU25_TwoShip_Load3',
+        'RED_Mirage_F1BQ_Load1',
+        'RED_Mirage_F1BQ_Load2',
+        'BLUE_F4E_Load1',
+        'BLUE_F4E_Load2',
     }
-    SeadPlaneTemplate = SeadPlaneTemplate or {
+    SeadPlaneTemplate = {
         'RED_SU-24M_TWOSHIP',
         'RED_SU-24M_ONESHIP',
     }
-    CasHeloTemplate = CasHeloTemplate or {
+    CasHeloTemplate = {
         'RED_Mi-24V_ONESHIP',
         'RED_Mi-24V_TWOSHIP',
         'BLUE_UH-1H_CAS',
+        'BLUE_UH-1H_CAS_TwoShip',
     }
-
-    HeloSupplyTemplate = HeloSupplyTemplate or {
+    HeloSupplyTemplate = {
         'RED_MI-8',
+        'RED_MI-8_2',
         'BLUE_CH-47',
+        'BLUE_CH-47_2',
         'BLUE_UH-60A',
-        'BLUE_UH-1H',
+        'BLUE_UH-1H',    
     }
-    AttackConvoy = AttackConvoy or {
+    AttackConvoy = {
         "AttackConvoy CW 1",
         "AttackConvoy CW 2",
         "AttackConvoy CW 3",
         "AttackConvoy CW 4",
     }
-
-	RunwayStrikePlaneTemplate = RunwayStrikePlaneTemplate or {
-        "RED_MIG-27K",
+	RunwayStrikePlaneTemplate = {
+        "RED_MIG-27K_RUNWAY",
+        "RED_MIRAGE_F1_RUNWAY",
     }
+	CapCarrierGroup = {
+        'BLUE_F14A',
+        'BLUE_HORNET_CW',
+	}
+	
 else
-    CapPlaneTemplate = CapPlaneTemplate or {
-        'RED_MIG29S',
-        'RED_MIG29A',
-        'RED_SU27',
-        'RED_MIG21Bis',
+
+    CapPlaneTemplate = {
+        'RED_MIG29S_Load1',
+		'RED_MIG29S_Load2',
+        'RED_MIG29A_Load1',
+        'RED_MIG29A_Load2',
+        'RED_SU27_Load1',
+        'RED_SU27_Load2',
+        'RED_MIG21Bis_Load1',
+        'RED_MIG21Bis_Load2',
         'RED_MIG23MLD',
         'RED_MIG25PD',
         'BLUE_HORNET',
@@ -516,62 +615,93 @@ else
         'BLUE_F14B',
         'BLUE_M-2000C',
     }
-    HeloSupplyTemplate = HeloSupplyTemplate or {
+    HeloSupplyTemplate = {
         'RED_MI-8',
+        'RED_MI-8_2',
         'BLUE_CH-47',
+        'BLUE_CH-47_2',
         'BLUE_UH-60A',
     }
-    CasPlaneTemplate = CasPlaneTemplate or {
-        'RED_SU25_OneShip',
-        'RED_SU25_TwoShip',
-        'RED_Mirage_F1BQ',
+    CasPlaneTemplate = {
+		'RED_SU25_OneShip_Load1',
+		'RED_SU25_OneShip_Load2',
+		'RED_SU25_OneShip_Load3',
+        'RED_SU25_TwoShip_Load1',
+		'RED_SU25_TwoShip_Load2',
+		'RED_SU25_TwoShip_Load3',
+		'RED_SU25T_OneShip_Load1',
+		'RED_SU25T_OneShip_Load2',
+		'RED_SU25T_OneShip_Load3',
+		'RED_SU25T_TwoShip_Load1',
+		'RED_SU25T_TwoShip_Load2',
+		'RED_SU25T_TwoShip_Load3',
+        'RED_Mirage_F1BQ_Load1',
+        'RED_Mirage_F1BQ_Load2',
         'RED_MIG21_BIS_ONE_SHIP',
         'RED_MIG21_BIS_TWO_SHIP',
-        'BLUE_F4E',
+        'BLUE_F4E_Load1',
+        'BLUE_F4E_Load2',
     }
-    SeadPlaneTemplate = SeadPlaneTemplate or {
-        'RED_JF17_ONESHIP',
-        'RED_JF17_TWOSHIP',
-        'RED_SU25T_ONESHIP',
-        'RED_SU25T_TWOSHIP',
-        'RED_SU-34_ONESHIP',
-        'RED_SU-34_TWOSHIP',
+    SeadPlaneTemplate = {
+        'RED_JF17_ONESHIP_SEAD',
+        'RED_JF17_TWOSHIP_SEAD',
+        'RED_SU25T_ONESHIP_SEAD',
+        'RED_SU25T_TWOSHIP_SEAD',
+        'RED_SU-34_ONESHIP_Load1',
+        'RED_SU-34_ONESHIP_Load2',
+        'RED_SU-34_TWOSHIP_Load1',
+        'RED_SU-34_TWOSHIP_Load2',
         'RED_SU-24M_TWOSHIP',
         'RED_SU-24M_ONESHIP',
     }
-    CasHeloTemplate = CasHeloTemplate or {
+    CasHeloTemplate ={
         'RED_Mi-24P_ONESHIP',
         'RED_Mi-24P_TWOSHIP',
-        'RED_M-28N_ONESHIP',
-        'RED_M-28N_TWOSHIP',
+        'RED_M-28N_ONESHIP_Load1',
+        'RED_M-28N_ONESHIP_Load2',
+        'RED_M-28N_TWOSHIP_Load1',
+        'RED_M-28N_TWOSHIP_Load2',
         'BLUE_AH-64D_ONESHIP',
         'BLUE_AH-64D_TWOSHIP',
+        'BLUE_AH-64D_TwoShip_Load2',
         'BLUE_AH-1W',
         'BLUE_SA342M',
+        'BLUE_SA342M_TwoShip',
+        'OH_58D',
+        'OH_58D_TwoShip',
     }
-    AttackConvoy = AttackConvoy or {
+    AttackConvoy = {
         "AttackConvoy 1",
         "AttackConvoy 2",
         "AttackConvoy 3",
         "AttackConvoy 4",
     }
-
-	RunwayStrikePlaneTemplate = RunwayStrikePlaneTemplate or {
-        "RED_MIG-27K",
-        "RED_SU-33",
+	RunwayStrikePlaneTemplate = {
+        "RED_MIG-27K_RUNWAY",
+        "RED_SU-33_RUNWAY",
+        "RED_MIRAGE_F1_RUNWAY",
     }
+	CapCarrierGroup = {
+        'BLUE_HORNET',
+        'BLUE_F14B',
+	}
 end
-
-PlaneSupplyTemplate = PlaneSupplyTemplate or {
-	"IL-76MD",
-	"C-130",
-}
-
-SupplyConvoy = SupplyConvoy or {
-    "SupplyConvoy 1",
-    "SupplyConvoy 2",
-    "SupplyConvoy 3",
-}
+	SupplyConvoy = {
+		"SupplyConvoy 1",
+		"SupplyConvoy 2",
+		"SupplyConvoy 3",
+		"SupplyConvoy_Blue 1",
+	}
+	PlaneSupplyTemplate = {
+		"IL-76MD",
+		"C-130J-30",
+		"AN-30M",
+	}
+	InsurgentConvoy = {
+    
+    "InsurgentConvoy 1",
+    "InsurgentConvoy 2",
+	}
 
 function CasAltitude() return math.random(15,25)*1000 end
 function CapAltitude() return math.random(22,32)*1000 end
@@ -1063,21 +1193,21 @@ SCHEDULER:New(nil,function()
 		"Red SAM AAA 2 #",
 		"Red SAM SHORAD SA-15 #",
 		"Red SAM SHORAD SA-8 #",
-		"Red SAM SHORAD SA-19 2 #",
-		"Red SAM SHORAD Tor M2 #",
-		"Red SAM SHORAD Pantsir S1 #",
+		"Red SAM SHORAD SA-19 #",
 		'Red Armor Group6',
 		'Red Armor Group8',
 	}, 30)
   else
 	bc:roamGroupsToLocalSubZone({
-	"Red Armor Group 2 #",
+	"Red Armour Group 2 #",
 	"Red SAM AAA #",
 	"Red SAM AAA 2 #",
 	"Red SAM SHORAD SA-15 #",
 	"Red SAM SHORAD SA-8 #",
-	"Red SAM SHORAD SA-19 2 #",
-	"Red Armor Group #",
+	"Red SAM SHORAD SA-19 #",
+	"Red SAM SHORAD Tor M2 #",
+	"Red SAM SHORAD Pantsir S1 #",
+	"Red Armour Group #",
   
 	}, 30)
   end
@@ -1086,7 +1216,7 @@ end,{},30,0)
 -----------------------------------------------DYNAMIC SHOP ------------------------------------------
 
 
-bc:registerShopItem('dynamiccap', 'Dynamic CAP', 500, function(sender)
+bc:registerShopItem('dynamiccap', 'Dynamic CAP', ShopPrices.dynamiccap, function(sender)
     if capActive then
         return 'CAP mission still in progress'
     end
@@ -1107,7 +1237,7 @@ function (sender, params)
     return
 end)
 
-bc:registerShopItem('dynamicarco', 'Dynamic Tanker (Drogue)', 100, function(sender)
+bc:registerShopItem('dynamicarco', 'Unlock Tanker (Drogue)', ShopPrices.dynamicarco, function(sender)
     if ArcoActive then
         return 'Arco is still airborne'
     end
@@ -1115,7 +1245,7 @@ bc:registerShopItem('dynamicarco', 'Dynamic Tanker (Drogue)', 100, function(send
 		return 'Choose spawn zone from F10 menu'
 	end
     buildArcoMenu()
-	trigger.action.outTextForCoalition(2, 'Tanker (Drogue) is requested. Select spawn zone.', 10)
+	trigger.action.outTextForCoalition(2, '(Drogue) Tanker is unlocked. Select spawn zone.', 20)
     return
 end,
 function (sender, params)
@@ -1124,11 +1254,11 @@ function (sender, params)
     end
     buildArcoMenu()
 
-	trigger.action.outTextForCoalition(2, 'Tanker (Drogue) is requested. Select spawn zone.', 10)
+	trigger.action.outTextForCoalition(2, '(Drogue) Tanker is unlocked. Select spawn zone.', 20)
     return
 end)
 
-bc:registerShopItem('dynamictexaco', 'Dynamic Tanker (Boom)', 100, function(sender)
+bc:registerShopItem('dynamictexaco', 'Unlock Tanker (Boom)', ShopPrices.dynamictexaco, function(sender)
     if TexacoActive then
         return 'Texaco is still airborne'
     end
@@ -1136,7 +1266,7 @@ bc:registerShopItem('dynamictexaco', 'Dynamic Tanker (Boom)', 100, function(send
 		return 'Choose spawn zone from F10 menu'
 	end
     buildTexacoMenu()
-	trigger.action.outTextForCoalition(2, 'Tanker (Boom) is requested. Select spawn zone.', 10)
+	trigger.action.outTextForCoalition(2, '(Boom) Tanker is unlocked. Select spawn zone.', 20)
     return
 end,
 function (sender, params)
@@ -1145,12 +1275,12 @@ function (sender, params)
     end
     buildTexacoMenu()
 
-	trigger.action.outTextForCoalition(2, 'Tanker (Boom) is requested. Select spawn zone.', 10)
+	trigger.action.outTextForCoalition(2, '(Boom) Tanker is unlocked. Select spawn zone.', 20)
     return
 end)
 ---
 
-bc:registerShopItem('dynamiccas', 'Dynamic CAS', 1000,
+bc:registerShopItem('dynamiccas', 'Dynamic CAS', ShopPrices.dynamiccas,
 function(sender)
     if casActive then
         return 'CAS mission still in progress'
@@ -1198,7 +1328,7 @@ function(sender, params)
     end
 end)
 
-bc:registerShopItem('dynamicdecoy', 'Dynamic Decoy', 300,
+bc:registerShopItem('dynamicdecoy', 'Dynamic Decoy', ShopPrices.dynamicdecoy,
 function(sender)
     if decoyActive then
         return 'Decoy mission still in progress'
@@ -1253,7 +1383,7 @@ function(sender, params)
 end)
 
 
-bc:registerShopItem('dynamicsead', 'Dynamic SEAD', 500,
+bc:registerShopItem('dynamicsead', 'Dynamic SEAD', ShopPrices.dynamicsead,
 function(sender)
     if seadActive then
         return 'SEAD mission still in progress'
@@ -1307,7 +1437,7 @@ function(sender, params)
     end
 end)
 
-bc:registerShopItem('dynamicbomb', 'Dynamic Bomb run', 500,
+bc:registerShopItem('dynamicbomb', 'Dynamic Bomb run', ShopPrices.dynamicbomb,
 function(sender)
     if bomberActive then
         return 'Bomb mission still in progress'
@@ -1366,7 +1496,7 @@ end)
 Group.getByName('ca-tanks-Coldwar'):destroy()
 Group.getByName('ca-tanks'):destroy()
 tanksMenu = nil
-bc:registerShopItem('armor', 'Deploy armor (for combined arms) ', 300, function(sender)
+bc:registerShopItem('armor', 'Deploy armor (for combined arms) ', ShopPrices.armor, function(sender)
 	
 	if tanksMenu then
 		return 'Choose deploy zone from F10 menu'
@@ -1398,7 +1528,7 @@ function(sender, params)
 end)
 Group.getByName('ca-arty'):destroy()
 artyMenu = nil
-bc:registerShopItem('artillery', 'Deploy artillery (for combined arms) ', 200, function(sender)
+bc:registerShopItem('artillery', 'Deploy artillery (for combined arms) ', ShopPrices.artillery, function(sender)
 	
 	if artyMenu then
 		return 'Choose deploy zone from F10 menu'
@@ -1430,7 +1560,7 @@ function(sender, params)
 end)
 Group.getByName('ca-recon'):destroy()
 reconMenu = nil
-bc:registerShopItem('recon', 'Deploy recon group (for combined arms)', 50, function(sender)
+bc:registerShopItem('recon', 'Deploy recon group (for combined arms)', ShopPrices.recon, function(sender)
 	
 	if reconMenu then
 		return 'Choose deploy zone from F10 menu'
@@ -1462,7 +1592,7 @@ function(sender, params)
 end)
 Group.getByName('ca-airdef'):destroy()
 airdefMenu = nil
-bc:registerShopItem('airdef', 'Deploy air defence (for combined arms)', 150, function(sender)
+bc:registerShopItem('airdef', 'Deploy air defence (for combined arms)', ShopPrices.airdef, function(sender)
 	
 	if airdefMenu then
 		return 'Choose deploy zone from F10 menu'
@@ -1505,7 +1635,7 @@ jtacDrones = {JTAC:new({name = 'jtacDroneColdwar1'}),JTAC:new({name = 'jtacDrone
 else
 jtacDrones = {JTAC:new({name = 'jtacDrone1'}),JTAC:new({name = 'jtacDrone2'})}
 end
-bc:registerShopItem('jtac','MQ-9 Reaper JTAC mission',150,function(sender)
+bc:registerShopItem('jtac','MQ-9 Reaper JTAC mission',ShopPrices.jtac,function(sender)
 	if jtacTargetMenu then return 'Choose target zone from F10 menu' end
 	local spawnAndOrbit = function(target)
 		if jtacTargetMenu then
@@ -1578,7 +1708,7 @@ droneAM = JTAC9line:new({name = 'JTAC9lineamColdwar'})
 else
 droneAM = JTAC9line:new({name = 'JTAC9lineam'})
 end
-bc:registerShopItem('9lineam', 'Jtac 9line AM', 0, function(sender)
+bc:registerShopItem('9lineam', 'Jtac 9line AM', ShopPrices["9lineam"], function(sender)
     if jtacTargetMenu2 then
         return 'Choose target zone from F10 menu'
     end
@@ -1623,7 +1753,7 @@ droneFM = JTAC9line:new({name = 'JTAC9linefmColdwar'})
 else
 droneFM = JTAC9line:new({name = 'JTAC9linefm'})
 end
-bc:registerShopItem('9linefm', 'Jtac 9line FM', 0, function(sender)
+bc:registerShopItem('9linefm', 'Jtac 9line FM', ShopPrices["9linefm"], function(sender)
     if jtacTargetMenu3 then
         return 'Choose target zone from F10 menu'
     end
@@ -1691,7 +1821,7 @@ function CheckJtacStatus()
 end
 
 local upgradeMenu = nil
-bc:registerShopItem('supplies2', 'Resupply friendly Zone', 200, function(sender)
+bc:registerShopItem('supplies2', 'Resupply friendly Zone', ShopPrices.supplies2, function(sender)
     if upgradeMenu then
         return 'Choose zone from F10 menu'
     end
@@ -1723,7 +1853,7 @@ function(sender, params)
 end)
 
 local fullyUpgradeMenu=nil
-bc:registerShopItem('supplies','Fully Upgrade Friendly Zone',1000,
+bc:registerShopItem('supplies','Fully Upgrade Friendly Zone',ShopPrices.supplies,
 function(sender)
     if fullyUpgradeMenu then
         return'Choose zone from F10 menu to fully upgrade'
@@ -1849,8 +1979,237 @@ local smoketargets = function(tz)
 	end
 end
 
+local flaretargets = function(tz)
+	if not tz or not tz.built then
+		env.info("flaretargets: no tz/built for zone "..tostring(tz and tz.zone or "nil"))
+		return
+	end
+	local units, statics, dangling, toRemove = {}, {}, {}, {}
+	for i,v in pairs(tz.built) do
+		local g = Group.getByName(v)
+		if g and g:isExist() then
+			local gUnits = g:getUnits()
+			if gUnits then
+				for i2,v2 in ipairs(gUnits) do
+					table.insert(units, v2)
+				end
+			end
+        else
+            local st = StaticObject.getByName(v)
+            if st and st:isExist() then
+                table.insert(statics, st)
+            else
+                table.insert(dangling, tostring(v))
+                table.insert(toRemove, i)
+            end
+        end
+	end
+	if #dangling > 0 then
+		trigger.action.outTextForCoalition(2, "(BUG) "..tz.zone.." error has unresolved entries: "..table.concat(dangling,", ")..". Please report to Leka.", 30)
+		for _,k in ipairs(toRemove) do tz.built[k] = nil end
+	end
+	local points = {}
+	for _,u in ipairs(units) do if u and u:isExist() then local p=u:getPosition().p; if p then table.insert(points,p) end end end
+	for _,s in ipairs(statics) do local p=s:getPoint(); if p then table.insert(points,p) end end
+	for i=1,3 do
+		if #points == 0 then break end
+		local idx = math.random(1,#points)
+		local az = math.random(0,359)
+		trigger.action.signalFlare(points[idx], trigger.flareColor.Red, az)
+		table.remove(points,idx)
+	end
+end
+
+local illumtargets = function(tz)
+	if not tz or not tz.built then
+		env.info("illumtargets: no tz/built for zone "..tostring(tz and tz.zone or "nil"))
+		return
+	end
+	local groups, units, statics, dangling, toRemove = {}, {}, {}, {}, {}
+	for i,v in pairs(tz.built) do
+		local g = Group.getByName(v)
+		if g and g:isExist() then
+			table.insert(groups, g)
+			local gUnits = g:getUnits()
+			if gUnits then
+				for i2,v2 in ipairs(gUnits) do
+					table.insert(units, v2)
+				end
+			end
+		else
+			local st = StaticObject.getByName(v)
+			if st and st:isExist() then
+				table.insert(statics, st)
+			else
+				table.insert(dangling, tostring(v))
+				table.insert(toRemove, i)
+			end
+		end
+	end
+	if #dangling > 0 then
+		trigger.action.outTextForCoalition(2, "(BUG) "..tz.zone.." error has unresolved entries: "..table.concat(dangling,", ")..". Please report to Leka.", 30)
+		for _,k in ipairs(toRemove) do tz.built[k] = nil end
+	end
+	local illumAltitude = 600
+	local illumPower = 400000
+
+	local targets = {}
+	local function addPos(p)
+		if p then table.insert(targets, p) end
+	end
+	local function addGroupLeaderPos(g)
+		if not g then return end
+		local u = g:getUnit(1)
+		if u and u:isExist() then
+			local p = u:getPosition().p
+			addPos(p)
+		end
+	end
+	local function addRandomUnitPos(pool)
+		if not pool or #pool == 0 then return end
+		local idx = math.random(1, #pool)
+		local u = pool[idx]
+		if u and u:isExist() then
+			local p = u:getPosition().p
+			addPos(p)
+		end
+		table.remove(pool, idx)
+	end
+
+	if #groups >= 3 then
+		local gpool = {}
+		for _,g in ipairs(groups) do table.insert(gpool, g) end
+		for i=1,3 do
+			local idx = math.random(1, #gpool)
+			addGroupLeaderPos(gpool[idx])
+			table.remove(gpool, idx)
+		end
+	elseif #groups == 2 then
+		addGroupLeaderPos(groups[1])
+		addGroupLeaderPos(groups[2])
+		local upool = {}
+		for _,u in ipairs(units) do table.insert(upool, u) end
+		if #upool > 0 then
+			addRandomUnitPos(upool)
+		elseif #statics > 0 then
+			local s = statics[math.random(1, #statics)]
+			addPos(s:getPoint())
+		end
+	elseif #groups == 1 then
+		local gUnits = groups[1]:getUnits() or {}
+		local upool = {}
+		for _,u in ipairs(gUnits) do table.insert(upool, u) end
+		if #upool == 0 then
+			for _,u in ipairs(units) do table.insert(upool, u) end
+		end
+		for i=1,3 do
+			if #upool == 0 then break end
+			addRandomUnitPos(upool)
+		end
+	else
+		local spoints = {}
+		for _,s in ipairs(statics) do
+			local p = s:getPoint()
+			if p then table.insert(spoints, p) end
+		end
+		for i=1,3 do
+			if #spoints == 0 then break end
+			local idx = math.random(1, #spoints)
+			addPos(spoints[idx])
+			table.remove(spoints, idx)
+		end
+	end
+
+	for _,p in ipairs(targets) do
+		local bombPoint = { x = p.x, y = p.y + illumAltitude, z = p.z }
+		trigger.action.illuminationBomb(bombPoint, illumPower)
+	end
+end
+
+local SHOP_PRICE_DEFAULTS = {
+  smoke         = 20,
+  flare         = 20,
+  illum         = 100,
+  dynamiccap    = 500,
+  dynamicarco   = 1000,
+  dynamictexaco = 1000,
+  dynamiccas    = 1000,
+  dynamicdecoy  = 300,
+  dynamicsead   = 500,
+  dynamicbomb   = 500,
+  dynamicstatic = 500,
+  cruisemsl     = 800,
+  supplies2     = 200,
+  supplies      = 1000,
+  jtac          = 500,
+  ["9lineam"]   = 0,
+  ["9linefm"]   = 0,
+  jam           = 500,
+  armor         = 100,
+  artillery     = 100,
+  recon         = 50,
+  airdef        = 150,
+  capture       = 500,
+  intel         = 150,
+  zinf          = 500,
+  zsam          = 2000,
+  zhimars       = 2500,
+  zlogc         = 2000,
+  zwh50         = 500,
+  zarm          = 1000,
+  zpat          = 5000,
+  gslot         = 3000,
+  farphere      = 1000,
+}
+
+local SHOP_RANK_DEFAULTS = {
+  jtac           = 2,
+  dynamiccap     = 2,
+  dynamiccas     = 5,
+  dynamicbomb    = 4,
+  dynamicsead    = 4,
+  dynamicdecoy   = 1,
+  dynamicstatic  = 4,
+  dynamicarco    = 3,
+  dynamictexaco  = 3,
+  farphere       = 4,
+  capture        = 1,
+  smoke          = 1,
+  flare          = 1,
+  illum          = 1,
+  intel          = 5,
+  supplies2      = 1,
+  supplies       = 6,
+  zinf           = 5,
+  zarm           = 7,
+  zsam           = 6,
+  zhimars        = 8,
+  zlogc          = 1,
+  zwh50          = 2,
+  gslot          = 9,
+  zpat           = 8,
+  armor          = 3,
+  artillery      = 3,
+  recon          = 3,
+  airdef         = 3,
+  ["9lineam"]    = 1,
+  ["9linefm"]    = 1,
+  cruisemsl      = 10,
+  jam            = 4,
+}
+
+local function mergeDefaults(defaults, overrides)
+  local out = {}
+  for k, v in pairs(defaults) do out[k] = v end
+  for k, v in pairs(overrides or {}) do out[k] = v end
+  return out
+end
+
+ShopPrices = mergeDefaults(SHOP_PRICE_DEFAULTS, ShopPrices)
+ShopRankRequirements = mergeDefaults(SHOP_RANK_DEFAULTS, ShopRankRequirements)
+
 local smokeTargetMenu = nil
-bc:registerShopItem('smoke', 'Smoke markers', 20, function(sender)
+bc:registerShopItem('smoke', 'Smoke markers', ShopPrices.smoke, function(sender)
 	if smokeTargetMenu then
 		return 'Choose target zone from F10 menu'
 	end
@@ -1877,10 +2236,66 @@ function(sender, params)
 	end
 end)
 
+local flareTargetMenu = nil
+bc:registerShopItem('flare', 'Flare markers', ShopPrices.flare, function(sender)
+	if flareTargetMenu then
+		return 'Choose target zone from F10 menu'
+	end
+
+	local launchAttack = function(target)
+		if flareTargetMenu then
+			local tz = bc:getZoneByName(target)
+			flaretargets(tz)
+			flareTargetMenu = nil
+			trigger.action.outTextForCoalition(2, 'Targets marked with RED flare at '..target, 15)
+		end
+	end
+
+	flareTargetMenu = bc:showTargetZoneMenu(2, 'Flare marker target', launchAttack, 1)
+
+	trigger.action.outTextForCoalition(2, 'Choose target zone from F10 menu', 15)
+end,
+function(sender, params)
+	if params.zone and params.zone.side == 1 and not params.zone.suspended then
+		flaretargets(params.zone)
+		trigger.action.outTextForCoalition(2, 'Targets marked with RED flare at '..params.zone.zone, 15)
+	else
+		return 'Can only target enemy zone'
+	end
+end)
+
+local illumTargetMenu = nil
+bc:registerShopItem('illum', 'Illumination bomb', ShopPrices.illum, function(sender)
+	if illumTargetMenu then
+		return 'Choose target zone from F10 menu'
+	end
+
+	local launchAttack = function(target)
+		if illumTargetMenu then
+			local tz = bc:getZoneByName(target)
+			illumtargets(tz)
+			illumTargetMenu = nil
+			trigger.action.outTextForCoalition(2, 'Targets illuminated at '..target, 15)
+		end
+	end
+
+	illumTargetMenu = bc:showTargetZoneMenu(2, 'Illumination target', launchAttack, 1)
+
+	trigger.action.outTextForCoalition(2, 'Choose target zone from F10 menu', 15)
+end,
+function(sender, params)
+	if params.zone and params.zone.side == 1 and not params.zone.suspended then
+		illumtargets(params.zone)
+		trigger.action.outTextForCoalition(2, 'Targets illuminated at '..params.zone.zone, 15)
+	else
+		return 'Can only target enemy zone'
+	end
+end)
+
 
 Group.getByName('ewAircraft'):destroy()
 local jamMenu = nil
-bc:registerShopItem('jam', 'Jam radars at zone', 500, function(sender)
+bc:registerShopItem('jam', 'Jam radars at zone', ShopPrices.jam, function(sender)
 	local gr = Group.getByName('ewAircraft')
 	if Utils.isGroupActive(gr) then 
 		return 'Jamming mission still in progress'
@@ -1927,8 +2342,11 @@ function(sender, params)
 end)
 -- new menu
 local supplyMenu=nil
-bc:registerShopItem('capture','Capture neutral zone',500,
+bc:registerShopItem('capture','Capture neutral zone',ShopPrices.capture,
 function(sender)
+	if NoAIBlueSupplies == true then 
+		return 'Blue AI supplies are disabled' 
+	end
 	if supplyMenu then
 		return 'Choose a zone from F10 menu'
 	end
@@ -2008,7 +2426,7 @@ end)
 --end of menu
 
 local intelMenu=nil
-bc:registerShopItem('intel','Intel on enemy zone',150,function(sender)
+bc:registerShopItem('intel','Intel on enemy zone',ShopPrices.intel,function(sender)
 	if intelMenu then
 		return 'Already choosing a zone'
 	end
@@ -2075,6 +2493,240 @@ local function buildLogisticAllowTable()
 	return allowed
 end
 
+-- Red AI zone upgrade helpers
+local function buildRedAllowTable()
+	local t = {}
+	for _, z in pairs(bc:getZones()) do
+		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
+		local used = (type(z.getUpgradesUsed) == "function") and z:getUpgradesUsed(1) or (z.upgradesUsed or 0)
+		if z.side == 1 and z.active and not z.suspended and not z.isHidden
+		   and not z.zone:lower():find("carrier")
+		   and used < max then
+			t[z.zone] = true
+		end
+	end
+	return t
+end
+
+local function normalizeBuiltName(name)
+	return name and name:gsub("#%d+$", "") or name
+end
+
+local function buildStaticNameSet(zoneObj)
+	local statics = {}
+	for _, data in ipairs(zoneObj.newStatics or {}) do
+		if data and data.name then
+			statics[data.name] = true
+			local base = normalizeBuiltName(data.name)
+			if base then
+				statics[base] = true
+			end
+		end
+	end
+	return statics
+end
+
+local function buildBuiltNameSet(zoneObj)
+	local built = {}
+	for _, name in pairs(zoneObj.built or {}) do
+		local base = normalizeBuiltName(name)
+		if base then
+			built[base] = true
+		end
+	end
+	return built
+end
+
+local function buildUpgradeNameSet(zoneObj)
+	local names = {}
+	for _, name in ipairs(zoneObj.upgrades and zoneObj.upgrades.red or {}) do
+		local base = normalizeBuiltName(name)
+		if base then
+			names[base] = true
+		end
+	end
+	return names
+end
+
+local function resolveMinMax(val)
+	if type(val) == "table" then
+		local minv = val[1] or 0
+		local maxv = val[2] or minv
+		return minv, maxv
+	end
+	if type(val) == "number" then
+		return val, val
+	end
+	return 0, 0
+end
+
+local function countZoneRedCategories(zoneObj)
+	local counts = { sam = 0, shorad = 0, aaa = 0, ground = 0, armor = 0, arty = 0 }
+	for _, name in ipairs(zoneObj.upgrades and zoneObj.upgrades.red or {}) do
+		if name and not isStaticUpgrade(name) then
+			local cat = classifyUpgradeName(name)
+			if counts[cat] ~= nil then
+				counts[cat] = counts[cat] + 1
+			end
+		end
+	end
+	return counts
+end
+
+local function buildRedPoolsForZone(zoneObj)
+	local zoneSize = getZoneSize(zoneObj)
+	local pools = { sam = {}, shorad = {}, aaa = {}, ground = {}, armor = {}, arty = {}, other = {} }
+	fillPoolsFrom(getGlobalRedPool(), pools, zoneSize)
+	local existing = buildUpgradeNameSet(zoneObj)
+
+	local function filterPool(src)
+		local out = {}
+		for _, name in ipairs(src or {}) do
+			local base = normalizeBuiltName(name)
+			if base and not existing[base] then
+				out[#out+1] = name
+			end
+		end
+		return out
+	end
+
+	for k, v in pairs(pools) do
+		pools[k] = filterPool(v)
+	end
+	return pools
+end
+
+local function chooseRedUpgradeCategory(counts, template)
+	local order = { "sam", "shorad", "aaa", "ground", "armor", "arty" }
+	local deficits = {}
+	for _, cat in ipairs(order) do
+		local minv = resolveMinMax(template and template[cat])
+		local have = counts[cat] or 0
+		deficits[cat] = math.max(0, minv - have)
+	end
+	if deficits.sam and deficits.sam > 0 then
+		return "sam"
+	end
+	for i = 2, #order do
+		local cat = order[i]
+		if deficits[cat] and deficits[cat] > 0 then
+			return cat
+		end
+	end
+	local bestCat, bestCount = nil, nil
+	for _, cat in ipairs(order) do
+		local have = counts[cat] or 0
+		if bestCount == nil or have < bestCount then
+			bestCount = have
+			bestCat = cat
+		end
+	end
+	return bestCat
+end
+
+local function pickRedUpgradeForZone(zoneObj)
+	local zoneSize = getZoneSize(zoneObj)
+	local template = RandomUpgradeTemplates and RandomUpgradeTemplates[zoneSize]
+	if not template then
+		return nil
+	end
+	local counts = countZoneRedCategories(zoneObj)
+	local pools = buildRedPoolsForZone(zoneObj)
+	local order = { "sam", "shorad", "aaa", "ground", "armor", "arty" }
+
+	local cat = chooseRedUpgradeCategory(counts, template)
+	if cat and pools[cat] and #pools[cat] > 0 then
+		return pools[cat][math.random(1, #pools[cat])]
+	end
+
+	for _, alt in ipairs(order) do
+		if pools[alt] and #pools[alt] > 0 then
+			return pools[alt][math.random(1, #pools[alt])]
+		end
+	end
+
+	if pools.other and #pools.other > 0 then
+		return pools.other[math.random(1, #pools.other)]
+	end
+	return nil
+end
+
+local function getRedUpgradeCandidates(zoneObj)
+	local candidates = {}
+	if not (zoneObj and zoneObj.upgrades and zoneObj.upgrades.red) then
+		return candidates
+	end
+	local built = buildBuiltNameSet(zoneObj)
+	local statics = buildStaticNameSet(zoneObj)
+	for _, name in ipairs(zoneObj.upgrades.red) do
+		if name then
+			local base = normalizeBuiltName(name)
+			local lname = name:lower()
+			if not statics[name] and not statics[base] and not lname:find("fixed") then
+				if not built[base] then
+					candidates[#candidates+1] = name
+				end
+			end
+		end
+	end
+	return candidates
+end
+
+local RED_ZONE_UPGRADE_ID = "redzoneupgrade"
+local RED_ZONE_UPGRADE_COST = 5000
+
+local function redZoneUpgradeAction()
+	local allow = buildRedAllowTable()
+	if not next(allow) then
+		return "No eligible red zones"
+	end
+
+	local zoneChoices = {}
+	for zName,_ in pairs(allow) do
+		local z = bc:getZoneByName(zName)
+		if z then
+			local slot = pickRedUpgradeForZone(z)
+			if slot then
+				zoneChoices[#zoneChoices+1] = { zone = z, slot = slot }
+			end
+		end
+	end
+	if #zoneChoices == 0 then
+		return "No valid upgrades"
+	end
+
+	local pick = zoneChoices[math.random(1,#zoneChoices)]
+	local zoneObj = pick.zone
+	local slot = pick.slot
+
+	local ok = zoneObj:addExtraSlot(slot)
+	if not ok then
+		return "Zone already upgraded"
+	end
+	if type(zoneObj.updateLabel) == "function" then
+		zoneObj:updateLabel()
+	end
+	zoneObj:upgrade(true)
+	trigger.action.outTextForCoalition(1, "Red forces reinforced at "..zoneObj.zone, 10)
+	return true
+end
+
+bc:registerShopItem(RED_ZONE_UPGRADE_ID, "Red zone upgrade", RED_ZONE_UPGRADE_COST, redZoneUpgradeAction)
+
+local RED_MASS_ATTACK_ID = "redmassattack"
+local RED_MASS_ATTACK_COST = 6000
+
+local function redMassAttackAction()
+	if not bc.triggerRedMassAttack then
+		return "Mass attack unavailable"
+	end
+	return bc:triggerRedMassAttack()
+end
+
+bc:registerShopItem(RED_MASS_ATTACK_ID, "Red mass airbase attack", RED_MASS_ATTACK_COST, redMassAttackAction)
+
+-- end of red
+
 local function buildWarehouseResupplyAllowTable()
 	local allowed = {}
 	if not WarehouseLogistics then
@@ -2139,7 +2791,7 @@ local function applyWarehouseResupply(zoneObj)
 end
 
 local infMenu=nil
-bc:registerShopItem('zinf','Add infantry squad to zone',500,function(sender)
+bc:registerShopItem('zinf','Add infantry squad to zone',ShopPrices.zinf,function(sender)
 	if infMenu then
 		return 'Already choosing a zone'
 	end
@@ -2197,7 +2849,7 @@ end)
 local samLabel = (Era == 'Coldwar') and 'Add Hawk system to a zone'
                                    or  'Add Nasams system to a zone'
 local samMenu=nil
-bc:registerShopItem('zsam',samLabel,2000,function(sender)
+bc:registerShopItem('zsam',samLabel,ShopPrices.zsam,function(sender)
 	if samMenu then
 		return 'Already choosing a zone'
 	end
@@ -2256,8 +2908,64 @@ function(sender,params)
 	end
 end)
 
+local himarsMenu=nil
+bc:registerShopItem('zhimars','Add HIMARS to a zone',ShopPrices.zhimars,function(sender)
+	if himarsMenu then
+		return 'Already choosing a zone'
+	end
+	local pickZone=function(zName)
+		if himarsMenu then
+			local z=bc:getZoneByName(zName)
+			if not z or z.side~=2 or z.suspended then
+				return 'Must pick friendly zone'
+			end
+			if z.upgradesUsed >= (1 + (bc.globalExtraUnlock and 1 or 0)) then
+				return 'Zone already upgraded'
+			end
+			z:addExtraSlot('HiMars')
+			z:updateLabel()
+			if bc.globalExtraUnlock then
+				trigger.action.outTextForCoalition(2,'HIMARS added to '..zName..' for '..tostring(ShopPrices.zhimars),10)
+			else
+				trigger.action.outTextForCoalition(2,'HIMARS added to '..zName..' for '..tostring(ShopPrices.zhimars)..' - buy the Global extra slot to upgrade this zone again',30)
+			end
+			missionCommands.removeItemForCoalition(2,himarsMenu)
+			himarsMenu=nil
+		end
+	end
+	local allow = buildAllowTable()
+	if not next(allow) then
+		if not bc.globalExtraUnlock then
+			return 'All zones already upgraded - purchase Global extra slot to add another'
+		end
+		return 'No eligible zone'
+	end
+	himarsMenu = bc:showTargetZoneMenu(2,'Choose Zone for HIMARS',pickZone,2,nil,allow)
+	trigger.action.outTextForCoalition(2,'Select friendly zone from F10 menu.',15)
+end,
+function(sender,params)
+	if params.zone and params.zone.side==2 then
+		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
+		if params.zone.upgradesUsed >= max then
+			if not bc.globalExtraUnlock then
+				return 'Zone already upgraded - purchase Global extra slot to add another'
+			end
+			return 'Zone already upgraded'
+		end
+		params.zone:addExtraSlot('HiMars')
+		params.zone:updateLabel()
+		if bc.globalExtraUnlock then
+			trigger.action.outTextForCoalition(2,'HIMARS added to '..params.zone.zone..' for '..tostring(ShopPrices.zhimars),10)
+		else
+			trigger.action.outTextForCoalition(2,'HIMARS added to '..params.zone.zone..' for '..tostring(ShopPrices.zhimars)..' - buy the Global extra slot to upgrade this zone again',30)
+		end
+	else
+		return 'Must pick friendly zone'
+	end
+end)
+
 local logiMenu=nil
-bc:registerShopItem('zlogc','Upgrade zone to logistic center',2000,function(sender)
+bc:registerShopItem('zlogc','Upgrade zone to logistic center',ShopPrices.zlogc,function(sender)
 	if logiMenu then
 		return 'Already choosing a zone'
 	end
@@ -2290,7 +2998,7 @@ function(sender,params)
 end)
 
 local warehouseMenu=nil
-bc:registerShopItem('zwh50','Resupply warehouse with 50',500,function(sender)
+bc:registerShopItem('zwh50','Resupply warehouse with 50',ShopPrices.zwh50,function(sender)
 	if warehouseMenu then
 		return 'Already choosing a zone'
 	end
@@ -2327,7 +3035,7 @@ end)
 
 
 local armMenu=nil
-bc:registerShopItem('zarm','Add armor group to a zone',1000,function(sender)
+bc:registerShopItem('zarm','Add armor group to a zone',ShopPrices.zarm,function(sender)
 	if armMenu then
 		return 'Already choosing a zone'
 	end
@@ -2384,7 +3092,7 @@ function(sender,params)
 	end
 end)
 
-bc:registerShopItem('gslot','Add extra upgrade slot',3000,function(sender)
+bc:registerShopItem('gslot','Add extra upgrade slot',ShopPrices.gslot,function(sender)
     if bc.globalExtraUnlock then
         return 'Already unlocked'
     end
@@ -2399,7 +3107,7 @@ end)
 
 Group.getByName('bluePATRIOT'):destroy()
 local patMenu=nil
-bc:registerShopItem('zpat','Add Patriot system to zone',5000,function(sender)
+bc:registerShopItem('zpat','Add Patriot system to zone',ShopPrices.zpat,function(sender)
 	if patMenu then
 		return 'Already choosing a zone'
 	end
@@ -2453,46 +3161,123 @@ function(sender,params)
 		return 'Must pick friendly zone'
 	end
 end)
-bc:registerShopItem('farphere','Deploy FARP',1000,function(sender)
+bc:registerShopItem('farphere','Deploy FARP',ShopPrices.farphere,function(sender)
         return 'Deploy a FARP via map marker.\nUse marker text: buy:farphere.\nMust be outside all zones and at least 10 NM from enemy zones.'
 end,function(_, params)
         return bc:processMapFarpPurchase(params)
 end)
 ------------------------------------------- End of Zone upgrades ----------------------------------------
 
+ShopPrices = ShopPrices or {
+	smoke         = 20,   -- Smoke markers
+	flare         = 20,   -- Flare markers
+	illum         = 100,  -- Illumination bomb
+	dynamiccap    = 500,  -- Dynamic CAP
+	dynamicarco   = 1000,  -- Dynamic Tanker (Drogue)
+	dynamictexaco = 1000,  -- Dynamic Tanker (Boom)
+	dynamiccas    = 1000, -- Dynamic CAS
+	dynamicdecoy  = 300,  -- Dynamic Decoy
+	dynamicsead   = 500,  -- Dynamic SEAD
+	dynamicbomb   = 500,  -- Dynamic Bomb run
+	dynamicstatic = 500,  -- Dynamic building Strike
+	supplies2     = 200,  -- Resupply friendly Zone
+	supplies      = 1000, -- Fully Upgrade Friendly Zone
+	jtac          = 500,  -- MQ-9 Reaper JTAC mission
+	["9lineam"]   = 0,    -- Jtac 9line AM
+	["9linefm"]   = 0,    -- Jtac 9line FM
+	jam           = 500,  -- Jam radars at zone
+	armor         = 100,  -- Deploy armor (for combined arms)
+	artillery     = 100,  -- Deploy artillery (for combined arms)
+	recon         = 50,   -- Deploy recon group (for combined arms)
+	airdef        = 150,  -- Deploy air defence (for combined arms)
+	capture       = 500,  -- Emergency capture zone
+	intel         = 150,  -- Intel on enemy zone
+	zinf          = 500,  -- Add infantry squad to zone
+	zsam          = 2000, -- Add Hawk/Nasams system to a zone
+	zhimars       = 2500, -- Add HIMARS to a zone
+	zlogc         = 2000, -- Upgrade zone to logistic center
+	zwh50         = 500,  -- Resupply warehouse with 50
+	zarm          = 1000, -- Add armor group to a zone
+	zpat          = 5000, -- Add Patriot system to zone
+	gslot         = 3000, -- Unlock extra upgrade slot
+	farphere      = 1000, -- Deploy FARP
+}
+
+ShopRankRequirements = ShopRankRequirements or {
+	jtac           = 2,  -- MQ-9 Reaper JTAC mission
+	dynamiccap     = 2,  -- Dynamic CAP
+	dynamiccas     = 5,  -- Dynamic CAS
+	dynamicbomb    = 4,  -- Dynamic Bomb run
+	dynamicsead    = 4,  -- Dynamic SEAD
+	dynamicdecoy   = 1,  -- Dynamic Decoy
+	dynamicstatic  = 4,  -- Dynamic building Strike
+	dynamicarco    = 3,  -- Dynamic Tanker (Drogue)
+	dynamictexaco  = 3,  -- Dynamic Tanker (Boom)
+	farphere       = 4,  -- Deploy FARP
+	capture        = 1,  -- Emergency capture zone
+	smoke          = 1,  -- Smoke markers
+	flare          = 1,  -- Flare markers
+	illum          = 1,  -- Illumination bomb
+	intel          = 5,  -- Intel on enemy zone
+	supplies2      = 1,  -- Resupply friendly Zone
+	supplies       = 6,  -- Fully Upgrade Friendly Zone
+	zinf           = 5,  -- Add infantry squad to zone
+	zarm           = 7,  -- Add armor group to a zone
+	zsam           = 6,  -- Add Hawk/Nasams system to a zone
+	zhimars        = 8,  -- Add HIMARS to a zone
+	zlogc          = 1,  -- Upgrade zone to logistic center
+	zwh50          = 2,  -- Resupply warehouse with 50
+	gslot          = 9,  -- Unlock extra upgrade slot
+	zpat           = 8,  -- Add Patriot system to zone
+	armor          = 3,  -- Deploy armor (for combined arms)
+	artillery      = 3,  -- Deploy artillery (for combined arms)
+	recon          = 3,  -- Deploy recon group (for combined arms)
+	airdef         = 3,  -- Deploy air defence (for combined arms)
+	["9lineam"]    = 1,  -- Jtac 9line AM
+	["9linefm"]    = 1,  -- Jtac 9line FM
+	jam            = 4,  -- Jam radars at zone
+}
+
+-----------------------------------------------
+
 -- first value below is how much in stock, the second number value is the ranking in the shop menu list, the third is the new ranking system.
-bc:addShopItem(2, 'jtac', -1, 1, 2) -- MQ-9 Reaper JTAC mission
-bc:addShopItem(2, 'dynamiccap', -1, 2, 2) -- CAP
-bc:addShopItem(2, 'dynamiccas', -1, 3, 5) -- CAS
-bc:addShopItem(2, 'dynamicbomb', -1, 4, 4) -- Bomber
-bc:addShopItem(2, 'dynamicsead', -1, 5, 4) -- SEAD
-bc:addShopItem(2, 'dynamicdecoy', -1, 6, 1) -- Decoy flight
+bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
+bc:addShopItem(1, 'redmassattack', -1, 2) -- red AI mass airbase attack
+bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac) -- MQ-9 Reaper JTAC mission
+bc:addShopItem(2, 'dynamiccap', -1, 2, ShopRankRequirements.dynamiccap) -- CAP
+bc:addShopItem(2, 'dynamiccas', -1, 3, ShopRankRequirements.dynamiccas) -- CAS
+bc:addShopItem(2, 'dynamicbomb', -1, 4, ShopRankRequirements.dynamicbomb) -- Bomber
+bc:addShopItem(2, 'dynamicsead', -1, 5, ShopRankRequirements.dynamicsead) -- SEAD
+bc:addShopItem(2, 'dynamicdecoy', -1, 6, ShopRankRequirements.dynamicdecoy) -- Decoy flight
 if UseStatics == true then
-    bc:addShopItem(2, 'dynamicstatic', -1,7,4) -- Static buildings
+	bc:addShopItem(2, 'dynamicstatic', -1,7,ShopRankRequirements.dynamicstatic) -- Static buildings
 end
-bc:addShopItem(2, 'dynamicarco', -1, 8, 3) -- Navy tanker
-bc:addShopItem(2, 'dynamictexaco', -1, 9, 3) -- Airforce tanker
-bc:addShopItem(2, 'farphere', -1, 10, 2) -- deploy FARP
-bc:addShopItem(2, 'capture', -1, 11, 1) -- emergency capture
-bc:addShopItem(2, 'smoke', -1, 12, 1) -- smoke on target
-bc:addShopItem(2, 'intel', -1, 13, 5) -- Intel
-bc:addShopItem(2, 'supplies2', -1, 14, 1) -- upgrade friendly zone
-bc:addShopItem(2, 'supplies', -1, 15, 6) -- fully upgrade friendly zone
-bc:addShopItem(2, 'zinf', -1, 16, 2) -- add infantry to a zone
-bc:addShopItem(2, 'zarm', -1, 17, 3) -- add armour group to a zone
-bc:addShopItem(2, 'zsam', -1, 18, 7) -- add Nasams to a zone
-bc:addShopItem(2, 'zlogc', -1, 19, 1) -- upgrade zone to logistic center
-bc:addShopItem(2, 'zwh50', -1, 20, 2) -- resupply warehouse with 50
-bc:addShopItem(2, 'gslot', 1, 21, 9) -- add another slot for upgrade
+bc:addShopItem(2, 'dynamicarco', 1, 8, ShopRankRequirements.dynamicarco) -- Navy tanker
+bc:addShopItem(2, 'dynamictexaco', 1, 9, ShopRankRequirements.dynamictexaco) -- Airforce tanker
+bc:addShopItem(2, 'farphere', -1, 10, ShopRankRequirements.farphere) -- deploy FARP
+ bc:addShopItem(2, 'capture', -1, 11, ShopRankRequirements.capture) -- emergency capture
+ bc:addShopItem(2, 'smoke', -1, 12, ShopRankRequirements.smoke) -- smoke on target
+ bc:addShopItem(2, 'flare', -1, 13, ShopRankRequirements.flare) -- flare on target
+ bc:addShopItem(2, 'illum', -1, 14, ShopRankRequirements.illum) -- illumination bomb
+ bc:addShopItem(2, 'intel', -1, 15, ShopRankRequirements.intel) -- Intel
+ bc:addShopItem(2, 'supplies2', -1, 16, ShopRankRequirements.supplies2) -- upgrade friendly zone
+ bc:addShopItem(2, 'supplies', -1, 17, ShopRankRequirements.supplies) -- fully upgrade friendly zone
+ bc:addShopItem(2, 'zinf', -1, 18, ShopRankRequirements.zinf) -- add infantry to a zone
+ bc:addShopItem(2, 'zarm', -1, 19, ShopRankRequirements.zarm) -- add armour group to a zone
+ bc:addShopItem(2, 'zsam', -1, 20, ShopRankRequirements.zsam) -- add Nasams to a zone
+ bc:addShopItem(2, 'zhimars', -1, 21, ShopRankRequirements.zhimars) -- add HIMARS to a zone
+ bc:addShopItem(2, 'zlogc', -1, 21, ShopRankRequirements.zlogc) -- upgrade zone to logistic center
+ bc:addShopItem(2, 'zwh50', -1, 22, ShopRankRequirements.zwh50) -- resupply warehouse with 50
+ bc:addShopItem(2, 'gslot', 1, 23, ShopRankRequirements.gslot) -- add another slot for upgrade
 if Era == 'Modern' then
-    bc:addShopItem(2, 'zpat', -1, 22, 8) -- Patriot system.
+	bc:addShopItem(2, 'zpat', -1, 24, ShopRankRequirements.zpat) -- Patriot system.
 end
-bc:addShopItem(2, 'armor', -1, 23, 3) -- combined arms
-bc:addShopItem(2, 'artillery', -1, 24, 3) -- combined arms
-bc:addShopItem(2, 'recon', -1, 25, 3) -- combined arms
-bc:addShopItem(2, 'airdef', -1, 26, 3) -- combined arms
-bc:addShopItem(2, '9lineam', -1, 27, 1) -- free jtac
-bc:addShopItem(2, '9linefm', -1, 28, 1) -- free jtac
+bc:addShopItem(2, 'armor', -1, 25, ShopRankRequirements.armor) -- combined arms
+bc:addShopItem(2, 'artillery', -1, 26, ShopRankRequirements.artillery) -- combined arms
+bc:addShopItem(2, 'recon', -1, 27, ShopRankRequirements.recon) -- combined arms
+bc:addShopItem(2, 'airdef', -1, 28, ShopRankRequirements.airdef) -- combined arms
+bc:addShopItem(2, '9lineam', -1, 29, ShopRankRequirements["9lineam"]) -- free jtac
+bc:addShopItem(2, '9linefm', -1, 30, ShopRankRequirements["9linefm"]) -- free jtac
 
 supplyZones = {
     "Bashur Airport",
@@ -2535,17 +3320,24 @@ supplyZones = {
 lc = LogisticCommander:new({battleCommander = bc, supplyZones = supplyZones})
 lc:init()
 
-bc:loadFromDisk()
+bc:loadFromDisk() -- will load and overwrite default zone levels, sides, funds, and available shop items
+if zonePersistance and zonePersistance.zones and next(zonePersistance.zones) == nil then
+    bc.saveLoaded = false
+end
+if not bc.saveLoaded then
+	applyRandomRedUpgrades()
+	applyRandomBlueUpgrades()
+end
+budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequency=20*60, decissionVariance=10*60, skipChance = 10})
+budgetAI:init()
 bc:init()
-bc:startRewardPlayerContribution(15,{infantry = 10, ground = 10, sam = 30, airplane = 30, ship = 200, helicopter=30, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['CAP mission'] = true, ['CAS mission'] = true})
-
-
-HercCargoDropSupply.init(bc)
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
+bc:startRewardPlayerContribution(15,RewardContribution)
 buildTemplateCache()
 bc:buildZoneDistanceCache()
 buildSubZoneRoadCache()
 bc:buildConnectionMap()
-DynamicConvoy.InitTargetTails(5)
+DynamicConvoy.InitTargetTails(15)
 DynamicConvoy.InitRoadPathCacheFromCommanders(GroupCommanders)
 PrecomputeLandingSpots()
 Frontline.ReindexZoneCalcs()
@@ -2646,9 +3438,10 @@ evc:addEvent({
 		end
 		RespawnGroup(planes[1])
 		local u = Group.getByName(planes[1]):getUnit(1)
-		if u then RegisterUnitTarget(u:getName(),250,'Intercept cargo plane') end
+		if u then RegisterUnitTarget(u:getName(),250,'Intercept cargo plane','cargointercept') end
 	end,
 	canExecute = function()
+		if ActiveMission['cargointercept'] then return false end
 		if timer.getTime() - lastCargoIntercept_COOLDOWN < CargoIntercept_COOLDOWN then return false end
 		if math.random(1,100) < 70 then return false end
 		if (bc:getZoneByName('Balad Airbase').side == 2
@@ -2677,10 +3470,12 @@ mc:trackMission({
     endAction = function()
     end,
     isActive = function()
-        if Group.getByName('evt-cargointercept1') then return true end
-        if Group.getByName('evt-cargointercept2') then return true end
-        if Group.getByName('evt-cargointercept3') then return true end
-        return false
+		if not ActiveMission['cargointercept'] then return false end
+		if Group.getByName('evt-cargointercept1') then return true end
+		if Group.getByName('evt-cargointercept2') then return true end
+		if Group.getByName('evt-cargointercept3') then return true end
+		ActiveMission['cargointercept'] = nil
+		return false
     end
 })
 
@@ -2694,7 +3489,7 @@ evc:addEvent({
 	id='cas',
 	action=function()
 		RespawnGroup(attackGrp)
-		RegisterGroupTarget(attackGrp,250,'Intercept enemy airstrike')
+		RegisterGroupTarget(attackGrp,250,'Intercept enemy airstrike','cas')
 		timer.scheduleFunction(function(param, time)
 			local tgts = {
 			'Kirkuk City',
@@ -2731,6 +3526,7 @@ evc:addEvent({
 		end, {}, timer.getTime()+3)
 	end,
 	canExecute = function()
+		if ActiveMission['cas'] then return false end
 		if timer.getTime()-lastairstrike_COOLDOWN<airstrike_COOLDOWN then return false end
 		local gr = Group.getByName(attackGrp)
 		if gr then return false end
@@ -2760,8 +3556,10 @@ mc:trackMission({
     endAction = function()
     end,
 	isActive = function()
-		local gr = Group.getByName('evt-attack')
-		if gr then return true else return false end
+		if not ActiveMission['cas'] then return false end
+		if Group.getByName(attackGrp) then return true end
+		ActiveMission['cas'] = nil
+		return false
 	end
 })
 local sceneryList = {
@@ -2803,7 +3601,7 @@ evc:addEvent({
 	id='bomb',
 	action=function()
 		RespawnGroup('evt-bomb')
-		RegisterGroupTarget('evt-bomb',500,'Intercept enemy bombers')
+		RegisterGroupTarget('evt-bomb',500,'Intercept enemy bombers','bomb')
 		timer.scheduleFunction(function()
 			RespawnGroup(escGrp)
 	local tgts = {
@@ -2815,6 +3613,7 @@ evc:addEvent({
 		end,{},timer.getTime()+1)
 	end,
 	canExecute = function()
+		if ActiveMission['bomb'] then return false end
 		if timer.getTime()-lastbomb_COOLDOWN<bomb_COOLDOWN then return false end
 		local gr = Group.getByName('evt-bomb')
 		if gr then return false end
@@ -2841,8 +3640,10 @@ mc:trackMission({
     endAction = function()
     end,
 	isActive = function()
-		local gr = Group.getByName('evt-bomb')
-		if gr then return true else return false end
+		if not ActiveMission['bomb'] then return false end
+		if Group.getByName('evt-bomb') then return true end
+		ActiveMission['bomb'] = nil
+		return false
 	end
 })
 
@@ -2924,12 +3725,13 @@ evc:addEvent({
 	action = function()
 		RespawnGroup('KanaqinConvoy')
 		RespawnGroup('KanaqinConvoy-1')
-		RegisterGroupTarget("KanaqinConvoy-2",500,"Al-Baghdadi's associate","FindHimInKanaqin")
+		RegisterGroupTarget("KanaqinConvoy-2",500,"Al-Baghdadi's associate","FindHimInKanaqin",true)
 	end,
 	canExecute = function()
+		if CustomFlags["FindHimInKanaqin"] then return false end
+		if ActiveMission['FindHimInKanaqin'] then return false end
 		if Group.getByName('KanaqinConvoy') then return false end
 		if bc:getZoneByName('Al-Sahra Airport').side ~= 2 or bc:getZoneByName('Al-Sahra Airport').suspended then return false end
-		if CustomFlags["FindHimInKanaqin"] then return false end
 		return true
 end
 })
@@ -2975,10 +3777,12 @@ Don't destroy the convoy until they reach the house!]],
 	end,
 	isActive = function()
 		if CustomFlags["FindHimInKanaqin"] then return false end
+		if not ActiveMission['FindHimInKanaqin'] then return false end
 		if Group.getByName('KanaqinConvoy') then return true end
 		if Group.getByName('KanaqinConvoy-1') then return true end
 		if Group.getByName('KanaqinConvoy-2') then return true end
-	return false
+		ActiveMission['FindHimInKanaqin'] = nil
+		return false
 	end
 })
 -- end of Al-Baghdadi associate
@@ -2989,14 +3793,13 @@ Group.getByName('Red SAM SHORAD SA-8 StrikeTarget2'):destroy()
 evc:addEvent({
 	id='StrikeTarget2',
 	action = function()
-	ActiveMission['StrikeTarget2'] = true
 	local tgt = sceneryList['StrikeTarget2'][1] or SCENERY:FindByZoneName('StrikeTarget2')
 	if not tgt then
 		trigger.action.outText('StrikeTarget2 is missing',30)
 		return
 	end
 		RespawnGroup('Red SAM SHORAD SA-8 StrikeTarget2')
-		RegisterScoreTarget('StrikeTarget2',tgt,500,'High value target 2')
+		RegisterScoreTarget('StrikeTarget2',tgt,500,'High value target 2',true)
 		local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
 		if p then
 			missionMarkId = missionMarkId + 1
@@ -3006,8 +3809,8 @@ evc:addEvent({
 	end,
 	canExecute = function()
 		if CustomFlags["StrikeTarget2"] then return false end
-		if bc:getZoneByName('Al-Sahra Airport').side ~= 2 or bc:getZoneByName('Al-Sahra Airport').suspended then return false end
 		if ActiveMission['StrikeTarget2'] then return false end
+		if bc:getZoneByName('Al-Sahra Airport').side ~= 2 or bc:getZoneByName('Al-Sahra Airport').suspended then return false end
 		return true
 	end
 })
@@ -3048,14 +3851,15 @@ Group.getByName('Red SAM SA-6 Fixed StrikeTarget3'):destroy()
 Group.getByName('Red SAM SHORAD SA-8 Fixed StrikeTarget3'):destroy()
 local Alqam = nil
 evc:addEvent({
-	id='StikeTarget3',
+	id='StrikeTarget3',
 	action = function()
 		RespawnGroup('StrikeTarget3Group')
-		RegisterGroupTarget('StrikeTarget3Group',250,'Sadam Hussiens assosisets','StrikeTarget3')
+		RegisterGroupTarget('StrikeTarget3Group',250,'Sadam Hussiens assosisets','StrikeTarget3',true)
 	end,
 	canExecute = function()
-		if bc:getZoneByName('Al-Asad Airbase').side ~= 2 or bc:getZoneByName('Al-Asad Airbase').suspended then return false end
 		if CustomFlags["StrikeTarget3"] then return false end
+		if ActiveMission['StrikeTarget3'] then return false end
+		if bc:getZoneByName('Al-Asad Airbase').side ~= 2 or bc:getZoneByName('Al-Asad Airbase').suspended then return false end
 		if Group.getByName('StrikeTarget3Group') then return false end
 		return true
 	end
@@ -3090,7 +3894,9 @@ Destroy the house and whoever is nearby.]],
 	end,
 	isActive = function()
 		if CustomFlags["StrikeTarget3"] then return false end
+		if not ActiveMission['StrikeTarget3'] then return false end
 		if Group.getByName('StrikeTarget3Group') then return true end
+		ActiveMission['StrikeTarget3'] = nil
 		return false
 	end
 })
@@ -3100,13 +3906,12 @@ Destroy the house and whoever is nearby.]],
 evc:addEvent({
 	id = 'StrikeTarget1',
 	action = function()
-		ActiveMission['StrikeTarget1'] = true
 		local tgt = sceneryList['StrikeTarget1'][1] or SCENERY:FindByZoneName('StrikeTarget1')
 		if not tgt then
 			trigger.action.outText('StrikeTarget1 scenery missing',30)
 			return
 		end
-		RegisterScoreTarget('StrikeTarget1',tgt,500,'High value target')
+		RegisterScoreTarget('StrikeTarget1',tgt,500,'High value target',true)
 		local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
 		if p then
 			missionMarkId = missionMarkId + 1
@@ -3161,12 +3966,13 @@ evc:addEvent({
 	id='StrikeTarget',
 	action = function()
 		RespawnGroup('GeneralKillConvoy')
-		RegisterGroupTarget('StrikeTargetInfantry',500,'High value target','StrikeTarget')
+		RegisterGroupTarget('StrikeTargetInfantry',500,'High value target','StrikeTarget',true)
 	end,
 	canExecute = function()
+		if CustomFlags["StrikeTarget"] then return false end
+		if ActiveMission['StrikeTarget'] then return false end
 		if math.random(1,100) < 50 then return false end
 		if bc:getZoneByName('Sulaimaniyah Airport').side ~= 2 or bc:getZoneByName('Sulaimaniyah Airport').suspended then return false end
-		if CustomFlags["StrikeTarget"] then return false end
 		return true
 	end
 })
@@ -3209,9 +4015,11 @@ Don't kill the convoy until they reach the house!]],
 		return false
 	end,
 	isActive = function()
-	if CustomFlags["StrikeTarget"] then return false end
-	if Group.getByName('GeneralKillConvoy') then return true end
-	return false
+		if CustomFlags["StrikeTarget"] then return false end
+		if not ActiveMission['StrikeTarget'] then return false end
+		if Group.getByName('GeneralKillConvoy') then return true end
+		ActiveMission['StrikeTarget'] = nil
+		return false
 	end
 })
 
@@ -3224,11 +4032,12 @@ evc:addEvent({
 	id='RightHandMan',
 	action = function()
 		RespawnGroup('RightHandMan')
-		RegisterGroupTarget('RightHandMan',250,'Right hand man','RightHandMan')
+		RegisterGroupTarget('RightHandMan',250,'Right hand man','RightHandMan',true)
 	end,
 	canExecute = function()
-		if bc:getZoneByName('Erbil Airport').side ~= 2 or bc:getZoneByName('Erbil Airport').suspended then return false end
 		if CustomFlags["RightHandMan"] then return false end
+		if ActiveMission['RightHandMan'] then return false end
+		if bc:getZoneByName('Erbil Airport').side ~= 2 or bc:getZoneByName('Erbil Airport').suspended then return false end
 		if Group.getByName('RightHandMan') then return false end
 		return true
 	end
@@ -3262,7 +4071,9 @@ Destroy the house and whoever is nearby.]],
 	end,
 	isActive = function()
 		if CustomFlags["RightHandMan"] then return false end
+		if not ActiveMission['RightHandMan'] then return false end
 		if Group.getByName('RightHandMan') then return true end
+		ActiveMission['RightHandMan'] = nil
 		return false
 	end
 })
@@ -3335,7 +4146,7 @@ evc:addEvent({
 	id='Artillery2',
 	action = function()
 		RespawnGroup('Khormato-Artillery')
-		RegisterGroupTarget('Khormato-Artillery',250,'Destroy artillery')
+		RegisterGroupTarget('Khormato-Artillery',250,'Destroy artillery','Artillery2')
 		timer.scheduleFunction(function(param, time)
 			if Group.getByName('Khormato-Artillery') then
 				local tgts = {'Kirkuk City', 'Sulaimaniyah Airport'}
@@ -3357,6 +4168,7 @@ evc:addEvent({
 		end, {}, timer.getTime()+(20*60))
 	end,
 	canExecute = function()
+		if ActiveMission['Artillery2'] then return false end
 		if math.random(1,100) < 70 then return false end
 		local gr = Group.getByName('Khormato-Artillery')
 		if gr then return false end
@@ -3387,8 +4199,10 @@ mc:trackMission({
         end
     end,
 	isActive = function()
-		local gr = Group.getByName('Khormato-Artillery')
-		if gr then return true else return false end
+		if not ActiveMission['Artillery2'] then return false end
+		if Group.getByName('Khormato-Artillery') then return true end
+		ActiveMission['Artillery2'] = nil
+		return false
 	end
 })
 
@@ -3409,10 +4223,11 @@ evc:addEvent({
 
         for _, entry in ipairs(groupsAndTargets) do
 			RespawnGroup(entry.group)
-			RegisterGroupTarget(entry.group,250,'Destroy artillery')
+			RegisterGroupTarget(entry.group,250,'Destroy artillery','helohunt')
         end
     end,
     canExecute = function()
+		if ActiveMission['helohunt'] then return false end
         if math.random(1, 100) < 70 then return false end
         if bc:getZoneByName('Balad Airbase').side ~= 1 or bc:getZoneByName('Balad Airbase').suspended then return false end
         local triggers = {'Al-Sahra Airport', 'Khormato', 'Sarqala', 'Maydan'}
@@ -3440,6 +4255,7 @@ mc:trackMission({
         end
     end,
     isActive = function()
+		if not ActiveMission['helohunt'] then return false end
         local groups = {'Balad-attack-Al-Sahra Airport-event',
             'Balad-attack-Khormato-event','Balad-attack-Sarqala-event',
             'Balad-attack-Maydan-event'}
@@ -3448,6 +4264,7 @@ mc:trackMission({
                 return true
             end
         end
+		ActiveMission['helohunt'] = nil
         return false
     end
 })
@@ -3967,8 +4784,8 @@ mc:trackMission({
 
 seadTarget = nil
 function generateSEADMission()
-    if seadTarget then return end
-    if not attackTarget then return end
+    if seadTarget then return true end
+    if not attackTarget then return false end
 
     local function isSEADZone(zone)
         local lname = zone.zone:lower()
@@ -4005,7 +4822,7 @@ function generateSEADMission()
         end
     end
 
-    if #validSEADZones == 0 then return end
+    if #validSEADZones == 0 then return false end
     local pick = validSEADZones[math.random(#validSEADZones)]
     if pick then
         seadTarget = pick
@@ -4042,9 +4859,9 @@ mc:trackMission({
 
 deadTarget = nil
 function generateDEADMission()
-    if deadTarget then return end
-    if seadTarget then return end
-    if not attackTarget then return end
+    if deadTarget then return true end
+    if seadTarget then return true end
+    if not attackTarget then return false end
 
     local function isDEADZone(zone)
         local lname = zone.zone:lower()
@@ -4080,7 +4897,7 @@ function generateDEADMission()
         end
     end
 
-    if #validDEADZones == 0 then return end
+    if #validDEADZones == 0 then return false end
 
     deadTarget = validDEADZones[math.random(#validDEADZones)]
     return true
@@ -4114,7 +4931,7 @@ mc:trackMission({
 })
 
 function generateCaptureMission()
-    if captureTarget ~= nil then return end
+    if captureTarget ~= nil then return true end
     
     local validzones = {}
     for _, v in ipairs(bc.zones) do
@@ -4124,7 +4941,7 @@ function generateCaptureMission()
         end
     end
     
-    if #validzones == 0 then return end
+    if #validzones == 0 then return false end
     
     local choice = math.random(1, #validzones)
     if validzones[choice] then
@@ -4136,8 +4953,8 @@ end
 
 
 function generateAttackMission()
-    if missionCompleted then return end
-    if attackTarget ~= nil then return end
+    if missionCompleted then return true end
+    if attackTarget ~= nil then return true end
 
         local validzones = {}
         for _, v in ipairs(bc.connections) do
@@ -4155,7 +4972,7 @@ function generateAttackMission()
 		end
 	end
 
-    if #validzones == 0 then return end
+    if #validzones == 0 then return false end
 
     local choice = math.random(1, #validzones)
     if validzones[choice] then
@@ -4165,8 +4982,8 @@ function generateAttackMission()
 end
 
 function generateSupplyMission()
-    if missionCompleted then return end
-    if resupplyTarget ~= nil then return end
+    if missionCompleted then return true end
+    if resupplyTarget ~= nil then return true end
 
     local validzones = {}
     for _, v in ipairs(bc.zones) do
@@ -4175,7 +4992,7 @@ function generateSupplyMission()
         end
     end
 
-    if #validzones == 0 then return end
+    if #validzones == 0 then return false end
 
     local choice = math.random(1, #validzones)
     if validzones[choice] then
@@ -4285,3 +5102,5 @@ env.info("Mission Setup : is completed!")
 -- last working durrning test mission
 
 -- the one with Flagcheck.
+
+

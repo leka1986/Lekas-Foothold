@@ -6,12 +6,14 @@ end, {}, 2)
 
 missionMarkId = missionMarkId or 900000000
 if Era == 'Gulfwar' then Era = 'Coldwar' end
-
+MISSING_GROUPS = {}
 PATH_CACHE=PATH_CACHE or{}
 Respawn = {}
 farpBuiltByConvoy={}
 ActiveCurrentMission = ActiveCurrentMission or {}
 _awacsRepositionSched = nil
+FlightTimeRewardPerMinute = FlightTimeRewardPerMinute or 1
+flightTimeTakeoffByPlayer = flightTimeTakeoffByPlayer or {}
 local escortFarpToZone={}
 
 local zoneByName = nil
@@ -48,6 +50,10 @@ local function getTriggerZone(name)
     end
     if z == false then return nil end
     return z
+end
+
+function getTriggerZoneCached(name)
+    return getTriggerZone(name)
 end
 
 function getMooseZone(name)
@@ -258,7 +264,9 @@ function Respawn.Group(groupName, uncontrolled)
 end
 
 function Respawn.SpawnAtPoint(grpName, coord, headingDeg, distNm, alt, spd)
+  local t0 = timer.getTime()
   local tpl = FetchMETemplate(grpName); if not tpl then return end
+  local t1 = timer.getTime()
   
   local ALT = alt and UTILS.FeetToMeters(alt) or tpl.units[1].alt or UTILS.FeetToMeters(25000)
 
@@ -287,27 +295,33 @@ function Respawn.SpawnAtPoint(grpName, coord, headingDeg, distNm, alt, spd)
   freshIds(tpl)
   tpl.lateActivation = false
   FixSelfTasks(tpl.route, tpl.groupId, tpl.units[1].unitId)
+  local t2 = timer.getTime()
   local newGrp = coalition.addGroup(tpl.countryId,Group.Category[CAT[tpl.category] or "GROUND"],tpl)
+  local t3 = timer.getTime()
   if not newGrp then env.error("Respawn: addGroup failed - "..tostring(newGrp)) return nil end
   return newGrp
 end
 
 
+
 local subZoneCache = {}
 
 local function collectSubZones(baseName)
-    if subZoneCache[baseName] then return subZoneCache[baseName] end
-    local zones = {}
-    for i = 1, 100, 1 do
-        local zname = baseName .. '-' .. i
-        if getTriggerZone(zname) then
-            zones[#zones + 1] = zname
-        else
-            break
-        end
-    end
-    subZoneCache[baseName] = zones
-    return zones
+	if subZoneCache[baseName] then return subZoneCache[baseName] end
+	local zones = {}
+	if not zoneByName then buildZoneByName() end
+	local prefix = baseName .. "-"
+	for zname,_ in pairs(zoneByName or {}) do
+		if zname:sub(1, #prefix) == prefix then
+			local suffix = zname:sub(#prefix + 1)
+			if suffix:match("^%d+$") then
+				zones[#zones + 1] = zname
+			end
+		end
+	end
+	table.sort(zones)
+	subZoneCache[baseName] = zones
+	return zones
 end
 
 local zoneCenterCache = {}
@@ -321,13 +335,13 @@ local zoneCenterCache = {}
 	end
 
 function StartBomberAuftrag(tag, grpName, tgtList, escortGroup)
-	local bomber = FLIGHTGROUP:New(grpName)
-	local coords = bomber:GetCoordinate()
-	local homebase, distance = coords:GetClosestAirbase(0, 1)
-	if homebase then
-		bomber:SetHomebase(homebase)
-		env.info(string.format("[BomberAuftrag] Bomber %s homebase set to %s (%.1f km)", grpName, homebase:GetName(), distance/1000))
-	end
+	local bomber = Group.getByName(grpName)
+	if not bomber or not bomber:isExist() or bomber:getSize() == 0 then return end
+	local lead = bomber:getUnit(1)
+	if not lead or not lead:isExist() then return end
+	local startPos = lead:getPoint()
+	local coords = COORDINATE:New(startPos.x, startPos.y or 0, startPos.z)
+
 	if type(tgtList) ~= "table" then tgtList = { tgtList } end
 	local choice = nil
 	do
@@ -354,32 +368,62 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup)
 		end
 		if not choice and #valid > 0 then choice = valid[math.random(1,#valid)] end
 	end
-	local setGroup = SET_GROUP:New()
 	local zn = choice and bc.indexedZones[choice] or nil
+	local altm = UTILS.FeetToMeters(25000)
+	local attack = { id = 'ComboTask', params = { tasks = {} } }
+	local firstpos = nil
 	if zn and zn.built then
 		for _, v in pairs(zn.built) do
-			local grp = GROUP:FindByName(v)
-			if grp then
-				setGroup:AddGroup(grp)
+			local task = bc:getAttackTask(v, AI.Task.WeaponExpend.HALF, altm)
+			if task then
+				if task.params then task.params.groupAttack = true end
+				table.insert(attack.params.tasks, task)
+				if not firstpos then
+					local p = bc:getTargetPos(v)
+					if p then firstpos = p end
+				end
 			end
 		end
 	end
-	local auftrag = AUFTRAG:NewBAI(setGroup, 25000)
-	auftrag:SetMissionAltitude(25000)
-	auftrag.missionWaypointOffsetNM = 25
-	auftrag:AddConditionSuccess(function() return bomber:IsOutOfBombs() end)
-	auftrag:SetWeaponExpend(AI.Task.WeaponExpend.HALF)
-	auftrag:SetEngageAsGroup(true)
-	auftrag:SetMissionSpeed(780)
-	bomber:AddMission(auftrag)
-	bomber:MissionStart(auftrag)
-	function bomber:OnAfterLanded(From, Event, To)
-		self:ScheduleOnce(5, function() self:Destroy() end)
+
+	if not firstpos and zn then
+		local c = getZoneCenter(zn.zone or choice)
+		if c then firstpos = { x = c.x, y = startPos.y, z = c.y } end
 	end
-	function bomber:OnAfterDead(From, Event, To)
-		local landed = (From=="Landed") or (From=="Arrived")
-		self:__Stop(1)
-	end
+	if not firstpos then return bomber, nil, choice end
+
+	local dx = firstpos.x - startPos.x
+	local dz = firstpos.z - startPos.z
+	local len = math.sqrt(dx * dx + dz * dz)
+	if len <= 0 then len = 1 end
+	local ux, uz = dx / len, dz / len
+	local appPos = {
+		x = firstpos.x - ux * UTILS.NMToMeters(25),
+		y = startPos.y,
+		z = firstpos.z - uz * UTILS.NMToMeters(25)
+	}
+	local speedKmh = 850
+	local destroyAtWp = {
+		id = 'WrappedAction',
+		params = {
+			action = {
+				id = 'Script',
+				params = {
+					command = "local gr = ...\ngr:destroy()"
+				}
+			}
+		}
+	}
+	local wp = {}
+	wp[#wp+1] = COORDINATE:New(appPos.x, altm, appPos.z):WaypointAirTurningPoint("RADIO", speedKmh, { attack }, "Ingress 25 NM")
+	--wp[#wp+1] = COORDINATE:New(firstpos.x, altm, firstpos.z):WaypointAirTurningPoint("RADIO", speedKmh, { attack }, "Attack")
+	wp[#wp+1] = COORDINATE:New(startPos.x, altm, startPos.z):WaypointAirTurningPoint("RADIO", speedKmh, { destroyAtWp }, "RTB Cleanup")
+
+	local mission = { id = 'Mission', params = { route = { points = wp } } }
+	local controller = bomber:getController()
+	if controller then controller:setTask(mission) end
+	bc:setDefaultAG(bomber)
+
 	if escortGroup then
 		timer.scheduleFunction(function()
 			local bgr = Group.getByName(grpName)
@@ -395,7 +439,7 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup)
 								groupId = bgr:getID(),
 								pos = { x = -20, y = 2000, z = 50 },
 								lastWptIndexFlag = false,
-								engagementDistMax = 30*NM,
+								engagementDistMax = 40*NM,
 								targetTypes = { 'plane' }
 							}
 						}
@@ -405,8 +449,8 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup)
 		end,{},timer.getTime()+5)
 	end
 	_G[tag..'Bomber'] = bomber
-	_G[tag..'Mission'] = auftrag
-	return bomber, auftrag, choice
+	_G[tag..'Mission'] = mission
+	return bomber, mission, choice
 end
 
 
@@ -516,23 +560,36 @@ do
 		end
 	end
 
+	INVALID_SPAWN_SUB_ZONES = INVALID_SPAWN_SUB_ZONES or {}
 	function GetValidCords(zoneName, allowed, attempts)
 		local zone = getMooseZone(zoneName); if not zone then return nil end
 		attempts = attempts or 100
+		local found
 		for _=1,attempts do
 			local coord = zone:GetRandomCoordinate()
 			if coord then
 				local st = coord:GetSurfaceType()
-				if st ~= land.SurfaceType.RUNWAY and (not allowed or allowed[st]) then return coord end
+				if st ~= land.SurfaceType.RUNWAY and (not allowed or allowed[st]) then found = coord; break end
 			end
 		end
-		env.info("GetValidCords: no valid coord in "..tostring(zoneName))
+		if found then return found end
+		if not INVALID_SPAWN_SUB_ZONES[zoneName] then
+			INVALID_SPAWN_SUB_ZONES[zoneName] = true
+			env.info("[ZoneCommander] Blacklisted spawn sub-zone: "..tostring(zoneName))
+			local list = {}
+			for name,_ in pairs(INVALID_SPAWN_SUB_ZONES) do
+				list[#list + 1] = name
+			end
+			table.sort(list)
+			env.info("[ZoneCommander] Blacklisted spawn sub-zones ("..tostring(#list).."): "..table.concat(list, ", "))
+		end
 		if env.mission.theatre=="GermanyCW" then
 			for _=1,attempts do
 				local coord = zone:GetRandomCoordinate()
 				if coord then return coord end
 			end
 		end
+		env.info("GetValidCords: no valid coord in "..tostring(zoneName))
 		return nil
 	end
 
@@ -541,6 +598,18 @@ do
 		if #spawnZones == 0 then return nil end
 		local choice = math.random(1, #spawnZones)
 		return spawnZones[choice]
+	end
+
+	local function shouldHideSamOnMFD()
+		local mode = HideSAMOnMFD
+		if mode == true then return true end
+		if mode == false then return false end
+		if mode == "random" then return math.random(1, 2) == 1 end
+		return true
+	end
+
+	local function isSamMfdHiddenGroup(grname)
+		return grname and (grname:find("Red SAM") or grname:find("blueHAWK") or grname:find("bluePD") or grname:find("bluePATRIOT"))
 	end
 
 	function SpawnCustom(grname, zoneName)
@@ -568,7 +637,7 @@ do
 		if (not grname:find("Red SAM") or grname:find("Dog Ear")) and not grname:find("bluePD") and not grname:find("blueHAWK") and not grname:find("bluePATRIOT") then
 		spawn = isCarrierZone and spawn:InitRandomizeUnits(true, 1500, 1000) or spawn:InitRandomizeUnits(true, 100, 30):InitHeading(1, 359)
 		end
-		if grname:find("Red SAM") or grname:find("Dog Ear") or grname:find("blueHAWK") or grname:find("bluePD") or grname:find("bluePATRIOT") then
+		if isSamMfdHiddenGroup(grname) and shouldHideSamOnMFD() then
 		spawn = spawn:InitHiddenOnMFD()
 		end
 		if grname:find("IsNotShown") or grname:find("Red EWR") then
@@ -592,7 +661,12 @@ do
 	function CustomZone:getRandomUnusedSpawnZone(markUsed)
 		if markUsed == nil then markUsed = true end
 		self.usedSpawnZones = self.usedSpawnZones or {}
-		local all = collectSubZones(self.name)
+		local all = {}
+		for _, zname in ipairs(collectSubZones(self.name)) do
+			if not INVALID_SPAWN_SUB_ZONES[zname] then
+				all[#all + 1] = zname
+			end
+		end
 		local unused = {}
 		for _, zname in ipairs(all) do
 			if not self.usedSpawnZones[zname] and not USED_SUB_ZONES[zname] then
@@ -614,6 +688,40 @@ do
 	
 	spawnCounter = spawnCounter or {}
 
+	local function isStrategicSamGroup(grname)
+		if not grname then return false end
+		local n = grname:lower()
+		return n:find("sa%-2", 1, false) or n:find("sa%-3", 1, false)
+			or n:find("sa%-6", 1, false) or n:find("sa%-10", 1, false)
+			or n:find("sa%-11", 1, false) or n:find("bluepd", 1, false)
+			or n:find("bluehawk", 1, false)
+	end
+
+	local function getSamSubZones(zoneName, used)
+		local samZones, samUnused = {}, {}
+		if not zoneByName then buildZoneByName() end
+		local prefix = zoneName:lower() .. "-sam-"
+		for zname, _ in pairs(zoneByName or {}) do
+			if zname:lower():find(prefix, 1, true) and not INVALID_SPAWN_SUB_ZONES[zname] then
+				samZones[#samZones + 1] = zname
+				if not (used and used[zname]) and not USED_SUB_ZONES[zname] then
+					samUnused[#samUnused + 1] = zname
+				end
+			end
+		end
+		return samZones, samUnused
+	end
+
+	local function filterOutSamZones(zoneName, zones)
+		local filtered = {}
+		local prefix = zoneName:lower() .. "-sam-"
+		for _, z in ipairs(zones) do
+			if not z:lower():find(prefix, 1, true) then
+				filtered[#filtered + 1] = z
+			end
+		end
+		return filtered
+	end
 
 
 	function CustomZone:spawnGroup(grname, forceFirst)
@@ -624,21 +732,53 @@ do
 
 	if grname:find("Fixed") then
 		local grp = GROUP:FindByName(grname)
-		if not grp then trigger.action.outText(grname.." not found, Report it to leka and what map", 60) end
-		local tpl = grp and grp:GetTemplate() or UTILS.DeepCopy(_DATABASE.Templates.Groups[grname].Template)
+		if not grp then
+			trigger.action.outText("Missing upgrade group "..tostring(grname).." in zone "..tostring(self.name)..". Will replace if possible.", 10)
+			MISSING_GROUPS[grname] = true
+		end
+		local tpl = grp and grp:GetTemplate()
+		if not tpl then
+			local db = _DATABASE and _DATABASE.Templates and _DATABASE.Templates.Groups and _DATABASE.Templates.Groups[grname]
+			if not db or not db.Template then
+				env.info("Fixed group template missing: "..tostring(grname).." in zone "..tostring(self.name))
+				MISSING_GROUPS[grname] = true
+				return nil
+			end
+			tpl = UTILS.DeepCopy(db.Template)
+		end
 		if grp and grp:IsAlive() then grp:Destroy() end
-		local g   = SPAWN:NewFromTemplate(tpl,grname,nil,true):InitHiddenOnMFD():Spawn()
+		local spawn = SPAWN:NewFromTemplate(tpl, grname, nil, true)
+		if isSamMfdHiddenGroup(grname) and shouldHideSamOnMFD() then
+			spawn = spawn:InitHiddenOnMFD()
+		end
+		local g = spawn:Spawn()
 		return g and { name = g:GetName() } or trigger.action.outText("Failed to spawn group: "..grname.." in zone "..self.name,10)
 	end
 
-	local all    = collectSubZones(self.name)
+	local all    = {}
+	for _, z in ipairs(collectSubZones(self.name)) do
+		if not INVALID_SPAWN_SUB_ZONES[z] then
+			all[#all + 1] = z
+		end
+	end
 	local unused = {}
 	for _, z in ipairs(all) do
-			if not (self.usedSpawnZones and self.usedSpawnZones[z]) and not USED_SUB_ZONES[z] then
+			if not INVALID_SPAWN_SUB_ZONES[z] and not (self.usedSpawnZones and self.usedSpawnZones[z]) and not USED_SUB_ZONES[z] then
 					unused[#unused + 1] = z
 			end
 	end
-	local zonePool = (#unused > 0) and unused or all
+	local zonePool = nil
+	if isStrategicSamGroup(grname) then
+		local samAll, samUnused = getSamSubZones(self.name, self.usedSpawnZones)
+		if #samAll > 0 then
+			zonePool = (#samUnused > 0) and samUnused or samAll
+		end
+	end
+	if not zonePool then
+		local filteredAll = filterOutSamZones(self.name, all)
+		local filteredUnused = filterOutSamZones(self.name, unused)
+		zonePool = (#filteredUnused > 0) and filteredUnused or filteredAll
+	end
 	if #zonePool==0 then zonePool[#zonePool+1]=self.name end
 
 	while #zonePool>0 do
@@ -1394,6 +1534,42 @@ do
 				table.insert(self._smokeCmds, h)
 			end
 
+			missionCommands.addCommandForCoalition(self.side, 'Flare on target', self.jtacMenu, function(dr)
+				if Group.getByName(dr.name) then
+					local tgtunit = Unit.getByName(dr.target)
+					if not tgtunit then
+						tgtunit = StaticObject.getByName(dr.target)
+					end
+					if tgtunit then
+						local p = tgtunit:getPoint()
+						local distSteps = {20,35,40}
+						local dist = distSteps[math.random(#distSteps)]
+						local ang = math.random() * 2 * math.pi
+						local fx = p.x + dist * math.cos(ang)
+						local fz = p.z + dist * math.sin(ang)
+						local flarePoint = { x = fx, y = p.y, z = fz }
+						local az = math.random(0, 359)
+						trigger.action.signalFlare(flarePoint, trigger.flareColor.Red, az)
+						local bearing = Utils.getBearing({x=flarePoint.x,z=flarePoint.z},{x=p.x,z=p.z})
+						if bearing < 0 then bearing = bearing + 360 end
+						local dir
+						if bearing >= 337.5 or bearing < 22.5 then dir = 'north'
+						elseif bearing < 67.5 then dir = 'north east'
+						elseif bearing < 112.5 then dir = 'east'
+						elseif bearing < 157.5 then dir = 'south east'
+						elseif bearing < 202.5 then dir = 'south'
+						elseif bearing < 247.5 then dir = 'south west'
+						elseif bearing < 292.5 then dir = 'west'
+						else dir = 'north west' end
+						local dStr = tostring(dist) .. ' meters'
+						trigger.action.outTextForCoalition(dr.side,'Target is '..dStr..' '..dir..' of the red flare at '..dr.tgtzone.zone,15)
+					end
+				else
+					missionCommands.removeItemForCoalition(dr.side, dr.jtacMenu)
+					dr.jtacMenu = nil
+				end
+			end, self)
+
 			local priomenu = missionCommands.addSubMenuForCoalition(self.side, 'Set Priority', self.jtacMenu)
 			for i,v in pairs(JTAC.categories) do
 				missionCommands.addCommandForCoalition(self.side, i, priomenu, function(dr, cat)
@@ -2016,7 +2192,7 @@ function CustomRespawn(grpName)
 
         if coord then
             local sp = SPAWN:NewFromTemplate(tpl, grpName, nil, true)
-            sp:InitSkill("Excellent")
+            sp:InitSkill(tostring(AiGroundSkill or "Excellent"))
             if not string.find(grpName, "Fixed") then
                 sp:InitRandomizePosition(true, 75, 30):InitPositionCoordinate(coord)
             end
@@ -2026,26 +2202,35 @@ function CustomRespawn(grpName)
 			 if not string.find(grpName, "Fixed") then
                 SP2:InitRandomizePosition(true, 75, 30)
 			 end	
-			SP2:Spawn()
+			SP2:InitSkill(tostring(AiGroundSkill or "Excellent")):Spawn()
         end
     else
         local tpl = UTILS.DeepCopy(_DATABASE.Templates.Groups[grpName].Template)
-        SPAWN:NewFromTemplate(tpl, grpName, nil, true):InitSkill("Excellent"):Spawn()
+        SPAWN:NewFromTemplate(tpl, grpName, nil, true):InitSkill(tostring(AiGroundSkill or "Excellent")):Spawn()
     end
 end
 
 function RespawnGroup(grpName)
   local old=GROUP:FindByName(grpName)
-  if not old then trigger.action.outText("Group "..tostring(grpName).." not found, please report it to Leka",30) 
+  if not old then
+	trigger.action.outText("Group "..tostring(grpName).." not found, please report it to Leka",30)
 	env.info("Group "..tostring(grpName).." not found, please report it to Leka")
-	end
+	MISSING_GROUPS[grpName] = true
+  end
   if old then old:Destroy() end
-  local tpl=UTILS.DeepCopy(_DATABASE.Templates.Groups[grpName].Template)
+  local db = _DATABASE and _DATABASE.Templates and _DATABASE.Templates.Groups and _DATABASE.Templates.Groups[grpName]
+  if not db or not db.Template then
+	env.info("RespawnGroup template missing: "..tostring(grpName))
+	MISSING_GROUPS[grpName] = true
+	return nil
+  end
+  local tpl=UTILS.DeepCopy(db.Template)
   tpl.name=grpName
   return SPAWN:NewFromTemplate(tpl,grpName,nil,true):InitRadioCommsOnOff(false):Spawn()
 end
 
-GlobalSettings = {}
+GlobalSettings = GlobalSettings or {}
+
 do
 	GlobalSettings.maxSupplyPerZoneBlue = 1  		-- max supply per to the same target zone at once
 	GlobalSettings.maxSupplyPerZoneRed = 2  		-- max supply per to the same target zone at once
@@ -2058,6 +2243,7 @@ do
 	GlobalSettings.frontlineDistanceLimitBlue = 30
 	GlobalSettings.frontlineDistanceLimitRed  = 60
 	GlobalSettings.proximityWakeNm = 30    			-- wake up zones within this nm of front
+	GlobalSettings.proximityWakeHoldSeconds = 10*60	-- keep player-proximity wakes alive for this many seconds
 	GlobalSettings.autoSuspendNmBlue = 80   		-- suspend blue zones deeper than this nm
 	GlobalSettings.autoSuspendNmRed = 120   		-- suspend red zones deeper than this nm
 	GlobalSettings.blockedDespawnTime = 12*60 		-- used to despawn aircraft that are stuck taxiing for some reason
@@ -2094,7 +2280,28 @@ do
 	
 	GlobalSettings.respawnTimers = {}
 	
-	function GlobalSettings.resetDifficultyScaling()
+	function GlobalSettings.resetDifficultyScaling(coalition)
+		if coalition == 1 or coalition == 2 then
+			GlobalSettings.respawnTimers[coalition] = {
+				supply = { 
+					dead = GlobalSettings.defaultRespawns[coalition].supply.dead, 
+					hangar = GlobalSettings.defaultRespawns[coalition].supply.hangar, 
+					preparing = GlobalSettings.defaultRespawns[coalition].supply.preparing
+				},
+				patrol = { 
+					dead = GlobalSettings.defaultRespawns[coalition].patrol.dead, 
+					hangar = GlobalSettings.defaultRespawns[coalition].patrol.hangar, 
+					preparing = GlobalSettings.defaultRespawns[coalition].patrol.preparing
+				},
+				attack = { 
+					dead = GlobalSettings.defaultRespawns[coalition].attack.dead, 
+					hangar = GlobalSettings.defaultRespawns[coalition].attack.hangar, 
+					preparing = GlobalSettings.defaultRespawns[coalition].attack.preparing
+				}
+			}
+			return
+		end
+	
 		GlobalSettings.respawnTimers[1] = {
 			supply = { 
 				dead = GlobalSettings.defaultRespawns[1].supply.dead, 
@@ -2133,7 +2340,7 @@ do
 	end
 	
 	function GlobalSettings.setDifficultyScaling(value, coalition)
-		GlobalSettings.resetDifficultyScaling()
+		GlobalSettings.resetDifficultyScaling(coalition)
 		for i,v in pairs(GlobalSettings.respawnTimers[coalition]) do
 			for i2,v2 in pairs(v) do
 				GlobalSettings.respawnTimers[coalition][i][i2] = math.floor(GlobalSettings.respawnTimers[coalition][i][i2] * value)
@@ -2142,6 +2349,10 @@ do
 	end
 	
 	GlobalSettings.resetDifficultyScaling()
+	if GlobalSettings.difficultyScaling then
+		if GlobalSettings.difficultyScaling[1] and GlobalSettings.difficultyScaling[1] ~= 1.0 then GlobalSettings.setDifficultyScaling(GlobalSettings.difficultyScaling[1], 1) end
+		if GlobalSettings.difficultyScaling[2] and GlobalSettings.difficultyScaling[2] ~= 1.0 then GlobalSettings.setDifficultyScaling(GlobalSettings.difficultyScaling[2], 2) end
+	end
 end
 
 ejectedPilotOwners = {}
@@ -2155,17 +2366,48 @@ MissionGroups         = {}
 ScoreTargets          = {}
 ActiveMission         = {}
 MissionMarks          = {}
+MissionFlagMetadata   = MissionFlagMetadata or {}
 
-function RegisterUnitTarget(uname,reward,stat,flagName)
+local function rememberMissionFlagMetadata(flagName, setCustomOnComplete)
+	if not flagName then return end
+	local meta = MissionFlagMetadata[flagName]
+	if not meta then
+		meta = {}
+		MissionFlagMetadata[flagName] = meta
+	end
+	if setCustomOnComplete == true then
+		meta.isStrike = true
+	elseif meta.isStrike == nil then
+		meta.isStrike = false
+	end
+end
+
+local function refreshStrikeMenusOnMissionFlag(flagName, setCustomOnComplete)
+	if not flagName or setCustomOnComplete ~= true then return end
+	if mc and mc.refreshAllStrikeMissionMenus then
+		mc:refreshAllStrikeMissionMenus(true)
+	end
+end
+
+function RegisterUnitTarget(uname,reward,stat,flagName,setCustomOnComplete)
     if flagName then
-        MissionTargets[uname]={reward=reward,stat=stat,flag=flagName}
+		rememberMissionFlagMetadata(flagName, setCustomOnComplete)
+        MissionTargets[uname]={reward=reward,stat=stat,flag=flagName,custom=setCustomOnComplete}
+		local wasActive = ActiveMission[flagName] == true
+		ActiveMission[flagName] = true
+		if not wasActive then
+			refreshStrikeMenusOnMissionFlag(flagName, setCustomOnComplete)
+		end
     else
         MissionTargets[uname]={reward=reward,stat=stat}
     end
 end
 
-function RegisterStaticGroup(groupKey,source,reward,stat,flagName)
+function RegisterStaticGroup(groupKey,source,reward,stat,flagName,setCustomOnComplete)
 	local list = (source and source.criticalObjects) and source.criticalObjects or source
+	if flagName then
+		rememberMissionFlagMetadata(flagName, setCustomOnComplete)
+	end
 	if not list or #list==0 then return end
 	local alive = {}
 	for i=1,#list do
@@ -2175,13 +2417,18 @@ function RegisterStaticGroup(groupKey,source,reward,stat,flagName)
 	end
 	if #alive==0 then
 		if flagName then
-			CustomFlags[flagName] = true
+			local wasActive = ActiveMission[flagName] == true
+			if setCustomOnComplete then CustomFlags[flagName] = true end
 			if ActiveMission[flagName] then ActiveMission[flagName] = nil end
+			if wasActive then
+				refreshStrikeMenusOnMissionFlag(flagName, setCustomOnComplete)
+			end
 		end
 		return
 	end
 	local tab = {reward = reward, stat = stat, alive = {}, remaining = 0, killers = {}}
 	if flagName then tab.flag = flagName end
+	tab.custom = setCustomOnComplete
 	for i=1,#alive do
 		local n = alive[i]
 		tab.alive[n] = true
@@ -2191,7 +2438,13 @@ function RegisterStaticGroup(groupKey,source,reward,stat,flagName)
 	end
 	MissionGroups[groupKey] = tab
 	if flagName then flag = flagName end
-	if flagName then ActiveMission[flagName] = true end
+	if flagName then
+		local wasActive = ActiveMission[flagName] == true
+		ActiveMission[flagName] = true
+		if not wasActive then
+			refreshStrikeMenusOnMissionFlag(flagName, setCustomOnComplete)
+		end
+	end
 	local cnt = #alive
 	for i=1,cnt do
 		local n = alive[i]
@@ -2209,14 +2462,17 @@ function RegisterStaticGroup(groupKey,source,reward,stat,flagName)
 end
 
 
-
-
-
-function RegisterGroupTarget(groupName,reward,stat,flagName)
+function RegisterGroupTarget(groupName,reward,stat,flagName,setCustomOnComplete)
+	if flagName then
+		rememberMissionFlagMetadata(flagName, setCustomOnComplete)
+	end
     local g = Group.getByName(groupName)
-    if not g then return end
+    if not g then
+	trigger.action.outText("Warning: RegisterGroupTarget failed, group "..tostring(groupName).." not found.",30)
+	return end
     local tab = {reward = reward, stat = stat, alive = {}, remaining = 0, killers = {}}
     if flagName then tab.flag = flagName end
+	tab.custom = setCustomOnComplete
     for _,u in ipairs(g:getUnits()) do
         local n = u:getName()
         tab.alive[n] = true
@@ -2226,6 +2482,13 @@ function RegisterGroupTarget(groupName,reward,stat,flagName)
     end
     MissionGroups[groupName] = tab
     if flagName then flag = flagName end
+	if flagName then
+		local wasActive = ActiveMission[flagName] == true
+		ActiveMission[flagName] = true
+		if not wasActive then
+			refreshStrikeMenusOnMissionFlag(flagName, setCustomOnComplete)
+		end
+	end
     local units = g:getUnits()
     local cnt = #units
     local s = getGroupSpeed(g)
@@ -2241,14 +2504,21 @@ function RegisterGroupTarget(groupName,reward,stat,flagName)
 	end
 end
 
-function RegisterScoreTarget(flag,obj,reward,stat)
+
+function RegisterScoreTarget(flag,obj,reward,stat,setCustomOnComplete)
+	rememberMissionFlagMetadata(flag, setCustomOnComplete)
     local st = ScoreTargets[flag]
     if not st then
-        st = {objects={},remaining=0,reward=reward,stat=stat}
+        st = {objects={},remaining=0,reward=reward,stat=stat,custom=setCustomOnComplete}
         ScoreTargets[flag] = st
     end
     st.objects[#st.objects+1] = obj
     st.remaining = st.remaining + 1
+	local wasActive = ActiveMission[flag] == true
+	ActiveMission[flag] = true
+	if not wasActive then
+		refreshStrikeMenusOnMissionFlag(flag, setCustomOnComplete)
+	end
 end
 
 function SetUpCAP_DefaultAA(group)
@@ -2260,6 +2530,7 @@ function SetUpCAP_DefaultAA(group)
 	--group:getController():setOption(AI.Option.Air.id.ROE, AI.Option.Air.val.ROE.OPEN_FIRE)
 	group:getController():setOption(AI.Option.Air.id.MISSILE_ATTACK, AI.Option.Air.val.MISSILE_ATTACK.MAX_RANGE)
 	group:getController():setOption(AI.Option.Air.id.RTB_ON_OUT_OF_AMMO, 268402688) -- AnyMissile
+	--group:getController():setOption(37, true)
 end
 
 
@@ -2546,6 +2817,14 @@ local function _bearingDeg(a, b)
     return _bearingDegFromDelta(b.x - a.x, b.y - a.y)
 end
 
+local function _zoneWaypointOrder(zoneName)
+    if type(WaypointList) ~= "table" then return nil end
+    local suffix = WaypointList[zoneName]
+    if suffix == nil then return nil end
+    if type(suffix) ~= "string" then suffix = tostring(suffix) end
+    return tonumber(suffix:match("(%d+)"))
+end
+
 local function _pickDensestZone(side, radiusNm)
     local r = radiusNm or 80
     if _densestZoneIndex[side] and _densestZoneIndex[side][r] then return _densestZoneIndex[side][r] end
@@ -2738,12 +3017,15 @@ local function _computeAwacsStationWithZone(side)
     end
     if not myPick then myPick = _anyZoneOfSide(side) end; if not myPick then return nil, nil end
 
-    local bestName, bestCnt, bestNear = nil, -1, 1e9
+    local bestName, bestCnt, bestNear, bestWp = nil, -1, 1e9, nil
+    local preferWaypoint = (side == 2)
+    local wpNearSlack = math.max(4, math.min(10, ((sep > 0) and (sep * 0.15) or 6)))
     for name,info in pairs(zi) do
         if info and info.center and info.side == side and info.active ~= false then
             local d = (_enemyDistIndex and _enemyDistIndex[name]) or _minDistToEnemyNm(name, side)
             local near = math.abs(d - sep)
             local cnt = 0
+            local wp = preferWaypoint and _zoneWaypointOrder(name) or nil
             if info.sameSideNeighbors then
                 for i=1,#info.sameSideNeighbors do
                     local n = info.sameSideNeighbors[i]
@@ -2751,8 +3033,29 @@ local function _computeAwacsStationWithZone(side)
                     if ni and ni.center and ni.side == side and n.dist2 then cnt = cnt + 1 else break end
                 end
             end
-            if (near < bestNear) or (near == bestNear and cnt > bestCnt) then
-                bestName, bestCnt, bestNear = name, cnt, near
+            local pick = false
+            if not bestName then
+                pick = true
+            else
+                local nearDiff = near - bestNear
+                if nearDiff < -0.01 then
+                    pick = true
+                elseif math.abs(nearDiff) <= 0.01 then
+                    if preferWaypoint and wp and ((not bestWp) or (wp > bestWp)) then
+                        pick = true
+                    elseif cnt > bestCnt then
+                        pick = true
+                    end
+                elseif preferWaypoint and wp and (nearDiff <= wpNearSlack) then
+                    if (not bestWp) or (wp > bestWp) then
+                        pick = true
+                    elseif bestWp and wp == bestWp and cnt > bestCnt then
+                        pick = true
+                    end
+                end
+            end
+            if pick then
+                bestName, bestCnt, bestNear, bestWp = name, cnt, near, wp
             end
         end
     end
@@ -2934,34 +3237,35 @@ local function _computeAwacsStationWithZoneSecondary(side, avoidX, avoidZ, minSe
                 break
             end
         end
-    end
-    return COORDINATE:New(myC.x, UTILS.FeetToMeters(alt), myC.y), bestName, hdg, toward
+ end
+ return COORDINATE:New(myC.x, UTILS.FeetToMeters(alt), myC.y), bestName, hdg, toward
 end
 
- function RepositionAwacsToFront()
-    env.info("AWACS is checking the frontline")
+function RepositionAwacsToFront()
 	local blueVec = nil
 	for side=1,2 do
 		local coord, z, h = _computeAwacsStationWithZone(side)
 		if coord then
 			if side == 2 then blueVec = coord.GetVec3 and coord:GetVec3() or nil end
 			setAwacsRacetrack(side, coord, h, nil, z)
-		else env.info("AWACS compute failed") end
+		end
 	end
 	if IsGroupActive(AWACS_GROUPS[3]) then
 		local avoidX = (blueVec and blueVec.x) or (_awacsMissionParams[2] and _awacsMissionParams[2].x) or nil
 		local avoidZ = (blueVec and blueVec.z) or (_awacsMissionParams[2] and _awacsMissionParams[2].z) or nil
 		local coord2, z2, h2 = _computeAwacsStationWithZoneSecondary(2, avoidX, avoidZ, 150)
-		if coord2 then setAwacsRacetrack(3, coord2, h2, nil, z2) else env.info("AWACS compute failed") end
+		if coord2 then setAwacsRacetrack(3, coord2, h2, nil, z2) end
 	else
 		spawnAwacs(3, nil, nil)
 	end
 end
 
 function setAwacsRacetrack(side, coord, heading, leg, zoneName)
-    local fg = _awacsFG[side] or nil; if not fg or not coord then return end
     local cfgSide = (side == 3) and 2 or side
     local cfg = AWACS_CFG[cfgSide] or {}
+    local fg = _awacsFG[side]
+    if not fg or not coord then return end
+
     local alt = cfg.alt or 30000
     local spd = cfg.speed or 350
     local hdg = heading or cfg.hdg or 270
@@ -2972,28 +3276,99 @@ function setAwacsRacetrack(side, coord, heading, leg, zoneName)
     if params and vec and params.x and params.z then
         local dx = vec.x - params.x
         local dz = vec.z - params.z
-        if (dx*dx + dz*dz) <= 2500 then return end
+        if (dx * dx + dz * dz) <= 2500 then return end
     end
 
-    local cur = fg:GetMissionCurrent(); if cur then cur:__Cancel(5) end
-    local auf = AUFTRAG:NewAWACS(coord, alt, spd, hdg, leglen)
+    local altitude = UTILS.FeetToMeters(alt)
+    local pBase = coord.GetVec2 and coord:GetVec2() or {x = coord.x, y = coord.z or coord.y}
+    local routeSpeed = UTILS.IasToTas(UTILS.KnotsToMps(spd), altitude)
+    local orbitTask = {
+        id = 'Orbit',
+        params = {
+            pattern = AI.Task.OrbitPattern.CIRCLE,
+            point = { x = pBase.x, y = pBase.y },
+            speed = routeSpeed,
+            altitude = altitude,
+            altitudeEdited = true,
+            altitudeType = AI.Task.AltitudeType.BARO,
+            alt_type = AI.Task.AltitudeType.BARO,
+        },
+    }
+    if leglen > 0 then
+        local p2 = UTILS.Vec2Translate(pBase, UTILS.NMToMeters(leglen), hdg)
+        orbitTask.params.pattern = AI.Task.OrbitPattern.RACE_TRACK
+        orbitTask.params.point2 = { x = p2.x, y = p2.y }
+    end
+    local lead = fg:getUnit(1)
+    if not lead then return end
+    local leadPos = lead:getPoint()
+    if not leadPos then return end
+
+    local controller = fg:getController()
+    if not controller then return end
+
+    controller:setTask({
+        id = 'Mission',
+        params = {
+            airborne = true,
+            route = {
+                points = {
+                    {
+                        x = leadPos.x,
+                        y = leadPos.z,
+                        alt = leadPos.y,
+                        alt_type = 'BARO',
+                        type = 'Turning Point',
+                        action = 'Turning Point',
+                        ETA = 0,
+                        ETA_locked = false,
+                        speed = routeSpeed,
+                        speed_locked = true,
+                        task = { id = 'ComboTask', params = { tasks = {} } },
+                    },
+                    {
+                        x = pBase.x,
+                        y = pBase.y,
+                        alt = altitude,
+                        alt_type = 'BARO',
+                        type = 'Turning Point',
+                        action = 'Turning Point',
+                        ETA = 0,
+                        ETA_locked = false,
+                        speed = routeSpeed,
+                        speed_locked = true,
+                        task = {
+                            id = 'ComboTask',
+                            params = {
+                                tasks = {
+                                    { id = 'AWACS', params = {} },
+                                    orbitTask,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    })
+
     _awacsZone[side] = zoneName or _awacsZone[side]
     _awacsMissionParams[side] = {
         x = vec and vec.x or nil,
         z = vec and vec.z or nil,
-        zone = _awacsZone[side]
+        hdg = hdg,
+        leg = leglen,
+        zone = _awacsZone[side],
     }
-	auf:SetMissionSpeed(350)
-	auf:SetMissionAltitude(30000)
-    fg:AddMission(auf)
 end
 
 function spawnAwacs(side, heading, leg)
     local cfgSide = (side == 3) and 2 or side
+    local cfg = AWACS_CFG[cfgSide] or {}
     local coord, z, ch, toward
     if side == 3 then
-        local avoidX = (_awacsMissionParams[2] and _awacsMissionParams[2].x) or nil
-        local avoidZ = (_awacsMissionParams[2] and _awacsMissionParams[2].z) or nil
+        local avoidX = _awacsMissionParams[2] and _awacsMissionParams[2].x or nil
+        local avoidZ = _awacsMissionParams[2] and _awacsMissionParams[2].z or nil
         coord, z, ch, toward = _computeAwacsStationWithZoneSecondary(2, avoidX, avoidZ, 150); if not coord then return end
     else
         coord, z, ch, toward = _computeAwacsStationWithZone(side); if not coord then return end
@@ -3002,32 +3377,45 @@ function spawnAwacs(side, heading, leg)
     local zobj = aim and ZONE:FindByName(aim) or nil
     local targetCoord = (zobj and zobj:GetCoordinate()) or (Frontline._zoneInfo[aim] and COORDINATE:New(Frontline._zoneInfo[aim].center.x, coord.y, Frontline._zoneInfo[aim].center.y)) or nil
     local hdgCalc = targetCoord and coord:GetAngleDegrees(coord:GetDirectionVec3(targetCoord)) or ch
-    local hdg = heading or hdgCalc or AWACS_CFG[cfgSide].hdg
-    local alt = AWACS_CFG[cfgSide].alt
-    local spd = AWACS_CFG[cfgSide].speed
-    local lg  = leg or AWACS_CFG[cfgSide].leg
+    local hdg = heading or hdgCalc or cfg.hdg or 270
+    local alt = cfg.alt or 30000
+    local spd = cfg.speed or 350
+    local lg  = leg or cfg.leg or 10
     local g = Respawn.SpawnAtPoint(AWACS_GROUPS[side], coord, hdg, lg, alt, spd)
     if not g then return end
     timer.scheduleFunction(function(group, time)
-        local spawnedGroup = GROUP:FindByName(group:getName())
-        local fg = FLIGHTGROUP:New(spawnedGroup)
-		_awacsFG[side] = fg
-		fg:SwitchInvisible(true)
-		fg:SwitchImmortal(true)
-        fg:GetGroup():CommandSetUnlimitedFuel(true)
-        local auf = AUFTRAG:NewAWACS(coord, alt, spd, hdg, lg)
-        fg:AddMission(auf)
-        _awacsZone[side] = z
+        local dcsGroup = Group.getByName(group:getName())
+        if not dcsGroup then return end
+        local groupController = dcsGroup:getController()
+        if not groupController then return end
+
+        groupController:setCommand({
+            id = 'SetInvisible',
+            params = { value = true }
+        })
+        groupController:setCommand({
+            id = 'SetImmortal',
+            params = { value = true }
+        })
+        groupController:setCommand({
+            id = 'SetUnlimitedFuel',
+            params = { value = true }
+        })
+        groupController:setCommand({
+            id = 'EPLRS',
+            params = {
+                value = true,
+                groupId = dcsGroup:getID()
+            }
+        })
+
+        _awacsFG[side] = dcsGroup
+        setAwacsRacetrack(side, coord, hdg, lg, z)
+
         local vec = coord.GetVec3 and coord:GetVec3() or nil
-        _awacsMissionParams[side] = {
-            x = vec and vec.x or nil,
-            z = vec and vec.z or nil,
-            hdg = hdg,
-            leg = lg,
-            zone = _awacsZone[side]
-        }
+
         if side == 2 and vec then
-            local coord2, z2, h2 = _computeAwacsStationWithZoneSecondary(2, vec.x, vec.z, 150)
+            local coord2, z2, h2 = _computeAwacsStationWithZoneSecondary(2, vec.x, vec.z, 100)
             if coord2 then
                 if IsGroupActive(AWACS_GROUPS[3]) then
                     setAwacsRacetrack(3, coord2, h2, nil, z2)
@@ -3036,7 +3424,7 @@ function spawnAwacs(side, heading, leg)
                 end
             end
         end
-    end, g, timer.getTime() + 0.5)
+    end, g, timer.getTime() + 2)
 end
 
 
@@ -3142,7 +3530,7 @@ dc.TARGET_SUBZONES = dc.TARGET_SUBZONES or {}
 dc.RSTATE = dc.RSTATE or (1 + math.floor((((timer and timer.getTime) and timer.getTime()) or 0) * 1000))
 dc.TARGET_TAIL_CACHE = dc.TARGET_TAIL_CACHE or {}
 dc.DEFAULT_SPEED = 20
-dc.DEFAULT_WAYPOINTS_IN_TARGET = 8
+dc.DEFAULT_WAYPOINTS_IN_TARGET = 15
 dc.PATH_CACHE = dc.PATH_CACHE or {}
 dc.OFFROAD_PENALTY = 1.25
 dc.OFFROAD_EXIT_EARLY_METERS = math.random(100, 300)
@@ -3560,6 +3948,619 @@ do
 			end
 		end
 	end
+
+	function BattleCommander:_getGroupPlayerName(groupId, groupObj)
+		local pname = (self.playerNames and self.playerNames[groupId]) or nil
+		if (not pname) and groupObj and groupObj.isExist and groupObj:isExist() then
+			local u = groupObj:getUnit(1)
+			if u and u.getPlayerName then
+				pname = u:getPlayerName()
+			end
+		end
+		return pname
+	end
+
+	function BattleCommander:_getGroupRank(groupId, groupObj)
+		return self:getPlayerRank(self:_getGroupPlayerName(groupId, groupObj)) or 0
+	end
+
+	function BattleCommander:_getTankerRequiredRank(itemId)
+		if not RankingSystem then return 0 end
+		if type(ShopRankRequirements) == "table" then
+			local req = tonumber(ShopRankRequirements[itemId])
+			if req then return req end
+		end
+		return 0
+	end
+
+	function BattleCommander:_removeTankerMenuForGroup(groupId)
+		self.groupTankerMenus = self.groupTankerMenus or {}
+		self.groupTankerSignatures = self.groupTankerSignatures or {}
+		local handle = self.groupTankerMenus[groupId]
+		if handle then
+			missionCommands.removeItemForGroup(groupId, handle)
+		end
+		self.groupTankerMenus[groupId] = nil
+		self.groupTankerSignatures[groupId] = nil
+	end
+
+	function BattleCommander:_removeDynamicControlMenuForGroup(groupId)
+		self.groupDynamicMenus = self.groupDynamicMenus or {}
+		self.groupDynamicSignatures = self.groupDynamicSignatures or {}
+		self:_removeTankerMenuForGroup(groupId)
+		local handle = self.groupDynamicMenus[groupId]
+		if handle then
+			missionCommands.removeItemForGroup(groupId, handle)
+		end
+		self.groupDynamicMenus[groupId] = nil
+		self.groupDynamicSignatures[groupId] = nil
+	end
+
+	function BattleCommander:_groupHasHumanPlayer(groupObj)
+		if not groupObj or not groupObj.isExist or not groupObj:isExist() then return false end
+		local sz = groupObj:getSize() or 0
+		for i=1,sz do
+			local u = groupObj:getUnit(i)
+			if u and u.getPlayerName and u:getPlayerName() then
+				return true
+			end
+		end
+		return false
+	end
+
+	function BattleCommander:_groupIsHelicopter(groupObj)
+		if not groupObj or not groupObj.isExist or not groupObj:isExist() then return false end
+		local sz = groupObj:getSize() or 0
+		for i=1,sz do
+			local u = groupObj:getUnit(i)
+			if u and (not u.isExist or u:isExist()) and u.getDesc then
+				local desc = u:getDesc()
+				local category = desc and desc.category
+				if category ~= nil and Unit and Unit.Category and Unit.Category.HELICOPTER ~= nil then
+					return category == Unit.Category.HELICOPTER
+				end
+				if desc and desc.attributes then
+					if desc.attributes.Helicopters or desc.attributes.Helicopter then
+						return true
+					else
+						return false
+					end
+				end
+			end
+		end
+		return false
+	end
+
+	function BattleCommander:refreshDynamicControlMenusForBlue(force)
+		self.groupDynamicMenus = self.groupDynamicMenus or {}
+		self.groupDynamicSignatures = self.groupDynamicSignatures or {}
+		local seen = {}
+		local groups = coalition.getGroups(2) or {}
+		for _, g in pairs(groups) do
+			if g and g:isExist() then
+				local gid = g:getID()
+				seen[gid] = true
+				self:refreshDynamicControlMenuForGroup(gid, g, force)
+			end
+		end
+		for gid, _ in pairs(self.groupDynamicMenus) do
+			if not seen[gid] then
+				self:_removeDynamicControlMenuForGroup(gid)
+				self:_removeTankerMenuForGroup(gid)
+			end
+		end
+	end
+
+	function BattleCommander:refreshDynamicControlMenuForGroup(groupId, groupObj, force)
+		self.groupDynamicMenus = self.groupDynamicMenus or {}
+		self.groupDynamicSignatures = self.groupDynamicSignatures or {}
+
+		if not groupObj or not groupObj.isExist or not groupObj:isExist() then
+			self:_removeDynamicControlMenuForGroup(groupId)
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+		if groupObj:getCoalition() ~= 2 then
+			self:_removeDynamicControlMenuForGroup(groupId)
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+		if not self:_groupHasHumanPlayer(groupObj) then
+			self:_removeDynamicControlMenuForGroup(groupId)
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+
+		local hasNonTankerDynamic = capActive or casActive or seadActive or decoyActive or bomberActive or StructureActive
+		local isHeloGroup = (self._groupIsHelicopter and self:_groupIsHelicopter(groupObj)) or false
+		local hasEligibleTankerController = false
+		local rank = (self._getGroupRank and self:_getGroupRank(groupId, groupObj)) or 0
+		local reqArco = (self._getTankerRequiredRank and self:_getTankerRequiredRank("dynamicarco")) or 0
+		local reqTexaco = (self._getTankerRequiredRank and self:_getTankerRequiredRank("dynamictexaco")) or 0
+		if (ArcoActive or TexacoActive) and not isHeloGroup then
+			hasEligibleTankerController = (ArcoActive and rank >= reqArco) or (TexacoActive and rank >= reqTexaco)
+		end
+
+		if not (hasNonTankerDynamic or hasEligibleTankerController) then
+			self:_removeDynamicControlMenuForGroup(groupId)
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+
+		local signature = table.concat({
+			tostring(capActive), tostring(casActive), tostring(seadActive),
+			tostring(decoyActive), tostring(bomberActive), tostring(StructureActive),
+			tostring(ArcoActive), tostring(TexacoActive),
+			tostring(isHeloGroup), tostring(rank),
+			tostring(reqArco), tostring(reqTexaco),
+			tostring(hasEligibleTankerController),
+		}, "|")
+
+		if not force and self.groupDynamicMenus[groupId] and self.groupDynamicSignatures[groupId] == signature then
+			self:refreshTankerControlMenuForGroup(groupId, groupObj, false, self.groupDynamicMenus[groupId])
+			return
+		end
+
+		self:_removeDynamicControlMenuForGroup(groupId)
+		local rootMenu = missionCommands.addSubMenuForGroup(groupId, "Dynamic Control")
+		self.groupDynamicMenus[groupId] = rootMenu
+		self.groupDynamicSignatures[groupId] = signature
+		self:refreshTankerControlMenuForGroup(groupId, groupObj, true, rootMenu)
+
+
+		local function orderedCapZonesForGroup()
+			local zones = (self.getZones and self:getZones()) or {}
+			local c = {}
+			for _, v in ipairs(zones) do
+				if v.active
+				and ((v.side == 2) or (v.side == 0 and (not v.NeutralAtStart or v.firstCaptureByRed)))
+				and (not v.isHidden)
+				and (not v.suspended) then
+					local suf = WaypointList and WaypointList[v.zone]
+					local wp = suf and tonumber(tostring(suf):match("%d+"))
+					c[#c+1] = { z = v, wp = wp, disp = (wp and (v.zone .. suf) or v.zone) }
+				end
+			end
+			table.sort(c, function(a, b)
+				if a.wp and b.wp then return a.wp > b.wp end
+				if a.wp then return true end
+				if b.wp then return false end
+				return a.z.zone < b.z.zone
+			end)
+			return c
+		end
+
+		if capActive then
+			local capSubMenu = missionCommands.addSubMenuForGroup(groupId, "CAP Control", rootMenu)
+
+			local zoneMenu = missionCommands.addSubMenuForGroup(groupId, "CAP: Reposition by Zone", capSubMenu)
+			local count = 0
+			local sub1
+			for _, wrap in ipairs(orderedCapZonesForGroup()) do
+				local v = wrap.z
+				local zoneSubMenu
+				count = count + 1
+				if count < 10 then
+					zoneSubMenu = missionCommands.addSubMenuForGroup(groupId, wrap.disp, zoneMenu)
+				elseif count == 10 then
+					sub1 = missionCommands.addSubMenuForGroup(groupId, "More", zoneMenu)
+					zoneSubMenu = missionCommands.addSubMenuForGroup(groupId, wrap.disp, sub1)
+				elseif count % 9 == 1 then
+					sub1 = missionCommands.addSubMenuForGroup(groupId, "More", sub1)
+					zoneSubMenu = missionCommands.addSubMenuForGroup(groupId, wrap.disp, sub1)
+				else
+					zoneSubMenu = missionCommands.addSubMenuForGroup(groupId, wrap.disp, sub1)
+				end
+				for _, headingName in ipairs({"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}) do
+					if headingName == "Orbit" then
+						missionCommands.addCommandForGroup(groupId, headingName, zoneSubMenu, function()
+							local zone = ZONE:FindByName(v.zone)
+							if not zone then return end
+							local coord = zone:GetCoordinate()
+							setCapRacetrack(coord, 045, 0, v.zone)
+							MESSAGE:New("CAP is en route to " .. v.zone .. ".", 20):ToAll()
+						end)
+					else
+						local headingVal = capHeadings[headingName]
+						local headingMenu = missionCommands.addSubMenuForGroup(groupId, headingName, zoneSubMenu)
+						for _, legName in ipairs({"Orbit","10 NM Leg","20 NM Leg","30 NM Leg","40 NM Leg","50 NM Leg"}) do
+							local legVal = capLegs[legName]
+							missionCommands.addCommandForGroup(groupId, legName, headingMenu, function()
+								local zone = ZONE:FindByName(v.zone)
+								if not zone then return end
+								local coord = zone:GetCoordinate()
+								setCapRacetrack(coord, headingVal, legVal)
+                            	MESSAGE:New("CAP is repositioning at " .. v.zone .. " with a new racetrack, heading " .. headingVal .. "°, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
+							end)
+						end
+					end
+				end
+			end
+
+			local posMenu = missionCommands.addSubMenuForGroup(groupId, "CAP: Reposition by Position", capSubMenu)
+			for _, dirName in ipairs({"Reposition 360", "Reposition 045", "Reposition 090", "Reposition 135", "Reposition 180", "Reposition 225", "Reposition 270", "Reposition 315"}) do
+				local dirVal = capPositionDirections[dirName]
+				local dirMenu = missionCommands.addSubMenuForGroup(groupId, dirName, posMenu)
+				for _, distName in ipairs({"0 NM", "10 NM", "20 NM", "30 NM", "40 NM", "50 NM", "60 NM", "70 NM", "80 NM", "90 NM", "100 NM"}) do
+					local distVal = capPositionDistances[distName]
+					local distMenu = missionCommands.addSubMenuForGroup(groupId, distName, dirMenu)
+					for _, headingName in ipairs({"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}) do
+						if headingName == "Orbit" then
+							missionCommands.addCommandForGroup(groupId, headingName, distMenu, function()
+								if capGroup then
+									local offsetCoord = capGroup:GetCoordinate():Translate(UTILS.NMToMeters(distVal), dirVal, true)
+									setCapRacetrack(offsetCoord, 045, 0)
+									MESSAGE:New("CAP is about to " .. dirName .. " for " .. distName .. " and orbit.", 20):ToAll()
+								end
+							end)
+						else
+							local headingVal = capHeadings[headingName]
+							local headingMenu = missionCommands.addSubMenuForGroup(groupId, headingName, distMenu)
+							for _, legName in ipairs({"Orbit", "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg"}) do
+								local legVal = capLegs[legName]
+								missionCommands.addCommandForGroup(groupId, legName, headingMenu, function()
+									if capGroup then
+										local offsetCoord = capGroup:GetCoordinate():Translate(UTILS.NMToMeters(distVal), dirVal, true)
+										setCapRacetrack(offsetCoord, headingVal, legVal)
+                                    	MESSAGE:New("CAP is about to " .. dirName .. " " .. distName .. " with a new racetrack, heading " .. headingVal .. "°, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
+									end
+								end)
+							end
+						end
+					end
+				end
+			end
+			missionCommands.addCommandForGroup(groupId, "CAP: Hold Racetrack", capSubMenu, function()
+				if capGroup then
+					capGroup:SwitchROE(2)
+				end
+				MESSAGE:New("CAP is set to (Engage If Engaged)", 15):ToAll()
+			end)
+			missionCommands.addCommandForGroup(groupId, "CAP: Flightsweep", capSubMenu, function()
+				if capGroup then
+					capGroup:SwitchROE(1)
+				end
+				MESSAGE:New("CAP set to Engage All", 15):ToAll()
+			end)
+			missionCommands.addCommandForGroup(groupId, "CAP: Destroy", capSubMenu, despawnCap)
+		end
+		if casActive then
+			missionCommands.addCommandForGroup(groupId, "CAS: Destroy", rootMenu, despawnCas)
+		end
+		if bomberActive then
+			missionCommands.addCommandForGroup(groupId, "Bomber: Destroy", rootMenu, despawnBomber)
+		end
+		if seadActive then
+			missionCommands.addCommandForGroup(groupId, "SEAD: Destroy", rootMenu, despawnSead)
+		end
+		if decoyActive then
+			missionCommands.addCommandForGroup(groupId, "DECOY: Destroy", rootMenu, despawnDecoy)
+		end
+		if StructureActive then
+			missionCommands.addCommandForGroup(groupId, "Building strike: Destroy", rootMenu, despawnStructure)
+		end
+	end
+
+	function BattleCommander:refreshTankerControlMenusForBlue(force)
+		self.groupTankerMenus = self.groupTankerMenus or {}
+		self.groupTankerSignatures = self.groupTankerSignatures or {}
+		self.groupDynamicMenus = self.groupDynamicMenus or {}
+		local seen = {}
+		local groups = coalition.getGroups(2) or {}
+		for _, g in pairs(groups) do
+			if g and g:isExist() then
+				local gid = g:getID()
+				seen[gid] = true
+				self:refreshTankerControlMenuForGroup(gid, g, force, self.groupDynamicMenus[gid])
+			end
+		end
+		for gid, _ in pairs(self.groupTankerMenus) do
+			if not seen[gid] then
+				self:_removeTankerMenuForGroup(gid)
+			end
+		end
+	end
+
+	function BattleCommander:refreshTankerControlMenuForGroup(groupId, groupObj, force, parentMenu)
+		self.groupTankerMenus = self.groupTankerMenus or {}
+		self.groupTankerSignatures = self.groupTankerSignatures or {}
+		self.groupDynamicMenus = self.groupDynamicMenus or {}
+
+		if not groupObj or not groupObj.isExist or not groupObj:isExist() then
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+		if groupObj:getCoalition() ~= 2 then
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+		if not self:_groupHasHumanPlayer(groupObj) then
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+		if self._groupIsHelicopter and self:_groupIsHelicopter(groupObj) then
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+
+		local rank = self:_getGroupRank(groupId, groupObj)
+		local reqArco = self:_getTankerRequiredRank("dynamicarco")
+		local reqTexaco = self:_getTankerRequiredRank("dynamictexaco")
+
+			local arcoUnlocked = _getTankerState("arco").unlocked == true
+			local texacoUnlocked = _getTankerState("texaco").unlocked == true
+			local arcoAltCurrent = _getTankerCurrentAltitude("arco")
+			local texacoAltCurrent = _getTankerCurrentAltitude("texaco")
+			local texacoSpeedCurrent = _getTankerCurrentSpeed("texaco")
+
+		local arcoEligible = (rank >= reqArco) and ArcoActive
+		local texacoEligible = (rank >= reqTexaco) and TexacoActive
+		if not (arcoEligible or texacoEligible) then
+			self:_removeTankerMenuForGroup(groupId)
+			return
+		end
+
+			local signature = table.concat({
+				tostring(rank),
+				tostring(reqArco), tostring(reqTexaco),
+				tostring(arcoUnlocked), tostring(texacoUnlocked),
+				tostring(ArcoActive), tostring(TexacoActive),
+				tostring(arcoAltCurrent), tostring(texacoAltCurrent),
+				tostring(texacoSpeedCurrent),
+			}, "|")
+		if not force and self.groupTankerMenus[groupId] and self.groupTankerSignatures[groupId] == signature then
+			return
+		end
+
+		self:_removeTankerMenuForGroup(groupId)
+		local rootMenu = parentMenu or self.groupDynamicMenus[groupId]
+		if not rootMenu then
+			return
+		end
+
+		local tankersMenu = missionCommands.addSubMenuForGroup(groupId, "Tankers Control", rootMenu)
+		self.groupTankerMenus[groupId] = tankersMenu
+		self.groupTankerSignatures[groupId] = signature
+
+		local orbitAndHeadings = {"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}
+		local legs = {"Orbit","10 NM Leg","20 NM Leg","30 NM Leg","40 NM Leg","50 NM Leg"}
+		local posDirs = {"Reposition 360", "Reposition 045", "Reposition 090", "Reposition 135", "Reposition 180", "Reposition 225", "Reposition 270", "Reposition 315"}
+		local posDists = {"0 NM", "10 NM", "20 NM", "30 NM", "40 NM", "50 NM", "60 NM", "70 NM", "80 NM", "90 NM", "100 NM"}
+		local spawnLegs = {"10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg"}
+		local function orderedBlueZones()
+			local zones = self:getZones() or {}
+			local c = {}
+			for _, v in ipairs(zones) do
+				if v.active and v.side == 2 and (not v.isHidden) and (not v.suspended) then
+					local suf = WaypointList and WaypointList[v.zone]
+					local wp = suf and tonumber(tostring(suf):match("%d+"))
+					c[#c+1] = { z = v, wp = wp, disp = (wp and (v.zone .. suf) or v.zone) }
+				end
+			end
+			table.sort(c, function(a, b)
+				if a.wp and b.wp then return a.wp > b.wp end
+				if a.wp then return true end
+				if b.wp then return false end
+				return a.z.zone < b.z.zone
+			end)
+			return c
+		end
+
+		local function addSpawnByZoneForGroup(title, spawnFn)
+			local root = missionCommands.addSubMenuForGroup(groupId, title, tankersMenu)
+			local count = 0
+			local sub1
+			for _, wrap in ipairs(orderedBlueZones()) do
+				local v = wrap.z
+				local zoneName = v.zone
+				local zoneDisplayName = wrap.disp
+				local zoneMenu
+				count = count + 1
+				if count < 10 then
+					zoneMenu = missionCommands.addSubMenuForGroup(groupId, zoneDisplayName, root)
+				elseif count == 10 then
+					sub1 = missionCommands.addSubMenuForGroup(groupId, "More", root)
+					zoneMenu = missionCommands.addSubMenuForGroup(groupId, zoneDisplayName, sub1)
+				elseif count % 9 == 1 then
+					sub1 = missionCommands.addSubMenuForGroup(groupId, "More", sub1)
+					zoneMenu = missionCommands.addSubMenuForGroup(groupId, zoneDisplayName, sub1)
+				else
+					zoneMenu = missionCommands.addSubMenuForGroup(groupId, zoneDisplayName, sub1)
+				end
+				for _, headingName in ipairs(orbitAndHeadings) do
+					if headingName == "Orbit" then
+						missionCommands.addCommandForGroup(groupId, headingName, zoneMenu, function()
+							spawnFn(zoneName, 45, 0)
+						end)
+					else
+						local headingVal = capHeadings[headingName]
+						local headingMenu = missionCommands.addSubMenuForGroup(groupId, headingName, zoneMenu)
+						for _, legName in ipairs(spawnLegs) do
+							local legVal = capLegs[legName]
+							missionCommands.addCommandForGroup(groupId, legName, headingMenu, function()
+								spawnFn(zoneName, headingVal, legVal)
+							end)
+						end
+					end
+				end
+			end
+		end
+
+		local function addRepositionMenusForGroup(prefix, zoneTitle, posTitle, groupGetter, setFn)
+			local zoneMenu = missionCommands.addSubMenuForGroup(groupId, zoneTitle, tankersMenu)
+			local count = 0
+			local sub1
+			for _, wrap in ipairs(orderedBlueZones()) do
+				local v = wrap.z
+				local zoneName = v.zone
+				local zoneSubMenu
+				count = count + 1
+				if count < 10 then
+					zoneSubMenu = missionCommands.addSubMenuForGroup(groupId, wrap.disp, zoneMenu)
+				elseif count == 10 then
+					sub1 = missionCommands.addSubMenuForGroup(groupId, "More", zoneMenu)
+					zoneSubMenu = missionCommands.addSubMenuForGroup(groupId, wrap.disp, sub1)
+				elseif count % 9 == 1 then
+					sub1 = missionCommands.addSubMenuForGroup(groupId, "More", sub1)
+					zoneSubMenu = missionCommands.addSubMenuForGroup(groupId, wrap.disp, sub1)
+				else
+					zoneSubMenu = missionCommands.addSubMenuForGroup(groupId, wrap.disp, sub1)
+				end
+				for _, headingName in ipairs(orbitAndHeadings) do
+					if headingName == "Orbit" then
+						missionCommands.addCommandForGroup(groupId, headingName, zoneSubMenu, function()
+							local zone = ZONE:FindByName(zoneName)
+							if not zone then return end
+							local coord = zone:GetCoordinate()
+							if setFn(coord, 45, 0, zoneName) then
+								MESSAGE:New(prefix .. " is en route to " .. zoneName .. ".", 20):ToAll()
+							end
+						end)
+					else
+						local headingVal = capHeadings[headingName]
+						local headingMenu = missionCommands.addSubMenuForGroup(groupId, headingName, zoneSubMenu)
+						for _, legName in ipairs(legs) do
+							local legVal = capLegs[legName]
+							missionCommands.addCommandForGroup(groupId, legName, headingMenu, function()
+								local zone = ZONE:FindByName(zoneName)
+								if not zone then return end
+								local coord = zone:GetCoordinate()
+								if setFn(coord, headingVal, legVal) then
+									MESSAGE:New(prefix .. " is repositioning to " .. zoneName .. " with a new racetrack, heading " .. headingVal .. " degrees, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
+								end
+							end)
+						end
+					end
+				end
+			end
+
+			local posMenu = missionCommands.addSubMenuForGroup(groupId, posTitle, tankersMenu)
+			for _, dirName in ipairs(posDirs) do
+				local dirVal = capPositionDirections[dirName]
+				local dirMenu = missionCommands.addSubMenuForGroup(groupId, dirName, posMenu)
+				for _, distName in ipairs(posDists) do
+					local distVal = capPositionDistances[distName]
+					local distMenu = missionCommands.addSubMenuForGroup(groupId, distName, dirMenu)
+					for _, headingName in ipairs(orbitAndHeadings) do
+						if headingName == "Orbit" then
+							missionCommands.addCommandForGroup(groupId, headingName, distMenu, function()
+								local g = groupGetter()
+								if g then
+									local baseCoord = nil
+									if g.GetCoordinate then
+										baseCoord = g:GetCoordinate()
+									elseif g.getUnit then
+										local gu = g:getUnit(1)
+										local gp = gu and gu:getPoint() or nil
+										if gp then
+											baseCoord = COORDINATE:New(gp.x, gp.y, gp.z)
+										end
+									end
+									if baseCoord then
+										local offsetCoord = baseCoord:Translate(UTILS.NMToMeters(distVal), dirVal, true)
+										if setFn(offsetCoord, 45, 0) then
+											MESSAGE:New(prefix .. " is about to " .. dirName .. " for " .. distName .. " and orbit.", 20):ToAll()
+										end
+									end
+								end
+							end)
+						else
+							local headingVal = capHeadings[headingName]
+							local headingMenu = missionCommands.addSubMenuForGroup(groupId, headingName, distMenu)
+							for _, legName in ipairs(legs) do
+								local legVal = capLegs[legName]
+								missionCommands.addCommandForGroup(groupId, legName, headingMenu, function()
+									local g = groupGetter()
+									if g then
+										local baseCoord = nil
+										if g.GetCoordinate then
+											baseCoord = g:GetCoordinate()
+										elseif g.getUnit then
+											local gu = g:getUnit(1)
+											local gp = gu and gu:getPoint() or nil
+											if gp then
+												baseCoord = COORDINATE:New(gp.x, gp.y, gp.z)
+											end
+										end
+										if baseCoord then
+											local offsetCoord = baseCoord:Translate(UTILS.NMToMeters(distVal), dirVal, true)
+											if setFn(offsetCoord, headingVal, legVal) then
+												MESSAGE:New(prefix .. " is about to " .. dirName .. " " .. distName .. " with a new racetrack, heading " .. headingVal .. " degrees, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
+											end
+										end
+									end
+								end)
+							end
+						end
+					end
+				end
+			end
+		end
+
+			local function addAltitudeMenuForGroup(prefix, title, kind, applyFn)
+				local altMenu = missionCommands.addSubMenuForGroup(groupId, title, tankersMenu)
+				local currentAlt = tonumber(_getTankerCurrentAltitude(kind)) or _getTankerDefaultAltitude(kind)
+				for _, altFt in ipairs(_getTankerAltitudeOptions(kind)) do
+					local label = _formatFeetMenuLabel(altFt)
+				if altFt == currentAlt then
+					label = label .. " (current)"
+				end
+				missionCommands.addCommandForGroup(groupId, label, altMenu, function()
+					local ok = applyFn(altFt)
+					if ok and self.refreshTankerControlMenusForBlue then
+						self:refreshTankerControlMenusForBlue(true)
+					end
+					end)
+				end
+			end
+
+			local function addSpeedMenuForGroup(prefix, title, kind, applyFn)
+				local speedMenu = missionCommands.addSubMenuForGroup(groupId, title, tankersMenu)
+				local currentSpeed = _getTankerCurrentSpeed(kind) or _getTankerDefaultSpeed(kind)
+				for _, speedKt in ipairs(_getTankerSpeedOptions(kind) or {}) do
+					local label = tostring(speedKt) .. " kt"
+					if speedKt == currentSpeed then
+						label = label .. " (current)"
+					end
+					missionCommands.addCommandForGroup(groupId, label, speedMenu, function()
+						local ok = applyFn(speedKt)
+						if ok and self.refreshTankerControlMenusForBlue then
+							self:refreshTankerControlMenusForBlue(true)
+						end
+					end)
+				end
+			end
+
+		if arcoEligible then
+			if ArcoActive then
+				addRepositionMenusForGroup("Arco", "Arco (Drogue): Move to Zone", "Arco (Drogue): Move by Position", function() return ArcoGroup end, ArcoRepositionCheckAndSet)
+				addAltitudeMenuForGroup("Arco", "Arco (Drogue): Altitude", "arco", ArcoAltitudeCheckAndSet)
+			end
+		end
+
+			if texacoEligible then
+				if TexacoActive then
+					addRepositionMenusForGroup("Texaco", "Texaco (Boom): Move to Zone", "Texaco (Boom): Move by Position", function() return TexacoGroup end, TexacoRepositionCheckAndSet)
+					addAltitudeMenuForGroup("Texaco", "Texaco (Boom): Altitude", "texaco", TexacoAltitudeCheckAndSet)
+					addSpeedMenuForGroup("Texaco", "Texaco (Boom): Speed", "texaco", TexacoSpeedCheckAndSet)
+				end
+			end
+
+		local tankerInfoLines = {}
+		if arcoEligible and ArcoActive then
+			local arcoAlt = _formatFeetMenuLabel(_getTankerCurrentAltitude("arco"))
+			tankerInfoLines[#tankerInfoLines + 1] = "Arco (Drogue): TCN 101Y | BTN 14 | 260.00 | ALT " .. arcoAlt .. " ft"
+		end
+		if texacoEligible and TexacoActive then
+			local texacoAlt = _formatFeetMenuLabel(_getTankerCurrentAltitude("texaco"))
+			tankerInfoLines[#tankerInfoLines + 1] = "Texaco (Boom): TCN 102Y | BTN 20 | 266.00 | ALT " .. texacoAlt .. " ft"
+		end
+		if #tankerInfoLines > 0 then
+			missionCommands.addCommandForGroup(groupId, "Tanker Info", tankersMenu, function()
+				trigger.action.outTextForGroup(groupId, table.concat(tankerInfoLines, "\n"), 15)
+			end)
+		end
+	end
 	
 function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficulty) -- difficulty = {start = 1.4, min = -0.5, max = 0.5, escalation = 0.1, fade = 0.1, fadeTime = 30*60, coalition=1} --coalition 1:red 2:blue
 		local obj = {}
@@ -3574,6 +4575,13 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		obj.difficulty = difficulty
 		obj.updateFrequency = updateFrequency
 		obj.saveFrequency = saveFrequency
+		obj.spawnEvalEnabled = true
+		obj.spawnEvalTickSec = 0.5
+		obj.spawnEvalJitterSec = 0.15
+		obj.spawnEvalBudgetBase = 8
+		obj.spawnEvalBudgetHigh = 18
+		obj.spawnEvalHighWater = 70
+		obj.spawnEvalCacheTtlSec = 60
 
 		obj.rankThresholds = obj.rankThresholds or {0,3000,5000,8000,12000,16000,22000,30000,45000,65000,90000}
 		obj.rankNames      = obj.rankNames      or {"Recruit","Aviator","Airman","Senior Airman","Staff Sergeant","Technical Sergeant","Master Sergeant","Senior Master Sergeant","Chief Master Sergeant","Second Lieutenant","First Lieutenant"}
@@ -3582,6 +4590,157 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		setmetatable(obj, self)
 		self.__index = self
 		return obj
+	end
+
+	function BattleCommander:_initSpawnEvalDispatcher()
+		if self._spawnEvalInit then return end
+
+		self._spawnEvalOrder = {
+			'cap_patrol',
+			'cap_attack',
+			'cas',
+			'sead',
+			'runway',
+			'antiship',
+			'supply',
+			'attack',
+		}
+		self._spawnEvalQueues = {}
+		for _, key in ipairs(self._spawnEvalOrder) do
+			self._spawnEvalQueues[key] = {}
+		end
+		self._spawnEvalQueued = {}
+		self._spawnEvalCursor = 1
+		self._spawnEvalInit = true
+	end
+
+	function BattleCommander:_spawnEvalGroupKey(gc)
+		local zn = gc and gc.zoneCommander and gc.zoneCommander.zone or ""
+		local gn = gc and gc.name or ""
+		local mt = gc and gc.MissionType or ""
+		local mz = gc and gc.targetzone or ""
+		return tostring(gn) .. "|" .. tostring(mt) .. "|" .. tostring(mz) .. "|" .. tostring(zn)
+	end
+
+	function BattleCommander:_queueShouldSpawnEval(gc, triggerState, ignore)
+		if not gc or not triggerState then return end
+		if self.spawnEvalEnabled == false then return end
+		self:_initSpawnEvalDispatcher()
+
+		local key = self:_spawnEvalGroupKey(gc)
+		if self._spawnEvalQueued[key] then return end
+
+		local bucket = 'other'
+		local missionType = gc.MissionType
+		local mission = gc.mission
+		if missionType == 'CAP' then
+			bucket = (mission == 'attack') and 'cap_attack' or 'cap_patrol'
+		elseif missionType == 'CAS' then
+			bucket = 'cas'
+		elseif missionType == 'SEAD' then
+			bucket = 'sead'
+		elseif missionType == 'RUNWAYSTRIKE' then
+			bucket = 'runway'
+		elseif missionType == 'ANTISHIP' then
+			bucket = 'antiship'
+		elseif mission == 'supply' then
+			bucket = 'supply'
+		elseif mission == 'attack' then
+			bucket = 'attack'
+		elseif mission == 'patrol' then
+			bucket = 'patrol'
+		end
+
+		local queue = self._spawnEvalQueues[bucket]
+		if not queue then
+			queue = {}
+			self._spawnEvalQueues[bucket] = queue
+			self._spawnEvalOrder[#self._spawnEvalOrder + 1] = bucket
+		end
+		queue[#queue + 1] = {
+			gc = gc,
+			state = triggerState,
+			ignore = ignore == true,
+		}
+		self._spawnEvalQueued[key] = true
+	end
+
+	function BattleCommander:_consumeShouldSpawnEval(gc, triggerState, ignore)
+		local cache = gc and gc._spawnEvalCache
+		if not cache then return nil end
+		local ttl = self.spawnEvalCacheTtlSec or 90
+		local at = cache.at or 0
+		if timer.getAbsTime() - at > ttl then
+			gc._spawnEvalCache = nil
+			return nil
+		end
+		if cache.state ~= triggerState then return nil end
+		if cache.ignore ~= (ignore == true) then return nil end
+		local value = cache.value == true
+		gc._spawnEvalCache = nil
+		return value
+	end
+
+	function BattleCommander:_isSpawnableCached(gc, ttlSec)
+		local cache = gc and (gc._spawnEvalLast or gc._spawnEvalCache)
+		if not cache then return false end
+		local ttl = ttlSec or self.spawnEvalCacheTtlSec or 90
+		if timer.getAbsTime() - (cache.at or 0) > ttl then
+			return false
+		end
+		return cache.value == true
+	end
+
+	function BattleCommander:_runShouldSpawnEvalTick()
+		if self.spawnEvalEnabled == false then return end
+		self:_initSpawnEvalDispatcher()
+
+		local total = 0
+		for _, key in ipairs(self._spawnEvalOrder) do
+			local q = self._spawnEvalQueues[key]
+			total = total + ((q and #q) or 0)
+		end
+		if total <= 0 then return end
+
+		local budget = (total > self.spawnEvalHighWater) and self.spawnEvalBudgetHigh or self.spawnEvalBudgetBase
+		local processed = 0
+		local emptyTurns = 0
+		local idx = self._spawnEvalCursor or 1
+		local orderCount = #self._spawnEvalOrder
+
+		while processed < budget and total > 0 and emptyTurns < orderCount do
+			if idx > orderCount then idx = 1 end
+			local key = self._spawnEvalOrder[idx]
+			local q = self._spawnEvalQueues[key]
+			if q and #q > 0 then
+				local entry = table.remove(q, 1)
+				total = total - 1
+				processed = processed + 1
+				emptyTurns = 0
+
+				if entry and entry.gc then
+					local gc = entry.gc
+					self._spawnEvalQueued[self:_spawnEvalGroupKey(gc)] = nil
+					local st = gc.state
+					if st == entry.state and (st == 'inhangar' or st == 'preparing' or st == 'dead') then
+						local decision = gc:shouldSpawn(entry.ignore)
+						gc._spawnEvalCache = {
+							value = decision == true,
+							state = entry.state,
+							ignore = entry.ignore == true,
+							at = timer.getAbsTime(),
+						}
+						gc._spawnEvalLast = gc._spawnEvalCache
+					end
+				end
+			else
+				emptyTurns = emptyTurns + 1
+			end
+			idx = idx + 1
+		end
+
+		if idx > orderCount then idx = 1 end
+		self._spawnEvalCursor = idx
 	end
 	
 	function BattleCommander:_jointIsSharing(p)
@@ -3833,14 +4992,24 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank)
 
 		local function safeSet(itemName, qty)
 		if not itemName then return end
-		pcall(function() dstStore:SetItem(itemName, qty) end)
+		dstStore:SetItem(itemName, qty)
+		end
+
+		local rocketSet = nil
+		if WEAPONSLIST and WEAPONSLIST.GetItems then
+			rocketSet = {}
+			for _, itemName in ipairs(WEAPONSLIST.GetItems("AG_ROCKETS") or {}) do
+				if itemName then rocketSet[itemName] = true end
+			end
 		end
 
 		for _, ammoName in ipairs(WEAPONSLIST.GetAllItems() or {}) do
 			if WarehouseLogistics == true and fromSave == true then
 				safeSet(ammoName, 0)
 			elseif WarehouseLogistics == true then
-				safeSet(ammoName, 30)
+				local qty = 30
+				if rocketSet and rocketSet[ammoName] then qty = qty * 3 end
+				safeSet(ammoName, qty)
 			else
 				safeSet(ammoName, 1073741823)
 			end
@@ -3848,6 +5017,9 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank)
 
 		if allZones then
 			allZones[#allZones + 1] = FName
+		end
+		if type(RegisterWelcomeZone) == "function" then
+			RegisterWelcomeZone(FName)
 		end
 
 		  if supplyZones then
@@ -4118,7 +5290,7 @@ function BattleCommander:credit(coalition, amount, buyerGroupId, buyerGroupObj, 
         self:addStat(buyerName, "Points spent", delta)
     end
 
-    local msg = string.format("%s — %d credits refunded.", label, amount)
+    local msg = string.format("%s, %d credits refunded.", label, amount)
     if buyerGroupId then
         trigger.action.outTextForGroup(buyerGroupId, msg, 12)
     else
@@ -4143,6 +5315,45 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 				trigger.action.outTextForCoalition(coalition,"Item not found in shop",10)
 			end
 			return
+		end
+		local isPersistentTankerItem = (coalition == 2) and (id == "dynamicarco" or id == "dynamictexaco")
+		if isPersistentTankerItem and _isTankerUnlockedById(id) then
+			if shop and shop[id] then
+				shop[id] = nil
+			end
+			local success = true
+			local sitem = self.shopItems[id]
+			if alternateParams ~= nil and type(sitem.altAction) == 'function' then
+				success = sitem:altAction(alternateParams)
+			elseif type(sitem.action) == 'function' then
+				success = sitem:action()
+			end
+
+			if success == true or success == nil then
+				local msg = "["..item.name.."] is already unlocked. No credits spent."
+				if buyerGroupId then
+					trigger.action.outTextForGroup(buyerGroupId, msg, 8)
+				else
+					trigger.action.outTextForCoalition(coalition, msg, 8)
+				end
+			elseif type(success) == 'string' then
+				if buyerGroupId then
+					trigger.action.outTextForGroup(buyerGroupId, success, 10)
+				else
+					trigger.action.outTextForCoalition(coalition, success, 10)
+				end
+			else
+				if buyerGroupId then
+					trigger.action.outTextForGroup(buyerGroupId, 'Not available at the current time', 10)
+				else
+					trigger.action.outTextForCoalition(coalition, 'Not available at the current time', 10)
+				end
+			end
+			if buildCapControlMenu then
+				buildCapControlMenu()
+			end
+			self:refreshShopMenuForAllGroupsInCoalition(coalition)
+			return success
 		end
 		if StoreLimit == true then
 			if item.cost > 250 and buyerGroupId and not exempt and earned < 100 then
@@ -4239,6 +5450,12 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 
 		if success == true or success == nil then
 			self.accounts[coalition] = self.accounts[coalition] - item.cost
+			if isPersistentTankerItem then
+				_setTankerUnlockedById(id)
+				if self.shops[coalition] then
+					self.shops[coalition][id] = nil
+				end
+			end
 			if item.stock > 0 then
 				item.stock = item.stock - 1
 			end
@@ -4271,6 +5488,10 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 					trigger.action.outTextForCoalition(coalition, "["..item.name.."] went out of stock", 5)
 				end
 			end
+			if isPersistentTankerItem and buildCapControlMenu then
+				buildCapControlMenu()
+			end
+			self:refreshShopMenuForAllGroupsInCoalition(coalition)
 
 		else
 			if type(success) == 'string' then
@@ -4303,7 +5524,10 @@ function BattleCommander:refreshShopMenuForGroup(groupId, groupObj)
 	self.groupSupportMenus[groupId].items = {}
 	local track   = self.groupSupportMenus[groupId].items
 	local shopData = self.shops[coalition]
-	if not shopData then return end
+	if not shopData then
+		self:refreshDynamicControlMenuForGroup(groupId, groupObj, false)
+		return
+	end
 
 	local pname = (self.playerNames and self.playerNames[groupId]) or nil
 	if (not pname) and groupObj and groupObj:isExist() then
@@ -4345,6 +5569,7 @@ function BattleCommander:refreshShopMenuForGroup(groupId, groupObj)
 			track[#track+1] = h
 		end
 	end
+	self:refreshDynamicControlMenuForGroup(groupId, groupObj, false)
 end
 
 	
@@ -4437,11 +5662,19 @@ function BattleCommander:showEmergencyNeutralZoneMenu(coalition, menuname, callb
 		st = { menu=nil, items={}, callback=nil }
 		self._emergencyNeutralZoneMenus[key] = st
 	end
-	st.callback = callback or st.callback
-	for i=1,#st.items do
-		missionCommands.removeItemForCoalition(coalition, st.items[i])
+	-- If we're starting a new capture selection, force a fresh submenu handle.
+	if callback ~= nil and st.menu then
+		missionCommands.removeItemForCoalition(coalition, st.menu)
+		st.menu = nil
+		st.items = {}
 	end
-	st.items = {}
+	st.callback = callback or st.callback
+	if #st.items > 0 then
+		for i=1,#st.items do
+			missionCommands.removeItemForCoalition(coalition, st.items[i])
+		end
+		st.items = {}
+	end
 	if not st.callback then return st.menu end
 
 	local eligible = 0
@@ -4452,8 +5685,15 @@ function BattleCommander:showEmergencyNeutralZoneMenu(coalition, menuname, callb
 			eligible = eligible + 1
 		end
 	end
-	if eligible == 0 and not st.menu and callback then
-		return 'No eligible neutral zones'
+	if eligible == 0 then
+		if callback then
+			return 'No eligible neutral zones'
+		end
+		if not st.menu then
+			st.menu = missionCommands.addSubMenuForCoalition(coalition, menuname)
+		end
+		st.items[#st.items+1] = missionCommands.addCommandForCoalition(coalition, 'No active zones to capture', st.menu, trigger.action.outTextForCoalition, coalition, 'No active zones to capture', 10)
+		return st.menu
 	end
 
 	if not st.menu then
@@ -4678,7 +5918,7 @@ end
 		local cnt=group:getController()
 		cnt:popTask()
 		
-		local expCount = AI.Task.WeaponExpend.ONE
+		local expCount = AI.Task.WeaponExpend.TWO
 		if expendAmmount then
 			expCount = expendAmmount
 		end
@@ -4697,7 +5937,6 @@ end
 					groupId = g:getID(),
 					expend = expCount,
 					weaponType = wepType,
-					groupAttack = true
 				  } 
 				}
 				
@@ -4926,10 +6165,15 @@ end
 		end
 	end
 	
-function BattleCommander:getStateTable()
+	function BattleCommander:getStateTable()
     local states = {zones = {}, accounts = {}}
+	local function cleanName(s)
+		s = tostring(s or "")
+		return (s:gsub("%s*#%s*%d+", ""):gsub("%s+Fixed", ""):gsub("%s%s+", " "):gsub("^%s+", ""):gsub("%s+$", ""))
+	end
     for i,v in ipairs(self.zones) do
         local unitTable = {}
+		local groupStatus = (not v.suspended) and {} or nil
         for i2,v2 in pairs(v.built) do
             unitTable[i2] = {}
             local gr = Group.getByName(v2)
@@ -4937,6 +6181,20 @@ function BattleCommander:getStateTable()
                 for i3,v3 in ipairs(gr:getUnits()) do
                     table.insert(unitTable[i2], v3:getDesc().typeName)
                 end
+				if groupStatus and gr:isExist() and (gr:getSize() or 0) > 0 then
+					local entry = { name = cleanName(v2), kind = "group" }
+					local initialSize = gr.getInitialSize and gr:getInitialSize() or nil
+					local currentSize = gr:getSize() or 0
+					if initialSize and initialSize > 0 and currentSize < initialSize then
+						entry.damaged = true
+					end
+					groupStatus[#groupStatus + 1] = entry
+				end
+			elseif groupStatus then
+				local st = StaticObject.getByName(v2)
+				if st then
+					groupStatus[#groupStatus + 1] = { name = cleanName(v2), kind = "static" }
+				end
             end
         end
         if v.wasBlue then v.firstCaptureByRed = true end
@@ -4951,10 +6209,28 @@ function BattleCommander:getStateTable()
             wasBlue           = v.wasBlue or false,
             firstCaptureByRed = v.firstCaptureByRed or false,
             upgradesUsed      = v.upgradesUsed,
+            upgradesUsedRed   = v.upgradesUsedRed,
+            upgradesUsedBlue  = v.upgradesUsedBlue,
 		extraUpgrade      = {},
 		lat_long 	  	  = v.lat_long,
 		logisticCenter   = (v.LogisticCenter == true)
         }
+		if groupStatus and #groupStatus > 0 then
+			states.zones[v.zone].groupStatus = groupStatus
+		end
+
+		if v.randomUpgradesRed then
+			states.zones[v.zone].randomUpgradesRed = {}
+			for i2, v2 in ipairs(v.randomUpgradesRed) do
+				states.zones[v.zone].randomUpgradesRed[#states.zones[v.zone].randomUpgradesRed+1] = v2
+			end
+		end
+		if v.randomUpgradesBlue then
+			states.zones[v.zone].randomUpgradesBlue = {}
+			for i2, v2 in ipairs(v.randomUpgradesBlue) do
+				states.zones[v.zone].randomUpgradesBlue[#states.zones[v.zone].randomUpgradesBlue+1] = v2
+			end
+		end
         if v.extraUpgrade then
             for _,grp in ipairs(v.extraUpgrade) do
                 if type(grp)=="table" and grp.side then
@@ -4989,7 +6265,7 @@ function BattleCommander:getStateTable()
     states.playerStats = {}
     if self.playerStats then
         for n,val in pairs(self.playerStats) do
-            local s = n:gsub("\\","\\\\"):gsub("'","\\'")
+            local s = n:gsub("\"","\\\""):gsub("'","\\'")
             states.playerStats[s] = val
         end
     end
@@ -5071,7 +6347,49 @@ function BattleCommander:getStateTable()
             table.insert(states.ejectedPilots, ejectedPilotTable)
             nbEjectedPilots = nbEjectedPilots + 1
         end
-    end							   
+    end
+
+	    local normalizeFn = _normalizeTankerState
+	    if type(normalizeFn) ~= "function" then
+	        normalizeFn = function(raw, defaultHeading, defaultSpeed)
+	            local out = {
+	                unlocked = false,
+	                x = nil,
+	                y = nil,
+	                z = nil,
+	                heading = defaultHeading,
+	                leg = 0,
+	                zone = nil,
+	                speed = defaultSpeed,
+	            }
+	            if type(raw) ~= "table" then return out end
+	            out.unlocked = raw.unlocked == true
+	            out.x = tonumber(raw.x)
+	            out.y = tonumber(raw.y)
+	            out.z = tonumber(raw.z)
+	            out.heading = tonumber(raw.heading) or defaultHeading
+	            out.leg = tonumber(raw.leg) or 0
+	            out.zone = raw.zone
+	            if type(raw.speed) == "number" then
+	                out.speed = math.floor(raw.speed + 0.5)
+	            end
+	            return out
+	        end
+	    end
+
+	    local getFn = _getTankerState
+	    if type(getFn) == "function" then
+	        states.tankers = {
+	            arco = normalizeFn(getFn("arco"), 45),
+	            texaco = normalizeFn(getFn("texaco"), 45, TEXACO_DEFAULT_SPEED_KT),
+	        }
+	    else
+	        local saved = TANKER_PERSISTENCE or {}
+	        states.tankers = {
+	            arco = normalizeFn(saved.arco, 45),
+	            texaco = normalizeFn(saved.texaco, 45, TEXACO_DEFAULT_SPEED_KT),
+	        }
+	    end
     return states
 end
 
@@ -5345,7 +6663,23 @@ end
 
 	GROUP_ZONE_CACHE = {}
 	ZONE_FRIENDLY_CACHE = {}
-	function BattleCommander:roamGroupsToLocalSubZone(prefix, distanceNm,skip)
+	function BattleCommander:roamGroupsToLocalSubZone(prefix, distanceNm, skip, roamTimers)
+		local timers = roamTimers
+		if type(roamTimers) == "number" then
+			timers = { groupMin = roamTimers, groupMax = roamTimers }
+		elseif type(roamTimers) ~= "table" then
+			timers = nil
+		end
+		local groupDelayMin = (timers and timers.groupMin) or 60
+		local groupDelayMax = (timers and timers.groupMax) or 120
+		local zoneDelayMin = (timers and timers.zoneMin) or 300
+		local zoneDelayMax = (timers and timers.zoneMax) or 900
+		local cycleMin = (timers and timers.cycleMin) or 900
+		local cycleMax = (timers and timers.cycleMax) or 2400
+		local startDelayMin = (timers and timers.startMin) or 10
+		local startDelayMax = (timers and timers.startMax) or 30
+		local nextRunPad = (timers and timers.nextRunPad) or 10
+
 		local formations = {"Off Road","On Road","Cone","Diamond","Vee"}  
 		local formationsTall = {"Off Road","Cone","Vee"}
 		
@@ -5624,10 +6958,10 @@ end
 									end
 
 									if zoneCounter % 3 == 0 then
-										offset = offset+math.random(300,900)
+										offset = offset + math.random(zoneDelayMin, zoneDelayMax)
 									end
 										
-									offset = offset + math.random(60,120)
+									offset = offset + math.random(groupDelayMin, groupDelayMax)
 									--env.info("[DEBUG roamGroupsToLocalSubZone] Scheduling "..gData.gName.." -> "..pick.." formation="..form.." speed="..spd)
 									SCHEDULER:New(nil, moveGroup, {gData.gName, pick, gData.formations, spd, gData.ctrl}, offset)
 									scheduledCount = scheduledCount + 1
@@ -5638,7 +6972,7 @@ end
 				end
 			end
 	
-			local nextRun = timer.getTime()+offset+10
+			local nextRun = timer.getTime() + offset + nextRunPad
 			return nextRun
 		end
 	
@@ -5650,11 +6984,11 @@ end
 		local function bigLoop()
 			USED_SUB_ZONES={}
 			buildCycleData()
-			nextBigTime=timer.getTime()+math.random(900,2400)
+			nextBigTime = timer.getTime() + math.random(cycleMin, cycleMax)
 			SCHEDULER:New(nil,bigLoop,{},nextBigTime - timer.getTime(),0)
 			innerLoop()
 		end
-		SCHEDULER:New(nil,bigLoop,{},math.random(10,30),0)
+		SCHEDULER:New(nil,bigLoop,{},math.random(startDelayMin, startDelayMax),0)
 	end
 	function forceMissionComplete()
 		if not missionCompleted then
@@ -5720,8 +7054,10 @@ end
 					toprint = toprint..'\ndebug:  - shows the status of the zone in the log.'
 					toprint = toprint..'\naddshop: - Add shop for the coalition and can be used from f10.'
 					toprint = toprint..'\nremoveshop: - remove shop for the coalition.'
+					toprint = toprint..'\nupgradera: - repair a zone and will add any missing units to the group.'
 					toprint = toprint..'\nupgradeallred: - upgrade all red zones to the max.'
 					toprint = toprint..'\nupgradeallblue: - upgrade all blue zones to the max.'
+					toprint = toprint..'\nspawnnow:<side> - fast-forward air spawns for side (1=red, 2=blue) while keeping limits/ranking.'
 					toprint = toprint..'\n-code: - This is a pure lua entry. Can be used to call function for example\n-code:zones.name:upgrade() to upgrade the zone'
 					if event.initiator then
 						trigger.action.outTextForGroup(event.initiator:getGroup():getID(), toprint, 30)
@@ -5748,9 +7084,7 @@ end
 					toprint = toprint..'\n'
 					local sorted = {}
 					for i,v in pairs(self.context.shops[event.coalition]) do
-						if not RankingSystem or not v.reqRank or myRank >= v.reqRank then
 						table.insert(sorted,{i,v})
-						end
 					end
 					table.sort(sorted, function(a,b) return a[2].name < b[2].name end)
 
@@ -5888,6 +7222,19 @@ end
 						end
 						trigger.action.removeMark(event.idx)
 					end
+				end
+				if event.text and event.text:lower():find('^spawnnow') then
+					local side = tonumber((event.text or ''):match("^[Ss][Pp][Aa][Ww][Nn][Nn][Oo][Ww]%s*:%s*(%d+)%s*$"))
+					if not side then side = event.coalition end
+					local ok, msg = self.context:spawnNowBySide(side)
+					local g = event.initiator and event.initiator.getGroup and event.initiator:getGroup() or nil
+					local gid = g and g:getID() or nil
+					if gid then
+						trigger.action.outTextForGroup(gid, msg, 15)
+					else
+						trigger.action.outTextForCoalition(event.coalition, msg, 15)
+					end
+					success = true
 				end
 				if event.text=='prepp' then
 					local z = bc:getZoneOfPoint(event.pos)
@@ -6065,6 +7412,13 @@ end
                     success = true
                     trigger.action.removeMark(event.idx)
                 end
+				if event.text:find('^addfundsred\:') then
+					local s = event.text:gsub('^addfundsred\:', '')
+					local amount = tonumber(s)
+					bc:addFunds(1,amount)
+                    success = true
+                    trigger.action.removeMark(event.idx)
+                end
 				if event.text=='upgradera' then
 					local z = bc:getZoneOfPoint(event.pos)
 					if z then
@@ -6224,15 +7578,22 @@ end
 		self:DrawConnectionLines()
 
 
-		--missionCommands.addCommandForCoalition(1, 'Budget overview', nil, self.printShopStatus, self, 1)
+		missionCommands.addCommandForCoalition(1, 'Budget overview', nil, self.printShopStatus, self, 1)
 		--missionCommands.addCommandForCoalition(2, 'Budget overview', nil, self.printShopStatus, self, 2)
 
-		--self:refreshShopMenuForCoalition(1)
+		self:refreshShopMenuForCoalition(1)
 		--self:refreshShopMenuForCoalition(2)
 	SCHEDULER:New(self,function(o)o:_autoZoneSuspend()end,{},1,60)
-	SCHEDULER:New(self,function(o)o:_proximityWakeSuspendedZones()end,{},10,30)
+	SCHEDULER:New(self,function(o)o:_proximityWakeSuspendedZones()end,{},10,60)
 	SCHEDULER:New(self,function(o)o:update()end,{},2,self.updateFrequency)
 	SCHEDULER:New(self,function(o)o:saveToDisk()end,{},30,self.saveFrequency)
+	self:_initSpawnEvalDispatcher()
+	if self.spawnEvalEnabled ~= false then
+		local tick = self.spawnEvalTickSec or 1
+		local jitter = self.spawnEvalJitterSec or 0
+		local delay = tick + ((jitter > 0) and (math.random() * jitter) or 0)
+		SCHEDULER:New(self, function(o) o:_runShouldSpawnEvalTick() end, {}, delay, tick)
+	end
 end
 
 
@@ -6346,8 +7707,131 @@ function BattleCommander:buildCapSpawnBuckets()
         local cz=CustomZone:getByName(z.zone)
         if cz then CapAnchorRowByZoneName[z.zone]=ZONE_DISTANCES[z.zone] end
     end
+    self:buildCapActiveBuckets()
     self:restaggerCapHangarDelays()
     self:buildNonCapSpawnBuckets()
+end
+
+function BattleCommander:spawnNowBySide(side)
+	side = tonumber(side)
+	if side ~= 1 and side ~= 2 then
+		return false, "Usage: spawnnow:<side> where side is 1 (red) or 2 (blue)."
+	end
+
+	self:buildCapSpawnBuckets()
+	if not self._nonCapBucketsBuilt then
+		self:buildNonCapSpawnBuckets()
+	end
+
+	local ordered = {}
+	local seen = {}
+	local function addCandidate(gc)
+		if not gc then return end
+		if seen[gc] then return end
+		if gc.side ~= side then return end
+		if gc.type ~= 'air' and gc.type ~= 'carrier_air' then return end
+		seen[gc] = true
+		ordered[#ordered + 1] = gc
+	end
+
+	local capMissions = {'patrol', 'attack'}
+	for _, mission in ipairs(capMissions) do
+		local targetMap = CapTargets and CapTargets[side] and CapTargets[side][mission]
+		if targetMap then
+			local targetNames = {}
+			for targetZone, _ in pairs(targetMap) do
+				targetNames[#targetNames + 1] = targetZone
+			end
+			table.sort(targetNames)
+			for _, targetZone in ipairs(targetNames) do
+				local ctx = targetMap[targetZone]
+				local candidates = ctx and ctx.candidates or nil
+				if candidates then
+					for i = 1, #candidates do
+						local rec = candidates[i]
+						local gc = rec and CapRef and CapRef[rec.name] or nil
+						addCandidate(gc)
+					end
+				end
+			end
+		end
+	end
+
+	for _, zc in ipairs(self.zones or {}) do
+		for _, gc in ipairs(zc.groups or {}) do
+			if gc and gc.MissionType ~= 'CAP' then
+				addCandidate(gc)
+			end
+		end
+	end
+
+	for _, zc in ipairs(self.zones or {}) do
+		for _, gc in ipairs(zc.groups or {}) do
+			addCandidate(gc)
+		end
+	end
+
+	local updates = 0
+	local forcedDead = 0
+	local forcedHangar = 0
+	local forcedPreparing = 0
+	local spawnedNow = 0
+
+	local function countSpawn(beforeSpawned, gc)
+		local afterSpawned = gc.Spawned == true
+		if (not beforeSpawned) and afterSpawned then
+			spawnedNow = spawnedNow + 1
+		end
+	end
+
+	local function rushGroup(gc)
+		local loops = 0
+		while loops < 3 do
+			local st = gc.state
+			if st ~= 'dead' and st ~= 'inhangar' and st ~= 'preparing' then
+				break
+			end
+			if st == 'dead' then
+				forcedDead = forcedDead + 1
+			elseif st == 'inhangar' then
+				forcedHangar = forcedHangar + 1
+			elseif st == 'preparing' then
+				forcedPreparing = forcedPreparing + 1
+			end
+			local beforeSpawned = gc.Spawned == true
+			gc.lastStateTime = timer.getAbsTime() - 999999
+			gc:update()
+			updates = updates + 1
+			countSpawn(beforeSpawned, gc)
+			loops = loops + 1
+			if gc.state == st then
+				break
+			end
+		end
+	end
+
+	for i = 1, #ordered do
+		rushGroup(ordered[i])
+	end
+
+	for i = 1, #ordered do
+		local gc = ordered[i]
+		if gc.state == 'preparing' then
+			local beforeSpawned = gc.Spawned == true
+			forcedPreparing = forcedPreparing + 1
+			gc.lastStateTime = timer.getAbsTime() - 999999
+			gc:update()
+			updates = updates + 1
+			countSpawn(beforeSpawned, gc)
+		end
+	end
+
+	local msg = string.format(
+		"SpawnNow side=%d queued=%d updates=%d spawned=%d (dead=%d hangar=%d preparing=%d)",
+		side, #ordered, updates, spawnedNow, forcedDead, forcedHangar, forcedPreparing
+	)
+	env.info("[SPAWNNOW] "..msg)
+	return true, msg
 end
 
 function BattleCommander:updateBlueZoneCount()
@@ -6396,6 +7880,91 @@ function BattleCommander:updateBlueZoneCount()
 	self._blueAirbaseNamesWarehouse = airbaseNamesWarehouse
 end
 
+function BattleCommander:triggerRedMassAttack()
+	self:updateBlueZoneCount()
+	local blueAirbaseByZone = {}
+	for _, z in ipairs(self._blueAirbaseZones or {}) do
+		if z and z.side == 2 and z.active and not z.suspended and not z.isHidden then
+			if z.airbaseName and z.airbaseName ~= "" and not z.zone:lower():find("carrier") then
+				blueAirbaseByZone[z.zone] = z
+			end
+		end
+	end
+	if not next(blueAirbaseByZone) then
+		return "No valid blue airbase zones"
+	end
+
+	local candidates = {}
+	for _, zc in ipairs(self.zones or {}) do
+		if zc and zc.side == 1 and zc.active and not zc.suspended and not zc.isHidden then
+			for _, gc in ipairs(zc.groups or {}) do
+				if gc and gc.side == 1 and gc.mission == 'attack' and gc.targetzone then
+					if blueAirbaseByZone[gc.targetzone] then
+						candidates[gc.targetzone] = true
+					end
+				end
+			end
+		end
+	end
+	if not next(candidates) then
+		return "No red attack groups targeting a blue airbase zone"
+	end
+
+	local list = {}
+	for zName in pairs(candidates) do list[#list + 1] = zName end
+	local targetName = list[math.random(1, #list)]
+	local total = 0
+	local forced = 0
+	local limits = { CAP = 2, SEAD = 1, RUNWAYSTRIKE = 1, CAS = 2 }
+	local liveCounts = {}
+	local pendingByType = { CAP = {}, SEAD = {}, RUNWAYSTRIKE = {}, CAS = {} }
+	for _, zc in ipairs(self.zones or {}) do
+		if zc and zc.side == 1 and zc.active and not zc.suspended and not zc.isHidden then
+			for _, gc in ipairs(zc.groups or {}) do
+				if gc and gc.side == 1 and gc.mission == 'attack' and gc.targetzone == targetName then
+					total = total + 1
+					local mt = gc.MissionType
+					if mt and limits[mt] then
+						local st = gc.state
+						local live = (st == 'takeoff' or st == 'inair' or st == 'landed' or st == 'enroute' or st == 'atdestination')
+						if live then
+							liveCounts[mt] = (liveCounts[mt] or 0) + 1
+						elseif gc.forceSpawnNow then
+							local bucket = pendingByType[mt]
+							bucket[#bucket + 1] = gc
+						end
+					end
+				end
+			end
+		end
+	end
+	if total == 0 then
+		return "No red attack groups targeting "..targetName
+	end
+
+	local function spawnUpTo(limit, liveCount, bucket)
+		local remaining = limit - (liveCount or 0)
+		while remaining > 0 and #bucket > 0 do
+			local idx = math.random(1, #bucket)
+			local gc = bucket[idx]
+			bucket[idx] = bucket[#bucket]
+			bucket[#bucket] = nil
+			gc:forceSpawnNow(targetName)
+			forced = forced + 1
+			remaining = remaining - 1
+		end
+	end
+
+	spawnUpTo(limits.CAP, liveCounts.CAP, pendingByType.CAP)
+	spawnUpTo(limits.SEAD, liveCounts.SEAD, pendingByType.SEAD)
+	spawnUpTo(limits.RUNWAYSTRIKE, liveCounts.RUNWAYSTRIKE, pendingByType.RUNWAYSTRIKE)
+	spawnUpTo(limits.CAS, liveCounts.CAS, pendingByType.CAS)
+
+	trigger.action.outTextForCoalition(1, "Red mass attack launched on "..targetName.." ("..forced.."/"..total.." forced)", 15)
+	trigger.action.outTextForCoalition(2, "Intel: The enemy is launching a mass attack on "..targetName, 15)
+	return true
+end
+
 SCHEDULER:New(nil, function()
         bc:updateBlueZoneCount()
 end, {}, 0.1)
@@ -6405,9 +7974,13 @@ function BattleCommander:reindexCombatZones()
 	Frontline.BuildFromZones(self.indexedZones or self.zones)
 	self._activeAttackOrPatrol = {}
 	self._activeOrigin = {}
+	self._activeAttackOrPatrolSources = {}
+	self._activeOriginSources = {}
 
 	local activeTargets = self._activeAttackOrPatrol
 	local activeOrigins = self._activeOrigin
+	local activeTargetsSrc = self._activeAttackOrPatrolSources
+	local activeOriginsSrc = self._activeOriginSources
 	local zones = self.zones or {}
 	local autoSuspendBlue = GlobalSettings.autoSuspendNmBlue or 70
 	local autoSuspendRed = GlobalSettings.autoSuspendNmRed or 120
@@ -6424,21 +7997,41 @@ function BattleCommander:reindexCombatZones()
 					if mission == 'attack' or mission == 'patrol' then
 						local targetName = gc.targetzone
 						if targetName then
-							local shouldSpawn = gc:shouldSpawn()
+							-- Spawnability is cached by the dispatcher to avoid expensive live checks in reindex.
+							local shouldSpawn = self:_isSpawnableCached(gc)
+							--local shouldSpawn = false
+							local live = (gc.state ~= 'dead' and gc.state ~= 'inhangar')
+							local reason = nil
+							if shouldSpawn then
+								reason = "spawnable"
+							elseif live then
+								reason = "live"
+							end
 							if mission == 'attack' then
-								if shouldSpawn or gc.state=='takeoff' or gc.state=='inair' or gc.state=='landed' or gc.state=='enroute' or gc.state=='atdestination' then
-									if originName then activeOrigins[originName] = true end
+								if reason then
+									if originName then
+										activeOrigins[originName] = true
+										activeOriginsSrc[originName] = activeOriginsSrc[originName] or {}
+										activeOriginsSrc[originName][#activeOriginsSrc[originName] + 1] =
+											string.format("%s -> %s (%s,%s)", tostring(gc.name or "group"), tostring(targetName), tostring(mission), reason)
+									end
 								end
 							end
 							local tz = self:getZoneByName(targetName)
 							if tz and tz.active and not tz.suspended and tz.side ~= 0 then
 								local tzName = tz.zone
 								if tzName and not tzName.isHidden then
-									if shouldSpawn or gc.state=='takeoff' or gc.state=='inair' or gc.state=='landed' or gc.state=='enroute' or gc.state=='atdestination' then
+									if reason then
 										if mission == 'attack' then
                                             activeTargets[targetName] = true
+											activeTargetsSrc[targetName] = activeTargetsSrc[targetName] or {}
+											activeTargetsSrc[targetName][#activeTargetsSrc[targetName] + 1] =
+												string.format("%s -> %s (%s,%s)", tostring(gc.name or "group"), tostring(targetName), tostring(mission), reason)
                                             if originName then
                                                 activeOrigins[originName] = true
+												activeOriginsSrc[originName] = activeOriginsSrc[originName] or {}
+												activeOriginsSrc[originName][#activeOriginsSrc[originName] + 1] =
+												string.format("%s -> %s (%s,%s)", tostring(gc.name or "group"), tostring(targetName), tostring(mission), reason)
                                             end
 										else
 											local dnm = self:_minEnemyDistanceNm(tz)
@@ -6446,8 +8039,14 @@ function BattleCommander:reindexCombatZones()
 												local lim = (tz.side == 2) and autoSuspendBlue or autoSuspendRed
 												if dnm <= lim then
                                                     activeTargets[targetName] = true
+													activeTargetsSrc[targetName] = activeTargetsSrc[targetName] or {}
+													activeTargetsSrc[targetName][#activeTargetsSrc[targetName] + 1] =
+														string.format("%s -> %s (%s,%s, dnm<=%d)", tostring(gc.name or "group"), tostring(targetName), tostring(mission), reason, lim)
                                                     if originName then
                                                         activeOrigins[originName] = true
+														activeOriginsSrc[originName] = activeOriginsSrc[originName] or {}
+														activeOriginsSrc[originName][#activeOriginsSrc[originName] + 1] =
+															string.format("%s -> %s (%s,%s, dnm<=%d)", tostring(gc.name or "group"), tostring(targetName), tostring(mission), reason, lim)
                                                         --env.info(string.format("[ORIGIN] %s via %s -> %s (patrol, dnm<=%d)", originName, tostring(gc.name or "group"), targetName, lim))
                                                     end
 												end
@@ -6524,121 +8123,100 @@ CAS_MISSION = CAS_MISSION or {}
 -- BASE:TraceClass("FLIGHTGROUP")
 -- BASE:TraceClass("AUFTRAG")
 
-	function BattleCommander:EngageCasAuftrag(targetZoneName, groupName, altitudeFt, expend, coalitionSide)
-		local gr = GROUP:FindByName(groupName); if not gr or not gr:IsAlive() then return end
-		local zn = self:getZoneByName(targetZoneName)
-		if not gr or not gr:IsAlive() then return end 
-		if zn.suspended then if gr and gr:IsAlive() then gr:Destroy() end return end
-		local fg = FLIGHTGROUP:New(gr)
-		FG_BY_GROUP[groupName] = fg
-		local targetZone = ZONE:FindByName(targetZoneName)
-		fg:GetGroup():SetOptionRadioSilence(true)
-		fg:SetOutOfAGMRTB(true)
-		local u = gr:GetUnit(1)
-		if coalitionSide and u then
-			local coord = gr:GetCoordinate()
-			local homebase = coord and coord:GetClosestAirbase(0, coalitionSide)
-			if homebase then fg:SetHomebase(homebase) end
-		end
 
-		local setGroup = SET_GROUP:New()
-		local setStatic = SET_STATIC:New()
-		local zn = bc.indexedZones[targetZoneName]
-		if zn and zn.built then
-			for _, v in pairs(zn.built) do
-				local g = GROUP:FindByName(v)
-				if g and g:IsAlive() then setGroup:AddGroup(g) end
-				local s = STATIC:FindByName(v,false)
-				if s and s:IsAlive() then setStatic:AddStatic(s) end
-			end
-		end
-
-		local altitudeFt = altitudeFt or 15000
-		local miss = AUFTRAG:NewCASENHANCED(targetZone,altitudeFt,400,15,nil,"Ground Units")
-		CAS_MISSION[groupName] = miss
-		--local miss = AUFTRAG:NewBAI(setGroup, altitudeFt)
-		--miss.missionWaypointOffsetNM = 15
-		miss:SetMissionAltitude(altitudeFt)
-		miss:AddConditionSuccess(function() local z=bc.indexedZones[targetZoneName]; return z and z.side==0 end)
-		miss:AddConditionFailure(function() return fg and fg:IsOutOfBombs() end)
-		miss:SetWeaponExpend(expend or AI.Task.WeaponExpend.ONE)
-		miss:SetEngageAsGroup(false)
-		miss:SetMissionSpeed(400)
-		miss:SetFormation(Utils.getRandomFormation())
-		fg:AddMission(miss)
-	end
-
-HELO_CAS_MISSION = HELO_CAS_MISSION or {}
-	function BattleCommander:EngageHeloCasAuftrag(targetZoneName, groupName, altitudeFt, expend, coalitionSide)
-		local gr = GROUP:FindByName(groupName); if not gr or not gr:IsAlive() then return end
-		local zn = self:getZoneByName(targetZoneName)
-		if not gr or not gr:IsAlive() then return end 
-		if zn.suspended then if gr and gr:IsAlive() then gr:Destroy() end return end
-		local fg = FLIGHTGROUP:New(gr)
-		FG_BY_GROUP[groupName] = fg
-		local targetZone = ZONE:FindByName(targetZoneName)
-		fg:GetGroup():SetOptionRadioSilence(true)
-		fg:SetOutOfAGMRTB(true)
-		local u = gr:GetUnit(1)
-		if coalitionSide and u then
-			local coord = gr:GetCoordinate()
-			local homebase = coord and coord:GetClosestAirbase(0, coalitionSide)
-			if homebase then fg:SetHomebase(homebase) end
-		end
-
-		local setGroup = SET_GROUP:New()
-		local setStatic = SET_STATIC:New()
-		local zn = bc.indexedZones[targetZoneName]
-		if zn and zn.built then
-			for _, v in pairs(zn.built) do
-				local g = GROUP:FindByName(v)
-				if g and g:IsAlive() then setGroup:AddGroup(g) end
-				local s = STATIC:FindByName(v,false)
-				if s and s:IsAlive() then setStatic:AddStatic(s) end
-			end
-		end
-
-		local altitudeFt = altitudeFt or 400
-		local miss = AUFTRAG:NewCASENHANCED(targetZone,altitudeFt,150,5,nil,"Ground Units")
-		HELO_CAS_MISSION[groupName] = miss
-		--local miss = AUFTRAG:NewBAI(setGroup, altitudeFt)
-		miss.missionWaypointOffsetNM = 5
-		miss:AddConditionSuccess(function() local z=bc.indexedZones[targetZoneName]; return z and z.side==0 end)
-		miss:SetWeaponExpend(expend or AI.Task.WeaponExpend.ONE)
-		miss:SetEngageAsGroup(false)
-		miss:SetMissionSpeed(160)
-		fg:AddMission(miss)
-	end
 
 	Runway_Bomb_MISSION = Runway_Bomb_MISSION or {}
-	function BattleCommander:EngageRunwayBombAuftrag(homeBase, targetZoneName, groupName, altitudeFt, coalitionSide)
-		local gr = GROUP:FindByName(groupName); if not gr or not gr:IsAlive() then return end
-		local fg = FLIGHTGROUP:New(gr)
-		FG_BY_GROUP[groupName] = fg
-		if self.side == 2 then fg:SwitchInvisible(true) end
-		local zn = self:getZoneByName(targetZoneName) if not zn then return end
+	function BattleCommander:EngageRunwayBombing(homeBase, targetZoneName, groupName, altitudeFt, coalitionSide)
+		local zn = self:getZoneByName(targetZoneName); if not zn then return end
+		local group = Group.getByName(groupName)
+		if not group or not group:isExist() or group:getSize() == 0 then return end
+		local gmoose = GROUP:FindByName(groupName); if not gmoose or not gmoose:IsAlive() then return end
 		local abName = zn and zn.airbaseName or nil
-		if abName then
-		fg:SetHomebase(homeBase)
-		
-		local Airdrome = getAirbaseByName(abName)
-				fg:GetGroup():SetOptionRadioSilence(true)
+		if not abName then return end
 
+		local airdrome = getAirbaseByName(abName)
+		if not airdrome then return end
 
-		local altitudeFt = altitudeFt or 25000
-		local miss = AUFTRAG:NewBOMBRUNWAY(Airdrome,altitudeFt)
-			Runway_Bomb_MISSION[groupName] = miss
-			local tgZone = zn
-			miss:AddConditionFailure(function() return fg and (tgZone.side == self.side or tgZone.side == 0) end)
-			--local miss = AUFTRAG:NewBAI(setGroup, altitudeFt)
-			--miss.missionWaypointOffsetNM = 20
-			miss:SetEngageAsGroup(true)
-			miss:SetMissionSpeed(450)
-			fg:AddMission(miss)
-			function fg:OnAfterDead(From, Event, To)
-				self:__Stop(3)
+		local runwayId = nil
+		if airdrome.GetID then runwayId = airdrome:GetID()
+		elseif airdrome.getID then runwayId = airdrome:getID()
+		end
+		if not runwayId then return end
+
+		local tgpos = nil
+		if airdrome.GetCoordinate then
+			local c = airdrome:GetCoordinate()
+			tgpos = c and c:GetVec3() or nil
+		elseif airdrome.getPoint then
+			tgpos = airdrome:getPoint()
+		end
+		if not tgpos then return end
+
+		local altm = (altitudeFt or 25000) / 3.281
+		local missionFraction = 0.75
+		local landUnitID = nil
+		if homeBase then
+			local hb = homeBase
+			if type(hb) == "string" then
+				hb = AIRBASE:FindByName(hb) or Airbase.getByName(hb)
+			end
+			if hb then
+				if hb.GetID then landUnitID = hb:GetID()
+				elseif hb.getID then landUnitID = hb:getID() end
 			end
 		end
+
+		local attack = {
+			id = 'ComboTask',
+			params = {
+				tasks = {
+					{
+						id = 'BombingRunway',
+						params = {
+							runwayId = runwayId,
+							weaponType = Weapon.flag.AnyBomb,
+							expend = AI.Task.WeaponExpend.ALL,
+							attackQty = 1,
+							direction = 0,
+							groupAttack = true,
+						},
+					},
+				},
+			},
+		}
+
+		local startPos = group:getUnit(1):getPoint()
+		local dx, dz = tgpos.x - startPos.x, tgpos.z - startPos.z
+		local len = math.sqrt(dx*dx + dz*dz); if len <= 0 then len = 1 end
+		local ux, uz = dx / len, dz / len
+		local missionDist = len * missionFraction
+		local midDist = math.min(UTILS.NMToMeters(5.0), missionDist * 0.5)
+		local egressDist = math.min(len * 0.9, missionDist + UTILS.NMToMeters(8.0))
+
+		local midPos = { x = startPos.x + ux * midDist, y = altm, z = startPos.z + uz * midDist }
+		local appPos = { x = startPos.x + ux * missionDist, y = altm, z = startPos.z + uz * missionDist }
+		local beforeLand = { x = startPos.x + ux * egressDist, y = altm, z = startPos.z + uz * egressDist }
+
+		local wp = {}
+		wp[#wp+1] = COORDINATE:New(startPos.x, altm, startPos.z):WaypointAirTurningPoint("RADIO", UTILS.KnotsToKmph(350), {}, "WP1")
+		wp[#wp+1] = COORDINATE:New(midPos.x, altm, midPos.z):WaypointAirTurningPoint("RADIO", UTILS.KnotsToKmph(320), {}, "WP2")
+		wp[#wp+1] = COORDINATE:New(appPos.x, altm, appPos.z):WaypointAirTurningPoint("RADIO", UTILS.KnotsToKmph(450), { attack }, "WP3")
+		wp[#wp+1] = COORDINATE:New(beforeLand.x, altm, beforeLand.z):WaypointAirTurningPoint("RADIO", UTILS.KnotsToKmph(320), {}, "WP4")
+		if landUnitID then
+			local ab = AIRBASE:FindByID(landUnitID)
+			if ab then
+				wp[#wp+1] = ab:GetCoordinate():WaypointAirLanding(UTILS.KnotsToKmph(300), ab, {}, "Landing")
+			end
+		end
+
+		local controller = group:getController()
+		if not controller then return end
+		if self.side == 2 then
+			controller:setCommand({ id = 'SetInvisible', params = { value = true } })
+		end
+		gmoose:Route(wp, 1)
+		Runway_Bomb_MISSION[groupName] = { task = attack, fraction = missionFraction }
+		self:setDefaultAG(group)
 	end
 
 	function BattleCommander:EngageAntiShipMission(tgtzone, groupname, expendAmmount, weapon, altitude, landUnitID)
@@ -6702,132 +8280,6 @@ HELO_CAS_MISSION = HELO_CAS_MISSION or {}
 		--self:setDefaultAGSHIP(group)
 		self:setDefaultAG(group)
 	end
-
-
-	SEAD_MISSION = SEAD_MISSION or {}
-
-	function BattleCommander:EngageSeadAuftrag(targetZoneName, groupName, altitudeFt, expend, coalitionSide)
-		local zn = self:getZoneByName(targetZoneName)
-		local gr = GROUP:FindByName(groupName); if not gr or not gr:IsAlive() then return end
-		if zn.suspended then
-			if gr and gr:IsAlive() then gr:Destroy() end
-			return
-		end
-		local fg = FLIGHTGROUP:New(gr)
-		FG_BY_GROUP[groupName] = fg
-		fg:GetGroup():SetOptionRadioSilence(true)
-		fg:SetOutOfAGMRTB(true)
-
-		local targetZone = ZONE:FindByName(targetZoneName)
-		local u = gr:GetUnit(1)
-		if coalitionSide and u then
-			local coord = u:GetCoordinate()
-			local homebase = coord and coord:GetClosestAirbase(0, coalitionSide)
-			if homebase then fg:SetHomebase(homebase) end
-		end
-
-		local setTargets = SET_UNIT:New()
-		local zn = bc.indexedZones[targetZoneName]
-		if zn and zn.built then
-			for _, v in pairs(zn.built) do
-			local g = GROUP:FindByName(v)
-				if g and g:IsAlive() then
-					for _, unit in ipairs(g:GetUnits() or {}) do
-						if unit:HasAttribute('SAM TR')
-							or unit:HasAttribute('SAM SR') then
-							setTargets:AddUnit(unit)
-						end
-					end
-				end
-			end
-		end
-		if setTargets:Count() == 0 then return end
-
-		altitudeFt = altitudeFt or 28000
-		local miss = AUFTRAG:NewSEAD(setTargets, altitudeFt)
-		SEAD_MISSION[groupName] = miss
-
-		miss:SetMissionAltitude(altitudeFt)
-		miss:SetMissionSpeed(600)
-		miss:SetWeaponExpend(expend or AI.Task.WeaponExpend.ALL)
-		miss:AddConditionSuccess(function() local z=bc.indexedZones[targetZoneName]; return z and z.side==0 end)
-
-		fg:AddMission(miss)
-	end
---[[ 
-function BattleCommander:EngageHeloCasMission(tgtzone, groupname, expendAmmount, altitudeFt, landUnitID)
-	local zn = self:getZoneByName(tgtzone)
-	local group = Group.getByName(groupname)
-	if zn and zn.suspended then if group and group:isExist() then group:destroy() end return end
-	if group and zn and zn.side == group:getCoalition() then return 'Can not engage friendly zone' end
-	if not group or not group:isExist() or group:getSize()==0 then return 'Not available' end
-
-	local startPos = group:getUnit(1):getPoint()
-	local expCount = expendAmmount or AI.Task.WeaponExpend.ONE
-	local alt = ((altitudeFt and altitudeFt > 0) and (altitudeFt/3.281)) or (300/3.281)
-	local rng = 10 * 1852
-
-	local viable = {}
-	if zn and zn.built then
-		for _, name in ipairs(zn.built) do
-			local g = Group.getByName(name)
-			if g and g:getCoalition() ~= group:getCoalition() then viable[#viable+1] = name end
-		end
-	end
-
-	local c = zoneCentroid and zoneCentroid(zn.zone) or nil
-	local tx, tz = c and c.x or startPos.x, c and c.y or startPos.z
-	local dx, dz = tx - startPos.x, tz - startPos.z
-	local len = math.sqrt(dx*dx + dz*dz) ; if len <= 0 then len = 1 end
-	local ux, uz = dx/len, dz/len
-
-	local midx, midz = startPos.x + ux*(1*1852), startPos.z + uz*(1*1852)
-	local apx,  apz  = tx        - ux*(4*1852),  tz        - uz*(4*1852)
-
-	local mis = { id='Mission', params={ route={ airborne=true, points={} } } }
-
-	table.insert(mis.params.route.points, {
-		type=AI.Task.WaypointType.TURNING_POINT,
-		x=midx, y=midz, speed=70,
-		action=AI.Task.TurnMethod.FLY_OVER_POINT,
-		alt=alt, alt_type=AI.Task.AltitudeType.RADIO
-	})
-
-	table.insert(mis.params.route.points, {
-		type=AI.Task.WaypointType.TURNING_POINT,
-		x=apx, y=apz, speed=70,
-		action=AI.Task.TurnMethod.FLY_OVER_POINT,
-		alt=alt, alt_type=AI.Task.AltitudeType.RADIO
-	})
-
-	local landParams = {
-		type=AI.Task.WaypointType.LAND,
-		x=startPos.x, y=startPos.z, speed=70,
-		action=AI.Task.TurnMethod.FIN_POINT,
-		alt=alt, alt_type=AI.Task.AltitudeType.RADIO,
-		task={ id='Land', params={ point={ x=startPos.x, y=startPos.z } } }
-	}
-	if landUnitID then landParams.linkUnit = landUnitID ; landParams.helipadId = landUnitID end
-	table.insert(mis.params.route.points, landParams)
-
-	local mooseGr = GROUP:FindByName(groupname)
-	if mooseGr then
-		local wp1 = mis.params.route.points[1]
-		local tlist = {}
-		tlist[#tlist+1] = mooseGr:EnRouteTaskEngageTargets(rng, {'Ground Units'}, 0)
-		for _, name in ipairs(viable) do
-			local g = GROUP:FindByName(name)
-			if g and g:IsAlive() and g:GetCoalition() ~= group:getCoalition() then
-				tlist[#tlist+1] = mooseGr:EnRouteTaskEngageGroup(g, 1, nil, expCount, 1, nil, alt, false)
-			end
-		end
-		if #tlist > 0 then mooseGr:SetTaskWaypoint(wp1, mooseGr:TaskCombo(tlist)) end
-	end
-
-	group:getController():setTask(mis)
-	self:setDefaultAG(group)
-end
- ]]
 
 
 function SetUpCAP(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side)
@@ -6955,13 +8407,18 @@ end
 		if group and zn.side == side then return 'Can not engage friendly zone' end
 		if not group then return 'Not available' end
 
-		local expCount = AI.Task.WeaponExpend.ONE
+		local expCount = AI.Task.WeaponExpend.ALL
 		if expendAmmount then expCount = expendAmmount end
 
-		local altm = 4572
+		local altm = 6000
 		if altitude then altm = altitude/3.281 end
 
 		local attack = { id = 'ComboTask', params = { tasks = {} } }
+
+		local gmoose = GROUP:FindByName(groupname) if not gmoose or not gmoose:IsAlive() then return 'Not available' end
+
+		local rngGround = 15 * 1852
+		local enroute = gmoose:EnRouteTaskEngageTargets(rngGround, InvisibleA10 and { 'Multirole fighters','Interceptors','Bombers','Ground Units' } or ((side == 2) and { 'Planes','Helicopters','Ground Units' } or { 'Planes','Ground Units' }), 0)
 
 		local firstpos = nil
 		for _, v in pairs(zn.built) do
@@ -6981,26 +8438,33 @@ end
 		if #attack.params.tasks == 0 then return 'No targets' end
 
 		local startPos = group:getUnit(1):getPoint()
-		local mis = self:getDefaultWaypoints(startPos, attack, firstpos, altm, landUnitID)
 
-		local rngGround = 10 * 1852
-		local rngPlane  = 20 * 1852
-		local searchGround = { id = 'EngageTargets', params = { maxDist = rngGround, maxDistEnabled = true, targetTypes = { 'Ground Units' } } }
-		local searchPlane  = { id = 'EngageTargets', params = { maxDist = rngPlane,  maxDistEnabled = true, targetTypes = InvisibleA10 and { 'Multirole fighters','Interceptors','Bombers' } or ((side == 2) and { 'Planes','Helicopters' } or { 'Planes' }) } }
-		local pts = mis.params.route.points
-		if pts then
-			for _,search in ipairs({searchGround,searchPlane}) do
-				if pts[2] and pts[2].task and pts[2].task.params and pts[2].task.params.tasks then
-					table.insert(pts[2].task.params.tasks, search)
-				end
-				if pts[3] and pts[3].task and pts[3].task.params and pts[3].task.params.tasks then
-					table.insert(pts[3].task.params.tasks, search)
-				end
+		local dx,dz = firstpos.x - startPos.x, firstpos.z - startPos.z
+		local len   = math.sqrt(dx*dx + dz*dz) ; if len<=0 then len=1 end
+		local ux,uz = dx/len, dz/len
+
+		local midPos = { x = startPos.x + ux*UTILS.NMToMeters(5.0),  y = startPos.y, z = startPos.z + uz*UTILS.NMToMeters(5.0) }
+		local appPos = { x = firstpos.x  - ux*UTILS.NMToMeters(20.0), y = firstpos.y,  z = firstpos.z  - uz*UTILS.NMToMeters(20.0) }
+		local BeforeLand = { x = startPos.x + ux*UTILS.NMToMeters(15.0), y = startPos.y, z = startPos.z + uz*UTILS.NMToMeters(15.0) }
+
+		local wp = {}
+
+		wp[#wp+1] = COORDINATE:New(startPos.x, altm, startPos.z):WaypointAirTurningPoint("RADIO", UTILS.MpsToKmph(350), {}, "WP1")
+		wp[#wp+1] = COORDINATE:New(midPos.x, altm, midPos.z):WaypointAirTurningPoint("RADIO", UTILS.MpsToKmph(320), { enroute }, "WP2")
+		wp[#wp+1] = COORDINATE:New(appPos.x, altm, appPos.z):WaypointAirTurningPoint("RADIO", UTILS.MpsToKmph(250), { enroute, attack }, "WP3")
+		wp[#wp+1] = COORDINATE:New(BeforeLand.x, altm, BeforeLand.z):WaypointAirTurningPoint("RADIO", UTILS.MpsToKmph(250), { enroute }, "WP4")
+
+		if landUnitID then
+			local ab = AIRBASE:FindByID(landUnitID)
+			if ab then
+				wp[#wp+1] = ab:GetCoordinate():WaypointAirLanding(UTILS.KnotsToKmph(300), ab, {}, "Landing")
 			end
 		end
 
-		group:getController():setTask(mis)
-		self:setDefaultAG(group)
+		gmoose:Route(wp, 1)
+		gmoose:CommandSetUnlimitedFuel(true)
+		local group = Group.getByName(groupname)
+		self:setDefaultAG(group,true)
 	end
 
 function BattleCommander:EngageHeloCasMission(tgtzone, groupname, expendAmmount, altitudeFt, landUnitID)
@@ -7031,11 +8495,21 @@ function BattleCommander:EngageHeloCasMission(tgtzone, groupname, expendAmmount,
 	local app  = COORDINATE:New(tx - ux*UTILS.NMToMeters(5.0),    altBaro, tz - uz*UTILS.NMToMeters(5.0))
 
 	local enroute = gmoose:EnRouteTaskEngageTargets(rng, {'Ground Units'}, 0)
+	local expCount = expendAmmount or AI.Task.WeaponExpend.ONE
+	local attack = { id = 'ComboTask', params = { tasks = {} } }
+	for _, v in pairs(zn.built) do
+		local task = self:getAttackTask(v, expCount, nil)
+		if task then
+			table.insert(attack.params.tasks, task)
+		end
+	end
+
+	if #attack.params.tasks == 0 then return 'No targets' end
 
 	local wp = {}
 	wp[#wp+1] = { type=AI.Task.WaypointType.TAKEOFF, x=sp.x, y=sp.z, speed=0, action=AI.Task.TurnMethod.FIN_POINT, alt=0, alt_type=AI.Task.AltitudeType.RADIO }
 	wp[#wp+1] = mid:WaypointAirTurningPoint("RADIO", speedKmh, { enroute }, "CAS Mid 3 NM")
-	wp[#wp+1] = app:WaypointAirTurningPoint("RADIO", speedKmh, {}, "CAS Approach 5 NM")
+	wp[#wp+1] = app:WaypointAirTurningPoint("RADIO", speedKmh, { enroute, attack }, "CAS Approach 5 NM")
 	local landingWp
 	if landUnitID then
 		local ab = AIRBASE:FindByID(landUnitID)
@@ -7078,7 +8552,6 @@ end
 					groupId = tgt:getID(),
 					expend = expend,
 					weaponType = Weapon.flag.AnyWeapon,
-					groupAttack = false,
 					altitudeEnabled = (altitude ~= nil),
 					altitude = altitude
 				}
@@ -7121,6 +8594,7 @@ end
 		group:getController():setOption(AI.Option.Air.id.PROHIBIT_JETT, true)
 		group:getController():setOption(AI.Option.Air.id.RTB_ON_BINGO, true)
 		group:getController():setOption(AI.Option.Air.id.REACTION_ON_THREAT, AI.Option.Air.val.REACTION_ON_THREAT.ALLOW_ABORT_MISSION)
+		group:getController():setOption(AI.Option.Air.id.SILENCE, true)
 		--group:getController():setOption(AI.Option.Air.id.ROE,AI.Option.Air.val.ROE.OPEN_FIRE)
 		if search then group:getController():setOption(AI.Option.Air.id.RADAR_USING,AI.Option.Air.val.RADAR_USING.FOR_CONTINUOUS_SEARCH) end
 		local weapons = 2147485694 + 30720 + 4161536
@@ -7137,21 +8611,41 @@ end
 		group:getController():setOption(AI.Option.Air.id.RTB_ON_OUT_OF_AMMO, weapons)
 		end
 
-	function BattleCommander:HasSeadTargets(targetZoneName)
-	local zn = self:getZoneByName(targetZoneName)
-		if not (zn and zn.built) then return false end
+	function BattleCommander:HasSeadTargets(targetZoneName, forceFresh)
+		if not targetZoneName then return false end
+		self._seadTargetsCache = self._seadTargetsCache or {}
+		local now = timer.getAbsTime()
+		local ttl = 300
+
+		if not forceFresh then
+			local cached = self._seadTargetsCache[targetZoneName]
+			if cached and cached.expireAt and cached.expireAt > now then
+				return cached.hasTargets == true
+			end
+		end
+
+		local hasTargets = false
+		local zn = self:getZoneByName(targetZoneName)
+		if zn and zn.built then
 			for _, v in pairs(zn.built) do
 				local g = GROUP:FindByName(v)
 				if g and g:IsAlive() then
 					for _, unit in ipairs(g:GetUnits() or {}) do
-						if unit:HasAttribute('SAM TR')
-						or unit:HasAttribute('SAM SR') then
-						return true
+						if unit:HasAttribute('SAM TR') or unit:HasAttribute('SAM SR') then
+							hasTargets = true
+							break
 						end
 					end
 				end
+				if hasTargets then break end
 			end
-		return false
+		end
+
+		self._seadTargetsCache[targetZoneName] = {
+			hasTargets = hasTargets,
+			expireAt = now + ttl,
+		}
+		return hasTargets
 	end
 
 
@@ -7160,12 +8654,12 @@ end
 		local alt = altitude or 4572
 		local defwp = { id='Mission', params={ route={ points={} } } }
 
-		local wp1 = COORDINATE:New(startPos.x, alt, startPos.z):WaypointAirTurningPoint("RADIO", 257, {}, "WP1")
+		local wp1 = COORDINATE:New(startPos.x, alt, startPos.z):WaypointAirTurningPoint("RADIO", UTILS.MpsToKmph(350), {}, "WP1")
 		wp1.task = task
 		table.insert(defwp.params.route.points, wp1)
 
 		if tgpos then
-			local wp2 = COORDINATE:New(tgpos.x, alt, tgpos.z):WaypointAirTurningPoint("RADIO", 257, {}, "WP2")
+			local wp2 = COORDINATE:New(tgpos.x, alt, tgpos.z):WaypointAirTurningPoint("RADIO", UTILS.MpsToKmph(250), {}, "WP2")
 			wp2.task = task
 			table.insert(defwp.params.route.points, wp2)
 		end
@@ -7173,7 +8667,7 @@ end
 		if landUnitID then
 			local ab = AIRBASE:FindByID(landUnitID)
 			if ab then
-				local landwp = ab:GetCoordinate():WaypointAirLanding(UTILS.MpsToKmph(50), ab, {}, "RTB Land (Airbase)")
+				local landwp = ab:GetCoordinate():WaypointAirLanding(UTILS.KnotsToMps(300), ab, {}, "RTB Land (Airbase)")
 				table.insert(defwp.params.route.points, landwp)
 			end
 		end
@@ -7228,25 +8722,37 @@ end
 			end
 		end)
 
-		local limit = (GlobalSettings.proximityWakeNm or 30)
+		local limit = (GlobalSettings.proximityWakeNm or 40)
+		local blockLimit = 5
 		local changed = false
 		for _,z in ipairs(self.zones) do
-			if z.suspended and z.side == 1 then
-				local cz = CustomZone:getByName(z.zone)
+			if z.side == 1 then
+				z.BlueIsNear = nil
+				local cz = z._cz
 				if cz and cz.point then
 					local zp = cz.point
+					local nearWake = false
+					local nearBlock = false
 					for _,p in ipairs(players) do
 						local up = p.point
 						local dx = up.x - zp.x
 						local dz = up.z - zp.z
 						local dnm = math.sqrt(dx*dx + dz*dz) / 1852
-						if dnm <= limit then
-							z._proximityWakeUntil = timer.getTime() + (GlobalSettings.proximityWakeHoldSeconds or 120)
-							z:resume()
+						if dnm <= limit then nearWake = true end
+						if dnm <= blockLimit then nearBlock = true end
+						if nearWake and nearBlock then break end
+					end
 
+					if nearWake then
+						z._proximityWakeUntil = timer.getTime() + (GlobalSettings.proximityWakeHoldSeconds or 120)
+						if z.suspended then
+							z:resume()
 							changed = true
-							break
 						end
+					end
+
+					if nearBlock and z.active and not z.isHidden and not z.suspended and ZONE_CONNECTED_TO_BLUE[z.zone] then
+						z.BlueIsNear = true
 					end
 				end
 			end
@@ -7286,11 +8792,45 @@ function BattleCommander:_hasActiveAttackOrPatrolOnZone()
 	return self._activeAttackOrPatrol
 end
 
+function BattleCommander:_hasActiveJtacOnZone(zoneName)
+	if not zoneName then return false end
+	for _, dr in ipairs(jtacQueue or {}) do
+		if dr and dr.tgtzone and dr.tgtzone.zone == zoneName then
+			return true
+		end
+	end
+	return false
+end
+
 function BattleCommander:explainSuspendDecision(zoneName, groupId)
 	local z = self:getZoneByName(zoneName); if not z then return end
 	local function b(v) return v and "true" or "false" end
-	local dist = self:_minEnemyDistanceNm(z)
-	local limit = (z.side==2) and (GlobalSettings.autoSuspendNmBlue or 70) or (GlobalSettings.autoSuspendNmRed or 150)
+	local function suspendLimit(zz)
+		if not zz then return nil end
+		return (type(zz.customSuspendNm) == "number" and zz.customSuspendNm)
+			or ((zz.side == 2) and (GlobalSettings.autoSuspendNmBlue or 70) or (GlobalSettings.autoSuspendNmRed or 150))
+	end
+	self:reindexCombatZones()
+	local dist = (self._minEnemyDistanceNmWithFarps and self:_minEnemyDistanceNmWithFarps(z)) or self:_minEnemyDistanceNm(z)
+	local nearestEnemyName, nearestEnemyDist = nil, nil
+	do
+		local row = ZONE_DISTANCES and ZONE_DISTANCES[z.zone]
+		if row then
+			for _, other in ipairs(self.zones or {}) do
+				if other.side ~= 0 and other.side ~= z.side and other.active and not other.suspended and not other.isHidden then
+					local d = row[other.zone]
+					if d then
+						local dnm = d / NM
+						if not nearestEnemyDist or dnm < nearestEnemyDist then
+							nearestEnemyDist = dnm
+							nearestEnemyName = other.zone
+						end
+					end
+				end
+			end
+		end
+	end
+	local limit = suspendLimit(z)
 
 	local hasOppositeNeighbor, hasNeutralNeighbor = false, false
 	local nbrs = self.connectionMap and self.connectionMap[z.zone]
@@ -7308,7 +8848,7 @@ function BattleCommander:explainSuspendDecision(zoneName, groupId)
 	for _, gc in ipairs(z.groups or {}) do
 		if gc and (gc.mission=='attack' or gc.mission=='patrol') then
 			local live = (gc.state=='takeoff' or gc.state=='inair' or gc.state=='landed' or gc.state=='enroute' or gc.state=='atdestination')
-			local spawnable = (not live) and gc.shouldSpawn and gc:shouldSpawn() or false
+			local spawnable = (not live) and self:_isSpawnableCached(gc) or false
 			local qualifies = false
 			if gc.mission=='attack' then
 				qualifies = spawnable or live
@@ -7317,7 +8857,7 @@ function BattleCommander:explainSuspendDecision(zoneName, groupId)
 				if tz and tz.active and not tz.suspended and tz.side~=0 then
 					local dnm = self:_minEnemyDistanceNm(tz)
 					if dnm then
-						local lim = (tz.side==2) and (GlobalSettings.autoSuspendNmBlue or 70) or (GlobalSettings.autoSuspendNmRed or 150)
+						local lim = suspendLimit(tz)
 						qualifies = (spawnable or live) and (dnm <= lim)
 					end
 				end
@@ -7329,47 +8869,121 @@ function BattleCommander:explainSuspendDecision(zoneName, groupId)
 	end
 	local originActive = (#originList > 0)
 
-	local incoming = false
-	for _, oz in ipairs(self.zones) do
-		for _, gc in ipairs(oz.groups or {}) do
-			if gc and gc.targetzone == z.zone and gc.mission == 'supply' then
-				local st = gc.state
-				if st ~= 'inhangar' and st ~= 'dead' then incoming = true break end
-			end
-		end
-		if incoming then break end
-	end
-
 	local canReceive = z:canRecieveSupply()
 
-	local supportersOut, supportersDetail = 0, {}
-	if nbrs then
-		for n,_ in pairs(nbrs) do
-			local nz = self:getZoneByName(n)
-			if nz and nz.active and nz.side==z.side and not nz.isHidden and not nz.zone:lower():find("carrier") then
-				for _, gc in ipairs(z.groups or {}) do
-					if gc and gc.mission=='supply' and gc.side==z.side and gc.targetzone==nz.zone then
-						if gc.state ~= 'inhangar' and gc.state ~= 'dead' then
-							supportersOut = supportersOut + 1
-							supportersDetail[#supportersDetail+1] = string.format("%s -> %s (%s)", gc.name or "?", nz.zone, gc.state or "?")
+	local incomingActiveSupply = {}
+	local hasSupplyToTarget = {}
+	for _, oz in ipairs(self.zones) do
+		for _, gc in ipairs(oz.groups or {}) do
+			if gc and gc.mission == 'supply' then
+				local targetName = gc.targetzone
+				if targetName then
+					local st = gc.state
+					if st ~= 'inhangar' and st ~= 'dead' then incomingActiveSupply[targetName] = true end
+					local originName = oz.zone
+					if originName then
+						local row = hasSupplyToTarget[originName]
+						if not row then row = {}; hasSupplyToTarget[originName] = row end
+						local mask = row[targetName] or 0
+						local supplySide = (oz and oz.side ~= 0 and oz.side) or gc.side
+						if supplySide == 1 then
+							if mask == 0 or mask == 2 then mask = mask + 1 end
+						elseif supplySide == 2 then
+							if mask == 0 or mask == 1 then mask = mask + 2 end
 						end
-						break
+						row[targetName] = mask
 					end
 				end
 			end
 		end
 	end
-	local supplierHold = supportersOut > 0
+	local incoming = false
+	if canReceive then
+		incoming = incomingActiveSupply[z.zone] == true
+	end
 
-	local shouldSuspend = (not hasOppositeNeighbor) and (not hasNeutralNeighbor) and (not originActive) and (not incoming) and (dist and dist > limit) and (not canReceive) and (not supplierHold)
+	local supplierHoldMap = {}
+	local supportersDetail = {}
+	local function hasSupplyLink(fromZone, toZone, side)
+		local row = hasSupplyToTarget[fromZone]
+		local mask = row and row[toZone]
+		return mask and ((side == 1 and (mask == 1 or mask == 3)) or (side == 2 and (mask == 2 or mask == 3)))
+	end
+	for _, dz in ipairs(self.zones) do
+		if not dz.suspended and dz.active and dz.side ~= 0 and not dz.isHidden and not dz.zone:lower():find("red carrier") then
+			if dz:canRecieveSupply() then
+				local dnbrs = self.connectionMap and self.connectionMap[dz.zone]
+				if dnbrs then
+					local picked = 0
+					for n,_ in pairs(dnbrs) do
+						if picked >= 2 then break end
+						local sz = self:getZoneByName(n)
+						if sz and sz.active and sz.side == dz.side and not sz.isHidden and not sz.zone:lower():find("red carrier") then
+							if hasSupplyLink(sz.zone, dz.zone, dz.side) and not sz.suspended then
+								supplierHoldMap[sz] = true
+								if sz == z then
+									supportersDetail[#supportersDetail+1] = string.format("%s -> %s", sz.zone, dz.zone)
+								end
+								picked = picked + 1
+							end
+						end
+					end
+					if picked < 2 then
+						for n,_ in pairs(dnbrs) do
+							if picked >= 2 then break end
+							local sz = self:getZoneByName(n)
+							if sz and sz.active and sz.side == dz.side and not sz.isHidden and not sz.zone:lower():find("red carrier") then
+								if hasSupplyLink(sz.zone, dz.zone, dz.side) and sz.suspended then
+									supplierHoldMap[sz] = true
+									if sz == z then
+										supportersDetail[#supportersDetail+1] = string.format("%s -> %s", sz.zone, dz.zone)
+									end
+									picked = picked + 1
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	local supplierHold = supplierHoldMap[z] == true
+	local supportersOut = #supportersDetail
 
+	local combat = self._activeAttackOrPatrol and self._activeAttackOrPatrol[z.zone]
+	local originActive = self._activeOrigin and self._activeOrigin[z.zone]
+	local jtacHold = self:_hasActiveJtacOnZone(z.zone)
+	local now = timer.getTime()
+	local proximityHold = z._proximityWakeUntil and z._proximityWakeUntil > now
+	local shouldSuspend = (not proximityHold) and (not jtacHold) and (not hasOppositeNeighbor) and (not hasNeutralNeighbor) and (not combat) and (not incoming) and (dist and dist > limit) and (not canReceive) and (not supplierHold)
+
+	local enemyLine = ""
+	if nearestEnemyName and dist and dist < limit then
+		enemyLine = string.format("\nnearestEnemy=%s dist=%.1fNm", tostring(nearestEnemyName), nearestEnemyDist or -1)
+	end
 	local header = string.format("[SUSPEND-CHECK] %s\nside=%d active=%s suspended=%s\nminEnemyDist=%.1fNm limit=%.1fNm\noppNbr=%s neutNbr=%s incoming=%s canReceive=%s",
 		z.zone, z.side, b(z.active), b(z.suspended), (dist or -1), limit, b(hasOppositeNeighbor), b(hasNeutralNeighbor), b(incoming), b(canReceive))
-	local origins = (#originList>0) and ("\noriginActive=true\n - "..table.concat(originList, "\n - ")) or "\noriginActive=false"
-	local supportersLine = (#supportersDetail>0) and ("\nsupplierHold=true supporters="..tostring(supportersOut).."\n - "..table.concat(supportersDetail, "\n - ")) or "\nsupplierHold=false supporters=0"
+	local origins = (#originList>0)
+		and ("\noriginActive=true (allowSpawnWhileSuspended=true)\n - "..table.concat(originList, "\n - "))
+		or "\noriginActive=false (allowSpawnWhileSuspended=false)"
+	local supportersLine = supplierHold
+		and ((supportersOut > 0)
+			and ("\nsupplierHold=true supporters="..tostring(supportersOut).."\n - "..table.concat(supportersDetail, "\n - "))
+			or "\nsupplierHold=true supporters=0")
+		or "\nsupplierHold=false supporters=0"
+	local combatLine = "\ncombat="..b(combat)..", originActive="..b(originActive)..", proximityHold="..b(proximityHold)..", jtacHold="..b(jtacHold)
+	local srcTarget = (self._activeAttackOrPatrolSources and self._activeAttackOrPatrolSources[z.zone]) or nil
+	local srcOrigin = (self._activeOriginSources and self._activeOriginSources[z.zone]) or nil
+	local srcLine = ""
+	if srcTarget and #srcTarget > 0 then
+		srcLine = srcLine .. "\nactiveTargetsSources:\n - " .. table.concat(srcTarget, "\n - ")
+	end
+	if srcOrigin and #srcOrigin > 0 then
+		srcLine = srcLine .. "\nactiveOriginSources:\n - " .. table.concat(srcOrigin, "\n - ")
+	end
 	local verdict = "\n=> shouldSuspend="..b(shouldSuspend)
 
-	local msg = header..origins..supportersLine..verdict
+	local msg = header..enemyLine..origins..supportersLine..combatLine..srcLine..verdict
 	if groupId then trigger.action.outTextForGroup(groupId, msg, 25) else trigger.action.outText(msg, 25) end
 end
 
@@ -7384,6 +8998,9 @@ function BattleCommander:_autoZoneSuspend()
 		local supplierHold = {}
 		local incomingActiveSupply = {}
 		local hasSupplyToTarget = {}
+		for _, z in ipairs(self.zones) do
+			z._suspendAllowSpawn = nil
+		end
 		for _, oz in ipairs(self.zones) do
 			for _, gc in ipairs(oz.groups or {}) do
 				if gc and gc.mission == 'supply' then
@@ -7396,9 +9013,10 @@ function BattleCommander:_autoZoneSuspend()
 							local row = hasSupplyToTarget[originName]
 							if not row then row = {}; hasSupplyToTarget[originName] = row end
 							local mask = row[targetName] or 0
-							if gc.side == 1 then
+							local supplySide = (oz and oz.side ~= 0 and oz.side) or gc.side
+							if supplySide == 1 then
 								if mask == 0 or mask == 2 then mask = mask + 1 end
-							elseif gc.side == 2 then
+							elseif supplySide == 2 then
 								if mask == 0 or mask == 1 then mask = mask + 2 end
 							end
 							row[targetName] = mask
@@ -7506,17 +9124,20 @@ function BattleCommander:_autoZoneSuspend()
 						end
 
 
-						local limit  = (z.side==2) and (GlobalSettings.autoSuspendNmBlue or 70) or (GlobalSettings.autoSuspendNmRed or 150)
+						local limit  = (type(z.customSuspendNm) == "number" and z.customSuspendNm)
+							or ((z.side==2) and (GlobalSettings.autoSuspendNmBlue or 70) or (GlobalSettings.autoSuspendNmRed or 150))
 						local combat = self._activeAttackOrPatrol and self._activeAttackOrPatrol[z.zone]
 						local originActive = self._activeOrigin and self._activeOrigin[z.zone]
+						z._suspendAllowSpawn = originActive and true or nil
 						local canReceive = z:canRecieveSupply()
 						local incoming = false
 						if canReceive then
 							incoming = incomingActiveSupply[z.zone] == true
 						end
+						local jtacHold = self:_hasActiveJtacOnZone(z.zone)
 						local now = timer.getTime()
 						local proximityHold = z._proximityWakeUntil and z._proximityWakeUntil > now
-						local shouldSuspend = (not proximityHold) and (not hasOppositeNeighbor) and (not hasNeutralNeighbor) and (not combat) and (not originActive) and (not incoming) and (dist > limit) and (not canReceive) and (not supplierHold[z])
+						local shouldSuspend = (not proximityHold) and (not jtacHold) and (not hasOppositeNeighbor) and (not hasNeutralNeighbor) and (not combat) and (not incoming) and (dist > limit) and (not canReceive) and (not supplierHold[z])
 
 						if shouldSuspend then
 							toSuspend[#toSuspend+1] = z
@@ -7539,7 +9160,7 @@ function BattleCommander:_autoZoneSuspend()
 		end
 	end
 end
-		local neighborWakeMeters = 15*NM
+		local neighborWakeMeters = 12*NM
 		local anchorSet = {}
 		for _, z in ipairs(self.zones) do
 			if z.active and z.side~=0 and not z.isHidden and not z.zone:lower():find("red carrier") then
@@ -7598,13 +9219,13 @@ end
 						end
 						if dist and dist <= limit then hasOppositeNeighbor = true end
 						local combat2 = self._activeAttackOrPatrol and self._activeAttackOrPatrol[sz.zone]
-						local originActive2 = self._activeOrigin and self._activeOrigin[sz.zone]
+						local jtacHold2 = self:_hasActiveJtacOnZone(sz.zone)
 						local canReceive2 = sz:canRecieveSupply()
 						local incoming2 = false
 						if canReceive2 then
 							incoming2 = incomingActiveSupply[sz.zone] == true
 						end
-						local shouldSuspend2 = (not hasOppositeNeighbor) and (not combat2) and (not originActive2) and (not incoming2) and dist and (dist > limit) and (not canReceive2)
+						local shouldSuspend2 = (not hasOppositeNeighbor) and (not jtacHold2) and (not combat2) and (not incoming2) and dist and (dist > limit) and (not canReceive2)
 						if shouldSuspend2 then finalSuspend[#finalSuspend+1] = sz end
 					end
 				end
@@ -7778,7 +9399,7 @@ function BattleCommander:RefreshConnectionsLines(zoneName)
 				end
 			end
 			if bestT then
-				return {x = sx + ux * bestT, y = sy, z = sz + ux * bestT}
+				return {x = sx + ux * bestT, y = sy, z = sz + uz * bestT}
 			end
 		end
 		return {x = sx, y = sy, z = sz}
@@ -8025,7 +9646,10 @@ function BattleCommander:printMyStats(unitid, player)
 				playerStats['Pilot Rescue'] = statValue
 			elseif statKey == 'Points spent' then
 				playerStats['Points spent'] = statValue
+			elseif statKey == 'Flight time' then
+				playerStats['Flight time'] = statValue
 			end
+			
 		end
 
 		local message = '[' .. player .. ']\nLeaderboard rank: ' .. (rank or '')
@@ -8041,12 +9665,12 @@ function BattleCommander:printMyStats(unitid, player)
 			if remain then message = message .. ', remaining: ' .. remain end
 		end
 
-		local displayOrder = {'Air', 'Helo', 'Ground Units', 'Ship', 'SAM', 'Structure', 'Deaths', 'Captured by enemy', 'Zone capture', 'Zone upgrade', 'Pilot Rescue', 'Points', 'Points spent'}
+		local displayOrder = {'Air', 'Helo', 'Ground Units', 'Ship', 'SAM', 'Structure', 'Deaths', 'Captured by enemy', 'Zone capture', 'Zone upgrade', 'Pilot Rescue', 'Points', 'Points spent', 'Flight time'}
 
 		for _, statKey in ipairs(displayOrder) do
 			local v = playerStats[statKey] or 0
 			if v > 0 or statKey == 'Air' or statKey == 'Helo' or statKey == 'Ground Units' or statKey == 'Ship' or statKey == 'SAM' or statKey == 'Structure' or statKey == 'Deaths' or statKey == 'Points' or statKey == 'Points spent' then
-				message = message .. statKey .. ': ' .. v .. '\n'
+				message = message .. '\n' .. statKey .. ': ' .. v
 			end
 		end
 
@@ -8138,11 +9762,13 @@ function BattleCommander:printStats(unitid, top)
 					playerStats['Pilot Rescue'] = statValue
 				elseif statKey == 'Points spent' then
 					playerStats['Points spent'] = statValue
+				elseif statKey == 'Flight time' then
+					playerStats['Flight time'] = statValue
 				end
 			end
 
 
-		local displayOrder = {'Air', 'Helo', 'Ground Units', 'Ship', 'SAM', 'Structure', 'Deaths', 'Captured by enemy', 'Zone capture', 'Zone upgrade', 'Pilot Rescue', 'Points', 'Points spent'}
+		local displayOrder = {'Air', 'Helo', 'Ground Units', 'Ship', 'SAM', 'Structure', 'Deaths', 'Captured by enemy', 'Zone capture', 'Zone upgrade', 'Pilot Rescue', 'Points', 'Points spent', 'Flight time'}
 
 			for _, statKey in ipairs(displayOrder) do
 				local v = playerStats[statKey] or 0
@@ -8280,7 +9906,11 @@ function BattleCommander:_spawnHunterForPlayer(pname,u,termType)
   end
   if not s1 then s1, s2 = spots[1].TerminalID, spots[2].TerminalID end
 local template = Era=='Coldwar' and 'RED_MIG23_TEMPLATE' or 'RED_MIG29_TEMPLATE'
-local hunter   = SPAWN:NewWithAlias(template, 'HUNTER_'..pname)
+local aliasPlayer = tostring(pname or "PLAYER")
+aliasPlayer = aliasPlayer:gsub('"', "_"):gsub("'", "_")
+if aliasPlayer == "" then aliasPlayer = "PLAYER" end
+local hunterAlias = "HUNTER_" .. aliasPlayer
+local hunter   = SPAWN:NewWithAlias(template, hunterAlias)
   hunter:OnSpawnGroup(function(g)
     Hunt = FLIGHTGROUP:New(g)
     Hunt:SetHomebase(home)
@@ -8416,6 +10046,8 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 	self.playerRewardsOn = true
 	self.rewards = rewards
 	self.defaultReward = defaultReward
+	self.lossPenaltyArmByPlayer = self.lossPenaltyArmByPlayer or {}
+	self.lossPenaltySkipByPlayer = self.lossPenaltySkipByPlayer or {}
 	local ev = {}
 	ev.context = self
 	ev.rewards = rewards
@@ -8435,8 +10067,21 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 			if event.id == 6 then -- Pilot ejected
 				if pname then
 					local crew=bc:getMulticrewPlayersNow(pname)
+					local ft = self.context.flightTimeTakeoffByPlayer and self.context.flightTimeTakeoffByPlayer[pname]
+					local takeoffTime = ft and ft.t
+					if takeoffTime then
+						self.context.flightTimeTakeoffByPlayer[pname] = nil
+						local flightSeconds = timer.getTime() - takeoffTime
+						if flightSeconds >= 300 then
+							local minutes = math.floor(flightSeconds / 60)
+							local rewardPerMinute = FlightTimeRewardPerMinute or 1
+							local reward = minutes * rewardPerMinute
+							if reward > 0 then bc:addContribution(pname,side,reward) end
+						end
+					end
 					for i=1,#crew do
 						local n=crew[i]
+						if self.context.flightTimeTakeoffByPlayer then self.context.flightTimeTakeoffByPlayer[n] = nil end
 						if self.context.playerContributions[side][n]~=nil and self.context.playerContributions[side][n]>0 then
 							local tenp=math.floor(self.context.playerContributions[side][n]*0.25)
 							self.context:addFunds(side,tenp)
@@ -8498,6 +10143,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
                             casKillsByPlayer[n] = 0 
                         end
                         for _,g in pairs(MissionGroups) do g.killers[n]=nil end
+                        if self.context.flightTimeTakeoffByPlayer then self.context.flightTimeTakeoffByPlayer[n] = nil end
                         if Hunt then bc.huntDone[n]=nil end
                         local jp = self.context.jointPairs and self.context.jointPairs[n]
                         if jp then
@@ -8527,6 +10173,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 				if event.id == 15 then
 					local crew = self.context:getMulticrewPlayersNow(pname)
 					local resetPilot = (#crew == 0)
+					if pname then self.context.lossPenaltyArmByPlayer[pname] = nil end
 
 					if not resetPilot then
 						local didCrew = false
@@ -8541,8 +10188,10 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 							end
 							if subslot > 0 then
 								didCrew = true
+								self.context.lossPenaltyArmByPlayer[n] = nil
 								self.context.playerContributions[side][n] = 0
 								for _,g in pairs(MissionGroups) do g.killers[n]=nil end
+								if self.context.flightTimeTakeoffByPlayer then self.context.flightTimeTakeoffByPlayer[n] = nil end
 								self.context:resetTempStats(n)
 							end
 						end
@@ -8551,6 +10200,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 
 					if resetPilot then
 						self.context.playerContributions[side][pname] = 0
+						if self.context.flightTimeTakeoffByPlayer then self.context.flightTimeTakeoffByPlayer[pname] = nil end
 						for _,g in pairs(MissionGroups) do g.killers[pname]=nil end
 						self.context:resetTempStats(pname)
 					end
@@ -8569,6 +10219,26 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 
 				if (event.id==28) then --killed unit
 					if self.context.playerContributions[side][pname] ~= nil then
+						if event.target and event.target.getCoalition and side == event.target:getCoalition() then
+							local tgtName = (event.target.getName and event.target:getName()) or 'Unknown'
+							local tgtPlayer = (event.target.getPlayerName and event.target:getPlayerName()) or nil
+							if not (tgtPlayer and tgtPlayer ~= '' and tgtPlayer == pname) then
+								if tgtPlayer and tgtPlayer ~= '' then
+									self.context.lossPenaltySkipByPlayer = self.context.lossPenaltySkipByPlayer or {}
+									self.context.lossPenaltySkipByPlayer[tgtPlayer] = true
+								end
+								local msg = '!! FRIENDLY FIRE !!\n['..pname..'] killed friendly '..(tgtPlayer and tgtPlayer ~= '' and ('player: '..tgtPlayer) or ('unit: '..tgtName))
+
+								if RankingSystem == true then
+									FriendlyFireRankPenalty = FriendlyFireRankPenalty or 500
+									if FriendlyFireRankPenalty > 0 then
+										self.context:addPlayerRankCredits(pname, -FriendlyFireRankPenalty)
+										msg = msg..' (Lost '..tostring(FriendlyFireRankPenalty)..' in ranking)'
+									end
+								end
+								trigger.action.outTextForCoalition(side,msg,10)
+							end
+						end
 						if event.target.getCoalition and side ~= event.target:getCoalition() then
 							local tgtName = event.target:getName()
 							local mt = MissionTargets[tgtName]
@@ -8659,9 +10329,14 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 											local mk = MissionMarks[mt.group]; if mk then trigger.action.removeMark(mk) MissionMarks[mt.group]=nil end
 											if gtab.flag and MissionMarks[gtab.flag] then trigger.action.removeMark(MissionMarks[gtab.flag]) MissionMarks[gtab.flag]=nil end
 											if gtab.flag then
-											if ActiveMission[gtab.flag] then ActiveMission[gtab.flag] = nil end
-											CustomFlags[gtab.flag] = true
+												local wasActive = ActiveMission[gtab.flag] == true
+												if ActiveMission[gtab.flag] then ActiveMission[gtab.flag] = nil end
+												if gtab.custom then CustomFlags[gtab.flag] = true end
+												if wasActive then
+													refreshStrikeMenusOnMissionFlag(gtab.flag, gtab.custom)
+												end
 											end
+
 											MissionGroups[mt.group]=nil
 										end
 									end
@@ -8693,8 +10368,14 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 											trigger.action.outTextForCoalition(2,mt.stat..' mission completed by '..pname..'. +'..mt.reward..' credits - land to redeem.',15)
 										end
 										trigger.action.outSoundForCoalition(2,"cancel.ogg")
-										if mt.flag then CustomFlags[mt.flag]=true end
-										 if ActiveMission[mt.flag] then ActiveMission[mt.flag] = nil end
+										if mt.flag then
+											local wasActive = ActiveMission[mt.flag] == true
+											if mt.custom then CustomFlags[mt.flag]=true end
+											if ActiveMission[mt.flag] then ActiveMission[mt.flag] = nil end
+											if wasActive then
+												refreshStrikeMenusOnMissionFlag(mt.flag, mt.custom)
+											end
+										end
 									end
 								end
 
@@ -8797,7 +10478,12 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 								end
 								trigger.action.outSoundForCoalition(2,'cancel.ogg')
 								if MissionMarks[flag] then trigger.action.removeMark(MissionMarks[flag]) MissionMarks[flag]=nil end
-								CustomFlags[flag]=true
+								local wasActive = ActiveMission[flag] == true
+								if st.custom then CustomFlags[flag]=true end
+								if ActiveMission[flag] then ActiveMission[flag] = nil end
+								if wasActive then
+									refreshStrikeMenusOnMissionFlag(flag, st.custom)
+								end
 								ScoreTargets[flag]=nil
 							end
 						end
@@ -8805,8 +10491,12 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 					return
 				end
 				if event.id == 4 then -- Landing event
-					if self.context.playerContributions[side][pname]~=nil and self.context.playerContributions[side][pname] 
-					and self.context.playerContributions[side][pname] > 0 then
+					local ft = self.context.flightTimeTakeoffByPlayer and self.context.flightTimeTakeoffByPlayer[pname]
+					local takeoffTime = ft and ft.t
+					local flightOk = takeoffTime and (timer.getTime() - takeoffTime) >= 300
+					if takeoffTime and not flightOk then self.context.flightTimeTakeoffByPlayer[pname] = nil end
+					if (self.context.playerContributions[side][pname]~=nil and self.context.playerContributions[side][pname] 
+					and self.context.playerContributions[side][pname] > 0) or flightOk then
 						local function scheduleCreditClaim(zoneData, zoneName, waitSeconds, zoneMooseWrapper)
 							if not event.skipRewardMsg then
 								trigger.action.outTextForGroup(groupid, '[' .. pname .. '] landed at ' .. zoneName .. '.\nWait ' .. waitSeconds .. ' seconds to claim credits...', 5)
@@ -8832,6 +10522,22 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 												coalitionSide = 2
 											end
 											local crew=bc:getMulticrewPlayersNow(player)
+											local ft = context.flightTimeTakeoffByPlayer and context.flightTimeTakeoffByPlayer[player]
+											local takeoffTime = ft and ft.t
+											if takeoffTime then
+												context.flightTimeTakeoffByPlayer[player] = nil
+												local flightSeconds = timer.getTime() - takeoffTime
+												if flightSeconds >= 300 then
+													local minutes = math.floor(flightSeconds / 60)
+													local rewardPerMinute = FlightTimeRewardPerMinute or 1
+													local reward = minutes * rewardPerMinute
+													if reward > 0 then bc:addContribution(player,coalitionSide,reward) end
+													for i=1,#crew do
+														local n=crew[i]
+														context:addTempStat(n,'Flight time',minutes)
+													end
+												end
+											end
 											local redeemMsg = 'Player Redeem :'
 											local did = false
 											for i=1,#crew do
@@ -8874,7 +10580,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 							local foundZone = false
 							local function unloadIfPilot()
 								local grObj = unit and unit:getGroup()
-								if not grObj or not lc or not lc.carriedPilots then return end
+								if not grObj or not lc.carriedPilots then return end
 								local gid = grObj:getID()
 								local carried = lc.carriedPilots[gid] or 0
 								if carried > 0 then
@@ -8939,6 +10645,22 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 											if un:getLife() > 0 then
 												local coalitionSide = un:getCoalition()
 												local crew=bc:getMulticrewPlayersNow(player)
+												local ft = context.flightTimeTakeoffByPlayer and context.flightTimeTakeoffByPlayer[player]
+												local takeoffTime = ft and ft.t
+												if takeoffTime then
+													context.flightTimeTakeoffByPlayer[player] = nil
+													local flightSeconds = timer.getTime() - takeoffTime
+													if flightSeconds >= 300 then
+														local minutes = math.floor(flightSeconds / 60)
+														local rewardPerMinute = FlightTimeRewardPerMinute or 1
+														local reward = minutes * rewardPerMinute
+														if reward > 0 then bc:addContribution(player,coalitionSide,reward) end
+														for i=1,#crew do
+															local n=crew[i]
+															context:addTempStat(n,'Flight time',minutes)
+														end
+													end
+												end
 												local redeemMsg = 'Player Redeem :'
 												local did = false
 												for i=1,#crew do
@@ -8985,10 +10707,44 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 						end
 					end
 				end
-				if CreditLosewhenKilled and CreditLosewhenKilled == true then
-					if event.id == world.event.S_EVENT_UNIT_LOST then
-						self.context:addFunds(side,-100)
-						trigger.action.outTextForCoalition(side,'['..pname..'] aircraft lost, -100 credits',10)
+				if event.id == world.event.S_EVENT_UNIT_LOST then
+					local armed = self.context.lossPenaltyArmByPlayer and self.context.lossPenaltyArmByPlayer[pname] == true
+					self.context.lossPenaltyArmByPlayer[pname] = nil
+					if armed then
+						local ctx = self.context
+						local lostPlayer = pname
+						local lostSide = side
+						local lostUnit = unit
+						SCHEDULER:New(nil, function()
+							local skip = ctx.lossPenaltySkipByPlayer and ctx.lossPenaltySkipByPlayer[lostPlayer] == true
+							if ctx.lossPenaltySkipByPlayer then
+								ctx.lossPenaltySkipByPlayer[lostPlayer] = nil
+							end
+							if skip then
+								return
+							end
+							if CreditLosewhenKilled == true then
+								local amount = CreditLosewhenKilledAmount or 100
+								ctx:addFunds(lostSide,-amount)
+								trigger.action.outTextForCoalition(lostSide,'['..lostPlayer..'] aircraft lost, -'..amount..' credits',10)
+							end
+							if RankingSystem == true and RankLoseWhenKilled == true then
+								local amount = RankLoseWhenKilledAmount or 100
+								local before = ctx:getPlayerRank(lostPlayer)
+								if amount > 0 then
+									ctx:addPlayerRankCredits(lostPlayer, -amount)
+									ctx:saveRanksToDisk()
+									trigger.action.outTextForCoalition(lostSide, '['..lostPlayer..'] aircraft lost, -'..amount..' rank points', 10)
+									local after = ctx:getPlayerRank(lostPlayer)
+									if after < before then
+										local name = ctx:getRankName(after)
+										trigger.action.outTextForCoalition(lostSide, lostPlayer..' has been demoted to '..name..'.', 12)
+										local g = lostUnit and lostUnit.getGroup and lostUnit:getGroup()
+										if g and g:isExist() then ctx:refreshShopMenuForGroup(g:getID(), g) end
+									end
+								end
+							end
+						end, {}, 2, 0)
 					end
 				end
 			end
@@ -9156,7 +10912,7 @@ end
 				else
 					earning = self.rewards.structure
 					message = 'Structure kill +'..earning..' credits'
-					statname = 'Structer'
+					statname = 'Structure'
 				end
 			end
 		else
@@ -9244,11 +11000,12 @@ function BattleCommander:addPlayerCredits(pname, amount)
 	end
 
 	function BattleCommander:addPlayerRankCredits(pname, amount)
-		if not pname or not amount or amount<=0 then return end
+		if not pname or not amount or amount==0 then return end
 		RankSave = RankSave or {players={},version=1}
 		RankSave.players = RankSave.players or {}
 		local rec = RankSave.players[pname] or {credits=0,lastSeen=0}
 		rec.credits = (rec.credits or 0) + amount
+		if rec.credits < 0 then rec.credits = 0 end
 		rec.lastSeen = timer and timer.getAbsTime() or 0
 		RankSave.players[pname] = rec
 	end
@@ -9278,6 +11035,20 @@ function BattleCommander:addPlayerCredits(pname, amount)
 
 
 function BattleCommander:loadFromDisk()
+		local defaultShopDefs = {}
+		for side = 1, 2 do
+			defaultShopDefs[side] = {}
+			for id, def in pairs((self.shops and self.shops[side]) or {}) do
+				defaultShopDefs[side][id] = {
+					name = def.name,
+					cost = def.cost,
+					stock = def.stock,
+					prio = def.prio,
+					reqRank = def.reqRank,
+				}
+			end
+		end
+
 		if RankingSystem == true then
 		self:loadRanksFromDisk()
 		end
@@ -9285,6 +11056,103 @@ function BattleCommander:loadFromDisk()
 		if zonePersistance then
 			if zonePersistance.zones then
 				self.saveLoaded = true
+				local function shouldKeepUpgradeName(name)
+					if not name then return false end
+					if isStaticUpgrade and isStaticUpgrade(name) then return true end
+					if hasGroupTemplate and hasGroupTemplate(name) then return true end
+					return false
+				end
+				local function listEqual(a, b)
+					if a == b then return true end
+					if (a == nil) ~= (b == nil) then return false end
+					if #a ~= #b then return false end
+					for i = 1, #a do
+						if a[i] ~= b[i] then return false end
+					end
+					return true
+				end
+				local function pruneAndTopUp(zoneObj, list, isRed)
+					local pruned = false
+					local out = {}
+					local missing = {}
+					local used = {}
+					for idx, name in ipairs(list or {}) do
+						if shouldKeepUpgradeName(name) then
+							out[idx] = name
+							used[name] = true
+						else
+							pruned = true
+							missing[#missing + 1] = { idx = idx, name = name }
+						end
+					end
+						if pruned then
+							for _, entry in ipairs(missing) do
+								local replacement = pickReplacementUpgrade(zoneObj, entry.name, out)
+								if replacement then
+									out[entry.idx] = replacement
+									used[replacement] = true
+									local msg = string.format("[RandomUpgrades] %s: replaced missing '%s' with '%s'", tostring(zoneObj and zoneObj.zone or "zone"), tostring(entry.name), tostring(replacement))
+									env.info(msg)
+									trigger.action.outText(msg, 10)
+								else
+									local msg = string.format("[RandomUpgrades] %s: missing '%s' could not be replaced (pool empty)", tostring(zoneObj and zoneObj.zone or "zone"), tostring(entry.name))
+									env.info(msg)
+									trigger.action.outText(msg, 10)
+								end
+							end
+						end
+					if pruned then
+						local compacted = {}
+						for i = 1, #out do
+							local n = out[i]
+							if n then
+								compacted[#compacted + 1] = n
+							end
+						end
+						out = compacted
+					end
+					return out, pruned
+				end
+				local function copyList(src)
+					local out = {}
+					for i, v in ipairs(src or {}) do
+						out[i] = v
+					end
+					return out
+				end
+				local function resolveMaxCount(v)
+					if type(v) == "table" then
+						local a = tonumber(v[1]) or 0
+						local b = tonumber(v[2]) or a
+						if b < a then a, b = b, a end
+						return b
+					end
+					return tonumber(v) or 0
+				end
+				local function getTemplateMaxTotal(zoneObj, isRed)
+					local zoneSize = getZoneSize(zoneObj)
+					local tpl = isRed
+						and (RandomUpgradeTemplates and RandomUpgradeTemplates[zoneSize])
+						or (RandomUpgradeTemplatesBlue and RandomUpgradeTemplatesBlue[zoneSize])
+					if type(tpl) ~= "table" then return nil end
+					local maxTotal = resolveMaxCount(tpl.total)
+					if maxTotal and maxTotal > 0 then return maxTotal end
+					local cats = isRed and {"sam","shorad","aaa","ground","armor","arty"} or {"sam","ground","armor"}
+					local sum = 0
+					for i = 1, #cats do
+						sum = sum + resolveMaxCount(tpl[cats[i]])
+					end
+					return (sum > 0) and sum or nil
+				end
+				local function clampToTemplateMax(zoneObj, list, isRed)
+					local maxTotal = getTemplateMaxTotal(zoneObj, isRed)
+					if not maxTotal or #list <= maxTotal then return list, false end
+					local out = {}
+					for i = 1, maxTotal do
+						out[i] = list[i]
+					end
+					return out, true
+				end
 				for i, v in pairs(zonePersistance.zones) do
 					local zn = self:getZoneByName(i)
 					if zn then
@@ -9302,6 +11170,58 @@ function BattleCommander:loadFromDisk()
 						zn.upgrades = zn.upgrades or {}
 						zn.upgrades.blue = zn.upgrades.blue or {}
 						zn.upgrades.red  = zn.upgrades.red  or {}
+
+						local randomChanged = false
+						if v.randomUpgradesRed and type(v.randomUpgradesRed) == "table" then
+							local original = v.randomUpgradesRed
+							local list, pruned = pruneAndTopUp(zn, original, true)
+							local clipped = false
+							list, clipped = clampToTemplateMax(zn, list, true)
+							zn.randomUpgradesRed = copyList(list)
+							zn.upgrades.red = copyList(list)
+							if pruned or clipped or not listEqual(original, list) then
+								randomChanged = true
+							end
+						end
+						if v.randomUpgradesBlue and type(v.randomUpgradesBlue) == "table" then
+							local original = v.randomUpgradesBlue
+							local list, pruned = pruneAndTopUp(zn, original, false)
+							local clipped = false
+							list, clipped = clampToTemplateMax(zn, list, false)
+							zn.randomUpgradesBlue = copyList(list)
+							zn.upgrades.blue = copyList(list)
+							if pruned or clipped or not listEqual(original, list) then
+								randomChanged = true
+							end
+						end
+						if randomChanged then
+							zn.remainingUnits = nil
+							zn._refreshRandomUpgrades = true
+						end
+
+						-- Replace missing entries in upgrades.red/blue (including "Fixed" ones)
+						local function fixMissingUpgradeList(zoneObj, list, isRed)
+							if not list then return end
+							for idx, entry in ipairs(list) do
+								local name = getUpgradeEntryName(entry)
+								if name and not isStaticUpgrade(name) and not hasGroupTemplate(name) then
+									local replacement = pickReplacementUpgrade(zoneObj, name, list)
+									if replacement then
+										list[idx] = replacement
+										local msg = string.format("[RandomUpgrades] %s: replaced missing '%s' with '%s'", tostring(zoneObj and zoneObj.zone or "zone"), tostring(name), tostring(replacement))
+										env.info(msg)
+										trigger.action.outText(msg, 10)
+									else
+										local msg = string.format("[RandomUpgrades] %s: missing '%s' could not be replaced (pool empty)", tostring(zoneObj and zoneObj.zone or "zone"), tostring(name))
+										env.info(msg)
+										trigger.action.outText(msg, 10)
+									end
+								end
+							end
+						end
+
+						fixMissingUpgradeList(zn, zn.upgrades.red, true)
+						fixMissingUpgradeList(zn, zn.upgrades.blue, false)
 
 						local raw = v.extraUpgrade
 						zn.extraUpgrade = (type(raw)=="table") and raw or {}
@@ -9325,7 +11245,22 @@ function BattleCommander:loadFromDisk()
 							end
 						end
 
-						zn.upgradesUsed = v.upgradesUsed or 0
+						local baseUsed = v.upgradesUsed or 0
+						local redUsed = v.upgradesUsedRed
+						local blueUsed = v.upgradesUsedBlue
+						if redUsed == nil and blueUsed == nil then
+							redUsed = baseUsed
+							blueUsed = baseUsed
+						end
+						zn.upgradesUsedRed = redUsed or 0
+						zn.upgradesUsedBlue = blueUsed or 0
+						if zn.side == 1 then
+							zn.upgradesUsed = zn.upgradesUsedRed
+						elseif zn.side == 2 then
+							zn.upgradesUsed = zn.upgradesUsedBlue
+						else
+							zn.upgradesUsed = baseUsed or 0
+						end
 
 						if not zn.active then
 							zn.side = 0
@@ -9425,6 +11360,59 @@ function BattleCommander:loadFromDisk()
 					EWRS_PENDING_PLAYER_SETTINGS = zonePersistance.ewrsSettings
 				end
 			end
+
+				if zonePersistance.tankers and type(zonePersistance.tankers) == "table" then
+					local savedArco = zonePersistance.tankers.arco
+					local savedTexaco = zonePersistance.tankers.texaco
+					TANKER_PERSISTENCE = TANKER_PERSISTENCE or {}
+					TANKER_PERSISTENCE.arco = _normalizeTankerState(savedArco, 45)
+					TANKER_PERSISTENCE.texaco = _normalizeTankerState(savedTexaco, 45, TEXACO_DEFAULT_SPEED_KT)
+					if TANKER_PERSISTENCE.texaco and type(TANKER_PERSISTENCE.texaco.speed) == "number" then
+						TexacoCurrentSpeedKt = TANKER_PERSISTENCE.texaco.speed
+					end
+				end
+			-- Reconcile tanker unlock items from persisted unlock state against setup defaults.
+			local function _addBackDefaultShopItem(side, id)
+				local def = defaultShopDefs and defaultShopDefs[side] and defaultShopDefs[side][id]
+				if not def then return end
+				self.shops = self.shops or {}
+				self.shops[side] = self.shops[side] or {}
+				if self.shops[side][id] then return end
+				self.shops[side][id] = {
+					name = def.name,
+					cost = def.cost,
+					stock = def.stock,
+					prio = def.prio,
+				}
+				if RankingSystem and def.reqRank then
+					self.shops[side][id].reqRank = def.reqRank
+				end
+			end
+
+			local function _removeShopItemIfPresent(side, id)
+				if self.shops and self.shops[side] and self.shops[side][id] then
+					self.shops[side][id] = nil
+				end
+			end
+
+			local arcoUnlocked = (TANKER_PERSISTENCE and TANKER_PERSISTENCE.arco and TANKER_PERSISTENCE.arco.unlocked) == true
+			local texacoUnlocked = (TANKER_PERSISTENCE and TANKER_PERSISTENCE.texaco and TANKER_PERSISTENCE.texaco.unlocked) == true
+
+			if arcoUnlocked then
+				_removeShopItemIfPresent(2, "dynamicarco")
+			else
+				_addBackDefaultShopItem(2, "dynamicarco")
+			end
+
+			if texacoUnlocked then
+				_removeShopItemIfPresent(2, "dynamictexaco")
+			else
+				_addBackDefaultShopItem(2, "dynamictexaco")
+			end
+
+			if schedulePersistentTankerRestore then
+				schedulePersistentTankerRestore()
+			end
 		end
 	end
 end
@@ -9444,7 +11432,10 @@ do
 		obj.active = true
 		obj.destroyOnInit = {}
 		obj.triggers = {}
-		obj.upgradesUsed = 0
+		local baseUpg = obj.upgradesUsed or 0
+		obj.upgradesUsed = baseUpg
+		obj.upgradesUsedRed = obj.upgradesUsedRed or baseUpg
+		obj.upgradesUsedBlue = obj.upgradesUsedBlue or baseUpg
 		obj.suspended = false
 		obj._hibernated = {}
 
@@ -9557,12 +11548,37 @@ function ZoneCommander:suspend()
 	end
 
 	
+	function ZoneCommander:getUpgradesUsed(side)
+		local s = side or self.side
+		if s == 1 then
+			return self.upgradesUsedRed or 0
+		elseif s == 2 then
+			return self.upgradesUsedBlue or 0
+		end
+		return self.upgradesUsed or 0
+	end
+
+	function ZoneCommander:_setUpgradesUsed(side, val)
+		if side == 1 then
+			self.upgradesUsedRed = val
+		elseif side == 2 then
+			self.upgradesUsedBlue = val
+		end
+		if side == self.side then
+			self.upgradesUsed = val
+		end
+	end
+
+	function ZoneCommander:_syncUpgradesUsed()
+		self.upgradesUsed = self:getUpgradesUsed(self.side)
+	end
+
 	function ZoneCommander:addExtraSlot(groupName)
 		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
-		local cur = self.upgradesUsed or 0
+		local cur = self:getUpgradesUsed(self.side)
 		if cur >= max then return false end
 
-		self.upgradesUsed = cur + 1
+		self:_setUpgradesUsed(self.side, cur + 1)
 		self.level        = self.level + 1
 
 		self.extraUpgrade = self.extraUpgrade or {}
@@ -9591,16 +11607,26 @@ function ZoneCommander:getFilteredUpgrades()
 		if self.suspended and self.remainingUnitsSnapshot then
 			local res = {}
 			for idx,_ in pairs(self.remainingUnitsSnapshot) do
-				local name = upgrades[idx]
+				local entry = upgrades[idx]
+				local name = getUpgradeEntryName(entry)
 				if name then res[#res+1] = name end
 			end
 			return res
 		end
 
-		if UseStatics then return upgrades end
+		if UseStatics then
+			-- Always return resolved names (upgrade lists may contain table entries).
+			local res = {}
+			for idx, entry in pairs(upgrades) do
+				local name = getUpgradeEntryName(entry)
+				if name then res[idx] = name end
+			end
+			return res
+		end
 
 		local res = {}
-		for idx, name in pairs(upgrades) do
+		for idx, entry in pairs(upgrades) do
+			local name = getUpgradeEntryName(entry)
 			local isStatic = false
 			if self.newStatics then
 				for _, data in ipairs(self.newStatics) do
@@ -9614,11 +11640,680 @@ function ZoneCommander:getFilteredUpgrades()
 				local st = StaticObject.getByName(name)
 				if st and st:isExist() then st:destroy() end
 			else
-				res[#res + 1] = name
+				res[idx] = name
 			end
 		end
 		return res
 	end
+
+-- Randomized upgrade helpers (shared across missions)
+RandomGroundGroups = RandomGroundGroups or false
+RandomBlueGroups = RandomBlueGroups or false
+
+
+function fhRand(min, max)
+	if math and math.randomseed then
+		if min == nil then return math.random() end
+		if max == nil then return math.random(min) end
+		return math.random(min, max)
+	end
+	FH_RNG_SEED = FH_RNG_SEED or 1234567
+	FH_RNG_SEED = (1103515245 * FH_RNG_SEED + 12345) % 2147483648
+	local r = FH_RNG_SEED / 2147483648
+	if min == nil then return r end
+	if max == nil then return math.floor(r * min) + 1 end
+	return math.floor(r * (max - min + 1)) + min
+end
+
+function resolveCount(v)
+	if type(v) == "table" then
+		local a, b = v[1], v[2]
+		if a and b then
+			return fhRand(a, b)
+		end
+	end
+	return tonumber(v) or 0
+end
+
+function resolveTemplate(t)
+	return {
+		sam = resolveCount(t.sam),
+		shorad = resolveCount(t.shorad),
+		aaa = resolveCount(t.aaa),
+		ground = resolveCount(t.ground),
+		armor = resolveCount(t.armor),
+		arty = resolveCount(t.arty),
+		total = resolveCount(t.total),
+	}
+end
+
+
+function resolveTemplateBlue(t)
+	return {
+		sam = resolveCount(t.sam),
+		ground = resolveCount(t.ground),
+		armor = resolveCount(t.armor),
+		total = resolveCount(t.total),
+	}
+end
+
+function getZoneSize(zoneObj)
+	if not zoneObj then return "none" end
+	return zoneObj.size or "none"
+end
+
+function classifyUpgradeName(name)
+	if not name then return "other" end
+	local n = name:lower()
+
+	local function hasAny(list)
+		for i = 1, #list do
+			if n:find(list[i], 1, true) then return true end
+		end
+		return false
+	end
+
+	if hasAny({ "aaa" }) then
+		return "aaa"
+	elseif hasAny({ "shorad", "pantsir", "tor", "sa-8", "sa 8", "sa-13", "sa 13", "sa-15", "sa 15", "sa-19", "sa 19", "dog ear" }) then
+		return "shorad"
+	elseif hasAny({ "sa-2", "sa 2", "sa-3", "sa 3", "sa-6", "sa 6", "sa-10", "sa 10", "sa-11", "sa 11" }) then
+		return "sam"
+	elseif hasAny({ "arty", "artillery", "mlrs", "grad", "smerch", "uragan", "bm-21" }) then
+		return "arty"
+	elseif hasAny({ "armour", "armor" }) then
+		return "armor"
+	elseif hasAny({ "enemy ground", "enemy task", "enemy forces" }) then
+		return "ground"
+	elseif hasAny({ "sam" }) then
+		return "sam"
+	end
+	return "other"
+end
+
+function classifyBlueUpgradeName(name)
+	if not name then return "other" end
+	local n = name:lower()
+	if n:find("infantry", 1, true) then
+		return "ground"
+	elseif n:find("armor", 1, true) then
+		return "armor"
+	elseif n:find("sam", 1, true) or n:find("pd", 1, true) then
+		return "sam"
+	end
+	return "other"
+end
+
+function isFixedName(name)
+	if not name then return false end
+	local n = name:lower()
+	return n:find("fixed", 1, true) ~= nil or n:find("(p)", 1, true) ~= nil
+end
+
+-- Upgrade entries can be either a string group/static name, or a table like:
+--   { n = "Group Name", p = true }  -- p=true means "pinned": never random-picked/replaced
+function getUpgradeEntryName(entry)
+	if type(entry) == "table" then
+		return entry.n or entry.name or entry[1]
+	end
+	return entry
+end
+
+function isPinnedUpgradeEntry(entry)
+	return type(entry) == "table" and entry.p == true
+end
+
+function hasGroupTemplate(name)
+	if not name then return false end
+	if _DATABASE and _DATABASE.Templates and _DATABASE.Templates.Groups and _DATABASE.Templates.Groups[name] then
+		return true
+	end
+	if Group and Group.getByName then
+		local gr = Group.getByName(name)
+		if gr then return true end
+	end
+	return false
+end
+
+function isStaticUpgrade(name)
+	if not name then return false end
+	return StaticObject and StaticObject.getByName and StaticObject.getByName(name) ~= nil
+end
+
+function isLongRangeSam(name)
+	if not name then return false end
+	local n = name:lower()
+	return n:find("sa-2", 1, true) or n:find("sa 2", 1, true)
+		or n:find("sa-10", 1, true) or n:find("sa 10", 1, true)
+		or n:find("sa-11", 1, true) or n:find("sa 11", 1, true)
+end
+
+function isExcludedBySize(name, zoneObj, zoneSize)
+	if not name or not zoneSize then return false end
+	local list = ZoneSizeExclusions[zoneSize]
+	if list then
+		local n = name:lower()
+		for i = 1, #list do
+			local pat = list[i]
+			if pat and n:find(pat, 1, true) then
+				return true
+			end
+		end
+	end
+	if zoneObj and zoneObj.noLongRangeSam and isLongRangeSam(name) then
+		return true
+	end
+	return false
+end
+
+function buildGlobalRedPool()
+	if RandomRedPool and #RandomRedPool > 0 then
+		return RandomRedPool
+	end
+	if type(upgrades) ~= "table" then return {} end
+	local pool = {}
+	local seen = {}
+	for key, def in pairs(upgrades) do
+		if type(def) == "table" then
+			local k = tostring(key):lower()
+			if not k:find("carrier", 1, true) and not k:find("hidden", 1, true) then
+				local red = def.red
+				if type(red) == "table" then
+					for _, entry in ipairs(red) do
+						local name = getUpgradeEntryName(entry)
+						if name and not isPinnedUpgradeEntry(entry) and not isFixedName(name) and not isStaticUpgrade(name) and not seen[name] and hasGroupTemplate(name) then
+							seen[name] = true
+							pool[#pool+1] = name
+						end
+					end
+				end
+			end
+		end
+	end
+	return pool
+end
+
+function getGlobalRedPool()
+	if not GlobalRedPool or #GlobalRedPool == 0 then
+		GlobalRedPool = buildGlobalRedPool()
+	end
+	return GlobalRedPool
+end
+
+GlobalRedPool = GlobalRedPool or buildGlobalRedPool()
+
+function buildGlobalBluePool()
+	if RandomBluePool and #RandomBluePool > 0 then
+		return RandomBluePool
+	end
+	if type(upgrades) ~= "table" then return {} end
+	local pool = {}
+	local seen = {}
+	for _, def in pairs(upgrades) do
+		if type(def) == "table" then
+			local blue = def.blue
+			if type(blue) == "table" then
+				for _, entry in ipairs(blue) do
+					local name = getUpgradeEntryName(entry)
+					if name and not isPinnedUpgradeEntry(entry) and name ~= "bluePATRIOT" and not isFixedName(name) and not isStaticUpgrade(name) and not seen[name] and hasGroupTemplate(name) then
+						seen[name] = true
+						pool[#pool+1] = name
+					end
+				end
+			end
+		end
+	end
+	return pool
+end
+
+function getGlobalBluePool()
+	if not GlobalBluePool or #GlobalBluePool == 0 then
+		GlobalBluePool = buildGlobalBluePool()
+	end
+	return GlobalBluePool
+end
+
+GlobalBluePool = GlobalBluePool or buildGlobalBluePool()
+
+function fillPoolsFrom(source, pools, zoneObj, zoneSize)
+	local poolSeen = {}
+	local count = 0
+	for _, entry in ipairs(source or {}) do
+		local name = getUpgradeEntryName(entry)
+		if name and not isPinnedUpgradeEntry(entry) and not isFixedName(name) and not isStaticUpgrade(name) and not isExcludedBySize(name, zoneObj, zoneSize) and hasGroupTemplate(name) then
+			if not poolSeen[name] then
+				poolSeen[name] = true
+				local cat = classifyUpgradeName(name)
+				pools[cat] = pools[cat] or {}
+				pools[cat][#pools[cat]+1] = name
+				count = count + 1
+			end
+		end
+	end
+	return count
+end
+
+function fillPoolsFromBlue(source, pools)
+	local poolSeen = {}
+	local count = 0
+	for _, entry in ipairs(source or {}) do
+		local name = getUpgradeEntryName(entry)
+		if name and not isPinnedUpgradeEntry(entry) and name ~= "bluePATRIOT" and not isFixedName(name) and not isStaticUpgrade(name) and hasGroupTemplate(name) then
+			if not poolSeen[name] then
+				poolSeen[name] = true
+				local cat = classifyBlueUpgradeName(name)
+				pools[cat] = pools[cat] or {}
+				pools[cat][#pools[cat]+1] = name
+				count = count + 1
+			end
+		end
+	end
+	return count
+end
+
+function pickFromPool(pool, count)
+	local picks = {}
+	for i = 1, count do
+		local n = #pool
+		if n == 0 then break end
+		local idx = fhRand(1, n)
+		picks[#picks+1] = pool[idx]
+		pool[idx] = pool[n]
+		pool[n] = nil
+	end
+	return picks
+end
+
+function buildRandomRedUpgrades(zoneObj)
+	if not (zoneObj and zoneObj.upgrades and zoneObj.upgrades.red) then return nil end
+	local zoneSize = getZoneSize(zoneObj)
+	local template = RandomUpgradeTemplates and RandomUpgradeTemplates[zoneSize]
+	if not template then return nil end
+	template = resolveTemplate(template)
+
+	local extraForced = {}
+	if zoneObj.extraUpgrade then
+		for _, grp in ipairs(zoneObj.extraUpgrade) do
+			if type(grp) == "table" then
+				local n = grp.name
+				if n and (grp.side == 1 or (grp.side == nil and zoneObj.side == 1)) then
+					extraForced[n] = true
+				end
+			end
+		end
+	end
+
+	local fixedList = {}
+	local staticList = {}
+	local fixedCounts = { sam = 0, shorad = 0, aaa = 0, ground = 0, armor = 0, arty = 0, other = 0 }
+	local fixedUnknown = 0
+	local totalFixed = 0
+	local pools = { sam = {}, shorad = {}, aaa = {}, ground = {}, armor = {}, arty = {}, other = {} }
+
+	for _, entry in ipairs(zoneObj.upgrades.red) do
+		local name = getUpgradeEntryName(entry)
+		if name then
+			if isStaticUpgrade(name) then
+				staticList[#staticList+1] = name
+			elseif isFixedName(name) or extraForced[name] or isPinnedUpgradeEntry(entry) then
+				fixedList[#fixedList+1] = name
+				totalFixed = totalFixed + 1
+				local cat = classifyUpgradeName(name)
+				if fixedCounts[cat] ~= nil then
+					fixedCounts[cat] = fixedCounts[cat] + 1
+				else
+					fixedUnknown = fixedUnknown + 1
+				end
+			end
+		end
+	end
+	if fixedUnknown > 0 then
+		totalFixed = totalFixed + fixedUnknown
+	end
+
+	local poolCount = 0
+	if RandomGroundGroups then
+		poolCount = fillPoolsFrom(getGlobalRedPool(), pools, zoneObj, zoneSize)
+	else
+		poolCount = fillPoolsFrom(zoneObj.upgrades.red, pools, zoneObj, zoneSize)
+		if poolCount == 0 then
+			pools = { sam = {}, shorad = {}, aaa = {}, ground = {}, armor = {}, arty = {}, other = {} }
+			poolCount = fillPoolsFrom(getGlobalRedPool(), pools, zoneObj, zoneSize)
+		end
+	end
+	if next(extraForced) ~= nil then
+		for _, cat in ipairs({"sam","shorad","aaa","ground","armor","arty","other"}) do
+			local list = pools[cat]
+			if list and #list > 0 then
+				local filtered = {}
+				for i = 1, #list do
+					local n = list[i]
+					if n and not extraForced[n] then
+						filtered[#filtered+1] = n
+					end
+				end
+				pools[cat] = filtered
+			end
+		end
+	end
+
+	local targetTotal = template.total
+	if not targetTotal or targetTotal <= 0 then
+		targetTotal = (template.sam or 0) + (template.shorad or 0) + (template.aaa or 0) + (template.ground or 0) + (template.armor or 0) + (template.arty or 0)
+	end
+	local remainingTotal = math.max(0, targetTotal - totalFixed)
+	local needed = {
+		sam = math.max(0, (template.sam or 0) - fixedCounts.sam),
+		shorad = math.max(0, (template.shorad or 0) - fixedCounts.shorad),
+		aaa = math.max(0, (template.aaa or 0) - fixedCounts.aaa),
+		ground = math.max(0, (template.ground or 0) - fixedCounts.ground),
+		armor = math.max(0, (template.armor or 0) - fixedCounts.armor),
+		arty = math.max(0, (template.arty or 0) - fixedCounts.arty),
+	}
+
+	local result = {}
+	for _, name in ipairs(staticList) do
+		result[#result+1] = name
+	end
+	for _, name in ipairs(fixedList) do
+		result[#result+1] = name
+	end
+
+	for _, cat in ipairs({"sam","shorad","aaa","ground","armor","arty"}) do
+		if remainingTotal <= 0 then break end
+		local want = math.min(needed[cat] or 0, remainingTotal)
+		if want > 0 then
+			local picks = pickFromPool(pools[cat] or {}, want)
+			for _, name in ipairs(picks) do
+				result[#result+1] = name
+			end
+			local got = #picks
+			needed[cat] = math.max(0, (needed[cat] or 0) - got)
+			remainingTotal = remainingTotal - got
+		end
+	end
+
+	if remainingTotal > 0 then
+		local anyPool = {}
+		local allowCat = {}
+		for _, cat in ipairs({"sam","shorad","aaa","ground","armor","arty"}) do
+			if (needed[cat] or 0) > 0 then
+				allowCat[cat] = true
+			end
+		end
+		for _, cat in ipairs({"sam","shorad","aaa","ground","armor","arty","other"}) do
+			if cat == "other" or allowCat[cat] then
+				for _, name in ipairs(pools[cat] or {}) do
+					anyPool[#anyPool+1] = name
+				end
+			end
+		end
+		local picks = pickFromPool(anyPool, remainingTotal)
+		for _, name in ipairs(picks) do
+			result[#result+1] = name
+		end
+	end
+
+	return result
+end
+
+function buildRandomBlueUpgrades(zoneObj)
+	if not (zoneObj and zoneObj.upgrades and zoneObj.upgrades.blue) then return nil end
+	local zoneSize = getZoneSize(zoneObj)
+	local template = RandomUpgradeTemplatesBlue and RandomUpgradeTemplatesBlue[zoneSize]
+	if not template then return nil end
+	template = resolveTemplateBlue(template)
+
+	local extraForced = {}
+	if zoneObj.extraUpgrade then
+		for _, grp in ipairs(zoneObj.extraUpgrade) do
+			if type(grp) == "table" then
+				local n = grp.name
+				if n and (grp.side == 2 or (grp.side == nil and zoneObj.side == 2)) then
+					extraForced[n] = true
+				end
+			elseif type(grp) == "string" and zoneObj.side == 2 then
+				extraForced[grp] = true
+			end
+		end
+	end
+
+	local fixedList = {}
+	local staticList = {}
+	local fixedCounts = { sam = 0, ground = 0, armor = 0, other = 0 }
+	local fixedUnknown = 0
+	local totalFixed = 0
+	local pools = { sam = {}, ground = {}, armor = {}, other = {} }
+
+	for _, entry in ipairs(zoneObj.upgrades.blue) do
+		local name = getUpgradeEntryName(entry)
+		if name then
+			if isStaticUpgrade(name) then
+				staticList[#staticList+1] = name
+			elseif isFixedName(name) or extraForced[name] or isPinnedUpgradeEntry(entry) then
+				fixedList[#fixedList+1] = name
+				totalFixed = totalFixed + 1
+				local cat = classifyBlueUpgradeName(name)
+				if fixedCounts[cat] ~= nil then
+					fixedCounts[cat] = fixedCounts[cat] + 1
+				else
+					fixedUnknown = fixedUnknown + 1
+				end
+			end
+		end
+	end
+	if fixedUnknown > 0 then
+		totalFixed = totalFixed + fixedUnknown
+	end
+
+	local poolCount = 0
+	if RandomBlueGroups then
+		poolCount = fillPoolsFromBlue(getGlobalBluePool(), pools)
+	else
+		poolCount = fillPoolsFromBlue(zoneObj.upgrades.blue, pools)
+		if poolCount == 0 then
+			pools = { sam = {}, ground = {}, armor = {}, other = {} }
+			poolCount = fillPoolsFromBlue(getGlobalBluePool(), pools)
+		end
+	end
+	if next(extraForced) ~= nil then
+		for _, cat in ipairs({"sam","ground","armor","other"}) do
+			local list = pools[cat]
+			if list and #list > 0 then
+				local filtered = {}
+				for i = 1, #list do
+					local n = list[i]
+					if n and not extraForced[n] then
+						filtered[#filtered+1] = n
+					end
+				end
+				pools[cat] = filtered
+			end
+		end
+	end
+
+	local targetTotal = template.total
+	if not targetTotal or targetTotal <= 0 then
+		targetTotal = (template.sam or 0) + (template.ground or 0) + (template.armor or 0)
+	end
+	local remainingTotal = math.max(0, targetTotal - totalFixed)
+	local needed = {
+		sam = math.max(0, (template.sam or 0) - fixedCounts.sam),
+		ground = math.max(0, (template.ground or 0) - fixedCounts.ground),
+		armor = math.max(0, (template.armor or 0) - fixedCounts.armor),
+	}
+
+	local result = {}
+	for _, name in ipairs(staticList) do
+		result[#result+1] = name
+	end
+	for _, name in ipairs(fixedList) do
+		result[#result+1] = name
+	end
+
+	for _, cat in ipairs({"sam","ground","armor"}) do
+		if remainingTotal <= 0 then break end
+		local want = math.min(needed[cat] or 0, remainingTotal)
+		if want > 0 then
+			local picks = pickFromPool(pools[cat] or {}, want)
+			for _, name in ipairs(picks) do
+				result[#result+1] = name
+			end
+			local got = #picks
+			needed[cat] = math.max(0, (needed[cat] or 0) - got)
+			remainingTotal = remainingTotal - got
+		end
+	end
+
+	if remainingTotal > 0 then
+		local anyPool = {}
+		local allowCat = {}
+		for _, cat in ipairs({"sam","ground","armor"}) do
+			if (needed[cat] or 0) > 0 then
+				allowCat[cat] = true
+			end
+		end
+		for _, cat in ipairs({"sam","ground","armor","other"}) do
+			if cat == "other" or allowCat[cat] then
+				for _, name in ipairs(pools[cat] or {}) do
+					anyPool[#anyPool+1] = name
+				end
+			end
+		end
+		local picks = pickFromPool(anyPool, remainingTotal)
+		for _, name in ipairs(picks) do
+			result[#result+1] = name
+		end
+	end
+
+	return result
+end
+
+function applyRandomRedUpgrades()
+	for _, z in pairs(zones or {}) do
+		if z and z.isHidden then
+		elseif z and z.zone and z.zone:lower():find("carrier") then
+		else
+			local list = buildRandomRedUpgrades(z)
+			if list and #list > 0 then
+				local base = {}
+				for i, v in ipairs(list) do base[i] = v end
+				z.randomUpgradesRed = base
+				z.upgrades.red = {}
+				for i, v in ipairs(base) do z.upgrades.red[i] = v end
+			end
+		end
+	end
+end
+
+function applyRandomBlueUpgrades()
+	for _, z in pairs(zones or {}) do
+		if z and z.isHidden then
+		elseif z and z.zone and z.zone:lower():find("carrier") then
+		else
+			local list = buildRandomBlueUpgrades(z)
+			if list and #list > 0 then
+				local base = {}
+				for i, v in ipairs(list) do base[i] = v end
+				z.randomUpgradesBlue = base
+				z.upgrades.blue = {}
+				for i, v in ipairs(base) do z.upgrades.blue[i] = v end
+			end
+		end
+	end
+end
+
+function pickReplacementUpgrade(zoneObj, missingName, upgradesList)
+	if not zoneObj or not missingName then return nil end
+	local used = {}
+	if upgradesList then
+		for _, entry in pairs(upgradesList) do
+			local n = getUpgradeEntryName(entry)
+			if n then used[n] = true end
+		end
+	end
+	used[missingName] = true
+
+	if zoneObj.side == 1 then
+		local zoneSize = getZoneSize(zoneObj)
+		local pools = { sam = {}, shorad = {}, aaa = {}, ground = {}, armor = {}, arty = {}, other = {} }
+		local source = (RandomGroundGroups and getGlobalRedPool()) or (zoneObj.upgrades and zoneObj.upgrades.red) or {}
+		fillPoolsFrom(source, pools, zoneObj, zoneSize)
+		local cat = classifyUpgradeName(missingName)
+
+		local function pickFrom(list)
+			local filtered = {}
+			for i = 1, #list do
+				local n = list[i]
+				if n and not used[n] then
+					filtered[#filtered + 1] = n
+				end
+			end
+			if #filtered == 0 then return nil end
+			return filtered[fhRand(1, #filtered)]
+		end
+
+		local choice = pickFrom(pools[cat] or {})
+		if not choice then
+			local any = {}
+			for _, c in ipairs({ "sam", "shorad", "aaa", "ground", "armor", "arty", "other" }) do
+				local list = pools[c]
+				if list then
+					for i = 1, #list do
+						local n = list[i]
+						if n and not used[n] then
+							any[#any + 1] = n
+						end
+					end
+				end
+			end
+			if #any > 0 then
+				choice = any[fhRand(1, #any)]
+			end
+		end
+		return choice
+	elseif zoneObj.side == 2 then
+		local pools = { sam = {}, ground = {}, armor = {}, other = {} }
+		local source = (RandomBlueGroups and getGlobalBluePool()) or (zoneObj.upgrades and zoneObj.upgrades.blue) or {}
+		fillPoolsFromBlue(source, pools)
+		local cat = classifyBlueUpgradeName(missingName)
+
+		local function pickFrom(list)
+			local filtered = {}
+			for i = 1, #list do
+				local n = list[i]
+				if n and not used[n] then
+					filtered[#filtered + 1] = n
+				end
+			end
+			if #filtered == 0 then return nil end
+			return filtered[fhRand(1, #filtered)]
+		end
+
+		local choice = pickFrom(pools[cat] or {})
+		if not choice then
+			local any = {}
+			for _, c in ipairs({ "sam", "ground", "armor", "other" }) do
+				local list = pools[c]
+				if list then
+					for i = 1, #list do
+						local n = list[i]
+						if n and not used[n] then
+							any[#any + 1] = n
+						end
+					end
+				end
+			end
+			if #any > 0 then
+				choice = any[fhRand(1, #any)]
+			end
+		end
+		return choice
+	end
+
+	return nil
+end
+
 
 
 	function ZoneCommander:addRestrictedPlayerGroup(groupinfo)
@@ -10499,6 +13194,14 @@ function BattleCommander:addWarehouseItemsAtZone(zoneObj, coalition, amountPerIt
         return false, "[Warehouse] No zone at this point."
     end
 
+    local rocketSet = nil
+    if WEAPONSLIST and WEAPONSLIST.GetItems then
+        rocketSet = {}
+        for _, itemName in ipairs(WEAPONSLIST.GetItems("AG_ROCKETS") or {}) do
+            if itemName then rocketSet[itemName] = true end
+        end
+    end
+
     local zoneName = zoneObj.zone
     local abName = zoneObj.airbaseName or zoneObj.baseName or zoneName
     if not abName or abName == "" then
@@ -10529,7 +13232,9 @@ function BattleCommander:addWarehouseItemsAtZone(zoneObj, coalition, amountPerIt
     for _, item in ipairs(items) do
         -- Always respect Coldwar restrictions
         if not (Era == "Coldwar" and WEAPONSLIST and WEAPONSLIST.IsRestricted and WEAPONSLIST.IsRestricted(item)) then
-            storage:AddItem(item, amount)
+            local addAmount = amount
+            if rocketSet and rocketSet[item] then addAmount = addAmount * 3 end
+            storage:AddItem(item, addAmount)
             added = added + 1
         end
     end
@@ -10555,6 +13260,72 @@ if WarehouseLogistics == true and AutoFillResources > 0 then
 		_autoRestockFriendlyAirbases()
 	end, {}, 900, 900)
 end
+
+local _resourceMapCache = nil
+local function _getWarehouseResourceMap()
+	if _resourceMapCache ~= nil then
+		return _resourceMapCache or nil
+	end
+	if Warehouse and Warehouse.getResourceMap then
+		_resourceMapCache = Warehouse.getResourceMap()
+	else
+		_resourceMapCache = false
+	end
+	return _resourceMapCache or nil
+end
+
+local function _prefillLogisticCenterFromResourceMap(airbaseName, fillAmount)
+    if WarehouseLogistics ~= true then return end
+    if not airbaseName then return end
+    local resMap = _getWarehouseResourceMap()
+    if not resMap then return end
+    local storage = STORAGE and STORAGE.FindByName and STORAGE:FindByName(airbaseName) or nil
+    if not storage then return end
+
+    local fill = tonumber(fillAmount) or 1000
+    if fill < 1 then fill = 1 end
+
+    -- Build known set from WEAPONSLIST.Items
+    local known = {}
+    for _, list in pairs(WEAPONSLIST.Items or {}) do
+        for _, name in ipairs(list) do
+            known[name] = true
+        end
+    end
+
+    -- Build mods set
+    local mods = {}
+    for _, name in ipairs(WEAPONSLIST_MODS_ITEMS or {}) do
+        mods[name] = true
+    end
+
+    local allowModFill = (Era == "Modern" and AllowMods == true)
+    local addedCount = 0
+
+    for itemName, ws in pairs(resMap) do
+        if type(ws) == "table" and ws[1] == 4 then
+            if not (restrictedWeaponSet and restrictedWeaponSet[itemName]) then
+                if not known[itemName] then
+                    -- If mods are not allowed (Coldwar or AllowMods false), skip mod items
+                    if allowModFill or not mods[itemName] then
+                        local amt = storage:GetItemAmount(itemName)
+                        if not amt or amt == 0 then
+                            storage:SetItem(itemName, fill)
+                            addedCount = addedCount + 1
+							--env.info(string.format("[Warehouse] Pre-filling %s with %d of %s based on resource map." ,tostring(airbaseName), fill, tostring(itemName)))
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if addedCount > 0 then
+        env.info(string.format("[Warehouse] Prefill %s: added %d item(s) at %d each", tostring(airbaseName), addedCount, fill))
+    end
+end
+
+
 
 -------------------------------- maxxa --------------------------------------------------------
 
@@ -10643,31 +13414,42 @@ function ZoneCommander:init()
 
 	if self.airbaseName and self.airbaseName ~= 'CVN-72' and self.airbaseName ~= 'CVN-73' then
 
-		timer.scheduleFunction(function()
+		--timer.scheduleFunction(function()
 			local ab = getDcsAirbaseByName(self.airbaseName)
 			if ab then
 				if ab:autoCaptureIsOn() then ab:autoCapture(false) end
+ 				if self.side == 2 and self.LogisticCenter and WarehouseLogistics == true then
+					_prefillLogisticCenterFromResourceMap(self.airbaseName, 1000)
+				end
+
 				if self.side == 0 or (not self.active and not self.wasBlue) then
+				  timer.scheduleFunction(function()
 					if RespawnStaticsForAirbase then
 						RespawnStaticsForAirbase(self.airbaseName, 0)						
 					end
+				  end, {}, timer.getTime() +1)	
 					ab:setCoalition(1)
 					if WarehouseLogistics == true and not self.LogisticCenter then
 						WEAPONSLIST.ClearWeaponsAtAirbase(self.airbaseName)
 					end					
 				end
 				if self.side == 1 then
+				  timer.scheduleFunction(function()
 					if RespawnStaticsForAirbase then
 						RespawnStaticsForAirbase(self.airbaseName, 1)
 						if self.LogisticCenter then self.LogisticCenter = false
 						end
 					end
+				  end, {}, timer.getTime() +1)	
 					ab:setCoalition(1)
 				end
-				if self.wasBlue then
+				if self.side == 2 then
+					timer.scheduleFunction(function()
 					if RespawnStaticsForAirbase then
+
 						RespawnStaticsForAirbase(self.airbaseName, 2)
 					end
+				  end, {}, timer.getTime() +1)
 						ab:setCoalition(2)
 					if WarehouseLogistics == true and not self.LogisticCenter then
 						WEAPONSLIST.ClearWeaponsAtAirbase(self.airbaseName)
@@ -10676,7 +13458,7 @@ function ZoneCommander:init()
 			else
 				env.info("Airbase " .. self.airbaseName .. " not found")
 			end
-		end, {}, timer.getTime() +1)
+		--end, {}, timer.getTime() +1)
 	end
 
 	local upgrades = self:getFilteredUpgrades()
@@ -10694,13 +13476,19 @@ function ZoneCommander:init()
 				local st = StaticObject.getByName(v)
 				local hasTpl = _DATABASE and _DATABASE.Templates and _DATABASE.Templates.Groups and _DATABASE.Templates.Groups[v]
 				if not gr and not st and not hasTpl then
-					local msg = "ZoneCommander INIT: upgrade group "..tostring(v).." missing for zone ["..tostring(self.zone).."] index ["..tostring(i).."]"
+					MISSING_GROUPS[v] = true
+					local msg = "ZoneCommander INIT: missing upgrade group "..tostring(v).." for zone ["..tostring(self.zone).."] index ["..tostring(i).."] (will replace if possible)"
 					env.info(msg)
-					trigger.action.outText(msg, 15)
+					trigger.action.outText(msg, 10)
 				end
 			end
 		end
 		self._validatedUpgrades = true
+	end
+
+	local forceRefresh = self._refreshRandomUpgrades == true
+	if forceRefresh then
+		self.remainingUnits = nil
 	end
 
 	if self.remainingUnits then
@@ -10719,7 +13507,8 @@ function ZoneCommander:init()
 							local gr = zone:spawnGroup(upg, false)
 							if gr then
 								self.built[i] = gr.name
-							else
+								else
+								MISSING_GROUPS[upg] = true
 								trigger.action.outText('Upgrade group '..tostring(upg)..' missing, skipped.',10)
 								env.info('zoneCommander ERROR: spawnGroup returned nil for zone ['..self.zone..'] extra upgrade index '..tostring(i)..' name='..(upg or 'nil'))
 							end							
@@ -10729,7 +13518,7 @@ function ZoneCommander:init()
 			end
 		end
 	else
-		if Utils.getTableSize(self.built) < self.level then
+		if forceRefresh or Utils.getTableSize(self.built) < self.level then
 			for i, v in pairs(upgrades) do
 				if not self.built[i] and i <= self.level then
 					local staticObj = StaticObject.getByName(v)
@@ -10741,8 +13530,41 @@ function ZoneCommander:init()
 						if not tostring(v):find("dismounted") then
 							local gr = zone:spawnGroup(v, false)
 							if not gr then
-								trigger.action.outText("Failed to spawn group for upgrade: " .. (v or "nil"), 10)
-								env.info("zoneCommander DEBUG: spawnGroup returned nil for zone ["..self.zone.."] upgrade index "..tostring(i).." name="..(v or "nil"))
+								MISSING_GROUPS = MISSING_GROUPS or {}
+								MISSING_GROUPS[v] = true
+								local replacement = pickReplacementUpgrade(self, v, upgrades)
+								if replacement then
+									upgrades[i] = replacement
+									if self.side == 1 and self.upgrades and self.upgrades.red then
+										local cur = self.upgrades.red[i]
+										if getUpgradeEntryName(cur) == v then
+											-- If the original entry was pinned, replacement implicitly unpins it.
+											self.upgrades.red[i] = replacement
+										end
+									elseif self.side == 2 and self.upgrades and self.upgrades.blue then
+										local cur = self.upgrades.blue[i]
+										if getUpgradeEntryName(cur) == v then
+											self.upgrades.blue[i] = replacement
+										end
+									end
+									if self.randomUpgradesRed and self.randomUpgradesRed[i] == v then
+										self.randomUpgradesRed[i] = replacement
+									end
+									if self.randomUpgradesBlue and self.randomUpgradesBlue[i] == v then
+										self.randomUpgradesBlue[i] = replacement
+									end
+									local gr2 = zone:spawnGroup(replacement, false)
+									if gr2 then
+										self.built[i] = gr2.name
+									else
+										MISSING_GROUPS[replacement] = true
+										trigger.action.outText("Failed to spawn replacement group: " .. (replacement or "nil"), 10)
+										env.info("zoneCommander DEBUG: spawnGroup returned nil for zone ["..self.zone.."] replacement index "..tostring(i).." name="..(replacement or "nil"))
+									end
+								else
+									trigger.action.outText("Failed to spawn group for upgrade: " .. (v or "nil"), 10)
+									env.info("zoneCommander DEBUG: spawnGroup returned nil for zone ["..self.zone.."] upgrade index "..tostring(i).." name="..(v or "nil"))
+								end
 							else
 								self.built[i] = gr.name
 							end
@@ -10751,6 +13573,9 @@ function ZoneCommander:init()
 				end
 			end
 		end
+	end
+	if forceRefresh then
+		self._refreshRandomUpgrades = nil
 	end
 	
 
@@ -10761,7 +13586,8 @@ function ZoneCommander:init()
 		else
 			if self.upgrades.red then
 				for i, v in pairs(self.upgrades.red) do
-					allUpgrades[v] = true
+					local name = getUpgradeEntryName(v)
+					if name then allUpgrades[name] = true end
 				end
 			end
 		end
@@ -10916,9 +13742,18 @@ end
 	end
 	
 	function ZoneCommander:update()
-		if self.suspended then return end
 		if not self.active then return end
-		self:checkCriticalObjects()
+		local allowSpawnWhileSuspended = self._suspendAllowSpawn == true
+		if self.suspended then
+			if allowSpawnWhileSuspended then
+				for i, v in ipairs(self.groups) do
+					v:update()
+				end
+			end
+			return
+		end
+		if not self.suspended then
+			self:checkCriticalObjects()
 
 			local toRemove = {}
 			local marked   = {}
@@ -11016,7 +13851,7 @@ end
 						if RespawnStaticsForAirbase then
 						RespawnStaticsForAirbase(self.airbaseName, coalition.side.NEUTRAL)
 						end
-						ab:setCoalition(1)
+						ab:setCoalition(0)
 						if WarehouseLogistics == true and not self.LogisticCenter then
 							WEAPONSLIST.ClearWeaponsAtAirbase(self.airbaseName)
 						end
@@ -11078,55 +13913,59 @@ end
 				addCTLDZonesForBlueControlled(self.zone)
 			end
 			if SpawnFriendlyAssets then
-				SCHEDULER:New(nil,SpawnFriendlyAssets,{},2,0)
+				SCHEDULER:New(nil,SpawnFriendlyAssets,{},2)
 			end
 
-			SCHEDULER:New(nil,bc:buildCapSpawnBuckets(),{},5,0)
+			SCHEDULER:New(nil, function() bc:buildCapSpawnBuckets() end, {}, 5)
 
 
 			bc:_hasActiveAttackOrPatrolOnZone()
 			self.battleCommander:_rebalanceRedDifficulty()
 		end
 
+		end
+
 		for i, v in ipairs(self.groups) do
 			v:update()
 		end
 
-		if self.crates then
-			for i, v in ipairs(self.crates) do
-				local crate = StaticObject.getByName(v)
-				if crate and Utils.isCrateSettledInZone(crate, self.zone) then
-					if self.side == 0 then
-						self:capture(crate:getCoalition())
-						if self.battleCommander.playerRewardsOn then
-							self.battleCommander:addFunds(self.side, self.battleCommander.rewards.crate)
-							trigger.action.outTextForCoalition(self.side, 'Capture +' .. self.battleCommander.rewards.crate .. ' credits', 5)
-						end
-					elseif self.side == crate:getCoalition() then
-						if self.battleCommander.playerRewardsOn then
-							if self:canRecieveSupply() then
+		if not self.suspended then
+			if self.crates then
+				for i, v in ipairs(self.crates) do
+					local crate = StaticObject.getByName(v)
+					if crate and Utils.isCrateSettledInZone(crate, self.zone) then
+						if self.side == 0 then
+							self:capture(crate:getCoalition())
+							if self.battleCommander.playerRewardsOn then
 								self.battleCommander:addFunds(self.side, self.battleCommander.rewards.crate)
-								trigger.action.outTextForCoalition(self.side, 'Resupply +' .. self.battleCommander.rewards.crate .. ' credits', 5)
-							else
-								local reward = self.battleCommander.rewards.crate * 0.25
-								self.battleCommander:addFunds(self.side, reward)
-								trigger.action.outTextForCoalition(self.side, 'Resupply +' .. reward .. ' credits (-75% due to no demand)', 5)
+								trigger.action.outTextForCoalition(self.side, 'Capture +' .. self.battleCommander.rewards.crate .. ' credits', 5)
 							end
+						elseif self.side == crate:getCoalition() then
+							if self.battleCommander.playerRewardsOn then
+								if self:canRecieveSupply() then
+									self.battleCommander:addFunds(self.side, self.battleCommander.rewards.crate)
+									trigger.action.outTextForCoalition(self.side, 'Resupply +' .. self.battleCommander.rewards.crate .. ' credits', 5)
+								else
+									local reward = self.battleCommander.rewards.crate * 0.25
+									self.battleCommander:addFunds(self.side, reward)
+									trigger.action.outTextForCoalition(self.side, 'Resupply +' .. reward .. ' credits (-75% due to no demand)', 5)
+								end
+							end
+							self:upgrade()
 						end
-						self:upgrade()
-					end
 
-					crate:destroy()
+						crate:destroy()
+					end
 				end
 			end
-		end
 
-		for i, v in ipairs(self.restrictedGroups) do
-			trigger.action.setUserFlag(v.name, v.side ~= self.side)
-		end
+			for i, v in ipairs(self.restrictedGroups) do
+				trigger.action.setUserFlag(v.name, v.side ~= self.side)
+			end
 
-		if self.income and self.side ~= 0 and self.active then
-			self.battleCommander:addFunds(self.side, self.income)
+			if self.income and self.side ~= 0 and self.active then
+				self.battleCommander:addFunds(self.side, self.income)
+			end
 		end
 	end
 
@@ -11228,6 +14067,7 @@ SCHEDULER:New(nil,function() for i,v in pairs(bc.zones or {}) do v:validateTarge
 function ZoneCommander:capture(newside,silent)
     if self.active and self.side == 0 and newside ~= 0 then
         self.side = newside
+        self:_syncUpgradesUsed()
 		self.battleCommander:buildZoneStatusMenuForGroup()
         local sidename = ''
         local color = {0.7,0.7,0.7,0.3}
@@ -11280,6 +14120,9 @@ function ZoneCommander:capture(newside,silent)
 		if checkAndDisableFriendlyZones then
 			checkAndDisableFriendlyZones()
 		end
+
+		bc:showEmergencyNeutralZoneMenu(2,'Select Zone for Emergency capture')
+
 		if not silent then
 			if GlobalSettings.messages.captured and self.active then 
             	trigger.action.outText(self.zone .. ' captured by ' .. sidename, 20)
@@ -11594,6 +14437,19 @@ end
 function GroupCommander:_enterHangar(isInitial)
     self.state = 'inhangar'
     self:_applyHangarDelay(isInitial)
+end
+
+function GroupCommander:forceSpawnNow(targetZoneName)
+	if targetZoneName then
+		self.targetzone = targetZoneName
+	end
+	self.forceSpawn = true
+	self.diceRolled = false
+	self.Spawned = false
+	self.state = 'preparing'
+	self.lastStateTime = timer.getAbsTime() - 3600
+	self:update()
+	self.forceSpawn = nil
 end
 
 function GroupCommander:init()
@@ -11929,7 +14785,7 @@ function GroupCommander:_assignHeloLogisticsRoute(groupName, targetZoneName, own
 
 	local kmh = 289
 	local spd = kmh / 3.6
-	local alt = 500
+	local alt = 1000
 
 	-- Use MOOSE route engine end-to-end (this also gives the 1s delayed SetTask that Route(...,1) uses).
 	local gmoose = GROUP:FindByName(groupName)
@@ -12245,20 +15101,41 @@ function serverHasPlayers()
 end
 
 playerListBlueCas = {}
+playerListRedCas = {}
 
-CasCountExtraTypes = {
-	["AH-64D_BLK_II"] = true,
-	["UH-60L_DAP"] = true,
-	["Mi-24P"] = true,
-	["Ka-50_3"] = true,
-	["Ka-50"] = true,
-	["OH58D"] = true,
+CapCountIgnoreTypes = CapCountIgnoreTypes or {
 	["A-10C_2"] = true,
+	["Hercules"] = true,
+	["A-10A"] = true,
+	["AV8BNA"] = true,
+	["AJS37"] = true,
+	["C-130J-30"] = true,
 }
+
+BlueCasCountIgnoreTypes = BlueCasCountIgnoreTypes or {
+	["Hercules"] = true,
+	["C-130J-30"] = true,
+	["CH-47Fbl1"] = true,
+}
+
+RedCasCountIgnoreTypes = RedCasCountIgnoreTypes or {
+	["Hercules"] = true,
+	["C-130J-30"] = true,
+	["CH-47Fbl1"] = true,
+}
+
 
 function getBlueCasPlayersCount()
     local cnt = 0
     for _ in pairs(playerListBlueCas) do
+        cnt = cnt + 1
+    end
+    return cnt
+end
+
+function getRedCasPlayersCount()
+    local cnt = 0
+    for _ in pairs(playerListRedCas) do
         cnt = cnt + 1
     end
     return cnt
@@ -12291,21 +15168,24 @@ function refreshPlayers()
     local b = coalition.getPlayers(coalition.side.BLUE)
     local currentBlue = {}
     local currentBlueCas = {}
+    local currentRedCas = {}
     local currentAll = {}
     for _, unit in ipairs(b) do
         local nm = unit:getPlayerName()
         if nm then
             currentAll[nm] = true
-            local desc = unit:getDesc()
             local unitType = unit:getTypeName()
-            if desc and desc.category == Unit.Category.AIRPLANE then
-                if unitType ~= "A-10C_2" and unitType ~= "Hercules" and unitType ~= "A-10A" and unitType ~= "AV8BNA"
-				and unitType ~= "AJS37" and unitType ~= "C-130J-30" then
-                    currentBlue[nm] = true
-                    currentBlueCas[nm] = true
-                end
-            elseif CasCountExtraTypes[unitType] then
+            local desc = unit:getDesc()
+            local isAirplane = desc and desc.category == Unit.Category.AIRPLANE
+			local isHelicopter = desc and desc.category == Unit.Category.HELICOPTER
+            if isAirplane and not CapCountIgnoreTypes[unitType] then
+                currentBlue[nm] = true
+            end
+            if (isAirplane or isHelicopter) and not BlueCasCountIgnoreTypes[unitType] then
                 currentBlueCas[nm] = true
+            end
+            if (isAirplane or isHelicopter) and not RedCasCountIgnoreTypes[unitType] then
+                currentRedCas[nm] = true
             end
         end
     end
@@ -12325,6 +15205,14 @@ function refreshPlayers()
     for newName in pairs(currentBlueCas) do
         playerListBlueCas[newName] = true
     end
+    for storedName in pairs(playerListRedCas) do
+        if not currentRedCas[storedName] then
+            playerListRedCas[storedName] = nil
+        end
+    end
+    for newName in pairs(currentRedCas) do
+        playerListRedCas[newName] = true
+    end
 
     local r = coalition.getPlayers(coalition.side.RED)
     local currentRed = {}
@@ -12332,9 +15220,10 @@ function refreshPlayers()
         local nm = unit:getPlayerName()
         if nm then
             currentAll[nm] = true
+            local unitType = unit:getTypeName()
             local desc = unit:getDesc()
             if desc and desc.category == Unit.Category.AIRPLANE then
-                if unit:getTypeName() ~= "A-10C_2" and unit:getTypeName() ~= "Hercules" and unit:getTypeName() ~= "A-10A" and unit:getTypeName() ~= "AV8BNA" and unit:getTypeName() ~= "C-130J-30" then
+                if not BlueCasCountIgnoreTypes[unitType] then
                     currentRed[nm] = true
                 end
             end
@@ -12366,6 +15255,39 @@ function refreshPlayers()
     local newBlue = getBluePlayersCount()
     local newBlueCas = getBlueCasPlayersCount()
     local newAny = getAnyPlayersCount()
+
+	if newBlue >= 3 and (bc:getActiveCAPCount(1, 'patrol') + bc:getActiveCAPCount(1, 'attack')) == 0 then
+		local redPreparing = false
+		for _,gc in pairs(CapRef) do
+			if gc.side == 1 and (gc.mission == 'patrol' or gc.mission == 'attack') and gc.state == 'preparing' then
+				redPreparing = true
+				break
+			end
+		end
+		if not redPreparing then
+			local bestMission, bestTarget, bestDist, bestMeta
+			local zoneDistances, capMeta = getClosestCapZonesToPlayers('patrol', 1, nil)
+			local first = zoneDistances[1]
+			if first then bestMission = 'patrol'; bestTarget = first.zone; bestDist = first.distance; bestMeta = capMeta end
+			local zoneDistances2, capMeta2 = getClosestCapZonesToPlayers('attack', 1, nil)
+			local first2 = zoneDistances2[1]
+			if first2 and (not bestDist or first2.distance < bestDist) then bestMission = 'attack'; bestTarget = first2.zone; bestDist = first2.distance; bestMeta = capMeta2 end
+			if bestTarget then
+				local ctx = bestMeta and bestMeta.targets and bestMeta.targets[bestTarget]
+				if ctx and ctx.candidates and ctx.candidates[1] then
+					local rec = ctx.candidates[1]
+					local gc = CapRef[rec.name]
+					if gc and (gc.state == 'inhangar' or gc.state == 'dead') then
+						local respawnTimers = GlobalSettings.respawnTimers[1][bestMission]
+						local spawnDelayFactor = gc.spawnDelayFactor or 1
+						gc.state = 'inhangar'
+						gc.lastStateTime = timer.getAbsTime() - (respawnTimers.hangar * spawnDelayFactor) - 1
+					end
+				end
+			end
+		end
+	end
+
     if newBlue ~= oldBlue or newBlueCas ~= oldBlueCas or newAny ~= oldAny then
         CapLiveMeta = CapLiveMeta or { [1]={ patrol=nil, attack=nil }, [2]={ patrol=nil, attack=nil } }
         for s=1,2 do
@@ -12386,100 +15308,251 @@ end
 
 SCHEDULER:New(nil,refreshPlayers,{},10,60)
 
-function getRedStrikeLimit(numPlayers)
-	numPlayers = numPlayers or getBluePlayersCount()
-	if numPlayers == 0 then
-		return 1
-	elseif numPlayers == 1 then
-		return 1
-	elseif numPlayers == 2 then
-		return 2
-	elseif numPlayers == 3 then
-		return 2
-	elseif numPlayers == 4 then
-		return 3
-	else
-		return 4
+local function _limitFromStages(numPlayers, stages)
+	if stages == nil or #stages == 0 then return nil end
+	numPlayers = tonumber(numPlayers) or 0
+	for i=1,#stages do
+		local st = stages[i]
+		if st ~= nil and numPlayers <= (st.player or 999999) then
+			return tonumber(st.amount) or 0
+		end
 	end
+	local last = stages[#stages]
+	return tonumber(last and last.amount) or 0
 end
 
 
 function getCapLimit(numPlayers)
 	numPlayers = numPlayers or getBluePlayersCount()
-    if numPlayers == 0 then
-        return 1
-    elseif numPlayers == 1 then
-        return 2
-	elseif numPlayers == 2 then
-        return 3
-    elseif numPlayers == 3 then
-        return 4
-	elseif numPlayers == 4 then
-        return 4
-	elseif numPlayers == 5 then
-        return 5
-	elseif numPlayers == 6 then
-        return 5
-	elseif numPlayers == 7 then
-        return 5
-	elseif numPlayers == 8 then
-        return 5
-	elseif numPlayers == 9 then
-        return 5
-	elseif numPlayers == 10 then
-        return 6
+	local diff = string.lower(tostring(CapDifficulty or 'medium'))
+	local stagesByDiff = CapLimitStages
+	local stages = stagesByDiff and (stagesByDiff[diff] or stagesByDiff.medium or stagesByDiff.easy or stagesByDiff.hard)
+	if stages then
+		local v = _limitFromStages(numPlayers, stages)
+		if v ~= nil then return v end
+	end
+	if diff == 'easy' then
+		if numPlayers == 0 then
+			return 0
+		elseif numPlayers == 1 then
+			return 1
+		elseif numPlayers == 2 then
+			return 2
+		elseif numPlayers == 3 then
+			return 3
+		elseif numPlayers == 4 then
+			return 3
+		elseif numPlayers == 5 then
+			return 4
+		elseif numPlayers == 6 then
+			return 4
+		elseif numPlayers == 7 then
+			return 4
+		elseif numPlayers == 8 then
+			return 4
+		elseif numPlayers == 9 then
+			return 4
+		elseif numPlayers == 10 then
+			return 5
+		elseif numPlayers == 11 then
+			return 6
+		else
+			return 6
+		end
+	elseif diff == 'hard' then
+		if numPlayers == 0 then
+			return 2
+		elseif numPlayers == 1 then
+			return 3
+		elseif numPlayers == 2 then
+			return 4
+		elseif numPlayers == 3 then
+			return 5
+		elseif numPlayers == 4 then
+			return 5
+		elseif numPlayers == 5 then
+			return 6
+		elseif numPlayers == 6 then
+			return 6
+		elseif numPlayers == 7 then
+			return 6
+		elseif numPlayers == 8 then
+			return 6
+		elseif numPlayers == 9 then
+			return 6
+		elseif numPlayers == 10 then
+			return 7
+		elseif numPlayers == 11 then
+			return 8
+		else
+			return 8
+		end
+	else
+		if numPlayers == 0 then
+			return 1
+		elseif numPlayers == 1 then
+			return 2
+		elseif numPlayers == 2 then
+			return 3
+		elseif numPlayers == 3 then
+			return 4
+		elseif numPlayers == 4 then
+			return 4
+		elseif numPlayers == 5 then
+			return 5
+		elseif numPlayers == 6 then
+			return 5
+		elseif numPlayers == 7 then
+			return 5
+		elseif numPlayers == 8 then
+			return 5
+		elseif numPlayers == 9 then
+			return 5
+		elseif numPlayers == 10 then
+			return 6
+		elseif numPlayers == 11 then
+			return 7
+		else
+			return 7
+		end
+	end
+end
+
+function getRedCasLimit(numPlayers)
+	numPlayers = numPlayers or getRedCasPlayersCount()
+	local diff = string.lower(tostring(CasSeadDifficulty or 'medium'))
+	local stagesByDiff = RedCasLimitStages
+	local stages = stagesByDiff and (stagesByDiff[diff] or stagesByDiff.medium or stagesByDiff.easy or stagesByDiff.hard)
+	if stages then
+		local v = _limitFromStages(numPlayers, stages)
+		if v ~= nil then return v end
+	end
+	if diff == 'easy' then
+		if numPlayers == 0 then
+			return 0
+		elseif numPlayers <= 2 then
+			return 1
+		elseif numPlayers <= 4 then
+			return 2
+		else
+			return 3
+		end
+	elseif diff == 'hard' then
+		if numPlayers == 0 then
+			return 1
+		elseif numPlayers <= 2 then
+			return 2
+		elseif numPlayers == 3 then
+			return 3
+		elseif numPlayers <= 9 then
+			return 4
+		else
+			return 5
+		end
+	else
+		if numPlayers <= 1 then
+			return 1
+		elseif numPlayers <= 3 then
+			return 2
+		elseif numPlayers == 4 then
+			return 3
+		else
+			return 4
+		end
+	end
+end
+
+function getBlueCapLimit(numPlayers)
+    numPlayers = numPlayers or getBluePlayersCount()
+	local diff = string.lower(tostring(FriendlyCapSupport or 'medium'))
+	local stagesByDiff = BlueCapSupportStages
+	local stages = stagesByDiff and (stagesByDiff[diff] or stagesByDiff.medium or stagesByDiff.easy or stagesByDiff.hard)
+	if stages then
+		local v = _limitFromStages(numPlayers, stages)
+		if v ~= nil then return v end
+	end
+    if diff == 'easy' then
+        if numPlayers <= 0 then
+            return 2
+        elseif numPlayers == 1 then
+            return 2
+        else
+            return 1
+        end
+    elseif diff == 'hard' then
+        return 0
     else
-        return 7
+        if numPlayers <= 0 then
+            return 1
+        elseif numPlayers == 1 then
+            return 1
+        else
+            return 0
+        end
     end
 end
 
-function getRedCapBoost(numPlayers)
-	numPlayers = numPlayers or getBluePlayersCount()
-	if numPlayers < 3 then
-		return 0
+function getBlueCasLimit(numPlayers)
+    numPlayers = numPlayers or getBlueCasPlayersCount()
+	local diff = string.lower(tostring(FriendlyCasSupport or 'medium'))
+	local stagesByDiff = BlueCasSupportStages
+	local stages = stagesByDiff and (stagesByDiff[diff] or stagesByDiff.medium or stagesByDiff.easy or stagesByDiff.hard)
+	if stages then
+		local v = _limitFromStages(numPlayers, stages)
+		if v ~= nil then return v end
 	end
-	local totalRedCap = bc:getActiveCAPCount(1, 'patrol') + bc:getActiveCAPCount(1, 'attack')
-	if totalRedCap > 0 then
-		return 0
-	end
-	local n = math.floor(numPlayers / 3)
-	if n < 1 then n = 1 end
-	return n
+    if diff == 'easy' then
+        if numPlayers <= 0 then
+            return 2
+        elseif numPlayers == 1 then
+            return 2
+        else
+            return 1
+        end
+    elseif diff == 'hard' then
+        return 0
+    else
+        if numPlayers <= 0 then
+            return 1
+        elseif numPlayers == 1 then
+            return 1
+        else
+            return 0
+        end
+    end
 end
 
 function getBlueSeadLimit(numPlayers)
-  numPlayers = numPlayers or getBluePlayersCount()
-  if numPlayers <= 0 then
-    return 1
-  elseif numPlayers == 1 then
-    return 1
-  else
-    return 0
-  end
+    numPlayers = numPlayers or getBluePlayersCount()
+	local diff = string.lower(tostring(FriendlySeadSupport or 'medium'))
+	local stagesByDiff = BlueSeadSupportStages
+	local stages = stagesByDiff and (stagesByDiff[diff] or stagesByDiff.medium or stagesByDiff.easy or stagesByDiff.hard)
+	if stages then
+		local v = _limitFromStages(numPlayers, stages)
+		if v ~= nil then return v end
+	end
+    if diff == 'easy' then
+        if numPlayers <= 0 then
+            return 2
+        elseif numPlayers == 1 then
+            return 2
+        else
+            return 1
+        end
+    elseif diff == 'hard' then
+        return 0
+    else
+        if numPlayers <= 0 then
+            return 1
+        elseif numPlayers == 1 then
+            return 1
+        else
+            return 0
+        end
+    end
 end
 
-function getBlueCasLimit(numPlayers)
-  numPlayers = numPlayers or getBlueCasPlayersCount()
-  if numPlayers <= 0 then
-    return 1
-  elseif numPlayers == 1 then
-    return 1
-  else
-    return 0
-  end
-end
 
-
-function getBlueCapLimit(numPlayers)
-  numPlayers = numPlayers or getBluePlayersCount()
-  if numPlayers <= 0 then
-    return 1
-  elseif numPlayers == 1 then
-    return 1
-  else
-    return 0
-  end
-end
 
 function BattleCommander:buildNonCapSpawnBuckets()
 	self._activeSupplyCount = { [1]={}, [2]={} }
@@ -12499,6 +15572,73 @@ function BattleCommander:buildNonCapSpawnBuckets()
 				gc._nonCapStrikeUnitCategory=nil
 				self:_syncNonCapSpawnBucketsForGroup(gc)
 			end
+		end
+	end
+end
+
+function BattleCommander:buildCapActiveBuckets()
+	self._activeCapCount = {
+		[1] = { _all = 0, patrol = 0, attack = 0 },
+		[2] = { _all = 0, patrol = 0, attack = 0 }
+	}
+	self._capBucketsBuilt = true
+	for _,zc in ipairs(self.zones or {}) do
+		for _,gc in ipairs(zc.groups or {}) do
+			if gc then
+				gc._capActiveSide = nil
+				gc._capActiveMission = nil
+				self:_syncCapSpawnBucketsForGroup(gc)
+			end
+		end
+	end
+end
+
+function BattleCommander:_capDelta(side, missionType, delta)
+	if side ~= 1 and side ~= 2 then return end
+	local bySide = self._activeCapCount and self._activeCapCount[side]
+	if not bySide then
+		bySide = { _all = 0, patrol = 0, attack = 0 }
+		self._activeCapCount = self._activeCapCount or {}
+		self._activeCapCount[side] = bySide
+	end
+	local total = (bySide._all or 0) + delta
+	if total < 0 then total = 0 end
+	bySide._all = total
+	if missionType then
+		local n = (bySide[missionType] or 0) + delta
+		if n < 0 then n = 0 end
+		bySide[missionType] = n
+	end
+end
+
+function BattleCommander:_syncCapSpawnBucketsForGroup(gc)
+	if not self._capBucketsBuilt then return end
+
+	local st = gc.state
+	local isCap = gc.MissionType == 'CAP'
+	local trackMission = (gc.mission == 'patrol' or gc.mission == 'attack') and gc.mission or nil
+	local capActive = isCap and (st == 'takeoff' or st == 'inair' or gc.Spawned)
+
+	if capActive then
+		local side = gc.side
+		local missionType = trackMission
+		if gc._capActiveSide then
+			if gc._capActiveSide ~= side or gc._capActiveMission ~= missionType then
+				self:_capDelta(gc._capActiveSide, gc._capActiveMission, -1)
+				self:_capDelta(side, missionType, 1)
+				gc._capActiveSide = side
+				gc._capActiveMission = missionType
+			end
+		else
+			self:_capDelta(side, missionType, 1)
+			gc._capActiveSide = side
+			gc._capActiveMission = missionType
+		end
+	else
+		if gc._capActiveSide then
+			self:_capDelta(gc._capActiveSide, gc._capActiveMission, -1)
+			gc._capActiveSide = nil
+			gc._capActiveMission = nil
 		end
 	end
 end
@@ -12700,6 +15840,17 @@ function BattleCommander:getActiveStrikeCount(side, missionType, missionRole, un
 end
 
 function BattleCommander:getActiveCAPCount(side, missionType)
+	if not self._capBucketsBuilt then
+		self:buildCapActiveBuckets()
+	end
+	if self._capBucketsBuilt then
+		local bySide = self._activeCapCount and self._activeCapCount[side]
+		if bySide then
+			if missionType then return bySide[missionType] or 0 end
+			return bySide._all or 0
+		end
+	end
+
     local count = 0
     for _, zoneCom in ipairs(self.zones) do
         for _, groupCom in ipairs(zoneCom.groups) do
@@ -12728,8 +15879,8 @@ RUNWAY_ZONE_COOLDOWN = {}
 runwayCooldown = 0
 runwayCompleted = false
 function generateRunwayStrikeMission()
-  if runwayMission or runwayTarget then return end
-  if timer.getTime() < runwayCooldown then return end
+  if runwayMission or runwayTarget then return true end
+  if timer.getTime() < runwayCooldown then return true end
 local cand, capCand = {}, {}
 	for _, z in ipairs(bc.zones) do
 		if z.side == 1 and z.active and not z.suspended and z.airbaseName and ZONE_CONNECTED_TO_BLUE[z.zone]
@@ -12834,8 +15985,8 @@ local cand, capCand = {}, {}
       --env.info(string.format("RUNWAY-DBG: option %d  %s  dist=%.0f  score=%d",i,e.zone.zone,e.dist,e.score))
     end
   
-  if #cand==0 then return end
-  if not cand[1] then return end
+  if #cand==0 then return false end
+  if not cand[1] then return false end
   local ab=cand[1].airbase
   local hitZones={}
   runwayNames={}
@@ -12859,7 +16010,7 @@ local cand, capCand = {}, {}
       end
     end
   end
-  if #hitZones==0 then return end
+  if #hitZones==0 then return false end
   hits,need=0,#hitZones
   runwayTarget=ab:GetName()
   runwayTargetZone = cand[1].zone.zone
@@ -12918,19 +16069,21 @@ local cand, capCand = {}, {}
     wp:StartTrack()
   end
   RunwayHandler:HandleEvent(EVENTS.Shot)
-  end
+  return true
+end
 
 function checkAndGenerateCASMission()
 	if casMissionTarget ~= nil or timer.getTime() < casMissionCooldownUntil then
-		return
+		return true
 	end
 	casTargetKills = math.random(10,16)
 	casMissionTarget = 'Active'
+	return true
 end
 
 function checkAndGenerateCAPMission()
 	if capMissionTarget ~= nil or timer.getTime() < capMissionCooldownUntil then
-		return
+		return true
 	end
 	local countInAir = 0
 	for _, zC in pairs(bc.zones) do
@@ -12946,7 +16099,7 @@ function checkAndGenerateCAPMission()
 	end
 	local players = getBluePlayersCount()
 	local limit = getCapLimit(players)
-	if players == 0 then return end
+	if players == 0 then return false end
 	if countInAir >= 1 then
 		local target = 0
 		if limit == 1 then
@@ -12965,8 +16118,10 @@ function checkAndGenerateCAPMission()
 		if target > 0 then
 			capTargetPlanes = target
 			capMissionTarget = "Active"
+			return true
 		end
 	end
+	return false
 end
 
 function getClosestCapZonesToPlayers(missionType, side, preMeta)
@@ -13089,54 +16244,85 @@ function getClosestCapZonesToPlayers(missionType, side, preMeta)
 end
 
 
+function GroupCommander:_shouldSpawnImmediate()
+	local isUrgent = type(self.urgent) == "function" and self.urgent() or self.urgent
+	return (self.forceSpawn == true) or (isUrgent == true)
+end
+
+function GroupCommander:_consumeShouldSpawnDecision(triggerState, ignore)
+	if self:_shouldSpawnImmediate() then
+		return self:shouldSpawn(ignore)
+	end
+	local bcObj = self.zoneCommander and self.zoneCommander.battleCommander
+	if not bcObj or bcObj.spawnEvalEnabled == false then
+		return self:shouldSpawn(ignore)
+	end
+	local decision = bcObj:_consumeShouldSpawnEval(self, triggerState, ignore)
+	if decision == nil then
+		bcObj:_queueShouldSpawnEval(self, triggerState, ignore)
+	end
+	return decision
+end
+
 function GroupCommander:shouldSpawn(ignore)
 	local plane = Unit.Category.AIRPLANE
 	local heli = Unit.Category.HELICOPTER
+	local force = self.forceSpawn == true
 
 	if not self.zoneCommander.active then
 		return false
 	end
 
-	if self.zoneCommander.suspended then 
-		return false 
+	if self.mission == 'supply' and self.side == 2 and NoAIBlueSupplies == true then
+		return false
+	end
+
+	if self.zoneCommander.suspended and not ignore and not force then
+		local allow = self.zoneCommander._suspendAllowSpawn
+		if not allow then
+			return false
+		end
+		if self.mission ~= 'attack' and self.mission ~= 'patrol' then
+			return false
+		end
+	end
+
+	if self.side == 1 and self.zoneCommander.BlueIsNear and not force then
+		self:_enterHangar(false)
+		return false
 	end
 
 	local tg = self.zoneCommander.battleCommander:getZoneByName(self.targetzone)
 
 	if not tg or tg.suspended or tg.active == false then return false end
 
-	
-	if self.condition and not self.condition() then return false end
-
-	if self.Bluecondition then 
-		if self.side == 2 then
-			if not self.Bluecondition() then return false end
-		else
-			return false
+	if force then
+		if self.template then
+			self:_ensureTemplateCache()
+			local zside = self.zoneCommander.side
+			if zside~=0 and self.side~=zside then
+				local lst=self._tplBySide[zside]
+				if lst and #lst>0 then self.side=zside else return false end
+			end
+			if self.side~=0 then
+				local lst=self._tplBySide[self.side]
+				if not lst or #lst==0 then return false end
+			end
 		end
-	end
 
-	if self.Redcondition then 
-		if self.side == 1 then
-			if not self.Redcondition() then return false end
-		else
-			return false
+		if self.side ~= self.zoneCommander.side then
+			return false 
 		end
-	end
 
-	local isUrgent = type(self.urgent) == "function" and self.urgent() or self.urgent
+		if self.MissionType == 'SEAD' then
+			if not self.zoneCommander.battleCommander:HasSeadTargets(tg.zone) then
+				return false
+			end
+			self.SpawnHot = true
+		end
 
-	local distNm = Frontline.ZoneDistToFrontNm(self.targetzone)
-	if distNm == nil then
-		return false
+		return true
 	end
-
-	if self.mission ~= 'supply' then
-	
-	local cutoff = (self.side == 2) and GlobalSettings.frontlineDistanceLimitBlue or GlobalSettings.frontlineDistanceLimitRed
-	if distNm < -cutoff then return false end
-	end
-		
 
 	if self.template then
         self:_ensureTemplateCache()
@@ -13154,6 +16340,38 @@ function GroupCommander:shouldSpawn(ignore)
     if self.side ~= self.zoneCommander.side then
 		return false 
 	end
+	
+	if self.condition and self:condition() == false then return false end
+
+	if self.Bluecondition then
+		if self.side == 2 then
+			if not self:Bluecondition() then return false end
+	else
+			return false
+		end
+	end
+
+	if self.Redcondition then
+		if self.side == 1 then
+			if not self:Redcondition() then return false end
+	else
+			return false
+		end
+	end
+
+	local isUrgent = type(self.urgent) == "function" and self.urgent() or self.urgent
+
+	local distNm = Frontline.ZoneDistToFrontNm(self.targetzone)
+	if distNm == nil then
+		return false
+	end
+
+	if self.mission ~= 'supply' then
+	
+	local cutoff = (self.side == 2) and GlobalSettings.frontlineDistanceLimitBlue or GlobalSettings.frontlineDistanceLimitRed
+	if distNm < -cutoff then return false end
+	end
+		
 
 	if self.side==2 and self.MissionType=='CAP' then
 		if distNm and distNm < -(GlobalSettings.capRearlineNmBlue or 30) then return false end
@@ -13173,35 +16391,50 @@ function GroupCommander:shouldSpawn(ignore)
 					if self.MissionType=='SEAD' and not self.zoneCommander.battleCommander:HasSeadTargets(tg.zone) then
 						return false
 					end
-					if self.unitCategory ~= plane then return true end
-					local players = getBluePlayersCount() or 0
-					local limit = getRedStrikeLimit(players) or 0
-					if limit <= 0 then return false end
-					local active = self.zoneCommander.battleCommander:getActiveStrikeCount(1,'attack',self.MissionType,self.unitCategory)
-					if active >= limit then
-						return false
-					end
+					local players = getRedCasPlayersCount() or 0
 					if self.MissionType ~='CAS' and players == 0 then
 						return false
 					end
-					return true
+					local planeLimit = getRedCasLimit(players) or 0
+					local heloBonus = 1
+					local totalLimit = math.max(0, planeLimit) + heloBonus
+					local activePlanes = self.zoneCommander.battleCommander:getActiveStrikeCount(1,'attack',self.MissionType,plane)
+					local activeHelos = self.zoneCommander.battleCommander:getActiveStrikeCount(1,'attack',self.MissionType,heli)
+					local activeTotal = self.zoneCommander.battleCommander:getActiveStrikeCount(1,'attack',self.MissionType,nil)
+
+					-- Hybrid cap: keep plane limit from config, but allow one extra helicopter slot.
+					if self.unitCategory == plane then
+						if planeLimit <= 0 then return false end
+						if activePlanes >= planeLimit then return false end
+						return true
+					elseif self.unitCategory == heli then
+						if activeHelos >= heloBonus then return false end
+						if activeTotal >= totalLimit then return false end
+						return true
+					end
+					return false
 				end
 				if self.side==2 then
 					if self.MissionType=='SEAD' and not self.zoneCommander.battleCommander:HasSeadTargets(tg.zone) then
 						return false
 					end
-					local players = getBluePlayersCount() or 0
+					local bluePlayers = getBluePlayersCount() or 0
 					local playersCas = getBlueCasPlayersCount() or 0
-					if self.MissionType=='ANTISHIP' and players > 1 then return false end
-					local limit   = getBlueSeadLimit(players) or 0
-					if limit <= 0 then return false end
-					if self.MissionType=='CAS' and playersCas > 1 then return false end
-					local limit   = getBlueCasLimit(playersCas) or 0
-					if limit <= 0 then return false end
-					local active = self.zoneCommander.battleCommander:getActiveCasSeadCount(2,'attack')
-					if active >= limit then
-						return false
+					if self.MissionType=='ANTISHIP' and bluePlayers > 1 then return false end
+
+					local limit = 0
+					if self.MissionType=='CAS' then
+						limit = getBlueCasLimit(playersCas) or 0
+					elseif self.MissionType=='SEAD' then
+						limit = getBlueSeadLimit(bluePlayers) or 0
+					else
+						-- RUNWAYSTRIKE / ANTISHIP follow blue CAS support scale.
+						limit = getBlueCasLimit(playersCas) or 0
 					end
+					if limit <= 0 then return false end
+
+					local active = self.zoneCommander.battleCommander:getActiveStrikeCount(2,'attack',self.MissionType,nil)
+					if active >= limit then return false end
 					return true
 				end
 			end
@@ -13240,12 +16473,6 @@ function GroupCommander:shouldSpawn(ignore)
                 local bluePlayers = getBluePlayersCount() or 0
                 local limit = (self.side==2) and getBlueCapLimit(bluePlayers) or getCapLimit(bluePlayers)
                 local currentCap = bc:getActiveCAPCount(self.side, 'patrol')
-				if self.side == 1 then
-					local boost = getRedCapBoost(bluePlayers)
-					if boost > 0 then
-						limit = boost
-					end
-				end
 
                 if self.side==2 and limit==0 then return false end
                 if currentCap >= limit then
@@ -13312,14 +16539,7 @@ function GroupCommander:shouldSpawn(ignore)
                 local bluePlayers = getBluePlayersCount() or 0
                 local limit = (self.side==2) and getBlueCapLimit(bluePlayers) or getCapLimit(bluePlayers)
                 local currentCap = bc:getActiveCAPCount(self.side, 'attack')
-				if self.side == 1 then
-					local boost = getRedCapBoost(bluePlayers)
-					if boost > 0 then
-						limit = boost
-					end
-				end
                 if self.side==2 and limit==0 then return false end
-                if self.side==1 and bluePlayers==0 then return false end
                 if currentCap >= limit then
                     if DebugIsOn then
                         env.info(string.format("[DEBUG] CAP attack limit reached: currentCap=%d, limit=%d, mission=%s", currentCap, limit, self.name))
@@ -13553,6 +16773,15 @@ end
 				gr:destroy()
 			end
 
+			if self._logiCargoByGroup then
+				local cname = self._logiCargoByGroup[self.name]
+				if cname then
+					local cargo = StaticObject.getByName(cname)
+					if cargo and cargo:isExist() then cargo:destroy() end
+					self._logiCargoByGroup[self.name] = nil
+				end
+			end
+
 			if self.state ~= 'inhangar' and self.state ~= 'preparing' and self.state ~= 'dead' then
 				self.state = 'dead'
 				self.lastStateTime = timer.getAbsTime()
@@ -13572,7 +16801,9 @@ end
                 end
             end
 
-            if self:shouldSpawn() then
+            local canSpawn = self:_consumeShouldSpawnDecision('inhangar', false)
+            if canSpawn == nil then return end
+            if canSpawn then
                 self.state = 'preparing'
                 self.lastStateTime = timer.getAbsTime()
 			else
@@ -13581,7 +16812,16 @@ end
         end
 	elseif self.state == 'preparing' then
 		if timer.getAbsTime() - self.lastStateTime > respawnTimers.preparing then
-			if self:shouldSpawn() then
+			local canSpawn = self:_consumeShouldSpawnDecision('preparing', false)
+			if canSpawn == nil then return end
+			if canSpawn then
+				if self.MissionType == 'SEAD' then
+					local bcObj = self.zoneCommander and self.zoneCommander.battleCommander
+					if bcObj and not bcObj:HasSeadTargets(self.targetzone, true) then
+						self:_enterHangar(false)
+						return
+					end
+				end
 				self:clearWreckage()
 				local didSpawn = false
 				if self.template then
@@ -13599,7 +16839,8 @@ end
 							local tpl = self:_getAirTemplate(resolved)
 							if tpl then
 								local sp = SPAWN:NewFromTemplate(tpl, resolved, self.name, true)
-								sp = sp:InitSkill("Excellent"):OnSpawnGroup(function(g)
+										local SpawnSkill = (self.side == 1) and tostring(AiPlaneSkill or "Excellent") or "Excellent"
+										sp = sp:InitSkill(SpawnSkill):OnSpawnGroup(function(g)
 
 										if self.MissionType == 'CAP' and self.mission== 'patrol' then
 											local gr = Group.getByName(g:GetName()); if not gr then return end
@@ -13647,17 +16888,18 @@ end
 											bc:EngageSeadMission(self.targetzone, g:GetName(), nil, self.Altitude, self._landUnitID)
 
 										elseif self.MissionType=='RUNWAYSTRIKE' and self.unitCategory == plane then
-											bc:EngageRunwayBombAuftrag(self.zoneCommander.airbaseName, self.targetzone, g:GetName(), self.Altitude, self.side)
+											bc:EngageRunwayBombing(self.zoneCommander.airbaseName, self.targetzone, g:GetName(), self.Altitude, self.side)
 										
 										elseif self.MissionType=='ANTISHIP' and self.unitCategory == plane then
 											bc:EngageAntiShipMission(self.targetzone, g:GetName(),nil,nil, self.Altitude, self._landUnitID)
 										end
 
 								end)
-									local tk = (self.mission == 'supply' and self.side == 2) and SPAWN.Takeoff.Hot or SPAWN.Takeoff.Cold
+									local spawnHot = ((self.mission == 'supply' and self.side == 2) or self.SpawnHot) and true or false
+									local tk = spawnHot and SPAWN.Takeoff.Hot or SPAWN.Takeoff.Cold
 									local spawned = nil
 								if self.ForceFromGround and self.unitCategory == heli then
-									local tk = (self.mission == 'supply' and self.side == 2) and true or false
+									local tk = spawnHot and true or false
 									spawned = self:_spawnFromGroundAt(resolved, originZone, self.targetzone, tk)
 								else
 									if not self.Airbase then
@@ -13684,7 +16926,8 @@ end
 							if self.unitCategory == plane then
 								self:_enterHangar(false)
 							else
-								local tk = (self.mission == 'supply' and self.side == 2) and SPAWN.Takeoff.Hot or SPAWN.Takeoff.Cold
+								local spawnHot = ((self.mission == 'supply' and self.side == 2) or self.SpawnHot) and true or false
+								local tk = spawnHot and SPAWN.Takeoff.Hot or SPAWN.Takeoff.Cold
 								local spawned = self:_spawnFromGroundAt(resolved, originZone, self.targetzone, tk)
 								if spawned then
 									if (self.mission=='supply' or self.MissionType=='CAS') and self.unitCategory == heli then spawned:OptionPreferVerticalLanding() end
@@ -13833,7 +17076,9 @@ end
 			end
 		elseif self.state == 'dead' then
 			if timer.getAbsTime() - self.lastStateTime > (respawnTimers.dead * spawnDelayFactor) then
-				if self:shouldSpawn() then
+				local canSpawn = self:_consumeShouldSpawnDecision('dead', false)
+				if canSpawn == nil then return end
+				if canSpawn then
 					self:_enterHangar(false)
 				end
 			end
@@ -13909,14 +17154,18 @@ end
 						return
 					end
 				end
-            if self:shouldSpawn() then
+            local canSpawn = self:_consumeShouldSpawnDecision('inhangar', false)
+            if canSpawn == nil then return end
+            if canSpawn then
                 self.state = 'preparing'
                 self.lastStateTime = timer.getAbsTime()
             end
         end
     elseif self.state == 'preparing' then
         if timer.getAbsTime() - self.lastStateTime > (respawnTimers.preparing * spawnDelayFactor) then
-            if self:shouldSpawn() then
+            local canSpawn = self:_consumeShouldSpawnDecision('preparing', false)
+            if canSpawn == nil then return end
+            if canSpawn then
 				self:clearWreckage()             
 				local templateName = self.template or self.name
                 self:_ensureTemplateCache()
@@ -13970,10 +17219,13 @@ end
                     Respawn.Group(self.name)
                     if isUrgent then env.info("Group [" .. self.name .. "] is spawning urgently!") else env.info("Group [" .. self.name .. "] is spawning normally.") end
                 end
-                self:_jtacMessage('JTAC: We spotted enemy convoy ', nil, self.zoneCommander.zone)
+                self:_jtacMessage('JTAC: We spotted enemy convoy moving out from ', nil, self.zoneCommander.zone)
                 self.state = 'enroute'
 				self.groundconvoyMessaged = false
                 self.lastStateTime = timer.getAbsTime()
+				if self.SetActiveMission then
+					ActiveMission[self.name] = true
+				end
             end
         end
 
@@ -14028,7 +17280,9 @@ end
 			end
 		elseif self.state == 'dead' then
 			if timer.getAbsTime() - self.lastStateTime > (respawnTimers.dead * spawnDelayFactor) then
-				if self:shouldSpawn() then
+				local canSpawn = self:_consumeShouldSpawnDecision('dead', false)
+				if canSpawn == nil then return end
+				if canSpawn then
 					self.state = 'preparing'
 					self.lastStateTime = timer.getAbsTime()
 				end
@@ -14050,7 +17304,11 @@ end
 
 			local spawnedNow=self.Spawned and true or false
 			if prevState~=self.state or prevSpawned~=spawnedNow or prevSide~=self.side or prevMission~=self.mission or prevMissionType~=self.MissionType or prevUnitCategory~=self.unitCategory or prevTargetzone~=self.targetzone then
-				self.zoneCommander.battleCommander:_syncNonCapSpawnBucketsForGroup(self)
+				local bcRef = self.zoneCommander and self.zoneCommander.battleCommander
+				if bcRef then
+					bcRef:_syncNonCapSpawnBucketsForGroup(self)
+					bcRef:_syncCapSpawnBucketsForGroup(self)
+				end
 			end
 		elseif self.type == 'surface' then
 			self:processSurface()
@@ -14770,7 +18028,7 @@ do
 	LogisticCommander.allowedTypes['MH-6J'] = true
 	LogisticCommander.allowedTypes['AH-6J'] = true
 
-LogisticCommander.AllowedToCarrySupplies = {
+LogisticCommander.AllowedToCarrySupplies = AllowedToCarrySupplies or {
     ['Ka-50'] = false,
     ['Ka-50_3'] = false,
     ['Mi-24P'] = true,
@@ -14793,7 +18051,7 @@ LogisticCommander.AllowedToCarrySupplies = {
 	['AH-6J'] = true,
 }
 
-LogisticCommander.AllowedCsar = {
+LogisticCommander.AllowedCsar = AllowedCsar or {
     ['Ka-50'] = 1,
     ['Ka-50_3'] = 1,
     ['Mi-24P'] = 8,
@@ -14816,16 +18074,69 @@ LogisticCommander.AllowedCsar = {
     ['AH-6J'] = 4,
 }
 
+LogisticCommander.AllowedCsar = AllowedCsar or {
+    ['Ka-50'] = 1,
+    ['Ka-50_3'] = 1,
+    ['Mi-24P'] = 8,
+    ['SA342Mistral'] = 3,
+    ['SA342L'] = 3,
+    ['SA342M'] = 3,
+    ['SA342Minigun'] = 3,
+    ['UH-60L'] = 11,
+    ['UH-60L_DAP'] = 11,
+    ['AH-64D_BLK_II'] = 2,
+    ['UH-1H'] = 11,
+    ['Mi-8MT'] = 24,
+    ['Hercules'] = 0,
+    ['OH58D'] = 1,
+    ['CH-47Fbl1'] = 32,
+    ['Bronco-OV-10A'] = 5,
+    ['OH-6A'] = 2,
+    ['C-130J-30'] = 0,
+    ['MH-6J'] = 4,
+    ['AH-6J'] = 4,
+}
+
+LogisticCommander.AllowedFlightTimeReward = AllowedFlightTimeReward or {
+    ['Ka-50'] = true,
+    ['Ka-50_3'] = true,
+    ['Mi-24P'] = true,
+    ['SA342Mistral'] = true,
+    ['SA342L'] = true,
+    ['SA342M'] = true,
+    ['SA342Minigun'] = true,
+    ['UH-60L'] = true,
+    ['UH-60L_DAP'] = true,
+    ['AH-64D_BLK_II'] = true,
+    ['UH-1H'] = true,
+    ['Mi-8MT'] = true,
+    ['Hercules'] = true,
+    ['OH58D'] = true,
+    ['CH-47Fbl1'] = true,
+    ['Bronco-OV-10A'] = true,
+    ['OH-6A'] = true,
+    ['C-130J-30'] = true,
+    ['MH-6J'] = true,
+    ['AH-6J'] = true,
+}
+
+
+	LogisticCommander.doubleSupplyTypes = {}
+
 	LogisticCommander.doubleSupplyTypes = {}
 	LogisticCommander.doubleSupplyTypes['CH-47Fbl1'] = true
 	LogisticCommander.doubleSupplyTypes['Hercules'] = true
 	LogisticCommander.doubleSupplyTypes['C-130J-30'] = true
-
+	
 	--LogisticCommander.maxCarriedPilots = 4
-	LogisticCommander.PilotWeight = 80
-	LogisticCommander.csarHoverDistance = 15
-	LogisticCommander.csarHoverHeight = 40
-	LogisticCommander.csarHoverSeconds = 10
+	LogisticCommander.PilotWeight = PilotWeight or 80
+	LogisticCommander.csarHoverDistance = CsarHoverDistance or 15
+	LogisticCommander.csarHoverHeight = CsarHoverHeight or 40
+	LogisticCommander.csarHoverSeconds = CsarHoverSeconds or 10
+	LogisticCommander.csarHostileInfantryChance = CsarHostileInfantryChance or 25
+	LogisticCommander.csarHostileInfantryMinDistanceNM = 1
+	LogisticCommander.csarHostileInfantryMaxDistanceNM = 3
+	LogisticCommander.csarHostileInfantryDistanceByTemplate = { ["CSAR_RED_INF_1"] = { minNM = 0.5, maxNM = 0.8, count = {1,3} }, ["CSAR_RED_INF_2"] = { minNM = 0.8, maxNM = 2.0, count = {1,2} } }
 	
 	LogisticCommander.mooseLogisticsMenus = {}
 
@@ -14848,6 +18159,8 @@ LogisticCommander.AllowedCsar = {
 		obj.csarSmokeTick = {}
 		obj.csarNextTick = {}
 		obj.csarLastAutoDrop = {}
+		obj.csarHostileGroupsByPilotObject = {}
+		obj.carriedPilotHostileGroups = {}
 		obj.csarApproachNear = 3000
 		obj.csarExtractDistance = 650
 		obj.csarLoadDistance = 20
@@ -15181,6 +18494,101 @@ end
 		end
 	end
 
+	function LogisticCommander:_appendUniqueCsarHostileGroup(list, groupName)
+		if type(list) ~= 'table' then return end
+		if type(groupName) ~= 'string' or groupName == '' then return end
+		for _, existing in ipairs(list) do
+			if existing == groupName then
+				return
+			end
+		end
+		list[#list + 1] = groupName
+	end
+
+	function LogisticCommander:_bindCsarHostilesToPilot(pid, pilotData, hostileGroupNames)
+		if type(hostileGroupNames) ~= 'table' or #hostileGroupNames == 0 then return end
+		if pilotData then
+			pilotData.csarHostileGroups = pilotData.csarHostileGroups or {}
+			for _, groupName in ipairs(hostileGroupNames) do
+				self:_appendUniqueCsarHostileGroup(pilotData.csarHostileGroups, groupName)
+			end
+		end
+		if pid then
+			self.csarHostileGroupsByPilotObject = self.csarHostileGroupsByPilotObject or {}
+			self.csarHostileGroupsByPilotObject[pid] = self.csarHostileGroupsByPilotObject[pid] or {}
+			for _, groupName in ipairs(hostileGroupNames) do
+				self:_appendUniqueCsarHostileGroup(self.csarHostileGroupsByPilotObject[pid], groupName)
+			end
+		end
+	end
+
+	function LogisticCommander:trackCsarHostilesForRescuedPilot(groupid, pid, pilotData)
+		local toCarry = {}
+		if pilotData and type(pilotData.csarHostileGroups) == 'table' then
+			for _, groupName in ipairs(pilotData.csarHostileGroups) do
+				self:_appendUniqueCsarHostileGroup(toCarry, groupName)
+			end
+		end
+		if pid then
+			self.csarHostileGroupsByPilotObject = self.csarHostileGroupsByPilotObject or {}
+			local byPid = self.csarHostileGroupsByPilotObject[pid]
+			if type(byPid) == 'table' then
+				for _, groupName in ipairs(byPid) do
+					self:_appendUniqueCsarHostileGroup(toCarry, groupName)
+				end
+			end
+			self.csarHostileGroupsByPilotObject[pid] = nil
+		end
+		if #toCarry > 0 then
+			self.carriedPilotHostileGroups = self.carriedPilotHostileGroups or {}
+			self.carriedPilotHostileGroups[groupid] = self.carriedPilotHostileGroups[groupid] or {}
+			for _, groupName in ipairs(toCarry) do
+				self:_appendUniqueCsarHostileGroup(self.carriedPilotHostileGroups[groupid], groupName)
+			end
+			if pilotData then
+				pilotData.csarHostileGroups = toCarry
+			end
+		end
+	end
+
+	function LogisticCommander:destroyCsarHostileGroups(groupNames)
+		if type(groupNames) ~= 'table' then return 0 end
+		local destroyed = 0
+		local seen = {}
+		for _, groupName in ipairs(groupNames) do
+			if type(groupName) == 'string' and groupName ~= '' and not seen[groupName] then
+				seen[groupName] = true
+				local hostileGroup = Group.getByName(groupName)
+				if hostileGroup and hostileGroup:isExist() then
+					local alive = false
+					local units = hostileGroup:getUnits()
+					if units then
+						for _, unit in pairs(units) do
+							if unit and unit:isExist() and (unit:getLife() or 0) > 0 then
+								alive = true
+								break
+							end
+						end
+					end
+					if alive then
+						hostileGroup:destroy()
+						destroyed = destroyed + 1
+					end
+				end
+			end
+		end
+		return destroyed
+	end
+
+	function LogisticCommander:cleanupCarriedCsarHostiles(groupid)
+		local groups = self.carriedPilotHostileGroups and self.carriedPilotHostileGroups[groupid]
+		local destroyed = self:destroyCsarHostileGroups(groups)
+		if self.carriedPilotHostileGroups then
+			self.carriedPilotHostileGroups[groupid] = nil
+		end
+		return destroyed
+	end
+
 	function LogisticCommander:loadPilot(groupname)
 		local gr=Group.getByName(groupname)
 		local groupid=gr:getID()
@@ -15208,6 +18616,7 @@ end
 					self.carriedPilotData[groupid]=self.carriedPilotData[groupid] or {}
 					local pid=v:getObjectID()
 					local pilotData=landedPilotOwners[pid]
+					self:trackCsarHostilesForRescuedPilot(groupid, pid, pilotData)
 					if pilotData then
 						table.insert(self.carriedPilotData[groupid],pilotData)
 						landedPilotOwners[pid]=nil
@@ -15252,6 +18661,7 @@ end
 							trigger.action.outTextForCoalition(un:getCoalition(),"["..playerName.."] dropped off "..table.concat(dropped,", ")..".",5)
 						end
 					end
+					self:cleanupCarriedCsarHostiles(groupid)
 					self.carriedPilotData[groupid]=nil
 					self.carriedPilots[groupid]=0
 					trigger.action.setUnitInternalCargo(un:getName(),0)
@@ -15328,6 +18738,37 @@ end
 			end
 		end
 	end
+
+	function LogisticCommander:infoTopPilots(groupname, limit)
+		local gr = Group.getByName(groupname)
+		if not gr then return end
+		local un = gr:getUnit(1)
+		if not un or not un:isExist() then return end
+		limit = limit or 3
+
+		local list = {}
+		local up = un:getPoint()
+		for _, v in ipairs(self.ejectedPilots) do
+			if v and v:isExist() then
+				local vp = v:getPoint()
+				if vp then
+					local dist = UTILS.VecDist3D(up, vp)
+					list[#list+1] = { pilot = v, dist = dist }
+				end
+			end
+		end
+
+		if #list == 0 then
+			trigger.action.outTextForGroup(gr:getID(), 'No ejected pilots nearby', 15)
+			return
+		end
+
+		table.sort(list, function(a,b) return a.dist < b.dist end)
+		local count = math.min(limit, #list)
+		for i = 1, count do
+			self:printPilotInfo(list[i].pilot, gr:getID(), un, 60)
+		end
+	end
 	
 		function LogisticCommander:infoHumanPilot(groupname)
 		local gr = Group.getByName(groupname)
@@ -15383,7 +18824,7 @@ end
 					end
 				end
 			end
-			local toprint=pilotName..(plural and '  We hear you! Request smoke if needed.' or '  I hear you! Request smoke if needed.')
+			local toprint=pilotName..(plural and ((pilotData and pilotData.hostileZoneName) and '  We hear you! Be careful, there are enemies nearby. Request smoke if needed.' or '  We hear you! Request smoke if needed.') or ((pilotData and pilotData.hostileZoneName) and '  I hear you! Be careful, there are enemies nearby. Request smoke if needed.' or '  I hear you! Request smoke if needed.'))
 			if freq and freq>0 then
 				toprint = toprint .. '\n\nADF: ' .. string.format('%.0f',freq/1000) .. ' kHz'
 			end
@@ -15401,10 +18842,19 @@ end
 
 
 		local toprint='Pilot in need of extraction:'
+		if pilotData and pilotData.hostileZoneName then
+			local pilotName = (pilotData.player and pilotData.player~='') and ('['..pilotData.player..']') or 'Downed pilot'
+			toprint='Rescue '..pilotName..' in hostile territory ('..pilotData.hostileZoneName..'):'
+			toprint = toprint .. '\n\nBe careful, there are enemies nearby'
+		end
 		if (pilotData and pilotData.player) then		
 
-			toprint = toprint .. '\n\n[' .. pilotData.player .. '] '
-			toprint = toprint .. ' Lost: ' .. pilotData.lostCredits .. ' Credits'
+			if pilotData.hostileZoneName then
+				toprint = toprint .. '\n\nLost: ' .. pilotData.lostCredits .. ' Credits'
+			else
+				toprint = toprint .. '\n\n[' .. pilotData.player .. '] '
+				toprint = toprint .. ' Lost: ' .. pilotData.lostCredits .. ' Credits'
+			end
 			toprint = toprint .. '\n\nSave the pilot to retrive the lost credits'
 		end
 		if freq and freq>0 then
@@ -15429,6 +18879,62 @@ end
 		trigger.action.outTextForGroup(groupid,toprint,duration)
 	end
 
+	function LogisticCommander:_csarMarkerLabel(pilotObj)
+		self.csarBeaconFreq = self.csarBeaconFreq or {}
+		self.csarBeaconName = self.csarBeaconName or {}
+		self.csarPilotDataByObject = self.csarPilotDataByObject or {}
+		if not pilotObj or not pilotObj:isExist() then return nil end
+		local pid = pilotObj:getObjectID()
+		if not pid then return nil end
+		local pilotData = landedPilotOwners[pid] or self.csarPilotDataByObject[pid] or ejectedPilotOwners[pid]
+		local freq = self.csarBeaconFreq[pid]
+		if not freq then
+			self.csarBeaconName[pid] = self.csarBeaconName[pid] or ("FOOTHOLD_CSAR_"..pid.."_BEACON")
+			freq = 250000 + math.random(0,1000)*1000
+			self.csarBeaconFreq[pid] = freq
+		end
+
+		local label
+		if pilotData and pilotData.player and pilotData.player ~= '' then
+			local lost = pilotData.lostCredits or 0
+			label = '['..pilotData.player..'] Lost: '..lost..' Credits'
+		else
+			label = 'Downed pilot'
+		end
+		if freq and freq > 0 then
+			label = label .. '\nADF: ' .. string.format('%.0f',freq/1000) .. ' kHz'
+		end
+		return label
+	end
+
+	function LogisticCommander:createCsarMarker(pilotObj)
+		if not pilotObj or not pilotObj:isExist() then return end
+		self.csarPilotMarks = self.csarPilotMarks or {}
+		local pid = pilotObj:getObjectID()
+		if not pid or self.csarPilotMarks[pid] then return end
+		local p = pilotObj:getPoint()
+		if not p then return end
+		local label = self:_csarMarkerLabel(pilotObj) or 'Downed pilot'
+		missionMarkId = missionMarkId + 1
+		local id = missionMarkId
+		trigger.action.markToCoalition(id, label, p, 2, false, false)
+		self.csarPilotMarks[pid] = { id = id, label = label, point = { x = p.x, y = p.y, z = p.z } }
+	end
+
+	function LogisticCommander:removeCsarMarker(pilotOrId)
+		self.csarPilotMarks = self.csarPilotMarks or {}
+		local pid = pilotOrId
+		if type(pilotOrId) == "table" and pilotOrId.getObjectID then
+			pid = pilotOrId:getObjectID()
+		end
+		local entry = pid and self.csarPilotMarks[pid]
+		if entry and entry.id then
+			trigger.action.removeMark(entry.id)
+		end
+		if pid then
+			self.csarPilotMarks[pid] = nil
+		end
+	end
 
 	function LogisticCommander:update()
 		self.csarBeaconName = self.csarBeaconName or {}
@@ -15439,6 +18945,7 @@ end
 		self.csarPilotDataByObject = self.csarPilotDataByObject or {}
 		self.csarHoverStatus = self.csarHoverStatus or {}
 		self.csarNearStatus = self.csarNearStatus or {}
+		self.ejectedPilotPidByObj = self.ejectedPilotPidByObj or {}
 		local tocleanup = {}
 		self.ejectedPilotsState = self.ejectedPilotsState or {}
 		for i = #self.ejectedPilotsState, 1, -1 do
@@ -15449,7 +18956,8 @@ end
 			if v and v:isExist() then
 				local keep = true
 				if v.getLife and v:getLife() <= 0 then
-					table.insert(tocleanup, { index = i, kia = true })
+					local pid = v.getObjectID and v:getObjectID() or nil
+					table.insert(tocleanup, { index = i, kia = true, pid = pid })
 					keep = false
 				end
 				if keep then
@@ -15458,6 +18966,7 @@ end
 						lostCredits = 0
 					}
 					local objectID = v:getObjectID()
+					self.ejectedPilotPidByObj[v] = objectID
 					local pilotData = (landedPilotOwners and landedPilotOwners[objectID]) or self.csarPilotDataByObject[objectID] or (ejectedPilotOwners and ejectedPilotOwners[objectID])
 					if pilotData then
 						ejectedPilotTable.playerName = pilotData.player or "Unknown"
@@ -15469,10 +18978,11 @@ end
 					end
 					table.insert(self.ejectedPilotsState, ejectedPilotTable)
 				end
-			else
-				table.insert(tocleanup, { index = i, kia = true })
+				else
+					local pid = self.ejectedPilotPidByObj[v] or nil
+					table.insert(tocleanup, { index = i, kia = true, pid = pid })
+				end
 			end
-		end
 
 		local function boardPilot(pilotObj, heliUnit, groupid, fromScheduler)
 			local pid = pilotObj:getObjectID()
@@ -15551,6 +19061,7 @@ end
 				trigger.action.outTextForGroup(groupid, "At max capacity", 8)
 				return false
 			end
+			self:trackCsarHostilesForRescuedPilot(groupid, pid, pilotData)
 			self.carriedPilots[groupid] = current + 1
 			self.carriedPilotData[groupid] = self.carriedPilotData[groupid] or {}
 			if pilotData then table.insert(self.carriedPilotData[groupid], pilotData) end
@@ -15602,6 +19113,7 @@ end
 			self.csarCloseMsg[pid] = nil
 			self.csarRunEta[pid] = nil
 
+			self:removeCsarMarker(pid)
 			return true
 
 		end
@@ -15992,23 +19504,34 @@ end
 			local pilot = self.ejectedPilots[index]
 
 			if entry.kia then
-				local pid = pilot and pilot:isExist() and pilot:getObjectID() or nil
+				local pid = entry.pid or (pilot and self.ejectedPilotPidByObj[pilot]) or nil
 				local pilotData = pid and (landedPilotOwners[pid] or self.csarPilotDataByObject[pid] or ejectedPilotOwners[pid]) or nil
 				local pname = pilotData and pilotData.player
 				local coal = pilotData and pilotData.coalition or 2
 				local msg
-				if pname and pname~='' then
-					msg = "["..pname.."] is KIA."
+				local now = timer.getTime()
+				if pilotData and pilotData.player and pilotData.player~='' and pilotData.hostileZoneName and pilotData.hostileGraceUntil then
+					if now >= pilotData.hostileGraceUntil then
+						self.battleCommander:addStat(pilotData.player,'Captured by enemy',1)
+						trigger.action.outTextForCoalition(2,"["..pilotData.player.."] has been captured by enemy forces in "..pilotData.hostileZoneName..". Assumed dead.",10)
+					end
 				else
-					msg = "Downed pilot is KIA."
-				end
-				for groupid in pairs(self.csarGroupMenus) do
-					trigger.action.outTextForGroup(groupid,msg,10)
+					if pname and pname~='' then
+						msg = "["..pname.."] is KIA."
+					else
+						msg = "Downed pilot is KIA."
+					end
+					for groupid in pairs(self.csarGroupMenus) do
+						trigger.action.outTextForGroup(groupid,msg,10)
+					end
 				end
 				if pid then
 					landedPilotOwners[pid]=nil
 					self.csarPilotDataByObject[pid]=nil
 					ejectedPilotOwners[pid]=nil
+					if self.csarHostileGroupsByPilotObject then
+						self.csarHostileGroupsByPilotObject[pid]=nil
+					end
 					self.csarAssignedGroup[pid]=nil
 					self.csarRouteIssued[pid]=nil
 					self.csarNextTick[pid]=nil
@@ -16022,10 +19545,14 @@ end
 					self.csarBeaconFreq[pid]=nil
 					self.csarBeaconNext[pid]=nil
 				end
+				if pid then
+					self:removeCsarMarker(pid)
+				end
 				if pilot and pilot:isExist() then
 					pilot:destroy()
 				end
 			end
+			if pilot then self.ejectedPilotPidByObj[pilot] = nil end
 			table.remove(self.ejectedPilots, index)
 		end
 	end
@@ -16056,6 +19583,24 @@ function LogisticCommander:init()
 								end, v, timer.getTime() + 0.1)
 								break
 							end
+						end
+						if event.initiator and event.initiator:isExist() then
+							event.initiator:destroy()
+						end
+						return
+					end
+					if PVE_Only and un:getCoalition() == 1 then
+						for i, v in pairs(plist) do
+							if net.get_name(v) == player then
+								net.send_chat_to("PVP mode is disabled. Red coalition slots are not available.", v)
+								timer.scheduleFunction(function(param, time)
+									net.force_player_slot(param, 0, '')
+								end, v, timer.getTime() + 0.1)
+								break
+							end
+						end
+						if gr and gr:isExist() then
+							trigger.action.outTextForGroup(gr:getID(), "PVP mode is disabled.", 5)
 						end
 						if event.initiator and event.initiator:isExist() then
 							event.initiator:destroy()
@@ -16149,6 +19694,11 @@ function LogisticCommander:init()
 				self.context.battleCommander.playerNames = self.context.battleCommander.playerNames or {}
                 self.context.battleCommander.playerNames[groupid] = player
 				self.context.battleCommander:refreshShopMenuForGroup(groupid, groupObj)
+				timer.scheduleFunction(function()
+					if buildCapControlMenu then
+						buildCapControlMenu()
+					end
+				end, {}, timer.getTime() + 1)
 
 				self.context.battleCommander.groupByPlayer = self.context.battleCommander.groupByPlayer or {}
 				self.context.battleCommander.groupNameByPlayer = self.context.battleCommander.groupNameByPlayer or {}
@@ -16156,9 +19706,9 @@ function LogisticCommander:init()
 				self.context.battleCommander.groupNameByPlayer[player] = groupname
 
 
-                if not self.context.statsMenus[groupid] then
+				if not self.context.statsMenus[groupid] then
 
-					local statsMenu = missionCommands.addSubMenuForGroup(groupid, 'Stats and Budget')
+					local statsMenu = missionCommands.addSubMenuForGroup(groupid, 'Stats and Others')
 					local statsSubMenu = missionCommands.addSubMenuForGroup(groupid, 'Stats', statsMenu)
 					missionCommands.addCommandForGroup(groupid, 'My Stats', statsSubMenu, self.context.battleCommander.printMyStats, self.context.battleCommander, event.initiator:getID(), player)
 					missionCommands.addCommandForGroup(groupid, 'All Stats', statsSubMenu, self.context.battleCommander.printStats, self.context.battleCommander, event.initiator:getID())
@@ -16169,12 +19719,29 @@ function LogisticCommander:init()
 					
 					self.context.statsMenus[groupid] = statsMenu
 				end
+				if ewrs then
+					EWRS_MENU_PARENT_BY_GROUP = EWRS_MENU_PARENT_BY_GROUP or {}
+					EWRS_MENU_PARENT_BY_GROUP[tostring(groupid)] = self.context.statsMenus[groupid]
+					if ewrs.builtF10Menus then
+						local ewrsMenu = ewrs.builtF10Menus[tostring(groupid)]
+						if ewrsMenu and ewrsMenu ~= true then
+							if type(ewrsMenu) == "table" and ewrsMenu.root then
+								missionCommands.removeItemForGroup(groupid, ewrsMenu.root)
+							else
+								missionCommands.removeItemForGroup(groupid, ewrsMenu)
+							end
+						end
+						ewrs.builtF10Menus[tostring(groupid)] = nil
+					end
+				end
 				MissionsRootMenus = MissionsRootMenus or {}
 				local missionsRoot = MissionsRootMenus[groupid] or missionCommands.addSubMenuForGroup(groupid, 'Missions')
 				MissionsRootMenus[groupid] = missionsRoot
 				printMissionMenus = printMissionMenus or {}
 			if not printMissionMenus[groupid] then
 				printMissionMenus[groupid] = missionCommands.addCommandForGroup(groupid, 'Missions', missionsRoot, mc.printMissions, mc, groupid)
+				mc:createStrikeMissionSubMenuForGroup(groupid, missionsRoot)
+				mc:refreshStrikeMissionMenuForGroup(groupid)
 				
 				local playerCoalition = event.initiator:getCoalition()
 				SCHEDULER:New(nil, function()
@@ -16235,12 +19802,13 @@ function LogisticCommander:init()
 							missionCommands.removeItemForGroup(groupid, self.context.groupMenus[groupid])
 						end
 							self.context.groupMenus[groupid] = nil
-					if LogisticCommander.AllowedCsar[unitType] > 0 then
-						self.context.csarGroupMenus[groupid] = true
-						local csar = missionCommands.addSubMenuForGroup(groupid, 'CSAR')
-						missionCommands.addCommandForGroup(groupid, 'Info on closest pilot', csar, self.context.infoPilot, self.context, groupname)
-						missionCommands.addCommandForGroup(groupid, 'Deploy smoke at closest pilot', csar, self.context.markPilot, self.context, groupname)
-						missionCommands.addCommandForGroup(groupid, 'Deploy flare at closest pilot', csar, self.context.flarePilot, self.context, groupname)
+						if LogisticCommander.AllowedCsar[unitType] > 0 then
+							self.context.csarGroupMenus[groupid] = true
+							local csar = missionCommands.addSubMenuForGroup(groupid, 'CSAR')
+							missionCommands.addCommandForGroup(groupid, 'Info on closest pilot', csar, self.context.infoPilot, self.context, groupname)
+							missionCommands.addCommandForGroup(groupid, 'Info on three closest pilots', csar, self.context.infoTopPilots, self.context, groupname, 3)
+							missionCommands.addCommandForGroup(groupid, 'Deploy smoke at closest pilot', csar, self.context.markPilot, self.context, groupname)
+							missionCommands.addCommandForGroup(groupid, 'Deploy flare at closest pilot', csar, self.context.flarePilot, self.context, groupname)
 						missionCommands.addCommandForGroup(groupid, 'Smoke nearest zone', csar, function() Foothold_ctld:SmokeZoneNearBy(GROUP:FindByName(groupname):GetUnit(1), false) end)
 						missionCommands.addCommandForGroup(groupid, 'Flare nearest zone', csar, function() Foothold_ctld:SmokeZoneNearBy(GROUP:FindByName(groupname):GetUnit(1), true) end)
 						--missionCommands.addCommandForGroup(groupid, 'Pick up pilot', csar, self.context.loadPilot, self.context, groupname)
@@ -16342,11 +19910,22 @@ function LogisticCommander:init()
 								local parentMenu = getPagedStaticMenu(cargoObj.Subcategory or "Statics")
                                 local needed = cargoObj:GetCratesNeeded() or 1
                                 local mass = cargoObj.PerCrateMass or 0
+                                local cargoLabel = cargoObj.Name
+                                if cargoObj.GetDisplayName then
+                                    local displayName = cargoObj:GetDisplayName()
+                                    if displayName and displayName ~= "" then
+                                        cargoLabel = displayName
+                                    end
+                                end
                                 local title
                                 if needed > 1 then
-                                    title = string.format("%d crate%s %s (%dkg)",needed,needed==1 and "" or "s",cargoObj.Name,mass)
+                                    -- Old behavior used cargoObj.Name directly (internal key when key/display split is enabled).
+                                    -- title = string.format("%d crate%s %s (%dkg)",needed,needed==1 and "" or "s",cargoObj.Name,mass)
+                                    title = string.format("%d crate%s %s (%dkg)",needed,needed==1 and "" or "s",cargoLabel,mass)
                                 else
-                                    title = string.format("%s (%dkg)",cargoObj.Name,mass)
+                                    -- Old behavior:
+                                    -- title = string.format("%s (%dkg)",cargoObj.Name,mass)
+                                    title = string.format("%s (%dkg)",cargoLabel,mass)
                                 end
                                 if cargoObj.Location then title = title.."[R]" end
                                 if Foothold_ctld.showstockinmenuitems then
@@ -16432,40 +20011,57 @@ function LogisticCommander:init()
 	end
 
         if event.id == world.event.S_EVENT_TAKEOFF
-           and event.initiator and event.initiator.getPlayerName and WarehouseLogistics == false
+           and event.initiator and event.initiator.getPlayerName
         then
             local groupid = event.initiator:getGroup():getID()
             local unitType = event.initiator:getDesc()['typeName']
             local player = event.initiator:getPlayerName()
-            local un = event.initiator
-            local zn = self.context.battleCommander:getZoneOfUnit(un:getName())
-
-            if zn and (zn.side == un:getCoalition() or (un:getCoalition() == 2 and zn.wasBlue)) then
-                for _, v in ipairs(self.context.supplyZones) do
-                    if v == zn.zone then
-                        if self.context.AllowedToCarrySupplies[unitType] and not self.context.carriedCargo[groupid] then
-                            trigger.action.outTextForGroup(groupid, 'Warning: Supplies not loaded', 30,true)
-                            if trigger.misc.getUserFlag(180) == 0 then
-                                trigger.action.outSoundForGroup(groupid, "micclick.ogg")
-                            end
-                        end
-                        return
+			local bc = self.context.battleCommander
+			if player then
+				if CreditLosewhenKilled == true or RankLoseWhenKilled == true then
+					bc.lossPenaltyArmByPlayer = bc.lossPenaltyArmByPlayer or {}
+					bc.lossPenaltyArmByPlayer[player] = true
+				end
+                if RewardFlightTime and (RewardAllAircraft == true or LogisticCommander.AllowedFlightTimeReward[unitType]) then
+                    bc.flightTimeTakeoffByPlayer = bc.flightTimeTakeoffByPlayer or {}
+                    local ft = bc.flightTimeTakeoffByPlayer[player]
+                    if not ft or ft.gid ~= groupid then
+                        bc.flightTimeTakeoffByPlayer[player] = { t = timer.getTime(), gid = groupid }
                     end
                 end
-            else
-                local group = GROUP:FindByName(un:getGroup():getName())
-                if group and un:getCoalition() == 2 then
-                    for _, zName in ipairs(self.context.supplyZones) do
-                        if string.find(zName, "CTLD FARP") or string.find(zName, "Escort Mission FARP") then
-                            local zObj = ZONE:FindByName(zName)
-                            if zObj and group:IsInZone(zObj) then
-                                if self.context.allowedTypes[unitType] and not self.context.carriedCargo[groupid] then
-                                    trigger.action.outTextForGroup(groupid, 'Warning: Supplies not loaded', 30,true)
-                                    if trigger.misc.getUserFlag(180) == 0 then
-                                        trigger.action.outSoundForGroup(groupid, "micclick.ogg")
-                                    end
+            end
+
+            if WarehouseLogistics == false then
+                local un = event.initiator
+                local zn = self.context.battleCommander:getZoneOfUnit(un:getName())
+
+                if zn and (zn.side == un:getCoalition() or (un:getCoalition() == 2 and zn.wasBlue)) then
+                    for _, v in ipairs(self.context.supplyZones) do
+                        if v == zn.zone then
+                            if self.context.AllowedToCarrySupplies[unitType] and not self.context.carriedCargo[groupid] then
+                                trigger.action.outTextForGroup(groupid, 'Warning: Supplies not loaded', 30,true)
+                                if trigger.misc.getUserFlag(180) == 0 then
+                                    trigger.action.outSoundForGroup(groupid, "micclick.ogg")
                                 end
-                                return
+                            end
+                            return
+                        end
+                    end
+                else
+                    local group = GROUP:FindByName(un:getGroup():getName())
+                    if group and un:getCoalition() == 2 then
+                        for _, zName in ipairs(self.context.supplyZones) do
+                            if string.find(zName, "CTLD FARP") or string.find(zName, "Escort Mission FARP") then
+                                local zObj = ZONE:FindByName(zName)
+                                if zObj and group:IsInZone(zObj) then
+                                    if self.context.allowedTypes[unitType] and not self.context.carriedCargo[groupid] then
+                                        trigger.action.outTextForGroup(groupid, 'Warning: Supplies not loaded', 30,true)
+                                        if trigger.misc.getUserFlag(180) == 0 then
+                                            trigger.action.outSoundForGroup(groupid, "micclick.ogg")
+                                        end
+                                    end
+                                    return
+                                end
                             end
                         end
                     end
@@ -16478,6 +20074,8 @@ function LogisticCommander:init()
 			local aircraftID=event.place and event.place.id_
 			local coalitionSide = event.initiator:getCoalition()
 			local pilotObjectID=event.initiator and event.initiator:getObjectID()
+			local hostileEnemyMessageAt = nil
+			local hostileSpawnedGroupNames = {}
 			ejectedPilotOwnersByAircraft = ejectedPilotOwnersByAircraft or {}
 			local list = aircraftID and ejectedPilotOwnersByAircraft[aircraftID]
 			local pilotData = list and table.remove(list,1) or nil
@@ -16510,7 +20108,10 @@ function LogisticCommander:init()
 			end
 
 			local zoneSide, zoneName = pointInActiveZone(event.initiator)
-			if zoneSide then
+			if zoneSide and pilotData and pilotData.player and pilotData.player ~= '' and pilotData.coalition and zoneSide ~= pilotData.coalition then
+				pilotData.hostileZoneName = zoneName
+				pilotData.hostileGraceUntil = timer.getTime() + 60
+			elseif zoneSide then
 				if pilotData and pilotData.player and pilotData.player ~= '' then
 					if pilotData.coalition and zoneSide ~= pilotData.coalition then
 						self.context.battleCommander:addStat(pilotData.player,'Captured by enemy',1)
@@ -16525,6 +20126,138 @@ function LogisticCommander:init()
 				return
 			end
 
+			local downedCoalition = (pilotData and pilotData.coalition) or coalitionSide
+			if (not zoneSide) and downedCoalition then
+				local templateKey = nil
+				if LogisticCommander.csarHostileInfantryDistanceByTemplate then
+					local n = 0
+					for k in pairs(LogisticCommander.csarHostileInfantryDistanceByTemplate) do
+						n = n + 1
+						if math.random(n) == 1 then templateKey = k end
+					end
+				end
+				if templateKey and templateKey ~= '' then
+					local chance = LogisticCommander.csarHostileInfantryChance or 20
+					if chance > 0 and math.random(100) <= chance then
+						local coord = event.initiator:getPoint()
+						local surfaceType = land.getSurfaceType({ x = coord.x, y = coord.z })
+						local overWater = (surfaceType == land.SurfaceType.WATER) or (surfaceType == land.SurfaceType.SHALLOW_WATER)
+						if not overWater then
+							local range = 20*NM
+							local limitSq = range*range
+							local bc = self.context.battleCommander
+							local inRange = false
+							for _, z in ipairs(bc.zones) do
+								if z.active and z.side and z.side ~= 0 and z.side ~= downedCoalition and z.zone then
+									local c = getZoneCenter(z.zone)
+									if c then
+										local dx = coord.x - c.x
+										local dz = coord.z - c.y
+										if (dx*dx + dz*dz) <= limitSq then
+											inRange = true
+											break
+										end
+									end
+								end
+							end
+							if inRange then
+								local pilotCoord = COORDINATE:NewFromVec3(coord)
+								local templateConfig = LogisticCommander.csarHostileInfantryDistanceByTemplate and LogisticCommander.csarHostileInfantryDistanceByTemplate[templateKey]
+								if type(templateConfig) == 'function' then
+									templateConfig = templateConfig(templateKey, pilotData, event)
+								end
+								local minDist = (LogisticCommander.csarHostileInfantryMinDistanceNM or 1) * NM
+								local maxDist = (LogisticCommander.csarHostileInfantryMaxDistanceNM or 2) * NM
+								local spawnCount = (LogisticCommander.csarHostileInfantrySpawnCount or 1)
+								if templateConfig then
+									if type(templateConfig) == 'number' then
+										minDist = templateConfig * NM
+										maxDist = minDist
+									else
+										if templateConfig.count ~= nil then
+											local c = templateConfig.count
+											if type(c) == 'function' then
+												c = c(templateKey, pilotData, event)
+											end
+											if type(c) == 'table' then
+												local cmin = c.min or c.minCount or c[1]
+												local cmax = c.max or c.maxCount or c[2]
+												if tonumber(cmin) and tonumber(cmax) then
+													local a = math.floor(tonumber(cmin))
+													local b = math.floor(tonumber(cmax))
+													if a > b then a, b = b, a end
+													spawnCount = math.max(1, math.random(a, b))
+												end
+											elseif tonumber(c) then
+												spawnCount = math.max(1, math.floor(tonumber(c)))
+											end
+										end
+										if templateConfig.nm then
+											minDist = templateConfig.nm * NM
+											maxDist = minDist
+										else
+											if templateConfig.minNM then minDist = templateConfig.minNM * NM end
+											if templateConfig.maxNM then maxDist = templateConfig.maxNM * NM else maxDist = minDist end
+										end
+									end
+								end
+
+								local function pickTemplateName()
+									if type(templateConfig) == 'table' then
+										local list = templateConfig.templates or templateConfig.groups
+										if type(list) == 'table' and #list > 0 then
+											return list[math.random(#list)]
+										end
+										if #templateConfig > 0 then
+											return templateConfig[math.random(#templateConfig)]
+										end
+									end
+									return templateKey
+								end
+
+								local baseHeading = math.random(0, 359)
+								local stepDeg = (spawnCount > 0) and (360 / spawnCount) or 180
+								local aliasBase = "FOOTHOLD_CSAR_REDINF_"..tostring(aircraftID or math.random(1000,9999)).."_"..tostring(pilotObjectID or math.random(1000,9999))
+								local anySpawned = false
+								for i = 1, spawnCount do
+									local heading = (baseHeading + ((i - 1) * stepDeg)) % 360
+									local spawnDist = minDist + ((maxDist - minDist) * math.random())
+									local spawnCoord = pilotCoord:Translate(spawnDist, heading, true)
+									local spawnVec2 = spawnCoord and spawnCoord.GetVec2 and spawnCoord:GetVec2() or nil
+									local spawnSurface = spawnVec2 and land.getSurfaceType(spawnVec2) or nil
+									local spawnOverWater = (spawnSurface == land.SurfaceType.WATER) or (spawnSurface == land.SurfaceType.SHALLOW_WATER)
+									if not spawnOverWater then
+										local templateName = pickTemplateName()
+										if templateName and templateName ~= '' then
+											local alias = aliasBase.."_"..tostring(i).."_"..tostring(math.random(1000,9999))
+											local spawned = SPAWN:NewWithAlias(templateName, alias):InitCoalition(coalition.side.RED):InitValidateAndRepositionGroundUnits(true):SpawnFromPointVec3(spawnCoord)
+											if spawned then
+												anySpawned = true
+												local spawnedGroupName = alias
+												if spawned.GetName then
+													local resolvedName = spawned:GetName()
+													if resolvedName and resolvedName ~= '' then
+														spawnedGroupName = resolvedName
+													end
+												end
+												self.context:_appendUniqueCsarHostileGroup(hostileSpawnedGroupNames, spawnedGroupName)
+											end
+										end
+									end
+								end
+								if anySpawned then
+									local msgAt = timer.getTime() + 120
+									if pilotData then
+										pilotData.hostileEnemyMessageAt = msgAt
+									else
+										hostileEnemyMessageAt = msgAt
+									end
+								end
+							end
+						end
+					end
+				end
+			end
 			self.context.csarPilotByAircraft = self.context.csarPilotByAircraft or {}
 			local existingPilot = aircraftID and self.context.csarPilotByAircraft[aircraftID]
 			local isPlayerAircraft = aircraftID and self.context.csarPlayerAircraftByAircraft and self.context.csarPlayerAircraftByAircraft[aircraftID]
@@ -16557,6 +20290,10 @@ function LogisticCommander:init()
 			local newPilotObj = spawnDownedPilot()
 			local pilotObj = newPilotObj or event.initiator
 			local newObjectID = pilotObj and pilotObj:getObjectID()
+			self.context:_bindCsarHostilesToPilot(pilotObjectID, pilotData, hostileSpawnedGroupNames)
+			if newObjectID and newObjectID ~= pilotObjectID then
+				self.context:_bindCsarHostilesToPilot(newObjectID, pilotData, hostileSpawnedGroupNames)
+			end
 			if pilotData then
 				self.csarPilotDataByObject = self.csarPilotDataByObject or {}
 				if pilotObjectID then
@@ -16566,6 +20303,28 @@ function LogisticCommander:init()
 				if newObjectID and newObjectID ~= pilotObjectID then
 					landedPilotOwners[newObjectID] = pilotData
 					self.csarPilotDataByObject[newObjectID] = pilotData
+				end
+				if pilotData.hostileEnemyMessageAt and pilotObj then
+					local delay = pilotData.hostileEnemyMessageAt - timer.getTime()
+					if delay < 0 then delay = 0 end
+					local playerName = pilotData.player
+					SCHEDULER:New(nil,function()
+						if pilotObj and pilotObj:isExist() then
+							trigger.action.outTextForCoalition(2,(playerName and playerName ~= '' and ("Enemy forces have surrounded ["..playerName.."]. Hurry and save him.") or "Enemy forces have surrounded the downed pilot. Hurry and save him."),10)
+						end
+					end,{},delay,0)
+					pilotData.hostileEnemyMessageAt = nil
+				end
+			else
+				if hostileEnemyMessageAt and pilotObj then
+					local delay = hostileEnemyMessageAt - timer.getTime()
+					if delay < 0 then delay = 0 end
+					SCHEDULER:New(nil,function()
+						if pilotObj and pilotObj:isExist() then
+							trigger.action.outTextForCoalition(2,"Enemy forces have surrounded the downed pilot. Hurry and save him.",10)
+						end
+					end,{},delay,0)
+					hostileEnemyMessageAt = nil
 				end
 			end
 
@@ -16577,6 +20336,7 @@ function LogisticCommander:init()
 			end
 
 			table.insert(self.context.ejectedPilots,pilotObj)
+			self.context:createCsarMarker(pilotObj)
 			for i in pairs(self.context.csarGroupMenus) do
 				local groupid=i
 				SCHEDULER:New(nil,function()
@@ -16609,118 +20369,7 @@ function LogisticCommander:checkSuppliesStatus(groupid)
 		trigger.action.outTextForGroup(groupid, 'Supplies not loaded', 10)
 	end
 end
-HercCargoDropSupply = {}
-do
-	HercCargoDropSupply.allowedCargo = {}
-	HercCargoDropSupply.allowedCargo['weapons.bombs.Generic Crate [20000lb]'] = true
-	HercCargoDropSupply.herculesRegistry = {} -- {takeoffzone = string, lastlanded = time}
 
-	HercCargoDropSupply.battleCommander = nil
-	function HercCargoDropSupply.init(bc)
-		HercCargoDropSupply.battleCommander = bc
-		
-		cargodropev = {}
-		function cargodropev:onEvent(event)
-			if event.id == world.event.S_EVENT_SHOT then
-				if event.initiator and event.initiator:isExist() then
-					local name = event.weapon:getDesc().typeName
-					if HercCargoDropSupply.allowedCargo[name] then
-						local alt = Utils.getAGL(event.weapon)
-						if alt < 5 then
-							HercCargoDropSupply.ProcessCargo(event)
-						else
-							timer.scheduleFunction(HercCargoDropSupply.CheckCargo, event, timer.getTime() + 0.1)
-						end
-					end
-				end
-			end
-			
-			if event.id == world.event.S_EVENT_TAKEOFF then
-				if event.initiator and event.initiator.getDesc then
-					local desc = event.initiator:getDesc()
-					if desc and desc.typeName == 'Hercules' then
-						local herc = HercCargoDropSupply.herculesRegistry[event.initiator:getName()]
-						local zn = HercCargoDropSupply.battleCommander:getZoneOfUnit(event.initiator:getName())
-						if zn then
-							if not herc then
-								HercCargoDropSupply.herculesRegistry[event.initiator:getName()] = {takeoffzone = zn.zone}
-							elseif not herc.lastlanded or (herc.lastlanded + 30) < timer.getTime() then
-								HercCargoDropSupply.herculesRegistry[event.initiator:getName()].takeoffzone = zn.zone
-							end
-						end
-					end
-				end
-			end
-			if event.id == world.event.S_EVENT_LAND then
-				if event.initiator then
-					local desc = event.initiator:getDesc()
-					if desc and desc.typeName == 'Hercules' then
-						local herc = HercCargoDropSupply.herculesRegistry[event.initiator:getName()]
-						
-						if not herc then
-							HercCargoDropSupply.herculesRegistry[event.initiator:getName()] = {}
-						end
-						
-						HercCargoDropSupply.herculesRegistry[event.initiator:getName()].lastlanded = timer.getTime()
-					end
-				end
-			end
-		end
-		
-		world.addEventHandler(cargodropev)
-	end
-
-	function HercCargoDropSupply.ProcessCargo(shotevent)
-		local cargo = shotevent.weapon
-		local zn = HercCargoDropSupply.battleCommander:getZoneOfWeapon(cargo)
-		if zn and zn.active and shotevent.initiator and shotevent.initiator:isExist() then
-			local herc = HercCargoDropSupply.herculesRegistry[shotevent.initiator:getName()]
-			if not herc or herc.takeoffzone == zn.zone then
-				cargo:destroy()
-				return
-			end
-			
-			local cargoSide = cargo:getCoalition()
-			if zn.side == 0 then
-				if HercCargoDropSupply.battleCommander.playerRewardsOn then
-					HercCargoDropSupply.battleCommander:addFunds(cargoSide, HercCargoDropSupply.battleCommander.rewards.crate)
-					trigger.action.outTextForCoalition(cargoSide,'Capture +'..HercCargoDropSupply.battleCommander.rewards.crate..' credits',5)
-				end
-				
-				zn:capture(cargoSide)
-			elseif zn.side == cargoSide then
-				if HercCargoDropSupply.battleCommander.playerRewardsOn then
-					if zn:canRecieveSupply() then
-						HercCargoDropSupply.battleCommander:addFunds(cargoSide, HercCargoDropSupply.battleCommander.rewards.crate)
-						trigger.action.outTextForCoalition(cargoSide,'Resupply +'..HercCargoDropSupply.battleCommander.rewards.crate..' credits',5)
-					else
-						local reward = HercCargoDropSupply.battleCommander.rewards.crate * 0.25
-						HercCargoDropSupply.battleCommander:addFunds(cargoSide, reward)
-						trigger.action.outTextForCoalition(cargoSide,'Resupply +'..reward..' credits (-75% due to no demand)',5)
-					end
-				end
-				
-				zn:upgrade()
-			end
-			
-			cargo:destroy()
-		end
-	end
-	
-	function HercCargoDropSupply.CheckCargo(shotevent, time)
-		local cargo = shotevent.weapon
-		if not cargo:isExist() then
-			return nil
-		end
-		
-		local alt = Utils.getAGL(cargo)
-		if alt < 5 then
-			HercCargoDropSupply.ProcessCargo(shotevent)
-			return nil
-		end
-		return time+0.1
-	end
-end
 MissionCommander = {}
 do
     function MissionCommander:new(obj)
@@ -16728,6 +20377,7 @@ do
         obj.missions = {}
         obj.missionsType = {}
         obj.missionFlags = {}
+		obj.strikeMenuByGroup = obj.strikeMenuByGroup or {}
         if obj.checkFrequency then
             obj.checkFrequency = 15
         end
@@ -16736,15 +20386,187 @@ do
         return obj
     end
 
-	function MissionCommander:printMissions(groupId)
+	function MissionCommander:decodeMessage(param)
+		if type(param) == "function" then
+			return param()
+		elseif type(param) == "string" then
+			return param
+		end
+	end
+
+	function MissionCommander:getMissionFlagName(mission)
+		if not mission then return nil end
+		return mission.customFlagName or mission.flagName or mission.flag
+	end
+
+	function MissionCommander:inferStrikeFlagForMission(mission)
+		if not mission or mission.customFlagName or not mission.isRunning then return mission and mission.customFlagName or nil end
+		if type(mission.isActive) ~= 'function' then return nil end
+
+		local strikeFlags = {}
+		for flagName, isActive in pairs(ActiveMission or {}) do
+			local meta = MissionFlagMetadata and MissionFlagMetadata[flagName]
+			if isActive and meta and meta.isStrike == true then
+				strikeFlags[#strikeFlags + 1] = flagName
+			end
+		end
+		if #strikeFlags == 0 then return nil end
+
+		local okRunning, isRunningNow = pcall(function() return mission:isActive() end)
+		if not okRunning or not isRunningNow then return nil end
+
+		for _, flagName in ipairs(strikeFlags) do
+			local oldValue = ActiveMission[flagName]
+			ActiveMission[flagName] = nil
+			local okWithout, stillActiveWithout = pcall(function() return mission:isActive() end)
+			ActiveMission[flagName] = oldValue
+			if okWithout and not stillActiveWithout then
+				mission.customFlagName = flagName
+				return flagName
+			end
+		end
+
+		return nil
+	end
+
+	function MissionCommander:isStrikeMission(mission)
+		local flagName = self:getMissionFlagName(mission)
+		if not flagName then
+			flagName = self:inferStrikeFlagForMission(mission)
+		end
+		if not flagName then return false end
+		local meta = MissionFlagMetadata and MissionFlagMetadata[flagName]
+		return meta and meta.isStrike == true or false
+	end
+
+	function MissionCommander:getActiveStrikeMissions()
+		local list = {}
+		for _, mission in ipairs(self.missions) do
+			if mission.isRunning and self:isStrikeMission(mission) then
+				table.insert(list, mission)
+			end
+		end
+		return list
+	end
+
+	function MissionCommander:_missionToText(mission, titleField)
+		local rawTitle = self:decodeMessage(mission and mission[titleField or 'title']) or self:decodeMessage(mission and mission.title) or 'Mission'
+		local rawDescription = self:decodeMessage(mission and mission.description) or 'No mission description available.'
+		return '[' .. rawTitle .. ']\n' .. rawDescription .. '\n------------------------------------------------'
+	end
+
+	function MissionCommander:_printMissionText(groupId, output, groupDuration, coalitionDuration)
+		if groupId then
+			trigger.action.outTextForGroup(groupId, output, groupDuration or 30)
+		else
+			trigger.action.outTextForCoalition(2, output, coalitionDuration or 10)
+		end
+	end
+
+	function MissionCommander:printSingleMission(groupId, mission)
+		if not mission or not mission.isRunning then
+			self:_printMissionText(groupId, 'Strike mission is no longer active.', 12, 8)
+			return
+		end
+		local output = 'Active Missions\n------------------------------------------------\n'
+		output = output .. self:_missionToText(mission, 'title')
+		self:_printMissionText(groupId, output, 30, 10)
+	end
+
+	function MissionCommander:_buildStrikeMenuSignature(activeStrikeMissions)
+		local keys = {}
+		for idx, mission in ipairs(activeStrikeMissions or {}) do
+			keys[#keys + 1] = self:getMissionFlagName(mission) or tostring(idx)
+		end
+		table.sort(keys)
+		return table.concat(keys, '|')
+	end
+
+	function MissionCommander:createStrikeMissionSubMenuForGroup(groupId, parent)
+		if not parent then return end
+		self.strikeMenuByGroup = self.strikeMenuByGroup or {}
+		local state = self.strikeMenuByGroup[groupId]
+		if state and state.root then
+			return state.root
+		end
+		local root = missionCommands.addSubMenuForGroup(groupId, 'Strike missions', parent)
+		self.strikeMenuByGroup[groupId] = {
+			root = root,
+			items = {},
+			signature = nil
+		}
+		return root
+	end
+
+	function MissionCommander:refreshStrikeMissionMenuForGroup(groupId, force)
+		self.strikeMenuByGroup = self.strikeMenuByGroup or {}
+		local state = self.strikeMenuByGroup[groupId]
+		if not state or not state.root then return end
+
+		local active = self:getActiveStrikeMissions()
+		local signature = self:_buildStrikeMenuSignature(active)
+		if not force and state.signature == signature then
+			return
+		end
+
+		if state.items then
+			for _, item in ipairs(state.items) do
+				missionCommands.removeItemForGroup(groupId, item)
+			end
+		end
+		state.items = {}
+		state.signature = signature
+
+		if #active == 0 then
+			local emptyItem = missionCommands.addCommandForGroup(groupId, 'No active strike missions', state.root, function()
+				trigger.action.outTextForGroup(groupId, 'No active strike missions.', 10)
+			end)
+			state.items[#state.items + 1] = emptyItem
+			return
+		end
+
+		local titleCount = {}
+		for _, mission in ipairs(active) do
+			local title = self:decodeMessage(mission.title) or 'Strike mission'
+			titleCount[title] = (titleCount[title] or 0) + 1
+		end
+
+		for idx, mission in ipairs(active) do
+			local title = self:decodeMessage(mission.title) or 'Strike mission'
+			local label = title
+			if titleCount[title] and titleCount[title] > 1 then
+				local flagName = self:getMissionFlagName(mission) or tostring(idx)
+				label = title .. ' [' .. flagName .. ']'
+			end
+			local missionRef = mission
+			local item = missionCommands.addCommandForGroup(groupId, label, state.root, function()
+				if not missionRef.isRunning then
+					trigger.action.outTextForGroup(groupId, 'Strike mission is no longer active.', 12)
+					self:refreshStrikeMissionMenuForGroup(groupId, true)
+					return
+				end
+				self:printSingleMission(groupId, missionRef)
+			end)
+			state.items[#state.items + 1] = item
+		end
+	end
+
+	function MissionCommander:refreshAllStrikeMissionMenus(force)
+		self.strikeMenuByGroup = self.strikeMenuByGroup or {}
+		for groupId, _ in pairs(self.strikeMenuByGroup) do
+			self:refreshStrikeMissionMenuForGroup(groupId, force)
+		end
+	end
+
+	function MissionCommander:printMissions(groupId, opts)
+		opts = opts or {}
+		local includeStrike = opts.includeStrike == true
 		local output = 'Active Missions'
 		output = output .. '\n------------------------------------------------'
 
 		for _, v in ipairs(self.missions) do
-			if v.isRunning then
-				output = output .. '\n[' .. self:decodeMessage(v.title) .. ']'
-				output = output .. '\n' .. self:decodeMessage(v.description)
-				output = output .. '\n------------------------------------------------'
+			if v.isRunning and (includeStrike or not self:isStrikeMission(v)) then
+				output = output .. '\n' .. self:_missionToText(v, 'title')
 			end
 		end
 
@@ -16761,18 +20583,13 @@ do
 			output = output .. '\n------------------------------------------------'
 			for _, v in ipairs(self.missions) do
 				if v.isEscortMission and not v.isRunning and not v.accept and v:isActive() then
-					output = output .. '\n[' .. self:decodeMessage(v.MainTitle) .. ']'
-					output = output .. '\n' .. self:decodeMessage(v.description)
-					output = output .. '\n------------------------------------------------'
+					output = output .. '\n' .. self:_missionToText(v, 'MainTitle')
 				end
 			end
 		end
-	  if groupId then
-		trigger.action.outTextForGroup(groupId, output, 30)
-	  else
-		trigger.action.outTextForCoalition(2, output, 10)
-	  end
+		self:_printMissionText(groupId, output, 30, 10)
 	end
+
 	function MissionCommander:trackMission(params)
 
 		if params.isEscortMission and params.zoneName then
@@ -16790,25 +20607,37 @@ do
 
 	function MissionCommander:checkMissions(time)
 		for i, v in ipairs(self.missions) do
+			local isActiveNow = v:isActive()
 			if v.isRunning then
-				if v.missionFail and v:isActive() and v:missionFail() then
+				if v.missionFail and isActiveNow and v:missionFail() then
+					local wasStrikeMission = self:isStrikeMission(v)
 					v.isRunning = false
 					table.remove(self.missions, i)
+					if wasStrikeMission then
+						self:refreshAllStrikeMissionMenus(true)
+					end
 				if v.startOver then v:startOver() end
-				elseif not v:isActive() then
+				elseif not isActiveNow then
+					local wasStrikeMission = self:isStrikeMission(v)
 					if v.messageEnd then trigger.action.outTextForCoalition(self.side, self:decodeMessage(v.messageEnd), 30) end
 					if v.reward then self.battleCommander:addFunds(self.side, v.reward) end
 					if v.endAction then v:endAction() end
 					v.isRunning = false
+					if wasStrikeMission then
+						self:refreshAllStrikeMissionMenus(true)
+					end
 					return time + 2
 				end
-			elseif v:isActive() and not v.isEscortMission then
+			elseif isActiveNow and not v.isEscortMission then
 				if v.canExecute and type(v.canExecute) == 'function' then
 					if v:canExecute() then
 						if v.messageStart then
 							trigger.action.outTextForCoalition(self.side, self:decodeMessage(v.messageStart), 30) end
 						if v.startAction then v:startAction() end
 						v.isRunning = true
+						if self:isStrikeMission(v) then
+							self:refreshAllStrikeMissionMenus(true)
+						end
 						--return time + 4
 					end
 				else
@@ -16816,20 +20645,23 @@ do
 						trigger.action.outTextForCoalition(self.side, self:decodeMessage(v.messageStart), 30) end
 					if v.startAction then v:startAction() end
 					v.isRunning = true
+					if self:isStrikeMission(v) then
+						self:refreshAllStrikeMissionMenus(true)
+					end
 					return time + 6
 				end
-			elseif v.isEscortMission and v:isActive() and not v.isRunning then
+			elseif v.isEscortMission and isActiveNow and not v.isRunning then
 				if not v.notified then
 					if v.titleBefore then
 					v:titleBefore() end
 					v.notified = true
 				end
-				if v:isActive() and v.notified and v:returnAccepted() and not v.isRunning then
+				if v.notified and v:returnAccepted() and not v.isRunning then
 					if v.startAction then v.startAction() end
 					v.isRunning = true
 					return time + 4
 				end
-			elseif v.isEscortMission and not v:isActive() and v.notified then
+			elseif v.isEscortMission and not isActiveNow and v.notified then
 				v.notified = false
 			end
 		end
@@ -16848,8 +20680,6 @@ do
 		end
 	end
 
-
-
 	function MissionCommander:init()
 		--missionCommands.addCommandForCoalition(self.side, 'Missions', nil, self.printMissions, self)
 		timer.scheduleFunction(self.checkMissions, self, timer.getTime() + 15)
@@ -16867,16 +20697,10 @@ do
 		local parent = MissionsRootMenus[groupId]
 		if parent then
 			printMissionMenus[groupId] = missionCommands.addCommandForGroup(groupId, "Available missions", parent, function() self:printMissions(groupId) end)
+			self:createStrikeMissionSubMenuForGroup(groupId, parent)
+			self:refreshStrikeMissionMenuForGroup(groupId, true)
 		else
 			return
-		end
-	end
-
-	function MissionCommander:decodeMessage(param)
-		if type(param) == "function" then
-			return param()
-		elseif type(param) == "string" then
-			return param
 		end
 	end
 end
@@ -17765,7 +21589,7 @@ local function orderedZones(side, allow, capMode)
 		end
 	end
 	table.sort(c, function(a, b)
-		if a.wp and b.wp then return a.wp < b.wp end
+		if a.wp and b.wp then return a.wp > b.wp end
 		if a.wp       then return true  end
 		if b.wp       then return false end
 		return a.z.zone < b.z.zone
@@ -17789,6 +21613,194 @@ TexacoActive = false
 ArcoGroup = nil
 TexacoGroup = nil
 capGroup = nil
+
+	ARCO_DEFAULT_ALTITUDE_FT = 18000
+	TEXACO_DEFAULT_ALTITUDE_FT = 16000
+	TEXACO_DEFAULT_SPEED_KT = TexacoSpeed or 286
+	ArcoCurrentAltitudeFt = ARCO_DEFAULT_ALTITUDE_FT
+	TexacoCurrentAltitudeFt = TEXACO_DEFAULT_ALTITUDE_FT
+	TexacoCurrentSpeedKt = TEXACO_DEFAULT_SPEED_KT
+
+-- Persisted tanker unlock + station state (saved in BattleCommander state table).
+	TANKER_PERSISTENCE = TANKER_PERSISTENCE or {
+	    arco = { unlocked = false, x = nil, y = nil, z = nil, heading = 45, leg = 0, zone = nil },
+	    texaco = { unlocked = false, x = nil, y = nil, z = nil, heading = 45, leg = 0, zone = nil, speed = TEXACO_DEFAULT_SPEED_KT },
+	}
+_tankerRestoreScheduled = _tankerRestoreScheduled or false
+
+_getTankerDefaultAltitude = function(kind)
+    if kind == "arco" then
+        return ARCO_DEFAULT_ALTITUDE_FT
+    end
+    return TEXACO_DEFAULT_ALTITUDE_FT
+end
+
+_getTankerCurrentAltitude = function(kind)
+    if kind == "arco" then
+        ArcoCurrentAltitudeFt = tonumber(ArcoCurrentAltitudeFt) or ARCO_DEFAULT_ALTITUDE_FT
+        return ArcoCurrentAltitudeFt
+    end
+    TexacoCurrentAltitudeFt = tonumber(TexacoCurrentAltitudeFt) or TEXACO_DEFAULT_ALTITUDE_FT
+    return TexacoCurrentAltitudeFt
+end
+
+_setTankerCurrentAltitude = function(kind, altitudeFt)
+    local alt = tonumber(altitudeFt)
+    if not alt then return nil end
+    alt = math.floor(alt + 0.5)
+    if kind == "arco" then
+        ArcoCurrentAltitudeFt = alt
+        return ArcoCurrentAltitudeFt
+    end
+    TexacoCurrentAltitudeFt = alt
+    return TexacoCurrentAltitudeFt
+end
+
+	_getTankerAltitudeOptions = function(kind)
+	    if kind == "arco" then
+	        return {16000, 17000, 18000, 19000, 20000, 21000, 22000}
+	    end
+	    return {14000, 15000, 16000, 17000, 18000, 19000, 20000}
+	end
+
+	_getTankerDefaultSpeed = function(kind)
+	    if kind == "texaco" then
+	        return TEXACO_DEFAULT_SPEED_KT
+	    end
+	    return nil
+	end
+
+	_getTankerCurrentSpeed = function(kind)
+	    if kind ~= "texaco" then return nil end
+	    local speed = TexacoCurrentSpeedKt
+	    if type(speed) ~= "number" then
+	        speed = TEXACO_DEFAULT_SPEED_KT
+	    end
+	    if type(_getTankerState) == "function" then
+	        local st = _getTankerState("texaco")
+	        if st then
+	            if type(st.speed) == "number" then
+	                speed = st.speed
+	            elseif st.speed == nil then
+	                st.speed = speed
+	            end
+	        end
+	    end
+	    TexacoCurrentSpeedKt = math.floor(speed + 0.5)
+	    return TexacoCurrentSpeedKt
+	end
+
+	_setTankerCurrentSpeed = function(kind, speedKt)
+	    if kind ~= "texaco" then return nil end
+	    if type(speedKt) ~= "number" then return nil end
+	    local speed = math.floor(speedKt + 0.5)
+	    local st = nil
+	    if type(_getTankerState) == "function" then
+	        st = _getTankerState("texaco")
+	        if st then st.speed = speed end
+	    end
+	    TexacoCurrentSpeedKt = speed
+	    return speed
+	end
+
+	_getTankerSpeedOptions = function(kind)
+	    if kind == "texaco" then
+	        return {220, 286, 300, 320, 340}
+	    end
+	    return {}
+	end
+
+_formatFeetMenuLabel = function(feet)
+    local n = math.floor((tonumber(feet) or 0) + 0.5)
+    local s = tostring(n)
+    while true do
+        local formatted, k = s:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+        s = formatted
+        if k == 0 then break end
+    end
+    return s
+end
+
+	_normalizeTankerState = function(raw, defaultHeading, defaultSpeed)
+	    local out = {
+	        unlocked = false,
+	        x = nil,
+	        y = nil,
+	        z = nil,
+	        heading = defaultHeading,
+	        leg = 0,
+	        zone = nil,
+	        speed = defaultSpeed,
+	    }
+	    if type(raw) ~= "table" then return out end
+	    out.unlocked = raw.unlocked == true
+	    out.x = tonumber(raw.x)
+	    out.y = tonumber(raw.y)
+	    out.z = tonumber(raw.z)
+	    out.heading = tonumber(raw.heading) or defaultHeading
+	    out.leg = tonumber(raw.leg) or 0
+	    out.zone = raw.zone
+	    if type(raw.speed) == "number" then
+	        out.speed = math.floor(raw.speed + 0.5)
+	    end
+	    return out
+	end
+	
+	_getTankerState = function(kind)
+	    local key = (kind == "arco") and "arco" or "texaco"
+	    local defHeading = (key == "arco") and 45 or 45
+	    local defSpeed = (key == "texaco") and TEXACO_DEFAULT_SPEED_KT or nil
+	    TANKER_PERSISTENCE = TANKER_PERSISTENCE or {}
+	    TANKER_PERSISTENCE[key] = _normalizeTankerState(TANKER_PERSISTENCE[key], defHeading, defSpeed)
+	    if key == "texaco" and type(TANKER_PERSISTENCE[key].speed) == "number" then
+	        TexacoCurrentSpeedKt = TANKER_PERSISTENCE[key].speed
+	    end
+	    return TANKER_PERSISTENCE[key]
+	end
+
+_isTankerUnlockedById = function(id)
+    if id == "dynamicarco" then
+        return _getTankerState("arco").unlocked == true
+    elseif id == "dynamictexaco" then
+        return _getTankerState("texaco").unlocked == true
+    end
+    return false
+end
+
+_setTankerUnlockedById = function(id)
+    if id == "dynamicarco" then
+        _getTankerState("arco").unlocked = true
+    elseif id == "dynamictexaco" then
+        _getTankerState("texaco").unlocked = true
+    end
+end
+
+	_saveTankerStation = function(kind, coord, heading, leg, zone)
+	    local st = _getTankerState(kind)
+	    st.unlocked = true
+	    st.heading = tonumber(heading) or st.heading or 45
+	    st.leg = tonumber(leg) or 0
+	    if kind == "texaco" then
+	        local speed = _getTankerCurrentSpeed("texaco")
+	        if type(speed) == "number" then
+	            st.speed = speed
+	        end
+	    end
+	    if zone then st.zone = zone end
+
+    local vec = nil
+    if coord and coord.GetVec3 then
+        vec = coord:GetVec3()
+    elseif type(coord) == "table" and coord.x and (coord.z or coord.y) then
+        vec = { x = coord.x, y = coord.y, z = coord.z or coord.y }
+    end
+    if vec and vec.x and vec.z then
+        st.x = vec.x
+        st.y = vec.y
+        st.z = vec.z
+    end
+end
+
 capTemplate = (Era == 'Coldwar') and 'CAP_Template_CW' or 'CAP_Template'
 capAltitude = 28000
 capSpeed = 380
@@ -17806,18 +21818,6 @@ capLegs = {["Orbit"] = 0,["10 NM Leg"] = 10, ["20 NM Leg"] = 20, ["30 NM Leg"] =
 function despawnCap()
     if capGroup then
         capGroup:Despawn()
-    end
-end
-function despawnArco()
-	stopArcoProximityWatch()
-    if ArcoGroup then
-        ArcoGroup:Despawn()
-    end
-end
-function despawnTexaco()
-	stopTexacoProximityWatch()
-    if TexacoGroup then
-        TexacoGroup:Despawn()
     end
 end
 
@@ -17847,7 +21847,6 @@ function setCapRacetrack(coord, heading, leg, zone)
 		CapMissionOrbit2:SetROE(2)
 		capGroup:AddMission(CapMissionOrbit2)
 		function CapMissionOrbit2:OnAfterExecuting(From, Event, To)
-			CapMissionOrbit2:SetMissionSpeed(330)
 			if zone then
 				trigger.action.outTextForCoalition(2, "CAP: Orbiting at " .. zone, 10)
 			else
@@ -17862,10 +21861,9 @@ function setCapRacetrack(coord, heading, leg, zone)
 		CapMission2:SetEngageDetected(40, {"Air"})
 		CapMission2:SetROT(2)
 		CapMission2:SetROE(2)
-		CapMission2:SetMissionSpeed(450)
+		CapMission2:SetMissionSpeed(600)
 		capGroup:AddMission(CapMission2)
 		function CapMission2:OnAfterExecuting(From, Event, To)
-		CapMission2:SetMissionSpeed(400)
 			if zone then
 				trigger.action.outTextForCoalition(2, "CAP: Racetrack at " .. zone .. " with heading " .. heading .. "° and leg distance " .. leg .. " NM", 10)
 			else
@@ -17904,7 +21902,7 @@ function ArcoRepositionCheckAndSet(coord, heading, leg, zone)
         MESSAGE:New("Players currently near the tanker. Try again later.", 10):ToAll()
         return
     end
-    setArcoRacetrack(coord, heading, leg, zone)
+    setArcoRacetrack(coord, heading, leg, zone, nil, true)
 	return true
 end
 
@@ -17913,15 +21911,16 @@ function TexacoRepositionCheckAndSet(coord, heading, leg, zone)
         MESSAGE:New("Players currently near the tanker. Try again later.", 10):ToAll()
         return
     end
-    setTexacoRacetrack(coord, heading, leg, zone)
+    setTexacoRacetrack(coord, heading, leg, zone, nil, true)
 	return true
 end
 
 function isArcoRepositionAllowed()
-    if not ArcoGroup then return true end
-    local u = ArcoGroup:GetUnit(1)
-    if not u or not u:IsAlive() then return true end
-    local tv = u:GetPointVec3()
+    if not ArcoGroup or not ArcoGroup:isExist() then return true end
+    local u = ArcoGroup:getUnit(1)
+    if not u or not u:isExist() then return true end
+    local tv = u:getPoint()
+    if not tv then return true end
     local occupied = false
     BlueClients:ForEachClient(function(client)
         if occupied then return end
@@ -17940,10 +21939,11 @@ function isArcoRepositionAllowed()
 end
 
 function isTexacoRepositionAllowed()
-    if not TexacoGroup then return true end
-    local u = TexacoGroup:GetUnit(1)
-    if not u or not u:IsAlive() then return true end
-    local tv = u:GetPointVec3()
+    if not TexacoGroup or not TexacoGroup:isExist() then return true end
+    local u = TexacoGroup:getUnit(1)
+    if not u or not u:isExist() then return true end
+    local tv = u:getPoint()
+    if not tv then return true end
     local occupied = false
     BlueClients:ForEachClient(function(client)
         if occupied then return end
@@ -17961,14 +21961,89 @@ function isTexacoRepositionAllowed()
     return not occupied
 end
 
+function ArcoAltitudeCheckAndSet(altFt)
+    if not ArcoGroup then return false end
+    if not isArcoRepositionAllowed() then
+        MESSAGE:New("Players currently near the tanker. Try again later.", 10):ToAll()
+        return false
+    end
+
+    local currentAlt = tonumber(_getTankerCurrentAltitude("arco")) or _getTankerDefaultAltitude("arco")
+    local targetAlt = _setTankerCurrentAltitude("arco", altFt)
+    if not targetAlt then return false end
+    if currentAlt == targetAlt then return false end
+
+    local st = _getTankerState("arco")
+    if not ArcoGroup:isExist() then return false end
+    local controller = ArcoGroup:getController()
+    if not controller then return false end
+    controller:setAltitude(UTILS.FeetToMeters(targetAlt), true, "BARO")
+    st.unlocked = true
+    MESSAGE:New("Arco altitude set to " .. _formatFeetMenuLabel(targetAlt) .. " ft.", 10):ToAll()
+    return true
+end
+
+function TexacoAltitudeCheckAndSet(altFt)
+    if not TexacoGroup then return false end
+    if not isTexacoRepositionAllowed() then
+        MESSAGE:New("Players currently near the tanker. Try again later.", 10):ToAll()
+        return false
+    end
+
+    local currentAlt = tonumber(_getTankerCurrentAltitude("texaco")) or _getTankerDefaultAltitude("texaco")
+    local targetAlt = _setTankerCurrentAltitude("texaco", altFt)
+    if not targetAlt then return false end
+    if currentAlt == targetAlt then return false end
+
+    local st = _getTankerState("texaco")
+    if not TexacoGroup:isExist() then return false end
+    local controller = TexacoGroup:getController()
+    if not controller then return false end
+    controller:setAltitude(UTILS.FeetToMeters(targetAlt), true, "BARO")
+    st.unlocked = true
+    MESSAGE:New("Texaco altitude set to " .. _formatFeetMenuLabel(targetAlt) .. " ft.", 10):ToAll()
+    return true
+end
+
+function TexacoSpeedCheckAndSet(speedKt)
+    if not TexacoGroup then return false end
+    if not isTexacoRepositionAllowed() then
+        MESSAGE:New("Players currently near the tanker. Try again later.", 10):ToAll()
+        return false
+    end
+
+    local currentSpeed = _getTankerCurrentSpeed("texaco") or _getTankerDefaultSpeed("texaco")
+    if type(speedKt) ~= "number" then return false end
+    local targetSpeed = math.floor(speedKt + 0.5)
+    if currentSpeed == targetSpeed then return false end
+
+    local st = _getTankerState("texaco")
+    if not TexacoGroup:isExist() then return false end
+    local controller = TexacoGroup:getController()
+    if not controller then return false end
+
+    local altitudeM = UTILS.FeetToMeters(_getTankerCurrentAltitude("texaco"))
+    local speedMps = UTILS.IasToTas(UTILS.KnotsToMps(targetSpeed), altitudeM)
+    controller:setSpeed(speedMps, true)
+
+    _setTankerCurrentSpeed("texaco", targetSpeed)
+    st.unlocked = true
+    st.speed = targetSpeed
+    MESSAGE:New("Texaco speed set to " .. tostring(targetSpeed) .. " kt.", 10):ToAll()
+    return true
+end
+
 function startArcoProximityWatch()
     if not ArcoGroup then return end
-    local u = ArcoGroup:GetUnit(1)
-    if not u or not u:IsAlive() then return end
+    local du = ArcoGroup:getUnit(1)
+    if not du or not du:isExist() then return end
+    local u = UNIT:FindByName(du:getName())
+    if not u then return end
     ArcoZone = ZONE_UNIT:New("Arco_Prox", u, ARCO_PROX_RADIUS_M)
     ArcoZone.OnAfterEnteredZone = function(self, From, Event, To, triggeringClient)
         if not triggeringClient then return end
         local cu = triggeringClient:GetPointVec3()
+        if not u:IsAlive() then return end
         local tu = u:GetPointVec3()
         if math.abs(cu.y - tu.y) <= ARCO_PROX_ALT_M then
             MESSAGE:New("Approaching Arco, BTN 14, 260.00", 20):ToClient(triggeringClient)
@@ -17979,12 +22054,15 @@ end
 
 function startTexacoProximityWatch()
     if not TexacoGroup then return end
-    local u = TexacoGroup:GetUnit(1)
-    if not u or not u:IsAlive() then return end
+    local du = TexacoGroup:getUnit(1)
+    if not du or not du:isExist() then return end
+    local u = UNIT:FindByName(du:getName())
+    if not u then return end
     TexacoZone = ZONE_UNIT:New("Texaco_Prox", u, TEXACO_PROX_RADIUS_M)
     TexacoZone.OnAfterEnteredZone = function(self, From, Event, To, triggeringClient)
         if not triggeringClient then return end
         local cu = triggeringClient:GetPointVec3()
+        if not u:IsAlive() then return end
         local tu = u:GetPointVec3()
         if math.abs(cu.y - tu.y) <= TEXACO_PROX_ALT_M then
             MESSAGE:New("Approaching Texaco, BTN 20, 266.00", 20):ToClient(triggeringClient)
@@ -17996,72 +22074,264 @@ end
 -- BASE:TraceOn()
 -- BASE:TraceClass("AUFTRAG")
 
-function setTexacoRacetrack(coord, heading, leg, zone)
-    if not TexacoGroup then return end
-    local currentMission = TexacoGroup:GetMissionCurrent()
-    if currentMission then
-        currentMission:__Cancel(5)
+function setTexacoRacetrack(coord, heading, leg, zone, speedOverride, silentMessage)
+    if not TexacoGroup or not coord then return end
+
+    local dcsGroup = TexacoGroup
+    if not dcsGroup or not dcsGroup:isExist() then return end
+
+    local texacoAltFt = _getTankerCurrentAltitude("texaco")
+    local legNm = leg or 0
+    local hdg = heading or 45
+    local speedKnots = speedOverride or _getTankerCurrentSpeed("texaco") or _getTankerDefaultSpeed("texaco") or TEXACO_DEFAULT_SPEED_KT
+    local altitude = UTILS.FeetToMeters(texacoAltFt)
+    local pBase = coord.GetVec2 and coord:GetVec2() or { x = coord.x, y = coord.z or coord.y }
+    local routeSpeed = UTILS.IasToTas(UTILS.KnotsToMps(speedKnots), altitude)
+
+    local orbitTask = {
+        id = 'Orbit',
+        params = {
+            pattern = AI.Task.OrbitPattern.CIRCLE,
+            point = { x = pBase.x, y = pBase.y },
+            speed = routeSpeed,
+            altitude = altitude,
+            altitudeEdited = true,
+            altitudeType = AI.Task.AltitudeType.BARO,
+            alt_type = AI.Task.AltitudeType.BARO,
+        },
+    }
+    if legNm > 0 then
+        local p2 = UTILS.Vec2Translate(pBase, UTILS.NMToMeters(legNm), hdg)
+        orbitTask.params.pattern = AI.Task.OrbitPattern.RACE_TRACK
+        orbitTask.params.point2 = { x = p2.x, y = p2.y }
     end
-    local TexacoTanker2 = AUFTRAG:NewTANKER(coord, 16000, 280, heading, leg)
-    
-	TexacoTanker2:SetMissionSpeed(361)
-	TexacoTanker2:SetMissionAltitude(16000)
-	TexacoGroup:AddMission(TexacoTanker2)
 
+    local lead = dcsGroup:getUnit(1)
+    if not lead then return end
+    local leadPos = lead:getPoint()
+    if not leadPos then return end
 
-	function TexacoTanker2:OnAfterStarted(From, Event, To)
---[[ 		TexacoGroup:SetAltitude(4876)
-		TexacoGroup:SetSpeed(UTILS.KnotsToMps(400)) ]]
+    local controller = dcsGroup:getController()
+    if not controller then return end
+    controller:setTask({
+        id = 'Mission',
+        params = {
+            airborne = true,
+            route = {
+                points = {
+                    {
+                        x = leadPos.x,
+                        y = leadPos.z,
+                        alt = leadPos.y,
+                        alt_type = 'BARO',
+                        type = 'Turning Point',
+                        action = 'Turning Point',
+                        ETA = 0,
+                        ETA_locked = false,
+                        speed = routeSpeed,
+                        speed_locked = true,
+                        task = { id = 'ComboTask', params = { tasks = {} } },
+                    },
+                    {
+                        x = pBase.x,
+                        y = pBase.y,
+                        alt = altitude,
+                        alt_type = 'BARO',
+                        type = 'Turning Point',
+                        action = 'Turning Point',
+                        ETA = 0,
+                        ETA_locked = false,
+                        speed = routeSpeed,
+                        speed_locked = true,
+                        task = {
+                            id = 'ComboTask',
+                            params = {
+                                tasks = {
+                                    { id = 'Tanker', params = {} },
+                                    orbitTask,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    })
 
-	end
-	function TexacoTanker2:OnAfterExecuting(From, Event, To)
-		if leg == 0 then
-			if zone then
-				trigger.action.outTextForCoalition(2, "Texaco: Orbiting at " .. zone, 10)
-			else
-				trigger.action.outTextForCoalition(2, "Texaco: Orbiting", 10)
-			end
-		else
-			if zone then
-				trigger.action.outTextForCoalition(2, "Texaco: Racetrack at " .. zone .. " with heading " .. heading .. "° and leg distance " .. leg .. " NM", 10)
-			else
-				trigger.action.outTextForCoalition(2, "Texaco: Racetrack with heading " .. heading .. "° and leg distance " .. leg .. " NM", 10)
-			end
-		end
-	end
-end
+    _saveTankerStation("texaco", coord, hdg, legNm, zone)
+    if silentMessage then return end
 
-
-
-
-function setArcoRacetrack(coord, heading, leg, zone)
-    if not ArcoGroup then return end
-    local currentMission = ArcoGroup:GetMissionCurrent()
-    if currentMission then
-        currentMission:__Cancel(5)
+    if legNm == 0 then
+        if zone then
+            trigger.action.outTextForCoalition(2, "Texaco: Orbiting at " .. zone, 10)
+        else
+            trigger.action.outTextForCoalition(2, "Texaco: Orbiting", 10)
+        end
+    else
+        if zone then
+            trigger.action.outTextForCoalition(2, "Texaco: Racetrack at " .. zone .. " with heading " .. hdg .. " degrees and leg distance " .. legNm .. " NM", 10)
+        else
+            trigger.action.outTextForCoalition(2, "Texaco: Racetrack with heading " .. hdg .. " degrees and leg distance " .. legNm .. " NM", 10)
+        end
     end
-    local ArcoTanker2 = AUFTRAG:NewTANKER(coord, 18000, 280, heading, leg)
-	ArcoTanker2:SetMissionSpeed(371)
-	ArcoTanker2:SetMissionAltitude(18000)
-    ArcoGroup:AddMission(ArcoTanker2)
-
-	function ArcoTanker2:OnAfterExecuting(From, Event, To)
-		if leg == 0 then
-			if zone then
-				trigger.action.outTextForCoalition(2, "Arco: Orbiting at " .. zone, 10)
-			else
-				trigger.action.outTextForCoalition(2, "Arco: Orbiting", 10)
-			end
-		else
-			if zone then
-				trigger.action.outTextForCoalition(2, "Arco: Racetrack at " .. zone .. " with heading " .. heading .. "° and leg distance " .. leg .. " NM", 10)
-			else
-				trigger.action.outTextForCoalition(2, "Arco: Racetrack with heading " .. heading .. "° and leg distance " .. leg .. " NM", 10)
-			end
-		end
-	end
 end
+function setArcoRacetrack(coord, heading, leg, zone, speedOverride, silentMessage)
+    if not ArcoGroup or not coord then return end
 
+    local dcsGroup = ArcoGroup
+    if not dcsGroup or not dcsGroup:isExist() then return end
+
+    local arcoAltFt = _getTankerCurrentAltitude("arco")
+    local legNm = leg or 0
+    local hdg = heading or 45
+    local speedKnots = speedOverride or ArcoSpeed or 286
+    local altitude = UTILS.FeetToMeters(arcoAltFt)
+    local pBase = coord.GetVec2 and coord:GetVec2() or { x = coord.x, y = coord.z or coord.y }
+    local routeSpeed = UTILS.IasToTas(UTILS.KnotsToMps(speedKnots), altitude)
+
+    local orbitTask = {
+        id = 'Orbit',
+        params = {
+            pattern = AI.Task.OrbitPattern.CIRCLE,
+            point = { x = pBase.x, y = pBase.y },
+            speed = routeSpeed,
+            altitude = altitude,
+            altitudeEdited = true,
+            altitudeType = AI.Task.AltitudeType.BARO,
+            alt_type = AI.Task.AltitudeType.BARO,
+        },
+    }
+    if legNm > 0 then
+        local p2 = UTILS.Vec2Translate(pBase, UTILS.NMToMeters(legNm), hdg)
+        orbitTask.params.pattern = AI.Task.OrbitPattern.RACE_TRACK
+        orbitTask.params.point2 = { x = p2.x, y = p2.y }
+    end
+
+    local lead = dcsGroup:getUnit(1)
+    if not lead then return end
+    local leadPos = lead:getPoint()
+    if not leadPos then return end
+
+    local controller = dcsGroup:getController()
+    if not controller then return end
+    controller:setTask({
+        id = 'Mission',
+        params = {
+            airborne = true,
+            route = {
+                points = {
+                    {
+                        x = leadPos.x,
+                        y = leadPos.z,
+                        alt = leadPos.y,
+                        alt_type = 'BARO',
+                        type = 'Turning Point',
+                        action = 'Turning Point',
+                        ETA = 0,
+                        ETA_locked = false,
+                        speed = routeSpeed,
+                        speed_locked = true,
+                        task = { id = 'ComboTask', params = { tasks = {} } },
+                    },
+                    {
+                        x = pBase.x,
+                        y = pBase.y,
+                        alt = altitude,
+                        alt_type = 'BARO',
+                        type = 'Turning Point',
+                        action = 'Turning Point',
+                        ETA = 0,
+                        ETA_locked = false,
+                        speed = routeSpeed,
+                        speed_locked = true,
+                        task = {
+                            id = 'ComboTask',
+                            params = {
+                                tasks = {
+                                    { id = 'Tanker', params = {} },
+                                    orbitTask,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    })
+
+    _saveTankerStation("arco", coord, hdg, legNm, zone)
+    if silentMessage then return end
+
+    if legNm == 0 then
+        if zone then
+            trigger.action.outTextForCoalition(2, "Arco: Orbiting at " .. zone, 10)
+        else
+            trigger.action.outTextForCoalition(2, "Arco: Orbiting", 10)
+        end
+    else
+        if zone then
+            trigger.action.outTextForCoalition(2, "Arco: Racetrack at " .. zone .. " with heading " .. hdg .. " degrees and leg distance " .. legNm .. " NM", 10)
+        else
+            trigger.action.outTextForCoalition(2, "Arco: Racetrack with heading " .. hdg .. " degrees and leg distance " .. legNm .. " NM", 10)
+        end
+    end
+end
+function schedulePersistentTankerRestore()
+	if _tankerRestoreScheduled then return end
+	local arcoState = _getTankerState("arco")
+	local texacoState = _getTankerState("texaco")
+	if not (arcoState.unlocked or texacoState.unlocked) then return end
+	_tankerRestoreScheduled = true
+		timer.scheduleFunction(function()
+			_tankerRestoreScheduled = false
+			local needArcoSelection = false
+			local needTexacoSelection = false
+
+			local arco = _getTankerState("arco")
+			if arco.unlocked and not ArcoActive then
+				local heading = tonumber(arco.heading) or 45
+				local leg = tonumber(arco.leg) or 0
+				local triedArcoSpawn = false
+				if arco.x and arco.z then
+					triedArcoSpawn = true
+					spawnArcoAt(COORDINATE:New(arco.x, UTILS.FeetToMeters(18000), arco.z), heading, leg, arco.zone or "saved position", true)
+				elseif arco.zone and ZONE:FindByName(arco.zone) then
+					triedArcoSpawn = true
+					spawnArcoAt(arco.zone, heading, leg, nil, true)
+				end
+				if (not triedArcoSpawn) or (not ArcoActive) then
+					needArcoSelection = true
+				end
+			end
+
+		local texaco = _getTankerState("texaco")
+			if texaco.unlocked and not TexacoActive then
+				local heading = tonumber(texaco.heading) or 45
+				local leg = tonumber(texaco.leg) or 0
+				local triedTexacoSpawn = false
+				if texaco.x and texaco.z then
+					triedTexacoSpawn = true
+					spawnTexacoAt(COORDINATE:New(texaco.x, UTILS.FeetToMeters(16000), texaco.z), heading, leg, texaco.zone or "saved position", true)
+				elseif texaco.zone and ZONE:FindByName(texaco.zone) then
+					triedTexacoSpawn = true
+					spawnTexacoAt(texaco.zone, heading, leg, nil, true)
+				end
+				if (not triedTexacoSpawn) or (not TexacoActive) then
+					needTexacoSelection = true
+				end
+		end
+
+		if needArcoSelection and not ArcoActive then
+			buildArcoMenu()
+			trigger.action.outTextForCoalition(2, '(Drogue) Tanker is unlocked. Select spawn zone.', 20)
+		end
+		if needTexacoSelection and not TexacoActive then
+			buildTexacoMenu()
+			trigger.action.outTextForCoalition(2, '(Boom) Tanker is unlocked. Select spawn zone.', 20)
+		end
+		return nil
+	end, {}, timer.getTime() + 2)
+end
 capPositionDirections = {["Reposition 360"] = 360, ["Reposition 045"] = 45, ["Reposition 090"] = 90, ["Reposition 135"] = 135, ["Reposition 180"] = 180, ["Reposition 225"] = 225, ["Reposition 270"] = 270, ["Reposition 315"] = 315}
 capPositionDistances = {["0 NM"] = 0,["10 NM"] = 10, ["20 NM"] = 20, ["30 NM"] = 30, ["40 NM"] = 40, ["50 NM"] = 50, ["60 NM"] = 60, ["70 NM"] = 70, ["80 NM"] = 80, ["90 NM"] = 90, ["100 NM"] = 100}
 
@@ -18111,329 +22381,8 @@ function findClosestBlueZoneOutside(targetZoneName,minDistNM)
 end
 -- cap
 function buildCapControlMenu()
-    if capControlMenu then
-        missionCommands.removeItemForCoalition(2, capControlMenu)
-        capControlMenu = nil
-    end
-    capControlMenu = missionCommands.addSubMenuForCoalition(2, "Dynamic Control")
-
-    if not (capActive or casActive or seadActive or decoyActive or bomberActive or StructureActive or ArcoActive or TexacoActive) then
-        if capControlMenu then
-            missionCommands.removeItemForCoalition(2, capControlMenu)
-            capControlMenu = nil
-        end
-        return
-    end
-
-    if destroyCasMenuItem then
-        missionCommands.removeItemForCoalition(2, destroyCasMenuItem)
-        destroyCasMenuItem = nil
-    end
-    if casActive then
-        destroyCasMenuItem = missionCommands.addCommandForCoalition(2, "CAS: Destroy", capControlMenu, despawnCas)
-    end
-
-    if destroyBomberMenuItem then
-        missionCommands.removeItemForCoalition(2, destroyBomberMenuItem)
-        destroyBomberMenuItem = nil
-    end
-    if bomberActive then
-        destroyBomberMenuItem = missionCommands.addCommandForCoalition(2, "Bomber: Destroy", capControlMenu, despawnBomber)
-    end
-
-    if destroySeadMenuItem then
-        missionCommands.removeItemForCoalition(2, destroySeadMenuItem)
-        destroySeadMenuItem = nil
-    end
-    if seadActive then
-        destroySeadMenuItem = missionCommands.addCommandForCoalition(2, "SEAD: Destroy", capControlMenu, despawnSead)
-    end
-
-    if destroyDecoyMenuItem then
-        missionCommands.removeItemForCoalition(2, destroyDecoyMenuItem)
-        destroyDecoyMenuItem = nil
-    end
-    if decoyActive then
-        destroyDecoyMenuItem = missionCommands.addCommandForCoalition(2, "DECOY: Destroy", capControlMenu, despawnDecoy)
-    end
-
-    if destroyStructureMenuItem then
-        missionCommands.removeItemForCoalition(2, destroyStructureMenuItem)
-        destroyStructureMenuItem = nil
-    end
-    if StructureActive then
-        destroyStructureMenuItem = missionCommands.addCommandForCoalition(2, "Building strike: Destroy", capControlMenu, despawnStructure)
-    end
-
-    if capActive then
-        local capSubMenu = missionCommands.addSubMenuForCoalition(2, "CAP Control", capControlMenu)
-        missionCommands.addCommandForCoalition(2, "CAP: Destroy", capSubMenu, despawnCap)
-        missionCommands.addCommandForCoalition(2, "CAP: Hold Racetrack", capSubMenu, function()
-            if capGroup then
-                capGroup:SwitchROE(2)
-            end
-            MESSAGE:New("CAP is set to (Engage If Engaged)", 15):ToAll()
-        end)
-        missionCommands.addCommandForCoalition(2, "CAP: Flightsweep", capSubMenu, function()
-            if capGroup then
-                capGroup:SwitchROE(1)
-            end
-            MESSAGE:New("CAP set to Engage All", 15):ToAll()
-        end)
-
-        local zoneMenu = missionCommands.addSubMenuForCoalition(2, "CAP: Reposition by Zone", capSubMenu)
-        local count = 0
-        local sub1
-        for _, wrap in ipairs(orderedZones(2, nil, true)) do
-            local v = wrap.z
-            local zoneSubMenu
-            count = count + 1
-            if count < 10 then
-                zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, zoneMenu)
-            elseif count == 10 then
-                sub1 = missionCommands.addSubMenuForCoalition(2, "More", zoneMenu)
-                zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-            elseif count % 9 == 1 then
-                sub1 = missionCommands.addSubMenuForCoalition(2, "More", sub1)
-                zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-            else
-                zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-            end
-            for _, headingName in ipairs({"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}) do
-                if headingName == "Orbit" then
-                    missionCommands.addCommandForCoalition(2, headingName, zoneSubMenu, function()
-                        local zone = ZONE:FindByName(v.zone)
-                        if not zone then return end
-                        local coord = zone:GetCoordinate()
-                        setCapRacetrack(coord, 045, 0, v.zone)
-                        MESSAGE:New("CAP is en route to " .. v.zone .. ".", 20):ToAll()
-                    end)
-                else
-                    local headingVal = capHeadings[headingName]
-                    local headingMenu = missionCommands.addSubMenuForCoalition(2, headingName, zoneSubMenu)
-                    for _, legName in ipairs({"Orbit","10 NM Leg","20 NM Leg","30 NM Leg","40 NM Leg","50 NM Leg"}) do
-                        local legVal = capLegs[legName]
-                        missionCommands.addCommandForCoalition(2, legName, headingMenu, function()
-                            local zone = ZONE:FindByName(v.zone)
-                            if not zone then return end
-                            local coord = zone:GetCoordinate()
-                            setCapRacetrack(coord, headingVal, legVal)
-                            MESSAGE:New("CAP is repositioning at " .. v.zone .. " with a new racetrack, heading " .. headingVal .. "°, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
-                        end)
-                    end
-                end
-            end
-        end
-
-        local posMenu = missionCommands.addSubMenuForCoalition(2, "CAP: Reposition by Position", capSubMenu)
-        for _, dirName in ipairs({"Reposition 360", "Reposition 045", "Reposition 090", "Reposition 135", "Reposition 180", "Reposition 225", "Reposition 270", "Reposition 315"}) do
-            local dirVal = capPositionDirections[dirName]
-            local dirMenu = missionCommands.addSubMenuForCoalition(2, dirName, posMenu)
-            for _, distName in ipairs({"0 NM", "10 NM", "20 NM", "30 NM", "40 NM", "50 NM", "60 NM", "70 NM", "80 NM", "90 NM", "100 NM"}) do
-                local distVal = capPositionDistances[distName]
-                local distMenu = missionCommands.addSubMenuForCoalition(2, distName, dirMenu)
-                for _, headingName in ipairs({"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}) do
-                    if headingName == "Orbit" then
-                        missionCommands.addCommandForCoalition(2, headingName, distMenu, function()
-                            if capGroup then
-                                local offsetCoord = capGroup:GetCoordinate():Translate(UTILS.NMToMeters(distVal), dirVal, true)
-                                setCapRacetrack(offsetCoord, 045, 0)
-                                MESSAGE:New("CAP is about to " .. dirName .. " for " .. distName .. " and orbit.", 20):ToAll()
-                            end
-                        end)
-                    else
-                        local headingVal = capHeadings[headingName]
-                        local headingMenu = missionCommands.addSubMenuForCoalition(2, headingName, distMenu)
-                        for _, legName in ipairs({"Orbit", "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg"}) do
-                            local legVal = capLegs[legName]
-                            missionCommands.addCommandForCoalition(2, legName, headingMenu, function()
-                                if capGroup then
-                                    local offsetCoord = capGroup:GetCoordinate():Translate(UTILS.NMToMeters(distVal), dirVal, true)
-                                    setCapRacetrack(offsetCoord, headingVal, legVal)
-                                    MESSAGE:New("CAP is about to " .. dirName .. " " .. distName .. " with a new racetrack, heading " .. headingVal .. "°, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
-                                end
-                            end)
-                        end
-                    end
-                end
-            end
-        end
-    end
-	local tankersMenu
-	if ArcoActive or TexacoActive then
-		tankersMenu = missionCommands.addSubMenuForCoalition(2, "Dynamic Tankers", capControlMenu)
-	end
-	if ArcoActive then
-		local zoneMenu = missionCommands.addSubMenuForCoalition(2, "Arco (Drogue): Reposition by Zone", tankersMenu)
-		local count = 0
-		local sub1
-		for _, wrap in ipairs(orderedZones(2, nil, false)) do
-			local v = wrap.z
-			local zoneSubMenu
-			count = count + 1
-			if count < 10 then
-				zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, zoneMenu)
-			elseif count == 10 then
-				sub1 = missionCommands.addSubMenuForCoalition(2, "More", zoneMenu)
-				zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-			elseif count % 9 == 1 then
-				sub1 = missionCommands.addSubMenuForCoalition(2, "More", sub1)
-				zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-			else
-				zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-			end
-			for _, headingName in ipairs({"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}) do
-				if headingName == "Orbit" then
-					missionCommands.addCommandForCoalition(2, headingName, zoneSubMenu, function()
-						local zone = ZONE:FindByName(v.zone)
-						if not zone then return end
-						local coord = zone:GetCoordinate()
-						if ArcoRepositionCheckAndSet(coord, 045, 0, v.zone) then
-							MESSAGE:New("Arco is en route to " .. v.zone .. ".", 20):ToAll()
-						end
-					end)
-				else
-					local headingVal = capHeadings[headingName]
-					local headingMenu = missionCommands.addSubMenuForCoalition(2, headingName, zoneSubMenu)
-					for _, legName in ipairs({"Orbit","10 NM Leg","20 NM Leg","30 NM Leg","40 NM Leg","50 NM Leg"}) do
-						local legVal = capLegs[legName]
-						missionCommands.addCommandForCoalition(2, legName, headingMenu, function()
-							local zone = ZONE:FindByName(v.zone)
-							if not zone then return end
-							local coord = zone:GetCoordinate()
-							if ArcoRepositionCheckAndSet(coord, headingVal, legVal) then
-								MESSAGE:New("Arco is repositioning to " .. v.zone .. " with a new racetrack, heading " .. headingVal .. "°, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
-							end
-						end)
-					end
-				end
-			end
-		end
-
-		local posMenu = missionCommands.addSubMenuForCoalition(2, "Arco (Drogue): Reposition by Position", tankersMenu)
-		for _, dirName in ipairs({"Reposition 360", "Reposition 045", "Reposition 090", "Reposition 135", "Reposition 180", "Reposition 225", "Reposition 270", "Reposition 315"}) do
-			local dirVal = capPositionDirections[dirName]
-			local dirMenu = missionCommands.addSubMenuForCoalition(2, dirName, posMenu)
-			for _, distName in ipairs({"0 NM", "10 NM", "20 NM", "30 NM", "40 NM", "50 NM", "60 NM", "70 NM", "80 NM", "90 NM", "100 NM"}) do
-				local distVal = capPositionDistances[distName]
-				local distMenu = missionCommands.addSubMenuForCoalition(2, distName, dirMenu)
-				for _, headingName in ipairs({"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}) do
-					if headingName == "Orbit" then
-						missionCommands.addCommandForCoalition(2, headingName, distMenu, function()
-							if ArcoGroup then
-								local offsetCoord = ArcoGroup:GetCoordinate():Translate(UTILS.NMToMeters(distVal), dirVal, true)
-								if ArcoRepositionCheckAndSet(offsetCoord, 045, 0) then
-									MESSAGE:New("Arco is about to " .. dirName .. " for " .. distName .. " and orbit.", 20):ToAll()
-								end
-							end
-						end)
-					else
-						local headingVal = capHeadings[headingName]
-						local headingMenu = missionCommands.addSubMenuForCoalition(2, headingName, distMenu)
-						for _, legName in ipairs({"Orbit","10 NM Leg","20 NM Leg","30 NM Leg","40 NM Leg","50 NM Leg"}) do
-							local legVal = capLegs[legName]
-							missionCommands.addCommandForCoalition(2, legName, headingMenu, function()
-								if ArcoGroup then
-									local offsetCoord = ArcoGroup:GetCoordinate():Translate(UTILS.NMToMeters(distVal), dirVal, true)
-									if ArcoRepositionCheckAndSet(offsetCoord, headingVal, legVal) then
-										MESSAGE:New("Arco is about to " .. dirName .. " " .. distName .. " with a new racetrack, heading " .. headingVal .. "°, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
-									end
-								end
-							end)
-							
-						end
-					end
-				end
-			end
-		end
-		missionCommands.addCommandForCoalition(2, "Arco: Destroy", tankersMenu, despawnArco)
-	end
-	if TexacoActive then
-		local zoneMenu = missionCommands.addSubMenuForCoalition(2, "Texaco (Boom): Reposition by Zone", tankersMenu)
-		local count = 0
-		local sub1
-		for _, wrap in ipairs(orderedZones(2, nil, false)) do
-			local v = wrap.z
-			local zoneSubMenu
-			count = count + 1
-			if count < 10 then
-				zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, zoneMenu)
-			elseif count == 10 then
-				sub1 = missionCommands.addSubMenuForCoalition(2, "More", zoneMenu)
-				zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-			elseif count % 9 == 1 then
-				sub1 = missionCommands.addSubMenuForCoalition(2, "More", sub1)
-				zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-			else
-				zoneSubMenu = missionCommands.addSubMenuForCoalition(2, wrap.disp, sub1)
-			end
-			for _, headingName in ipairs({"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}) do
-				if headingName == "Orbit" then
-					missionCommands.addCommandForCoalition(2, headingName, zoneSubMenu, function()
-						local zone = ZONE:FindByName(v.zone)
-						if not zone then return end
-						local coord = zone:GetCoordinate()
-						if TexacoRepositionCheckAndSet(coord, 045, 0, v.zone) then
-							MESSAGE:New("Texaco is en route to " .. v.zone .. ".", 20):ToAll()
-						end
-					end)
-				else
-					local headingVal = capHeadings[headingName]
-					local headingMenu = missionCommands.addSubMenuForCoalition(2, headingName, zoneSubMenu)
-					for _, legName in ipairs({"Orbit","10 NM Leg","20 NM Leg","30 NM Leg","40 NM Leg","50 NM Leg"}) do
-						local legVal = capLegs[legName]
-						missionCommands.addCommandForCoalition(2, legName, headingMenu, function()
-							local zone = ZONE:FindByName(v.zone)
-							if not zone then return end
-							local coord = zone:GetCoordinate()
-							if TexacoRepositionCheckAndSet(coord, headingVal, legVal) then
-								MESSAGE:New("Texaco is repositioning to " .. v.zone .. " with a new racetrack, heading " .. headingVal .. "°, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
-							end
-						end)
-					end
-				end
-			end
-		end
-
-		local posMenu = missionCommands.addSubMenuForCoalition(2, "Texaco (Boom): Reposition by Position", tankersMenu)
-		for _, dirName in ipairs({"Reposition 360", "Reposition 045", "Reposition 090", "Reposition 135", "Reposition 180", "Reposition 225", "Reposition 270", "Reposition 315"}) do
-			local dirVal = capPositionDirections[dirName]
-			local dirMenu = missionCommands.addSubMenuForCoalition(2, dirName, posMenu)
-			for _, distName in ipairs({"0 NM", "10 NM", "20 NM", "30 NM", "40 NM", "50 NM", "60 NM", "70 NM", "80 NM", "90 NM", "100 NM"}) do
-				local distVal = capPositionDistances[distName]
-				local distMenu = missionCommands.addSubMenuForCoalition(2, distName, dirMenu)
-				for _, headingName in ipairs({"Orbit","Hot 360","Hot 045","Hot 090","Hot 135","Hot 180","Hot 225","Hot 270","Hot 315"}) do
-					if headingName == "Orbit" then
-						missionCommands.addCommandForCoalition(2, headingName, distMenu, function()
-							if TexacoGroup then
-								local offsetCoord = TexacoGroup:GetCoordinate():Translate(UTILS.NMToMeters(distVal), dirVal, true)
-								if TexacoRepositionCheckAndSet(offsetCoord, 045, 0) then
-									MESSAGE:New("Texaco is about to " .. dirName .. " for " .. distName .. " and orbit.", 20):ToAll()
-								end
-							end
-						end)
-					else
-						local headingVal = capHeadings[headingName]
-						local headingMenu = missionCommands.addSubMenuForCoalition(2, headingName, distMenu)
-						for _, legName in ipairs({"Orbit","10 NM Leg","20 NM Leg","30 NM Leg","40 NM Leg","50 NM Leg"}) do
-							local legVal = capLegs[legName]
-							missionCommands.addCommandForCoalition(2, legName, headingMenu, function()
-								if TexacoGroup then
-									local offsetCoord = TexacoGroup:GetCoordinate():Translate(UTILS.NMToMeters(distVal), dirVal, true)
-									if TexacoRepositionCheckAndSet(offsetCoord, headingVal, legVal) then
-										MESSAGE:New("Texaco is about to " .. dirName .. " " .. distName .. " with a new racetrack, heading " .. headingVal .. "°, " .. tostring(legVal) .. " miles leg.", 20):ToAll()
-									end
-								end
-							end)
-						end
-					end
-				end
-			end
-		end
-		missionCommands.addCommandForCoalition(2, "Texaco: Destroy", tankersMenu, despawnTexaco)
-	end
+    bc:refreshDynamicControlMenusForBlue(true)
 end
-
 
 
 function spawnCapAt(zoneName, heading, leg)
@@ -18520,8 +22469,6 @@ function spawnCapAt(zoneName, heading, leg)
 	capSpawnIndex = capSpawnIndex + 1
 end
 
-
-
 	function buildCapMenu()
 		if capParentMenu then
 			missionCommands.removeItemForCoalition(2, capParentMenu)
@@ -18568,62 +22515,95 @@ end
 -------------------------------------------------------- Dynamic Tankers -----------------------------------------------------
 --Arco
 
-function spawnArcoAt(zoneName, heading, leg)
+local function _resolveTankerSpawnInput(input, heading, fallbackZoneLabel)
+	local zoneName = nil
+	local sourceCoord = nil
+	if type(input) == "string" then
+		local zone = ZONE:FindByName(input)
+		if not zone then return nil end
+		zoneName = input
+		sourceCoord = zone:GetCoordinate()
+	elseif input and type(input) == "table" and input.GetVec3 then
+		sourceCoord = input
+	elseif type(input) == "table" and input.x and (input.z or input.y) then
+		sourceCoord = COORDINATE:New(input.x, input.y or 0, input.z or input.y)
+	end
+	if not sourceCoord then return nil end
+	local spawnHeading = tonumber(heading) or 45
+	local coord = COORDINATE:NewFromVec3(sourceCoord:GetVec3(), spawnHeading)
+	local label = zoneName or fallbackZoneLabel or "saved position"
+	return {
+		coord = coord,
+		spawnCoord = sourceCoord,
+		zoneName = zoneName,
+		label = label,
+		heading = spawnHeading,
+	}
+end
+function spawnArcoAt(zoneOrCoord, heading, leg, zoneLabel, fromRestore)
     if ArcoActive then return end
-    local zone = ZONE:FindByName(zoneName)
-    if not zone then return end
-    local coordVec3 = zone:GetCoordinate():GetVec3()
-	local SpawnCords = zone:GetCoordinate()
-	local coord = COORDINATE:NewFromVec3(coordVec3, heading)
-		local g = Respawn.SpawnAtPoint( 'Arco', coord, heading, 2, 18000, 286 )
-				if not g then return end
+	_setTankerCurrentAltitude("arco", _getTankerDefaultAltitude("arco"))
+	local arcoAltFt = _getTankerCurrentAltitude("arco")
+	local spawn = _resolveTankerSpawnInput(zoneOrCoord, heading, zoneLabel)
+	if not spawn then return end
+	local spawnLeg = tonumber(leg) or 0
+	local g = Respawn.SpawnAtPoint('Arco', spawn.coord, spawn.heading, 2, arcoAltFt, 286)
+	if not g then return end
+	local zoneToSave = spawn.zoneName or ((zoneLabel and zoneLabel ~= "saved position") and zoneLabel or nil)
+	_saveTankerStation("arco", spawn.coord, spawn.heading, spawnLeg, zoneToSave)
 	timer.scheduleFunction(function(group, time)
-		local spawnedGroup = GROUP:FindByName(group:getName())
-        ArcoGroup = FLIGHTGROUP:New(spawnedGroup)
-		ArcoGroup:SwitchInvisible(true):SwitchImmortal(true):GetGroup():CommandSetUnlimitedFuel(true)
-		ArcoGroup:SetDefaultTACAN("101", "ARC", "Arco", "Y")
-		local homebase, distance = SpawnCords:GetClosestAirbase(0, 2)
-		if homebase then
-			ArcoGroup:SetHomebase(homebase)
+		ArcoGroup = Group.getByName(group:getName())
+		if not ArcoGroup then return end
+		local groupController = ArcoGroup:getController()
+		if groupController then
+			groupController:setCommand({
+				id = 'SetInvisible',
+				params = { value = true }
+			})
+			groupController:setCommand({
+				id = 'SetImmortal',
+				params = { value = true }
+			})
+			groupController:setCommand({
+				id = 'SetUnlimitedFuel',
+				params = { value = true }
+			})
 		end
-		local speed
-		if leg == 0 then 
-		speed = 280
-		else
-		speed = 286
-		end
-		function ArcoGroup:OnAfterFuelLow(From, Event, To)
-			trigger.action.outText("Arco is low on fuel, returning to base", 20)
-		end
-		ArcoTanker = AUFTRAG:NewTANKER(coord, 18000, speed, heading, leg)
-		--ArcoTanker:SetTACAN(101, "ARCO", "Arco", "Y")
-		ArcoGroup:AddMission(ArcoTanker)
-		ArcoGroup:MissionStart(ArcoTanker)
-		startArcoProximityWatch()
-
-		function ArcoGroup:OnAfterLanded(From, Event, To)
-    	self:ScheduleOnce(5, function() self:Destroy() end)
-		end
-	
-		function ArcoGroup:OnAfterDead(From, Event, To)
-			stopArcoProximityWatch()
-			local landed = (From=="Landed") or (From=="Arrived")
-			self:__Stop(1)
-			ArcoGroup  = nil
-			ArcoActive = false
-			buildCapControlMenu()
-			if landed then
-				trigger.action.outText("Arco have landed", 20)
-			else
-				trigger.action.outText("Arco have been killed", 20)
+		local arcoUnit = ArcoGroup:getUnit(1)
+		local arcoFreq = UTILS.TACANToFrequency(101, "Y")
+		if arcoUnit and arcoFreq then
+			local arcoController = arcoUnit:getController()
+			if arcoController then
+				arcoController:setCommand({
+					id = "ActivateBeacon",
+					params = {
+						type = BEACON.Type.TACAN,
+						system = BEACON.System.TACAN_TANKER_Y,
+						frequency = arcoFreq,
+						unitId = arcoUnit:getID(),
+						channel = 101,
+						modeChannel = "Y",
+						AA = true,
+						callsign = "ARC",
+						bearing = true,
+					},
+				})
 			end
 		end
-
-		local msg = (leg == 0)
-            and ("Arco (BTN-14, 260.00, TCN 101Y)\nOn station orbiting at " .. zoneName .. ".")
-            or  ("Arco (BTN-14, 260.00, TCN 101Y)\nOn station at " .. zoneName .. ", setting up racetrack " .. heading .. "°, " .. tostring(leg) .. " miles leg.")
+		local speed = (spawnLeg == 0) and 280 or ArcoSpeed or 286
+		setArcoRacetrack(spawn.coord, spawn.heading, spawnLeg, zoneToSave, speed, true)
+		startArcoProximityWatch()
+		local msg
+		if fromRestore then
+			msg = (spawnLeg == 0)
+				and ("Arco (BTN-14, 260.00, TCN 101Y)\nOn station orbiting.")
+				or  ("Arco (BTN-14, 260.00, TCN 101Y)\nOn station, setting up racetrack " .. spawn.heading .. " deg, " .. tostring(spawnLeg) .. " miles leg.")
+		else
+			msg = (spawnLeg == 0)
+				and ("Arco (BTN-14, 260.00, TCN 101Y)\nOn station orbiting at " .. spawn.label .. ".")
+				or  ("Arco (BTN-14, 260.00, TCN 101Y)\nOn station at " .. spawn.label .. ", setting up racetrack " .. spawn.heading .. " deg, " .. tostring(spawnLeg) .. " miles leg.")
+		end
 		MESSAGE:New(msg, 20):ToAll()
-
 		if ArcoParentMenu then
 		missionCommands.removeItemForCoalition(2, ArcoParentMenu)
 		ArcoParentMenu = nil
@@ -18631,12 +22611,8 @@ function spawnArcoAt(zoneName, heading, leg)
 	end, g, timer.getTime() + 1)
     ArcoActive = true
 	buildCapControlMenu()
-
 	ArcoSpawnIndex = ArcoSpawnIndex + 1
 end
-
-
-
 	function buildArcoMenu()
 		if ArcoParentMenu then
 			missionCommands.removeItemForCoalition(2, ArcoParentMenu)
@@ -18684,64 +22660,78 @@ end
 
 -- Texaco
 
-function spawnTexacoAt(zoneName, heading, leg)
+function spawnTexacoAt(zoneOrCoord, heading, leg, zoneLabel, fromRestore)
     if TexacoActive then return end
-    local zone = ZONE:FindByName(zoneName)
-    if not zone then return end
-    local coordVec3 = zone:GetCoordinate():GetVec3()
-	local SpawnCords = zone:GetCoordinate()
-	local coord = COORDINATE:NewFromVec3(coordVec3, heading)
-		local g = Respawn.SpawnAtPoint( 'Texaco', coord, heading, 2, 16000, 286 )
-				if not g then return end
+	_setTankerCurrentAltitude("texaco", _getTankerDefaultAltitude("texaco"))
+	local texacoAltFt = _getTankerCurrentAltitude("texaco")
+	local spawn = _resolveTankerSpawnInput(zoneOrCoord, heading, zoneLabel)
+	if not spawn then return end
+	local spawnLeg = tonumber(leg) or 0
+	if fromRestore then
+		local texacoState = _getTankerState("texaco")
+		if texacoState and type(texacoState.speed) == "number" then
+			_setTankerCurrentSpeed("texaco", texacoState.speed)
+		end
+	else
+		_setTankerCurrentSpeed("texaco", _getTankerDefaultSpeed("texaco"))
+	end
+	local g = Respawn.SpawnAtPoint('Texaco', spawn.coord, spawn.heading, 2, texacoAltFt, TEXACO_DEFAULT_SPEED_KT)
+	if not g then return end
+	local zoneToSave = spawn.zoneName or ((zoneLabel and zoneLabel ~= "saved position") and zoneLabel or nil)
+	_saveTankerStation("texaco", spawn.coord, spawn.heading, spawnLeg, zoneToSave)
 	timer.scheduleFunction(function(group, time)
-		local spawnedGroup = GROUP:FindByName(group:getName())
-        TexacoGroup = FLIGHTGROUP:New(spawnedGroup)
-		--:CommandSetUnlimitedFuel(true)
-		TexacoGroup:SwitchInvisible(true):SwitchImmortal(true):GetGroup():CommandSetUnlimitedFuel(true)
-		--TexacoGroup:GetGroup():CommandSetImmortal(true):CommandSetInvisible(true)
-		TexacoGroup:SetDefaultTACAN("102", "TEX", "Texaco", "Y")
-		local homebase, distance = SpawnCords:GetClosestAirbase(0, 2)
-		if homebase then
-			TexacoGroup:SetHomebase(homebase)
+		TexacoGroup = Group.getByName(group:getName())
+		if not TexacoGroup then return end
+		local groupController = TexacoGroup:getController()
+		if groupController then
+			groupController:setCommand({
+				id = 'SetInvisible',
+				params = { value = true }
+			})
+			groupController:setCommand({
+				id = 'SetImmortal',
+				params = { value = true }
+			})
+			groupController:setCommand({
+				id = 'SetUnlimitedFuel',
+				params = { value = true }
+			})
 		end
-		function TexacoGroup:OnAfterFuelLow(From, Event, To)
-			trigger.action.outText("Texaco is low on fuel, returning to base", 20)
-		end
-		local speed
-		if leg == 0 then 
-		speed = 280
-		else
-		speed = 286
-		end
-		TexacoTanker = AUFTRAG:NewTANKER(coord, 16000, speed, heading, leg)
-		--TexacoTanker:SetTACAN(102, "TEX", "Texaco", "Y")
-		TexacoGroup:AddMission(TexacoTanker)
-		TexacoGroup:MissionStart(TexacoTanker)
-		startTexacoProximityWatch()
-
-		function TexacoGroup:OnAfterLanded(From, Event, To)
-    	self:ScheduleOnce(5, function() self:Destroy() end)
-		end
-
-		function TexacoGroup:OnAfterDead(From, Event, To)
-			stopTexacoProximityWatch()
-			local landed = (From=="Landed") or (From=="Arrived")
-			self:__Stop(1)
-			TexacoGroup  = nil
-			TexacoActive = false
-			buildCapControlMenu()
-			if landed then
-				trigger.action.outText("Texaco have landed", 20)
-			else
-				trigger.action.outText("Texaco have been killed", 20)
+		local texacoUnit = TexacoGroup:getUnit(1)
+		local texacoFreq = UTILS.TACANToFrequency(102, "Y")
+		if texacoUnit and texacoFreq then
+			local texacoController = texacoUnit:getController()
+			if texacoController then
+				texacoController:setCommand({
+					id = "ActivateBeacon",
+					params = {
+						type = BEACON.Type.TACAN,
+						system = BEACON.System.TACAN_TANKER_Y,
+						frequency = texacoFreq,
+						unitId = texacoUnit:getID(),
+						channel = 102,
+						modeChannel = "Y",
+						AA = true,
+						callsign = "TEX",
+						bearing = true,
+					},
+				})
 			end
 		end
-
-		local msg = (leg == 0)
-            and ("Texaco (BTN-20, 266.00, TCN 102Y)\non station orbiting at " .. zoneName .. ".")
-            or  ("Texaco (BTN-20, 266.00, TCN 102Y)\non station at " .. zoneName .. ", setting up racetrack " .. heading .. "°, " .. tostring(leg) .. " miles leg.")
+		local speed = _getTankerCurrentSpeed("texaco") or _getTankerDefaultSpeed("texaco") or TEXACO_DEFAULT_SPEED_KT
+		setTexacoRacetrack(spawn.coord, spawn.heading, spawnLeg, zoneToSave, speed, true)
+		startTexacoProximityWatch()
+		local msg
+		if fromRestore then
+			msg = (spawnLeg == 0)
+				and ("Texaco (BTN-20, 266.00, TCN 102Y)\non station orbiting.")
+				or  ("Texaco (BTN-20, 266.00, TCN 102Y)\non station, setting up racetrack " .. spawn.heading .. " deg, " .. tostring(spawnLeg) .. " miles leg.")
+		else
+			msg = (spawnLeg == 0)
+				and ("Texaco (BTN-20, 266.00, TCN 102Y)\non station orbiting at " .. spawn.label .. ".")
+				or  ("Texaco (BTN-20, 266.00, TCN 102Y)\non station at " .. spawn.label .. ", setting up racetrack " .. spawn.heading .. " deg, " .. tostring(spawnLeg) .. " miles leg.")
+		end
 		MESSAGE:New(msg, 20):ToAll()
-
 		if TexacoParentMenu then
 		missionCommands.removeItemForCoalition(2, TexacoParentMenu)
 		TexacoParentMenu = nil
@@ -18749,11 +22739,7 @@ function spawnTexacoAt(zoneName, heading, leg)
 	end, g, timer.getTime() + 1)
     TexacoActive = true
 	buildCapControlMenu()
-
 end
-
-
-
 	function buildTexacoMenu()
 		if TexacoParentMenu then
 			missionCommands.removeItemForCoalition(2, TexacoParentMenu)
@@ -18983,21 +22969,29 @@ function spawnDecoyAt(zoneName, targetZoneName, offsetNM, altitude)
 	local missionAlt = altitude - 1000
 	--local DecoyMission = AUFTRAG:NewCASENHANCED(targetZone,27000,550,35,nil,"Air Defence")
 	local DecoyMission = AUFTRAG:NewBAI(decoyTargets, missionAlt)
-	local offsetNM = 33
+	local offsetNM = 35
 	for _, u in pairs(decoyTargets:GetSet()) do
-		if string.find(u:GetTypeName(), "40B6M") then
+		if string.find(u:GetTypeName(), "RPC_5N62V") then
 			offsetNM = 35
-			break
-		elseif string.find(u:GetTypeName(), "RPC_5N62V") then
-			offsetNM = 60
 			break
 		end
 	end
 	DecoyMission.missionWaypointOffsetNM = offsetNM
 	DecoyMission:SetWeaponExpend(AI.Task.WeaponExpend.ALL)
 	DecoyMission.engageWeaponType=ENUMS.WeaponType.Any
-	DecoyMission:SetMissionSpeed(750)
+	local decoyMissionSpeed = 750
+	DecoyMission:SetMissionSpeed(decoyMissionSpeed)
 	DecoyMission:SetEngageAsGroup(true)
+	timer.scheduleFunction(function()
+		local fireCoord = targetCoord:Translate(UTILS.NMToMeters(offsetNM), heading + 180, true)
+		local totalDist = coord:Get2DDistance(fireCoord)
+		local eta = math.floor(totalDist / (decoyMissionSpeed / 3.6)) - 30
+		if eta < 0 then eta = 0 end
+		local minutes = math.floor(eta / 60)
+		local seconds = eta % 60
+		trigger.action.outTextForCoalition(2, "Decoy group: ETA to fire "..minutes.." minutes and "..seconds.." seconds.", 15)
+	end, nil, timer.getTime() + 15)
+
 	decoyGroup:AddMission(DecoyMission)
 	function DecoyMission:OnAfterStarted(From, Event, To)
 	DecoyMission:SetFormation(65538)
@@ -19014,7 +23008,7 @@ function spawnDecoyAt(zoneName, targetZoneName, offsetNM, altitude)
 	end
     function decoyGroup:OnAfterOutOfMissilesAG(From, Event, To)
 		if decoyGroup then
-        trigger.action.outTextForCoalition(2, "Decoy Group is now RTB", 15)
+        trigger.action.outTextForCoalition(2, "Decoy group: All ducks away. Returning to base.", 15)
 		end
     end
     function decoyGroup:OnAfterDead(From, Event, To)
@@ -19234,7 +23228,7 @@ local BombMission = AUFTRAG:NewCASENHANCED(targetZone,27000,550,15,nil)
 	BombMission:AddConditionSuccess(function() return bc.indexedZones[targetZoneName].side == 0 end)
 	BombMission:AddConditionFailure(function() return BomberGroup and bc.indexedZones[targetZoneName].side == 1 and BomberGroup:IsOutOfBombs() end)
 	BombMission:SetMissionAltitude(27000)
-	if era == 'Coldwar' then
+	if Era == 'Coldwar' then
 		BombMission:SetWeaponExpend(AI.Task.WeaponExpend.FOUR)
 	else
 		BombMission:SetWeaponExpend(AI.Task.WeaponExpend.ONE)
@@ -19361,10 +23355,10 @@ function spawnStructureAt(zoneName, targetZoneName,offsetNM)
     end
 	if setStaticBomber:Count() > 0 then
 		local auftragstatic = AUFTRAG:NewBAI(setStaticBomber, 25000)
-		auftragstatic.missionWaypointOffsetNM = 14
-		auftragstatic:SetWeaponExpend(AI.Task.WeaponExpend.ONE)
-		auftragstatic:SetEngageAsGroup(false)
-		auftragstatic:SetMissionSpeed(600)
+		auftragstatic.missionWaypointOffsetNM = 9
+		auftragstatic:SetWeaponExpend(AI.Task.WeaponExpend.TWO)
+		auftragstatic:SetEngageAsGroup(true)
+		auftragstatic:SetMissionSpeed(700)
 		StructureGroup:AddMission(auftragstatic)
 		function auftragstatic:OnAfterExecuting(From, Event, To)
 		StructureGroup:SwitchROE(2)
@@ -19405,48 +23399,48 @@ end
 --trigger.action.outTextForCoalition(2,"", 10)
 --trigger.action.outText("", 10)
 
-
-function checkGroupState(groupName)
-    if not groupName or not bc or not bc.zones then return end
-    for _, z in ipairs(bc.zones) do
-        if z.groups then
-            for _, g in ipairs(z.groups) do
-                if g.name == groupName then
-                    env.info("Group ["..groupName.."] state: "..tostring(g.state))
-                    return
-                end
-            end
-        end
+--[[ function ZoneByGroup(name)
+  for _, z in ipairs(bc.zones) do
+    for _, b in pairs(z.built or {}) do
+      if b == name then return z.zone end
     end
-    env.info("GroupCommander not found: "..tostring(groupName))
+    for _, g in ipairs(z.groups or {}) do
+      if g.name == name then return z.zone end
+    end
+  end
+  return nil
 end
 
---checkGroupState("Taftanaz-attack-Duhur-Cas")
+local z = ZoneByGroup("Red SAM SHORAD Pantsir S1 #2")
+env.info("zone=" .. tostring(z)) ]]
 
+function checkGroupState(groupName)
+	local zoneName, _, g = GetGroupCommanderZoneByName(groupName, {verbose=false})
+	if g then
+		env.info("Group ["..tostring(groupName).."] zone: "..tostring(zoneName).." state: "..tostring(g.state))
+		return
+	end
+	if zoneName then
+		env.info("Group ["..tostring(groupName).."] current zone: "..tostring(zoneName))
+		return
+	end
+	env.info("GroupCommander not found: "..tostring(groupName))
+end
 
--- Start Mantis efter 10 Seconds.
 
 SCHEDULER:New(nil, function()
---if IsGroupActive("AWACS_RED") then
-	--FootholdMantis = MANTIS:New("Foothold MANTIS","Red SAM","Red EWR",nil,"red",true,"AWACS_RED")
---else
-	FootholdMantis = MANTIS:New("Foothold MANTIS","Red SAM","Red EWR",nil,"red",true,nil)
---end
+
+FootholdMantis = MANTIS:New("Foothold MANTIS","Red SAM","Red EWR",nil,"red",true,nil)
+
 FootholdMantis:SetSAMRange(110)
 FootholdMantis:SetDetectInterval(10)
 FootholdMantis:SetAccousticDetectionOn(3000)
---FootholdMantis:SetSmokeDecoy(true)
 ZoneTable_Mantis = SET_ZONE:New():FilterPrefixes("Scoot"):FilterStart()
 FootholdMantis:AddScootZones(ZoneTable_Mantis, 3, true, "Cone")
 FootholdMantis.autorelocate = true
 FootholdMantis:Start()
 end, {}, 3)
 
-
---FootholdMantis:Debug(true)
---[[ BASE:TraceOn()
-BASE:TraceClass("AUFTRAG")
-BASE:TraceClass("FLIGHTGROUP") ]]
 
 WarehouseExtraAirbases = WarehouseExtraAirbases or {}
 WarehousePersistence = WarehousePersistence or {}
@@ -19577,7 +23571,7 @@ do
 				if type(wp) == 'table' then
 					for item, qty in pairs(wp) do
 						qty = tonumber(qty) or 0
-						if qty < 0 then
+						if qty < 0 or qty == 1073741823 then
 							hasUnlimited = true
 						else
 							if qty > 0 then
@@ -19585,7 +23579,7 @@ do
 								countQty = countQty + 1
 							end
 						end
-						if qty ~= 0 then
+						if qty ~= 0 and qty ~= 1073741823 then
 							nonZeroEntries = nonZeroEntries + 1
 							out[#out + 1] = string.format('%s;W;%s;%d', ab, tostring(item), qty)
 						end
@@ -19595,7 +23589,7 @@ do
 					for i = 1, #wsItems do
 						local w = wsItems[i]
 						local qty = tonumber(st:GetItemAmount(w)) or 0
-						if qty < 0 then
+						if qty < 0 or qty == 1073741823 then
 							hasUnlimited = true
 						else
 							if qty > 0 then
@@ -19603,7 +23597,7 @@ do
 								countQty = countQty + 1
 							end
 						end
-						if qty ~= 0 then
+						if qty ~= 0 and qty ~= 1073741823 then
 							nonZeroEntries = nonZeroEntries + 1
 							out[#out + 1] = string.format('%s;W;{%d,%d,%d,%d};%d', ab, tonumber(w[1]) or 0, tonumber(w[2]) or 0, tonumber(w[3]) or 0, tonumber(w[4]) or 0, qty)
 						end
@@ -19805,319 +23799,311 @@ WEAPONSLIST.CategoryOrder = {
 
 end
 
-
-
 WEAPONSLIST.Items = {
 [WEAPONSLIST.ItemCategory.AA_MISSILES] = {
     -- AA MISSILES
+         'weapons.missiles.AIM-7E',
+         'weapons.missiles.AIM-7E-2',
+         'weapons.missiles.AIM-7F',
+         'weapons.missiles.AIM-7MH',
+         'weapons.missiles.AIM-7P',
+         'weapons.missiles.AIM-9E',
+         'weapons.missiles.AIM-9J',
+         'weapons.missiles.AIM-9JULI',
+         'weapons.missiles.AIM-9L',
+         'weapons.missiles.AIM-9P',
+         'weapons.missiles.AIM-9P3',
+         'weapons.missiles.AIM-9P5',
+         'weapons.missiles.AIM_120',
+         'weapons.missiles.AIM_120C',
+         'weapons.missiles.AIM_54',
+         'weapons.missiles.AIM_54A_Mk47',
+         'weapons.missiles.AIM_54A_Mk60',
+         'weapons.missiles.AIM_54C_Mk47',
+         'weapons.missiles.AIM_54C_Mk60',
+         'weapons.missiles.AIM_7',
+         'weapons.missiles.AIM_9',
+         'weapons.missiles.AIM_9X',
          'weapons.missiles.CATM_9M',
-        'weapons.missiles.Mistral',
-        'weapons.missiles.Igla_1E',
-        'weapons.missiles.R_550',
-        'weapons.missiles.P_60',
-        'weapons.missiles.AIM_120C',
-        'weapons.missiles.AIM_120',
-        'weapons.missiles.P_33E',
-        'weapons.missiles.Rb 24',
-        'weapons.missiles.Rb 24J',
-        'weapons.missiles.Rb 74',
-        'weapons.missiles.P_27P',
-        'weapons.missiles.AIM-9P',
-        'weapons.missiles.AIM_9X',
-        'weapons.missiles.P_27PE',
-        'weapons.missiles.P_27T',
-        'weapons.missiles.P_27TE',
-        'weapons.missiles.P_73',
-        'weapons.missiles.P_77',
-        'weapons.missiles.MICA_T',
-        'weapons.missiles.AIM_7',
-        'weapons.missiles.AIM_9',
-        'weapons.missiles.AIM_54',
-        'weapons.missiles.P_24T',
-        'weapons.missiles.GAR-8',
-        'weapons.missiles.AIM-9P5',
-        'weapons.missiles.AIM-9L',
-        'weapons.missiles.AIM-7E',
-        'weapons.missiles.AIM-7F',
-        'weapons.missiles.P_40T',
-        'weapons.missiles.AIM-7MH',
-        'weapons.missiles.MICA_R',
-        'weapons.missiles.PL-5EII',
-        'weapons.missiles.SD-10',
-        'weapons.missiles.PL-12',
-        'weapons.missiles.PL-8B',
-        'weapons.missiles.PL-8A',
-        'weapons.missiles.AIM_54A_Mk47',
-        'weapons.missiles.AIM_54A_Mk60',
-        'weapons.missiles.AIM_54C_Mk47',
-        'weapons.missiles.MMagicII',
-        'weapons.missiles.R-13M',
-        'weapons.missiles.R-13M1',
-        'weapons.missiles.R-3S',
-        'weapons.missiles.R-3R',
-        'weapons.missiles.RS2US',
-        'weapons.missiles.R-55',
-        'weapons.missiles.R-60',
-        'weapons.missiles.Matra Super 530D',
-        'weapons.missiles.AIM-9J',
-        'weapons.missiles.AIM-9JULI',
-        'weapons.missiles.R_530F_EM',
-        'weapons.missiles.R_530F_IR',
-        'weapons.missiles.AIM-7P',
-        'weapons.missiles.Super_530D',
-        'weapons.missiles.R_550_M1',
-        'weapons.missiles.AIM_54C_Mk60',
-        'weapons.missiles.Super_530F',
-        'weapons.missiles.AIM-7E-2',
-        'weapons.missiles.AIM-9P3',
-        'weapons.missiles.HB-AIM-7E',
-        'weapons.missiles.HB-AIM-7E-2',
-        'weapons.missiles.AIM-9E',
-        'weapons.missiles.OH58D_FIM_92',
-        'weapons.missiles.P_40R',
-        'weapons.missiles.P_24R',
+         'weapons.missiles.GAR-8',
+         'weapons.missiles.HB-AIM-7E',
+         'weapons.missiles.HB-AIM-7E-2',
+         'weapons.missiles.Igla_1E',
+         'weapons.missiles.MICA_R',
+         'weapons.missiles.MICA_T',
+         'weapons.missiles.MMagicII',
+         'weapons.missiles.Matra Super 530D',
+         'weapons.missiles.Mistral',
+         'weapons.missiles.OH58D_FIM_92',
+         'weapons.missiles.OH_6_FIM_92',
+         'weapons.missiles.PL-12',
+         'weapons.missiles.PL-5EII',
+         'weapons.missiles.PL-8A',
+         'weapons.missiles.PL-8B',
+         'weapons.missiles.P_24R',
+         'weapons.missiles.P_24T',
+         'weapons.missiles.P_27P',
+         'weapons.missiles.P_27PE',
+         'weapons.missiles.P_27T',
+         'weapons.missiles.P_27TE',
+         'weapons.missiles.P_33E',
+         'weapons.missiles.P_40R',
+         'weapons.missiles.P_40T',
+         'weapons.missiles.P_60',
+         'weapons.missiles.P_73',
+         'weapons.missiles.P_77',
+         'weapons.missiles.R-13M',
+         'weapons.missiles.R-13M1',
+         'weapons.missiles.R-3R',
+         'weapons.missiles.R-3S',
+         'weapons.missiles.R-55',
+         'weapons.missiles.R-60',
+         'weapons.missiles.RS2US',
+         'weapons.missiles.R_530F_EM',
+         'weapons.missiles.R_530F_IR',
+         'weapons.missiles.R_550',
+         'weapons.missiles.R_550_M1',
+         'weapons.missiles.Rb 24',
+         'weapons.missiles.Rb 24J',
+         'weapons.missiles.Rb 74',
+         'weapons.missiles.SD-10',
+         'weapons.missiles.Super_530D',
+         'weapons.missiles.Super_530F',
     },
 
 [WEAPONSLIST.ItemCategory.AG_MISSILES] = {
     -- AG MISSILES
-        'weapons.missiles.TGM_65G',
-        'weapons.missiles.HB_AGM_78',
-        'weapons.missiles.TGM_65G',
-        'weapons.missiles.TGM_65D',
-        'weapons.missiles.CATM_65K',
-        'weapons.missiles.TGM_65H',
-        'weapons.missiles.BK90_MJ1_MJ2',
-        'weapons.missiles.Rb 05A',
-        'weapons.missiles.Rb_04',
-        'weapons.missiles.RB75',
-        'weapons.missiles.RB75T',
-        'weapons.missiles.RB75B',
-        'weapons.missiles.BK90_MJ1',
-        'weapons.missiles.BK90_MJ2',
-        'weapons.missiles.Rb 04E',
-        'weapons.missiles.Rb 15F',
-        'weapons.missiles.TOW',
-        'weapons.missiles.AGM_154',
-        'weapons.missiles.S_25L',
-        'weapons.missiles.AGM_65H',
-        'weapons.missiles.AGM_65G',
-        'weapons.missiles.Rb 15F (for A.I.)',
-        'weapons.missiles.Rb 04E (for A.I.)',
-        'weapons.missiles.AGM_65F',
-        'weapons.missiles.AGM_65L',
-        'weapons.missiles.AGM_65A',
-        'weapons.missiles.AGM_65B',
-        'weapons.missiles.AGM_84D',
-        'weapons.missiles.AGM_84H',
-        'weapons.missiles.AGM_154A',
-        'weapons.missiles.AGM_154B',
-        'weapons.missiles.DWS39_MJ1',
-        'weapons.missiles.DWS39_MJ2',
-        'weapons.missiles.DWS39_MJ1_MJ2',
-        'weapons.missiles.Kh25MP_PRGS1VP',
         'weapons.missiles.ADM_141A',
         'weapons.missiles.ADM_141B',
-        'weapons.missiles.AGR_20A',
-        'weapons.missiles.AGR_20_M282',
-        'weapons.missiles.GB-6',
-        'weapons.missiles.GB-6-SFW',
-        'weapons.missiles.GB-6-HE',
-        'weapons.missiles.BRM-1_90MM',
-        'weapons.missiles.YJ-83K',
-        'weapons.missiles.CM-802AKG',
-        'weapons.missiles.LD-10',
-        'weapons.missiles.AKD-10',
-        'weapons.missiles.Kh-66_Grom',
-        'weapons.missiles.Ataka_9M220',
-        'weapons.missiles.Ataka_9M120',
-        'weapons.missiles.Ataka_9M120F',
-        'weapons.missiles.YJ-12',
-        'weapons.missiles.C_802AK',
-        'weapons.missiles.CM_802AKG',
-        'weapons.missiles.AGM_86C',
+        'weapons.missiles.AGM_114',
         'weapons.missiles.AGM_114K',
         'weapons.missiles.AGM_119',
-        'weapons.missiles.HOT3_MBDA',
-        'weapons.missiles.X_22',
-        'weapons.missiles.KD_20',
-        'weapons.missiles.C_701T',
-        'weapons.missiles.AGM_12B',
+        'weapons.missiles.AGM_122',
         'weapons.missiles.AGM_12A',
+        'weapons.missiles.AGM_12B',
+        'weapons.missiles.AGM_12C_ED',
+        'weapons.missiles.AGM_130',
+        'weapons.missiles.AGM_154',
+        'weapons.missiles.AGM_154A',
+        'weapons.missiles.AGM_154B',
+        'weapons.missiles.AGM_45A',
+        'weapons.missiles.AGM_45B',
+        'weapons.missiles.AGM_65A',
+        'weapons.missiles.AGM_65B',
+        'weapons.missiles.AGM_65D',
+        'weapons.missiles.AGM_65E',
+        'weapons.missiles.AGM_65F',
+        'weapons.missiles.AGM_65G',
+        'weapons.missiles.AGM_65H',
+        'weapons.missiles.AGM_65K',
+        'weapons.missiles.AGM_65L',
+        'weapons.missiles.AGM_78A',
+        'weapons.missiles.AGM_78B',
+        'weapons.missiles.AGM_84A',
+        'weapons.missiles.AGM_84D',
+        'weapons.missiles.AGM_84E',
+        'weapons.missiles.AGM_84H',
+        'weapons.missiles.AGM_86',
+        'weapons.missiles.AGM_86C',
+        'weapons.missiles.AGM_88',
+        'weapons.missiles.AGR_20A',
+        'weapons.missiles.AGR_20_M282',
+        'weapons.missiles.AKD-10',
+        'weapons.missiles.ALARM',
+        'weapons.missiles.ASM_N_2',
+        'weapons.missiles.AT_6',
+        'weapons.missiles.Ataka_9M120',
+        'weapons.missiles.Ataka_9M120F',
+        'weapons.missiles.Ataka_9M220',
+        'weapons.missiles.BK90_MJ1',
+        'weapons.missiles.BK90_MJ1_MJ2',
+        'weapons.missiles.BK90_MJ2',
+        'weapons.missiles.BRM-1_90MM',
+        'weapons.missiles.CATM_65K',
+        'weapons.missiles.CM-400AKG',
+        'weapons.missiles.CM-802AKG',
+        'weapons.missiles.CM_802AKG',
+        'weapons.missiles.C_701IR',
+        'weapons.missiles.C_701T',
+        'weapons.missiles.C_802AK',
+        'weapons.missiles.DWS39_MJ1',
+        'weapons.missiles.DWS39_MJ1_MJ2',
+        'weapons.missiles.DWS39_MJ2',
+        'weapons.missiles.GB-6',
+        'weapons.missiles.GB-6-HE',
+        'weapons.missiles.GB-6-SFW',
+        'weapons.missiles.HB_AGM_78',
+        'weapons.missiles.HJ-12',
+        'weapons.missiles.HOT3_MBDA',
+        'weapons.missiles.KD_20',
         'weapons.missiles.KD_63',
         'weapons.missiles.KD_63B',
+        'weapons.missiles.Kh-66_Grom',
+        'weapons.missiles.Kh25MP_PRGS1VP',
+        'weapons.missiles.Kormoran',
+        'weapons.missiles.LD-10',
         'weapons.missiles.LS_6',
         'weapons.missiles.LS_6_500',
-        'weapons.missiles.AGM_45B',
-        'weapons.missiles.AGM_78B',
-        'weapons.missiles.AGM_78A',
-        'weapons.missiles.AGM_12C_ED',
-        'weapons.missiles.X_28',
+        'weapons.missiles.RB75',
+        'weapons.missiles.RB75B',
+        'weapons.missiles.RB75T',
+        'weapons.missiles.Rb 04E',
+        'weapons.missiles.Rb 04E (for A.I.)',
+        'weapons.missiles.Rb 05A',
+        'weapons.missiles.Rb 15F',
+        'weapons.missiles.Rb 15F (for A.I.)',
+        'weapons.missiles.Rb_04',
         'weapons.missiles.SPIKE_ER',
         'weapons.missiles.SPIKE_ER2',
-        'weapons.missiles.HJ-12',
-        'weapons.missiles.CM-400AKG',
-        'weapons.missiles.X_25ML',
-        'weapons.missiles.X_58',
-        'weapons.missiles.X_555',
+        'weapons.missiles.S_25L',
+        'weapons.missiles.Sea_Eagle',
+        'weapons.missiles.TGM_65D',
+        'weapons.missiles.TGM_65G',
+        'weapons.missiles.TGM_65G',
+        'weapons.missiles.TGM_65H',
+        'weapons.missiles.TOW',
+        'weapons.missiles.V-1',
+        'weapons.missiles.Vikhr_M',
         'weapons.missiles.X_101',
-        'weapons.missiles.C_701IR',
-        'weapons.missiles.ASM_N_2',
+        'weapons.missiles.X_22',
+        'weapons.missiles.X_25ML',
         'weapons.missiles.X_25MP',
-        'weapons.missiles.AT_6',
+        'weapons.missiles.X_25MR',
+        'weapons.missiles.X_28',
         'weapons.missiles.X_29L',
-        'weapons.missiles.X_65',
+        'weapons.missiles.X_29T',
         'weapons.missiles.X_31A',
-        'weapons.missiles.X_59M',
+        'weapons.missiles.X_31P',
         'weapons.missiles.X_35',
         'weapons.missiles.X_41',
-        'weapons.missiles.Vikhr_M',
-        'weapons.missiles.AGM_114',
-        'weapons.missiles.AGM_45A',
-        'weapons.missiles.AGM_65K',
-        'weapons.missiles.AGM_84A',
-        'weapons.missiles.AGM_84E',
-        'weapons.missiles.AGM_86',
-        'weapons.missiles.AGM_88',
-        'weapons.missiles.Sea_Eagle',
-        'weapons.missiles.AGM_122',
-        'weapons.missiles.AGM_65E',
-        'weapons.missiles.AGM_130',
-        'weapons.missiles.ALARM',
-        'weapons.missiles.X_25MR',
-        'weapons.missiles.X_29T',
-        'weapons.missiles.X_31P',
-        'weapons.missiles.AGM_65D',
-        'weapons.missiles.Kormoran',
+        'weapons.missiles.X_555',
+        'weapons.missiles.X_58',
+        'weapons.missiles.X_59M',
+        'weapons.missiles.X_65',
+        'weapons.missiles.YJ-12',
+        'weapons.missiles.YJ-83K',
     },
 
 
 [WEAPONSLIST.ItemCategory.AG_ROCKETS] = {
     -- AG ROCKETS
+       'weapons.nurs.ARAKM70BAP',
+       'weapons.nurs.ARAKM70BAPPX',
        'weapons.nurs.ARAKM70BHE',
-        'weapons.nurs.ARAKM70BAP',
-        'weapons.nurs.ARAKM70BAPPX',
-        'weapons.nurs.HYDRA_70_MK1',
-        'weapons.nurs.HYDRA_70_MK5',
-        'weapons.nurs.HYDRA_70_MK61',
-        'weapons.nurs.HYDRA_70_M151',
-        'weapons.nurs.HYDRA_70_M156',
-        'weapons.nurs.HYDRA_70_WTU1B',
-        'weapons.nurs.HYDRA_70_M274',
-        'weapons.nurs.HYDRA_70_M257',
-        'weapons.nurs.C_8OFP2',
-        'weapons.nurs.C_8OM',
-        'weapons.nurs.HVAR',
-        'weapons.nurs.C_8CM_GN',
-        'weapons.nurs.C_8CM_RD',
-        'weapons.nurs.C_8CM_WH',
-        'weapons.nurs.C_8CM_BU',
-        'weapons.nurs.C_8CM_YE',
-        'weapons.nurs.C_8CM_VT',
-        'weapons.nurs.R4M',
-        'weapons.nurs.WGr21',
-        'weapons.nurs.M8rocket',
-        'weapons.nurs.FFAR Mk1 HE',
-        'weapons.nurs.FFAR Mk5 HEAT',
-        'weapons.nurs.FFAR M156 WP',
-        'weapons.nurs.C_8CM',
-        'weapons.nurs.C_5',
-        'weapons.nurs.C_8',
-        'weapons.nurs.RS-82',
-        'weapons.nurs.S5M1_HEFRAG_FFAR',
-        'weapons.nurs.C_13',
-        'weapons.nurs.S5MO_HEFRAG_FFAR',
-        'weapons.nurs.C_24',
-        'weapons.nurs.S-5M',
-        'weapons.nurs.S-24A',
-        'weapons.nurs.S-24B',
-        'weapons.nurs.C_25',
-        'weapons.nurs.HYDRA_70_M282',
-        'weapons.nurs.British_HE_60LBFNo1_3INCHNo1',
-        'weapons.nurs.British_HE_60LBSAPNo2_3INCHNo1',
-        'weapons.nurs.British_AP_25LBNo1_3INCHNo1',
-        'weapons.nurs.ARF8M3HEI',
-        'weapons.nurs.ARF8M3API',
-        'weapons.nurs.ARF8M3TPSM',
-        'weapons.nurs.S-25-O',
-        'weapons.nurs.Zuni_127',
-        'weapons.nurs.HYDRA_70_M229',
-        'weapons.nurs.SNEB_TYPE250_F1B',
-        'weapons.nurs.SNEB_TYPE251_F1B',
-        'weapons.nurs.SNEB_TYPE251_H1',
-        'weapons.nurs.SNEB_TYPE252_F1B',
-        'weapons.nurs.SNEB_TYPE252_H1',
-        'weapons.nurs.SNEB_TYPE253_F1B',
-        'weapons.nurs.SNEB_TYPE253_H1',
-        'weapons.nurs.SNEB_TYPE254_F1B_RED',
-        'weapons.nurs.SNEB_TYPE254_H1_RED',
-        'weapons.nurs.SNEB_TYPE254_F1B_YELLOW',
-        'weapons.nurs.SNEB_TYPE254_H1_YELLOW',
-        'weapons.nurs.SNEB_TYPE254_F1B_GREEN',
-        'weapons.nurs.SNEB_TYPE254_H1_GREEN',
-        'weapons.nurs.SNEB_TYPE256_F1B',
-        'weapons.nurs.SNEB_TYPE256_H1',
-        'weapons.nurs.SNEB_TYPE257_F1B',
-        'weapons.nurs.SNEB_TYPE257_H1',
-        'weapons.nurs.SNEB_TYPE259E_F1B',
-        'weapons.nurs.SNEB_TYPE259E_H1',
-        'weapons.nurs.HYDRA_70_M259',
-        'weapons.nurs.HYDRA_70_M151_M433',
-        'weapons.nurs.FFAR_Mk61',
-        'weapons.nurs.S_5KP',
-        'weapons.nurs.S_5M',
-        'weapons.nurs.Tiny Tim',
-        'weapons.nurs.HVAR USN Mk28 Mod4',
-        'weapons.nurs.Rkt_90-1_HE',
+       'weapons.nurs.ARF8M3API',
+       'weapons.nurs.ARF8M3HEI',
+       'weapons.nurs.ARF8M3TPSM',
+       'weapons.nurs.British_AP_25LBNo1_3INCHNo1',
+       'weapons.nurs.British_HE_60LBFNo1_3INCHNo1',
+       'weapons.nurs.British_HE_60LBSAPNo2_3INCHNo1',
+       'weapons.nurs.C_13',
+       'weapons.nurs.C_24',
+       'weapons.nurs.C_25',
+       'weapons.nurs.C_5',
+       'weapons.nurs.C_8',
+       'weapons.nurs.C_8CM',
+       'weapons.nurs.C_8CM_BU',
+       'weapons.nurs.C_8CM_GN',
+       'weapons.nurs.C_8CM_RD',
+       'weapons.nurs.C_8CM_VT',
+       'weapons.nurs.C_8CM_WH',
+       'weapons.nurs.C_8CM_YE',
+       'weapons.nurs.C_8OFP2',
+       'weapons.nurs.C_8OM',
+       'weapons.nurs.FFAR M156 WP',
+       'weapons.nurs.FFAR Mk1 HE',
+       'weapons.nurs.FFAR Mk5 HEAT',
+       'weapons.nurs.FFAR_Mk61',
+       'weapons.nurs.HVAR',
+       'weapons.nurs.HVAR USN Mk28 Mod4',
+       'weapons.nurs.HYDRA_70_M151',
+       'weapons.nurs.HYDRA_70_M151_M433',
+       'weapons.nurs.HYDRA_70_M156',
+       'weapons.nurs.HYDRA_70_M229',
+       'weapons.nurs.HYDRA_70_M257',
+       'weapons.nurs.HYDRA_70_M259',
+       'weapons.nurs.HYDRA_70_M274',
+       'weapons.nurs.HYDRA_70_M282',
+       'weapons.nurs.HYDRA_70_MK1',
+       'weapons.nurs.HYDRA_70_MK5',
+       'weapons.nurs.HYDRA_70_MK61',
+       'weapons.nurs.HYDRA_70_WTU1B',
+       'weapons.nurs.M8rocket',
+       'weapons.nurs.Mi28NE_BL13L',
+       'weapons.nurs.R4M',
+       'weapons.nurs.RS-82',
+       'weapons.nurs.Rkt_90-1_HE',
+       'weapons.nurs.S-24A',
+       'weapons.nurs.S-24B',
+       'weapons.nurs.S-25-O',
+       'weapons.nurs.S-5M',
+       'weapons.nurs.S5M1_HEFRAG_FFAR',
+       'weapons.nurs.S5MO_HEFRAG_FFAR',
+       'weapons.nurs.SNEB_TYPE250_F1B',
+       'weapons.nurs.SNEB_TYPE251_F1B',
+       'weapons.nurs.SNEB_TYPE251_H1',
+       'weapons.nurs.SNEB_TYPE252_F1B',
+       'weapons.nurs.SNEB_TYPE252_H1',
+       'weapons.nurs.SNEB_TYPE253_F1B',
+       'weapons.nurs.SNEB_TYPE253_H1',
+       'weapons.nurs.SNEB_TYPE254_F1B_GREEN',
+       'weapons.nurs.SNEB_TYPE254_F1B_RED',
+       'weapons.nurs.SNEB_TYPE254_F1B_YELLOW',
+       'weapons.nurs.SNEB_TYPE254_H1_GREEN',
+       'weapons.nurs.SNEB_TYPE254_H1_RED',
+       'weapons.nurs.SNEB_TYPE254_H1_YELLOW',
+       'weapons.nurs.SNEB_TYPE256_F1B',
+       'weapons.nurs.SNEB_TYPE256_H1',
+       'weapons.nurs.SNEB_TYPE257_F1B',
+       'weapons.nurs.SNEB_TYPE257_H1',
+       'weapons.nurs.SNEB_TYPE259E_F1B',
+       'weapons.nurs.SNEB_TYPE259E_H1',
+       'weapons.nurs.S_5KP',
+       'weapons.nurs.S_5M',
+       'weapons.nurs.Tiny Tim',
+       'weapons.nurs.WGr21',
+       'weapons.nurs.Zuni_127',
     },
 
 [WEAPONSLIST.ItemCategory.AG_BOMBS] = {
     -- AG BOMBS (UNGUIDED / CLUSTER / GENERAL)
-        'weapons.containers.BRD-4-250',
-        'weapons.bombs.BetAB_500',
-        'weapons.bombs.BETAB-500S',
-        'weapons.bombs.BAP_100',
-        'weapons.bombs.BAP-100',
-        'weapons.bombs.BetAB_500ShP',
-        'weapons.bombs.Type_200A',
-        'weapons.bombs.Durandal',
-        'weapons.bombs.RBK_250',
-        'weapons.bombs.RBK_500AO',
-        'weapons.bombs.BL_755',
-        'weapons.bombs.AB_250_2_SD_2',
+        
+        
+        'weapons.bombs.250-2',
+        'weapons.bombs.250-3',
         'weapons.bombs.AB_250_2_SD_10A',
+        'weapons.bombs.AB_250_2_SD_2',
         'weapons.bombs.AB_500_1_SD_10A',
+        'weapons.bombs.AN_M30A1',
+        'weapons.bombs.AN_M57',
+        'weapons.bombs.AN_M64',
+        'weapons.bombs.AN_M65',
+        'weapons.bombs.AN_M66',
+        'weapons.bombs.BAP-100',
+        'weapons.bombs.BAP_100',
+        'weapons.bombs.BAT-120',
+        'weapons.bombs.BDU_33',
+        'weapons.bombs.BDU_45',
+        'weapons.bombs.BDU_45B',
+        'weapons.bombs.BDU_50HD',
+        'weapons.bombs.BDU_50LD',
+        'weapons.bombs.BEER_BOMB',
+        'weapons.bombs.BETAB-500M',
+        'weapons.bombs.BETAB-500S',
+        'weapons.bombs.BIN_200',
+        'weapons.bombs.BKF_AO2_5RT',
+        'weapons.bombs.BKF_PTAB2_5KO',
         'weapons.bombs.BLG66',
-        'weapons.bombs.RBK_250_275_AO_1SCH',
-        'weapons.bombs.RBK_500U_OAB_2_5RT',
-        'weapons.bombs.CBU_99',
         'weapons.bombs.BLG66_BELOUGA',
-        'weapons.bombs.CBU_97',
-        'weapons.bombs.ROCKEYE',
         'weapons.bombs.BLG66_EG',
-        'weapons.bombs.BLU-3_GROUP',
         'weapons.bombs.BLU-3B_GROUP',
+        'weapons.bombs.BLU-3_GROUP',
         'weapons.bombs.BLU-4B_GROUP',
-        'weapons.bombs.CBU_87',
-        'weapons.bombs.CBU_105',
-        'weapons.bombs.CBU_103',
-        'weapons.bombs.RBK_500U',
-        'weapons.bombs.CBU_52B',
-        'weapons.bombs.LYSBOMB 11086',
-        'weapons.bombs.LYSBOMB 11087',
-        'weapons.bombs.LYSBOMB 11088',
-        'weapons.bombs.LYSBOMB 11089',
-        'weapons.bombs.SAB_250_200',
-        'weapons.bombs.SAB_100MN',
-        'weapons.bombs.LUU_2B',
-        'weapons.bombs.HEBOMB',
-        'weapons.bombs.HEBOMBD',
-        'weapons.bombs.SC_50',
-        'weapons.bombs.SC_250_T1_L2',
-        'weapons.bombs.SC_250_T3_J',
-        'weapons.bombs.SC_500_J',
-        'weapons.bombs.SC_500_L2',
-        'weapons.bombs.SD_250_Stg',
-        'weapons.bombs.SD_500_A',
+        'weapons.bombs.BL_755',
+        'weapons.bombs.BR_250',
+        'weapons.bombs.BR_500',
+        'weapons.bombs.BetAB_500',
+        'weapons.bombs.BetAB_500ShP',
         'weapons.bombs.British_GP_250LB_Bomb_Mk1',
         'weapons.bombs.British_GP_250LB_Bomb_Mk4',
         'weapons.bombs.British_GP_250LB_Bomb_Mk5',
@@ -20131,1237 +24117,1700 @@ WEAPONSLIST.Items = {
         'weapons.bombs.British_MC_500LB_Bomb_Mk2',
         'weapons.bombs.British_SAP_250LB_Bomb_Mk5',
         'weapons.bombs.British_SAP_500LB_Bomb_Mk5',
-        'weapons.bombs.AN_M30A1',
-        'weapons.bombs.AN_M57',
-        'weapons.bombs.AN_M65',
-        'weapons.bombs.AN_M66',
-        'weapons.bombs.BEER_BOMB',
+        'weapons.bombs.CBU_103',
+        'weapons.bombs.CBU_105',
+        'weapons.bombs.CBU_52B',
+        'weapons.bombs.CBU_87',
+        'weapons.bombs.CBU_97',
+        'weapons.bombs.CBU_99',
+        'weapons.bombs.Durandal',
+        'weapons.bombs.FAB-250-M62',
+        'weapons.bombs.FAB-250M54',
+        'weapons.bombs.FAB-250M54TU',
+        'weapons.bombs.FAB-500M54',
+        'weapons.bombs.FAB-500M54TU',
+        'weapons.bombs.FAB-500SL',
+        'weapons.bombs.FAB-500TA',
+        'weapons.bombs.FAB_100',
+        'weapons.bombs.FAB_100M',
+        'weapons.bombs.FAB_100SV',
+        'weapons.bombs.FAB_1500',
+        'weapons.bombs.FAB_250',
+        'weapons.bombs.FAB_50',
+        'weapons.bombs.FAB_500',
+        'weapons.bombs.HB_F4E_GBU15V1',
+        'weapons.bombs.HEBOMB',
+        'weapons.bombs.HEBOMBD',
+        'weapons.bombs.IAB-500',
+        'weapons.bombs.LUU_2B',
+        'weapons.bombs.LYSBOMB 11086',
+        'weapons.bombs.LYSBOMB 11087',
+        'weapons.bombs.LYSBOMB 11088',
+        'weapons.bombs.LYSBOMB 11089',
+        'weapons.bombs.MK106',
+        'weapons.bombs.MK76',
+        'weapons.bombs.MK_82AIR',
+        'weapons.bombs.MK_82SNAKEYE',
+        'weapons.bombs.M_117',
         'weapons.bombs.Mk_81',
         'weapons.bombs.Mk_82',
         'weapons.bombs.Mk_82Y',
-        'weapons.bombs.Mk_83CT',
-        'weapons.bombs.BDU_45',
-        'weapons.bombs.BDU_45B',
-        'weapons.bombs.BIN_200',
-        'weapons.bombs.BR_250',
-        'weapons.bombs.BR_500',
         'weapons.bombs.Mk_83',
-        'weapons.bombs.FAB_100SV',
-        'weapons.bombs.P-50T',
-        'weapons.bombs.OFAB-100 Jupiter',
-        'weapons.bombs.FAB_50',
-        'weapons.bombs.FAB_100M',
-        'weapons.bombs.IAB-500',
-        'weapons.bombs.RN-24',
-        'weapons.bombs.RN-28',
+        'weapons.bombs.Mk_83AIR',
+        'weapons.bombs.Mk_83CT',
         'weapons.bombs.Mk_84',
-        'weapons.bombs.ODAB-500PM',
-        'weapons.bombs.FAB-500M54',
-        'weapons.bombs.FAB-500TA',
-        'weapons.bombs.FAB-500SL',
-        'weapons.bombs.FAB-500M54TU',
-        'weapons.bombs.OFAB-100-120TU',
-        'weapons.bombs.FAB-250M54TU',
-        'weapons.bombs.FAB-250M54',
-        'weapons.bombs.BETAB-500M',
-        'weapons.bombs.M_117',
-        'weapons.bombs.250-2',
-        'weapons.bombs.250-3',
-        'weapons.bombs.FAB-250-M62',
-        'weapons.bombs.BAT-120',
-        'weapons.bombs.MK76',
-        'weapons.bombs.MK106',
-        'weapons.bombs.SAMP125LD',
-        'weapons.bombs.SAMP250LD',
-        'weapons.bombs.SAMP250HD',
-        'weapons.bombs.SAMP400LD',
-        'weapons.bombs.SAMP400HD',
         'weapons.bombs.Mk_84AIR_GP',
         'weapons.bombs.Mk_84AIR_TP',
-        'weapons.bombs.HB_F4E_GBU15V1',
-        'weapons.bombs.OH58D_Red_Smoke_Grenade',
+        'weapons.bombs.ODAB-500PM',
+        'weapons.bombs.OFAB-100 Jupiter',
+        'weapons.bombs.OFAB-100-120TU',
         'weapons.bombs.OH58D_Blue_Smoke_Grenade',
         'weapons.bombs.OH58D_Green_Smoke_Grenade',
+        'weapons.bombs.OH58D_Red_Smoke_Grenade',
         'weapons.bombs.OH58D_Violet_Smoke_Grenade',
-        'weapons.bombs.OH58D_Yellow_Smoke_Grenade',
         'weapons.bombs.OH58D_White_Smoke_Grenade',
-        'weapons.bombs.FAB_100',
-        'weapons.bombs.Mk_83AIR',
-        'weapons.bombs.FAB_250',
-        'weapons.bombs.BDU_33',
-        'weapons.bombs.FAB_500',
-        'weapons.bombs.BDU_50LD',
-        'weapons.bombs.BDU_50HD',
-        'weapons.bombs.MK_82AIR',
-        'weapons.bombs.MK_82SNAKEYE',
-        'weapons.bombs.FAB_1500',
-        'weapons.bombs.AN_M64',
-		'weapons.bombs.BKF_PTAB2_5KO',
-
-		'weapons.bombs.BKF_AO2_5RT',
+        'weapons.bombs.OH58D_Yellow_Smoke_Grenade',
+        'weapons.bombs.P-50T',
+        'weapons.bombs.RBK_250',
+        'weapons.bombs.RBK_250_275_AO_1SCH',
+        'weapons.bombs.RBK_500AO',
+        'weapons.bombs.RBK_500U',
+        'weapons.bombs.RBK_500U_OAB_2_5RT',
+        'weapons.bombs.RN-24',
+        'weapons.bombs.RN-28',
+        'weapons.bombs.ROCKEYE',
+        'weapons.bombs.SAB_100MN',
+        'weapons.bombs.SAB_250_200',
+        'weapons.bombs.SAMP125LD',
+        'weapons.bombs.SAMP250HD',
+        'weapons.bombs.SAMP250LD',
+        'weapons.bombs.SAMP400HD',
+        'weapons.bombs.SAMP400LD',
+        'weapons.bombs.SC_250_T1_L2',
+        'weapons.bombs.SC_250_T3_J',
+        'weapons.bombs.SC_50',
+        'weapons.bombs.SC_500_J',
+        'weapons.bombs.SC_500_L2',
+        'weapons.bombs.SD_250_Stg',
+        'weapons.bombs.SD_500_A',
+        'weapons.bombs.Type_200A',
+		'weapons.bombs.PTAB_2_5KO',
     },
 
 [WEAPONSLIST.ItemCategory.AG_GUIDED_BOMBS] = {
     -- AG GUIDED BOMBS
-        'weapons.bombs.KAB_500',
-        'weapons.bombs.KAB_500Kr',
-        'weapons.bombs.KAB_1500Kr',
-        'weapons.bombs.KAB_1500T',
-        'weapons.bombs.KAB_1500LG',
-        'weapons.bombs.KAB_500S',
-		'weapons.bombs.KAB_500KrOD',
-        'weapons.bombs.GBU_31_V_2B',
-        'weapons.bombs.GBU_31_V_4B',
-        'weapons.bombs.GBU_32_V_2B',
-        'weapons.bombs.GBU_54_V_1B',
+        'weapons.bombs.AGM_62',
+        'weapons.bombs.AGM_62_I',
         'weapons.bombs.BDU_45LGB',
+        'weapons.bombs.BDU_50LGB',
         'weapons.bombs.GBU_10',
         'weapons.bombs.GBU_12',
+        'weapons.bombs.GBU_15_V_1_B',
+        'weapons.bombs.GBU_15_V_31_B',
         'weapons.bombs.GBU_16',
         'weapons.bombs.GBU_24',
-        'weapons.bombs.GBU_15_V_31_B',
         'weapons.bombs.GBU_27',
-        'weapons.bombs.AGM_62_I',
-        'weapons.bombs.LS_6_100',
-        'weapons.bombs.AGM_62',
-        'weapons.bombs.GBU_39',
-        'weapons.bombs.GBU_8_B',
         'weapons.bombs.GBU_28',
-        'weapons.bombs.GBU_15_V_1_B',
-        'weapons.bombs.BDU_50LGB',
         'weapons.bombs.GBU_31',
-        'weapons.bombs.GBU_38',
+        'weapons.bombs.GBU_31_V_2B',
         'weapons.bombs.GBU_31_V_3B',
-        'weapons.bombs.GBU_43', -- MOAB
+        'weapons.bombs.GBU_31_V_4B',
+        'weapons.bombs.GBU_32_V_2B',
+        'weapons.bombs.GBU_38',
+        'weapons.bombs.GBU_39',
+        'weapons.bombs.GBU_43',
+        'weapons.bombs.GBU_54_V_1B',
+        'weapons.bombs.GBU_8_B',
+        'weapons.bombs.KAB_1500Kr',
+        'weapons.bombs.KAB_1500LG',
+        'weapons.bombs.KAB_1500T',
+        'weapons.bombs.KAB_500',
+        'weapons.bombs.KAB_500Kr',
+        'weapons.bombs.KAB_500KrOD',
+        'weapons.bombs.KAB_500S',
+        'weapons.bombs.LS_6_100',
     },
 
 [WEAPONSLIST.ItemCategory.FUEL_TANKS] = {
     -- FUEL TANKS
-        'weapons.droptanks.fuel_tank_230',
-        'weapons.droptanks.HB_A6E_AERO1D_EMPTY',
-        'weapons.droptanks.HB_A6E_D704',
-        'weapons.droptanks.HB_A6E_AERO1D',
-        'weapons.droptanks.PTB_1200_F1',
-        'weapons.droptanks.PTB_580G_F1',
-        'weapons.droptanks.oiltank',
-        'weapons.droptanks.MB339_FT330',
-        'weapons.droptanks.MB339_TT500_L',
-        'weapons.droptanks.MB339_TT500_R',
-        'weapons.droptanks.MB339_TT320_L',
-        'weapons.droptanks.MB339_TT320_R',
+        'weapons.droptanks.1100L Tank',
+        'weapons.droptanks.1100L Tank Empty',
+        'weapons.droptanks.800L Tank',
+        'weapons.droptanks.800L Tank Empty',
         'weapons.droptanks.AV8BNA_AERO1D',
         'weapons.droptanks.AV8BNA_AERO1D_EMPTY',
-        'weapons.droptanks.M2KC_02_RPL541_EMPTY',
-        'weapons.droptanks.M2KC_08_RPL541_EMPTY',
-        'weapons.droptanks.M2KC_RPL_522_EMPTY',
-        'weapons.droptanks.',
+        'weapons.droptanks.Bidon',
+        'weapons.droptanks.C130J_Ext_Tank_L',
+        'weapons.droptanks.C130J_Ext_Tank_R',
+        'weapons.droptanks.Drop tank 75gal',
+        'weapons.droptanks.Drop_Tank_300_Liter',
         'weapons.droptanks.F-15E_Drop_Tank',
         'weapons.droptanks.F-15E_Drop_Tank_Empty',
-        'weapons.droptanks.HB_F-4E_EXT_WingTank',
-        'weapons.droptanks.HB_F-4E_EXT_WingTank_R',
-        'weapons.droptanks.HB_F-4E_EXT_Center_Fuel_Tank',
-        'weapons.droptanks.HB_HIGH_PERFORMANCE_CENTERLINE_600_GAL',
-        'weapons.droptanks.HB_F-4E_EXT_WingTank_EMPTY',
-        'weapons.droptanks.HB_F-4E_EXT_WingTank_R_EMPTY',
-        'weapons.droptanks.HB_F-4E_EXT_Center_Fuel_Tank_EMPTY',
-        'weapons.droptanks.Drop_Tank_300_Liter',
-        'weapons.droptanks.FW-190_Fuel-Tank',
-        'weapons.droptanks.droptank_108_gal',
-        'weapons.droptanks.droptank_110_gal',
-        'weapons.droptanks.droptank_150_gal',
-        'weapons.droptanks.Spitfire_slipper_tank',
-        'weapons.droptanks.Spitfire_tank_1',
+        'weapons.droptanks.F-16-PTB-N2',
+        'weapons.droptanks.F15-PTB',
+        'weapons.droptanks.F4-BAK-C',
+        'weapons.droptanks.F4-BAK-L',
         'weapons.droptanks.F4U-1D_Drop_Tank_Aux',
         'weapons.droptanks.F4U-1D_Drop_Tank_Mk5',
         'weapons.droptanks.F4U-1D_Drop_Tank_Mk6',
-        'weapons.droptanks.PTB_1500_MIG29A',
-        'weapons.droptanks.LNS_VIG_XTANK',
-        'weapons.droptanks.800L Tank',
-        'weapons.droptanks.1100L Tank',
-        'weapons.droptanks.PTB_200_F86F35',
-        'weapons.droptanks.PTB_120_F86F35',
-        'weapons.droptanks.HB_F14_EXT_DROPTANK_EMPTY',
-        'weapons.droptanks.HB_F14_EXT_DROPTANK',
         'weapons.droptanks.FPU_8A',
-        'weapons.droptanks.i16_eft',
+        'weapons.droptanks.FT600',
+        'weapons.droptanks.FW-190_Fuel-Tank',
         'weapons.droptanks.FuelTank_150L',
         'weapons.droptanks.FuelTank_350L',
+        'weapons.droptanks.HB_A6E_AERO1D',
+        'weapons.droptanks.HB_A6E_AERO1D_EMPTY',
+        'weapons.droptanks.HB_A6E_D704',
+        'weapons.droptanks.HB_F-4E_EXT_Center_Fuel_Tank',
+        'weapons.droptanks.HB_F-4E_EXT_Center_Fuel_Tank_EMPTY',
+        'weapons.droptanks.HB_F-4E_EXT_WingTank',
+        'weapons.droptanks.HB_F-4E_EXT_WingTank_EMPTY',
+        'weapons.droptanks.HB_F-4E_EXT_WingTank_R',
+        'weapons.droptanks.HB_F-4E_EXT_WingTank_R_EMPTY',
+        'weapons.droptanks.HB_F14_EXT_DROPTANK',
+        'weapons.droptanks.HB_F14_EXT_DROPTANK_EMPTY',
+        'weapons.droptanks.HB_HIGH_PERFORMANCE_CENTERLINE_600_GAL',
+        'weapons.droptanks.LNS_VIG_XTANK',
+        'weapons.droptanks.M2000-PTB',
         'weapons.droptanks.M2KC_02_RPL541',
+        'weapons.droptanks.M2KC_02_RPL541_EMPTY',
         'weapons.droptanks.M2KC_08_RPL541',
+        'weapons.droptanks.M2KC_08_RPL541_EMPTY',
         'weapons.droptanks.M2KC_RPL_522',
-        'weapons.droptanks.PTB400_MIG15',
-        'weapons.droptanks.PTB600_MIG15',
-        'weapons.droptanks.PTB300_MIG15',
-        'weapons.droptanks.PTB400_MIG19',
-        'weapons.droptanks.PTB760_MIG19',
+        'weapons.droptanks.M2KC_RPL_522_EMPTY',
+        'weapons.droptanks.MB339_FT330',
+        'weapons.droptanks.MB339_TT320_L',
+        'weapons.droptanks.MB339_TT320_R',
+        'weapons.droptanks.MB339_TT500_L',
+        'weapons.droptanks.MB339_TT500_R',
+        'weapons.droptanks.MIG-23-PTB',
+        'weapons.droptanks.MIG-25-PTB',
+        'weapons.droptanks.Mosquito_Drop_Tank_100gal',
+        'weapons.droptanks.Mosquito_Drop_Tank_50gal',
+        'weapons.droptanks.PTB-1150',
+        'weapons.droptanks.PTB-1150-29',
+        'weapons.droptanks.PTB-150',
+        'weapons.droptanks.PTB-1500',
+        'weapons.droptanks.PTB-2000',
+        'weapons.droptanks.PTB-275',
+        'weapons.droptanks.PTB-3000',
+        'weapons.droptanks.PTB-450',
         'weapons.droptanks.PTB-490-MIG21',
         'weapons.droptanks.PTB-490C-MIG21',
+        'weapons.droptanks.PTB-800',
         'weapons.droptanks.PTB-800-MIG21',
-        'weapons.droptanks.Mosquito_Drop_Tank_50gal',
-        'weapons.droptanks.Mosquito_Drop_Tank_100gal',
-        'weapons.droptanks.PTB-450',
-        'weapons.droptanks.800L Tank Empty',
-        'weapons.droptanks.1100L Tank Empty',
-        'weapons.droptanks.fueltank450',
+        'weapons.droptanks.PTB300_MIG15',
+        'weapons.droptanks.PTB400_MIG15',
+        'weapons.droptanks.PTB400_MIG19',
+        'weapons.droptanks.PTB600_MIG15',
+        'weapons.droptanks.PTB760_MIG19',
+        'weapons.droptanks.PTB_1200_F1',
+        'weapons.droptanks.PTB_120_F86F35',
+        'weapons.droptanks.PTB_1500_MIG29A',
+        'weapons.droptanks.PTB_200_F86F35',
+        'weapons.droptanks.PTB_580G_F1',
+        'weapons.droptanks.S-3-PTB',
+        'weapons.droptanks.Spitfire_slipper_tank',
+        'weapons.droptanks.Spitfire_tank_1',
+        'weapons.droptanks.T-PTB',
+        'weapons.droptanks.droptank_108_gal',
+        'weapons.droptanks.droptank_110_gal',
+        'weapons.droptanks.droptank_150_gal',
+        'weapons.droptanks.f-18c-ptb',
+        'weapons.droptanks.fuel_tank_230',
+        'weapons.droptanks.fuel_tank_300gal',
+        'weapons.droptanks.fuel_tank_370gal',
         'weapons.droptanks.fueltank200',
-        'weapons.droptanks.C130J_Ext_Tank_R',
-        'weapons.droptanks.C130J_Ext_Tank_L',
         'weapons.droptanks.fueltank230',
+        'weapons.droptanks.fueltank450',
+        'weapons.droptanks.i16_eft',
+        'weapons.droptanks.oiltank',
         'weapons.droptanks.uh60l_iafts',
+        'weapons.droptanks.{IAFS_ComboPak_100}',
     },
 
 [WEAPONSLIST.ItemCategory.MISC] = {
     -- MISC (ADAPTERS / PODS / GUNMOUNTS / OTHER)
-		
+        -- new
+        'weapons.adapters.ACH_47F_GL',
+        'weapons.adapters.B-8V20A',
+        'weapons.adapters.KMGU-2',
+        'weapons.adapters.MBD-3-LAU-61',
+        'weapons.adapters.MBD-3-LAU-68',
+        'weapons.adapters.OH-58D_Gorgona',
+        'weapons.adapters.kmgu-2',
+        'weapons.adapters.lau-88',
+        'weapons.containers.',
+        'weapons.containers.16c_hts_pod',
         'weapons.containers.AAQ-28_LITENING',
-        'weapons.containers.MB339_Vinten',
+        'weapons.containers.ACH_47F_GL',
+        'weapons.containers.ACH_47F_Left',
+        'weapons.containers.ACH_47F_Right',
+        'weapons.containers.AIM-9S',
+        'weapons.containers.ALQ-131',
+        'weapons.containers.ALQ-184',
+        'weapons.containers.ANAWW_13',
+        'weapons.containers.AN_AAQ_33',
+        'weapons.containers.AN_ASQ_228',
+        'weapons.containers.APK-9',
+        'weapons.containers.ASO-2',
+        'weapons.containers.AV8BNA_ALQ164',
+        'weapons.containers.BARAX',
+        'weapons.containers.BOZ-100',
+        'weapons.containers.BRD-4-250',
+        'weapons.containers.BRU-42_LS',
+        'weapons.containers.ETHER',
         'weapons.containers.F-15E_AAQ-13_LANTIRN',
         'weapons.containers.F-15E_AAQ-14_LANTIRN',
         'weapons.containers.F-15E_AAQ-28_LITENING',
         'weapons.containers.F-15E_AAQ-33_XR_ATP-SE',
         'weapons.containers.F-15E_AXQ-14_DATALINK',
-        'weapons.containers.KINGAL',
-        'weapons.containers.ah-64d_radar',
-        'weapons.containers.HB_ALE_40_0_0',
-        'weapons.containers.HB_ALE_40_0_120',
-        'weapons.containers.HB_ALE_40_30_60',
-        'weapons.containers.HB_ALE_40_15_90',
-        'weapons.containers.HB_ALE_40_30_0',
-        'weapons.containers.HB_ORD_Pave_Spike',
-        'weapons.containers.HB_ORD_Pave_Spike_Fast',
-        'weapons.containers.HB_F14_EXT_TARPS',
-        'weapons.containers.HB_F14_EXT_ECA',
-        'weapons.containers.LANTIRN',
-        'weapons.containers.AN_AAQ_33',
-        'weapons.containers.APK-9',
-        'weapons.containers.PAVETACK',
-        'weapons.containers.ANAWW_13',
-        'weapons.containers.aaq-28LEFT litening',
-        'weapons.containers.AN_ASQ_228',
-        'weapons.containers.dlpod_akg',
-        'weapons.containers.wmd7',
-        'weapons.containers.{F14-LANTIRN-TP}',
-        'weapons.containers.LANTIRN-F14-TARGET',
-        'weapons.containers.TANGAZH',
-        'weapons.containers.ETHER',
-        'weapons.containers.SHPIL',
-        'weapons.containers.Fantasm',
         'weapons.containers.F-18-FLIR-POD',
         'weapons.containers.F-18-LDT-POD',
-        'weapons.containers.16c_hts_pod',
-        'weapons.containers.Spear',
-        'weapons.containers.ALQ-184',
-        'weapons.containers.SORBCIJA_R',
-        'weapons.containers.BARAX',
-        'weapons.containers.MATRA-PHIMAT',
-        'weapons.containers.HB_F14_EXT_AN_APQ-167',
-        'weapons.containers.ALQ-131',
-        'weapons.containers.SORBCIJA_L',
-        'weapons.containers.U22',
-        'weapons.containers.U22A',
-        'weapons.containers.SPS-141',
-        'weapons.containers.AV8BNA_ALQ164',
-        'weapons.containers.SKY_SHADOW',
-        'weapons.containers.kg600',
-        'weapons.containers.',
-        'weapons.containers.SPS-141-100',
-        'weapons.containers.{ECM_POD_L_175V}',
-        'weapons.containers.MPS-410',
-        'weapons.containers.alq-184long',
-        'weapons.containers.ais-pod-t50_r',
-        'weapons.containers.sa342_dipole_antenna',
-        'weapons.containers.MB339_TravelPod',
-		'weapons.adapters.MBD-3-LAU-61',
-        'weapons.adapters.lau-88',
-		'weapons.adapters.MBD-3-LAU-68',
-		'weapons.containers.SPRD_99Twin',
-        'weapons.containers.FAS',
-        'weapons.containers.IRDeflector',
-        'weapons.containers.{EclairM_60}',
-        'weapons.containers.{EclairM_51}',
-        'weapons.containers.{EclairM_42}',
-        'weapons.containers.{EclairM_33}',
-        'weapons.containers.{EclairM_24}',
-        'weapons.containers.{EclairM_15}',
-        'weapons.containers.{EclairM_06}',
-        'weapons.containers.KBpod',
-        'weapons.containers.BOZ-100',
-        'weapons.containers.{Eclair}',
-        'weapons.containers.ASO-2',
-        'weapons.containers.{M2KC_AGF}',
-        'weapons.containers.{M2KC_AAF}',
-        'weapons.containers.MB339_SMOKE-POD',
-        'weapons.containers.{US_M10_SMOKE_TANK_RED}',
-        'weapons.containers.{US_M10_SMOKE_TANK_YELLOW}',
-        'weapons.containers.{US_M10_SMOKE_TANK_ORANGE}',
-        'weapons.containers.{US_M10_SMOKE_TANK_GREEN}',
-        'weapons.containers.{US_M10_SMOKE_TANK_BLUE}',
-        'weapons.containers.{US_M10_SMOKE_TANK_WHITE}',
-        'weapons.containers.{F4U1D_SMOKE_WHITE}',
-        'weapons.containers.{SMOKE_WHITE}',
-        'weapons.containers.smoke_pod',
-        'weapons.containers.{CE2_SMOKE_WHITE}',
-        'weapons.containers.HVAR_rocket',
-        'weapons.containers.{MIG21_SMOKE_WHITE}',
-        'weapons.containers.{MIG21_SMOKE_RED}',
-        'weapons.containers.pl5eii',
-        'weapons.containers.HB_F14_EXT_BRU34',
         'weapons.containers.F4-PILON',
-        'weapons.containers.SPRD-99',
-        'weapons.containers.ais-pod-t50',
-        'weapons.containers.rightSeat',
-        'weapons.containers.leftSeat',
-        'weapons.containers.rearCargoSeats',
-        'weapons.containers.ais-pod-t50_l',
+        'weapons.containers.FAS',
+        'weapons.containers.Fantasm',
+        'weapons.containers.GUV_VOG',
+        'weapons.containers.GUV_YakB_GSHP',
+        'weapons.containers.HB_ALE_40_0_0',
+        'weapons.containers.HB_ALE_40_0_120',
+        'weapons.containers.HB_ALE_40_15_90',
+        'weapons.containers.HB_ALE_40_30_0',
+        'weapons.containers.HB_ALE_40_30_60',
+        'weapons.containers.HB_F14_EXT_AN_APQ-167',
+        'weapons.containers.HB_F14_EXT_BRU34',
+        'weapons.containers.HB_F14_EXT_ECA',
         'weapons.containers.HB_F14_EXT_LAU-7',
-        'weapons.containers.fullCargoSeats',
-        'weapons.containers.lau-105',
+        'weapons.containers.HB_F14_EXT_TARPS',
         'weapons.containers.HB_ORD_MER',
         'weapons.containers.HB_ORD_Missile_Well_Adapter',
-
-
-        'weapons.shells.KDA_35_FAPDS',
-        'weapons.shells.Rh202_20_HE',
-        'weapons.shells.Mauser7.92x57_S.m.K.',
-        'weapons.shells.Mauser7.92x57_S.m.K._Ub.m.Zerl.',
-        'weapons.shells.N37_37x155_HEI_T',
-        'weapons.shells.MG_20x82_API',
-        'weapons.shells.GSH23_23_AP',
-        'weapons.shells.M2_12_7',
-        'weapons.shells.L23A1_APFSDS',
-        'weapons.shells.DEFA553_30HE',
-        'weapons.shells.KS19_100HE',
-        'weapons.shells.50Browning_API_M8_Corsair',
-        'weapons.shells.MG_13x64_HEI_T',
-        'weapons.shells.2A38_30_AP',
-        'weapons.shells.20mm_M70LD_SAPHEI',
-        'weapons.shells.ZTZ_125_HE',
-        'weapons.shells.HP30_30_AP',
-        'weapons.shells.M256_120_HE',
-        'weapons.shells.7_62x51tr',
-        'weapons.shells.AK176_76',
-        'weapons.shells.M393A3_105_HE',
-        'weapons.shells.M61_20_AP',
-        'weapons.shells.DM53_120_AP',
-        'weapons.shells.PJ26_76_PFHE',
-        'weapons.shells.HEDPM430',
-        'weapons.shells.GSH_23_HE',
-        'weapons.shells.Hispano_Mk_II_SAP/I',
-        'weapons.shells.DEFA554_30_HE',
-        'weapons.shells.50Browning_Ball_M2',
-        'weapons.shells.50Browning_I_M1',
-        'weapons.shells.British303_Ball_Mk8',
-        'weapons.shells.ZTZ_7_62',
-        'weapons.shells.Mauser7.92x57_B.',
-        'weapons.shells.M39_20_HEI',
-        "weapons.shells.Mauser7.92x57_S.m.K._L'spur(weiss)",
-        'weapons.shells.3UBM11_100mm_AP',
-        'weapons.shells.MK_108_MGsch',
-        'weapons.shells.ship_Bofors_40mm_HE',
-        'weapons.shells.GSh_30_2K_AP_Tr',
-        'weapons.shells.M383',
-        'weapons.shells.M53_APT_RED',
-        'weapons.shells.75mm_AA_JAP',
-        'weapons.shells.2A28_73',
-        'weapons.shells.GAU8_30_AP',
-        'weapons.shells.British303_Ball_Mk1c',
-        'weapons.shells.L31_120mm_HESH',
-        'weapons.shells.20mm_M53_API',
-        'weapons.shells.MINGR55_NO_TRC',
-        'weapons.shells.British303_G_Mk4',
-        'weapons.shells.CHAP_76_PFHE',
-        'weapons.shells.PJ87_100_PFHE',
-        'weapons.shells.2A42_30_AP',
-        'weapons.shells.37mm_Type_100_JAP',
-        'weapons.shells.M2_12_7_T',
-        'weapons.shells.2A42_30_HE',
-        'weapons.shells.M230_HEI M799',
-        'weapons.shells.Sprgr_34_L48',
-        'weapons.shells.7_62x39',
-        'weapons.shells.GSH23_23_HE',
-        'weapons.shells.British303_G_Mk2',
-        'weapons.shells.M242_25_AP_M919',
-        'weapons.shells.M322_120_AP',
-        'weapons.shells.M242_25_HE_M792',
-        'weapons.shells.M46',
-        'weapons.shells.CHAP_76_HE_T',
-        'weapons.shells.2A38_30_HE',
-        'weapons.shells.British303_G_Mk5',
-        'weapons.shells.M39_20_TP',
-        'weapons.shells.GAU8_30_HE',
-        'weapons.shells.KDA_35_AP',
-        'weapons.shells.CL3143_120_AP',
-        'weapons.shells.M61_20_TP_T',
-        'weapons.shells.NR23_23x115_API',
-        'weapons.shells.KPVT_14_5',
-        'weapons.shells.L14A2_30_APDS',
-        'weapons.shells.L21A1_30_HE',
-        'weapons.shells.GSh_30_2K_HE',
-        'weapons.shells.M39_20_API',
-        'weapons.shells.2A46M_125_AP',
-        'weapons.shells.M61_20_HEIT_RED',
-        'weapons.shells.KS19_100AP',
-        'weapons.shells.20mm_M56_HEI',
-        'weapons.shells.M61',
-        'weapons.shells.2A46M_125_HE',
-        'weapons.shells.50Browning_T_M1',
-        'weapons.shells.NR30_30x155_APT',
-        'weapons.shells.AK630_30_AP',
-        'weapons.shells.L23_120_AP',
-        'weapons.shells.25mm_AA_JAP',
-        'weapons.shells.MK_108_HEI',
-        'weapons.shells.MG_13x64_I_T',
-        'weapons.shells.OF_350',
-        'weapons.shells.M134_7_62_T',
-        'weapons.shells.DM33_120_AP',
-        'weapons.shells.M256_120_HE_L55',
-        'weapons.shells.YakB_12_7',
-        'weapons.shells.M230_30',
-        'weapons.shells.VOG17',
-        'weapons.shells.GSh_30_2K_AP',
-        'weapons.shells.M61_20_PGU30',
-        'weapons.shells.120_EXPL_F1_120mm_HE',
-        'weapons.shells.PGU32_SAPHEI_T',
-        'weapons.shells.British303_W_Mk1z',
-        'weapons.shells.5_56x45_NOtr',
-        'weapons.shells.50Browning_API_M8',
-        'weapons.shells.5_45x39',
-        'weapons.shells.M39_20_HEI_T',
-        'weapons.shells.CHAP_125_3BM69_APFSDS_T',
-        'weapons.shells.3BM59_125_AP',
-        'weapons.shells.6_5mm_Type_91_JAP',
-        'weapons.shells.M61_20_PGU28',
-        'weapons.shells.NR30_30x155_APHE',
-        'weapons.shells.7_7mm_Type_97_JAP',
-        'weapons.shells.PINK_PROJECTILE',
-        'weapons.shells.CHAP_76_HESH_T',
-        'weapons.shells.PKT_7_62',
-        'weapons.shells.OFL_120F2_AP',
-        'weapons.shells.DM12_L55_120mm_HEAT_MP_T',
-        'weapons.shells.British303_O_Mk1',
-        'weapons.shells.M256_120_AP',
-        'weapons.shells.UOF412_100HE',
-        'weapons.shells.M61_20_HE_gr',
-        'weapons.shells.M61_20_PGU27',
-        'weapons.shells.Utes_12_7x108',
-        'weapons.shells.2A7_23_HE',
-        'weapons.shells.British303_G_Mk3',
-        'weapons.shells.M61_20_AP_gr',
-        'weapons.shells.M485_155_IL',
-        'weapons.shells.2A64_152',
-        'weapons.shells.M61_20_HE',
-        'weapons.shells.57mm_Type_90_JAP',
-        'weapons.shells.DEFA554_30_HE_TRACERS',
-        'weapons.shells.Hispano_Mk_II_MKIIZ_AP',
-        'weapons.shells.M256_120_AP_L55',
-        'weapons.shells.MG_13x64_HE',
-        'weapons.shells.Hispano_Mk_II_Tracer_G',
-        'weapons.shells.20mm_M220_Tracer',
-        'weapons.shells.Bofors_40mm_Essex',
-        'weapons.shells.MG_13x64_I',
-        'weapons.shells.Pzgr_39/40',
-        'weapons.shells.2A60_120',
-        'weapons.shells.MK_108_MGsch_T',
-        'weapons.shells.HP30_30_HE',
-        'weapons.shells.L31A7_HESH',
-        'weapons.shells.GSH301_30_AP',
-        'weapons.shells.M55A2_TP_RED',
-        'weapons.shells.MG_13x64_API',
-        'weapons.shells.DM23_105_AP',
-        'weapons.shells.Bofors_40mm_HE',
-        'weapons.shells.7_62x54',
-        'weapons.shells.DM12_120mm_HEAT_MP_T',
-        'weapons.shells.DEFA553_30AP',
-        'weapons.shells.76mm_AA_JAP',
-        'weapons.shells.PLZ_155_HE',
-        'weapons.shells.GSH301_30_HE',
-        'weapons.shells.Br303',
-        'weapons.shells.DANA_152',
-        'weapons.shells.MK45_127',
-        'weapons.shells.M230_TP M788',
-        'weapons.shells.Utes_12_7x108_T',
-        'weapons.shells.7_92x57sS',
-        'weapons.shells.M20_50_aero_APIT',
-        'weapons.shells.20MM_M242_HEI-T',
-        'weapons.shells.M339_120mm_HEAT_MP_T',
-        'weapons.shells.M68_105_HE',
-        'weapons.shells.50Browning_APIT_M20',
-        'weapons.shells.M197_20',
-        'weapons.shells.KDA_35_HE',
-        'weapons.shells.British303_Ball_Mk6',
-        'weapons.shells.7_62x54_NOTRACER',
-        'weapons.shells.ZTZ_14_5',
-        'weapons.shells.A222_130',
-        'weapons.shells.50Browning_AP_M2_Corsair',
-        'weapons.shells.M68_105_AP',
-        'weapons.shells.Mauser7.92x57_S.m.K.H.',
-        'weapons.shells.BR_354N',
-        'weapons.shells.British303_G_Mk6z',
-        'weapons.shells.KPVT_14_5_T',
-        'weapons.shells.NR23_23x115_HEI_T',
-        'weapons.shells.M56A3_HE_RED',
-        'weapons.shells.GSh_30_2K_HE_Tr',
-        'weapons.shells.K307_155HE',
-        'weapons.shells.Oerlikon_20mm_Essex',
-        'weapons.shells.HESH_105',
-        'weapons.shells.M242_25_AP_M791',
-        'weapons.shells.BK_27',
-        'weapons.shells.M185_155',
-        'weapons.shells.British303_B_Mk4z',
-        'weapons.shells.M246_20_HE_gr',
-        'weapons.shells.Hispano_Mk_II_MKI_HE/I',
-        'weapons.shells.2A7_23_AP',
-        'weapons.shells.MG_13x64_APT',
-        'weapons.shells.M2_50_aero_AP',
-        'weapons.shells.2A18_122',
-        'weapons.shells.YakB_12_7_T',
-        'weapons.shells.N37_37x155_API_T',
-        'weapons.shells.MG_20x82_MGsch',
-        'weapons.shells.British303_G_Mk1',
-        'weapons.shells.M53_AP_RED',
-        'weapons.shells.British303_Ball_Mk7',
-        'weapons.shells.7_62x51',
-        'weapons.shells.Hispano_Mk_II_AP/T',
-        'weapons.shells.GSH_23_AP',
-        'weapons.shells.MK75_76',
-        'weapons.shells.50Browning_Ball_M2_Corsair',
-        'weapons.shells.GAU8_30_TP',
-        'weapons.shells.MK45_127mm_AP_Essex',
-        'weapons.shells.NR30_30x155_HEI_T',
-        'weapons.shells.PKT_7_62_T',
-        'weapons.shells.7_92x57_Smkl',
-        'weapons.shells.M2_12_7_TG',
-        'weapons.shells.M230_ADEM/DEFA',
-        'weapons.shells.9x19_m882',
-        'weapons.shells.2A33_152',
-        'weapons.shells.M825A1_155_SM',
-        'weapons.shells.53-UBR-281U',
-        'weapons.shells.MINGR55',
-        'weapons.shells.MK45_127mm_Essex',
-        'weapons.shells.MAUZER30_30',
-        'weapons.shells.MG_20x82_HEI_T',
-        'weapons.shells.DEFA552_30',
-        'weapons.shells.50Browning_AP_M2',
-        'weapons.shells.5_56x45',
-        'weapons.shells.M61_20_TP',
-        'weapons.shells.AK100_100',
-        'weapons.shells.53-UOR-281U',
-        'weapons.shells.ZTZ_125_AP',
-        'weapons.shells.50Browning_APIT_M20_Corsair',
-        'weapons.shells.British303_B_Mk6z',
-        'weapons.shells.M61_20_HE_INVIS',
-        'weapons.shells.M230_HEDP M789',
-        'weapons.shells.Rh202_20_AP',
-        'weapons.shells.Br303_tr',
-        'weapons.shells.UOF_17_100HE',
-        'weapons.shells.5_45x39_NOtr',
-        'weapons.shells.GSH23_23_HE_T',
-        'weapons.shells.AK630_30_HE',
-        'weapons.shells.Flak18_Sprgr_39',
-        "weapons.shells.Mauser7.92x57_S.m.K._L'spur(gelb)",
-        'weapons.shells.DEFA553_30APIT',
-        "weapons.shells.Mauser7.92x57_P.m.K.",
-        'weapons.shells.Hispano_Mk_II_Mk_Z_Ball',
-        'weapons.shells.Oerlikon_20mm_HE',
-        'weapons.shells.HE_T_MkII_40mm',
-        'weapons.shells.RM_15cm_HE',
-        'weapons.shells.Mk_20_HE_shell',
-        'weapons.shells.Flak41_Sprgr_39',
-        'weapons.shells.Pzgr_39/42',
-        'weapons.shells.M1_37mm_37AP-T',
-        'weapons.shells.Pzgr_39_5cm',
-        'weapons.shells.Sprgr_38',
-        'weapons.shells.Pzgr_39/43',
-        'weapons.shells.Sprgr_39',
-        'weapons.shells.37x263_AP',
-        'weapons.shells.20x138B_AP',
-        'weapons.shells.Besa7_92x57T',
-        'weapons.shells.Sprgr_34_L70',
-        'weapons.shells.QF94_AA_HE',
-        'weapons.shells.M63_37HE',
-        'weapons.shells.QF95_206R_fixed',
-        'weapons.shells.UBR_365_85AP',
-        'weapons.shells.M101',
-        'weapons.shells.HE_M1_Shell',
-        'weapons.shells.M42A1_HE',
-        'weapons.shells.UO_365K_85HE',
-        'weapons.shells.M1_37mm_HE-T',
-        'weapons.shells.QF17_HE',
-        'weapons.shells.2A20_115mm_HE',
-        'weapons.shells.Pzgr_39',
-        'weapons.shells.2A20_115mm_AP',
-        'weapons.shells.Besa7_92x57',
-        'weapons.shells.leFH18_105HE',
-        'weapons.shells.I_Gr_33',
-        'weapons.shells.Sprgr_43_L71',
-        'weapons.shells.M62_APC',
-        'weapons.shells.APCBC',
-        'weapons.shells.20x138B_HE',
-        'weapons.shells.AP_T_MkI_40mm',
-        'weapons.shells.Mk_12_HE_shell',
-        'weapons.shells.M51_37AP',
-        'weapons.shells.37x263_HE',
-
-
-
-        'weapons.gunmounts.NR-30',
-        'weapons.gunmounts.{MB339_ANM3_L}',
-        'weapons.gunmounts.OH58D_M3P_L500',
-        'weapons.gunmounts.C130_M4_Rifle',
-        'weapons.gunmounts.{C130-M18-Sidearm}',
-        'weapons.gunmounts.MINIGUN',
-        'weapons.gunmounts.{GIAT_M621_SAPHEI}',
-        'weapons.gunmounts.{C130-Cargo-Bay-M4}',
-        'weapons.gunmounts.{CC420_GUN_POD}',
-        'weapons.gunmounts.{MB339_DEFA553_R}',
-        'weapons.gunmounts.PKT_7_62',
-        'weapons.gunmounts.{UH60_GAU19_LEFT}',
-        'weapons.gunmounts.defa_553',
-        'weapons.gunmounts.{CH47_STBD_M60D}',
-        'weapons.gunmounts.N-37',
-        'weapons.gunmounts.{CH47_AFT_M60D}',
-        'weapons.gunmounts.M-61A1',
-        'weapons.gunmounts.UH60L_M134',
-        'weapons.gunmounts.{AN-M3}',
-        'weapons.gunmounts.NR-23',
-        'weapons.gunmounts.UPK_23_25',
-        'weapons.gunmounts.{UH60L_M134_GUNNER}',
-        'weapons.gunmounts.{SUU_23_POD}',
-        'weapons.gunmounts.{SA342_M134_SIDE_R}',
-        'weapons.gunmounts.HMP400',
-        'weapons.gunmounts.M134_R',
-        'weapons.gunmounts.OH_58_BRAUNING',
-        'weapons.gunmounts.{UH60L_M60_GUNNER}',
-        'weapons.gunmounts.M60_SIDE_L',
-        'weapons.gunmounts.KORD_12_7_MI24_R',
-        'weapons.gunmounts.KORD_12_7_MI24_L',
-        'weapons.gunmounts.M60_SIDE_R',
-        'weapons.gunmounts.{GAU_12_Equalizer_HE}',
-        'weapons.gunmounts.{FN_HMP400_100}',
-        'weapons.gunmounts.MG_151_20',
-        'weapons.gunmounts.C130_M18_Sidearm',
-        'weapons.gunmounts.m3_browning',
-        'weapons.gunmounts.{AKAN_NO_TRC}',
+        'weapons.containers.HB_ORD_Pave_Spike',
+        'weapons.containers.HB_ORD_Pave_Spike_Fast',
+        'weapons.containers.HVAR_rocket',
+        'weapons.containers.IRDeflector',
+        'weapons.containers.KBpod',
+        'weapons.containers.KINGAL',
+        'weapons.containers.KORD_12_7',
+        'weapons.containers.KORD_12_7_MI24_L',
+        'weapons.containers.KORD_12_7_MI24_R',
+        'weapons.containers.LANTIRN',
+        'weapons.containers.LANTIRN-F14-TARGET',
+        'weapons.containers.M134_L',
+        'weapons.containers.M134_R',
+        'weapons.containers.M134_SIDE_L',
+        'weapons.containers.M134_SIDE_R',
+        'weapons.containers.M60_SIDE_L',
+        'weapons.containers.M60_SIDE_R',
+        'weapons.containers.MATRA-PHIMAT',
+        'weapons.containers.MB339_SMOKE-POD',
+        'weapons.containers.MB339_TravelPod',
+        'weapons.containers.MB339_Vinten',
+        'weapons.containers.MPS-410',
+        'weapons.containers.MXU-648',
+        'weapons.containers.OH58D_M3P_L100',
+        'weapons.containers.OH58D_M3P_L200',
+        'weapons.containers.OH58D_M3P_L300',
+        'weapons.containers.OH58D_M3P_L400',
+        'weapons.containers.OH58D_M3P_L500',
+        'weapons.containers.OV-10A_Paratrooper',
+        'weapons.containers.PAVETACK',
+        'weapons.containers.PKT_7_62',
+        'weapons.containers.R-73U',
+        'weapons.containers.SHPIL',
+        'weapons.containers.SKY_SHADOW',
+        'weapons.containers.SORBCIJA_L',
+        'weapons.containers.SORBCIJA_R',
+        'weapons.containers.SPRD-99',
+        'weapons.containers.SPRD_99Twin',
+        'weapons.containers.SPS-141',
+        'weapons.containers.SPS-141-100',
+        'weapons.containers.Spear',
+        'weapons.containers.TANGAZH',
+        'weapons.containers.U22',
+        'weapons.containers.U22A',
+        'weapons.containers.aaq-28LEFT litening',
+        'weapons.containers.ah-64d_radar',
+        'weapons.containers.ais-pod-t50',
+        'weapons.containers.ais-pod-t50_l',
+        'weapons.containers.ais-pod-t50_r',
+        'weapons.containers.alq-184long',
+        'weapons.containers.dlpod_akg',
+        'weapons.containers.fullCargoSeats',
+        'weapons.containers.hvar_SmokeGenerator',
+        'weapons.containers.kg600',
+        'weapons.containers.lau-105',
+        'weapons.containers.leftSeat',
+        'weapons.containers.oh-58-brauning',
+        'weapons.containers.pl5eii',
+        'weapons.containers.rearCargoSeats',
+        'weapons.containers.rightSeat',
+        'weapons.containers.sa342_dipole_antenna',
+        'weapons.containers.smoke_pod',
+        'weapons.containers.wmd7',
+        'weapons.containers.{05544F1A-C39C-466b-BC37-5BD1D52E57BB}',
+        'weapons.containers.{ACH_47_M230_Combat_Mix}',
+        'weapons.containers.{ACH_47_M230_NoTracers}',
+        'weapons.containers.{ADEN_GUNPOD}',
+        'weapons.containers.{AKAN_NO_TRC}',
+        'weapons.containers.{AKAN}',
+        'weapons.containers.{AN-M3}',
+        'weapons.containers.{C-101-DEFA553}',
+        'weapons.containers.{C130-Cargo-Bay-M4}',
+        'weapons.containers.{C130-M18-Sidearm}',
+        'weapons.containers.{CC420_GUN_POD}',
+        'weapons.containers.{CE2_SMOKE_WHITE}',
+        'weapons.containers.{CH47_AFT_M240H}',
+        'weapons.containers.{CH47_AFT_M3M}',
+        'weapons.containers.{CH47_AFT_M60D}',
+        'weapons.containers.{CH47_PORT_M134D}',
+        'weapons.containers.{CH47_PORT_M240H}',
+        'weapons.containers.{CH47_PORT_M60D}',
+        'weapons.containers.{CH47_STBD_M134D}',
+        'weapons.containers.{CH47_STBD_M240H}',
+        'weapons.containers.{CH47_STBD_M60D}',
+        'weapons.containers.{E92CBFE5-C153-11d8-9897-000476191836}',
+        'weapons.containers.{ECM_POD_L_175V}',
+        'weapons.containers.{EclairM_06}',
+        'weapons.containers.{EclairM_15}',
+        'weapons.containers.{EclairM_24}',
+        'weapons.containers.{EclairM_33}',
+        'weapons.containers.{EclairM_42}',
+        'weapons.containers.{EclairM_51}',
+        'weapons.containers.{EclairM_60}',
+        'weapons.containers.{Eclair}',
+        'weapons.containers.{F14-LANTIRN-TP}',
+        'weapons.containers.{F4U1D_SMOKE_WHITE}',
+        'weapons.containers.{FN_HMP400_100}',
+        'weapons.containers.{FN_HMP400_200}',
+        'weapons.containers.{FN_HMP400}',
+        'weapons.containers.{GAU_12_Equalizer_AP}',
+        'weapons.containers.{GAU_12_Equalizer_HE}',
+        'weapons.containers.{GAU_12_Equalizer}',
+        'weapons.containers.{GIAT_M621_APHE}',
+        'weapons.containers.{GIAT_M621_AP}',
+        'weapons.containers.{GIAT_M621_HEAP}',
+        'weapons.containers.{GIAT_M621_HE}',
+        'weapons.containers.{GIAT_M621_SAPHEI}',
+        'weapons.containers.{INV-SMOKE-BLUE}',
+        'weapons.containers.{INV-SMOKE-GREEN}',
+        'weapons.containers.{INV-SMOKE-ORANGE}',
+        'weapons.containers.{INV-SMOKE-RED}',
+        'weapons.containers.{INV-SMOKE-WHITE}',
+        'weapons.containers.{INV-SMOKE-YELLOW}',
+        'weapons.containers.{M2KC_AAF}',
+        'weapons.containers.{M2KC_AGF}',
+        'weapons.containers.{MB339_ANM3_L}',
+        'weapons.containers.{MB339_ANM3_R}',
+        'weapons.containers.{MB339_DEFA553_L}',
+        'weapons.containers.{MB339_DEFA553_R}',
+        'weapons.containers.{MIG21_SMOKE_RED}',
+        'weapons.containers.{MIG21_SMOKE_WHITE}',
+        'weapons.containers.{MK4_Mod0_OV10}',
+        'weapons.containers.{OH-6_M134_Door}',
+        'weapons.containers.{OH-6_M134_Minigun10}',
+        'weapons.containers.{OH-6_M134_Minigun11}',
+        'weapons.containers.{OH-6_M134_Minigun12}',
+        'weapons.containers.{OH-6_M134_Minigun13}',
+        'weapons.containers.{OH-6_M134_Minigun14}',
+        'weapons.containers.{OH-6_M134_Minigun1}',
+        'weapons.containers.{OH-6_M134_Minigun2}',
+        'weapons.containers.{OH-6_M134_Minigun3}',
+        'weapons.containers.{OH-6_M134_Minigun4}',
+        'weapons.containers.{OH-6_M134_Minigun5}',
+        'weapons.containers.{OH-6_M134_Minigun6}',
+        'weapons.containers.{OH-6_M134_Minigun7}',
+        'weapons.containers.{OH-6_M134_Minigun8}',
+        'weapons.containers.{OH-6_M134_Minigun9}',
+        'weapons.containers.{OH-6_M60_Door}',
+        'weapons.containers.{OV10_SMOKE}',
+        'weapons.containers.{PK-3}',
+        'weapons.containers.{RKL609_L}',
+        'weapons.containers.{RKL609_R}',
+        'weapons.containers.{SA342_M134_SIDE_R}',
+        'weapons.containers.{SMOKE_WHITE}',
+        'weapons.containers.{SUU_23_POD}',
+        'weapons.containers.{UH60L_M134_GUNNER}',
+        'weapons.containers.{UH60L_M2_GUNNER}',
+        'weapons.containers.{UH60L_M60_GUNNER}',
+        'weapons.containers.{UH60_GAU19_LEFT}',
+        'weapons.containers.{UH60_GAU19_RIGHT}',
+        'weapons.containers.{UH60_M134_LEFT}',
+        'weapons.containers.{UH60_M134_RIGHT}',
+        'weapons.containers.{UH60_M230_LEFT}',
+        'weapons.containers.{UH60_M230_RIGHT}',
+        'weapons.containers.{UPK-23-250 MiG-21}',
+        'weapons.containers.{US_M10_SMOKE_TANK_BLUE}',
+        'weapons.containers.{US_M10_SMOKE_TANK_GREEN}',
+        'weapons.containers.{US_M10_SMOKE_TANK_ORANGE}',
+        'weapons.containers.{US_M10_SMOKE_TANK_RED}',
+        'weapons.containers.{US_M10_SMOKE_TANK_WHITE}',
+        'weapons.containers.{US_M10_SMOKE_TANK_YELLOW}',
+        'weapons.gunmounts.A20_TopTurret_M2_L',
         'weapons.gunmounts.A20_TopTurret_M2_R',
-        'weapons.gunmounts.MG_131',
-        'weapons.gunmounts.GUV_VOG',
-        'weapons.gunmounts.GIAT_M261',
-        'weapons.gunmounts.GSh-23-2 tail defense',
-        'weapons.gunmounts.HispanoMkII',
-        'weapons.gunmounts.{ADEN_GUNPOD}',
-        'weapons.gunmounts.OH58D_M3P',
-        'weapons.gunmounts.{GAU_12_Equalizer}',
+        'weapons.gunmounts.ACH_47_M230',
+        'weapons.gunmounts.ACH_47_M230_NT',
+        'weapons.gunmounts.AKAN',
+        'weapons.gunmounts.AKAN_NO_TRC',
+        'weapons.gunmounts.B17_BallTurret_M2_L',
+        'weapons.gunmounts.B17_BallTurret_M2_R',
+        'weapons.gunmounts.B17_ChinTurret_M2_L',
+        'weapons.gunmounts.B17_ChinTurret_M2_R',
+        'weapons.gunmounts.B17_Left_Nose_M2',
+        'weapons.gunmounts.B17_Right_Nose_M2',
+        'weapons.gunmounts.B17_TailTurret_M2_L',
+        'weapons.gunmounts.B17_TailTurret_M2_R',
+        'weapons.gunmounts.B17_TopTurret_M2_L',
+        'weapons.gunmounts.B17_TopTurret_M2_R',
+        'weapons.gunmounts.B17_Waist_Left_M2',
+        'weapons.gunmounts.B17_Waist_Right_M2',
+        'weapons.gunmounts.Browning303MkII',
+        'weapons.gunmounts.BrowningM2',
+        'weapons.gunmounts.C130_M18_Sidearm',
+        'weapons.gunmounts.C130_M4_Rifle',
         'weapons.gunmounts.CPG_M4',
-        'weapons.gunmounts.M134_L',
-        'weapons.gunmounts.{UH60_M134_LEFT}',
-        'weapons.gunmounts.{UH60_M230_RIGHT}',
-        'weapons.gunmounts.M134_SIDE_R',
-        'weapons.gunmounts.UH-60L GAU-19',
-        'weapons.gunmounts.{AKAN}',
+        'weapons.gunmounts.DEFA 554',
+        'weapons.gunmounts.DEFA_553',
         'weapons.gunmounts.GAU_12',
-        'weapons.gunmounts.OH58D_M3P_L300',
-        'weapons.gunmounts.{GAU_12_Equalizer_AP}',
-        'weapons.gunmounts.{MB339_ANM3_R}',
+        'weapons.gunmounts.GIAT_M261',
+        'weapons.gunmounts.GSH_23',
+        'weapons.gunmounts.GSh-23-2 tail defense',
+        'weapons.gunmounts.GUV_VOG',
+        'weapons.gunmounts.GUV_YakB_GSHP',
+        'weapons.gunmounts.HMP400',
+        'weapons.gunmounts.HispanoMkII',
+        'weapons.gunmounts.Ju88_Turret_Bottom_MG_81_L',
+        'weapons.gunmounts.Ju88_Turret_Bottom_MG_81_R',
+        'weapons.gunmounts.Ju88_Turret_Top_Left_MG_81',
+        'weapons.gunmounts.Ju88_Turret_Top_Right_MG_81',
+        'weapons.gunmounts.Ju88_Turret_ahead_MG_81',
+        'weapons.gunmounts.KORD_12_7',
+        'weapons.gunmounts.KORD_12_7_MI24_L',
+        'weapons.gunmounts.KORD_12_7_MI24_R',
+        'weapons.gunmounts.M-61',
+        'weapons.gunmounts.M-61A1',
+        'weapons.gunmounts.M134_L',
+        'weapons.gunmounts.M134_R',
+        'weapons.gunmounts.M134_SIDE_L',
+        'weapons.gunmounts.M134_SIDE_R',
+        'weapons.gunmounts.M230',
+        'weapons.gunmounts.M60_SIDE_L',
+        'weapons.gunmounts.M60_SIDE_R',
+        'weapons.gunmounts.MG_131',
+        'weapons.gunmounts.MG_151_20',
+        'weapons.gunmounts.MINIGUN',
         'weapons.gunmounts.MK_108',
-        'weapons.gunmounts.UH60_M134',
+        'weapons.gunmounts.N-37',
+        'weapons.gunmounts.NR-23',
+        'weapons.gunmounts.NR-30',
+        'weapons.gunmounts.OH-6_M134',
+        'weapons.gunmounts.OH-6_M134_Door',
+        'weapons.gunmounts.OH-6_M60_Door',
+        'weapons.gunmounts.OH58D_M3P',
         'weapons.gunmounts.OH58D_M3P_L100',
+        'weapons.gunmounts.OH58D_M3P_L200',
+        'weapons.gunmounts.OH58D_M3P_L300',
+        'weapons.gunmounts.OH58D_M3P_L400',
+        'weapons.gunmounts.OH58D_M3P_L500',
+        'weapons.gunmounts.OH_58_BRAUNING',
+        'weapons.gunmounts.PKT_7_62',
+        'weapons.gunmounts.SHKAS_GUN',
+        'weapons.gunmounts.SPPU_22',
+        'weapons.gunmounts.UH-60L GAU-19',
+        'weapons.gunmounts.UH60L_M134',
+        'weapons.gunmounts.UH60_M134',
+        'weapons.gunmounts.UPK_23_25',
+        'weapons.gunmounts.defa_553',
+        'weapons.gunmounts.m3_browning',
+        'weapons.gunmounts.{ACH_47_M230_Combat_Mix}',
+        'weapons.gunmounts.{ACH_47_M230_NoTracers}',
+        'weapons.gunmounts.{ADEN_GUNPOD}',
+        'weapons.gunmounts.{AKAN_NO_TRC}',
+        'weapons.gunmounts.{AKAN}',
+        'weapons.gunmounts.{AN-M3}',
+        'weapons.gunmounts.{C-101-DEFA553}',
+        'weapons.gunmounts.{C130-Cargo-Bay-M4}',
+        'weapons.gunmounts.{C130-M18-Sidearm}',
+        'weapons.gunmounts.{CC420_GUN_POD}',
+        'weapons.gunmounts.{CH47_AFT_M240H}',
+        'weapons.gunmounts.{CH47_AFT_M3M}',
+        'weapons.gunmounts.{CH47_AFT_M60D}',
+        'weapons.gunmounts.{CH47_PORT_M134D}',
         'weapons.gunmounts.{CH47_PORT_M240H}',
+        'weapons.gunmounts.{CH47_PORT_M60D}',
+        'weapons.gunmounts.{CH47_STBD_M134D}',
+        'weapons.gunmounts.{CH47_STBD_M240H}',
+        'weapons.gunmounts.{CH47_STBD_M60D}',
+        'weapons.gunmounts.{FN_HMP400_100}',
+        'weapons.gunmounts.{FN_HMP400_200}',
+        'weapons.gunmounts.{FN_HMP400}',
+        'weapons.gunmounts.{GAU_12_Equalizer_AP}',
+        'weapons.gunmounts.{GAU_12_Equalizer_HE}',
+        'weapons.gunmounts.{GAU_12_Equalizer}',
+        'weapons.gunmounts.{GIAT_M621_APHE}',
+        'weapons.gunmounts.{GIAT_M621_AP}',
         'weapons.gunmounts.{GIAT_M621_HEAP}',
         'weapons.gunmounts.{GIAT_M621_HE}',
-        'weapons.gunmounts.SPPU_22',
-        'weapons.gunmounts.{FN_HMP400_200}',
-        'weapons.gunmounts.{PK-3}',
-        'weapons.gunmounts.A20_TopTurret_M2_L',
-        'weapons.gunmounts.{UH60_GAU19_RIGHT}',
-        'weapons.gunmounts.{CH47_PORT_M134D}',
-        'weapons.gunmounts.{GIAT_M621_AP}',
-        'weapons.gunmounts.AKAN_NO_TRC',
-        'weapons.gunmounts.BrowningM2',
-        'weapons.gunmounts.{CH47_AFT_M240H}',
-        'weapons.gunmounts.OH58D_M3P_L400',
-        'weapons.gunmounts.M230',
+        'weapons.gunmounts.{GIAT_M621_SAPHEI}',
+        'weapons.gunmounts.{MB339_ANM3_L}',
+        'weapons.gunmounts.{MB339_ANM3_R}',
         'weapons.gunmounts.{MB339_DEFA553_L}',
-        'weapons.gunmounts.M-61',
-        'weapons.gunmounts.GSH_23',
-        'weapons.gunmounts.M134_SIDE_L',
-        'weapons.gunmounts.GUV_YakB_GSHP',
-        'weapons.gunmounts.KORD_12_7',
-        'weapons.gunmounts.AKAN',
-        'weapons.gunmounts.Browning303MkII',
-        'weapons.gunmounts.DEFA_553',
-        'weapons.gunmounts.{C-101-DEFA553}',
-        'weapons.gunmounts.{CH47_STBD_M240H}',
-        'weapons.gunmounts.{UH60_M134_RIGHT}',
-        'weapons.gunmounts.{FN_HMP400}',
-        'weapons.gunmounts.{GIAT_M621_APHE}',
-        'weapons.gunmounts.SHKAS_GUN',
-        'weapons.gunmounts.{UH60_M230_LEFT}',
-        'weapons.gunmounts.{CH47_AFT_M3M}',
-        'weapons.gunmounts.OH58D_M3P_L200',
-        'weapons.gunmounts.{CH47_PORT_M60D}',
-        'weapons.gunmounts.DEFA 554',
+        'weapons.gunmounts.{MB339_DEFA553_R}',
+        'weapons.gunmounts.{MK4_Mod0_OV10}',
+        'weapons.gunmounts.{OH-6_M134_Door}',
+        'weapons.gunmounts.{OH-6_M134_Minigun10}',
+        'weapons.gunmounts.{OH-6_M134_Minigun11}',
+        'weapons.gunmounts.{OH-6_M134_Minigun12}',
+        'weapons.gunmounts.{OH-6_M134_Minigun13}',
+        'weapons.gunmounts.{OH-6_M134_Minigun14}',
+        'weapons.gunmounts.{OH-6_M134_Minigun1}',
+        'weapons.gunmounts.{OH-6_M134_Minigun2}',
+        'weapons.gunmounts.{OH-6_M134_Minigun3}',
+        'weapons.gunmounts.{OH-6_M134_Minigun4}',
+        'weapons.gunmounts.{OH-6_M134_Minigun5}',
+        'weapons.gunmounts.{OH-6_M134_Minigun6}',
+        'weapons.gunmounts.{OH-6_M134_Minigun7}',
+        'weapons.gunmounts.{OH-6_M134_Minigun8}',
+        'weapons.gunmounts.{OH-6_M134_Minigun9}',
+        'weapons.gunmounts.{OH-6_M60_Door}',
+        'weapons.gunmounts.{PK-3}',
+        'weapons.gunmounts.{SA342_M134_SIDE_R}',
+        'weapons.gunmounts.{SUU_23_POD}',
+        'weapons.gunmounts.{UH60L_M134_GUNNER}',
         'weapons.gunmounts.{UH60L_M2_GUNNER}',
-        'weapons.gunmounts.{CH47_STBD_M134D}',
-		'weapons.gunmounts.B17_TailTurret_M2_L',
-		'weapons.gunmounts.B17_BallTurret_M2_L',
-		'weapons.gunmounts.B17_BallTurret_M2_R',
-		'weapons.gunmounts.B17_TopTurret_M2_R',
-		'weapons.gunmounts.B17_Waist_Right_M2',
-		'weapons.gunmounts.Ju88_Turret_Top_Right_MG_81',
-		'weapons.gunmounts.Ju88_Turret_Bottom_MG_81_L',
-		'weapons.gunmounts.B17_ChinTurret_M2_L',
-		'weapons.gunmounts.B17_ChinTurret_M2_R',
-		'weapons.gunmounts.B17_Right_Nose_M2',
-		'weapons.gunmounts.Ju88_Turret_Bottom_MG_81_R',
-		'weapons.gunmounts.Ju88_Turret_ahead_MG_81',
-		'weapons.gunmounts.B17_Waist_Left_M2',
-		'weapons.gunmounts.B17_TailTurret_M2_R',
-		'weapons.gunmounts.B17_Left_Nose_M2',
-		'weapons.gunmounts.Ju88_Turret_Top_Left_MG_81',
-		'weapons.gunmounts.B17_TopTurret_M2_L',
-		'weapons.adapters.B-8V20A',
-		'weapons.torpedoes.G7A_T1',
-		'weapons.torpedoes.YU-6',
-		'weapons.torpedoes.Mark_46',
-		'weapons.torpedoes.mk46torp_name',
-		'weapons.torpedoes.LTF_5B',
+        'weapons.gunmounts.{UH60L_M60_GUNNER}',
+        'weapons.gunmounts.{UH60_GAU19_LEFT}',
+        'weapons.gunmounts.{UH60_GAU19_RIGHT}',
+        'weapons.gunmounts.{UH60_M134_LEFT}',
+        'weapons.gunmounts.{UH60_M134_RIGHT}',
+        'weapons.gunmounts.{UH60_M230_LEFT}',
+        'weapons.gunmounts.{UH60_M230_RIGHT}',
+        'weapons.shells.120_EXPL_F1_120mm_HE',
+        'weapons.shells.20MM_M242_HEI-T',
+        'weapons.shells.20mm_M220_Tracer',
+        'weapons.shells.20mm_M53_API',
+        'weapons.shells.20mm_M56_HEI',
+        'weapons.shells.20mm_M70LD_SAPHEI',
+        'weapons.shells.20x138B_AP',
+        'weapons.shells.20x138B_HE',
+        'weapons.shells.25mm_AA_JAP',
+        'weapons.shells.2A18_122',
+        'weapons.shells.2A20_115mm_AP',
+        'weapons.shells.2A20_115mm_HE',
+        'weapons.shells.2A28_73',
+        'weapons.shells.2A33_152',
+        'weapons.shells.2A38_30_AP',
+        'weapons.shells.2A38_30_HE',
+        'weapons.shells.2A42_30_AP',
+        'weapons.shells.2A42_30_HE',
+        'weapons.shells.2A46M_125_AP',
+        'weapons.shells.2A46M_125_HE',
+        'weapons.shells.2A60_120',
+        'weapons.shells.2A64_152',
+        'weapons.shells.2A7_23_AP',
+        'weapons.shells.2A7_23_HE',
+        'weapons.shells.37mm_Type_100_JAP',
+        'weapons.shells.37x263_AP',
+        'weapons.shells.37x263_HE',
+        'weapons.shells.3BM59_125_AP',
+        'weapons.shells.3UBM11_100mm_AP',
+        'weapons.shells.50Browning_APIT_M20',
+        'weapons.shells.50Browning_APIT_M20_Corsair',
+        'weapons.shells.50Browning_API_M8',
+        'weapons.shells.50Browning_API_M8_Corsair',
+        'weapons.shells.50Browning_AP_M2',
+        'weapons.shells.50Browning_AP_M2_Corsair',
+        'weapons.shells.50Browning_Ball_M2',
+        'weapons.shells.50Browning_Ball_M2_Corsair',
+        'weapons.shells.50Browning_I_M1',
+        'weapons.shells.50Browning_T_M1',
+        'weapons.shells.53-UBR-281U',
+        'weapons.shells.53-UOR-281U',
+        'weapons.shells.57mm_Type_90_JAP',
+        'weapons.shells.5_45x39',
+        'weapons.shells.5_45x39_NOtr',
+        'weapons.shells.5_56x45',
+        'weapons.shells.5_56x45_NOtr',
+        'weapons.shells.6_5mm_Type_91_JAP',
+        'weapons.shells.75mm_AA_JAP',
+        'weapons.shells.76mm_AA_JAP',
+        'weapons.shells.7_62x39',
+        'weapons.shells.7_62x51',
+        'weapons.shells.7_62x51tr',
+        'weapons.shells.7_62x54',
+        'weapons.shells.7_62x54_NOTRACER',
+        'weapons.shells.7_7mm_Type_97_JAP',
+        'weapons.shells.7_92x57_Smkl',
+        'weapons.shells.7_92x57sS',
+        'weapons.shells.9x19_m882',
+        'weapons.shells.A222_130',
+        'weapons.shells.AK100_100',
+        'weapons.shells.AK176_76',
+        'weapons.shells.AK630_30_AP',
+        'weapons.shells.AK630_30_HE',
+        'weapons.shells.APCBC',
+        'weapons.shells.AP_T_MkI_40mm',
+        'weapons.shells.BK_27',
+        'weapons.shells.BR_354N',
+        'weapons.shells.Besa7_92x57',
+        'weapons.shells.Besa7_92x57T',
+        'weapons.shells.Bofors_40mm_Essex',
+        'weapons.shells.Bofors_40mm_HE',
+        'weapons.shells.Br303',
+        'weapons.shells.Br303_tr',
+        'weapons.shells.British303_B_Mk4z',
+        'weapons.shells.British303_B_Mk6z',
+        'weapons.shells.British303_Ball_Mk1c',
+        'weapons.shells.British303_Ball_Mk6',
+        'weapons.shells.British303_Ball_Mk7',
+        'weapons.shells.British303_Ball_Mk8',
+        'weapons.shells.British303_G_Mk1',
+        'weapons.shells.British303_G_Mk2',
+        'weapons.shells.British303_G_Mk3',
+        'weapons.shells.British303_G_Mk4',
+        'weapons.shells.British303_G_Mk5',
+        'weapons.shells.British303_G_Mk6z',
+        'weapons.shells.British303_O_Mk1',
+        'weapons.shells.British303_W_Mk1z',
+        'weapons.shells.CHAP_125_3BM69_APFSDS_T',
+        'weapons.shells.CHAP_76_HESH_T',
+        'weapons.shells.CHAP_76_HE_T',
+        'weapons.shells.CHAP_76_PFHE',
+        'weapons.shells.CL3143_120_AP',
+        'weapons.shells.DANA_152',
+        'weapons.shells.DEFA552_30',
+        'weapons.shells.DEFA553_30AP',
+        'weapons.shells.DEFA553_30APIT',
+        'weapons.shells.DEFA553_30HE',
+        'weapons.shells.DEFA554_30_HE',
+        'weapons.shells.DEFA554_30_HE_TRACERS',
+        'weapons.shells.DM12_120mm_HEAT_MP_T',
+        'weapons.shells.DM12_L55_120mm_HEAT_MP_T',
+        'weapons.shells.DM23_105_AP',
+        'weapons.shells.DM33_120_AP',
+        'weapons.shells.DM53_120_AP',
+        'weapons.shells.Flak18_Sprgr_39',
+        'weapons.shells.Flak41_Sprgr_39',
+        'weapons.shells.GAU8_30_AP',
+        'weapons.shells.GAU8_30_HE',
+        'weapons.shells.GAU8_30_TP',
+        'weapons.shells.GSH23_23_AP',
+        'weapons.shells.GSH23_23_HE',
+        'weapons.shells.GSH23_23_HE_T',
+        'weapons.shells.GSH301_30_AP',
+        'weapons.shells.GSH301_30_HE',
+        'weapons.shells.GSH_23_AP',
+        'weapons.shells.GSH_23_HE',
+        'weapons.shells.GSh_30_2K_AP',
+        'weapons.shells.GSh_30_2K_AP_Tr',
+        'weapons.shells.GSh_30_2K_HE',
+        'weapons.shells.GSh_30_2K_HE_Tr',
+        'weapons.shells.HEDPM430',
+        'weapons.shells.HESH_105',
+        'weapons.shells.HE_M1_Shell',
+        'weapons.shells.HE_T_MkII_40mm',
+        'weapons.shells.HP30_30_AP',
+        'weapons.shells.HP30_30_HE',
+        'weapons.shells.Hispano_Mk_II_AP/T',
+        'weapons.shells.Hispano_Mk_II_MKIIZ_AP',
+        'weapons.shells.Hispano_Mk_II_MKI_HE/I',
+        'weapons.shells.Hispano_Mk_II_Mk_Z_Ball',
+        'weapons.shells.Hispano_Mk_II_SAP/I',
+        'weapons.shells.Hispano_Mk_II_Tracer_G',
+        'weapons.shells.I_Gr_33',
+        'weapons.shells.K307_155HE',
+        'weapons.shells.KDA_35_AP',
+        'weapons.shells.KDA_35_FAPDS',
+        'weapons.shells.KDA_35_HE',
+        'weapons.shells.KPVT_14_5',
+        'weapons.shells.KPVT_14_5_T',
+        'weapons.shells.KS19_100AP',
+        'weapons.shells.KS19_100HE',
+        'weapons.shells.L14A2_30_APDS',
+        'weapons.shells.L21A1_30_HE',
+        'weapons.shells.L23A1_APFSDS',
+        'weapons.shells.L23_120_AP',
+        'weapons.shells.L31A7_HESH',
+        'weapons.shells.L31_120mm_HESH',
+        'weapons.shells.M101',
+        'weapons.shells.M134_7_62_T',
+        'weapons.shells.M185_155',
+        'weapons.shells.M197_20',
+        'weapons.shells.M1_37mm_37AP-T',
+        'weapons.shells.M1_37mm_HE-T',
+        'weapons.shells.M20_50_aero_APIT',
+        'weapons.shells.M230_30',
+        'weapons.shells.M230_ADEM/DEFA',
+        'weapons.shells.M230_HEDP M789',
+        'weapons.shells.M230_HEI M799',
+        'weapons.shells.M230_TP M788',
+        'weapons.shells.M242_25_AP_M791',
+        'weapons.shells.M242_25_AP_M919',
+        'weapons.shells.M242_25_HE_M792',
+        'weapons.shells.M246_20_HE_gr',
+        'weapons.shells.M256_120_AP',
+        'weapons.shells.M256_120_AP_L55',
+        'weapons.shells.M256_120_HE',
+        'weapons.shells.M256_120_HE_L55',
+        'weapons.shells.M2_12_7',
+        'weapons.shells.M2_12_7_T',
+        'weapons.shells.M2_12_7_TG',
+        'weapons.shells.M2_50_aero_AP',
+        'weapons.shells.M322_120_AP',
+        'weapons.shells.M339_120mm_HEAT_MP_T',
+        'weapons.shells.M383',
+        'weapons.shells.M393A3_105_HE',
+        'weapons.shells.M39_20_API',
+        'weapons.shells.M39_20_HEI',
+        'weapons.shells.M39_20_HEI_T',
+        'weapons.shells.M39_20_TP',
+        'weapons.shells.M42A1_HE',
+        'weapons.shells.M46',
+        'weapons.shells.M485_155_IL',
+        'weapons.shells.M51_37AP',
+        'weapons.shells.M53_APT_RED',
+        'weapons.shells.M53_AP_RED',
+        'weapons.shells.M55A2_TP_RED',
+        'weapons.shells.M56A3_HE_RED',
+        'weapons.shells.M61',
+        'weapons.shells.M61_20_AP',
+        'weapons.shells.M61_20_AP_gr',
+        'weapons.shells.M61_20_HE',
+        'weapons.shells.M61_20_HEIT_RED',
+        'weapons.shells.M61_20_HE_INVIS',
+        'weapons.shells.M61_20_HE_gr',
+        'weapons.shells.M61_20_PGU27',
+        'weapons.shells.M61_20_PGU28',
+        'weapons.shells.M61_20_PGU30',
+        'weapons.shells.M61_20_TP',
+        'weapons.shells.M61_20_TP_T',
+        'weapons.shells.M62_APC',
+        'weapons.shells.M63_37HE',
+        'weapons.shells.M68_105_AP',
+        'weapons.shells.M68_105_HE',
+        'weapons.shells.M825A1_155_SM',
+        'weapons.shells.MAUZER30_30',
+        'weapons.shells.MG_13x64_API',
+        'weapons.shells.MG_13x64_APT',
+        'weapons.shells.MG_13x64_HE',
+        'weapons.shells.MG_13x64_HEI_T',
+        'weapons.shells.MG_13x64_I',
+        'weapons.shells.MG_13x64_I_T',
+        'weapons.shells.MG_20x82_API',
+        'weapons.shells.MG_20x82_HEI_T',
+        'weapons.shells.MG_20x82_MGsch',
+        'weapons.shells.MINGR55',
+        'weapons.shells.MINGR55_NO_TRC',
+        'weapons.shells.MK45_127',
+        'weapons.shells.MK45_127mm_AP_Essex',
+        'weapons.shells.MK45_127mm_Essex',
+        'weapons.shells.MK75_76',
+        'weapons.shells.MK_108_HEI',
+        'weapons.shells.MK_108_MGsch',
+        'weapons.shells.MK_108_MGsch_T',
+        'weapons.shells.Mauser7.92x57_B.',
+        'weapons.shells.Mauser7.92x57_P.m.K.',
+        'weapons.shells.Mauser7.92x57_S.m.K.',
+        'weapons.shells.Mauser7.92x57_S.m.K.H.',
+        'weapons.shells.Mauser7.92x57_S.m.K._L\'spur(gelb)',
+        'weapons.shells.Mauser7.92x57_S.m.K._L\'spur(weiss)',
+        'weapons.shells.Mauser7.92x57_S.m.K._Ub.m.Zerl.',
+        'weapons.shells.Mk_12_HE_shell',
+        'weapons.shells.Mk_20_HE_shell',
+        'weapons.shells.N37_37x155_API_T',
+        'weapons.shells.N37_37x155_HEI_T',
+        'weapons.shells.NR23_23x115_API',
+        'weapons.shells.NR23_23x115_HEI_T',
+        'weapons.shells.NR30_30x155_APHE',
+        'weapons.shells.NR30_30x155_APT',
+        'weapons.shells.NR30_30x155_HEI_T',
+        'weapons.shells.OFL_120F2_AP',
+        'weapons.shells.OF_350',
+        'weapons.shells.Oerlikon_20mm_Essex',
+        'weapons.shells.Oerlikon_20mm_HE',
+        'weapons.shells.PGU32_SAPHEI_T',
+        'weapons.shells.PINK_PROJECTILE',
+        'weapons.shells.PJ26_76_PFHE',
+        'weapons.shells.PJ87_100_PFHE',
+        'weapons.shells.PKT_7_62',
+        'weapons.shells.PKT_7_62_T',
+        'weapons.shells.PLZ_155_HE',
+        'weapons.shells.Pzgr_39',
+        'weapons.shells.Pzgr_39/40',
+        'weapons.shells.Pzgr_39/42',
+        'weapons.shells.Pzgr_39/43',
+        'weapons.shells.Pzgr_39_5cm',
+        'weapons.shells.QF17_HE',
+        'weapons.shells.QF94_AA_HE',
+        'weapons.shells.QF95_206R_fixed',
+        'weapons.shells.RM_15cm_HE',
+        'weapons.shells.Rh202_20_AP',
+        'weapons.shells.Rh202_20_HE',
+        'weapons.shells.Sprgr_34_L48',
+        'weapons.shells.Sprgr_34_L70',
+        'weapons.shells.Sprgr_38',
+        'weapons.shells.Sprgr_39',
+        'weapons.shells.Sprgr_43_L71',
+        'weapons.shells.UBR_365_85AP',
+        'weapons.shells.UOF412_100HE',
+        'weapons.shells.UOF_17_100HE',
+        'weapons.shells.UO_365K_85HE',
+        'weapons.shells.Utes_12_7x108',
+        'weapons.shells.Utes_12_7x108_T',
+        'weapons.shells.VOG17',
+        'weapons.shells.YakB_12_7',
+        'weapons.shells.YakB_12_7_T',
+        'weapons.shells.ZTZ_125_AP',
+        'weapons.shells.ZTZ_125_HE',
+        'weapons.shells.ZTZ_14_5',
+        'weapons.shells.ZTZ_7_62',
+        'weapons.shells.leFH18_105HE',
+        'weapons.shells.ship_Bofors_40mm_HE',
+        'weapons.torpedoes.G7A_T1',
+        'weapons.torpedoes.LTF_5B',
+        'weapons.torpedoes.Mark_46',
+        'weapons.torpedoes.YU-6',
+        'weapons.torpedoes.mk46torp_name',
 
-		{4,15,46,2492},
-		{4,15,46,2491},
-		{4,15,46,2490},	
-		{4,15,46,2489},
-		{4,15,46,2488},
-		{4,15,46,2493},
-		{4,15,46,2494},
-		{4,15,46,2495},
-		{4,15,46,20},
-		{4,5,32,95},
-		{4,5,32,94},
-		{4,15,46,2611},
-		{4,15,46,2610},
-		{4,15,46,2609},
-		{4,15,46,2608},
-		{4,15,46,2607},
-		{4,15,46,18},
-		{4,15,46,183},
-		{4,15,46,1771},
-		{4,15,46,1294},
-		{4,15,46,1295},
-		{4,15,46,1770},
-		{4,15,46,1769},
-		{4,15,46,1768},
-		{4,15,46,1767},
-		{4,15,46,1766},
-		{4,15,46,1765},
-		{4,15,46,1764},
-		{4,15,46,1057},
-		{4,15,46,160},
-		{4,15,46,161},
-		{4,15,46,170},
-		{4,15,46,171},
-		{4,15,46,174},
-		{4,15,46,175},
-		{4,15,46,176},
-		{4,15,46,177},
-		{4,15,46,184},
-		{4,15,46,3169},
-		{4,15,46,3102},
-		{4,15,46,3163},
-		{4,15,46,3164},
-		{4,15,46,3165},
-		{4,15,46,3166},
-		{4,15,46,3167},
-		{4,15,46,3168},
-		{4,15,46,3170},
-		{4,15,46,3171},
-
-		-- little bird
-
-		{1,3,43,464},
-		{4,15,46,3155},
-		{4,15,46,3156},
-		{4,15,46,3157},
-		{4,15,46,3158},
-		{4,15,46,3172},
-		{4,15,46,3173},
-		{4,15,46,3174},
-		{4,15,46,3175},
-		{4,15,46,3176},
-		{4,15,46,3177},
-		{4,15,46,3178},
-		{4,15,46,3179},
-		{4,15,46,3180},
-		{4,4,8,11209},
-		{4,4,8,11210},
-		{4,4,8,11211},
-		{4,4,8,11212},
-		{1,3,43,3159},
-		"weapons.bombs.AH6_SMOKE_RED",
-		"weapons.bombs.AH6_SMOKE_GREEN",
-		"weapons.bombs.AH6_SMOKE_YELLOW",
-		"weapons.bombs.AH6_SMOKE_BLUE",
-
+		 {4,4,8,11212},
+		 {4,4,8,11210},
+		 {4,4,8,11211},
+		 {4,4,8,11209},
+	
     },
 }
 
 local WEAPONSLIST_MODS_ITEMS = {
-		-- FUEL TANKS
-		'weapons.adapters.HB_F-4E_ORD_LAU_77',
-		'weapons.adapters.hb_a-6e_lau7_adu299',
-		'weapons.adapters.UB-13',
-		'weapons.adapters.APU-60-1',
-		'weapons.adapters.M-2000C_AUF2',
-		'weapons.adapters.Carrier_N-1_EM_EF',
-		'weapons.adapters.RB15pylon',
-		'weapons.adapters.UB_32A',
-		'weapons.adapters.OH58D_M260',
-		'weapons.adapters.HB_F14_EXT_SHOULDER_PHX_L',
-		'weapons.adapters.sa342_ATAM_Tube_2x',
-		'weapons.adapters.CHAP_Mi28N_ataka',
-		'weapons.adapters.B-8V20A',
-		'weapons.adapters.apu-13mt',
-		'weapons.adapters.HB_ORD_Missile_Well_Adapter',
-		'weapons.adapters.KMGU-2',
-		'weapons.adapters.9M114-PYLON_EMPTY',
-		'weapons.adapters.adapter_gdj_kd63',
-		'weapons.adapters.LAU-117',
-		'weapons.adapters.Spitfire_pilon2L',
-		'weapons.adapters.adapter_df4b',
-		'weapons.adapters.b52-mbd_mk84',
-		'weapons.adapters.J-11A_twinpylon_l',
-		'weapons.adapters.aero-3b',
-		'weapons.adapters.F4-PILON',
-		'weapons.adapters.mbd-4',
-		'weapons.adapters.m559',
-		'weapons.adapters.BRU-42_LS_(LAU-131)',
-		'weapons.adapters.LAU-61',
-		'weapons.adapters.mer2',
-		'weapons.adapters.30-6-M2',
-		'weapons.adapters.LAU-10',
-		'weapons.adapters.HB_F14_EXT_LAU-7',
-		'weapons.adapters.PU_9S846_STRELEC',
-		'weapons.adapters.b-52_CSRL_ALCM',
-		'weapons.adapters.9M114-PILON',
-		'weapons.adapters.CLB_4',
-		'weapons.adapters.CHAP_Mi28N_igla',
-		'weapons.adapters.hj12-launcher-tube',
-		'weapons.adapters.9m114-pilon',
-		'weapons.adapters.b52-mbd_m117',
-		'weapons.adapters.OH58D_HRACK_R',
-		'weapons.adapters.F4E_dual_LAU7',
-		'weapons.adapters.HB_F14_EXT_SPARROW_PYLON',
-		'weapons.adapters.tu-22m3-mbd',
-		'weapons.adapters.HB_F-4E_BRU-42',
-		'weapons.adapters.MBD-2-67',
-		'weapons.adapters.OH58D_SRACK_R',
-		'weapons.adapters.UB-16',
-		'weapons.adapters.APU-170',
-		'weapons.adapters.adapter_df4a',
-		'weapons.adapters.Rocket_Launcher_4_5inch',
-		'weapons.adapters.JF-17_PF12_twin',
-		'weapons.adapters.CLB_30',
-		'weapons.adapters.9M120_pylon',
-		'weapons.adapters.oro-57k.edm',
-		'weapons.adapters.suu-25',
-		'weapons.adapters.LAU-3',
-		'weapons.adapters.F-15E_LAU-117',
-		'weapons.adapters.SA342_LAU_HOT3_2x',
-		'weapons.adapters.Schloss_500XIIC',
-		'weapons.adapters.mbd-3',
-		'weapons.adapters.b52-mbd_agm86',
-		'weapons.adapters.Spitfire_pilon2R',
-		'weapons.adapters.apu-60-2_R',
-		'weapons.adapters.MER-5E',
-		'weapons.adapters.gdj-iv1',
-		'weapons.adapters.14-3-M2',
-		'weapons.adapters.OH-58D_Gorgona',
-		'weapons.adapters.ARAKM70B',
-		'weapons.adapters.apu-6',
-		'weapons.adapters.BRU-42_LS',
-		'weapons.adapters.M299_AGM114',
-		'weapons.adapters.BRU-42_LS_(LAU-68)',
-		'weapons.adapters.B-1B_Conventional_Rotary_Launcher',
-		'weapons.adapters.LAU-105',
-		'weapons.adapters.ER4_Rack',
-		'weapons.adapters.lau-118a',
-		'weapons.adapters.b-52_suu67',
-		'weapons.adapters.JF-17_GDJ-II19L',
-		'weapons.adapters.AUF2_RACK',
-		'weapons.adapters.kmgu-2',
-		'weapons.adapters.JF-17_GDJ-II19R',
-		'weapons.adapters.F-15E_LAU-88',
-		'weapons.adapters.9k121',
-		'weapons.adapters.MAK-79_VAR_4',
-		'weapons.adapters.BRU_42A',
-		'weapons.adapters.APU-12-40',
-		'weapons.adapters.HB_F14_EXT_BRU34',
-		'weapons.adapters.apu-13u-2',
-		'weapons.adapters.UB-32',
-		'weapons.adapters.HB_ORD_LAU-88',
-		'weapons.adapters.ptab-2_5ko_block1',
-		'weapons.adapters.XM158',
-		'weapons.adapters.CBLS-200',
-		'weapons.adapters.ao-2_5rt_block1',
-		'weapons.adapters.MAK-79_VAR_2',
-		'weapons.adapters.UB_32A_24',
-		'weapons.adapters.tow-pilon',
-		'weapons.adapters.apu-7',
-		'weapons.adapters.BRU-42_HS',
-		'weapons.adapters.TER-9A',
-		'weapons.adapters.LAU-115C',
-		'weapons.adapters.M-2000C_LRF4.edm',
-		'weapons.adapters.su-27-twinpylon',
-		'weapons.adapters.BRU_33A',
-		'weapons.adapters.T45_PMBR',
-		'weapons.adapters.M-2000c_BAP_Rack',
-		'weapons.adapters.apu-60-2_L',
-		'weapons.adapters.BRD-4-250',
-		'weapons.adapters.lau-117',
-		'weapons.adapters.uh60l_lwl12',
-		'weapons.adapters.HB_ORD_SUU_7',
-		'weapons.adapters.9m120',
-		'weapons.adapters.APU-68',
-		'weapons.adapters.OH58D_HRACK_L',
-		'weapons.adapters.APU-73',
-		'weapons.adapters.CHAP_Tu95MS_rotary_launcher',
-		'weapons.adapters.MAK-79_VAR_3',
-		'weapons.adapters.hf20_pod',
-		'weapons.adapters.LAU_127',
-		'weapons.adapters.M272_AGM114',
-		'weapons.adapters.M272',
-		'weapons.adapters.HB_F14_EXT_SHOULDER_PHX_R',
-		'weapons.adapters.rb04pylon',
-		'weapons.adapters.M-2000C_LRF4',
-		'weapons.adapters.mbd',
-		'weapons.adapters.PylonM71',
-		'weapons.adapters.b-52_CRL_mod1',
-		'weapons.adapters.9K114_Shturm',
-		'weapons.adapters.f4-pilon',
-		'weapons.adapters.M261',
-		'weapons.adapters.B-20',
-		'weapons.adapters.BR21-Gerat',
-		'weapons.adapters.LAU-68',
-		'weapons.adapters.HB_F-4E_LAU-34',
-		'weapons.adapters.LR-25',
-		'weapons.adapters.b-52_HSAB',
-		'weapons.adapters.BRU_57',
-		'weapons.adapters.MAK-79_VAR_1',
-		'weapons.adapters.SA342_Telson8',
-		'weapons.adapters.LAU-115C+2_LAU127',
-		'weapons.adapters.BRU-42_LS_(SUU-25)',
-		'weapons.adapters.9M120_pylon2',
-		'weapons.adapters.LAU-131',
-		'weapons.adapters.apu-68um3',
-		'weapons.adapters.OH58D_SRACK_L',
-		'weapons.adapters.rb05pylon',
-		'weapons.adapters.B-1B_28-store_Conventional_Bomb_Module',
-		'weapons.adapters.C-25PU',
-		'weapons.adapters.HB_F4E_LAU117',
-		'weapons.adapters.UB-16-57UMP',
-		'weapons.adapters.mbd3-u6-68',
-		'weapons.adapters.b-20',
-		'weapons.adapters.c-25pu',
-		'weapons.adapters.Matra-F1-Rocket',
-		'weapons.adapters.J-11A_twinpylon_r',
-		'weapons.adapters.M299',
-		'weapons.adapters.Spitfire_pilon1',
-		'weapons.adapters.adapter_gdj_yj83k',
-		'weapons.adapters.HB_ORD_MER',
-		'weapons.adapters.9m114_pylon2',
-		'weapons.adapters.boz-100',
-		'weapons.adapters.BRU_55',
-		'weapons.adapters.lau-105',
-		'weapons.adapters.apu-68m3',
-		'weapons.adapters.B-1B_10-store_Conventional_Bomb_Module',
-		'weapons.adapters.AKU-58',
-		'weapons.adapters.HB_F14_EXT_BRU42',
-		'weapons.adapters.SA342_LAU_HOT3_1x',
-		'weapons.adapters.MBD-2-67U',
-		'weapons.adapters.BRU_41A',
-		'weapons.adapters.9m120m',
-		'weapons.adapters.M260',
-		'weapons.missiles.HQ-16',
-		'weapons.missiles.MALUTKA',
-		'weapons.missiles.SM_6',
-		'weapons.missiles.Sea_Dart',
-		'weapons.missiles.SA48H6E2',
-		'weapons.missiles.Sea_Cat',
-		'weapons.missiles.FIM_92C',
-		'weapons.missiles.SM_2ER',
-		'weapons.missiles.SA9M338K',
-		'weapons.missiles.M39A1',
-		'weapons.missiles.SA3M9M',
-		'weapons.missiles.HQ-7B',
-		'weapons.missiles.SA5B55',
-		'weapons.missiles.9M723',
-		'weapons.missiles.SVIR',
-		'weapons.missiles.REFLEX',
-		'weapons.missiles.HOT2',
-		'weapons.missiles.Rapier',
-		'weapons.missiles.YJ-83',
-		'weapons.missiles.BGM_109B',
-		'weapons.missiles.ROLAND_R',
-		'weapons.missiles.SPIKE_ERA',
-		'weapons.missiles.TOW2',
-		'weapons.missiles.SA9M333',
-		'weapons.missiles.P_9M133',
-		'weapons.missiles.RIM_116A',
-		'weapons.missiles.Sea_Wolf',
-		'weapons.missiles.M30',
-		'weapons.missiles.SA_IRIS_T_SL',
-		'weapons.missiles.9M317',
-		'weapons.missiles.SA9M31',
-		'weapons.missiles.HHQ-9',
-		'weapons.missiles.MIM_104',
-		'weapons.missiles.SM_1',
-		'weapons.missiles.HAWK_RAKETA',
-		'weapons.missiles.HY-2',
-		'weapons.missiles.SA57E6',
-		'weapons.missiles.P_500',
-		'weapons.missiles.9M723_HE',
-		'weapons.missiles.SA2V755',
-		'weapons.missiles.SCUD_RAKETA',
-		'weapons.missiles.SA9M38M1',
-		'weapons.missiles.SA9M33',
-		'weapons.missiles.SA5B27',
-		'weapons.missiles.M31',
-		'weapons.missiles.SM_2',
-		'weapons.missiles.KONKURS',
-		'weapons.missiles.SA9M311',
-		'weapons.missiles.P_700',
-		'weapons.missiles.MIM_72G',
-		'weapons.missiles.SeaSparrow',
-		'weapons.missiles.SA9M330',
-		'weapons.missiles.M48',
-		'weapons.missiles.YJ-62',
-		'weapons.missiles.P_9M117',
-		'weapons.missiles.SA5V28',
-		'weapons.missiles.AGM_84S',
-		'weapons.missiles.X_29TE',
-		'weapons.missiles.YJ-82',
-		'weapons.missiles.Barrel',
-		'weapons.nurs.SMERCH_9M55F',
-		'weapons.nurs.M26',
-		'weapons.nurs.AGR_20_M282_unguided',
-		'weapons.nurs.AGR_20_M151_unguided',
-		'weapons.nurs.BRM1_90MM_UG',
-		'weapons.nurs.PG_9V',
-		'weapons.nurs.PG_16V',
-		'weapons.nurs.GRAD_9M22U',
-		'weapons.nurs.URAGAN_9M27F',
-		'weapons.nurs.M26HE',
-		'weapons.nurs.SMERCH_9M55K',
-		'weapons.nurs.MO_10104M',
-		'weapons.bombs.M485_FLARE',
-		'weapons.bombs.GBU_30',
-		'weapons.bombs.S_8OM_FLARE',
-		'weapons.bombs.RBK_500SOAB',
-		'weapons.bombs.RBK_500U_BETAB_M',
-		'weapons.bombs.SAB_100_FLARE',
-		'weapons.bombs.AO_2_5RT',
-		'weapons.bombs.GBU_11',
-		'weapons.bombs.LUU_2BB',
-		'weapons.bombs.RBK_250S',
-		'weapons.bombs.PTAB_2_5KO',
-		'weapons.bombs.GBU_17',
-		'weapons.bombs.LUU_19',
-		'weapons.bombs.AH6_SMOKE_BLUE',
-		'weapons.bombs.AH6_SMOKE_GREEN',
-		'weapons.bombs.AH6_SMOKE_RED',
-		'weapons.bombs.AH6_SMOKE_YELLOW',
-
-		'weapons.bombs.M257_FLARE',
-		'weapons.bombs.LYSBOMB_CANDLE',
-		'weapons.bombs.SAB_250_FLARE',
-		'weapons.bombs.GBU_29',
-		'weapons.bombs.LUU_2AB',
-		'weapons.adapters.aku-58',
-		'weapons.adapters.AMBER',
-		'weapons.adapters.BRU_33AA',
-		'weapons.adapters.f-15ex_pylon1',
-		'weapons.adapters.jas39_arakm70b',
-		'weapons.adapters.jas39_brimstone_triple_rack',
-		'weapons.adapters.jas39_bru_61',
-		'weapons.adapters.jas39_PylonM71',
-		'weapons.adapters.jas39_spear_triple_rack',
-		'weapons.adapters.Lau_33_A',
-		'weapons.adapters.lau-131',
-		'weapons.adapters.lau-61',
-		'weapons.adapters.LWL_12',
-		'weapons.adapters.null',
-		'weapons.adapters.OH-6_XM158',
-		'weapons.adapters.PAMC',
-		'weapons.adapters.placeholder',
-		'weapons.adapters.STA02_SUU80+SUU79+SUU79_OFFSET_RACK',
-		'weapons.adapters.STA03_SUU80+SUU79+SUU79_OFFSET_RACK',
-		'weapons.adapters.STA09_SUU80+SUU79+SUU79_OFFSET_RACK',
-		'weapons.adapters.STA10_SUU80+SUU79+SUU79_OFFSET_RACK',
-		'weapons.adapters.TLAU_127',
-		'weapons.adapters.TWP_35',
-		'weapons.adapters.WingLauncher',
-		'weapons.bombs.jas_gbu-31',
-		'weapons.bombs.jas_gbu-31_blu109',
-		'weapons.bombs.jas_gbu-32',
-		'weapons.bombs.jas_gbu-38',
-		'weapons.bombs.jas_gbu-49',
-		'weapons.bombs.jas_sdb',
-		'weapons.bombs.jas39_gbu-10',
-		'weapons.bombs.jas39_gbu-12',
-		'weapons.bombs.jas39_gbu-16',
-		'weapons.bombs.M71HD',
-		'weapons.bombs.M71LD',
-		'weapons.bombs.Mk-82 500 lb GP Bomb',
-		'weapons.bombs.Mk-83 1000 lb GP Bomb',
-		'weapons.bombs.Mk-84 2000 lb GP Bomb',
-		'weapons.bombs.OH6_FRAG',
-		'weapons.bombs.OH6_SMOKE_BLUE',
-		'weapons.bombs.OH6_SMOKE_GREEN',
-		'weapons.bombs.OH6_SMOKE_RED',
-		'weapons.bombs.OH6_SMOKE_YELLOW',
-		'weapons.droptanks.A-29B TANK',
-		'weapons.droptanks.AA42R',
-		'weapons.droptanks.Bidon',
-		'weapons.droptanks.Drop tank 1100 litre',
-		'weapons.droptanks.DUMMY_STORE',
-		'weapons.droptanks.F-15EX Mods',
-		'weapons.droptanks.F22_LDTP',
-		'weapons.droptanks.FPU_12_FUEL_TANK',
-		'weapons.droptanks.FPU_12_FUEL_TANKHighVis',
-		'weapons.gunmounts.bk_27',
-		'weapons.gunmounts.M_60',
-		'weapons.gunmounts.MG_20',
-		'weapons.gunmounts.Mk11mod0',
-		'weapons.gunmounts.OH-6_M134',
-		'weapons.gunmounts.OH-6_M134_Door',
-		'weapons.gunmounts.OH-6_M60_Door',
-		'weapons.gunmounts.{OH-6_M134_Minigun1}',
-		'weapons.gunmounts.{OH-6_M134_Minigun2}',
-		'weapons.gunmounts.{OH-6_M134_Minigun3}',
-		'weapons.gunmounts.{OH-6_M134_Minigun4}',
-		'weapons.gunmounts.{OH-6_M134_Minigun5}',
-		'weapons.gunmounts.{OH-6_M134_Minigun6}',
-		'weapons.gunmounts.{OH-6_M134_Minigun7}',
-		'weapons.gunmounts.{OH-6_M134_Minigun8}',
-		'weapons.gunmounts.{OH-6_M134_Minigun9}',
-		'weapons.gunmounts.{OH-6_M134_Minigun10}',
-		'weapons.gunmounts.{OH-6_M134_Minigun11}',
-		'weapons.gunmounts.{OH-6_M134_Minigun12}',
-		'weapons.gunmounts.{OH-6_M134_Minigun13}',
-		'weapons.gunmounts.{OH-6_M134_Minigun14}',
-		'weapons.gunmounts.{ACH_47_M230_Combat_Mix}',
-		'weapons.gunmounts.{OH-6_M134_Door}',
-		'weapons.gunmounts.{OH-6_M60_Door}',
-		'weapons.gunmounts.{MK4_Mod0_OV10}',
-		'weapons.missiles.IRIS-T IR AAM',
-		'weapons.gunmounts.ACH_47_M230_NT',
-		'weapons.gunmounts.ACH_47_M230',
-		'weapons.missiles.Personal',
-		'weapons.adapters.ACH_47F_GL',
-		'weapons.missiles.V1',
-		'weapons.missiles.A-Darter IR AAM',
-		'weapons.missiles.Ammo',
-		'weapons.missiles.APKWS-II-IR',
-		'weapons.missiles.AGM-114L',
-		'weapons.missiles.AGM-88G AARGM-ER',
-		'weapons.missiles.AIM_120C7',
-		'weapons.missiles.AIM_120C8',
-		'weapons.missiles.AIM_120D3',
-		'weapons.missiles.AIM_260A',
-		'weapons.missiles.AIM-120B AMRAAM Active Rdr AAM',
-		'weapons.missiles.AIM-120C-5 AMRAAM - Active Rdr AAM',
-		'weapons.missiles.AIM-120C-5 AMRAAM Active Rdr AAM',
-		'weapons.missiles.AIM-120D',
-		'weapons.missiles.AIM-120D AMRAAM - Active Radar AAM',
-		'weapons.missiles.AIM-132 ASRAAM IR AAM',
-		'weapons.missiles.AIM-200A Peregrine Active Rdr AAM',
-		'weapons.missiles.AIM-260A JATM - Active Radar AAM',
-		'weapons.missiles.AIM-92C',
-		'weapons.missiles.AIM-92E',
-		'weapons.missiles.AIM-92J',
-		'weapons.missiles.AIM-9L Sidewinder IR AAM',
-		'weapons.missiles.AIM-9M Sidewinder IR AAM',
-		'weapons.missiles.AIM-9X Blk II+ Sidewinder IR AAM',
-		'weapons.missiles.AIM-9X Sidewinder IR AAM',
-		'weapons.missiles.AIM9X_BLKII',
-		'weapons.missiles.Brimstone Laser Guided Missile',
-		'weapons.missiles.GBU32_JDAM',
-		'weapons.missiles.I-Derby ER BVRAAM Active Rdr AAM',
-		'weapons.missiles.jas_agm_65h',
-		'weapons.missiles.jas_agm_65k',
-		'weapons.missiles.jas_dws39_arm',
-		'weapons.missiles.jas_dws39_tv',
-		'weapons.missiles.jas39_kepd350_arm',
-		'weapons.missiles.JAS39_RBS15_MK4',
-		'weapons.missiles.jas39_stormshadow_arm',
-		'weapons.missiles.KH-31P (AS-17 Krypton)',
-		'weapons.missiles.MAKO_A2A_C',
-		'weapons.missiles.MAKO_A2G_C',
-		'weapons.missiles.mar1',
-		'weapons.missiles.Meteor BVRAAM Active Rdr AAM',
-		'weapons.missiles.Python-5 IR AAM',
-		'weapons.missiles.R-33',
-		'weapons.missiles.R-37',
-		'weapons.missiles.R-37M',
-		'weapons.missiles.R-73L',
-		'weapons.missiles.R-77M',
-		'weapons.missiles.RBS-15 Mk4 AShM',
-		'weapons.missiles.RVV-BD',
-		'weapons.missiles.SPEAR-3 Anti-Radiation Missile',
-		'weapons.missiles.SPEAR-EW Decoy',
-		'weapons.missiles.AIM-120C-7 AMRAAM Active Rdr AAM',
-		'weapons.missiles.AIM-120C-7 AMRAAM - Active Rdr AAM',
-		'weapons.nurs.jas_m70bap',
-		'weapons.nurs.jas_m70bhe',
-		'weapons.nurs.LWL_MPP',
-		'weapons.nurs.LWL_RP',
-		'weapons.nurs.M49PSRAK145HEAT',
-		'weapons.nurs.M56ARAK135HE',
-		'weapons.nurs.OH6Rocket FFAR',
-		'weapons.shells.OH-6 7.62x51mm M61',
-		'weapons.shells.MG_20x64_HEI',
-		'weapons.shells.BK_27_AP',
-		'weapons.shells.MG_20x64_APT',
-		'weapons.shells.BK_27_PELET',
-		'weapons.shells.OH-6 7.62x51mm M80',
-		'weapons.shells.20x110mm HE-I',
-		'weapons.gunmounts.Akan M/55 30mm',
-		'weapons.shells.20x110mm AP-T',
-		'weapons.shells.20x110mm AP-I',
-		'weapons.shells.OH-6 7.62x51mm M62',
-		'weapons.shells.M39_20_TP_T',
-		'weapons.shells.BK_27_PELE',
-		'weapons.shells.OH-6 7.62x51mm HE-I',
-		'weapons.shells.7.62x51mm',
-		"weapons.containers.ALQ-167",
-		"weapons.containers.{SPRAYER_P}",
-		"weapons.gunmounts.{ACH_47_M230_NoTracers}",
-		"weapons.gunmounts.{5d5aa063-a002-4de8-8a89-6eda1e80ee7b}",
-		"weapons.containers.{SPRAYER_F}",
-		"weapons.containers.{OV10_SMOKE}",
-		"weapons.containers.ACH_47F_Right",
-		"weapons.containers.ACH_47F_Left",
-		"weapons.adapters.DAGR_Launcher",
-		"weapons.containers.Litening III Targeting Pod",
-		"weapons.containers.TLAU_127",
-		"weapons.containers.{SPRAY_P}",
-		"weapons.containers.{SPRAY_F}",
-		"weapons.containers.OV-10A_Paratrooper",
-		"weapons.containers.FLIR-STAR-SAFIRE",
-		"weapons.containers.ACH_47F_GL",
-		"weapons.containers.Legion Pod",
-		"weapons.containers.A29B_SMOKE-POD",
-		"weapons.shells.BK_27_HE",
-		"weapons.shells.BK_27_APHE",
+		"weapons.missiles.9M317",
+		"weapons.missiles.9M723",
+		"weapons.missiles.9M723_HE",
+		"weapons.missiles.A-Darter IR AAM",
+		"weapons.missiles.A_29B_APKWS_M282",
+		"weapons.missiles.adarter_AA",
+		"weapons.missiles.AGM-114AS (Anti-Ship)",
+		"weapons.missiles.AGM-114L",
+		"weapons.missiles.AGM-114L (Anti-Radiation)",
+		"weapons.missiles.AGM-142 Popeye",
+		"weapons.missiles.AGM-88F HCSM",
+		"weapons.missiles.AGM-88G AARGM-ER",
+		"weapons.missiles.AGM_131C_SRAM",
+		"weapons.missiles.AGM_84S",
+		"weapons.missiles.AGM_88G_ARM",
+		"weapons.missiles.AGM_88G_N_ARM",
+		"weapons.missiles.AGR_20_M282_REDUX",
+		"weapons.missiles.AIM-120B AMRAAM Active Rdr AAM",
+		"weapons.missiles.AIM-120C-5 AMRAAM - Active Rdr AAM",
+		"weapons.missiles.AIM-120C-5 AMRAAM Active Rdr AAM",
+		"weapons.missiles.AIM-120C-6",
+		"weapons.missiles.AIM-120C-7",
+		"weapons.missiles.AIM-120C-7 AMRAAM - Active Rdr AAM",
+		"weapons.missiles.AIM-120C-7 AMRAAM Active Rdr AAM",
+		"weapons.missiles.AIM-120C-8",
+		"weapons.missiles.AIM-120D",
+		"weapons.missiles.AIM-120D AMRAAM - Active Radar AAM",
+		"weapons.missiles.AIM-120D-3",
+		"weapons.missiles.AIM-120E",
+		"weapons.missiles.AIM-132 ASRAAM IR AAM",
+		"weapons.missiles.AIM-174B",
+		"weapons.missiles.AIM-200A Peregrine Active Radar AAM",
+		"weapons.missiles.AIM-200A Peregrine Active Rdr AAM",
+		"weapons.missiles.AIM-260A",
+		"weapons.missiles.AIM-260A JATM - Active Radar AAM",
+		"weapons.missiles.AIM-260B",
+		"weapons.missiles.AIM-92C",
+		"weapons.missiles.AIM-92E",
+		"weapons.missiles.AIM-92J",
+		"weapons.missiles.AIM-9C",
+		"weapons.missiles.AIM-9D",
+		"weapons.missiles.AIM-9L Sidewinder IR AAM",
+		"weapons.missiles.AIM-9M Sidewinder IR AAM",
+		"weapons.missiles.AIM-9X Blk II+ Sidewinder IR AAM",
+		"weapons.missiles.AIM-9X Sidewinder IR AAM",
+		"weapons.missiles.AIM9X_BLKII",
+		"weapons.missiles.AIM_120C7",
+		"weapons.missiles.AIM_120C8",
+		"weapons.missiles.AIM_120D3",
+		"weapons.missiles.Aim_132",
+		"weapons.missiles.AIM_2000",
+		"weapons.missiles.AIM_200A",
+		"weapons.missiles.AIM_260A",
+		"weapons.missiles.AIM_272A",
+		"weapons.missiles.AIM_74A",
+		"weapons.missiles.AIM_74B",
+		"weapons.missiles.AIM_9X2",
+		"weapons.missiles.AIM_9X3",
+		"weapons.missiles.Ammo",
+		"weapons.missiles.APKWS-II-IR",
+		"weapons.missiles.asraam_AA",
+		"weapons.missiles.B61_11_A",
+		"weapons.missiles.B61_11_B",
+		"weapons.missiles.B61_11_C",
+		"weapons.missiles.B61_11_D",
+		"weapons.missiles.Barrel",
+		"weapons.missiles.Beer",
+		"weapons.missiles.BGM_109B",
+		"weapons.missiles.Brimstone Laser Guided Missile",
+		"weapons.missiles.CATM-Python-5",
+		"weapons.missiles.CATM_120C",
+		"weapons.missiles.CATM_9X",
+		"weapons.missiles.CF-ASTRA-MK-1",
+		"weapons.missiles.CF-I-DERBY-ER",
+		"weapons.missiles.CF-R-27EA",
+		"weapons.missiles.CF-R-27EP",
+		"weapons.missiles.CF-R-27ER",
+		"weapons.missiles.CF-R-27ET1",
+		"weapons.missiles.CF-R-27P",
+		"weapons.missiles.CF-R-27R",
+		"weapons.missiles.CF-R-27T1",
+		"weapons.missiles.CF-R-37M",
+		"weapons.missiles.CF-R-73L",
+		"weapons.missiles.CF-R-74M",
+		"weapons.missiles.CF-R-74M2",
+		"weapons.missiles.CF-R-77",
+		"weapons.missiles.CF-R-77-1",
+		"weapons.missiles.CF-R-77M",
+		"weapons.missiles.CF-R-77PD",
+		"weapons.missiles.CF-RVV-AE",
+		"weapons.missiles.CF-RVV-MD2",
+		"weapons.missiles.CF-RVV-SD",
+		"weapons.missiles.f111_agm_130",
+		"weapons.missiles.F111_AGM_84D",
+		"weapons.missiles.FIM_92C",
 		"weapons.missiles.Fuel",
-		"weapons.shells.DroneBombShell",
-		"weapons.gunmounts.{DroneBomb}",
-		"weapons.gunmounts.DroneBombMount",
-		"weapons.containers.A29B_SMOKE-POD",
-		"weapons.containers.null",
+		"weapons.missiles.GBU32_JDAM",
+		"weapons.missiles.GBU_32",
+		"weapons.missiles.HAWK_RAKETA",
+		"weapons.missiles.HHQ-9",
+		"weapons.missiles.HOT2",
+		"weapons.missiles.HQ-16",
+		"weapons.missiles.HQ-7B",
+		"weapons.missiles.HY-2",
+		"weapons.missiles.I-Derby ER BVRAAM Active Rdr AAM",
+		"weapons.missiles.IRIS-T IR AAM",
+		"weapons.missiles.IrisT",
+		"weapons.missiles.jas39_kepd350_arm",
+		"weapons.missiles.JAS39_RBS15_MK4",
+		"weapons.missiles.jas39_stormshadow_arm",
+		"weapons.missiles.jas_agm_65h",
+		"weapons.missiles.jas_agm_65k",
+		"weapons.missiles.jas_dws39_arm",
+		"weapons.missiles.jas_dws39_tv",
+		"weapons.missiles.KH-31P (AS-17 Krypton)",
+		"weapons.missiles.KONKURS",
+		"weapons.missiles.m2000d_aasm_250",
+		"weapons.missiles.M30",
+		"weapons.missiles.M31",
+		"weapons.missiles.M39A1",
+		"weapons.missiles.M48",
+		"weapons.missiles.MAKO_A2A_C",
+		"weapons.missiles.MAKO_A2A_N",
+		"weapons.missiles.MAKO_A2G_C",
+		"weapons.missiles.MAKO_A2G_N",
+		"weapons.missiles.MALUTKA",
+		"weapons.missiles.mar1",
+		"weapons.missiles.Meteor",
+		"weapons.missiles.Meteor BVRAAM Active Rdr AAM",
+		"weapons.missiles.Meteor-N",
+		"weapons.missiles.Mi28NE_305E",
+		"weapons.missiles.Mi28NE_9M120",
+		"weapons.missiles.Mi28NE_9M120F",
+		"weapons.missiles.Mi28NE_9M120M",
+		"weapons.missiles.Mi28NE_9M220",
+		"weapons.missiles.MICA IR AAM",
+		"weapons.missiles.MICA NG RF",
+		"weapons.missiles.MICA_IR",
+		"weapons.missiles.MIM_104",
+		"weapons.missiles.MIM_72G",
+		"weapons.missiles.MK83",
+		"weapons.missiles.OKC_RIM8_Talos",
+		"weapons.missiles.P_500",
+		"weapons.missiles.P_700",
+		"weapons.missiles.P_9M117",
+		"weapons.missiles.P_9M133",
+		"weapons.missiles.Personal",
+		"weapons.missiles.PYTHON 5 AAM",
+		"weapons.missiles.Python-5 IR AAM",
+		"weapons.missiles.Python_AA",
+		"weapons.missiles.R-33",
+		"weapons.missiles.R-33S",
+		"weapons.missiles.R-37",
+		"weapons.missiles.R-37M",
+		"weapons.missiles.R-73L",
+		"weapons.missiles.R-77M",
+		"weapons.missiles.Rapier",
+		"weapons.missiles.RBS-15 Mk4 AShM",
+		"weapons.missiles.REFLEX",
+		"weapons.missiles.RIM_116A",
+		"weapons.missiles.ROLAND_R",
+		"weapons.missiles.RVV-BD",
+		"weapons.missiles.SA2V755",
+		"weapons.missiles.SA3M9M",
+		"weapons.missiles.SA48H6E2",
+		"weapons.missiles.SA57E6",
+		"weapons.missiles.SA5B27",
+		"weapons.missiles.SA5B55",
+		"weapons.missiles.SA5V28",
+		"weapons.missiles.SA9M31",
+		"weapons.missiles.SA9M311",
+		"weapons.missiles.SA9M33",
+		"weapons.missiles.SA9M330",
+		"weapons.missiles.SA9M333",
+		"weapons.missiles.SA9M338K",
+		"weapons.missiles.SA9M38M1",
+		"weapons.missiles.SA_IRIS_T_SL",
+		"weapons.missiles.SCALP-EG",
+		"weapons.missiles.SCUD_RAKETA",
+		"weapons.missiles.Sea_Cat",
+		"weapons.missiles.Sea_Dart",
+		"weapons.missiles.Sea_Wolf",
+		"weapons.missiles.SeaSparrow",
+		"weapons.missiles.SM_1",
+		"weapons.missiles.SM_2",
+		"weapons.missiles.SM_2ER",
+		"weapons.missiles.SM_6",
+		"weapons.missiles.SP_AIM_120C7",
+		"weapons.missiles.SP_AIM_120C8",
+		"weapons.missiles.SP_AIM_120D3",
+		"weapons.missiles.SP_AIM_260A",
+		"weapons.missiles.SP_MAKO_A2G_C",
+		"weapons.missiles.SPEAR-3 Anti-Radiation Missile",
+		"weapons.missiles.SPEAR-EW Decoy",
+		"weapons.missiles.SPIKE_ERA",
+		"weapons.missiles.Su30_BRAHMOS_S",
+		"weapons.missiles.Su30_BRAHMOS_SEAD",
+		"weapons.missiles.Su30_CMII",
+		"weapons.missiles.Su30_FAB500UMPK",
+		"weapons.missiles.Su30_KH-29TE",
+		"weapons.missiles.Su30_KH-38MTE",
+		"weapons.missiles.Su30_KH-59M",
+		"weapons.missiles.Su30_KH29L",
+		"weapons.missiles.SU30_KH31A",
+		"weapons.missiles.Su30_KH31AD",
+		"weapons.missiles.Su30_KH31P",
+		"weapons.missiles.Su30_KH31PD",
+		"weapons.missiles.Su30_KH35A",
+		"weapons.missiles.Su30_KH35UE",
+		"weapons.missiles.Su30_KH36",
+		"weapons.missiles.Su30_KH38MAE",
+		"weapons.missiles.Su30_KH38MLE",
+		"weapons.missiles.Su30_KH_59MK",
+		"weapons.missiles.Su30_KH_59MK2",
+		"weapons.missiles.Su30_Rudra-M1",
+		"weapons.missiles.Su30_SAAW",
+		"weapons.missiles.SVIR",
+		"weapons.missiles.TOW2",
+		"weapons.missiles.V1",
+		"weapons.missiles.X_29TE",
+		"weapons.missiles.YJ-62",
+		"weapons.missiles.YJ-82",
+		"weapons.missiles.YJ-83",
 
+		"weapons.bombs.AAA GEPARD [34720lb]",
+		"weapons.bombs.AAA Vulcan M163 Air [21666lb]",
+		"weapons.bombs.AAA Vulcan M163 Skid [21577lb]",
+		"weapons.bombs.AH6_SMOKE_BLUE",
+		"weapons.bombs.AH6_SMOKE_GREEN",
+		"weapons.bombs.AH6_SMOKE_RED",
+		"weapons.bombs.AH6_SMOKE_YELLOW",
+		"weapons.bombs.AN-M66A2",
+		"weapons.bombs.AN-M81",
+		"weapons.bombs.AN-M88",
+		"weapons.bombs.AO_2_5RT",
+		"weapons.bombs.APC BTR-80 Air [23936lb]",
+		"weapons.bombs.APC BTR-82A Air [24998lb]",
+		"weapons.bombs.APC BTR-82A Skid [24888lb]",
+		"weapons.bombs.APC Cobra Air [10912lb]",
+		"weapons.bombs.APC Cobra Skid [10802lb]",
+		"weapons.bombs.APC LAV-25 Air [22520lb]",
+		"weapons.bombs.APC LAV-25 Skid [22514lb]",
+		"weapons.bombs.APC M1043 HMMWV Armament Air [7023lb]",
+		"weapons.bombs.APC M1126 Stryker ICV [29542lb]",
+		"weapons.bombs.APC M113 Air [21624lb]",
+		"weapons.bombs.APC M113 Skid [21494lb]",
+		"weapons.bombs.APC MTLB Air [26400lb]",
+		"weapons.bombs.APC MTLB Skid [26290lb]",
+		"weapons.bombs.ART 2S9 NONA Air [19140lb]",
+		"weapons.bombs.ARV BRDM-2 Air [12320lb]",
+		"weapons.bombs.ARV BRDM-2 Skid [12210lb]",
+		"weapons.bombs.ATGM M1045 HMMWV TOW Air [7183lb]",
+		"weapons.bombs.ATGM M1134 Stryker [30337lb]",
+		"weapons.bombs.BLU-3B_OLD",
+		"weapons.bombs.BLU-4B_OLD",
+		"weapons.bombs.BLU_3B_GROUP",
+		"weapons.bombs.BLU_4B_GROUP",
+		"weapons.bombs.EWR SBORKA Air [21624lb]",
+		"weapons.bombs.EWR SBORKA Skid [21624lb]",
+		"weapons.bombs.f111_gbu_10",
+		"weapons.bombs.f111_gbu_12",
+		"weapons.bombs.f111_gbu_16",
+		"weapons.bombs.f111_gbu_24",
+		"weapons.bombs.FAB-500M62NV",
+		"weapons.bombs.FLASH_CARTRIDGE",
+		"weapons.bombs.GBU-43/B(MOAB)",
+		"weapons.bombs.GBU_11",
+		"weapons.bombs.GBU_17",
+		"weapons.bombs.GBU_29",
+		"weapons.bombs.GBU_30",
+		"weapons.bombs.Generic Crate [20000lb]",
+		"weapons.bombs.IFV BMD-1 Air [18040lb]",
+		"weapons.bombs.IFV BMP-2 [25168lb]",
+		"weapons.bombs.IFV BMP-3 [32912lb]",
+		"weapons.bombs.IFV BTR-D Air [18040lb]",
+		"weapons.bombs.IFV BTR-D Skid [17930lb]",
+		"weapons.bombs.IFV M2A2 Bradley [34720lb]",
+		"weapons.bombs.IFV MCV-80 [34720lb]",
+		"weapons.bombs.IFV TPZ FUCH [33440lb]",
+		"weapons.bombs.jas39_gbu-10",
+		"weapons.bombs.jas39_gbu-12",
+		"weapons.bombs.jas39_gbu-16",
+		"weapons.bombs.jas_gbu-31",
+		"weapons.bombs.jas_gbu-31_blu109",
+		"weapons.bombs.jas_gbu-32",
+		"weapons.bombs.jas_gbu-38",
+		"weapons.bombs.jas_gbu-49",
+		"weapons.bombs.jas_sdb",
+		"weapons.bombs.KAB-1500LG",
+		"weapons.bombs.KAB-500S",
+		"weapons.bombs.LUU_19",
+		"weapons.bombs.LUU_2AB",
+		"weapons.bombs.LUU_2BB",
+		"weapons.bombs.LYSBOMB_CANDLE",
+		"weapons.bombs.M1025 HMMWV Air [6160lb]",
+		"weapons.bombs.m2000d_gbu-10",
+		"weapons.bombs.m2000d_gbu-12",
+		"weapons.bombs.m2000d_gbu-16",
+		"weapons.bombs.m2000d_gbu-24",
+		"weapons.bombs.M257_FLARE",
+		"weapons.bombs.M485_FLARE",
+		"weapons.bombs.M71HD",
+		"weapons.bombs.M71LD",
+		"weapons.bombs.MK-81SE",
+		"weapons.bombs.Mk-82 500 lb GP Bomb",
+		"weapons.bombs.Mk-83 1000 lb GP Bomb",
+		"weapons.bombs.Mk-84 2000 lb GP Bomb",
+		"weapons.bombs.MK77mod0-WPN",
+		"weapons.bombs.MK77mod1-WPN",
+		"weapons.bombs.OH6_FRAG",
+		"weapons.bombs.OH6_SMOKE_BLUE",
+		"weapons.bombs.OH6_SMOKE_GREEN",
+		"weapons.bombs.OH6_SMOKE_RED",
+		"weapons.bombs.OH6_SMOKE_YELLOW",
+		"weapons.bombs.RBK_250S",
+		"weapons.bombs.RBK_500SOAB",
+		"weapons.bombs.RBK_500U_BETAB_M",
+		"weapons.bombs.S_8OM_FLARE",
+		"weapons.bombs.S_8OM_FLARE_BLUE",
+		"weapons.bombs.S_8OM_FLARE_COPY",
+		"weapons.bombs.S_8OM_FLARE_RED",
+		"weapons.bombs.SAB_100_FLARE",
+		"weapons.bombs.SAB_250_FLARE",
+		"weapons.bombs.SAM Avenger M1097 Air [7200lb]",
+		"weapons.bombs.SAM CHAPARRAL Air [21624lb]",
+		"weapons.bombs.SAM ROLAND ADS [34720lb]",
+		"weapons.bombs.SAM ROLAND LN [34720b]",
+		"weapons.bombs.SAM SA-13 STRELA [21624lb]",
+		"weapons.bombs.SPG M1128 Stryker MGS [33036lb]",
+		"weapons.bombs.Squad 30 x Soldier [7950lb]",
+		"weapons.bombs.SU30-KAB-1500T",
+		"weapons.bombs.SU30_244N",
+		"weapons.bombs.Su30_FAB250M62",
+		"weapons.bombs.Su30_FAB500M54",
+		"weapons.bombs.Su30_FAB500M62",
+		"weapons.bombs.SU30_GBU-38",
+		"weapons.bombs.Su30_OFAB100",
+		"weapons.bombs.Su30_OFAB250",
+		"weapons.bombs.toilet_bomb",
+		"weapons.bombs.Transport M818 [16000lb]",
+		"weapons.bombs.Transport Tigr Air [15900lb]",
+		"weapons.bombs.Transport Tigr Skid [15730lb]",
+		"weapons.bombs.Transport UAZ-469 Air [3747lb]",
+		"weapons.bombs.Transport UAZ-469 Skid [3630lb]",
+		"weapons.bombs.Transport URAL-375 [14815lb]",
+
+		"weapons.nurs.AGR_20_M151_unguided",
+		"weapons.nurs.AGR_20_M282_unguided",
+		"weapons.nurs.ANDR0ID_SONO_IL",
+		"weapons.nurs.ANDR0ID_SONO_IL2",
+		"weapons.nurs.BRM1_90MM_UG",
+		"weapons.nurs.GRAD_9M22U",
+		"weapons.nurs.jas_m70bap",
+		"weapons.nurs.jas_m70bhe",
+		"weapons.nurs.LWL_MPP",
+		"weapons.nurs.LWL_RP",
+		"weapons.nurs.M26",
+		"weapons.nurs.M26HE",
+		"weapons.nurs.M282_MPP_REDO",
+		"weapons.nurs.M49PSRAK145HEAT",
+		"weapons.nurs.M56ARAK135HE",
+		"weapons.nurs.MO_10104M",
+		"weapons.nurs.OH6Rocket FFAR",
+		"weapons.nurs.PG_16V",
+		"weapons.nurs.PG_9V",
+		"weapons.nurs.SMERCH_9M55F",
+		"weapons.nurs.SMERCH_9M55K",
+		"weapons.nurs.URAGAN_9M27F",
+
+		"weapons.adapters.14-3-M2",
+		"weapons.adapters.30-6-M2",
+		"weapons.adapters.9K114_Shturm",
+		"weapons.adapters.9k121",
+		"weapons.adapters.9M114-PILON",
+		"weapons.adapters.9m114-pilon",
+		"weapons.adapters.9M114-PYLON_EMPTY",
+		"weapons.adapters.9m114_pylon2",
+		"weapons.adapters.9m120",
+		"weapons.adapters.9M120_pylon",
+		"weapons.adapters.9M120_pylon2",
+		"weapons.adapters.9m120m",
+		"weapons.adapters.A4E_SUU-7",
+		"weapons.adapters.ACH_47F_Left",
+		"weapons.adapters.ACH_47F_Left_ATAS",
+		"weapons.adapters.ACH_47F_Left_Outboard",
+		"weapons.adapters.ACH_47F_Right",
+		"weapons.adapters.ACH_47F_Right_ATAS",
+		"weapons.adapters.ACH_47F_Right_Outboard",
+		"weapons.adapters.adapter_df4a",
+		"weapons.adapters.adapter_df4b",
+		"weapons.adapters.adapter_gdj_kd63",
+		"weapons.adapters.adapter_gdj_yj83k",
+		"weapons.adapters.aero-3b",
+		"weapons.adapters.AKU-58",
+		"weapons.adapters.aku-58",
+		"weapons.adapters.AMBER",
+		"weapons.adapters.ANDR0ID_JAYHAWK",
+		"weapons.adapters.ANDR0ID_MH60_SOAR_OldShort",
+		"weapons.adapters.ANDR0ID_MH60K",
+		"weapons.adapters.ANDR0ID_MH60M_NewLong",
+		"weapons.adapters.ANDR0ID_MH60M_NewShort",
+		"weapons.adapters.ANDR0ID_MH60M_RADAR",
+		"weapons.adapters.ANDR0ID_MK58_Launcher_ACH47",
+		"weapons.adapters.ANDR0ID_Pavehawk_New",
+		"weapons.adapters.ANDR0ID_Pavehawk_Old",
+		"weapons.adapters.ANDR0ID_SH60R",
+		"weapons.adapters.ANDR0ID_SH60R_Console",
+		"weapons.adapters.ANDR0ID_SH60R_Launcher",
+		"weapons.adapters.ANDR0ID_SH60S_NOPYLON",
+		"weapons.adapters.ANDR0ID_SH60S_PYLON",
+		"weapons.adapters.ANDR0ID_STD_ESSS",
+		"weapons.adapters.ao-2_5rt_block1",
+		"weapons.adapters.APU-12-40",
+		"weapons.adapters.apu-13mt",
+		"weapons.adapters.apu-13u-2",
+		"weapons.adapters.APU-170",
+		"weapons.adapters.apu-6",
+		"weapons.adapters.APU-60-1",
+		"weapons.adapters.apu-60-2_L",
+		"weapons.adapters.apu-60-2_R",
+		"weapons.adapters.APU-68",
+		"weapons.adapters.apu-68m3",
+		"weapons.adapters.apu-68um3",
+		"weapons.adapters.apu-7",
+		"weapons.adapters.APU-73",
+		"weapons.adapters.ARAKM70B",
+		"weapons.adapters.AUF2_RACK",
+		"weapons.adapters.B-1B_10-store_Conventional_Bomb_Module",
+		"weapons.adapters.B-1B_28-store_Conventional_Bomb_Module",
+		"weapons.adapters.B-1B_Conventional_Rotary_Launcher",
+		"weapons.adapters.B-20",
+		"weapons.adapters.b-20",
+		"weapons.adapters.b-52_CRL_mod1",
+		"weapons.adapters.b-52_CSRL_ALCM",
+		"weapons.adapters.b-52_HSAB",
+		"weapons.adapters.b-52_suu67",
+		"weapons.adapters.B-8V20A",
+		"weapons.adapters.b52-mbd_agm86",
+		"weapons.adapters.b52-mbd_m117",
+		"weapons.adapters.b52-mbd_mk84",
+		"weapons.adapters.boz-100",
+		"weapons.adapters.BR21-Gerat",
+		"weapons.adapters.BRD-4-250",
+		"weapons.adapters.BRU-42_HS",
+		"weapons.adapters.BRU-42_LS",
+		"weapons.adapters.BRU-42_LS_(LAU-131)",
+		"weapons.adapters.BRU-42_LS_(LAU-68)",
+		"weapons.adapters.BRU-42_LS_(SUU-25)",
+		"weapons.adapters.BRU_33A",
+		"weapons.adapters.BRU_33AA",
+		"weapons.adapters.BRU_41A",
+		"weapons.adapters.BRU_42A",
+		"weapons.adapters.BRU_55",
+		"weapons.adapters.BRU_57",
+		"weapons.adapters.C-25PU",
+		"weapons.adapters.c-25pu",
+		"weapons.adapters.cargo_oh6_ammo",
+		"weapons.adapters.cargo_oh6_animals",
+		"weapons.adapters.cargo_oh6_fbi",
+		"weapons.adapters.cargo_oh6_fuel",
+		"weapons.adapters.cargo_oh6_mixed",
+		"weapons.adapters.cargo_oh6_mre",
+		"weapons.adapters.cargo_oh6_pax",
+		"weapons.adapters.Carrier_N-1_EM_EF",
+		"weapons.adapters.CBLS-200",
+		"weapons.adapters.CHAP_Mi28N_ataka",
+		"weapons.adapters.CHAP_Mi28N_igla",
+		"weapons.adapters.CHAP_Tu95MS_rotary_launcher",
+		"weapons.adapters.CLB_30",
+		"weapons.adapters.CLB_4",
+		"weapons.adapters.DAGR_Launcher",
+		"weapons.adapters.ER4_Rack",
+		"weapons.adapters.EX_Pylon",
+		"weapons.adapters.EX_Pylon_Single",
+		"weapons.adapters.F-15E_LAU-117",
+		"weapons.adapters.F-15E_LAU-88",
+		"weapons.adapters.f-15ex_pylon1",
+		"weapons.adapters.F22_IRST",
+		"weapons.adapters.F4-PILON",
+		"weapons.adapters.f4-pilon",
+		"weapons.adapters.F4E_dual_LAU7",
+		"weapons.adapters.gdj-iv1",
+		"weapons.adapters.hb_a-6e_lau7_adu299",
+		"weapons.adapters.HB_F-4E_BRU-42",
+		"weapons.adapters.HB_F-4E_LAU-34",
+		"weapons.adapters.HB_F-4E_ORD_LAU_77",
+		"weapons.adapters.HB_F14_EXT_BRU34",
+		"weapons.adapters.HB_F14_EXT_BRU42",
+		"weapons.adapters.HB_F14_EXT_LAU-7",
+		"weapons.adapters.HB_F14_EXT_SHOULDER_PHX_L",
+		"weapons.adapters.HB_F14_EXT_SHOULDER_PHX_R",
+		"weapons.adapters.HB_F14_EXT_SPARROW_PYLON",
+		"weapons.adapters.HB_F4E_LAU117",
+		"weapons.adapters.HB_ORD_LAU-88",
+		"weapons.adapters.HB_ORD_MER",
+		"weapons.adapters.HB_ORD_Missile_Well_Adapter",
+		"weapons.adapters.HB_ORD_SUU_7",
+		"weapons.adapters.Hercules_Ammo_Pallet",
+		"weapons.adapters.hf20_pod",
+		"weapons.adapters.hj12-launcher-tube",
+		"weapons.adapters.J-11A_twinpylon_l",
+		"weapons.adapters.J-11A_twinpylon_r",
+		"weapons.adapters.jas39_arakm70b",
+		"weapons.adapters.jas39_brimstone_triple_rack",
+		"weapons.adapters.jas39_bru_61",
+		"weapons.adapters.jas39_PylonM71",
+		"weapons.adapters.jas39_spear_triple_rack",
+		"weapons.adapters.JF-17_GDJ-II19L",
+		"weapons.adapters.JF-17_GDJ-II19R",
+		"weapons.adapters.JF-17_PF12_twin",
+		"weapons.adapters.LAU-10",
+		"weapons.adapters.LAU-105",
+		"weapons.adapters.lau-105",
+		"weapons.adapters.LAU-115C",
+		"weapons.adapters.LAU-115C+2_LAU127",
+		"weapons.adapters.LAU-117",
+		"weapons.adapters.lau-117",
+		"weapons.adapters.lau-118a",
+		"weapons.adapters.LAU-131",
+		"weapons.adapters.lau-131",
+		"weapons.adapters.LAU-3",
+		"weapons.adapters.LAU-61",
+		"weapons.adapters.lau-61",
+		"weapons.adapters.LAU-68",
+		"weapons.adapters.lau-68",
+		"weapons.adapters.LAU_127",
+		"weapons.adapters.Lau_33_A",
+		"weapons.adapters.LR-25",
+		"weapons.adapters.LWL_12",
+		"weapons.adapters.M-2000C_AUF2",
+		"weapons.adapters.M-2000c_BAP_Rack",
+		"weapons.adapters.M-2000C_LRF4",
+		"weapons.adapters.M-2000C_LRF4.edm",
+		"weapons.adapters.M260",
+		"weapons.adapters.M261",
+		"weapons.adapters.M272",
+		"weapons.adapters.M272_AGM114",
+		"weapons.adapters.M299",
+		"weapons.adapters.M299_AGM114",
+		"weapons.adapters.m559",
+		"weapons.adapters.MAK-79_VAR_1",
+		"weapons.adapters.MAK-79_VAR_2",
+		"weapons.adapters.MAK-79_VAR_3",
+		"weapons.adapters.MAK-79_VAR_4",
+		"weapons.adapters.Matra-F1-Rocket",
+		"weapons.adapters.mbd",
+		"weapons.adapters.MBD-2-67",
+		"weapons.adapters.MBD-2-67U",
+		"weapons.adapters.mbd-3",
+		"weapons.adapters.mbd-4",
+		"weapons.adapters.mbd3-u6-68",
+		"weapons.adapters.MER-5E",
+		"weapons.adapters.mer2",
+		"weapons.adapters.mer_a4e",
+		"weapons.adapters.Mi28_9K114_Shturm",
+		"weapons.adapters.Mi28_9K114_Shturm_g",
+		"weapons.adapters.Mi28NE_305E_dual_pylon",
+		"weapons.adapters.Mi28NE_305E_pylon",
+		"weapons.adapters.Mi28NE_BL13L",
+		"weapons.adapters.null",
+		"weapons.adapters.OH-6_XM158",
+		"weapons.adapters.OH58D_HRACK_L",
+		"weapons.adapters.OH58D_HRACK_R",
+		"weapons.adapters.OH58D_M260",
+		"weapons.adapters.OH58D_SRACK_L",
+		"weapons.adapters.OH58D_SRACK_R",
+		"weapons.adapters.oh6_cargo_ammo",
+		"weapons.adapters.oh6_cargo_animals",
+		"weapons.adapters.oh6_cargo_crates",
+		"weapons.adapters.oh6_cargo_jerrycans",
+		"weapons.adapters.oh6_cargo_operator",
+		"weapons.adapters.oh6_cargo_pax",
+		"weapons.adapters.oh6_cargo_pigs",
+		"weapons.adapters.oh6_cargo_soldiers",
+		"weapons.adapters.oro-57k.edm",
+		"weapons.adapters.PAMC",
+		"weapons.adapters.placeholder",
+		"weapons.adapters.ptab-2_5ko_block1",
+		"weapons.adapters.PU_9S846_STRELEC",
+		"weapons.adapters.PylonM71",
+		"weapons.adapters.rb04pylon",
+		"weapons.adapters.rb05pylon",
+		"weapons.adapters.RB15pylon",
+		"weapons.adapters.Rocket_Launcher_4_5inch",
+		"weapons.adapters.sa342_ATAM_Tube_2x",
+		"weapons.adapters.SA342_LAU_HOT3_1x",
+		"weapons.adapters.SA342_LAU_HOT3_2x",
+		"weapons.adapters.SA342_Telson8",
+		"weapons.adapters.Schloss_500XIIC",
+		"weapons.adapters.Spitfire_pilon1",
+		"weapons.adapters.Spitfire_pilon2L",
+		"weapons.adapters.Spitfire_pilon2R",
+		"weapons.adapters.STA02_SUU80+SUU79+SUU79_OFFSET_RACK",
+		"weapons.adapters.STA03_SUU80+SUU79+SUU79_OFFSET_RACK",
+		"weapons.adapters.STA09_SUU80+SUU79+SUU79_OFFSET_RACK",
+		"weapons.adapters.STA10_SUU80+SUU79+SUU79_OFFSET_RACK",
+		"weapons.adapters.su-27-twinpylon",
+		"weapons.adapters.Su30_Brahmos_pylon",
+		"weapons.adapters.Su30_DUAL_77",
+		"weapons.adapters.Su30_SAAW_POD",
+		"weapons.adapters.suu-25",
+		"weapons.adapters.T45_PMBR",
+		"weapons.adapters.TER-9A",
+		"weapons.adapters.tinytim",
+		"weapons.adapters.TLAU_127",
+		"weapons.adapters.tow-pilon",
+		"weapons.adapters.tu-22m3-mbd",
+		"weapons.adapters.TWP_35",
+		"weapons.adapters.UB-13",
+		"weapons.adapters.UB-16",
+		"weapons.adapters.UB-16-57UMP",
+		"weapons.adapters.UB-32",
+		"weapons.adapters.UB_32A",
+		"weapons.adapters.UB_32A_24",
+		"weapons.adapters.uh60l_lwl12",
+		"weapons.adapters.vap_ammo_box_wood_small",
+		"weapons.adapters.WingLauncher",
+		"weapons.adapters.XM158",
+
+		"weapons.containers.2-c9",
+		"weapons.containers.22_RBF.edm",
+		"weapons.containers.2c1",
+		"weapons.containers.2c6m",
+		"weapons.containers.A29B_SMOKE-POD",
+		"weapons.containers.A29B_SMOKE-POD",
+		"weapons.containers.A4E_SUU-7",
+		"weapons.containers.ab-212_cable",
+		"weapons.containers.aero-3b",
+		"weapons.containers.agrarspray",
+		"weapons.containers.ALQ-167",
+		"weapons.containers.AN/ASG-34 Legion IRST Pod (Cosmetic)",
+		"weapons.containers.AN/ASW-55",
+		"weapons.containers.ANDR0ID_JAYHAWK",
+		"weapons.containers.ANDR0ID_MH60_SOAR_OldShort",
+		"weapons.containers.ANDR0ID_MH60K",
+		"weapons.containers.ANDR0ID_MH60M_NewLong",
+		"weapons.containers.ANDR0ID_MH60M_NewShort",
+		"weapons.containers.ANDR0ID_MH60M_RADAR",
+		"weapons.containers.ANDR0ID_Pavehawk_New",
+		"weapons.containers.ANDR0ID_Pavehawk_Old",
+		"weapons.containers.ANDR0ID_SH60R",
+		"weapons.containers.ANDR0ID_SH60R_Console",
+		"weapons.containers.ANDR0ID_SH60S_NOPYLON",
+		"weapons.containers.ANDR0ID_SH60S_PYLON",
+		"weapons.containers.ANDR0ID_STD_ESSS",
+		"weapons.containers.BA_58",
+		"weapons.containers.Bell47-Floats",
+		"weapons.containers.BLACK",
+		"weapons.containers.BLUE",
+		"weapons.containers.bmd-1",
+		"weapons.containers.bmp-1",
+		"weapons.containers.BRU_42A",
+		"weapons.containers.BTR-80",
+		"weapons.containers.Damocles Targeting Pod",
+		"weapons.containers.ECLAIR-M Pod",
+		"weapons.containers.Elta EL/L 8222",
+		"weapons.containers.F22_IRST_PAIR",
+		"weapons.containers.F22_Sensor_Pod",
+		"weapons.containers.FLIR-STAR-SAFIRE",
+		"weapons.containers.GRAY",
+		"weapons.containers.GREEN",
+		"weapons.containers.HEMTT",
+		"weapons.containers.hemtt_fire",
+		"weapons.containers.Hercules_Battle_Station",
+		"weapons.containers.Hercules_Battle_Station_TGP",
+		"weapons.containers.Hercules_JATO",
+		"weapons.containers.HMMWV_M1025",
+		"weapons.containers.HMMWV_M1043",
+		"weapons.containers.HMMWV_M1045",
+		"weapons.containers.HMMWV_M973",
+		"weapons.containers.HookBell47",
+		"weapons.containers.L-370_Left.edm",
+		"weapons.containers.L-370_Right.edm",
+		"weapons.containers.Legion Pod",
+		"weapons.containers.Litening III Targeting Pod",
+		"weapons.containers.M48",
+		"weapons.containers.M6",
+		"weapons.containers.marder",
+		"weapons.containers.null",
+		"weapons.containers.ORANGE",
+		"weapons.containers.OV-10A_Paratrooper",
+		"weapons.containers.RED",
+		"weapons.containers.sh2f_mad",
+		"weapons.containers.stretchers_bell47",
+		"weapons.containers.Su30_APK_9",
+		"weapons.containers.Su30_DAMOCLES",
+		"weapons.containers.Su30_ELM2060",
+		"weapons.containers.Su30_R73U_BLACK",
+		"weapons.containers.SU30_SAP518_L1",
+		"weapons.containers.SU30_SAP518_R1",
+		"weapons.containers.Su30SM_T220",
+		"weapons.containers.Su30SM_T2201",
+		"weapons.containers.TLAU_127",
+		"weapons.containers.WHITE",
+		"weapons.containers.YELLOW",
+		"weapons.containers.zsu-23-4",
+		"weapons.containers.{5d5aa063-a002-4de8-8a89-6eda1e80ee7b}",
+		"weapons.containers.{AH-6_DOORS}",
+		"weapons.containers.{AH-6_Door}",
+		"weapons.containers.{AH-6_FN_HMP400}",
+		"weapons.containers.{AH-6_Gunners}",
+		"weapons.containers.{AH6_M134L}",
+		"weapons.containers.{AH6_M134R}",
+		"weapons.containers.{ANDR0ID_M134}",
+		"weapons.containers.{ANDR0ID_M240_TWIN_AFT}",
+		"weapons.containers.{ANDR0ID_M2HB_AFT}",
+		"weapons.containers.{ANDR0ID_M2HB_DUAL_PORT}",
+		"weapons.containers.{ANDR0ID_M2HB_DUAL_STBD}",
+		"weapons.containers.{ANDR0ID_M2HB_PORT}",
+		"weapons.containers.{ANDR0ID_M2HB_STBD}",
+		"weapons.containers.{ANDR0ID_MH47_DUAL_PORT}",
+		"weapons.containers.{ANDR0ID_MH47_DUAL_STBD}",
+		"weapons.containers.{ANDR0ID_MK19}",
+		"weapons.containers.{ANDR0ID_XM197}",
+		"weapons.containers.{C_A4E_CBU-1A}",
+		"weapons.containers.{C_A4E_CBU-2A}",
+		"weapons.containers.{C_A4E_CBU-2BA}",
+		"weapons.containers.{CANON PUCA LEFT}",
+		"weapons.containers.{CANON PUCA RIGHT}",
+		"weapons.containers.{DAP_6_A29B}",
+		"weapons.containers.{F111C_FLIR}",
+		"weapons.containers.{FN_HMP400_100_A29B}",
+		"weapons.containers.{FN_HMP400_200_A29B}",
+		"weapons.containers.{FN_HMP400_A29B}",
+		"weapons.containers.{GIAT_NC621_AP_A29B}",
+		"weapons.containers.{GIAT_NC621_APHE_A29B}",
+		"weapons.containers.{GIAT_NC621_HE_A29B}",
+		"weapons.containers.{GIAT_NC621_HEAP_A29B}",
+		"weapons.containers.{GIAT_NC621_SAPHEI_A29B}",
+		"weapons.containers.{GSh_30_1}",
+		"weapons.containers.{Herc_105mm_Howitzer}",
+		"weapons.containers.{Herc_GAU_23A_Chain_Gun}",
+		"weapons.containers.{Herc_M61_Vulcan_Rotary_Cannon}",
+		"weapons.containers.{JAS39_EWS39}",
+		"weapons.containers.{M134 SittingMinigun}",
+		"weapons.containers.{Mk4 HIPEG}",
+		"weapons.containers.{OH-58_M134P_3000}",
+		"weapons.containers.{OH-6_M129}",
+		"weapons.containers.{OH58_GAU-19}",
+		"weapons.containers.{OH6_Browning_M3P_1}",
+		"weapons.containers.{OH6_Browning_M3P_2}",
+		"weapons.containers.{OH6_Browning_M3P_3}",
+		"weapons.containers.{OH6_FN_HMP_1}",
+		"weapons.containers.{OH6_FN_HMP_2}",
+		"weapons.containers.{OH6_FN_HMP_3}",
+		"weapons.containers.{OH6_GIAT_M261_1}",
+		"weapons.containers.{OH6_GIAT_M261_2}",
+		"weapons.containers.{OH6_GIAT_M261_3}",
+		"weapons.containers.{OV10_SMOKE}",
+		"weapons.containers.{SPRAY_F}",
+		"weapons.containers.{SPRAY_H}",
+		"weapons.containers.{SPRAY_P}",
+		"weapons.containers.{SPRAYER_F}",
+		"weapons.containers.{SPRAYER_H}",
+		"weapons.containers.{SPRAYER_P}",
+
+		"weapons.droptanks.A-29B TANK",
+		"weapons.droptanks.AA42R",
+		"weapons.droptanks.ah6_auxtank",
+		"weapons.droptanks.DFT_150_GAL_A4E",
+		"weapons.droptanks.DFT_300_GAL_A4E",
+		"weapons.droptanks.DFT_300_GAL_A4E_LR",
+		"weapons.droptanks.DFT_400_GAL_A4E",
+		"weapons.droptanks.dragonfly_fuel_tanks",
+		"weapons.droptanks.Drop Tank 1000 Litre",
+		"weapons.droptanks.Drop tank 1100 litre",
+		"weapons.droptanks.Drop Tank 2000 Litre",
+		"weapons.droptanks.DUMMY_STORE",
+		"weapons.droptanks.EF_CENTRAL_TANK",
+		"weapons.droptanks.EF_FuelTank_1000L",
+		"weapons.droptanks.F-15EX Mods",
+		"weapons.droptanks.F22_600gal",
+		"weapons.droptanks.F22_LDTP",
+		"weapons.droptanks.FPU_12_FUEL_TANK",
+		"weapons.droptanks.FPU_12_FUEL_TANKHighVis",
+		"weapons.droptanks.Hercules_ExtFuelTank",
+		"weapons.droptanks.JAYHAWK_120_Fuel_Tank",
+		"weapons.droptanks.JAYHAWK_80gal_Fuel_Tank",
+		"weapons.droptanks.null",
+		"weapons.droptanks.PUCARA TANK",
+		"weapons.droptanks.SEAHAWK_120_Fuel_Tank",
+		"weapons.droptanks.sh2f_tank_l",
+		"weapons.droptanks.sh2f_tank_r",
+		"weapons.droptanks.Su-25sm3_PTB-800.edm",
+
+		"weapons.shells.20x110mm AP-I",
+		"weapons.shells.20x110mm AP-T",
+		"weapons.shells.20x110mm HE-I",
+		"weapons.shells.7.62x51mm",
+		"weapons.shells.AH-6 7.62x51mm M61",
+		"weapons.shells.AH-6 7.62x51mm M62",
+		"weapons.shells.AH-6 7.62x51mm M80",
+		"weapons.shells.BK_27_AP",
+		"weapons.shells.BK_27_APHE",
+		"weapons.shells.BK_27_HE",
+		"weapons.shells.BK_27_PELE",
+		"weapons.shells.BK_27_PELET",
+		"weapons.shells.DroneBombShell",
+		"weapons.shells.EB_US_5_56",
+		"weapons.shells.M39_20_TP_T",
+		"weapons.shells.Mauser7.92x57_S.m.K._L",
+		"weapons.shells.Mauser7.92x57_S.m.K._L",
+		"weapons.shells.MG_20x64_APT",
+		"weapons.shells.MG_20x64_HEI",
+		"weapons.shells.OH-6 7.62x51mm HE-I",
+		"weapons.shells.OH-6 7.62x51mm M61",
+		"weapons.shells.OH-6 7.62x51mm M62",
+		"weapons.shells.OH-6 7.62x51mm M80",
+
+		"weapons.gunmounts.AH-6_Door_Gun",
+		"weapons.gunmounts.AH-6_HMP400",
+		"weapons.gunmounts.AH-6_M134L",
+		"weapons.gunmounts.AH-6_M134R",
+		"weapons.gunmounts.Akan M/55 30mm",
+		"weapons.gunmounts.bk_27",
+		"weapons.gunmounts.DroneBombMount",
+		"weapons.gunmounts.M_60",
+		"weapons.gunmounts.MG_20",
+		"weapons.gunmounts.Mk11mod0",
+		"weapons.gunmounts.sppu_gun",
+		"weapons.gunmounts.{22_SPPU_reversed}",
+		"weapons.gunmounts.{22_SPPU}",
+		"weapons.gunmounts.{5d5aa063-a002-4de8-8a89-6eda1e80ee7b}",
+		"weapons.gunmounts.{AH-6_Door}",
+		"weapons.gunmounts.{AH-6_FN_HMP400}",
+		"weapons.gunmounts.{AH6_M134L}",
+		"weapons.gunmounts.{AH6_M134R}",
+		"weapons.gunmounts.{DroneBomb}",
 	}
 
-if AllowMods then
+if AllowMods and Era == "Modern" then
   WEAPONSLIST.Items[WEAPONSLIST.ItemCategory.MODS] = WEAPONSLIST_MODS_ITEMS
 end
 
@@ -21427,6 +25876,180 @@ function WEAPONSLIST.GetAllItems()
   return WEAPONSLIST.GetItems("ALL")
 end
 
+local _wsAllowedPrefixes = {
+  'weapons.missiles.',
+  'weapons.nurs.',
+  'weapons.bombs.',
+  'weapons.containers.',
+  'weapons.droptanks.',
+  'weapons.adapters.',
+  'weapons.shells.',
+  'weapons.gunmounts.',
+}
+
+local function _wsIsAllowedWeaponKey(name)
+  if type(name) ~= "string" then return false end
+  for i = 1, #_wsAllowedPrefixes do
+    local prefix = _wsAllowedPrefixes[i]
+    if name:sub(1, #prefix) == prefix then
+      return true
+    end
+  end
+  return false
+end
+
+local function _wsLooksGuidedBomb(name)
+  local u = name:upper()
+  return u:find("GBU") or u:find("KAB") or u:find("LGB") or u:find("JDAM") or
+         u:find("SDB") or u:find("LS_6") or u:find("SPICE") or
+         u:find("AGM_62") or u:find("AGM-62")
+end
+
+local function _wsLooksAGMissile(name)
+  local u = name:upper()
+  return u:find("AGM") or u:find("KH") or u:find("X_") or u:find("X-") or
+         u:find("YJ") or u:find("CM_") or u:find("CM-") or u:find("KD_") or
+         u:find("KD-") or u:find("LD-") or u:find("BRM") or u:find("BK90") or
+         u:find("DWS39") or u:find("TOW") or u:find("HOT") or u:find("SPIKE") or
+         u:find("ADM_") or u:find("ADM-")
+end
+
+local function _wsLooksAAMissile(name)
+  local u = name:upper()
+  return u:find("AIM") or u:find("MICA") or u:find("IRIS") or u:find("PL-") or
+         u:find("PL_") or u:find("SD-") or u:find("SD_") or u:find("CATM") or
+         u:find("R_") or u:find("R-") or u:find("P_") or u:find("P-")
+end
+
+local function _wsCategoryForWeapon(name)
+  if name:sub(1, 17) == "weapons.missiles." then
+    if _wsLooksAGMissile(name) then
+      return WEAPONSLIST.ItemCategory.AG_MISSILES
+    end
+    if _wsLooksAAMissile(name) then
+      return WEAPONSLIST.ItemCategory.AA_MISSILES
+    end
+    return WEAPONSLIST.ItemCategory.AG_MISSILES
+  end
+  if name:sub(1, 13) == "weapons.nurs." then
+    return WEAPONSLIST.ItemCategory.AG_ROCKETS
+  end
+  if name:sub(1, 14) == "weapons.bombs." then
+    if _wsLooksGuidedBomb(name) then
+      return WEAPONSLIST.ItemCategory.AG_GUIDED_BOMBS
+    end
+    return WEAPONSLIST.ItemCategory.AG_BOMBS
+  end
+  if name:sub(1, 18) == "weapons.droptanks." then
+    return WEAPONSLIST.ItemCategory.FUEL_TANKS
+  end
+  return WEAPONSLIST.ItemCategory.MISC
+end
+
+local function _wsAddItem(category, name)
+  if not (category and name) then return end
+  WEAPONSLIST.Items[category] = WEAPONSLIST.Items[category] or {}
+  table.insert(WEAPONSLIST.Items[category], name)
+end
+
+local function _wsCollectLogisticCenterAirbases()
+  if not (bc and bc.getZones and bc.indexedZones) then return {} end
+  local list, seen = {}, {}
+  for _, zref in ipairs(bc:getZones() or {}) do
+    local z = bc.indexedZones[zref.zone]
+    local ab = z and z.airbaseName
+    if ab and z.LogisticCenter == true and not seen[ab] then
+      seen[ab] = true
+      list[#list + 1] = ab
+    end
+  end
+  table.sort(list)
+  return list
+end
+
+function WEAPONSLIST.SyncFromWarehouseLogistics(opts)
+  if WarehouseLogistics ~= true then return false end
+  if not (STORAGE and STORAGE.FindByName) then return false end
+  if not (WEAPONSLIST and WEAPONSLIST.Items) then return false end
+
+  opts = opts or {}
+  local addToList = (opts.addToList ~= false)
+  local logMissing = (opts.logMissing ~= false)
+  local logAdded = (opts.logAdded ~= false)
+
+  local known = {}
+  for _, list in pairs(WEAPONSLIST.Items or {}) do
+    for _, name in ipairs(list) do
+      known[name] = true
+    end
+  end
+
+  -- Build mods set so we can skip mod-only items when AllowMods is false.
+  local mods = {}
+  for _, name in ipairs(WEAPONSLIST_MODS_ITEMS or {}) do
+    mods[name] = true
+  end
+  local allowModWeapons = (Era == "Modern" and AllowMods == true)
+
+  local airbases = _wsCollectLogisticCenterAirbases()
+  if #airbases == 0 then return false end
+
+  local addedByCat = {}
+  local scanned = 0
+
+  for _, airbaseName in ipairs(airbases) do
+    local storage = STORAGE:FindByName(airbaseName)
+    if storage and storage.GetInventory then
+      local _, _, wp = storage:GetInventory()
+      for weaponName, qty in pairs(wp or {}) do
+        if type(qty) == "number" and qty >= 0 and _wsIsAllowedWeaponKey(weaponName) then
+          scanned = scanned + 1
+          if (not allowModWeapons) and mods[weaponName] then
+            -- Mods not allowed: ignore mod-only items so they don't get added/logged.
+          else
+            if not known[weaponName] then
+              known[weaponName] = true
+              local cat = _wsCategoryForWeapon(weaponName)
+              addedByCat[cat] = addedByCat[cat] or {}
+              table.insert(addedByCat[cat], weaponName)
+              if addToList then
+                _wsAddItem(cat, weaponName)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  local addedCount = 0
+  for _, list in pairs(addedByCat) do
+    table.sort(list)
+    addedCount = addedCount + #list
+  end
+
+  if logMissing then
+    if addedCount == 0 then
+      env.info("[WEAPONSLIST] Warehouse scan: no missing weapons found")
+    else
+      env.info(string.format("[WEAPONSLIST] Warehouse scan: %d airbases, %d items scanned, %d missing", #airbases, scanned, addedCount))
+      for cat, list in pairs(addedByCat) do
+        for _, item in ipairs(list) do
+          env.info(string.format("[WEAPONSLIST] Missing (%s): %s", tostring(cat), tostring(item)))
+        end
+      end
+    end
+  end
+
+  if addToList and logAdded and addedCount > 0 then
+    for cat, list in pairs(addedByCat) do
+      env.info(string.format("[WEAPONSLIST] Added %d item(s) to %s", #list, tostring(cat)))
+    end
+  end
+
+  return true
+end
+
 function WEAPONSLIST.ClearWeaponsInStorage(storage)
 	if not storage then return false end
 	for _, itemName in ipairs(WEAPONSLIST.GetAllItems() or {}) do
@@ -21443,7 +26066,7 @@ function WEAPONSLIST.ClearWeaponsAtAirbase(airbaseName)
 	return WEAPONSLIST.ClearWeaponsInStorage(storage)
 end
 
-local restrictedWeapons = {
+restrictedWeapons = restrictedWeapons or {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
     -- Missiles
@@ -21513,9 +26136,7 @@ local restrictedWeapons = {
     "weapons.missiles.AGM_114",
      --"weapons.missiles.AGM_114K",
     --"weapons.missiles.AGM_65F",
-
     -- Bombs
-    
     "weapons.bombs.GBU_31_V_4B",
     "weapons.bombs.CBU_105",
     "weapons.bombs.CBU_103",
@@ -21535,18 +26156,18 @@ local restrictedWeapons = {
     "weapons.bombs.GBU-43/B(MOAB)",}
 
 
-allowedPlanes = {
+allowedPlanes = allowedPlanes or {
   "MiG-19P","Mirage-F1AD","F/A-18A","Su-24MR","F-4E-45MC","MiG-23MLD","Mirage-F1CR","SA342Mistral","Mi-24V","F-15E","AJS37","UH-1H",
   "UH-60L","MB-339A","F-14A-135-GR", "F-14A-135-GR-Early", "F-15C","F-16A MLU","Mirage-F1BD","P3C_Orion","Mirage-F1M-EE","An-30M","F-5E-3_FC",
   "Mirage-F1EQ","A-10A", "Mirage-F1M-CE","Mirage-F1ED","Ka-27","E-2C","UH-60A","Mirage-F1C","Mirage-F1CE","AH-1W","MiG-21Bis","Mirage-F1BE",
-  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B",
+  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA",
   "Mirage-F1C-200","Mirage-F1DDA","MiG-15bis","Mirage-F1CJ","Mirage-F1CK","Mirage-F1AZ", "A-10C_2", "Mirage-F1CT","A-10C","M-2000C",
-  "Mirage-F1EH","Mirage-F1CH","SA342Minigun","MiG-29A","Bronco-OV-10A","OH-6A", "Mirage-F1CG","F-5E-3","F-86F Sabre","F-14A","L-39C","C-101CC",
-  "SA342L","Mi-8MT","Mirage-F1EE","Mi-24P","CH-47Fbl1","FA-18C_hornet","F-16C_50", "MiG-29 Fulcrum","UH-60L_DAP","C-130J-30","F-14B","AH-64D_BLK_II","MH-6J","AH-6J"}
+  "Mirage-F1EH","Mirage-F1CH","SA342Minigun","MiG-29A","Bronco-OV-10A","OH-6A", "Mirage-F1CG","F-5E-3","F-86F Sabre","F-14A","L-39C","C-101CC","SU22",
+  "SA342L","Mi-8MT","Mirage-F1EE","Mi-24P","CH-47Fbl1","FA-18C_hornet","F-16C_50", "MiG-29 Fulcrum","UH-60L_DAP","C-130J-30","F-14B","AH-64D_BLK_II","MH-6J","AH-6J","Mi-28NE"}
 
-restockAircraft = {
-"FA-18FT","EA-18G","F-22A","FA-18E","B-52H","FA-18F","FA-18ET","F15EX","A-29B","F-23A","Ka-50_3","Ka-50",
-"Bronco-OV-10A","JAS39Gripen_AG","MiG-31BM","JAS39Gripen","Su-35S","UH-60L","OH-6A","Su-35","JAS39Gripen_BVR","SK-60","T-45","UH-60L_DAP", "MiG-29 Fulcrum","MH-6J","AH-6J"}
+restockAircraft = restockAircraft or {
+"UH-60L_DAP","UH-60L","Bronco-OV-10A","Ka-50_3","Ka-50","SK-60","T-45","OH-6A","FA-18FT","EA-18G","F-22A","FA-18E","B-52H","FA-18F","FA-18ET","F15EX","A-29B","F-23A","Mi-28NE","SU22","AV8BNA","Su-30MKA","Su-30MKI","Su-30MKM","Su-30SM",
+"JAS39Gripen_AG","MiG-31BM","JAS39Gripen","Su-35S","Su-35","JAS39Gripen_BVR", "MH-6J","AH-6J"}
 
 
 
@@ -21559,6 +26180,31 @@ local restockWeapons = WEAPONSLIST.GetAllItems()
 
 function WEAPONSLIST.IsRestricted(itemName)
     return restrictedWeaponSet[itemName] == true
+end
+
+local planeUnlimitedCheckInitialized = false
+
+local function checkUnlimitedPlanesOnce(airbaseNames)
+	if planeUnlimitedCheckInitialized then return end
+	planeUnlimitedCheckInitialized = true
+	if type(airbaseNames) ~= "table" then return end
+	for _, airbaseName in ipairs(airbaseNames) do
+		local storage = STORAGE:FindByName(airbaseName)
+		if storage and storage.GetInventory and storage.IsUnlimited then
+			local ac = storage:GetInventory()
+			local samplePlane = nil
+			for name, _ in pairs(ac or {}) do
+				samplePlane = name
+				break
+			end
+			if samplePlane then
+				local ok, isUnlimited = pcall(storage.IsUnlimited, storage, samplePlane)
+				if ok and isUnlimited then
+					trigger.action.outText('Unlimited aircraft detected at '..tostring(airbaseName),15)
+				end
+			end
+		end
+	end
 end
 
 function checkWeaponsList(airbase)
@@ -21608,13 +26254,21 @@ function checkWeaponsList(airbase)
 		end
     end
 
-    local function restockColdwarLogisticCenter(storage,airbaseName)
-        if not storage then return end
-        if not storage.GetInventory then return end
+	local function restockColdwarLogisticCenter(storage,airbaseName)
+		if not storage then return end
+		if not storage.GetInventory then return end
 
-        local ac, lq, wp = storage:GetInventory()
+		local ac, lq, wp = storage:GetInventory()
 		if WarehouseLogistics ~= true or isLogisticCenterAirbase(airbaseName) then
 			for name, _ in pairs(wp or {}) do
+				if not (restrictedWeaponSet and restrictedWeaponSet[name]) then
+					storage:SetItem(name, 1073741823)
+				end
+			end
+			-- Also fill any allowed items that are missing from the warehouse list.
+			local allItems = (WEAPONSLIST and WEAPONSLIST.GetAllItems and WEAPONSLIST.GetAllItems()) or {}
+			for i = 1, #allItems do
+				local name = allItems[i]
 				if not (restrictedWeaponSet and restrictedWeaponSet[name]) then
 					storage:SetItem(name, 1073741823)
 				end
@@ -21666,6 +26320,8 @@ function checkWeaponsList(airbase)
             end
         end
 
+        checkUnlimitedPlanesOnce(airbaseList)
+
         for _, airbaseName in ipairs(airbaseList) do
             processColdwarAirbase(airbaseName)
         end
@@ -21711,3 +26367,16 @@ end
 timer.scheduleFunction(function()
     checkWeaponsList()
 end, {}, timer.getTime() + 1)
+
+local _wsWarehouseSyncDone = false
+timer.scheduleFunction(function()
+    if _wsWarehouseSyncDone then return end
+    if WarehouseLogistics ~= true then return end
+    if WEAPONSLIST and WEAPONSLIST.SyncFromWarehouseLogistics then
+        local ok = WEAPONSLIST.SyncFromWarehouseLogistics({ addToList = true, logMissing = true, logAdded = true })
+        if ok then
+            _wsWarehouseSyncDone = true
+            return
+        end
+    end
+end, {}, timer.getTime() + 0.1)
