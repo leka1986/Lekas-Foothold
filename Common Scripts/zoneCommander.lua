@@ -3253,7 +3253,7 @@ function RepositionAwacsToFront()
 	if IsGroupActive(AWACS_GROUPS[3]) then
 		local avoidX = (blueVec and blueVec.x) or (_awacsMissionParams[2] and _awacsMissionParams[2].x) or nil
 		local avoidZ = (blueVec and blueVec.z) or (_awacsMissionParams[2] and _awacsMissionParams[2].z) or nil
-		local coord2, z2, h2 = _computeAwacsStationWithZoneSecondary(2, avoidX, avoidZ, 150)
+		local coord2, z2, h2 = _computeAwacsStationWithZoneSecondary(2, avoidX, avoidZ, 100)
 		if coord2 then setAwacsRacetrack(3, coord2, h2, nil, z2) end
 	else
 		spawnAwacs(3, nil, nil)
@@ -3369,7 +3369,7 @@ function spawnAwacs(side, heading, leg)
     if side == 3 then
         local avoidX = _awacsMissionParams[2] and _awacsMissionParams[2].x or nil
         local avoidZ = _awacsMissionParams[2] and _awacsMissionParams[2].z or nil
-        coord, z, ch, toward = _computeAwacsStationWithZoneSecondary(2, avoidX, avoidZ, 150); if not coord then return end
+        coord, z, ch, toward = _computeAwacsStationWithZoneSecondary(2, avoidX, avoidZ, 100); if not coord then return end
     else
         coord, z, ch, toward = _computeAwacsStationWithZone(side); if not coord then return end
     end
@@ -6174,6 +6174,12 @@ end
     for i,v in ipairs(self.zones) do
         local unitTable = {}
 		local groupStatus = (not v.suspended) and {} or nil
+		local groupStatusMax = nil
+		if not v.suspended then
+			local upgradePool = v.getFilteredUpgrades and v:getFilteredUpgrades() or nil
+			local maxFromPool = upgradePool and Utils.getTableSize(upgradePool) or 0
+			groupStatusMax = (maxFromPool > 0) and maxFromPool or Utils.getTableSize(v.built)
+		end
         for i2,v2 in pairs(v.built) do
             unitTable[i2] = {}
             local gr = Group.getByName(v2)
@@ -6217,6 +6223,9 @@ end
         }
 		if groupStatus and #groupStatus > 0 then
 			states.zones[v.zone].groupStatus = groupStatus
+		end
+		if groupStatusMax and groupStatusMax > 0 then
+			states.zones[v.zone].groupStatusMax = groupStatusMax
 		end
 
 		if v.randomUpgradesRed then
