@@ -1739,7 +1739,7 @@ end)
 Group.getByName('ca-tanks-Coldwar'):destroy()
 Group.getByName('ca-tanks'):destroy()
 tanksMenu = nil
-bc:registerShopItem('armor', 'Deploy armor (for combined arms) ', ShopPrices.armor, function(sender)
+bc:registerShopItem('armor', 'Deploy armor', ShopPrices.armor, function(sender)
 	
 	if tanksMenu then
 		return 'Choose deploy zone from F10 menu'
@@ -1771,7 +1771,7 @@ function(sender, params)
 end)
 Group.getByName('ca-arty'):destroy()
 artyMenu = nil
-bc:registerShopItem('artillery', 'Deploy artillery (for combined arms) ', ShopPrices.artillery, function(sender)
+bc:registerShopItem('artillery', 'Deploy artillery', ShopPrices.artillery, function(sender)
 	
 	if artyMenu then
 		return 'Choose deploy zone from F10 menu'
@@ -1802,7 +1802,7 @@ function(sender, params)
 end)
 Group.getByName('ca-recon'):destroy()
 reconMenu = nil
-bc:registerShopItem('recon', 'Deploy recon group (for combined arms)', ShopPrices.recon, function(sender)
+bc:registerShopItem('recon', 'Deploy recon group', ShopPrices.recon, function(sender)
 	
 	if reconMenu then
 		return 'Choose deploy zone from F10 menu'
@@ -1834,7 +1834,7 @@ function(sender, params)
 end)
 Group.getByName('ca-airdef'):destroy()
 airdefMenu = nil
-bc:registerShopItem('airdef', 'Deploy air defence (for combined arms)', ShopPrices.airdef, function(sender)
+bc:registerShopItem('airdef', 'Deploy air defence', ShopPrices.airdef, function(sender)
 	
 	if airdefMenu then
 		return 'Choose deploy zone from F10 menu'
@@ -2004,12 +2004,21 @@ local flaretargets = function(tz)
 	local points = {}
 	for _,u in ipairs(units) do if u and u:isExist() then local p=u:getPosition().p; if p then table.insert(points,p) end end end
 	for _,s in ipairs(statics) do local p=s:getPoint(); if p then table.insert(points,p) end end
+	local selectedPoints = {}
 	for i=1,3 do
 		if #points == 0 then break end
 		local idx = math.random(1,#points)
-		local az = math.random(0,359)
-		trigger.action.signalFlare(points[idx], trigger.flareColor.Red, az)
+		selectedPoints[#selectedPoints+1] = points[idx]
 		table.remove(points,idx)
+	end
+	for _,pt in ipairs(selectedPoints) do
+		for burst=0,2 do
+			local flarePoint = { x = pt.x, y = pt.y, z = pt.z }
+			timer.scheduleFunction(function(args, t)
+				trigger.action.signalFlare(args.point, trigger.flareColor.Red, math.random(0,359))
+				return nil
+			end, { point = flarePoint }, timer.getTime() + (burst * 5))
+		end
 	end
 end
 
@@ -2480,7 +2489,7 @@ end)
 -----------------------------------------------DYNAMIC SHOP ------------------------------------------
 
 
-bc:registerShopItem('dynamiccap', 'Dynamic CAP', ShopPrices.dynamiccap, function(sender)
+bc:registerShopItem('dynamiccap', 'CAP Flight', ShopPrices.dynamiccap, function(sender)
     if capActive then
         return 'CAP mission still in progress'
     end
@@ -2543,7 +2552,7 @@ function (sender, params)
     return
 end)
 ---
-bc:registerShopItem('dynamiccas', 'Dynamic CAS', ShopPrices.dynamiccas,
+bc:registerShopItem('dynamiccas', 'CAS Flight', ShopPrices.dynamiccas,
 function(sender)
     if casActive then
         return 'CAS mission still in progress'
@@ -2591,7 +2600,7 @@ function(sender, params)
     end
 end)
 
-bc:registerShopItem('dynamicdecoy', 'Dynamic Decoy', ShopPrices.dynamicdecoy,
+bc:registerShopItem('dynamicdecoy', 'TALD DECOY Flight', ShopPrices.dynamicdecoy,
 function(sender)
     if decoyActive then
         return 'Decoy mission still in progress'
@@ -2646,7 +2655,7 @@ function(sender, params)
 end)
 
 
-bc:registerShopItem('dynamicsead', 'Dynamic SEAD', ShopPrices.dynamicsead,
+bc:registerShopItem('dynamicsead', 'SEAD Flight', ShopPrices.dynamicsead,
 function(sender)
     if seadActive then
         return 'SEAD mission still in progress'
@@ -2700,7 +2709,7 @@ function(sender, params)
     end
 end)
 
-bc:registerShopItem('dynamicbomb', 'Dynamic Bomb run', ShopPrices.dynamicbomb,
+bc:registerShopItem('dynamicbomb', 'Bomber Flight', ShopPrices.dynamicbomb,
 function(sender)
     if bomberActive then
         return 'Bomb mission still in progress'
@@ -2756,7 +2765,7 @@ end)
 
 
 if UseStatics == true then
-bc:registerShopItem('Dynamicstatic', 'Dynamic building Strike', ShopPrices.dynamicstatic,
+bc:registerShopItem('dynamicstatic', 'Static structure Flight', ShopPrices.dynamicstatic,
 function(sender)
     if StructureActive then
         return 'building strike mission still in progress'
@@ -3346,7 +3355,7 @@ function(sender,params)
 end)
 
 local logiMenu=nil
-bc:registerShopItem('zlogc','Upgrade zone to logistic center',ShopPrices.zlogc,function(sender)
+bc:registerShopItem('zlogc','Make a zone logistic center',ShopPrices.zlogc,function(sender)
 	if logiMenu then
 		return 'Already choosing a zone'
 	end
@@ -3625,43 +3634,76 @@ ShopRankRequirements = ShopRankRequirements or {
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
 bc:addShopItem(1, 'redmassattack', -1, 2) -- red AI mass airbase attack
 
-bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac) -- MQ-9 Reaper JTAC mission
-bc:addShopItem(2, 'dynamiccap', -1, 2, ShopRankRequirements.dynamiccap) -- CAP
+ShopCategoryLabels = ShopCategoryLabels or {}
+local ShopCats = ShopCategoryLabels
 
-bc:addShopItem(2, 'dynamiccas', -1, 3, ShopRankRequirements.dynamiccas) -- CAS
-bc:addShopItem(2, 'dynamicbomb', -1, 4, ShopRankRequirements.dynamicbomb) -- Bomber
-bc:addShopItem(2, 'dynamicsead', -1, 5, ShopRankRequirements.dynamicsead) -- SEAD
-bc:addShopItem(2, 'dynamicdecoy', -1, 6, ShopRankRequirements.dynamicdecoy) -- Decoy flight
+ShopCats.AIAttack = ShopCats.AIAttack or "AI Attack"
+ShopCats.ZoneUpgrades = ShopCats.ZoneUpgrades or "Zone Upgrades"
+ShopCats.JTACIntel = ShopCats.JTACIntel or "JTAC & Intel"
+ShopCats.MarkingTools = ShopCats.MarkingTools or "Marking & Tools"
+ShopCats.CombinedArms = ShopCats.CombinedArms or "Combined Arms"
+ShopCats.LogisticsStrategic = ShopCats.LogisticsStrategic or "Capture & resources"
+ShopCats.OtherSupport = ShopCats.OtherSupport or "Other Support"
+
+ShopCats.Order = ShopCats.Order or {
+    ShopCats.AIAttack,
+    ShopCats.ZoneUpgrades,
+    ShopCats.JTACIntel,
+    ShopCats.MarkingTools,
+    ShopCats.CombinedArms,
+    ShopCats.LogisticsStrategic,
+    ShopCats.OtherSupport,
+}
+
+-- AI Attack
+bc:addShopItem(2, 'dynamiccap', -1, 1, ShopRankRequirements.dynamiccap, ShopCats.AIAttack) -- CAP Flight
+bc:addShopItem(2, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats.AIAttack) -- CAS Flight
+bc:addShopItem(2, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack) -- Bomber Flight
+bc:addShopItem(2, 'dynamicsead', -1, 4, ShopRankRequirements.dynamicsead, ShopCats.AIAttack) -- SEAD Flight
+bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, ShopCats.AIAttack) -- TALD DECOY Flight
 if UseStatics == true then
-	bc:addShopItem(2, 'dynamicstatic', -1,7, ShopRankRequirements.dynamicstatic) -- Static buildings
+    bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
 end
-bc:addShopItem(2, 'dynamicarco', 1, 8, ShopRankRequirements.dynamicarco) -- Navy tanker
-bc:addShopItem(2, 'dynamictexaco', 1, 9, ShopRankRequirements.dynamictexaco) -- Airforce tanker
-bc:addShopItem(2, 'farphere', -1, 10, ShopRankRequirements.farphere)
-bc:addShopItem(2, 'capture', -1, 11, ShopRankRequirements.capture) -- emergency capture
-bc:addShopItem(2, 'smoke', -1, 12, ShopRankRequirements.smoke) -- smoke on target
-bc:addShopItem(2, 'flare', -1, 13, ShopRankRequirements.flare) -- flare on target
-bc:addShopItem(2, 'illum', -1, 14, ShopRankRequirements.illum) -- illumination bomb
-bc:addShopItem(2, 'intel', -1, 15, ShopRankRequirements.intel) -- Intel
-bc:addShopItem(2, 'supplies2', -1, 16, ShopRankRequirements.supplies2) -- upgrade friendly zone
-bc:addShopItem(2, 'supplies', -1, 17, ShopRankRequirements.supplies) -- fully upgrade friendly zone
-bc:addShopItem(2, 'zinf', -1, 18, ShopRankRequirements.zinf) -- add infantry to a zone
-bc:addShopItem(2, 'zarm', -1, 19, ShopRankRequirements.zarm) -- add armour group to a zone
-bc:addShopItem(2, 'zsam', -1, 20, ShopRankRequirements.zsam) -- add Nasams to a zone
-bc:addShopItem(2, 'zhimars', -1, 21, ShopRankRequirements.zhimars) -- add HIMARS to a zone
-bc:addShopItem(2, 'zlogc', -1, 21, ShopRankRequirements.zlogc) -- upgrade zone to logistic center
-bc:addShopItem(2, 'zwh50', -1, 22, ShopRankRequirements.zwh50) -- resupply warehouse with 50
-bc:addShopItem(2, 'gslot', 1, 23, ShopRankRequirements.gslot) -- add another slot for upgrade
+bc:addShopItem(2, 'cruisemsl', 12, 7, ShopRankRequirements.cruisemsl, ShopCats.AIAttack) -- Cruise missiles
+
+-- Zone Upgrades
+bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
+bc:addShopItem(2, 'zarm', -1, 2, ShopRankRequirements.zarm, ShopCats.ZoneUpgrades) -- add armour group to a zone
+bc:addShopItem(2, 'zsam', -1, 3, ShopRankRequirements.zsam, ShopCats.ZoneUpgrades) -- add Nasams to a zone
+bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
+bc:addShopItem(2, 'gslot', 1, 5, ShopRankRequirements.gslot, ShopCats.ZoneUpgrades) -- add another slot for upgrade
 if Era == 'Modern' then
-	bc:addShopItem(2, 'zpat', -1, 24, ShopRankRequirements.zpat) -- Patriot system.
+    bc:addShopItem(2, 'zpat', -1, 6, ShopRankRequirements.zpat, ShopCats.ZoneUpgrades) -- Patriot system.
 end
-bc:addShopItem(2, 'armor', -1, 25, ShopRankRequirements.armor) -- combined arms
-bc:addShopItem(2, 'artillery', -1, 26, ShopRankRequirements.artillery) -- combined arms
-bc:addShopItem(2, 'recon', -1, 27, ShopRankRequirements.recon) -- combined arms
-bc:addShopItem(2, 'airdef', -1, 28, ShopRankRequirements.airdef) -- combined arms
-bc:addShopItem(2, '9lineam', -1, 29, ShopRankRequirements["9lineam"]) -- free jtac
-bc:addShopItem(2, '9linefm', -1, 30, ShopRankRequirements["9linefm"]) -- free jtac
-bc:addShopItem(2, 'cruisemsl', 12, 31, ShopRankRequirements.cruisemsl) -- Cruise missiles
+
+-- JTAC & Intel
+bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac, ShopCats.JTACIntel) -- MQ-9 Reaper JTAC mission
+bc:addShopItem(2, 'smoke', -1, 2, ShopRankRequirements.smoke, ShopCats.JTACIntel) -- smoke on target
+bc:addShopItem(2, 'flare', -1, 3, ShopRankRequirements.flare, ShopCats.JTACIntel) -- flare on target
+bc:addShopItem(2, 'illum', -1, 4, ShopRankRequirements.illum, ShopCats.JTACIntel) -- illumination bomb
+bc:addShopItem(2, 'intel', -1, 5, ShopRankRequirements.intel, ShopCats.JTACIntel) -- Intel
+bc:addShopItem(2, '9lineam', -1, 6, ShopRankRequirements['9lineam'], ShopCats.JTACIntel) -- free jtac
+bc:addShopItem(2, '9linefm', -1, 7, ShopRankRequirements['9linefm'], ShopCats.JTACIntel) -- free jtac
+
+-- Combined Arms
+bc:addShopItem(2, 'armor', -1, 1, ShopRankRequirements.armor, ShopCats.CombinedArms) -- combined arms
+bc:addShopItem(2, 'artillery', -1, 2, ShopRankRequirements.artillery, ShopCats.CombinedArms) -- combined arms
+bc:addShopItem(2, 'recon', -1, 3, ShopRankRequirements.recon, ShopCats.CombinedArms) -- combined arms
+bc:addShopItem(2, 'airdef', -1, 4, ShopRankRequirements.airdef, ShopCats.CombinedArms) -- combined arms
+
+-- Logistics & Strategic
+bc:addShopItem(2, 'capture', -1, 1, ShopRankRequirements.capture, ShopCats.LogisticsStrategic) -- emergency capture
+bc:addShopItem(2, 'supplies2', -1, 2, ShopRankRequirements.supplies2, ShopCats.LogisticsStrategic) -- upgrade friendly zone
+bc:addShopItem(2, 'supplies', -1, 3, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
+if WarehouseLogistics then
+    bc:addShopItem(2, 'zlogc', -1, 4, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
+    bc:addShopItem(2, 'zwh50', -1, 5, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
+end
+
+-- Other Support
+bc:addShopItem(2, 'dynamicarco', 1, 1, ShopRankRequirements.dynamicarco, ShopCats.OtherSupport) -- Navy tanker
+bc:addShopItem(2, 'dynamictexaco', 1, 2, ShopRankRequirements.dynamictexaco, ShopCats.OtherSupport) -- Airforce tanker
+bc:addShopItem(2, 'farphere', -1, 3, ShopRankRequirements.farphere, ShopCats.OtherSupport) -- deploy FARP
 -----------------------------------------------
 
 

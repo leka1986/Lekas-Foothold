@@ -2026,12 +2026,21 @@ local flaretargets = function(tz)
 	local points = {}
 	for _,u in ipairs(units) do if u and u:isExist() then local p=u:getPosition().p; if p then table.insert(points,p) end end end
 	for _,s in ipairs(statics) do local p=s:getPoint(); if p then table.insert(points,p) end end
+	local selectedPoints = {}
 	for i=1,3 do
 		if #points == 0 then break end
 		local idx = math.random(1,#points)
-		local az = math.random(0,359)
-		trigger.action.signalFlare(points[idx], trigger.flareColor.Red, az)
+		selectedPoints[#selectedPoints+1] = points[idx]
 		table.remove(points,idx)
+	end
+	for _,pt in ipairs(selectedPoints) do
+		for burst=0,2 do
+			local flarePoint = { x = pt.x, y = pt.y, z = pt.z }
+			timer.scheduleFunction(function(args, t)
+				trigger.action.signalFlare(args.point, trigger.flareColor.Red, math.random(0,359))
+				return nil
+			end, { point = flarePoint }, timer.getTime() + (burst * 5))
+		end
 	end
 end
 
