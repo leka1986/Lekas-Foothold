@@ -1,5 +1,18 @@
 env.info("ZoneSetup: is loading.")
 
+local L10N = FH_L10N
+local function LT(T) return T or L10N end
+local function LTGet(key) return L10N:DeferredGet(key) end
+local function LTFormat(key, ...) return L10N:DeferredFormat(key, ...) end
+
+local function localizedHeadingLabel(headingName, T)
+	return L10N:DynamicHeadingLabel(headingName, T)
+end
+
+local function localizedLegLabel(legName, T)
+	return L10N:DynamicLegLabel(legName, T)
+end
+
 function merge(tbls)
 	local res = {}
 	for i,v in ipairs(tbls) do
@@ -124,62 +137,62 @@ upgrades = {
 ------------------------------------end upgrades section------------------------------------------
 --------------------------------begin flavor section (this is what gives a hint or description of the zone to the player)-----------------------------------
 flavor = {
-    kandahar           	  = 'WPT 1\nKandahar\nMain hub for logistics and fixed-wing ops. Hold this and you hold the south.',
-    alpha              	  = 'WPT 2\nCheckpoint Alpha\nFrontline staging area linking Kandahar to the central routes.',
-    bost               	  = 'WPT 3\nBost\nHardpoint near Bastion. Shortens heli legs and protects the Dwyer route.',
-    campbastion        	  = 'WPT 4\nCamp Bastion\nMajor coalition airfield. Your safest logistics chain starts here.',
-    dwyer              	  = 'WPT 5\nDwyer\nForward strip linking Bost to Nimroz. If this falls, Nimroz gets isolated fast.',
-    nimroz             	  = 'WPT 6\nNimroz\nDesert runway and logistics node. Keeps Farah supplied and the west alive.',
-    farah              	  = 'WPT 7\nFarah\nForward runway on the west approach. Supplies here keep Shindand pressure constant.',
-    shindand           	  = 'WPT 8\nShindand\nStrategic airbase between Farah and Herat. Perfect staging point for pushing west.',
-    herat              	  = 'WPT 9\nHerat\nWestern anchor. Once captured, it opens the entire west corridor.',
-    qalainaw           	  = 'WPT 10\nQala i Naw\nWestern connector. If this falls, the north-west becomes exposed.',
-    maymanazahiraddin  	  = 'WPT 11\nMaymana Zahiraddin Faryabi\nNorthern outpost. Hold it to lock down the north-west corridor.',
-    chaghcharan        	  = 'WPT 12\nChaghcharan\nMountain connector bridging Herat/QalaiNaw with Bamyan and the north-west.',
-    bamyan             	  = 'WPT 13\nBamyan\nHigh-altitude route control linking the Kabul pocket to the western chain.',
-    bagram             	  = 'WPT 14\nBagram\nStrategic military airbase north of Kabul.\nControls air dominance over the capital and central corridor.',
-    kabul              	  = 'WPT 15\nKabul\nHigh-value capital node. Expect heavy resistance and constant pressure.',
-    checkpointkabulw   	  = 'WPT 16\nCheckpoint Kabul W\nWestern checkpoint. Defensive choke on the capital approach.',
-    kabulsouth         	  = 'WPT 17\nCheckpoint Kabul S\nSouthern approach into Kabul. Best place to stop pressure from Delta and Gardez.',
-    checkpointkabule   	  = 'WPT 18\nCheckpoint Kabul E\nEastern checkpoint into Kabul. Main friction point for attacks from the hills.',
-    fobkunar           	  = 'WPT 19\nFOB Kunar\nForward operating base in the east. Short-hop launches toward nearby hideouts.',
-    jalalabad          	  = 'WPT 20\nJalalabad\nGateway to the east. Supplies here push the FOB Kunar line forward.',
-    gardez             	  = 'WPT 21\nGardez\nSouthern Kabul approach. Great for supplies and patrols toward Jalalabad.',
-    delta              	  = 'WPT 22\nCheckpoint Delta\nKabul ring gate. Control Delta to control access to Kabul and Bamyan.',
-    ghazniheliport     	  = 'WPT 23\nGhazni Heliport\nRotary-wing hub controlling the midline between Charlie and Delta.',
-    sharana            	  = 'WPT 24\nSharana\nMountain-side runway. Strong stepping stone between Charlie, Gardez, and Ghazni.',
-    charlie            	  = 'WPT 25\nCheckpoint Charlie\nCentral crossroad. Pressure Tarinkot, Sharana, and Ghazni from here.',
-    bravo              	  = 'WPT 26\nCheckpoint Bravo\nTraffic control point protecting the Kandahar ↔ Tarinkot corridor.',
-    tarinkot           	  = 'WPT 27\nTarinkot\nKey runway in the central-south. Controls routes to Bravo/Charlie and the insurgent belt.',
-    insurgentqalat        = 'Insurgent Base Qalat\nFortified stronghold. Clearing it reduces raids along the Bravo corridor.',
-    insurgentdelaram      = 'Insurgent Base Delaram\nRoadside ambush hub. Leaving it alive threatens Bastion supply lines.',
-    insurgentchimozay     = 'Insurgent Base Chimozay\nRural camp network used to harass Farah and the west route.',
-    insurgentnili         = 'Insurgent Base Nili\nHidden valley base. Expect MANPADS/technicals in the high ground.',
-    insurgentalpha        = 'Insurgent Base Alpha\nTraining compound. If ignored, Tarinkot stays contested.',
-    insurgentqarabagh     = 'Insurgent Qarabagh\nUrban pocket and supply cache. Clearing it stabilizes the Charlie sector.',
-    insurgentasadabad     = 'Insurgent Base Asadabad\nKunar foothills hideout. Hit it to stop pressure on FOB Kunar.',
-    insurgentkunar        = 'Insurgent Base Kunar\nRiver valley camp. Frequent raids and reinforcements move through here.',
-    insurgentsarobi       = 'Insurgent Base Sarobi\nStrongpoint east of Kabul. Clearing it reduces attacks on Kabul E.',
-    insurgentmountain     = 'Insurgent Base Mountain\nMountain hideout network. Expect AAA/MANPADS and hard-to-find units.',
-	faridbasharat   	  = 'FOB-Farid Basharat\nAbandoned forward operating base. Light fortifications remain. Capture to establish a new foothold.',
-	ahmadshahmassoud 	  = 'FOB-Ahmad Shah Massoud\nFormer coalition FOB now abandoned. Minimal resistance expected. Capture to enable forward operations.',
-	ismailkhan    		  = 'FOB-Ismail Khan\nDeserted FOB with aging infrastructure. Strategic location for regional control. Captureable.',
-	hamidkarzai   		  = 'FOB-Hamid Karzai\nOnce a key logistics FOB, now abandoned. Securing it restores supply and helicopter access.',
-	javidbasharat 		  = 'FOB-Javid Basharat\nRemote and abandoned FOB. Limited defenses remain. Capture to deny enemy staging ground.',
-	shank         		  = 'FOB-Shank\nFormer major FOB now in disuse. Expect scattered enemy presence. Capture to reopen air and ground operations.',
-	lagman        		  = 'FOB-Lagman\nAbandoned FOB in rugged terrain. Strategic overlook of surrounding routes. Captureable.',
-	bostick       		  = 'FOB-Bostick\nOld border-region FOB left unmanned. Control of this site improves regional security.',
-	delaram        		  = 'FOB-Delaram\nAbandoned FOB near key transit routes. Capture to reestablish forward presence and logistics.',
-	jamsheed       		  = 'FOB-Jamsheed\nAbandoned FOB near key position and transit routes. Capture to reestablish forward presence and logistics.',
-	fenty        		  = 'FOB-Fenty\nAbandoned NATO FOB in rugged terrain in path to Tarinkot. Capture to establish northern presense and logistics.',
-	samalpha			  = 'SAM Site Alpha\nSAM site outside of Farah. Take caution.',
-	sambravo			  = 'SAM Site Bravo\nSAM site en route to Sharana. Take caution.',
-	samcharlie			  = 'SAM Site Charlie\nSAM site west of Fob Hamid Karzai. Take caution.',
-	--samdelta			  = 'SAM Site Delta\nSAM site to the west of Checkpoint Kabul W. Take caution.',
-	samjamsheed			  = 'Jamsheed SAM Site\nThe legend of Jamsheed SAM site has been identified. Take extreme caution in this area.',
-	urgoon				  = 'Urgoon Heliport\nAbandoned heliport that can be captured to advance warehouse logistics.',
-	khost				  = 'Khost\nAbandoned airport that can be captured to advance warehouse logistics.',
-	hidden				  = 'Hidden\nThis is hidden.',
+    kandahar           	  = L10N:Format("AF_FLAVOR_KANDAHAR", 1),
+    alpha              	  = L10N:Format("AF_FLAVOR_ALPHA", 2),
+    bost               	  = L10N:Format("AF_FLAVOR_BOST", 3),
+    campbastion        	  = L10N:Format("AF_FLAVOR_CAMP_BASTION", 4),
+    dwyer              	  = L10N:Format("AF_FLAVOR_DWYER", 5),
+    nimroz             	  = L10N:Format("AF_FLAVOR_NIMROZ", 6),
+    farah              	  = L10N:Format("AF_FLAVOR_FARAH", 7),
+    shindand           	  = L10N:Format("AF_FLAVOR_SHINDAND", 8),
+    herat              	  = L10N:Format("AF_FLAVOR_HERAT", 9),
+    qalainaw           	  = L10N:Format("AF_FLAVOR_QALA_I_NAW", 10),
+    maymanazahiraddin  	  = L10N:Format("AF_FLAVOR_MAYMANA_ZAHIRADDIN", 11),
+    chaghcharan        	  = L10N:Format("AF_FLAVOR_CHAGHCHARAN", 12),
+    bamyan             	  = L10N:Format("AF_FLAVOR_BAMYAN", 13),
+    bagram             	  = L10N:Format("AF_FLAVOR_BAGRAM", 14),
+    kabul              	  = L10N:Format("AF_FLAVOR_KABUL", 15),
+    checkpointkabulw   	  = L10N:Format("AF_FLAVOR_CHECKPOINT_KABUL_W", 16),
+    kabulsouth         	  = L10N:Format("AF_FLAVOR_CHECKPOINT_KABUL_S", 17),
+    checkpointkabule   	  = L10N:Format("AF_FLAVOR_CHECKPOINT_KABUL_E", 18),
+    fobkunar           	  = L10N:Format("AF_FLAVOR_FOB_KUNAR", 19),
+    jalalabad          	  = L10N:Format("AF_FLAVOR_JALALABAD", 20),
+    gardez             	  = L10N:Format("AF_FLAVOR_GARDEZ", 21),
+    delta              	  = L10N:Format("AF_FLAVOR_CHECKPOINT_DELTA", 22),
+    ghazniheliport     	  = L10N:Format("AF_FLAVOR_GHAZNI_HELIPORT", 23),
+    sharana            	  = L10N:Format("AF_FLAVOR_SHARANA", 24),
+    charlie            	  = L10N:Format("AF_FLAVOR_CHECKPOINT_CHARLIE", 25),
+    bravo              	  = L10N:Format("AF_FLAVOR_CHECKPOINT_BRAVO", 26),
+    tarinkot           	  = L10N:Format("AF_FLAVOR_TARINKOT", 27),
+    insurgentqalat        = L10N:Get("AF_FLAVOR_INSURGENT_QALAT"),
+    insurgentdelaram      = L10N:Get("AF_FLAVOR_INSURGENT_DELARAM"),
+    insurgentchimozay     = L10N:Get("AF_FLAVOR_INSURGENT_CHIMOZAY"),
+    insurgentnili         = L10N:Get("AF_FLAVOR_INSURGENT_NILI"),
+    insurgentalpha        = L10N:Get("AF_FLAVOR_INSURGENT_ALPHA"),
+    insurgentqarabagh     = L10N:Get("AF_FLAVOR_INSURGENT_QARABAGH"),
+    insurgentasadabad     = L10N:Get("AF_FLAVOR_INSURGENT_ASADABAD"),
+    insurgentkunar        = L10N:Get("AF_FLAVOR_INSURGENT_KUNAR"),
+    insurgentsarobi       = L10N:Get("AF_FLAVOR_INSURGENT_SAROBI"),
+    insurgentmountain     = L10N:Get("AF_FLAVOR_INSURGENT_MOUNTAIN"),
+	faridbasharat   	  = L10N:Get("AF_FLAVOR_FOB_FARID_BASHARAT"),
+	ahmadshahmassoud 	  = L10N:Get("AF_FLAVOR_FOB_AHMAD_SHAH_MASSOUD"),
+	ismailkhan    		  = L10N:Get("AF_FLAVOR_FOB_ISMAIL_KHAN"),
+	hamidkarzai   		  = L10N:Get("AF_FLAVOR_FOB_HAMID_KARZAI"),
+	javidbasharat 		  = L10N:Get("AF_FLAVOR_FOB_JAVID_BASHARAT"),
+	shank         		  = L10N:Get("AF_FLAVOR_FOB_SHANK"),
+	lagman        		  = L10N:Get("AF_FLAVOR_FOB_LAGMAN"),
+	bostick       		  = L10N:Get("AF_FLAVOR_FOB_BOSTICK"),
+	delaram        		  = L10N:Get("AF_FLAVOR_FOB_DELARAM"),
+	jamsheed       		  = L10N:Get("AF_FLAVOR_FOB_JAMSHEED"),
+	fenty        		  = L10N:Get("AF_FLAVOR_FOB_FENTY"),
+	samalpha			  = L10N:Get("AF_FLAVOR_SAM_ALPHA"),
+	sambravo			  = L10N:Get("AF_FLAVOR_SAM_BRAVO"),
+	samcharlie			  = L10N:Get("AF_FLAVOR_SAM_CHARLIE"),
+	--samdelta			  = L10N:Get("AF_FLAVOR_SAM_DELTA"),
+	samjamsheed			  = L10N:Get("AF_FLAVOR_SAM_JAMSHEED"),
+	urgoon				  = L10N:Get("AF_FLAVOR_URGOON"),
+	khost				  = L10N:Get("AF_FLAVOR_KHOST"),
+	hidden				  = L10N:Get("AF_FLAVOR_HIDDEN"),
 
 }
 -----------------------------------end flavor section------------------------------------------
@@ -234,8 +247,8 @@ local cwSwap = {
 	['bluePD'] 						= 'bluePD Coldwar',
 	['bluePD 2'] 					= 'bluePD 2 Coldwar',
 	['bluePD1'] 					= 'bluePD 2 Coldwar',
-	['Red SAM SHORAD Tor M2'] = 'Red SAM SHORAD SA-8',
-	['Red SAM SHORAD Pantsir S1'] = 'Red SAM SHORAD SA-19',
+	['Red SAM SHORAD Tor M2'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9', 'Red SAM SHORAD SA-15'} },
+	['Red SAM SHORAD Pantsir S1'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9', 'Red SAM SHORAD SA-15'} },
 }
 ----------------------end coldwar swap section-----------------------
 
@@ -291,9 +304,26 @@ local function deepSwap(t,s)
 				if sub == '' then
 					t[k] = nil
 				elseif type(sub)=='table' then
-					t[k] = sub[1]
-					for i=2,#sub do
-						table.insert(t,sub[i])
+					local mode = sub.mode
+					local list = sub.list
+					if type(list)=='table' then
+						if mode == 'random' then
+							if #list > 0 then
+								t[k] = list[math.random(1,#list)]
+							else
+								t[k] = nil
+							end
+						else
+							t[k] = list[1]
+							for i=2,#list do
+								table.insert(t,list[i])
+							end
+						end
+					else
+						t[k] = sub[1]
+						for i=2,#sub do
+							table.insert(t,sub[i])
+						end
 					end
 				else
 					t[k] = sub
@@ -308,34 +338,29 @@ if Era == 'Coldwar' then
 end
 
 local SamSwap = {
-	['Red SAM SA-10'] = 'Red SAM SA-2',
-	['Red SAM SA-11'] = 'Red SAM SA-6',
-	['Red SAM SHORAD Tor M2'] = 'Red SAM SHORAD SA-8',
-	['Red SAM SHORAD SA-15'] = 'Red SAM SHORAD SA-9',
-	['Red SAM SHORAD Pantsir S1'] = 'Red SAM SHORAD SA-19',
+	['Red SAM SA-10'] = { mode='random', list={'Red SAM SA-2', 'Red SAM SA-3', 'Red SAM SA-6'} },
+	['Red SAM SA-11'] = { mode='random', list={'Red SAM SA-2', 'Red SAM SA-3', 'Red SAM SA-6'} },
 	['Red SAM SA-10 Fixed Jamsheed IsNotShown-1'] = 'Red SAM SA-2 Fixed Jamsheed IsNotShown-1',
 	
 }
 
-local function deepSwapAgain(t,s)
-	for k,v in pairs(t) do
-		if type(v)=='table' then
-			deepSwapAgain(v,s)
-		elseif s[v] then
-			if type(s[v])=='table' then
-				t[k]=s[v][1]
-				for i=2,#s[v] do
-					table.insert(t,s[v][i])
-				end
-			else
-				t[k]=s[v]
-			end
-		end
-	end
-end
+local SamSwapNoTorM2AndPantsir = {
+	['Red SAM SHORAD Pantsir S1'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
+	['Red SAM SHORAD Tor M2'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
+}
+
+local SamSwapNoSA15 = {
+	['Red SAM SHORAD SA-15'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
+}
 ----------------------------end coldwar fixed swaps -----------------------------------------
 if NoSA10AndSA11 == true then
-	deepSwapAgain(upgrades,SamSwap)
+	deepSwap(upgrades,SamSwap)
+end
+if NoTorM2AndPantsir == true then
+	deepSwap(upgrades,SamSwapNoTorM2AndPantsir)
+end
+if NoSA15 == true then
+	deepSwap(upgrades,SamSwapNoSA15)
 end
 
 
@@ -390,7 +415,13 @@ if Era == 'Coldwar' then
 end
 
 if NoSA10AndSA11 == true then
-	deepSwapAgain(RandomRedPool, SamSwap)
+	deepSwap(RandomRedPool, SamSwap)
+end
+if NoTorM2AndPantsir == true then
+	deepSwap(RandomRedPool, SamSwapNoTorM2AndPantsir)
+end
+if NoSA15 == true then
+	deepSwap(RandomRedPool, SamSwapNoSA15)
 end
 
 ZoneSizeExclusions = {
@@ -425,8 +456,9 @@ RandomUpgradeTemplatesBlue = {
     insurgent = { sam = 0, shorad = {1,3}, aaa = {1,2}, ground = {1,2}, armor = 0, arty = 0, total = {6,7} },
 }
 
-RandomGroundGroups = RandomGroundGroups or false
-RandomBlueGroups = RandomBlueGroups or true
+RandomGroundGroups = true
+RandomBlueGroups = true
+AllowScriptedSupplies = AllowScriptedSupplies ~= false
 
 bc = BattleCommander:new(filepath, 13, 60)
 if RankingSystem then
@@ -436,32 +468,32 @@ end
 Hunt = true
 -----------------------------begin zone definitions(this is where a side is chosen and what flavor and upgrades each zone will have etc etc)-------------------------
 zones = {
-    kandahar            = ZoneCommander:new({zone='Kandahar',                    side=2, size='big', level=25, upgrades=upgrades.airfieldStart,    	crates={},flavorText=flavor.kandahar}),
-    alpha               = ZoneCommander:new({zone='Checkpoint Alpha',            side=2, size='small', level=25, upgrades=upgrades.farp,             	crates={},flavorText=flavor.alpha}),
+    kandahar            = ZoneCommander:new({zone='Kandahar',                    side=StartNormal and 2 or 1, size='big', level=25, upgrades=upgrades.airfieldStart,    	crates={},flavorText=flavor.kandahar,income = 0.75, redIncomeOnly=true}),
+    alpha               = ZoneCommander:new({zone='Checkpoint Alpha',            side=StartNormal and 2 or 1, size='small', level=25, upgrades=upgrades.farp,             	crates={},flavorText=flavor.alpha}),
     bost                = ZoneCommander:new({zone='Bost',                        side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,          crates={},flavorText=flavor.bost}),
-    campbastion         = ZoneCommander:new({zone='Camp Bastion',                side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.campbastion}),
+    campbastion         = ZoneCommander:new({zone='Camp Bastion',                side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.campbastion,income = 0.75, redIncomeOnly=true}),
     dwyer               = ZoneCommander:new({zone='Dwyer',                       side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.dwyer}),
     bravo               = ZoneCommander:new({zone='Checkpoint Bravo',            side=1, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.bravo}),
-    tarinkot            = ZoneCommander:new({zone='Tarinkot',                    side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.tarinkot}),
+    tarinkot            = ZoneCommander:new({zone='Tarinkot',                    side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.tarinkot,income = 0.2}),
     insurgentqalat      = ZoneCommander:new({zone='Insurgent Base Qalat',        side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints6, 	    crates={},flavorText=flavor.insurgentqalat}),
     insurgentdelaram    = ZoneCommander:new({zone='Insurgent Base Delaram',      side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints1,     	crates={},flavorText=flavor.insurgentdelaram}),
     farah               = ZoneCommander:new({zone='Farah',                       side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.farah}),
     insurgentchimozay   = ZoneCommander:new({zone='Insurgent Base Chimozay',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints5,     	crates={},flavorText=flavor.insurgentchimozay}),
     insurgentnili       = ZoneCommander:new({zone='Insurgent Base Nili',         side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,     	crates={},flavorText=flavor.insurgentnili}),
     insurgentalpha      = ZoneCommander:new({zone='Insurgent Base Alpha',        side=1, size='insurgent', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.insurgentalpha}),
-    jamsheed            = ZoneCommander:new({zone='FOB-Jamsheed',                side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.jamsheed,ForceNeutral=true}),
-    faridbasharat       = ZoneCommander:new({zone='FOB-Farid Basharat',          side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.faridbasharat,ForceNeutral=true}),      
-    ahmadshahmassoud    = ZoneCommander:new({zone='FOB-Ahmad Shah Massoud',      side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.ahmadshahmassoud,ForceNeutral=true}),
-    ismailkhan          = ZoneCommander:new({zone='FOB-Ismail Khan',             side=0, size='bignosam', level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.ismailkhan,ForceNeutral=true}),	
-    hamidkarzai         = ZoneCommander:new({zone='FOB-Hamid Karzai',            side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.hamidkarzai,ForceNeutral=true}),	
-    javidbasharat       = ZoneCommander:new({zone='FOB-Javid Basharat',          side=0, size='bignosam', level=25, upgrades=upgrades.farp3,             crates={},flavorText=flavor.javidbasharat,ForceNeutral=true}),
-    shank               = ZoneCommander:new({zone='FOB-Shank',                   side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.shank,ForceNeutral=true}),
-    lagman              = ZoneCommander:new({zone='FOB-Lagman',                  side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.lagman,ForceNeutral=true}),
-    bostick             = ZoneCommander:new({zone='FOB-Bostick',                 side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.bostick,ForceNeutral=true}),
-    delaram             = ZoneCommander:new({zone='FOB-Delaram',                 side=0, size='bignosam', level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.delaram,ForceNeutral=true}),	
-    fenty               = ZoneCommander:new({zone='FOB-Fenty',                   side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.fenty,ForceNeutral=true}),		
-	khost               = ZoneCommander:new({zone='Khost',                       side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.khost,ForceNeutral=true}),	
-	urgoon              = ZoneCommander:new({zone='Urgoon Heliport',             side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.urgoon,ForceNeutral=true}),		
+    jamsheed            = ZoneCommander:new({zone='FOB-Jamsheed',                side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.jamsheed,NeutralAtStart=true}),
+    faridbasharat       = ZoneCommander:new({zone='FOB-Farid Basharat',          side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.faridbasharat,NeutralAtStart=true}),      
+    ahmadshahmassoud    = ZoneCommander:new({zone='FOB-Ahmad Shah Massoud',      side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.ahmadshahmassoud,NeutralAtStart=true}),
+    ismailkhan          = ZoneCommander:new({zone='FOB-Ismail Khan',             side=0, size='bignosam', level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.ismailkhan,NeutralAtStart=true}),	
+    hamidkarzai         = ZoneCommander:new({zone='FOB-Hamid Karzai',            side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.hamidkarzai,NeutralAtStart=true}),	
+    javidbasharat       = ZoneCommander:new({zone='FOB-Javid Basharat',          side=0, size='bignosam', level=25, upgrades=upgrades.farp3,             crates={},flavorText=flavor.javidbasharat,NeutralAtStart=true}),
+    shank               = ZoneCommander:new({zone='FOB-Shank',                   side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.shank,NeutralAtStart=true}),
+    lagman              = ZoneCommander:new({zone='FOB-Lagman',                  side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.lagman,NeutralAtStart=true}),
+    bostick             = ZoneCommander:new({zone='FOB-Bostick',                 side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.bostick,NeutralAtStart=true}),
+    delaram             = ZoneCommander:new({zone='FOB-Delaram',                 side=0, size='bignosam', level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.delaram,NeutralAtStart=true}),	
+    fenty               = ZoneCommander:new({zone='FOB-Fenty',                   side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.fenty,NeutralAtStart=true}),		
+	khost               = ZoneCommander:new({zone='Khost',                       side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.khost,NeutralAtStart=true, income = 0.2}),	
+	urgoon              = ZoneCommander:new({zone='Urgoon Heliport',             side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.urgoon,NeutralAtStart=true}),		
     charlie             = ZoneCommander:new({zone='Checkpoint Charlie',          side=1, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.charlie}),
     insurgentqarabagh   = ZoneCommander:new({zone='Insurgent Qarabagh',          side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,     	crates={},flavorText=flavor.insurgentqarabagh}),
     ghazniheliport      = ZoneCommander:new({zone='Ghazni Heliport',             side=1, size='big', level=25, upgrades=upgrades.airfield,          crates={},flavorText=flavor.ghazniheliport}),
@@ -472,7 +504,7 @@ zones = {
     insurgentasadabad   = ZoneCommander:new({zone='Insurgent Base Asadabad',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints5,      crates={},flavorText=flavor.insurgentasadabad}),
     insurgentkunar      = ZoneCommander:new({zone='Insurgent Base Kunar',        side=1, size='insurgent', level=25, upgrades=upgrades.farp,        		crates={},flavorText=flavor.insurgentkunar}),
     fobkunar            = ZoneCommander:new({zone='FOB Kunar',                   side=1, size='bignosam', level=25, upgrades=upgrades.farp2,        		crates={},flavorText=flavor.fobkunar}),
-    jalalabad           = ZoneCommander:new({zone='Jalalabad',                   side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.jalalabad}),
+    jalalabad           = ZoneCommander:new({zone='Jalalabad',                   side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.jalalabad, income = 0.75, redIncomeOnly=true}),
     insurgentsarobi     = ZoneCommander:new({zone='Insurgent Base Sarobi',       side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints6,     	crates={},flavorText=flavor.insurgentsarobi}),
     insurgentmountain   = ZoneCommander:new({zone='Insurgent Base Mountain',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,      crates={},flavorText=flavor.insurgentmountain}),
     checkpointkabule    = ZoneCommander:new({zone='Checkpoint Kabul E',          side=1, size='small', level=25, upgrades=upgrades.checkpoints2,      crates={},flavorText=flavor.checkpointkabule}),
@@ -485,7 +517,7 @@ zones = {
     chaghcharan         = ZoneCommander:new({zone='Chaghcharan',                 side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.chaghcharan}),
     qalainaw            = ZoneCommander:new({zone='Qala i Naw',                  side=1, size='mediumbig', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.qalainaw}),
     maymanazahiraddin   = ZoneCommander:new({zone='Maymana Zahiraddin Faryabi',  side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.maymanazahiraddin}),
-	bagram				= ZoneCommander:new({zone='Bagram',  					 side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.bagram}),
+	bagram				= ZoneCommander:new({zone='Bagram',  					 side=StartNormal and 1 or 2, size='mediumbig', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.bagram}),
  	hidden1				= ZoneCommander:new({zone='Hidden',        			     side=1, level=25, upgrades=upgrades.HiddenSam1,        crates={},flavorText=flavor.hidden}),
 	hidden2				= ZoneCommander:new({zone='Hidden2',        			 side=1, level=25, upgrades=upgrades.HiddenSam2,        crates={},flavorText=flavor.hidden}),
 	hidden3				= ZoneCommander:new({zone='Hidden3',        			 side=1, level=25, upgrades=upgrades.HiddenSam3,        crates={},flavorText=flavor.hidden}),
@@ -550,6 +582,10 @@ if Era == "Coldwar" then
         "AttackConvoy CW 2",
         "AttackConvoy CW 3",
         "AttackConvoy CW 4",
+    }
+    GroundAttackConvoy = {
+        "GroundAttackConvoy CW 1",
+        "GroundAttackConvoy CW 2",
     }
 	RunwayStrikePlaneTemplate = {
         "RED_MIG-27K_RUNWAY",
@@ -640,6 +676,11 @@ else
         "AttackConvoy 3",
         "AttackConvoy 4",
     }
+    GroundAttackConvoy = {
+        "GroundAttackConvoy 1",
+        "GroundAttackConvoy 2",
+        "GroundAttackConvoy 3",
+    }
 	RunwayStrikePlaneTemplate = {
         "RED_MIG-27K_RUNWAY",
         "RED_SU-33_RUNWAY",
@@ -650,6 +691,12 @@ else
         'BLUE_F14B',
 	}
 end
+	ArtilleryConvoyLong = {
+		"ArtilleryConvoyLong 1",
+	}
+	ArtilleryConvoyShort = {
+		"ArtilleryConvoyShort 1",
+	}
 	SupplyConvoy = {
 		"SupplyConvoy 1",
 		"SupplyConvoy 2",
@@ -1149,6 +1196,50 @@ zones.maymanazahiraddin:addGroups({
 
     -- Surface attack routes
     GroupCommander:new({name='Maymana-attack-FOBHamidKarzai', mission='attack', targetzone='FOB-Hamid Karzai', type='surface', SetActiveMission = true}),
+	GroupCommander:new({name='Maymana-attack-FOB-Delaram-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='FOB-Delaram', type='surface',artilleryRangeNm= 7,SetActiveMission = true}),
+
+})
+zones.hamidkarzai:addGroups({
+	GroupCommander:new({name='FOBHamidKarzai-supply-Maymana', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='FOBHamidKarzai-supply-QalaiNaw', mission='supply', template='HeloSupplyTemplate', targetzone='Qala i Naw', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+})
+
+zones.delaram:addGroups({
+	GroupCommander:new({name='delaram-supply-Maymana', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='delaram-supply-chaghcharan', mission='supply', template='HeloSupplyTemplate', targetzone='Chaghcharan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+})
+
+zones.javidbasharat:addGroups({
+	GroupCommander:new({name='javidbasharat-supply-chaghcharan', mission='supply', template='HeloSupplyTemplate', targetzone='Chaghcharan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='javidbasharat-supply-bamyan', mission='supply', template='HeloSupplyTemplate', targetzone='Bamyan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+})
+
+zones.bostick:addGroups({
+	GroupCommander:new({name='bostick-supply-Sharana', mission='supply', template='HeloSupplyTemplate', targetzone='Sharana', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='bostick-supply-charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+})
+
+zones.faridbasharat:addGroups({
+	GroupCommander:new({name='faridbasharat-supply-Jalalabad', mission='supply', template='HeloSupplyTemplate', targetzone='Jalalabad', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='faridbasharat-supply-Gardez', mission='supply', template='HeloSupplyTemplate', targetzone='Gardez', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+})
+
+zones.shank:addGroups({
+	GroupCommander:new({name='Shank-supply-Bravo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='Shank-supply-Charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+})
+
+zones.fenty:addGroups({
+	GroupCommander:new({name='Fenty-supply-Bravo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='Fenty-supply-Tarinkot', mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='Fenty-supply-Kandahar', mission='supply', template='HeloSupplyTemplate', targetzone='Kandahar', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+})
+
+zones.jamsheed:addGroups({
+	GroupCommander:new({name='Jamsheed-supply-Farah', mission='supply', template='HeloSupplyTemplate', targetzone='Farah', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='Jamsheed-supply-Nimroz', mission='supply', template='HeloSupplyTemplate', targetzone='Nimroz', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='Jamsheed-supply-Dwyer', mission='supply', template='HeloSupplyTemplate', targetzone='Dwyer', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	GroupCommander:new({name='Jamsheed-supply-Camp Bastion', mission='supply', template='HeloSupplyTemplate', targetzone='Camp Bastion', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 -- CHAGHCHARAN (airport) -> connects to: Maymana Zahiraddin Faryabi, Bamyan
@@ -1168,6 +1259,8 @@ zones.chaghcharan:addGroups({
 
     -- Surface attack routes
     GroupCommander:new({name='Chaghcharan-attack-FOBDelaram',  mission='attack', targetzone='FOB-Delaram', type='surface',SetActiveMission = true}),
+	GroupCommander:new({name='Chaghcharan-attack-FOB-Javid-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='FOB-Javid Basharat', type='surface',artilleryRangeNm= 7,SetActiveMission = true}),
+
 })
 
 -- BAMYAN (airport) -> connects to: Chaghcharan, Kabul, Bagram
@@ -1366,15 +1459,11 @@ zones.fenty.isHeloSpawn = true
 zones.fenty.airbaseName = 'FOB-Fenty'
 
 zones.khost.airbaseName = 'Khost'
+zones.khost.isHeloSpawn = true
 
 zones.urgoon.airbaseName = 'Urgoon Heliport'
+zones.urgoon.isHeloSpawn = true
 
-SCHEDULER:New(nil,function()
-if not CustomFlags["EWR Updated"] then
-zones.hiddenewr:MakeZoneredandupgradednow()
-CustomFlags["EWR Updated"] = true
-end
-end,{},5)
 
 --
 --------------------------------------------end Airbase definitions------------------------
@@ -1383,143 +1472,97 @@ for i,v in pairs(zones) do
 end
 
 ---------------------------Begin connections (this is what draws lines between each point--------------------------
-bc:addConnection("Kandahar","Checkpoint Alpha")
-bc:addConnection("Checkpoint Alpha","Kandahar")
+bc:addConnection("Kandahar","Checkpoint Alpha",true)
 
-bc:addConnection("Checkpoint Alpha","Bost")
-bc:addConnection("Bost","Checkpoint Alpha")
+bc:addConnection("Checkpoint Alpha","Bost",true)
 
-bc:addConnection("Checkpoint Alpha","Camp Bastion")
-bc:addConnection("Camp Bastion","Checkpoint Alpha")
+bc:addConnection("Checkpoint Alpha","Camp Bastion",true)
 
-bc:addConnection("Checkpoint Alpha","Tarinkot")
-bc:addConnection("Tarinkot","Checkpoint Alpha")
+bc:addConnection("Checkpoint Alpha","Tarinkot",true)
 
-bc:addConnection("Camp Bastion","Nimroz")
-bc:addConnection("Nimroz","Camp Bastion")
+bc:addConnection("Camp Bastion","Nimroz",true)
 
-bc:addConnection("Camp Bastion","Dwyer")
-bc:addConnection("Dwyer","Camp Bastion")
+bc:addConnection("Camp Bastion","Dwyer",true)
 
-bc:addConnection("Bost","Dwyer")
-bc:addConnection("Dwyer","Bost")
+bc:addConnection("Bost","Dwyer",true)
 
-bc:addConnection("Bost","Camp Bastion")
-bc:addConnection("Camp Bastion","Bost")
+bc:addConnection("Bost","Camp Bastion",true)
 
-bc:addConnection("Kandahar","Checkpoint Bravo")
-bc:addConnection("Checkpoint Bravo","Kandahar")
+bc:addConnection("Kandahar","Checkpoint Bravo",true)
 
-bc:addConnection("Kandahar","Tarinkot")
-bc:addConnection("Tarinkot","Kandahar")
+bc:addConnection("Kandahar","Tarinkot",true)
 
-bc:addConnection("Checkpoint Bravo","Tarinkot")
-bc:addConnection("Tarinkot","Checkpoint Bravo")
+bc:addConnection("Checkpoint Bravo","Tarinkot",true)
 
-bc:addConnection("Checkpoint Bravo","Checkpoint Charlie")
-bc:addConnection("Checkpoint Charlie","Checkpoint Bravo")
+bc:addConnection("Checkpoint Bravo","Checkpoint Charlie",true)
 
-bc:addConnection("Tarinkot","Checkpoint Charlie")
-bc:addConnection("Checkpoint Charlie","Tarinkot")
+bc:addConnection("Tarinkot","Checkpoint Charlie",true)
 
-bc:addConnection("Checkpoint Charlie","Sharana")
-bc:addConnection("Sharana","Checkpoint Charlie")
+bc:addConnection("Checkpoint Charlie","Sharana",true)
 
-bc:addConnection("Checkpoint Charlie","Ghazni Heliport")
-bc:addConnection("Ghazni Heliport","Checkpoint Charlie")
+bc:addConnection("Checkpoint Charlie","Ghazni Heliport",true)
 
-bc:addConnection("Sharana","Ghazni Heliport")
-bc:addConnection("Ghazni Heliport","Sharana")
+bc:addConnection("Sharana","Ghazni Heliport",true)
 
-bc:addConnection("Sharana","Gardez")
-bc:addConnection("Gardez","Sharana")
+bc:addConnection("Sharana","Gardez",true)
 
-bc:addConnection("Ghazni Heliport","Gardez")
-bc:addConnection("Gardez","Ghazni Heliport")
+bc:addConnection("Ghazni Heliport","Gardez",true)
 
-bc:addConnection("Ghazni Heliport","Checkpoint Delta")
-bc:addConnection("Checkpoint Delta","Ghazni Heliport")
+bc:addConnection("Ghazni Heliport","Checkpoint Delta",true)
 
-bc:addConnection("Checkpoint Delta","Checkpoint Kabul S")
-bc:addConnection("Checkpoint Kabul S","Checkpoint Delta")
+bc:addConnection("Checkpoint Delta","Checkpoint Kabul S",true)
 
-bc:addConnection("Checkpoint Delta","Checkpoint Kabul W")
-bc:addConnection("Checkpoint Kabul W","Checkpoint Delta")
+bc:addConnection("Checkpoint Delta","Checkpoint Kabul W",true)
 
-bc:addConnection("Checkpoint Delta","Kabul")
-bc:addConnection("Kabul","Checkpoint Delta")
+bc:addConnection("Checkpoint Delta","Kabul",true)
 
-bc:addConnection("Checkpoint Delta","Bamyan")
-bc:addConnection("Bamyan","Checkpoint Delta")
+bc:addConnection("Checkpoint Delta","Bamyan",true)
 
-bc:addConnection("Farah","Shindand")
-bc:addConnection("Shindand","Farah")
+bc:addConnection("Farah","Shindand",true)
 
-bc:addConnection("Shindand","Herat")
-bc:addConnection("Herat","Shindand")
+bc:addConnection("Shindand","Herat",true)
 
-bc:addConnection("Herat","Chaghcharan")
-bc:addConnection("Chaghcharan","Herat")
+bc:addConnection("Herat","Chaghcharan",true)
 
-bc:addConnection("Herat","Qala i Naw")
-bc:addConnection("Qala i Naw","Herat")
+bc:addConnection("Herat","Qala i Naw",true)
 
-bc:addConnection("Qala i Naw","Maymana Zahiraddin Faryabi")
-bc:addConnection("Maymana Zahiraddin Faryabi","Qala i Naw")
+bc:addConnection("Qala i Naw","Maymana Zahiraddin Faryabi",true)
 
-bc:addConnection("Qala i Naw","Chaghcharan")
-bc:addConnection("Chaghcharan","Qala i Naw")
+bc:addConnection("Qala i Naw","Chaghcharan",true)
 
-bc:addConnection("Chaghcharan","Maymana Zahiraddin Faryabi")
-bc:addConnection("Maymana Zahiraddin Faryabi","Chaghcharan")
+bc:addConnection("Chaghcharan","Maymana Zahiraddin Faryabi",true)
 
-bc:addConnection("Chaghcharan","Bamyan")
-bc:addConnection("Bamyan","Chaghcharan")
+bc:addConnection("Chaghcharan","Bamyan",true)
 
-bc:addConnection("Bamyan","Kabul")
-bc:addConnection("Kabul","Bamyan")
+bc:addConnection("Bamyan","Kabul",true)
 
-bc:addConnection("Bamyan","Bagram")
-bc:addConnection("Bagram","Bamyan")
+bc:addConnection("Bamyan","Bagram",true)
 
-bc:addConnection("Kabul","Bagram")
-bc:addConnection("Bagram","Kabul")
+bc:addConnection("Kabul","Bagram",true)
 
-bc:addConnection("Kabul","Checkpoint Kabul E")
-bc:addConnection("Checkpoint Kabul E","Kabul")
+bc:addConnection("Kabul","Checkpoint Kabul E",true)
 
-bc:addConnection("Bagram","Checkpoint Kabul E")
-bc:addConnection("Checkpoint Kabul E","Bagram")
+bc:addConnection("Bagram","Checkpoint Kabul E",true)
 
-bc:addConnection("Checkpoint Kabul E","Jalalabad")
-bc:addConnection("Jalalabad","Checkpoint Kabul E")
+bc:addConnection("Checkpoint Kabul E","Jalalabad",true)
 
-bc:addConnection("Kabul","Checkpoint Kabul W")
-bc:addConnection("Checkpoint Kabul W","Kabul")
+bc:addConnection("Kabul","Checkpoint Kabul W",true)
 
-bc:addConnection("Bagram","Checkpoint Kabul W")
-bc:addConnection("Checkpoint Kabul W","Bagram")
+bc:addConnection("Bagram","Checkpoint Kabul W",true)
 
-bc:addConnection("Kabul","Checkpoint Kabul S")
-bc:addConnection("Checkpoint Kabul S","Kabul")
+bc:addConnection("Kabul","Checkpoint Kabul S",true)
 
-bc:addConnection("Checkpoint Kabul S","Checkpoint Kabul E")
-bc:addConnection("Checkpoint Kabul E","Checkpoint Kabul S")
+bc:addConnection("Checkpoint Kabul S","Checkpoint Kabul E",true)
 
-bc:addConnection("Dwyer","Nimroz")
-bc:addConnection("Nimroz","Dwyer")
+bc:addConnection("Dwyer","Nimroz",true)
 
-bc:addConnection("Nimroz","Farah")
-bc:addConnection("Farah","Nimroz")
+bc:addConnection("Nimroz","Farah",true)
 
-bc:addConnection("Gardez","Jalalabad")
-bc:addConnection("Jalalabad","Gardez")
+bc:addConnection("Gardez","Jalalabad",true)
 
-bc:addConnection("Gardez","Checkpoint Kabul S")
-bc:addConnection("Checkpoint Kabul S","Gardez")
+bc:addConnection("Gardez","Checkpoint Kabul S",true)
 
-bc:addConnection("Jalalabad","FOB Kunar")
-bc:addConnection("FOB Kunar","Jalalabad")
+bc:addConnection("Jalalabad","FOB Kunar",true)
 
 bc:addConnection("Camp Bastion","Insurgent Base Delaram")
 bc:addConnection("Farah","Insurgent Base Chimozay")
@@ -1552,14 +1595,14 @@ local checkMissionComplete = function(event, sender)
 	if done then
 		missionCompleted = true
 		trigger.action.setUserFlag(180, true)
-		trigger.action.outText("Enemy has been defeated.\n\nMission Complete.\n\nYou can restart the mission from the radio menu.", 120)
+		trigger.action.outText(L10N:Get("SYRIA_SETUP_MISSION_COMPLETE_MENU"), 120)
 
 		timer.scheduleFunction(function()
 			trigger.action.outSoundForCoalition(2, "BH.ogg")
 		end, {}, timer.getTime() + 5)
 
-			local subMenu = missionCommands.addSubMenuForCoalition(2, "Restart and Reset?", nil)
-			missionCommands.addCommandForCoalition(2, "Yes", subMenu, function()
+			local subMenu = missionCommands.addSubMenuForCoalition(2, L10N:Get("SYRIA_SETUP_RESTART_MENU"), nil)
+			missionCommands.addCommandForCoalition(2, L10N:Get("COMMON_YES"), subMenu, function()
 					Utils.saveTable(bc.saveFile, 'zonePersistance', {})
 					if resetSaveFileAndFarp then
 					resetSaveFileAndFarp()
@@ -1572,12 +1615,12 @@ local checkMissionComplete = function(event, sender)
 						end
 						WarehousePersistence.ClearFile(opts)
 					end
-				trigger.action.outText("Restarting now..", 120)
+				trigger.action.outText(L10N:Get("SYRIA_SETUP_RESTARTING_NOW"), 120)
 				timer.scheduleFunction(function()
 					trigger.action.setUserFlag(181, true)
 				end, {}, timer.getTime() + 5)
 			end)
-			missionCommands.addCommandForCoalition(2, "No", subMenu, function()
+			missionCommands.addCommandForCoalition(2, L10N:Get("COMMON_NO"), subMenu, function()
 		end)
 	end
 end
@@ -1618,516 +1661,6 @@ end
 end,{},5,0)
 
 -- SHOP --
-local upgradeMenu = nil
-bc:registerShopItem('supplies2', 'Resupply friendly Zone', ShopPrices.supplies2, function(sender)
-    if upgradeMenu then
-        return 'Choose zone from F10 menu'
-    end
-
-    local upgradeZone = function(target)
-        if upgradeMenu then
-            local zn = bc:getZoneByName(target)
-            if zn and zn.side == 2 and not zn.suspended then
-                zn:upgrade()
-            else
-                return 'Zone not friendly'
-            end
-            
-            upgradeMenu = nil
-        end
-    end
-
-
-    upgradeMenu = bc:showTargetZoneMenu(2, 'Select Zone to resupply', upgradeZone, 2, true)
-    
-    trigger.action.outTextForCoalition(2, 'Supplies prepared. Choose zone from F10 menu', 15)
-end,
-function(sender, params)
-    if params.zone and params.zone.side == 2 and not params.zone.suspended then
-        params.zone:upgrade()
-    else
-        return 'Can only target friendly zone'
-    end
-end)
-
-local fullyUpgradeMenu=nil
-bc:registerShopItem('supplies','Fully Upgrade Friendly Zone',ShopPrices.supplies,
-function(sender)
-    if fullyUpgradeMenu then
-        return'Choose zone from F10 menu to fully upgrade'
-    end
-    local fullyUpgradeZone
-    fullyUpgradeZone=function(target)
-        if fullyUpgradeMenu then
-            local zn=bc:getZoneByName(target)
-            if zn and zn.side==2 and not zn.suspended then
-                local function repairs()
-                    local n=0
-                    for _,v in pairs(zn.built)do
-                        local g=Group.getByName(v)
-                        if g then
-                            if g:getSize()<g:getInitialSize() then n=n+1
-                            else
-                                for _,u in ipairs(g:getUnits())do
-                                    if u and u:isExist() and u:getLife()<u:getLife0() then n=n+1 break end
-                                end
-                            end
-                        end
-                    end
-                    return n
-                end
-                local upgs=zn.upgrades.blue or{}
-                local todo=repairs()+(#upgs-Utils.getTableSize(zn.built))
-                if todo>0 then
-                    local function loop()
-                        local before=Utils.getTableSize(zn.built)
-                        zn:upgrade()
-                        local now=Utils.getTableSize(zn.built)
-                        if repairs()>0 or now<#upgs then
-                            timer.scheduleFunction(loop,{},timer.getTime()+2)
-                        else
-                            trigger.action.outTextForCoalition(2,target..' is now fully upgraded!',15)
-                        end
-                    end
-                    loop()
-                else
-                    trigger.action.outTextForCoalition(2,target..' is already fully upgraded',15)
-                end
-            else
-                return'Zone not friendly'
-            end
-            fullyUpgradeMenu=nil
-        end
-    end
-    fullyUpgradeMenu=bc:showTargetZoneMenu(2,'Select Zone to Fully Upgrade',fullyUpgradeZone,2,true)
-    trigger.action.outTextForCoalition(2,'Preparing to full upgrade and repair. Choose zone from F10 menu',15)
-end,
-function(sender,params)
-    if params.zone and params.zone.side==2 and not params.zone.suspended then
-        local zn=params.zone
-        local upgs=zn.upgrades.blue or{}
-        local function repairs()
-            local n=0
-            for _,v in pairs(zn.built)do
-                local g=Group.getByName(v)
-                if g then
-                    if g:getSize()<g:getInitialSize() then n=n+1
-                    else
-                        for _,u in ipairs(g:getUnits())do
-                            if u and u:isExist() and u:getLife()<u:getLife0() then n=n+1 break end
-                        end
-                    end
-                end
-            end
-            return n
-        end
-        local function loop()
-            local before=Utils.getTableSize(zn.built)
-            zn:upgrade()
-            local now=Utils.getTableSize(zn.built)
-            if repairs()>0 or now<#upgs then
-                timer.scheduleFunction(loop,{},timer.getTime()+2)
-			else
-				trigger.action.outTextForCoalition(2,params.zone.zone..' is now fully upgraded!',15)
-			end
-        end
-        loop()
-    else
-        return'Can only target friendly zone'
-    end
-end)
-Group.getByName('ca-tanks-Coldwar'):destroy()
-Group.getByName('ca-tanks'):destroy()
-tanksMenu = nil
-bc:registerShopItem('armor', 'Deploy armor', ShopPrices.armor, function(sender)
-	
-	if tanksMenu then
-		return 'Choose deploy zone from F10 menu'
-	end
-	
-	local deployTanks = function(target)
-		if tanksMenu then
-		
-			local zn = CustomZone:getByName(target)
-			zn:spawnGroup((Era == 'Coldwar') and 'ca-tanks-Coldwar' or 'ca-tanks')
-			
-			tanksMenu = nil
-			trigger.action.outTextForCoalition(2, 'Friendly armor deployed at '..target, 15)
-		end
-	end
-	
-	tanksMenu = bc:showTargetZoneMenu(2, 'Deploy armor (Choose friendly zone) ', deployTanks, 2)
-	trigger.action.outTextForCoalition(2, 'Choose deploy zone from F10 menu', 15)
-end,
-function(sender, params)
-    if params.zone and params.zone.side == 2 and not params.zone.suspended then
-
-		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup((Era == 'Coldwar') and 'ca-tanks-Coldwar' or 'ca-tanks')
-		trigger.action.outTextForCoalition(2, 'Friendly armor deployed at '..params.zone.zone, 15)
-	else
-		return 'Can only deploy at friendly zone'
-	end
-end)
-Group.getByName('ca-arty'):destroy()
-artyMenu = nil
-bc:registerShopItem('artillery', 'Deploy artillery', ShopPrices.artillery, function(sender)
-	
-	if artyMenu then
-		return 'Choose deploy zone from F10 menu'
-	end
-	
-	local deployArty = function(target)
-		if artyMenu then
-		
-			local zn = CustomZone:getByName(target)
-			zn:spawnGroup('ca-arty')
-			
-			artyMenu = nil
-			trigger.action.outTextForCoalition(2, 'Friendly artillery deployed at '..target, 15)
-		end
-	end
-	
-	artyMenu = bc:showTargetZoneMenu(2, 'Deploy artillery (Choose friendly zone) ', deployArty, 2)
-	trigger.action.outTextForCoalition(2, 'Choose deploy zone from F10 menu ', 15)
-end,
-function(sender, params)
-    if params.zone and params.zone.side == 2 and not params.zone.suspended then		
-		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('ca-arty')
-		trigger.action.outTextForCoalition(2, 'Friendly artillery deployed at '..params.zone.zone, 15)
-	else
-		return 'Can only deploy at friendly zone'
-	end
-end)
-Group.getByName('ca-recon'):destroy()
-reconMenu = nil
-bc:registerShopItem('recon', 'Deploy recon group', ShopPrices.recon, function(sender)
-	
-	if reconMenu then
-		return 'Choose deploy zone from F10 menu'
-	end
-	
-	local deployRecon = function(target)
-		if reconMenu then
-		
-			local zn = CustomZone:getByName(target)
-			zn:spawnGroup('ca-recon')
-			
-			reconMenu = nil
-			trigger.action.outTextForCoalition(2, 'Friendly recon group deployed at '..target, 15)
-		end
-	end
-	
-	reconMenu = bc:showTargetZoneMenu(2, 'Deploy recon group (Choose friendly zone)', deployRecon, 2)
-	trigger.action.outTextForCoalition(2, 'Choose deploy zone from F10 menu', 15)
-end,
-function(sender, params)
-	if params.zone and params.zone.side == 2 and not params.zone.suspended then
-		
-		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('ca-recon')
-		trigger.action.outTextForCoalition(2, 'Friendly recon group deployed at '..params.zone.zone, 15)
-	else
-		return 'Can only deploy at friendly zone'
-	end
-end)
-Group.getByName('ca-airdef'):destroy()
-airdefMenu = nil
-bc:registerShopItem('airdef', 'Deploy air defence', ShopPrices.airdef, function(sender)
-	
-	if airdefMenu then
-		return 'Choose deploy zone from F10 menu'
-	end
-	
-	local deployAirDef = function(target)
-		if airdefMenu then
-		
-			local zn = CustomZone:getByName(target)
-			zn:spawnGroup('ca-airdef')
-			
-			airdefMenu = nil
-			trigger.action.outTextForCoalition(2, 'Friendly air defence deployed at '..target, 15)
-		end
-	end
-	
-	airdefMenu = bc:showTargetZoneMenu(2, 'Deploy air defence (Choose friendly zone)', deployAirDef, 2)
-	trigger.action.outTextForCoalition(2, 'Choose deploy zone from F10 menu', 15)
-end,
-function(sender, params)
-	if params.zone and params.zone.side == 2 and not params.zone.suspended then
-		
-		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('ca-airdef')
-		trigger.action.outTextForCoalition(2, 'Friendly air defence deployed at '..params.zone.zone, 15)
-	else
-		return 'Can only deploy at friendly zone'
-	end
-end)
-
-
-local jtacDrones
-local jtacTargetMenu = nil
-for _,n in ipairs({'jtacDroneColdwar1','jtacDroneColdwar2','jtacDrone1','jtacDrone2'}) do
-    local g = Group.getByName(n)
-    if g then g:destroy() end
-end
-if Era == 'Coldwar' then
-jtacDrones = {JTAC:new({name = 'jtacDroneColdwar1'}),JTAC:new({name = 'jtacDroneColdwar2'})}
-else
-jtacDrones = {JTAC:new({name = 'jtacDrone1'}),JTAC:new({name = 'jtacDrone2'})}
-end
-bc:registerShopItem('jtac','MQ-9 Reaper JTAC mission',ShopPrices.jtac,function(sender)
-	if jtacTargetMenu then return 'Choose target zone from F10 menu' end
-	local spawnAndOrbit = function(target)
-		if jtacTargetMenu then
-			local zn = bc:getZoneByName(target)
-			for _,v in ipairs(jtacQueue) do
-				if v.tgtzone and v.tgtzone.zone == zn.zone then
-					trigger.action.outTextForCoalition(2,'JTAC already active over '..zn.zone..' Select another zone',10)
-					return 'duplicate zone'
-				end
-			end
-			if #jtacQueue == 2 then
-				local old = table.remove(jtacQueue,1)
-				local gr = Group.getByName(old.name)
-				if gr then gr:destroy() end
-			end
-			local dr = jtacDrones[1]
-			for i,v in ipairs(jtacDrones) do
-				if not Utils.isGroupActive(Group.getByName(v.name)) then dr = v break end
-			end
-			dr:deployAtZone(zn)
-			dr:showMenu()
-			table.insert(jtacQueue,dr)
-			trigger.action.outTextForCoalition(2,'Reaper drone deployed over '..target..' - JTACs active '..#jtacQueue..' / 2',15)
-			jtacTargetMenu = nil
-		end
-	end
-	jtacTargetMenu = bc:showTargetZoneMenu(2,'Deploy JTAC',spawnAndOrbit,1)
-	trigger.action.outTextForCoalition(2,'Choose which zone to deploy JTAC at from F10 menu',15)
-end,function(sender,params)
-	if params.zone and params.zone.side == 1 and not params.zone.suspended then
-		for _,v in ipairs(jtacQueue) do
-			if v.tgtzone and v.tgtzone.zone == params.zone.zone then
-				return 'JTAC already active over '..params.zone.zone..' Choose another zone'
-			end
-		end
-		if #jtacQueue == 2 then
-			local old = table.remove(jtacQueue,1)
-			local gr  = Group.getByName(old.name)
-			if gr then gr:destroy() end
-		end
-		local dr = jtacDrones[1]
-		for i,v in ipairs(jtacDrones) do
-			if not Utils.isGroupActive(Group.getByName(v.name)) then dr = v break end
-		end
-		dr:deployAtZone(params.zone)
-		dr:showMenu()
-		table.insert(jtacQueue,dr)
-		trigger.action.outTextForCoalition(2,'Reaper drone deployed over '..params.zone.zone..' - JTACs active '..#jtacQueue..' / 2',15)
-	else
-		return 'Can only target enemy zone'
-	end
-end)
-
-
-local smoketargets = function(tz)
-	if not tz or not tz.built then
-		env.info("smoketargets: no tz/built for zone "..tostring(tz and tz.zone or "nil"))
-		return
-	end
-	local units, statics, dangling, toRemove = {}, {}, {}, {}
-	for i,v in pairs(tz.built) do
-		local g = Group.getByName(v)
-		if g and g:isExist() then
-			local gUnits = g:getUnits()
-			if gUnits then
-				for i2,v2 in ipairs(gUnits) do
-					table.insert(units, v2)
-				end
-			end
-        else
-            local st = StaticObject.getByName(v)
-            if st and st:isExist() then
-                table.insert(statics, st)
-            else
-                table.insert(dangling, tostring(v))
-                table.insert(toRemove, i)
-            end
-        end
-	end
-	if #dangling > 0 then
-		trigger.action.outTextForCoalition(2, "(BUG) "..tz.zone.." error has unresolved entries: "..table.concat(dangling,", ")..". Please report to Leka.", 30)
-		for _,k in ipairs(toRemove) do tz.built[k] = nil end
-	end
-	local points = {}
-	for _,u in ipairs(units) do if u and u:isExist() then local p=u:getPosition().p; if p then table.insert(points,p) end end end
-	for _,s in ipairs(statics) do local p=s:getPoint(); if p then table.insert(points,p) end end
-	for i=1,3 do
-		if #points == 0 then break end
-		local idx = math.random(1,#points)
-		trigger.action.smoke(points[idx],1)
-		table.remove(points,idx)
-	end
-end
-
-local flaretargets = function(tz)
-	if not tz or not tz.built then
-		env.info("flaretargets: no tz/built for zone "..tostring(tz and tz.zone or "nil"))
-		return
-	end
-	local units, statics, dangling, toRemove = {}, {}, {}, {}
-	for i,v in pairs(tz.built) do
-		local g = Group.getByName(v)
-		if g and g:isExist() then
-			local gUnits = g:getUnits()
-			if gUnits then
-				for i2,v2 in ipairs(gUnits) do
-					table.insert(units, v2)
-				end
-			end
-        else
-            local st = StaticObject.getByName(v)
-            if st and st:isExist() then
-                table.insert(statics, st)
-            else
-                table.insert(dangling, tostring(v))
-                table.insert(toRemove, i)
-            end
-        end
-	end
-	if #dangling > 0 then
-		trigger.action.outTextForCoalition(2, "(BUG) "..tz.zone.." error has unresolved entries: "..table.concat(dangling,", ")..". Please report to Leka.", 30)
-		for _,k in ipairs(toRemove) do tz.built[k] = nil end
-	end
-	local points = {}
-	for _,u in ipairs(units) do if u and u:isExist() then local p=u:getPosition().p; if p then table.insert(points,p) end end end
-	for _,s in ipairs(statics) do local p=s:getPoint(); if p then table.insert(points,p) end end
-	local selectedPoints = {}
-	for i=1,3 do
-		if #points == 0 then break end
-		local idx = math.random(1,#points)
-		selectedPoints[#selectedPoints+1] = points[idx]
-		table.remove(points,idx)
-	end
-	for _,pt in ipairs(selectedPoints) do
-		for burst=0,2 do
-			local flarePoint = { x = pt.x, y = pt.y, z = pt.z }
-			timer.scheduleFunction(function(args, t)
-				trigger.action.signalFlare(args.point, trigger.flareColor.Red, math.random(0,359))
-				return nil
-			end, { point = flarePoint }, timer.getTime() + (burst * 5))
-		end
-	end
-end
-
-local illumtargets = function(tz)
-	if not tz or not tz.built then
-		env.info("illumtargets: no tz/built for zone "..tostring(tz and tz.zone or "nil"))
-		return
-	end
-	local groups, units, statics, dangling, toRemove = {}, {}, {}, {}, {}
-	for i,v in pairs(tz.built) do
-		local g = Group.getByName(v)
-		if g and g:isExist() then
-			table.insert(groups, g)
-			local gUnits = g:getUnits()
-			if gUnits then
-				for i2,v2 in ipairs(gUnits) do
-					table.insert(units, v2)
-				end
-			end
-		else
-			local st = StaticObject.getByName(v)
-			if st and st:isExist() then
-				table.insert(statics, st)
-			else
-				table.insert(dangling, tostring(v))
-				table.insert(toRemove, i)
-			end
-		end
-	end
-	if #dangling > 0 then
-		trigger.action.outTextForCoalition(2, "(BUG) "..tz.zone.." error has unresolved entries: "..table.concat(dangling,", ")..". Please report to Leka.", 30)
-		for _,k in ipairs(toRemove) do tz.built[k] = nil end
-	end
-	local illumAltitude = 600
-	local illumPower = 400000
-
-	local targets = {}
-	local function addPos(p)
-		if p then table.insert(targets, p) end
-	end
-	local function addGroupLeaderPos(g)
-		if not g then return end
-		local u = g:getUnit(1)
-		if u and u:isExist() then
-			local p = u:getPosition().p
-			addPos(p)
-		end
-	end
-	local function addRandomUnitPos(pool)
-		if not pool or #pool == 0 then return end
-		local idx = math.random(1, #pool)
-		local u = pool[idx]
-		if u and u:isExist() then
-			local p = u:getPosition().p
-			addPos(p)
-		end
-		table.remove(pool, idx)
-	end
-
-	if #groups >= 3 then
-		local gpool = {}
-		for _,g in ipairs(groups) do table.insert(gpool, g) end
-		for i=1,3 do
-			local idx = math.random(1, #gpool)
-			addGroupLeaderPos(gpool[idx])
-			table.remove(gpool, idx)
-		end
-	elseif #groups == 2 then
-		addGroupLeaderPos(groups[1])
-		addGroupLeaderPos(groups[2])
-		local upool = {}
-		for _,u in ipairs(units) do table.insert(upool, u) end
-		if #upool > 0 then
-			addRandomUnitPos(upool)
-		elseif #statics > 0 then
-			local s = statics[math.random(1, #statics)]
-			addPos(s:getPoint())
-		end
-	elseif #groups == 1 then
-		local gUnits = groups[1]:getUnits() or {}
-		local upool = {}
-		for _,u in ipairs(gUnits) do table.insert(upool, u) end
-		if #upool == 0 then
-			for _,u in ipairs(units) do table.insert(upool, u) end
-		end
-		for i=1,3 do
-			if #upool == 0 then break end
-			addRandomUnitPos(upool)
-		end
-	else
-		local spoints = {}
-		for _,s in ipairs(statics) do
-			local p = s:getPoint()
-			if p then table.insert(spoints, p) end
-		end
-		for i=1,3 do
-			if #spoints == 0 then break end
-			local idx = math.random(1, #spoints)
-			addPos(spoints[idx])
-			table.remove(spoints, idx)
-		end
-	end
-
-	for _,p in ipairs(targets) do
-		local bombPoint = { x = p.x, y = p.y + illumAltitude, z = p.z }
-		trigger.action.illuminationBomb(bombPoint, illumPower)
-	end
-end
-
 local SHOP_PRICE_DEFAULTS = {
   smoke         = 20,
   flare         = 20,
@@ -2153,6 +1686,7 @@ local SHOP_PRICE_DEFAULTS = {
   airdef        = 150,
   capture       = 500,
   intel         = 150,
+  groundattack  = 1000,
   zinf          = 500,
   zsam          = 2000,
   zhimars       = 2500,
@@ -2170,6 +1704,7 @@ local SHOP_RANK_DEFAULTS = {
   dynamiccas     = 5,
   dynamicbomb    = 4,
   dynamicsead    = 4,
+  groundattack   = 5,
   dynamicdecoy   = 1,
   dynamicstatic  = 4,
   dynamicarco    = 3,
@@ -2210,90 +1745,339 @@ end
 ShopPrices = mergeDefaults(SHOP_PRICE_DEFAULTS, ShopPrices)
 ShopRankRequirements = mergeDefaults(SHOP_RANK_DEFAULTS, ShopRankRequirements)
 
+local upgradeMenu = nil
+local function clearFriendlySupplyMenu()
+    if upgradeMenu then
+        missionCommands.removeItemForCoalition(2, upgradeMenu)
+        upgradeMenu = nil
+    end
+end
+
+bc:registerShopItem('supplies2', LTGet("SYRIA_SHOP_ITEM_RESUPPLY_ZONE"), ShopPrices.supplies2, function(sender)
+    if not AllowScriptedSupplies and NoAIBlueSupplies == true then
+        return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
+    end
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end,
+function(sender, params)
+    if not AllowScriptedSupplies then
+        if NoAIBlueSupplies == true then
+            return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
+        end
+        if params.zone then
+            return bc:requestFriendlySupplyMission(params.zone, params)
+        end
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY")
+    elseif params.zone and params.zone.side == 2 and not params.zone.suspended then
+        if not params.zone:upgrade() then
+            return LTGet("SYRIA_SHOP_ZONE_NO_RESUPPLY")
+        end
+    else
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY")
+    end
+end)
+bc.shopItems['supplies2'].groupZoneSelector = {
+    targetzoneside = 2,
+    showUpgradeStatus = true,
+    includeSuspended = false,
+    extraPredicate = function(zoneObj)
+        return zoneObj.active and zoneObj.side == 2 and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
+    end,
+    zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+        local function remember(handle)
+            if rememberHandle then
+                return rememberHandle(handle)
+            end
+            if handle then
+                track[#track + 1] = handle
+            end
+            return handle
+        end
+
+        if not AllowScriptedSupplies then
+            local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
+            local canUseFarp = bestCommander and (bestCommander.type == 'surface' or bestCommander.unitCategory == Unit.Category.HELICOPTER)
+            local hasFriendlyDynamicFarp = false
+            local hasNearbyFriendlyDynamicFarp = false
+            local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[2] or nil
+            if farps then
+                for i = 1, #farps do
+                    local farpAb = AIRBASE:FindByName(farps[i].name)
+                    if farpAb and farpAb:GetCoalition() == 2 then
+                        hasFriendlyDynamicFarp = true
+                        local distMeters = bcRef:_getDynamicFarpZoneDistance(farps[i], zoneObj.zone)
+                        if distMeters and distMeters <= (30 * 1852) then
+                            hasNearbyFriendlyDynamicFarp = true
+                        end
+                    end
+                end
+            end
+            local hasDynamicShopSupplyFarp = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj)
+            local hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj) ~= nil)
+            if (canUseFarp and hasFriendlyDynamicFarp) or hasFallbackHeloFarp or hasDynamicShopSupplyFarp then
+                local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
+                local T = L10N:ForGroup(groupId)
+                remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_DEPLOY_FROM_FARP"), zoneMenu, function() end))
+                remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+                    zone = zoneObj,
+                    allowFarp = true,
+                }, groupId, groupObj))
+                remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+                    zone = zoneObj,
+                    allowFarp = false,
+                }, groupId, groupObj))
+                return
+            end
+        end
+
+        remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+            zone = zoneObj,
+        }, groupId, groupObj))
+    end,
+    sortPolicy = 'friendly_frontline',
+    emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+
+if AllowScriptedSupplies then
+local fullyUpgradeMenu=nil
+bc:registerShopItem('supplies',LTGet("SYRIA_SHOP_ITEM_FULLY_UPGRADE_ZONE"),ShopPrices.supplies,
+function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE_FULLY_UPGRADE")
+end,
+function(sender,params)
+    if params.zone and params.zone.side==2 and not params.zone.suspended then
+        local zn=params.zone
+        if not zn:UpgradeUntilComplete(function()
+            trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_ZONE_FULLY_UPGRADED", params.zone.zone),15)
+        end) then
+            trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_ZONE_FULLY_UPGRADED", params.zone.zone),15)
+        end
+    else
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY")
+    end
+end)
+bc.shopItems['supplies'].groupZoneSelector = {
+    targetzoneside = 2,
+    showUpgradeStatus = true,
+    includeSuspended = false,
+    extraPredicate = function(zoneObj)
+        return zoneObj.active and zoneObj.side == 2 and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
+    end,
+    sortPolicy = 'friendly_frontline',
+    emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+end
+Group.getByName('ca-tanks-Coldwar'):destroy()
+Group.getByName('ca-tanks'):destroy()
+tanksMenu = nil
+bc:registerShopItem('armor', LTGet("SYRIA_SHOP_ITEM_DEPLOY_ARMOR"), ShopPrices.armor, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_DEPLOY_ZONE")
+end,
+function(sender, params)
+    if params.zone and params.zone.side == 2 and not params.zone.suspended then
+
+		local zn = CustomZone:getByName(params.zone.zone)
+		zn:spawnGroup((Era == 'Coldwar') and 'ca-tanks-Coldwar' or 'ca-tanks')
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_ARMOR_DEPLOYED", params.zone.zone), 15)
+	else
+		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
+	end
+end)
+bc.shopItems['armor'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+Group.getByName('ca-arty'):destroy()
+artyMenu = nil
+bc:registerShopItem('artillery', LTGet("SYRIA_SHOP_ITEM_DEPLOY_ARTILLERY"), ShopPrices.artillery, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_DEPLOY_ZONE")
+end,
+function(sender, params)
+    if params.zone and params.zone.side == 2 and not params.zone.suspended then		
+		local zn = CustomZone:getByName(params.zone.zone)
+		zn:spawnGroup('ca-arty')
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_ARTY_DEPLOYED", params.zone.zone), 15)
+	else
+		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
+	end
+end)
+bc.shopItems['artillery'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+Group.getByName('ca-recon'):destroy()
+reconMenu = nil
+bc:registerShopItem('recon', LTGet("SYRIA_SHOP_ITEM_DEPLOY_RECON"), ShopPrices.recon, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_DEPLOY_ZONE")
+end,
+function(sender, params)
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
+		
+		local zn = CustomZone:getByName(params.zone.zone)
+		zn:spawnGroup('ca-recon')
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_RECON_DEPLOYED", params.zone.zone), 15)
+	else
+		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
+	end
+end)
+bc.shopItems['recon'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+Group.getByName('ca-airdef'):destroy()
+airdefMenu = nil
+bc:registerShopItem('airdef', LTGet("SYRIA_SHOP_ITEM_DEPLOY_AIRDEF"), ShopPrices.airdef, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_DEPLOY_ZONE")
+end,
+function(sender, params)
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
+		
+		local zn = CustomZone:getByName(params.zone.zone)
+		zn:spawnGroup('ca-airdef')
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_AIRDEF_DEPLOYED", params.zone.zone), 15)
+	else
+		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
+	end
+end)
+bc.shopItems['airdef'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+
+
+local jtacDrones
+local jtacTargetMenu = nil
+for _,n in ipairs({'jtacDroneColdwar1','jtacDroneColdwar2','jtacDrone1','jtacDrone2'}) do
+    local g = Group.getByName(n)
+    if g then g:destroy() end
+end
+if Era == 'Coldwar' then
+jtacDrones = {JTAC:new({name = 'jtacDroneColdwar1'}),JTAC:new({name = 'jtacDroneColdwar2'})}
+else
+jtacDrones = {JTAC:new({name = 'jtacDrone1'}),JTAC:new({name = 'jtacDrone2'})}
+end
+bc:registerShopItem('jtac',LTGet("SYRIA_SHOP_ITEM_JTAC_MQ9"),ShopPrices.jtac,function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+end,function(sender,params)
+	if params.zone and params.zone.side == 1 and not params.zone.suspended then
+		for _,v in ipairs(jtacQueue) do
+			if v.tgtzone and v.tgtzone.zone == params.zone.zone then
+				return LTFormat("SYRIA_SHOP_JTAC_ALREADY_ACTIVE", params.zone.zone)
+			end
+		end
+		if #jtacQueue == 2 then
+			local old = table.remove(jtacQueue,1)
+			local gr  = Group.getByName(old.name)
+			if gr then gr:destroy() end
+		end
+		local dr = jtacDrones[1]
+		for i,v in ipairs(jtacDrones) do
+			if not Utils.isGroupActive(Group.getByName(v.name)) then dr = v break end
+		end
+		dr:deployAtZone(params.zone)
+		dr:showMenu()
+		table.insert(jtacQueue,dr)
+		if Era == 'Coldwar' then
+			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_ACTIVE", params.zone.zone, #jtacQueue),15)
+		else
+			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_JTAC_REAPER_ACTIVE", params.zone.zone, #jtacQueue),15)
+		end
+	else
+		return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
+	end
+end)
+bc.shopItems['jtac'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	extraPredicate = function(zoneObj)
+		for _, v in ipairs(jtacQueue) do
+			if v.tgtzone and v.tgtzone.zone == zoneObj.zone then
+				return false
+			end
+		end
+		return true
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
+
 
 local smokeTargetMenu = nil
-bc:registerShopItem('smoke', 'Smoke markers ', ShopPrices.smoke, function(sender)
-	if smokeTargetMenu then
-		return 'Choose target zone from F10 menu'
-	end
-	
-	local launchAttack = function(target)
-		if smokeTargetMenu then
-			local tz = bc:getZoneByName(target)
-			smoketargets(tz)
-			smokeTargetMenu = nil
-			trigger.action.outTextForCoalition(2, 'Targets marked with RED smoke at '..target, 15)
-		end
-	end
-	
-	smokeTargetMenu = bc:showTargetZoneMenu(2, 'Smoke marker target', launchAttack, 1)
-	
-	trigger.action.outTextForCoalition(2, 'Choose target zone from F10 menu ', 15)
+bc:registerShopItem('smoke', LTGet("SYRIA_SHOP_ITEM_SMOKE_MARKERS"), ShopPrices.smoke, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
-		smoketargets(params.zone)
-		trigger.action.outTextForCoalition(2, 'Targets marked with RED smoke at '..params.zone.zone, 15)
+		bc:smokeTargets(params.zone)
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_TARGETS_RED_SMOKE", params.zone.zone), 15)
 	else
-		return 'Can only target enemy zone'
+		return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
 	end
 end)
+bc.shopItems['smoke'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
 local flareTargetMenu = nil
-bc:registerShopItem('flare', 'Flare markers', ShopPrices.flare, function(sender)
-	if flareTargetMenu then
-		return 'Choose target zone from F10 menu'
-	end
-
-	local launchAttack = function(target)
-		if flareTargetMenu then
-			local tz = bc:getZoneByName(target)
-			flaretargets(tz)
-			flareTargetMenu = nil
-			trigger.action.outTextForCoalition(2, 'Targets marked with RED flare at '..target, 15)
-		end
-	end
-
-	flareTargetMenu = bc:showTargetZoneMenu(2, 'Flare marker target', launchAttack, 1)
-
-	trigger.action.outTextForCoalition(2, 'Choose target zone from F10 menu', 15)
+bc:registerShopItem('flare', LTGet("SYRIA_SHOP_ITEM_FLARE_MARKERS"), ShopPrices.flare, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
-		flaretargets(params.zone)
-		trigger.action.outTextForCoalition(2, 'Targets marked with RED flare at '..params.zone.zone, 15)
+		bc:flareTargets(params.zone)
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_TARGETS_RED_FLARE", params.zone.zone), 15)
 	else
-		return 'Can only target enemy zone'
+		return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
 	end
 end)
+bc.shopItems['flare'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
 local illumTargetMenu = nil
-bc:registerShopItem('illum', 'Illumination bomb', ShopPrices.illum, function(sender)
-	if illumTargetMenu then
-		return 'Choose target zone from F10 menu'
-	end
-
-	local launchAttack = function(target)
-		if illumTargetMenu then
-			local tz = bc:getZoneByName(target)
-			illumtargets(tz)
-			illumTargetMenu = nil
-			trigger.action.outTextForCoalition(2, 'Targets illuminated at '..target, 15)
-		end
-	end
-
-	illumTargetMenu = bc:showTargetZoneMenu(2, 'Illumination target', launchAttack, 1)
-
-	trigger.action.outTextForCoalition(2, 'Choose target zone from F10 menu', 15)
+bc:registerShopItem('illum', LTGet("SYRIA_SHOP_ITEM_ILLUMINATION"), ShopPrices.illum, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 1 then
-		illumtargets(params.zone)
-		trigger.action.outTextForCoalition(2, 'Targets illuminated at '..params.zone.zone, 15)
+	if params.zone and params.zone.side == 1 and not params.zone.suspended then
+		bc:illumTargets(params.zone)
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_TARGETS_ILLUMINATED", params.zone.zone), 15)
 	else
-		return 'Can only target enemy zone'
+		return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
 	end
 end)
+bc.shopItems['illum'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
 ------------------------------------ START own 9 line jtac AM START ----------------------------------
 jtacZones = {}
@@ -2306,34 +2090,28 @@ droneAM = JTAC9line:new({name = 'JTAC9lineamColdwar'})
 else
 droneAM = JTAC9line:new({name = 'JTAC9lineam'})
 end
-bc:registerShopItem('9lineam', 'Jtac 9line AM', ShopPrices["9lineam"], function(sender)
-    if jtacTargetMenu2 then
-        return 'Choose target zone from F10 menu'
-    end
-    
-    local spawnAndOrbit2 = function(target)
-        if jtacTargetMenu2 then
-            local zn = bc:getZoneByName(target)
-            droneAM:deployAtZone(zn)
-			jtacZones[target] = {drone = Era == 'Coldwar' and 'JTAC9lineamColdwar' or 'JTAC9lineam'}
-			
-		trigger.action.outTextForCoalition(2, 'Reaper drone deployed over ' .. target .. '. Contact Springfield on 241.00 AM ', 30)
-        jtacTargetMenu2 = nil
-		end
-    end
-    
-    jtacTargetMenu2 = bc:showTargetZoneMenu(2, 'Deploy JTAC to Zone', spawnAndOrbit2, 1)
-    trigger.action.outTextForCoalition(2, 'Choose which zone to deploy JTAC at from F10 menu', 15)
+bc:registerShopItem('9lineam', LTGet("SYRIA_SHOP_ITEM_JTAC_9LINE_AM"), ShopPrices["9lineam"], function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         droneAM:deployAtZone(params.zone)
         jtacZones[params.zone.zone] = {drone = Era == 'Coldwar' and 'JTAC9lineamColdwar' or 'JTAC9lineam'}
-        trigger.action.outTextForCoalition(2, 'Reaper drone deployed over ' .. params.zone.zone .. '. Contact Springfield on 241.00 AM ', 30)
+		if Era == 'Coldwar' then
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_AM", params.zone.zone), 30)
+		else
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_REAPER_AM", params.zone.zone), 30)
+		end
     else
-        return 'Can only target enemy zone'
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
 end)
+bc.shopItems['9lineam'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
   ------------------------------ END 9 line jtac AM END ----------------------------------
   ----------------------------- START 9 line jtac fm START ---------------------------
@@ -2346,35 +2124,28 @@ droneFM = JTAC9line:new({name = 'JTAC9linefmColdwar'})
 else
 droneFM = JTAC9line:new({name = 'JTAC9linefm'})
 end
-bc:registerShopItem('9linefm', 'Jtac 9line FM', ShopPrices["9linefm"], function(sender)
-    if jtacTargetMenu3 then
-        return 'Choose target zone from F10 menu'
-    end
-    
-    local spawnAndOrbit3 = function(target)
-        if jtacTargetMenu3 then
-            local zn = bc:getZoneByName(target)
-            droneFM:deployAtZone(zn)
-			
-			jtacZones[target] = {drone = Era == 'Coldwar' and 'JTAC9linefmColdwar' or 'JTAC9linefm'}
-			
-		trigger.action.outTextForCoalition(2, 'Reaper drone deployed over ' .. target .. '. Contact Uzi on 31.00 FM ', 30)            
-            jtacTargetMenu3 = nil
-        end
-    end
-    
-    jtacTargetMenu3 = bc:showTargetZoneMenu(2, 'Deploy JTAC to Zone', spawnAndOrbit3, 1)
-    trigger.action.outTextForCoalition(2, 'Choose which zone to deploy JTAC at from F10 menu', 15)
+bc:registerShopItem('9linefm', LTGet("SYRIA_SHOP_ITEM_JTAC_9LINE_FM"), ShopPrices["9linefm"], function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         droneFM:deployAtZone(params.zone)
         jtacZones[params.zone.zone] = {drone = Era == 'Coldwar' and 'JTAC9linefmColdwar' or 'JTAC9linefm'}
-        trigger.action.outTextForCoalition(2, 'Reaper drone deployed over ' .. params.zone.zone .. '. Contact Uzi on 31.00 FM ', 30)
+		if Era == 'Coldwar' then
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_FM", params.zone.zone), 30)
+		else
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_REAPER_FM", params.zone.zone), 30)
+		end
     else
-        return 'Can only target enemy zone'
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
 end)
+bc.shopItems['9linefm'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
   -------------------------- END 9 line jtac FM END ----------------------------------
 
@@ -2404,969 +2175,676 @@ end
 
 -- new menu
 local supplyMenu=nil
-bc:registerShopItem('capture','Capture neutral zone',ShopPrices.capture,
+bc:registerShopItem('capture',LTGet("SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL"),ShopPrices.capture,
 function(sender)
 	if NoAIBlueSupplies == true then 
-		return 'Blue AI supplies are disabled' 
+		return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
 	end
-	if supplyMenu then
-		return 'Choose a zone from F10 menu'
-	end
-    local cost=500
-    trigger.action.outTextForCoalition(2,'Select zone from F10 menu',15)
-    supplyMenu=bc:showEmergencyNeutralZoneMenu(2,'Select Zone for Emergency capture',
-    function(zonename)
-        if not zonename then
-            bc:addFunds(2,cost)
-            if supplyMenu then missionCommands.removeItemForCoalition(2,supplyMenu) end
-            supplyMenu=nil
-            trigger.action.outTextForCoalition(2,'No zone name selected, purchase refunded',10)
-            return 'No zone name'
-        end
-        local chosenZone=bc:getZoneByName(zonename)
-        if not chosenZone then
-            bc:addFunds(2,cost)
-            if supplyMenu then missionCommands.removeItemForCoalition(2,supplyMenu) end
-            supplyMenu=nil
-            trigger.action.outTextForCoalition(2,'Zone not found, purchase refunded',10)
-            return 'Zone not found'
-        end
-        if chosenZone.side~=0 then
-            bc:addFunds(2,cost)
-            if supplyMenu then missionCommands.removeItemForCoalition(2,supplyMenu) end
-            supplyMenu=nil
-            trigger.action.outTextForCoalition(2,'Zone is not neutral anymore, purchase refunded',10)
-            return 'Zone is no longer neutral!'
-        end
-        local bestCommander,status=findNearestAvailableSupplyCommander(chosenZone)
-        if not bestCommander then
-            bc:addFunds(2,cost)
-            if supplyMenu then missionCommands.removeItemForCoalition(2,supplyMenu) end
-            supplyMenu=nil
-            if status=='inprogress' then
-                trigger.action.outTextForCoalition(2,'Supply to '..chosenZone.zone..' already in progress, purchase refunded',10)
-                return 'Supply mission in progress for this zone'
-            else
-                trigger.action.outTextForCoalition(2,'No suitable supply group found for '..chosenZone.zone..', purchase refunded',10)
-                return 'No available supply convoys'
-            end
-        end
-        bestCommander.targetzone=zonename
-        bestCommander.state='preparing'
-        bestCommander.urgent=true
-        bestCommander.lastStateTime=timer.getAbsTime()-999999
-        trigger.action.outTextForCoalition(2,'Emergency Capture from '..bestCommander.name..' heading to '..zonename,10)
-        if supplyMenu then
-            missionCommands.removeItemForCoalition(2,supplyMenu)
-            supplyMenu=nil
-        end
-        return nil
-    end)
-    return nil
+	return LTGet("SYRIA_SHOP_CHOOSE_NEUTRAL_ZONE")
 end,
 function(sender,params)
     if not params.zone or params.zone.side~=0 then
-        return 'Zone is not neutral'
+        return LTGet("SYRIA_SHOP_ZONE_NOT_NEUTRAL")
     end
     local chosenZone=bc:getZoneByName(params.zone.zone)
-    local bestCommander,status=findNearestAvailableSupplyCommander(chosenZone)
-    if not bestCommander then
-        if status=='inprogress' then
-            return 'Supply mission in progress for this zone'
-        else
-            return 'No available supply convoys'
-        end
-    end
-    bestCommander.targetzone=params.zone.zone
-    bestCommander.state='preparing'
-    bestCommander.urgent=true
-    bestCommander.lastStateTime=timer.getAbsTime()-999999
-    trigger.action.outTextForCoalition(2,'Emergency Capture from '..bestCommander.name..' heading to '..params.zone.zone,10)
-    return nil
+    return bc:requestCaptureMission(chosenZone, params)
 end)
+bc.shopItems['capture'].groupZoneSelector = {
+	targetzoneside = 0,
+	includeSuspended = true,
+	extraPredicate = function(zoneObj)
+		return zoneObj.active and (not zoneObj.NeutralAtStart or zoneObj.firstCaptureByRed)
+	end,
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		local function remember(handle)
+			if rememberHandle then
+				return rememberHandle(handle)
+			end
+			if handle then
+				track[#track + 1] = handle
+			end
+			return handle
+		end
+
+		local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
+		local canUseFarp = bestCommander and (bestCommander.type == 'surface' or bestCommander.unitCategory == Unit.Category.HELICOPTER)
+		local hasFriendlyDynamicFarp = false
+		local hasNearbyFriendlyDynamicFarp = false
+		local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[2] or nil
+		if farps then
+			for i = 1, #farps do
+				local farpAb = AIRBASE:FindByName(farps[i].name)
+				if farpAb and farpAb:GetCoalition() == 2 then
+					hasFriendlyDynamicFarp = true
+					local distMeters = bcRef:_getDynamicFarpZoneDistance(farps[i], zoneObj.zone)
+					if distMeters and distMeters <= (30 * 1852) then
+						hasNearbyFriendlyDynamicFarp = true
+					end
+				end
+			end
+		end
+		local hasDynamicShopSupplyFarp = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj)
+		local hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj) ~= nil)
+		if (canUseFarp and hasFriendlyDynamicFarp) or hasFallbackHeloFarp or hasDynamicShopSupplyFarp then
+			local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
+			local T = L10N:ForGroup(groupId)
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_DEPLOY_FROM_FARP"), zoneMenu, function() end))
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+				zone = zoneObj,
+				allowFarp = true,
+			}, groupId, groupObj))
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+				zone = zoneObj,
+				allowFarp = false,
+			}, groupId, groupObj))
+			return
+		end
+
+		remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			zone = zoneObj,
+		}, groupId, groupObj))
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_NEUTRAL_ZONES"),
+}
 --end of menu
 
 -----------------------------------------------DYNAMIC SHOP ------------------------------------------
 
 
-bc:registerShopItem('dynamiccap', 'CAP Flight', ShopPrices.dynamiccap, function(sender)
+bc:registerShopItem('dynamiccap', LTGet("SYRIA_SHOP_ITEM_CAP_FLIGHT"), ShopPrices.dynamiccap, function(sender)
     if capActive then
-        return 'CAP mission still in progress'
+        return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAP")
     end
 		if capParentMenu then
-		return 'Choose spawn zone from F10 menu'
+		return LTGet("SYRIA_SHOP_CHOOSE_SPAWN_ZONE")
 	end
     buildCapMenu()
-	trigger.action.outTextForCoalition(2, 'CAP is requested. Select spawn zone.', 10)
+	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_CAP_REQUESTED"), 20)
     return
 end,
 function (sender, params)
     if capActive then
-        return 'CAP mission still in progress'
+        return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAP")
+    end
+    if params and params.zone then
+        if params.zone.side ~= 2 or params.zone.suspended then
+            return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY")
+        end
+        spawnCapAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0)
+        return
     end
     buildCapMenu()
 
-	trigger.action.outTextForCoalition(2, 'CAP is requested. Select spawn zone.', 10)
+	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_CAP_REQUESTED"), 20)
     return
 end)
+bc.shopItems['dynamiccap'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		local function remember(handle)
+			if rememberHandle then
+				return rememberHandle(handle)
+			end
+			if handle then
+				track[#track + 1] = handle
+			end
+			return handle
+		end
+
+		local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
+		local T = L10N:ForGroup(groupId)
+		for _, headingName in ipairs({ "Orbit", "Hot 360", "Hot 045", "Hot 090", "Hot 135", "Hot 180", "Hot 225", "Hot 270", "Hot 315" }) do
+			if headingName == "Orbit" then
+				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+					zone = zoneObj,
+					heading = 45,
+					leg = 0,
+				}, groupId, groupObj))
+			else
+				local headingVal = capHeadings[headingName]
+				local headingMenu = remember(missionCommands.addSubMenuForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu))
+				for _, legName in ipairs({ "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg" }) do
+					local legVal = capLegs[legName]
+					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+						zone = zoneObj,
+						heading = headingVal,
+						leg = legVal,
+					}, groupId, groupObj))
+				end
+			end
+		end
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
 ---
-bc:registerShopItem('dynamicarco', 'Unlock Tanker (Drogue)', ShopPrices.dynamicarco, function(sender)
+bc:registerShopItem('dynamicarco', LTGet("SYRIA_SHOP_ITEM_TANKER_DROGUE"), ShopPrices.dynamicarco, function(sender)
     if ArcoActive then
-        return 'Arco is still airborne'
+        return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Arco")
     end
 		if ArcoParentMenu then
-		return 'Choose spawn zone from F10 menu'
+		return LTGet("SYRIA_SHOP_CHOOSE_SPAWN_ZONE")
 	end
     buildArcoMenu()
-	trigger.action.outTextForCoalition(2, '(Drogue) Tanker is unlocked. Select spawn zone.', 20)
+	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_DROGUE_UNLOCKED"), 20)
     return
 end,
 function (sender, params)
     if ArcoActive then
-        return 'Arco is still airborne'
+        return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Arco")
+    end
+    if params and params.zone then
+        if params.zone.side ~= 2 then
+            return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY")
+        end
+        spawnArcoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0)
+        return
     end
     buildArcoMenu()
 
-	trigger.action.outTextForCoalition(2, '(Drogue) Tanker is unlocked. Select spawn zone.', 20)
+	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_DROGUE_UNLOCKED"), 20)
     return
 end)
+bc.shopItems['dynamicarco'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = true,
+	sortPolicy = 'friendly_frontline',
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		local function remember(handle)
+			if rememberHandle then
+				return rememberHandle(handle)
+			end
+			if handle then
+				track[#track + 1] = handle
+			end
+			return handle
+		end
 
-bc:registerShopItem('dynamictexaco', 'Unlock Tanker (Boom)', ShopPrices.dynamictexaco, function(sender)
+		local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
+		local T = L10N:ForGroup(groupId)
+		for _, headingName in ipairs({ "Orbit", "Hot 360", "Hot 045", "Hot 090", "Hot 135", "Hot 180", "Hot 225", "Hot 270", "Hot 315" }) do
+			if headingName == "Orbit" then
+				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+					zone = zoneObj,
+					heading = 45,
+					leg = 0,
+				}, groupId, groupObj))
+			else
+				local headingVal = capHeadings[headingName]
+				local headingMenu = remember(missionCommands.addSubMenuForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu))
+				for _, legName in ipairs({ "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg" }) do
+					local legVal = capLegs[legName]
+					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+						zone = zoneObj,
+						heading = headingVal,
+						leg = legVal,
+					}, groupId, groupObj))
+				end
+			end
+		end
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+
+bc:registerShopItem('dynamictexaco', LTGet("SYRIA_SHOP_ITEM_TANKER_BOOM"), ShopPrices.dynamictexaco, function(sender)
     if TexacoActive then
-        return 'Texaco is still airborne'
+        return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Texaco")
     end
 		if TexacoParentMenu then
-		return 'Choose spawn zone from F10 menu'
+		return LTGet("SYRIA_SHOP_CHOOSE_SPAWN_ZONE")
 	end
     buildTexacoMenu()
-	trigger.action.outTextForCoalition(2, '(Boom) Tanker is unlocked. Select spawn zone.', 20)
+	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_BOOM_UNLOCKED"), 20)
     return
 end,
 function (sender, params)
     if TexacoActive then
-        return 'Texaco is still airborne'
+        return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Texaco")
+    end
+    if params and params.zone then
+        if params.zone.side ~= 2 then
+            return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY")
+        end
+        spawnTexacoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0)
+        return
     end
     buildTexacoMenu()
 
-	trigger.action.outTextForCoalition(2, '(Boom) Tanker is unlocked. Select spawn zone.', 20)
+	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_BOOM_UNLOCKED"), 20)
     return
 end)
+bc.shopItems['dynamictexaco'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = true,
+	sortPolicy = 'friendly_frontline',
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		local function remember(handle)
+			if rememberHandle then
+				return rememberHandle(handle)
+			end
+			if handle then
+				track[#track + 1] = handle
+			end
+			return handle
+		end
+
+		local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
+		local T = L10N:ForGroup(groupId)
+		for _, headingName in ipairs({ "Orbit", "Hot 360", "Hot 045", "Hot 090", "Hot 135", "Hot 180", "Hot 225", "Hot 270", "Hot 315" }) do
+			if headingName == "Orbit" then
+				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+					zone = zoneObj,
+					heading = 45,
+					leg = 0,
+				}, groupId, groupObj))
+			else
+				local headingVal = capHeadings[headingName]
+				local headingMenu = remember(missionCommands.addSubMenuForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu))
+				for _, legName in ipairs({ "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg" }) do
+					local legVal = capLegs[legName]
+					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+						zone = zoneObj,
+						heading = headingVal,
+						leg = legVal,
+					}, groupId, groupObj))
+				end
+			end
+		end
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
 ---
-bc:registerShopItem('dynamiccas', 'CAS Flight', ShopPrices.dynamiccas,
+bc:registerShopItem('dynamiccas', LTGet("SYRIA_SHOP_ITEM_CAS_FLIGHT"), ShopPrices.dynamiccas,
 function(sender)
     if casActive then
-        return 'CAS mission still in progress'
+        return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAS")
     end
-	if CASTargetMenu then
-		return 'Choose target zone from F10 menu'
-	end
-    local minNM = 25
-    local allow = {}
-    for _, z in ipairs(bc:getZones()) do
-        if z.side == 1 and findClosestBlueZoneOutside(z.zone, minNM) then
-            allow[z.zone] = true
-        end
-    end
-    if not next(allow) then
-        trigger.action.outTextForCoalition(2, 'No enemy zone is far enough (>'..minNM..' NM) from the front line.', 10)
-        return
-    end
-    CASTargetMenu = bc:showTargetZoneMenu(2, 'Select CAS Target', function(targetZoneName, menu)
-        if casActive then return end
-        local spawnZone, dist = findClosestBlueZoneOutside(targetZoneName, minNM)
-        if not spawnZone then
-            return 'No friendly zone available for CAS spawn '..minNM..'+ NM away'
-        end
-        local offset = (dist and dist < minNM) and (minNM - dist) or 0
-        spawnCasAt(spawnZone, targetZoneName, offset)
-        CASTargetMenu = nil
-    end, 1, nil, allow)
-    trigger.action.outTextForCoalition(2, 'Select CAS target zone from F10', 10)
-    return
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
         if params.zone and params.zone.side == 1 and not params.zone.suspended then
-        if casActive then return 'CAS mission still in progress' end
+        if casActive then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAS") end
         local minNM = 25
         local closestBlue, dist = findClosestBlueZoneOutside(params.zone.zone, minNM)
         if not closestBlue then
-            return 'No friendly zone available for CAS spawn.'
+            return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "CAS")
         end
         local offset = (dist and dist < minNM) and (minNM - dist) or 0
         spawnCasAt(closestBlue, params.zone.zone, offset)
         return
     else
-        return 'Can only target enemy zone'
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
 end)
+bc.shopItems['dynamiccas'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	allow = function(zoneObj)
+		return zoneObj.side == 1
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
-bc:registerShopItem('dynamicdecoy', 'TALD DECOY Flight', ShopPrices.dynamicdecoy,
+bc:registerShopItem('dynamicdecoy', LTGet("SYRIA_SHOP_ITEM_TALD_DECOY"), ShopPrices.dynamicdecoy,
 function(sender)
     if decoyActive then
-        return 'Decoy mission still in progress'
+        return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "Decoy")
     end
-	if DECOYTargetMenu then
-		return 'Choose target zone from F10 menu'
-	end
-
-    local minNM = 40
-    local allow = {}
-    for _, z in ipairs(bc:getZones()) do
-        if z.side == 1 and findClosestBlueZoneOutside(z.zone, minNM) then
-            allow[z.zone] = true
-        end
-    end
-    if not next(allow) then
-        trigger.action.outTextForCoalition(2, 'No enemy zone is far enough (>'..minNM..' NM) from the front line.', 10)
-        return
-    end
-
-    DECOYTargetMenu = bc:showTargetZoneMenu(2, 'Select Decoy Target', function(targetZoneName, menu)
-        if decoyActive then return end
-        local spawnZone, dist = findClosestBlueZoneOutside(targetZoneName, minNM)
-        if not spawnZone then
-            trigger.action.outTextForCoalition(2, 'No friendly zone available for Decoy spawn '..minNM..'+ NM away.', 15)
-            return
-        end
-        local offset = (dist and dist < minNM) and (minNM - dist) or 0
-        spawnDecoyAt(spawnZone, targetZoneName, offset)
-        DECOYTargetMenu = nil
-    end, 1, nil, allow)
-
-    trigger.action.outTextForCoalition(2, 'Select Decoy target zone from F10', 10)
-    return
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         if decoyActive then
-            return 'Decoy mission still in progress'
+            return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "Decoy")
         end
         local minNM = 40
         local closestBlue, dist = findClosestBlueZoneOutside(params.zone.zone, minNM)
         if not closestBlue then
-            return 'No friendly zone available for Decoy spawn.'
+            return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "Decoy")
         end
         local offset = (dist and dist < minNM) and (minNM - dist) or 0
         spawnDecoyAt(closestBlue, params.zone.zone, offset)
         return
     else
-        return 'Can only target enemy zone'
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
 end)
+bc.shopItems['dynamicdecoy'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	allow = function(zoneObj)
+		return zoneObj.side == 1
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
 
-bc:registerShopItem('dynamicsead', 'SEAD Flight', ShopPrices.dynamicsead,
+bc:registerShopItem('dynamicsead', LTGet("SYRIA_SHOP_ITEM_SEAD_FLIGHT"), ShopPrices.dynamicsead,
 function(sender)
     if seadActive then
-        return 'SEAD mission still in progress'
+        return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "SEAD")
     end
-	if SEADTargetMenu then
-		return 'Choose target zone from F10 menu'
-	end
-
-    local minNM = 40
-    local allow = {}
-    for _, z in ipairs(bc:getZones()) do
-        if z.side == 1 and findClosestBlueZoneOutside(z.zone, minNM) then
-            allow[z.zone] = true
-        end
-    end
-    if not next(allow) then
-        trigger.action.outTextForCoalition(2, 'No enemy zone is far enough (>'..minNM..' NM) from the front line.', 10)
-        return
-    end
-
-    SEADTargetMenu = bc:showTargetZoneMenu(2, 'Select SEAD Target', function(targetZoneName, menu)
-        if seadActive then return end
-        local spawnZone, dist = findClosestBlueZoneOutside(targetZoneName, minNM)
-        if not spawnZone then
-            trigger.action.outTextForCoalition(2, 'No friendly zone available for SEAD spawn '..minNM..'+ NM away.', 15)
-            return
-        end
-        local offset = (dist and dist < minNM) and (minNM - dist) or 0
-        spawnSeadAt(spawnZone, targetZoneName, offset)
-        SEADTargetMenu = nil
-    end, 1, nil, allow)
-
-    trigger.action.outTextForCoalition(2, 'Select SEAD target zone from F10', 10)
-    return
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         if seadActive then
-            return 'SEAD mission still in progress'
+            return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "SEAD")
         end
         local minNM = 40
         local closestBlue, dist = findClosestBlueZoneOutside(params.zone.zone, minNM)
         if not closestBlue then
-            return 'No friendly zone available for SEAD spawn.'
+            return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "SEAD")
         end
         local offset = (dist and dist < minNM) and (minNM - dist) or 0
         spawnSeadAt(closestBlue, params.zone.zone, offset)
         return
     else
-        return 'Can only target enemy zone'
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
 end)
+bc.shopItems['dynamicsead'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	allow = function(zoneObj)
+		return zoneObj.side == 1
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
-bc:registerShopItem('dynamicbomb', 'Bomber Flight', ShopPrices.dynamicbomb,
+bc:registerShopItem('dynamicbomb', LTGet("SYRIA_SHOP_ITEM_BOMBER_FLIGHT"), ShopPrices.dynamicbomb,
 function(sender)
     if bomberActive then
-        return 'Bomb mission still in progress'
+        return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "Bomb")
     end
-	if BomberTargetMenu then
-        return 'Choose target zone from F10 menu'
-    end
-
-    local minNM = 25
-    local allow = {}
-    for _, z in ipairs(bc:getZones()) do
-        if z.side == 1 and findClosestBlueZoneOutside(z.zone, minNM) then
-            allow[z.zone] = true
-        end
-    end
-    if not next(allow) then
-        trigger.action.outTextForCoalition(2, 'No enemy zone is far enough (>'..minNM..' NM) from the front line.', 10)
-        return
-    end
-
-    BomberTargetMenu = bc:showTargetZoneMenu(2, 'Select bomb run target', function(targetZoneName, menu)
-        if bomberActive then return end
-        local spawnZone, dist = findClosestBlueZoneOutside(targetZoneName, minNM)
-        if not spawnZone then
-            trigger.action.outTextForCoalition(2, 'No friendly zone available for Bomb spawn '..minNM..'+ NM away.', 15)
-            return
-        end
-        local offset = (dist and dist < minNM) and (minNM - dist) or 0
-        spawnBomberAt(spawnZone, targetZoneName, offset)
-        BomberTargetMenu = nil
-    end, 1, nil, allow)
-
-    trigger.action.outTextForCoalition(2, 'Select bomb run target zone from F10', 10)
-    return
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         if bomberActive then
-            return 'Bomb run mission still in progress'
+            return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "Bomb run")
         end
         local minNM = 25
         local closestBlue, dist = findClosestBlueZoneOutside(params.zone.zone, minNM)
         if not closestBlue then
-            return 'No friendly zone available for bomb run spawn.'
+            return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "bomb run")
         end
         local offset = (dist and dist < minNM) and (minNM - dist) or 0
         spawnBomberAt(closestBlue, params.zone.zone, offset)
         return
     else
-        return 'Can only target enemy zone'
+        return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
 end)
+bc.shopItems['dynamicbomb'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	allow = function(zoneObj)
+		return zoneObj.side == 1
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
+
+bc:registerShopItem('groundattack', LTGet("SYRIA_SHOP_ITEM_GROUND_ATTACK"), ShopPrices.groundattack, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+end,
+function(sender, params)
+	if params.zone and params.zone.side == 1 and not params.zone.suspended and not isCarrierZoneName(params.zone.zone) then
+		return bc:launchPlayerGroundAttack(params.zone, params.allowFarp)
+	end
+	return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
+end)
+bc.shopItems['groundattack'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	allow = function(zoneObj)
+		return zoneObj.side == 1
+	end,
+	extraPredicate = function(zoneObj)
+		return not isCarrierZoneName(zoneObj.zone)
+	end,
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		local function remember(handle)
+			if rememberHandle then
+				return rememberHandle(handle)
+			end
+			if handle then
+				track[#track + 1] = handle
+			end
+			return handle
+		end
+
+		local hasFriendlyDynamicFarp = false
+		local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[2] or nil
+		if farps then
+			for i = 1, #farps do
+				local farpAb = AIRBASE:FindByName(farps[i].name)
+				if farpAb and farpAb:GetCoalition() == 2 then
+					hasFriendlyDynamicFarp = true
+					break
+				end
+			end
+		end
+		if hasFriendlyDynamicFarp then
+			local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
+			local T = L10N:ForGroup(groupId)
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_DEPLOY_FROM_FARP"), zoneMenu, function() end))
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+				zone = zoneObj,
+				allowFarp = true,
+			}, groupId, groupObj))
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+				zone = zoneObj,
+				allowFarp = false,
+			}, groupId, groupObj))
+			return
+		end
+
+		remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			zone = zoneObj,
+		}, groupId, groupObj))
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
 
 if UseStatics == true then
-bc:registerShopItem('dynamicstatic', 'Static structure Flight', ShopPrices.dynamicstatic,
+bc:registerShopItem('dynamicstatic', LTGet("CA_SHOP_ITEM_STATIC_STRUCTURE"), ShopPrices.dynamicstatic,
 function(sender)
     if StructureActive then
-        return 'building strike mission still in progress'
+        return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "building strike")
     end
-	if StructureTargetMenu then
-		return 'Choose target zone from F10 menu'
-	end
-    local minNM = 25
-    local allow = {}
-    for _, z in ipairs(bc:getZones()) do
-        if z.side == 1 and z.newStatics and next(z.newStatics) and findClosestBlueZoneOutside(z.zone, minNM) then
-            allow[z.zone] = true
-        end
-    end
-    if not next(allow) then
-        trigger.action.outTextForCoalition(2, 'No enemy zone with building targets far enough (>'..minNM..' NM) from the front line.', 10)
-        return
-    end
-
-    StructureTargetMenu = bc:showTargetZoneMenu(2, 'Select building strike target zone', function(targetZoneName, menu)
-        if bomberActive then return end
-        local spawnZone, dist = findClosestBlueZoneOutside(targetZoneName, minNM)
-        if not spawnZone then
-            trigger.action.outTextForCoalition(2, 'No friendly zone available for strike spawn '..minNM..'+ NM away.', 15)
-            return
-        end
-        local offset = (dist and dist < minNM) and (minNM - dist) or 0
-        spawnStructureAt(spawnZone, targetZoneName, offset)
-        StructureTargetMenu = nil
-    end, 1, nil, allow)
-
-    trigger.action.outTextForCoalition(2, 'Select building strike target zone from F10', 10)
-    return
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and params.zone.newStatics and next(params.zone.newStatics) then
         if StructureActive then
-            return 'building strike mission still in progress'
+            return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "building strike")
         end
         local minNM = 25
         local closestBlue, dist = findClosestBlueZoneOutside(params.zone.zone, minNM)
         if not closestBlue then
-            return 'No friendly zone available for strike spawn.'
+            return LTGet("CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN")
         end
         local offset = (dist and dist < minNM) and (minNM - dist) or 0
         spawnStructureAt(closestBlue, params.zone.zone, offset)
         return
     else
-        return 'Can only target enemy zone with building targets'
+        return LTGet("CA_SHOP_CAN_ONLY_TARGET_BUILDINGS")
     end
 end)
+bc.shopItems['dynamicstatic'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	allow = function(zoneObj)
+		return zoneObj.side == 1
+			and zoneObj.newStatics
+			and next(zoneObj.newStatics) ~= nil
+	end,
+	emptyLabel = LTGet("CA_SHOP_NO_VALID_BUILDING_TARGET_ZONES"),
+}
 end
 ---------------------------------------------END DYNAMIC SHOP ------------------------------------------
 
 local intelMenu=nil
-bc:registerShopItem('intel','Intel on enemy zone',ShopPrices.intel,function(sender)
-	if intelMenu then
-		return 'Already choosing a zone'
-	end
-	local pickZone = function(targetZoneName)
-		if intelMenu then
-			local zoneObj = bc:getZoneByName(targetZoneName)
-			if not zoneObj or zoneObj.side ~= 1 or zoneObj.suspended then
-				return 'Must pick an enemy zone'
-			end
-			intelActiveZones[targetZoneName] = true
-			startZoneIntel(targetZoneName)
-			trigger.action.outTextForCoalition(2, 'Intel available for '..targetZoneName..'. Check Zone status. Valid for 1 hour', 15)
-			timer.scheduleFunction(function(args)
-				local zName = args[1]
-				if intelActiveZones[zName] then intelActiveZones[zName] = false end
-				local zn = bc:getZoneByName(zName)
-				if zn and zn.updateLabel then zn:updateLabel() end
-				trigger.action.outTextForCoalition(2, 'Intel on '..zName..' has expired.', 10)
-			end, {targetZoneName}, timer.getTime()+60*60)
-			intelMenu = nil
-		end
-	end
-	intelMenu = bc:showTargetZoneMenu(2, 'Choose Enemy Zone for Intel', pickZone, 1)
-	trigger.action.outTextForCoalition(2, 'Intel purchase started. Select enemy zone from F10 menu.', 15)
+bc:registerShopItem('intel',LTGet("SYRIA_SHOP_ITEM_INTEL_ENEMY"),ShopPrices.intel,function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
 		intelActiveZones[params.zone.zone] = true
 		startZoneIntel(params.zone.zone)
-		trigger.action.outTextForCoalition(2, 'Intel available for '..params.zone.zone..'. Check Zone status. Valid for 1 hour', 15)
-		SCHEDULER:New(nil,function(zName)
-			if intelActiveZones[zName] then intelActiveZones[zName] = false end
-			local zn = bc:getZoneByName(zName)
-			if zn and zn.updateLabel then zn:updateLabel() end
-			trigger.action.outTextForCoalition(2, 'Intel on '..zName..' has expired.', 10)
-		end,{params.zone.zone},3600)
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
 	else
-		return 'Must pick an enemy zone'
+		return LTGet("SYRIA_SHOP_MUST_PICK_ENEMY_ZONE")
 	end
 end)
+bc.shopItems['intel'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
+}
 
 ------------------------------------------- Zone upgrades --------------------------------------------
-local function buildAllowTable()
-	local t = {}
-	for _, z in pairs(bc:getZones()) do
-		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
-        if z.side == 2 and (z.upgradesUsed or 0) < max
-           and not z.zone:lower():find("carrier") and not z.suspended then
-			t[z.zone] = true
-		end
-	end
-	return t
-end
-
-local function buildLogisticAllowTable()
-	local allowed = {}
-	for _, z in pairs(bc:getZones()) do
-		if z.side == 2 and z.airbaseName and not z.LogisticCenter and not z.isHidden and not z.suspended then
-			allowed[z.zone] = true
-		end
-	end
-	return allowed
-end
-
--- Red AI zone upgrade helpers
-local function buildRedAllowTable()
-	local t = {}
-	for _, z in pairs(bc:getZones()) do
-		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
-		local used = (type(z.getUpgradesUsed) == "function") and z:getUpgradesUsed(1) or (z.upgradesUsed or 0)
-		if z.side == 1 and z.active and not z.suspended and not z.isHidden
-		   and not z.zone:lower():find("carrier")
-		   and used < max then
-			t[z.zone] = true
-		end
-	end
-	return t
-end
-
-local function normalizeBuiltName(name)
-	return name and name:gsub("#%d+$", "") or name
-end
-
-local function buildStaticNameSet(zoneObj)
-	local statics = {}
-	for _, data in ipairs(zoneObj.newStatics or {}) do
-		if data and data.name then
-			statics[data.name] = true
-			local base = normalizeBuiltName(data.name)
-			if base then
-				statics[base] = true
-			end
-		end
-	end
-	return statics
-end
-
-local function buildBuiltNameSet(zoneObj)
-	local built = {}
-	for _, name in pairs(zoneObj.built or {}) do
-		local base = normalizeBuiltName(name)
-		if base then
-			built[base] = true
-		end
-	end
-	return built
-end
-
-local function buildUpgradeNameSet(zoneObj)
-	local names = {}
-	for _, name in ipairs(zoneObj.upgrades and zoneObj.upgrades.red or {}) do
-		local base = normalizeBuiltName(name)
-		if base then
-			names[base] = true
-		end
-	end
-	return names
-end
-
-local function resolveMinMax(val)
-	if type(val) == "table" then
-		local minv = val[1] or 0
-		local maxv = val[2] or minv
-		return minv, maxv
-	end
-	if type(val) == "number" then
-		return val, val
-	end
-	return 0, 0
-end
-
-local function countZoneRedCategories(zoneObj)
-	local counts = { sam = 0, shorad = 0, aaa = 0, ground = 0, armor = 0, arty = 0 }
-	for _, name in ipairs(zoneObj.upgrades and zoneObj.upgrades.red or {}) do
-		if name and not isStaticUpgrade(name) then
-			local cat = classifyUpgradeName(name)
-			if counts[cat] ~= nil then
-				counts[cat] = counts[cat] + 1
-			end
-		end
-	end
-	return counts
-end
-
-local function buildRedPoolsForZone(zoneObj)
-	local zoneSize = getZoneSize(zoneObj)
-	local pools = { sam = {}, shorad = {}, aaa = {}, ground = {}, armor = {}, arty = {}, other = {} }
-	fillPoolsFrom(getGlobalRedPool(), pools, zoneSize)
-	local existing = buildUpgradeNameSet(zoneObj)
-
-	local function filterPool(src)
-		local out = {}
-		for _, name in ipairs(src or {}) do
-			local base = normalizeBuiltName(name)
-			if base and not existing[base] then
-				out[#out+1] = name
-			end
-		end
-		return out
-	end
-
-	for k, v in pairs(pools) do
-		pools[k] = filterPool(v)
-	end
-	return pools
-end
-
-local function chooseRedUpgradeCategory(counts, template)
-	local order = { "sam", "shorad", "aaa", "ground", "armor", "arty" }
-	local deficits = {}
-	for _, cat in ipairs(order) do
-		local minv = resolveMinMax(template and template[cat])
-		local have = counts[cat] or 0
-		deficits[cat] = math.max(0, minv - have)
-	end
-	if deficits.sam and deficits.sam > 0 then
-		return "sam"
-	end
-	for i = 2, #order do
-		local cat = order[i]
-		if deficits[cat] and deficits[cat] > 0 then
-			return cat
-		end
-	end
-	local bestCat, bestCount = nil, nil
-	for _, cat in ipairs(order) do
-		local have = counts[cat] or 0
-		if bestCount == nil or have < bestCount then
-			bestCount = have
-			bestCat = cat
-		end
-	end
-	return bestCat
-end
-
-local function pickRedUpgradeForZone(zoneObj)
-	local zoneSize = getZoneSize(zoneObj)
-	local template = RandomUpgradeTemplates and RandomUpgradeTemplates[zoneSize]
-	if not template then
-		return nil
-	end
-	local counts = countZoneRedCategories(zoneObj)
-	local pools = buildRedPoolsForZone(zoneObj)
-	local order = { "sam", "shorad", "aaa", "ground", "armor", "arty" }
-
-	local cat = chooseRedUpgradeCategory(counts, template)
-	if cat and pools[cat] and #pools[cat] > 0 then
-		return pools[cat][math.random(1, #pools[cat])]
-	end
-
-	for _, alt in ipairs(order) do
-		if pools[alt] and #pools[alt] > 0 then
-			return pools[alt][math.random(1, #pools[alt])]
-		end
-	end
-
-	if pools.other and #pools.other > 0 then
-		return pools.other[math.random(1, #pools.other)]
-	end
-	return nil
-end
-
-local function getRedUpgradeCandidates(zoneObj)
-	local candidates = {}
-	if not (zoneObj and zoneObj.upgrades and zoneObj.upgrades.red) then
-		return candidates
-	end
-	local built = buildBuiltNameSet(zoneObj)
-	local statics = buildStaticNameSet(zoneObj)
-	for _, name in ipairs(zoneObj.upgrades.red) do
-		if name then
-			local base = normalizeBuiltName(name)
-			local lname = name:lower()
-			if not statics[name] and not statics[base] and not lname:find("fixed") then
-				if not built[base] then
-					candidates[#candidates+1] = name
-				end
-			end
-		end
-	end
-	return candidates
-end
-
+-- red Shop
 local RED_ZONE_UPGRADE_ID = "redzoneupgrade"
 local RED_ZONE_UPGRADE_COST = 5000
 
-local function redZoneUpgradeAction()
-	local allow = buildRedAllowTable()
-	if not next(allow) then
-		return "No eligible red zones"
-	end
-
-	local zoneChoices = {}
-	for zName,_ in pairs(allow) do
-		local z = bc:getZoneByName(zName)
-		if z then
-			local slot = pickRedUpgradeForZone(z)
-			if slot then
-				zoneChoices[#zoneChoices+1] = { zone = z, slot = slot }
-			end
-		end
-	end
-	if #zoneChoices == 0 then
-		return "No valid upgrades"
-	end
-
-	local pick = zoneChoices[math.random(1,#zoneChoices)]
-	local zoneObj = pick.zone
-	local slot = pick.slot
-
-	local ok = zoneObj:addExtraSlot(slot)
-	if not ok then
-		return "Zone already upgraded"
-	end
-	if type(zoneObj.updateLabel) == "function" then
-		zoneObj:updateLabel()
-	end
-	zoneObj:upgrade(true)
-	trigger.action.outTextForCoalition(1, "Red forces reinforced at "..zoneObj.zone, 10)
-	return true
-end
-
-bc:registerShopItem(RED_ZONE_UPGRADE_ID, "Red zone upgrade", RED_ZONE_UPGRADE_COST, redZoneUpgradeAction)
+bc:registerShopItem(RED_ZONE_UPGRADE_ID, LTGet("SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE"), RED_ZONE_UPGRADE_COST, function(sender)
+	return bc:redZoneUpgradeAction()
+end)
 
 local RED_MASS_ATTACK_ID = "redmassattack"
 local RED_MASS_ATTACK_COST = 6000
 
 local function redMassAttackAction()
 	if not bc.triggerRedMassAttack then
-		return "Mass attack unavailable"
+		return LTGet("SYRIA_SHOP_MASS_ATTACK_UNAVAILABLE")
 	end
 	return bc:triggerRedMassAttack()
 end
 
-bc:registerShopItem(RED_MASS_ATTACK_ID, "Red mass airbase attack", RED_MASS_ATTACK_COST, redMassAttackAction)
-
-local function buildWarehouseResupplyAllowTable()
-	local allowed = {}
-	if not WarehouseLogistics then
-		return allowed
-	end
-	for _, z in pairs(bc:getZones()) do
-		if z.side == 2 and z.airbaseName and not z.LogisticCenter and not z.isHidden and not z.suspended then
-			allowed[z.zone] = true
-		end
-	end
-	return allowed
-end
-
-local function applyLogisticCenterUpgrade(zoneObj)
-	if not zoneObj or zoneObj.side ~= 2 or zoneObj.suspended then
-		return 'Must pick friendly zone'
-	end
-	if not zoneObj.airbaseName then
-		return 'Zone must have an airbase'
-	end
-	if zoneObj.LogisticCenter then
-		return 'Zone already upgraded'
-	end
-	if type(zoneObj.canRecieveSupply) == 'function' and zoneObj:canRecieveSupply() then
-		return 'The zone must be fully upgraded first!'
-	end
-
-	local ok, err = bc:addWarehouseItemsAtZone(zoneObj, 2, 500000)
-	if not ok then
-		return err or 'Unable to restock warehouse'
-	end
-
-	zoneObj.LogisticCenter = true
-	if type(zoneObj.updateLabel) == 'function' then
-		zoneObj:updateLabel()
-	end
-
-	trigger.action.outTextForCoalition(2, zoneObj.zone..' is now a Logistic Center. Warehouse restocked.', 15)
-	return true
-end
-
-local function applyWarehouseResupply(zoneObj)
-	if not WarehouseLogistics then
-		return 'Warehouse logistics is disabled'
-	end
-	if not zoneObj or zoneObj.side ~= 2 or zoneObj.suspended then
-		return 'Must pick friendly zone'
-	end
-	if not zoneObj.airbaseName then
-		return 'Zone must have an airbase'
-	end
-	if zoneObj.LogisticCenter then
-		return 'Zone already upgraded'
-	end
-	local ok, err = bc:addWarehouseItemsAtZone(zoneObj, 2, 50)
-	if not ok then
-		return err or 'Unable to restock warehouse'
-	end
-
-	trigger.action.outTextForCoalition(2, zoneObj.zone..' warehouse resupplied with 50 items.', 15)
-	return true
-end
+bc:registerShopItem(RED_MASS_ATTACK_ID, LTGet("SYRIA_SHOP_ITEM_RED_MASS_ATTACK"), RED_MASS_ATTACK_COST, redMassAttackAction)
 
 local infMenu=nil
-bc:registerShopItem('zinf','Add infantry squad to zone',ShopPrices.zinf,function(sender)
-	if infMenu then
-		return 'Already choosing a zone'
-	end
-	local pickZone=function(zName)
-		if infMenu then
-			local z=bc:getZoneByName(zName)
-			if not z or z.side~=2 or z.suspended then
-				return 'Must pick friendly zone'
-			end
-			if z.upgradesUsed >= (1 + (bc.globalExtraUnlock and 1 or 0)) then
-				return 'Zone already upgraded'
-			end
-			z:addExtraSlot('blueInfantry')
-			z:updateLabel()
-			if bc.globalExtraUnlock then
-                trigger.action.outTextForCoalition(2,'Infantry added to '..zName..' for 500',10)
-            else
-                trigger.action.outTextForCoalition(2,'Infantry added to '..zName..' for 500 - buy the Global extra slot to upgrade this zone again',30)
-            end
-			missionCommands.removeItemForCoalition(2,infMenu)
-			infMenu=nil
-		end
-	end
-	local allow = buildAllowTable()
-	if not next(allow) then
-		if not bc.globalExtraUnlock then
-			return 'All zones already upgraded - purchase Global extra slot to add another'
-		end
-		return 'No eligible zone'
-	end
-	infMenu = bc:showTargetZoneMenu(2,'Choose Zone for Infantry',pickZone,2,nil,allow)
-	trigger.action.outTextForCoalition(2,'Select friendly zone from F10 menu.',15)
+bc:registerShopItem('zinf',LTGet("SYRIA_SHOP_ITEM_UPGRADE_INFANTRY"),ShopPrices.zinf,function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
-	if params.zone and params.zone.side==2 then
+	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
 			if not bc.globalExtraUnlock then
-				return 'Zone already upgraded - purchase Global extra slot to add another'
+				return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA")
 			end
-			return 'Zone already upgraded'
+			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
 		params.zone:addExtraSlot('blueInfantry')
-		params.zone:updateLabel()
+		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
-		trigger.action.outTextForCoalition(2,'Infantry added to '..params.zone.zone..' for 500',10)
+		trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", L10N:Get("SYRIA_SHOP_LABEL_INFANTRY"), params.zone.zone, tostring(ShopPrices.zinf)),10)
 		else
-		trigger.action.outTextForCoalition(2,'Infantry added to '..params.zone.zone..' for 500 - buy the Global extra slot to upgrade this zone again',30)
+		trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED_EXTRA", L10N:Get("SYRIA_SHOP_LABEL_INFANTRY"), params.zone.zone, tostring(ShopPrices.zinf)),30)
 		end
 	else
-		return 'Must pick friendly zone'
+		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
-local samLabel = (Era == 'Coldwar') and 'Add Hawk system to a zone'
-                                   or  'Add Nasams system to a zone'
+bc.shopItems['zinf'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
+}
+local samLabel = (Era == 'Coldwar') and LTGet("SYRIA_SHOP_ITEM_UPGRADE_HAWK")
+                                   or  LTGet("SYRIA_SHOP_ITEM_UPGRADE_NASAMS")
 local samMenu=nil
 bc:registerShopItem('zsam',samLabel,ShopPrices.zsam,function(sender)
-	if samMenu then
-		return 'Already choosing a zone'
-	end
-	local pickZone=function(zName)
-		if samMenu then
-			local z=bc:getZoneByName(zName)
-			if not z or z.side~=2 or z.suspended then
-				return 'Must pick friendly zone'
-			end
-		if z.upgradesUsed >= (1 + (bc.globalExtraUnlock and 1 or 0)) then
-			return 'Zone already upgraded'
-		end
-            local slot = (Era == 'Coldwar') and 'bluePD Coldwar' or 'bluePD1'
-            z:addExtraSlot(slot)
-			z:updateLabel()
-			local sys = (Era == 'Coldwar') and 'Hawk' or 'Nasams'
-            if bc.globalExtraUnlock then	
-                trigger.action.outTextForCoalition(2,sys..' added to '..zName..' for 2000',10)
-            else
-                trigger.action.outTextForCoalition(2,sys..' added to '..zName..' for 2000 - buy the Global extra slot to upgrade this zone again',30)
-            end
-			missionCommands.removeItemForCoalition(2,samMenu)
-			samMenu=nil
-		end
-	end
-
-	local allow = buildAllowTable()
-	if not next(allow) then
-		if not bc.globalExtraUnlock then
-			return 'All zones already upgraded - purchase Global extra slot to add another'
-		end
-		return 'No eligible zone'
-	end
-	samMenu = bc:showTargetZoneMenu(2,'Choose Zone for SAM',     pickZone,2,nil,allow)
-	trigger.action.outTextForCoalition(2,'Select friendly zone from F10 menu.',15)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
-	if params.zone and params.zone.side==2 then
+	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
 			if not bc.globalExtraUnlock then
-				return 'Zone already upgraded - purchase Global extra slot to add another'
+				return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA")
 			end
-			return 'Zone already upgraded'
+			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
 		params.zone:addExtraSlot((Era == 'Coldwar') and 'bluePD Coldwar' or 'bluePD1')
-		params.zone:updateLabel()
+		bc:refreshZoneLabel(params.zone.zone)
 		local sys = (Era == 'Coldwar') and 'Hawk' or 'Nasams'
         if bc.globalExtraUnlock then
-            trigger.action.outTextForCoalition(2,sys..' added to '..params.zone.zone..' for 2000',10)
+            trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", sys, params.zone.zone, tostring(ShopPrices.zsam)),10)
         else
-            trigger.action.outTextForCoalition(2,sys..' added to '..params.zone.zone..' for 2000 - buy the Global extra slot to upgrade this zone again',30)
+            trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED_EXTRA", sys, params.zone.zone, tostring(ShopPrices.zsam)),30)
         end
 	else
-		return 'Must pick friendly zone'
+		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
+bc.shopItems['zsam'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
+}
 
 local himarsMenu=nil
-bc:registerShopItem('zhimars','Add HIMARS to a zone',ShopPrices.zhimars,function(sender)
-	if himarsMenu then
-		return 'Already choosing a zone'
-	end
-	local pickZone=function(zName)
-		if himarsMenu then
-			local z=bc:getZoneByName(zName)
-			if not z or z.side~=2 or z.suspended then
-				return 'Must pick friendly zone'
-			end
-			if z.upgradesUsed >= (1 + (bc.globalExtraUnlock and 1 or 0)) then
-				return 'Zone already upgraded'
-			end
-			z:addExtraSlot('HiMars')
-			z:updateLabel()
-			if bc.globalExtraUnlock then
-				trigger.action.outTextForCoalition(2,'HIMARS added to '..zName..' for '..tostring(ShopPrices.zhimars),10)
-			else
-				trigger.action.outTextForCoalition(2,'HIMARS added to '..zName..' for '..tostring(ShopPrices.zhimars)..' - buy the Global extra slot to upgrade this zone again',30)
-			end
-			missionCommands.removeItemForCoalition(2,himarsMenu)
-			himarsMenu=nil
-		end
-	end
-	local allow = buildAllowTable()
-	if not next(allow) then
-		if not bc.globalExtraUnlock then
-			return 'All zones already upgraded - purchase Global extra slot to add another'
-		end
-		return 'No eligible zone'
-	end
-	himarsMenu = bc:showTargetZoneMenu(2,'Choose Zone for HIMARS',pickZone,2,nil,allow)
-	trigger.action.outTextForCoalition(2,'Select friendly zone from F10 menu.',15)
+bc:registerShopItem('zhimars',LTGet("SYRIA_SHOP_ITEM_UPGRADE_HIMARS"),ShopPrices.zhimars,function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
-	if params.zone and params.zone.side==2 then
+	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
 			if not bc.globalExtraUnlock then
-				return 'Zone already upgraded - purchase Global extra slot to add another'
+				return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA")
 			end
-			return 'Zone already upgraded'
+			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
 		params.zone:addExtraSlot('HiMars')
-		params.zone:updateLabel()
+		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
-			trigger.action.outTextForCoalition(2,'HIMARS added to '..params.zone.zone..' for '..tostring(ShopPrices.zhimars),10)
+			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", "HIMARS", params.zone.zone, tostring(ShopPrices.zhimars)),10)
 		else
-			trigger.action.outTextForCoalition(2,'HIMARS added to '..params.zone.zone..' for '..tostring(ShopPrices.zhimars)..' - buy the Global extra slot to upgrade this zone again',30)
+			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED_EXTRA", "HIMARS", params.zone.zone, tostring(ShopPrices.zhimars)),30)
 		end
 	else
-		return 'Must pick friendly zone'
+		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
+bc.shopItems['zhimars'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
+}
 
 local logiMenu=nil
-bc:registerShopItem('zlogc','Make a zone logistic center',ShopPrices.zlogc,function(sender)
+bc:registerShopItem('zlogc',LTGet("SYRIA_SHOP_ITEM_LOGISTIC_CENTER"),ShopPrices.zlogc,function(sender)
 	if logiMenu then
-		return 'Already choosing a zone'
+		return LTGet("SYRIA_SHOP_ALREADY_CHOOSING_ZONE")
 	end
-	local allow = buildLogisticAllowTable()
+	local allow = bc:buildLogisticAllowTable()
 	if not next(allow) then
-		return 'No eligible airbase zones'
+		return LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES")
 	end
 	local pickZone=function(zName)
 		if not logiMenu then return end
 		local zoneObj = bc:getZoneByName(zName)
-		local result = applyLogisticCenterUpgrade(zoneObj)
+		local result = bc:applyLogisticCenterUpgrade(zoneObj)
 		if result == true then
 			missionCommands.removeItemForCoalition(2,logiMenu)
 			logiMenu=nil
@@ -3377,180 +2855,182 @@ bc:registerShopItem('zlogc','Make a zone logistic center',ShopPrices.zlogc,funct
 			return result
 		end
 	end
-	logiMenu = bc:showTargetZoneMenu(2,'Choose zone for Logistic Center',pickZone,2,nil,allow)
-	trigger.action.outTextForCoalition(2,'Select friendly fully-upgraded airbase zone from F10 menu.',15)
+	logiMenu = bc:showTargetZoneMenu(2,L10N:Get("SYRIA_SHOP_SELECT_LOGISTIC_CENTER"),pickZone,2,nil,allow)
+	trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE"),15)
 end,
 function(sender,params)
 	if params.zone then
-		return applyLogisticCenterUpgrade(params.zone)
+		return bc:applyLogisticCenterUpgrade(params.zone)
 	end
-	return 'Must pick friendly zone'
+	return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 end)
 
 local warehouseMenu=nil
-bc:registerShopItem('zwh50','Resupply warehouse with 50',ShopPrices.zwh50,function(sender)
-	if warehouseMenu then
-		return 'Already choosing a zone'
-	end
+bc:registerShopItem('zwh50',LTGet("SYRIA_SHOP_ITEM_WAREHOUSE_50"),ShopPrices.zwh50,function(sender)
 	if not WarehouseLogistics then
-		return 'Warehouse logistics is disabled'
+		return LTGet("WAREHOUSE_LOGISTICS_DISABLED")
 	end
-	local allow = buildWarehouseResupplyAllowTable()
-	if not next(allow) then
-		return 'No eligible airbase zones'
-	end
-	local pickZone=function(zName)
-		if not warehouseMenu then return end
-		local zoneObj = bc:getZoneByName(zName)
-		local result = applyWarehouseResupply(zoneObj)
-		if result == true then
-			missionCommands.removeItemForCoalition(2,warehouseMenu)
-			warehouseMenu=nil
-		else
-			if type(result) == 'string' then
-				trigger.action.outTextForCoalition(2,result,10)
-			end
-			return result
-		end
-	end
-	warehouseMenu = bc:showTargetZoneMenu(2,'Choose zone to resupply warehouse',pickZone,2,nil,allow)
-	trigger.action.outTextForCoalition(2,'Select friendly airbase zone from F10 menu.',15)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
 	if params.zone then
-		return applyWarehouseResupply(params.zone)
+		return bc:applyWarehouseResupply(params.zone)
 	end
-	return 'Must pick friendly zone'
+	return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 end)
+bc.shopItems['zwh50'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	candidatesBuilder = function()
+		return bc:buildWarehouseResupplyCandidates()
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
+}
+
+bc.shopItems['smoke'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['smoke'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['flare'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['flare'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['illum'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['illum'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['dynamiccap'].groupZoneSelector.candidateBucket = 'blue_visible'
+bc.shopItems['dynamiccap'].groupZoneSelector.includeSuspended = true
+bc.shopItems['dynamiccap'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['dynamicarco'].groupZoneSelector.candidateBucket = 'blue_visible'
+bc.shopItems['dynamicarco'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['dynamictexaco'].groupZoneSelector.candidateBucket = 'blue_visible'
+bc.shopItems['dynamictexaco'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['dynamiccas'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['dynamiccas'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['dynamicdecoy'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['dynamicdecoy'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['dynamicsead'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['dynamicsead'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['dynamicbomb'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['dynamicbomb'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['groundattack'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['groundattack'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+if bc.shopItems['dynamicstatic'] and bc.shopItems['dynamicstatic'].groupZoneSelector then
+	bc.shopItems['dynamicstatic'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+	bc.shopItems['dynamicstatic'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+end
+bc.shopItems['supplies2'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['supplies2'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+if bc.shopItems['supplies'] and bc.shopItems['supplies'].groupZoneSelector then
+	bc.shopItems['supplies'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+	bc.shopItems['supplies'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+end
+bc.shopItems['jtac'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['jtac'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['9lineam'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['9lineam'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['9linefm'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['9linefm'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['armor'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['armor'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['artillery'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['artillery'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['recon'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['recon'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['airdef'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['airdef'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['zinf'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['zinf'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['zsam'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['zsam'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['zhimars'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['zhimars'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['capture'].groupZoneSelector.candidateBucket = 'neutral_capture_targets'
+bc.shopItems['capture'].groupZoneSelector.refreshTags = { 'neutral_capture_targets' }
+bc.shopItems['intel'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['intel'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['zwh50'].groupZoneSelector.candidateBucket = 'warehouse_targets'
+bc.shopItems['zwh50'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 
 local armMenu=nil
-bc:registerShopItem('zarm','Add armor group to a zone',ShopPrices.zarm,function(sender)
-	if armMenu then
-		return 'Already choosing a zone'
-	end
-	local pickZone=function(zName)
-		if armMenu then
-			local z=bc:getZoneByName(zName)
-			if not z or z.side~=2 or z.suspended then
-				return 'Must pick friendly zone'
-			end
-			if z.upgradesUsed >= (1 + (bc.globalExtraUnlock and 1 or 0)) then
-				return 'Zone already upgraded'
-			end
-			local slotID = (Era == 'Coldwar') and 'blueArmor_cw' or 'blueArmor'
-			z:addExtraSlot(slotID)
-			z:updateLabel()
-			if bc.globalExtraUnlock then
-				trigger.action.outTextForCoalition(2,'Armor added to '..zName..' for 1000',10)
-			else
-				trigger.action.outTextForCoalition(2,'Armor added to '..zName..' for 1000 - buy the Global extra slot to upgrade this zone again',30)
-			end
-			missionCommands.removeItemForCoalition(2,armMenu)
-			armMenu=nil
-		end
-	end
-	local allow = buildAllowTable()
-	if not next(allow) then
-		if not bc.globalExtraUnlock then
-			return 'All zones already upgraded - purchase Global extra slot to add another'
-		end
-		return 'No eligible zone'
-	end
-	armMenu = bc:showTargetZoneMenu(2,'Choose Zone for Armor',   pickZone,2,nil,allow)
-	trigger.action.outTextForCoalition(2,'Select friendly zone from F10 menu.',15)
+bc:registerShopItem('zarm',LTGet("SYRIA_SHOP_ITEM_UPGRADE_ARMOR"),ShopPrices.zarm,function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
-	if params.zone and params.zone.side==2 then
+	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
 			if not bc.globalExtraUnlock then
-				return 'Zone already upgraded - purchase Global extra slot to add another'
+				return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA")
 			end
-			return 'Zone already upgraded'
+			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
 		local slotID = (Era == 'Coldwar') and 'blueArmor_cw' or 'blueArmor'
 		params.zone:addExtraSlot(slotID)
-		params.zone:updateLabel()
+		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
-			trigger.action.outTextForCoalition(2,'Armor added to '..params.zone.zone..' for 1000',10)
+			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", L10N:Get("SYRIA_SHOP_LABEL_ARMOR"), params.zone.zone, tostring(ShopPrices.zarm)),10)
 		else
-			trigger.action.outTextForCoalition(2,'Armor added to '..params.zone.zone..' for 1000\nBuy the Global extra slot to upgrade this zone again',30)
+			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED_EXTRA_LINE", L10N:Get("SYRIA_SHOP_LABEL_ARMOR"), params.zone.zone, tostring(ShopPrices.zarm)),30)
 		end
 	else
-		return 'Must pick friendly zone'
+		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
+bc.shopItems['zarm'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
+}
+bc.shopItems['zarm'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['zarm'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 
 local patMenu=nil
-bc:registerShopItem('zpat','Add Patriot system to zone',ShopPrices.zpat,function(sender)
-	if patMenu then
-		return 'Already choosing a zone'
-	end
-	local pickZone=function(zName)
-		if patMenu then
-			local z=bc:getZoneByName(zName)
-			if not z or z.side~=2 or z.suspended then
-				return 'Must pick friendly zone'
-			end
-			if z.upgradesUsed >= (1 + (bc.globalExtraUnlock and 1 or 0)) then
-				return 'Zone already upgraded'
-			end
-			z:addExtraSlot('bluePATRIOT')
-			z:updateLabel()
-			if bc.globalExtraUnlock then
-                trigger.action.outTextForCoalition(2,'Patriot added to '..zName..' for 5000',10)
-            else
-                trigger.action.outTextForCoalition(2,'Patriot added to '..zName..' for 5000 - buy the Global extra slot to upgrade this zone again',30)
-            end
-			missionCommands.removeItemForCoalition(2,patMenu)
-			patMenu=nil
-		end
-	end
-	local allow = buildAllowTable()
-	if not next(allow) then
-		if not bc.globalExtraUnlock then
-			return 'All zones already upgraded - purchase Global extra slot to add another'
-		end
-		return 'No eligible zone'
-	end
-	patMenu = bc:showTargetZoneMenu(2,'Choose Zone for Patriot SAM system',pickZone,2,nil,allow)
-	trigger.action.outTextForCoalition(2,'Select friendly zone from F10 menu.',15)
+bc:registerShopItem('zpat',LTGet("SYRIA_SHOP_ITEM_UPGRADE_PATRIOT"),ShopPrices.zpat,function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
-	if params.zone and params.zone.side==2 then
+	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 1 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
 			if not bc.globalExtraUnlock then
-				return 'Zone already upgraded - purchase Global extra slot to add another'
+				return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA")
 			end
-			return 'Zone already upgraded'
+			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
 		params.zone:addExtraSlot('bluePATRIOT')
-		params.zone:updateLabel()
+		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
-		trigger.action.outTextForCoalition(2,'Patriot added to '..params.zone.zone..' for 5000',10)
+		trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", "Patriot", params.zone.zone, tostring(ShopPrices.zpat)),10)
 		else
-		trigger.action.outTextForCoalition(2,'Patriot added to '..params.zone.zone..' for 5000 - buy the Global extra slot to upgrade this zone again',30)
+		trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED_EXTRA", "Patriot", params.zone.zone, tostring(ShopPrices.zpat)),30)
 		end
 	else
-		return 'Must pick friendly zone'
+		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
+bc.shopItems['zpat'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
+}
+bc.shopItems['zpat'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['zpat'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 
-bc:registerShopItem('gslot','Unlock extra upgrade slot',ShopPrices.gslot,function(sender)
+bc:registerShopItem('gslot',LTGet("SYRIA_SHOP_ITEM_EXTRA_SLOT"),ShopPrices.gslot,function(sender)
     if bc.globalExtraUnlock then
-        return 'Already unlocked'
+        return LTGet("SYRIA_SHOP_ALREADY_UNLOCKED")
     end
     bc.globalExtraUnlock = true
     for _,z in pairs(bc:getZones()) do
 
     end
-    trigger.action.outTextForCoalition(2,'All zones can now buy a second upgrade',15)
+    trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE"),15)
 	bc:removeShopItem(2, 'gslot')
 	return nil
 end)
-bc:registerShopItem('farphere','Deploy FARP',ShopPrices.farphere,function(sender)
-        return 'Deploy a FARP via map marker.\nUse marker text: buy:farphere.\nMust be outside all zones and at least 10 NM from enemy zones.'
+bc:registerShopItem('farphere',LTGet("SYRIA_SHOP_ITEM_DEPLOY_FARP"),ShopPrices.farphere,function(sender)
+        return LTGet("SYRIA_SHOP_FARP_MARKER_HELP")
 end,function(_, params)
         return bc:processMapFarpPurchase(params)
 end)
@@ -3582,13 +3062,14 @@ ShopPrices = ShopPrices or {
 	airdef        = 150,  -- Deploy air defence (for combined arms)
 	capture       = 500,  -- Emergency capture zone
 	intel         = 150,  -- Intel on enemy zone
-	zinf          = 500,  -- Add infantry squad to zone
-	zsam          = 2000, -- Add Hawk/Nasams system to a zone
-	zhimars       = 2500, -- Add HIMARS to a zone
+	groundattack  = 1000, -- Ground attack convoy
+	zinf          = 500,  -- Upgrade zone with infantry
+	zsam          = 2000, -- Upgrade zone with Hawk/Nasams
+	zhimars       = 2500, -- Upgrade zone with HIMARS
 	zlogc         = 2000, -- Upgrade zone to logistic center
 	zwh50         = 500,  -- Resupply warehouse with 50
-	zarm          = 1000, -- Add armor group to a zone
-	zpat          = 5000, -- Add Patriot system to zone
+	zarm          = 1000, -- Upgrade zone with armor
+	zpat          = 5000, -- Upgrade zone with Patriot
 	gslot         = 3000, -- Unlock extra upgrade slot
 	farphere      = 1000, -- Deploy FARP
 }
@@ -3599,6 +3080,7 @@ ShopRankRequirements = ShopRankRequirements or {
 	dynamiccas     = 5,  -- Dynamic CAS
 	dynamicbomb    = 4,  -- Dynamic Bomb run
 	dynamicsead    = 4,  -- Dynamic SEAD
+	groundattack   = 5,  -- Ground attack convoy
 	dynamicdecoy   = 1,  -- Dynamic Decoy
 	dynamicstatic  = 4,  -- Dynamic building Strike
 	dynamicarco    = 3,  -- Dynamic Tanker (Drogue)
@@ -3611,14 +3093,14 @@ ShopRankRequirements = ShopRankRequirements or {
 	intel          = 5,  -- Intel on enemy zone
 	supplies2      = 1,  -- Resupply friendly Zone
 	supplies       = 6,  -- Fully Upgrade Friendly Zone
-	zinf           = 5,  -- Add infantry squad to zone
-	zarm           = 7,  -- Add armor group to a zone
-	zsam           = 6,  -- Add Hawk/Nasams system to a zone
-	zhimars        = 8,  -- Add HIMARS to a zone
+	zinf           = 5,  -- Upgrade zone with infantry
+	zarm           = 7,  -- Upgrade zone with armor
+	zsam           = 6,  -- Upgrade zone with Hawk/Nasams
+	zhimars        = 8,  -- Upgrade zone with HIMARS
 	zlogc          = 1,  -- Upgrade zone to logistic center
 	zwh50          = 2,  -- Resupply warehouse with 50
 	gslot          = 9,  -- Unlock extra upgrade slot
-	zpat           = 8,  -- Add Patriot system to zone
+	zpat           = 8,  -- Upgrade zone with Patriot
 	armor          = 3,  -- Deploy armor (for combined arms)
 	artillery      = 3,  -- Deploy artillery (for combined arms)
 	recon          = 3,  -- Deploy recon group (for combined arms)
@@ -3637,22 +3119,22 @@ bc:addShopItem(1, 'redmassattack', -1, 2) -- red AI mass airbase attack
 ShopCategoryLabels = ShopCategoryLabels or {}
 local ShopCats = ShopCategoryLabels
 
-ShopCats.AIAttack = ShopCats.AIAttack or "AI Attack"
-ShopCats.ZoneUpgrades = ShopCats.ZoneUpgrades or "Zone Upgrades"
-ShopCats.JTACIntel = ShopCats.JTACIntel or "JTAC & Intel"
-ShopCats.MarkingTools = ShopCats.MarkingTools or "Marking & Tools"
-ShopCats.CombinedArms = ShopCats.CombinedArms or "Combined Arms"
-ShopCats.LogisticsStrategic = ShopCats.LogisticsStrategic or "Capture & resources"
-ShopCats.OtherSupport = ShopCats.OtherSupport or "Other Support"
+ShopCats.AIAttack = LTGet("SYRIA_SHOP_CAT_AI_ATTACK")
+ShopCats.ZoneUpgrades = LTGet("SYRIA_SHOP_CAT_ZONE_UPGRADES")
+ShopCats.JTACIntel = LTGet("SYRIA_SHOP_CAT_JTAC_INTEL")
+ShopCats.MarkingTools = LTGet("SYRIA_SHOP_CAT_MARKING_TOOLS")
+ShopCats.CombinedArms = LTGet("SYRIA_SHOP_CAT_COMBINED_ARMS")
+ShopCats.LogisticsStrategic = LTGet("SYRIA_SHOP_CAT_LOGISTICS")
+ShopCats.OtherSupport = LTGet("SYRIA_SHOP_CAT_OTHER_SUPPORT")
 
-ShopCats.Order = ShopCats.Order or {
-    ShopCats.AIAttack,
-    ShopCats.ZoneUpgrades,
-    ShopCats.JTACIntel,
-    ShopCats.MarkingTools,
-    ShopCats.CombinedArms,
-    ShopCats.LogisticsStrategic,
-    ShopCats.OtherSupport,
+ShopCats.Order = {
+	ShopCats.AIAttack,
+	ShopCats.ZoneUpgrades,
+	ShopCats.JTACIntel,
+	ShopCats.MarkingTools,
+	ShopCats.CombinedArms,
+	ShopCats.LogisticsStrategic,
+	ShopCats.OtherSupport,
 }
 
 -- AI Attack
@@ -3661,6 +3143,7 @@ bc:addShopItem(2, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats
 bc:addShopItem(2, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack) -- Bomber Flight
 bc:addShopItem(2, 'dynamicsead', -1, 4, ShopRankRequirements.dynamicsead, ShopCats.AIAttack) -- SEAD Flight
 bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, ShopCats.AIAttack) -- TALD DECOY Flight
+bc:addShopItem(2, 'groundattack', -1, 7, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
 if UseStatics == true then
     bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
 end
@@ -3694,7 +3177,9 @@ bc:addShopItem(2, 'airdef', -1, 4, ShopRankRequirements.airdef, ShopCats.Combine
 -- Logistics & Strategic
 bc:addShopItem(2, 'capture', -1, 1, ShopRankRequirements.capture, ShopCats.LogisticsStrategic) -- emergency capture
 bc:addShopItem(2, 'supplies2', -1, 2, ShopRankRequirements.supplies2, ShopCats.LogisticsStrategic) -- upgrade friendly zone
-bc:addShopItem(2, 'supplies', -1, 3, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
+if AllowScriptedSupplies then
+    bc:addShopItem(2, 'supplies', -1, 3, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
+end
 if WarehouseLogistics then
     bc:addShopItem(2, 'zlogc', -1, 4, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
     bc:addShopItem(2, 'zwh50', -1, 5, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
@@ -3743,104 +3228,132 @@ supplyZones = {
 zones.insurgentqalat:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Qalat have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Qalat"),20)
 end, 'disablesinsurgentqalat')
 
 
 zones.insurgentdelaram:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Delaram have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Delaram"),20)
 end, 'disablesinsurgentdelaram')
 
 
 zones.insurgentchimozay:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Chimozay have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Chimozay"),20)
 end, 'disableinsurgentchimozay')
 
 
 zones.insurgentnili:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Nili have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Nili"),20)
 end, 'disableinsurgentnili')
 
 
 zones.insurgentalpha:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Alpha have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Alpha"),20)
 end, 'disableinsurgentalpha')
 
 
 zones.insurgentqarabagh:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Qarabagh have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Qarabagh"),20)
 end, 'disableinsurgentqarabagh')
 
 
 zones.insurgentasadabad:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Asadabad have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Asadabad"),20)
 end, 'disableinsurgentasadabad')
 
 
 zones.insurgentkunar:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Kunar have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Kunar"),20)
 end, 'disableinsurgentkunar')
 
 
 zones.insurgentsarobi:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Sarobi have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Sarobi"),20)
 end, 'disableinsurgentsarobi')
 
 
 zones.insurgentmountain:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at Insurgent Mountain have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Mountain"),20)
 end, 'disableinsurgentmountain')
 zones.samalpha:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at SAM Alpha have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "SAM Alpha"),20)
 end, 'disablesamalpha')
 zones.sambravo:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at SAM Bravo have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "SAM Bravo"),20)
 end, 'disablesambravo')
 zones.samcharlie:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at SAM Charlie Mountain have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "SAM Charlie Mountain"),20)
 end, 'disablesamcharlie')
 zones.samjamsheed:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,'Enemies at SAM Jamsheed have been defeated.\n+500 credits',20)
+	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "SAM Jamsheed"),20)
 end, 'disablesamjamsheed')
 
 lc = LogisticCommander:new({battleCommander = bc, supplyZones = supplyZones})
 lc:init()
 
-bc:loadFromDisk() -- will load and overwrite default zone levels, sides, funds, and available shop items
+TerritoryOverlayOuterDrawPushMeters = 500000
+
+bc:loadFromDisk()
 if zonePersistance and zonePersistance.zones and next(zonePersistance.zones) == nil then
     bc.saveLoaded = false
 end
-if not bc.saveLoaded then
-	applyRandomRedUpgrades()
-	applyRandomBlueUpgrades()
+
+if bc.saveLoaded and CustomFlags['StartNormalFalse'] ~= nil then
+    StartNormal = not CustomFlags['StartNormalFalse']
+else
+    CustomFlags['StartNormalFalse'] = not StartNormal
+    StartNormal = not CustomFlags['StartNormalFalse']
 end
+
+local disableBlueCarrierAfterInit = not StartNormal
+
+if not bc.saveLoaded then
+    applyRandomRedUpgrades()
+    applyRandomBlueUpgrades()
+
+    if not StartNormal then
+		zones.bagram.LogisticCenter = true
+		DestroyOnce=true
+    else
+	zones.kandahar.LogisticCenter = true
+	zones.alpha.LogisticCenter = true
+    end
+else
+    applyRandomUpgradesForNewZonesOnly()
+end
+
 bc:init()
+
+if DestroyOnce then
+	destroyGroupIfActive('Red EWR Bagram Fixed')
+	CustomFlags["Red EWR Bagram Fixed"] = true
+end
 budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequency=20*60, decissionVariance=10*60, skipChance = 10})
 budgetAI:init()
 RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
@@ -3852,6 +3365,8 @@ bc:buildConnectionMap()
 DynamicConvoy.InitTargetTails(15)
 DynamicConvoy.InitRoadPathCacheFromCommanders(GroupCommanders)
 PrecomputeLandingSpots()
+BuildAirbaseParkingClusterCache()
+Frontline.BuildFromZones(bc.indexedZones)
 Frontline.ReindexZoneCalcs()
 bc:buildCapSpawnBuckets()
 startWarehousePersistence()
@@ -3874,6 +3389,26 @@ evc = EventCommander:new({ decissionFrequency=10*60, decissionVariance=10*60, sk
 evc:init()
 
 mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
+
+DynamicHybridConfig = DynamicHybridConfig or {
+	enabled = true,
+	runOnce = true,
+	airMaxNm = 120,
+	heloCasMaxNm = 40,
+	minGroundAttackNm = 10,
+	surfaceMaxNm = 30,
+	minTargetNm = 10,
+	filterDelaySec = 5,
+	minCapAttackNm = 35,
+	minPlaneAttackNm = 25,
+	minHeloAttackNm = 15,
+	log = true,
+}
+bc:startDynamicHybridFiller(DynamicHybridConfig)
+
+if RedReactiveConfig.enabled then
+	bc:startRedReactiveCounterpressure(RedReactiveConfig)
+end
 ---------------------------------------------------------------------
 --                          CAP MISSION                            --
 
@@ -3884,21 +3419,22 @@ capWinner = nil
 capMissionCooldownUntil = 0
 
 mc:trackMission({
-    title = function() return "CAP mission" end,
-    description = function()
+    title = function(T) return LT(T):Get("MISSION_CAP_TITLE") end,
+    description = function(T)
+        T = LT(T)
         if not next(capKillsByPlayer) then
-            return "Kill "..capTargetPlanes.." A/A targets without getting shot down, who wins?"
+            return T:Format("MISSION_CAP_DESCRIPTION_EMPTY", capTargetPlanes)
         else
-            local scoreboard = "Current Kill Count:\n"
+            local scoreboard = T:Get("MISSION_CAP_SCOREBOARD_HEADER")
             for playerName, kills in pairs(capKillsByPlayer) do
                 scoreboard = scoreboard .. string.format("%s: %d\n", playerName, kills)
             end
-            return string.format("Kill %d A/A targets, who wins?\n\n%s", capTargetPlanes, scoreboard)
+            return T:Format("MISSION_CAP_DESCRIPTION_WITH_SCORE", capTargetPlanes, scoreboard)
         end
     end,
-    messageStart = function()
-        return "New CAP mission: Kill "..capTargetPlanes.." A/A targets." end,
-    messageEnd = function() return "Mission ended: CAP" end,
+    messageStart = function(T)
+        return LT(T):Format("MISSION_CAP_START", capTargetPlanes) end,
+    messageEnd = function(T) return LT(T):Get("MISSION_CAP_END") end,
     startAction = function()
         if not missionCompleted then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -3914,7 +3450,7 @@ mc:trackMission({
                 bc:addContribution(jp, 2, reward)
                 bc:addTempStat(jp,'CAP mission (Joint mission)',1)
                 bc:addTempStat(pname,'CAP mission (Joint mission)',1)
-                trigger.action.outTextForCoalition(2,"["..pname.."] and ["..jp.."] completed the CAP mission!\nReward pending: "..reward.." credits each (land to redeem).",20)
+                trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAP_COMPLETED_JOINT", pname, jp, reward),20)
                 local jgn = bc.groupNameByPlayer[jp]
                 local jgr = Group.getByName(jgn)
                 if jgr then
@@ -3929,7 +3465,7 @@ mc:trackMission({
                 end
             else
                 bc:addTempStat(pname,'CAP mission',1)
-                trigger.action.outTextForCoalition(2,"["..pname.."] completed the CAP mission!\nReward pending: "..reward.." credits (land to redeem).",20)
+                trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAP_COMPLETED_SOLO", pname, reward),20)
             end
             capMissionCooldownUntil = timer.getTime() + 900
         end
@@ -3961,20 +3497,21 @@ casWinner = nil
 casMissionCooldownUntil = 0
 
 mc:trackMission({
-	title = function() return 'CAS mission' end,
-	description = function()
+	title = function(T) return LT(T):Get("MISSION_CAS_TITLE") end,
+	description = function(T)
+		T = LT(T)
 		if not next(casKillsByPlayer) then
-			return 'Destroy '..casTargetKills..' ground targets without getting shot down, who wins?'
+			return T:Format("MISSION_CAS_DESCRIPTION_EMPTY", casTargetKills)
 		else
-			local scoreboard = 'Current Kill Count:\n'
+			local scoreboard = T:Get("MISSION_CAP_SCOREBOARD_HEADER")
 			for playerName, kills in pairs(casKillsByPlayer) do
 				scoreboard = scoreboard..string.format('%s: %d\n', playerName, kills)
 			end
-			return string.format('Destroy %d ground targets, who wins?\n\n%s', casTargetKills, scoreboard)
+			return T:Format("MISSION_CAS_DESCRIPTION_WITH_SCORE", casTargetKills, scoreboard)
 		end
 	end,
-	messageStart = function()
-		return 'New CAS mission: Destroy '..casTargetKills..' ground targets.'
+	messageStart = function(T)
+		return LT(T):Format("MISSION_CAS_START", casTargetKills)
 	end,
 	messageEnd = '',
 	startAction = function()
@@ -3990,7 +3527,7 @@ mc:trackMission({
                 bc:addContribution(jp, 2, reward)
             	bc:addTempStat(jp,'CAS mission (Joint mission)',1)
 				bc:addTempStat(pname,'CAS mission (Joint mission)',1)
-				trigger.action.outTextForCoalition(2,'['..pname..'] and ['..jp..'] completed the CAS mission!\nReward pending: '..reward..' credits each (land to redeem).',20)
+				trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAS_COMPLETED_JOINT", pname, jp, reward),20)
                 local jgn = bc.groupNameByPlayer[jp]
                 local jgr = Group.getByName(jgn)
                 if jgr then
@@ -4005,7 +3542,7 @@ mc:trackMission({
                 end
 			else
             	bc:addTempStat(pname,'CAS mission',1)
-				trigger.action.outTextForCoalition(2,'['..pname..'] completed the CAS mission!\nReward pending: '..reward..' credits (land to redeem).',20)
+				trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAS_COMPLETED_SOLO", pname, reward),20)
 			end
             
             casMissionCooldownUntil = timer.getTime()+900
@@ -4037,29 +3574,29 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
     }
 	if IsGroupActive(mission.missionGroup) then
 		trigger.action.outSoundForGroup(groupID, "ding.ogg")
-		trigger.action.outTextForGroup(groupID, "Active mission is pending:\n\nEscort convoy from " .. mission.zone .. " to " .. mission.TargetZone, 30)
+		trigger.action.outTextForGroup(groupID, L10N:FormatForGroup(groupID, "SYRIA_ESCORT_ACTIVE_PENDING", mission.zone, mission.TargetZone), 30)
         return
     end
 	if mc.missionFlags[zoneName] then
 			trigger.action.outSoundForGroup(groupID, "ding.ogg")
-			trigger.action.outTextForGroup(groupID, "Special mission available:\n\nEscort convoy from " .. mission.zone .. " to " .. mission.TargetZone, 30)
+			trigger.action.outTextForGroup(groupID, L10N:FormatForGroup(groupID, "MISSION_ESCORT_SPECIAL_AVAILABLE", mission.zone, mission.TargetZone), 30)
 		return 
 	end
 
     mc:trackMission({
-        MainTitle = function() return "Escort mission" end,
-        title = function() return "Escort mission" end,
+        MainTitle = LTGet("MISSION_ESCORT_TITLE"),
+        title = LTGet("MISSION_ESCORT_TITLE"),
 		titleBefore = function(self)
 			self.notified = true
 			trigger.action.outSoundForGroup(groupID, "ding.ogg")
-			trigger.action.outTextForGroup(groupID, "Special mission available:\n\nEscort convoy from " .. mission.zone .. " to " .. mission.TargetZone, 30)
+			trigger.action.outTextForGroup(groupID, L10N:FormatForGroup(groupID, "MISSION_ESCORT_SPECIAL_AVAILABLE", mission.zone, mission.TargetZone), 30)
 		 end,
-        description = function() return "\nEscort a convoy to " .. mission.TargetZone .. "\nThe roads are filled with hostile enemies." end,
+        description = LTFormat("MISSION_ESCORT_DESCRIPTION", mission.TargetZone),
         isEscortMission = true,
         accept = false,
         missionGroup = mission.missionGroup,
         zoneName = zoneName,
-        messageStart = function() return "Escort convoy to " .. mission.TargetZone end,
+        messageStart = LTFormat("MISSION_ESCORT_START", mission.TargetZone),
 		missionFail = function(self)
 		self.accept = false
 		if not IsGroupActive(mission.missionGroup) then
@@ -4069,7 +3606,7 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
 					local groupID = data.groupID
 					local group = data.group
 					trigger.action.outSoundForGroup(groupID, "cancel.ogg")
-					trigger.action.outTextForGroup(groupID, "Mission failed:\n\nConvoy was destroyed\n\nStandby, looking for a new group...", 30)
+					trigger.action.outTextForGroup(groupID, L10N:GetForGroup(groupID, "SYRIA_ESCORT_FAILED_RETRY"), 30)
 					removeMissionMenuForAll(mission.zone, groupID)
 					if trackedGroups[groupName] then
 						trackedGroups[groupName] = nil
@@ -4078,7 +3615,7 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
 				end
 			else
 				trigger.action.outSoundForCoalition(2, "cancel.ogg")
-				trigger.action.outTextForCoalition(2, "Mission failed:\n\nConvoy was destroyed", 30)
+				trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_ESCORT_FAILED"), 30)
 				removeMissionMenuForAll(mission.zone, nil, true)
 				destroyGroupIfActive(mission.missionGroup)
 			end
@@ -4156,11 +3693,11 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
 				mc.missionFlags[zoneName] = nil
 				local msg
 				if cnt > 1 then
-					msg = "Escort mission completed by " .. table.concat(names, ", ") .. "\ncredit " .. share .. " each - land to redeem"
+					msg = L10N:Format("SYRIA_ESCORT_COMPLETED_MULTI", table.concat(names, ", "), share)
 				elseif cnt == 1 then
-					msg = "Escort mission completed by " .. names[1] .. "\ncredit " .. reward .. " - land to redeem"
+					msg = L10N:Format("SYRIA_ESCORT_COMPLETED_SOLO", names[1], reward)
 				else
-					msg = "Escort mission completed — no players alive.\nReward + " .. reward
+					msg = L10N:Format("SYRIA_ESCORT_COMPLETED_NONE", reward)
 				end
 				trigger.action.outSoundForCoalition(2, "ding.ogg")
 				trigger.action.outTextForCoalition(2, msg, 20)
@@ -4191,47 +3728,48 @@ end
 --                      RUN WAY STRIKE MISSION                     --
 
 mc:trackMission({
-    title=function() return 'Bomb runway' end,
-    description=function()
+    title=LTGet("MISSION_BOMB_RUNWAY_TITLE"),
+    description=function(T)
+	  T = LT(T)
       local wp=WaypointList[runwayTargetZone] or ""
       if #runwayNames>1 then
-        return 'Drop 1 bomb on each runway at '..runwayTargetZone..wp
+        return T:Format("MISSION_BOMB_RUNWAY_DESC_ALL", runwayTargetZone, wp)
       else
-        return 'Drop 1 bomb on the runway at '..runwayTargetZone..wp
+        return T:Format("MISSION_BOMB_RUNWAY_DESC_ONE", runwayTargetZone, wp)
       end
     end,
-    messageStart=function()
+    messageStart=function(T)
+	T = LT(T)
     local wp=WaypointList[runwayTargetZone] or ""
       if #runwayNames>1 then
-        return 'New mission: Bomb all runways at '..runwayTargetZone..wp
+        return T:Format("MISSION_BOMB_RUNWAY_START_ALL", runwayTargetZone, wp)
       else
-        return 'New mission: Bomb runway at '..runwayTargetZone..wp
+        return T:Format("MISSION_BOMB_RUNWAY_START_ONE", runwayTargetZone, wp)
       end
     end,
-	messageEnd = function()
+	messageEnd = function(T)
+		T = LT(T)
 		trigger.action.outSoundForCoalition(2,'cancel.ogg')
 		if runwayTargetZone then
 			if runwayCompleted then
 				local cred = (need and need>1) and 200 or 100
 				if bomberName and runwayPartnerName then
-					return 'Mission ended: Bomb runway at '..runwayTargetZone..' completed by '..bomberName..' and '..runwayPartnerName..'\ncredit '..cred..' each - land to redeem'
+					return T:Format("SYRIA_BOMB_RUNWAY_END_JOINT", runwayTargetZone, bomberName, runwayPartnerName, cred)
 				elseif bomberName then
-					return 'Mission ended: Bomb runway at '..runwayTargetZone..' completed by '..bomberName..'\ncredit '..cred..' - land to redeem'
+					return T:Format("SYRIA_BOMB_RUNWAY_END_SOLO", runwayTargetZone, bomberName, cred)
 				else
-					return 'Mission ended: Bomb runway at '..runwayTargetZone..' completed'
+					return T:Format("SYRIA_BOMB_RUNWAY_END_COMPLETED", runwayTargetZone)
 				end
 			else
-				return 'Mission ended: Bomb runway at '..runwayTargetZone..' canceled'
+				return T:Format("SYRIA_BOMB_RUNWAY_END_CANCELED_ZONE", runwayTargetZone)
 			end
 		else
-			return 'Mission canceled: Bomb runway'
+			return T:Get("SYRIA_BOMB_RUNWAY_CANCELED")
 		end
 	end,
 	startAction = function()
-    ActiveCurrentMission[runwayTargetZone] = type(ActiveCurrentMission[runwayTargetZone]) == 'table' and ActiveCurrentMission[runwayTargetZone] or {}
-    ActiveCurrentMission[runwayTargetZone]["Bomb runway"] = true
-
-	local z = bc:getZoneByName(runwayTargetZone) if z then z:updateLabel() end
+    bc:addMissionTag(runwayTargetZone, "Bomb runway")
+	bc:refreshZoneLabel(runwayTargetZone)
 	if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
 		trigger.action.outSoundForCoalition(2, "ding.ogg")
 	end
@@ -4243,15 +3781,11 @@ endAction = function()
         runwayMission = nil
     end
     if runwayTargetZone then
-        RUNWAY_ZONE_COOLDOWN[runwayTargetZone] = timer.getTime() + 1800
-        local t = (type(ActiveCurrentMission) == 'table') and ActiveCurrentMission[runwayTargetZone] or nil
-        if type(t) == 'table' then
-            t["Bomb runway"] = nil
-            if not next(t) then ActiveCurrentMission[runwayTargetZone] = nil end
-        end
-        local z = bc:getZoneByName(runwayTargetZone) if z then z:updateLabel() end
+        RUNWAY_ZONE_COOLDOWN[runwayTargetZone] = timer.getTime() + 2700
+        bc:removeMissionTag(runwayTargetZone, "Bomb runway")
+        bc:refreshZoneLabel(runwayTargetZone)
     end
-    runwayCooldown = timer.getTime() + 900
+    runwayCooldown = timer.getTime() + 600
     runwayTargetZone, bomberName, runwayTarget = nil, nil, nil
 end,
 	isActive = function()
@@ -4263,116 +3797,263 @@ end,
 ---------------------------------------------------------------------
 --                      END OF RUN WAY STRIKE MISSION              --
 
-resupplyTarget = nil
-mc:trackMission({
-    title = function()
-        local wp = WaypointList[resupplyTarget] or ""
-        return "Resupply " .. resupplyTarget .. wp
-    end,
-    description = function()
-        return "Deliver supplies to " .. resupplyTarget end,
-    messageStart = function()
-        local wp = WaypointList[resupplyTarget] or ""
-        return "New mission: Resupply " .. resupplyTarget .. wp
-    end,
-    messageEnd = function()
-        return "Mission ended: Resupply " .. resupplyTarget end,
-    startAction = function()
-        local MissionType = "Resupply"
-        ActiveCurrentMission[resupplyTarget] = MissionType
-        local z = bc:getZoneByName(resupplyTarget) ; if z then z:updateLabel() end
-        if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
-        end
-    end,
-    endAction = function()       
-        local MissionType = "Resupply"
-        if ActiveCurrentMission[resupplyTarget] == MissionType then
-            ActiveCurrentMission[resupplyTarget] = nil
-        end
-        local z = bc:getZoneByName(resupplyTarget) ; if z then z:updateLabel() end
-        resupplyTarget = nil
-        if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "cancel.ogg")
-        end
-    end,
-    isActive = function()
-        if not resupplyTarget then return false end
+attackTarget1 = nil
+attackTarget2 = nil
+resupplyTarget1 = nil
+resupplyTarget2 = nil
+attackCombinedStart1 = nil
+attackCombinedStart2 = nil
+attackSuppressStart2 = nil
+resupplyCombinedStart1 = nil
+resupplyCombinedStart2 = nil
+resupplySuppressStart2 = nil
+local function _isFrontlineConnectionEligible(from, to)
+	return from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 and
+		((not to.suspended) or from.suspended)
+end
 
-        local targetzn = bc:getZoneByName(resupplyTarget)
-        return targetzn and targetzn.side == 2 and targetzn:canRecieveSupply()
-    end
+local function _isValidAttackMissionZone(zone)
+	if not zone or not zone.zone then return false end
+	local lname = zone.zone:lower()
+	return zone.side == 1 and zone.active and not zone.suspended and not zone.isHidden and
+		not isZoneUnderSEADMission(zone.zone) and
+		not lname:find('hidden') and not lname:find('sam') and not lname:find('defence') and
+		not lname:find('papa') and not lname:find('juliett') and not lname:find('india') and
+		not lname:find('delta') and not lname:find('bravo') and not lname:find('hotel')
+end
+
+local function _getAttackAnchorZones()
+	local anchors = {}
+	local seen = {}
+	for _, zoneName in ipairs({ attackTarget1, attackTarget2 }) do
+		if zoneName and not seen[zoneName] then
+			local targetzn = bc:getZoneByName(zoneName)
+			if targetzn and targetzn.zone and targetzn.side == 1 then
+				seen[zoneName] = true
+				anchors[#anchors + 1] = targetzn.zone
+			end
+		end
+	end
+	return anchors
+end
+local function _minDistanceToAttackAnchors(anchors, zoneName)
+	local minDist = nil
+	for _, anchorZone in ipairs(anchors or {}) do
+		local dist = ZONE_DISTANCES[anchorZone] and ZONE_DISTANCES[anchorZone][zoneName]
+		if dist and (not minDist or dist < minDist) then
+			minDist = dist
+		end
+	end
+	return minDist
+end
+
+mc:trackMission({
+	title = function(T)
+		local wp = WaypointList[resupplyTarget1] or ""
+		return LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_TITLE", resupplyTarget1, wp)
+	end,
+	description = function(T)
+		return LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_DESC", resupplyTarget1)
+	end,
+	messageStart = nil,
+	messageEnd = function(T)
+		return LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_END", resupplyTarget1)
+	end,
+	startAction = function()
+		local MissionType = "Resupply"
+		bc:addMissionTag(resupplyTarget1, MissionType)
+		bc:refreshZoneLabel(resupplyTarget1)
+		local wp = WaypointList[resupplyTarget1] or ""
+		if resupplyCombinedStart1 == resupplyTarget1 and resupplyCombinedStart2 == resupplyTarget2 and resupplyTarget2 then
+			local wp2 = WaypointList[resupplyTarget2] or ""
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RESUPPLY_START_TWO", resupplyTarget1, wp, resupplyTarget2, wp2), 30)
+			resupplySuppressStart2 = resupplyTarget2
+			resupplyCombinedStart1 = nil
+			resupplyCombinedStart2 = nil
+		else
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RESUPPLY_START_ONE", resupplyTarget1, wp), 30)
+		end
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		local MissionType = "Resupply"
+		bc:removeMissionTag(resupplyTarget1, MissionType)
+		bc:refreshZoneLabel(resupplyTarget1)
+		resupplyTarget1 = nil
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+	end,
+	isActive = function()
+		if not resupplyTarget1 then return false end
+		local targetzn = bc:getZoneByName(resupplyTarget1)
+		return targetzn and targetzn.side == 2 and targetzn:canRecieveSupply()
+	end
 })
 
-
-attackTarget = nil
 mc:trackMission({
-    title = function()
-        local wp = WaypointList[attackTarget] or ""
-        return "Attack " .. attackTarget .. wp
-    end,
-    description = function()
-        local wp = WaypointList[attackTarget] or ""
-        return "Destroy enemy forces at " .. attackTarget end,
-    messageStart = function()
-        local wp = WaypointList[attackTarget] or ""
-        return "New mission: Attack " .. attackTarget .. wp
-    end,
-    messageEnd = function()
-        return "Mission ended: Attack " .. attackTarget end,
+	title = function(T)
+		local wp = WaypointList[resupplyTarget2] or ""
+		return LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_TITLE", resupplyTarget2, wp)
+	end,
+	description = function(T)
+		return LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_DESC", resupplyTarget2)
+	end,
+	messageStart = nil,
+	messageEnd = function(T)
+		return LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_END", resupplyTarget2)
+	end,
 	startAction = function()
-		ActiveCurrentMission = ActiveCurrentMission or {}
-		ActiveCurrentMission.Attack = ActiveCurrentMission.Attack or {}
-		ActiveCurrentMission.Attack[attackTarget] = true
-		local z = bc:getZoneByName(attackTarget) if z then z:updateLabel() end
+		local MissionType = "Resupply"
+		bc:addMissionTag(resupplyTarget2, MissionType)
+		bc:refreshZoneLabel(resupplyTarget2)
+		resupplyCombinedStart1 = nil
+		resupplyCombinedStart2 = nil
+		if resupplySuppressStart2 == resupplyTarget2 then
+			resupplySuppressStart2 = nil
+		else
+			local wp = WaypointList[resupplyTarget2] or ""
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RESUPPLY_START_ONE", resupplyTarget2, wp), 30)
+			if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+				trigger.action.outSoundForCoalition(2, "ding.ogg")
+			end
+		end
+	end,
+	endAction = function()
+		local MissionType = "Resupply"
+		bc:removeMissionTag(resupplyTarget2, MissionType)
+		bc:refreshZoneLabel(resupplyTarget2)
+		resupplyTarget2 = nil
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+	end,
+	isActive = function()
+		if not resupplyTarget2 then return false end
+		local targetzn = bc:getZoneByName(resupplyTarget2)
+		return targetzn and targetzn.side == 2 and targetzn:canRecieveSupply()
+	end
+})
+
+mc:trackMission({
+	title = function(T)
+		local wp = WaypointList[attackTarget1] or ""
+		return LT(T):Format("SYRIA_DYNAMIC_ATTACK_TITLE", attackTarget1, wp)
+	end,
+	description = function(T)
+		return LT(T):Format("SYRIA_DYNAMIC_ATTACK_DESC", attackTarget1)
+	end,
+	messageStart = nil,
+	messageEnd = function(T)
+		return LT(T):Format("SYRIA_DYNAMIC_ATTACK_END", attackTarget1)
+	end,
+	startAction = function()
+		bc:addMissionTag(attackTarget1, "Attack")
+		bc:refreshZoneLabel(attackTarget1)
+		local wp = WaypointList[attackTarget1] or ""
+		if attackCombinedStart1 == attackTarget1 and attackCombinedStart2 == attackTarget2 and attackTarget2 then
+			local wp2 = WaypointList[attackTarget2] or ""
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_ATTACK_START_TWO", attackTarget1, wp, attackTarget2, wp2), 30)
+			attackSuppressStart2 = attackTarget2
+			attackCombinedStart1 = nil
+			attackCombinedStart2 = nil
+		else
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_ATTACK_START_ONE", attackTarget1, wp), 30)
+		end
 		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
 			trigger.action.outSoundForCoalition(2, "cas.ogg")
 		end
 	end,
 	endAction = function()
-		if ActiveCurrentMission and ActiveCurrentMission.Attack then
-			ActiveCurrentMission.Attack[attackTarget] = nil
-		end
-		local z = bc:getZoneByName(attackTarget) if z then z:updateLabel() end
-		attackTarget = nil
+		bc:removeMissionTag(attackTarget1, "Attack")
+		bc:refreshZoneLabel(attackTarget1)
+		attackTarget1 = nil
 		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
 			trigger.action.outSoundForCoalition(2, "cancel.ogg")
 		end
 	end,
-    isActive = function()
-        if not attackTarget then return false end
-        local targetzn = bc:getZoneByName(attackTarget)
-        return targetzn.side == 1 and not targetzn.suspended
-    end
+	isActive = function()
+		if not attackTarget1 then return false end
+		local targetzn = bc:getZoneByName(attackTarget1)
+		if targetzn and targetzn.zone and targetzn.side == 1 then
+			return not targetzn.suspended
+		end
+		return false
+	end
+})
+
+mc:trackMission({
+	title = function(T)
+		local wp = WaypointList[attackTarget2] or ""
+		return LT(T):Format("SYRIA_DYNAMIC_ATTACK_TITLE", attackTarget2, wp)
+	end,
+	description = function(T)
+		return LT(T):Format("SYRIA_DYNAMIC_ATTACK_DESC", attackTarget2)
+	end,
+	messageStart = nil,
+	messageEnd = function(T)
+		return LT(T):Format("SYRIA_DYNAMIC_ATTACK_END", attackTarget2)
+	end,
+	startAction = function()
+		bc:addMissionTag(attackTarget2, "Attack")
+		bc:refreshZoneLabel(attackTarget2)
+		attackCombinedStart1 = nil
+		attackCombinedStart2 = nil
+		if attackSuppressStart2 == attackTarget2 then
+			attackSuppressStart2 = nil
+		else
+			local wp = WaypointList[attackTarget2] or ""
+			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_ATTACK_START_ONE", attackTarget2, wp), 30)
+			if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+				trigger.action.outSoundForCoalition(2, "cas.ogg")
+			end
+		end
+	end,
+	endAction = function()
+		bc:removeMissionTag(attackTarget2, "Attack")
+		bc:refreshZoneLabel(attackTarget2)
+		attackTarget2 = nil
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+	end,
+	isActive = function()
+		if not attackTarget2 then return false end
+		local targetzn = bc:getZoneByName(attackTarget2)
+		if targetzn and targetzn.zone and targetzn.side == 1 then
+			return not targetzn.suspended
+		end
+		return false
+	end
 })
 captureTarget = nil
 mc:trackMission({
-    title = function()
+    title = function(T)
         local wp = WaypointList[captureTarget] or ""
-        return "Capture " .. captureTarget .. wp
+        return LT(T):Format("SYRIA_DYNAMIC_CAPTURE_TITLE", captureTarget, wp)
     end,
-    description = function()
-        return captureTarget .. " is neutral. Capture it by delivering supplies" end,
-    messageStart = function()
+    description = function(T)
+        return LT(T):Format("SYRIA_DYNAMIC_CAPTURE_DESC", captureTarget) end,
+    messageStart = function(T)
         local wp = WaypointList[captureTarget] or ""
-        return "New mission: Capture " .. captureTarget .. wp
+        return LT(T):Format("SYRIA_DYNAMIC_CAPTURE_START", captureTarget, wp)
     end,
-    messageEnd = function()
-        return "Mission ended: Capture " .. captureTarget end,
+    messageEnd = function(T)
+        return LT(T):Format("SYRIA_DYNAMIC_CAPTURE_END", captureTarget) end,
     startAction = function()
         local MissionType = "Capture"
-        ActiveCurrentMission[captureTarget] = MissionType
-        local z = bc:getZoneByName(captureTarget) ; if z then z:updateLabel() end
+        bc:addMissionTag(captureTarget, MissionType)
+        bc:refreshZoneLabel(captureTarget)
         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
     end,
     endAction = function()
         local MissionType = "Capture"
-        if ActiveCurrentMission[captureTarget] == MissionType then
-            ActiveCurrentMission[captureTarget] = nil
-        end
-        local z = bc:getZoneByName(captureTarget) ; if z then z:updateLabel() end
+        bc:removeMissionTag(captureTarget, MissionType)
+        bc:refreshZoneLabel(captureTarget)
         captureTarget = nil
         if not missionCompleted then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
@@ -4388,7 +4069,8 @@ mc:trackMission({
 
 function generateSEADMission()
     if seadTarget then return true end
-    if not attackTarget then return false end
+    local attackAnchors = _getAttackAnchorZones()
+    if #attackAnchors == 0 then return false end
 
     local function isSEADZone(zone)
         local lname = zone.zone:lower()
@@ -4398,16 +4080,11 @@ function generateSEADMission()
     end
 
     local validSEADZones = {}
-    local attackZone = bc:getZoneByName(attackTarget)
-
-    if attackZone and attackZone.zone then
-        local znA = attackZone.zone
-        for _, zone in ipairs(bc.zones) do
-            local znB = zone.zone
-            local dist = ZONE_DISTANCES[znA] and ZONE_DISTANCES[znA][znB]
-            if isSEADZone(zone) and bc:HasSeadTargets(zone.zone) and dist and dist <= 24000 then
-                table.insert(validSEADZones, zone.zone)
-            end
+    for _, zone in ipairs(bc.zones) do
+        local znB = zone.zone
+        local minDist = znB and _minDistanceToAttackAnchors(attackAnchors, znB) or nil
+        if isSEADZone(zone) and bc:HasSeadTargets(zone.zone) and minDist and minDist <= 24000 then
+            table.insert(validSEADZones, zone.zone)
         end
     end
 
@@ -4434,22 +4111,20 @@ function generateSEADMission()
 end
 
 mc:trackMission({
-    title = function() return "SEAD mission at " .. seadTarget end,
-    description = function() return "Neutralize enemy SAM/defences at " .. seadTarget end,
-    messageStart = function() return "New SEAD mission: Engage SAM at " .. seadTarget end,
-    messageEnd = function() return "SEAD mission ended" end,
+    title = function(T) return LT(T):Format("MISSION_SEAD_TITLE", seadTarget) end,
+    description = function(T) return LT(T):Format("MISSION_SEAD_DESCRIPTION", seadTarget) end,
+    messageStart = function(T) return LT(T):Format("MISSION_SEAD_START", seadTarget) end,
+    messageEnd = function(T) return LT(T):Get("MISSION_SEAD_END") end,
     startAction = function()
         local MissionType = "SEAD"
-        ActiveCurrentMission[seadTarget] = MissionType
-        local z = bc:getZoneByName(seadTarget) ; if z then z:updateLabel() end
+        bc:addMissionTag(seadTarget, MissionType)
+        bc:refreshZoneLabel(seadTarget)
         if not missionCompleted then trigger.action.outSoundForCoalition(2,"ding.ogg") end
     end,
     endAction = function()
         local MissionType = "SEAD"
-        if ActiveCurrentMission[seadTarget] == MissionType then
-            ActiveCurrentMission[seadTarget] = nil
-        end
-        local z = bc:getZoneByName(seadTarget) ; if z then z:updateLabel() end
+        bc:removeMissionTag(seadTarget, MissionType)
+        bc:refreshZoneLabel(seadTarget)
         seadTarget = nil
         if not missionCompleted then trigger.action.outSoundForCoalition(2,"cancel.ogg") end
     end,
@@ -4464,7 +4139,8 @@ deadTarget = nil
 function generateDEADMission()
     if deadTarget then return true end
     if seadTarget then return true end
-    if not attackTarget then return false end
+    local attackAnchors = _getAttackAnchorZones()
+    if #attackAnchors == 0 then return false end
 
     local function isDEADZone(zone)
         local lname = zone.zone:lower()
@@ -4472,16 +4148,11 @@ function generateDEADMission()
     end
 
     local validDEADZones = {}
-    local attackZone = bc:getZoneByName(attackTarget)
-
-    if attackZone and attackZone.zone then
-        local znA = attackZone.zone
-        for _, zone in ipairs(bc.zones) do
-            local znB = zone.zone
-            local dist = ZONE_DISTANCES[znA] and ZONE_DISTANCES[znA][znB]
-            if isDEADZone(zone) and not bc:HasSeadTargets(zone.zone) and dist and dist <= 24000 then
-                table.insert(validDEADZones, zone.zone)
-            end
+    for _, zone in ipairs(bc.zones) do
+        local znB = zone.zone
+        local minDist = znB and _minDistanceToAttackAnchors(attackAnchors, znB) or nil
+        if isDEADZone(zone) and not bc:HasSeadTargets(zone.zone) and minDist and minDist <= 24000 then
+            table.insert(validDEADZones, zone.zone)
         end
     end
 
@@ -4507,22 +4178,20 @@ function generateDEADMission()
 end
 
 mc:trackMission({
-    title = function() return "DEAD mission at " .. deadTarget end,
-    description = function() return "Destroy remaining enemy air defences at " .. deadTarget end,
-    messageStart = function() return "New DEAD mission: Destroy remaining air defences at " .. deadTarget end,
-    messageEnd = function() return "DEAD mission ended" end,
+    title = function(T) return LT(T):Format("MISSION_DEAD_TITLE", deadTarget) end,
+    description = function(T) return LT(T):Format("MISSION_DEAD_DESCRIPTION", deadTarget) end,
+    messageStart = function(T) return LT(T):Format("MISSION_DEAD_START", deadTarget) end,
+    messageEnd = function(T) return LT(T):Get("MISSION_DEAD_END") end,
     startAction = function()
         local MissionType = "DEAD"
-        ActiveCurrentMission[deadTarget] = MissionType
-        local z = bc:getZoneByName(deadTarget) ; if z then z:updateLabel() end
+        bc:addMissionTag(deadTarget, MissionType)
+        bc:refreshZoneLabel(deadTarget)
         if not missionCompleted then trigger.action.outSoundForCoalition(2,"ding.ogg") end
     end,
     endAction = function()
         local MissionType = "DEAD"
-        if ActiveCurrentMission[deadTarget] == MissionType then
-            ActiveCurrentMission[deadTarget] = nil
-        end
-        local z = bc:getZoneByName(deadTarget) ; if z then z:updateLabel() end
+        bc:removeMissionTag(deadTarget, MissionType)
+        bc:refreshZoneLabel(deadTarget)
         deadTarget = nil
         if not missionCompleted then trigger.action.outSoundForCoalition(2,"cancel.ogg") end
     end,
@@ -4533,19 +4202,123 @@ mc:trackMission({
     end
 })
 
+---------------------------------------------------------------------
+--                         RECON MISSION                           --
+reconMissionTarget = nil
+reconMissionWinner = nil
+reconMissionCooldownUntil = 0
+reconMissionCompleted = false
+reconMissionCompletedTarget = nil
+
+mc:trackMission({
+	title = function(T)
+		local target = reconMissionCompletedTarget or reconMissionTarget
+		if not target then return LT(T):Get("SYRIA_DYNAMIC_RECON_TITLE_EMPTY") end
+		local wp = WaypointList[target] or ""
+		return LT(T):Format("SYRIA_DYNAMIC_RECON_TITLE", target, wp)
+	end,
+	description = function(T)
+		local target = reconMissionCompletedTarget or reconMissionTarget
+		if not target then return LT(T):Get("SYRIA_DYNAMIC_RECON_DESC_EMPTY") end
+		return LT(T):Format("SYRIA_DYNAMIC_RECON_DESC", target)
+	end,
+	messageStart = function(T)
+		local target = reconMissionCompletedTarget or reconMissionTarget
+		if not target then return LT(T):Get("SYRIA_DYNAMIC_RECON_START_EMPTY") end
+		local wp = WaypointList[target] or ""
+		return LT(T):Format("SYRIA_DYNAMIC_RECON_START", target, wp)
+	end,
+	messageEnd = function(T)
+		if reconMissionCompleted and reconMissionCompletedTarget and reconMissionWinner then
+			return LT(T):Format("SYRIA_DYNAMIC_RECON_END_BY", reconMissionCompletedTarget, reconMissionWinner)
+		end
+		if reconMissionCompletedTarget then
+			return LT(T):Format("SYRIA_DYNAMIC_RECON_END_TARGET", reconMissionCompletedTarget)
+		end
+		return LT(T):Get("SYRIA_DYNAMIC_RECON_END")
+	end,
+	startAction = function()
+		reconMissionCompleted = false
+		reconMissionWinner = nil
+		reconMissionCompletedTarget = nil
+
+		bc:addMissionTag(reconMissionTarget, "Recon")
+		bc:refreshZoneLabel(reconMissionTarget)
+
+		startReconMissionZoneTracker(reconMissionTarget)
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		local target = reconMissionCompletedTarget or reconMissionTarget
+		if target then
+			stopReconMissionZoneTracker(target)
+			bc:removeMissionTag(target, "Recon")
+			bc:refreshZoneLabel(target)
+		end
+
+		if reconMissionCompleted and target and reconMissionWinner then
+			local reward = 100
+			bc:addContribution(reconMissionWinner, 2, reward)
+			local jp = bc.jointPairs and bc.jointPairs[reconMissionWinner]
+			if jp and bc:_jointPartnerAlive(reconMissionWinner) and bc:_jointPartnerAlive(jp) and bc.playerContributions[2][jp] ~= nil then
+				bc.playerContributions[2][jp] = (bc.playerContributions[2][jp] or 0) + reward
+				bc:addTempStat(jp, "Recon mission (Joint mission)", 1)
+				bc:addTempStat(reconMissionWinner, "Recon mission (Joint mission)", 1)
+				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_JOINT", reconMissionWinner, jp, target, reward), 20)
+				local jgn = bc.groupNameByPlayer[jp]
+				local jgr = Group.getByName(jgn)
+				if jgr then
+					local ju = jgr:getUnit(1)
+					if ju and not Utils.isInAir(ju) then
+						SCHEDULER:New(nil, function()
+							if ju and ju:isExist() then
+								world.onEvent({id=world.event.S_EVENT_LAND,time=timer.getAbsTime(),initiator=ju,initiatorPilotName=jp,initiator_unit_type=ju:getTypeName(),initiator_coalition=ju:getCoalition(),skipRewardMsg=true})
+							end
+						end, {}, 5, 0)
+					end
+				end
+			else
+				bc:addTempStat(reconMissionWinner, "Recon mission", 1)
+				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
+			end
+			startZoneIntel(target, 10 * 60)
+			reconMissionCooldownUntil = timer.getTime() + 900
+		end
+
+		reconMissionTarget = nil
+		reconMissionWinner = nil
+		reconMissionCompleted = false
+		reconMissionCompletedTarget = nil
+
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+	end,
+	isActive = function()
+		if reconMissionCompleted then return false end
+		if not reconMissionTarget then return false end
+		local targetzn = bc:getZoneByName(reconMissionTarget)
+		return targetzn and targetzn.side == 1 and targetzn.active and not targetzn.suspended
+	end
+})
+--                    End of RECON MISSION                         --
+---------------------------------------------------------------------
+
 
 -------------------------------- Destroy artillery --------------------------------
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted south of FOB-Delaram headed to FOB-Delaram.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed to FOB-Delaram",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "south of FOB-Delaram", "FOB-Delaram"),
+    messageStart = LTFormat("MISSION_ARTY_START", "FOB-Delaram"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Chaghcharan-attack-FOBDelaram',250,'Destroy artillery','Chaghcharan-attack-FOBDelaram')
+		RegisterGroupTarget('Chaghcharan-attack-FOBDelaram',250,L10N:Get("MISSION_ARTY_TITLE"),'Chaghcharan-attack-FOBDelaram')
     end,
     endAction = function()
     end,
@@ -4558,15 +4331,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards FOB-Hamid Karzai from the direction of Maymana.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed to FOB-Hamid Karzai",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Maymana", "FOB-Hamid Karzai"),
+    messageStart = LTFormat("MISSION_ARTY_START", "FOB-Hamid Karzai"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Maymana-attack-FOBHamidKarzai',250,'Destroy artillery','Maymana-attack-FOBHamidKarzai')
+		RegisterGroupTarget('Maymana-attack-FOBHamidKarzai',250,L10N:Get("MISSION_ARTY_TITLE"),'Maymana-attack-FOBHamidKarzai')
     end,
     endAction = function()
     end,
@@ -4579,15 +4352,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards Herat from the direction of Shindand.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed to Herat",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Shindand", "Herat"),
+    messageStart = LTFormat("MISSION_ARTY_START", "Herat"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Shindand-attack-Herat',250,'Destroy artillery','Shindand-attack-Herat')
+		RegisterGroupTarget('Shindand-attack-Herat',250,L10N:Get("MISSION_ARTY_TITLE"),'Shindand-attack-Herat')
     end,
     endAction = function()
     end,
@@ -4600,15 +4373,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards Shindand from the direction of Herat.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed to Shindand",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Herat", "Shindand"),
+    messageStart = LTFormat("MISSION_ARTY_START", "Shindand"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Herat-attack-Shindand',250,'Destroy artillery','Herat-attack-Shindand')
+		RegisterGroupTarget('Herat-attack-Shindand',250,L10N:Get("MISSION_ARTY_TITLE"),'Herat-attack-Shindand')
     end,
     endAction = function()
     end,
@@ -4621,15 +4394,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards FOB-Ahmad Shah Massoud from the direction of Shindand.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed to FOB-Ahmad Shah Massoud",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Shindand", "FOB-Ahmad Shah Massoud"),
+    messageStart = LTFormat("MISSION_ARTY_START", "FOB-Ahmad Shah Massoud"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Shindand-attack-FOB-AhmadShahMassoud',100,'Destroy artillery','Shindand-attack-FOB-AhmadShahMassoud')
+		RegisterGroupTarget('Shindand-attack-FOB-AhmadShahMassoud',100,L10N:Get("MISSION_ARTY_TITLE"),'Shindand-attack-FOB-AhmadShahMassoud')
     end,
     endAction = function()
     end,
@@ -4642,15 +4415,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards FOB-Javid from the direction of Shindand.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed to FOB-Javid",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Shindand", "FOB-Javid"),
+    messageStart = LTFormat("MISSION_ARTY_START", "FOB-Javid"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Bamyan-attack-FOB-JavidBasharat',100,'Destroy artillery','Bamyan-attack-FOB-JavidBasharat')
+		RegisterGroupTarget('Bamyan-attack-FOB-JavidBasharat',100,L10N:Get("MISSION_ARTY_TITLE"),'Bamyan-attack-FOB-JavidBasharat')
     end,
     endAction = function()
     end,
@@ -4663,15 +4436,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards Kabul from the direction of Bagram.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed to Kabul",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Bagram", "Kabul"),
+    messageStart = LTFormat("MISSION_ARTY_START", "Kabul"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Bagram-attack-Kabul',250,'Destroy artillery','Bagram-attack-Kabul')
+		RegisterGroupTarget('Bagram-attack-Kabul',250,L10N:Get("MISSION_ARTY_TITLE"),'Bagram-attack-Kabul')
     end,
     endAction = function()
     end,
@@ -4684,15 +4457,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards Ghazni Heliport from the direction of Checkpoint Delta.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed to Ghazni Heliport",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Checkpoint Delta", "Ghazni Heliport"),
+    messageStart = LTFormat("MISSION_ARTY_START", "Ghazni Heliport"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('CheckpointDelta-attack-GhazniHeliport',250,'Destroy artillery','CheckpointDelta-attack-GhazniHeliport')
+		RegisterGroupTarget('CheckpointDelta-attack-GhazniHeliport',250,L10N:Get("MISSION_ARTY_TITLE"),'CheckpointDelta-attack-GhazniHeliport')
     end,
     endAction = function()
     end,
@@ -4705,15 +4478,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards FOB-Bostick from the direction of Checkpoint Charlie.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery toward FOB-Bostick",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Checkpoint Charlie", "FOB-Bostick"),
+    messageStart = LTFormat("MISSION_ARTY_START", "FOB-Bostick"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('CheckpointCharlie-attack-FOB-Bostick',250,'Destroy artillery','CheckpointCharlie-attack-FOB-Bostick')
+		RegisterGroupTarget('CheckpointCharlie-attack-FOB-Bostick',250,L10N:Get("MISSION_ARTY_TITLE"),'CheckpointCharlie-attack-FOB-Bostick')
     end,
     endAction = function()
     end,
@@ -4726,15 +4499,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards Tarinkot from the direction of Checkpoint Bravo.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed toward Tarinkot",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Checkpoint Bravo", "Tarinkot"),
+    messageStart = LTFormat("MISSION_ARTY_START", "Tarinkot"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('CheckpointBravo-attack-Tarinkot',250,'Destroy artillery','CheckpointBravo-attack-Tarinkot')
+		RegisterGroupTarget('CheckpointBravo-attack-Tarinkot',250,L10N:Get("MISSION_ARTY_TITLE"),'CheckpointBravo-attack-Tarinkot')
     end,
     endAction = function()
     end,
@@ -4747,15 +4520,15 @@ mc:trackMission({
 })
 
 mc:trackMission({
-    title = "Destroy artillery",
-    description = "Artillery has been spotted heading towards Kabul from the direction of Checkpoint Kabul Eeast.\nDestroy them before they get in range.",
-    messageStart = "New mission: Destroy artillery headed toward Kabul",
-    messageEnd = "Mission ended: Destroy artillery",
+    title = LTGet("MISSION_ARTY_TITLE"),
+    description = LTFormat("MISSION_ARTY_DESCRIPTION", "Checkpoint Kabul East", "Kabul"),
+    messageStart = LTFormat("MISSION_ARTY_START", "Kabul"),
+    messageEnd = LTGet("MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('CheckpointKabulE-attack-Kabul',250,'Destroy artillery','CheckpointKabulE-attack-Kabul')
+		RegisterGroupTarget('CheckpointKabulE-attack-Kabul',250,L10N:Get("MISSION_ARTY_TITLE"),'CheckpointKabulE-attack-Kabul')
     end,
     endAction = function()
     end,
@@ -4789,7 +4562,7 @@ do
     end
   end
   for _, name in ipairs(missing) do
-    trigger.action.outText(name .. ' is missing', 30)
+    trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", name), 30)
   end
 end
 end, {}, timer.getTime() + 1)
@@ -4800,14 +4573,14 @@ evc:addEvent({
 	action = function()
 		local tgt = sceneryList['BostBuilding'][1] or SCENERY:FindByZoneName('BostBuilding')
 		if not tgt then
-			trigger.action.outText('BostBuilding is missing',30)
+			trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", "BostBuilding"),30)
 			return
 		end
-        RegisterScoreTarget('BostBuilding',tgt,500,'Strike known Bin Laden location',true)
+        RegisterScoreTarget('BostBuilding',tgt,500,L10N:Get("AF_MISSION_STRIKE_BIN_LADEN_LOCATION_TARGET"),true)
 		local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
 		if p then
 			missionMarkId = missionMarkId + 1
-			trigger.action.markToCoalition(missionMarkId,"Strike known Bin Laden location",p,2,false,false)
+			trigger.action.markToCoalition(missionMarkId,L10N:Get("AF_MISSION_STRIKE_BIN_LADEN_LOCATION_TARGET"),p,2,false,false)
 			MissionMarks['BostBuilding'] = missionMarkId
 		end
 	end,
@@ -4820,21 +4593,10 @@ evc:addEvent({
 })
 
 mc:trackMission({
-	title = "Strike on enemy hideout",
-	description =
-[[We have intel on a building where Bin Laden might be held up at. 
-Intel states that he might be in the city of Bost, just near the airport.
-We shouldn't take any chances and we need to act fast, blow that building up!
-
-Reward: 500
-
-MGRS: 41 R PQ 31519 95368
-Lat long: N 31°35'09" E 64°23'10"
-Lat long Precise: N 31°35'09.18" E 64°23'10.11"
-Lat long Decimal Minutes: N 31°35.153' E 64°23.168'
-Elevation 2550 feet]],
-	messageStart = "New strike mission: Strike known Bin Laden location",
-	messageEnd = "Strike mission ended: Strike known Bin Laden location",
+	title = LTGet("AF_MISSION_STRIKE_BIN_LADEN_LOCATION_TITLE"),
+	description = LTGet("AF_MISSION_STRIKE_BIN_LADEN_LOCATION_DESC"),
+	messageStart = LTGet("AF_MISSION_STRIKE_BIN_LADEN_LOCATION_START"),
+	messageEnd = LTGet("AF_MISSION_STRIKE_BIN_LADEN_LOCATION_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -4858,13 +4620,10 @@ Elevation 2550 feet]],
 
 ---------------------------------------------- Capture Khost------------------------------------------------------
 mc:trackMission({
-	title = "Capture Khost to help supply runs",
-	description =
-[[We need supply routes for planes through Pakistan. 
-Capture Khost to assist with the supply runs. 
-Afterwards you can also use the base to fly from in times of need.]],
-	messageStart = "New Capture mission: Special forces need to capture Khost",
-	messageEnd = "Capture mission ended: Capture Khost",
+	title = LTGet("AF_MISSION_CAPTURE_KHOST_TITLE"),
+	description = LTGet("AF_MISSION_CAPTURE_KHOST_DESC"),
+	messageStart = LTGet("AF_MISSION_CAPTURE_KHOST_START"),
+	messageEnd = LTGet("AF_MISSION_CAPTURE_KHOST_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -4885,13 +4644,10 @@ Afterwards you can also use the base to fly from in times of need.]],
 ---------------------------------------------- End of Capture Khost ------------------------------------------------------
 ---------------------------------------------- Capture Urgoon Heliport------------------------------------------------------
 mc:trackMission({
-	title = "Capture Urgoon Heliport to help supply runs",
-	description =
-[[We need more supply routes for Helicopters through Pakistan. 
-Capture Urgoon Heliport to assist with the supply runs. 
-Afterwards you can also use the base to fly from in times of need.]],
-	messageStart = "New Capture mission: Special forces need to capture Urgoon Heliport",
-	messageEnd = "Capture mission ended: Capture Urgoon Heliport",
+	title = LTGet("AF_MISSION_CAPTURE_URGOON_HELIPORT_TITLE"),
+	description = LTGet("AF_MISSION_CAPTURE_URGOON_HELIPORT_DESC"),
+	messageStart = LTGet("AF_MISSION_CAPTURE_URGOON_HELIPORT_START"),
+	messageEnd = LTGet("AF_MISSION_CAPTURE_URGOON_HELIPORT_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -4916,7 +4672,7 @@ evc:addEvent({
 	id='Associates',
 	action = function()
 	RespawnGroup('Associates')
-    RegisterGroupTarget('Associates',500,'Kill the Associates','Associates',true)
+    RegisterGroupTarget('Associates',500,L10N:Get("AF_MISSION_ASSOCIATES_TARGET"),'Associates',true)
 	end,
 	canExecute = function()
 		--if math.random(1,100) < 70 then return false end
@@ -4929,21 +4685,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Strike the Associates",
-	description =
-[[A known Associate has been found 70 NM east of Shindand.
-
-Eliminate them before they can cause more trouble.
-
-Reward: 500
-
-MGRS: 41 S NS 65579 97245
-Lat long: N 33°24'45" E 63°42'19"
-Lat long Decimal Minutes: N 33°24.752' E 63°42.318'
-
-Elevation 6973 feet]],
-	messageStart = "New strike mission: Strike the Associates",
-	messageEnd = "Strike mission ended: Strike the Associates",
+	title = LTGet("AF_MISSION_ASSOCIATES_TITLE"),
+	description = LTGet("AF_MISSION_ASSOCIATES_DESC"),
+	messageStart = LTGet("AF_MISSION_ASSOCIATES_START"),
+	messageEnd = LTGet("AF_MISSION_ASSOCIATES_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -4951,7 +4696,7 @@ Elevation 6973 feet]],
     end,
     endAction = function()
         RespawnGroup('AssociatesConvoy')
-        trigger.action.outTextForCoalition(2,'One of the Associates is fleeing!! Kill them before they run away',30)
+        trigger.action.outTextForCoalition(2,L10N:Get("AF_MISSION_ASSOCIATE_FLEEING"),30)
 	end,
 	isActive = function()
     if CustomFlags["Associates"] then return false end
@@ -4967,7 +4712,7 @@ Elevation 6973 feet]],
 evc:addEvent({
 	id='AssociatesConvoy',
 	action = function()
-    RegisterGroupTarget('AssociatesConvoy',500,'Hunt the associates Convoy','AssociatesConvoy',true)
+    RegisterGroupTarget('AssociatesConvoy',500,L10N:Get("AF_MISSION_ASSOCIATES_CONVOY_TARGET"),'AssociatesConvoy',true)
 	end,
 	canExecute = function()
 		--if math.random(1,100) < 70 then return false end
@@ -4979,11 +4724,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Hunt the associates Convoy",
-	description =
-[[]],
-	messageStart = "New strike mission: hunt the Associates convoy!!!!",
-	messageEnd = "Strike mission ended: hunt the Associates convoy",
+	title = LTGet("AF_MISSION_ASSOCIATES_CONVOY_TITLE"),
+	description = LTGet("AF_MISSION_ASSOCIATES_CONVOY_DESC"),
+	messageStart = LTGet("AF_MISSION_ASSOCIATES_CONVOY_START"),
+	messageEnd = LTGet("AF_MISSION_ASSOCIATES_CONVOY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5007,7 +4751,7 @@ evc:addEvent({
 	id='Bodyguards',
 	action = function()
 	RespawnGroup('Bodyguards')
-    RegisterGroupTarget('Bodyguards',500,'Kill the Bodyguards','Bodyguards',true)
+    RegisterGroupTarget('Bodyguards',500,L10N:Get("AF_MISSION_BODYGUARDS_TARGET"),'Bodyguards',true)
 	end,
 	canExecute = function()
 		--if math.random(1,100) < 70 then return false end
@@ -5020,20 +4764,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Strike the Bodyguards",
-	description =
-[[Intel indicates that Bin Ladens personal guards were spotted at this location. 
-Ensure that he and his body guards are eliminated. 
-
-Reward: 500
-
-MGRS GRID: 42 S UC 38879 58074
-Lat Long: N 33°57'03" E 67°15'23"
-Lat Long Decimal: N 33°57.050' E 67°15.383'
-
-Elevation 7952 feet]],
-	messageStart = "New strike mission: Strike the Bodyguards",
-	messageEnd = "Strike mission ended: Strike the Bodyguards",
+	title = LTGet("AF_MISSION_BODYGUARDS_TITLE"),
+	description = LTGet("AF_MISSION_BODYGUARDS_DESC"),
+	messageStart = LTGet("AF_MISSION_BODYGUARDS_START"),
+	messageEnd = LTGet("AF_MISSION_BODYGUARDS_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5041,7 +4775,7 @@ Elevation 7952 feet]],
     end,
     endAction = function()
         RespawnGroup('BinLadenEscape')
-        trigger.action.outTextForCoalition(2,'Bin Laden is fleeing!! Kill him before he gets away',30)
+        trigger.action.outTextForCoalition(2,L10N:Get("AF_MISSION_BIN_LADEN_FLEEING"),30)
 	end,
 	isActive = function()
 	if CustomFlags["Bodyguards"] then return false end
@@ -5057,7 +4791,7 @@ Elevation 7952 feet]],
 evc:addEvent({
 	id='BinLadenEscape',
 	action = function()
-    RegisterGroupTarget('BinLadenEscape',500,'Hunt down Bin Laden','BinLadenEscape',true)
+    RegisterGroupTarget('BinLadenEscape',500,L10N:Get("AF_MISSION_BIN_LADEN_ESCAPE_TARGET"),'BinLadenEscape',true)
 	end,
 	canExecute = function()
 		--if math.random(1,100) < 70 then return false end
@@ -5069,11 +4803,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Hunt down Bin Laden",
-	description =
-[[]],
-	messageStart = "New strike mission: hunt down Bin Laden!!!!",
-	messageEnd = "Strike mission ended: hunt down Bin Laden",
+	title = LTGet("AF_MISSION_BIN_LADEN_ESCAPE_TITLE"),
+	description = LTGet("AF_MISSION_BIN_LADEN_ESCAPE_DESC"),
+	messageStart = LTGet("AF_MISSION_BIN_LADEN_ESCAPE_START"),
+	messageEnd = LTGet("AF_MISSION_BIN_LADEN_ESCAPE_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5094,7 +4827,7 @@ mc:trackMission({
 evc:addEvent({
 	id='Red EWR Camp Bastion Fixed',
 	action = function()
-    RegisterGroupTarget('Red EWR Camp Bastion Fixed',300,'Destroy the EWR at Camp Bastion','Red EWR Camp Bastion Fixed',true)
+    RegisterGroupTarget('Red EWR Camp Bastion Fixed',300,L10N:Format("AF_MISSION_EWR_TITLE", "Camp Bastion"),'Red EWR Camp Bastion Fixed',true)
 	end,
 	canExecute = function()
         if CustomFlags["Red EWR Camp Bastion Fixed"] then return false end
@@ -5105,21 +4838,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Destroy the EWR at Camp Bastion",
-	description =
-[[We have intelligence showing the location of an early warning radar system located near Camp Bastion.
-
-Destroy this EWRS to help with SAM site threats. 
-
-Reward: 300
-
-MGRS GRID: 41 R PR 26499 32795
-Lat Long Standard: N 31°55'26" E 64°20'17"
-Lat Long Decimal Minutes: N 31°55.441' E 64°20.285'
-
-Elevation 2916 feet]],
-	messageStart = "New strike mission: Destroy the EWR at Camp Bastion",
-	messageEnd = "Strike mission ended: Destroy the EWR at Camp Bastion",
+	title = LTFormat("AF_MISSION_EWR_TITLE", "Camp Bastion"),
+	description = LTFormat("AF_MISSION_EWR_DESC", "Camp Bastion", "41 R PR 26499 32795", "N 31°55'26\" E 64°20'17\"", "N 31°55.441' E 64°20.285'", "2916"),
+	messageStart = LTFormat("AF_MISSION_EWR_START", "Camp Bastion"),
+	messageEnd = LTFormat("AF_MISSION_EWR_END", "Camp Bastion"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5139,7 +4861,7 @@ Elevation 2916 feet]],
 evc:addEvent({
 	id='Red EWR Nimroz Fixed',
 	action = function()
-    RegisterGroupTarget('Red EWR Nimroz Fixed',300,'Destroy the EWR at Nimroz','Red EWR Nimroz Fixed',true)
+    RegisterGroupTarget('Red EWR Nimroz Fixed',300,L10N:Format("AF_MISSION_EWR_TITLE", "Nimroz"),'Red EWR Nimroz Fixed',true)
 	end,
 	canExecute = function()
         if CustomFlags["Red EWR Nimroz Fixed"] then return false end
@@ -5150,21 +4872,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Destroy the EWR at Nimroz",
-	description =
-[[We have intelligence showing the location of an early warning radar system located near Nimroz.
-
-Destroy this EWRS to help with SAM site threats. 
-
-Reward: 300
-
-MGRS GRID: 41 R MQ 52934 19038
-Lat Long Standard: N 30°54'13" E 62°30'26"
-Lat Long Decimal Minutes: N 30°54.224' E 62°30.449'
-
-Elevation 2381 feet]],
-	messageStart = "New strike mission: Destroy the EWR at Nimroz",
-	messageEnd = "Strike mission ended: Destroy the EWR at Nimroz",
+	title = LTFormat("AF_MISSION_EWR_TITLE", "Nimroz"),
+	description = LTFormat("AF_MISSION_EWR_DESC", "Nimroz", "41 R MQ 52934 19038", "N 30°54'13\" E 62°30'26\"", "N 30°54.224' E 62°30.449'", "2381"),
+	messageStart = LTFormat("AF_MISSION_EWR_START", "Nimroz"),
+	messageEnd = LTFormat("AF_MISSION_EWR_END", "Nimroz"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5185,7 +4896,7 @@ Elevation 2381 feet]],
 evc:addEvent({
 	id='Red EWR Herat Fixed',
 	action = function()
-    RegisterGroupTarget('Red EWR Herat Fixed',300,'Destroy the EWR at Herat','Red EWR Herat Fixed',true)
+    RegisterGroupTarget('Red EWR Herat Fixed',300,L10N:Format("AF_MISSION_EWR_TITLE", "Herat"),'Red EWR Herat Fixed',true)
 	end,
 	canExecute = function()
         if CustomFlags["Red EWR Herat Fixed"] then return false end
@@ -5198,21 +4909,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Destroy the EWR at Herat",
-	description =
-[[We have intelligence showing the location of an early warning radar system located near Herat.
-
-Destroy this EWRS to help with SAM site threats. 
-
-Reward: 300
-
-MGRS GRID: 41 S MU 35387 32028
-Lat Long Standard: N 34°37'41" E 62°17'42"
-Lat Long Decimal Minutes: N 34°37.686' E 62°17.706'
-
-Elevation 7676 feet]],
-	messageStart = "New strike mission: Destroy the EWR at Herat",
-	messageEnd = "Strike mission ended: Destroy the EWR at Herat",
+	title = LTFormat("AF_MISSION_EWR_TITLE", "Herat"),
+	description = LTFormat("AF_MISSION_EWR_DESC", "Herat", "41 S MU 35387 32028", "N 34°37'41\" E 62°17'42\"", "N 34°37.686' E 62°17.706'", "7676"),
+	messageStart = LTFormat("AF_MISSION_EWR_START", "Herat"),
+	messageEnd = LTFormat("AF_MISSION_EWR_END", "Herat"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5232,7 +4932,7 @@ Elevation 7676 feet]],
 evc:addEvent({
 	id='Red EWR Chaghcharan Fixed',
 	action = function()
-    RegisterGroupTarget('Red EWR Chaghcharan Fixed',300,'Destroy the EWR at Chaghcharan','Red EWR Chaghcharan Fixed',true)
+    RegisterGroupTarget('Red EWR Chaghcharan Fixed',300,L10N:Format("AF_MISSION_EWR_TITLE", "Chaghcharan"),'Red EWR Chaghcharan Fixed',true)
 	end,
 	canExecute = function()
         if CustomFlags["Red EWR Chaghcharan Fixed"] then return false end
@@ -5243,21 +4943,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Destroy the EWR at Chaghcharan",
-	description =
-[[We have intelligence showing the location of an early warning radar system located near Chaghcharan.
-
-Destroy this EWRS to help with SAM site threats. 
-
-Reward: 300
-
-MGRS GRID: 41 S QU 64492 81853
-Lat Long Standard: N 35°02'41" E 65°53'58"
-Lat Long Decimal Minutes: N 35°02.686' E 65°53.978'
-
-Elevation 11051 feet]],
-	messageStart = "New strike mission: Destroy the EWR at Chaghcharan",
-	messageEnd = "Strike mission ended: Destroy the EWR at Chaghcharan",
+	title = LTFormat("AF_MISSION_EWR_TITLE", "Chaghcharan"),
+	description = LTFormat("AF_MISSION_EWR_DESC", "Chaghcharan", "41 S QU 64492 81853", "N 35°02'41\" E 65°53'58\"", "N 35°02.686' E 65°53.978'", "11051"),
+	messageStart = LTFormat("AF_MISSION_EWR_START", "Chaghcharan"),
+	messageEnd = LTFormat("AF_MISSION_EWR_END", "Chaghcharan"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5277,7 +4966,7 @@ Elevation 11051 feet]],
 evc:addEvent({
 	id='Red EWR Jamsheed Fixed',
 	action = function()
-    RegisterGroupTarget('Red EWR Jamsheed Fixed',300,'Destroy the EWR at Jamsheed SAM site','Red EWR Jamsheed Fixed',true)
+    RegisterGroupTarget('Red EWR Jamsheed Fixed',300,L10N:Format("AF_MISSION_EWR_TITLE", "Jamsheed SAM site"),'Red EWR Jamsheed Fixed',true)
 	end,                                                                          
 	canExecute = function()
         if CustomFlags["Red EWR Jamsheed Fixed"] then return false end
@@ -5288,21 +4977,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Destroy the EWR at SAM Jamsheed",
-	description =
-[[We have intelligence showing the location of an early warning radar system located near Jamsheed SAM Site.
-
-Destroy this EWRS to help with SAM site threats. 
-
-Reward: 300
-
-MGRS GRID: 41 S PT 75189 12172
-Lat Long Standard: N 33°32'05" E 64°53'12"
-Lat Long Decimal Minutes: N 33°32.088' E 64°53.202'
-
-Elevation 12668 feet]],
-	messageStart = "New strike mission: Destroy the EWR at Jamsheed SAM site",
-	messageEnd = "Strike mission ended: Destroy the EWR at Jamsheed SAM site",
+	title = LTFormat("AF_MISSION_EWR_TITLE", "SAM Jamsheed"),
+	description = LTFormat("AF_MISSION_EWR_DESC", "Jamsheed SAM Site", "41 S PT 75189 12172", "N 33°32'05\" E 64°53'12\"", "N 33°32.088' E 64°53.202'", "12668"),
+	messageStart = LTFormat("AF_MISSION_EWR_START", "Jamsheed SAM site"),
+	messageEnd = LTFormat("AF_MISSION_EWR_END", "Jamsheed SAM site"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5322,7 +5000,7 @@ Elevation 12668 feet]],
 evc:addEvent({
 	id='Red EWR Bagram Fixed',
 	action = function()
-    RegisterGroupTarget('Red EWR Bagram Fixed',300,'Destroy the EWR at Bagram','Red EWR Bagram Fixed',true)
+    RegisterGroupTarget('Red EWR Bagram Fixed',300,L10N:Format("AF_MISSION_EWR_TITLE", "Bagram"),'Red EWR Bagram Fixed',true)
 	end,
 	canExecute = function()
         if CustomFlags["Red EWR Bagram Fixed"] then return false end
@@ -5333,21 +5011,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Destroy the EWR at Bagram",
-	description =
-[[We have intelligence showing the location of an early warning radar system located near Bagram.
-
-Destroy this EWRS to help with SAM site threats. 
-
-Reward: 300
-
-MGRS GRID: 42 S WD 28839 64152
-Lat Long Standard: N 34°55'09" E 69°18'56"
-Lat Long Decimal Minutes: N 34°55.165' E 69°18.944'
-
-Elevation 4814 feet]],
-	messageStart = "New strike mission: Destroy the EWR at Bagram",
-	messageEnd = "Strike mission ended: Destroy the EWR at Bagram",
+	title = LTFormat("AF_MISSION_EWR_TITLE", "Bagram"),
+	description = LTFormat("AF_MISSION_EWR_DESC", "Bagram", "42 S WD 28839 64152", "N 34°55'09\" E 69°18'56\"", "N 34°55.165' E 69°18.944'", "4814"),
+	messageStart = LTFormat("AF_MISSION_EWR_START", "Bagram"),
+	messageEnd = LTFormat("AF_MISSION_EWR_END", "Bagram"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5367,7 +5034,7 @@ Elevation 4814 feet]],
 evc:addEvent({
 	id='Red EWR Sharana Fixed',
 	action = function()
-    RegisterGroupTarget('Red EWR Sharana Fixed',300,'Destroy the EWR at Sharana','Red EWR Sharana Fixed',true)
+    RegisterGroupTarget('Red EWR Sharana Fixed',300,L10N:Format("AF_MISSION_EWR_TITLE", "Sharana"),'Red EWR Sharana Fixed',true)
 	end,
 	canExecute = function()
         if CustomFlags["Red EWR Sharana Fixed"] then return false end
@@ -5378,21 +5045,10 @@ evc:addEvent({
 end
 })
 mc:trackMission({
-	title = "Destroy the EWR at Sharana",
-	description =
-[[We have intelligence showing the location of an early warning radar system located near Sharana.
-
-Destroy this EWRS to help with SAM site threats. 
-
-Reward: 300
-
-MGRS GRID: 42 S WB 01484 67453
-Lat Long Standard: N 33°08'44" E 69°00'57"
-Lat Long Decimal Minutes: N 33°08.749' E 69°00.955'
-
-Elevation 9829 feet]],
-	messageStart = "New strike mission: Destroy the EWR at Sharana",
-	messageEnd = "Strike mission ended: Destroy the EWR at Sharana",
+	title = LTFormat("AF_MISSION_EWR_TITLE", "Sharana"),
+	description = LTFormat("AF_MISSION_EWR_DESC", "Sharana", "42 S WB 01484 67453", "N 33°08'44\" E 69°00'57\"", "N 33°08.749' E 69°00.955'", "9829"),
+	messageStart = LTFormat("AF_MISSION_EWR_START", "Sharana"),
+	messageEnd = LTFormat("AF_MISSION_EWR_END", "Sharana"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5410,7 +5066,7 @@ Elevation 9829 feet]],
 -----------------------------------------------END EWRS - Sharana-----------------------------------------------------------
 ---------------------------------------------------- general missions -------------------------------------------------------
 
-local EscortCooldown = 1800
+local EscortCooldown = 3600
 local lastEscortCooldown   = -EscortCooldown
 Group.getByName('escort-me'):destroy()
 Group.getByName('interceptor-1'):destroy()
@@ -5428,9 +5084,9 @@ evc:addEvent({
 				if not g then
 					if math.random(1,100) > 30 then
 						if math.random(1,100) > 50 then
-							trigger.action.outTextForCoalition(2,'Enemy interceptor spotted heading for our cargo transport.',15)
+							trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_EVENT_INTERCEPTOR_SPOTTED"),15)
 						else
-							trigger.action.outTextForCoalition(2,'The enemy has launched an intercept mission against our cargo transport',15)
+							trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_EVENT_INTERCEPT_MISSION"),15)
 						end
 						RespawnGroup(groupname)
 					end
@@ -5455,10 +5111,10 @@ evc:addEvent({
 	end
 })
 mc:trackMission({
-    title = "Escort cargo plane",
-    description = "Friendly cargo plane is taking off from Kandahar. Protect it until it leaves the airspace.",
-    messageStart = "New mission: Escort cargo plane",
-    messageEnd = function() lastEscortCooldown = timer.getTime() return "Mission ended: Escort cargo plane" end,
+    title = LTGet("SYRIA_MISSION_ESCORT_CARGO_TITLE"),
+    description = LTGet("AF_MISSION_ESCORT_CARGO_KANDAHAR_DESC"),
+    messageStart = LTGet("SYRIA_MISSION_ESCORT_CARGO_START"),
+    messageEnd = function(T) lastEscortCooldown = timer.getTime() return LT(T):Get("SYRIA_MISSION_ESCORT_CARGO_END") end,
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5484,7 +5140,7 @@ evc:addEvent({
 	id='bomb',
 	action=function()
 		RespawnGroup('evt-bomber')
-        RegisterGroupTarget('evt-bomber',500,'Intercept enemy bombers','bomb')
+        RegisterGroupTarget('evt-bomber',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb')
 		timer.scheduleFunction(function()
 			RespawnGroup(escGrp)
 				local tgts = {
@@ -5509,10 +5165,10 @@ evc:addEvent({
 })
 
 mc:trackMission({
-	title = "Intercept Bombers",
-	description = "Enemy bombers spotted to the north-east\nDestroy them before they get in range.",
-	messageStart = "New mission: Intercept Bombers",
-	messageEnd=function() lastbomb_COOLDOWN=timer.getTime() return "Mission ended: Intercept Bombers" end,
+	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
+	description = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_NE"),
+	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
+	messageEnd=function(T) lastbomb_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5543,7 +5199,7 @@ evc:addEvent({
 	id='bomb2',
 	action=function()
 		RespawnGroup('evt-bomber2')
-        RegisterGroupTarget('evt-bomber2',500,'Intercept enemy bombers','bomb2')
+        RegisterGroupTarget('evt-bomber2',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb2')
 		timer.scheduleFunction(function()
 			RespawnGroup(escGrp2)
 			local tgts = {
@@ -5567,10 +5223,10 @@ evc:addEvent({
 })
 
 mc:trackMission({
-	title = "Intercept Bombers",
-	description = "Enemy bombers spotted north of Qala\nDestroy them before they get in range.",
-	messageStart = "New mission: Intercept Bombers",
-	messageEnd=function() lastbomb2_COOLDOWN=timer.getTime() return "Mission ended: Intercept Bombers" end,
+	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
+	description = LTGet("AF_MISSION_INTERCEPT_BOMBERS_DESC_QALA"),
+	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
+	messageEnd=function(T) lastbomb2_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5601,7 +5257,7 @@ evc:addEvent({
 	id='bomb3',
 	action=function()
 		RespawnGroup('evt-bomber3')
-        RegisterGroupTarget('evt-bomber3',500,'Intercept enemy bombers','bomb3')
+        RegisterGroupTarget('evt-bomber3',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb3')
 		timer.scheduleFunction(function()
 			local bomber3
 			RespawnGroup(escGrp3)
@@ -5627,10 +5283,10 @@ evc:addEvent({
 })
 
 mc:trackMission({
-	title = "Intercept Bombers",
-	description = "Enemy bombers spotted north of Bagram\nDestroy them before they get in range.",
-	messageStart = "New mission: Intercept Bombers",
-	messageEnd=function() lastbomb3_COOLDOWN=timer.getTime() return "Mission ended: Intercept Bombers" end,
+	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
+	description = LTGet("AF_MISSION_INTERCEPT_BOMBERS_DESC_BAGRAM"),
+	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
+	messageEnd=function(T) lastbomb3_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5662,7 +5318,7 @@ evc:addEvent({
 	id='cas',
 	action=function()
 		RespawnGroup(casGrp)
-        RegisterGroupTarget(casGrp,500,'Intercept enemy airstrike','cas')
+        RegisterGroupTarget(casGrp,500,L10N:Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"),'cas')
 		timer.scheduleFunction(function()
 			local tgts={'Tarinkot','Checkpoint Bravo','Tarinkot','FOB-Bostick','Sharana','Ghazni Heliport','FOB-Javid Basharat','Chaghcharan','FOB-Delaram','Gardez','Jalalabad','Bagram','Kabul',
 						'Bamyan'}
@@ -5689,10 +5345,10 @@ evc:addEvent({
 	end
 })
 mc:trackMission({
-	title = "Intercept enemy airstrike",
-	description = "Enemy aircraft conducting an airstrike from the North-east\nDestroy them before they get in range.",
-	messageStart = "New mission: Intercept enemy airstrike",
-	messageEnd =function() lastairstrike_COOLDOWN=timer.getTime() return "Mission ended: Intercept enemy airstrike" end,
+	title = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"),
+	description = LTGet("AF_MISSION_INTERCEPT_AIRSTRIKE_DESC_NE"),
+	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START"),
+	messageEnd =function(T) lastairstrike_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END") end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5723,7 +5379,7 @@ evc:addEvent({
 	id='cas2',
 	action=function()
 		RespawnGroup(casGrp)
-		RegisterGroupTarget(casGrp,500,'Intercept enemy airstrike')
+		RegisterGroupTarget(casGrp,500,L10N:Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"))
 		timer.scheduleFunction(function()
 			local tgts = {'Paphos','Ercan','Gecitkale','Pinarbashi','Larnaca','Incirlik'}
 			local valid={}
@@ -5748,10 +5404,10 @@ evc:addEvent({
 	end
 })
 mc:trackMission({
-	title = "Intercept enemy airstrike",
-	description = "Enemy aircraft conducting an airstrike from the North-South\nDestroy them before they get in range.",
-	messageStart = "New mission: Intercept enemy airstrike",
-	messageEnd =function() lastairstrike_COOLDOWN=timer.getTime() return "Mission ended: Intercept enemy airstrike" end,
+	title = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"),
+	description = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_DESC_NS"),
+	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START"),
+	messageEnd =function(T) lastairstrike_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END") end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5781,7 +5437,7 @@ function generateCaptureMission()
     local validzones = {}
     for _, v in ipairs(bc.zones) do
         if v.active and v.side == 0 and (not v.NeutralAtStart or v.firstCaptureByRed) and
-           not v.ForceNeutral and not string.find(v.zone, "Hidden") then
+           not v.zone:lower():find("hidden", 1, true) then
             table.insert(validzones, v.zone)
         end
     end
@@ -5798,50 +5454,195 @@ end
 
 function generateAttackMission()
     if missionCompleted then return true end
-    if attackTarget ~= nil then return true end
 
-        local validzones = {}
-        for _, v in ipairs(bc.connections) do
-			local from, to = bc:getConnectionZones(v)
+	local validzones = {}
+	local validSeen = {}
+	local redByBlue = {}
+	local created1 = false
+	local created2 = false
 
-        local function checkValid(zone)
-			local lname = zone.zone:lower()
-            return zone.side == 1 and zone.active and (not zone.suspended) and not isZoneUnderSEADMission(zone.zone)
-			and not lname:find('sam') and not lname:find('defence')
-        end
+	for _, v in ipairs(bc.connections) do
+		local from, to = bc:getConnectionZones(v)
 
-	if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 then
-			if checkValid(from) then table.insert(validzones, from.zone) end
-			if checkValid(to)   then table.insert(validzones, to.zone)   end
+		if _isFrontlineConnectionEligible(from, to) then
+			if _isValidAttackMissionZone(from) and not validSeen[from.zone] then
+				validSeen[from.zone] = true
+				table.insert(validzones, from.zone)
+			end
+			if _isValidAttackMissionZone(to) and not validSeen[to.zone] then
+				validSeen[to.zone] = true
+				table.insert(validzones, to.zone)
+			end
+
+			if _isValidAttackMissionZone(from) and to and to.side == 2 then
+				redByBlue[to.zone] = redByBlue[to.zone] or {}
+				local found = false
+				for _, zoneName in ipairs(redByBlue[to.zone]) do
+					if zoneName == from.zone then found = true break end
+				end
+				if not found then table.insert(redByBlue[to.zone], from.zone) end
+			end
+			if _isValidAttackMissionZone(to) and from and from.side == 2 then
+				redByBlue[from.zone] = redByBlue[from.zone] or {}
+				local found = false
+				for _, zoneName in ipairs(redByBlue[from.zone]) do
+					if zoneName == to.zone then found = true break end
+				end
+				if not found then table.insert(redByBlue[from.zone], to.zone) end
+			end
 		end
 	end
 
     if #validzones == 0 then return false end
 
-    local choice = math.random(1, #validzones)
-    if validzones[choice] then
-        attackTarget = validzones[choice]
-        return true
-    end
-end
-
-function generateSupplyMission()
-	if resupplyTarget ~= nil then return true end
-		
-	local validzones = {}
-	for _,v in ipairs(bc.zones) do
-		if v.side == 2 and not v.suspended and v:canRecieveSupply() then
-			table.insert(validzones, v.zone)
+	if not attackTarget1 then
+		local pool = {}
+		for _, zoneName in ipairs(validzones) do
+			if zoneName ~= attackTarget2 then
+				table.insert(pool, zoneName)
+			end
+		end
+		if #pool > 0 then
+			attackTarget1 = pool[math.random(1, #pool)]
+			created1 = true
 		end
 	end
-	
-	if #validzones == 0 then return false end
-	
-	local choice = math.random(1, #validzones)
-	if validzones[choice] then
-		resupplyTarget = validzones[choice]
-		return true
+
+	if not attackTarget2 then
+		local pool = {}
+		local seenPool = {}
+		local anchor = attackTarget1 or attackTarget2
+		if anchor then
+			for _, redList in pairs(redByBlue) do
+				local hasAnchor = false
+				for _, zoneName in ipairs(redList) do
+					if zoneName == anchor then
+						hasAnchor = true
+						break
+					end
+				end
+				if hasAnchor then
+					for _, zoneName in ipairs(redList) do
+						if zoneName ~= attackTarget1 and zoneName ~= attackTarget2 and not seenPool[zoneName] then
+							seenPool[zoneName] = true
+							table.insert(pool, zoneName)
+						end
+					end
+				end
+			end
+		end
+		if #pool == 0 then
+			for _, zoneName in ipairs(validzones) do
+				if zoneName ~= attackTarget1 and zoneName ~= attackTarget2 then
+					table.insert(pool, zoneName)
+				end
+			end
+		end
+		if #pool > 0 then
+			attackTarget2 = pool[math.random(1, #pool)]
+			created2 = true
+		end
 	end
+
+	attackCombinedStart1 = nil
+	attackCombinedStart2 = nil
+	if created1 and created2 and attackTarget1 and attackTarget2 then
+		attackCombinedStart1 = attackTarget1
+		attackCombinedStart2 = attackTarget2
+	end
+
+	return attackTarget1 ~= nil or attackTarget2 ~= nil
+end
+function generateSupplyMission()
+	local preferred = {}
+	local validzones = {}
+	local attackFrontSet = {}
+	local created1 = false
+	local created2 = false
+	if attackTarget1 then attackFrontSet[attackTarget1] = true end
+	if attackTarget2 then attackFrontSet[attackTarget2] = true end
+
+	for _, connection in ipairs(bc.connections or {}) do
+		local from, to = bc:getConnectionZones(connection)
+		if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 and
+			((not to.suspended) or from.suspended) then
+			if from and to and attackFrontSet[from.zone] and to.side == 2 and to:canRecieveSupply() then
+				local found = false
+				for _, zoneName in ipairs(preferred) do
+					if zoneName == to.zone then found = true break end
+				end
+				if not found then table.insert(preferred, to.zone) end
+			end
+			if from and to and attackFrontSet[to.zone] and from.side == 2 and from:canRecieveSupply() then
+				local found = false
+				for _, zoneName in ipairs(preferred) do
+					if zoneName == from.zone then found = true break end
+				end
+				if not found then table.insert(preferred, from.zone) end
+			end
+		end
+	end
+
+	for _, v in ipairs(bc.zones) do
+		if v.side == 2 and v:canRecieveSupply() then
+			local found = false
+			for _, zoneName in ipairs(validzones) do
+				if zoneName == v.zone then found = true break end
+			end
+			if not found then table.insert(validzones, v.zone) end
+		end
+	end
+
+	if #validzones == 0 then return false end
+
+	if not resupplyTarget1 then
+		local pool = {}
+		for _, zoneName in ipairs(preferred) do
+			if zoneName ~= resupplyTarget2 then
+				table.insert(pool, zoneName)
+			end
+		end
+		if #pool == 0 then
+			for _, zoneName in ipairs(validzones) do
+				if zoneName ~= resupplyTarget2 then
+					table.insert(pool, zoneName)
+				end
+			end
+		end
+		if #pool > 0 then
+			resupplyTarget1 = pool[math.random(1, #pool)]
+			created1 = true
+		end
+	end
+
+	if not resupplyTarget2 then
+		local pool = {}
+		for _, zoneName in ipairs(preferred) do
+			if zoneName ~= resupplyTarget1 then
+				table.insert(pool, zoneName)
+			end
+		end
+		if #pool == 0 then
+			for _, zoneName in ipairs(validzones) do
+				if zoneName ~= resupplyTarget1 then
+					table.insert(pool, zoneName)
+				end
+			end
+		end
+		if #pool > 0 then
+			resupplyTarget2 = pool[math.random(1, #pool)]
+			created2 = true
+		end
+	end
+
+	resupplyCombinedStart1 = nil
+	resupplyCombinedStart2 = nil
+	if created1 and created2 and resupplyTarget1 and resupplyTarget2 then
+		resupplyCombinedStart1 = resupplyTarget1
+		resupplyCombinedStart2 = resupplyTarget2
+	end
+
+	return resupplyTarget1 ~= nil or resupplyTarget2 ~= nil
 end
 timer.scheduleFunction(function(_, time)
 	if generateCaptureMission() then
@@ -5882,6 +5683,13 @@ timer.scheduleFunction(function(_, time)
 		return time+120
 	end
 end, {}, timer.getTime() + 180)
+timer.scheduleFunction(function(_, time)
+	if checkAndGenerateReconMissionV2() then
+		return time+300
+	else
+		return time+120
+	end
+end, {}, timer.getTime() + 200)
 timer.scheduleFunction(function(_, time)
 	if generateSupplyMission() then
 		return time+300
@@ -5939,3 +5747,5 @@ airbaseStatics = {
 
 
 env.info("Mission Setup : is completed!")
+
+

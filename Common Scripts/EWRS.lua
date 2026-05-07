@@ -47,6 +47,7 @@
 ]]
 
 ewrs = {} --DO NOT REMOVE
+local L10N = FH_L10N
 ewrs.HELO = 1
 ewrs.ATTACK = 2
 ewrs.FIGHTER = 3
@@ -60,7 +61,7 @@ ewrs.messageDisplayTime = ewrs_messageDisplayTime or 15 --How long EWRS BRA mess
 if ewrs_restrictToOneReference ~= nil then ewrs.restrictToOneReference = ewrs_restrictToOneReference else ewrs.restrictToOneReference = false end -- Disables the ability to change the BRA calls from pilot's own aircraft or bullseye. If this is true, set ewrs.defaultReference to the option you want to restrict to.
 ewrs.defaultReference = ewrs_defaultReference or "self" --The default reference for BRA calls - can be changed via f10 radio menu if ewrs.restrictToOneReference is false (self or bulls)
 ewrs.defaultMeasurements = ewrs_defaultMeasurements or "imperial" --Default measurement units - can be changed via f10 radio menu (imperial or metric)
-if ewrs_defaultShowTankers ~= nil then ewrs.defaultShowTankers = ewrs_defaultShowTankers else ewrs.defaultShowTankers = false end -- Default show tankers in picture report (still requires Show Friendlies)
+if ewrs_defaultShowTankers ~= nil then ewrs.defaultShowTankers = ewrs_defaultShowTankers else ewrs.defaultShowTankers = false end -- Default show tankers in picture report
 if ewrs_disableFightersBRA ~= nil then ewrs.disableFightersBRA = ewrs_disableFightersBRA else ewrs.disableFightersBRA = false end -- disables BRA messages to fighters when true
 if ewrs_enableRedTeam ~= nil then ewrs.enableRedTeam = ewrs_enableRedTeam else ewrs.enableRedTeam = true end -- enables / disables EWRS for the red team
 if ewrs_enableBlueTeam ~= nil then ewrs.enableBlueTeam = ewrs_enableBlueTeam else ewrs.enableBlueTeam = true end -- enables / disables EWRS for the blue team
@@ -99,6 +100,57 @@ end
 
 function ewrs.shouldHideFriendlyReportingName(name)
   return name and ewrs.hiddenFriendlyReportingNames[name] == true
+end
+
+local function ewrsGetPlayerDisplayName(playerName)
+  if not playerName then
+    return playerName
+  end
+  if type(getPlayerDisplayName) == "function" then
+    return getPlayerDisplayName(playerName)
+  end
+  if type(getPlayerAssignment) == "function" then
+    local callsign = select(1, getPlayerAssignment(playerName))
+    if callsign and callsign ~= "" then
+      return callsign
+    end
+  end
+  return playerName
+end
+
+local function ewrsStatusLabel(value, caps, translator)
+  local T = translator or L10N
+  if caps then
+    return T:Get(value and "EWRS_STATUS_ON_CAPS" or "EWRS_STATUS_OFF_CAPS")
+  end
+  return T:Get(value and "EWRS_STATUS_ON" or "EWRS_STATUS_OFF")
+end
+
+local function ewrsReferenceLabel(reference, translator)
+  local T = translator or L10N
+  if reference == "bulls" then return T:Get("EWRS_REFERENCE_BULLS") end
+  if reference == "self" then return T:Get("EWRS_REFERENCE_SELF") end
+  return tostring(reference)
+end
+
+local function ewrsMeasurementLabel(measurements, translator)
+  local T = translator or L10N
+  if measurements == "imperial" then return T:Get("EWRS_MEASUREMENTS_IMPERIAL") end
+  if measurements == "metric" then return T:Get("EWRS_MEASUREMENTS_METRIC") end
+  return tostring(measurements)
+end
+
+local function ewrsAspectLabel(aspect, translator)
+  local T = translator or L10N
+  local key = "EWRS_ASPECT_" .. string.upper(tostring(aspect or ""))
+  local text = T:Get(key)
+  if text ~= key then return text end
+  return string.upper(tostring(aspect or ""))
+end
+
+local function ewrsUnitTypeLabel(unitType, translator)
+  local T = translator or L10N
+  return unitType or T:Get("EWRS_UNKNOWN")
 end
 
 ewrs.runtimeCache = { units = {}, friendlyGroups = {}, groupSettings = {} }
@@ -160,6 +212,7 @@ local function ewrs_clonePersistentSettings(src)
     reference = src.reference,
     measurements = src.measurements,
     rangeLimit = src.rangeLimit,
+    maxThreats = src.maxThreats,
     showFriendlies = src.showFriendlies,
     showTankers = src.showTankers,
     maxFriendlies = src.maxFriendlies,
@@ -171,7 +224,7 @@ end
 local function ewrs_settingsEqual(a, b)
   if a == b then return true end
   if type(a) ~= "table" or type(b) ~= "table" then return false end
-  local keys = {"reference","measurements","rangeLimit","showFriendlies","showTankers","maxFriendlies","messages"}
+  local keys = {"reference","measurements","rangeLimit","maxThreats","showFriendlies","showTankers","maxFriendlies","messages"}
   for _,key in ipairs(keys) do
     if a[key] ~= b[key] then
       return false
@@ -432,7 +485,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
       threatTable[j].aspect=aspect
     end
   end
-    if activePlayer.side==2 and not bogeyDope and groupSettings.showFriendlies and groupSettings.showTankers then
+    if activePlayer.side==2 and not bogeyDope and groupSettings.showTankers then
 
     local function addTanker(name,label)
       local g=Group.getByName(name)
@@ -555,6 +608,8 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
     
     local message = {}
     local groupSettings = ewrs.getGroupSettingsTable(activePlayer.groupID)
+    local T = L10N:ForGroup(activePlayer.groupID)
+    local displayPlayerName = ewrsGetPlayerDisplayName(activePlayer.player)
     local altUnits
     local speedUnits
     local rangeUnits
@@ -575,14 +630,18 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
       if greeting == nil then
         if bogeyDope then
           maxThreats = 1
-          messageGreeting = "EWRS Bogey Dope for: " .. activePlayer.player
+          messageGreeting = T:Format("EWRS_BOGEY_DOPE_FOR", displayPlayerName)
         else
-          if ewrs.maxThreatDisplay == 0 then
+          local threatLimit = groupSettings.maxThreats
+          if threatLimit == nil then
+            threatLimit = ewrs.maxThreatDisplay
+          end
+          if threatLimit == 0 then
             maxThreats = 999
           else
-            maxThreats = ewrs.maxThreatDisplay
+            maxThreats = threatLimit
           end
-          messageGreeting = "EWRS : " .. activePlayer.player .. " | relative to " .. groupSettings.reference
+          messageGreeting = T:Format("EWRS_REPORT_RELATIVE", displayPlayerName, ewrsReferenceLabel(groupSettings.reference, T))
         end
       else
         messageGreeting = greeting
@@ -601,10 +660,10 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
           if t==nil then break end
           if not t.isFriendly and shown<maxThreats then
             if t.range==ewrs.notAvailable then
-              table.insert(message,string.format("%s Position: Unknown",(t.unitType or "Unknown")))
+              table.insert(message,T:Format("EWRS_POSITION_UNKNOWN", ewrsUnitTypeLabel(t.unitType, T)))
             else
-              local asp = string.upper(t.aspect)
-              table.insert(message,string.format("\n%s\t\tBRA\t\t%03d for %s\t\t%s\t\t%s",(ewrs.showType and t.unitType or "Unknown"),t.bearing,t.range..rangeUnits,t.altitude..altUnits,asp))
+              local asp = ewrsAspectLabel(t.aspect, T)
+              table.insert(message,T:Format("EWRS_CONTACT_LINE", (ewrs.showType and ewrsUnitTypeLabel(t.unitType, T) or T:Get("EWRS_UNKNOWN")), t.bearing, t.range..rangeUnits, t.altitude..altUnits, asp))
             end
             shown=shown+1
             if shown<maxThreats then table.insert(message,"\n") end
@@ -613,12 +672,12 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
         for k=1,#threatTable do
           local t=threatTable[k]
           if t and t.isFriendly then
-            if not friendlyHeader then if message[#message] ~= "\n" then table.insert(message,"\n") end table.insert(message,"\n"); table.insert(message,"-------------------------------->  Friendly  <---------------------------------"); table.insert(message,"\n"); friendlyHeader=true end
+            if not friendlyHeader then if message[#message] ~= "\n" then table.insert(message,"\n") end table.insert(message,"\n"); table.insert(message,T:Get("EWRS_FRIENDLY_HEADER")); table.insert(message,"\n"); friendlyHeader=true end
             if t.range==ewrs.notAvailable then
-              table.insert(message,string.format("%s Position: Unknown",(t.unitType or "Unknown")))
+              table.insert(message,T:Format("EWRS_POSITION_UNKNOWN", ewrsUnitTypeLabel(t.unitType, T)))
             else
-              local asp = string.upper(t.aspect)
-              table.insert(message,string.format("\n%s\t\tBRA\t\t%03d for %s\t\t%s\t\t%s",(ewrs.showType and t.unitType or "Unknown"),t.bearing,t.range..rangeUnits,t.altitude..altUnits,asp))
+              local asp = ewrsAspectLabel(t.aspect, T)
+              table.insert(message,T:Format("EWRS_CONTACT_LINE", (ewrs.showType and ewrsUnitTypeLabel(t.unitType, T) or T:Get("EWRS_UNKNOWN")), t.bearing, t.range..rangeUnits, t.altitude..altUnits, asp))
             end
             if k<#threatTable then table.insert(message,"\n") end
           end
@@ -626,13 +685,13 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
       else
         for k=1,maxThreats do
           if threatTable[k]==nil then break end
-          if greeting==nil and not friendlyHeader and threatTable[k].isFriendly then table.insert(message,"\n"); table.insert(message,"-------------------------------->  Friendly  <---------------------------------"); table.insert(message,"\n"); friendlyHeader=true end
+          if greeting==nil and not friendlyHeader and threatTable[k].isFriendly then table.insert(message,"\n"); table.insert(message,T:Get("EWRS_FRIENDLY_HEADER")); table.insert(message,"\n"); friendlyHeader=true end
           if threatTable[k].range==ewrs.notAvailable then
-            table.insert(message,string.format("%s Position: Unknown",(threatTable[k].unitType or "Unknown")))
+            table.insert(message,T:Format("EWRS_POSITION_UNKNOWN", ewrsUnitTypeLabel(threatTable[k].unitType, T)))
           else
-            local asp = string.upper(threatTable[k].aspect)
-            table.insert(message,string.format("\n%s\t\tBRA\t\t%03d for %s\t\t%s\t\t%s",
-            (ewrs.showType and threatTable[k].unitType or "Unknown"),
+            local asp = ewrsAspectLabel(threatTable[k].aspect, T)
+            table.insert(message,T:Format("EWRS_CONTACT_LINE",
+            (ewrs.showType and ewrsUnitTypeLabel(threatTable[k].unitType, T) or T:Get("EWRS_UNKNOWN")),
             threatTable[k].bearing,
             threatTable[k].range..rangeUnits,
             threatTable[k].altitude..altUnits,
@@ -646,12 +705,12 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
        trigger.action.outTextForGroup(activePlayer.groupID,table.concat(message),ewrs.messageDisplayTime)
     else
       if bogeyDope then
-        trigger.action.outTextForGroup(activePlayer.groupID, "EWRS Bogey Dope for: " .. activePlayer.player .. "\nNo targets detected", ewrs.messageDisplayTime)
+        trigger.action.outTextForGroup(activePlayer.groupID, T:Format("EWRS_BOGEY_DOPE_FOR", displayPlayerName) .. "\n" .. T:Get("EWRS_NO_TARGETS_DETECTED"), ewrs.messageDisplayTime)
       elseif (not ewrs.disableMessageWhenNoThreats) and greeting == nil then
-        trigger.action.outTextForGroup(activePlayer.groupID, "EWRS Picture Report for: " .. activePlayer.player .. "\nNo targets detected", ewrs.messageDisplayTime)
+        trigger.action.outTextForGroup(activePlayer.groupID, T:Format("EWRS_PICTURE_REPORT_FOR", displayPlayerName) .. "\n" .. T:Get("EWRS_NO_TARGETS_DETECTED"), ewrs.messageDisplayTime)
       end
       if greeting ~= nil then
-        trigger.action.outTextForGroup(activePlayer.groupID, "EWRS Friendly Picture for: " .. activePlayer.player .. "\nNo friendlies detected", ewrs.messageDisplayTime)
+        trigger.action.outTextForGroup(activePlayer.groupID, T:Format("EWRS_FRIENDLY_PICTURE_FOR", displayPlayerName) .. "\n" .. T:Get("EWRS_NO_FRIENDLIES_DETECTED"), ewrs.messageDisplayTime)
       end
     end
   end)
@@ -751,7 +810,8 @@ function ewrs.friendlyPicture(args)
         --local friendlies = mist.makeUnitTable(filter) --find a way to do this only once if there is more then 1 person in a group
         local friendlies = SET_UNIT:New():FilterCoalitions(sideString):FilterTypes({"helicopter","plane"}):FilterOnce()
         local friendlyTable = ewrs.buildFriendlyTable(friendlies:GetSetNames(),ewrs.activePlayers[i])
-        local greeting = "EWRS Friendly Picture for: " .. ewrs.activePlayers[i].player
+        local T = L10N:ForGroup(ewrs.activePlayers[i].groupID)
+        local greeting = T:Format("EWRS_FRIENDLY_PICTURE_FOR", ewrsGetPlayerDisplayName(ewrs.activePlayers[i].player))
         ewrs.outText(ewrs.activePlayers[i],friendlyTable,false,greeting)
       end
     end
@@ -904,33 +964,70 @@ function ewrs.addGroupSettings(groupID,isHelo,showFriendlies)
   ewrs.groupSettings[groupID].measurements=ewrs.defaultMeasurements
   ewrs.groupSettings[groupID].messages=true
   ewrs.groupSettings[groupID].rangeLimit=isHelo and 5 or 60
+  ewrs.groupSettings[groupID].maxThreats=ewrs.maxThreatDisplay
   ewrs.groupSettings[groupID].showFriendlies=showFriendlies and true or false
   ewrs.groupSettings[groupID].showTankers=ewrs.defaultShowTankers
-  ewrs.groupSettings[groupID].maxFriendlies=5
+  ewrs.groupSettings[groupID].maxFriendlies=3
 end
+
+function ewrs.removeGroupF10Menu(groupID)
+  local stringGroupID = tostring(groupID)
+  local menuHandle = ewrs.builtF10Menus[stringGroupID]
+  if menuHandle then
+    missionCommands.removeItemForGroup(groupID, menuHandle)
+    ewrs.builtF10Menus[stringGroupID] = nil
+  end
+end
+
+function ewrs.refreshGroupF10Menu(groupID)
+  ewrs.removeGroupF10Menu(groupID)
+  ewrs.buildF10Menu()
+end
+
 function ewrs.setGroupMaxFriendlies(args)
   local groupID=args[1]
   local value=args[2]
   local settings=ewrs.getGroupSettingsTable(groupID)
   settings.maxFriendlies=value
   ewrs_flagSettingsDirty(settings)
+  local T = L10N:ForGroup(groupID)
   local msg
   if value==0 then
-    msg="Friendly contact limit set to ALL"
+    msg=T:Get("EWRS_FRIENDLY_CONTACT_LIMIT_ALL")
   else
-    msg="Friendly contact limit set to "..value
+    msg=T:Format("EWRS_FRIENDLY_CONTACT_LIMIT_VALUE", value)
   end
   trigger.action.outTextForGroup(groupID,msg,ewrs.messageDisplayTime)
   ewrs.persistGroupSettings(groupID)
+  ewrs.refreshGroupF10Menu(groupID)
+end
+function ewrs.setGroupMaxThreats(args)
+  local groupID=args[1]
+  local value=args[2]
+  local settings=ewrs.getGroupSettingsTable(groupID)
+  settings.maxThreats=value
+  ewrs_flagSettingsDirty(settings)
+  local T = L10N:ForGroup(groupID)
+  local msg
+  if value==0 then
+    msg=T:Get("EWRS_THREAT_LIMIT_ALL")
+  else
+    msg=T:Format("EWRS_THREAT_LIMIT_VALUE", value)
+  end
+  trigger.action.outTextForGroup(groupID,msg,ewrs.messageDisplayTime)
+  ewrs.persistGroupSettings(groupID)
+  ewrs.refreshGroupF10Menu(groupID)
 end
 function ewrs.setGroupShowFriendlies(args)
   local groupID=args[1]
   local settings=ewrs.getGroupSettingsTable(groupID)
   settings.showFriendlies=args[2]
   ewrs_flagSettingsDirty(settings)
-  local onOff=args[2] and "on" or "off"
-  trigger.action.outTextForGroup(groupID,"Friendly contacts in picture turned "..onOff,ewrs.messageDisplayTime)
+  local T = L10N:ForGroup(groupID)
+  local onOff=ewrsStatusLabel(args[2], false, T)
+  trigger.action.outTextForGroup(groupID,T:Format("EWRS_FRIENDLY_CONTACTS_TURNED", onOff),ewrs.messageDisplayTime)
   ewrs.persistGroupSettings(groupID)
+  ewrs.refreshGroupF10Menu(groupID)
 end
 
 function ewrs.setGroupShowTankers(args)
@@ -938,9 +1035,11 @@ function ewrs.setGroupShowTankers(args)
   local settings=ewrs.getGroupSettingsTable(groupID)
   settings.showTankers=args[2]
   ewrs_flagSettingsDirty(settings)
-  local onOff=args[2] and "on" or "off"
-  trigger.action.outTextForGroup(groupID,"Tanker contacts in picture turned "..onOff,ewrs.messageDisplayTime)
+  local T = L10N:ForGroup(groupID)
+  local onOff=ewrsStatusLabel(args[2], false, T)
+  trigger.action.outTextForGroup(groupID,T:Format("EWRS_TANKER_CONTACTS_TURNED", onOff),ewrs.messageDisplayTime)
   ewrs.persistGroupSettings(groupID)
+  ewrs.refreshGroupF10Menu(groupID)
 end
 
 function ewrs.setGroupReference(args)
@@ -948,8 +1047,10 @@ function ewrs.setGroupReference(args)
   local settings = ewrs.getGroupSettingsTable(groupID)
   settings.reference = args[2]
   ewrs_flagSettingsDirty(settings)
-  trigger.action.outTextForGroup(groupID,"Reference changed to "..args[2],ewrs.messageDisplayTime)
+  local T = L10N:ForGroup(groupID)
+  trigger.action.outTextForGroup(groupID,T:Format("EWRS_REFERENCE_CHANGED", ewrsReferenceLabel(args[2], T)),ewrs.messageDisplayTime)
   ewrs.persistGroupSettings(groupID)
+  ewrs.refreshGroupF10Menu(groupID)
 end
 
 function ewrs.setGroupMeasurements(args)
@@ -966,19 +1067,22 @@ function ewrs.setGroupMeasurements(args)
   end
   groupSettings.measurements = newUnits
   ewrs_flagSettingsDirty(groupSettings)
-  trigger.action.outTextForGroup(groupID,"Measurement units changed to "..newUnits,ewrs.messageDisplayTime)
+  local T = L10N:ForGroup(groupID)
+  trigger.action.outTextForGroup(groupID,T:Format("EWRS_MEASUREMENT_UNITS_CHANGED", ewrsMeasurementLabel(newUnits, T)),ewrs.messageDisplayTime)
   ewrs.persistGroupSettings(groupID)
+  ewrs.refreshGroupF10Menu(groupID)
 end
 
 function ewrs.setGroupMessages(args)
   local groupID = args[1]
-  local onOff
-  if args[2] then onOff = "on" else onOff = "off" end
   local settings = ewrs.getGroupSettingsTable(groupID)
   settings.messages = args[2]
   ewrs_flagSettingsDirty(settings)
-  trigger.action.outTextForGroup(groupID,"Picture reports for group turned "..onOff,ewrs.messageDisplayTime)
+  local T = L10N:ForGroup(groupID)
+  local onOff = ewrsStatusLabel(args[2], false, T)
+  trigger.action.outTextForGroup(groupID,T:Format("EWRS_AUTO_PICTURE_TURNED", onOff),ewrs.messageDisplayTime)
   ewrs.persistGroupSettings(groupID)
+  ewrs.refreshGroupF10Menu(groupID)
 end
 
 function ewrs.buildF10Menu()
@@ -986,26 +1090,37 @@ function ewrs.buildF10Menu()
     for i = 1, #ewrs.activePlayers do
       local groupID = ewrs.activePlayers[i].groupID
       local stringGroupID = tostring(groupID)
+      local groupSettings = ewrs.getGroupSettingsTable(groupID)
+      local T = L10N:ForGroup(groupID)
 
       if ewrs.builtF10Menus[stringGroupID] == nil then
         local desiredParent = nil
         if EWRS_MENU_PARENT_BY_GROUP and EWRS_MENU_PARENT_BY_GROUP[stringGroupID] then
           desiredParent = EWRS_MENU_PARENT_BY_GROUP[stringGroupID]
         end
-        local rootPath = missionCommands.addSubMenuForGroup(groupID, "EWRS", desiredParent)
+        local rootPath = missionCommands.addSubMenuForGroup(groupID, T:Get("EWRS_MENU_ROOT"), desiredParent)
         
-        if ewrs.allowBogeyDope then
-          missionCommands.addCommandForGroup(groupID, "Request Bogey Dope",rootPath,ewrs.onDemandMessage,{groupID,true})
+        if ewrs.allowBogeyDope and (ewrs.onDemand or not groupSettings.messages) then
+          missionCommands.addCommandForGroup(groupID, T:Get("EWRS_REQUEST_BOGEY_DOPE"),rootPath,ewrs.onDemandMessage,{groupID,true})
         end
         
         if ewrs.onDemand then
-          missionCommands.addCommandForGroup(groupID, "Request Picture",rootPath,ewrs.onDemandMessage,{groupID})
+          missionCommands.addCommandForGroup(groupID, T:Get("EWRS_REQUEST_PICTURE"),rootPath,ewrs.onDemandMessage,{groupID})
         end
-        local rangeMenu = missionCommands.addSubMenuForGroup(groupID,"Set detection range",rootPath)
+        local rangeMenu = missionCommands.addSubMenuForGroup(groupID,T:Get("EWRS_SET_DETECTION_RANGE"),rootPath)
         for _,u in ipairs({"km","nm"}) do
-          local sub = missionCommands.addSubMenuForGroup(groupID,u:upper(),rangeMenu)
+          local subLabel = u:upper()
+          local selectedMeasurements = (u == "km") and "metric" or "imperial"
+          if groupSettings.measurements == selectedMeasurements then
+            subLabel = subLabel .. T:Get("EWRS_CURRENT_SUFFIX")
+          end
+          local sub = missionCommands.addSubMenuForGroup(groupID,subLabel,rangeMenu)
           for _,r in ipairs(ewrs.rangeOptions[u]) do
-            missionCommands.addCommandForGroup(groupID,r.." "..u,sub, function(args)
+            local label = r.." "..u
+            if groupSettings.measurements == selectedMeasurements and groupSettings.rangeLimit == r then
+              label = label .. T:Get("EWRS_CURRENT_SUFFIX")
+            end
+            missionCommands.addCommandForGroup(groupID,label,sub, function(args)
               local gid=args[1]
               local range=args[2]
               local selectedUnit=args[3]
@@ -1017,45 +1132,52 @@ function ewrs.buildF10Menu()
               end
               settings.rangeLimit = range
               ewrs_flagSettingsDirty(settings)
-              trigger.action.outTextForGroup(gid,"Range set to "..range..selectedUnit,ewrs.messageDisplayTime)
+              local TGroup = L10N:ForGroup(gid)
+              trigger.action.outTextForGroup(gid,TGroup:Format("EWRS_RANGE_SET", range, selectedUnit),ewrs.messageDisplayTime)
               ewrs.persistGroupSettings(gid)
+              ewrs.refreshGroupF10Menu(gid)
             end, {groupID,r,u})
           end
         end
-        
-        if ewrs.allowFriendlyPicture then
-          missionCommands.addCommandForGroup(groupID, "Request Friendly Picture",rootPath,ewrs.friendlyPicture,{groupID})
+        local threatLimitPath = missionCommands.addSubMenuForGroup(groupID,T:Get("EWRS_SET_THREAT_LIMIT"),rootPath)
+        for _,value in ipairs({1,2,3,4,5}) do
+          local label = tostring(value) .. ((groupSettings.maxThreats == value) and T:Get("EWRS_CURRENT_SUFFIX") or "")
+          missionCommands.addCommandForGroup(groupID,label,threatLimitPath,ewrs.setGroupMaxThreats,{groupID,value})
         end
-        
-        if not ewrs.restrictToOneReference then
-          local referenceSetPath = missionCommands.addSubMenuForGroup(groupID,"Set GROUP's reference point", rootPath)
-          missionCommands.addCommandForGroup(groupID, "Set to Bullseye",referenceSetPath,ewrs.setGroupReference,{groupID, "bulls"})
-          missionCommands.addCommandForGroup(groupID, "Set to Self",referenceSetPath,ewrs.setGroupReference,{groupID, "self"})
+        local allThreatsLabel = T:Get("EWRS_ALL") .. ((groupSettings.maxThreats == 0) and T:Get("EWRS_CURRENT_SUFFIX") or "")
+        missionCommands.addCommandForGroup(groupID,allThreatsLabel,threatLimitPath,ewrs.setGroupMaxThreats,{groupID,0})
+
+        local friendliesPath = missionCommands.addSubMenuForGroup(groupID,T:Get("EWRS_FRIENDLIES"),rootPath)
+        local showFriendliesLabel = T:Format("EWRS_SHOW_FRIENDLIES_CURRENT", ewrsStatusLabel(groupSettings.showFriendlies, true, T))
+        missionCommands.addCommandForGroup(groupID,showFriendliesLabel,friendliesPath,ewrs.setGroupShowFriendlies,{groupID,not groupSettings.showFriendlies})
+        local friendLimitPath=missionCommands.addSubMenuForGroup(groupID,T:Get("EWRS_SET_FRIENDLY_LIMIT"),friendliesPath)
+        for _,value in ipairs({1,2,3,4,5}) do
+          local label = tostring(value) .. ((groupSettings.maxFriendlies == value) and T:Get("EWRS_CURRENT_SUFFIX") or "")
+          missionCommands.addCommandForGroup(groupID,label,friendLimitPath,ewrs.setGroupMaxFriendlies,{groupID,value})
         end
-      
-        local measurementsSetPath = missionCommands.addSubMenuForGroup(groupID,"Set GROUP's measurement units",rootPath)
-        missionCommands.addCommandForGroup(groupID, "Set to Imperial (feet, knts)",measurementsSetPath,ewrs.setGroupMeasurements,{groupID, "imperial"})
-        missionCommands.addCommandForGroup(groupID, "Set to Metric (meters, km/h)",measurementsSetPath,ewrs.setGroupMeasurements,{groupID, "metric"})
-
-        local showTankersPath=missionCommands.addSubMenuForGroup(groupID,"Show tankers in Picture",rootPath)
-        missionCommands.addCommandForGroup(groupID,"Show Tankers ON",showTankersPath,ewrs.setGroupShowTankers,{groupID,true})
-        missionCommands.addCommandForGroup(groupID,"Show Tankers OFF",showTankersPath,ewrs.setGroupShowTankers,{groupID,false})
-
-        local showFriendliesPath=missionCommands.addSubMenuForGroup(groupID,"Show friendlies in Picture",rootPath)
-        missionCommands.addCommandForGroup(groupID,"Show Friendlies ON",showFriendliesPath,ewrs.setGroupShowFriendlies,{groupID,true})
-        missionCommands.addCommandForGroup(groupID,"Show Friendlies OFF",showFriendliesPath,ewrs.setGroupShowFriendlies,{groupID,false})
-        local friendLimitPath=missionCommands.addSubMenuForGroup(groupID,"Set friendly limit",showFriendliesPath)
-        missionCommands.addCommandForGroup(groupID,"1",friendLimitPath,ewrs.setGroupMaxFriendlies,{groupID,1})
-        missionCommands.addCommandForGroup(groupID,"2",friendLimitPath,ewrs.setGroupMaxFriendlies,{groupID,2})
-        missionCommands.addCommandForGroup(groupID,"3",friendLimitPath,ewrs.setGroupMaxFriendlies,{groupID,3})
-        missionCommands.addCommandForGroup(groupID,"4",friendLimitPath,ewrs.setGroupMaxFriendlies,{groupID,4})
-        missionCommands.addCommandForGroup(groupID,"5",friendLimitPath,ewrs.setGroupMaxFriendlies,{groupID,5})
+        local showTankersLabel = T:Format("EWRS_SHOW_TANKERS_CURRENT", ewrsStatusLabel(groupSettings.showTankers, true, T))
+        missionCommands.addCommandForGroup(groupID,showTankersLabel,friendliesPath,ewrs.setGroupShowTankers,{groupID,not groupSettings.showTankers})
 
         if not ewrs.onDemand then
-          local messageOnOffPath = missionCommands.addSubMenuForGroup(groupID, "Turn Picture Report On/Off",rootPath)
-          missionCommands.addCommandForGroup(groupID, "Message ON", messageOnOffPath, ewrs.setGroupMessages, {groupID, true})
-          missionCommands.addCommandForGroup(groupID, "Message OFF", messageOnOffPath, ewrs.setGroupMessages, {groupID, false})
+          local autoPictureLabel = T:Format("EWRS_AUTO_PICTURE_CURRENT", ewrsStatusLabel(groupSettings.messages, true, T))
+          missionCommands.addCommandForGroup(groupID, autoPictureLabel, rootPath, ewrs.setGroupMessages, {groupID, not groupSettings.messages})
         end
+
+        local groupSettingsPath = missionCommands.addSubMenuForGroup(groupID,T:Get("EWRS_GROUP_SETTINGS"),rootPath)
+
+        if not ewrs.restrictToOneReference then
+          local referenceSetPath = missionCommands.addSubMenuForGroup(groupID,T:Get("EWRS_SET_GROUP_REFERENCE"), groupSettingsPath)
+          local bullsLabel = T:Get("EWRS_SET_TO_BULLSEYE") .. ((groupSettings.reference == "bulls") and T:Get("EWRS_CURRENT_SUFFIX") or "")
+          local selfLabel = T:Get("EWRS_SET_TO_SELF") .. ((groupSettings.reference == "self") and T:Get("EWRS_CURRENT_SUFFIX") or "")
+          missionCommands.addCommandForGroup(groupID, bullsLabel,referenceSetPath,ewrs.setGroupReference,{groupID, "bulls"})
+          missionCommands.addCommandForGroup(groupID, selfLabel,referenceSetPath,ewrs.setGroupReference,{groupID, "self"})
+        end
+      
+        local measurementsSetPath = missionCommands.addSubMenuForGroup(groupID,T:Get("EWRS_SET_GROUP_MEASUREMENTS"),groupSettingsPath)
+        local imperialLabel = T:Get("EWRS_SET_TO_IMPERIAL") .. ((groupSettings.measurements == "imperial") and T:Get("EWRS_CURRENT_SUFFIX") or "")
+        local metricLabel = T:Get("EWRS_SET_TO_METRIC") .. ((groupSettings.measurements == "metric") and T:Get("EWRS_CURRENT_SUFFIX") or "")
+        missionCommands.addCommandForGroup(groupID, imperialLabel,measurementsSetPath,ewrs.setGroupMeasurements,{groupID, "imperial"})
+        missionCommands.addCommandForGroup(groupID, metricLabel,measurementsSetPath,ewrs.setGroupMeasurements,{groupID, "metric"})
 
         ewrs.builtF10Menus[stringGroupID] = rootPath
       end

@@ -7,26 +7,25 @@ local map = env.mission.theatre
 AIEN.config = AIEN.config or {}
 if AIEN.config.dontInitialize == nil then AIEN.config.dontInitialize = false end                    -- if true, AIEN will not initialize; instead, you'll have to run it from your own code - it's useful when you want to override some functions/parameters before the initialization takes place
 
+-- values expected from mission config (Foothold Config.lua)
 -- coalition affected by the script
 if AIEN.config.blueAI == nil then AIEN.config.blueAI = true end		                                -- true/false. If true, the AI enhancement will be applied to the blue coalition ground groups, else, no script effect will take place
 if AIEN.config.redAI == nil then AIEN.config.redAI = true end		                                -- true/false. If true, the AI enhancement will be applied to the red  coalition ground groups, else, no script effect will take place
-
--- Action sets allowed.
-if AIEN.config.firemissions == nil then AIEN.config.firemissions = true end                         -- true/false. If true, each artillery in the coalition will fire automatically at available targets provided by other ground units and drones
-if AIEN.config.uavNightScan == nil then AIEN.config.uavNightScan = true end                         -- true/false. If true, UAVs will supplement detection by scanning nearby enemies when visibility-based sensors fail (e.g. at night)
-if AIEN.config.reactions == nil then AIEN.config.reactions = true end                               -- true/false. If true, when a mover group gets an hit, it will react accordingly to its skills and to its situational awareness, not staying there taking hits without doing nothing
-if AIEN.config.suppression == nil then AIEN.config.suppression = true end                           -- true/false. If true, once a group take fire from arty or air and it's not armoured, it will be suppressed for 15-45 seconds and won't return fire. Require reactions to be set as 'true'
 if AIEN.config.dismount == nil then AIEN.config.dismount = true end 		                        -- true/false. //BEWARE: CAN AFFECT PERFORMANCES ON LOW END SYSTEMS // Thanks to MBot's original script, if true AI ground units with infantry transport capabilities (mainly APC/IFV/Trucks) will dismount soldiers with rifle, rpg and sometimes mandpads when appropriate
-if AIEN.config.blueHitFireSupportOnly == nil then AIEN.config.blueHitFireSupportOnly = true end     -- true/false. If true, blue ground hit reactions are limited to artillery support/counter-battery only.
+if AIEN.config.message_feed == nil then AIEN.config.message_feed = true end 		                -- true/false. If true, each relevant AI action starting will also create a trigger message feedback for its coalition
 if AIEN.config.initiative == nil then AIEN.config.initiative = true end                             -- true/false. If true, the ground groups will take limited initiative of attack or advance if intel and terrain allow them
---AIEN.config.conquer 		    = true 		                                                        -- true/false. If true, the ground groups will look for nearby towns or DCS ground markers and will try to move there if intel and terrain allow them (this is limited in space cause it's designed to work appropriately with DSMC 2)
+
+-- Action sets allowed (AIEN internal defaults, not exposed in Foothold Config.lua)
+AIEN.config.firemissions = true         -- true/false. If true, each artillery in the coalition will fire automatically at available targets provided by other ground units and drones
+AIEN.config.uavNightScan = true         -- true/false. If true, UAVs will supplement detection by scanning nearby enemies when visibility-based sensors fail (e.g. at night)
+AIEN.config.reactions = true            -- true/false. If true, when a mover group gets an hit, it will react accordingly to its skills and to its situational awareness, not staying there taking hits without doing nothing
+AIEN.config.suppression = true                                                                       -- true/false. If true, once a group take fire from arty or air and it's not armoured, it will be suppressed for 15-45 seconds and won't return fire. Require reactions to be set as 'true'
 
 -- User advanced customization 
 AIEN.config.AIEN_xcl_tag		= {"Hidden","hidden","supply","support","EscortGroup", "attack"} 	-- string, global, case sensitive. Can be dynamically changed by other script or triggers, since it's a global variable. used as a text format without spaces or special characters. only letters and numbers allowed. Any ground group with this 'tag' in its group name won't get AI enhancement behaviour, regardless of its coalition 
 AIEN.config.AIEN_xcl_tag_delegation		= {"Red SAM"}  	                                            -- This will make the groups able to delegate attacks
 AIEN.config.AIEN_zoneFilter     = ""    	                                                        -- string, global, case sensitive. Can be dynamically changed by other script or triggers, since it's a global variable. used as a text format without spaces or special characters. only letters and numbers allowed, i.e. "AIEN" will fit. If left nil, or void string like "", won't be used. Only groups inside the named trigger zone will be affected by AIEN script behaviors of reaction, dismount and suppression, and vice versa. If no trigger zone with the specific name is in the mission, then all the groups will use AIEN features.
-if AIEN.config.message_feed == nil then AIEN.config.message_feed = true end 		                -- true/false. If true, each relevant AI action starting will also create a trigger message feedback for its coalition
-if AIEN.config.mark_on_f10_map == nil then AIEN.config.mark_on_f10_map = true end 	                -- true/false. If true, when an artillery fire mission is ongoing, a markpoint will appear on the map of the allied coalition to show the expected impact point
+AIEN.config.mark_on_f10_map = true                                                                    -- true/false. If true, when an artillery fire mission is ongoing, a markpoint will appear on the map of the allied coalition to show the expected impact point
 AIEN.config.skill_action_const  = false                                                             -- true/false. If true, AI available reactions types will be limited by the group average skill. If not, almost 2/3 of all available actions will be always be available regardless of the group skills
 AIEN.config.maxGroupInMovement  = 10                                                                -- number, used to limit the maximum number of groups that can be in movement at the same time. If more than this number are in movement, the script will not allow new movements until one of them is finished. This is useful to avoid too many groups moving at the same time and causing performance issues.    
 
@@ -71,13 +70,13 @@ AIEN.config.disperseActionTime				  = 120               -- seconds
 AIEN.config.counterBatteryRadarRange          = 50000             -- m, capable distance for a radar to perform counter battery calculations
 AIEN.config.counterBatteryPlanDelay           = 160               -- s, will be also randomized on +-35%. Used to define the delay of the planned counter battery fire if available
 AIEN.config.smoke_source_num                  = 5                 -- number, between 4 and 9. Generated smokes for each unit when smoke reaction is called in. Any number below 4 or above 9 will be converted in the nearest threshold
-if AIEN.config.delegationZoneLockTimeout == nil then AIEN.config.delegationZoneLockTimeout = 1200 end -- s, zone delegation lock timeout (default 20 min)
+AIEN.config.delegationZoneLockTimeout         = 1200              -- s, zone delegation lock timeout (default 20 min)
 
 -- SA evaluation variables
 AIEN.config.proxyBuildingDistance			  = 2500              -- m, if buildings are within this distance value, they are considered "close"
 AIEN.config.proxyUnitsDistance                = 4500              -- m, if units are within this distance value, they are considered "close"
 AIEN.config.supportDistance					  = 4000			  -- m, maximum distance for evaluating support or cover movements when under attack
-if AIEN.config.delegationArtyAttackRange == nil then AIEN.config.delegationArtyAttackRange = 10000 end -- m, max distance for delegated ground assault on enemy ARTY/MLRS
+AIEN.config.delegationArtyAttackRange         = 10000             -- m, max distance for delegated ground assault on enemy ARTY/MLRS
 AIEN.config.withrawDist                       = 3500             -- m, maximum distance for withdraw manoeuvre nearby a friendly support unit
 
 
@@ -8821,7 +8820,7 @@ local function isZoneDelegationLocked(zoneName)
     if not t then
         return false
     end
-    local timeout = AIEN.config.delegationZoneLockTimeout or 1200
+    local timeout = AIEN.config.delegationZoneLockTimeout
     if timer.getTime() - t >= timeout then
         delegationZoneLocks[zoneName] = nil
         return false
@@ -9751,7 +9750,7 @@ local function getSA(group) -- built a situational awareness check
                     for _, tgtData in pairs(sa.targets) do
                         local tgt   = tgtData.object
                         if tgt and tgt:isExist() then
-                            pcall(function()
+                            --pcall(function()
                                 local posTbl = tgt:getPosition()
                                 local pos    = posTbl and posTbl.p
                                 if pos then
@@ -9764,7 +9763,7 @@ local function getSA(group) -- built a situational awareness check
                                         intelDb[t_id] = {obj = tgt,pos = pos,coa = coa,life = tgt:getLife(),record = _now,speed = speed,type = (tgt.type and tgt:getTypeName() or "unknown"),ucat = tgt:getCategory(),scat = nil,attr = (tgt:getDesc() and tgt:getDesc().attributes or nil),cls = getUnitClass(tgt),identifier = sa.cls}
                                     end
                                 end
-                            end)
+                            --end)
                         end
                     end
                 end
@@ -9958,14 +9957,20 @@ local function groupfireAtPoint(var)
                 local groupName = group:getName()
                 local unit = group:getUnit(1)
                 local shooterType = unit and unit:getTypeName() or groupName
-                local batchKey = zoneName ~= "" and (tostring(coal) .. ":" .. zoneName) or ("coal:" .. tostring(coal))
+                local batchKey = "coal:" .. tostring(coal)
                 local batchWindow = AIEN.config.artyMessageBatchWindow or 1.6
 
                 AIEN._msgBatch = AIEN._msgBatch or {}
                 local b = AIEN._msgBatch[batchKey]
                 if not b then
-                    b = {zone=zoneName, coal=coal, shooters={}, shooterGroups={}, targets={}, scheduled=false}
+                    b = {coal=coal, zones={}, hasUnknownZone=false, shooters={}, shooterGroups={}, targets={}, scheduled=false}
                     AIEN._msgBatch[batchKey] = b
+                end
+
+                if zoneName ~= "" then
+                    b.zones[zoneName] = true
+                else
+                    b.hasUnknownZone = true
                 end
 
                 if not b.shooterGroups[groupName] then
@@ -9989,7 +9994,19 @@ local function groupfireAtPoint(var)
                     timer.scheduleFunction(function()
                         local bb = AIEN._msgBatch[batchKey]; if not bb then return end
                         local txt = "C2, Artillery, request fire mission, fire for Effect."
-                        if bb.zone ~= "" then txt = txt .. "\nZone: " .. bb.zone end
+
+                        local zoneList = {}
+                        for name in pairs(bb.zones) do
+                            zoneList[#zoneList + 1] = name
+                        end
+                        table.sort(zoneList)
+                        if bb.hasUnknownZone == false then
+                            if #zoneList == 1 then
+                                txt = txt .. "\nZone: " .. zoneList[1]
+                            elseif #zoneList > 1 then
+                                txt = txt .. "\nZones: " .. table.concat(zoneList, ", ")
+                            end
+                        end
 
                         local shooterList = {}
                         for name, count in pairs(bb.shooters) do
@@ -13576,6 +13593,7 @@ end
                                     local age = now - (gData.taskTime or 0)
                                     if age >= timeout then
                                         gData.tasked = false
+                                        gData.taskTime = nil
                                         if AIEN.config.AIEN_debugProcessDetail then
                                             env.info("ARTY_RESET "..gData.n)
                                         end
@@ -13746,6 +13764,36 @@ end
                                                     if AIEN.config.AIEN_debugProcessDetail then
                                                         env.info("ARTY_JTAC "..gData.n.." seeded ".._obj:getName().." via scout")
                                                     end
+                                                end
+                                                if jtacSrc == "queue" then
+                                                    local grp = _obj:getGroup()
+                                                    local gName = grp and grp:getName()
+                                                    local inBuilt = false
+                                                    if zTgt and zTgt.built and gName then
+                                                        for _, builtName in pairs(zTgt.built) do
+                                                            if builtName == gName then
+                                                                inBuilt = true
+                                                                break
+                                                            end
+                                                        end
+                                                    end
+                                                    if not inBuilt then
+                                                        intelDb[_obj_id] = nil
+                                                        return
+                                                    end
+                                                    local cls = (grp and getGroupClass(grp)) or getUnitClass(_obj) or "UNKN"
+                                                    if cls == "none" then cls = "UNKN" end
+                                                    report = report or {}
+                                                    report.pos = p
+                                                    report.cls = cls
+                                                    report.record = now
+                                                    report.speed = 0
+                                                    report.life = _obj:getLife() or 0
+                                                    report.jtacFallback = true
+                                                    report.obj = _obj
+                                                    report.coa = _obj:getCoalition()
+                                                    report.id = _obj_id
+                                                    intelDb[_obj_id] = report
                                                 end
                                                 if report and report.targeted == nil then
                                                     local lastContact = now - (report.record or now)
@@ -14192,7 +14240,9 @@ end
             end
     
             local shooterCat = pcallGetCategory(shooter)
-            if unitCat == 1 and shooterCat == 1 then
+            local shooterKnown = shooter and shooterCat == 1
+            local allowUnknownShooter = SplashDamage == true and not shooterKnown
+            if unitCat == 1 and (shooterKnown or allowUnknownShooter) then
     
                 local vehicle       = unit:hasAttribute("Vehicles")
                 local infantry      = unit:hasAttribute("Infantry")
@@ -14212,15 +14262,11 @@ end
                         
                         local AI_consent = true
                         local db_group = groundgroupsDb[group:getID()]
-                        local blueFireOnly = false
                         if db_group and db_group.delegationOnly == true then
                             delegationOnly = true
                             if AIEN.config.AIEN_debugProcessDetail == true then
                                 env.info(("AIEN.event_hit, S_EVENT_HIT, group delegationOnly enabled: " .. tostring(group:getName()) ))
                             end
-                        end
-                        if group:getCoalition() == 2 and AIEN.config.blueHitFireSupportOnly == true then
-                            blueFireOnly = true
                         end
 
     
@@ -14247,7 +14293,7 @@ end
                         
                         if AI_consent == true then
 
-                            if shooter:getCoalition() == group:getCoalition() then
+                            if shooterKnown and shooter:getCoalition() == group:getCoalition() then
 --[[                                 if AIEN.config.message_feed == true then
                                     local z = bc:getZoneOfPoint(position)
                                     if z and z.zone then
@@ -14263,7 +14309,7 @@ end
     
                             -- suppression part
 
-                            if AIEN.config.suppression == true and armoured and not delegationOnly and not blueFireOnly then
+                            if shooterKnown and AIEN.config.suppression == true and armoured and not delegationOnly then
                                 local suppressEffects = false
                                 if shooter:hasAttribute("Air") or shooter:hasAttribute("Ships") or shooter:hasAttribute("Indirect fire") then
                                     suppressEffects = true
@@ -14277,7 +14323,7 @@ end
                             end
     
                             -- dismount part
-                            if AIEN.config.dismount == true and not delegationOnly and not blueFireOnly then
+                            if shooterKnown and AIEN.config.dismount == true and not delegationOnly then
                                 if not underAttack[group:getID()] then
                                     if shooter:hasAttribute("Air") then
                                         timer.scheduleFunction(groupDeployManpad, group, timer.getTime() + aie_random(8, 15))
@@ -14303,7 +14349,7 @@ end
 
                                 -- Only stop the group on the first hit of the underAttack window.
                                 -- If we stop again on subsequent hits, reactions are skipped and the group can freeze.
-                                if not delegationOnly and not blueFireOnly then trigger.action.groupStopMoving(group) end
+                                if not delegationOnly then trigger.action.groupStopMoving(group) end
                                 
                                 if AIEN.config.AIEN_debugProcessDetail == true then
                                     env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) ))
@@ -14340,7 +14386,7 @@ end
                                         end								
                                     end
     
-                                    if shooter and con then
+                                    if shooterKnown and con then
                                         if AIEN.config.AIEN_debugProcessDetail == true then
                                             env.info(("AIEN.event_hit, S_EVENT_HIT, shooter known"))
                                         end	
@@ -14440,12 +14486,10 @@ end
                                     end	
     
                                     local av_ac = deepCopy(reactionsDb)
-                                    if blueFireOnly == true then
                                         av_ac = {}
                                         if reactionsDb[10] then
                                             av_ac[10] = reactionsDb[10]
                                         end
-                                    end
     
                                     -- remove not doable actions due to missin informations
                                     if s_fireMis < 1 or AI_consent == false then -- shooter position is not sufficiently recent
@@ -14551,7 +14595,7 @@ end
                                     local counterBatteryDone = false
                                     if choosenAct ~= "ac_fireMissionOnShooter" then
                                         if AIEN.config.firemissions == true then
-                                            if shooter and shooter:getPoint() and position then
+                                            if shooterKnown and shooter:getPoint() and position then
                                                 if s_cat ~= 0 then
                                                     counterBatteryDone = counterBattery(position, shooter:getPoint(), group:getCoalition()) == true
                                                 elseif AIEN.config.AIEN_debugProcessDetail == true then
@@ -14561,7 +14605,7 @@ end
                                         end
                                     end
 
-                                    if group:getCoalition() == 1 and shooter and a_pos and s_detected and not counterBatteryDone then
+                                    if group:getCoalition() == 1 and shooterKnown and a_pos and s_detected and not counterBatteryDone then
                                         local delegated = false
                                         if s_cat == 1 and (o_cls == "SAM" or o_cls == "SHORAD" or o_cls == "ARTY" or o_cls == "MLRS") then
                                             delegated = true
@@ -14668,7 +14712,7 @@ end
                                                 local bestGroup2
                                                 local bestScore1
                                                 local bestScore2
-                                                local maxRange = AIEN.config.delegationArtyAttackRange or 10000
+                                                local maxRange = AIEN.config.delegationArtyAttackRange
 
                                                 for _, gName in ipairs(z1.built) do
                                                     local gObj = Group.getByName(gName)
@@ -14744,7 +14788,7 @@ end
 
                                         if not delegated then
                                             if AIEN.config.AIEN_debugProcessDetail == true then
-                                                env.info(("AIEN.event_hit, delegation skipped, shooterAir " .. tostring(shooter and shooter:hasAttribute("Air")) .. ", hit cls " .. tostring(o_cls) .. ", shooter cls " .. tostring(s_cls)))
+                                                env.info(("AIEN.event_hit, delegation skipped, shooterAir " .. tostring(shooterKnown and shooter:hasAttribute("Air")) .. ", hit cls " .. tostring(o_cls) .. ", shooter cls " .. tostring(s_cls)))
                                             end
                                         end
                                     else
@@ -14850,9 +14894,10 @@ local function event_birth(initiator)
                 if AIEN.config.AIEN_debugProcessDetail == true then
                     env.info((tostring(ModuleName) .. ", event_birth: adding to droneunitDb " .. tostring(gp:getName() )))
                 end
+                droneunitDb[gp:getID()] = { group = gp, class = c, n = gpName, coa = coalition, sa = {} }
                 local sa0 = getSA(gp) or {}
                 AIEN.primeBlueArtySA()
-                droneunitDb[gp:getID()] = { group = gp, class = c, n = gpName, coa = coalition, sa = sa0 }
+                droneunitDb[gp:getID()].sa = sa0
                 AIEN.seedArtillerySA()
             end
         end

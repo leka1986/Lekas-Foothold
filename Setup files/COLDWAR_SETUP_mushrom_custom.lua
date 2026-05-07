@@ -258,7 +258,7 @@ upgrades = {
 	},
 	Wismar = {
 		blue = {'blueInfantry', 'blueArmor','bluePD1','blueArmor'},
-		red = {'Enemy ground forces','Red SAM AAA 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD Tor M2', 'Red Arty', 'Red SAM SHORAD SA-19','Grisha Fixed-1'}
+		red = {'Grisha Fixed-1','Enemy ground forces','Red SAM AAA 2', 'Red Armour Group', 'Red Armour Group 2', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD Tor M2', 'Red Arty', 'Red SAM SHORAD SA-19'}
 	},
 	EWRMantisNet = {
 		blue = {},
@@ -280,11 +280,11 @@ upgrades = {
     Chemical = {
 		blue = {},
 		red = {'Chemical building', 'Chemical building 2', 'Chemical building 3','Red SAM SHORAD SA-15', 'Chemical Factory building','Chemical Guairds infantry Fixed','Red SAM SHORAD SA-15', 'Chemical Factory building 2','Red SAM AAA Chemical Fixed',
-    'Chemical Factoy tank', 'Chemical Factoy tank 2', 'Chemical Factoy tank 3', 'Chemical Factoy tank 4','Red SAM AAA CHemical Fixed Mixed','Red Armour Group 2','Red SAM SA-6','Red SAM SA-3'}
+    		'Chemical Factoy tank', 'Chemical Factoy tank 2', 'Chemical Factoy tank 3', 'Chemical Factoy tank 4','Red SAM AAA CHemical Fixed Mixed','Red Armour Group 2','Red SAM SA-6','Red SAM SA-3'}
 	},
 	hiddenground1 = {
 		blue = {},
-		red = {'hiddenground1-Fixed-1', 'hiddenground1-Fixed-2', 'hiddenground1-Fixed-3','hiddenground1-Fixed-4','hiddenground1-Fixed-5','hiddenground1-Fixed-6',
+		red = {'hiddenground1-Fixed-1', 'hiddenground1-Fixed-2', 'hiddenground1-Fixed-3','hiddenground1-Fixed-4','hiddenground1-Fixed-5',
                 'hiddenground1-Fixed-7','hiddenground1-Fixed-8','hiddenground1-Fixed-9', 'hiddenground1-Fixed-10','hiddenground1-Fixed-11','hiddenground1-Fixed-12',
                 'hiddenground1-Fixed-13','hiddenground1-Fixed-14','hiddenground1-Fixed-15','hiddenground1-Fixed-16','hiddenground1-Fixed-17'}
 	},
@@ -293,10 +293,50 @@ upgrades = {
 		red = {'hiddenground2-Fixed-1', 'hiddenground2-Fixed-2', 'hiddenground2-Fixed-3','hiddenground2-Fixed-4','hiddenground2-Fixed-5','hiddenground2-Fixed-6',
                 'hiddenground2-Fixed-7','hiddenground2-Fixed-8','hiddenground2-Fixed-9','hiddenground2-Fixed-10','hiddenground2-Fixed-11'}
 	},
+	hiddenground6 = {
+		blue = {},
+		red = {'hiddenground6-Fixed-1', 'hiddenground6-Fixed-2', 'hiddenground6-Fixed-3', 'hiddenground6-Fixed-4' ,'hiddenground6-Fixed-5'}
+	},	
+	hiddenground7 = {
+		blue = {},
+		red = {'hiddenground7-Fixed-1', 'hiddenground7-Fixed-2', 'hiddenground7-Fixed-3'}
+	},
+	hiddenground8 = {
+		blue = {},
+		red = {'hiddenground8-Fixed-1', 'hiddenground8-Fixed-2', 'hiddenground8-Fixed-3','hiddenground8-Fixed-4','hiddenground8-Fixed-5', 'hiddenground8-Fixed-6', 'hiddenground8-Fixed-7'}
+	},
+	hiddenground9 = {
+		blue = {},
+		red = {'hiddenground9-Fixed-1', 'hiddenground9-Fixed-2', 'hiddenground9-Fixed-3', 'hiddenground9-Fixed-4'}
+	},
+	hiddenground10 = {
+		blue = {},
+		red = {'hiddenground10-Fixed-1', 'hiddenground10-Fixed-2', 'hiddenground10-Fixed-3', 'hiddenground10-Fixed-4'}
+	},
+	hiddenground11 = {
+		blue = {},
+		red = {'hiddenground11-Fixed-1', 'hiddenground11-Fixed-2', 'hiddenground11-Fixed-3', 'hiddenground11-Fixed-4'}
+	},
+	hiddenground12 = {
+		blue = {},
+		red = {'hiddenground12-Fixed-1', 'hiddenground12-Fixed-2', 'hiddenground12-Fixed-3'}
+	},
+	hiddenground13 = {
+		blue = {},
+		red = {'hiddenground13-Fixed-1', 'hiddenground13-Fixed-2', 'hiddenground13-Fixed-3'}
+	},
+	hiddenground14 = {
+		blue = {},
+		red = {'hiddenground14-Fixed-1', 'hiddenground14-Fixed-2', 'hiddenground14-Fixed-3', 'hiddenground14-Fixed-4', 'hiddenground14-Fixed-5', 'hiddenground14-Fixed-6','hiddenground14-Fixed-7'}
+	},	
+	hiddenground15 = {
+		blue = {},
+		red = {'hiddenground15-Fixed-1', 'hiddenground15-Fixed-2', 'hiddenground15-Fixed-3', 'hiddenground15-Fixed-4', 'hiddenground15-Fixed-5', 'hiddenground15-Fixed-6'}
+	},	
 	hiddenground3 = {
 		blue = {},
 		red = {'hiddenground3-Fixed-1', 'hiddenground3-Fixed-2', 'hiddenground3-Fixed-3','hiddenground3-Fixed-4','hiddenground3-Fixed-5','hiddenground3-Fixed-6',
-                'hiddenground3-Fixed-7','hiddenground3-Fixed-8','hiddenground3-Fixed-9','hiddenground3-Fixed-10','hiddenground3-Fixed-11'}
+		           'hiddenground3-Fixed-7','hiddenground3-Fixed-8','hiddenground3-Fixed-9','hiddenground3-Fixed-10','hiddenground3-Fixed-11'}
 	},
 	hiddenground4 = {
 		blue = {},
@@ -307,11 +347,11 @@ upgrades = {
 	hiddenground5 = {
 		blue = {},
 		red = {'hiddenground5-Fixed-1', 'hiddenground5-Fixed-2', 'hiddenground5-Fixed-3','hiddenground5-Fixed-4','hiddenground5-Fixed-5','hiddenground5-Fixed-6',
-                'hiddenground5-Fixed-7','hiddenground5-Fixed-8','hiddenground5-Fixed-9','hiddenground5-Fixed-10','hiddenground5-Fixed-11','hiddenground5-Fixed-12',
-                'hiddenground5-Fixed-13','hiddenground5-Fixed-14','hiddenground5-Fixed-15','hiddenground5-Fixed-16','hiddenground5-Fixed-17','hiddenground5-Fixed-18',
-                'hiddenground5-Fixed-19','hiddenground5-Fixed-20','hiddenground5-Fixed-21','hiddenground5-Fixed-22','hiddenground5-Fixed-23','hiddenground5-Fixed-24',
-                'hiddenground5-Fixed-25','hiddenground5-Fixed-26','hiddenground5-Fixed-27','hiddenground5-Fixed-28','hiddenground5-Fixed-29','hiddenground5-Fixed-30',
-                'hiddenground5-Fixed-31','hiddenground5-Fixed-32'}
+			'hiddenground5-Fixed-7','hiddenground5-Fixed-8','hiddenground5-Fixed-9','hiddenground5-Fixed-10','hiddenground5-Fixed-11','hiddenground5-Fixed-12',
+			'hiddenground5-Fixed-13','hiddenground5-Fixed-14','hiddenground5-Fixed-15','hiddenground5-Fixed-16','hiddenground5-Fixed-17','hiddenground5-Fixed-18',
+			'hiddenground5-Fixed-19','hiddenground5-Fixed-20','hiddenground5-Fixed-21','hiddenground5-Fixed-22','hiddenground5-Fixed-23','hiddenground5-Fixed-24',
+			'hiddenground5-Fixed-25','hiddenground5-Fixed-26','hiddenground5-Fixed-27','hiddenground5-Fixed-28','hiddenground5-Fixed-29','hiddenground5-Fixed-30',
+			'hiddenground5-Fixed-31','hiddenground5-Fixed-32'}
 	},
 }
 
@@ -595,6 +635,16 @@ zones = {
     hiddenground3   = ZoneCommander:new({zone='HiddenGround3',      side=0, level=20, upgrades=upgrades.hiddenground3,  crates={}, flavorText=flavor.hiddenground3, NeutralAtStart=true}),
     hiddenground4   = ZoneCommander:new({zone='HiddenGround4',      side=0, level=20, upgrades=upgrades.hiddenground4,  crates={}, flavorText=flavor.hiddenground4, NeutralAtStart=true}),
     hiddenground5   = ZoneCommander:new({zone='HiddenGround5',      side=0, level=35, upgrades=upgrades.hiddenground5,  crates={}, flavorText=flavor.hiddenground5, NeutralAtStart=true}),
+    hiddenground6   = ZoneCommander:new({zone='HiddenGround6',      side=0, level=35, upgrades=upgrades.hiddenground6,  crates={}, flavorText=flavor.hiddenground6, NeutralAtStart=true}),
+    hiddenground7   = ZoneCommander:new({zone='HiddenGround7',      side=0, level=35, upgrades=upgrades.hiddenground7,  crates={}, flavorText=flavor.hiddenground7, NeutralAtStart=true}),
+    hiddenground8   = ZoneCommander:new({zone='HiddenGround8',      side=0, level=35, upgrades=upgrades.hiddenground8,  crates={}, flavorText=flavor.hiddenground8, NeutralAtStart=true}),
+    hiddenground9   = ZoneCommander:new({zone='HiddenGround9',      side=0, level=35, upgrades=upgrades.hiddenground9,  crates={}, flavorText=flavor.hiddenground9, NeutralAtStart=true}),
+    hiddenground10   = ZoneCommander:new({zone='HiddenGround10',      side=0, level=35, upgrades=upgrades.hiddenground10,  crates={}, flavorText=flavor.hiddenground10, NeutralAtStart=true}),
+    hiddenground11   = ZoneCommander:new({zone='HiddenGround11',      side=0, level=35, upgrades=upgrades.hiddenground11,  crates={}, flavorText=flavor.hiddenground11, NeutralAtStart=true}),
+    hiddenground12   = ZoneCommander:new({zone='HiddenGround12',      side=0, level=35, upgrades=upgrades.hiddenground12,  crates={}, flavorText=flavor.hiddenground12, NeutralAtStart=true}),
+    hiddenground13   = ZoneCommander:new({zone='HiddenGround13',      side=0, level=35, upgrades=upgrades.hiddenground13,  crates={}, flavorText=flavor.hiddenground13, NeutralAtStart=true}),
+    hiddenground14   = ZoneCommander:new({zone='HiddenGround14',      side=0, level=35, upgrades=upgrades.hiddenground14,  crates={}, flavorText=flavor.hiddenground14, NeutralAtStart=true}),
+    hiddenground15   = ZoneCommander:new({zone='HiddenGround15',      side=0, level=35, upgrades=upgrades.hiddenground15,  crates={}, flavorText=flavor.hiddenground15, NeutralAtStart=true}),																																														  
     hiddensweden    = ZoneCommander:new({zone='HiddenSweden',       side=0, level=35, upgrades=upgrades.hiddensweden,   crates={}, flavorText=flavor.hiddensweden, NeutralAtStart=true}),
 
     sheizefactory   = ZoneCommander:new({zone='Scheiße Factory',     side=1, level=20, upgrades=upgrades.Scheize,        crates={}, flavorText=flavor.sheizefactory}),
@@ -1792,6 +1842,7 @@ zones.larz:registerTrigger('captured', function(_, zone)
 end, 'larzcaptured')
 
 
+
 missions = {
         ["Baumholder FARP"] = {	
         zone = "Baumholder FARP",
@@ -1799,9 +1850,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Baumholder FARP"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Baumholder FARP"),
         TargetZone = "Ramstein",
-        radius = 2500,
+        radius = 1000,
         MissionType = "Escort",
-        flag = 101
+        flag = 101,
+		ActivateZone = "hiddenground6"
     },
     ["Bad Durkheim"] = {	
         zone = "Bad Durkheim",
@@ -1809,9 +1861,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Bad Durkheim"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Bad Durkheim"),
         TargetZone = "Walldorf FARP",
-		radius = 2500,
+		radius = 2000,
         MissionType = "Escort",
-		flag = 101
+		flag = 101,
+		ActivateZone = "hiddenground7"
     },
     ["Gelnhausen"] = {	
         zone = "Gelnhausen",
@@ -1819,9 +1872,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Gelnhausen"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Gelnhausen"),
         TargetZone = "Walldorf FARP",
-		radius = 2500,
+		radius = 5,
         MissionType = "Escort",
-		flag = 111
+		flag = 111,
+		ActivateZone = "hiddenground12"
     },
     ["Walldurn FARP"] = {	
         zone = "Walldurn FARP",
@@ -1829,9 +1883,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "WalldurnFarp"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "WalldurnFarp"),
         TargetZone = "Giebelstadt",
-        radius = 2500,
+        radius = 5,
         MissionType = "Escort",
-		flag = 121
+		flag = 121,
+		ActivateZone = "hiddenground8"
     },
     ["Laubach FARP"] = {	
         zone = "Laubach FARP",
@@ -1839,9 +1894,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Laubach FARP"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Laubach FARP"),
         TargetZone = "Fulda",
-        radius = 2500,
+        radius = 2000,
         MissionType = "Escort",
-		flag = 131
+		flag = 131,
+		ActivateZone = "hiddenground13"
     },
     ["Altes Lager"] = {	
         zone = "Altes Lager",
@@ -1849,9 +1905,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Altes Lager"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Altes Lager"),
         TargetZone = "Wundsdorf FARP",
-        radius = 2500,
+        radius = 5,
         MissionType = "Escort",
-		flag = 141
+		flag = 141,
+		ActivateZone = "hiddenground9"
     },
     ["Wundsdorf FARP"] = {	
         zone = "Wundsdorf FARP",
@@ -1859,9 +1916,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Wundsdorf FARP"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Wundsdorf FARP"),
         TargetZone = "Tegel",
-        radius = 2500,
+        radius = 5,
         MissionType = "Escort",
-		flag = 151
+		flag = 151,
+		ActivateZone = "hiddenground10"
     },
     ["Tegel"] = {	
         zone = "Tegel",
@@ -1869,9 +1927,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Tegel"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Tegel"),
         TargetZone = "Werneuchen",
-        radius = 2500,
+        radius = 5,
         MissionType = "Escort",
-        flag = 161
+        flag = 161,
+		ActivateZone = "hiddenground11"
     },
     ["Scheessel"] = {	
         zone = "Scheessel",
@@ -1879,9 +1938,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Scheessel"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Scheessel"),
         TargetZone = "Bremen",
-        radius = 2500,
+        radius = 5,
         MissionType = "Escort",
-        flag = 171
+        flag = 171,
+		ActivateZone = "hiddenground15"
     },
     ["Naumburg FARP"] = {	
         zone = "Naumburg FARP",
@@ -1889,9 +1949,10 @@ missions = {
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Naumburg FARP"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Naumburg FARP"),
         TargetZone = "Schkeuditz",
-        radius = 2500,
+        radius = 5,
         MissionType = "Escort",
-        flag = 181
+        flag = 181,
+		ActivateZone = "hiddenground14"
     },
 }
 for _, data in pairs(missions) do
