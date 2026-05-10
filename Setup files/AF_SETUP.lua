@@ -608,7 +608,7 @@ else
         'RED_MIG21Bis_Load1',
         'RED_MIG21Bis_Load2',
         'RED_MIG23MLD',
-        'RED_MIG25PD',
+        'RED_MIG31',
         'BLUE_HORNET',
         'BLUE_F15C',
         'BLUE_F16C',
