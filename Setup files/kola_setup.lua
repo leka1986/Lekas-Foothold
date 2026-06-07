@@ -531,7 +531,7 @@ neutralFARP_RU = false
 neutralFARP_SE = false
 AllowScriptedSupplies = AllowScriptedSupplies ~= false
 
-bc = BattleCommander:new(filepath, 13, 60)
+bc = BattleCommander:new(filepath, 10, 60)
 if RankingSystem then
 bc.rankFile = (lfs and (lfs.writedir()..'Missions/Saves/Foothold_Ranks.lua')) or 'Foothold_Ranks.lua'
 env.info('Foothold - Rank file path: '..bc.rankFile)
@@ -703,7 +703,7 @@ else
         'RED_MIG21Bis_Load1',
         'RED_MIG21Bis_Load2',
         'RED_MIG23MLD',
-        'RED_MIG25PD',
+        'RED_MIG31',
         'BLUE_HORNET',
         'BLUE_F15C',
         'BLUE_F16C',
@@ -2172,7 +2172,10 @@ bc:registerShopItem('supplies2', LTGet("SYRIA_SHOP_ITEM_RESUPPLY_ZONE"), ShopPri
     return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender, params)
-    if not AllowScriptedSupplies then
+    local carrierSupplyTarget = params and params.zone and isCarrierZoneName(params.zone.zone)
+    local useScriptedSupply = AllowScriptedSupplies or carrierSupplyTarget
+
+    if not useScriptedSupply then
         if NoAIBlueSupplies == true then
             return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
         end
@@ -2206,7 +2209,7 @@ bc.shopItems['supplies2'].groupZoneSelector = {
 			return handle
 		end
 
-		if not AllowScriptedSupplies then
+		if not AllowScriptedSupplies and not isCarrierZoneName(zoneObj.zone) then
 			local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
 			local canUseFarp = bestCommander and (bestCommander.type == 'surface' or bestCommander.unitCategory == Unit.Category.HELICOPTER)
 			local hasFriendlyDynamicFarp = false
@@ -2358,16 +2361,31 @@ bc:registerShopItem('intel',LTGet("SYRIA_SHOP_ITEM_INTEL_ENEMY"),ShopPrices.inte
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 1 and not params.zone.suspended then
-		intelActiveZones[params.zone.zone] = true
-		startZoneIntel(params.zone.zone)
-		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
+	local intelSide = params.coalition or 2
+	local enemySide = intelSide == 1 and 2 or 1
+	if params.zone and params.zone.side == enemySide and not params.zone.suspended then
+		startZoneIntel(params.zone.zone, nil, intelSide)
+		trigger.action.outTextForCoalition(intelSide, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
 	else
 		return LTGet("SYRIA_SHOP_MUST_PICK_ENEMY_ZONE")
 	end
 end)
 bc.shopItems['intel'].groupZoneSelector = {
 	targetzoneside = 1,
+	targetzonesideByCoalition = {
+		[1] = 2,
+		[2] = 1,
+	},
+	candidateBucketByCoalition = {
+		[1] = 'blue_unsuspended',
+		[2] = 'enemy_unsuspended',
+	},
+	paramsBuilder = function(bcRef, zoneObj, groupId, groupObj, itemInfo)
+		return {
+			zone = zoneObj,
+			coalition = groupObj:getCoalition(),
+		}
+	end,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
@@ -2602,6 +2620,10 @@ bc.shopItems['capture'].groupZoneSelector.candidateBucket = 'neutral_capture_tar
 bc.shopItems['capture'].groupZoneSelector.refreshTags = { 'neutral_capture_targets' }
 bc.shopItems['intel'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['intel'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['intel'].groupZoneSelector.refreshTagsByCoalition = {
+	[1] = { 'friendly_targets' },
+	[2] = { 'enemy_targets' },
+}
 bc.shopItems['zwh50'].groupZoneSelector.candidateBucket = 'warehouse_targets'
 bc.shopItems['zwh50'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 
@@ -2808,9 +2830,9 @@ bc:addShopItem(2, 'groundattack', -1, 8, ShopRankRequirements.groundattack, Shop
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
 bc:addShopItem(2, 'zarm', -1, 2, ShopRankRequirements.zarm, ShopCats.ZoneUpgrades) -- add armour group to a zone
 bc:addShopItem(2, 'zsam', -1, 3, ShopRankRequirements.zsam, ShopCats.ZoneUpgrades) -- add Nasams to a zone
-bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
 bc:addShopItem(2, 'gslot', 1, 5, ShopRankRequirements.gslot, ShopCats.ZoneUpgrades) -- add another slot for upgrade
 if Era == 'Modern' then
+    bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
     bc:addShopItem(2, 'zpat', -1, 6, ShopRankRequirements.zpat, ShopCats.ZoneUpgrades) -- Patriot system.
 end
 
@@ -2858,7 +2880,7 @@ bc:loadFromDisk() --will load and overwrite default zone levels, sides, funds an
 bc:init()
 budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequency=20*60, decissionVariance=10*60, skipChance = 10})
 budgetAI:init()
-RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
 bc:startRewardPlayerContribution(15,RewardContribution)
 buildTemplateCache()
 bc:buildZoneDistanceCache()
@@ -2886,7 +2908,7 @@ AWACS_CFG = {
 
 GlobalSettings.autoSuspendNmBlue = 100   		-- suspend blue zones deeper than this nm
 GlobalSettings.autoSuspendNmRed = 140   		-- suspend red zones deeper than this nm
-evc = EventCommander:new({ decissionFrequency=15*60, decissionVariance=10*60, skipChance = 15})
+evc = EventCommander:new({ decissionFrequency=15*60, decissionVariance=10*60, skipChance = 15, strikeFrequency=5*60})
 evc:init()
 mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
 
@@ -2938,6 +2960,7 @@ Group.getByName('evt-bomb'):destroy()
 Group.getByName('EscortBomber'):destroy()
 evc:addEvent({
 	id='bomb',
+	StrikeMission = true,
 	action=function()
 		RespawnGroup('evt-bomb')
 		RegisterGroupTarget('evt-bomb',500,L10N:Get("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),'bomb')
@@ -2983,6 +3006,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('bomb')
     end,
     isActive = function()
         if not ActiveMission['bomb'] then return false end
@@ -2996,6 +3020,7 @@ local lastairstrike_COOLDOWN  = -airstrike_COOLDOWN
 Group.getByName('evt-attack'):destroy()
 evc:addEvent({
 	id='cas',
+	StrikeMission = true,
 	action = function()
         Respawn.Group('evt-attack')
 		RegisterGroupTarget('evt-attack',250,L10N:Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"),'cas')
@@ -3064,6 +3089,7 @@ mc:trackMission({
         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('cas')
     end,
     isActive = function()
         if not ActiveMission['cas'] then return false end
@@ -3079,6 +3105,7 @@ Group.getByName('interceptor-1'):destroy()
 Group.getByName('interceptor-2'):destroy()
 evc:addEvent({
 	id='escort',
+	StrikeMission = true,
 	action = function()
         RespawnGroup('escort-me')
         ActiveMission['escort'] = true
@@ -3149,6 +3176,7 @@ Group.getByName('evt-cargointercept2'):destroy()
 Group.getByName('evt-cargointercept3'):destroy()
 evc:addEvent({
 	id='cargointercept',
+	StrikeMission = true,
 	action = function()
 		local planes
 		if bc:getZoneByName('Olenya').side == 1 and not bc:getZoneByName('Olenya').suspended then
@@ -3219,6 +3247,7 @@ mc:trackMission({
 Group.getByName('Zapolyarnyy-Scuds'):destroy()
 evc:addEvent({
 	id='scuds2',
+	StrikeMission = true,
 	action = function()
         RespawnGroup('Zapolyarnyy-Scuds')
 		RegisterGroupTarget('Zapolyarnyy-Scuds',100,L10N:Get("KOLA_TARGET_DESTROY_SCUDS"),'scuds2')
@@ -3277,6 +3306,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('scuds2')
     end,
 	isActive = function()
         if not ActiveMission['scuds2'] then return false end
@@ -3288,6 +3318,7 @@ mc:trackMission({
 Group.getByName('Kittila-Scuds'):destroy()
 evc:addEvent({
 	id='scuds1',
+	StrikeMission = true,
 	action = function()
 
     RespawnGroup('Kittila-Scuds')  
@@ -3349,6 +3380,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('scuds1')
     end,
 	isActive = function()
         if not ActiveMission['scuds1'] then return false end
@@ -3662,6 +3694,7 @@ end, {}, timer.getTime() + 1)
 
 evc:addEvent({
 	id='RussiansHideOut',
+	StrikeMission = true,
 	action = function()
 	ActiveMission['RussiansHideOut'] = true
 	local tgt = SCENERY:FindByZoneName('RussiansHideOut')
@@ -3706,6 +3739,7 @@ mc:trackMission({
 
 evc:addEvent({
 	id='GeneralsHouse',
+	StrikeMission = true,
 	action = function()
 	ActiveMission['GeneralsHouse'] = true
 	local tgt = SCENERY:FindByZoneName('GeneralsHouse')
@@ -3755,6 +3789,7 @@ Group.getByName('PapasSon'):destroy()
 Group.getByName('Red SAM SA-3 Fixed PapasSon'):destroy()
 evc:addEvent({
 	id='PapasSon',
+	StrikeMission = true,
 	action = function()
         RespawnGroup('PapasSon')
 		RegisterGroupTarget('PapasSon',500,L10N:Get("KOLA_TARGET_RIGHT_HAND_MAN"),'PapasSon',true)
@@ -3782,6 +3817,7 @@ description = LTGet("KOLA_MISSION_RIGHT_HAND_MAN_DESC"),
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('PapasSon')
         RespawnGroup('Red SAM SA-3 Fixed PapasSon')
 	end,
 	isActive = function()
@@ -3794,6 +3830,7 @@ description = LTGet("KOLA_MISSION_RIGHT_HAND_MAN_DESC"),
 ----------------------- laplandiya statics mission --------------------------------
 evc:addEvent({
 	id = 'laplandiyaStorage',
+	StrikeMission = true,
 		action = function()
 		local z = zones.laplandiya
 		if not z then return end
@@ -3838,6 +3875,7 @@ mc:trackMission({
 
 evc:addEvent({
 	id = 'ZelenoborskijStorage',
+	StrikeMission = true,
 		action = function()
 		local z = zones.zelenoborskij
 		if not z then return end
@@ -3881,6 +3919,7 @@ mc:trackMission({
 --PyaozerskyStorage
 evc:addEvent({
 	id = 'PyaozerskyStorage',
+	StrikeMission = true,
 		action = function()
 		local z = zones.PyaozerskyStorage
 		if not z then return end
@@ -3925,6 +3964,7 @@ mc:trackMission({
 
 evc:addEvent({
 	id = 'lovozeroCCCBunker',
+	StrikeMission = true,
 		action = function()
 		local z = zones.LovozeroCCC
 		if not z then return end
@@ -4777,7 +4817,7 @@ mc:trackMission({
 				bc:addTempStat(reconMissionWinner, "Recon mission", 1)
 				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
 			end
-			startZoneIntel(target, 10 * 60)
+			startZoneIntel(target, 10 * 60, 2)
 			reconMissionCooldownUntil = timer.getTime() + 900
 		end
 

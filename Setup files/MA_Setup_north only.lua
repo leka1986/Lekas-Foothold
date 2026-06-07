@@ -54,7 +54,7 @@ upgrades = {
 	},
 	airfield2 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
-		red = {'Ground Forces 1', 'Red Armour Group', 'Red Armour Group 3','Red SAM SHORAD SA-19','Red SAM AAA', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-19', 'Red SAM AAA 2', 'Red SAM AAA 3', 'Red SAM AAA 4'}
+		red = {'Ground Forces 1', 'Red Armour Group', 'Red Armour Group 3','Red SAM SHORAD SA-19','Red SAM AAA', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-19', 'Red SAM AAA 2', 'Red SAM AAA 5', 'Red SAM AAA 6'}
 	},
 	airfield2Ismailiyah = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
@@ -169,7 +169,7 @@ upgrades = {
 	},
 	farp3 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD2'},
-		red = {'Enemy ground forces', 'Red SAM AAA', 'Red SAM SHORAD SA-15', 'Red Armour Group 2', 'Red Armour Group 3', 'Red SAM AAA 2', 'Red SAM AAA 3','Red SAM AAA 4'}
+		red = {'Enemy ground forces', 'Red SAM AAA', 'Red SAM SHORAD SA-15', 'Red Armour Group 2', 'Red Armour Group 3', 'Red SAM AAA 2', 'Red SAM AAA 5','Red SAM AAA 6'}
 	},
 	farp32 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD2'},
@@ -246,7 +246,6 @@ upgrades = {
 }
 
 flavor = {
-	bluecarrier = L10N:Get("SINAI_FLAVOR_START_ZONE"),
 	redcarrier = L10N:Format("SINAI_FLAVOR_ENEMY_CARRIER", 15),
 	sdedov = 'WPT \n',
 	bengurion = 'WPT 1\n',
@@ -457,10 +456,14 @@ RandomRedPool = {
 	-- AAA
 	"Red SAM AAA",
 	"Red SAM AAA 2",
-	"Red SAM AAA 3",
-	"Red SAM AAA 4",
 	"Red SAM AAA 5",
 	"Red SAM AAA 6",
+	"Red SAM AAA 7",
+	"Red SAM AAA 8",
+	"Red SAM AAA 9",
+	"Red SAM AAA 10",
+	"Red SAM AAA 3",
+	"Red SAM AAA 4",
 
 	-- Ground
 	"Enemy Task forces",
@@ -470,11 +473,29 @@ RandomRedPool = {
 	"Red Armour Group 2",
 	"Red Armour Group 3",
 	"Red Armour Group 4",
+	-- Mech
+	"Red Mech group 1",
+	"Red Mech group 2",
+	"Red Mech group 3",
+	"Red Mech group 4",
+	"Red Mech group 5",
+	"Red Mech group 6",
+
+	-- Special
+	"Red Special 1",
+	"Red Special 2",
+	"Red Special 3",
+
 	-- Arty
 	"Red Arty",
 	"Red Arty 1",
 	"Red Arty 2",
 	"Red Arty 3",
+	"Red Arty 4",
+	"Red Arty 5",
+	"Red Arty 6",
+	"Red Arty 7",
+	"Red Arty 8",
 }
 
 RandomBluePool = {
@@ -506,16 +527,16 @@ ZoneSizeExclusions = {
 }
 
 RandomUpgradeTemplates = {
-	small = { sam = 0, shorad = {1,2}, aaa = 2, ground = 1, armor = {1,2}, arty = {0,1}, total = {5,7} },
-	smallmedium = { sam = 0, shorad = {1,3}, aaa = 2, ground = 1, armor = {1,2}, arty = {0,1}, total = {6,8} },
-	medium = { sam = {0,1}, shorad = {1,3}, aaa = {1,3}, ground = 1, armor = {1,2}, arty = 1, total = {7,9} },
-	mediumbig = { sam = {0,1}, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10} },
-	big = { sam = 1, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {8,10} },
-	bignosam = { sam = 0, shorad = {3,4}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10} },
-	extrabig = { sam = 2, shorad = {3,4}, aaa = 2, ground = 1, armor = {1,2}, arty = 1, total = {10,12} },
-	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {5,5} },
-	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {5,6} },
-	samspecial = { sam = 3, shorad = {1,4}, aaa = {1,3}, ground = 0, armor = 0, arty = 0, total = {5,9} },
+	small = { sam = 0, shorad = {0,2}, aaa = {0,2}, ground = {0,3}, armor = {0,2}, arty = {0,2}, total = {3,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	smallmedium = { sam = 0, shorad = {0,3}, aaa = {0,2}, ground = {0,3}, armor = {0,3}, arty = {0,2}, total = {4,7}, flakChance = 12, flakSecondChance = 0, flakMax = 1 },
+	medium = { sam = {0,1}, shorad = {0,3}, aaa = {0,3}, ground = {0,3}, armor = {0,3}, arty = {0,3}, total = {4,9}, flakChance = 15, flakSecondChance = 0, flakMax = 1 },
+	mediumbig = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 20, flakSecondChance = 5, flakMax = 2 },
+	big = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
+	bignosam = { sam = 0, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
+	extrabig = { sam = {1,2}, shorad = {0,5}, aaa = {0,4}, ground = {0,4}, armor = {0,4}, arty = {0,4}, total = {7,12}, flakChance = 40, flakSecondChance = 20, flakMax = 2 },
+	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {5,5}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {5,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	samspecial = { sam = 3, shorad = {1,4}, aaa = {1,3}, ground = 0, armor = 0, arty = 0, total = {5,9}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
 }
 
 RandomUpgradeTemplatesBlue = {
@@ -543,9 +564,8 @@ Hunt = true
 
 zones = {
 	redcarrier = ZoneCommander:new		({zone='Red Carrier', side=1, level=10, upgrades=upgrades.redships, crates={}, flavorText=flavor.redcarrier}),
-	bluecarrier = ZoneCommander:new		({zone='Blue Carrier', side=2, level=20, upgrades=upgrades.blueships, crates={}, flavorText=flavor.bluecarrier}),
 	
-	sdedov = ZoneCommander:new			({zone='Sde Dov', side=2, size='smallmedium', level=2, upgrades=upgrades.startbase2, crates={}, flavorText=flavor.sdedov}),
+	sdedov = ZoneCommander:new			({zone='Sde Dov', side=2, size='smallmedium', level=20, upgrades=upgrades.startbase2, crates={}, flavorText=flavor.sdedov}),
 	bengurion = ZoneCommander:new		({zone='Ben-Gurion', side=2, size='small', level=20, upgrades=upgrades.airfieldBen, crates={}, flavorText=flavor.bengurion}),
 	palmahim = ZoneCommander:new		({zone='Palmahim', side=2, size='small', level=20, upgrades=upgrades.startbase, crates={}, flavorText=flavor.palmahim}),
 	telnof = ZoneCommander:new			({zone='Tel Nof', side=2, size='small', level=20, upgrades=upgrades.startbase, crates={}, flavorText=flavor.telnof}),
@@ -556,11 +576,11 @@ zones = {
 	elgora = ZoneCommander:new			({zone='El Gora', side=1, size='mediumbig', level=20, upgrades=upgrades.ElGoraUpgrade, crates={}, flavorText=flavor.elgora}),
 	elarish = ZoneCommander:new			({zone='El Arish', side=1, size='mediumbig', level=20, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.elarish}),
 	ovda = ZoneCommander:new			({zone='Ovda', side=1, size='big', level=20, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.ovda}),
-	birhasanah = ZoneCommander:new		({zone='Bir Hasanah', side=1, size='mediumbig', level=2, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.birhasanah}),
+	birhasanah = ZoneCommander:new		({zone='Bir Hasanah', side=1, size='mediumbig', level=20, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.birhasanah}),
 	melez = ZoneCommander:new			({zone='Melez', side=1, size='big', level=20, upgrades=upgrades.Melez, crates={}, flavorText=flavor.melez}),
 	baluza = ZoneCommander:new			({zone='Baluza', side=1, size='mediumbig', level=20, upgrades=upgrades.Baluza, crates={}, flavorText=flavor.baluza}),
 	assalihiyah = ZoneCommander:new		({zone='As Salihiyah', side=1, size='medium', level=20, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.assalihiyah}),
-	alismailiyah = ZoneCommander:new	({zone='Al Ismailiyah', side=1, size='mediumbig', level=10, upgrades=upgrades.airfield2Ismailiyah, crates={}, flavorText=flavor.alismailiyah}),
+	alismailiyah = ZoneCommander:new	({zone='Al Ismailiyah', side=1, size='mediumbig', level=20, upgrades=upgrades.airfield2Ismailiyah, crates={}, flavorText=flavor.alismailiyah}),
 	kibritairbase = ZoneCommander:new	({zone='Kibrit Air Base', side=1, size='mediumbig', level=20, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.kibritairbase}),
 	almansurah = ZoneCommander:new		({zone='Al Mansurah', side=1, size='bignosam', level=20, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.almansurah}),
 	azzaqaziq = ZoneCommander:new		({zone='AzZaqaziq', side=1, size='mediumbig', level=20, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.azzaqaziq}),
@@ -576,7 +596,7 @@ zones = {
 	borgelarab = ZoneCommander:new		({zone='Borg El Arab International Airport', side=1, level=20, upgrades=upgrades.farp3, crates={}, flavorText=flavor.borgelarab}),
 
 	farpalpha = ZoneCommander:new	({zone='FARP-Alpha', side=1, size='smallmedium', level=20, upgrades=upgrades.Alpha, crates={}, flavorText=flavor.farpalpha}),
-	farpbravo = ZoneCommander:new	({zone='FARP-Bravo', side=1, size='smallmedium', level=10, upgrades=upgrades.farp3, crates={}, flavorText=flavor.farpbravo}),
+	farpbravo = ZoneCommander:new	({zone='FARP-Bravo', side=1, size='smallmedium', level=20, upgrades=upgrades.farp3, crates={}, flavorText=flavor.farpbravo}),
 	farpcharlie = ZoneCommander:new	({zone='FARP-Charlie', side=1, size='small', level=20, upgrades=upgrades.Charlie, crates={}, flavorText=flavor.farpcharlie}),
 	
 	
@@ -604,7 +624,7 @@ zones = {
 	samfoxtrot = ZoneCommander:new	({zone='SAM-Foxtrot', side=1, size='sam', level=20, upgrades=upgrades.sam3foxtrot, crates={}, flavorText=flavor.samfoxtrot}),
 	samhotel = ZoneCommander:new	({zone='SAM-Hotel', side=1, size='sam', level=20, upgrades=upgrades.sam4hotel, crates={}, flavorText=flavor.samhotel}),
 	samgolf = ZoneCommander:new		({zone='SAM-Golf', side=1, size='sam', level=20, upgrades=upgrades.sam4golf, crates={}, flavorText=flavor.samgolf}),
-	samindia = ZoneCommander:new	({zone='SAM-India', side=1, size='sam', level=20, upgrades=upgrades.sam6india, crates={}, flavorText=flavor.samindia}),
+	samindia = ZoneCommander:new	({zone='SAM-India', side=1, size='sam', level=20, upgrades=upgrades.sam6india, crates={}, flavorText=flavor.samindia,customSuspendNm = 150}),
 	samjuliett = ZoneCommander:new	({zone='SAM-Juliett', side=1, size='sam', level=20, upgrades=upgrades.sam5juliett, crates={}, flavorText=flavor.samjuliett}),
 
 }
@@ -689,7 +709,7 @@ else
         'RED_MIG21Bis_Load1',
         'RED_MIG21Bis_Load2',
         'RED_MIG23MLD',
-        'RED_MIG25PD',
+        'RED_MIG31',
         'BLUE_HORNET',
         'BLUE_F15C',
         'BLUE_F16C',
@@ -1030,40 +1050,59 @@ zones.benisuef:addGroups({
     GroupCommander:new({name = 'Beni Suef-Attack-SAM-Juliett-Sead', mission = 'attack',template='SeadPlaneTemplate',MissionType='SEAD', targetzone = 'SAM-Juliett', Altitude = SeadAltitude()})
 })
 
-function SpawnFriendlyAssets()
-	if zones.redcarrier.wasBlue then
-		trigger.action.setMarkupTypeLine(zones.bluecarrier.index, 0)
-		local t0 = timer.getTime()
-		timer.scheduleFunction(function()
-			activateGroupIfNotActive('CVN-73')
-		end, {}, t0 + 5)
-		timer.scheduleFunction(function()
-			activateGroupIfNotActive('CVN-59')
-		end, {}, t0 + 10)
-		timer.scheduleFunction(function()
-			activateGroupIfNotActive('HMS Invincible')
-		end, {}, t0 + 15)
-		timer.scheduleFunction(function()
-			destroyGroupIfActive('CVN-72')
-		end, {}, t0 + 20)
-		timer.scheduleFunction(function()
-			destroyGroupIfActive('CVN-74')
-		end, {}, t0 + 25)
-		timer.scheduleFunction(function()
-			checkWeaponsList('CVN-73')
-			checkWeaponsList('CVN-59')
-			checkWeaponsList('HMS Invincible')
-		end, {}, t0 + 30)
-	end
+
+	local CarrierNavRefreshZones = {
+		["Red Carrier"] = true,
+		["ArtilleryFactory"] = true,
+		["Borj Oil production Site"] = true,
+
+	}
+
+function SpawnFriendlyAssets(changedZone)
+
+		if zones.redcarrier.side == 2 then zones.redcarrier:disableZone(true) end
+
+		if changedZone and not CarrierNavRefreshZones[changedZone] then return end
+
+		local redCarrierBlue = not bc:getZoneByName("Red Carrier").active
+
+	bc:setCarrierNavigationAutoRoute({
+		"CVN72_AREA_HOMEBASE",
+		"CVN72_AREA_RED_CARRIER",
+		"CVN72_AREA_EGYPT",
+		"CVN72_AREA_EGYPT_FINAL",
+	})
+
+	bc:setCarrierNavigationAreaAvailability({
+		CVN72_AREA_HOMEBASE = true,
+
+		CVN72_AREA_RED_CARRIER = {
+			available = redCarrierBlue,
+			via = { "CVN72_AREA_TRANSITION_1", "CVN72_AREA_TRANSITION_2" },
+			autoMove =  redCarrierBlue
+		},
+		CVN72_AREA_TRANSITION_1 = {
+			available = redCarrierBlue,
+			transit = true,
+		},
+		CVN72_AREA_TRANSITION_2 = {
+			available = redCarrierBlue,
+			transit = true,
+		},
+		CVN72_AREA_EGYPT = {
+			available = not bc:getZoneByName("ArtilleryFactory").active,
+			autoMove = not bc:getZoneByName("ArtilleryFactory").active,
+		},
+		CVN72_AREA_EGYPT_FINAL = {
+			available = not bc:getZoneByName("Borj Oil production Site").active,
+			autoMove = not bc:getZoneByName("Borj Oil production Site").active,
+		},
+	}, false)
 end
-timer.scheduleFunction(SpawnFriendlyAssets, {}, timer.getTime() + 8)
 
 
-if zones.redcarrier.wasBlue then
-zones.bluecarrier.isHeloSpawn = false
-else
-zones.bluecarrier.isHeloSpawn = true
-end
+
+
 zones.bengurion.isHeloSpawn = true
 
 zones.redcarrier.isHeloSpawn = true
@@ -1152,7 +1191,6 @@ for i,v in pairs(zones) do
 	bc:addZone(v)
 end
 
-bc:addConnection("Blue Carrier","Sde Dov")
 bc:addConnection("Sde Dov","Ben-Gurion")
 bc:addConnection("Ben-Gurion","Palmahim")
 bc:addConnection("Palmahim","Tel Nof")
@@ -1209,6 +1247,7 @@ bc:addConnection("Beni Suef","TankFactory")
 bc:addConnection("Beni Suef","AmmonitionDepo")
 
 bc:addHiddenConnection("Melez","Ramon Airbase")
+bc:addHiddenConnection("Melez","El Arish")
 
 --[[
 zones.tankfactory:addCriticalObject('TankFactory1')
@@ -1296,6 +1335,9 @@ zones.portsaid:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 end, 'disableportsaid')
 
+zones.redcarrier:registerTrigger('lost', function(event, sender)
+	sender:disableZone(true)
+end, 'disableredcarrier')
 
 zones.secrettechfacility:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
@@ -1334,6 +1376,12 @@ zones.missilefactory:registerTrigger('lost', function(event, sender)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_MISSILE_FACTORY_DESTROYED"),20)
 end, 'disablemissilefactory')
+
+zones.borjoil:registerTrigger('lost', function(event, sender)
+	sender:disableZone()
+	bc:addFunds(2,500)
+	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_BORJ_OIL_DESTROYED"),20)
+end, 'disablemborjoil')
 
 ------------------------------------------ SAM DISABLE --------------------------------------------
 
@@ -1390,45 +1438,28 @@ for i,v in ipairs(bc:getZones()) do
 	v:registerTrigger('lost', checkMissionComplete, 'missioncompleted')
 end
 
-SCHEDULER:New(nil,function()
+timer.scheduleFunction(function()
 	checkMissionComplete(nil, nil)
-    if Era == 'Coldwar' then
-    bc:roamGroupsToLocalSubZone({
-        "Red Armor Group6 #",
-        "Red Armor Group7 #",
-        "Red Armor Group8 #",
-		"Red SAM AAA 2 #",
-		"Red SAM AAA 3 #",
-		"Red SAM AAA 4 #",
-		"Red SAM SHORAD SA-19 #",
-		"Red SAM SHORAD SA-9 #",
-		"Red SAM SHORAD SA-15 #",
-		"Red SAM SHORAD SA-8 #",
-		"Red SAM SHORAD SA-13 #",
-		"Molniya #",
-		"Rezky #",
-		"Neustrashimy #",
-	}, 30, nil, { zoneMin = 210, zoneMax = 600, cycleMin = 600, cycleMax = 1200 })
-else
 	bc:roamGroupsToLocalSubZone({
-		"Ground Armour 2 #",
-		"Ground Armour 3 #",
-		"Ground Armour #",
+		'Red Armor Group',
+		'Red Armour Group',
+		"Red SAM AAA #",
 		"Red SAM AAA 2 #",
-		"Red SAM AAA 3 #",
-		"Red SAM AAA 4 #",
-		"Red SAM SHORAD SA-19 #",
-		"Red SAM SHORAD SA-9 #",
-		"Red SAM SHORAD SA-15 #",
-		"Red SAM SHORAD SA-8 #",
-		"Red SAM SHORAD SA-13 #",
+		"Red SAM AAA 5 #",
+		"Red SAM AAA 6 #",
+		"Red SAM AAA 7 #",
+		"Red SAM AAA 8 #",
+		"Red SAM AAA 9 #",
+		"Red SAM AAA 10 #",
+		"Red SAM SHORAD",
+		"Red Mech group",
+		"Red Special",
 		"Neustrashimy #",
 		"Molniya #",
 		"Rezky #",
 		"Grisha #"
-	}, 30, nil, { zoneMin = 210, zoneMax = 600, cycleMin = 600, cycleMax = 1200 })
-end
-end,{},5,0)
+	}, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+end, {}, timer.getTime() + 30)
 
 local SHOP_PRICE_DEFAULTS = {
   smoke         = 20,
@@ -1529,7 +1560,10 @@ bc:registerShopItem('supplies2', LTGet("SYRIA_SHOP_ITEM_RESUPPLY_ZONE"), ShopPri
     return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender, params)
-    if not AllowScriptedSupplies then
+    local carrierSupplyTarget = params and params.zone and isCarrierZoneName(params.zone.zone)
+    local useScriptedSupply = AllowScriptedSupplies or carrierSupplyTarget
+
+    if not useScriptedSupply then
         if NoAIBlueSupplies == true then
             return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
         end
@@ -1563,7 +1597,7 @@ bc.shopItems['supplies2'].groupZoneSelector = {
 			return handle
 		end
 
-		if not AllowScriptedSupplies then
+		if not AllowScriptedSupplies and not isCarrierZoneName(zoneObj.zone) then
 			local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
 			local canUseFarp = bestCommander and (bestCommander.type == 'surface' or bestCommander.unitCategory == Unit.Category.HELICOPTER)
 			local hasFriendlyDynamicFarp = false
@@ -2471,16 +2505,31 @@ bc:registerShopItem('intel',LTGet("SYRIA_SHOP_ITEM_INTEL_ENEMY"),ShopPrices.inte
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 1 and not params.zone.suspended then
-		intelActiveZones[params.zone.zone] = true
-		startZoneIntel(params.zone.zone)
-		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
+	local intelSide = params.coalition or 2
+	local enemySide = intelSide == 1 and 2 or 1
+	if params.zone and params.zone.side == enemySide and not params.zone.suspended then
+		startZoneIntel(params.zone.zone, nil, intelSide)
+		trigger.action.outTextForCoalition(intelSide, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
 	else
 		return LTGet("SYRIA_SHOP_MUST_PICK_ENEMY_ZONE")
 	end
 end)
 bc.shopItems['intel'].groupZoneSelector = {
 	targetzoneside = 1,
+	targetzonesideByCoalition = {
+		[1] = 2,
+		[2] = 1,
+	},
+	candidateBucketByCoalition = {
+		[1] = 'blue_unsuspended',
+		[2] = 'enemy_unsuspended',
+	},
+	paramsBuilder = function(bcRef, zoneObj, groupId, groupObj, itemInfo)
+		return {
+			zone = zoneObj,
+			coalition = groupObj:getCoalition(),
+		}
+	end,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
@@ -2720,6 +2769,10 @@ bc.shopItems['capture'].groupZoneSelector.candidateBucket = 'neutral_capture_tar
 bc.shopItems['capture'].groupZoneSelector.refreshTags = { 'neutral_capture_targets' }
 bc.shopItems['intel'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['intel'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['intel'].groupZoneSelector.refreshTagsByCoalition = {
+	[1] = { 'friendly_targets' },
+	[2] = { 'enemy_targets' },
+}
 bc.shopItems['zwh50'].groupZoneSelector.candidateBucket = 'warehouse_targets'
 bc.shopItems['zwh50'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 
@@ -2926,9 +2979,9 @@ end
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
 bc:addShopItem(2, 'zarm', -1, 2, ShopRankRequirements.zarm, ShopCats.ZoneUpgrades) -- add armour group to a zone
 bc:addShopItem(2, 'zsam', -1, 3, ShopRankRequirements.zsam, ShopCats.ZoneUpgrades) -- add Nasams to a zone
-bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
 bc:addShopItem(2, 'gslot', 1, 5, ShopRankRequirements.gslot, ShopCats.ZoneUpgrades) -- add another slot for upgrade
 if Era == 'Modern' then
+    bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
     bc:addShopItem(2, 'zpat', -1, 6, ShopRankRequirements.zpat, ShopCats.ZoneUpgrades) -- Patriot system.
 end
 
@@ -2963,7 +3016,6 @@ bc:addShopItem(2, 'dynamicarco', 1, 1, ShopRankRequirements.dynamicarco, ShopCat
 bc:addShopItem(2, 'dynamictexaco', 1, 2, ShopRankRequirements.dynamictexaco, ShopCats.OtherSupport) -- Airforce tanker
 bc:addShopItem(2, 'farphere', -1, 3, ShopRankRequirements.farphere, ShopCats.OtherSupport) -- deploy FARP
 supplyZones = {
-	'Blue Carrier',
 	
 	'Sde Dov',	
 	'Ben-Gurion', 
@@ -3014,7 +3066,7 @@ end
 bc:init()
 budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequency=20*60, decissionVariance=10*60, skipChance = 10})
 budgetAI:init()
-RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
 bc:startRewardPlayerContribution(15,RewardContribution)
 buildTemplateCache()
 bc:buildZoneDistanceCache()
@@ -3028,6 +3080,10 @@ Frontline.BuildFromZones(bc.indexedZones)
 Frontline.ReindexZoneCalcs()
 bc:buildCapSpawnBuckets()
 startWarehousePersistence()
+bc:enableCarrierNavigation()
+if not bc.carrierNavigation or not next(bc.carrierNavigation) then
+	bc:deployCarrierNavigationArea("CVN72_AREA_HOMEBASE")
+end
 local HuntNumber = SplashDamage and math.random(8,15) or math.random(6,15)
 bc:initHunter(HuntNumber)
 SCHEDULER:New(nil, function() bc:_buildHunterBaseList() end, {}, 1)
@@ -3040,9 +3096,20 @@ AWACS_CFG = {
     [2] = { alt=30000, speed=350, hdg=270, leg=15, sep=75 }   -- blue
 }
 
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_EGYPT", "SAM-India",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_EGYPT", "Birma Air Base",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_EGYPT", "Al Mansurah",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_EGYPT", "SAM-Hotel",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Port Said",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Baluza",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "ArtilleryFactory",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "SAM-Foxtrot",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "SAM-Echo",true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Al Mansurah",true)
+
 GlobalSettings.autoSuspendNmBlue = 80   		-- suspend blue zones deeper than this nm
 GlobalSettings.autoSuspendNmRed = 100   		-- suspend red zones deeper than this nm
-evc = EventCommander:new({ decissionFrequency=30*60, decissionVariance=30*60, skipChance = 10})
+evc = EventCommander:new({ decissionFrequency=30*60, decissionVariance=30*60, skipChance = 10, strikeFrequency=5*60})
 evc:init()
 mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
 
@@ -3065,6 +3132,8 @@ bc:startDynamicHybridFiller(DynamicHybridConfig)
 if RedReactiveConfig.enabled then
 	bc:startRedReactiveCounterpressure(RedReactiveConfig)
 end
+
+SpawnFriendlyAssets()
 ---------------------- Destroy SCUDS at Gebel El Basur Air Base (31) ------------------
 Group.getByName('Quwaysina-Scuds'):destroy()
 evc:addEvent({
@@ -3132,6 +3201,7 @@ mc:trackMission({
 	isActive = function()
 		if not ActiveMission['Quwaysinascuds'] then return false end
 		if Group.getByName('Quwaysina-Scuds') then return true end
+		bc:cancelGroupTargetMission('Quwaysinascuds')
 		ActiveMission['Quwaysinascuds'] = nil
 		return false
 	end
@@ -3204,6 +3274,7 @@ mc:trackMission({
 	isActive = function()
 		if not ActiveMission['Baluza-scuds'] then return false end
 		if Group.getByName('Baluza-Scuds') then return true end
+		bc:cancelGroupTargetMission('Baluza-scuds')
 		ActiveMission['Baluza-scuds'] = nil
 		return false
 	end
@@ -3263,6 +3334,7 @@ mc:trackMission({
 	isActive = function()
 		if not ActiveMission['bomb'] then return false end
 		if Group.getByName('evt-bomb') then return true end
+		bc:cancelGroupTargetMission('bomb')
 		ActiveMission['bomb'] = nil
 		return false
 	end
@@ -3344,6 +3416,7 @@ mc:trackMission({
 		if not ActiveMission['cas'] then return false end
 		if Group.getByName('evt-attack') then return true end
 		if Group.getByName('evt-attackcw') then return true end
+		bc:cancelGroupTargetMission('cas')
 		ActiveMission['cas'] = nil
 		return false
 	end
@@ -3439,6 +3512,7 @@ mc:trackMission({
 		if not ActiveMission['shiptercept'] then return false end
 		if Group.getByName('evt-shiptercept2') then return true end
 		if Group.getByName('evt-shiptercept3') then return true end
+		bc:cancelGroupTargetMission('shiptercept')
 		ActiveMission['shiptercept'] = nil
 		return false
     end
@@ -3482,6 +3556,7 @@ mc:trackMission({
 	isActive = function()
 		if not ActiveMission['artilleryattack'] then return false end
 		if Group.getByName('evt-Salihiyah-attack-melez-art') then return true end
+		bc:cancelGroupTargetMission('artilleryattack')
 		ActiveMission['artilleryattack'] = nil
 		return false
 	end
@@ -3834,7 +3909,7 @@ mc:trackMission({
 				bc:addTempStat(reconMissionWinner, "Recon mission", 1)
 				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
 			end
-			startZoneIntel(target, 10 * 60)
+			startZoneIntel(target, 10 * 60, 2)
 			reconMissionCooldownUntil = timer.getTime() + 900
 		end
 
@@ -4299,6 +4374,7 @@ Group.getByName('FactoryStrike'):destroy()
 Group.getByName('Red SAM SA-3 Fixed SAM'):destroy()
 evc:addEvent({
 	id = 'FactoryStrike',
+	StrikeMission = true,
 	action = function()
 		RespawnGroup('FactoryStrike')
 		RegisterGroupTarget('FactoryStrike',500,L10N:Get("SINAI_TARGET_FACTORY_STRIKE"),'FactoryStrike',true)
@@ -4329,6 +4405,7 @@ mc:trackMission({
 		if CustomFlags["FactoryStrike"] then return false end
 		if not ActiveMission['FactoryStrike'] then return false end
 		if Group.getByName('FactoryStrike') then return true end
+		bc:cancelGroupTargetMission('FactoryStrike')
 		ActiveMission['FactoryStrike'] = nil
 		return false
 	end
@@ -4337,6 +4414,7 @@ mc:trackMission({
 
 evc:addEvent({
 	id = 'factoryBulding',
+	StrikeMission = true,
 	action = function()
 		local tgt = sceneryList['factoryBulding'][1] or SCENERY:FindByZoneName('factoryBulding')
 		if not tgt then
@@ -4381,6 +4459,7 @@ mc:trackMission({
 
 evc:addEvent({
 	id = 'factoryBulding2',
+	StrikeMission = true,
 	action = function()
 		local tgt = sceneryList['factoryBulding2'][1] or SCENERY:FindByZoneName('factoryBulding2')
 		if not tgt then
@@ -4424,6 +4503,7 @@ mc:trackMission({
 
 evc:addEvent({
 	id = 'factoryBulding3',
+	StrikeMission = true,
 	action = function()
 		local tgt = sceneryList['factoryBulding3'][1] or SCENERY:FindByZoneName('factoryBulding3')
 		if not tgt then

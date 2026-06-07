@@ -36,7 +36,7 @@ end
 
 upgrades = {
 	redships = {
-		blue = {'blueShip Fixed'},
+		blue = {},
 		red = {'Molniya', 'Molniya', 'Rezky', 'Rezky', 'Neustrashimy', 'Moskva'}
 	},
 	blueships = {
@@ -479,6 +479,11 @@ RandomRedPool = {
 	"Red SAM AAA 3",
 	"Red SAM AAA 4",
 	"Red SAM AAA 5",
+	"Red SAM AAA 6",
+	"Red SAM AAA 7",
+	"Red SAM AAA 8",
+	"Red SAM AAA 9",
+	"Red SAM AAA 10",
 	"Red SAM AAA",
 	-- Ground
 	"Enemy Task forces",
@@ -487,11 +492,30 @@ RandomRedPool = {
 	"Red Armour Group",
 	"Red Armour Group 2",
 	"Red Armour Group 3",
+	-- Mech
+	"Red Mech group 1",
+	"Red Mech group 2",
+	"Red Mech group 3",
+	"Red Mech group 4",
+	"Red Mech group 5",
+	"Red Mech group 6",
+
+	-- Special
+	"Red Special 1",
+	"Red Special 2",
+	"Red Special 3",
+
 	-- Arty
 	"Red Arty",
+	"Red Arty 1",
 	"Red Arty 2",
 	"Red Arty 3",
 	"Red Arty 4",
+	"Red Arty 5",
+	"Red Arty 6",
+	"Red Arty 7",
+	"Red Arty 8",
+	"Red Arty 9",
 }
 
 RandomBluePool = {
@@ -530,19 +554,19 @@ ZoneSizeExclusions = {
 }
 
 RandomUpgradeTemplates = {
-	small = { sam = 0, shorad = {1,2}, aaa = 2, ground = 1, armor = {1,2}, arty = {0,1}, total = {5,7} },
-	smallmedium = { sam = 0, shorad = {1,3}, aaa = 2, ground = 1, armor = {1,2}, arty = {0,1}, total = {6,8} },
-	medium = { sam = {0,1}, shorad = {1,3}, aaa = {1,3}, ground = 1, armor = {1,2}, arty = 1, total = {7,9} },
-	mediumbig = { sam = {0,1}, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10} },
-	big = { sam = 1, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {8,10} },
-	bignosam = { sam = 0, shorad = {3,4}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10} },
-	extrabig = { sam = 2, shorad = {3,4}, aaa = 2, ground = 1, armor = {1,2}, arty = 1, total = {10,12} },
-	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {5,5} },
-	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {5,6} },
-	samspecial = { sam = 2, shorad = {1,3}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {6,7} },
+	small = { sam = 0, shorad = {0,2}, aaa = {0,2}, ground = {0,3}, armor = {0,2}, arty = {0,2}, total = {4,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	smallmedium = { sam = 0, shorad = {0,3}, aaa = {0,2}, ground = {0,3}, armor = {0,3}, arty = {0,2}, total = {4,7}, flakChance = 12, flakSecondChance = 0, flakMax = 1 },
+	medium = { sam = {0,1}, shorad = {0,3}, aaa = {0,3}, ground = {0,3}, armor = {0,3}, arty = {0,3}, total = {4,9}, flakChance = 15, flakSecondChance = 0, flakMax = 1 },
+	mediumbig = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 20, flakSecondChance = 5, flakMax = 2 },
+	big = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
+	bignosam = { sam = 0, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
+	extrabig = { sam = {1,2}, shorad = {0,5}, aaa = {0,4}, ground = {0,4}, armor = {0,4}, arty = {0,4}, total = {7,12}, flakChance = 40, flakSecondChance = 20, flakMax = 2 },
+	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {3,5}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {3,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	samspecial = { sam = 2, shorad = {1,3}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {6,7}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
 	redarmycamp = { sam = 0, shorad = 0, aaa = 0, ground = {3,5}, armor = 0, arty = {0,5}, total = {6,8} },
-	redarmycamp2 = { sam = 0, shorad = 0, aaa = {1,2}, ground = {3,5}, armor = 0, arty = {0,4}, total = {6,8} },
-	redarmycamp3 = { sam = {0,2}, shorad = {0,3}, aaa = {1,3}, ground = 0, armor = 0, arty = 0, total = {6,8} },
+	redarmycamp2 = { sam = 0, shorad = 0, aaa = {1,2}, ground = {3,5}, armor = 0, arty = {0,4}, total = {6,8}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
+	redarmycamp3 = { sam = {0,2}, shorad = {0,3}, aaa = {1,3}, ground = 0, armor = 0, arty = 0, total = {6,8}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
 
 }
 
@@ -674,6 +698,7 @@ if Era == "Coldwar" then
         'RED_Mirage_F1BQ_Load2',
         'BLUE_F4E_Load1',
         'BLUE_F4E_Load2',
+        'BLUE_Harrier',
     }
     SeadPlaneTemplate = {
         'RED_SU-24M_TWOSHIP',
@@ -726,7 +751,7 @@ else
         'RED_MIG21Bis_Load1',
         'RED_MIG21Bis_Load2',
         'RED_MIG23MLD',
-        'RED_MIG25PD',
+        'RED_MIG31',
         'BLUE_HORNET',
         'BLUE_F15C',
         'BLUE_F16C',
@@ -759,6 +784,7 @@ else
         'RED_MIG21_BIS_TWO_SHIP',
         'BLUE_F4E_Load1',
         'BLUE_F4E_Load2',
+        'BLUE_Harrier',
     }
     SeadPlaneTemplate = {
         'RED_JF17_ONESHIP_SEAD',
@@ -901,9 +927,6 @@ zones.tbilisi.airbaseName = 'Tbilisi-Lochini'
 zones.vaziani.airbaseName = 'Vaziani'
 zones.soganlug.airbaseName = 'Soganlug'
 
---
-zones.redcarrier.airbaseName = 'CVN-73'
-
 -- FARP Zones
 zones.lima.airbaseName = 'Lima'
 zones.kilo.airbaseName = 'Kilo'
@@ -923,12 +946,9 @@ zones.bluecarrier:addGroups({
 	GroupCommander:new({name='carrier-patrol-Kobuleti', mission='patrol',template='CapCarrierGroup',MissionType='CAP', targetzone='Kobuleti', Altitude = CapAltitude()}),
 })
 
-zones.redcarrier:addGroups({
-	GroupCommander:new({name='Red-carrier-capture-Blue-carrier-blue', mission='supply', targetzone='Blue Carrier', type='surface', urgent = function() return zones.bluecarrier.side == 0 end, ForceUrgent = true}),
-	
-})
+
 zones.kobuleti:addGroups({
-	GroupCommander:new({name='Support-SAM-Alpha', mission='supply', targetzone='SAM-Alpha',template='SupplyConvoy', type='surface'}),
+	GroupCommander:new({name='Support-SAM-Alpha', mission='supply', targetzone='SAM-Alpha',template='SupplyConvoy', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamAlphaWarehouse"])end}),
 	GroupCommander:new({name='Kobuleti-supply-Senaki', mission='supply',template='HeloSupplyTemplate', targetzone='Senaki'}),
 	GroupCommander:new({name='Kobuleti-attack-patrol-Cap', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Batumi', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Kobuleti-attack-Kutaisi-Cap', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='Kutaisi', Altitude = CapAltitude()}),
@@ -936,7 +956,6 @@ zones.kobuleti:addGroups({
 
 })
 zones.batumi:addGroups({
-	GroupCommander:new({name='Batumi-supply-carrier-blue', mission='supply', targetzone='Blue Carrier', type='surface', urgent = function() return zones.bluecarrier.side == 0 end, ForceUrgent = true}),
 	GroupCommander:new({name='Batumi-supply-Kobuleti', mission='supply',template='HeloSupplyTemplate', targetzone='Kobuleti'}),
 	GroupCommander:new({name='Batumi-supply-Kutaisi', mission='supply',template='PlaneSupplyTemplate', targetzone='Kutaisi'}),
 	GroupCommander:new({name='Batumi-supply-Sochi', mission='supply',template='PlaneSupplyTemplate', targetzone='Sochi'}),
@@ -968,7 +987,7 @@ zones.kutaisi:addGroups({
 
 })
 zones.sukhumi:addGroups({
-	GroupCommander:new({name='Support-SAM-Delta', mission='supply',template='SupplyConvoy', targetzone='SAM-Delta', type='surface'}),
+	GroupCommander:new({name='Support-SAM-Delta', mission='supply',template='SupplyConvoy', targetzone='SAM-Delta', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamDeltaWarehouse"])end}),
 	GroupCommander:new({name='sukhumi-attack-Sochi', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='Sochi', Bluecondition = function() return not zones.samdelta.active end, Altitude = CapAltitude()}),
 	GroupCommander:new({name='Sukhumi-supply-gudauta', mission='supply',template='HeloSupplyTemplate', targetzone='Gudauta'}),
 	GroupCommander:new({name='Sukhumi-supply-alpha', mission='supply',template='HeloSupplyTemplate', targetzone='Alpha'}),
@@ -981,13 +1000,12 @@ zones.gudauta:addGroups({
 	GroupCommander:new({name='Gudauta-supply-sochi', mission='supply',template='HeloSupplyTemplate', targetzone='Sochi', Redcondition = function() return end}),
 	GroupCommander:new({name='Gudauta-supply-sukhumi', mission='supply',template='HeloSupplyTemplate', targetzone='Sukhumi'}),
 	GroupCommander:new({name='Gudauta-attack-Sukhumi', mission='attack',template='AttackConvoy', targetzone='Sukhumi', type='surface'}),
-	GroupCommander:new({name='gudauta-capture-Red-carrier-blue', mission='supply', targetzone='Red Carrier', type='surface', urgent = function() return zones.redcarrier.side == 0 end, ForceUrgent = true, Bluecondition = function() return not zones.sochi.side == 2 end}),
 	GroupCommander:new({name='Gudauta-attack-Sukhumi-Arty', mission='attack', targetzone='Sukhumi', type='surface', SetActiveMission = true}),
 
 })
 
 zones.sochi:addGroups({
-	GroupCommander:new({name='Support-SAM-Echo', mission='supply',template='SupplyConvoy', targetzone='SAM-Echo', type='surface'}),
+	GroupCommander:new({name='Support-SAM-Echo', mission='supply',template='SupplyConvoy', targetzone='SAM-Echo', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamEchoWarehouse"])end}),
 	GroupCommander:new({name='sochi-attack-gudauta-Cas', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Gudauta'}),
 	GroupCommander:new({name='sochi-attack-sukhumi-Cas', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Sukhumi'}),
 	GroupCommander:new({name='Sochi-attack-kutaisi-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Kutaisi', Altitude = CapAltitude()}),
@@ -1000,7 +1018,6 @@ zones.sochi:addGroups({
 	GroupCommander:new({name='Sochi-supply-mykop-by-air', mission='supply',template='PlaneSupplyTemplate', targetzone='Maykop'}),
 	GroupCommander:new({name='Sochi-supply-Maykop', mission='supply',template='PlaneSupplyTemplate', targetzone='Maykop'}),
 	GroupCommander:new({name='Sochi-supply-Anapa', mission='supply',template='PlaneSupplyTemplate', targetzone='Anapa'}),
-	GroupCommander:new({name='Sochi-capture-Red-carrier-blue', mission='supply', targetzone='Red Carrier', type='surface', urgent = function() return zones.redcarrier.side == 0 end, ForceUrgent = true, Bluecondition = function() return true end}),
 
 })
 zones.bravo:addGroups({
@@ -1049,7 +1066,7 @@ zones.anapa:addGroups({
 	GroupCommander:new({name='Anapa-supply-Novorossiysk', mission='supply',template='HeloSupplyTemplate', targetzone='Novorossiysk'}),
 	GroupCommander:new({name='Anapa-supply-Gelendzhik', mission='supply',template='HeloSupplyTemplate', targetzone='Gelendzhik'}),
 	GroupCommander:new({name='Anapa-supply-Sochi-by-air', mission='supply', template='PlaneSupplyTemplate', targetzone='Sochi'}),
-	GroupCommander:new({name='Anapa-supply-SAM-Golf', mission='supply',template='SupplyConvoy', targetzone='SAM-Golf', type='surface'}),
+	GroupCommander:new({name='Anapa-supply-SAM-Golf', mission='supply',template='SupplyConvoy', targetzone='SAM-Golf', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamGolfWarehouse"])end}),
 	GroupCommander:new({name='Anapa-supply-Krymsk-plane', mission='supply',template='PlaneSupplyTemplate', targetzone='Krymsk'}),
 	GroupCommander:new({name='Anapa-supply-KrasnodarC-plane', mission='supply',template='PlaneSupplyTemplate', targetzone='Krasnodar-Center'}),
 	GroupCommander:new({name='Anapa-supply-KrasnodarP-plane', mission='supply',template='PlaneSupplyTemplate', targetzone='Krasnodar-Pashkovsky'}),
@@ -1086,7 +1103,7 @@ zones.krasnodarp:addGroups({
 	GroupCommander:new({name='krasnodarp-patrol-Krymsk-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Krymsk', Altitude = CapAltitude(), Redcondition = function() return not zones.krasnodarc.side == 1 end}),
 	GroupCommander:new({name='krasnodarp-attack-Krymsk-Cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Krymsk', Altitude = CasAltitude(), Redcondition = function() return not zones.krasnodarc.side == 1 end}),
 	GroupCommander:new({name='krasnodarp-supply-Maykop', mission='supply',template='HeloSupplyTemplate', targetzone='Maykop'}),
-	GroupCommander:new({name='krasnodarp-supply-SAM-Hotel', mission='supply',template='SupplyConvoy', targetzone='SAM-Hotel', type='surface'}),
+	GroupCommander:new({name='krasnodarp-supply-SAM-Hotel', mission='supply',template='SupplyConvoy', targetzone='SAM-Hotel', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamHotelWarehouse"])end}),
 	GroupCommander:new({name='Support-supply-Krasnodar-Center', mission='supply',template='SupplyConvoy', targetzone='Krasnodar-Center', type='surface'}),
 	GroupCommander:new({name='krasnodarp-supply-Foxtrot', mission='supply',template='HeloSupplyTemplate', targetzone='Foxtrot'})
 })
@@ -1142,7 +1159,7 @@ zones.mozdok:addGroups({
 	GroupCommander:new({name='mozdok-supply-nalchik', mission='supply', template='PlaneSupplyTemplate', targetzone='Nalchik'}),
 	GroupCommander:new({name='Mozdok-supply-Beslan', mission='supply', template='PlaneSupplyTemplate', targetzone='Beslan'}),
 	GroupCommander:new({name='Mozdok-supply-Mineralnye', mission='supply',template='PlaneSupplyTemplate', targetzone='Mineralnye'}),
-	GroupCommander:new({name='Mozdok-Support-SAM-Kilo', mission='supply', template='SupplyConvoy', targetzone='SAM-Kilo', type='surface'})
+	GroupCommander:new({name='Mozdok-Support-SAM-Kilo', mission='supply', template='SupplyConvoy', targetzone='SAM-Kilo', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamKiloWarehouse"])end})
 })
 
 zones.nalchik:addGroups({
@@ -1182,7 +1199,7 @@ zones.lima:addGroups({
 	GroupCommander:new({name='Lima-supply-Tbilisi', mission='supply', template='HeloSupplyTemplate', targetzone='Tbilisi'}),
 })
 zones.mineralnye:addGroups({
-	GroupCommander:new({name='Mineralnye-supply-SAM-Juliett', mission='supply',template='SupplyConvoy', targetzone='SAM-Juliett', type='surface'}),
+	GroupCommander:new({name='Mineralnye-supply-SAM-Juliett', mission='supply',template='SupplyConvoy', targetzone='SAM-Juliett', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamJuliettWarehouse"])end}),
 	GroupCommander:new({name='Mineralnye-patrol-Maykop-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Maykop', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Mineralnye-Attack-Maykop-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Maykop', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Mineralnye-Attack-Maykop-Sead', mission='attack', template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Maykop', Altitude = SeadAltitude()}),
@@ -1221,22 +1238,15 @@ zones.vaziani:addGroups({
 
 
 })
-function SpawnFriendlyAssets()
 
-	if zones.redcarrier.wasBlue then
-		timer.scheduleFunction(function()
-		activateGroupIfNotActive('CVN-73')
-		activateGroupIfNotActive('CVN-59')
-		end, {}, timer.getTime() + 5)
-		timer.scheduleFunction(function()
-		destroyGroupIfActive('CVN-72')
-		destroyGroupIfActive('CVN-74')
-		end, {}, timer.getTime() + 2)
-		timer.scheduleFunction(function()
-			checkWeaponsList('CVN-73')
-			checkWeaponsList('CVN-59')
-		end, {}, timer.getTime() + 7)
-	end
+	local CarrierNavRefreshZones = {
+		["Red Carrier"] = true,
+		["Sochi"] = true,
+		["Charlie"] = true,
+		["Novorossiysk"] = true,
+	}
+
+function SpawnFriendlyAssets(changedZone)
 
 	if zones.redcarrier.wasBlue then
 		trigger.action.setMarkupTypeLine(zones.bluecarrier.index, 0)
@@ -1327,12 +1337,99 @@ function SpawnFriendlyAssets()
 		bc:RefreshConnectionsLines("Maykop")
 		end, {}, timer.getTime() + math.random(5,30))
 	end
+
+	if zones.redcarrier.side == 0 then zones.redcarrier:disableZone(true) end
+
+	if zones.redcarrier.side == 2 then zones.redcarrier:disableZone(true) end
+
+	if not zones.redcarrier.active then
+		activateGroupIfNotActive('CVN-72')
+		activateGroupIfNotActive('CVN-74')
+		activateGroupIfNotActive('Tarawa')
+
+		if not bc.carrierNavigation or not next(bc.carrierNavigation) then
+			bc:deployCarrierNavigationArea("CVN72_AREA_SOCHI", true)
+		end
+	end
+
+	if zones.bluecarrier.active then zones.bluecarrier:disableZone(true) end
+
+	if changedZone and not CarrierNavRefreshZones[changedZone] then return end
+
+	local redCarrierBlue = not bc:getZoneByName("Red Carrier").active
+
+	if CustomFlags['StartNormalFalse'] == true then
+		bc:setCarrierNavigationAutoRoute({})
+
+		bc:setCarrierNavigationAreaAvailability({
+			CVN72_AREA_BATUMI = redCarrierBlue,
+
+			CVN72_AREA_TRANSITION_1 = {
+				available = redCarrierBlue,
+				transit = true,
+			},
+
+			CVN72_AREA_TRANSITION_2 = {
+				available = redCarrierBlue,
+				transit = true,
+			},
+
+			CVN72_AREA_SOCHI = {
+				available = redCarrierBlue,
+				autoMove = false,
+			},
+
+			CVN72_AREA_CHARLIE = {
+				available = bc:getZoneByName("Charlie").side == 2,
+				autoMove = false,
+			},
+
+			CVN72_AREA_NOVOROSSIYSK = {
+				available = bc:getZoneByName("Novorossiysk").side == 2,
+				autoMove = false,
+			},
+		}, false)
+	else
+		bc:setCarrierNavigationAutoRoute({
+			"CVN72_AREA_BATUMI",
+			"CVN72_AREA_SOCHI",
+			"CVN72_AREA_CHARLIE",
+			"CVN72_AREA_NOVOROSSIYSK",
+		})
+
+		bc:setCarrierNavigationAreaAvailability({
+			CVN72_AREA_BATUMI = true,
+			CVN72_AREA_SOCHI = {
+				available = redCarrierBlue,
+				via = { "CVN72_AREA_TRANSITION_1", "CVN72_AREA_TRANSITION_2" },
+				autoMove = redCarrierBlue,
+			},
+			CVN72_AREA_CHARLIE = {
+				available = bc:getZoneByName("Charlie").side == 2,
+				autoMove = bc:getZoneByName("Charlie").side == 2,
+			},
+			CVN72_AREA_NOVOROSSIYSK = {
+				available = bc:getZoneByName("Novorossiysk").side == 2,
+				autoMove = bc:getZoneByName("Novorossiysk").side == 2,
+			},
+			CVN72_AREA_TRANSITION_1 = {
+				available = redCarrierBlue,
+				transit = true,
+			},
+			CVN72_AREA_TRANSITION_2 = {
+				available = redCarrierBlue,
+				transit = true,
+			},
+		}, false)
+	end
 end
-timer.scheduleFunction(SpawnFriendlyAssets, {}, timer.getTime() + 8)
+
+
+
+
 
 function checkAndDisableFriendlyZones()
 end
-timer.scheduleFunction(checkAndDisableFriendlyZones, {}, timer.getTime() + 5)
 
 for i,v in pairs(zones) do
 	bc:addZone(v)
@@ -1736,31 +1833,27 @@ end
 
 timer.scheduleFunction(function()
 	checkMissionComplete(nil, nil)
-
-if Era == 'Coldwar' then
     bc:roamGroupsToLocalSubZone({
+		"Red SAM AAA #",
 		"Red SAM AAA 2 #",
-		"Red Armour Group #",
-		"Red SAM SHORAD SA-15 #",
-		"Red SAM SHORAD SA-19 #",
-		"Red SAM SHORAD SA-8 #",
-		'Red Armor Group8 #',
-		'Red Armor Group9 #',
-		'Red Armor Group6 #',
-		'Red Armor Group7 #',
-	}, 50, nil, { zoneMin = 210, zoneMax = 600, cycleMin = 600, cycleMax = 1200 })
-else
-	bc:roamGroupsToLocalSubZone({
-		"Red Armour Group 4 #",
-		"Red Armour Group 2 #",
-		"Red SAM AAA 2 #",
-		"Red Armour Group 3 #",
-		"Red Armour Group #",
-		"Red SAM SHORAD SA-15 #",
-		"Red SAM SHORAD SA-19 #",
-		"Red SAM SHORAD SA-8 #",
-	}, 50, nil, { zoneMin = 210, zoneMax = 600, cycleMin = 600, cycleMax = 1200 })
-end
+		"Red SAM AAA 5 #",
+		"Red SAM AAA 6 #",
+		"Red SAM AAA 7 #",
+		"Red SAM AAA 8 #",
+		"Red SAM AAA 9 #",
+		"Red SAM AAA 10 #",
+		"Red Mech group",
+		"Red Special",
+		"Red Armour Group",
+		"Red SAM SHORAD",
+		'Red Armor Group',
+	}, 50, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+    bc:roamGroupsToLocalSubZone({
+		'Moskva #',
+		'Rezky #',
+		'Molniya #',
+		'Neustrashimy #',
+	}, 50, nil, { groupMin = 60, groupMax = 180, zoneMin = 120, zoneMax = 360, cycleMin = 3600, cycleMax = 3600, carrierRangeNm = 80 })
 end, {}, timer.getTime() + 30)
 
 
@@ -2270,7 +2363,10 @@ bc:registerShopItem('supplies2', LTGet("SYRIA_SHOP_ITEM_RESUPPLY_ZONE"), ShopPri
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender, params)
-    if not AllowScriptedSupplies then
+    local carrierSupplyTarget = params and params.zone and isCarrierZoneName(params.zone.zone)
+    local useScriptedSupply = AllowScriptedSupplies or carrierSupplyTarget
+
+    if not useScriptedSupply then
         if NoAIBlueSupplies == true then
             return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
         end
@@ -2304,7 +2400,7 @@ bc.shopItems['supplies2'].groupZoneSelector = {
             return handle
         end
 
-        if not AllowScriptedSupplies then
+        if not AllowScriptedSupplies and not isCarrierZoneName(zoneObj.zone) then
             local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
             local canUseFarp = bestCommander and (bestCommander.type == 'surface' or bestCommander.unitCategory == Unit.Category.HELICOPTER)
             local hasFriendlyDynamicFarp = false
@@ -2830,16 +2926,31 @@ bc:registerShopItem('intel',LTGet("SYRIA_SHOP_ITEM_INTEL_ENEMY"),ShopPrices.inte
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 1 and not params.zone.suspended then
-		intelActiveZones[params.zone.zone] = true
-		startZoneIntel(params.zone.zone)
-		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
+	local intelSide = params.coalition or 2
+	local enemySide = intelSide == 1 and 2 or 1
+	if params.zone and params.zone.side == enemySide and not params.zone.suspended then
+		startZoneIntel(params.zone.zone, nil, intelSide)
+		trigger.action.outTextForCoalition(intelSide, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
 	else
 		return LTGet("SYRIA_SHOP_MUST_PICK_ENEMY_ZONE")
 	end
 end)
 bc.shopItems['intel'].groupZoneSelector = {
 	targetzoneside = 1,
+	targetzonesideByCoalition = {
+		[1] = 2,
+		[2] = 1,
+	},
+	candidateBucketByCoalition = {
+		[1] = 'blue_unsuspended',
+		[2] = 'enemy_unsuspended',
+	},
+	paramsBuilder = function(bcRef, zoneObj, groupId, groupObj, itemInfo)
+		return {
+			zone = zoneObj,
+			coalition = groupObj:getCoalition(),
+		}
+	end,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
@@ -3080,6 +3191,10 @@ bc.shopItems['capture'].groupZoneSelector.candidateBucket = 'neutral_capture_tar
 bc.shopItems['capture'].groupZoneSelector.refreshTags = { 'neutral_capture_targets' }
 bc.shopItems['intel'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['intel'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['intel'].groupZoneSelector.refreshTagsByCoalition = {
+	[1] = { 'friendly_targets' },
+	[2] = { 'enemy_targets' },
+}
 bc.shopItems['zwh50'].groupZoneSelector.candidateBucket = 'warehouse_targets'
 bc.shopItems['zwh50'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 
@@ -3292,9 +3407,9 @@ end
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
 bc:addShopItem(2, 'zarm', -1, 2, ShopRankRequirements.zarm, ShopCats.ZoneUpgrades) -- add armour group to a zone
 bc:addShopItem(2, 'zsam', -1, 3, ShopRankRequirements.zsam, ShopCats.ZoneUpgrades) -- add Nasams to a zone
-bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
 bc:addShopItem(2, 'gslot', 1, 5, ShopRankRequirements.gslot, ShopCats.ZoneUpgrades) -- add another slot for upgrade
 if Era == 'Modern' then
+    bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
     bc:addShopItem(2, 'zpat', -1, 6, ShopRankRequirements.zpat, ShopCats.ZoneUpgrades) -- Patriot system.
 end
 
@@ -3429,19 +3544,31 @@ if disableBlueCarrierAfterInit then
 	bc:addConnection("Soganlug", "FuelDepo")
 	bc:RefreshConnectionsLines("FuelDepo")
 	bc:RefreshConnectionsLines("Kutaisi")
-	destroyGroupIfActive('CVN-74')
-	destroyGroupIfActive('CVN-72')	
-	destroyGroupIfActive('Tarawa')
 end
 if DestroyOnce then
-	zones.bluecarrier:disableZone(true)
+	
 	zones.samlima:disableZone(true)
 	zones.sammike:disableZone(true)
 end
+
+if zones.bluecarrier.active then 
+	zones.bluecarrier:disableZone(true)
+end
+
+local carriersShouldBeActive = StartNormal or not zones.redcarrier.active
+
+if carriersShouldBeActive then
+	activateGroupIfNotActive('CVN-72')
+	activateGroupIfNotActive('CVN-74')
+	activateGroupIfNotActive('Tarawa')
+end
+
+
 budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequency=20*60, decissionVariance=10*60, skipChance = 10})
 budgetAI:init()
-RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
 bc:startRewardPlayerContribution(15,RewardContribution)
+HercCargoDropSupply.init(bc)
 buildTemplateCache()
 bc:buildZoneDistanceCache()
 buildSubZoneRoadCache()
@@ -3454,6 +3581,26 @@ Frontline.BuildFromZones(bc.indexedZones)
 Frontline.ReindexZoneCalcs()
 bc:buildCapSpawnBuckets()
 startWarehousePersistence()
+bc:enableCarrierNavigation()
+if carriersShouldBeActive and (not bc.carrierNavigation or not next(bc.carrierNavigation)) then
+	if CustomFlags['StartNormalFalse'] == true then
+		bc:deployCarrierNavigationArea("CVN72_AREA_SOCHI", true)
+	else
+		bc:deployCarrierNavigationArea("CVN72_AREA_BATUMI")
+	end
+end
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BATUMI", "Batumi", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Sochi", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Gudauta", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Bravo", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Delta", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Charlie", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_CHARLIE", "Charlie", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Delta", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_CHARLIE", "Gelendzhik", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_CHARLIE", "Novorossiysk", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_NOVOROSSIYSK", "Anapa", true)
+
 local HuntNumber = SplashDamage and math.random(8,15) or math.random(6,15)
 bc:initHunter(HuntNumber)
 SCHEDULER:New(nil, function() bc:_buildHunterBaseList() end, {}, 1)
@@ -3466,12 +3613,11 @@ AWACS_CFG = {
     [2] = { alt=30000, speed=350, hdg=270, leg=15, sep=70 }   -- blue
 }
 
-
 GlobalSettings.autoSuspendNmBlue = 80   		-- suspend blue zones deeper than this nm
 GlobalSettings.autoSuspendNmRed = 95   		-- suspend red zones deeper than this nm
 
 
-evc = EventCommander:new({ decissionFrequency=15*60, decissionVariance=10*60, skipChance = 15})
+evc = EventCommander:new({ decissionFrequency=15*60, decissionVariance=10*60, skipChance = 15, strikeFrequency=5*60})
 evc:init()
 mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
 
@@ -3493,6 +3639,9 @@ bc:startDynamicHybridFiller(DynamicHybridConfig)
 if RedReactiveConfig.enabled then
 	bc:startRedReactiveCounterpressure(RedReactiveConfig)
 end
+
+SpawnFriendlyAssets()
+
 ----------------------------------------- Destroy SCUDS ---------------------------------------
 local Scuds_COOLDOWN = 2700
 local lastScuds_COOLDOWN  = -Scuds_COOLDOWN
@@ -3556,6 +3705,7 @@ mc:trackMission({
 		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('scuds')
     end,
 	isActive = function()
 		if not ActiveMission['scuds'] then return false end
@@ -3618,6 +3768,7 @@ mc:trackMission({
         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('cargointercept')
     end,
     isActive = function()
 		if not ActiveMission['cargointercept'] then return false end
@@ -3673,6 +3824,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('shiptercept')
     end,
     isActive = function()
 		if not ActiveMission['shiptercept'] then return false end
@@ -3734,6 +3886,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('bomb')
     end,
 	isActive = function()
 		if not ActiveMission['bomb'] then return false end
@@ -3806,6 +3959,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('cas')
     end,
     isActive = function()
 		if not ActiveMission['cas'] then return false end
@@ -4375,7 +4529,7 @@ mc:trackMission({
 				bc:addTempStat(reconMissionWinner, "Recon mission", 1)
 				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
 			end
-			startZoneIntel(target, 10 * 60)
+			startZoneIntel(target, 10 * 60, 2)
 			reconMissionCooldownUntil = timer.getTime() + 900
 		end
 
@@ -4410,6 +4564,7 @@ mc:trackMission({
 		RegisterGroupTarget('Echo-attack-Krymsk-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Echo-attack-Krymsk-Arty')
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('Echo-attack-Krymsk-Arty')
     end,
     isActive = function()
         if not ActiveMission['Echo-attack-Krymsk-Arty'] then return false end
@@ -4431,6 +4586,7 @@ mc:trackMission({
 		RegisterGroupTarget('Krymsk-Attack-Anapa-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Krymsk-Attack-Anapa-Arty')
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('Krymsk-Attack-Anapa-Arty')
     end,
     isActive = function()
         if not ActiveMission['Krymsk-Attack-Anapa-Arty'] then return false end
@@ -4452,6 +4608,7 @@ mc:trackMission({
 		RegisterGroupTarget('Novorossiysk-attack-Gelendzhik-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Novorossiysk-attack-Gelendzhik-Arty')
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('Novorossiysk-attack-Gelendzhik-Arty')
     end,
     isActive = function()
         if not ActiveMission['Novorossiysk-attack-Gelendzhik-Arty'] then return false end
@@ -4473,6 +4630,7 @@ mc:trackMission({
 		RegisterGroupTarget('Gudauta-attack-Sukhumi-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Gudauta-attack-Sukhumi-Arty')
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('Gudauta-attack-Sukhumi-Arty')
     end,
     isActive = function()
         if not ActiveMission['Gudauta-attack-Sukhumi-Arty'] then return false end
@@ -4494,6 +4652,7 @@ mc:trackMission({
 		RegisterGroupTarget('Golf-attack-Maykop-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Golf-attack-Maykop-Arty')
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('Golf-attack-Maykop-Arty')
     end,
     isActive = function()
         if not ActiveMission['Golf-attack-Maykop-Arty'] then return false end
@@ -4536,6 +4695,7 @@ mc:trackMission({
 		RegisterGroupTarget('Nalchik-attack-Mineralnye-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Nalchik-attack-Mineralnye-Arty')
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('Nalchik-attack-Mineralnye-Arty')
     end,
     isActive = function()
         if not ActiveMission['Nalchik-attack-Mineralnye-Arty'] then return false end
@@ -4557,6 +4717,7 @@ mc:trackMission({
 		RegisterGroupTarget('Nalchik-attack-Mozdok-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Nalchik-attack-Mozdok-Arty')
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('Nalchik-attack-Mozdok-Arty')
     end,
     isActive = function()
         if not ActiveMission['Nalchik-attack-Mozdok-Arty'] then return false end
@@ -5172,6 +5333,13 @@ local sceneryList = {
   ["RightHandMan"] = {SCENERY:FindByZoneName("RightHandMan")},
   ["LefttHandMan"] = {SCENERY:FindByZoneName("LefttHandMan")},
   ["StrikeVaziani"] = {SCENERY:FindByZoneName("StrikeVaziani")},
+  ["SamDeltaWarehouse"] = {SCENERY:FindByZoneName("SamDeltaWarehouse")},
+  ["SamEchoWarehouse"] = {SCENERY:FindByZoneName("SamEchoWarehouse")},
+  ["SamGolfWarehouse"] = {SCENERY:FindByZoneName("SamGolfWarehouse")},
+  ["SamAlphaWarehouse"] = {SCENERY:FindByZoneName("SamAlphaWarehouse")},
+  ["SamHotelWarehouse"] = {SCENERY:FindByZoneName("SamHotelWarehouse")},
+  ["SamJuliettWarehouse"] = {SCENERY:FindByZoneName("SamJuliettWarehouse")},
+  ["SamKiloWarehouse"] = {SCENERY:FindByZoneName("SamKiloWarehouse")},
 
 }
 timer.scheduleFunction(function()
@@ -5196,6 +5364,7 @@ end, {}, timer.getTime() + 1)
 --------------------------- Strike High value target ---------------------------
 evc:addEvent({
 	id = 'StrikeTarget',
+	StrikeMission = true,
 	action = function()
 		local tgt = sceneryList['StrikeTarget'][1] or SCENERY:FindByZoneName('StrikeTarget')
 		if not tgt then
@@ -5243,6 +5412,7 @@ mc:trackMission({
 
 evc:addEvent({
 	id = 'StrikeTarget1',
+	StrikeMission = true,
 	action = function()
 		local tgt = sceneryList['StrikeTarget1'][1] or SCENERY:FindByZoneName('StrikeTarget1')
 		if not tgt then
@@ -5293,6 +5463,7 @@ Group.getByName('Red SAM SHORAD SA-15 StrikeTarget2 Fixed'):destroy()
 Group.getByName('Red SAM SHORAD SA-8 StrikeTarget2 Fixed'):destroy()
 evc:addEvent({
 	id='StrikeTarget2',
+	StrikeMission = true,
 	action = function()
 		local groupname = (Era == 'Coldwar') and 'Red SAM SHORAD SA-8 StrikeTarget2 Fixed' or 'Red SAM SHORAD SA-15 StrikeTarget2 Fixed'
 
@@ -5302,7 +5473,7 @@ evc:addEvent({
 	canExecute = function()
 		if CustomFlags["StrikeTarget2"] == true then return false end
 		if ActiveMission['StrikeTarget2'] then return false end
-		local zn = bc:getZoneByName('Senaki')
+		local zn = bc:getZoneByName('Sukhumi')
 		local zn2 = bc:getZoneByName('Tbilisi')
 		if zn.side ~= 2 and zn2.side ~= 2 then return false end
 		return true
@@ -5319,6 +5490,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('StrikeTarget2')
 	end,
 	isActive = function()
 		if CustomFlags["StrikeTarget2"] then return false end
@@ -5340,6 +5512,7 @@ Group.getByName('RightHandMan'):destroy()
 local SecondManEvent = nil
 evc:addEvent({
     id = 'RightHandMan',
+	StrikeMission = true,
     action = function()
         RespawnGroup('RightHandMan')
 		RegisterGroupTarget('RightHandMan',500,L10N:Get("CA_TARGET_HIGH_VALUE_GENERAL"),'RightHandMan',true)
@@ -5370,6 +5543,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('RightHandMan')
 	end,
 	isActive = function()
 		if CustomFlags["RightHandMan"] then return false end
@@ -5384,6 +5558,7 @@ mc:trackMission({
 Group.getByName('LefttHandMan'):destroy()
 evc:addEvent({
 	id = 'LefttHandMan',
+	StrikeMission = true,
 	action = function()
 		RespawnGroup('LefttHandMan')
 		RegisterGroupTarget('LefttHandMan',500,L10N:Get("CA_TARGET_HIGH_VALUE_GENERAL"),'LefttHandMan',true)
@@ -5410,6 +5585,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('LefttHandMan')
 	end,
 	isActive = function()
 		if CustomFlags["LefttHandMan"] then return false end
@@ -5424,6 +5600,7 @@ mc:trackMission({
 Group.getByName('StrikeVaziani'):destroy()
 evc:addEvent({
 	id = 'StrikeVaziani',
+	StrikeMission = true,
 	action = function()
 	RespawnGroup('StrikeVaziani')
 	RegisterGroupTarget('StrikeVaziani',1000,L10N:Get("CA_TARGET_VAZIANI_SUPPLY_WAREHOUSE"),'StrikeVaziani',true)
@@ -5432,7 +5609,7 @@ evc:addEvent({
 		if CustomFlags["StartNormalFalse"] then return false end
 		if CustomFlags["StrikeVaziani"] then return false end
 		if ActiveMission['StrikeVaziani'] then return false end
-		if bc:getZoneByName('Lima').side ~= 2 and bc:getZoneByName('Vaziani').side ~= 1 then return false end
+		if bc:getZoneByName('Lima').side ~= 2 or bc:getZoneByName('Vaziani').side ~= 1 then return false end
 		return true
 	end})
 
@@ -5450,6 +5627,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('StrikeVaziani')
 	end,
 	isActive = function()
 	if CustomFlags["StrikeVaziani"] then return false end
@@ -5461,6 +5639,370 @@ mc:trackMission({
 	end,
 })
 --------------------------- end of Strike Vaziani ---------------------------
+--------------------------------- SamDeltaWarehouse --------------------------------
+evc:addEvent({
+	id = 'SamDeltaWarehouse',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['SamDeltaWarehouse'][1] or SCENERY:FindByZoneName('SamDeltaWarehouse')
+		if not tgt then
+			trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", "SamDeltaWarehouse"),30)
+			return
+		end
+		RegisterScoreTarget('SamDeltaWarehouse',tgt,500,L10N:Get("MISSION_STRIKE_DEFAULT_TITLE"),true)
+	local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId,L10N:Get("CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE"),p,2,false,false)
+			MissionMarks['SamDeltaWarehouse'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+	if ActiveMission['SamDeltaWarehouse'] then return false end
+	if CustomFlags["SamDeltaWarehouse"] then return false end
+	if bc:getZoneByName('Sukhumi').side ~= 1 or bc:getZoneByName('Sukhumi').suspended then return false end
+	if bc:getZoneByName('SAM-Delta').side ~= 1 or bc:getZoneByName('SAM-Delta').suspended then return false end
+	if bc:getZoneByName('Alpha').side ~= 2 and bc:getZoneByName('Sochi').side ~= 2 then return false end
+	return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE"),
+	description = LTGet("CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC"),
+	messageStart = L10N:Get("CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START"),
+	messageEnd = L10N:Get("CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END"),
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "cancel.ogg")
+        end
+		bc:cancelScoreTargetMission('SamDeltaWarehouse')
+	end,
+	isActive = function()
+		if CustomFlags["SamDeltaWarehouse"] then return false end
+		if bc:getZoneByName('Sukhumi').side ~= 1 or bc:getZoneByName('SAM-Delta').side ~= 1 then return false end
+		if ActiveMission['SamDeltaWarehouse'] then return true end
+		return false
+	end
+})
+--------------------------------- end of SamDeltaWarehouse --------------------------------
+--------------------------------- SamEchoWarehouse --------------------------------
+evc:addEvent({
+	id = 'SamEchoWarehouse',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['SamEchoWarehouse'][1] or SCENERY:FindByZoneName('SamEchoWarehouse')
+		if not tgt then
+			trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", "SamEchoWarehouse"),30)
+			return
+		end
+		RegisterScoreTarget('SamEchoWarehouse',tgt,500,L10N:Get("MISSION_STRIKE_DEFAULT_TITLE"),true)
+	local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId,L10N:Get("CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE"),p,2,false,false)
+			MissionMarks['SamEchoWarehouse'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+	if ActiveMission['SamEchoWarehouse'] then return false end
+	if CustomFlags["SamEchoWarehouse"] then return false end
+	if bc:getZoneByName('Sochi').side ~= 1 or bc:getZoneByName('Sochi').suspended then return false end
+	if bc:getZoneByName('SAM-Echo').side ~= 1 or bc:getZoneByName('SAM-Echo').suspended then return false end
+	if bc:getZoneByName('Sukhumi').side ~= 2 and bc:getZoneByName('Maykop').side ~= 2 and bc:getZoneByName('Gelendzhik').side ~= 2 then return false end
+	return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE"),
+	description = LTGet("CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC"),
+	messageStart = L10N:Get("CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START"),
+	messageEnd = L10N:Get("CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END"),
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "cancel.ogg")
+        end
+		bc:cancelScoreTargetMission('SamEchoWarehouse')
+	end,
+	isActive = function()
+		if CustomFlags["SamEchoWarehouse"] then return false end
+		if bc:getZoneByName('Sochi').side ~= 1 or bc:getZoneByName('SAM-Echo').side ~= 1 then return false end
+		if ActiveMission['SamEchoWarehouse'] then return true end
+		return false
+	end
+})
+--------------------------------- end of SamEchoWarehouse --------------------------------
+--------------------------------- SamGolfWarehouse --------------------------------
+evc:addEvent({
+	id = 'SamGolfWarehouse',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['SamGolfWarehouse'][1] or SCENERY:FindByZoneName('SamGolfWarehouse')
+		if not tgt then
+			trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", "SamGolfWarehouse"),30)
+			return
+		end
+		RegisterScoreTarget('SamGolfWarehouse',tgt,500,L10N:Get("MISSION_STRIKE_DEFAULT_TITLE"),true)
+	local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId,L10N:Get("CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE"),p,2,false,false)
+			MissionMarks['SamGolfWarehouse'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+	if ActiveMission['SamGolfWarehouse'] then return false end
+	if CustomFlags["SamGolfWarehouse"] then return false end
+	if bc:getZoneByName('Anapa').side ~= 1 or bc:getZoneByName('Anapa').suspended then return false end
+	if bc:getZoneByName('SAM-Golf').side ~= 1 or bc:getZoneByName('SAM-Golf').suspended then return false end
+	if bc:getZoneByName('Krasnodar-Center').side ~= 2 and bc:getZoneByName('Gelendzhik').side ~= 2 then return false end
+	return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE"),
+	description = LTGet("CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC"),
+	messageStart = L10N:Get("CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START"),
+	messageEnd = L10N:Get("CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END"),
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "cancel.ogg")
+        end
+		bc:cancelScoreTargetMission('SamGolfWarehouse')
+	end,
+	isActive = function()
+		if CustomFlags["SamGolfWarehouse"] then return false end
+		if bc:getZoneByName('Anapa').side ~= 1 or bc:getZoneByName('SAM-Golf').side ~= 1 then return false end
+		if ActiveMission['SamGolfWarehouse'] then return true end
+		return false
+	end
+})
+--------------------------------- end of SamGolfWarehouse --------------------------------
+--------------------------------- SamAlphaWarehouse --------------------------------
+evc:addEvent({
+	id = 'SamAlphaWarehouse',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['SamAlphaWarehouse'][1] or SCENERY:FindByZoneName('SamAlphaWarehouse')
+		if not tgt then
+			trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", "SamAlphaWarehouse"),30)
+			return
+		end
+		RegisterScoreTarget('SamAlphaWarehouse',tgt,500,L10N:Get("MISSION_STRIKE_DEFAULT_TITLE"),true)
+	local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId,L10N:Get("CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE"),p,2,false,false)
+			MissionMarks['SamAlphaWarehouse'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+	if ActiveMission['SamAlphaWarehouse'] then return false end
+	if CustomFlags["SamAlphaWarehouse"] then return false end
+	if bc:getZoneByName('Kobuleti').side ~= 1 or bc:getZoneByName('Kobuleti').suspended then return false end
+	if bc:getZoneByName('SAM-Alpha').side ~= 1 or bc:getZoneByName('SAM-Alpha').suspended then return false end
+	if bc:getZoneByName('Batumi').side ~= 2 and bc:getZoneByName('Kutaisi').side ~= 2 then return false end
+	return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE"),
+	description = LTGet("CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC"),
+	messageStart = L10N:Get("CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START"),
+	messageEnd = L10N:Get("CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END"),
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "cancel.ogg")
+        end
+		bc:cancelScoreTargetMission('SamAlphaWarehouse')
+	end,
+	isActive = function()
+		if CustomFlags["SamAlphaWarehouse"] then return false end
+		if bc:getZoneByName('Kobuleti').side ~= 1 or bc:getZoneByName('SAM-Alpha').side ~= 1 then return false end
+		if ActiveMission['SamAlphaWarehouse'] then return true end
+		return false
+	end
+})
+--------------------------------- end of SamAlphaWarehouse --------------------------------
+--------------------------------- SamHotelWarehouse --------------------------------
+evc:addEvent({
+	id = 'SamHotelWarehouse',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['SamHotelWarehouse'][1] or SCENERY:FindByZoneName('SamHotelWarehouse')
+		if not tgt then
+			trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", "SamHotelWarehouse"),30)
+			return
+		end
+		RegisterScoreTarget('SamHotelWarehouse',tgt,500,L10N:Get("MISSION_STRIKE_DEFAULT_TITLE"),true)
+	local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId,L10N:Get("CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE"),p,2,false,false)
+			MissionMarks['SamHotelWarehouse'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+	if ActiveMission['SamHotelWarehouse'] then return false end
+	if CustomFlags["SamHotelWarehouse"] then return false end
+	if bc:getZoneByName('Krasnodar-Pashkovsky').side ~= 1 or bc:getZoneByName('Krasnodar-Pashkovsky').suspended then return false end
+	if bc:getZoneByName('SAM-Hotel').side ~= 1 or bc:getZoneByName('SAM-Hotel').suspended then return false end
+	if bc:getZoneByName('Krymsk').side ~= 2 and bc:getZoneByName('Maykop').side ~= 2 then return false end
+	return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE"),
+	description = LTGet("CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC"),
+	messageStart = L10N:Get("CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START"),
+	messageEnd = L10N:Get("CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END"),
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "cancel.ogg")
+        end
+		bc:cancelScoreTargetMission('SamHotelWarehouse')
+	end,
+	isActive = function()
+		if CustomFlags["SamHotelWarehouse"] then return false end
+		if bc:getZoneByName('Krasnodar-Pashkovsky').side ~= 1 or bc:getZoneByName('SAM-Hotel').side ~= 1 then return false end
+		if ActiveMission['SamHotelWarehouse'] then return true end
+		return false
+	end
+})
+--------------------------------- end of SamHotelWarehouse --------------------------------
+--------------------------------- SamJuliettWarehouse --------------------------------
+evc:addEvent({
+	id = 'SamJuliettWarehouse',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['SamJuliettWarehouse'][1] or SCENERY:FindByZoneName('SamJuliettWarehouse')
+		if not tgt then
+			trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", "SamJuliettWarehouse"),30)
+			return
+		end
+		RegisterScoreTarget('SamJuliettWarehouse',tgt,500,L10N:Get("MISSION_STRIKE_DEFAULT_TITLE"),true)
+	local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId,L10N:Get("CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE"),p,2,false,false)
+			MissionMarks['SamJuliettWarehouse'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+	if ActiveMission['SamJuliettWarehouse'] then return false end
+	if CustomFlags["SamJuliettWarehouse"] then return false end
+	if bc:getZoneByName('Mineralnye').side ~= 1 or bc:getZoneByName('Mineralnye').suspended then return false end
+	if bc:getZoneByName('SAM-Juliett').side ~= 1 or bc:getZoneByName('SAM-Juliett').suspended then return false end
+	if bc:getZoneByName('Hotel').side ~= 2 and bc:getZoneByName('Nalchik').side ~= 2 and bc:getZoneByName('Mozdok').side ~= 2 then return false end
+	return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE"),
+	description = LTGet("CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC"),
+	messageStart = L10N:Get("CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START"),
+	messageEnd = L10N:Get("CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END"),
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "cancel.ogg")
+        end
+		bc:cancelScoreTargetMission('SamJuliettWarehouse')
+	end,
+	isActive = function()
+		if CustomFlags["SamJuliettWarehouse"] then return false end
+		if bc:getZoneByName('Mineralnye').side ~= 1 or bc:getZoneByName('SAM-Juliett').side ~= 1 then return false end
+		if ActiveMission['SamJuliettWarehouse'] then return true end
+		return false
+	end
+})
+--------------------------------- end of SamJuliettWarehouse --------------------------------
+--------------------------------- SamKiloWarehouse --------------------------------
+evc:addEvent({
+	id = 'SamKiloWarehouse',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['SamKiloWarehouse'][1] or SCENERY:FindByZoneName('SamKiloWarehouse')
+		if not tgt then
+			trigger.action.outText(L10N:Format("SYRIA_SETUP_OBJECT_MISSING", "SamKiloWarehouse"),30)
+			return
+		end
+		RegisterScoreTarget('SamKiloWarehouse',tgt,500,L10N:Get("MISSION_STRIKE_DEFAULT_TITLE"),true)
+	local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId,L10N:Get("CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE"),p,2,false,false)
+			MissionMarks['SamKiloWarehouse'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+	if ActiveMission['SamKiloWarehouse'] then return false end
+	if CustomFlags["SamKiloWarehouse"] then return false end
+	if bc:getZoneByName('Mozdok').side ~= 1 or bc:getZoneByName('Mozdok').suspended then return false end
+	if bc:getZoneByName('SAM-Kilo').side ~= 1 or bc:getZoneByName('SAM-Kilo').suspended then return false end
+	if bc:getZoneByName('Beslan').side ~= 2 and bc:getZoneByName('Mineralnye').side ~= 2 then return false end
+	return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE"),
+	description = LTGet("CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC"),
+	messageStart = L10N:Get("CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START"),
+	messageEnd = L10N:Get("CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END"),
+    startAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "ding.ogg")
+        end
+    end,
+    endAction = function()
+         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+            trigger.action.outSoundForCoalition(2, "cancel.ogg")
+        end
+		bc:cancelScoreTargetMission('SamKiloWarehouse')
+	end,
+	isActive = function()
+		if CustomFlags["SamKiloWarehouse"] then return false end
+		if bc:getZoneByName('Mozdok').side ~= 1 or bc:getZoneByName('SAM-Kilo').side ~= 1 then return false end
+		if ActiveMission['SamKiloWarehouse'] then return true end
+		return false
+	end
+})
+--------------------------------- end of SamKiloWarehouse --------------------------------
 
 timer.scheduleFunction(function(_, time)
 	if generateCaptureMission() then

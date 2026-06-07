@@ -430,6 +430,11 @@ RandomRedPool = {
 	"Red SAM AAA 3",
 	"Red SAM AAA 4",
 	"Red SAM AAA 5",
+	"Red SAM AAA 6",
+	"Red SAM AAA 7",
+	"Red SAM AAA 8",
+	"Red SAM AAA 9",
+	"Red SAM AAA 10",
 	"Red SAM AAA",
 	-- Ground
 	"Enemy Task forces",
@@ -438,10 +443,29 @@ RandomRedPool = {
 	"Red Armour Group",
 	"Red Armour Group 2",
 	"Red Armour Group 3",
+	-- Mech
+	"Red Mech group 1",
+	"Red Mech group 2",
+	"Red Mech group 3",
+	"Red Mech group 4",
+	"Red Mech group 5",
+	"Red Mech group 6",
+
+	-- Special
+	"Red Special 1",
+	"Red Special 2",
+	"Red Special 3",
+
 	-- Arty
 	"Red Arty",
 	"Red Arty 2",
 	"Red Arty 3",
+	"Red Arty 4",
+	"Red Arty 5",
+	"Red Arty 6",
+	"Red Arty 7",
+	"Red Arty 8",
+	"Red Arty 9",
 }
 
 RandomBluePool = {
@@ -476,16 +500,16 @@ ZoneSizeExclusions = {
 }
 
 RandomUpgradeTemplates = {
-	small = { sam = 0, shorad = {1,2}, aaa = 2, ground = 1, armor = {1,2}, arty = {0,1}, total = {5,7} },
-	smallmedium = { sam = 0, shorad = {1,3}, aaa = 2, ground = 1, armor = {1,2}, arty = {0,1}, total = {6,8} },
-	medium = { sam = {0,1}, shorad = {1,3}, aaa = {1,3}, ground = 1, armor = {1,2}, arty = 1, total = {7,9} },
-	mediumbig = { sam = {0,1}, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10} },
-	big = { sam = 1, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {8,10} },
-	bignosam = { sam = 0, shorad = {3,4}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10} },
-	extrabig = { sam = 2, shorad = {3,4}, aaa = 2, ground = 1, armor = {1,2}, arty = 1, total = {10,12} },
-	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {5,5} },
-	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {5,6} },
-	samspecial = { sam = 3, shorad = {1,4}, aaa = {1,3}, ground = 0, armor = 0, arty = 0, total = {5,9} },
+	small = { sam = 0, shorad = {0,2}, aaa = {0,2}, ground = {0,3}, armor = {0,2}, arty = {0,2}, total = {4,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	smallmedium = { sam = 0, shorad = {0,3}, aaa = {0,2}, ground = {0,3}, armor = {0,3}, arty = {0,2}, total = {4,7}, flakChance = 12, flakSecondChance = 0, flakMax = 1 },
+	medium = { sam = {0,1}, shorad = {0,3}, aaa = {0,3}, ground = {0,3}, armor = {0,3}, arty = {0,3}, total = {4,9}, flakChance = 15, flakSecondChance = 0, flakMax = 1 },
+	mediumbig = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 20, flakSecondChance = 5, flakMax = 2 },
+	big = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
+	bignosam = { sam = 0, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
+	extrabig = { sam = {1,2}, shorad = {0,5}, aaa = {0,4}, ground = {0,4}, armor = {0,4}, arty = {0,4}, total = {7,12}, flakChance = 40, flakSecondChance = 20, flakMax = 2 },
+	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {5,5}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {5,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	samspecial = { sam = 3, shorad = {1,4}, aaa = {1,3}, ground = 0, armor = 0, arty = 0, total = {5,9}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
 }
 
 RandomUpgradeTemplatesBlue = {
@@ -504,7 +528,7 @@ RandomGroundGroups = true
 RandomBlueGroups = true
 AllowScriptedSupplies = AllowScriptedSupplies ~= false
 
-bc = BattleCommander:new(filepath, 13, 60)
+bc = BattleCommander:new(filepath, 10, 60)
 if RankingSystem then
 bc.rankFile = (lfs and (lfs.writedir()..'Missions/Saves/Foothold_Ranks.lua')) or 'Foothold_Ranks.lua'
 env.info('Foothold - Rank file path: '..bc.rankFile)
@@ -650,7 +674,7 @@ else
         'RED_MIG21Bis_Load1',
         'RED_MIG21Bis_Load2',
         'RED_MIG23MLD',
-        'RED_MIG25PD',
+        'RED_MIG31',
         'BLUE_HORNET',
         'BLUE_F15C',
         'BLUE_F16C',
@@ -1259,30 +1283,21 @@ end
 
 SCHEDULER:New(nil,function()
 	checkMissionComplete(nil, nil)
-  if Era == 'Coldwar' then
 	bc:roamGroupsToLocalSubZone({
 		"Red SAM AAA #",
 		"Red SAM AAA 2 #",
-		"Red SAM SHORAD SA-15 #",
-		"Red SAM SHORAD SA-8 #",
-		"Red SAM SHORAD SA-19 #",
-		'Red Armor Group6',
-		'Red Armor Group8',
-	}, 30)
-  else
-	bc:roamGroupsToLocalSubZone({
-	"Red Armour Group 2 #",
-	"Red SAM AAA #",
-	"Red SAM AAA 2 #",
-	"Red SAM SHORAD SA-15 #",
-	"Red SAM SHORAD SA-8 #",
-	"Red SAM SHORAD SA-19 #",
-	"Red SAM SHORAD Tor M2 #",
-	"Red SAM SHORAD Pantsir S1 #",
-	"Red Armour Group #",
-  
-	}, 30)
-  end
+		"Red SAM AAA 5 #",
+		"Red SAM AAA 6 #",
+		"Red SAM AAA 7 #",
+		"Red SAM AAA 8 #",
+		"Red SAM AAA 9 #",
+		"Red SAM AAA 10 #",
+		"Red SAM SHORAD",
+		'Red Armor Group',
+		'Red Armour Group',
+		"Red Mech group",
+		"Red Special",
+	}, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
 end,{},30,0)
 
 -----------------------------------------------DYNAMIC SHOP ------------------------------------------
@@ -2040,7 +2055,10 @@ bc:registerShopItem('supplies2', LTGet("SYRIA_SHOP_ITEM_RESUPPLY_ZONE"), ShopPri
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender, params)
-    if not AllowScriptedSupplies then
+    local carrierSupplyTarget = params and params.zone and isCarrierZoneName(params.zone.zone)
+    local useScriptedSupply = AllowScriptedSupplies or carrierSupplyTarget
+
+    if not useScriptedSupply then
         if NoAIBlueSupplies == true then
             return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
         end
@@ -2074,7 +2092,7 @@ bc.shopItems['supplies2'].groupZoneSelector = {
 			return handle
 		end
 
-		if not AllowScriptedSupplies then
+		if not AllowScriptedSupplies and not isCarrierZoneName(zoneObj.zone) then
 			local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
 			local canUseFarp = bestCommander and (bestCommander.type == 'surface' or bestCommander.unitCategory == Unit.Category.HELICOPTER)
 			local hasFriendlyDynamicFarp = false
@@ -2330,16 +2348,31 @@ bc:registerShopItem('intel',LTGet("SYRIA_SHOP_ITEM_INTEL_ENEMY"),ShopPrices.inte
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
-	if params.zone and params.zone.side == 1 and not params.zone.suspended then
-		intelActiveZones[params.zone.zone] = true
-		startZoneIntel(params.zone.zone)
-		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
+	local intelSide = params.coalition or 2
+	local enemySide = intelSide == 1 and 2 or 1
+	if params.zone and params.zone.side == enemySide and not params.zone.suspended then
+		startZoneIntel(params.zone.zone, nil, intelSide)
+		trigger.action.outTextForCoalition(intelSide, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
 	else
 		return LTGet("SYRIA_SHOP_MUST_PICK_ENEMY_ZONE")
 	end
 end)
 bc.shopItems['intel'].groupZoneSelector = {
 	targetzoneside = 1,
+	targetzonesideByCoalition = {
+		[1] = 2,
+		[2] = 1,
+	},
+	candidateBucketByCoalition = {
+		[1] = 'blue_unsuspended',
+		[2] = 'enemy_unsuspended',
+	},
+	paramsBuilder = function(bcRef, zoneObj, groupId, groupObj, itemInfo)
+		return {
+			zone = zoneObj,
+			coalition = groupObj:getCoalition(),
+		}
+	end,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
@@ -2573,6 +2606,10 @@ bc.shopItems['capture'].groupZoneSelector.candidateBucket = 'neutral_capture_tar
 bc.shopItems['capture'].groupZoneSelector.refreshTags = { 'neutral_capture_targets' }
 bc.shopItems['intel'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['intel'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['intel'].groupZoneSelector.refreshTagsByCoalition = {
+	[1] = { 'friendly_targets' },
+	[2] = { 'enemy_targets' },
+}
 bc.shopItems['zwh50'].groupZoneSelector.candidateBucket = 'warehouse_targets'
 bc.shopItems['zwh50'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 
@@ -2775,9 +2812,9 @@ end
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
 bc:addShopItem(2, 'zarm', -1, 2, ShopRankRequirements.zarm, ShopCats.ZoneUpgrades) -- add armour group to a zone
 bc:addShopItem(2, 'zsam', -1, 3, ShopRankRequirements.zsam, ShopCats.ZoneUpgrades) -- add Nasams to a zone
-bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
 bc:addShopItem(2, 'gslot', 1, 5, ShopRankRequirements.gslot, ShopCats.ZoneUpgrades) -- add another slot for upgrade
 if Era == 'Modern' then
+    bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
     bc:addShopItem(2, 'zpat', -1, 6, ShopRankRequirements.zpat, ShopCats.ZoneUpgrades) -- Patriot system.
 end
 
@@ -2867,7 +2904,7 @@ end
 budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequency=20*60, decissionVariance=10*60, skipChance = 10})
 budgetAI:init()
 bc:init()
-RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
 bc:startRewardPlayerContribution(15,RewardContribution)
 buildTemplateCache()
 bc:buildZoneDistanceCache()
@@ -2895,7 +2932,7 @@ AWACS_CFG = {
 
 GlobalSettings.autoSuspendNmBlue = 80   		-- suspend blue zones deeper than this nm
 GlobalSettings.autoSuspendNmRed = 90   		-- suspend red zones deeper than this nm
-evc = EventCommander:new({ decissionFrequency=30*60, decissionVariance=30*60, skipChance = 15})
+evc = EventCommander:new({ decissionFrequency=30*60, decissionVariance=30*60, skipChance = 15, strikeFrequency=5*60})
 mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
 
 DynamicHybridConfig = DynamicHybridConfig or {
@@ -3112,6 +3149,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('cas')
     end,
 	isActive = function()
 		if not ActiveMission['cas'] then return false end
@@ -3196,6 +3234,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('bomb')
     end,
 	isActive = function()
 		if not ActiveMission['bomb'] then return false end
@@ -3280,6 +3319,7 @@ Group.getByName('KanaqinConvoy-1'):destroy()
 Group.getByName('KanaqinConvoy-2'):destroy()
 evc:addEvent({
 	id='FindHimInKanaqin',
+	StrikeMission = true,
 	action = function()
 		RespawnGroup('KanaqinConvoy')
 		RespawnGroup('KanaqinConvoy-1')
@@ -3308,11 +3348,13 @@ mc:trackMission({
 		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
 			trigger.action.outSoundForCoalition(2, "cancel.ogg")
 		end
+		bc:cancelGroupTargetMission('FindHimInKanaqin')
 	end,
 	missionFail = function()
 		if not IsGroupActive('KanaqinConvoy') and IsGroupActive('KanaqinConvoy-1') then
 			trigger.action.outTextForCoalition(2, L10N:Get("IRAQ_MISSION_CONVOY_DESTROYED_FAILED"), 10)
 			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+			bc:cancelGroupTargetMission('FindHimInKanaqin')
 			destroyGroupIfActive('KanaqinConvoy-2')
 			destroyGroupIfActive('KanaqinConvoy-1')
 			return true
@@ -3337,6 +3379,7 @@ mc:trackMission({
 Group.getByName('Red SAM SHORAD SA-8 StrikeTarget2'):destroy()
 evc:addEvent({
 	id='StrikeTarget2',
+	StrikeMission = true,
 	action = function()
 	local tgt = sceneryList['StrikeTarget2'][1] or SCENERY:FindByZoneName('StrikeTarget2')
 	if not tgt then
@@ -3388,6 +3431,7 @@ Group.getByName('Red SAM SHORAD SA-8 Fixed StrikeTarget3'):destroy()
 local Alqam = nil
 evc:addEvent({
 	id='StrikeTarget3',
+	StrikeMission = true,
 	action = function()
 		RespawnGroup('StrikeTarget3Group')
 		RegisterGroupTarget('StrikeTarget3Group',250,L10N:Get("SYRIA_MISSION_TARGET_STRIKE_MISSION"),'StrikeTarget3',true)
@@ -3412,6 +3456,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('StrikeTarget3')
 		RespawnGroup('Red SAM SA-6 Fixed StrikeTarget3')
 		RespawnGroup('Red SAM SHORAD SA-8 Fixed StrikeTarget3')
 	end,
@@ -3429,6 +3474,7 @@ mc:trackMission({
 
 evc:addEvent({
 	id = 'StrikeTarget1',
+	StrikeMission = true,
 	action = function()
 		local tgt = sceneryList['StrikeTarget1'][1] or SCENERY:FindByZoneName('StrikeTarget1')
 		if not tgt then
@@ -3479,6 +3525,7 @@ Group.getByName('GeneralKillConvoy'):destroy()
 Group.getByName('StrikeTargetInfantry'):destroy()
 evc:addEvent({
 	id='StrikeTarget',
+	StrikeMission = true,
 	action = function()
 		RespawnGroup('GeneralKillConvoy')
 		RegisterGroupTarget('StrikeTargetInfantry',500,L10N:Get("SYRIA_MISSION_TARGET_STRIKE_MISSION"),'StrikeTarget',true)
@@ -3506,11 +3553,13 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('StrikeTarget')
 	end,
 	missionFail = function()
 		if not IsGroupActive('GeneralKillConvoy') and IsGroupActive('StrikeTargetInfantry') then
 			trigger.action.outTextForCoalition(2, L10N:Get("IRAQ_MISSION_TARGET_LOCATION_UNKNOWN_FAILED"), 15)
 			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+			bc:cancelGroupTargetMission('StrikeTarget')
 			return true
 		end
 		return false
@@ -3531,6 +3580,7 @@ Group.getByName('RightHandMan'):destroy()
 Group.getByName('Red SAM SA-3 Fixed Righthand'):destroy()
 evc:addEvent({
 	id='RightHandMan',
+	StrikeMission = true,
 	action = function()
 		RespawnGroup('RightHandMan')
 		RegisterGroupTarget('RightHandMan',250,L10N:Get("IRAQ_TARGET_RIGHT_HAND_MAN"),'RightHandMan',true)
@@ -3555,6 +3605,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
+		bc:cancelGroupTargetMission('RightHandMan')
 		RespawnGroup('Red SAM SA-3 Fixed Righthand')
 	end,
 	isActive = function()
@@ -3685,6 +3736,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('Artillery2')
     end,
 	isActive = function()
 		if not ActiveMission['Artillery2'] then return false end
@@ -3741,6 +3793,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+		bc:cancelGroupTargetMission('helohunt')
     end,
     isActive = function()
 		if not ActiveMission['helohunt'] then return false end
@@ -4637,7 +4690,7 @@ mc:trackMission({
 				bc:addTempStat(reconMissionWinner, "Recon mission", 1)
 				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
 			end
-			startZoneIntel(target, 10 * 60)
+			startZoneIntel(target, 10 * 60, 2)
 			reconMissionCooldownUntil = timer.getTime() + 900
 		end
 
