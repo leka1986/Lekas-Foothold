@@ -203,6 +203,15 @@ menuEscortRequest = {}
 escortRequestMenus = {}
 escortMenus = {}
 
+local function RemoveEscortRequestMenuHandle(groupName)
+    local menuHandle = escortRequestMenus[groupName] or menuEscortRequest[groupName]
+    if menuHandle then
+        menuHandle:Remove()
+    end
+    escortRequestMenus[groupName] = nil
+    menuEscortRequest[groupName] = nil
+end
+
 function GatherStaticDetails()
     for airbaseName, staticNames in pairs(airbaseStatics) do
         for _, staticName in ipairs(staticNames) do
@@ -730,14 +739,111 @@ local function getAltimeter(translator)
     return T:Format("WELCOME_ALTIMETER", pressureInHg)
 end
 
-local _AIRBOSS = {}
-local WelcomeCarrierNames = {"CVN-73","CVN-72","CVN-59","CVN-74","CVN-75"}
+local WelcomeCarrierNames = {"CVN-73","CVN-72","CVN-59","CVN-74","CVN-75","Tarawa"}
+local CarrierLink4ACLSUnitIds = {}
 
-local function AirBoss(name)
-    if not _AIRBOSS[name] then
-        _AIRBOSS[name] = AIRBOSS:New(name)
+local function getCarrierUnitAndController(name)
+    local group = Group.getByName(name)
+    if not group or not group:isExist() or group:getSize() == 0 then return nil, nil end
+    local unit = Unit.getByName(name) or group:getUnit(1)
+    if not unit or not unit:isExist() then return nil, nil end
+    return unit, group:getController()
+end
+
+local function activateCarrierTACAN(name, channel, mode, morse, bearing)
+    local unit, controller = getCarrierUnitAndController(name)
+    if not unit or not controller then return end
+    local frequency = UTILS.TACANToFrequency(channel, mode)
+    if not frequency then return end
+    controller:setCommand({
+        id = "ActivateBeacon",
+        params = {
+            type = 4,
+            system = 3,
+            frequency = frequency,
+            unitId = unit:getID(),
+            channel = channel,
+            modeChannel = mode,
+            AA = false,
+            callsign = morse,
+            bearing = bearing == true,
+        },
+    })
+end
+
+local function activateCarrierICLS(name, channel, callsign)
+    local unit, controller = getCarrierUnitAndController(name)
+    if not unit or not controller then return end
+    controller:setCommand({
+        id = "ActivateICLS",
+        params = {
+            type = 131584,
+            channel = channel,
+            unitId = unit:getID(),
+            callsign = callsign,
+        },
+    })
+end
+
+local function activateCarrierLink4(name, frequency, callsign)
+    local unit, controller = getCarrierUnitAndController(name)
+    if not unit or not controller then return end
+    controller:setCommand({
+        id = "ActivateLink4",
+        params = {
+            frequency = frequency * 1000000,
+            unitId = unit:getID(),
+            name = callsign,
+        },
+    })
+end
+
+local function activateCarrierACLS(name, callsign)
+    local unit, controller = getCarrierUnitAndController(name)
+    if not unit or not controller then return end
+    controller:setCommand({
+        id = "ActivateACLS",
+        params = {
+            unitId = unit:getID(),
+            name = callsign or "ACL",
+        },
+    })
+end
+
+local function activateCarrierLink4AndACLSOnce(name, frequency, callsign)
+    if not frequency then return end
+    local unit = getCarrierUnitAndController(name)
+    if not unit then return end
+    local unitId = unit:getID()
+    if CarrierLink4ACLSUnitIds[name] == unitId then return end
+    activateCarrierLink4(name, frequency, callsign)
+    activateCarrierACLS(name, callsign)
+    CarrierLink4ACLSUnitIds[name] = unitId
+end
+
+local function getCarrierBRC(name)
+    local unit = Unit.getByName(name)
+    if not unit or not unit:isExist() then return nil end
+    local pos = unit:getPosition()
+    if not pos or not pos.x then return nil end
+    local heading = math.deg(math.atan2(pos.x.z, pos.x.x))
+    if heading < 0 then heading = heading + 360 end
+    local magvar = UTILS.GetMagneticDeclination() or 0
+    local brc = (heading - magvar) % 360
+    if brc < 0 then brc = brc + 360 end
+    return math.floor(brc + 0.5)
+end
+
+local function activateCarrierBeacons(name, tacanChannel, tacanMode, tacanMorse, iclsChannel, link4Frequency)
+    if IsGroupActive(name) then
+        activateCarrierTACAN(name, tacanChannel, tacanMode, tacanMorse, true)
+        if iclsChannel then
+            activateCarrierICLS(name, iclsChannel, tacanMorse)
+        end
+        if link4Frequency then
+            activateCarrierLink4AndACLSOnce(name, link4Frequency, tacanMorse)
+        end
     end
-    return _AIRBOSS[name]
 end
 
 local function getFirstActiveCarrierName()
@@ -749,41 +855,15 @@ local function getFirstActiveCarrierName()
 end
 
 function refreshBeacons()
-    if IsGroupActive("CVN-73") then
-        local ab = AirBoss("CVN-73")
-        if not ab then return end
-        ab.beacon:ActivateTACAN(73, "X", "GWN", true)
-        ab.beacon:ActivateICLS(13, "GWN")
-    end
-
-    if IsGroupActive("CVN-72") then
-        local ab = AirBoss("CVN-72")
-        if not ab then return end
-        ab.beacon:ActivateTACAN(72, "X", "ABE", true)
-        ab.beacon:ActivateICLS(12, "ABE")
-    end
-
-    if IsGroupActive("CVN-59") then
-        local ab = AirBoss("CVN-59")
-        if not ab then return end
-        ab.beacon:ActivateTACAN(59, "X", "FTS", true)
-        ab.beacon:ActivateICLS(9,  "FTS")
-    end
-    if IsGroupActive("CVN-74") then
-        local ab = AirBoss("CVN-74")
-        if not ab then return end
-        ab.beacon:ActivateTACAN(74, "X", "JCS", true)
-        ab.beacon:ActivateICLS(14, "JCS")
-    end
-    if IsGroupActive("CVN-75") then
-        local ab = AirBoss("CVN-75")
-        if not ab then return end
-        ab.beacon:ActivateTACAN(75, "X", "HST", true)
-        ab.beacon:ActivateICLS(15, "HST")
-    end
+    activateCarrierBeacons("CVN-73", 73, "X", "GWN", 13)
+    activateCarrierBeacons("CVN-72", 72, "X", "ABE", 12, 372)
+    activateCarrierBeacons("CVN-59", 59, "X", "FTS", 9)
+    activateCarrierBeacons("CVN-74", 74, "X", "JCS", 14, 374)
+    activateCarrierBeacons("CVN-75", 75, "X", "HST", 15)
+    activateCarrierBeacons("Tarawa", 1, "X", "TRW")
 end
 
-SCHEDULER:New(nil, refreshBeacons, {}, 30, 1200)
+SCHEDULER:New(nil, refreshBeacons, {}, 5, 3600)
 
 local function IsThereACarrier()
     return getFirstActiveCarrierName() ~= nil
@@ -792,11 +872,13 @@ end
 local function getBRC(cvnName, translator)
     local T = translator or L10N
     if cvnName and IsGroupActive(cvnName) then
-        return T:Format("WELCOME_BRC", AirBoss(cvnName):GetBRC())
+        local brc = getCarrierBRC(cvnName)
+        if brc then return T:Format("WELCOME_BRC", brc) end
     end
     local activeCarrierName = getFirstActiveCarrierName()
     if activeCarrierName then
-        return T:Format("WELCOME_BRC", AirBoss(activeCarrierName):GetBRC())
+        local brc = getCarrierBRC(activeCarrierName)
+        if brc then return T:Format("WELCOME_BRC", brc) end
     end
     return T:Get("WELCOME_BRC_UNAVAILABLE")
 end
@@ -807,6 +889,7 @@ function hullPrettyAndTCN(name)
     if name=="CVN-59" then return "Forrestal","59X" end
     if name=="CVN-74" then return "John C. Stennis","74X" end
     if name=="CVN-75" then return "Harry S. Truman","75X" end
+    if name=="Tarawa" then return "Tarawa","1X" end
 end
 
 local function getCarrierWind(cvnName, translator)
@@ -927,6 +1010,7 @@ local function sendATISInformation(client, group, zoneName)
     if not client then return end
     local T = getMooseUnitTranslator(client)
     if isCarrierZoneName(zoneName) then
+        if client:GetCoalition() ~= coalition.side.BLUE then return end
         local altimeter = getAltimeter(T)
         local lines = {}
 
@@ -990,7 +1074,8 @@ function getClosestFriendlyAirbaseInfo(client)
         return
     end
     local clientType      = client:GetTypeName()
-    local considerCarrier = (clientType == "FA-18C_hornet" or clientType == "F-14B")
+    local playerSide      = client:GetCoalition()
+    local considerCarrier = playerSide == coalition.side.BLUE and (clientType == "FA-18C_hornet" or clientType == "F-14B")
     local lines           = {}
 
     if considerCarrier then
@@ -1013,7 +1098,7 @@ function getClosestFriendlyAirbaseInfo(client)
     local closestNormalZoneName,closestNormalDistance,closestNormalBearing = nil,math.huge,nil
     for zoneName,details in pairs(atisZones) do
         local airbase = GetAirbaseByNameCached(details.airbaseName)
-        if airbase and airbase:GetCoalition() == coalition.side.BLUE then
+        if airbase and airbase:GetCoalition() == playerSide then
             local dist     = playerCoord:Get2DDistance(airbase:GetCoordinate())
             local trueBrg  = playerCoord:HeadingTo(airbase:GetCoordinate(),nil)
             local magDecl  = playerCoord:GetMagneticDeclination()
@@ -1051,6 +1136,7 @@ function SetupATISMenu(client)
     local group = client:GetGroup()
     if not group then return end
     local T = getMooseGroupTranslator(group)
+    local playerSide = client:GetCoalition()
 
     local groupID = group:GetName()
 
@@ -1063,7 +1149,7 @@ function SetupATISMenu(client)
 
     local atisMenu = MENU_GROUP:New(group, T:Get("WELCOME_MENU_ATIS_INFO"), mainMenu)
     MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_CLOSEST_FRIENDLY"), mainMenu, getClosestFriendlyAirbaseInfo, client)
-    local hasMother = IsThereACarrier()
+    local hasMother = playerSide == coalition.side.BLUE and IsThereACarrier()
     if hasMother then
     MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_ATIS_MOTHER"), atisMenu, sendATISInformation, client, group, "Carrier")
     end
@@ -1074,7 +1160,7 @@ function SetupATISMenu(client)
     for zoneName, details in pairs(atisZones) do
         if not isCarrierZoneName(zoneName) then
             local airbase = GetAirbaseByNameCached(details.airbaseName)
-            if airbase and airbase:GetCoalitionName() == 'Blue' then
+            if airbase and airbase:GetCoalition() == playerSide then
                 local wpSuffix = (type(WaypointList) == "table" and WaypointList[zoneName]) or ""
                 local wpNum = tonumber(tostring(wpSuffix):match("%d+"))
                 entries[#entries + 1] = {
@@ -1113,17 +1199,21 @@ function static:onBaseCapture(_event)
         local capturedBaseName = event.Place:GetName()  
         local coalitionSide = event.Place:GetCoalition()
 
-        if event.Place:GetCoalition() == coalition.side.BLUE then  
-                local zname = atisZoneByAirbaseName[capturedBaseName]
-                if zname then
-                local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCoalitions("blue"):FilterAlive():FilterOnce()
-                clientSet:ForEachClient(function(client)
-                    SetupATISMenu(client)  
-                    SCHEDULER:New(nil, function()
-                    local group=client:GetGroup()
-                    sendATISInformation(client,group,zname)
-                    end, {}, 10)
-                end)
+        if coalitionSide == coalition.side.BLUE or coalitionSide == coalition.side.RED then
+            local zname = atisZoneByAirbaseName[capturedBaseName]
+            if zname then
+                local ownerCoalitionName = coalitionSide == coalition.side.RED and "red" or "blue"
+                for _, coalitionName in ipairs({ "blue", "red" }) do
+                    local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCoalitions(coalitionName):FilterAlive():FilterOnce()
+                    clientSet:ForEachClient(function(client)
+                        SetupATISMenu(client)  
+                        if coalitionName ~= ownerCoalitionName then return end
+                        SCHEDULER:New(nil, function()
+                            local group=client:GetGroup()
+                            sendATISInformation(client,group,zname)
+                        end, {}, 10)
+                    end)
+                end
             end
         end  
     end
@@ -1167,7 +1257,7 @@ function static:processPlayerSpawn(player, zoneNameOverride)
 	local groupName = group:GetName()
 	local playerType = player:GetTypeName()
 
-	if EscortTakeoffFromGround == true and IsEscortEligibleType(playerType) then
+	if IsEscortEligibleType(playerType) then
 		EnsureEscortSpawnState(groupName, playerName)
 		if not escortGroups[groupName] and not escortRequestMenus[groupName] then
 			SCHEDULER:New(nil, function(unitName, expectedGroupName, fallbackPlayerName)
@@ -1419,9 +1509,7 @@ function AddEscortRequestMenu(group)
     end
     local T = getMooseGroupTranslator(group)
     local groupName = group:GetName()
-    if escortRequestMenus[groupName] then
-        escortRequestMenus[groupName]:Remove()
-    end
+    RemoveEscortRequestMenuHandle(groupName)
     escortRequestMenus[groupName] = MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_REQUEST_ESCORT"), nil, EscortClientGroup, group)
     menuEscortRequest[groupName] = escortRequestMenus[groupName]
 end
@@ -1430,9 +1518,7 @@ function EnableEscortRequestMenu(group)
         return
     end
     local groupName = group:GetName()
-    if escortRequestMenus[groupName] then
-        escortRequestMenus[groupName]:Remove()
-    end
+    RemoveEscortRequestMenuHandle(groupName)
 end
 function RequestEscort(group)
     EscortClientGroup(group)
@@ -1440,13 +1526,7 @@ function RequestEscort(group)
 end
 function RemoveRequestEscortMenu(group)
     local groupName = group:GetName()
-    if escortRequestMenus[groupName] then
-        escortRequestMenus[groupName]:Remove()
-        escortRequestMenus[groupName] = nil
-    end
-    if menuEscortRequest[groupName] then
-        menuEscortRequest[groupName] = nil
-    end
+    RemoveEscortRequestMenuHandle(groupName)
 end
 
 
@@ -1470,45 +1550,37 @@ function HandleEscortLandingForGroupName(groupName, orbitCenter)
 
     local escortGroup = escortGroups[groupName]
     if escortGroup then
-        if EscortTakeoffFromGround == true then
-            local clientGroup = GROUP:FindByName(groupName)
-            local currentMission = escortGroup:GetMissionCurrent()
-            if currentMission and currentMission:GetType() ~= AUFTRAG.Type.ESCORT then
-                return
+        local clientGroup = GROUP:FindByName(groupName)
+        local currentMission = escortGroup:GetMissionCurrent()
+        if currentMission and currentMission:GetType() ~= AUFTRAG.Type.ESCORT then
+            return
+        end
+        if orbitCenter then
+            local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(orbitCenter, 10000, 250)
+            orbitAuftrag.missionTask=ENUMS.MissionTask.CAP
+            orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
+            orbitAuftrag:SetEngageDetected(40, {"Air"})
+            orbitAuftrag:SetMissionAltitude(10000)  
+            orbitAuftrag:SetROE(2)
+            orbitAuftrag:SetROT(2)
+            escortGroup:AddMission(orbitAuftrag)
+            if currentMission then
+                currentMission:__Cancel(5)
             end
-            if orbitCenter then
-                local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(orbitCenter, 10000, 250)
-                orbitAuftrag.missionTask=ENUMS.MissionTask.CAP
-                orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
-                orbitAuftrag:SetEngageDetected(40, {"Air"})
-                orbitAuftrag:SetMissionAltitude(10000)  
-                orbitAuftrag:SetROE(2)
-                orbitAuftrag:SetROT(2)
-                escortGroup:AddMission(orbitAuftrag)
-                if currentMission then
-                    currentMission:__Cancel(5)
-                end
-                escortPendingJoin[groupName] = true
-                if clientGroup then
-                    AddEscortMenu(clientGroup)
-                    if clientGroup:IsAlive() then
-                        local T = getMooseGroupTranslator(clientGroup)
-                        MESSAGE:New(T:Get("WELCOME_ESCORT_ORBITING_OVERHEAD"), 20):ToGroup(clientGroup)
-                    end
+            escortPendingJoin[groupName] = true
+            if clientGroup then
+                AddEscortMenu(clientGroup)
+                if clientGroup:IsAlive() then
+                    local T = getMooseGroupTranslator(clientGroup)
+                    MESSAGE:New(T:Get("WELCOME_ESCORT_ORBITING_OVERHEAD"), 20):ToGroup(clientGroup)
                 end
             end
-        else
-            escortGroup:Destroy()
-            escortGroups[groupName] = nil
-            escortPendingJoin[groupName] = nil
         end
         return
     end
 
-    if EscortTakeoffFromGround ~= true and escortRequestMenus[groupName] then
-        escortRequestMenus[groupName]:Remove()
-        escortRequestMenus[groupName] = nil
-        menuEscortRequest[groupName] = nil
+    if EscortTakeoffFromGround ~= true and (escortRequestMenus[groupName] or menuEscortRequest[groupName]) then
+        RemoveEscortRequestMenuHandle(groupName)
     end
 end
 
@@ -1577,7 +1649,7 @@ function GetClosestEscortAirdromeZone(clientGroup)
     return closestZoneName, closestAirbase
 end
 
-function SpawnEscortInAirBehindClient(clientGroup, templateName, alias, onSpawn)
+function SpawnEscortInAirBehindClient(clientGroup, templateName, alias, onSpawn, spawnCenterCoord)
     if not clientGroup or not templateName or not alias then
         return nil
     end
@@ -1589,8 +1661,14 @@ function SpawnEscortInAirBehindClient(clientGroup, templateName, alias, onSpawn)
     local offsetX = math.cos(math.rad(clientHeading)) * distanceBehindMeters
     local offsetZ = math.sin(math.rad(clientHeading)) * distanceBehindMeters
 
-    local desiredAlt = IsPlayerGroupInAir(clientGroup) and (UTILS.MetersToFeet(clientPos.y) + 10000) or 27000
-    local spawnPos = { x = clientPos.x - offsetX, y = UTILS.FeetToMeters(desiredAlt), z = clientPos.z - offsetZ }
+    local playerInAir = IsPlayerGroupInAir(clientGroup)
+    local centerVec = nil
+    if not playerInAir and spawnCenterCoord and spawnCenterCoord.GetVec3 then
+        centerVec = spawnCenterCoord:GetVec3()
+    end
+    local desiredAlt = playerInAir and (UTILS.MetersToFeet(clientPos.y) + 10000) or 27000
+    local spawnPos = centerVec and { x = centerVec.x, y = UTILS.FeetToMeters(desiredAlt), z = centerVec.z }
+        or { x = clientPos.x - offsetX, y = UTILS.FeetToMeters(desiredAlt), z = clientPos.z - offsetZ }
     local coord = COORDINATE:NewFromVec3(spawnPos)
 
     local spawnHeading = tonumber(clientHeading) or 0
@@ -1681,7 +1759,7 @@ function EscortClientGroup(clientGroup)
             local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, { x = -100, y = 3048, z = 100 }, 40, { "Air" })
             escortGroup:AddMission(escortAuftrag)
         else
-            local orbitCenter = escortSpawnedFromGround and escortHomeCoord or clientGroup:GetPointVec2()
+            local orbitCenter = escortHomeCoord or clientGroup:GetPointVec2()
             if orbitCenter then
                 local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(orbitCenter, 10000, 350)
                 orbitAuftrag.missionTask=ENUMS.MissionTask.CAP
@@ -1766,7 +1844,7 @@ function EscortClientGroup(clientGroup)
     end
     if not spawned then
         escortSpawnedFromGround = false
-        spawned = SpawnEscortInAirBehindClient(clientGroup, templateName, alias, OnEscortSpawn)
+        spawned = SpawnEscortInAirBehindClient(clientGroup, templateName, alias, OnEscortSpawn, escortHomeCoord)
     end
 
     spawnedGroups[groupName].escortSpawnCount = spawnCount + 1
@@ -1993,6 +2071,87 @@ function EscortAbort(group)
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 10):ToGroup(group)
     end
 end
+
+function static:OnEventRefueling(EventData)
+    if not EventData.IniUnit then
+        return
+    end
+
+    if EventData.IniPlayerName then
+        local existing = refuelStartByUnitName[EventData.IniUnitName]
+        if existing and existing.playerName == EventData.IniPlayerName then
+            return
+        end
+
+        refuelStartByUnitName[EventData.IniUnitName] = {
+            playerName = EventData.IniPlayerName,
+            side = EventData.IniCoalition,
+            fuel = EventData.IniUnit:GetFuel(),
+            fuelMassMax = EventData.IniUnit:GetDesc().fuelMassMax,
+        }
+        return
+    end
+
+    local tankerPoint = EventData.IniUnit:GetVec3()
+    for _, playerUnit in pairs(coalition.getPlayers(EventData.IniCoalition) or {}) do
+        local unitCategory = Unit.getCategoryEx(playerUnit)
+        if unitCategory == Unit.Category.AIRPLANE or unitCategory == Unit.Category.HELICOPTER then
+            local playerName = playerUnit:getPlayerName()
+            if playerName then
+                local playerPoint = playerUnit:getPoint()
+                local dx = playerPoint.x - tankerPoint.x
+                local dz = playerPoint.z - tankerPoint.z
+                if (dx * dx + dz * dz) <= (300 * 300) then
+                    refuelStartByUnitName[playerUnit:getName()] = {
+                        playerName = playerName,
+                        side = playerUnit:getCoalition(),
+                        fuel = playerUnit:getFuel(),
+                        fuelMassMax = playerUnit:getDesc().fuelMassMax,
+                    }
+                end
+            end
+        end
+    end
+end
+
+function static:OnEventRefuelingStop(EventData)
+    if not EventData.IniUnit or not EventData.IniPlayerName then
+        return
+    end
+
+    local refuelStart = refuelStartByUnitName[EventData.IniUnitName]
+    if not refuelStart or refuelStart.playerName ~= EventData.IniPlayerName then
+        return
+    end
+
+    refuelStartByUnitName[EventData.IniUnitName] = nil
+
+    local gainedLbs = (EventData.IniUnit:GetFuel() - refuelStart.fuel) * refuelStart.fuelMassMax * 2.20462262185
+    if gainedLbs < RefuelRewardMinimumLbs then
+        return
+    end
+
+    local reward = math.floor(gainedLbs / 100) * RefuelReward
+    if reward <= 0 then
+        return
+    end
+
+    if not (bc.playerRewardsOn and bc.playerContributions[refuelStart.side][refuelStart.playerName] ~= nil) then
+        return
+    end
+
+    bc:addContribution(refuelStart.playerName, refuelStart.side, reward)
+
+    if not refuelStatAwardedByPlayer[refuelStart.playerName] then
+        local crew = bc:getMulticrewPlayersNow(refuelStart.playerName)
+        for i=1,#crew do
+            local n = crew[i]
+            bc:addTempStat(n, "Refueling", 1)
+            refuelStatAwardedByPlayer[n] = true
+        end
+    end
+end
+
 function static:OnEventTakeoff(EventData)
     if not EventData.IniUnit or not EventData.IniPlayerName then
         return
@@ -2033,7 +2192,7 @@ function static:OnEventTakeoff(EventData)
             MESSAGE:New(T:Get("WELCOME_ESCORT_HEADING_TO_POSITION"), 20):ToGroup(playerGroup)
         end
 
-        if EscortTakeoffFromGround ~= true and not escortGroup then
+        if EscortTakeoffFromGround ~= true and not escortGroup and not escortRequestMenus[PGName] then
             MESSAGE:New(T:Format("WELCOME_ESCORT_AVAILABLE_PLAYER", EventData.IniPlayerName), 10, ""):ToUnit(playerUnit)
             AddEscortRequestMenu(playerGroup)
         elseif EscortTakeoffFromGround == true and not escortGroup and not escortRequestMenus[PGName] then
@@ -2062,15 +2221,7 @@ function static:OnEventPlayerLeaveUnit(EventData)
             escortMenus[groupName] = nil
         end
 
-        if escortRequestMenus and escortRequestMenus[groupName] then
-            escortRequestMenus[groupName]:Remove()
-            escortRequestMenus[groupName] = nil
-        end
-
-        if menuEscortRequest and menuEscortRequest[groupName] then
-            menuEscortRequest[groupName]:Remove()
-            menuEscortRequest[groupName] = nil
-        end
+        RemoveEscortRequestMenuHandle(groupName)
 
         if spawnedGroups and spawnedGroups[groupName] then
             spawnedGroups[groupName] = nil
@@ -2081,6 +2232,18 @@ function static:OnEventPlayerLeaveUnit(EventData)
         if EventData.IniUnit and EventData.IniPlayerName then
             local playerName = EventData.IniPlayerName
             local playerUnit = EventData.IniUnit
+        if EventData.id == EVENTS.PlayerLeaveUnit then
+            local side = playerUnit:GetCoalition()
+            bc.lossPenaltyArmByPlayer[playerName] = nil
+            if bc.playerContributions and bc.playerContributions[side] then
+                bc.playerContributions[side][playerName] = 0
+            end
+            if bc.flightTimeTakeoffByPlayer then bc.flightTimeTakeoffByPlayer[playerName] = nil end
+            for _, g in pairs(MissionGroups) do g.killers[playerName] = nil end
+            bc:resetTempStats(playerName, true)
+            bc:clearRefuelRewardState(playerName, playerUnit:GetName())
+            if Hunt then bc.huntDone[playerName] = nil end
+        end
             playerGroup = playerUnit:GetGroup()
             local groupName = playerGroup and playerGroup:GetName()
             if (not groupName) and globalCallsignAssignments[playerName] then
@@ -2178,6 +2341,7 @@ function static:OnEventPlayerLeaveUnit(EventData)
                     if bc.groupNameByPlayer then
                         bc.groupNameByPlayer[playerName] = nil
                     end
+                    bc:clearRefuelRewardState(playerName)
                     globalCallsignAssignments[playerName]=nil
                 end
             end
@@ -2194,6 +2358,8 @@ static:HandleEvent(EVENTS.PlayerLeaveUnit, static.OnEventPlayerLeaveUnit)
 static:HandleEvent(EVENTS.PilotDead, static.OnEventPlayerLeaveUnit)
 static:HandleEvent(EVENTS.Ejection, static.OnEventPlayerLeaveUnit)
 static:HandleEvent(EVENTS.Takeoff, static.OnEventTakeoff)
+static:HandleEvent(EVENTS.Refueling, static.OnEventRefueling)
+static:HandleEvent(EVENTS.RefuelingStop, static.OnEventRefuelingStop)
 _SETTINGS:SetPlayerMenuOff()
 _SETTINGS:SetA2G_BR()
 _SETTINGS:SetA2A_BULLS()

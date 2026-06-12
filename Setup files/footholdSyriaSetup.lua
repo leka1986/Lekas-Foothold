@@ -1664,7 +1664,7 @@ zones.milbase.airbaseName = 'FOB Military Base'
 zones.india.airbaseName = 'FOB INDIA'
 zones.polis.airbaseName = 'FOB POLIS'
 zones.karavostasi.airbaseName = 'FOB KARAVOSTASI'
-zones.durayhim.airbaseName = 'FOB DURAYHIM'
+zones.durayhim.airbaseName = 'HS05'
 zones.hotel.airbaseName = 'FOB HOTEL'
 zones.thalah.airbaseName = "Tha'lah"
 zones.bengurion.airbaseName = 'Ben Gurion'
@@ -1693,7 +1693,51 @@ zones.akrotiri.airbaseName = 'Akrotiri'
 zones.carrier.airbaseName = 'CVN-72'
 --zones.redcarrier.airbaseName = 'CVN-73'
 
-
+local AirBaseToDisable = {
+	"HMed00",
+	"HMed26",
+	"HMed09",
+	"HMed28",
+	"HS04",
+	"Palmachim",
+	"HI01",
+	"HI02",
+	"HI08",
+	"HI09",
+	"HI11",
+	"HI12",
+	"HI13",
+	"HI15",
+	"HI26",
+	"HI22",
+	"HS15",
+	"HS02",
+	"HS03",
+	"HS05",
+	"HS06",
+	"HS07",
+	"HS17",
+	"HS18",
+	"HS20",
+	"Marj as Sultan South",
+	"Marj as Sultan North",
+	"Qabr as Sitt",
+	"Tel Nof",
+	"H_med_orig_01",
+	"H_med_orig_09",
+	"HT02",
+	"HStad01",
+	"HStad03",
+	"Adana Sakirpasa",
+	"Chukurova",
+}
+for i, v in ipairs(AirBaseToDisable) do
+	local ab = Airbase.getByName(v)
+	if ab then
+		if ab:autoCaptureIsOn() then ab:autoCapture(false) end
+		ab:setCoalition(0)
+	end
+end
 
 
 for i,v in pairs(zones) do
@@ -3947,6 +3991,7 @@ evc:addEvent({
 		timer.scheduleFunction(spawnIntercept, {'interceptor-2'}, timer.getTime() + timers[2])
 	end,
 	canExecute = function()
+		if DisableFriendlyEscortMeMission == true then return false end
 		if timer.getTime() - lastEscortCooldown < EscortCooldown then return false end
 		local gr = Group.getByName('escort-me')
 		if gr then return false end
@@ -6529,7 +6574,6 @@ end
 airbaseStatics = {
     ["FOB HOTEL"] = {"FarpHotelammo", "Farphotelfuel", "Farphoteltent1", "Farphoteltent2", "Farphoteltent3", "Farphoteltent4", "Farphotelcommand", "Farphotelwind"},
     ["FOB LIMA"] = {"Farplimaammo", "Farplimafuel", "Farplimatent1", "Farplimatent2", "Farplimatent3", "Farplimatent4", "Farplimatent5", "Farplimatent6", "Farplimatent7", "Farplimacommand", "Farplimawind"},
-    ["FOB DURAYHIM"] = {"Durayhimammo", "Durayhimfuel", "Durayhimtent1", "Durayhimtent2", "Durayhimtent3", "Durayhimtent4", "Durayhimcommand", "Durayhimwind"},
     ["FOB INDIA"] = {"Fobindiaammo", "Fobindiafuel", "Fobindiatent1", "Fobindiatent2", "Fobindiatent3", "Fobindiatent4", "Fobindiacommand", "Fobindiawind"},
     ["FOB MIKE"] = {"FobMikeAmmo", "FobMikeFuel", "FobMiketent1", "FobMiketent2", "FobMiketent3", "FobMiketent4", "FobMiketent5", "FobMiketent6", "FobMiketent7", 
 	"FobMiketent8", "FobMiketent9", "FobMikeTower1", "FobMikeTower2", "FobMikeTower3", "FobMikeTower4", "FobMikeHelo1", "FobMikeHelo2", "FobMikeHelo3", "FobMikeHelo4", 

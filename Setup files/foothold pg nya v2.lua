@@ -4304,6 +4304,7 @@ evc:addEvent({
 		timer.scheduleFunction(spawnIntercept, {'interceptor-2'}, timer.getTime() + timers[2])
 	end,
 	canExecute = function()
+		if DisableFriendlyEscortMeMission == true then return false end
 		if timer.getTime() - lastEscortCooldown < EscortCooldown then return false end
 		local gr = Group.getByName('escort-me')
 		if gr then return false end

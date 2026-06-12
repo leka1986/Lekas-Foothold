@@ -792,7 +792,7 @@ zones.chamanki:addGroups({
 zones.outpost:addGroups({
     GroupCommander:new({name='OutPost-attack-Chamanki-convoy', mission='attack',template='AttackConvoy', targetzone='Chamanki', type='surface'}),
     GroupCommander:new({name='OutPost-supply-Chamanki-convoy', mission='supply',template='SupplyConvoy', targetzone='Chamanki', type='surface'}),
-    GroupCommander:new({name='OutPost-supply-Duhok-City', mission='supply', targetzone='Duhok City'}) -- special case, non dynamic template
+    GroupCommander:new({name='OutPost-supply-DuhokCity', mission='supply',template='HeloSupplyTemplate', targetzone='Duhok City', NotCargo=true}) -- special case, non dynamic template
 })
 zones.erbilairport:addGroups({
     GroupCommander:new({name='Erbil-supply-Mosul', mission='supply',template='HeloSupplyTemplate', targetzone='Mosul City'}),
@@ -3276,6 +3276,7 @@ evc:addEvent({
 		timer.scheduleFunction(spawnIntercept, {'interceptor-2'}, timer.getTime() + timers[2])
 	end,
 	canExecute = function()
+		if DisableFriendlyEscortMeMission == true then return false end
 		if timer.getTime()-lastEscort_COOLDOWN<Escort_COOLDOWN then return false end
 		local gr = Group.getByName('escort-me')
 		if gr then return false end

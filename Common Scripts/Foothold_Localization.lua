@@ -39,6 +39,8 @@ FL.Messages.EN = {
 	COMMON_DISABLED                    = "Disabled",
 	LANGUAGE_MENU_SET                  = "Set language",
 	LANGUAGE_SET_RESLOT                = "Language set to %s. Please reslot to rebuild your menus.",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "Enemy supply ship has reached port.",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "Enemy cargo plane has landed.",
 
 	-- ============================================================
 	-- Welcome / ATIS / Escort
@@ -358,7 +360,112 @@ Reward 1000
 
 2000 Pounds required]],
 	CA_MISSION_STRIKE_VAZIANI_START    = "New strike mission: Strike Vaziani's supply warehouse\n\nStrike this building to cripple the supplis to the surrounding enemy zones",
-	CA_MISSION_STRIKE_VAZIANI_END      = "Strike mission ended: Strike Vaziani's supply warehouse\n\nsupply warehouse is now out of order",
+	CA_MISSION_STRIKE_VAZIANI_END      = "Strike mission ended: Strike Vaziani's supply warehouse",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "Strike Sukhumi supply warehouse for SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[Strike Sukhumi supply warehouse to cripple supplies to SAM-Delta.
+
+Coordinates:
+MGRS: 37 T FH 73652 48322
+Lat long: N 42°52'03" E 41°07'33"
+Lat long Decimal Minutes: N 42°52.065' E 41°07.553'
+
+Elevation 43 feet
+
+Reward 500
+
+2000 Pounds required]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "New strike mission: Strike Sukhumi supply warehouse for SAM-Delta\n\nStrike this building to cripple supplies to SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "Strike mission ended: Strike Sukhumi supply warehouse for SAM-Delta",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "Strike Sochi supply warehouse for SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[Strike Sochi supply warehouse to cripple supplies to SAM-Echo.
+
+Coordinates:
+MGRS: 37 T EJ 76855 11472
+Lat long: N 43°27'07" E 39°56'59"
+Lat long Decimal Minutes: N 43°27.133' E 39°56.994'
+
+Elevation 98 feet
+
+Reward 500
+
+2000 Pounds required]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "New strike mission: Strike Sochi supply warehouse for SAM-Echo\n\nStrike this building to cripple supplies to SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "Strike mission ended: Strike Sochi supply warehouse for SAM-Echo",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "Strike Anapa supply warehouse for SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[Strike Anapa supply warehouse to cripple supplies to SAM-Golf.
+
+Coordinates:
+MGRS: 37 T CK 69326 85636
+Lat long: N 45°00'43" E 37°20'30"
+Lat long Decimal Minutes: N 45°00.728' E 37°20.500'
+
+Elevation 141 feet
+
+Reward 500
+
+2000 Pounds required]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "New strike mission: Strike Anapa supply warehouse for SAM-Golf\n\nStrike this building to cripple supplies to SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "Strike mission ended: Strike Anapa supply warehouse for SAM-Golf",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "Strike Kobuleti supply warehouse for SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[Strike Kobuleti supply warehouse to cripple supplies to SAM-Alpha.
+
+Coordinates:
+MGRS: 37 T GG 38429 46709
+Lat long: N 41°56'10" E 41°52'33"
+Lat long Decimal Minutes: N 41°56.180' E 41°52.558'
+
+Elevation 59 feet
+
+Reward 500
+
+2000 Pounds required]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "New strike mission: Strike Kobuleti supply warehouse for SAM-Alpha\n\nStrike this building to cripple supplies to SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "Strike mission ended: Strike Kobuleti supply warehouse for SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "Strike Krasnodar-Pashkovsky supply warehouse for SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[Strike Krasnodar-Pashkovsky supply warehouse to cripple supplies to SAM-Hotel.
+
+Coordinates:
+MGRS: 37 T DK 96195 93639
+Lat long: N 45°05'46" E 38°57'05"
+Lat long Decimal Minutes: N 45°05.772' E 38°57.098'
+
+Elevation 92 feet
+
+Reward 500
+
+2000 Pounds required]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "New strike mission: Strike Krasnodar-Pashkovsky supply warehouse for SAM-Hotel\n\nStrike this building to cripple supplies to SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "Strike mission ended: Strike Krasnodar-Pashkovsky supply warehouse for SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "Strike Mineralnye supply warehouse for SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[Strike Mineralnye supply warehouse to cripple supplies to SAM-Juliett.
+
+Coordinates:
+MGRS: 38 T LP 48963 98291
+Lat long: N 44°13'19" E 43°06'32"
+Lat long Decimal Minutes: N 44°13.331' E 43°06.545'
+
+Elevation 1009 feet
+
+Reward 500
+
+2000 Pounds required]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "New strike mission: Strike Mineralnye supply warehouse for SAM-Juliett\n\nStrike this building to cripple supplies to SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "Strike mission ended: Strike Mineralnye supply warehouse for SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "Strike Mozdok supply warehouse for SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[Strike Mozdok supply warehouse to cripple supplies to SAM-Kilo.
+
+Coordinates:
+MGRS: 38 T MP 68815 48119
+Lat long: N 43°47'07" E 44°36'44"
+Lat long Decimal Minutes: N 43°47.128' E 44°36.745'
+
+Elevation 507 feet
+
+Reward 500
+
+2000 Pounds required]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "New strike mission: Strike Mozdok supply warehouse for SAM-Kilo\n\nStrike this building to cripple supplies to SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "Strike mission ended: Strike Mozdok supply warehouse for SAM-Kilo",
 	CA_SHOP_ITEM_STATIC_STRUCTURE      = "Static structure Flight",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "building strike",
 	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "No friendly zone available for strike spawn.",
@@ -1072,6 +1179,8 @@ Reward: 1000]],
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "Toggle KM / NM",
 	SELF_JTAC_MENU_AUTO_SEARCH         = "Auto Search (Current: %s)",
 	SELF_JTAC_MENU_AUTO_NEXT           = "Auto-Next Target (Current: %s)",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "Hide Coordinates (Current: %s)",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "Ignore Structures (Current: %s)",
 	SELF_JTAC_MENU_CODE                = "Code",
 	SELF_JTAC_STATE_ON                 = "ON",
 	SELF_JTAC_STATE_OFF                = "OFF",
@@ -1079,11 +1188,14 @@ Reward: 1000]],
 	SELF_JTAC_DISTANCE_UNIT            = "Distance: %s",
 	SELF_JTAC_AUTO_SEARCH_STATE        = "Auto search %s",
 	SELF_JTAC_AUTO_NEXT_STATE          = "Auto-next %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "Hide coordinates %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "Ignore structures %s",
 	SELF_JTAC_FOCUSING_ON              = "Focusing on %s",
 	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "Target out of bounds, stoping laser",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "Unidentified",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "Structure",
 	SELF_JTAC_REPORT                   = "Lasing %s\nCode: %d\n\nBearing: %03d°  Dist: %s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "Lasing %s\n\nCode: %d\n\nBearing: %03d°, Dist: %s\n",
 	SELF_JTAC_MARKING_BLUE_SMOKE       = "Marking with blue Smoke",
 	SELF_JTAC_INVALID_OBJECTIVE        = "Invalid Objetive",
 	SELF_JTAC_NO_OBJECTIVE             = "No objetive",
@@ -1222,10 +1334,16 @@ Reward: 1000]],
 	ARTILLERY_ATTACK_GRID_1            = "%s: We are getting pounded by enemy artillery somewhere from GRID %s!",
 	ARTILLERY_ATTACK_GRID_2            = "%s: We are getting attacked by enemy artillery somewhere from GRID %s!",
 	ARTILLERY_ATTACK_GRID_3            = "Enemy artillery is firing somewhere from GRID %s at %s, request assistance!",
-	ARTILLERY_STILL_FIRING             = "Intel: Enemy artillery is still firing at %s. Approximate position %s, grid %s. Map marker placed.",
+	ARTILLERY_STILL_FIRING             = "Intel: Enemy artillery is still firing at %s. Approximate position %s, altitude %s, grid %s. Map marker placed.",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s: Enemy %s last known position, in GRID %s (%s), moving from %s toward %s. Map marker placed.",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s: Enemy %s contact update, last known position in GRID %s (%s), moving from %s toward %s. Map marker placed.",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s: Enemy %s reported near GRID %s (%s), last known moving from %s toward %s. Map marker placed.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "They are halfway there.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "The convoy is roughly halfway to the target.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "They have reached the midpoint of their route.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "They are almost there!",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "The convoy is closing on the target.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "They are nearing the objective. Intercept soon.",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "Last known enemy %s\nGrid %s\nTarget: %s\nPlaced: %s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "Enemy artillery firing\nGrid %s\nTarget: %s\nPlaced: %s",
 
@@ -1393,6 +1511,31 @@ Reward: 1000]],
 	DYNAMIC_DECOY_DESTROY              = "DECOY: Destroy",
 	DYNAMIC_BUILDING_STRIKE_DESTROY    = "Building strike: Destroy",
 	DYNAMIC_TANKERS_CONTROL            = "Tankers Control",
+	DYNAMIC_CARRIER_NAVIGATION         = "Carrier Navigation",
+	DYNAMIC_CARRIER_INFO               = "Carrier Info",
+	DYNAMIC_CARRIER_GROUP              = "Carrier group",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "Sail to %s",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "Carrier navigation is available after Red Carrier is cleared.",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "Carrier area unavailable: %s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s is not active.",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s could not plot a water route to %s.",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Tarawa marker commands:\ntarawahelp - show this help\ntarawahere - sail to this marker and stop\ntarawahereandstop - sail to this marker and stop\ntarawahere1 - set racetrack point 1\ntarawahere2 - set racetrack point 2 and start racetrack\ntarawareturn - return to carrier area.",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "Tarawa marker movement is disabled.",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "Tarawa marker movement is only available to blue coalition.",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Tarawa route rejected: marker is not in deep water.",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Tarawa route rejected: path is not deep enough or direct enough.",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Tarawa route rejected: marker must be in friendly territory.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Tarawa racetrack point 1 saved. Place tarawahere2 to complete the route.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "Place tarawahere1 before tarawahere2.",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa is sailing to the marker.",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Tarawa racetrack route set.",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa reached the marker and stopped.",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa is returning to its carrier area.",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa could not plot a return route.",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s is sailing to %s.",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "Carrier group is now able to sail to a new location.",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s will turn in 5 minutes.",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s will turn in 1 minute.",
 	DYNAMIC_TANKER_INFO                = "Tanker Info",
 	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco (Drogue): Move to Zone",
 	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco (Drogue): Move by Position",
@@ -1417,6 +1560,7 @@ Reward: 1000]],
 	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "CAP is set to (Engage If Engaged)",
 	DYNAMIC_CAP_ENGAGE_ALL             = "CAP set to Engage All",
 	DYNAMIC_TANKER_BUSY                = "Players currently near the tanker. Try again later.",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "Players currently near the tanker. Try again %s.",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s is en route to %s.",
 	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s is repositioning to %s with a new racetrack, heading %d degrees, %d miles leg.",
 	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s is about to %s for %s and orbit.",
@@ -1650,6 +1794,8 @@ FL.Messages.DE = {
 	COMMON_DISABLED                    = "Deaktiviert",
 	LANGUAGE_MENU_SET                  = "Sprache einstellen",
 	LANGUAGE_SET_RESLOT                = "Sprache auf %s gesetzt. Bitte Slot neu betreten, um deine Menüs neu aufzubauen.",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "Feindliches Versorgungsschiff hat den Hafen erreicht.",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "Feindliches Frachtflugzeug ist gelandet.",
 
 	-- ============================================================
 	-- Welcome / ATIS / Escort
@@ -1969,7 +2115,112 @@ Belohnung 1000
 
 2000 Pfund erforderlich]],
 	CA_MISSION_STRIKE_VAZIANI_START    = "Neue Angriffsmission: Vazianis Versorgungslager angreifen\n\nGreife dieses Gebäude an, um die Versorgung der umliegenden feindlichen Zonen zu schwächen",
-	CA_MISSION_STRIKE_VAZIANI_END      = "Angriffsmission beendet: Vazianis Versorgungslager\n\nDas Versorgungslager ist jetzt außer Betrieb",
+	CA_MISSION_STRIKE_VAZIANI_END      = "Angriffsmission beendet: Vazianis Versorgungslager",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "Sukhumi-Versorgungslager für SAM-Delta angreifen",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[Greife das Sukhumi-Versorgungslager an, um die Versorgung von SAM-Delta zu schwächen.
+
+Koordinaten:
+MGRS: 37 T FH 73652 48322
+Lat long: N 42°52'03" E 41°07'33"
+Lat long Decimal Minutes: N 42°52.065' E 41°07.553'
+
+Höhe 43 Fuß
+
+Belohnung 500
+
+2000 Pfund erforderlich]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "Neue Angriffsmission: Sukhumi-Versorgungslager für SAM-Delta angreifen\n\nGreife dieses Gebäude an, um die Versorgung von SAM-Delta zu schwächen",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "Angriffsmission beendet: Sukhumi-Versorgungslager für SAM-Delta",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "Sochi-Versorgungslager für SAM-Echo angreifen",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[Greife das Sochi-Versorgungslager an, um die Versorgung von SAM-Echo zu schwächen.
+
+Koordinaten:
+MGRS: 37 T EJ 76855 11472
+Lat long: N 43°27'07" E 39°56'59"
+Lat long Decimal Minutes: N 43°27.133' E 39°56.994'
+
+Höhe 98 Fuß
+
+Belohnung 500
+
+2000 Pfund erforderlich]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "Neue Angriffsmission: Sochi-Versorgungslager für SAM-Echo angreifen\n\nGreife dieses Gebäude an, um die Versorgung von SAM-Echo zu schwächen",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "Angriffsmission beendet: Sochi-Versorgungslager für SAM-Echo",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "Anapa-Versorgungslager für SAM-Golf angreifen",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[Greife das Anapa-Versorgungslager an, um die Versorgung von SAM-Golf zu schwächen.
+
+Koordinaten:
+MGRS: 37 T CK 69326 85636
+Lat long: N 45°00'43" E 37°20'30"
+Lat long Decimal Minutes: N 45°00.728' E 37°20.500'
+
+Höhe 141 Fuß
+
+Belohnung 500
+
+2000 Pfund erforderlich]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "Neue Angriffsmission: Anapa-Versorgungslager für SAM-Golf angreifen\n\nGreife dieses Gebäude an, um die Versorgung von SAM-Golf zu schwächen",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "Angriffsmission beendet: Anapa-Versorgungslager für SAM-Golf",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "Kobuleti-Versorgungslager für SAM-Alpha angreifen",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[Greife das Kobuleti-Versorgungslager an, um die Versorgung von SAM-Alpha zu schwächen.
+
+Koordinaten:
+MGRS: 37 T GG 38429 46709
+Lat long: N 41°56'10" E 41°52'33"
+Lat long Decimal Minutes: N 41°56.180' E 41°52.558'
+
+Höhe 59 Fuß
+
+Belohnung 500
+
+2000 Pfund erforderlich]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "Neue Angriffsmission: Kobuleti-Versorgungslager für SAM-Alpha angreifen\n\nGreife dieses Gebäude an, um die Versorgung von SAM-Alpha zu schwächen",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "Angriffsmission beendet: Kobuleti-Versorgungslager für SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "Krasnodar-Pashkovsky-Versorgungslager für SAM-Hotel angreifen",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[Greife das Krasnodar-Pashkovsky-Versorgungslager an, um die Versorgung von SAM-Hotel zu schwächen.
+
+Koordinaten:
+MGRS: 37 T DK 96195 93639
+Lat long: N 45°05'46" E 38°57'05"
+Lat long Decimal Minutes: N 45°05.772' E 38°57.098'
+
+Höhe 92 Fuß
+
+Belohnung 500
+
+2000 Pfund erforderlich]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "Neue Angriffsmission: Krasnodar-Pashkovsky-Versorgungslager für SAM-Hotel angreifen\n\nGreife dieses Gebäude an, um die Versorgung von SAM-Hotel zu schwächen",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "Angriffsmission beendet: Krasnodar-Pashkovsky-Versorgungslager für SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "Mineralnye-Versorgungslager für SAM-Juliett angreifen",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[Greife das Mineralnye-Versorgungslager an, um die Versorgung von SAM-Juliett zu schwächen.
+
+Koordinaten:
+MGRS: 38 T LP 48963 98291
+Lat long: N 44°13'19" E 43°06'32"
+Lat long Decimal Minutes: N 44°13.331' E 43°06.545'
+
+Höhe 1009 Fuß
+
+Belohnung 500
+
+2000 Pfund erforderlich]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "Neue Angriffsmission: Mineralnye-Versorgungslager für SAM-Juliett angreifen\n\nGreife dieses Gebäude an, um die Versorgung von SAM-Juliett zu schwächen",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "Angriffsmission beendet: Mineralnye-Versorgungslager für SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "Mozdok-Versorgungslager für SAM-Kilo angreifen",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[Greife das Mozdok-Versorgungslager an, um die Versorgung von SAM-Kilo zu schwächen.
+
+Koordinaten:
+MGRS: 38 T MP 68815 48119
+Lat long: N 43°47'07" E 44°36'44"
+Lat long Decimal Minutes: N 43°47.128' E 44°36.745'
+
+Höhe 507 Fuß
+
+Belohnung 500
+
+2000 Pfund erforderlich]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "Neue Angriffsmission: Mozdok-Versorgungslager für SAM-Kilo angreifen\n\nGreife dieses Gebäude an, um die Versorgung von SAM-Kilo zu schwächen",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "Angriffsmission beendet: Mozdok-Versorgungslager für SAM-Kilo",
 	CA_SHOP_ITEM_STATIC_STRUCTURE      = "Gebäudeangriffsflug",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "Gebäudeangriff",
 	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "Keine freundliche Zone für den Angriffs-Spawn verfügbar.",
@@ -2548,10 +2799,16 @@ Belohnung: 1000]],
 	ARTILLERY_ATTACK_GRID_1            = "%s: Wir werden irgendwo aus GRID %s von feindlicher Artillerie beschossen!",
 	ARTILLERY_ATTACK_GRID_2            = "%s: Wir werden irgendwo aus GRID %s von feindlicher Artillerie angegriffen!",
 	ARTILLERY_ATTACK_GRID_3            = "Feindliche Artillerie feuert irgendwo aus GRID %s auf %s, Unterstützung angefordert!",
-	ARTILLERY_STILL_FIRING             = "Aufklärung: Feindliche Artillerie feuert weiter auf %s. Ungefähre Position %s, grid %s. Kartenmarkierung gesetzt.",
+	ARTILLERY_STILL_FIRING             = "Aufklärung: Feindliche Artillerie feuert weiter auf %s. Ungefähre Position %s, Höhe %s, grid %s. Kartenmarkierung gesetzt.",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s: Feindkontakt %s, letzte bekannte Position in GRID %s (%s), bewegt sich von %s Richtung %s. Kartenmarkierung gesetzt.",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s: Kontaktupdate für feindlichen %s, letzte bekannte Position in GRID %s (%s), bewegt sich von %s Richtung %s. Kartenmarkierung gesetzt.",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s: Feindlicher %s nahe GRID %s (%s) gemeldet, zuletzt auf dem Weg von %s Richtung %s. Kartenmarkierung gesetzt.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "Sie sind auf halbem Weg.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "Der Konvoi ist ungefähr auf halbem Weg zum Ziel.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "Sie haben den Mittelpunkt ihrer Route erreicht.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "Sie sind fast da!",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "Der Konvoi nähert sich dem Ziel.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "Sie nähern sich dem Ziel. Bald abfangen.",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "Letzter bekannter Feindkontakt %s\nGrid %s\nZiel: %s\nGesetzt: %s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "Feindliche Artillerie feuert\nGrid %s\nZiel: %s\nGesetzt: %s",
 
@@ -2692,6 +2949,8 @@ Belohnung: 1000]],
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "KM / NM umschalten",
 	SELF_JTAC_MENU_AUTO_SEARCH         = "Automatische Suche (aktuell: %s)",
 	SELF_JTAC_MENU_AUTO_NEXT           = "Automatisch nächstes Ziel (aktuell: %s)",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "Koordinaten ausblenden (aktuell: %s)",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "Strukturen ignorieren (aktuell: %s)",
 	SELF_JTAC_MENU_CODE                = "Code",
 	SELF_JTAC_STATE_ON                 = "EIN",
 	SELF_JTAC_STATE_OFF                = "AUS",
@@ -2699,11 +2958,14 @@ Belohnung: 1000]],
 	SELF_JTAC_DISTANCE_UNIT            = "Entfernung: %s",
 	SELF_JTAC_AUTO_SEARCH_STATE        = "Automatische Suche %s",
 	SELF_JTAC_AUTO_NEXT_STATE          = "Automatisch nächstes Ziel %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "Koordinaten ausblenden %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "Strukturen ignorieren %s",
 	SELF_JTAC_FOCUSING_ON              = "Fokussiert auf %s",
 	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "Ziel außerhalb der Grenzen, Laser wird gestoppt",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "Unidentifiziert",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "Struktur",
 	SELF_JTAC_REPORT                   = "Laser markiert %s\nCode: %d\n\nPeilung: %03d°  Entf.: %s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "Laser markiert %s\n\nCode: %d\n\nPeilung: %03d°, Entf.: %s\n",
 	SELF_JTAC_MARKING_BLUE_SMOKE       = "Markiere mit blauem Rauch",
 	SELF_JTAC_INVALID_OBJECTIVE        = "Ungültiges Ziel",
 	SELF_JTAC_NO_OBJECTIVE             = "Kein Ziel",
@@ -3004,6 +3266,31 @@ Belohnung: 1000]],
 	DYNAMIC_DECOY_DESTROY              = "DECOY: Entfernen",
 	DYNAMIC_BUILDING_STRIKE_DESTROY    = "Gebäudeschlag: Entfernen",
 	DYNAMIC_TANKERS_CONTROL            = "Tanker-Steuerung",
+	DYNAMIC_CARRIER_NAVIGATION         = "Trägernavigation",
+	DYNAMIC_CARRIER_INFO               = "Träger-Info",
+	DYNAMIC_CARRIER_GROUP              = "Trägergruppe",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "Zu %s fahren",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "Trägernavigation ist verfügbar, nachdem Red Carrier gesichert wurde.",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "Trägerbereich nicht verfügbar: %s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s ist nicht aktiv.",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s konnte keine Wasserroute nach %s planen.",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Tarawa-Markerbefehle:\ntarawahelp - diese Hilfe anzeigen\ntarawahere - zu diesem Marker fahren und stoppen\ntarawahereandstop - zu diesem Marker fahren und stoppen\ntarawahere1 - Rennstreckenpunkt 1 setzen\ntarawahere2 - Rennstreckenpunkt 2 setzen und Rennstrecke starten\ntarawareturn - zum Trägerbereich zurückkehren.",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "Tarawa-Markerbewegung ist deaktiviert.",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "Tarawa-Markerbewegung ist nur für die blaue Koalition verfügbar.",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Tarawa-Route abgelehnt: Marker liegt nicht in tiefem Wasser.",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Tarawa-Route abgelehnt: Pfad ist nicht tief oder direkt genug.",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Tarawa-Route abgelehnt: Marker muss in befreundetem Gebiet liegen.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Tarawa-Rennstreckenpunkt 1 gespeichert. Setze tarawahere2, um die Route abzuschließen.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "Setze tarawahere1 vor tarawahere2.",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa fährt zum Marker.",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Tarawa-Rennstreckenroute gesetzt.",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa hat den Marker erreicht und gestoppt.",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa kehrt zu ihrem Trägerbereich zurück.",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa konnte keine Rückroute planen.",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s fährt nach %s.",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "Die Trägergruppe kann nun zu einem neuen Ort fahren.",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s wendet in 5 Minuten.",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s wendet in 1 Minute.",
 	DYNAMIC_TANKER_INFO                = "Tanker-Info",
 	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco (Drogue): Zur Zone verlegen",
 	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco (Drogue): Nach Position verlegen",
@@ -3028,6 +3315,7 @@ Belohnung: 1000]],
 	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "CAP greift an, wenn angegriffen",
 	DYNAMIC_CAP_ENGAGE_ALL             = "CAP ist auf freien Angriff gesetzt",
 	DYNAMIC_TANKER_BUSY                = "Spieler sind gerade in Tankernähe. Versuche es später erneut.",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "Spieler sind gerade in Tankernähe. Versuche es erneut %s.",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s ist auf dem Weg nach %s.",
 	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s verlegt nach %s auf einen neuen Racetrack, Kurs %d Grad, %d Meilen Leg.",
 	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s verlegt %s für %s und geht in den Orbit.",
@@ -3261,6 +3549,8 @@ FL.Messages.FR = {
 	COMMON_DISABLED                    = "Désactivé",
 	LANGUAGE_MENU_SET                  = "Définir la langue",
 	LANGUAGE_SET_RESLOT                = "Langue définie sur %s. Reprenez votre slot pour reconstruire vos menus.",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "Le navire de ravitaillement ennemi a atteint le port.",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "L'avion cargo ennemi a atterri.",
 
 	-- ============================================================
 	-- Welcome / ATIS / Escort
@@ -3580,7 +3870,112 @@ Récompense 1000
 
 2000 livres requis]],
 	CA_MISSION_STRIKE_VAZIANI_START    = "Nouvelle mission de frappe : entrepôt de ravitaillement de Vaziani\n\nFrappez ce bâtiment pour affaiblir le ravitaillement des zones ennemies environnantes",
-	CA_MISSION_STRIKE_VAZIANI_END      = "Mission de frappe terminée : entrepôt de ravitaillement de Vaziani\n\nL'entrepôt de ravitaillement est maintenant hors service",
+	CA_MISSION_STRIKE_VAZIANI_END      = "Mission de frappe terminée : entrepôt de ravitaillement de Vaziani",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Sukhumi pour SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Sukhumi pour affaiblir le ravitaillement de SAM-Delta.
+
+Coordonnées :
+MGRS: 37 T FH 73652 48322
+Lat long: N 42°52'03" E 41°07'33"
+Lat long Decimal Minutes: N 42°52.065' E 41°07.553'
+
+Altitude 43 pieds
+
+Récompense 500
+
+2000 livres requis]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Sukhumi pour SAM-Delta\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Sukhumi pour SAM-Delta",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Sochi pour SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Sochi pour affaiblir le ravitaillement de SAM-Echo.
+
+Coordonnées :
+MGRS: 37 T EJ 76855 11472
+Lat long: N 43°27'07" E 39°56'59"
+Lat long Decimal Minutes: N 43°27.133' E 39°56.994'
+
+Altitude 98 pieds
+
+Récompense 500
+
+2000 livres requis]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Sochi pour SAM-Echo\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Sochi pour SAM-Echo",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement d'Anapa pour SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement d'Anapa pour affaiblir le ravitaillement de SAM-Golf.
+
+Coordonnées :
+MGRS: 37 T CK 69326 85636
+Lat long: N 45°00'43" E 37°20'30"
+Lat long Decimal Minutes: N 45°00.728' E 37°20.500'
+
+Altitude 141 pieds
+
+Récompense 500
+
+2000 livres requis]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement d'Anapa pour SAM-Golf\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement d'Anapa pour SAM-Golf",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Kobuleti pour SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Kobuleti pour affaiblir le ravitaillement de SAM-Alpha.
+
+Coordonnées :
+MGRS: 37 T GG 38429 46709
+Lat long: N 41°56'10" E 41°52'33"
+Lat long Decimal Minutes: N 41°56.180' E 41°52.558'
+
+Altitude 59 pieds
+
+Récompense 500
+
+2000 livres requis]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Kobuleti pour SAM-Alpha\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Kobuleti pour SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Krasnodar-Pashkovsky pour SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Krasnodar-Pashkovsky pour affaiblir le ravitaillement de SAM-Hotel.
+
+Coordonnées :
+MGRS: 37 T DK 96195 93639
+Lat long: N 45°05'46" E 38°57'05"
+Lat long Decimal Minutes: N 45°05.772' E 38°57.098'
+
+Altitude 92 pieds
+
+Récompense 500
+
+2000 livres requis]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Krasnodar-Pashkovsky pour SAM-Hotel\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Krasnodar-Pashkovsky pour SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Mineralnye pour SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Mineralnye pour affaiblir le ravitaillement de SAM-Juliett.
+
+Coordonnées :
+MGRS: 38 T LP 48963 98291
+Lat long: N 44°13'19" E 43°06'32"
+Lat long Decimal Minutes: N 44°13.331' E 43°06.545'
+
+Altitude 1009 pieds
+
+Récompense 500
+
+2000 livres requis]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Mineralnye pour SAM-Juliett\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Mineralnye pour SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Mozdok pour SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Mozdok pour affaiblir le ravitaillement de SAM-Kilo.
+
+Coordonnées :
+MGRS: 38 T MP 68815 48119
+Lat long: N 43°47'07" E 44°36'44"
+Lat long Decimal Minutes: N 43°47.128' E 44°36.745'
+
+Altitude 507 pieds
+
+Récompense 500
+
+2000 livres requis]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Mozdok pour SAM-Kilo\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Mozdok pour SAM-Kilo",
 	CA_SHOP_ITEM_STATIC_STRUCTURE      = "Vol de frappe structure",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "frappe bâtiment",
 	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "Aucune zone alliée disponible pour le spawn de frappe.",
@@ -4159,10 +4554,16 @@ Récompense : 1000]],
 	ARTILLERY_ATTACK_GRID_1            = "%s : Nous sommes pilonnés par de l'artillerie ennemie quelque part depuis GRID %s !",
 	ARTILLERY_ATTACK_GRID_2            = "%s : Nous sommes attaqués par de l'artillerie ennemie quelque part depuis GRID %s !",
 	ARTILLERY_ATTACK_GRID_3            = "Artillerie ennemie en train de tirer quelque part depuis GRID %s sur %s, demande d'assistance !",
-	ARTILLERY_STILL_FIRING             = "Renseignement : l'artillerie ennemie tire toujours sur %s. Position approximative %s, grid %s. Marqueur placé sur la carte.",
+	ARTILLERY_STILL_FIRING             = "Renseignement : l'artillerie ennemie tire toujours sur %s. Position approximative %s, altitude %s, grid %s. Marqueur placé sur la carte.",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s : Dernière position connue de l'ennemi %s, dans GRID %s (%s), en mouvement depuis %s vers %s. Marqueur placé sur la carte.",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s : Mise à jour du contact ennemi %s, dernière position connue dans GRID %s (%s), en mouvement depuis %s vers %s. Marqueur placé sur la carte.",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s : Ennemi %s signalé près de GRID %s (%s), dernier mouvement connu depuis %s vers %s. Marqueur placé sur la carte.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "Ils sont à mi-chemin.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "Le convoi est à peu près à mi-chemin de la cible.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "Ils ont atteint le milieu de leur route.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "Ils y sont presque !",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "Le convoi se rapproche de la cible.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "Ils approchent de l'objectif. Interceptez-les bientôt.",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "Dernière position connue ennemi %s\nGrid %s\nCible : %s\nPlacé : %s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "Artillerie ennemie en tir\nGrid %s\nCible : %s\nPlacé : %s",
 
@@ -4303,6 +4704,8 @@ Récompense : 1000]],
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "Basculer KM / NM",
 	SELF_JTAC_MENU_AUTO_SEARCH         = "Recherche auto (actuel : %s)",
 	SELF_JTAC_MENU_AUTO_NEXT           = "Cible suivante auto (actuel : %s)",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "Masquer les coordonnées (actuel : %s)",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "Ignorer les structures (actuel : %s)",
 	SELF_JTAC_MENU_CODE                = "Code",
 	SELF_JTAC_STATE_ON                 = "ACTIF",
 	SELF_JTAC_STATE_OFF                = "INACTIF",
@@ -4310,11 +4713,14 @@ Récompense : 1000]],
 	SELF_JTAC_DISTANCE_UNIT            = "Distance : %s",
 	SELF_JTAC_AUTO_SEARCH_STATE        = "Recherche auto %s",
 	SELF_JTAC_AUTO_NEXT_STATE          = "Cible suivante auto %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "Masquer les coordonnées %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "Ignorer les structures %s",
 	SELF_JTAC_FOCUSING_ON              = "Priorité sur %s",
 	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "Cible hors limites, arrêt du laser",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "Non identifié",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "Structure",
 	SELF_JTAC_REPORT                   = "Laser sur %s\nCode : %d\n\nRelèvement : %03d°  Dist. : %s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "Laser sur %s\n\nCode : %d\n\nRelèvement : %03d°, Dist. : %s\n",
 	SELF_JTAC_MARKING_BLUE_SMOKE       = "Marquage avec fumée bleue",
 	SELF_JTAC_INVALID_OBJECTIVE        = "Objectif invalide",
 	SELF_JTAC_NO_OBJECTIVE             = "Aucun objectif",
@@ -4615,6 +5021,31 @@ Récompense : 1000]],
 	DYNAMIC_DECOY_DESTROY              = "LEURRE : détruire",
 	DYNAMIC_BUILDING_STRIKE_DESTROY    = "Frappe structure : détruire",
 	DYNAMIC_TANKERS_CONTROL            = "Contrôle des ravitailleurs",
+	DYNAMIC_CARRIER_NAVIGATION         = "Navigation porte-avions",
+	DYNAMIC_CARRIER_INFO               = "Infos porte-avions",
+	DYNAMIC_CARRIER_GROUP              = "Groupe aéronaval",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "Naviguer vers %s",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "La navigation du porte-avions est disponible après la sécurisation de Red Carrier.",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "Zone porte-avions indisponible : %s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s n'est pas actif.",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s n'a pas pu tracer une route maritime vers %s.",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Commandes de marqueur Tarawa :\ntarawahelp - afficher cette aide\ntarawahere - naviguer vers ce marqueur et s'arrêter\ntarawahereandstop - naviguer vers ce marqueur et s'arrêter\ntarawahere1 - définir le point 1 du circuit\ntarawahere2 - définir le point 2 et lancer le circuit\ntarawareturn - retourner vers la zone porte-avions.",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "Le déplacement de Tarawa par marqueur est désactivé.",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "Le déplacement de Tarawa par marqueur est réservé à la coalition bleue.",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Route Tarawa refusée : le marqueur n'est pas en eau profonde.",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Route Tarawa refusée : le trajet n'est pas assez profond ou direct.",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Route Tarawa refusée : le marqueur doit être en territoire allié.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Point 1 du circuit Tarawa enregistré. Placez tarawahere2 pour terminer la route.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "Placez tarawahere1 avant tarawahere2.",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa navigue vers le marqueur.",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Circuit Tarawa défini.",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa a atteint le marqueur et s'est arrêté.",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa retourne vers sa zone porte-avions.",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa n'a pas pu tracer de route de retour.",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s navigue vers %s.",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "Le groupe aéronaval peut maintenant naviguer vers un nouvel emplacement.",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s virera dans 5 minutes.",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s virera dans 1 minute.",
 	DYNAMIC_TANKER_INFO                = "Infos ravitailleur",
 	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco (Drogue) : déplacer vers zone",
 	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco (Drogue) : déplacer par position",
@@ -4639,6 +5070,7 @@ Récompense : 1000]],
 	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "La CAP est réglée pour riposter si engagée",
 	DYNAMIC_CAP_ENGAGE_ALL             = "La CAP est réglée sur engagement libre",
 	DYNAMIC_TANKER_BUSY                = "Des joueurs sont actuellement près du ravitailleur. Réessayez plus tard.",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "Des joueurs sont actuellement près du ravitailleur. Réessayez %s.",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s est en route vers %s.",
 	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s se repositionne vers %s sur un nouveau racetrack, cap %d degrés, branche de %d miles.",
 	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s va %s sur %s puis se mettre en orbite.",
@@ -4872,6 +5304,8 @@ FL.Messages.ES = {
 	COMMON_DISABLED                    = "Desactivado",
 	LANGUAGE_MENU_SET                  = "Establecer idioma",
 	LANGUAGE_SET_RESLOT                = "Idioma establecido en %s. Vuelve a entrar en el slot para reconstruir tus menús.",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "El buque de suministro enemigo ha llegado a puerto.",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "El avión de carga enemigo ha aterrizado.",
 
 	-- ============================================================
 	-- Welcome / ATIS / Escort
@@ -5191,7 +5625,112 @@ Recompensa 1000
 
 Se requieren 2000 libras]],
 	CA_MISSION_STRIKE_VAZIANI_START    = "Nueva misión de ataque: almacén de suministros de Vaziani\n\nAtaca este edificio para debilitar los suministros de las zonas enemigas cercanas",
-	CA_MISSION_STRIKE_VAZIANI_END      = "Misión de ataque terminada: almacén de suministros de Vaziani\n\nEl almacén de suministros está fuera de servicio",
+	CA_MISSION_STRIKE_VAZIANI_END      = "Misión de ataque terminada: almacén de suministros de Vaziani",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Sukhumi para SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Sukhumi para debilitar los suministros a SAM-Delta.
+
+Coordenadas:
+MGRS: 37 T FH 73652 48322
+Lat long: N 42°52'03" E 41°07'33"
+Lat long Decimal Minutes: N 42°52.065' E 41°07.553'
+
+Elevación 43 pies
+
+Recompensa 500
+
+Se requieren 2000 libras]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Sukhumi para SAM-Delta\n\nAtaca este edificio para debilitar los suministros a SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Sukhumi para SAM-Delta",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Sochi para SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Sochi para debilitar los suministros a SAM-Echo.
+
+Coordenadas:
+MGRS: 37 T EJ 76855 11472
+Lat long: N 43°27'07" E 39°56'59"
+Lat long Decimal Minutes: N 43°27.133' E 39°56.994'
+
+Elevación 98 pies
+
+Recompensa 500
+
+Se requieren 2000 libras]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Sochi para SAM-Echo\n\nAtaca este edificio para debilitar los suministros a SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Sochi para SAM-Echo",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Anapa para SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Anapa para debilitar los suministros a SAM-Golf.
+
+Coordenadas:
+MGRS: 37 T CK 69326 85636
+Lat long: N 45°00'43" E 37°20'30"
+Lat long Decimal Minutes: N 45°00.728' E 37°20.500'
+
+Elevación 141 pies
+
+Recompensa 500
+
+Se requieren 2000 libras]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Anapa para SAM-Golf\n\nAtaca este edificio para debilitar los suministros a SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Anapa para SAM-Golf",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Kobuleti para SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Kobuleti para debilitar los suministros a SAM-Alpha.
+
+Coordenadas:
+MGRS: 37 T GG 38429 46709
+Lat long: N 41°56'10" E 41°52'33"
+Lat long Decimal Minutes: N 41°56.180' E 41°52.558'
+
+Elevación 59 pies
+
+Recompensa 500
+
+Se requieren 2000 libras]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Kobuleti para SAM-Alpha\n\nAtaca este edificio para debilitar los suministros a SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Kobuleti para SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Krasnodar-Pashkovsky para SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Krasnodar-Pashkovsky para debilitar los suministros a SAM-Hotel.
+
+Coordenadas:
+MGRS: 37 T DK 96195 93639
+Lat long: N 45°05'46" E 38°57'05"
+Lat long Decimal Minutes: N 45°05.772' E 38°57.098'
+
+Elevación 92 pies
+
+Recompensa 500
+
+Se requieren 2000 libras]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Krasnodar-Pashkovsky para SAM-Hotel\n\nAtaca este edificio para debilitar los suministros a SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Krasnodar-Pashkovsky para SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Mineralnye para SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Mineralnye para debilitar los suministros a SAM-Juliett.
+
+Coordenadas:
+MGRS: 38 T LP 48963 98291
+Lat long: N 44°13'19" E 43°06'32"
+Lat long Decimal Minutes: N 44°13.331' E 43°06.545'
+
+Elevación 1009 pies
+
+Recompensa 500
+
+Se requieren 2000 libras]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Mineralnye para SAM-Juliett\n\nAtaca este edificio para debilitar los suministros a SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Mineralnye para SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Mozdok para SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Mozdok para debilitar los suministros a SAM-Kilo.
+
+Coordenadas:
+MGRS: 38 T MP 68815 48119
+Lat long: N 43°47'07" E 44°36'44"
+Lat long Decimal Minutes: N 43°47.128' E 44°36.745'
+
+Elevación 507 pies
+
+Recompensa 500
+
+Se requieren 2000 libras]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Mozdok para SAM-Kilo\n\nAtaca este edificio para debilitar los suministros a SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Mozdok para SAM-Kilo",
 	CA_SHOP_ITEM_STATIC_STRUCTURE      = "Vuelo de ataque a estructuras",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "ataque a edificios",
 	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "No hay zona amiga disponible para spawn de ataque.",
@@ -5770,10 +6309,16 @@ Recompensa: 1000]],
 	ARTILLERY_ATTACK_GRID_1            = "%s: ¡Nos está machacando artillería enemiga desde algún lugar de GRID %s!",
 	ARTILLERY_ATTACK_GRID_2            = "%s: ¡Nos está atacando artillería enemiga desde algún lugar de GRID %s!",
 	ARTILLERY_ATTACK_GRID_3            = "Artillería enemiga disparando desde algún lugar de GRID %s contra %s, ¡solicitamos apoyo!",
-	ARTILLERY_STILL_FIRING             = "Intel: La artillería enemiga sigue disparando contra %s. Posición aproximada %s, grid %s. Marcador colocado en el mapa.",
+	ARTILLERY_STILL_FIRING             = "Intel: La artillería enemiga sigue disparando contra %s. Posición aproximada %s, altitud %s, grid %s. Marcador colocado en el mapa.",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s: Última posición conocida de enemigo %s, en GRID %s (%s), moviéndose desde %s hacia %s. Marcador colocado en el mapa.",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s: Actualización de contacto enemigo %s, última posición conocida en GRID %s (%s), moviéndose desde %s hacia %s. Marcador colocado en el mapa.",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s: Enemigo %s reportado cerca de GRID %s (%s), último movimiento conocido desde %s hacia %s. Marcador colocado en el mapa.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "Están a mitad de camino.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "El convoy está aproximadamente a mitad de camino hacia el objetivo.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "Han alcanzado el punto medio de su ruta.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "¡Ya casi llegan!",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "El convoy se acerca al objetivo.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "Se acercan al objetivo. Intercepten pronto.",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "Última posición conocida enemigo %s\nGrid %s\nObjetivo: %s\nColocado: %s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "Artillería enemiga disparando\nGrid %s\nObjetivo: %s\nColocado: %s",
 
@@ -5914,6 +6459,8 @@ Recompensa: 1000]],
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "Alternar KM / NM",
 	SELF_JTAC_MENU_AUTO_SEARCH         = "Búsqueda automática (actual: %s)",
 	SELF_JTAC_MENU_AUTO_NEXT           = "Siguiente objetivo automático (actual: %s)",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "Ocultar coordenadas (actual: %s)",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "Ignorar estructuras (actual: %s)",
 	SELF_JTAC_MENU_CODE                = "Código",
 	SELF_JTAC_STATE_ON                 = "ACTIVADO",
 	SELF_JTAC_STATE_OFF                = "DESACTIVADO",
@@ -5921,11 +6468,14 @@ Recompensa: 1000]],
 	SELF_JTAC_DISTANCE_UNIT            = "Distancia: %s",
 	SELF_JTAC_AUTO_SEARCH_STATE        = "Búsqueda automática %s",
 	SELF_JTAC_AUTO_NEXT_STATE          = "Auto-siguiente %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "Ocultar coordenadas %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "Ignorar estructuras %s",
 	SELF_JTAC_FOCUSING_ON              = "Enfocando en %s",
 	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "Objetivo fuera de límites, deteniendo láser",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "No identificado",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "Estructura",
 	SELF_JTAC_REPORT                   = "Marcando con láser %s\nCódigo: %d\n\nRumbo: %03d°  Dist: %s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "Marcando con láser %s\n\nCódigo: %d\n\nRumbo: %03d°, Dist: %s\n",
 	SELF_JTAC_MARKING_BLUE_SMOKE       = "Marcando con humo azul",
 	SELF_JTAC_INVALID_OBJECTIVE        = "Objetivo inválido",
 	SELF_JTAC_NO_OBJECTIVE             = "Sin objetivo",
@@ -6229,6 +6779,31 @@ Recompensa: 1000]],
 	DYNAMIC_DECOY_DESTROY              = "SEÑUELO: destruir",
 	DYNAMIC_BUILDING_STRIKE_DESTROY    = "Ataque a edificio: destruir",
 	DYNAMIC_TANKERS_CONTROL            = "Control de tanqueros",
+	DYNAMIC_CARRIER_NAVIGATION         = "Navegación del portaaviones",
+	DYNAMIC_CARRIER_INFO               = "Info del portaaviones",
+	DYNAMIC_CARRIER_GROUP              = "Grupo de portaaviones",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "Navegar a %s",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "La navegación del portaaviones está disponible después de despejar Red Carrier.",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "Área de portaaviones no disponible: %s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s no está activo.",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s no pudo trazar una ruta por agua a %s.",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Comandos de marcador de Tarawa:\ntarawahelp - mostrar esta ayuda\ntarawahere - navegar a este marcador y detenerse\ntarawahereandstop - navegar a este marcador y detenerse\ntarawahere1 - establecer punto 1 del circuito\ntarawahere2 - establecer punto 2 e iniciar el circuito\ntarawareturn - regresar al área de portaaviones.",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "El movimiento de Tarawa por marcador está desactivado.",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "El movimiento de Tarawa por marcador solo está disponible para la coalición azul.",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Ruta de Tarawa rechazada: el marcador no está en aguas profundas.",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Ruta de Tarawa rechazada: el trayecto no es lo bastante profundo o directo.",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Ruta de Tarawa rechazada: el marcador debe estar en territorio aliado.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Punto 1 del circuito de Tarawa guardado. Coloca tarawahere2 para completar la ruta.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "Coloca tarawahere1 antes de tarawahere2.",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa navega hacia el marcador.",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Ruta de circuito de Tarawa establecida.",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa llegó al marcador y se detuvo.",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa regresa a su área de portaaviones.",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa no pudo trazar una ruta de regreso.",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s navega hacia %s.",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "El grupo de portaaviones ahora puede navegar a una nueva ubicación.",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s virará en 5 minutos.",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s virará en 1 minuto.",
 	DYNAMIC_TANKER_INFO                = "Info del tanquero",
 	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco (Drogue): mover a zona",
 	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco (Drogue): mover por posición",
@@ -6253,6 +6828,7 @@ Recompensa: 1000]],
 	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "CAP configurado para responder si es atacado",
 	DYNAMIC_CAP_ENGAGE_ALL             = "CAP configurado para ataque libre",
 	DYNAMIC_TANKER_BUSY                = "Hay jugadores cerca del tanquero. Inténtalo más tarde.",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "Hay jugadores cerca del tanquero. Inténtalo de nuevo %s.",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s está en ruta hacia %s.",
 	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s se reposiciona hacia %s con un nuevo racetrack, rumbo %d grados, tramo de %d millas.",
 	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s va a %s durante %s y entrará en órbita.",
@@ -6486,6 +7062,8 @@ FL.Messages.RU = {
 	COMMON_DISABLED                    = "Отключено",
 	LANGUAGE_MENU_SET                  = "Выбрать язык",
 	LANGUAGE_SET_RESLOT                = "Язык изменен на %s. Перезайдите в слот, чтобы обновить меню.",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "Вражеское судно снабжения достигло порта.",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "Вражеский грузовой самолет приземлился.",
 
 	-- ============================================================
 	-- Welcome / ATIS / Escort
@@ -6805,7 +7383,112 @@ MGRS: 38 T NM 04080 09769
 
 Требуется 2000 фунтов]],
 	CA_MISSION_STRIKE_VAZIANI_START    = "Новая ударная миссия: склад снабжения Vaziani\n\nНанесите удар по этому зданию, чтобы ослабить снабжение окружающих вражеских зон",
-	CA_MISSION_STRIKE_VAZIANI_END      = "Ударная миссия завершена: склад снабжения Vaziani\n\nСклад снабжения теперь выведен из строя",
+	CA_MISSION_STRIKE_VAZIANI_END      = "Ударная миссия завершена: склад снабжения Vaziani",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "Удар по складу снабжения Sukhumi для SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Sukhumi, чтобы ослабить снабжение SAM-Delta.
+
+Координаты:
+MGRS: 37 T FH 73652 48322
+Широта/долгота: N 42°52'03" E 41°07'33"
+Широта/долгота, десятичные минуты: N 42°52.065' E 41°07.553'
+
+Высота 43 фута
+
+Награда 500
+
+Требуется 2000 фунтов]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Sukhumi для SAM-Delta\n\nНанесите удар по этому зданию, чтобы ослабить снабжение SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Sukhumi для SAM-Delta",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "Удар по складу снабжения Sochi для SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Sochi, чтобы ослабить снабжение SAM-Echo.
+
+Координаты:
+MGRS: 37 T EJ 76855 11472
+Широта/долгота: N 43°27'07" E 39°56'59"
+Широта/долгота, десятичные минуты: N 43°27.133' E 39°56.994'
+
+Высота 98 футов
+
+Награда 500
+
+Требуется 2000 фунтов]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Sochi для SAM-Echo\n\nНанесите удар по этому зданию, чтобы ослабить снабжение SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Sochi для SAM-Echo",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "Удар по складу снабжения Anapa для SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Anapa, чтобы ослабить снабжение SAM-Golf.
+
+Координаты:
+MGRS: 37 T CK 69326 85636
+Широта/долгота: N 45°00'43" E 37°20'30"
+Широта/долгота, десятичные минуты: N 45°00.728' E 37°20.500'
+
+Высота 141 фут
+
+Награда 500
+
+Требуется 2000 фунтов]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Anapa для SAM-Golf\n\nНанесите удар по этому зданию, чтобы ослабить снабжение SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Anapa для SAM-Golf",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "Удар по складу снабжения Kobuleti для SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Kobuleti, чтобы ослабить снабжение SAM-Alpha.
+
+Координаты:
+MGRS: 37 T GG 38429 46709
+Широта/долгота: N 41°56'10" E 41°52'33"
+Широта/долгота, десятичные минуты: N 41°56.180' E 41°52.558'
+
+Высота 59 футов
+
+Награда 500
+
+Требуется 2000 фунтов]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Kobuleti для SAM-Alpha\n\nНанесите удар по этому зданию, чтобы ослабить снабжение SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Kobuleti для SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "Удар по складу снабжения Krasnodar-Pashkovsky для SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Krasnodar-Pashkovsky, чтобы ослабить снабжение SAM-Hotel.
+
+Координаты:
+MGRS: 37 T DK 96195 93639
+Широта/долгота: N 45°05'46" E 38°57'05"
+Широта/долгота, десятичные минуты: N 45°05.772' E 38°57.098'
+
+Высота 92 фута
+
+Награда 500
+
+Требуется 2000 фунтов]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Krasnodar-Pashkovsky для SAM-Hotel\n\nНанесите удар по этому зданию, чтобы ослабить снабжение SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Krasnodar-Pashkovsky для SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "Удар по складу снабжения Mineralnye для SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Mineralnye, чтобы ослабить снабжение SAM-Juliett.
+
+Координаты:
+MGRS: 38 T LP 48963 98291
+Широта/долгота: N 44°13'19" E 43°06'32"
+Широта/долгота, десятичные минуты: N 44°13.331' E 43°06.545'
+
+Высота 1009 футов
+
+Награда 500
+
+Требуется 2000 фунтов]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Mineralnye для SAM-Juliett\n\nНанесите удар по этому зданию, чтобы ослабить снабжение SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Mineralnye для SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "Удар по складу снабжения Mozdok для SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Mozdok, чтобы ослабить снабжение SAM-Kilo.
+
+Координаты:
+MGRS: 38 T MP 68815 48119
+Широта/долгота: N 43°47'07" E 44°36'44"
+Широта/долгота, десятичные минуты: N 43°47.128' E 44°36.745'
+
+Высота 507 футов
+
+Награда 500
+
+Требуется 2000 фунтов]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Mozdok для SAM-Kilo\n\nНанесите удар по этому зданию, чтобы ослабить снабжение SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Mozdok для SAM-Kilo",
 	CA_SHOP_ITEM_STATIC_STRUCTURE      = "Вылет удара по сооружениям",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "удар по зданиям",
 	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "Нет дружественной зоны для появления ударной группы.",
@@ -7384,10 +8067,16 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	ARTILLERY_ATTACK_GRID_1            = "%s: Нас накрывает вражеская артиллерия откуда-то из GRID %s!",
 	ARTILLERY_ATTACK_GRID_2            = "%s: Нас атакует вражеская артиллерия откуда-то из GRID %s!",
 	ARTILLERY_ATTACK_GRID_3            = "Вражеская артиллерия ведёт огонь откуда-то из GRID %s по %s, нужна помощь!",
-	ARTILLERY_STILL_FIRING             = "Разведка: Вражеская артиллерия всё ещё ведёт огонь по %s. Примерная позиция %s, grid %s. Маркер установлен на карте.",
+	ARTILLERY_STILL_FIRING             = "Разведка: Вражеская артиллерия всё ещё ведёт огонь по %s. Примерная позиция %s, высота %s, grid %s. Маркер установлен на карте.",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s: Последняя известная позиция противника %s, в GRID %s (%s), движение от %s к %s. Маркер установлен на карте.",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s: Обновление контакта противника %s, последняя известная позиция в GRID %s (%s), движение от %s к %s. Маркер установлен на карте.",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s: Противник %s замечен возле GRID %s (%s), последнее известное движение от %s к %s. Маркер установлен на карте.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "Они на полпути.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "Конвой примерно на полпути к цели.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "Они достигли середины маршрута.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "Они почти на месте!",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "Конвой приближается к цели.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "Они приближаются к объекту. Перехватите скорее.",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "Последняя известная позиция противника %s\nGrid %s\nЦель: %s\nУстановлено: %s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "Вражеская артиллерия ведёт огонь\nGrid %s\nЦель: %s\nУстановлено: %s",
 
@@ -7528,6 +8217,8 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "Переключить KM / NM",
 	SELF_JTAC_MENU_AUTO_SEARCH         = "Автопоиск (сейчас: %s)",
 	SELF_JTAC_MENU_AUTO_NEXT           = "Авто-следующая цель (сейчас: %s)",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "Скрыть координаты (сейчас: %s)",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "Игнорировать сооружения (сейчас: %s)",
 	SELF_JTAC_MENU_CODE                = "Код",
 	SELF_JTAC_STATE_ON                 = "ВКЛ",
 	SELF_JTAC_STATE_OFF                = "ВЫКЛ",
@@ -7535,11 +8226,14 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	SELF_JTAC_DISTANCE_UNIT            = "Дистанция: %s",
 	SELF_JTAC_AUTO_SEARCH_STATE        = "Автопоиск %s",
 	SELF_JTAC_AUTO_NEXT_STATE          = "Авто-следующая цель %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "Скрыть координаты %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "Игнорировать сооружения %s",
 	SELF_JTAC_FOCUSING_ON              = "Фокус на %s",
 	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "Цель вне допустимых пределов, лазер выключен",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "Неопознано",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "Сооружение",
 	SELF_JTAC_REPORT                   = "Лазерная подсветка %s\nКод: %d\n\nАзимут: %03d°  Дист.: %s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "Лазерная подсветка %s\n\nКод: %d\n\nАзимут: %03d°, Дист.: %s\n",
 	SELF_JTAC_MARKING_BLUE_SMOKE       = "Отмечаю синим дымом",
 	SELF_JTAC_INVALID_OBJECTIVE        = "Недопустимая цель",
 	SELF_JTAC_NO_OBJECTIVE             = "Нет цели",
@@ -7843,6 +8537,31 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	DYNAMIC_DECOY_DESTROY              = "DECOY: удалить",
 	DYNAMIC_BUILDING_STRIKE_DESTROY    = "Удар по зданиям: удалить",
 	DYNAMIC_TANKERS_CONTROL            = "Управление танкерами",
+	DYNAMIC_CARRIER_NAVIGATION         = "Навигация авианосца",
+	DYNAMIC_CARRIER_INFO               = "Информация об авианосце",
+	DYNAMIC_CARRIER_GROUP              = "Авианосная группа",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "Идти к %s",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "Навигация авианосца доступна после зачистки Red Carrier.",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "Район авианосца недоступен: %s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s не активен.",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s не смог построить водный маршрут к %s.",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Команды маркера Tarawa:\ntarawahelp - показать эту справку\ntarawahere - идти к этому маркеру и остановиться\ntarawahereandstop - идти к этому маркеру и остановиться\ntarawahere1 - задать точку 1 маршрута\ntarawahere2 - задать точку 2 и запустить маршрут\ntarawareturn - вернуться в район авианосца.",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "Перемещение Tarawa по маркеру отключено.",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "Перемещение Tarawa по маркеру доступно только синей коалиции.",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Маршрут Tarawa отклонен: маркер не в глубокой воде.",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Маршрут Tarawa отклонен: путь недостаточно глубокий или прямой.",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Маршрут Tarawa отклонен: маркер должен быть на дружественной территории.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Точка 1 маршрута Tarawa сохранена. Поставьте tarawahere2, чтобы завершить маршрут.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "Поставьте tarawahere1 перед tarawahere2.",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa идет к маркеру.",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Маршрут Tarawa задан.",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa дошла до маркера и остановилась.",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa возвращается в свой район авианосца.",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa не смогла построить обратный маршрут.",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s идет к %s.",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "Авианосная группа теперь может идти к новой позиции.",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s повернет через 5 минут.",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s повернет через 1 минуту.",
 	DYNAMIC_TANKER_INFO                = "Информация о танкере",
 	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco (Drogue): переместить в зону",
 	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco (Drogue): переместить по позиции",
@@ -7867,6 +8586,7 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "CAP переведен в режим ответа при атаке",
 	DYNAMIC_CAP_ENGAGE_ALL             = "CAP переведен в режим свободной атаки",
 	DYNAMIC_TANKER_BUSY                = "Игроки сейчас рядом с танкером. Попробуйте позже.",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "Игроки сейчас рядом с танкером. Попробуйте снова %s.",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s следует к %s.",
 	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s перемещается к %s на новый маршрут, курс %d градусов, участок %d миль.",
 	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s собирается переместиться %s на %s и выйти на орбиту.",
@@ -8100,6 +8820,8 @@ FL.Messages["PT-BR"] = {
 	COMMON_DISABLED                    = "Desativado",
 	LANGUAGE_MENU_SET                  = "Definir idioma",
 	LANGUAGE_SET_RESLOT                = "Idioma definido para %s. Entre novamente no slot para reconstruir seus menus.",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "O navio de suprimentos inimigo chegou ao porto.",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "O avião de carga inimigo pousou.",
 
 	-- ============================================================
 	-- Welcome / ATIS / Escort
@@ -8419,7 +9141,112 @@ Recompensa 1000
 
 Requer 2000 libras]],
 	CA_MISSION_STRIKE_VAZIANI_START    = "Nova missão de ataque: armazém de suprimentos de Vaziani\n\nAtaque este edifício para enfraquecer os suprimentos das zonas inimigas ao redor",
-	CA_MISSION_STRIKE_VAZIANI_END      = "Missão de ataque encerrada: armazém de suprimentos de Vaziani\n\nO armazém de suprimentos está fora de operação",
+	CA_MISSION_STRIKE_VAZIANI_END      = "Missão de ataque encerrada: armazém de suprimentos de Vaziani",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "Atacar armazém de suprimentos de Sukhumi para SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[Ataque o armazém de suprimentos de Sukhumi para enfraquecer os suprimentos para SAM-Delta.
+
+Coordenadas:
+MGRS: 37 T FH 73652 48322
+Latitude/longitude: N 42°52'03" E 41°07'33"
+Latitude/longitude em minutos decimais: N 42°52.065' E 41°07.553'
+
+Elevação 43 pés
+
+Recompensa 500
+
+Requer 2000 libras]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "Nova missão de ataque: armazém de suprimentos de Sukhumi para SAM-Delta\n\nAtaque este edifício para enfraquecer os suprimentos para SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "Missão de ataque encerrada: armazém de suprimentos de Sukhumi para SAM-Delta",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "Atacar armazém de suprimentos de Sochi para SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[Ataque o armazém de suprimentos de Sochi para enfraquecer os suprimentos para SAM-Echo.
+
+Coordenadas:
+MGRS: 37 T EJ 76855 11472
+Latitude/longitude: N 43°27'07" E 39°56'59"
+Latitude/longitude em minutos decimais: N 43°27.133' E 39°56.994'
+
+Elevação 98 pés
+
+Recompensa 500
+
+Requer 2000 libras]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "Nova missão de ataque: armazém de suprimentos de Sochi para SAM-Echo\n\nAtaque este edifício para enfraquecer os suprimentos para SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "Missão de ataque encerrada: armazém de suprimentos de Sochi para SAM-Echo",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "Atacar armazém de suprimentos de Anapa para SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[Ataque o armazém de suprimentos de Anapa para enfraquecer os suprimentos para SAM-Golf.
+
+Coordenadas:
+MGRS: 37 T CK 69326 85636
+Latitude/longitude: N 45°00'43" E 37°20'30"
+Latitude/longitude em minutos decimais: N 45°00.728' E 37°20.500'
+
+Elevação 141 pés
+
+Recompensa 500
+
+Requer 2000 libras]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "Nova missão de ataque: armazém de suprimentos de Anapa para SAM-Golf\n\nAtaque este edifício para enfraquecer os suprimentos para SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "Missão de ataque encerrada: armazém de suprimentos de Anapa para SAM-Golf",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "Atacar armazém de suprimentos de Kobuleti para SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[Ataque o armazém de suprimentos de Kobuleti para enfraquecer os suprimentos para SAM-Alpha.
+
+Coordenadas:
+MGRS: 37 T GG 38429 46709
+Latitude/longitude: N 41°56'10" E 41°52'33"
+Latitude/longitude em minutos decimais: N 41°56.180' E 41°52.558'
+
+Elevação 59 pés
+
+Recompensa 500
+
+Requer 2000 libras]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "Nova missão de ataque: armazém de suprimentos de Kobuleti para SAM-Alpha\n\nAtaque este edifício para enfraquecer os suprimentos para SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "Missão de ataque encerrada: armazém de suprimentos de Kobuleti para SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "Atacar armazém de suprimentos de Krasnodar-Pashkovsky para SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[Ataque o armazém de suprimentos de Krasnodar-Pashkovsky para enfraquecer os suprimentos para SAM-Hotel.
+
+Coordenadas:
+MGRS: 37 T DK 96195 93639
+Latitude/longitude: N 45°05'46" E 38°57'05"
+Latitude/longitude em minutos decimais: N 45°05.772' E 38°57.098'
+
+Elevação 92 pés
+
+Recompensa 500
+
+Requer 2000 libras]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "Nova missão de ataque: armazém de suprimentos de Krasnodar-Pashkovsky para SAM-Hotel\n\nAtaque este edifício para enfraquecer os suprimentos para SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "Missão de ataque encerrada: armazém de suprimentos de Krasnodar-Pashkovsky para SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "Atacar armazém de suprimentos de Mineralnye para SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[Ataque o armazém de suprimentos de Mineralnye para enfraquecer os suprimentos para SAM-Juliett.
+
+Coordenadas:
+MGRS: 38 T LP 48963 98291
+Latitude/longitude: N 44°13'19" E 43°06'32"
+Latitude/longitude em minutos decimais: N 44°13.331' E 43°06.545'
+
+Elevação 1009 pés
+
+Recompensa 500
+
+Requer 2000 libras]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "Nova missão de ataque: armazém de suprimentos de Mineralnye para SAM-Juliett\n\nAtaque este edifício para enfraquecer os suprimentos para SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "Missão de ataque encerrada: armazém de suprimentos de Mineralnye para SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "Atacar armazém de suprimentos de Mozdok para SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[Ataque o armazém de suprimentos de Mozdok para enfraquecer os suprimentos para SAM-Kilo.
+
+Coordenadas:
+MGRS: 38 T MP 68815 48119
+Latitude/longitude: N 43°47'07" E 44°36'44"
+Latitude/longitude em minutos decimais: N 43°47.128' E 44°36.745'
+
+Elevação 507 pés
+
+Recompensa 500
+
+Requer 2000 libras]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "Nova missão de ataque: armazém de suprimentos de Mozdok para SAM-Kilo\n\nAtaque este edifício para enfraquecer os suprimentos para SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "Missão de ataque encerrada: armazém de suprimentos de Mozdok para SAM-Kilo",
 	CA_SHOP_ITEM_STATIC_STRUCTURE      = "Voo de ataque a estruturas",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "ataque a edifícios",
 	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "Nenhuma zona aliada disponível para spawn de ataque.",
@@ -8998,10 +9825,16 @@ Recompensa: 1000]],
 	ARTILLERY_ATTACK_GRID_1            = "%s: Estamos sendo atingidos por artilharia inimiga em algum lugar de GRID %s!",
 	ARTILLERY_ATTACK_GRID_2            = "%s: Estamos sendo atacados por artilharia inimiga em algum lugar de GRID %s!",
 	ARTILLERY_ATTACK_GRID_3            = "Artilharia inimiga disparando em algum lugar de GRID %s contra %s, solicito apoio!",
-	ARTILLERY_STILL_FIRING             = "Intel: A artilharia inimiga ainda está disparando contra %s. Posição aproximada %s, grid %s. Marcador colocado no mapa.",
+	ARTILLERY_STILL_FIRING             = "Intel: A artilharia inimiga ainda está disparando contra %s. Posição aproximada %s, altitude %s, grid %s. Marcador colocado no mapa.",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s: Última posição conhecida do inimigo %s, em GRID %s (%s), movendo-se de %s para %s. Marcador colocado no mapa.",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s: Atualização de contato inimigo %s, última posição conhecida em GRID %s (%s), movendo-se de %s para %s. Marcador colocado no mapa.",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s: Inimigo %s reportado perto de GRID %s (%s), último movimento conhecido de %s para %s. Marcador colocado no mapa.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "Eles estão na metade do caminho.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "O comboio está aproximadamente a meio caminho do alvo.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "Eles chegaram ao ponto médio da rota.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "Eles estão quase lá!",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "O comboio está se aproximando do alvo.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "Eles estão perto do objetivo. Intercepte-os em breve.",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "Última posição conhecida inimigo %s\nGrid %s\nAlvo: %s\nColocado: %s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "Artilharia inimiga disparando\nGrid %s\nAlvo: %s\nColocado: %s",
 
@@ -9142,6 +9975,8 @@ Recompensa: 1000]],
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "Alternar KM / NM",
 	SELF_JTAC_MENU_AUTO_SEARCH         = "Busca automática (Atual: %s)",
 	SELF_JTAC_MENU_AUTO_NEXT           = "Próximo alvo automático (Atual: %s)",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "Ocultar coordenadas (Atual: %s)",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "Ignorar estruturas (Atual: %s)",
 	SELF_JTAC_MENU_CODE                = "Código",
 	SELF_JTAC_STATE_ON                 = "LIGADO",
 	SELF_JTAC_STATE_OFF                = "DESLIGADO",
@@ -9149,11 +9984,14 @@ Recompensa: 1000]],
 	SELF_JTAC_DISTANCE_UNIT            = "Distância: %s",
 	SELF_JTAC_AUTO_SEARCH_STATE        = "Busca automática %s",
 	SELF_JTAC_AUTO_NEXT_STATE          = "Próximo automático %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "Ocultar coordenadas %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "Ignorar estruturas %s",
 	SELF_JTAC_FOCUSING_ON              = "Focando em %s",
 	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "Alvo fora dos limites, parando laser",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "Não identificado",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "Estrutura",
 	SELF_JTAC_REPORT                   = "Marcando com laser %s\nCódigo: %d\n\nRumo: %03d°  Dist: %s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "Marcando com laser %s\n\nCódigo: %d\n\nRumo: %03d°, Dist: %s\n",
 	SELF_JTAC_MARKING_BLUE_SMOKE       = "Marcando com fumaça azul",
 	SELF_JTAC_INVALID_OBJECTIVE        = "Objetivo inválido",
 	SELF_JTAC_NO_OBJECTIVE             = "Sem objetivo",
@@ -9454,6 +10292,31 @@ Recompensa: 1000]],
 	DYNAMIC_DECOY_DESTROY              = "DECOY: Destruir",
 	DYNAMIC_BUILDING_STRIKE_DESTROY    = "Ataque a prédio: Destruir",
 	DYNAMIC_TANKERS_CONTROL            = "Controle de tankers",
+	DYNAMIC_CARRIER_NAVIGATION         = "Navegação do porta-aviões",
+	DYNAMIC_CARRIER_INFO               = "Info do porta-aviões",
+	DYNAMIC_CARRIER_GROUP              = "Grupo de porta-aviões",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "Navegar para %s",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "A navegação do porta-aviões fica disponível depois que Red Carrier for limpo.",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "Área do porta-aviões indisponível: %s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s não está ativo.",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s não conseguiu traçar uma rota marítima para %s.",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Comandos de marcador da Tarawa:\ntarawahelp - mostrar esta ajuda\ntarawahere - navegar até este marcador e parar\ntarawahereandstop - navegar até este marcador e parar\ntarawahere1 - definir ponto 1 do circuito\ntarawahere2 - definir ponto 2 e iniciar o circuito\ntarawareturn - retornar à área do porta-aviões.",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "O movimento da Tarawa por marcador está desativado.",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "O movimento da Tarawa por marcador só está disponível para a coalizão azul.",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Rota da Tarawa rejeitada: o marcador não está em águas profundas.",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Rota da Tarawa rejeitada: o caminho não é profundo ou direto o suficiente.",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Rota da Tarawa rejeitada: o marcador deve estar em território aliado.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Ponto 1 do circuito da Tarawa salvo. Posicione tarawahere2 para completar a rota.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "Posicione tarawahere1 antes de tarawahere2.",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa está navegando para o marcador.",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Rota de circuito da Tarawa definida.",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa chegou ao marcador e parou.",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa está retornando à sua área de porta-aviões.",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa não conseguiu traçar uma rota de retorno.",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s está navegando para %s.",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "O grupo de porta-aviões agora pode navegar para um novo local.",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s vai virar em 5 minutos.",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s vai virar em 1 minuto.",
 	DYNAMIC_TANKER_INFO                = "Info do tanker",
 	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco (Drogue): Mover para zona",
 	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco (Drogue): Mover por posição",
@@ -9478,6 +10341,7 @@ Recompensa: 1000]],
 	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "CAP configurado para (Engage If Engaged)",
 	DYNAMIC_CAP_ENGAGE_ALL             = "CAP configurado para Engage All",
 	DYNAMIC_TANKER_BUSY                = "Jogadores atualmente próximos do tanker. Tente novamente mais tarde.",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "Jogadores atualmente próximos do tanker. Tente novamente %s.",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s está em rota para %s.",
 	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s está reposicionando para %s com novo racetrack, proa %d graus, perna de %d milhas.",
 	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s vai %s por %s e entrar em órbita.",
@@ -9711,6 +10575,8 @@ FL.Messages.TR = {
 	COMMON_DISABLED                    = "Devre dışı",
 	LANGUAGE_MENU_SET                  = "Dili ayarla",
 	LANGUAGE_SET_RESLOT                = "Dil %s olarak ayarlandı. Menülerin yeniden oluşturulması için lütfen slota yeniden gir.",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "Düşman ikmal gemisi limana ulaştı.",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "Düşman kargo uçağı indi.",
 
 	-- ============================================================
 	-- Welcome / ATIS / Escort
@@ -10030,7 +10896,112 @@ Rakım 1465 fit
 
 2000 pound gerekli]],
 	CA_MISSION_STRIKE_VAZIANI_START    = "Yeni saldırı görevi: Vaziani ikmal deposu\n\nÇevredeki düşman bölgelerinin ikmalini zayıflatmak için bu binaya saldır",
-	CA_MISSION_STRIKE_VAZIANI_END      = "Saldırı görevi sona erdi: Vaziani ikmal deposu\n\nİkmal deposu artık devre dışı",
+	CA_MISSION_STRIKE_VAZIANI_END      = "Saldırı görevi sona erdi: Vaziani ikmal deposu",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "SAM-Delta için Sukhumi ikmal deposuna saldır",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[SAM-Delta'ya giden ikmali zayıflatmak için Sukhumi ikmal deposuna saldır.
+
+Koordinatlar:
+MGRS: 37 T FH 73652 48322
+Enlem/boylam: N 42°52'03" E 41°07'33"
+Enlem/boylam ondalık dakika: N 42°52.065' E 41°07.553'
+
+Rakım 43 fit
+
+Ödül 500
+
+2000 pound gerekli]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "Yeni saldırı görevi: SAM-Delta için Sukhumi ikmal deposu\n\nSAM-Delta'ya giden ikmali zayıflatmak için bu binaya saldır",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "Saldırı görevi sona erdi: SAM-Delta için Sukhumi ikmal deposu",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "SAM-Echo için Sochi ikmal deposuna saldır",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[SAM-Echo'ya giden ikmali zayıflatmak için Sochi ikmal deposuna saldır.
+
+Koordinatlar:
+MGRS: 37 T EJ 76855 11472
+Enlem/boylam: N 43°27'07" E 39°56'59"
+Enlem/boylam ondalık dakika: N 43°27.133' E 39°56.994'
+
+Rakım 98 fit
+
+Ödül 500
+
+2000 pound gerekli]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "Yeni saldırı görevi: SAM-Echo için Sochi ikmal deposu\n\nSAM-Echo'ya giden ikmali zayıflatmak için bu binaya saldır",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "Saldırı görevi sona erdi: SAM-Echo için Sochi ikmal deposu",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "SAM-Golf için Anapa ikmal deposuna saldır",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[SAM-Golf'a giden ikmali zayıflatmak için Anapa ikmal deposuna saldır.
+
+Koordinatlar:
+MGRS: 37 T CK 69326 85636
+Enlem/boylam: N 45°00'43" E 37°20'30"
+Enlem/boylam ondalık dakika: N 45°00.728' E 37°20.500'
+
+Rakım 141 fit
+
+Ödül 500
+
+2000 pound gerekli]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "Yeni saldırı görevi: SAM-Golf için Anapa ikmal deposu\n\nSAM-Golf'a giden ikmali zayıflatmak için bu binaya saldır",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "Saldırı görevi sona erdi: SAM-Golf için Anapa ikmal deposu",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "SAM-Alpha için Kobuleti ikmal deposuna saldır",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[SAM-Alpha'ya giden ikmali zayıflatmak için Kobuleti ikmal deposuna saldır.
+
+Koordinatlar:
+MGRS: 37 T GG 38429 46709
+Enlem/boylam: N 41°56'10" E 41°52'33"
+Enlem/boylam ondalık dakika: N 41°56.180' E 41°52.558'
+
+Rakım 59 fit
+
+Ödül 500
+
+2000 pound gerekli]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "Yeni saldırı görevi: SAM-Alpha için Kobuleti ikmal deposu\n\nSAM-Alpha'ya giden ikmali zayıflatmak için bu binaya saldır",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "Saldırı görevi sona erdi: SAM-Alpha için Kobuleti ikmal deposu",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "SAM-Hotel için Krasnodar-Pashkovsky ikmal deposuna saldır",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[SAM-Hotel'e giden ikmali zayıflatmak için Krasnodar-Pashkovsky ikmal deposuna saldır.
+
+Koordinatlar:
+MGRS: 37 T DK 96195 93639
+Enlem/boylam: N 45°05'46" E 38°57'05"
+Enlem/boylam ondalık dakika: N 45°05.772' E 38°57.098'
+
+Rakım 92 fit
+
+Ödül 500
+
+2000 pound gerekli]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "Yeni saldırı görevi: SAM-Hotel için Krasnodar-Pashkovsky ikmal deposu\n\nSAM-Hotel'e giden ikmali zayıflatmak için bu binaya saldır",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "Saldırı görevi sona erdi: SAM-Hotel için Krasnodar-Pashkovsky ikmal deposu",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "SAM-Juliett için Mineralnye ikmal deposuna saldır",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[SAM-Juliett'e giden ikmali zayıflatmak için Mineralnye ikmal deposuna saldır.
+
+Koordinatlar:
+MGRS: 38 T LP 48963 98291
+Enlem/boylam: N 44°13'19" E 43°06'32"
+Enlem/boylam ondalık dakika: N 44°13.331' E 43°06.545'
+
+Rakım 1009 fit
+
+Ödül 500
+
+2000 pound gerekli]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "Yeni saldırı görevi: SAM-Juliett için Mineralnye ikmal deposu\n\nSAM-Juliett'e giden ikmali zayıflatmak için bu binaya saldır",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "Saldırı görevi sona erdi: SAM-Juliett için Mineralnye ikmal deposu",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "SAM-Kilo için Mozdok ikmal deposuna saldır",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[SAM-Kilo'ya giden ikmali zayıflatmak için Mozdok ikmal deposuna saldır.
+
+Koordinatlar:
+MGRS: 38 T MP 68815 48119
+Enlem/boylam: N 43°47'07" E 44°36'44"
+Enlem/boylam ondalık dakika: N 43°47.128' E 44°36.745'
+
+Rakım 507 fit
+
+Ödül 500
+
+2000 pound gerekli]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "Yeni saldırı görevi: SAM-Kilo için Mozdok ikmal deposu\n\nSAM-Kilo'ya giden ikmali zayıflatmak için bu binaya saldır",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "Saldırı görevi sona erdi: SAM-Kilo için Mozdok ikmal deposu",
 	CA_SHOP_ITEM_STATIC_STRUCTURE      = "Statik yapı saldırı uçuşu",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "bina saldırısı",
 	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "Saldırı spawnı için uygun dost bölge yok.",
@@ -10608,10 +11579,16 @@ Rakım: 1251 fit
 	ARTILLERY_ATTACK_GRID_1            = "%s: GRID %s civarından düşman topçusu bizi dövüyor!",
 	ARTILLERY_ATTACK_GRID_2            = "%s: GRID %s civarından düşman topçusu tarafından saldırı altındayız!",
 	ARTILLERY_ATTACK_GRID_3            = "Düşman topçusu GRID %s civarından %s hedefine ateş ediyor, destek gerekiyor!",
-	ARTILLERY_STILL_FIRING             = "İstihbarat: Düşman topçusu %s hedefine ateş etmeye devam ediyor. Yaklaşık konum %s, grid %s. Harita işareti yerleştirildi.",
+	ARTILLERY_STILL_FIRING             = "İstihbarat: Düşman topçusu %s hedefine ateş etmeye devam ediyor. Yaklaşık konum %s, irtifa %s, grid %s. Harita işareti yerleştirildi.",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s: Düşman %s son bilinen konumu, GRID %s (%s), %s noktasından %s yönüne hareket ediyor. Harita işareti yerleştirildi.",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s: Düşman %s temas güncellemesi, son bilinen konum GRID %s (%s), %s noktasından %s yönüne hareket ediyor. Harita işareti yerleştirildi.",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s: Düşman %s GRID %s (%s) yakınında bildirildi, son bilinen hareket %s noktasından %s yönüne. Harita işareti yerleştirildi.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "Yolun yarısına geldiler.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "Konvoy hedefe giden yolun yaklaşık yarısında.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "Rotanın orta noktasına ulaştılar.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "Neredeyse vardılar!",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "Konvoy hedefe yaklaşıyor.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "Hedefe yaklaşıyorlar. Yakında önlerini kesin.",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "Son bilinen düşman %s\nGrid %s\nHedef: %s\nYerleştirildi: %s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "Düşman topçusu ateş ediyor\nGrid %s\nHedef: %s\nYerleştirildi: %s",
 
@@ -10752,6 +11729,8 @@ Rakım: 1251 fit
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "KM / NM değiştir",
 	SELF_JTAC_MENU_AUTO_SEARCH         = "Otomatik arama (Mevcut: %s)",
 	SELF_JTAC_MENU_AUTO_NEXT           = "Otomatik sonraki hedef (Mevcut: %s)",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "Koordinatları gizle (Mevcut: %s)",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "Yapıları yoksay (Mevcut: %s)",
 	SELF_JTAC_MENU_CODE                = "Kod",
 	SELF_JTAC_STATE_ON                 = "AÇIK",
 	SELF_JTAC_STATE_OFF                = "KAPALI",
@@ -10759,11 +11738,14 @@ Rakım: 1251 fit
 	SELF_JTAC_DISTANCE_UNIT            = "Mesafe: %s",
 	SELF_JTAC_AUTO_SEARCH_STATE        = "Otomatik arama %s",
 	SELF_JTAC_AUTO_NEXT_STATE          = "Otomatik sonraki %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "Koordinatları gizle %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "Yapıları yoksay %s",
 	SELF_JTAC_FOCUSING_ON              = "%s üzerine odaklanıyor",
 	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "Hedef sınır dışında, lazer durduruluyor",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "Tanımlanamayan",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "Yapı",
 	SELF_JTAC_REPORT                   = "Lazer %s üzerinde\nKod: %d\n\nKerteriz: %03d°  Mesafe: %s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "Lazer %s üzerinde\n\nKod: %d\n\nKerteriz: %03d°, Mesafe: %s\n",
 	SELF_JTAC_MARKING_BLUE_SMOKE       = "Mavi dumanla işaretleniyor",
 	SELF_JTAC_INVALID_OBJECTIVE        = "Geçersiz hedef",
 	SELF_JTAC_NO_OBJECTIVE             = "Hedef yok",
@@ -11064,6 +12046,31 @@ Rakım: 1251 fit
 	DYNAMIC_DECOY_DESTROY              = "DECOY: Yok et",
 	DYNAMIC_BUILDING_STRIKE_DESTROY    = "Bina strike: Yok et",
 	DYNAMIC_TANKERS_CONTROL            = "Tanker Kontrolü",
+	DYNAMIC_CARRIER_NAVIGATION         = "Uçak gemisi navigasyonu",
+	DYNAMIC_CARRIER_INFO               = "Uçak gemisi bilgisi",
+	DYNAMIC_CARRIER_GROUP              = "Taşıyıcı grup",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "%s bölgesine git",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "Uçak gemisi navigasyonu Red Carrier temizlendikten sonra kullanılabilir.",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "Uçak gemisi alanı kullanılamıyor: %s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s aktif değil.",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s, %s için deniz rotası çizemedi.",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Tarawa işaretçi komutları:\ntarawahelp - bu yardımı göster\ntarawahere - bu işaretçiye git ve dur\ntarawahereandstop - bu işaretçiye git ve dur\ntarawahere1 - yarış hattı noktası 1'i ayarla\ntarawahere2 - yarış hattı noktası 2'yi ayarla ve rotayı başlat\ntarawareturn - uçak gemisi alanına dön.",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "Tarawa işaretçi hareketi devre dışı.",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "Tarawa işaretçi hareketi yalnızca mavi koalisyon için kullanılabilir.",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Tarawa rotası reddedildi: işaretçi derin suda değil.",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Tarawa rotası reddedildi: yol yeterince derin veya doğrudan değil.",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Tarawa rotası reddedildi: işaretçi dost bölgede olmalı.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Tarawa yarış hattı noktası 1 kaydedildi. Rotayı tamamlamak için tarawahere2 yerleştir.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "tarawahere2 öncesinde tarawahere1 yerleştir.",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa işaretçiye gidiyor.",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Tarawa yarış hattı rotası ayarlandı.",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa işaretçiye ulaştı ve durdu.",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa uçak gemisi alanına geri dönüyor.",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa dönüş rotası çizemedi.",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s, %s bölgesine gidiyor.",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "Taşıyıcı grup artık yeni bir konuma gidebilir.",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s 5 dakika içinde dönecek.",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s 1 dakika içinde dönecek.",
 	DYNAMIC_TANKER_INFO                = "Tanker Bilgisi",
 	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco (Drogue): Bölgeye taşı",
 	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco (Drogue): Pozisyona göre taşı",
@@ -11088,6 +12095,7 @@ Rakım: 1251 fit
 	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "CAP (Engage If Engaged) olarak ayarlı",
 	DYNAMIC_CAP_ENGAGE_ALL             = "CAP Engage All olarak ayarlı",
 	DYNAMIC_TANKER_BUSY                = "Tanker yakınında oyuncular var. Daha sonra tekrar dene.",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "Tanker yakınında oyuncular var. Tekrar dene %s.",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s, %s hedefine yolda.",
 	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s, %s hedefine yeni racetrack ile yeniden konumlanıyor, heading %d derece, %d mil leg.",
 	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s, %s için %s yapıp orbit'e girmek üzere.",
@@ -11304,6 +12312,1759 @@ Rakım: 1251 fit
 	INTEL_ENEMY_ATTACK_CONVOY_INBOUND  = "İstihbarat: Düşman saldırı konvoyu %s konumundan geliyor, %s hedefine ilerliyor.",
 }
 
+FL.Messages.IT = {
+	-- ============================================================
+	-- Common
+	-- ============================================================
+	COMMON_YES                         = "Sì",
+	COMMON_NO                          = "No",
+	COMMON_ACCEPT                      = "Accetta",
+	COMMON_CLEAR                       = "Cancella",
+	COMMON_MORE                        = "Altro",
+	COMMON_NONE                        = "Nessuno",
+	COMMON_UNKNOWN                     = "Sconosciuto",
+	COMMON_ENABLED                     = "Attivato",
+	COMMON_DISABLED                    = "Disattivato",
+	LANGUAGE_MENU_SET                  = "Imposta lingua",
+	LANGUAGE_SET_RESLOT                = "Lingua impostata su %s. Rientra nello slot per ricostruire i menu.",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "La nave di rifornimento nemica ha raggiunto il porto.",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "L'aereo cargo nemico è atterrato.",
+
+	-- ============================================================
+	-- Welcome / ATIS / Escort
+	-- ============================================================
+	WELCOME_ALTIMETER                  = "Altimetro %.2f",
+	WELCOME_BRC                        = "BRC %d°",
+	WELCOME_BRC_UNAVAILABLE            = "Dati BRC non disponibili",
+	WELCOME_CARRIER_NOT_FOUND          = "Portaerei non trovata",
+	WELCOME_CARRIER_NOT_AVAILABLE      = "Portaerei non disponibile.",
+	WELCOME_WIND_UNAVAILABLE           = "Dati sul vento non disponibili",
+	WELCOME_WIND_AT_KNOTS              = "Vento da %03d° a %d nodi",
+	WELCOME_WIND_AT                    = "Vento da %03d° a %d",
+	WELCOME_AIRBASE_NOT_FOUND          = "Base aerea non trovata",
+	WELCOME_AIRBASE_DATA_UNAVAILABLE   = "Dati della base aerea non disponibili.",
+	WELCOME_AIRBASE_CONFLICT           = "Rilevato conflitto tra base e FARP o base aerea non trovata: %s",
+	WELCOME_NO_ACTIVE_RUNWAY           = "Nessun dato sulla pista attiva disponibile.",
+	WELCOME_ACTIVE_RUNWAY              = "La pista attiva è %s",
+	WELCOME_ACTIVE_RUNWAY_LANDING_TAKEOFF = "Pista attiva per l'atterraggio: %s, per il decollo: %s",
+	WELCOME_ACTIVE_RUNWAY_LANDING      = "Pista attiva (atterraggio): %s",
+	WELCOME_ACTIVE_RUNWAY_TAKEOFF      = "Pista attiva (decollo): %s",
+	WELCOME_TEMPERATURE                = "Temperatura %d°C",
+	WELCOME_TEMPERATURE_UNAVAILABLE    = "Dati sulla temperatura non disponibili",
+	WELCOME_ATIS_FOR_FULL              = "ATIS per %s:\n\n%s, %s\n\n%s",
+	WELCOME_ATIS_FOR_FULL_PERIOD       = "ATIS per %s :\n\n%s, %s\n\n%s.",
+	WELCOME_ATIS_FOR_SIMPLE            = "ATIS per %s :\n\n%s",
+	WELCOME_RUNWAY_INFO_UNAVAILABLE    = "Informazioni sulla pista non disponibili",
+	WELCOME_PLAYER_POSITION_UNKNOWN    = "È impossibile determinare la posizione del giocatore.",
+	WELCOME_CARRIER_INFO               = "Portaerei: %s\n\nDistanza: %.2f NM, rilevamento: %03d°\n\nTACAN: %s, %s",
+	WELCOME_CLOSEST_AIRFIELD           = "Base alleata più vicina: %s\n\nDistanza: %.2f NM, rilevamento: %03d°\n\n%s%s%s",
+	WELCOME_MENU_ATIS_CLOSEST          = "ATIS e base più vicina",
+	WELCOME_MENU_ATIS_INFO             = "Informazioni ATIS",
+	WELCOME_MENU_CLOSEST_FRIENDLY      = "Ottieni la base alleata più vicina",
+	WELCOME_MENU_ATIS_MOTHER           = "Ottieni ATIS per Mother",
+	WELCOME_MENU_ATIS_ZONE             = "Ottieni l'ATIS di %s",
+	WELCOME_GREETING_CARRIER_ASSIGNED  = "Benvenuto a bordo di %s, %s!\n\nSei stato assegnato a %s, IFF %04d.\n\nAttendi il bollettino meteorologico da Mother.",
+	WELCOME_DETAIL_CARRIER_ASSIGNED_TCN = "Benvenuto a bordo %s, %s!\n\n%s, %s, %s\n\nTCN: %s, %s\n\nA 7 miglia, passare al canale tattico 3.",
+	WELCOME_DETAIL_CARRIER_ASSIGNED    = "Benvenuto a bordo %s, %s!\n\n%s, %s, %s\n\n%s\n\nA 7 miglia, passare al canale tattico 3.",
+	WELCOME_GREETING_CARRIER_STANDBY   = "Benvenuto a bordo %s, %s!\n\nAttendi le previsioni meteo e BRC.",
+	WELCOME_GREETING_ZONE_ASSIGNED_ATIS = "Benvenuto a %s, %s!\n\nSei stato assegnato a %s, IFF %04d.\n\nAttendi le informazioni meteo e ATIS.",
+	WELCOME_DETAIL_ZONE_ATIS           = "Benvenuti a %s, %s!\n\n%s, %s, %s.\n\n%s.\n\nUna volta in volo, passare al canale tattico 3.",
+	WELCOME_GREETING_ZONE_STANDBY      = "Benvenuti a %s, %s!\n\nAttendere le informazioni meteo.",
+	WELCOME_GREETING_BACK_ZONE_ASSIGNED_ATIS = "Bentornato su %s, %s!\n\nSei stato assegnato a %s, IFF %04d.\n\nRiceverai a breve le ultime informazioni meteo e ATIS.",
+	WELCOME_DETAIL_BACK_ZONE_ATIS      = "Bentornati su %s, %s!\n\n%s, %s, %s.\n\n%s.\n\nUna volta in volo, passate al canale tattico 3.",
+	WELCOME_GREETING_BACK_ZONE_STANDBY = "Bentornati a %s, %s!\n\nAttendere informazioni meteo aggiornate.",
+	WELCOME_GREETING_ZONE_ASSIGNED     = "Benvenuto a %s, %s!\n\nSei stato assegnato a %s, IFF %04d.\n\nAttendi le informazioni meteo.",
+	WELCOME_DETAIL_ZONE                = "Benvenuti a %s, %s!\n\n%s, %s, %s.\n\nUna volta in volo, passate al canale tattico 3.",
+	WELCOME_GREETING_BACK_ZONE_ASSIGNED = "Bentornato su %s, %s!\n\nSei stato assegnato a %s, IFF %04d.\n\nRiceverai a breve informazioni meteo aggiornate.",
+	WELCOME_DETAIL_BACK_ZONE           = "Bentornati su %s, %s!\n\n%s, %s, %s.\n\nUna volta in volo, passate al canale tattico 3.",
+	WELCOME_MENU_CHANGE_CALLSIGN       = "Cambiare nominativo",
+	WELCOME_MENU_REQUEST_ESCORT        = "Richiedi una scorta",
+	WELCOME_ESCORT_AVAILABLE_PLAYER    = "Scorta disponibile, %s.",
+	WELCOME_ESCORT_ORBITING_OVERHEAD   = "La scorta orbita sopra di te finché non sei di nuovo in volo.",
+	WELCOME_ESCORT_SCRAMBLING_TAXI     = "Il gruppo di scorta si sta avviando e si dirigerà verso il circuito. Vi raggiungeremo presto.",
+	WELCOME_ESCORT_AIRBORNE_HEADING    = "Il gruppo di scorta è in volo e si sta dirigendo verso la vostra posizione.",
+	WELCOME_ESCORT_AIRBORNE_HOLDING    = "Il gruppo di scorta è in volo e rimarrà sopra la base fino al vostro decollo.",
+	WELCOME_ESCORT_ON_ROUTE            = "SCORTA IN ARRIVO.\n\nPuoi controllare la scorta dal menu radio.",
+	WELCOME_ESCORT_HOLDING_OVERHEAD    = "L'aereo di scorta rimarrà in volo fino al decollo.",
+	WELCOME_ESCORT_DESTROYED           = "Il tuo gruppo di scorta è stato distrutto. Decolla da un aeroporto per reclutarne uno nuovo.",
+	WELCOME_MENU_ESCORT                = "Scorta",
+	WELCOME_MENU_ESCORT_FLIGHTSWEEP    = "Scorta: Ricognizione aerea",
+	WELCOME_ESCORT_SET_ENGAGE_ALL      = "Scorta con accordi flessibili",
+	WELCOME_MENU_ESCORT_ENGAGE_IF_ENGAGED = "Scorta: Reagisci se coinvolta",
+	WELCOME_ESCORT_SET_ENGAGE_IF_ENGAGED = "Scorta organizzata per reagire se coinvolti",
+	WELCOME_MENU_PATROL_AHEAD          = "Pattuglia in avanti a 15 miglia nautiche",
+	WELCOME_MENU_RACETRACK_NOSE        = "Racetrack, 20 miglia nautiche più avanti",
+	WELCOME_MENU_RACETRACK_LEFT_RIGHT  = "Racetrack, Da sinistra a destra 20 miglia nautiche",
+	WELCOME_MENU_RACETRACK_RIGHT_LEFT  = "Racetrack, da destra a sinistra 20 miglia nautiche",
+	WELCOME_MENU_START_ORBIT           = "Inizia l'orbita da qui",
+	WELCOME_MENU_REJOIN                = "Ricongiungiti",
+	WELCOME_MENU_ESCORT_RTB            = "Scorta RTB",
+	WELCOME_ESCORT_COPY                = "Scorta: ricevuto!",
+	WELCOME_ESCORT_ORBIT_ESTABLISHED   = "Scorta: Orbita stabilita.",
+	WELCOME_ESCORT_NOT_FOUND           = "Nessun servizio di scorta attivo trovato.",
+	WELCOME_ESCORT_PATROL_INVALID      = "Impossibile schierare la pattuglia: gruppo di scorta non valido o distrutto.",
+	WELCOME_ESCORT_PATROLLING_NOSE     = "Scorta: stiamo pattugliando 15 miglia nautiche davanti a voi.",
+	WELCOME_ESCORT_RACETRACK_HEADING   = "La scorta stabilisce un tracciato di 20 NM in direzione %s",
+	WELCOME_ESCORT_REJOINING           = "La scorta si unisce alla vostra formazione.",
+	WELCOME_ESCORT_CANT_JOIN_GROUND    = "Non possiamo raggiungervi da terra. Resteremo in orbita sopra di voi finché non sarete di nuovo in volo.",
+	WELCOME_ESCORT_RTB                 = "La scorta è RTB",
+	WELCOME_ESCORT_HEADING_TO_POSITION = "La scorta si sta dirigendo verso la tua posizione.",
+
+	-- ============================================================
+	-- Directions
+	-- ============================================================
+	DIR_NORTH                          = "a nord",
+	DIR_NORTH_EAST                     = "a nord-est",
+	DIR_EAST                           = "a est",
+	DIR_SOUTH_EAST                     = "a sud-est",
+	DIR_SOUTH                          = "a sud",
+	DIR_SOUTH_WEST                     = "a sud-ouest",
+	DIR_WEST                           = "a ouest",
+	DIR_NORTH_WEST                     = "a nord-ouest",
+	DIR_NORTH_BOUND                    = "verso nord",
+	DIR_NORTH_EAST_BOUND               = "verso nord-est",
+	DIR_EAST_BOUND                     = "verso est",
+	DIR_SOUTH_EAST_BOUND               = "verso sud-est",
+	DIR_SOUTH_BOUND                    = "verso sud",
+	DIR_SOUTH_WEST_BOUND               = "verso sud-ouest",
+	DIR_WEST_BOUND                     = "verso ouest",
+	DIR_NORTH_WEST_BOUND               = "verso nord-ouest",
+
+	-- ============================================================
+	-- Menus - Common
+	-- ============================================================
+	MENU_MORE                          = "Di più",
+	MENU_SHOP                          = "Negozio",
+	MENU_DYNAMIC_CONTROL               = "Controllo dinamico",
+	MENU_INTEL                         = "Informazioni",
+	MENU_AVAILABLE_MISSIONS            = "Missione disponibile",
+	MENU_MISSIONS                      = "Missioni",
+	MENU_BUDGET_OVERVIEW               = "Panoramica del budget",
+	MENU_RESTART_AND_RESET             = "Riavviare e ripristinare?",
+	MENU_INTEL_ZONE_STATUS             = "Informazioni e stato delle aree",
+	MENU_RED_SIDE                      = "Campo Rosso",
+	MENU_BLUE_SIDE                     = "Campo Blu",
+
+	-- ============================================================
+	-- EWRS
+	-- ============================================================
+	EWRS_MENU_ROOT                     = "EWRS",
+	EWRS_REQUEST_BOGEY_DOPE            = "Chiedi a Bogey Dope",
+	EWRS_REQUEST_PICTURE               = "Richiedi il rapporto sulla situazione",
+	EWRS_SET_DETECTION_RANGE           = "Definire l'intervallo di rilevamento",
+	EWRS_CURRENT_SUFFIX                = " (attuale)",
+	EWRS_SET_THREAT_LIMIT              = "Definire i limiti di minaccia",
+	EWRS_ALL                           = "Tutto",
+	EWRS_FRIENDLIES                    = "Alleati",
+	EWRS_SHOW_FRIENDLIES_CURRENT       = "Mostra gli alleati (attualmente %s)",
+	EWRS_SET_FRIENDLY_LIMIT            = "Definire il confine dell'alleato",
+	EWRS_SHOW_TANKERS_CURRENT          = "Visualizza i punti di rifornimento (attualmente %s)",
+	EWRS_AUTO_PICTURE_CURRENT          = "Rapporto sullo stato automatico (attualmente %s)",
+	EWRS_GROUP_SETTINGS                = "Impostazioni di gruppo",
+	EWRS_SET_GROUP_REFERENCE           = "Definire il riferimento GRUPPO",
+	EWRS_SET_TO_BULLSEYE               = "Imposta su Bullseye",
+	EWRS_SET_TO_SELF                   = "Definisci te stesso",
+	EWRS_SET_GROUP_MEASUREMENTS        = "Definire le unità di GRUPPO",
+	EWRS_SET_TO_IMPERIAL               = "Definizione di unità imperiali (piedi, nodi)",
+	EWRS_SET_TO_METRIC                 = "Definizione del sistema metrico (metri, km/h)",
+	EWRS_STATUS_ON                     = "attivato",
+	EWRS_STATUS_OFF                    = "Disattivato",
+	EWRS_STATUS_ON_CAPS                = "ATTIVATO",
+	EWRS_STATUS_OFF_CAPS               = "DISATTIVATO",
+	EWRS_REFERENCE_SELF                = "se stessi",
+	EWRS_REFERENCE_BULLS               = "Bullseye",
+	EWRS_MEASUREMENTS_IMPERIAL         = "imperiale",
+	EWRS_MEASUREMENTS_METRIC           = "metrico",
+	EWRS_UNKNOWN                       = "Sconosciuto",
+	EWRS_BOGEY_DOPE_FOR                = "EWRS Bogey Dope per: %s",
+	EWRS_PICTURE_REPORT_FOR            = "EWRS Rapporto sullo stato di avanzamento per: %s",
+	EWRS_FRIENDLY_PICTURE_FOR          = "EWRS Situazione degli alleati per: %s",
+	EWRS_REPORT_RELATIVE               = "EWRS : %s | relativo a %s",
+	EWRS_NO_TARGETS_DETECTED           = "Nessun obiettivo rilevato",
+	EWRS_NO_FRIENDLIES_DETECTED        = "Nessun alleato rilevato",
+	EWRS_POSITION_UNKNOWN              = "%s Posizione: sconosciuta",
+	EWRS_CONTACT_LINE                  = "\n%s\t\tBRA\t\t%03d per %s\t\t%s\t\t%s",
+	EWRS_FRIENDLY_HEADER               = "--------------------------------> AMICI  <---------------------------------",
+	EWRS_ASPECT_HOT                    = "IN ARRIVO",
+	EWRS_ASPECT_FLANKING               = "FIANCO",
+	EWRS_ASPECT_BEAMING                = "TRAVERSO",
+	EWRS_ASPECT_COLD                   = "IN USCITA",
+	EWRS_FRIENDLY_CONTACT_LIMIT_ALL    = "Limite dei contatti alleati impostato su TUTTI",
+	EWRS_FRIENDLY_CONTACT_LIMIT_VALUE  = "Limite dei contatti alleati impostato a %d",
+	EWRS_THREAT_LIMIT_ALL              = "Limite di minaccia impostato su TUTTE",
+	EWRS_THREAT_LIMIT_VALUE            = "Limite di minaccia impostato su %d",
+	EWRS_FRIENDLY_CONTACTS_TURNED      = "Contatti alleati nella situazione : %s",
+	EWRS_TANKER_CONTACTS_TURNED        = "Aziende fornitrici nella situazione : %s",
+	EWRS_REFERENCE_CHANGED             = "Riferimento modificato a %s",
+	EWRS_MEASUREMENT_UNITS_CHANGED     = "Unità di misura modificate in %s",
+	EWRS_AUTO_PICTURE_TURNED           = "Rapporti automatici sullo stato del gruppo : %s",
+	EWRS_RANGE_SET                     = "Ambito definito su %d%s",
+
+	-- ============================================================
+	-- Syria Setup
+	-- ============================================================
+	SYRIA_FLAVOR_START_ZONE            = "WPT %s\nArea di partenza",
+	SYRIA_FLAVOR_WPT                   = "WPT %s\n",
+	SYRIA_FLAVOR_RED_CARRIER           = "WPT %s\n Distruggete la nave e la base della Silkworm, e potremo portare qui la CVN.",
+	SYRIA_FLAVOR_EWR_SITE              = "WPT %s\nSito EWR, non può essere catturato, distruggilo per 500 crediti e riduci le pattuglie nemiche",
+	SYRIA_FLAVOR_HELO_SPAWNS           = "WPT %s\nFornisce punti di spawn per elicotteri ai giocatori se catturato",
+	SYRIA_FLAVOR_PLANE_HELO_SPAWNS     = "WPT %s\nFornisce punti di generazione di aerei ed elicotteri ai giocatori se catturato",
+	SYRIA_FLAVOR_INCOME_180            = "WPT %s\n+180 crediti/ora",
+	SYRIA_FLAVOR_SAM_SITE              = "WPT %s\nSito SAM",
+	SYRIA_FLAVOR_STRIKE_TARGET_500     = "WPT %s\nObiettivo dell'attacco, non può essere catturato, distruttibile per 500 crediti",
+	SYRIA_FLAVOR_CRASHED_BLACKHAWK     = "WPT %s\nBlackhawk distrutto, attaccato a sorpresa da insorti locali, riparazione per 500 crediti.",
+	SYRIA_FLAVOR_INSURGENT_OUTPOST     = "WPT %s\nAvamposto degli insorti, non può essere conquistato, si conquista per 1000 crediti.",
+	SYRIA_FLAVOR_SA11_OR_PATRIOT       = "WPT %s\nGenera SA-11 o Patriot al livello massimo",
+	SYRIA_FLAVOR_DEFENCE_ZONE          = "WPT \nZona di difesa %s",
+	SYRIA_FLAVOR_SILKWORM_SITE         = "WPT \nSito Silkworm",
+	SYRIA_SETUP_SILKWORM_BLOCKING      = "Le nostre navi sono in attesa di conquistare l'area del Portatore Rosso, ma il Baco da Seta è ancora attivo.",
+	SYRIA_SETUP_MISSION_COMPLETE_RESTART = "Il nemico è stato sconfitto. Missione completata. Riavvio.",
+	SYRIA_SETUP_MISSION_COMPLETE_MENU  = "Il nemico è stato sconfitto. Missione completata. Puoi riavviare la missione dal menu radio.",
+	SYRIA_SETUP_RESTART_MENU           = "Riavvia e ripristina ?",
+	SYRIA_SETUP_RESTARTING_NOW         = "Riavvio in corso.",
+	SYRIA_SETUP_EWR_DESTROYED          = "Radar di allarme avanzato distrutto.\nRiduzione delle pattuglie nemiche nella zona.\n+500 crediti",
+	SYRIA_SETUP_SUBSTATION_DISABLED    = "Sottostazione disattivata\n+500 crediti",
+	SYRIA_SETUP_TV_TOWER_DISABLED      = "Torre televisiva disattivata\n+500 crediti",
+	SYRIA_SETUP_RADIO_TOWER_DISABLED   = "Torre radio disattivata\n+500 crediti",
+	SYRIA_SETUP_RADAR_DISABLED         = "Radar disattivato\n+500 crediti",
+	SYRIA_SETUP_INSURGENTS_CLEARED     = "Insorti eliminati\n+1000crediti",
+	SYRIA_SETUP_BLACKHAWK_RESCUED      = "L'equipaggio dell'elicottero Blackhawk è stato tratto in salvo.\n+500 crediti",
+	SYRIA_SETUP_DEFENCES_DESTROYED     = "Le difese di %s vengono distrutte\n+200 crediti",
+	SYRIA_SETUP_SILKWORM_DESTROYED     = "Le difese del Silkworm vengono distrutte.\n+200 crédits",
+	SYRIA_SETUP_OBJECT_MISSING         = "%s manca",
+	CA_SETUP_INSURGENTS_DL22_INTEL     = "Intel:\nSono stati avvistati insorti nella zona DL22, a nord di Krymsk.\nRipulisci l'area",
+	CA_SETUP_INSURGENTS_MN47_INTEL     = "Intel:\nSono stati avvistati insorti nella griglia MN47, a sud-ovest di Beslan.\nRipulisci l'area",
+	CA_SETUP_INSURGENTS_FJ98_INTEL     = "Intel:\nSono stati avvistati insorti nella griglia FJ98, a nord dell'hotel.\nRipulisci l'area",
+	CA_SETUP_INSURGENTS_EL70_INTEL     = "Intel:\nInsorti con sistemi missilistici terra-aria avanzati sono stati avvistati nella griglia EL70, a nord di Maykop.\nRipulisci l'area",
+	CA_MISSION_GROUND_ESCORT_TITLE     = "%s : scorta terrestre",
+	CA_EVENT_KUTAISI_ASSAULT           = "Il nemico ha lanciato un attacco a Kutaisi\n\n2 bombardieri scortati da 2 aerei non identificati!",
+	CA_EVENT_SOCHI_ARTY_ATTACK         = "Sochi è sotto attacco da parte dell'artiglieria nemica !\n\nAl riparo !",
+	CA_EVENT_SOCHI_ARTY_INTEL          = "Abbiamo trovato l'artiglieria nemica!\nA est di Bravo, coordinate:\n\nMGRS: 37 T EJ 39677 50279\nLatitudine/longitudine: N 43°48'16\" E 39°29'35\"\nLatitudine/longitudine (minuti decimali): N 43°48.270' E 39°29.596'\nAltitudine : 886 pieds\n\nDistruggeteli prima che sparino di nuovo!",
+	CA_EVENT_ANAPA_SCUDS               = "Al riparo !!\n\nIl nemico ha lanciato missili SCUD verso Anapa!!",
+	CA_SETUP_ENEMY_SAM_DESTROYED       = "Sistema missilistico antiaereo nemico distrutto\n+%d crediti",
+	CA_SETUP_MINING_FACILITY_DESTROYED = "L'impianto minerario non esiste più.\n+500 crediti",
+	CA_SETUP_INSURGENT_CAMP_DESTROYED  = "Il campo degli insorti non esiste più.\n+500 crediti",
+	CA_SETUP_AMMUNITION_DEPO_DESTROYED = "Il deposito di munizioni non esiste più.\n+500 crediti",
+	CA_SETUP_ARTILLERY_FACTORY_DESTROYED = "La fabbrica di artiglieria non esiste più\n+500 crediti",
+	CA_SETUP_CHEMSITE_DESTROYED        = "Il sito chimico non esiste più.\n+500 crediti",
+	CA_SETUP_FUELDEPO_DISABLED         = "Deposito di carburante disattivato\n+500 crediti",
+	CA_SETUP_SECRET_TECH_FACILITY_DESTROYED = "L'installazione tecnologica segreta è stata distrutta\n+500 crediti",
+	CA_SETUP_TANK_FACTORY_DESTROYED    = "Ottimo lavoro! La fabbrica di carri armati è stata distrutta.\n+500 crediti",
+	CA_SETUP_INSURGENCY_GRID_DESTROYED = "Rete dell'insurrezione %s distrutta.\n+500 crediti",
+	CA_EVENT_SCUDS_MAYKOP_LAUNCHING    = "SCUD a Maykop in fase di lancio %s",
+	CA_MISSION_SCUDS_21_TITLE          = "Distruggi gli SCUD (21)",
+	CA_MISSION_SCUDS_MAYKOP_DESC       = "Sono stati avvistati dei dispositivi SCUD a Maykop.\nDistruggeteli prima che lancino i loro missili.",
+	CA_MISSION_SCUDS_MAYKOP_START      = "Nuova missione: distruggere gli SCUD a Maykop",
+	CA_MISSION_INTERCEPT_CARGO_DESC    = "Individua e distruggi l'aereo cargo nemico in partenza da Vaziani e diretto verso Anapa, Kutaisi o Mineralnye.",
+	CA_MISSION_DESTROY_BATTLE_SHIPS_TITLE = "Distruggi navi mercantili e navi da guerra",
+	CA_MISSION_DESTROY_BATTLE_SHIPS_DESC = "Individua e distruggi le navi da guerra nemiche in partenza da Novorossiysk, dirette verso Sochi, Gudauta o Sukhumi. !",
+	CA_MISSION_DESTROY_BATTLE_SHIPS_START = "Nuova missione: distruggere le navi da guerra",
+	CA_MISSION_DESTROY_BATTLE_SHIPS_END = "Missione compiuta: distruggere le navi da guerra",
+	CA_MISSION_INTERCEPT_BOMBERS_MINERALNYE_DESC = "Avvistati bombardieri nemici a nord di Mineralnye\nDistruggili prima che ti raggiungano.",
+	CA_MISSION_INTERCEPT_AIRSTRIKE_WEST_EAST_DESC = "Aerei nemici che conducono un attacco aereo da ovest a est\nDistruggili prima che ti raggiungano.",
+	CA_MISSION_ESCORT_CARGO_KUTAISI_DESC = "Un aereo cargo alleato sta decollando da Kutaisi. Proteggilo finché non avrà lasciato lo spazio aereo.",
+	CA_TARGET_HIGH_VALUE_TARGET        = "obiettivo di alto valore",
+	CA_TARGET_HIGH_VALUE_GENERAL       = "Generale di grande valore",
+	CA_TARGET_VAZIANI_SUPPLY_WAREHOUSE = "Magazzino di forniture Vaziani",
+	CA_MISSION_STRIKE_HIGH_VALUE_TITLE = "Colpire un obiettivo di alto valore",
+	CA_MISSION_STRIKE_HIGH_VALUE_MARKER = "Colpire l'edificio con un bersaglio di alto valore",
+	CA_MISSION_STRIKE_HIGH_VALUE_DESC  = [[Colpisci un edificio di alto valore a queste coordinate :
+
+MGRS: 37 T EK 58654 22580
+Lat long: N 44°27'14" E 39°44'14"
+Lat long Decimal Minutes: N 44°27.248' E 39°44.234'
+
+Altitude : 677 piedi
+
+Ricompensa = 1000]],
+	CA_MISSION_STRIKE_HIGH_VALUE_START = "Nuova missione d'attacco: edificio bersaglio di alto valore",
+	CA_MISSION_STRIKE_HIGH_VALUE_END   = "Missione d'attacco completata: edificio bersaglio di alto valore",
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_TITLE = "Colpisci un altro obiettivo di alto valore",
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_MARKER = "Colpisci l'edificio di un altro obiettivo di alto valore",
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_DESC = [[Colpisci un edificio di alto valore a queste coordinate :
+
+MGRS: 37 T FH 84000 46225
+Lat long: N 42°50'47" E 41°15'06"
+Lat long Decimal Minutes: N 42°50.788' E 41°15.108'
+
+Altitude : 193 piedi
+
+Ricompensa = 1000]],
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_START = "Nuova missione d'attacco: un altro edificio bersaglio di alto valore",
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_END = "Missione d'attacco completata: un altro edificio bersaglio di alto valore",
+	CA_MISSION_STRIKE_HIGH_VALUE_GROUP_DESC = [[Colpisci un edificio di alto valore a queste coordinate :
+
+MGRS: 38 T LM 09247 78805
+Lat long: N 42°14'17" E 42°41'17"
+Lat long Decimal Minutes: N 42°14.288' E 42°41.287'
+
+Altitude : 435 piedi
+
+Ricompensa = 500]],
+	CA_MISSION_STRIKE_HIGH_VALUE_GROUP_START = "Nuova missione d'attacco: obiettivo di alto valore",
+	CA_MISSION_STRIKE_HIGH_VALUE_GROUP_END = "Missione d'attacco completata: obiettivo di alto valore",
+	CA_MISSION_KILL_HIGH_VALUE_GENERAL_TITLE = "Uccidere un generale di alto valore",
+	CA_MISSION_RIGHT_HAND_MAN_DESC     = [[Abbiamo individuato un obiettivo di alto valore
+nella città di Belorechensk. Eliminala!
+
+Coordonnées :
+MGRS: 37 T EK 68850 58279
+Lat Long: N 44°46'28" E 39°52'12"
+Lat long Decimal Minutes: N 44°46.475' E 39°52.210'
+
+Altitude : 381 piedi
+
+Ricompensa : 500
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+	CA_MISSION_LEFT_HAND_MAN_DESC      = [[Abbiamo individuato un altro obiettivo di alto valore
+nella città di Cherkessk. Probabilmente è
+nell'edificio. Eliminatela!
+
+Coordonnées :
+MGRS: 38 T KQ 64147 02594
+Lat Long: N 44°14'18" E 42°02'47"
+Lat long Decimal Minutes: N 44°14.303' E 42°02.786'
+
+Altitude : 1705 piedi
+
+Ricompensa : 500
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+	CA_MISSION_KILL_HIGH_VALUE_GENERAL_START = "Nuova missione d'assalto: uccidere un generale di alto rango",
+	CA_MISSION_KILL_HIGH_VALUE_GENERAL_END = "Missione d'attacco completata: ucciso un generale di alto valore",
+	CA_MISSION_STRIKE_VAZIANI_TITLE    = "Colpisci il deposito di rifornimenti di Vaziani",
+	CA_MISSION_STRIKE_VAZIANI_DESC     = [[Colpisci il deposito di rifornimenti di Vaziani per interrompere
+rifornire le zone nemiche circostanti.
+
+Coordinate :
+MGRS: 38 T NM 04080 09769
+Lat long: N 41°38'22" E 45°02'56"
+Lat long Decimal Minutes: N 41°38.378' E 45°02.939'
+
+Altitude 1465 piedi
+
+Ricompensa 1000
+
+2000 livres requis]],
+	CA_MISSION_STRIKE_VAZIANI_START    = "Nuova missione d'attacco: deposito di rifornimenti di Vaziani\n\nColpisci questo edificio per indebolire le linee di rifornimento verso le aree nemiche circostanti.",
+	CA_MISSION_STRIKE_VAZIANI_END      = "Missione d'attacco completata: deposito di rifornimenti di Vaziani",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "Colpisci il deposito di rifornimenti di Sukhumi per SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[Colpisci il deposito di rifornimenti di Sukhumi per indebolire i rifornimenti verso SAM-Delta.
+
+Coordinate:
+MGRS: 37 T FH 73652 48322
+Lat long: N 42°52'03" E 41°07'33"
+Lat long Decimal Minutes: N 42°52.065' E 41°07.553'
+
+Altitudine 43 piedi
+
+Ricompensa 500
+
+2000 libbre richieste]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "Nuova missione d'attacco: deposito di rifornimenti di Sukhumi per SAM-Delta\n\nColpisci questo edificio per indebolire i rifornimenti verso SAM-Delta",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "Missione d'attacco completata: deposito di rifornimenti di Sukhumi per SAM-Delta",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "Colpisci il deposito di rifornimenti di Sochi per SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[Colpisci il deposito di rifornimenti di Sochi per indebolire i rifornimenti verso SAM-Echo.
+
+Coordinate:
+MGRS: 37 T EJ 76855 11472
+Lat long: N 43°27'07" E 39°56'59"
+Lat long Decimal Minutes: N 43°27.133' E 39°56.994'
+
+Altitudine 98 piedi
+
+Ricompensa 500
+
+2000 libbre richieste]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "Nuova missione d'attacco: deposito di rifornimenti di Sochi per SAM-Echo\n\nColpisci questo edificio per indebolire i rifornimenti verso SAM-Echo",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "Missione d'attacco completata: deposito di rifornimenti di Sochi per SAM-Echo",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "Colpisci il deposito di rifornimenti di Anapa per SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[Colpisci il deposito di rifornimenti di Anapa per indebolire i rifornimenti verso SAM-Golf.
+
+Coordinate:
+MGRS: 37 T CK 69326 85636
+Lat long: N 45°00'43" E 37°20'30"
+Lat long Decimal Minutes: N 45°00.728' E 37°20.500'
+
+Altitudine 141 piedi
+
+Ricompensa 500
+
+2000 libbre richieste]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "Nuova missione d'attacco: deposito di rifornimenti di Anapa per SAM-Golf\n\nColpisci questo edificio per indebolire i rifornimenti verso SAM-Golf",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "Missione d'attacco completata: deposito di rifornimenti di Anapa per SAM-Golf",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "Colpisci il deposito di rifornimenti di Kobuleti per SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[Colpisci il deposito di rifornimenti di Kobuleti per indebolire i rifornimenti verso SAM-Alpha.
+
+Coordinate:
+MGRS: 37 T GG 38429 46709
+Lat long: N 41°56'10" E 41°52'33"
+Lat long Decimal Minutes: N 41°56.180' E 41°52.558'
+
+Altitudine 59 piedi
+
+Ricompensa 500
+
+2000 libbre richieste]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "Nuova missione d'attacco: deposito di rifornimenti di Kobuleti per SAM-Alpha\n\nColpisci questo edificio per indebolire i rifornimenti verso SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "Missione d'attacco completata: deposito di rifornimenti di Kobuleti per SAM-Alpha",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "Colpisci il deposito di rifornimenti di Krasnodar-Pashkovsky per SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[Colpisci il deposito di rifornimenti di Krasnodar-Pashkovsky per indebolire i rifornimenti verso SAM-Hotel.
+
+Coordinate:
+MGRS: 37 T DK 96195 93639
+Lat long: N 45°05'46" E 38°57'05"
+Lat long Decimal Minutes: N 45°05.772' E 38°57.098'
+
+Altitudine 92 piedi
+
+Ricompensa 500
+
+2000 libbre richieste]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "Nuova missione d'attacco: deposito di rifornimenti di Krasnodar-Pashkovsky per SAM-Hotel\n\nColpisci questo edificio per indebolire i rifornimenti verso SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "Missione d'attacco completata: deposito di rifornimenti di Krasnodar-Pashkovsky per SAM-Hotel",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "Colpisci il deposito di rifornimenti di Mineralnye per SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[Colpisci il deposito di rifornimenti di Mineralnye per indebolire i rifornimenti verso SAM-Juliett.
+
+Coordinate:
+MGRS: 38 T LP 48963 98291
+Lat long: N 44°13'19" E 43°06'32"
+Lat long Decimal Minutes: N 44°13.331' E 43°06.545'
+
+Altitudine 1009 piedi
+
+Ricompensa 500
+
+2000 libbre richieste]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "Nuova missione d'attacco: deposito di rifornimenti di Mineralnye per SAM-Juliett\n\nColpisci questo edificio per indebolire i rifornimenti verso SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "Missione d'attacco completata: deposito di rifornimenti di Mineralnye per SAM-Juliett",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "Colpisci il deposito di rifornimenti di Mozdok per SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[Colpisci il deposito di rifornimenti di Mozdok per indebolire i rifornimenti verso SAM-Kilo.
+
+Coordinate:
+MGRS: 38 T MP 68815 48119
+Lat long: N 43°47'07" E 44°36'44"
+Lat long Decimal Minutes: N 43°47.128' E 44°36.745'
+
+Altitudine 507 piedi
+
+Ricompensa 500
+
+2000 libbre richieste]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "Nuova missione d'attacco: deposito di rifornimenti di Mozdok per SAM-Kilo\n\nColpisci questo edificio per indebolire i rifornimenti verso SAM-Kilo",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "Missione d'attacco completata: deposito di rifornimenti di Mozdok per SAM-Kilo",
+	CA_SHOP_ITEM_STATIC_STRUCTURE      = "volo di attacco alla struttura",
+	CA_SHOP_LABEL_BUILDING_STRIKE      = "edificio imponente",
+	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "Nessuna zona alleata disponibile per il punto di partenza dell'attacco.",
+	CA_SHOP_CAN_ONLY_TARGET_BUILDINGS  = "Bersagliabile solo in territorio nemico con edifici",
+	CA_SHOP_NO_VALID_BUILDING_TARGET_ZONES = "Al momento non sono presenti zone nemiche valide con edifici.",
+	SYRIA_EVENT_SCUDS_LAUNCHING        = "I missili SCUD vengono lanciati vicino a Oscar su %s",
+	SYRIA_EVENT_INTERCEPTOR_SPOTTED    = "Avvistato un intercettore nemico lungo il percorso verso il nostro trasporto merci.",
+	SYRIA_EVENT_INTERCEPT_MISSION      = "Il nemico ha lanciato una missione di intercettazione contro il nostro trasporto merci.",
+	SYRIA_SHOP_ITEM_CRUISE_MISSILE     = "attacco missilistico da crociera",
+	SYRIA_SHOP_ITEM_RESUPPLY_ZONE      = "Rifornire una zona alleata",
+	SYRIA_SHOP_ITEM_FULLY_UPGRADE_ZONE = "Migliora completamente una zona alleata",
+	SYRIA_SHOP_ITEM_CAP_FLIGHT         = "Volo CAP",
+	SYRIA_SHOP_ITEM_TANKER_DROGUE      = "Sblocca l'aereo rifornimenti (doge)",
+	SYRIA_SHOP_ITEM_TANKER_BOOM        = "Sblocca l'aereo rifornimenti (Boom)",
+	SYRIA_SHOP_ITEM_CAS_FLIGHT         = "Volo CAS",
+	SYRIA_SHOP_ITEM_TALD_DECOY         = "Volo decoy TALD",
+	SYRIA_SHOP_ITEM_SEAD_FLIGHT        = "Volo SEAD",
+	SYRIA_SHOP_ITEM_BOMBER_FLIGHT      = "Volo bombardier",
+	SYRIA_SHOP_ITEM_JTAC_MQ9           = "Missione JTAC MQ-9 Reaper",
+	SYRIA_SHOP_ITEM_JTAC_9LINE_AM      = "JTAC 9-linea AM",
+	SYRIA_SHOP_ITEM_JTAC_9LINE_FM      = "JTAC 9-linea FM",
+	SYRIA_SHOP_ITEM_GROUND_ATTACK      = "Attacco terrestre",
+	SYRIA_SHOP_ITEM_SMOKE_MARKERS      = "Segnalatori di fumo",
+	SYRIA_SHOP_ITEM_FLARE_MARKERS      = "Marcatori per razzi",
+	SYRIA_SHOP_ITEM_ILLUMINATION       = "Bomba lanciarazzi",
+	SYRIA_SHOP_ITEM_DEPLOY_ARMOR       = "Schierare veicoli blindati",
+	SYRIA_SHOP_ITEM_DEPLOY_ARTILLERY   = "schierare artiglieria",
+	SYRIA_SHOP_ITEM_DEPLOY_RECON       = "schierare gruppo reco",
+	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Schierare la difesa aerea",
+	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Cattura zona neutra",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Informazioni di intelligence sul territorio nemico",
+	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Miglioramento della zona rossa",
+	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Massiccio attacco rosso all'aeroporto.",
+	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Migliorare l'area con la fanteria",
+	SYRIA_SHOP_LABEL_INFANTRY          = "Fanteria",
+	SYRIA_SHOP_ITEM_UPGRADE_HAWK       = "Migliora l'area con Hawk",
+	SYRIA_SHOP_ITEM_UPGRADE_NASAMS     = "Migliora l'area con NASAMS",
+	SYRIA_SHOP_ITEM_UPGRADE_HIMARS     = "Migliora l'area con HIMARS",
+	SYRIA_SHOP_ITEM_LOGISTIC_CENTER    = "Trasformare l'area in un polo logistico",
+	SYRIA_SHOP_ITEM_WAREHOUSE_50       = "Fornitura magazzino con 50",
+	SYRIA_SHOP_ITEM_UPGRADE_ARMOR      = "Migliorare l'area con veicoli blindati",
+	SYRIA_SHOP_ITEM_UPGRADE_PATRIOT    = "Migliora l'area con Patriot",
+	SYRIA_SHOP_ITEM_EXTRA_SLOT         = "Sblocca uno slot di potenziamento aggiuntivo",
+	SYRIA_SHOP_ITEM_DEPLOY_FARP        = "Implementa FARP",
+	SYRIA_SHOP_ITEM_JAM_RADARS         = "Disturbo dei radar nella zona",
+	SYRIA_SHOP_CAT_AI_ATTACK           = "Attacco IA",
+	SYRIA_SHOP_CAT_ZONE_UPGRADES       = "Miglioramenti dell'area",
+	SYRIA_SHOP_CAT_JTAC_INTEL          = "JTAC e intelligence",
+	SYRIA_SHOP_CAT_MARKING_TOOLS       = "Marcatura e strumenti",
+	SYRIA_SHOP_CAT_COMBINED_ARMS       = "Armi combinate",
+	SYRIA_SHOP_CAT_LOGISTICS           = "Acquisizione e risorse",
+	SYRIA_SHOP_CAT_OTHER_SUPPORT       = "Altri supporti",
+	SYRIA_SHOP_CHOOSE_TARGET_ZONE      = "Seleziona l'area di destinazione dal menu Negozio.",
+	SYRIA_SHOP_CHOOSE_TARGET_ZONE_F10  = "Seleziona l'area di destinazione dal menu F10",
+	SYRIA_SHOP_CHOOSE_ZONE             = "Seleziona l'area dal menu Negozio",
+	SYRIA_SHOP_CHOOSE_ZONE_FULLY_UPGRADE = "Seleziona un'area dal menu Negozio per potenziarla completamente.",
+	SYRIA_SHOP_CHOOSE_SPAWN_ZONE       = "Seleziona la zona di generazione dal menu F10",
+	SYRIA_SHOP_CHOOSE_DEPLOY_ZONE      = "Seleziona la zona di distribuzione dal menu Negozio",
+	SYRIA_SHOP_CHOOSE_NEUTRAL_ZONE     = "Seleziona la zona neutra dal menu Negozio",
+	SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY   = "È possibile colpire una sola zona nemica.",
+	SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY = "È possibile colpire una sola zona alleata.",
+	SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY = "Spawn possibile solo da una zona alleata",
+	SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY = "Il dispiegamento è possibile solo in una zona alleata.",
+	SYRIA_SHOP_ZONE_NO_RESUPPLY        = "La zona non necessita di rifornimenti.",
+	SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED = "I rifornimenti lanciati dall'IA blu sono disabilitati.",
+	SYRIA_SHOP_DEPLOY_FROM_FARP        = "Distribuisci da un FARP, se disponibile.?",
+	SYRIA_SHOP_NO_VALID_ENEMY_ZONES    = "Al momento non sono presenti zone nemiche valide.",
+	SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES = "Al momento non esistono zone alleate valide.",
+	SYRIA_SHOP_NO_ELIGIBLE_NEUTRAL_ZONES = "Al momento non sono ammissibili zone neutrali.",
+	SYRIA_SHOP_NO_ELIGIBLE_ZONE        = "Nessuna area idonea",
+	SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES = "Nessuna area aeroportuale idonea",
+	SYRIA_SHOP_MUST_PICK_ENEMY_ZONE    = "Devi scegliere una zona nemica",
+	SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE = "Devi scegliere una zona alleata",
+	SYRIA_SHOP_ZONE_NOT_NEUTRAL        = "La zona non è neutrale",
+	SYRIA_SHOP_MASS_ATTACK_UNAVAILABLE = "Attacco di massa non disponibile",
+	SYRIA_SHOP_ALREADY_CHOOSING_ZONE   = "La selezione delle zone è già in corso.",
+	SYRIA_SHOP_ALREADY_UNLOCKED        = "Già sbloccato",
+	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "Ora tutte le aree possono acquistare un secondo aggiornamento",
+	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Scegliere l'area per il centro logistico",
+	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Seleziona un'area aeroportuale alleata completamente potenziata dal menu F10.",
+	SYRIA_SHOP_GATHERING_INTEL         = "Raccolta di informazioni su %s. In attesa del rapporto...",
+	SYRIA_SHOP_LAUNCHING_CRUISE        = "Lancio di missili da crociera su %s",
+	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "Missione %s ancora in corso",
+	SYRIA_SHOP_JAMMING_TARGET          = "Obiettivo di disturbo",
+	SYRIA_SHOP_GROWLER_JAMMING         = "Growler disturba i radar a %s",
+	SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE = "%s sta ancora volando",
+	SYRIA_SHOP_CAP_REQUESTED           = "CAP richiesto. Seleziona un'area di spawn.",
+	SYRIA_SHOP_TANKER_DROGUE_UNLOCKED  = "Rifornimento (droga) sbloccato. Seleziona un'area di spawn.",
+	SYRIA_SHOP_TANKER_BOOM_UNLOCKED    = "Lancio di rifornimenti (Boom) sbloccato. Seleziona un'area di spawn.",
+	SYRIA_SHOP_NO_FRIENDLY_SPAWN       = "Nessuna zona alleata disponibile per il spawn %s.",
+	SYRIA_SHOP_JTAC_ALREADY_ACTIVE     = "JTAC è già attivo sopra %s. Scegli un'altra area",
+	SYRIA_SHOP_JTAC_TOMCAT_ACTIVE      = "Tomcat alleato schierato oltre %s - JTAC attivi %d / 2",
+	SYRIA_SHOP_JTAC_REAPER_ACTIVE      = "Drone Reaper impiegato su %s - JTAC attivo %d / 2",
+	SYRIA_SHOP_JTAC_TOMCAT_AM          = "Tomcat alleato schierato oltre %s. Contattare Springfield a 241.00 AM ",
+	SYRIA_SHOP_JTAC_REAPER_AM          = "Drone Reaper dispiegato sopra %s. Contattare Springfield a 241.00 AM ",
+	SYRIA_SHOP_JTAC_TOMCAT_FM          = "Tomcat alleato schierato sopra %s. Contatta Uzi a 31.00 FM ",
+	SYRIA_SHOP_JTAC_REAPER_FM          = "Drone Reaper dispiegato sopra %s. Contatta Uzi a 31.00 FM ",
+	SYRIA_SHOP_TARGETS_RED_SMOKE       = "Obiettivi contrassegnati con fumo ROSSO a %s",
+	SYRIA_SHOP_TARGETS_RED_FLARE       = "Obiettivi contrassegnati da un razzo ROSSO a %s",
+	SYRIA_SHOP_TARGETS_ILLUMINATED     = "Bersagli illuminati a %s",
+	SYRIA_SHOP_FRIENDLY_ARMOR_DEPLOYED = "Veicoli corazzati alleati schierati a %s",
+	SYRIA_SHOP_FRIENDLY_ARTY_DEPLOYED  = "Artiglieria alleata schierata a %s",
+	SYRIA_SHOP_FRIENDLY_RECON_DEPLOYED = "Gruppo di ricognizione alleato schierato a %s",
+	SYRIA_SHOP_FRIENDLY_AIRDEF_DEPLOYED = "La difesa aerea alleata è stata dispiegata a %s",
+	SYRIA_SHOP_ZONE_FULLY_UPGRADED     = "%s è ora completamente migliorato !",
+	SYRIA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA = "Zona già migliorata: acquista lo slot globale aggiuntivo per aggiungerne un altro",
+	SYRIA_SHOP_ZONE_ALREADY_UPGRADED   = "Area già migliorata",
+	SYRIA_SHOP_UPGRADE_ADDED           = "%s aggiunto a %s per %s",
+	SYRIA_SHOP_UPGRADE_ADDED_EXTRA     = "%s aggiunto a %s per %s - acquista lo slot globale aggiuntivo per migliorare ulteriormente quest'area",
+	SYRIA_SHOP_UPGRADE_ADDED_EXTRA_LINE = "%s aggiunto a %s per %s\nAcquista lo slot globale aggiuntivo per potenziare ulteriormente quest'area.",
+	SYRIA_SHOP_FARP_MARKER_HELP        = "Distribuisci un FARP tramite un indicatore sulla mappa.\nUtilizza il testo del marcatore: buy:farphere.\nDeve trovarsi al di fuori di tutte le zone e ad almeno 10 miglia nautiche dalle zone nemiche.",
+	SYRIA_MISSION_SCUDS_TITLE          = "Distruggi gli SCUD(52)",
+	SYRIA_MISSION_TARGET_DESTROY_SCUDS = "Distruggi gli Scud",
+	SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS = "Intercettare i bombardieri nemici",
+	SYRIA_MISSION_TARGET_DESTROY_CARGO_SHIP = "Distruggi il carico",
+	SYRIA_MISSION_TARGET_STRIKE_MISSION = "missione d'attacco",
+	SYRIA_MISSION_TARGET_DAM_FACTORIES = "Fabbriche di dighe",
+	SYRIA_MISSION_TARGET_REFINERY_FACTORIES = "Impianti di raffinazione",
+	SYRIA_MISSION_SCUDS_DESC           = "Gli SCUD sono stati individuati in Oscar (52).\nDistruggeteli prima che possano lanciare i loro missili.",
+	SYRIA_MISSION_SCUDS_START          = "Nuova missione: Distruggi gli SCUD",
+	SYRIA_MISSION_SCUDS_END            = "Missione completata: distruggere gli SCUDS",
+	SYRIA_MISSION_ESCORT_CARGO_TITLE   = "Scortare un aereo cargo",
+	SYRIA_MISSION_ESCORT_CARGO_DESC    = "Un aereo cargo alleato sta decollando da Incirlik. Proteggilo finché non avrà lasciato lo spazio aereo.",
+	SYRIA_MISSION_ESCORT_CARGO_START   = "Nuova missione: scortare un aereo cargo.",
+	SYRIA_MISSION_ESCORT_CARGO_END     = "Missione compiuta: scortare l'aereo cargo.",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE = "Intercettare un attacco aereo nemico",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_DESC_SE = "Aerei nemici stanno conducendo un attacco aereo da sud-est.\nDistruggili prima che entrino a tiro.",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_DESC_NS = "Aerei nemici stanno conducendo un attacco aereo dall'asse nord-sud\nDistruggili prima che entrino a tiro.",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START = "Nuova missione: intercettare un attacco aereo nemico",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END = "Missione completata: intercettato attacco aereo nemico",
+	SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE = "Intercettare i bombardieri",
+	SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_NE = "Avvistati bombardieri nemici a nord-est\nDistruggili prima che entrino a tiro.",
+	SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_CYPRUS = "Avvistati bombardieri nemici a nord di Cipro.\nDistruggili prima che entrino a tiro.",
+	SYRIA_MISSION_INTERCEPT_BOMBERS_START = "Nuova missione: intercettare i bombardieri",
+	SYRIA_MISSION_INTERCEPT_BOMBERS_END = "Missione compiuta: intercettazione dei bombardieri",
+	SYRIA_MISSION_DESTROY_CARGO_SHIP_TITLE = "Distruggi il carico presso Red Carrier",
+	SYRIA_MISSION_DESTROY_CARGO_SHIP_DESC = "Individua e distruggi la nave mercantile nemica a Red Carrier, sulla rotta per Bassel Al-Assad.",
+	SYRIA_MISSION_DESTROY_CARGO_SHIP_START = "Nuova missione: distruggere il carico",
+	SYRIA_MISSION_DESTROY_CARGO_SHIP_END = "Missione completata: distruggere il carico",
+	SYRIA_MISSION_INTERCEPT_CARGO_TITLE = "Intercettare un aereo cargo",
+	SYRIA_MISSION_INTERCEPT_CARGO_DESC = "Individua e distruggi l'aereo cargo nemico vicino a Red Carrier, sulla rotta per Basilea Al-Assad.",
+	SYRIA_MISSION_INTERCEPT_CARGO_START = "Nuova missione: intercettare un aereo cargo.",
+	SYRIA_MISSION_INTERCEPT_CARGO_END  = "Missione compiuta: intercettazione dell'aereo cargo.",
+	SYRIA_MISSION_DEFEND_DUHUR_TITLE   = "In difesa di Abu al-Duhur",
+	SYRIA_MISSION_DEFEND_DUHUR_DESC    = "Il nemico si sta preparando a sferrare un attacco su vasta scala contro Abu al-Duhur.\nDifendere l'aeroporto a tutti i costi.",
+	SYRIA_MISSION_DEFEND_DUHUR_START   = "Nuova missione: difendere Abu al-Duhur",
+	SYRIA_MISSION_DEFEND_DUHUR_END     = "Missione compiuta: difendere Abu al-Duhur",
+	SYRIA_MISSION_FIND_GENERAL_TITLE   = "Trova il convoglio del generale",
+	SYRIA_MISSION_FIND_GENERAL_DESC    = "Trova il convoglio del generale!\nHa appena lasciato Pinarbashi in un convoglio protetto dalle SA-19,\n\nScopri dove abita e fai esplodere una bomba sull'edificio.",
+	SYRIA_MISSION_FIND_GENERAL_START   = "Nuova missione: trovare il convoglio del generale.\nÈ appena partito da Pinarbashi, diretto a nord.",
+	SYRIA_MISSION_FIND_GENERAL_END     = "Missione compiuta: trovare il convoglio del generale.",
+	SYRIA_MISSION_ARTY_TITLE           = "Distruggi l'artiglieria",
+	SYRIA_MISSION_ARTY_DESC            = "L'artiglieria è stata avvistata in rotta verso %s dalla direzione di %s.\nDistruggilo prima che entri nel raggio d'azione.",
+	SYRIA_MISSION_ARTY_START           = "Nuova missione: Distruggi l'artiglieria",
+	SYRIA_MISSION_ARTY_END             = "Missione completata: distruggere l'artiglieria",
+	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_TITLE = "Attacco al deposito nemico",
+	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_DESC = [[È stato scoperto un deposito nemico,
+a nord-ovest dell'aeroporto di Aleppo, nella città di Aleppo.
+Distruggilo !
+
+rICOMPENSA : 500
+
+MGRS: 37 S CA 34720 07791
+Lat long: N 36°12'03" E 37°09'41"
+Lat long Precise: N 36°12'03.04" E 37°09'41.70"
+Lat long Decimal Minutes: N 36°12.050' E 37°09.695'
+Altitude 1287 PIEDI]],
+	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "Nuova missione d'assalto: Assalto al deposito nemico",
+	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Missione d'attacco completata: attacco al deposito nemico.",
+	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "aTTACCO  al magazzino di approvvigionamento di Taftanaz",
+	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[Il deposito di rifornimenti di Taftanaz è stato trovato,
+Distruggilo per interrompere i rifornimenti provenienti da lì.
+
+Ricompensa : 500
+
+MGRS: 37 S CV 00527 82799
+Lat long: N 35°58'09" E 36°47'16"
+Lat long Precise: N 35°58'09.20" E 36°47'16.11"
+Lat long Decimal Minutes: N 35°58.154' E 36°47.268'
+Altitude 1020 piedi]],
+	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_START = "Nuova missione d'attacco: colpire il deposito di rifornimenti di Taftanaz.",
+	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_END = "Missione d'attacco completata: attacco al deposito di rifornimenti di Taftanaz.",
+	SYRIA_MISSION_STRIKE_ABU_DUHUR_PAPA_WAREHOUSE_TITLE = "Attacco presso il magazzino di rifornimenti Papa di Abu al-Duhur",
+	SYRIA_MISSION_STRIKE_ABU_DUHUR_PAPA_WAREHOUSE_DESC = [[È stata trovata la fornitura di Abu al-Duhur per l'SA-11 a Papa,
+Distruggilo per interrompere il flusso di rifornimenti verso questo sito.
+
+Ricompensa : 500
+
+MGRS: 37 S CV 29530 56517
+Lat long: N 35°44'16" E 37°06'53"
+Lat long Precise: N 35°44'16.48" E 37°06'53.64"
+Lat long Decimal Minutes: N 35°44.274' E 37°06.894'
+Altitude 1020 pieds]],
+	SYRIA_MISSION_STRIKE_ABU_DUHUR_PAPA_WAREHOUSE_MARK = "Attacco al magazzino Papa Supply di Abu al-Duhur",
+	SYRIA_MISSION_STRIKE_ABU_DUHUR_PAPA_WAREHOUSE_START = "Nuova missione d'attacco: colpire il deposito di rifornimenti Papa di Abu al-Duhur.",
+	SYRIA_MISSION_STRIKE_ABU_DUHUR_PAPA_WAREHOUSE_END = "Missione d'attacco completata: attacco al deposito di rifornimenti Papa di Abu al-Duhur.",
+	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_TITLE = "Attacco presso il deposito di rifornimenti della Difesa di Incirlik",
+	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_DESC = [[Presso lo stabilimento Incirlik Defence sono state ritrovate le forniture di Incirlik per il sistema SA-11.
+All'aeroporto di Incirlik. Attacca il magazzino per fermare i rifornimenti.
+a questo sito.
+
+Ricompensa : 500
+
+MGRS: 36 S YF 16959 97729
+Lat long: N 37°00'02" E 35°26'17"
+Lat long Precise: N 37°00'02.52" E 35°26'17.60"
+Lat long Decimal Minutes: N 37°00.042' E 35°26.293'
+Altitude 204 piedi]],
+	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_START = "Nuova missione d'attacco: Magazzino di rifornimenti per la difesa di Incirlik",
+	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_END = "Missione d'attacco completata: Magazzino di rifornimenti della Difesa di Incirlik",
+	SYRIA_MISSION_STRIKE_DAM_FACTORIES_TITLE = "Attacco sulle fabbriche della diga",
+	SYRIA_MISSION_STRIKE_DAM_FACTORIES_DESC = [[2 sono state identificate le fabbriche di dighe.
+Distruggili per eliminare questa base nemica e
+tutta la sua attività.
+
+Ricompensa : 250
+
+È necessaria una bomba perforante da 2000 libbre.
+
+MGRS: 37 S DV 60107 68418
+Lat long: N 35°51'32" E 38°33'29"
+Lat long Precise: N 35°51'32.99" E 38°33'29.39"
+Lat long Decimal Minutes: N 35°51.549' E 38°33.489'
+Altitude 980 piedi
+
+MGRS: 37 S DV 60141 68067
+Lat long: N 35°51'21" E 38°33'30"
+Lat long Precise: N 35°51'21.61" E 38°33'30.80"
+Lat long Decimal Minutes: N 35°51.360' E 38°33.513'
+Altitude 973 piedi]],
+	SYRIA_MISSION_STRIKE_DAM_FACTORIES_START = "Nuova missione di sciopero: colpire le fabbriche di dighe",
+	SYRIA_MISSION_STRIKE_DAM_FACTORIES_END = "Missione d'attacco completata: attacco alle fabbriche di dighe",
+	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_TITLE = "Attacco negli impianti di raffinazione",
+	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_DESC = [[4 Sono stati individuati gli stabilimenti all'interno della raffineria.
+Distruggili per eliminare questa base nemica e
+tutta la sua attività.
+
+RRicompensa : 500
+
+È necessaria una bomba penetrante da 2000 libbre.
+4 bersagli vicino al centro del waypoint.
+
+MGRS: 37 S CU 85209 66109
+Lat long: N 34°55'51" E 37°44'35"
+Lat long Precise: N 34°55'51.52" E 37°44'35.29"
+Lat long Decimal Minutes: N 34°55.858' E 37°44.588'
+Altitude 2512 piedi]],
+	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_START = "Nuova missione di sciopero: colpire le raffinerie.",
+	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_END = "Missione d'attacco completata: attacco agli impianti di raffinazione.",
+	SYRIA_MISSION_STRIKE_PALMYRA_SA5_TITLE = "Attacco sui componenti di stoccaggio SA-5 a Palmira",
+	SYRIA_MISSION_STRIKE_PALMYRA_SA5_DESC = [[Sono stati ritrovati i componenti di stoccaggio SA-5 provenienti da Palmira.,
+Distruggili per impedire che le riparazioni provengano da lì.
+
+Ricompensa : 500
+
+MGRS: 37 S DU 36481 24765
+Lat long: N 34°33'45" E 38°18'27"
+Lat long Precise: N 34°33'45.65" E 38°18'27.31"
+Lat long Decimal Minutes: N 34°33.760' E 38°18.455'
+Altitude 1300 piedi]],
+	SYRIA_MISSION_STRIKE_PALMYRA_SA5_START = "Nuova missione d'attacco: colpire le scorte di SA-5 a Palmira.",
+	SYRIA_MISSION_STRIKE_PALMYRA_SA5_END = "Missione compiuta: attacco alle monete di stoccaggio SA-5 di Palmira",
+	SYRIA_MISSION_STRIKE_RAMAT_DAVID_WAREHOUSE_TITLE = "Attacco al deposito di rifornimenti di Ramat David",
+	SYRIA_MISSION_STRIKE_RAMAT_DAVID_WAREHOUSE_DESC = [[Il deposito di rifornimenti di Ramat David è stato trovato,
+Distruggilo per interrompere i rifornimenti alla base di difesa di Ramat David.
+Ricompensa : 500
+
+MGRS: 36 S YB 05640 16615
+Lat long: N 32°40'05" E 35°11'34"
+Lat long Precise: N 32°40'05.07" E 35°11'34.60"
+Lat long Decimal Minutes: N 32°40.084' E 35°11.576'
+Altitude 151 piedi]],
+	SYRIA_MISSION_STRIKE_RAMAT_DAVID_WAREHOUSE_START = "Nuova missione d'attacco: colpire il deposito di rifornimenti di Ramat David.",
+	SYRIA_MISSION_STRIKE_RAMAT_DAVID_WAREHOUSE_END = "Missione d'attacco completata: attacco al deposito di rifornimenti di Ramat David.",
+	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_TITLE = "Attacco presso il magazzino di rifornimenti di Basilea Al-Assad per l'hotel",
+	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_DESC = [[È stato scoperto il deposito di rifornimenti di Bassel Al-Assad.
+	Distruggilo per interrompere le consegne di rifornimenti all'hotel.
+
+Ricompensa: 500
+
+MGRS: 36 S YE 68139 21017
+Lat long: N 35°23'47" E 35°57'08"
+Lat long Precise: N 35°23'47.37" E 35°57'08.41"
+Lat long Decimal Minutes: N 35°23.789' E 35°57.140'
+Altitude 92 piedi]],
+	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_MARK = "Attacco presso il magazzino di rifornimenti di Basilea Al-Assad",
+	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_START = "Nuova missione d'attacco: attacco al deposito di rifornimenti di Al-Assad a Basilea per l'hotel",
+	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_END = "Missione d'attacco completata: attacco al deposito di rifornimenti di Al-Assad a Bassel per l'hotel",
+	SYRIA_MISSION_STRIKE_REBELES_TITLE = "Colpire i ribelli",
+	SYRIA_MISSION_STRIKE_REBELES_ADANA_DESC = [[È stato scoperto un nascondiglio dei ribelli,
+
+a est di Incirlik, nella città di Adana.
+
+Fai esplodere una bomba sull'edificio!
+
+Ricompensa: 250
+
+MGRS: 36 S YF 01234 99114
+Lat long: N N 37°01'00" E 35°15'43"
+Lat long Decimal Minutes: N 37°01.000' E 35°15.720'
+
+Altitude 83 piedi]],
+	SYRIA_MISSION_STRIKE_REBELES_ALEPPO_DESC = [[È stato scoperto un altro deposito di rifornimenti dei ribelli,
+
+a ovest dell'aeroporto di Aleppo, nella città di Aleppo.
+
+Fai esplodere una bomba sull'edificio!
+
+Ricompensa: 250
+
+MGRS: 37 S CA 45592 05682
+Lat long: N N N 36°11'01" E 37°16'58"
+Lat long Decimal Minutes: N 36°11.017' E 37°16.972'
+
+Altitude 1261 piedi]],
+	SYRIA_MISSION_STRIKE_REBELES_START = "Nuova missione d'attacco: Colpisci i ribelli",
+	SYRIA_MISSION_STRIKE_REBELES_END = "Missione d'attacco completata: colpire i ribelli",
+	SYRIA_MISSION_STRIKE_REBELES_END_REWARD = "Missione d'attacco completata: colpire i ribelli\n+250 crediti",
+	SYRIA_MISSION_STRIKE_GENERAL_TITLE = "Colpire il generale",
+	SYRIA_MISSION_STRIKE_GENERAL_DESC = [[Conosciamo la posizione di uno dei generali.
+
+A sud di Hama, eliminatelo!
+
+Coordinate:
+MGRS: 37 S BU 92159 66783
+Lat Long: N 34°55'20" E 36°43'28"
+Lat long Decimal Minutes: N 34°55.334' E 36°43.481'
+Altitude : 1333 piedi
+
+Récompense : 750
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+	SYRIA_MISSION_STRIKE_GENERAL_START = "Nuova missione di attacco: Colpisci il generale",
+	SYRIA_MISSION_STRIKE_GENERAL_END   = "Missione d'attacco completata: colpire il generale",
+	SYRIA_MISSION_DEEP_STRIKE_EWR_TITLE = "Missione di attacco in profondità contro un EWR nemico",
+	SYRIA_MISSION_DEEP_STRIKE_EWR_SOUTH_DESC = [[Abbiamo individuato la posizione della torre di controllo nemica (EWR); è fondamentale distruggerla prima di proseguire l'avanzata.
+
+La posizione si trova a sud dell'aeroporto Ben Gurion.
+
+Coordinate:
+MGRS: 36 R XA 77724 23705
+Lat Long: N 31°50'06" E 34°52'41"
+Lat long Decimal Minutes: N 31°50.111' E 34°52.684'
+Altitude : 321 piedi
+
+Ricompensa : 1000]],
+	SYRIA_MISSION_DEEP_STRIKE_EWR_SA5_DESC = [[Abbiamo individuato la posizione del sistema di allarme elettronico nemico (EWR); è fondamentale distruggerlo prima di proseguire l'avanzata.
+
+La posizione si trova a 30 miglia nautiche a sud-est di SA-5.
+
+Coordinate:
+MGRS: 37 S EU 31088 22294
+Lat Long: N 34°32'30" E 39°20'19"
+Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
+Altitude : 1251 piedi
+
+Ricompensa : 1000]],
+	SYRIA_MISSION_BEHIND_LINES_START   = "NNuova missione d'attacco: dietro le linee nemiche.",
+	SYRIA_MISSION_BEHIND_LINES_END     = "Missione d'attacco completata: dietro le linee nemiche.",
+	SYRIA_DYNAMIC_RESUPPLY_TITLE       = "Fornitura %s%s",
+	SYRIA_DYNAMIC_RESUPPLY_DESC        = "Consegna di rifornimenti a %s",
+	SYRIA_DYNAMIC_RESUPPLY_START_ONE   = "Nuova missione: Rifornimento %s%s",
+	SYRIA_DYNAMIC_RESUPPLY_START_TWO   = "Nuova missione: Rifornimento %s%s, %s%s",
+	SYRIA_DYNAMIC_RESUPPLY_END         = "Missione completata: rifornimento %s",
+	SYRIA_DYNAMIC_ATTACK_TITLE         = "Attrezzatura %s%s",
+	SYRIA_DYNAMIC_ATTACK_DESC          = "Distruggi le forze nemiche a %s",
+	SYRIA_DYNAMIC_ATTACK_START_ONE     = "Nuova missione: Attacco %s%s",
+	SYRIA_DYNAMIC_ATTACK_START_TWO     = "Nuova missione: Attaccor %s%s, %s%s",
+	SYRIA_DYNAMIC_ATTACK_END           = "Missione completata: attacco %s",
+	SYRIA_DYNAMIC_CAPTURE_TITLE        = "Catturare %s%s",
+	SYRIA_DYNAMIC_CAPTURE_DESC         = "%s è neutrale. Conquistalo consegnando rifornimenti.",
+	SYRIA_DYNAMIC_CAPTURE_START        = "Nuova missione: Cattura %s%s",
+	SYRIA_DYNAMIC_CAPTURE_END          = "Missione completata: cattura %s",
+	SYRIA_DYNAMIC_RECON_TITLE          = "Riconoscimento %s%s",
+	SYRIA_DYNAMIC_RECON_TITLE_EMPTY    = "RRiconoscimento",
+	SYRIA_DYNAMIC_RECON_DESC_EMPTY     = "Sorvola l'area bersaglio per completare la missione di ricognizione.",
+	SYRIA_DYNAMIC_RECON_DESC           = "Passa il mouse sopra %s per completare la missione di ricognizione.",
+	SYRIA_DYNAMIC_RECON_START_EMPTY    = "Nuova missione di ricognizione.",
+	SYRIA_DYNAMIC_RECON_START          = "Nuova missione di ricognizione: sorvolare %s%s",
+	SYRIA_DYNAMIC_RECON_END            = "Missione completata: Ricognizione",
+	SYRIA_DYNAMIC_RECON_END_TARGET     = "Missione completata: Ricognizione %s",
+	SYRIA_DYNAMIC_RECON_END_BY         = "Missione completata: Ricognizione %s completata da %s",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] e [%s] completata la ricognizione a %s!\nRicompensa in sospeso: %d crediti ciascuno (terreno da collezionare).\nInformazioni interattive per 10 minuti.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] ha completato la ricognizione a %s.\nRicompensa in sospeso: %d crediti (terreno da riscuotere).\nInformazioni interattive per 10 minuti.",
+	SYRIA_ESCORT_ACTIVE_PENDING        = "Missione attiva in corso :\n\nScortare il convoglio di %s a %s",
+	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Missione speciale disponibile :\n\nScortare il convoglio da %s a %s",
+	SYRIA_ESCORT_DESC                  = "\nScortare un convoglio verso %s\nLe strade sono piene di nemici.",
+	SYRIA_ESCORT_START                 = "Scortare il convoglio a %s",
+	SYRIA_ESCORT_FAILED_RETRY          = "Missione fallita :\n\nIl convoglio è stato distrutto\n\nAttendi, sto cercando un nuovo gruppo...",
+	SYRIA_ESCORT_FAILED                = "Missione fallita :\n\nIl convoglio è stato distrutto",
+	SYRIA_ESCORT_COMPLETED_MULTI       = "Missione di scorta completata da %s\ncredito %d ciascuno - terreno da incassare",
+	SYRIA_ESCORT_COMPLETED_SOLO        = "Missione di scorta completata da %s\ncredito %d - terreno da riscuotere",
+	SYRIA_ESCORT_COMPLETED_NONE        = "Missione di scorta completata - nessun giocatore in vita.\nRricompensa + %d",
+	SYRIA_BOMB_RUNWAY_END_JOINT        = "Missione completata: la pista di %s è stata bombardata da %s e %s\ncredito %d ciascuno - terreno da incassare",
+	SYRIA_BOMB_RUNWAY_END_SOLO         = "Missione completata: la pista di %s è stata bombardata da %s\ncredito %d - terreno da riscuotere",
+	SYRIA_BOMB_RUNWAY_END_COMPLETED    = "Missione completata: pista bombardata al %s",
+	SYRIA_BOMB_RUNWAY_END_CANCELED_ZONE = "Missione completata: bombardamento della pista al %s annullato",
+	SYRIA_BOMB_RUNWAY_CANCELED         = "Missione annullata: bombardamento della pista",
+
+	-- ============================================================
+	-- PvP / Stats Menus
+	-- ============================================================
+	PVP_MODE_DISABLED_RED_SLOTS        = "La modalità PvP è disabilitata. Gli slot della coalizione rossa non sono disponibili.",
+	PVP_MODE_DISABLED                  = "La modalità PVP è disabilitata.",
+	PVP_CANNOT_SPAWN_IN_ZONE           = "È impossibile generare %s in una zona nemica/neutrale",
+	STATS_MENU_ROOT                    = "Statistiche e parametri",
+	STATS_MENU_STATS                   = "Statistiche",
+	STATS_MENU_MY_STATS                = "Le mie statistiche",
+	STATS_MENU_ALL_STATS               = "I 10 migliori giocatori",
+	STATS_MENU_TOP_5_PLAYERS           = "I 5 migliori giocatori",
+	STATS_MENU_TOP_5_TODAY             = "Le 5 migliori del giornor",
+	STATS_MENU_RANK_HELP               = "Aiuto per la classifica",
+	STATS_MENU_BUDGET_OVERVIEW         = "Panoramica del budget",
+	STATS_LEADERBOARD_RANK             = "Classifica : %s",
+	STATS_CURRENT_RANK                 = "Posizione attuale : %s",
+	STATS_NEXT_RANK                    = "rango successivo : %s",
+	STATS_REMAINING_SUFFIX             = ", rimanente : %s",
+	STATS_RANK_REQUIREMENTS            = "Requisiti di grado (crediti totali) :",
+	STATS_LEADERBOARDS_TITLE           = "[Classifiche]",
+	STATS_TOP_PLAYERS_TITLE            = "[Top %s giocatori]",
+	STATS_RANK_LINE                    = "Rango : %s",
+	STATS_LABEL_AIR                    = "Aria",
+	STATS_LABEL_HELO                   = "Ciao",
+	STATS_LABEL_GROUND_UNITS           = "Unità terrestre",
+	STATS_LABEL_SHIP                   = "Nave",
+	STATS_LABEL_SAM                    = "SAM",
+	STATS_LABEL_STRUCTURE              = "strutture",
+	STATS_LABEL_DEATHS                 = "Morti",
+	STATS_LABEL_CAPTURED_BY_ENEMY      = "Catturato dal nemico",
+	STATS_LABEL_ZONE_CAPTURE           = "Acquisizione dell'area",
+	STATS_LABEL_ZONE_UPGRADE           = "Amiglioramento dell'area",
+	STATS_LABEL_PILOT_RESCUE           = "Salvataggio del pilota",
+	STATS_LABEL_POINTS                 = "Punti",
+	STATS_LABEL_POINTS_SPENT           = "Punti spesi",
+	STATS_LABEL_FLIGHT_TIME            = "Tempo di volo",
+
+	-- ============================================================
+	-- Mission Text
+	-- ============================================================
+	MISSION_DEFAULT_TITLE              = "Missione",
+	MISSION_DEFAULT_DESCRIPTION        = "Nessuna descrizione della missione disponibile.",
+	MISSION_ACTIVE_HEADER              = "missioni attive",
+	MISSION_SEPARATOR                  = "------------------------------------------------",
+	MISSION_STRIKE_NONE                = "Nessuna missione di attacco attiva",
+	MISSION_STRIKE_NONE_MESSAGE        = "Nessuna missione di attacco attiva.",
+	MISSION_STRIKE_EXPIRED             = "La missione d'attacco non è più attiva.",
+	MISSION_CAP_TITLE                  = "Missione CAP",
+	MISSION_CAP_DESCRIPTION_EMPTY      = "Elimina %d bersagli A/A senza essere eliminato a tua volta. Chi vince??",
+	MISSION_CAP_DESCRIPTION_WITH_SCORE = "Elimina %d obiettivi A/A. Chi vince?\n\n%s",
+	MISSION_CAP_SCOREBOARD_HEADER      = "Numero attuale di vittorie :\n",
+	MISSION_CAP_START                  = "Nuova missione CAP: abbattere %d obiettivi A/A.",
+	MISSION_CAP_END                    = "Missione compiuta : CAP",
+	MISSION_CAP_COMPLETED_SOLO         = "[%s] missione CAP completata!\nRicompensa in sospeso: %d crediti (terreno da riscuotere).",
+	MISSION_CAP_COMPLETED_JOINT        = "[%s] e [%s] hanno completato la missione CAP!\nRicompensa in sospeso: %d crediti ciascuno (terreno da collezionare).",
+	MISSION_CAS_TITLE                  = "Missione CAS",
+	MISSION_CAS_DESCRIPTION_EMPTY      = "Distruggi %d bersagli a terra senza essere abbattuto. Chi vince??",
+	MISSION_CAS_DESCRIPTION_WITH_SCORE = "Distruggi %d bersagli a terra. Chi vince?\n\n%s",
+	MISSION_CAS_START                  = "Nuova missione CAS: distruggere %d bersagli terrestri.",
+	MISSION_CAS_COMPLETED_SOLO         = "[%s] missione CAS completata!\nRicompensa in sospeso: %d crediti (terreno da riscuotere).",
+	MISSION_CAS_COMPLETED_JOINT        = "[%s] e [%s] hanno completato la missione CAS!\nRicompensa in sospeso: %d crediti ciascuno (terreno da collezionare).",
+	MISSION_ESCORT_TITLE               = "Missione di scrota",
+	MISSION_ESCORT_ACTIVE_PENDING      = "Missione attiva in corso :\n\nScortare un convoglio da %s a %s",
+	MISSION_ESCORT_SPECIAL_AVAILABLE   = "Missione speciale disponibile :\n\nScortare un convoglio di %s à %s",
+	MISSION_ESCORT_DESCRIPTION         = "\nScortare un convoglio a %s\nLe strade sono piene di nemici.",
+	MISSION_ESCORT_START               = "Scorta il convoglio fino a %s",
+	MISSION_BOMB_RUNWAY_TITLE          = "Bombardare la pista",
+	MISSION_BOMB_RUNWAY_DESC_ONE       = "Sgancia 1 bomba sulla pista alle %s%s",
+	MISSION_BOMB_RUNWAY_DESC_ALL       = "Sgancia 1 bomba su ogni traccia a %s%s",
+	MISSION_BOMB_RUNWAY_START_ONE      = "Nuova missione: bombardare la pista di atterraggio a %s%s",
+	MISSION_BOMB_RUNWAY_START_ALL      = "Nuova missione: bombardare tutte le piste di atterraggio di %s%s",
+	MISSION_BOMB_RUNWAY_HIT            = "%s COLPITA!",
+	MISSION_SEAD_TITLE                 = "mISSIONE SEAD à %s",
+	MISSION_SEAD_DESCRIPTION           = "Neutralizzare i SAM/difese nemici a %s",
+	MISSION_SEAD_START                 = "Nuova missione SEAD: coinvolgere il SAM a %s",
+	MISSION_SEAD_END                   = "Missione SEAD completata.",
+	MISSION_DEAD_TITLE                 = "Missione DEAD a %s",
+	MISSION_DEAD_DESCRIPTION           = "Distruggi le restanti difese aeree nemiche a %s",
+	MISSION_DEAD_START                 = "Nuova missione DEAD: Distruggi le restanti difese aeree a %s",
+	MISSION_DEAD_END                   = "Missione DEAD completata",
+	MISSION_STRIKE_MENU                = "missioni di attacco",
+	MISSION_STRIKE_DEFAULT_TITLE       = "missione d'attacco",
+	MISSION_AVAILABLE_HEADER           = "Missioni disponibili",
+	MISSION_TEXT_ENTRY                 = "[%s]\n%s\n------------------------------------------------",
+	MISSION_IN_PROGRESS_CONTINUE       = "Missione in corso. Continua?",
+	MISSION_ACCEPT                     = "Accetta la missione",
+	MISSION_DENY                       = "Rifiutare il missionario",
+	MISSION_DENIED                     = "MMissione rifiutata.",
+	MISSION_ESCORT_GROUP_INVALID       = "Errore: il gruppo di scorta non è definito o non è valido.",
+	MISSION_ESCORT_ACCEPTED_BY         = "Missione di scorta accettata da %s.",
+	MISSION_ESCORT_STANDBY_READY       = "Gruppo di scorta:\n\nSiamo pronti e in attesa dei tuoi ordini.",
+	MISSION_ARTY_TITLE                 = "Ddistruggere l'artiglieria",
+	MISSION_ARTY_DESCRIPTION           = "Artiglieria avvistata mentre lascia %s in direzione di %s.\nDistruggilo prima che entri nel raggio d'azione.",
+	MISSION_ARTY_START                 = "Nuova missione: distruggere l'artiglieria lungo il percorso verso %s",
+	MISSION_ARTY_END                   = "Missione compiuta: distruggere l'artiglieria",
+
+	-- ============================================================
+	-- Zone / Intel
+	-- ============================================================
+	INTEL_NONE_AVAILABLE               = "Nessuna informazione disponibile.",
+	INTEL_NONE_AVAILABLE_MENU          = "Nessuna informazione disponibile",
+	INTEL_NONE_AVAILABLE_FOR_ZONE      = "Nessuna informazione disponibile per %s.",
+	INTEL_EXPIRED_FOR_ZONE             = "Le informazioni relative a %s sono scadute.",
+	INTEL_HEADER                       = "Informazioni su %s :",
+	INTEL_UPDATE_HEADER                = "Aggiornamento delle informazioni su %s :\n%s",
+	INTEL_IDENTIFIED_SAMS              = "SAM identificato : %s.",
+	INTEL_STRUCTURES                   = "Strutture : %s.",
+	INTEL_ADDITIONAL_CONTACTS          = "Contatti aggiuntivi : %s.",
+	INTEL_REMAINING_SAMS               = "SAM rimanente : %s.",
+	INTEL_STRUCTURES_REMAINING         = "Strutture rimanenti : %s.",
+	INTEL_ADDITIONAL_CONTACTS_REMAINING = "Contatti aggiuntivi rimanenti : %s.",
+	INTEL_SITE_DESTROYED               = "%s distrutto.",
+	INTEL_SITE_DETECTED                = "%s rilevato.",
+	INTEL_STR_DESTROYED_DEGRADED       = "%s STR sito distrutto e degradato.",
+	INTEL_TR_DESTROYED_DEGRADED        = "%s TR sito distrutto e degradato.",
+	INTEL_ENEMY_REPAIRED_STR           = "Il nemico ha riparato %s STR.",
+	INTEL_ENEMY_REPAIRED_TR            = "Il nemico ha riparato %s TR.",
+	INTEL_COUNT_DESTROYED              = "%s distrutto.",
+	INTEL_COUNT_DETECTED               = "%s rilevato.",
+	INTEL_ENEMY_REPAIRED_COUNT         = "Il nemico ha riparato %s.",
+	INTEL_CONTACT_DETECTED             = "%s rilevato : %s.",
+	INTEL_CONTACT_DESTROYED            = "%s distrutto : %s.",
+	INTEL_STRUCTURE_CONTACT_DETECTED   = "%s rilevato : %s.",
+	INTEL_STRUCTURE_DESTROYED          = "%s distrutto : %s.",
+	INTEL_MANPAD_NEUTRALIZED           = "Minaccia MANPAD neutralizzata dalle forze di terra.",
+	INTEL_MANPAD_IDENTIFIED            = "Minaccia MANPAD identificata tra le forze di terra.",
+	INTEL_ON_MOVE                      = "Informazioni: %s si muove in %s.",
+	INTEL_AIR_STARTING_UP_AT           = "Informazioni: %s inizia a %s.",
+	INTEL_AIR_TOOK_OFF_FROM            = "Informazioni: %s è appena decollato da %s.",
+	INTEL_AIR_INBOUND_LANDING_AT       = "Informazioni: %s si sta avvicinando e atterrerà a %s.",
+	INTEL_ENEMY_CONVOY_MOVING_OUT_FROM = "RInsegnamento: il convoglio nemico parte %s.",
+	INTEL_ENEMY_CONVOY_ARRIVING_AT     = "Informazioni: il convoglio nemico sta per arrivare a %s.",
+	INTEL_MASS_ATTACK                  = "Intelligence: Il nemico sta lanciando un massiccio attacco contro %s",
+	INTEL_ARMOR_LINE                   = "Veicoli blindati : %s.",
+	INTEL_ARMOR_REMAINING_LINE         = "Veicoli blindati rimanenti : %s.",
+	INTEL_ARTILLERY_LINE               = "Artiglieria : %s.",
+	INTEL_ARTILLERY_REMAINING_LINE     = "Artiglieria rimanente : %s.",
+	INTEL_GROUND_FORCES_LINE           = "FForze terrestri : %s.",
+	INTEL_GROUND_FORCES_REMAINING_LINE = "Forze terrestri rimanenti : %s.",
+	INTEL_GROUND_FORCES_NONE           = "aNessun rilevamento",
+	INTEL_AAA_LINE                     = "AAA : %s.",
+	INTEL_AAA_REMAINING_LINE           = "AAA rimanente : %s.",
+	INTEL_RADAR_DESTROYED_SUFFIX       = " (radar distrutto)",
+	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d radar distrutto)",
+	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR distrutto)",
+	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR distrutto)",
+	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d fforze di terra con MANPADS",
+	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d Forze di terra dotate di MANPADS",
+	INTEL_COUNT_GROUND_FORCES_ONE      = "%d gruppo delle forze di terra",
+	INTEL_COUNT_GROUND_FORCES_MANY     = "%d gruppi di forze di terra",
+	INTEL_COUNT_ARMORED_ONE            = "%d gruppo corazzato",
+	INTEL_COUNT_ARMORED_MANY           = "%d gruppi corazzati",
+	INTEL_COUNT_ARTILLERY_ONE          = "%d gruppo di artiglieria",
+	INTEL_COUNT_ARTILLERY_MANY         = "%d gruppi di artiglieria",
+	INTEL_COUNT_SHILKA_ONE             = "%d Gruppo Shilka",
+	INTEL_COUNT_SHILKA_MANY            = "%d Gruppi Shilka",
+	INTEL_COUNT_FLAK_ONE               = "%d Gruppo antiaereo",
+	INTEL_COUNT_FLAK_MANY              = "%d Gruppi antiaereo",
+	INTEL_COUNT_HEAVY_AAA_ONE          = "%d Gruppo AAA dei pesi massimi",
+	INTEL_COUNT_HEAVY_AAA_MANY         = "%d Gruppi AAA dei pesi massimi",
+	INTEL_COUNT_ZU23_AAA_ONE           = "%d Gruppo AAA ZU-23",
+	INTEL_COUNT_ZU23_AAA_MANY          = "%d Gruppi AAA ZU-23",
+	INTEL_COUNT_OTHER_AAA_ONE          = "%d un altro gruppo AAA",
+	INTEL_COUNT_OTHER_AAA_MANY         = "%d altri gruppi AAA",
+	INTEL_COUNT_AAA_ONE                = "%d Gruppo AAA",
+	INTEL_COUNT_AAA_MANY               = "%d Gruppi AAA",
+	INTEL_COUNT_FLAK_RADAR_ONE         = "%d radar antiaerea",
+	INTEL_COUNT_FLAK_RADAR_MANY        = "%d radars antiaerea",
+	INTEL_COUNT_NEW_CONTACT_ONE        = "%d nuovo contatto",
+	INTEL_COUNT_NEW_CONTACT_MANY       = "%d nuovi contatti",
+	INTEL_COUNT_CONTACT_ONE            = "%d contatto",
+	INTEL_COUNT_CONTACT_MANY           = "%d contatti",
+	INTEL_COUNT_STRUCTURE_CONTACT_ONE  = "%d struttura di contatto",
+	INTEL_COUNT_STRUCTURE_CONTACT_MANY = "%d contatti strutturali",
+	INTEL_COUNT_STRUCTURE_ONE          = "%d struttura",
+	INTEL_COUNT_STRUCTURE_MANY         = "%d strutture",
+	ARTILLERY_ATTACK_GRID_1            = "%s : Siamo sotto attacco da parte dell'artiglieria nemica da qualche parte lungo GRID %s !",
+	ARTILLERY_ATTACK_GRID_2            = "%s : Siamo sotto attacco da parte dell'artiglieria nemica da qualche parte lungo la GRIGLIA. %s !",
+	ARTILLERY_ATTACK_GRID_3            = "Artiglieria nemica sta sparando da GRID %s su %s, richiesta di assistenza !",
+	ARTILLERY_STILL_FIRING             = "Informazioni: L'artiglieria nemica sta ancora sparando su %s. Posizione approssimativa %s, altitudine %s, griglia %s. Indicatore posizionato sulla mappa.",
+	SURFACE_INTEL_LAST_KNOWN_1         = "%s : Ultima posizione nota del nemico %s, nella GRIGLIA %s (%s), in movimento da %s a %s. Indicatore posizionato sulla mappa.",
+	SURFACE_INTEL_LAST_KNOWN_2         = "%s : Contatto nemico aggiornato %s, ultima posizione nota nella griglia %s (%s), in movimento da %s a %s. Indicatore posizionato sulla mappa.",
+	SURFACE_INTEL_LAST_KNOWN_3         = "%s : Nemico %s segnalato vicino alla griglia %s (%s), ultimo movimento noto da %s a %s. Indicatore posizionato sulla mappa.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "Sono a metà strada.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "Il convoglio è circa a metà strada verso il bersaglio.",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "Hanno raggiunto il punto medio della rotta.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "Ci sono quasi!",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "Il convoglio si sta avvicinando al bersaglio.",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "Si stanno avvicinando all'obiettivo. Intercettateli presto.",
+	SURFACE_INTEL_MARKER_LAST_KNOWN    = "Ultima posizione nota del nemico %s\nGriglia %s\nBersaglio : %s\nPosto : %s",
+	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "fuoco di artiglieria nemica\nGriglia %s\nBersaglio : %s\nPosto : %s",
+
+	-- ============================================================
+	-- System / Combat Alerts
+	-- ============================================================
+	SYSTEM_ENGINE_CRASH                = "Il motore Foothold si è bloccato; si prega di segnalarlo a Leka utilizzando il log del server.\nMappa : %s\nVersione : %s\nDa questo punto in poi non sarà più possibile salvare la missione. Riavviare la missione potrebbe risolvere il problema.",
+	COMBAT_RED_MASS_ATTACK             = "Attacco massiccio rosso lanciato su %s (%d/%d forzato))",
+	COMBAT_HUNT_SCRAMBLE              = "%s, Il nemico sta inviando due aerei da combattimento per darti la caccia!",
+
+	-- ============================================================
+	-- Zone Admin / Labels
+	-- ============================================================
+	ZONE_LABEL_MISSION                 = "Missione!",
+	ZONE_MISSION_TAG_ATTACK            = "Attacco",
+	ZONE_MISSION_TAG_BOMB_RUNWAY       = "Bombardare la pista",
+	ZONE_MISSION_TAG_CAPTURE           = "Cattura",
+	ZONE_MISSION_TAG_DEAD              = "Morto",
+	ZONE_MISSION_TAG_RECON             = "Riconoscimento",
+	ZONE_MISSION_TAG_RESUPPLY          = "Fornitura",
+	ZONE_MISSION_TAG_SEAD              = "SEAD",
+	ZONE_LABEL_WAREHOUSE               = "[WH]",
+	ZONE_LABEL_EMPTY_WAREHOUSE         = "Magazzino vuoto!",
+	ZONE_LABEL_LOW_WAREHOUSE           = "Magazzino debole!",
+	ZONE_AIRBASE_NOT_FOUND             = "Base aerea %s non trovata",
+	ZONE_ALL_SIDE_FULLY_UPGRADED       = "Tutte le zone %s sono ora completamente migliorate.",
+	ZONE_ALL_RED_FULLY_UPGRADED        = "Tutte le zone rosse sono state ora completamente bonificate.",
+	ZONE_ALL_BLUE_FULLY_UPGRADED       = "Tutte le zone blu sono ora completamente migliorate.",
+	ZONE_UPGRADE_PROCESS_RUNNING       = "Il processo di miglioramento è già in corso.",
+	ZONE_COMMAND_ACCEPTED_PENDING      = "Ordine accettato, in sospeso",
+	ZONE_ERROR_NOT_FOUND_IN_MISSION    = "ERRORE: Zona [%s] non trovata nella missione",
+	ZONE_INIT_MISSING_UPGRADE_GROUP    = "ZoneCommander INIT: manca il gruppo di miglioramento %s per la zona [%s] indice [%s] (sostituzione se possibile)",
+	ZONE_UPGRADE_GROUP_MISSING_SKIPPED = "Gruppo di miglioramento %s mancante, ignorato.",
+	ZONE_FAILED_SPAWN_REPLACEMENT_GROUP = "Generazione del gruppo di sostituzione non riuscita : %s",
+	ZONE_FAILED_SPAWN_GROUP_FOR_UPGRADE = "Generazione del gruppo non riuscita per l'aggiornamento : %s",
+	ZONE_LOST_GROUP                    = "%s hanno perso il gruppo %s",
+	ZONE_NOW_NEUTRAL                   = "%s ora è neutrale",
+	ZONE_LOST_BY_BLUE                  = "Abbiamo perso %s !",
+	ZONE_WARNING_UNKNOWN_TARGETZONE    = "ATTENZIONE: targetzone sconosciuto=%s nel gruppo=%s zona=%s",
+	ZONE_CAPTURED_BY                   = "%s catturato da %s",
+	ZONE_CAPTURED_BLUE_PROGRESS_DISABLED = "%s catturato da BLUE\n\nL'area è ora disattivata grazie ai progressi compiuti, ottimo lavoro!",
+	ZONE_DESTROYED                     = "%s è stato distrutto",
+	ZONE_DESTROYED_NO_CAPTURE          = "%s è stato distrutto e non può più essere catturato",
+	ZONE_REPAIRED                      = "%s è stato riparato",
+	ZONE_GROUP_REPAIRED                = "Gruppo %s a %s riparato",
+	ZONE_ALREADY_FULLY_UPGRADED        = "%s è già completamente migliorato!",
+	ZONE_SPAWNGROUP_FAILED             = "SpawnGroup non riuscito %s Segnalalo a Leka",
+	ZONE_UPGRADED_COUNT                = "%s migliorato %d/%d",
+	ZONE_DEFENSES_UPGRADED             = "Difese %s migliorate",
+	ZONE_DESTROYED_NO_UPGRADE          = "%s è stato distrutto e non può più essere migliorato",
+	ZONE_ERROR_GROUP_TEMPLATE_MISSING  = "ERRORE: schema di gruppo mancante [%s]",
+	ZONE_ERROR_DYNAMIC_SET_COALITION   = "ERRORE: Impossibile risolvere la coalizione per l'insieme dinamico [%s]",
+	ZONE_ERROR_GROUP_NOT_FOUND_MISSION = "ERRORE: Gruppo [%s] non trovato nella missione",
+	ZONE_ERROR_TEMPLATE_NO_VALID_GROUPS = "ERRORE: Modello [%s] senza voce di gruppo valida",
+
+	ZONE_NO_ACTIVE_TO_CAPTURE          = "Nessuna area attiva da catturare",
+	ZONE_NO_ELIGIBLE_NEUTRAL           = "Nessuna zona neutrale idonea",
+	ZONE_SIDE_NEUTRAL                  = "Neutro",
+	ZONE_SIDE_RED                      = "Rosso",
+	ZONE_SIDE_BLUE                     = "Blu",
+	ZONE_SIDE_NONE                     = "Nessuno",
+	ZONE_STATUS_TITLE                  = "Stato di %s",
+	ZONE_CONTROLLED_BY                 = " Controllato da : %s",
+	ZONE_INTEL_MIN_REMAINING           = "Informazioni: %d minuti rimanenti",
+	ZONE_UPGRADES_LINE                 = " Miglioramenti : %d/%d",
+	ZONE_GROUPS_HEADER                 = " Gruppi :",
+	ZONE_GROUP_HEALTH                  = "  %s %d%%",
+	ZONE_UNRESOLVED_BUILT             = "  (non risolto nella build) : %s",
+	ZONE_EXPECTED_UPGRADES             = "  (previsto dal momento dei miglioramenti) : %s",
+	ZONE_NO_BUILT_OR_UPGRADES          = "  (Non sono state create nuove voci e non sono previsti miglioramenti.)",
+	ZONE_BUY_INTEL_OR_JTAC             = "Acquista informazioni di intelligence o schiera un JTAC per ottenere informazioni sulle unità nemiche.",
+	ZONE_IRREPARABLY_DAMAGED           = "ATTENZIONE: Quest'area è stata danneggiata in modo irreparabile e non è più utilizzabile.",
+	ZONE_FRIENDLY_REPOSITIONED         = "Zona alleata. Tutte le unità si sono riposizionate vicino alla linea del fronte.",
+	ZONE_FARP_AIRFIELD_OPERATIONAL     = "FARP/aeroporto operativo.",
+	ZONE_COORD_DDM                     = "DDM :  %s",
+	ZONE_COORD_DMS                     = "DMS :  %s",
+	ZONE_COORD_MGRS                    = "MGRS : %s",
+	ZONE_COORD_ALT                     = "Alt : %dm | %dft",
+
+	-- ============================================================
+	-- JTAC
+	-- ============================================================
+	JTAC_CODE_SET                      = "Codice JTAC impostato su %d à %s",
+	JTAC_CODE_INVALID                  = "Codice laser non valido. Deve essere compreso tra 1111 e 1788.",
+	JTAC_AIR_STARTING_UP_AT            = "JTAC : %s inizia alle",
+	JTAC_AIR_TOOK_OFF_FROM             = "JTAC : %s è appena decollato",
+	JTAC_AIR_INBOUND_LANDING_AT        = "JTAC : %sin avvicinamento e atterrerà a",
+	JTAC_ENEMY_CONVOY_MOVING_OUT_FROM  = "JTAC : il convoglio nemico parte",
+	JTAC_ENEMY_CONVOY_ARRIVING_AT      = "JTAC : convoglio nemico in procinto di arrivare a",
+	JTAC_MENU_TITLE                    = "%s JTAC",
+	JTAC_MENU_TARGET_REPORT            = "Rapporto sugli obiettivi",
+	JTAC_MENU_NEXT_TARGET              = "Prossimo obiettivo",
+	JTAC_MENU_SMOKE_ON_TARGET          = "Fumo sul bersaglio",
+	JTAC_MENU_CHANGE_SMOKE_COLOR       = "Cambia il colore del fumo",
+	JTAC_MENU_FLARE_ON_TARGET          = "Segnale luminoso sul bersaglio",
+	JTAC_MENU_SET_PRIORITY             = "Imposta la priorità",
+	JTAC_MENU_SET_LASER_CODE           = "Definizione del codice laser",
+	JTAC_MENU_SELECT_TARGET            = "Seleziona il bersaglio",
+	JTAC_MENU_NO_VALID_TARGETS         = "Nessun obiettivo valido",
+	JTAC_MENU_CURRENT_SUFFIX           = " (attuale)",
+	JTAC_MENU_LASING_SUFFIX            = " (laser attivo)",
+	JTAC_PRIORITY_SAM                  = "SAM",
+	JTAC_PRIORITY_STRUCTURES           = "Strutture",
+	JTAC_PRIORITY_INFANTRY             = "Fanteria",
+	JTAC_PRIORITY_ARMOR                = "Veicoli blindati",
+	JTAC_PRIORITY_SUPPORT              = "Supporto",
+	JTAC_COLOR_GREEN                   = "verde",
+	JTAC_COLOR_RED                     = "rosso",
+	JTAC_COLOR_WHITE                   = "bianco",
+	JTAC_COLOR_ORANGE                  = "arancione",
+	JTAC_COLOR_BLUE                    = "blu",
+	JTAC_DISTANCE_METERS               = "%d metri",
+	JTAC_SMOKE_TARGET_OFFSET           = "L'obiettivo à %s %s de la fumée %s à %s",
+	JTAC_FLARE_TARGET_OFFSET           = "L'obiettivo à %s %s il bagliore rosso à %s",
+	JTAC_SMOKE_COLOR_SET               = "colore fumo JTAC impostato su %s à %s",
+	JTAC_PRIORITY_TARGETS              = "Obiettivi prioritari : %s\n",
+	JTAC_NO_PRIORITY_TARGETS           = "JTAC : Nessun obiettivo prioritario trovato",
+	JTAC_KILL_CONFIRMED                = "Distruzione confermata, obiettivo modificato.",
+	JTAC_NO_MORE_TARGETS               = "JTAC : Niente più obiettivi, partenza.",
+	JTAC_DEPLOYED                      = "JTAC schierato, ricerca obiettivi in ​​corso, attendere prego",
+	JTAC_NO_TARGET                     = "Nessun bersaglio",
+	JTAC_NO_TARGET_TITLE               = "Nessun bersaglio",
+	JTAC_TARGET_MOVING                 = "\nIl bersaglio si sta muovendo %s",
+	JTAC_LASING_REPORT                 = "Laser acceso %s à %s%s\nCodice : %d\n",
+	JTAC_ALTITUDE_LINE                 = "\n\nAlt : %dm | %dft",
+	JTAC_9LINE_GROUP_NOT_FOUND         = "Gruppo JTAC non trovato dopo l'implementazione : %s",
+
+	-- ============================================================
+	-- Self JTAC / Laser Designator
+	-- ============================================================
+	SELF_JTAC_LASER_CODE_SET           = "Codice laser impostato su %d",
+	SELF_JTAC_MENU_TITLE               = "Designatore laser",
+	SELF_JTAC_MENU_SEARCH              = "Per fare ricerca",
+	SELF_JTAC_MENU_TARGET_INFO         = "Informazioni sul bersaglio",
+	SELF_JTAC_MENU_MARK_WITH_SMOKE     = "Marcare con il fumo",
+	SELF_JTAC_MENU_PRIORITY            = "Priorità",
+	SELF_JTAC_MENU_OPTIONS             = "Opzioni",
+	SELF_JTAC_MENU_TOGGLE_UNIT         = "Interruttore KM/NM",
+	SELF_JTAC_MENU_AUTO_SEARCH         = "Ricerca auto (attuale) : %s)",
+	SELF_JTAC_MENU_AUTO_NEXT           = "Prossimo obiettivo automatico (attuale) : %s)",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "Nascondi coordinate (attuale: %s)",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "Ignora strutture (attuale: %s)",
+	SELF_JTAC_MENU_CODE                = "Codice",
+	SELF_JTAC_STATE_ON                 = "ATTIVO",
+	SELF_JTAC_STATE_OFF                = "INATTIVO",
+	SELF_JTAC_TARGET_CLEARED           = "Obiettivo eliminato",
+	SELF_JTAC_DISTANCE_UNIT            = "Distanza : %s",
+	SELF_JTAC_AUTO_SEARCH_STATE        = "Ricerca auto %s",
+	SELF_JTAC_AUTO_NEXT_STATE          = "Prossimo obiettivo automatico %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "Nascondi coordinate %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "Ignora strutture %s",
+	SELF_JTAC_FOCUSING_ON              = "Priorità su %s",
+	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "Bersaglio fuori portata, laser fermato",
+	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "Non identificato",
+	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "Strutture",
+	SELF_JTAC_REPORT                   = "Laser acceso %s\nCodice : %d\n\nRilevamento: %03d° Dist. : %s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "Laser acceso %s\n\nCodice : %d\n\nRilevamento: %03d°, Dist. : %s\n",
+	SELF_JTAC_MARKING_BLUE_SMOKE       = "Marcatura con fumo blu",
+	SELF_JTAC_INVALID_OBJECTIVE        = "Obiettivo non valido",
+	SELF_JTAC_NO_OBJECTIVE             = "Nessun obbiettivo",
+	SELF_JTAC_KILL_CONFIRMED           = "Distruzione confermata",
+	SELF_JTAC_KILL_CONFIRMED_STOPPING  = "Distruzione confermata. Laser spento.",
+	SELF_JTAC_NO_PRIORITY_SEARCHING    = "Nessun obiettivo prioritario trovato, ricerca di qualsiasi obiettivo in corso...",
+	SELF_JTAC_TARGET_LOST              = "Obiettivo perso",
+	SELF_JTAC_NO_TARGETS_FOUND         = "Nessun obiettivo trovato",
+
+	-- ============================================================
+	-- Shop / Credits
+	-- ============================================================
+	SHOP_MENU_ALL                      = "Acquista per tutti",
+	SHOP_ITEM_LABEL                    = "[%d] %s",
+	SHOP_COST_LINE                     = "[Costo : %d] %s",
+	SHOP_AVAILABLE_SUFFIX              = " [Disponibile : %s]",
+	SHOP_UNCLAIMED_CREDITS             = "Crediti non riscossi",
+	SHOP_GROUP_LABEL                   = "Gruppo %s",
+	SHOP_REASON_CTLD_ACTION            = "azione CTLD",
+	SHOP_REASON_REFUND                 = "rimborso",
+	SHOP_INSUFFICIENT_RANK             = "Rango insufficiente per %s. Rango %d richiesto, il tuo rango è %d.",
+	SHOP_TEAM_CREDITS_SHORT            = "Il nostro team non ha crediti sufficienti per %s. Sono necessari %d crediti e al momento ne abbiamo %d. Ulteriori crediti sono disponibili completando le missioni.",
+	SHOP_CTLD_SPENT                    = "%s crediti spesi %d su CTLD %s.\n\n%d fondi rimanenti della coalizione.",
+	SHOP_REFUNDED                      = "%s, %d prestiti rimborsati.",
+	SHOP_ITEM_NOT_FOUND                = "Article introuvable dans la boutique",
+	SHOP_ALREADY_UNLOCKED              = "[%s] è già sbloccato. Nessun credito speso.",
+	SHOP_NOT_AVAILABLE_NOW             = "Al momento non disponibile.",
+	SHOP_PERSONAL_CREDITS_REQUIRED     = "Per avanzare di grado devi prima guadagnare almeno %d crediti personali, %s.",
+	SHOP_ALL_ZONES_UPGRADED            = "Tutte le aree sono state completamente aggiornate! Non è necessario alcun rifornimento.",
+	SHOP_NO_NEUTRAL_ZONES              = "Nessuna zona neutrale valida trovata",
+	SHOP_NOT_ENOUGH_CREDITS_FOR_ITEM   = "Non ci sono abbastanza crediti per [%s]",
+	SHOP_CANNOT_AFFORD_ITEM            = "Impossibile pagare [%s]",
+	SHOP_OUT_OF_STOCK                  = "[%s] è esaurito",
+	SHOP_BOUGHT_BY_PLAYER              = "%s comprato :\n[%s] per %d crediti.\n%d crediti rimanenti.",
+	SHOP_WENT_OUT_OF_STOCK             = "[%s] è attualmente esaurito",
+	SHOP_BOUGHT                        = "[%s] acquistato per %d\n%d crediti rimanenti",
+
+	-- ============================================================
+	-- Joint Missions
+	-- ============================================================
+	JOINT_NO_PLAYER_FOR_GROUP          = "Nessun giocatore trovato per questo gruppo",
+	JOINT_LEFT                         = "Missione congiunta abbandonata",
+	JOINT_PLAYER_LEFT                  = "[%s] ha lasciato la missione congiunta",
+	JOINT_YOU_HAVE_LEFT                = "Hai lasciato la missione congiunta",
+	JOINT_PLAYER_DIED_LEFT             = "[%s] morì e lasciò la missione congiunta",
+	JOINT_LEFT_DUE_RESPAWN             = "MMissione congiunta abbandonata a causa del respawn",
+	JOINT_PLAYER_LEFT_DUE_RESPAWN      = "[%s] ha abbandonato la missione congiunta a causa del respawn",
+	JOINT_ALREADY_ALONE                = "Sei già solo",
+	JOINT_CODE                         = "Codice di missione congiunta : %s",
+	JOINT_INVALID_CODE                 = "Codice non valido",
+	JOINT_SAME_COALITION               = "Devono far parte della stessa coalizione",
+	JOINT_CANT_JOIN_OWN                = "Non puoi unirti al tuo codice, trovare amici!",
+	JOINT_ALREADY_SHARING              = "Già condiviso",
+	JOINT_JOINED                       = "%s riunirsi",
+	JOINT_PLAYER_JOINED                = "[%s]si è unito alla vostra missione comune",
+	JOINT_MENU_ROOT                    = "Missioni congiunte",
+	JOINT_MENU_INVITE                  = "Invito alla missione congiunta",
+	JOINT_MENU_JOIN_ANOTHER            = "Unisciti a un altro giocatore",
+	JOINT_MENU_CODE                    = "codice %s",
+	JOINT_MENU_REQUEST_PLAYER          = "Richiedi una missione congiunta",
+	JOINT_MENU_PENDING_REQUESTS        = "Richieste congiunte in corso di valutazione",
+	JOINT_MENU_NO_PLAYERS              = "Nessun giocatore disponibile",
+	JOINT_MENU_NO_PENDING_REQUESTS     = "Nessuna richiesta in sospeso",
+	JOINT_MENU_REQUEST_FROM            = "Richiesta di %s",
+	JOINT_MENU_ACCEPT_REQUEST          = "Accettare",
+	JOINT_MENU_DENY_REQUEST            = "Rifiutare",
+	JOINT_MENU_LEAVE                   = "Lascia la missione congiunta",
+	JOINT_MENU_STATUS                  = "Stato della missione congiunta",
+	JOINT_MENU_HELP                    = "Aiuto",
+	JOINT_STATUS_WITH                  = "In missione congiunta con %s",
+	JOINT_STATUS_ALONE                 = "Sei solo",
+	JOINT_REQUEST_SENT                 = "Richiesta di missione congiunta inviata a %s. Il giocatore ha 120 secondi per accettare.",
+	JOINT_REQUEST_ALREADY_SENT         = "Richiesta già inviata a %s. Tempo di attesa: %d secondi.",
+	JOINT_REQUEST_RECEIVED             = "Richiesta di missione congiunta da %s. Utilizza Missioni > Missioni congiunte > Richieste congiunte in sospeso per accettare o rifiutare.",
+	JOINT_REQUEST_DENIED               = "Richiesta di missione congiunta da parte di %s rifiutata",
+	JOINT_REQUEST_DENIED_BY            = "%s abbiamo rifiutato la tua richiesta di missione congiunta",
+	JOINT_REQUEST_EXPIRED              = "La richiesta di missione congiunta è scaduta",
+	JOINT_REQUEST_TARGET_BUSY          = "%s è già in missione congiunta",
+	JOINT_REQUEST_REQUESTER_BUSY       = "Siete già impegnati in una missione comune",
+	JOINT_REQUEST_NOT_AVAILABLE        = "Questo giocatore non è più disponibile",
+	JOINT_STAT_SUFFIX                  = " (missione congiunta)",
+	JOINT_HELP_REQUESTS                = "Le missioni congiunte consentono a due giocatori di guadagnare fino al doppio dei crediti missione.\n\nFunzionamento :\n- Aprire \"Richiedi una missione congiunta\" e seleziona un giocatore.\n- Il giocatore selezionato riceve una richiesta in sospeso e ha 120 secondi per accettarla o rifiutarla. I crediti verranno assegnati a entrambi i giocatori per le missioni, non per le normali eliminazioni. Valido per le missioni CAS, CAP, Bomb Runway e Strike.\n- Se il tuo partner è morto/scomparso, mantieni i tuoi guadagni più la ricompensa aggiuntiva.",
+	JOINT_HELP                         = "Le missioni congiunte consentono a due giocatori di guadagnare fino al doppio dei crediti missione.\n\nFunzionamento :\n• L'ospite sceglie \"Invito alla missione congiunta\" per ricevere un codice di 4 cifre.\n• Il compagno di squadra apre \"Unisciti a un altro giocatore\" e inserisce il codice.\n• I crediti verranno assegnati a entrambi i giocatori per le missioni completate, non per le normali eliminazioni.\n• Valido per missioni CAS, CAP, bombardamento di piste e attacchi.\n• Se il tuo partner è morto/scomparso, mantieni i tuoi guadagni più la ricompensa aggiuntiva.\n• Solo la stessa coalizione.",
+
+	-- ============================================================
+	-- Logistics / Supplies
+	-- ============================================================
+	LOGISTICS_MENU                     = "Logistica",
+	LOGISTICS_LOAD_SUPPLIES            = "Rifornimento",
+	LOGISTICS_LOAD_SUPPLIES_COUNT      = "Caricare %d forniture",
+	LOGISTICS_UNLOAD_SUPPLIES          = "Scaricare le forniture",
+	LOGISTICS_LIST_SUPPLY_ZONES        = "Elenca le aree di rifornimento",
+	LOGISTICS_SUPPLIES_STATUS          = "Stato dell'offerta",
+	LOGISTICS_SUPPLIES_HELP            = "Aiuto di fornitura",
+	LOGISTICS_MARK_ZONE                = "Area contrassegnata",
+	LOGISTICS_STATICS                  = "oggetti statici",
+	LOGISTICS_OVERVIEW_HELP            = "Panoramica logistica\n\nRifornimento dell'area (miglioramenti + scorte iniziali)\n• Utilizzo \"Rifornimento dell'area\" per raccogliere casse.\n• Carico/scarico con la squadra di terra.\n• 1 cassa = 1 potenziamento dell'area.\n• Le casse sono molto pesanti. Trasportane solo diverse se il tuo dispositivo lo consente.\n• È possibile utilizzare un sistema di carico a esterno, oppure combinare 1 carico interno + 1 carico a tracolla.\n• Ogni cassa contiene 10 unità di ciascun articolo presente nel magazzino (bombe, missili, bombe guidate, razzi, missili aria-terra, ecc.).\n\nRifornimento del magazzino (armi aggiuntive)\n• Utilizzo \"Rifornimento del magazzino\" per consegnare maggiori quantità di armi.\n• Il rifornimento del magazzino non include le zone.\n\nCattura con le truppe\n• Le truppe CTLD possono conquistare/migliorare le aree.\n• 1 gruppo di truppe = 1 potenziamento.\n• Se un'area è già stata completamente potenziata, le truppe aggiuntive vengono rimborsate.",
+	LOGISTICS_CANNOT_LOAD_IN_AIR       = "È impossibile effettuare il rifornimento in volo",
+	LOGISTICS_CANNOT_UNLOAD_IN_AIR     = "È impossibile scaricare carburante in volo.",
+	LOGISTICS_SUPPLIES_LOADED          = "Forniture caricate",
+	LOGISTICS_SUPPLIES_LOADED_COUNT    = "%d rifornimenti caricati",
+	LOGISTICS_SUPPLIES_LOADED_COUNT_CAP = "%d forniture caricate",
+	LOGISTICS_ALREADY_LOADED           = "Forniture già caricate",
+	LOGISTICS_ALREADY_LOADED_COUNT     = "%d Forniture già caricate",
+	LOGISTICS_SUPPLIES_NOT_LOADED      = "Rifornimento a vuoto",
+	LOGISTICS_NO_SUPPLIES_LOADED       = "Nessun rifornimento caricato",
+	LOGISTICS_WARNING_NOT_LOADED       = "Attenzione: carburante non caricato",
+	LOGISTICS_LOAD_ONLY_FRIENDLY_OR_CARRIER = "Le provviste possono essere caricate solo in un'area di rifornimento amica o sulla portaerei.",
+	LOGISTICS_LOAD_ONLY_FRIENDLY       = "Le provviste possono essere caricate solo in una zona di rifornimento amica.",
+	LOGISTICS_UNLOAD_ONLY_FRIENDLY_NEUTRAL = "Le merci possono essere scaricate solo in una zona amica o neutrale.",
+	LOGISTICS_SUPPLIES_UNLOADED        = "Forniture scaricate",
+	LOGISTICS_SUPPLIES_UNLOADED_COUNT  = "%d forniture scaricate",
+	LOGISTICS_FRIENDLY_SUPPLY_ZONES    = "Zone di rifornimento amichevoli:",
+	LOGISTICS_CAPTURE_CREDITS          = "Cattura +%s crediti",
+	LOGISTICS_RESUPPLY_CREDITS         = "Rifornimento +%s crediti",
+	LOGISTICS_RESUPPLY_NO_DEMAND       = "Rifornimento +%s crediti (-75%% per mancanza di domanda)",
+	LOGISTICS_PLAYER_RESUPPLY_NO_DEMAND = "[%s] Rifornimento +%s crediti (-75%% per mancanza di domanda)",
+	LOGISTICS_ZONE_NOT_FOUND           = "Area non trovata",
+	LOGISTICS_ZONE_NOT_FRIENDLY        = "La zona non è una zona amica valida",
+	LOGISTICS_ZONE_NOT_NEUTRAL         = "La zona non è neutrale",
+	LOGISTICS_ZONE_NO_RESUPPLY_NEEDED  = "La zona %s non necessita di rifornimento.",
+	LOGISTICS_SUPPLY_ALREADY_PROGRESS  = "Rifornimento a %s già in corso",
+	LOGISTICS_NO_AVAILABLE_SUPPLY      = "Nessun convoglio di rifornimenti disponibile",
+	LOGISTICS_NO_SUITABLE_SUPPLY       = "Non è stato trovato alcun gruppo di fornitura adatto per %s",
+	LOGISTICS_LOOKING_FOR_PILOTS       = "Ricerca di piloti disponibili in corso, attendere prego.",
+	LOGISTICS_NO_AVAILABLE_PILOTS      = "Nessun pilota disponibile trovato",
+	LOGISTICS_FRIENDLY_CONVOY_MOVING   = "Un convoglio amichevole si sta spostando da %s a %s",
+	LOGISTICS_FRIENDLY_RESUPPLY_TO     = "Fare rifornimento all'amico in viaggio verso %s",
+	LOGISTICS_FRIENDLY_HELO_SCRAMBLE   = "Un elicottero amichevole decolla da %s verso %s",
+	LOGISTICS_EMERGENCY_CAPTURE_TO     = "Cattura di emergenza in rotta verso %s",
+	LOGISTICS_EMERGENCY_CAPTURE_VIA    = "Cattura di emergenza in rotta verso %s via %s",
+	LOGISTICS_FARP_HELO_ENROUTE_FROM_ETA = "Un elicottero amico è in rotta da %s per costruire una FARP. ETA %d minuti.",
+	LOGISTICS_FARP_HELO_ENROUTE_ETA    = "Un elicottero amico è in rotta per costruire una FARP. ETA %d minuti.",
+	LOGISTICS_FARP_HELO_ENROUTE_FROM   = "Un elicottero amico è in rotta da %s per costruire una FARP.",
+	LOGISTICS_FARP_HELO_ENROUTE        = "Un elicottero amico è in viaggio per costruire una FARP.",
+
+	-- ============================================================
+	-- Foothold CTLD
+	-- ============================================================
+	CTLD_AUTO_BUILD_FAILED_DESTROYED   = "[CTLD] Auto-build non riuscito: il carico sganciato è stato distrutto prima dell'atterraggio.",
+	CTLD_AUTO_BUILD_SKIPPED_AIRBORNE   = "[CTLD] La costruzione automatica del lancio aereo di Hercules è stata ignorata (l'aereo non è in volo).).",
+	CTLD_MOVE_CARGO_BEFORE_HERCULES_AUTOBUILD = "[CTLD] Sposta %s fuori da %s prima della compilazione automatica di Hercules.",
+	CTLD_SAM_MERGE_FAILED_MISSING_TEMPLATE = "%s : Unione non riuscita, dati del modello mancanti.",
+	CTLD_SAM_MERGE_FAILED_NO_COMPONENT = "%s : Unione non riuscita, nessun modello di componente.",
+	CTLD_SAM_MERGE_FAILED_APPEND       = "%s : Unione non riuscita, errore di aggiunta.",
+	CTLD_SAM_MERGE_FAILED_SPAWN        = "%s : fusione non riuscita, errore di spawn.",
+	CTLD_SAM_MERGE_COMPLETE            = "%s : Unione completata, %s aggiunto al sistema vicino.",
+	CTLD_ZONE_SUPPLIES_DESTROYED       = "[CTLD] Area di rifornimento distrutta in %s (%s).",
+	CTLD_ZONE_SUPPLIES_DELIVERED       = "Rifornimento dell'area : %s %s.",
+	CTLD_ZONE_SUPPLY_ACTION_CAPTURED   = "catturare",
+	CTLD_ZONE_SUPPLY_ACTION_UPGRADED   = "migliorato",
+	CTLD_CRATE_LOADED_GROUND_CREW      = "Cassa %s caricata dal personale di terra!",
+	CTLD_CRATE_UNLOADED_GROUND_CREW    = "Cassa %s scaricata dal team di terra!",
+	CTLD_CRATES_POSITIONED             = "%d posizionata cassa per %s posizionati vicino a te !",
+	CTLD_MENU_ZONE_SUPPLIES            = "Rifornimento dell'area",
+	CTLD_MENU_WAREHOUSE                = "Magazzino",
+	CTLD_MENU_SUPPLIES                 = "Fornitura",
+	CTLD_MENU_AMMO_TRUCK               = "Camion delle munizioni",
+	CTLD_MENU_SQUAD_8                  = "Squadra 8",
+	CTLD_MENU_PLATOON_16               = "Plotone 16",
+	CTLD_MENU_PLATOON_32               = "Plotone 32",
+	CTLD_MENU_ANTI_AIR_SOLDIERS        = "soldati antiaerei",
+	CTLD_MENU_MORTAR_SQUAD             = "squadra mortai",
+	CTLD_MENU_ENGINEER_SOLDIER         = "Geniere",
+	CTLD_MENU_ANTI_TANK                = "Anticarro",
+	CTLD_MENU_SUPPORT                  = "Supporto",
+	CTLD_MENU_SAM_AAA                  = "SAM/AAA",
+	CTLD_MENU_SAM_ADDON                = "Estensione SAM",
+	CTLD_MENU_FARP                     = "FARP",
+	CTLD_MENU_HUMVEE_SCOUT             = "Humvee da ricognizione",
+	CTLD_MENU_10_EVERYTHING            = "10 di qualsiasi cosa",
+	CTLD_MENU_25_EVERYTHING            = "25 di qualsiasi cosa",
+	CTLD_MENU_50_EVERYTHING            = "50 di qualsiasi cosa",
+	CTLD_MENU_10_AA_MISSILES           = "10 missili A/A",
+	CTLD_MENU_25_AA_MISSILES           = "25 missili A/A",
+	CTLD_MENU_50_AA_MISSILES           = "50 missili A/A",
+	CTLD_MENU_10_AG_MISSILES           = "10 missili A/G",
+	CTLD_MENU_25_AG_MISSILES           = "25 missili A/G",
+	CTLD_MENU_50_AG_MISSILES           = "50 missili A/G",
+	CTLD_MENU_10_AG_ROCKETS            = "10 razzi A/G",
+	CTLD_MENU_25_AG_ROCKETS            = "25 razzi A/G",
+	CTLD_MENU_50_AG_ROCKETS            = "50 razzi A/G",
+	CTLD_MENU_10_AG_BOMBS              = "10 bombe A/G",
+	CTLD_MENU_25_AG_BOMBS              = "25 bombeA/G",
+	CTLD_MENU_50_AG_BOMBS              = "50 bombe A/G",
+	CTLD_MENU_10_FUEL_TANKS_PYLONS     = "10 serbatoi esterni e piloni",
+	CTLD_MENU_25_FUEL_TANKS_PYLONS     = "25 serbatoi esterni e piloni",
+	CTLD_MENU_50_FUEL_TANKS_PYLONS     = "50 serbatoi esterni e piloni",
+	CTLD_MENU_10_MODDED_WEAPONS        = "10 mod armi",
+	CTLD_MENU_25_MODDED_WEAPONS        = "25 mod armi",
+	CTLD_MENU_50_MODDED_WEAPONS        = "50 mod armi",
+	CTLD_SUPPLIES_RETURNED_TO_ZONE     = "%s tornato a %s.",
+	CTLD_SUPPLIES_DELIVERED_BY         = "%s consegnato a %s da %s.",
+	CTLD_ZONE_SUPPLY_NOT_NEEDED_WAREHOUSE_APPLIED = "%s Attualmente non richiede il rifornimento della zona. Il rifornimento del magazzino è stato comunque applicato.",
+	CTLD_LIMIT_REACHED_REMOVED_OLDEST  = "[CTLD] limite %s raggiunto - rimosso il %s più vecchio (%s).",
+	CTLD_TROOP_LIMIT_REACHED_REMOVED_OLDEST = "[CTLD] Limite de troupes %s atteinte - plus ancien %s retiré (%s).",
+	CTLD_WAREHOUSE_MISCONFIGURED_INVALID_AMOUNT = "[CTLD] %s Configurazione errata (quantità non valida)).",
+	CTLD_WAREHOUSE_NOT_AVAILABLE       = "[CTLD] %s non disponibile à %s (%s).",
+	CTLD_WAREHOUSE_REMOVE_FAILED       = "[CTLD] %s non poteva essere rimosso da %s (%s).",
+	CTLD_SAVE_LOAD_DISABLED_DESANITIZE = "CTLD Non sarà possibile salvare/caricare. Si prega di desanificare il file DCS missionscripting.lua.\n\nfunzione disabilitata.",
+	CTLD_ENGINEERS_RETURNED_TO_BASE    = "Gli ingegneri sono tornati alla base!",
+	CTLD_TROOPS_RETURNED_TO_BASE       = "Le truppe sono tornate alla base!",
+	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Un gruppo di truppe è entrato nella zona : %s",
+	CTLD_TROOP_ZONE_CAPTURED           = "catturare",
+	CTLD_TROOP_ZONE_UPGRADED           = "migliorato",
+	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "catturato e migliorato",
+	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
+	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d crediti.",
+	CTLD_REASON_ENEMY_ZONE             = "zona nemica",
+	CTLD_REASON_NEUTRAL_ZONE_TIMEOUT   = "Scadenza in zona neutrale",
+	CTLD_REASON_WAREHOUSE_LOGISTICS_DISABLED = "Logistica di magazzino disabilitata",
+	CTLD_REASON_NO_STORAGE             = "nessun deposito",
+	CTLD_REASON_NO_APPLICABLE_INVENTORY = "Nessun inventario applicabile",
+	CTLD_REASON_NOT_AVAILABLE          = "non disponibile",
+	CTLD_REASON_DEBIT_FAILED           = "flusso fallito",
+	CTLD_REASON_NO_ITEMS               = "nessun articolo %s",
+	CTLD_REASON_INSUFFICIENT_STOCK     = "scorte insufficienti di %s",
+	CTLD_ADJUST_NO_ITEMS               = "nessun elemento modificato (skippedLow=%d) a %s",
+
+	-- ============================================================
+	-- CSAR
+	-- ============================================================
+	CSAR_MENU                          = "CSAR",
+	CSAR_INFO_CLOSEST_PILOT            = "Informazioni sul pilota più vicino",
+	CSAR_INFO_THREE_CLOSEST_PILOTS     = "Informazioni sui tre piloti più vicini",
+	CSAR_DEPLOY_SMOKE_CLOSEST          = "lanciare fumogeni sul pilota più vicino",
+	CSAR_DEPLOY_FLARE_CLOSEST          = "Lancia il razzo verso il pilota più vicino",
+	CSAR_SMOKE_NEAREST_ZONE            = "Fumo nell'area circostante",
+	CSAR_FLARE_NEAREST_ZONE            = "Lancia un razzo sopra l'area più vicina",
+	CSAR_NO_EJECTED_PILOTS             = "Nessun pilota eiettato nelle vicinanze",
+	CSAR_NO_EJECTED_FRIENDLY_PILOTS    = "Nessun pilota alleato si è eiettato nelle vicinanze",
+	CSAR_BLUE_SMOKE_MARKED             = "Il pilota eiettato era segnalato da una nuvola di fumo blu.",
+	CSAR_PILOT_EXTRACTION_HEADER       = "Il pilota verrà estratto :",
+	CSAR_DOWNED_PILOT                  = "Pilota abbattuto",
+	CSAR_ADDITIONAL_SURVIVOR           = "Sopravvissuto aggiuntivo",
+	CSAR_RESCUE_HOSTILE                = "Risparmia %s in territorio ostile (%s) :",
+	CSAR_HOSTILE_CAUTION               = "Attenzione, i nemici sono nelle vicinanze.",
+	CSAR_LOST_CREDITS                  = "Persi: %s crediti",
+	CSAR_PLAYER_LOST_CREDITS           = "[%s]  Persi: %s crediti",
+	CSAR_SAVE_TO_RETRIEVE              = "Salva il pilota per recuperare i crediti persi.",
+	CSAR_NEAREST_PILOT_TO_YOU          = "pilota più vicino a te :",
+	CSAR_NEAREST_PILOT_LOST_CREDITS    = "%s - Persi: %s crediti",
+	CSAR_DISTANCE_NM_KM_LINE            = "Distanza: %s km | %s NM",
+	CSAR_BEARING_TEXT_LINE             = "Rilevato : %s",
+	CSAR_ADF_LINE                      = "ADF : %s kHz",
+	CSAR_DISTANCE_LINE                 = "Dist : %skm | %snm",
+	CSAR_BEARING_LINE                  = "Rilevato : %d",
+	CSAR_MARKER_LOST_CREDITS           = "[%s] Persi: %s crediti",
+	CSAR_PLAYER_CAPTURED               = "[%s] catturato dalle forze nemiche al %s. Presunto morto.",
+	CSAR_PLAYER_LANDED_SAFELY          = "[%s] atterrato in sicurezza a %s.",
+	CSAR_PLAYER_LANDED_RECOVERED_CREDITS = "[%s] atterrato sano e salvo a %s e recuperati tutti i crediti persi: %s crediti.",
+	CSAR_PLAYER_HOME_SAFE              = "[%s] ora è sicuro a %s.",
+	CSAR_PLAYER_HOME_RECOVERED_CREDITS = "[%s] Ora è al sicuro presso %s e ha recuperato tutti i crediti persi: %s crediti.",
+	CSAR_PLAYER_RUNNING_HOME           = "Il pilota espulso %s corre verso %s.",
+	CSAR_PILOT_RUNNING_HOME            = "%s breve verso %s.",
+	CSAR_RUNNING_HOME_STATUS           = "Attualmente in corsa verso %s.",
+	CSAR_PLAYER_KIA                    = "[%s] e'Oui KIA.",
+	CSAR_DOWNED_PILOT_KIA              = "Il pilota abbattuto è KIA.",
+	CSAR_ENEMY_SURROUNDED_PLAYER       = "Le forze nemiche hanno circondato [%s]. Sbrigati a salvarlo.",
+	CSAR_ENEMY_SURROUNDED_PILOT        = "Le forze nemiche hanno circondato il pilota abbattuto. Affrettatevi a salvarlo!.",
+	CSAR_WE_HEAR_YOU                   = "%s Vi abbiamo ascoltato! Se necessario, chiedete del fumo.",
+	CSAR_WE_HEAR_YOU_HOSTILE           = "%s  Vi sentiamo! Attenzione, nemici nelle vicinanze. Richiedete del fumo se necessario.",
+	CSAR_I_HEAR_YOU                    = "%s  Ti sento! Chiedi del fumo se necessario.",
+	CSAR_I_HEAR_YOU_HOSTILE            = "%s  Ti sento! Attenzione, nemici nelle vicinanze. Richiedi del fumo se necessario.",
+	CSAR_CLOSE_LAND_SAFE               = "Ci sei quasi! Atterra in un luogo sicuro, verremo noi da te.",
+	CSAR_CLOSE_CLOCK                   = "Sei vicino! Sono a ore %d. Atterra in un posto sicuro, verremo noi da te.",
+	CSAR_PICKING_UP_HOVER              = "Recupero %s. Mantieni fermo per %ds.",
+	CSAR_DIRECTION_FORWARD             = "Avanti",
+	CSAR_DIRECTION_RIGHT               = "Destra",
+	CSAR_DIRECTION_LEFT                = "Sinistra",
+	CSAR_DIRECTION_BACK                = "Indietro",
+	CSAR_GUIDANCE_MOVE                 = "%s %dm%s",
+	CSAR_GUIDANCE_DESCEND_SUFFIX       = ", scendere %d ft",
+	CSAR_AT_MAX_CAPACITY               = "Capacità massima raggiunta",
+	CSAR_RESCUED_WITH_CREDITS          = "[%s] Salvati [%s] +%s crediti. Atterra in una zona amica per depositare.",
+	CSAR_RESCUED                       = "[%s] salvato [%s]. Atterra in una zona amica per sbarcare.",
+	CSAR_PILOT_ONBOARD                 = "Pilota a bordo [%d/%d]",
+	CSAR_TOO_HIGH                      = "Sei troppo alto",
+	CSAR_TOO_FAST                      = "Stai andando troppo veloce",
+	CSAR_NO_ONE_ONBOARD                = "Nessuno a bordo",
+	CSAR_CANNOT_DROPOFF_IN_AIR         = "È impossibile far scendere i piloti in volo.",
+	CSAR_PILOTS_DROPPED_OFF            = "I piloti hanno abbandonato",
+	CSAR_PLAYER_DROPPED_OFF            = "[%s] dichiarato %s.",
+	CSAR_COMING_TO_YOU_ETA             = "%s : Mi sto avvicinando a te.\nETA %d secondi.",
+
+	-- ============================================================
+	-- Dynamic Air Support
+	-- ============================================================
+	DYNAMIC_CAP_CONTROL                = "Controllo CAP",
+	DYNAMIC_CAP_REPOSITION_BY_ZONE     = "CAP : riposizionamento per area",
+	DYNAMIC_CAP_REPOSITION_BY_POSITION = "CAP : riposizionamento per posizione",
+	DYNAMIC_CAP_HOLD_RACETRACK         = "CAP : tenere la pista",
+	DYNAMIC_CAP_FLIGHTSWEEP            = "CAP : scansione aerea",
+	DYNAMIC_CAP_DESTROY                = "CAP : distruggere",
+	DYNAMIC_CAS_DESTROY                = "CAS : distruggere",
+	DYNAMIC_BOMBER_DESTROY             = "Bombardiere: distruggere",
+	DYNAMIC_SEAD_DESTROY               = "SEAD : distruggere",
+	DYNAMIC_DECOY_DESTROY              = "ESCA : distruggere",
+	DYNAMIC_BUILDING_STRIKE_DESTROY    = "Distruggere struttura",
+	DYNAMIC_TANKERS_CONTROL            = "Controllo dei fornitori",
+	DYNAMIC_CARRIER_NAVIGATION         = "Navigazione portaerei",
+	DYNAMIC_CARRIER_INFO               = "Informazioni portaerei",
+	DYNAMIC_CARRIER_GROUP              = "Gruppo portaerei",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "Naviga verso %s",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "La navigazione della portaerei è disponibile dopo aver liberato Red Carrier.",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "Area portaerei non disponibile: %s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s non è attivo.",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s non è riuscita a tracciare una rotta marittima verso %s.",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Comandi marcatore Tarawa:\ntarawahelp - mostra questo aiuto\ntarawahere - naviga verso questo marcatore e fermati\ntarawahereandstop - naviga verso questo marcatore e fermati\ntarawahere1 - imposta punto 1 del circuito\ntarawahere2 - imposta punto 2 e avvia il circuito\ntarawareturn - torna all'area portaerei.",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "Il movimento della Tarawa tramite marcatore è disattivato.",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "Il movimento della Tarawa tramite marcatore è disponibile solo per la coalizione blu.",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Rotta Tarawa rifiutata: il marcatore non è in acque profonde.",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Rotta Tarawa rifiutata: il percorso non è abbastanza profondo o diretto.",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Rotta Tarawa rifiutata: il marcatore deve trovarsi in territorio amico.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Punto 1 del circuito Tarawa salvato. Posiziona tarawahere2 per completare la rotta.",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "Posiziona tarawahere1 prima di tarawahere2.",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa sta navigando verso il marcatore.",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Rotta circuito Tarawa impostata.",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa ha raggiunto il marcatore e si è fermata.",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa sta tornando alla sua area portaerei.",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa non è riuscita a tracciare una rotta di ritorno.",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s sta navigando verso %s.",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "Il gruppo portaerei ora può navigare verso una nuova posizione.",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s virerà tra 5 minuti.",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s virerà tra 1 minuto.",
+	DYNAMIC_TANKER_INFO                = "Informazioni sul rifornimento",
+	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco (Drogue) : spostarsi nell'area",
+	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco (Drogue) : spostamento per posizione",
+	DYNAMIC_TANKER_ARCO_ALTITUDE       = "Arco (Drogue) : altitudine",
+	DYNAMIC_TANKER_ARCO_SPEED          = "Arco (Drogue) : velocità",
+	DYNAMIC_TANKER_TEXACO_MOVE_TO_ZONE = "Texaco (Boom) : spostarsi nell'area",
+	DYNAMIC_TANKER_TEXACO_MOVE_BY_POS  = "Texaco (Boom) : spostamento per posizione",
+	DYNAMIC_TANKER_TEXACO_ALTITUDE     = "Texaco (Boom) : altitudine",
+	DYNAMIC_TANKER_TEXACO_SPEED        = "Texaco (Boom) : velocità",
+	DYNAMIC_TANKER_ARCO_INFO           = "Arco (Drogue) : TCN 101Y | BTN 14 | 260.00 | ALT %s ft",
+	DYNAMIC_TANKER_TEXACO_INFO         = "Texaco (Boom) : TCN 102Y | BTN 20 | 266.00 | ALT %s ft",
+	DYNAMIC_ORBIT                      = "Orbita",
+	DYNAMIC_HOT_HEADING                = "Hot %03d",
+	DYNAMIC_REPOSITION_HEADING         = "Riposizionamento %03d",
+	DYNAMIC_NM_DISTANCE                = "%d NM",
+	DYNAMIC_NM_LEG                     = "%d NM Leg",
+	DYNAMIC_SPEED_KT                   = "%d kt",
+	DYNAMIC_CAP_EN_ROUTE_TO_ZONE       = "La CAP è in viaggio verso %s.",
+	DYNAMIC_CAP_REPOSITIONING_ZONE     = "La CAP si riposiziona a %s su una nuova pista, dirigendosi a %d°, ramo di %d miglia.",
+	DYNAMIC_CAP_REPOSITIONING_ORBIT    = "La CAP vai %s su %s poi vai in orbita.",
+	DYNAMIC_CAP_REPOSITIONING_POSITION = "La CAP vai %s %s su una nuova pista, direzione %d°, ramo di %d miglia.",
+	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "La CAP è impostato per reagire se coinvolto",
+	DYNAMIC_CAP_ENGAGE_ALL             = "La CAP si basa su un impegno libero",
+	DYNAMIC_TANKER_BUSY                = "I giocatori si trovano attualmente vicino al punto di rifornimento. Riprova più tardi.",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "I giocatori si trovano attualmente vicino al punto di rifornimento. Riprova %s.",
+	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s è in viaggio verso %s.",
+	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s si riposiziona verso %s su una nuova pista, direzione %d gradi, ramo di %d miglia.",
+	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s vai %s su %s poi vai in orbita.",
+	DYNAMIC_TANKER_REPOSITIONING_POS   = "%s vai %s %s su una nuova pista, direzione %d gradi, ramo di %d miglia.",
+	DYNAMIC_TANKER_ALTITUDE_SET        = "Altitudine di %s impostata su %s ft.",
+	DYNAMIC_TANKER_SPEED_SET           = "Velocità di %s impostata su %d kt.",
+	DYNAMIC_TANKER_APPROACHING_ARCO    = "L'approccio di Arco, BTN 14, 260.00",
+	DYNAMIC_TANKER_APPROACHING_TEXACO  = "L'approccio di Texaco, BTN 20, 266.00",
+	DYNAMIC_CAP_ORBITING_AT            = "CAP : orbita à %s",
+	DYNAMIC_CAP_ORBITING               = "CAP : orbita",
+	DYNAMIC_CAP_RACETRACK_AT           = "CAP : pista  a %s con cap %d° e ramo di %d NM",
+	DYNAMIC_CAP_RACETRACK              = "CAP : pista con CAP %d° e ramo di %d NM",
+	DYNAMIC_TANKER_ORBITING_AT         = "%s : ORBITA à %s",
+	DYNAMIC_TANKER_ORBITING            = "%s : orbita",
+	DYNAMIC_TANKER_RACETRACK_AT        = "%s: racetrack a %s con rotta %d gradi e tratta di %d NM",
+	DYNAMIC_TANKER_RACETRACK           = "%s: racetrack con rotta %d gradi e tratta di %d NM",
+	DYNAMIC_TANKER_SAVED_POSITION      = "posizione registrata",
+	DYNAMIC_ARCO_STATION_ORBIT         = "Arco (BTN-14, 260.00, TCN 101Y)\norbita stazionaria.",
+	DYNAMIC_ARCO_STATION_RACETRACK     = "Arco (BTN-14, 260.00, TCN 101Y)\nIn stazione, impostazione  %s deg,ramo di %s miles.",
+	DYNAMIC_ARCO_STATION_ORBIT_AT      = "Arco (BTN-14, 260.00, TCN 101Y)\norbita stazionariaà %s.",
+	DYNAMIC_ARCO_STATION_RACETRACK_AT  = "Arco (BTN-14, 260.00, TCN 101Y)\nAlla stazione à %s,impostazione  %s deg,ramo di %s miles.",
+	DYNAMIC_TEXACO_STATION_ORBIT       = "Texaco (BTN-20, 266.00, TCN 102Y)\nORBITA stazionazria.",
+	DYNAMIC_TEXACO_STATION_RACETRACK   = "Texaco (BTN-20, 266.00, TCN 102Y)\nIn stazione, impostazione  %s deg,ramo di %s miles.",
+	DYNAMIC_TEXACO_STATION_ORBIT_AT    = "Texaco (BTN-20, 266.00, TCN 102Y)\norbita stazionaria à %s.",
+	DYNAMIC_TEXACO_STATION_RACETRACK_AT = "Texaco (BTN-20, 266.00, TCN 102Y)\nin stazione a %s, impostazione racetrack %s deg, tratta di %s miglia.",
+	DYNAMIC_DROGUE_UNLOCKED_SELECT     = "Ravitailleur (Drogue) sbloccato. Seleziona un'area di spawn.",
+	DYNAMIC_BOOM_UNLOCKED_SELECT       = "Ravitailleur (Boom) sbloccato. Seleziona un'area di spawn.",
+	DYNAMIC_REQUEST_CAP_FROM           = "Richiedi CAP da",
+	DYNAMIC_REQUEST_DROGUE_TANKER_FROM = "Richiedi fornitore (Drogue) da",
+	DYNAMIC_REQUEST_TEXACO_TANKER_FROM = "Richiedi cisterna Texaco (Boom) Da",
+
+	-- ============================================================
+	-- Escort / Ground Missions
+	-- ============================================================
+	ESCORT_MOVE                        = "Aavanguardia",
+	ESCORT_HOLD_POSITION               = "Mantenere la posizione",
+	ESCORT_DEPLOY_SMOKE_CONVOY         = "lanciare fumogeni vicino al convoglio",
+	ESCORT_GET_BEARING_CONVOY          = "Orientarsi in direzione del convoglio",
+	ESCORT_MANUAL_HOLD                 = "Arrêt manuel",
+	ESCORT_ENABLE_FORCED_HOLD          = "Abilita lo spegnimento forzato",
+	ESCORT_DISABLE_FORCED_HOLD         = "Disabilita l'arresto forzatoé",
+	ESCORT_RESTART_MISSION             = "Riavvia la missione",
+	ESCORT_SET_UP_FARP                 = "Installare FARP?",
+	ESCORT_ALREADY_MOVING_PLAYER       = "Gruppo di scorta: siamo già in movimento, %s.",
+	ESCORT_ALREADY_MOVING_SIR          = "Gruppo di scorta: Siamo già in movimento, capo.",
+	ESCORT_COPY_MOVING_PLAYER          = "Gruppo di scorta: ricevuto %s, in viaggio.",
+	ESCORT_MOVING                      = "Gruppo di scorta: in movimento.",
+	ESCORT_ALREADY_STOPPED_PLAYER      = "Gruppo di scorta: siamo già stati fermati, %s.",
+	ESCORT_ALREADY_STOPPED_SIR         = "Gruppo di scorta: Siamo già stati fermati, capo.",
+	ESCORT_COPY_HOLDING_PLAYER         = "Gruppo di scorta: ricevuto %s, manteniamo la posizione.",
+	ESCORT_HOLDING                     = "Gruppo di scorta: mantenimento della posizione.",
+	ESCORT_GROUND_UNIT_NOT_FOUND       = "Unità di terra non trovata.",
+	ESCORT_BLUE_SMOKE_DEPLOYED         = "Gruppo di scorta: fumo blu dispiegato",
+	ESCORT_NO_ALIVE_UNITS              = "Nel gruppo di scorta non sono state rinvenute unità abitative.",
+	ESCORT_GROUP_NOT_FOUND             = "Gruppo di scorta non trovato.",
+	ESCORT_BEARING_DISTANCE            = "Gruppo di scorta: %d°\n\nDistanza : %s km",
+	ESCORT_LEADER_POSITION_UNKNOWN     = "È impossibile determinare la posizione del capogruppo.",
+	ESCORT_FORCED_HOLD_ENABLED         = "Gruppo di scorta: OK, ricevuto. Arresto forzato attivato.",
+	ESCORT_FORCED_HOLD_DISABLED        = "Gruppo di scorta: Ricevuto. Arresto forzato disabilitato",
+	ESCORT_RESTART_CANCELED            = "Riavvio annullato.",
+	ESCORT_FARP_DEPLOYMENT_POSSIBLE    = "Gruppo di scorta: possibile dispiegamento FARP - selezionare Scorta dal menu delle opzioni.",
+	ESCORT_FARP_CREATING               = "Gruppo di scorta: Roger - Creazione FARP, aspetta. Stiamo procedendo un po' oltre.",
+	ESCORT_FARP_PROCEEDING             = "Gruppo di scorta: ricevuto, la missione continua",
+	ESCORT_CONVOY_HOLDING_INTEL        = "Abbiamo ricevuto informazioni su un convoglio nemico diretto verso di noi!\n\nIl convoglio mantiene la posizione",
+	ESCORT_CHECKPOINT_AHEAD            = "Posto di blocco nemico più avanti.\n\nConvoglio in posizione, pulire",
+	ESCORT_NEARING_TARGET              = "Gruppo di scorta: avvicinandosi all'area bersaglio, liberarla\n\nIl convoglio mantiene la posizione",
+	ESCORT_ALRIGHT_MOVING              = "Gruppo di scorta: molto buono, in movimento!",
+	ESCORT_UNKNOWN_CONTEXT             = "Contesto sconosciuto. Verificare lo stato del convoglio.",
+	ESCORT_HALT_MSG_1                  = "La ricognizione conferma la presenza nemica nelle vicinanze.\n\nIl convoglio mantiene la posizione, in attesa dell'autorizzazione.",
+	ESCORT_HALT_MSG_2                  = "Rilevato movimento ostile nelle vicinanze.\n\nConvoglio fermato. Mettere in sicurezza l'area prima di procedere.",
+	ESCORT_HALT_MSG_3                  = "Presenza nemica confermata di fronte.\n\nConvoglio fermo, in attesa di ordini.",
+	ESCORT_HALT_MSG_4                  = "Minaccia potenziale identificata.\n\nConvoglio fermo. Liberare l'area per poter proseguire.",
+	ESCORT_MOVING_MSG_1                = "Convoglio in viaggio.\n\nRimanete vigili e tenete gli occhi aperti.",
+	ESCORT_MOVING_MSG_2                = "Convoglio Oscar Mike .\n\nMantenete una formazione compatta e monitorate la presenza di minacce.",
+	ESCORT_MOVING_MSG_3                = "Convoglio in movimento.\n\nPrestate attenzione alla strada che avete davanti per individuare eventuali veicoli ostili.",
+	ESCORT_MOVING_MSG_4                = "La strada è libera. Il convoglio si sta dirigendo verso la sua destinazione.",
+
+	-- ============================================================
+	-- Persistence / Warehouse
+	-- ============================================================
+	PERSISTENCE_SAVE_DISABLED          = "PLa persistenza è disabilitata; non è possibile creare il file di backup.",
+	PERSISTENCE_SAVE_DESANITIZE        = "La persistenza è disabilitata; non è possibile creare il file di backup.\n\nDesanifica il file DCS missionscripting.lua",
+
+	-- ============================================================
+	-- Admin / Diagnostics
+	-- ============================================================
+	LZ_NO_VALID_LANDING_SPOTS          = "[LZ] La zona %s non ha punti di atterraggio validi",
+	SPAWN_INVALID_GROUP_NAME           = "Errore: grname è nullo o non è una stringa valida",
+	SPAWN_MISSING_UPGRADE_GROUP        = "Gruppo di miglioramento %s mancante nell'area %s. Sostituzione se possibile.",
+	SPAWN_FAILED_GROUP_IN_ZONE         = "Generazione del gruppo non riuscita: %s nell'area %s",
+	RESPAWN_TEMPLATE_NOT_FOUND         = "Respawn: modello ME '%s' non trovato",
+	RESPAWN_ADDGROUP_FAILED            = "Respawn: aggiunta del gruppo non riuscita per il gruppo '%s'",
+	RESPAWN_ADDGROUP_FAILED_REASON     = "Respawn : addGroup non riuscito - %s",
+	GROUP_NOT_FOUND_REPORT             = "Gruppo %s non trovato, si prega di segnalarlo a Leka",
+	REGISTER_GROUP_TARGET_FAILED       = "Attenzione: la registrazione di RegisterGroupTarget non è riuscita, il gruppo %s non è stato trovato.",
+	DIAGNOSTIC_PROCESS_AIR_NON_AIR     = "GroupCommander:processAir ha richiesto un'unità non aerea %s. Segnalalo a Leka",
+	DIAGNOSTIC_RESPAWN_TIMERS_NIL      = "ERRORE: Segnala a Leka e invia il log! respawnTimers nil %s name=%s mission=%s side=%s urgent=%s",
+	ADMIN_BUG_UNRESOLVED_ENTRIES       = "(BUG) Errore %s con voci non risolte: %s. Si prega di segnalarlo a Leka.",
+	ADMIN_STATUS_ZONE_ONLY             = "Il comando di stato funziona solo in una zona",
+	ADMIN_RANK_SET                     = "rango di %s definito",
+	ADMIN_TOP_HEADER                   = "[Top %d oggi]",
+	ADMIN_TOP_LINE                     = "%d. [%s]\nPunti: %d",
+	ADMIN_COMMAND_HELP                 = "Ordini disponibili :\nAcquista - Mostra gli articoli di supporto disponibili\nbuy:item - acquista un oggetto di supporto\nstato - visualizza lo stato della zona per 60 secondi\nstatistiche - mostra la classifica completa\nIn alto - Mostra i 5 migliori giocatori della classificat\nmystats - visualizza le tue statistiche personali (solo tramite messaggio privato)\nMissioni - Mostra tutte le missioni attive",
+	ADMIN_DEBUG_HELP                   = "Ordini disponibili :\nspawn -Genera oggetti in quest'area se il marcatore è valido.\nrensa - sgombera un'area dalle sue unità.\nintelstatus - forza la visualizzazione dello stato anche senza informazioni acquistate.\ncapture: -Cattura: 2 o cattura: 1. Può catturare una zona neutrale.\nmaxxa - migliora un'area al massimo per la coalizione attuale.\nevento - visualizza gli eventi dello script nel registro.\nevento: avvia l'evento se canexecute è true. evento:IDevento\naddfunds: - addfunds:1000 - aggiunge 1000 crediti alla coalizione blu.\nAddRank: - AddRank:player,1000 - aggiunge 1000 crediti di rango a un giocatore.\ndebug: - visualizza lo stato della zona nel registro.\naddshop: - aggiunge il negozio per la coalizione e lo attiva tramite F10.\nremoveshop: - rimuovere il negozio per la coalizione.\nupgradera: - ripara un'area e aggiunge le unità mancanti al gruppo.\nupgradeallred: - migliora al massimo tutte le zone rosse.\nupgradeallblue: - Migliora al massimo tutte le aree blu.\nspawnnow:<side> - velocizza le apparizioni aeree per un accampamento (1=rosso, 2=blu) mantenendo i limiti/il rango.\n-codice: - Input Lua puro. Può chiamare una funzione, ad esempio\n-codice:zones.name:upgrade() per migliorare la zona",
+
+	-- ============================================================
+	-- Mission Completion / Player Rewards
+	-- ============================================================
+	MISSION_COMPLETE_AUTORESTART       = "Il nemico è stato sconfitto.\n\nMissione compiuta.\n\nRiavvio in corso.",
+	MISSION_COMPLETE_MANUAL_RESTART    = "Il nemico è stato sconfitto.\n\nMissione compiuta.\n\nPuoi riavviare la missione dal menu radio.",
+	MISSION_RESTARTING_NOW             = "Riavvio in corso.",
+	PLAYER_ILLEGAL_NAME_CHARACTERS     = "Il tuo nome contiene caratteri non autorizzati ( ' / \\ ). Per favore, rimuovili e unisciti di nuovo.",
+	PLAYER_PROMOTED                   = "%s è stato promosso %s!",
+	PLAYER_DEMOTED                    = "%s è stato retrocesso a %s.",
+	PLAYER_EJECTED_CREDITS             = "[%s] eiettato. +%d crediti (25%% dei guadagni). Statistiche delle uccisioni perse.",
+	PLAYER_AIRCRAFT_LOST_CREDITS      = "[%s] Dispositivo smarrito, -%d crediti",
+	PLAYER_AIRCRAFT_LOST_RANK         = "[%s] Dispositivo smarrito, -%d punti classifica",
+	PLAYER_LANDED_CLAIM_ZONE          = "[%s] atterrato a %s.\nAttendi %d secondi per riscattare i crediti...",
+	PLAYER_LANDED_CLAIM_CARRIER       = "[%s] atterrato sul %s.\nAttendi 10 secondi per riscattare i crediti...",
+	PLAYER_REDEEM_HEADER              = "Recupero del giocatore :",
+	PLAYER_REDEEM_CREW_HEADER         = "Recupero del giocatore (equipaggio) :",
+	PLAYER_REDEEM_LINE                = "%s : %d CREDITI",
+	MISSION_REWARD_COMPLETED_SOLO      = "Missione %s completata da %s. +%d crediti - atterra per raccoglierli.",
+	MISSION_REWARD_COMPLETED_JOINT     = "Mission %s terminée par %s et %s. +%d crédits chacun - atterrissez pour les récupérer.",
+	MISSION_REWARD_COMPLETED_GROUP     = "Missione %s completata da %s. +%d crediti ciascuno - atterra per raccoglierli.",
+	MISSION_REWARD_DESTROYED_SOLO      = "%s Distrutto da %s. +%d crediti - atterra per recuperarli.",
+	MISSION_REWARD_DESTROYED_JOINT     = "%s Distrutto da %s e %s. +%d crediti ciascuno - atterra per recuperarli.",
+	FRIENDLY_FIRE_UNIT                 = "!! TIRO FRATRICIDO !!\n[%s] ha ucciso un'unità alleata : %s",
+	FRIENDLY_FIRE_PLAYER               = "!! TIRO FRATRICIDO !!\n[%s] ha ucciso un giocatore alleato : %s",
+	FRIENDLY_FIRE_RANK_LOSS            = "\n[%s] punti classifica persi %s",
+	REWARD_UNIT_KILL                   = "Unità distrutta +%s crediti",
+	REWARD_AIRCRAFT_KILL               = "Abbattimento aereo +%s crediti",
+	REWARD_HELICOPTER_KILL             = "Abbattimento elicottero +%s crediti",
+	REWARD_SAM_KILL                    = "SAM distrutto +%s crediti",
+	REWARD_INFANTRY_KILL               = "Fanteria eliminata +%s crediti",
+	REWARD_GROUND_KILL                 = "Bersaglio terrestre distrutto +%s crediti",
+	REWARD_VEHICLE_KILL                = "Veicolo distrutto +%s crediti",
+	REWARD_SHIP_KILL                   = "Nave distrutta +%s crediti",
+	REWARD_STRUCTURE_KILL              = "Struttura distrutta +%s crediti",
+
+	-- ============================================================
+	-- Dynamic Support Air / FARP
+	-- ============================================================
+	DYNAMIC_FARP_IN_OPERATION          = "%s Operativo!",
+	DYNAMIC_BUILD_FARP_GROUP_INVALID   = "Gruppo non valido : %s",
+	DYNAMIC_BUILD_FARP_NO_COORDINATE   = "BuildFarpHere: nessuna coordinata trovata per il gruppo : %s",
+	DYNAMIC_CHINOOK_LAUNCH_FAILED      = "Impossibile lanciare il Chinook",
+	DYNAMIC_MARKER_NO_POSITION         = "Nessuna posizione del marcatore trovata",
+	DYNAMIC_FARP_TOO_FAR               = "Troppo lontano da una base aerea amica (max 100nm)",
+	DYNAMIC_SUPPORT_AIRBORNE_INGRESS   = "Gruppo %s in volo, seguendo la rotta di ingresso verso %s.",
+	DYNAMIC_SUPPORT_CAP_OUT_OF_MISSILES = "CAP Niente missili, ritorno alla base",
+	DYNAMIC_SUPPORT_CAP_LANDED         = "Il gruppo CAP atterrato",
+	DYNAMIC_SUPPORT_CAP_KILLED         = "Il gruppo CAP  distrutto",
+	DYNAMIC_SUPPORT_CAP_SCRAMBLING_ORBIT = "CAP decolla da %s per stabilire un'orbita a %s.",
+	DYNAMIC_SUPPORT_CAP_SCRAMBLING_RACETRACK = "CAP decolla da %s per stabilire un circuito a %s, direzione %d°, ramo di %d miglia.",
+	DYNAMIC_SUPPORT_CAP_ON_STATION_ORBIT = "CAP sulla stazione, in orbita a %s.",
+	DYNAMIC_SUPPORT_CAP_ON_STATION_RACETRACK = "CAP Alla stazione %s, allestire la pista %d°, diramazione di %d miglia.",
+	DYNAMIC_SUPPORT_CAS_COMPLETED      = "Il gruppo CAS ha portato a termine con successo la sua missione",
+	DYNAMIC_SUPPORT_CAS_WINCHESTER     = "Gruppo CAS Winchester , ritorno alla base",
+	DYNAMIC_SUPPORT_CAS_LANDED         = "Il gruppo CAS atterrato",
+	DYNAMIC_SUPPORT_CAS_KILLED         = "Gruppo CAS distrutto",
+	DYNAMIC_SUPPORT_CAS_SCRAMBLING     = "Il volo CAS decolla da %s per attaccare %s",
+	DYNAMIC_SUPPORT_CAS_LAUNCHED       = "Volo CAS lanciato da %s per attaccare %s",
+	DYNAMIC_SUPPORT_DECOY_ETA          = "Gruppo decoy: lancio tra %d minuti e %d secondi.",
+	DYNAMIC_SUPPORT_DECOY_COMPLETED    = "Il gruppo decoy ha completato con successo la missione",
+	DYNAMIC_SUPPORT_DECOY_ALL_AWAY     = "Gruppo decoy: tutti i decoy sono stati lanciati. Rientro alla base.",
+	DYNAMIC_SUPPORT_DECOY_LANDED       = "Il gruppo decoy è atterrato",
+	DYNAMIC_SUPPORT_DECOY_KILLED       = "Il gruppo decoy è stato distrutto",
+	DYNAMIC_SUPPORT_DECOY_SCRAMBLING   = "Il volo decoy decolla da %s per attaccare %s",
+	DYNAMIC_SUPPORT_DECOY_LAUNCHED     = "Il volo decoy è stato lanciato da %s per attaccare %s",
+	DYNAMIC_SUPPORT_NO_SEAD_TARGETS_REFUND = "Nessun obiettivo SEAD valido a %s. %d crediti rimborsati",
+	DYNAMIC_SUPPORT_SEAD_COMPLETED     = "Il gruppo SEAD ha completato con successo la sua missione",
+	DYNAMIC_SUPPORT_SEAD_RTB           = "Il gruppo SEAD ritorno alla base",
+	DYNAMIC_SUPPORT_SEAD_LANDED        = "Il gruppo SEAD atterrato",
+	DYNAMIC_SUPPORT_SEAD_KILLED        = "Il gruppo SEAD distrutto",
+	DYNAMIC_SUPPORT_SEAD_SCRAMBLING    = "il volo SEAD decolla da %s per attaccare %s",
+	DYNAMIC_SUPPORT_SEAD_LAUNCHED      = "il volo SEAD lanciato da %s per attaccare %s",
+	DYNAMIC_SUPPORT_BOMBER_COMPLETED   = "Il gruppo bombardieri ha portato a termine con successo la sua missione.",
+	DYNAMIC_SUPPORT_BOMBER_RTB         = "Il gruppo bbombardieri, ritorna alla base",
+	DYNAMIC_SUPPORT_BOMBER_LANDED      = "Il gruppo bombardieri atterrato",
+	DYNAMIC_SUPPORT_BOMBER_KILLED      = "Il gruppo bombardieri distrutto",
+	DYNAMIC_SUPPORT_BOMBER_SCRAMBLING  = "il volo bombardieri decolla da %s per attaccare %s",
+	DYNAMIC_SUPPORT_BOMBER_LAUNCHED    = "il volo bombardieri lanciato da %s per attaccare %s",
+	DYNAMIC_SUPPORT_STRIKE_COMPLETED   = "Il gruppo Strike ha completato con successo la sua missione",
+	DYNAMIC_SUPPORT_INFRASTRUCTURE_RTB = "Il gruppo Strike , ritorna alla base",
+	DYNAMIC_SUPPORT_STRIKE_LANDED      = "Il gruppo Strike atterrato",
+	DYNAMIC_SUPPORT_STRIKE_KILLED      = "Il gruppo Strike distrutto",
+	DYNAMIC_SUPPORT_STRIKE_SCRAMBLING  = "Il gruppo Strike decolla da %s per attaccare %s",
+	DYNAMIC_SUPPORT_STRIKE_LAUNCHED    = "Il gruppo Strike lanciato da %s per attaccare %s",
+
+	-- ============================================================
+	-- Warehouse / Ground Convoys
+	-- ============================================================
+	WAREHOUSE_NO_ELIGIBLE_RED_ZONES    = "Nessuna zona rossa idonea",
+	WAREHOUSE_NO_VALID_UPGRADES        = "Nessun miglioramento valido",
+	WAREHOUSE_RED_REINFORCED           = "Le forze rosse si sono rinforzate a %s",
+	WAREHOUSE_MUST_PICK_FRIENDLY_ZONE  = "Scegli una zona amichevole",
+	WAREHOUSE_ZONE_MUST_HAVE_AIRBASE   = "La zona deve avere una base aerea",
+	WAREHOUSE_ZONE_ALREADY_UPGRADED    = "Area già migliorata",
+	WAREHOUSE_ZONE_FULLY_UPGRADED_FIRST = "L'area deve prima essere completamente riqualificata!",
+	WAREHOUSE_UNABLE_RESTOCK           = "Impossibile rifornire il magazzino",
+	WAREHOUSE_LOGISTICS_DISABLED       = "Logistica di magazzino disabilitata",
+	WAREHOUSE_LOGISTIC_CENTER_CREATED  = "%s Ora è un centro logistico. Magazzino rifornito.",
+	WAREHOUSE_RESUPPLIED_50            = "Magazzino in %s rifornito con 50 articoli.",
+	WAREHOUSE_PERSISTENCE_LOADED       = "[WarehousePersistence] %d magazzini caricati da allora %s",
+	WAREHOUSE_PERSISTENCE_STARTED      = "WarehousePersistence iniziato",
+	WAREHOUSE_UNLIMITED_AIRCRAFT_DETECTED = "Illimitato aeromobile rilevato a %s",
+	WAREHOUSE_UNLIMITED_WAREHOUSE_DETECTED = "magazzino illimitato rilevato a%s",
+	GROUND_ATTACK_DISPATCHED           = "Convoglio d'attacco al suolo inviato verso %s.",
+	GROUND_ATTACK_ABORTED_NO_ENEMY      = "Convoglio di attacco terrestre annullato. Nessuna zona nemica entro un raggio di 40 NM.",
+	GROUND_ATTACK_CONVOY_DEPLOYING     = "Convoglio partito da %s per attaccare %s. Arrivo previsto: %d minuti.",
+	GROUND_ATTACK_CONVOY_EN_ROUTE      = "Convoglio in rotta per attaccare %s. ETA: %d minuti.",
+	INTEL_ENEMY_SUPPLY_CONVOY_INBOUND  = "Informazioni: convoglio di rifornimenti nemico in avvicinamento da %s verso %s.",
+	INTEL_ENEMY_ATTACK_CONVOY_INBOUND  = "Informazioni: convoglio d'attacco nemico in avvicinamento da %s verso %s.",
+}
+
 FL.Messages["zh-TW"] = {
 	-- ============================================================
 	-- Common
@@ -11319,6 +14080,8 @@ FL.Messages["zh-TW"] = {
 	COMMON_DISABLED                    = "已停用",
 	LANGUAGE_MENU_SET                  = "設定語言",
 	LANGUAGE_SET_RESLOT                = "語言已設為 %s。請重新選位以重建選單。",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "敵方補給船已抵達港口。",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "敵方貨機已降落。",
 
 	-- ============================================================
 	-- Welcome / ATIS / Escort
@@ -11638,7 +14401,112 @@ MGRS: 38 T NM 04080 09769
 
 需要 2000 磅投彈量]],
 	CA_MISSION_STRIKE_VAZIANI_START    = "新打擊任務：打擊 Vaziani 補給倉庫\n\n摧毀該建築以癱瘓周邊敵方補給",
-	CA_MISSION_STRIKE_VAZIANI_END      = "打擊任務結束：打擊 Vaziani 補給倉庫\n\n補給倉庫已失效",
+	CA_MISSION_STRIKE_VAZIANI_END      = "打擊任務結束：打擊 Vaziani 補給倉庫",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "打擊 Sukhumi 的 SAM-Delta 補給倉庫",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[打擊 Sukhumi 的補給倉庫，以削弱前往 SAM-Delta 的補給。
+
+座標：
+MGRS: 37 T FH 73652 48322
+緯經度：N 42°52'03" E 41°07'33"
+十進位分：N 42°52.065' E 41°07.553'
+
+海拔 43 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "新打擊任務：打擊 Sukhumi 的 SAM-Delta 補給倉庫\n\n摧毀該建築以削弱前往 SAM-Delta 的補給",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "打擊任務結束：打擊 Sukhumi 的 SAM-Delta 補給倉庫",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "打擊 Sochi 的 SAM-Echo 補給倉庫",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[打擊 Sochi 的補給倉庫，以削弱前往 SAM-Echo 的補給。
+
+座標：
+MGRS: 37 T EJ 76855 11472
+緯經度：N 43°27'07" E 39°56'59"
+十進位分：N 43°27.133' E 39°56.994'
+
+海拔 98 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "新打擊任務：打擊 Sochi 的 SAM-Echo 補給倉庫\n\n摧毀該建築以削弱前往 SAM-Echo 的補給",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "打擊任務結束：打擊 Sochi 的 SAM-Echo 補給倉庫",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "打擊 Anapa 的 SAM-Golf 補給倉庫",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[打擊 Anapa 的補給倉庫，以削弱前往 SAM-Golf 的補給。
+
+座標：
+MGRS: 37 T CK 69326 85636
+緯經度：N 45°00'43" E 37°20'30"
+十進位分：N 45°00.728' E 37°20.500'
+
+海拔 141 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "新打擊任務：打擊 Anapa 的 SAM-Golf 補給倉庫\n\n摧毀該建築以削弱前往 SAM-Golf 的補給",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "打擊任務結束：打擊 Anapa 的 SAM-Golf 補給倉庫",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "打擊 Kobuleti 的 SAM-Alpha 補給倉庫",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[打擊 Kobuleti 的補給倉庫，以削弱前往 SAM-Alpha 的補給。
+
+座標：
+MGRS: 37 T GG 38429 46709
+緯經度：N 41°56'10" E 41°52'33"
+十進位分：N 41°56.180' E 41°52.558'
+
+海拔 59 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "新打擊任務：打擊 Kobuleti 的 SAM-Alpha 補給倉庫\n\n摧毀該建築以削弱前往 SAM-Alpha 的補給",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "打擊任務結束：打擊 Kobuleti 的 SAM-Alpha 補給倉庫",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "打擊 Krasnodar-Pashkovsky 的 SAM-Hotel 補給倉庫",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[打擊 Krasnodar-Pashkovsky 的補給倉庫，以削弱前往 SAM-Hotel 的補給。
+
+座標：
+MGRS: 37 T DK 96195 93639
+緯經度：N 45°05'46" E 38°57'05"
+十進位分：N 45°05.772' E 38°57.098'
+
+海拔 92 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "新打擊任務：打擊 Krasnodar-Pashkovsky 的 SAM-Hotel 補給倉庫\n\n摧毀該建築以削弱前往 SAM-Hotel 的補給",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "打擊任務結束：打擊 Krasnodar-Pashkovsky 的 SAM-Hotel 補給倉庫",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "打擊 Mineralnye 的 SAM-Juliett 補給倉庫",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[打擊 Mineralnye 的補給倉庫，以削弱前往 SAM-Juliett 的補給。
+
+座標：
+MGRS: 38 T LP 48963 98291
+緯經度：N 44°13'19" E 43°06'32"
+十進位分：N 44°13.331' E 43°06.545'
+
+海拔 1009 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "新打擊任務：打擊 Mineralnye 的 SAM-Juliett 補給倉庫\n\n摧毀該建築以削弱前往 SAM-Juliett 的補給",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "打擊任務結束：打擊 Mineralnye 的 SAM-Juliett 補給倉庫",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "打擊 Mozdok 的 SAM-Kilo 補給倉庫",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[打擊 Mozdok 的補給倉庫，以削弱前往 SAM-Kilo 的補給。
+
+座標：
+MGRS: 38 T MP 68815 48119
+緯經度：N 43°47'07" E 44°36'44"
+十進位分：N 43°47.128' E 44°36.745'
+
+海拔 507 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "新打擊任務：打擊 Mozdok 的 SAM-Kilo 補給倉庫\n\n摧毀該建築以削弱前往 SAM-Kilo 的補給",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "打擊任務結束：打擊 Mozdok 的 SAM-Kilo 補給倉庫",
 	CA_SHOP_ITEM_STATIC_STRUCTURE      = "建築打擊編隊",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "建築打擊",
 	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "無可用友軍區域可進行打擊編隊生成。",
@@ -12217,10 +15085,16 @@ MGRS: 37 S EU 31088 22294
 	ARTILLERY_ATTACK_GRID_1            = "%s：敵方砲兵正從 GRID %s 附近猛烈砲擊我們！",
 	ARTILLERY_ATTACK_GRID_2            = "%s：敵方砲兵正從 GRID %s 附近攻擊我們！",
 	ARTILLERY_ATTACK_GRID_3            = "敵方砲兵正從 GRID %s 附近向 %s 開火，請求支援！",
-	ARTILLERY_STILL_FIRING             = "情報：敵方砲兵仍在向 %s 開火。大致位置 %s，grid %s。已放置地圖標記。",
+	ARTILLERY_STILL_FIRING             = "情報：敵方砲兵仍在向 %s 開火。大致位置 %s，高度 %s，grid %s。已放置地圖標記。",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s：敵方 %s 最後已知位置在 GRID %s（%s），正從 %s 往 %s 移動。已放置地圖標記。",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s：敵方 %s 接觸更新，最後已知位置在 GRID %s（%s），正從 %s 往 %s 移動。已放置地圖標記。",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s：敵方 %s 回報在 GRID %s（%s）附近，最後已知從 %s 往 %s 移動。已放置地圖標記。",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "他們已經走到一半了。",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "車隊大約已抵達前往目標的半途。",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "他們已到達路線中點。",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "他們快到了！",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "車隊正在接近目標。",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "他們正逼近目標，請盡快攔截。",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "敵方 %s 最後已知位置\nGrid %s\n目標：%s\n放置：%s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "敵方砲兵開火\nGrid %s\n目標：%s\n放置：%s",
 
@@ -12361,6 +15235,8 @@ MGRS: 37 S EU 31088 22294
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "切換 KM / NM",
 	SELF_JTAC_MENU_AUTO_SEARCH         = "自動搜尋（目前：%s）",
 	SELF_JTAC_MENU_AUTO_NEXT           = "自動切換目標（目前：%s）",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "隱藏座標（目前：%s）",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "忽略建築（目前：%s）",
 	SELF_JTAC_MENU_CODE                = "代碼",
 	SELF_JTAC_STATE_ON                 = "開",
 	SELF_JTAC_STATE_OFF                = "關",
@@ -12368,11 +15244,14 @@ MGRS: 37 S EU 31088 22294
 	SELF_JTAC_DISTANCE_UNIT            = "距離：%s",
 	SELF_JTAC_AUTO_SEARCH_STATE        = "自動搜尋 %s",
 	SELF_JTAC_AUTO_NEXT_STATE          = "自動切換 %s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "隱藏座標 %s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "忽略建築 %s",
 	SELF_JTAC_FOCUSING_ON              = "鎖定目標 %s",
 	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "目標超出範圍，停止雷射",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "未識別",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "建築",
 	SELF_JTAC_REPORT                   = "雷射標定 %s\n代碼：%d\n\n方位：%03d°  距離：%s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "雷射標定 %s\n\n代碼：%d\n\n方位：%03d°，距離：%s\n",
 	SELF_JTAC_MARKING_BLUE_SMOKE       = "以藍色煙霧標記",
 	SELF_JTAC_INVALID_OBJECTIVE        = "無效目標",
 	SELF_JTAC_NO_OBJECTIVE             = "無目標",
@@ -12565,7 +15444,7 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群組沒有玩家",
 	CTLD_MENU_25_MODDED_WEAPONS        = "25 個模組武器",
 	CTLD_MENU_50_MODDED_WEAPONS        = "50 個模組武器",
 	CTLD_SUPPLIES_RETURNED_TO_ZONE     = "%s 已返回至 %s。",
-	CTLD_SUPPLIES_DELIVERED_BY         = "%s 已由 %s 運送至 %s。",
+	CTLD_SUPPLIES_DELIVERED_BY         = "%s 已運送至 %s，由 %s 運輸。",
 	CTLD_ZONE_SUPPLY_NOT_NEEDED_WAREHOUSE_APPLIED = "%s 目前不需要區域補給，已套用倉庫補給。",
 	CTLD_LIMIT_REACHED_REMOVED_OLDEST  = "[CTLD] %s 已達上限 - 已移除最舊的 %s（%s）。",
 	CTLD_TROOP_LIMIT_REACHED_REMOVED_OLDEST = "[CTLD] %s 部隊上限已達 - 已移除最舊的 %s（%s）。",
@@ -12673,6 +15552,31 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群組沒有玩家",
 	DYNAMIC_DECOY_DESTROY              = "誘餌：銷毀",
 	DYNAMIC_BUILDING_STRIKE_DESTROY    = "建築打擊：銷毀",
 	DYNAMIC_TANKERS_CONTROL            = "加油機控制",
+	DYNAMIC_CARRIER_NAVIGATION         = "航母導航",
+	DYNAMIC_CARRIER_INFO               = "航母資訊",
+	DYNAMIC_CARRIER_GROUP              = "航母編隊",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "航行至 %s",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "Red Carrier 清除後才可使用航母導航。",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "航母區域不可用：%s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s 未啟用。",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s 無法規劃前往 %s 的水上航線。",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Tarawa 標記指令：\ntarawahelp - 顯示此說明\ntarawahere - 航行至此標記並停止\ntarawahereandstop - 航行至此標記並停止\ntarawahere1 - 設定往返航線點 1\ntarawahere2 - 設定往返航線點 2 並開始航線\ntarawareturn - 返回航母區域。",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "Tarawa 標記移動已停用。",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "Tarawa 標記移動僅限藍方使用。",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Tarawa 航線遭拒：標記不在深水區。",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Tarawa 航線遭拒：路徑不夠深或不夠直接。",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Tarawa 航線遭拒：標記必須位於友方領土。",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Tarawa 往返航線點 1 已儲存。放置 tarawahere2 以完成航線。",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "請先放置 tarawahere1，再放置 tarawahere2。",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa 正航行至標記。",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Tarawa 往返航線已設定。",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa 已抵達標記並停止。",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa 正返回其航母區域。",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa 無法規劃返回航線。",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s 正航行至 %s。",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "航母編隊現在可以駛向新的位置。",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s 將在 5 分鐘後轉向。",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s 將在 1 分鐘後轉向。",
 	DYNAMIC_TANKER_INFO                = "加油機資訊",
 	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco（軟管）：移至區域",
 	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco（軟管）：依座標移動",
@@ -12697,6 +15601,7 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群組沒有玩家",
 	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "CAP 設定為（遭接戰時接戰）",
 	DYNAMIC_CAP_ENGAGE_ALL             = "CAP 設定為全面接戰",
 	DYNAMIC_TANKER_BUSY                = "目前有玩家在加油機附近，請稍後再試。",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "目前有玩家在加油機附近，請再試一次 %s。",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s 正前往 %s。",
 	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s 正重新部署至 %s，建立新等待航線，航向 %d 度，%d 海里航段。",
 	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s 即將%s前往 %s 並盤旋。",
@@ -12927,88 +15832,88 @@ FL.Messages["zh-CN"] = {
 	COMMON_ENABLED                     = "已启用",
 	COMMON_DISABLED                    = "已禁用",
 	LANGUAGE_MENU_SET                  = "设置语言",
-	LANGUAGE_SET_RESLOT                = "语言已设为 %s。重新选择机位以刷新菜单。",
-
+	LANGUAGE_SET_RESLOT                = "语言已设为 %s。请重新选择机位以刷新菜单。",
+	MISSION_EVENT_ENEMY_SUPPLY_SHIP_REACHED_PORT = "敌方补给船已抵达港口。",
+	MISSION_EVENT_ENEMY_CARGO_PLANE_LANDED = "敌方货机已降落。",
 	-- ============================================================
 	-- Welcome / ATIS / Escort
 	-- ============================================================
-	WELCOME_ALTIMETER                  = "气压 %.2f",
+	WELCOME_ALTIMETER                  = "修正海压 %.2f",
 	WELCOME_BRC                        = "BRC %d°",
-	WELCOME_BRC_UNAVAILABLE            = "无法获取 BRC 数据",
+	WELCOME_BRC_UNAVAILABLE            = "BRC 数据不可用",
 	WELCOME_CARRIER_NOT_FOUND          = "未找到航母",
 	WELCOME_CARRIER_NOT_AVAILABLE      = "航母不可用。",
-	WELCOME_WIND_UNAVAILABLE           = "无法获取风向数据",
+	WELCOME_WIND_UNAVAILABLE           = "风向风速数据不可用",
 	WELCOME_WIND_AT_KNOTS              = "风向 %03d°，风速 %d 节",
 	WELCOME_WIND_AT                    = "风向 %03d°，风速 %d",
 	WELCOME_AIRBASE_NOT_FOUND          = "未找到机场",
-	WELCOME_AIRBASE_DATA_UNAVAILABLE   = "无法获取机场数据。",
-	WELCOME_AIRBASE_CONFLICT           = "检测到机场或FARP 冲突或机场不存在：%s",
-	WELCOME_NO_ACTIVE_RUNWAY           = "无可用的跑道信息。",
-	WELCOME_ACTIVE_RUNWAY              = "当前使用跑道为 %s",
-	WELCOME_ACTIVE_RUNWAY_LANDING_TAKEOFF = "降落跑道为 %s，起飞跑道为 %s",
-	WELCOME_ACTIVE_RUNWAY_LANDING      = "降落跑道为 %s",
-	WELCOME_ACTIVE_RUNWAY_TAKEOFF      = "起飞跑道为 %s",
-	WELCOME_TEMPERATURE                = "温度 %d°C",
-	WELCOME_TEMPERATURE_UNAVAILABLE    = "无法获取温度数据",
-	WELCOME_ATIS_FOR_FULL              = "%s 的 ATIS：\n\n%s，%s\n\n%s",
-	WELCOME_ATIS_FOR_FULL_PERIOD       = "%s 的 ATIS：\n\n%s，%s\n\n%s。",
+	WELCOME_AIRBASE_DATA_UNAVAILABLE   = "机场数据不可用。",
+	WELCOME_AIRBASE_CONFLICT           = "检测到机场/FARP 冲突，或未找到机场：%s",
+	WELCOME_NO_ACTIVE_RUNWAY           = "当前没有可用的跑道信息。",
+	WELCOME_ACTIVE_RUNWAY              = "当前活动跑道为 %s",
+	WELCOME_ACTIVE_RUNWAY_LANDING_TAKEOFF = "当前着陆跑道为 %s，起飞跑道为 %s",
+	WELCOME_ACTIVE_RUNWAY_LANDING      = "当前着陆跑道为 %s",
+	WELCOME_ACTIVE_RUNWAY_TAKEOFF      = "当前起飞跑道为 %s",
+	WELCOME_TEMPERATURE                = "气温 %d°C",
+	WELCOME_TEMPERATURE_UNAVAILABLE    = "温度数据不可用",
+	WELCOME_ATIS_FOR_FULL              = "%s 的 ATIS：\n\n%s, %s\n\n%s",
+	WELCOME_ATIS_FOR_FULL_PERIOD       = "%s 的 ATIS：\n\n%s, %s\n\n%s。",
 	WELCOME_ATIS_FOR_SIMPLE            = "%s 的 ATIS：\n\n%s",
-	WELCOME_RUNWAY_INFO_UNAVAILABLE    = "无法获取跑道信息",
-	WELCOME_PLAYER_POSITION_UNKNOWN    = "无法判定玩家位置。",
+	WELCOME_RUNWAY_INFO_UNAVAILABLE    = "跑道信息不可用",
+	WELCOME_PLAYER_POSITION_UNKNOWN    = "无法确定玩家位置。",
 	WELCOME_CARRIER_INFO               = "航母：%s\n\n距离：%.2f 海里，方位：%03d°\n\nTACAN：%s，%s",
 	WELCOME_CLOSEST_AIRFIELD           = "最近友军机场：%s\n\n距离：%.2f 海里，方位：%03d°\n\n%s%s%s",
 	WELCOME_MENU_ATIS_CLOSEST          = "ATIS 与最近机场",
 	WELCOME_MENU_ATIS_INFO             = "ATIS 信息",
 	WELCOME_MENU_CLOSEST_FRIENDLY      = "获取最近友军机场",
-	WELCOME_MENU_ATIS_MOTHER           = "获取航母 ATIS",
+	WELCOME_MENU_ATIS_MOTHER           = "获取 Mother 的 ATIS",
 	WELCOME_MENU_ATIS_ZONE             = "获取 %s 的 ATIS",
-	WELCOME_GREETING_CARRIER_ASSIGNED  = "欢迎登舰 %s，%s！\n\n你已分配至 %s，IFF %04d。\n\n请待命接收航母气象通报。",
-	WELCOME_DETAIL_CARRIER_ASSIGNED_TCN = "欢迎登舰 %s，%s！\n\n%s，%s，%s\n\nTCN：%s，%s\n\n距离 7 海里时，切换 Tactical 至频道 3。",
-	WELCOME_DETAIL_CARRIER_ASSIGNED    = "欢迎登舰 %s，%s！\n\n%s，%s，%s\n\n%s\n\n距离 7 海里时，切换 Tactical 至频道 3。",
-	WELCOME_GREETING_CARRIER_STANDBY   = "欢迎登舰 %s，%s！\n\n请待命接收气象与 BRC。",
-	WELCOME_GREETING_ZONE_ASSIGNED_ATIS = "欢迎来到 %s，%s！\n\n你已分配至 %s，IFF %04d。\n\n请待命接收气象与 ATIS 信息。",
-	WELCOME_DETAIL_ZONE_ATIS           = "欢迎来到 %s，%s！\n\n%s，%s，%s。\n\n%s。\n\n起飞后切换 Tactical 至频道 3。",
-	WELCOME_GREETING_ZONE_STANDBY      = "欢迎来到 %s，%s！\n\n请待命接收气象信息。",
-	WELCOME_GREETING_BACK_ZONE_ASSIGNED_ATIS = "欢迎返回 %s，%s！\n\n你已分配至 %s，IFF %04d。\n\n稍后将提供最新气象与 ATIS 信息。",
-	WELCOME_DETAIL_BACK_ZONE_ATIS      = "欢迎返回 %s，%s！\n\n%s，%s，%s。\n\n%s。\n\n起飞后切换 Tactical 至频道 3。",
-	WELCOME_GREETING_BACK_ZONE_STANDBY = "欢迎返回 %s，%s！\n\n请待命接收更新后的气象信息。",
-	WELCOME_GREETING_ZONE_ASSIGNED     = "欢迎来到 %s，%s！\n\n你已分配至 %s，IFF %04d。\n\n请待命接收气象信息。",
-	WELCOME_DETAIL_ZONE                = "欢迎来到 %s，%s！\n\n%s，%s，%s。\n\n起飞后切换 Tactical 至频道 3。",
-	WELCOME_GREETING_BACK_ZONE_ASSIGNED = "欢迎返回 %s，%s！\n\n你已分配至 %s，IFF %04d。\n\n稍后将提供更新后的气象信息。",
-	WELCOME_DETAIL_BACK_ZONE           = "欢迎返回 %s，%s！\n\n%s，%s，%s。\n\n起飞后切换 Tactical 至频道 3。",
+	WELCOME_GREETING_CARRIER_ASSIGNED  = "欢迎登舰，%s，%s！\n\n你已被分配至 %s，IFF %04d。\n\n请待命接收航母气象简报。",
+	WELCOME_DETAIL_CARRIER_ASSIGNED_TCN = "欢迎登舰，%s，%s！\n\n%s，%s，%s\n\nTCN：%s，%s\n\n距离 7 海里时切换至战术频率 CH 3。",
+	WELCOME_DETAIL_CARRIER_ASSIGNED    = "欢迎登舰，%s，%s！\n\n%s，%s，%s\n\n%s\n\n距离 7 海里时切换至战术频率 CH 3。",
+	WELCOME_GREETING_CARRIER_STANDBY   = "欢迎登舰，%s，%s！\n\n请待命接收天气与 BRC 信息。",
+	WELCOME_GREETING_ZONE_ASSIGNED_ATIS = "欢迎来到 %s，%s！\n\n你已被分配至 %s，IFF %04d。\n\n请待命接收天气与 ATIS 信息。",
+	WELCOME_DETAIL_ZONE_ATIS           = "欢迎来到 %s，%s！\n\n%s，%s，%s。\n\n%s。\n\n起飞后切换至战术频率 CH 3。",
+	WELCOME_GREETING_ZONE_STANDBY      = "欢迎来到 %s，%s！\n\n请待命接收天气信息。",
+	WELCOME_GREETING_BACK_ZONE_ASSIGNED_ATIS = "欢迎返回 %s，%s！\n\n你已被分配至 %s，IFF %04d。\n\n稍后将收到最新天气与 ATIS 信息。",
+	WELCOME_DETAIL_BACK_ZONE_ATIS      = "欢迎返回 %s，%s！\n\n%s，%s，%s。\n\n%s。\n\n起飞后切换至战术频率 CH 3。",
+	WELCOME_GREETING_BACK_ZONE_STANDBY = "欢迎返回 %s，%s！\n\n请待命接收更新后的天气信息。",
+	WELCOME_GREETING_ZONE_ASSIGNED     = "欢迎来到 %s，%s！\n\n你已被分配至 %s，IFF %04d。\n\n请待命接收天气信息。",
+	WELCOME_DETAIL_ZONE                = "欢迎来到 %s，%s！\n\n%s，%s，%s。\n\n起飞后切换至战术频率 CH 3。",
+	WELCOME_GREETING_BACK_ZONE_ASSIGNED = "欢迎返回 %s，%s！\n\n你已被分配至 %s，IFF %04d。\n\n稍后将收到更新后的天气信息。",
+	WELCOME_DETAIL_BACK_ZONE           = "欢迎返回 %s，%s！\n\n%s，%s，%s。\n\n起飞后切换至战术频率 CH 3。",
 	WELCOME_MENU_CHANGE_CALLSIGN       = "更改呼号",
 	WELCOME_MENU_REQUEST_ESCORT        = "请求护航",
-	WELCOME_ESCORT_AVAILABLE_PLAYER    = "护航已就绪，%s。",
-	WELCOME_ESCORT_ORBITING_OVERHEAD   = "护航编队正在上空盘旋，等待你再次起飞。",
-	WELCOME_ESCORT_SCRAMBLING_TAXI     = "护航编队已紧急出动并即将滑行至跑道。\n\n稍后与你会合。",
-	WELCOME_ESCORT_AIRBORNE_HEADING    = "护航编队已起飞，正朝你的方向前进。",
-	WELCOME_ESCORT_AIRBORNE_HOLDING    = "护航编队已起飞，正在基地上空待命，等待你起飞。",
-	WELCOME_ESCORT_ON_ROUTE            = "护航编队已出发。\n\n你可通过无线电菜单控制。",
-	WELCOME_ESCORT_HOLDING_OVERHEAD    = "护航编队正在上空待命，直到你起飞。",
-	WELCOME_ESCORT_DESTROYED           = "你的护航编队已被摧毁。请从机场起飞以重新获得护航。",
+	WELCOME_ESCORT_AVAILABLE_PLAYER    = "护航可用，%s。",
+	WELCOME_ESCORT_ORBITING_OVERHEAD   = "护航机将在你再次起飞前持续在上空盘旋。",
+	WELCOME_ESCORT_SCRAMBLING_TAXI     = "护航编队正在紧急出动，即将滑行至跑道。\n\n我们很快会与你会合。",
+	WELCOME_ESCORT_AIRBORNE_HEADING    = "护航编队已起飞，正飞往你的位置。",
+	WELCOME_ESCORT_AIRBORNE_HOLDING    = "护航编队已起飞，并将在你起飞前在基地上空等待。",
+	WELCOME_ESCORT_ON_ROUTE            = "护航已在途中。\n\n你可以通过无线电菜单控制护航。",
+	WELCOME_ESCORT_HOLDING_OVERHEAD    = "护航将在你起飞前一直在上空盘旋待命。",
+	WELCOME_ESCORT_DESTROYED           = "你的护航编队已被摧毁。从机场起飞即可获得新的护航。",
 	WELCOME_MENU_ESCORT                = "护航",
-	WELCOME_MENU_ESCORT_FLIGHTSWEEP    = "护航：扫荡",
-	WELCOME_ESCORT_SET_ENGAGE_ALL      = "护航模式：攻击所有目标",
-	WELCOME_MENU_ESCORT_ENGAGE_IF_ENGAGED = "护航：受攻击才交战",
-	WELCOME_ESCORT_SET_ENGAGE_IF_ENGAGED = "护航设置为受攻击才交战",
-	WELCOME_MENU_PATROL_AHEAD          = "前方巡逻 15 海里",
-	WELCOME_MENU_RACETRACK_NOSE        = "等待航线，正前方 20 海里",
-	WELCOME_MENU_RACETRACK_LEFT_RIGHT  = "等待航线，由左至右 20 海里",
-	WELCOME_MENU_RACETRACK_RIGHT_LEFT  = "等待航线，由右至左 20 海里",
-	WELCOME_MENU_START_ORBIT           = "在此盘旋",
+	WELCOME_MENU_ESCORT_FLIGHTSWEEP    = "护航：清扫空域",
+	WELCOME_ESCORT_SET_ENGAGE_ALL      = "护航已设置为攻击所有目标",
+	WELCOME_MENU_ESCORT_ENGAGE_IF_ENGAGED = "护航：仅在被攻击时交战",
+	WELCOME_ESCORT_SET_ENGAGE_IF_ENGAGED = "护航已设置为仅在被攻击时交战",
+	WELCOME_MENU_PATROL_AHEAD          = "前方 15 海里巡逻",
+	WELCOME_MENU_RACETRACK_NOSE        = "前方 20 海里航线盘旋",
+	WELCOME_MENU_RACETRACK_LEFT_RIGHT  = "左至右 20 海里航线盘旋",
+	WELCOME_MENU_RACETRACK_RIGHT_LEFT  = "右至左 20 海里航线盘旋",
+	WELCOME_MENU_START_ORBIT           = "在此开始盘旋",
 	WELCOME_MENU_REJOIN                = "重新编队",
 	WELCOME_MENU_ESCORT_RTB            = "护航返航",
 	WELCOME_ESCORT_COPY                = "护航：收到！",
-	WELCOME_ESCORT_ORBIT_ESTABLISHED   = "护航：盘旋建立完成。",
-	WELCOME_ESCORT_NOT_FOUND           = "未找到可用护航。",
-	WELCOME_ESCORT_PATROL_INVALID      = "无法建立巡逻：护航编队无效或已被摧毁。",
-	WELCOME_ESCORT_PATROLLING_NOSE     = "护航：目前于你前方 15 海里进行巡逻。",
-	WELCOME_ESCORT_RACETRACK_HEADING   = "护航正在建立航向 %s 的 20 海里等待航线。",
-	WELCOME_ESCORT_REJOINING           = "护航正在重新编队。",
-	WELCOME_ESCORT_CANT_JOIN_GROUND    = "无法在地面与你编队。我们将在上空盘旋，直到你起飞。",
+	WELCOME_ESCORT_ORBIT_ESTABLISHED   = "护航：已建立盘旋。",
+	WELCOME_ESCORT_NOT_FOUND           = "未找到活动中的护航。",
+	WELCOME_ESCORT_PATROL_INVALID      = "无法设置巡逻：护航编队无效或已被摧毁。",
+	WELCOME_ESCORT_PATROLLING_NOSE     = "护航：我们现在正在你前方 15 海里巡逻。",
+	WELCOME_ESCORT_RACETRACK_HEADING   = "护航正在建立 20 海里航线盘旋，航向 %s",
+	WELCOME_ESCORT_REJOINING           = "护航正在重新加入你的编队。",
+	WELCOME_ESCORT_CANT_JOIN_GROUND    = "你还在地面时我们无法加入编队。我们会在你再次起飞前于上空盘旋。",
 	WELCOME_ESCORT_RTB                 = "护航返航中",
-	WELCOME_ESCORT_HEADING_TO_POSITION = "护航正前往你的所在位置。",
-
+	WELCOME_ESCORT_HEADING_TO_POSITION = "护航正前往你的位置。",
 	-- ============================================================
 	-- Directions
 	-- ============================================================
@@ -13028,44 +15933,42 @@ FL.Messages["zh-CN"] = {
 	DIR_SOUTH_WEST_BOUND               = "向西南",
 	DIR_WEST_BOUND                     = "向西",
 	DIR_NORTH_WEST_BOUND               = "向西北",
-
 	-- ============================================================
 	-- Menus - Common
 	-- ============================================================
 	MENU_MORE                          = "更多",
-	MENU_SHOP                          = "阵营商店",
-	MENU_DYNAMIC_CONTROL               = "动态控制",
+	MENU_SHOP                          = "商店",
+	MENU_DYNAMIC_CONTROL               = "动态支援控制",
 	MENU_INTEL                         = "情报",
 	MENU_AVAILABLE_MISSIONS            = "可用任务",
-	MENU_MISSIONS                      = "任务列表",
-	MENU_BUDGET_OVERVIEW               = "预算总览",
-	MENU_RESTART_AND_RESET             = "重新启动并重置？",
-	MENU_INTEL_ZONE_STATUS             = "情报与区域状态",
+	MENU_MISSIONS                      = "任务",
+	MENU_BUDGET_OVERVIEW               = "预算概览",
+	MENU_RESTART_AND_RESET             = "重启并重置？",
+	MENU_INTEL_ZONE_STATUS             = "情报",
 	MENU_RED_SIDE                      = "红方",
 	MENU_BLUE_SIDE                     = "蓝方",
-
 	-- ============================================================
 	-- EWRS
 	-- ============================================================
-	EWRS_MENU_ROOT                     = "预警系统(EWRS)",
-	EWRS_REQUEST_BOGEY_DOPE            = "请求目标信息",
-	EWRS_REQUEST_PICTURE               = "请求战况图",
-	EWRS_SET_DETECTION_RANGE           = "设置检测距离",
-	EWRS_CURRENT_SUFFIX                = "（目前）",
-	EWRS_SET_THREAT_LIMIT              = "设置威胁上限",
+	EWRS_MENU_ROOT                     = "EWRS",
+	EWRS_REQUEST_BOGEY_DOPE            = "请求敌机引导",
+	EWRS_REQUEST_PICTURE               = "请求空情概览",
+	EWRS_SET_DETECTION_RANGE           = "设置探测距离",
+	EWRS_CURRENT_SUFFIX                = "（当前）",
+	EWRS_SET_THREAT_LIMIT              = "设置威胁数量上限",
 	EWRS_ALL                           = "全部",
 	EWRS_FRIENDLIES                    = "友军",
-	EWRS_SHOW_FRIENDLIES_CURRENT       = "显示友军（目前 %s）",
-	EWRS_SET_FRIENDLY_LIMIT            = "设置友军上限",
-	EWRS_SHOW_TANKERS_CURRENT          = "显示加油机（目前 %s）",
-	EWRS_AUTO_PICTURE_CURRENT          = "自动战况图（目前 %s）",
-	EWRS_GROUP_SETTINGS                = "群组设置",
-	EWRS_SET_GROUP_REFERENCE           = "设置群组参考点",
+	EWRS_SHOW_FRIENDLIES_CURRENT       = "显示友军（当前：%s）",
+	EWRS_SET_FRIENDLY_LIMIT            = "设置友军数量上限",
+	EWRS_SHOW_TANKERS_CURRENT          = "显示加油机（当前：%s）",
+	EWRS_AUTO_PICTURE_CURRENT          = "自动情报简报报告（当前：%s）",
+	EWRS_GROUP_SETTINGS                = "编队设置",
+	EWRS_SET_GROUP_REFERENCE           = "设置编队参考点",
 	EWRS_SET_TO_BULLSEYE               = "设为靶眼",
-	EWRS_SET_TO_SELF                   = "设为本机位置",
-	EWRS_SET_GROUP_MEASUREMENTS        = "设置群组单位制",
+	EWRS_SET_TO_SELF                   = "设为自身",
+	EWRS_SET_GROUP_MEASUREMENTS        = "设置编队单位制",
 	EWRS_SET_TO_IMPERIAL               = "设为英制（英尺、节）",
-	EWRS_SET_TO_METRIC                 = "设为公制（公尺、公里/小时）",
+	EWRS_SET_TO_METRIC                 = "设为公制（米、公里/小时）",
 	EWRS_STATUS_ON                     = "开",
 	EWRS_STATUS_OFF                    = "关",
 	EWRS_STATUS_ON_CAPS                = "开",
@@ -13075,30 +15978,29 @@ FL.Messages["zh-CN"] = {
 	EWRS_MEASUREMENTS_IMPERIAL         = "英制",
 	EWRS_MEASUREMENTS_METRIC           = "公制",
 	EWRS_UNKNOWN                       = "未知",
-	EWRS_BOGEY_DOPE_FOR                = "EWRS 目标信息：%s",
-	EWRS_PICTURE_REPORT_FOR            = "EWRS 战况图：%s",
-	EWRS_FRIENDLY_PICTURE_FOR          = "EWRS 友军战况图：%s",
-	EWRS_REPORT_RELATIVE               = "EWRS：%s | 相对于 %s",
-	EWRS_NO_TARGETS_DETECTED           = "未检测到目标",
-	EWRS_NO_FRIENDLIES_DETECTED        = "未检测到友军",
+	EWRS_BOGEY_DOPE_FOR                = "%s 的 EWRS 敌机引导",
+	EWRS_PICTURE_REPORT_FOR            = "%s 的 EWRS 空情概览",
+	EWRS_FRIENDLY_PICTURE_FOR          = "%s 的 EWRS 友军空情",
+	EWRS_REPORT_RELATIVE               = "EWRS：%s | 相对 %s",
+	EWRS_NO_TARGETS_DETECTED           = "未探测到目标",
+	EWRS_NO_FRIENDLIES_DETECTED        = "未探测到友军",
 	EWRS_POSITION_UNKNOWN              = "%s 位置：未知",
-	EWRS_CONTACT_LINE                  = "\n%s\t\t方位/距离\t\t%03d / %s\t\t%s\t\t%s",
-	EWRS_FRIENDLY_HEADER               = "------------------------------>  友军  <------------------------------",
+	EWRS_CONTACT_LINE                  = "\n%s\t\tBRA\t\t%03d / %s\t\t%s\t\t%s",
+	EWRS_FRIENDLY_HEADER               = "-------------------------------->  友军  <---------------------------------",
 	EWRS_ASPECT_HOT                    = "迎头",
 	EWRS_ASPECT_FLANKING               = "侧向",
-	EWRS_ASPECT_BEAMING                = "横向",
-	EWRS_ASPECT_COLD                   = "远离",
-	EWRS_FRIENDLY_CONTACT_LIMIT_ALL    = "友军显示上限设为全部",
-	EWRS_FRIENDLY_CONTACT_LIMIT_VALUE  = "友军显示上限设为 %d",
-	EWRS_THREAT_LIMIT_ALL              = "威胁上限设为全部",
-	EWRS_THREAT_LIMIT_VALUE            = "威胁上限设为 %d",
-	EWRS_FRIENDLY_CONTACTS_TURNED      = "战况图中的友军显示已设为 %s",
-	EWRS_TANKER_CONTACTS_TURNED        = "战况图中的加油机显示已设为 %s",
-	EWRS_REFERENCE_CHANGED             = "参考点已设为 %s",
-	EWRS_MEASUREMENT_UNITS_CHANGED     = "单位制已设为 %s",
-	EWRS_AUTO_PICTURE_TURNED           = "群组自动战况图已设为 %s",
-	EWRS_RANGE_SET                     = "距离已设为 %d%s",
-
+	EWRS_ASPECT_BEAMING                = "横穿",
+	EWRS_ASPECT_COLD                   = "背离",
+	EWRS_FRIENDLY_CONTACT_LIMIT_ALL    = "友军数量上限已设为全部",
+	EWRS_FRIENDLY_CONTACT_LIMIT_VALUE  = "友军数量上限已设为 %d",
+	EWRS_THREAT_LIMIT_ALL              = "威胁数量上限已设为全部",
+	EWRS_THREAT_LIMIT_VALUE            = "威胁数量上限已设为 %d",
+	EWRS_FRIENDLY_CONTACTS_TURNED      = "情报简报中友军显示已%s",
+	EWRS_TANKER_CONTACTS_TURNED        = "情报简报中加油机显示已%s",
+	EWRS_REFERENCE_CHANGED             = "参考点已切换为 %s",
+	EWRS_MEASUREMENT_UNITS_CHANGED     = "单位制已切换为 %s",
+	EWRS_AUTO_PICTURE_TURNED           = "编队自动情报简报报告已%s",
+	EWRS_RANGE_SET                     = "探测距离已设为 %d%s",
 	-- ============================================================
 	-- Syria Setup
 	-- ============================================================
@@ -13130,38 +16032,38 @@ FL.Messages["zh-CN"] = {
 	SYRIA_SETUP_BLACKHAWK_RESCUED      = "黑鹰机组已成功获救\n+500 点数",
 	SYRIA_SETUP_DEFENCES_DESTROYED     = "%s 防御设施已摧毁\n+200 点数",
 	SYRIA_SETUP_SILKWORM_DESTROYED     = "蚕式反舰防御系统已摧毁\n+200 点数",
-	SYRIA_SETUP_OBJECT_MISSING         = "%s 目标不存在",
-	CA_SETUP_INSURGENTS_DL22_INTEL     = "情报：\n在 DL22 网格（Krymsk 北方）发现叛乱分子。\n歼灭该区域",
-	CA_SETUP_INSURGENTS_MN47_INTEL     = "情报：\n在 MN47 网格（Beslan 西南方）发现叛乱分子。\n歼灭该区域",
-	CA_SETUP_INSURGENTS_FJ98_INTEL     = "情报：\n在 FJ98 网格（Hotel 北方）发现叛乱分子。\n歼灭该区域",
-	CA_SETUP_INSURGENTS_EL70_INTEL     = "情报：\n在 EL70 网格（Maykop 北方）发现配备先进地对空飞弹系统的叛乱分子。\n清除该区域。",
-	CA_MISSION_GROUND_ESCORT_TITLE     = "%s：地面护卫",
-	CA_EVENT_KUTAISI_ASSAULT           = "敌军对 Kutaisi 发动攻击！\n\n2 架轰炸机由 2 架不明战机护航！",
-	CA_EVENT_SOCHI_ARTY_ATTACK         = "Sochi 正遭敌方炮兵攻击！\n\n准备应对！",
-	CA_EVENT_SOCHI_ARTY_INTEL          = "已发现敌方炮兵位置！\n位于 Bravo 东方，座标如下：\n\nMGRS：37 T EJ 39677 50279\n纬经度：N 43°48'16\" E 39°29'35\"\n十进位分：N 43°48.270' E 39°29.596'\n海拔：886 英尺\n\n在其再次开火前将其摧毁！",
-	CA_EVENT_ANAPA_SCUDS               = "注意！！\n\n敌军已向 Anapa 发射飞毛腿飞弹！！",
-	CA_SETUP_ENEMY_SAM_DESTROYED       = "敌方防空飞弹已摧毁\n+%d 点数",
-	CA_SETUP_MINING_FACILITY_DESTROYED = "采矿设施已摧毁\n+500 点数",
-	CA_SETUP_INSURGENT_CAMP_DESTROYED  = "叛乱分子营地已摧毁\n+500 点数",
-	CA_SETUP_AMMUNITION_DEPO_DESTROYED = "弹药库已摧毁\n+500 点数",
-	CA_SETUP_ARTILLERY_FACTORY_DESTROYED = "火炮工厂已摧毁\n+500 点数",
-	CA_SETUP_CHEMSITE_DESTROYED        = "化学设施已摧毁\n+500 点数",
-	CA_SETUP_FUELDEPO_DISABLED         = "燃料库已瘫痪\n+500 点数",
-	CA_SETUP_SECRET_TECH_FACILITY_DESTROYED = "秘密科技设施已摧毁\n+500 点数",
-	CA_SETUP_TANK_FACTORY_DESTROYED    = "干得好！坦克工厂已摧毁\n+500 点数",
-	CA_SETUP_INSURGENCY_GRID_DESTROYED = "叛乱网格 %s 已清除。\n+500 点数",
-	CA_EVENT_SCUDS_MAYKOP_LAUNCHING    = "Maykop 的飞毛腿飞弹正在向 %s 发射",
-	CA_MISSION_SCUDS_21_TITLE          = "摧毁飞毛腿飞弹（21）",
-	CA_MISSION_SCUDS_MAYKOP_DESC       = "已在 Maykop 发现飞毛腿飞弹。\n在其发射前将其摧毁",
-	CA_MISSION_SCUDS_MAYKOP_START      = "新任务：摧毁 Maykop 的飞毛腿飞弹",
-	CA_MISSION_INTERCEPT_CARGO_DESC    = "搜寻并摧毁自 Vaziani 起飞、前往 Anapa 或 Kutaisi 或 Mineralnye 的敌方运输机。",
-	CA_MISSION_DESTROY_BATTLE_SHIPS_TITLE = "摧毁运输与战舰",
-	CA_MISSION_DESTROY_BATTLE_SHIPS_DESC = "搜寻并摧毁自 Novorossiysk 出航、前往 Sochi 或 Gudauta 或 Sukhumi 的敌方战舰！",
+	SYRIA_SETUP_OBJECT_MISSING         = "%s 缺失",
+	CA_SETUP_INSURGENTS_DL22_INTEL     = "情报：\n在 Krymsk 以北的 Grid DL22 发现叛乱分子。\n请清剿该区域",
+	CA_SETUP_INSURGENTS_MN47_INTEL     = "情报：\n在 Beslan 西南方向的 Grid MN47 发现叛乱分子。\n请清剿该区域",
+	CA_SETUP_INSURGENTS_FJ98_INTEL     = "情报：\n在 Hotel 以北的 Grid FJ98 发现叛乱分子。\n请清剿该区域",
+	CA_SETUP_INSURGENTS_EL70_INTEL     = "情报：\n在 Maykop 以北的 Grid EL70 发现配备先进地对空导弹系统的叛乱分子。\n请清剿该区域。",
+	CA_MISSION_GROUND_ESCORT_TITLE     = "%s：地面护送",
+	CA_EVENT_KUTAISI_ASSAULT           = "敌军已对 Kutaisi 发起强袭！\n\n2 架轰炸机由 2 架不明战斗机护航！",
+	CA_EVENT_SOCHI_ARTY_ATTACK         = "Sochi 正遭受敌军炮击！\n\n注意规避！",
+	CA_EVENT_SOCHI_ARTY_INTEL          = "我们已发现敌方炮兵位置！\n位于 Bravo 东方，座标如下：\n\nMGRS：37 T EJ 39677 50279\n纬经度：N 43°48'16\" E 39°29'35\"\n十进位分：N 43°48.270' E 39°29.596'\n海拔：886 英尺\n\n在其再次开火前将其摧毁！",
+	CA_EVENT_ANAPA_SCUDS               = "小心！！\n\n敌军已向 Anapa 发射飞毛腿导弹！！",
+	CA_SETUP_ENEMY_SAM_DESTROYED       = "敌军防空系统已摧毁\n+%d 积分",
+	CA_SETUP_MINING_FACILITY_DESTROYED = "矿场已被摧毁\n+500 积分",
+	CA_SETUP_INSURGENT_CAMP_DESTROYED  = "叛乱分子营地已被摧毁\n+500 积分",
+	CA_SETUP_AMMUNITION_DEPO_DESTROYED = "弹药库已被摧毁\n+500 积分",
+	CA_SETUP_ARTILLERY_FACTORY_DESTROYED = "炮兵工厂已被摧毁\n+500 积分",
+	CA_SETUP_CHEMSITE_DESTROYED        = "化工设施已被摧毁\n+500 积分",
+	CA_SETUP_FUELDEPO_DISABLED         = "燃料库已失效\n+500 积分",
+	CA_SETUP_SECRET_TECH_FACILITY_DESTROYED = "秘密科技设施已被摧毁\n+500 积分",
+	CA_SETUP_TANK_FACTORY_DESTROYED    = "干得漂亮！坦克工厂已被摧毁\n+500 积分",
+	CA_SETUP_INSURGENCY_GRID_DESTROYED = "叛乱据点网格 %s 已被摧毁。\n+500 积分",
+	CA_EVENT_SCUDS_MAYKOP_LAUNCHING    = "Maykop 的飞毛腿导弹正在向 %s 发射",
+	CA_MISSION_SCUDS_21_TITLE          = "摧毁飞毛腿导弹（21）",
+	CA_MISSION_SCUDS_MAYKOP_DESC       = "在 Maykop 发现了飞毛腿导弹。\n请在其发射导弹前将其摧毁。",
+	CA_MISSION_SCUDS_MAYKOP_START      = "新任务：摧毁 Maykop 的飞毛腿导弹",
+	CA_MISSION_INTERCEPT_CARGO_DESC    = "寻找并摧毁从 Vaziani 起飞、飞往 Anapa、Kutaisi 或 Mineralnye 的敌军运输机。",
+	CA_MISSION_DESTROY_BATTLE_SHIPS_TITLE = "摧毁货船与战舰",
+	CA_MISSION_DESTROY_BATTLE_SHIPS_DESC = "寻找并摧毁从 Novorossiysk 出航、驶向 Sochi、Gudauta 或 Sukhumi 的敌军战舰！",
 	CA_MISSION_DESTROY_BATTLE_SHIPS_START = "新任务：摧毁战舰",
 	CA_MISSION_DESTROY_BATTLE_SHIPS_END = "任务结束：摧毁战舰",
-	CA_MISSION_INTERCEPT_BOMBERS_MINERALNYE_DESC = "在 Mineralnye 北方发现敌方轰炸机\n在其进入攻击范围前将其击落。",
-	CA_MISSION_INTERCEPT_AIRSTRIKE_WEST_EAST_DESC = "敌机正由西向东执行空袭任务\n在其进入攻击范围前将其击落。",
-	CA_MISSION_ESCORT_CARGO_KUTAISI_DESC = "友军运输机自 Kutaisi 起飞，护送其离开空域。",
+	CA_MISSION_INTERCEPT_BOMBERS_MINERALNYE_DESC = "发现敌军轰炸机，位于 Mineralnye 以北。\n请在其进入射程前将其击落。",
+	CA_MISSION_INTERCEPT_AIRSTRIKE_WEST_EAST_DESC = "敌机正自西向东实施空袭。\n请在其进入射程前将其击落。",
+	CA_MISSION_ESCORT_CARGO_KUTAISI_DESC = "友军运输机正从 Kutaisi 起飞。请在其离开空域前负责护航。",
 	CA_TARGET_HIGH_VALUE_TARGET        = "高价值目标",
 	CA_TARGET_HIGH_VALUE_GENERAL       = "高价值将军",
 	CA_TARGET_VAZIANI_SUPPLY_WAREHOUSE = "Vaziani 补给仓库",
@@ -13178,8 +16080,8 @@ MGRS: 37 T EK 58654 22580
 奖励 = 1000]],
 	CA_MISSION_STRIKE_HIGH_VALUE_START = "新打击任务：打击高价值目标建筑",
 	CA_MISSION_STRIKE_HIGH_VALUE_END   = "打击任务结束：打击高价值目标建筑",
-	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_TITLE = "打击另一个高价值目标",
-	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_MARKER = "打击另一个高价值目标建筑",
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_TITLE = "打击另一处高价值目标",
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_MARKER = "打击另一处高价值目标建筑",
 	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_DESC = [[打击以下座标的高价值建筑：
 
 MGRS: 37 T FH 84000 46225
@@ -13189,8 +16091,8 @@ MGRS: 37 T FH 84000 46225
 海拔：193 英尺
 
 奖励 = 1000]],
-	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_START = "新打击任务：打击另一个高价值目标建筑",
-	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_END = "打击任务结束：打击另一个高价值目标建筑",
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_START = "新打击任务：打击另一处高价值目标建筑",
+	CA_MISSION_STRIKE_ANOTHER_HIGH_VALUE_END = "打击任务结束：打击另一处高价值目标建筑",
 	CA_MISSION_STRIKE_HIGH_VALUE_GROUP_DESC = [[打击以下座标的高价值建筑：
 
 MGRS: 38 T LM 09247 78805
@@ -13246,164 +16148,269 @@ MGRS: 38 T NM 04080 09769
 奖励 1000
 
 需要 2000 磅投弹量]],
-	CA_MISSION_STRIKE_VAZIANI_START    = "新打击任务：打击 Vaziani 补给仓库\n\n摧毁该建筑以瘫痪周边敌方补给",
-	CA_MISSION_STRIKE_VAZIANI_END      = "打击任务结束：打击 Vaziani 补给仓库\n\n补给仓库已失效",
-	CA_SHOP_ITEM_STATIC_STRUCTURE      = "建筑打击编队",
+	CA_MISSION_STRIKE_VAZIANI_START    = "新打击任务：打击 Vaziani 补给仓库\n\n摧毁这座建筑以削弱周边敌军区域的补给",
+	CA_MISSION_STRIKE_VAZIANI_END      = "打击任务结束：打击 Vaziani 补给仓库",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_TITLE = "打击 Sukhumi 的 SAM-Delta 补给仓库",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_DESC = [[打击 Sukhumi 的补给仓库，以削弱前往 SAM-Delta 的补给。
+
+坐标：
+MGRS: 37 T FH 73652 48322
+纬经度：N 42°52'03" E 41°07'33"
+十进位分：N 42°52.065' E 41°07.553'
+
+海拔 43 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_START = "新打击任务：打击 Sukhumi 的 SAM-Delta 补给仓库\n\n摧毁这座建筑以削弱前往 SAM-Delta 的补给",
+	CA_MISSION_STRIKE_SAM_DELTA_WAREHOUSE_END = "打击任务结束：打击 Sukhumi 的 SAM-Delta 补给仓库",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_TITLE = "打击 Sochi 的 SAM-Echo 补给仓库",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_DESC = [[打击 Sochi 的补给仓库，以削弱前往 SAM-Echo 的补给。
+
+坐标：
+MGRS: 37 T EJ 76855 11472
+纬经度：N 43°27'07" E 39°56'59"
+十进位分：N 43°27.133' E 39°56.994'
+
+海拔 98 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_START = "新打击任务：打击 Sochi 的 SAM-Echo 补给仓库\n\n摧毁这座建筑以削弱前往 SAM-Echo 的补给",
+	CA_MISSION_STRIKE_SAM_ECHO_WAREHOUSE_END = "打击任务结束：打击 Sochi 的 SAM-Echo 补给仓库",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_TITLE = "打击 Anapa 的 SAM-Golf 补给仓库",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_DESC = [[打击 Anapa 的补给仓库，以削弱前往 SAM-Golf 的补给。
+
+坐标：
+MGRS: 37 T CK 69326 85636
+纬经度：N 45°00'43" E 37°20'30"
+十进位分：N 45°00.728' E 37°20.500'
+
+海拔 141 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_START = "新打击任务：打击 Anapa 的 SAM-Golf 补给仓库\n\n摧毁这座建筑以削弱前往 SAM-Golf 的补给",
+	CA_MISSION_STRIKE_SAM_GOLF_WAREHOUSE_END = "打击任务结束：打击 Anapa 的 SAM-Golf 补给仓库",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_TITLE = "打击 Kobuleti 的 SAM-Alpha 补给仓库",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_DESC = [[打击 Kobuleti 的补给仓库，以削弱前往 SAM-Alpha 的补给。
+
+坐标：
+MGRS: 37 T GG 38429 46709
+纬经度：N 41°56'10" E 41°52'33"
+十进位分：N 41°56.180' E 41°52.558'
+
+海拔 59 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_START = "新打击任务：打击 Kobuleti 的 SAM-Alpha 补给仓库\n\n摧毁这座建筑以削弱前往 SAM-Alpha 的补给",
+	CA_MISSION_STRIKE_SAM_ALPHA_WAREHOUSE_END = "打击任务结束：打击 Kobuleti 的 SAM-Alpha 补给仓库",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_TITLE = "打击 Krasnodar-Pashkovsky 的 SAM-Hotel 补给仓库",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_DESC = [[打击 Krasnodar-Pashkovsky 的补给仓库，以削弱前往 SAM-Hotel 的补给。
+
+坐标：
+MGRS: 37 T DK 96195 93639
+纬经度：N 45°05'46" E 38°57'05"
+十进位分：N 45°05.772' E 38°57.098'
+
+海拔 92 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_START = "新打击任务：打击 Krasnodar-Pashkovsky 的 SAM-Hotel 补给仓库\n\n摧毁这座建筑以削弱前往 SAM-Hotel 的补给",
+	CA_MISSION_STRIKE_SAM_HOTEL_WAREHOUSE_END = "打击任务结束：打击 Krasnodar-Pashkovsky 的 SAM-Hotel 补给仓库",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_TITLE = "打击 Mineralnye 的 SAM-Juliett 补给仓库",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_DESC = [[打击 Mineralnye 的补给仓库，以削弱前往 SAM-Juliett 的补给。
+
+坐标：
+MGRS: 38 T LP 48963 98291
+纬经度：N 44°13'19" E 43°06'32"
+十进位分：N 44°13.331' E 43°06.545'
+
+海拔 1009 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_START = "新打击任务：打击 Mineralnye 的 SAM-Juliett 补给仓库\n\n摧毁这座建筑以削弱前往 SAM-Juliett 的补给",
+	CA_MISSION_STRIKE_SAM_JULIETT_WAREHOUSE_END = "打击任务结束：打击 Mineralnye 的 SAM-Juliett 补给仓库",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_TITLE = "打击 Mozdok 的 SAM-Kilo 补给仓库",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_DESC = [[打击 Mozdok 的补给仓库，以削弱前往 SAM-Kilo 的补给。
+
+坐标：
+MGRS: 38 T MP 68815 48119
+纬经度：N 43°47'07" E 44°36'44"
+十进位分：N 43°47.128' E 44°36.745'
+
+海拔 507 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_START = "新打击任务：打击 Mozdok 的 SAM-Kilo 补给仓库\n\n摧毁这座建筑以削弱前往 SAM-Kilo 的补给",
+	CA_MISSION_STRIKE_SAM_KILO_WAREHOUSE_END = "打击任务结束：打击 Mozdok 的 SAM-Kilo 补给仓库",
+	CA_SHOP_ITEM_STATIC_STRUCTURE      = "静态目标打击编队",
 	CA_SHOP_LABEL_BUILDING_STRIKE      = "建筑打击",
-	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "无可用友军区域可进行打击编队生成。",
-	CA_SHOP_CAN_ONLY_TARGET_BUILDINGS  = "仅能选择具有建筑目标的敌方区域",
-	CA_SHOP_NO_VALID_BUILDING_TARGET_ZONES = "目前没有可攻击建筑目标的敌方区域。",
-	SYRIA_EVENT_SCUDS_LAUNCHING        = "Oscar 附近的飞毛腿飞弹正在向 %s 发射",
-	SYRIA_EVENT_INTERCEPTOR_SPOTTED    = "检测到敌方拦截机正朝我方运输机接近。",
+	CA_SHOP_NO_FRIENDLY_STRIKE_SPAWN   = "当前没有可用于打击出动的友方区域。",
+	CA_SHOP_CAN_ONLY_TARGET_BUILDINGS  = "只能选择带有建筑目标的敌方区域",
+	CA_SHOP_NO_VALID_BUILDING_TARGET_ZONES = "当前没有带有建筑目标的有效敌方区域。",
+	SYRIA_EVENT_SCUDS_LAUNCHING        = "Oscar 附近的飞毛腿导弹正在向 %s 发射",
+	SYRIA_EVENT_INTERCEPTOR_SPOTTED    = "发现敌军截击机正飞向我方运输机。",
 	SYRIA_EVENT_INTERCEPT_MISSION      = "敌军已对我方运输机发起拦截任务",
-	SYRIA_SHOP_ITEM_CRUISE_MISSILE     = "战斧飞弹打击",
-	SYRIA_SHOP_ITEM_RESUPPLY_ZONE      = "补给友军区域",
-	SYRIA_SHOP_ITEM_FULLY_UPGRADE_ZONE = "完全升级友军区域",
-	SYRIA_SHOP_ITEM_CAP_FLIGHT         = "战斗空中巡逻编队",
-	SYRIA_SHOP_ITEM_TANKER_DROGUE      = "解锁加油机（软管式）",
-	SYRIA_SHOP_ITEM_TANKER_BOOM        = "解锁加油机（硬管式）",
-	SYRIA_SHOP_ITEM_CAS_FLIGHT         = "近距空中支援编队",
-	SYRIA_SHOP_ITEM_TALD_DECOY         = "诱饵编队(DECOY)",
-	SYRIA_SHOP_ITEM_SEAD_FLIGHT        = "压制防空编队(SEAD)",
+	SYRIA_SHOP_ITEM_CRUISE_MISSILE     = "巡航导弹打击",
+	SYRIA_SHOP_ITEM_RESUPPLY_ZONE      = "为友方区域补给",
+	SYRIA_SHOP_ITEM_FULLY_UPGRADE_ZONE = "将友方区域升至满级",
+	SYRIA_SHOP_ITEM_CAP_FLIGHT         = "空中战斗巡逻编队",
+	SYRIA_SHOP_ITEM_TANKER_DROGUE      = "解锁加油机（软管）",
+	SYRIA_SHOP_ITEM_TANKER_BOOM        = "解锁加油机（硬管）",
+	SYRIA_SHOP_ITEM_CAS_FLIGHT         = "近距离空中支援编队",
+	SYRIA_SHOP_ITEM_TALD_DECOY         = "空射诱饵编队",
+	SYRIA_SHOP_ITEM_SEAD_FLIGHT        = "防空压制编队",
 	SYRIA_SHOP_ITEM_BOMBER_FLIGHT      = "轰炸机编队",
-	SYRIA_SHOP_ITEM_JTAC_MQ9           = "MQ-9 「死神」 JTAC 任务",
-	SYRIA_SHOP_ITEM_JTAC_9LINE_AM      = "JTAC 9-Line（AM）",
-	SYRIA_SHOP_ITEM_JTAC_9LINE_FM      = "JTAC 9-Line（FM）",
-	SYRIA_SHOP_ITEM_GROUND_ATTACK      = "地面攻击",
+	SYRIA_SHOP_ITEM_JTAC_MQ9           = "MQ-9 JTAC",
+	SYRIA_SHOP_ITEM_JTAC_9LINE_AM      = "JTAC 九线简报 AM",
+	SYRIA_SHOP_ITEM_JTAC_9LINE_FM      = "JTAC 九线简报 FM",
+	SYRIA_SHOP_ITEM_GROUND_ATTACK      = "地面进攻",
 	SYRIA_SHOP_ITEM_SMOKE_MARKERS      = "烟雾标记",
 	SYRIA_SHOP_ITEM_FLARE_MARKERS      = "照明弹标记",
 	SYRIA_SHOP_ITEM_ILLUMINATION       = "照明炸弹",
 	SYRIA_SHOP_ITEM_DEPLOY_ARMOR       = "部署装甲部队",
-	SYRIA_SHOP_ITEM_DEPLOY_ARTILLERY   = "部署炮兵",
+	SYRIA_SHOP_ITEM_DEPLOY_ARTILLERY   = "部署炮兵部队",
 	SYRIA_SHOP_ITEM_DEPLOY_RECON       = "部署侦察部队",
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "部署防空部队",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "占领中立区域",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "敌方区域情报",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "获取敌方区域情报",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "红方区域升级",
-	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "红方大规模空军基地攻击",
-	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "为区域升级并部署步兵",
+	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "红方大规模机场进攻",
+	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "部署步兵升级区域",
 	SYRIA_SHOP_LABEL_INFANTRY          = "步兵",
-	SYRIA_SHOP_ITEM_UPGRADE_HAWK       = "为区域升级并部署鹰式防空系统",
-	SYRIA_SHOP_ITEM_UPGRADE_NASAMS     = "为区域升级并部署NASAMS 防空系统",
-	SYRIA_SHOP_ITEM_UPGRADE_HIMARS     = "为区域升级并部署海马斯",
-	SYRIA_SHOP_ITEM_LOGISTIC_CENTER    = "设置为后勤中心",
-	SYRIA_SHOP_ITEM_WAREHOUSE_50       = "补给仓库 +50",
-	SYRIA_SHOP_ITEM_UPGRADE_ARMOR      = "为区域升级并部署装甲部队",
-	SYRIA_SHOP_ITEM_UPGRADE_PATRIOT    = "为区域升级并部署爱国者防空系统",
-	SYRIA_SHOP_ITEM_EXTRA_SLOT         = "解锁额外升级栏位",
+	SYRIA_SHOP_ITEM_UPGRADE_HAWK       = "部署霍克防空升级区域",
+	SYRIA_SHOP_ITEM_UPGRADE_NASAMS     = "部署先进防空升级区域",
+	SYRIA_SHOP_ITEM_UPGRADE_HIMARS     = "部署海马斯火箭炮升级区域",
+	SYRIA_SHOP_ITEM_LOGISTIC_CENTER    = "将区域设为后勤中心",
+	SYRIA_SHOP_ITEM_WAREHOUSE_50       = "后勤仓库补给50单位",
+	SYRIA_SHOP_ITEM_UPGRADE_ARMOR      = "部署装甲部队升级区域",
+	SYRIA_SHOP_ITEM_UPGRADE_PATRIOT    = "部署爱国者防空升级区域",
+	SYRIA_SHOP_ITEM_EXTRA_SLOT         = "解锁额外升级槽位",
 	SYRIA_SHOP_ITEM_DEPLOY_FARP        = "部署 FARP",
-	SYRIA_SHOP_ITEM_JAM_RADARS         = "干扰区域雷达",
+	SYRIA_SHOP_ITEM_JAM_RADARS         = "压制区域雷达",
 	SYRIA_SHOP_CAT_AI_ATTACK           = "AI 攻击",
 	SYRIA_SHOP_CAT_ZONE_UPGRADES       = "区域升级",
-	SYRIA_SHOP_CAT_JTAC_INTEL          = "JTAC 与情报",
+	SYRIA_SHOP_CAT_JTAC_INTEL          = "JTAC 情报",
 	SYRIA_SHOP_CAT_MARKING_TOOLS       = "标记与工具",
 	SYRIA_SHOP_CAT_COMBINED_ARMS       = "联合作战",
 	SYRIA_SHOP_CAT_LOGISTICS           = "占领与资源",
 	SYRIA_SHOP_CAT_OTHER_SUPPORT       = "其他支援",
-	SYRIA_SHOP_CHOOSE_TARGET_ZONE      = "从商店菜单选择目标区域",
-	SYRIA_SHOP_CHOOSE_TARGET_ZONE_F10  = "从 F10 菜单选择目标区域",
-	SYRIA_SHOP_CHOOSE_ZONE             = "从商店菜单选择区域",
-	SYRIA_SHOP_CHOOSE_ZONE_FULLY_UPGRADE = "从商店菜单选择要完全升级的区域",
-	SYRIA_SHOP_CHOOSE_SPAWN_ZONE       = "从 F10 菜单选择生成区域",
-	SYRIA_SHOP_CHOOSE_DEPLOY_ZONE      = "从商店菜单选择部署区域",
-	SYRIA_SHOP_CHOOSE_NEUTRAL_ZONE     = "从商店菜单选择中立区域",
-	SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY   = "仅能选择敌方区域",
-	SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY = "仅能选择友军区域",
-	SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY = "仅能于友军区域生成",
-	SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY = "仅能于友军区域部署",
-	SYRIA_SHOP_ZONE_NO_RESUPPLY        = "该区域无需补给",
+	SYRIA_SHOP_CHOOSE_TARGET_ZONE      = "请从商店菜单选择目标区域",
+	SYRIA_SHOP_CHOOSE_TARGET_ZONE_F10  = "请从 F10 菜单选择目标区域",
+	SYRIA_SHOP_CHOOSE_ZONE             = "请从商店菜单选择区域",
+	SYRIA_SHOP_CHOOSE_ZONE_FULLY_UPGRADE = "请从商店菜单选择要升至满级的区域",
+	SYRIA_SHOP_CHOOSE_SPAWN_ZONE       = "请从 F10 菜单选择出击区域",
+	SYRIA_SHOP_CHOOSE_DEPLOY_ZONE      = "请从商店菜单选择部署区域",
+	SYRIA_SHOP_CHOOSE_NEUTRAL_ZONE     = "请从商店菜单选择中立区域",
+	SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY   = "只能选择敌方区域作为目标",
+	SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY = "只能选择友方区域作为目标",
+	SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY = "只能从友方区域出击",
+	SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY = "只能部署到友方区域",
+	SYRIA_SHOP_ZONE_NO_RESUPPLY        = "该区域当前不需要补给",
 	SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED = "蓝方 AI 补给已禁用",
-	SYRIA_SHOP_DEPLOY_FROM_FARP        = "是否从 FARP 部署（若可用）？",
-	SYRIA_SHOP_NO_VALID_ENEMY_ZONES    = "目前没有可用的敌方区域。",
-	SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES = "目前没有可用的友军区域。",
-	SYRIA_SHOP_NO_ELIGIBLE_NEUTRAL_ZONES = "目前没有可用的中立区域。",
-	SYRIA_SHOP_NO_ELIGIBLE_ZONE        = "无可用区域",
-	SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES = "无可用机场区域",
-	SYRIA_SHOP_MUST_PICK_ENEMY_ZONE    = "必须选择敌方区域",
-	SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE = "必须选择友军区域",
-	SYRIA_SHOP_ZONE_NOT_NEUTRAL        = "该区域非中立",
-	SYRIA_SHOP_MASS_ATTACK_UNAVAILABLE = "大规模攻击不可用",
+	SYRIA_SHOP_DEPLOY_FROM_FARP        = "若可用，是否从 FARP 部署？",
+	SYRIA_SHOP_NO_VALID_ENEMY_ZONES    = "当前没有有效的敌方区域。",
+	SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES = "当前没有有效的友方区域。",
+	SYRIA_SHOP_NO_ELIGIBLE_NEUTRAL_ZONES = "当前没有符合条件的中立区域。",
+	SYRIA_SHOP_NO_ELIGIBLE_ZONE        = "没有符合条件的区域",
+	SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES = "没有符合条件的机场区域",
+	SYRIA_SHOP_MUST_PICK_ENEMY_ZONE    = "必须选择一个敌方区域",
+	SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE = "必须选择一个友方区域",
+	SYRIA_SHOP_ZONE_NOT_NEUTRAL        = "该区域不是中立区域",
+	SYRIA_SHOP_MASS_ATTACK_UNAVAILABLE = "当前无法执行大规模进攻",
 	SYRIA_SHOP_ALREADY_CHOOSING_ZONE   = "已在选择区域中",
 	SYRIA_SHOP_ALREADY_UNLOCKED        = "已解锁",
-	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "所有区域现在可购买第二项升级",
-	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "选择设为后勤中心的区域",
-	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "从 F10 菜单选择已完全升级的友军机场区域。",
-	SYRIA_SHOP_GATHERING_INTEL         = "正在收集 %s 的情报，请稍候...",
-	SYRIA_SHOP_LAUNCHING_CRUISE        = "正在对 %s 发射战斧飞弹",
-	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "%s 任务进行中",
-	SYRIA_SHOP_JAMMING_TARGET          = "正在干扰目标",
-	SYRIA_SHOP_GROWLER_JAMMING         = "EA-18G「咆哮者」正在对 %s 进行雷达干扰",
-	SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE = "%s 仍在空中飞行",
-	SYRIA_SHOP_CAP_REQUESTED           = "已请求 CAP，请选择生成区域。",
-	SYRIA_SHOP_TANKER_DROGUE_UNLOCKED  = "（软管式）加油机已解锁，请选择生成区域。",
-	SYRIA_SHOP_TANKER_BOOM_UNLOCKED    = "（硬管式）加油机已解锁，请选择生成区域。",
-	SYRIA_SHOP_NO_FRIENDLY_SPAWN       = "没有可用的友军区域可供 %s 生成。",
-	SYRIA_SHOP_JTAC_ALREADY_ACTIVE     = "%s 上空已有 JTAC，请选择其他区域",
-	SYRIA_SHOP_JTAC_TOMCAT_ACTIVE      = "%s 上空已部署友军F-14「雄猫」 - JTAC 已启用 %d / 2",
-	SYRIA_SHOP_JTAC_REAPER_ACTIVE      = "%s 上空已部署MQ-9「死神」 - JTAC 已启用 %d / 2",
-	SYRIA_SHOP_JTAC_TOMCAT_AM          = "%s 上空已部署友军F-14「雄猫」，请使用 241.00 AM 呼叫 Springfield",
-	SYRIA_SHOP_JTAC_REAPER_AM          = "%s 上空已部署MQ-9「死神」，请使用 241.00 AM 呼叫 Springfield",
-	SYRIA_SHOP_JTAC_TOMCAT_FM          = "%s 上空已部署友军F-14「雄猫」，请使用 31.00 FM 呼叫 Uzi",
-	SYRIA_SHOP_JTAC_REAPER_FM          = "%s 上空已部署MQ-9「死神」，请使用 31.00 FM 呼叫 Uzi",
-	SYRIA_SHOP_TARGETS_RED_SMOKE       = "%s 目标已以红色烟雾标记",
-	SYRIA_SHOP_TARGETS_RED_FLARE       = "%s 目标已以红色照明弹标记",
+	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "所有区域现已可购买第二个升级项",
+	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "请选择要设为后勤中心的区域",
+	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "请从 F10 菜单选择已满级的友方机场区域。",
+	SYRIA_SHOP_GATHERING_INTEL         = "正在收集 %s 的情报，请稍候……",
+	SYRIA_SHOP_LAUNCHING_CRUISE        = "正在向 %s 发射巡航导弹",
+	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "%s 任务仍在进行中",
+	SYRIA_SHOP_JAMMING_TARGET          = "正在压制目标",
+	SYRIA_SHOP_GROWLER_JAMMING         = "Growler 正在压制 %s 的雷达",
+	SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE = "%s 仍在空中",
+	SYRIA_SHOP_CAP_REQUESTED           = "已请求空中战斗巡逻。请选择出击区域。",
+	SYRIA_SHOP_TANKER_DROGUE_UNLOCKED  = "已解锁加油机（软管）。请选择出击区域。",
+	SYRIA_SHOP_TANKER_BOOM_UNLOCKED    = "已解锁加油机（硬管）。请选择出击区域。",
+	SYRIA_SHOP_NO_FRIENDLY_SPAWN       = "当前没有可用于 %s 出击的友方区域。",
+	SYRIA_SHOP_JTAC_ALREADY_ACTIVE     = "%s 上空已有 JTAC 在执行任务。请选择其他区域。",
+	SYRIA_SHOP_JTAC_TOMCAT_ACTIVE      = "友军 Tomcat 已部署至 %s 上空，当前 JTAC 数量 %d / 2",
+	SYRIA_SHOP_JTAC_REAPER_ACTIVE      = "Reaper 无人机已部署至 %s 上空，当前 JTAC 数量 %d / 2",
+	SYRIA_SHOP_JTAC_TOMCAT_AM          = "友军 Tomcat 已部署至 %s 上空。请在 241.00 AM 联系 Springfield",
+	SYRIA_SHOP_JTAC_REAPER_AM          = "Reaper 无人机已部署至 %s 上空。请在 241.00 AM 联系 Springfield",
+	SYRIA_SHOP_JTAC_TOMCAT_FM          = "友军 Tomcat 已部署至 %s 上空。请在 31.00 FM 联系 Uzi",
+	SYRIA_SHOP_JTAC_REAPER_FM          = "Reaper 无人机已部署至 %s 上空。请在 31.00 FM 联系 Uzi",
+	SYRIA_SHOP_TARGETS_RED_SMOKE       = "%s 目标已用红色烟标标记",
+	SYRIA_SHOP_TARGETS_RED_FLARE       = "%s 目标已用红色照明弹标记",
 	SYRIA_SHOP_TARGETS_ILLUMINATED     = "%s 目标已被照明",
-	SYRIA_SHOP_FRIENDLY_ARMOR_DEPLOYED = "%s 已部署友军装甲部队",
-	SYRIA_SHOP_FRIENDLY_ARTY_DEPLOYED  = "%s 已部署友军炮兵部队",
-	SYRIA_SHOP_FRIENDLY_RECON_DEPLOYED = "%s 已部署友军侦察部队",
-	SYRIA_SHOP_FRIENDLY_AIRDEF_DEPLOYED = "%s 已部署友军防空部队",
-	SYRIA_SHOP_ZONE_FULLY_UPGRADED     = "%s 已完全升级！",
-	SYRIA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA = "区域已升级 - 请购买全域额外栏位以新增更多升级",
-	SYRIA_SHOP_ZONE_ALREADY_UPGRADED   = "区域已升级",
-	SYRIA_SHOP_UPGRADE_ADDED           = "%s 已加入至 %s（花费 %s）",
-	SYRIA_SHOP_UPGRADE_ADDED_EXTRA     = "%s 已加入至 %s（花费 %s）- 购买全域额外栏位以再次升级此区域",
-	SYRIA_SHOP_UPGRADE_ADDED_EXTRA_LINE = "%s 已加入至 %s（花费 %s）\n购买全域额外栏位以再次升级此区域",
-	SYRIA_SHOP_FARP_MARKER_HELP        = "透过地图标记部署 FARP。\n使用标记文字：buy:farphere。\n必须位于所有区域外，且距离敌方区域至少 10 海里。",
-	SYRIA_MISSION_SCUDS_TITLE          = "摧毁飞毛腿飞弹（52）",
-	SYRIA_MISSION_TARGET_DESTROY_SCUDS = "摧毁飞毛腿飞弹",
-	SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS = "拦截敌方轰炸机",
-	SYRIA_MISSION_TARGET_DESTROY_CARGO_SHIP = "摧毁运输船",
+	SYRIA_SHOP_FRIENDLY_ARMOR_DEPLOYED = "友军装甲部队已部署至 %s",
+	SYRIA_SHOP_FRIENDLY_ARTY_DEPLOYED  = "友军炮兵已部署至 %s",
+	SYRIA_SHOP_FRIENDLY_RECON_DEPLOYED = "友军侦察分队已部署至 %s",
+	SYRIA_SHOP_FRIENDLY_AIRDEF_DEPLOYED = "友军防空部队已部署至 %s",
+	SYRIA_SHOP_ZONE_FULLY_UPGRADED     = "%s 现已升至满级！",
+	SYRIA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA = "该区域已升级，如需继续升级，请购买全局额外槽位",
+	SYRIA_SHOP_ZONE_ALREADY_UPGRADED   = "该区域已升级",
+	SYRIA_SHOP_UPGRADE_ADDED           = "已将 %s 添加到 %s，花费 %s",
+	SYRIA_SHOP_UPGRADE_ADDED_EXTRA     = "已将 %s 添加到 %s，花费 %s。如需再次升级该区域，请购买全局额外槽位",
+	SYRIA_SHOP_UPGRADE_ADDED_EXTRA_LINE = "已将 %s 添加到 %s，花费 %s\n如需再次升级该区域，请购买全局额外槽位",
+	SYRIA_SHOP_FARP_MARKER_HELP        = "通过地图标记部署 FARP。\n请使用标记文本：buy:farphere。\n必须位于所有区域之外，且距离敌方区域至少 10 海里。",
+	SYRIA_MISSION_SCUDS_TITLE          = "摧毁飞毛腿导弹（52）",
+	SYRIA_MISSION_TARGET_DESTROY_SCUDS = "摧毁飞毛腿导弹",
+	SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS = "拦截敌军轰炸机",
+	SYRIA_MISSION_TARGET_DESTROY_CARGO_SHIP = "摧毁货船",
 	SYRIA_MISSION_TARGET_STRIKE_MISSION = "打击任务",
-	SYRIA_MISSION_TARGET_DAM_FACTORIES = "水坝工厂",
-	SYRIA_MISSION_TARGET_REFINERY_FACTORIES = "炼油厂",
-	SYRIA_MISSION_SCUDS_DESC           = "在 Oscar（52）发现飞毛腿飞弹。\n在其发射前将其摧毁",
-	SYRIA_MISSION_SCUDS_START          = "新任务：摧毁飞毛腿飞弹",
-	SYRIA_MISSION_SCUDS_END            = "任务结束：摧毁飞毛腿飞弹",
+	SYRIA_MISSION_TARGET_DAM_FACTORIES = "大坝工厂",
+	SYRIA_MISSION_TARGET_REFINERY_FACTORIES = "炼油厂工厂",
+	SYRIA_MISSION_SCUDS_DESC           = "在 Oscar（52）发现了飞毛腿导弹。\n请在其发射导弹前将其摧毁。",
+	SYRIA_MISSION_SCUDS_START          = "新任务：摧毁飞毛腿导弹",
+	SYRIA_MISSION_SCUDS_END            = "任务结束：摧毁飞毛腿导弹",
 	SYRIA_MISSION_ESCORT_CARGO_TITLE   = "护送运输机",
-	SYRIA_MISSION_ESCORT_CARGO_DESC    = "友军运输机自 Incirlik 起飞，护送其离开空域。",
+	SYRIA_MISSION_ESCORT_CARGO_DESC    = "友军运输机正从 Incirlik 起飞。请在其离开空域前负责护航。",
 	SYRIA_MISSION_ESCORT_CARGO_START   = "新任务：护送运输机",
 	SYRIA_MISSION_ESCORT_CARGO_END     = "任务结束：护送运输机",
-	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE = "拦截敌方空袭",
-	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_DESC_SE = "敌机正自东南方向执行空袭\n在其进入攻击范围前将其击落。",
-	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_DESC_NS = "敌机正沿南北方向执行空袭\n在其进入攻击范围前将其击落。",
-	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START = "新任务：拦截敌方空袭",
-	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END = "任务结束：拦截敌方空袭",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE = "拦截敌军空袭",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_DESC_SE = "敌机正从东南方向实施空袭。\n请在其进入射程前将其击落。",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_DESC_NS = "敌机正沿南北方向实施空袭。\n请在其进入射程前将其击落。",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START = "新任务：拦截敌军空袭",
+	SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END = "任务结束：拦截敌军空袭",
 	SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE = "拦截轰炸机",
-	SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_NE = "在东北方向发现敌方轰炸机\n在其进入攻击范围前将其击落。",
-	SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_CYPRUS = "在 Cyprus 北方发现敌方轰炸机\n在其进入攻击范围前将其击落。",
+	SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_NE = "发现敌军轰炸机位于东北方向。\n请在其进入射程前将其击落。",
+	SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_CYPRUS = "发现敌军轰炸机位于 Cyprus 以北。\n请在其进入射程前将其击落。",
 	SYRIA_MISSION_INTERCEPT_BOMBERS_START = "新任务：拦截轰炸机",
 	SYRIA_MISSION_INTERCEPT_BOMBERS_END = "任务结束：拦截轰炸机",
-	SYRIA_MISSION_DESTROY_CARGO_SHIP_TITLE = "摧毁红方航母区域的运输船",
-	SYRIA_MISSION_DESTROY_CARGO_SHIP_DESC = "搜寻并摧毁红方航母区域的敌方运输船，其正前往 Bassel Al-Assad",
-	SYRIA_MISSION_DESTROY_CARGO_SHIP_START = "新任务：摧毁运输船",
-	SYRIA_MISSION_DESTROY_CARGO_SHIP_END = "任务结束：摧毁运输船",
+	SYRIA_MISSION_DESTROY_CARGO_SHIP_TITLE = "摧毁 Red Carrier 的货船",
+	SYRIA_MISSION_DESTROY_CARGO_SHIP_DESC = "寻找并摧毁位于 Red Carrier、正驶向 Bassel Al-Assad 的敌军货船",
+	SYRIA_MISSION_DESTROY_CARGO_SHIP_START = "新任务：摧毁货船",
+	SYRIA_MISSION_DESTROY_CARGO_SHIP_END = "任务结束：摧毁货船",
 	SYRIA_MISSION_INTERCEPT_CARGO_TITLE = "拦截运输机",
-	SYRIA_MISSION_INTERCEPT_CARGO_DESC = "搜寻并摧毁红方航母附近的敌方运输机，其正前往 Bassel Al-Assad。",
+	SYRIA_MISSION_INTERCEPT_CARGO_DESC = "寻找并摧毁位于 Red Carrier 附近、正飞往 Bassel Al-Assad 的敌军运输机。",
 	SYRIA_MISSION_INTERCEPT_CARGO_START = "新任务：拦截运输机",
 	SYRIA_MISSION_INTERCEPT_CARGO_END  = "任务结束：拦截运输机",
-	SYRIA_MISSION_DEFEND_DUHUR_TITLE   = "防守 Abu al-Duhur",
-	SYRIA_MISSION_DEFEND_DUHUR_DESC    = "敌军正准备对 Abu al-Duhur 发动全面攻击。\n不惜一切代价防守该机场。",
-	SYRIA_MISSION_DEFEND_DUHUR_START   = "新任务：防守 Abu al-Duhur",
-	SYRIA_MISSION_DEFEND_DUHUR_END     = "任务结束：防守 Abu al-Duhur",
+	SYRIA_MISSION_DEFEND_DUHUR_TITLE   = "保卫 Abu al-Duhur",
+	SYRIA_MISSION_DEFEND_DUHUR_DESC    = "敌军正准备对 Abu al-Duhur 发起全面进攻。\n不惜一切代价保卫机场。",
+	SYRIA_MISSION_DEFEND_DUHUR_START   = "新任务：保卫 Abu al-Duhur",
+	SYRIA_MISSION_DEFEND_DUHUR_END     = "任务结束：保卫 Abu al-Duhur",
 	SYRIA_MISSION_FIND_GENERAL_TITLE   = "寻找将军车队",
-	SYRIA_MISSION_FIND_GENERAL_DESC    = "寻找将军车队！\n其刚自 Pinarbashi 出发，车队由 SA-19 防空系统护卫，\n\n找到其所在地并对建筑投弹",
-	SYRIA_MISSION_FIND_GENERAL_START   = "新任务：寻找将军车队。\n其刚自 Pinarbashi 向北移动",
+	SYRIA_MISSION_FIND_GENERAL_DESC    = "找到将军车队！\n他刚从 Pinarbashi 出发，车队由 SA-19 护卫。\n\n查明他的住处并向建筑投弹。",
+	SYRIA_MISSION_FIND_GENERAL_START   = "新任务：寻找将军车队。\n他刚从 Pinarbashi 向北出发",
 	SYRIA_MISSION_FIND_GENERAL_END     = "任务结束：寻找将军车队",
 	SYRIA_MISSION_ARTY_TITLE           = "摧毁炮兵",
-	SYRIA_MISSION_ARTY_DESC            = "侦测到炮兵自 %s 方向向 %s 推进。\n在其进入攻击范围前将其摧毁。",
+	SYRIA_MISSION_ARTY_DESC            = "发现炮兵正从 %s 方向前往 %s。\n请在其进入射程前将其摧毁。",
 	SYRIA_MISSION_ARTY_START           = "新任务：摧毁炮兵",
 	SYRIA_MISSION_ARTY_END             = "任务结束：摧毁炮兵",
-	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_TITLE = "打击敌方藏匿据点",
+	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_TITLE = "打击敌军藏身处",
 		SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_DESC = [[已发现敌方藏匿据点，
 位于 Aleppo 机场西北方，Aleppo 市内。
 立即将其摧毁！
@@ -13415,8 +16422,8 @@ MGRS: 37 S CA 34720 07791
 精确纬经度：N 36°12'03.04" E 37°09'41.70"
 十进位分：N 36°12.050' E 37°09.695'
 海拔 1287 英尺]],
-	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "新打击任务：打击敌方藏匿据点",
-	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "打击任务结束：打击敌方藏匿据点",
+	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "新打击任务：打击敌军藏身处",
+	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "打击任务结束：打击敌军藏身处",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "打击 Taftanaz 补给仓库",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[已发现 Taftanaz 补给仓库，
 摧毁它以切断该区域的补给来源。
@@ -13444,7 +16451,7 @@ MGRS: 37 S CV 29530 56517
 	SYRIA_MISSION_STRIKE_ABU_DUHUR_PAPA_WAREHOUSE_MARK = "打击 Abu al-Duhur Papa 补给仓库",
 	SYRIA_MISSION_STRIKE_ABU_DUHUR_PAPA_WAREHOUSE_START = "新打击任务：打击 Abu al-Duhur Papa 补给仓库",
 	SYRIA_MISSION_STRIKE_ABU_DUHUR_PAPA_WAREHOUSE_END = "打击任务结束：打击 Abu al-Duhur Papa 补给仓库",
-	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_TITLE = "打击 Incirlik 防御补给仓库",
+	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_TITLE = "打击 Incirlik Defence 补给仓库",
 	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_DESC = [[已在 Incirlik 机场发现提供 Incirlik 防御 SA-11 的补给来源，
 摧毁该仓库以切断补给。
 
@@ -13456,9 +16463,9 @@ MGRS: 36 S YF 16959 97729
 精确纬经度：N 37°00'02.52" E 35°26'17.60"
 十进位分：N 37°00.042' E 35°26.293'
 海拔 204 英尺]],
-	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_START = "新打击任务：Incirlik 防御补给仓库",
-	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_END = "打击任务结束：Incirlik 防御补给仓库",
-	SYRIA_MISSION_STRIKE_DAM_FACTORIES_TITLE = "打击水坝工厂",
+	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_START = "新打击任务：打击 Incirlik Defence 补给仓库",
+	SYRIA_MISSION_STRIKE_INCIRLIK_WAREHOUSE_END = "打击任务结束：打击 Incirlik Defence 补给仓库",
+	SYRIA_MISSION_STRIKE_DAM_FACTORIES_TITLE = "打击大坝工厂",
 	SYRIA_MISSION_STRIKE_DAM_FACTORIES_DESC = [[已确认 2 座水坝工厂。
 摧毁它们以瓦解此敌方据点及其所有活动。
 
@@ -13478,9 +16485,9 @@ MGRS: 37 S DV 60141 68067
 精确纬经度：N 35°51'21.61" E 38°33'30.80"
 十进位分：N 35°51.360' E 38°33.513'
 海拔 973 英尺]],
-	SYRIA_MISSION_STRIKE_DAM_FACTORIES_START = "新打击任务：打击水坝工厂",
-	SYRIA_MISSION_STRIKE_DAM_FACTORIES_END = "打击任务结束：打击水坝工厂",
-	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_TITLE = "打击炼油厂",
+	SYRIA_MISSION_STRIKE_DAM_FACTORIES_START = "新打击任务：打击大坝工厂",
+	SYRIA_MISSION_STRIKE_DAM_FACTORIES_END = "打击任务结束：打击大坝工厂",
+	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_TITLE = "打击炼油厂工厂",
 	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_DESC = [[已确认炼油厂内 4 座设施。
 摧毁它们以瓦解此敌方据点及其所有活动。
 
@@ -13495,9 +16502,9 @@ MGRS: 37 S CU 85209 66109
 精确纬经度：N 34°55'51.52" E 37°44'35.29"
 十进位分：N 34°55.858' E 37°44.588'
 海拔 2512 英尺]],
-	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_START = "新打击任务：打击炼油厂",
-	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_END = "打击任务结束：打击炼油厂",
-	SYRIA_MISSION_STRIKE_PALMYRA_SA5_TITLE = "打击 Palmyra SA-5 储备设施",
+	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_START = "新打击任务：打击炼油厂工厂",
+	SYRIA_MISSION_STRIKE_REFINERY_FACTORIES_END = "打击任务结束：打击炼油厂工厂",
+	SYRIA_MISSION_STRIKE_PALMYRA_SA5_TITLE = "打击 Palmyra 的 SA-5 储备部件",
 	SYRIA_MISSION_STRIKE_PALMYRA_SA5_DESC = [[已发现 Palmyra 的 SA-5 备件储存设施，
 摧毁它以中断维修补给。
 
@@ -13508,8 +16515,8 @@ MGRS: 37 S DU 36481 24765
 精确纬经度：N 34°33'45.65" E 38°18'27.31"
 十进位分：N 34°33.760' E 38°18.455'
 海拔 1300 英尺]],
-	SYRIA_MISSION_STRIKE_PALMYRA_SA5_START = "新打击任务：打击 Palmyra SA-5 储备设施",
-	SYRIA_MISSION_STRIKE_PALMYRA_SA5_END = "打击任务结束：打击 Palmyra SA-5 储备设施",
+	SYRIA_MISSION_STRIKE_PALMYRA_SA5_START = "新打击任务：打击 Palmyra 的 SA-5 储备部件",
+	SYRIA_MISSION_STRIKE_PALMYRA_SA5_END = "打击任务结束：打击 Palmyra 的 SA-5 储备部件",
 	SYRIA_MISSION_STRIKE_RAMAT_DAVID_WAREHOUSE_TITLE = "打击 Ramat David 补给仓库",
 	SYRIA_MISSION_STRIKE_RAMAT_DAVID_WAREHOUSE_DESC = [[已发现 Ramat David 补给仓库，
 摧毁它以切断供应至 Ramat David 防御的补给。
@@ -13523,7 +16530,7 @@ MGRS: 36 S YB 05640 16615
 海拔 151 英尺]],
 	SYRIA_MISSION_STRIKE_RAMAT_DAVID_WAREHOUSE_START = "新打击任务：打击 Ramat David 补给仓库",
 	SYRIA_MISSION_STRIKE_RAMAT_DAVID_WAREHOUSE_END = "打击任务结束：打击 Ramat David 补给仓库",
-	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_TITLE = "打击 Bassel Al-Assad 补给仓库（Hotel）",
+	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_TITLE = "打击为 Hotel 提供补给的 Bassel Al-Assad 仓库",
 	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_DESC = [[已发现 Bassel Al-Assad 补给仓库，
 摧毁它以切断供应至 Hotel 的补给。
 
@@ -13535,8 +16542,8 @@ MGRS: 36 S YE 68139 21017
 十进位分：N 35°23.789' E 35°57.140'
 海拔 92 英尺]],
 	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_MARK = "打击 Bassel Al-Assad 补给仓库",
-	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_START = "新打击任务：打击 Bassel Al-Assad 补给仓库（Hotel）",
-	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_END = "打击任务结束：打击 Bassel Al-Assad 补给仓库（Hotel）",
+	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_START = "新打击任务：打击为 Hotel 提供补给的 Bassel Al-Assad 仓库",
+	SYRIA_MISSION_STRIKE_BASSEL_WAREHOUSE_END = "打击任务结束：打击为 Hotel 提供补给的 Bassel Al-Assad 仓库",
 	SYRIA_MISSION_STRIKE_REBELES_TITLE = "打击叛军据点",
 	SYRIA_MISSION_STRIKE_REBELES_ADANA_DESC = [[已发现叛军藏匿据点，
 位于 Incirlik 东方的 Adana 市内。
@@ -13564,7 +16571,7 @@ MGRS: 37 S CA 45592 05682
 海拔 1261 英尺]],
 	SYRIA_MISSION_STRIKE_REBELES_START = "新打击任务：打击叛军据点",
 	SYRIA_MISSION_STRIKE_REBELES_END = "打击任务结束：打击叛军据点",
-	SYRIA_MISSION_STRIKE_REBELES_END_REWARD = "打击任务结束：打击叛军据点\n+250 点数",
+	SYRIA_MISSION_STRIKE_REBELES_END_REWARD = "打击任务结束：打击叛军据点\n+250 积分",
 	SYRIA_MISSION_STRIKE_GENERAL_TITLE = "打击将军",
 	SYRIA_MISSION_STRIKE_GENERAL_DESC = [[已掌握其中一名将军位置。
 位于 Hama 南方，立即将其歼灭！
@@ -13580,7 +16587,7 @@ MGRS: 37 S BU 92159 66783
 摧毁该建筑及其周边所有目标。]],
 	SYRIA_MISSION_STRIKE_GENERAL_START = "新打击任务：打击将军",
 	SYRIA_MISSION_STRIKE_GENERAL_END   = "打击任务结束：打击将军",
-	SYRIA_MISSION_DEEP_STRIKE_EWR_TITLE = "敌方预警雷达纵深打击任务",
+	SYRIA_MISSION_DEEP_STRIKE_EWR_TITLE = "纵深打击敌军预警雷达",
 	SYRIA_MISSION_DEEP_STRIKE_EWR_SOUTH_DESC = [[已掌握敌方预警雷达位置，
 在推进前必须优先将其摧毁。
 
@@ -13605,20 +16612,20 @@ MGRS: 37 S EU 31088 22294
 海拔：1251 英尺
 
 奖励：1000]],
-	SYRIA_MISSION_BEHIND_LINES_START   = "新打击任务：深入敌后。",
-	SYRIA_MISSION_BEHIND_LINES_END     = "打击任务结束：深入敌后。",
+	SYRIA_MISSION_BEHIND_LINES_START   = "新打击任务：深入敌后",
+	SYRIA_MISSION_BEHIND_LINES_END     = "打击任务结束：深入敌后",
 	SYRIA_DYNAMIC_RESUPPLY_TITLE       = "补给 %s%s",
-	SYRIA_DYNAMIC_RESUPPLY_DESC        = "将补给运送至 %s",
+	SYRIA_DYNAMIC_RESUPPLY_DESC        = "向 %s 运送补给",
 	SYRIA_DYNAMIC_RESUPPLY_START_ONE   = "新任务：补给 %s%s",
-	SYRIA_DYNAMIC_RESUPPLY_START_TWO   = "新任务：补给 %s%s，%s%s",
+	SYRIA_DYNAMIC_RESUPPLY_START_TWO   = "新任务：补给 %s%s、%s%s",
 	SYRIA_DYNAMIC_RESUPPLY_END         = "任务结束：补给 %s",
 	SYRIA_DYNAMIC_ATTACK_TITLE         = "攻击 %s%s",
-	SYRIA_DYNAMIC_ATTACK_DESC          = "摧毁 %s 的敌方部队",
+	SYRIA_DYNAMIC_ATTACK_DESC          = "摧毁 %s 的敌军部队",
 	SYRIA_DYNAMIC_ATTACK_START_ONE     = "新任务：攻击 %s%s",
-	SYRIA_DYNAMIC_ATTACK_START_TWO     = "新任务：攻击 %s%s，%s%s",
+	SYRIA_DYNAMIC_ATTACK_START_TWO     = "新任务：攻击 %s%s、%s%s",
 	SYRIA_DYNAMIC_ATTACK_END           = "任务结束：攻击 %s",
 	SYRIA_DYNAMIC_CAPTURE_TITLE        = "占领 %s%s",
-	SYRIA_DYNAMIC_CAPTURE_DESC         = "%s 为中立区域。透过运送补给进行占领",
+	SYRIA_DYNAMIC_CAPTURE_DESC         = "%s 当前为中立区。通过运送补给来占领它",
 	SYRIA_DYNAMIC_CAPTURE_START        = "新任务：占领 %s%s",
 	SYRIA_DYNAMIC_CAPTURE_END          = "任务结束：占领 %s",
 	SYRIA_DYNAMIC_RECON_TITLE          = "侦察 %s%s",
@@ -13629,264 +16636,264 @@ MGRS: 37 S EU 31088 22294
 	SYRIA_DYNAMIC_RECON_START          = "新侦察任务：飞越 %s%s",
 	SYRIA_DYNAMIC_RECON_END            = "任务结束：侦察",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "任务结束：侦察 %s",
-	SYRIA_DYNAMIC_RECON_END_BY         = "任务结束：%s 已完成侦察 %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] 与 [%s] 已在 %s 完成侦察！\n奖励待领：各 %d 点数（降落后领取）。\n情报有效时间 10 分钟。",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] 已在 %s 完成侦察。\n奖励待领：%d 点数（降落后领取）。\n情报有效时间 10 分钟。",
-	SYRIA_ESCORT_ACTIVE_PENDING        = "当前任务待执行：\n\n护送车队从 %s 至 %s",
-	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "特殊任务可用：\n\n护送车队从 %s 至 %s",
-	SYRIA_ESCORT_DESC                  = "\n护送车队至 %s\n道路上充满敌对威胁。",
-	SYRIA_ESCORT_START                 = "护送车队至 %s",
-	SYRIA_ESCORT_FAILED_RETRY          = "任务失败：\n\n车队已被摧毁\n\n请待命，正在寻找新目标...",
+	SYRIA_DYNAMIC_RECON_END_BY         = "任务结束：%s 的侦察由 %s 完成",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] 与 [%s] 已在 %s 完成侦察！\n奖励待领取：每人 %d 积分（着陆后领取）。\n情报有效 10 分钟。",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] 已在 %s 完成侦察。\n奖励待领取：%d 积分（着陆后领取）。\n情报有效 10 分钟。",
+	SYRIA_ESCORT_ACTIVE_PENDING        = "当前有待执行任务：\n\n护送车队从 %s 前往 %s",
+	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "特殊任务可用：\n\n护送车队从 %s 前往 %s",
+	SYRIA_ESCORT_DESC                  = "\n护送一支车队前往 %s\n道路上遍布敌军。",
+	SYRIA_ESCORT_START                 = "护送车队前往 %s",
+	SYRIA_ESCORT_FAILED_RETRY          = "任务失败：\n\n车队已被摧毁\n\n请待命，正在寻找新的编队……",
 	SYRIA_ESCORT_FAILED                = "任务失败：\n\n车队已被摧毁",
-	SYRIA_ESCORT_COMPLETED_MULTI       = "护送任务完成：%s\n各获得 %d 点数（降落后领取）",
-	SYRIA_ESCORT_COMPLETED_SOLO        = "护送任务完成：%s\n获得 %d 点数（降落后领取）",
-	SYRIA_ESCORT_COMPLETED_NONE        = "护送任务完成 - 无玩家存活。\n奖励 + %d",
-	SYRIA_BOMB_RUNWAY_END_JOINT        = "任务结束：%s 跑道轰炸已由 %s 与 %s 完成\n各获得 %d 点数（降落后领取）",
-	SYRIA_BOMB_RUNWAY_END_SOLO         = "任务结束：%s 跑道轰炸已由 %s 完成\n获得 %d 点数（降落后领取）",
-	SYRIA_BOMB_RUNWAY_END_COMPLETED    = "任务结束：%s 跑道轰炸完成",
-	SYRIA_BOMB_RUNWAY_END_CANCELED_ZONE = "任务结束：%s 跑道轰炸已取消",
-	SYRIA_BOMB_RUNWAY_CANCELED         = "任务已取消：跑道轰炸",
-
+	SYRIA_ESCORT_COMPLETED_MULTI       = "护送任务已由 %s 完成\n每人 %d 积分，着陆后领取",
+	SYRIA_ESCORT_COMPLETED_SOLO        = "护送任务已由 %s 完成\n%d 积分，着陆后领取",
+	SYRIA_ESCORT_COMPLETED_NONE        = "护送任务已完成，但没有存活玩家。\n奖励 + %d",
+	SYRIA_BOMB_RUNWAY_END_JOINT        = "任务结束：%s 的轰炸跑道任务已由 %s 与 %s 完成\n每人 %d 积分，着陆后领取",
+	SYRIA_BOMB_RUNWAY_END_SOLO         = "任务结束：%s 的轰炸跑道任务已由 %s 完成\n%d 积分，着陆后领取",
+	SYRIA_BOMB_RUNWAY_END_COMPLETED    = "任务结束：%s 的轰炸跑道任务已完成",
+	SYRIA_BOMB_RUNWAY_END_CANCELED_ZONE = "任务结束：%s 的轰炸跑道任务已取消",
+	SYRIA_BOMB_RUNWAY_CANCELED         = "任务已取消：轰炸跑道",
 	-- ============================================================
 	-- PvP / Stats Menus
 	-- ============================================================
-	PVP_MODE_DISABLED_RED_SLOTS        = "PVP 模式已禁用，不可使用红方机位。",
-	PVP_MODE_DISABLED                  = "PVP 模式已禁用。",
-	PVP_CANNOT_SPAWN_IN_ZONE           = "无法在敌方或中立区域以 %s 生成",
-	STATS_MENU_ROOT                    = "统计与设置",
+	PVP_MODE_DISABLED_RED_SLOTS        = "PvP 模式已关闭。红方阵营机位不可用。",
+	PVP_MODE_DISABLED                  = "PvP 模式已关闭。",
+	PVP_CANNOT_SPAWN_IN_ZONE           = "无法在敌方/中立区域以 %s 生成",
+	STATS_MENU_ROOT                    = "统计",
 	STATS_MENU_STATS                   = "统计",
 	STATS_MENU_MY_STATS                = "我的统计",
-	STATS_MENU_ALL_STATS               = "前 10 名玩家",
+	STATS_MENU_ALL_STATS               = "全部统计",
 	STATS_MENU_TOP_5_PLAYERS           = "前 5 名玩家",
 	STATS_MENU_TOP_5_TODAY             = "今日前 5 名",
-	STATS_MENU_RANK_HELP               = "阶级说明",
-	STATS_MENU_BUDGET_OVERVIEW         = "预算总览",
+	STATS_MENU_RANK_HELP               = "军衔说明",
+	STATS_MENU_BUDGET_OVERVIEW         = "预算概览",
 	STATS_LEADERBOARD_RANK             = "排行榜名次：%s",
-	STATS_CURRENT_RANK                 = "目前阶级：%s",
-	STATS_NEXT_RANK                    = "下一阶级：%s",
-	STATS_REMAINING_SUFFIX             = "，剩余：%s",
-	STATS_RANK_REQUIREMENTS            = "阶级需求（总点数）：",
+	STATS_CURRENT_RANK                 = "当前军衔：%s",
+	STATS_NEXT_RANK                    = "下一军衔：%s",
+	STATS_REMAINING_SUFFIX             = "，还需：%s",
+	STATS_RANK_REQUIREMENTS            = "军衔要求（总积分）：",
 	STATS_LEADERBOARDS_TITLE           = "[排行榜]",
 	STATS_TOP_PLAYERS_TITLE            = "[前 %s 名玩家]",
-	STATS_RANK_LINE                    = "阶级：%s",
-	STATS_LABEL_AIR                    = "飞机",
+	STATS_RANK_LINE                    = "军衔：%s",
+	STATS_LABEL_AIR                    = "空战",
 	STATS_LABEL_HELO                   = "直升机",
 	STATS_LABEL_GROUND_UNITS           = "地面单位",
-	STATS_LABEL_SHIP                   = "舰艇",
-	STATS_LABEL_SAM                    = "防空系统",
+	STATS_LABEL_SHIP                   = "舰船",
+	STATS_LABEL_SAM                    = "防空导弹",
 	STATS_LABEL_STRUCTURE              = "建筑",
-	STATS_LABEL_DEATHS                 = "死亡",
-	STATS_LABEL_CAPTURED_BY_ENEMY      = "被敌方俘获",
+	STATS_LABEL_DEATHS                 = "阵亡",
+	STATS_LABEL_CAPTURED_BY_ENEMY      = "被敌军俘获",
 	STATS_LABEL_ZONE_CAPTURE           = "区域占领",
 	STATS_LABEL_ZONE_UPGRADE           = "区域升级",
 	STATS_LABEL_PILOT_RESCUE           = "飞行员救援",
-	STATS_LABEL_POINTS                 = "点数",
-	STATS_LABEL_POINTS_SPENT           = "已花费点数",
+	STATS_LABEL_POINTS                 = "积分",
+	STATS_LABEL_POINTS_SPENT           = "已花费积分",
 	STATS_LABEL_FLIGHT_TIME            = "飞行时间",
-
 	-- ============================================================
 	-- Mission Text
 	-- ============================================================
 	MISSION_DEFAULT_TITLE              = "任务",
-	MISSION_DEFAULT_DESCRIPTION        = "无任务描述。",
+	MISSION_DEFAULT_DESCRIPTION        = "暂无任务描述。",
 	MISSION_ACTIVE_HEADER              = "进行中任务",
 	MISSION_SEPARATOR                  = "------------------------------------------------",
-	MISSION_STRIKE_NONE                = "目前无打击任务",
-	MISSION_STRIKE_NONE_MESSAGE        = "目前没有打击任务。",
-	MISSION_STRIKE_EXPIRED             = "打击任务已失效。",
-	MISSION_CAP_TITLE                  = "空中巡逻任务",
-	MISSION_CAP_DESCRIPTION_EMPTY      = "击落 %d 个空对空目标且未被击落，谁能胜出？",
-	MISSION_CAP_DESCRIPTION_WITH_SCORE = "击落 %d 个空对空目标，谁能胜出？\n\n%s",
-	MISSION_CAP_SCOREBOARD_HEADER      = "目前击落数：\n",
-	MISSION_CAP_START                  = "新 CAP 任务：击落 %d 个空对空目标。",
-	MISSION_CAP_END                    = "任务结束：CAP",
-	MISSION_CAP_COMPLETED_SOLO         = "[%s] 已完成 CAP 任务！\n奖励待领：%d 点数（降落后领取）。",
-	MISSION_CAP_COMPLETED_JOINT        = "[%s] 与 [%s] 已完成 CAP 任务！\n奖励待领：各 %d 点数（降落后领取）。",
-	MISSION_CAS_TITLE                  = "近距空中支援任务",
-	MISSION_CAS_DESCRIPTION_EMPTY      = "摧毁 %d 个地面目标且未被击落，谁能胜出？",
-	MISSION_CAS_DESCRIPTION_WITH_SCORE = "摧毁 %d 个地面目标，谁能胜出？\n\n%s",
-	MISSION_CAS_START                  = "新 CAS 任务：摧毁 %d 个地面目标。",
-	MISSION_CAS_COMPLETED_SOLO         = "[%s] 已完成 CAS 任务！\n奖励待领：%d 点数（降落后领取）。",
-	MISSION_CAS_COMPLETED_JOINT        = "[%s] 与 [%s] 已完成 CAS 任务！\n奖励待领：各 %d 点数（降落后领取）。",
+	MISSION_STRIKE_NONE                = "当前没有进行中的打击任务",
+	MISSION_STRIKE_NONE_MESSAGE        = "当前没有进行中的打击任务。",
+	MISSION_STRIKE_EXPIRED             = "打击任务已不再有效。",
+	MISSION_CAP_TITLE                  = "空中战斗巡逻任务",
+	MISSION_CAP_DESCRIPTION_EMPTY      = "击落 %d 个空中目标且自身不得被击落，看看谁能赢？",
+	MISSION_CAP_DESCRIPTION_WITH_SCORE = "击落 %d 个空中目标，看看谁能赢？\n\n%s",
+	MISSION_CAP_SCOREBOARD_HEADER      = "当前击杀数：\n",
+	MISSION_CAP_START                  = "新空中战斗巡逻任务：击落 %d 个空中目标。",
+	MISSION_CAP_END                    = "任务结束：空中战斗巡逻",
+	MISSION_CAP_COMPLETED_SOLO         = "[%s] 已完成空中战斗巡逻任务！\n奖励待领取：%d 积分（着陆后领取）。",
+	MISSION_CAP_COMPLETED_JOINT        = "[%s] 与 [%s] 已完成空中战斗巡逻任务！\n奖励待领取：每人 %d 积分（着陆后领取）。",
+	MISSION_CAS_TITLE                  = "近距离空中支援任务",
+	MISSION_CAS_DESCRIPTION_EMPTY      = "摧毁 %d 个地面目标且自身不得被击落，看看谁能赢？",
+	MISSION_CAS_DESCRIPTION_WITH_SCORE = "摧毁 %d 个地面目标，看看谁能赢？\n\n%s",
+	MISSION_CAS_START                  = "新近距离空中支援任务：摧毁 %d 个地面目标。",
+	MISSION_CAS_COMPLETED_SOLO         = "[%s] 已完成近距离空中支援任务！\n奖励待领取：%d 积分（着陆后领取）。",
+	MISSION_CAS_COMPLETED_JOINT        = "[%s] 与 [%s] 已完成近距离空中支援任务！\n奖励待领取：每人 %d 积分（着陆后领取）。",
 	MISSION_ESCORT_TITLE               = "护送任务",
-	MISSION_ESCORT_ACTIVE_PENDING      = "当前任务待执行：\n\n护送车队从 %s 至 %s",
-	MISSION_ESCORT_SPECIAL_AVAILABLE   = "特殊任务可用：\n\n护送车队从 %s 至 %s",
-	MISSION_ESCORT_DESCRIPTION         = "\n护送车队至 %s\n道路上充满敌对威胁。",
-	MISSION_ESCORT_START               = "护送车队至 %s",
+	MISSION_ESCORT_ACTIVE_PENDING      = "当前待执行任务：\n\n护送车队从 %s 前往 %s",
+	MISSION_ESCORT_SPECIAL_AVAILABLE   = "特殊任务可用：\n\n护送车队从 %s 前往 %s",
+	MISSION_ESCORT_DESCRIPTION         = "\n护送一支车队前往 %s\n道路上遍布敌军。",
+	MISSION_ESCORT_START               = "护送车队前往 %s",
 	MISSION_BOMB_RUNWAY_TITLE          = "轰炸跑道",
-	MISSION_BOMB_RUNWAY_DESC_ONE       = "于 %s%s 的跑道投下 1 枚炸弹",
-	MISSION_BOMB_RUNWAY_DESC_ALL       = "于 %s%s 的每条跑道各投下 1 枚炸弹",
-	MISSION_BOMB_RUNWAY_START_ONE      = "新任务：轰炸 %s%s 跑道",
-	MISSION_BOMB_RUNWAY_START_ALL      = "新任务：轰炸 %s%s 所有跑道",
+	MISSION_BOMB_RUNWAY_DESC_ONE       = "向 %s%s 的跑道投下 1 枚炸弹",
+	MISSION_BOMB_RUNWAY_DESC_ALL       = "向 %s%s 的每条跑道各投下 1 枚炸弹",
+	MISSION_BOMB_RUNWAY_START_ONE      = "新任务：轰炸 %s%s 的跑道",
+	MISSION_BOMB_RUNWAY_START_ALL      = "新任务：轰炸 %s%s 的全部跑道",
 	MISSION_BOMB_RUNWAY_HIT            = "%s 命中！",
-	MISSION_SEAD_TITLE                 = "%s SEAD 任务",
-	MISSION_SEAD_DESCRIPTION           = "压制 %s 的敌方防空系统",
-	MISSION_SEAD_START                 = "新 SEAD 任务：攻击 %s 的防空系统",
-	MISSION_SEAD_END                   = "SEAD 任务结束",
-	MISSION_DEAD_TITLE                 = "%s DEAD 任务",
-	MISSION_DEAD_DESCRIPTION           = "摧毁 %s 的剩余防空系统",
-	MISSION_DEAD_START                 = "新 DEAD 任务：摧毁剩余防空系统 %s",
-	MISSION_DEAD_END                   = "DEAD 任务结束",
+	MISSION_SEAD_TITLE                 = "%s 的压制防空任务",
+	MISSION_SEAD_DESCRIPTION           = "压制 %s 的敌军防空导弹/防空阵地",
+	MISSION_SEAD_START                 = "新压制防空任务：攻击 %s 的防空阵地",
+	MISSION_SEAD_END                   = "压制防空任务结束",
+	MISSION_DEAD_TITLE                 = "%s 的摧毁防空任务",
+	MISSION_DEAD_DESCRIPTION           = "摧毁 %s 剩余的敌军防空力量",
+	MISSION_DEAD_START                 = "新摧毁防空任务：摧毁 %s 剩余防空力量",
+	MISSION_DEAD_END                   = "摧毁防空任务结束",
 	MISSION_STRIKE_MENU                = "打击任务",
 	MISSION_STRIKE_DEFAULT_TITLE       = "打击任务",
 	MISSION_AVAILABLE_HEADER           = "可用任务",
 	MISSION_TEXT_ENTRY                 = "[%s]\n%s\n------------------------------------------------",
-	MISSION_IN_PROGRESS_CONTINUE       = "目前任务进行中，是否继续？",
+	MISSION_IN_PROGRESS_CONTINUE       = "当前任务正在进行。继续吗？",
 	MISSION_ACCEPT                     = "接受任务",
 	MISSION_DENY                       = "拒绝任务",
 	MISSION_DENIED                     = "任务已拒绝。",
 	MISSION_ESCORT_GROUP_INVALID       = "错误：护送编队未定义或无效。",
 	MISSION_ESCORT_ACCEPTED_BY         = "护送任务已由 %s 接受。",
-	MISSION_ESCORT_STANDBY_READY       = "护送编队：\n\n我们已待命，随时可依指示行动。",
+	MISSION_ESCORT_STANDBY_READY       = "护送编队：\n\n我们已待命，随时听候你的命令出发。",
 	MISSION_ARTY_TITLE                 = "摧毁炮兵",
-	MISSION_ARTY_DESCRIPTION           = "侦测到炮兵自 %s 出发前往 %s。\n在其进入攻击范围前将其摧毁。",
+	MISSION_ARTY_DESCRIPTION           = "发现炮兵从 %s 向 %s 移动。\n在其进入射程前将其摧毁。",
 	MISSION_ARTY_START                 = "新任务：摧毁前往 %s 的炮兵",
 	MISSION_ARTY_END                   = "任务结束：摧毁炮兵",
-
 -- ============================================================
 	-- Zone / Intel
 	-- ============================================================
-	INTEL_NONE_AVAILABLE               = "无可用情报。",
-	INTEL_NONE_AVAILABLE_MENU          = "无可用情报",
-	INTEL_NONE_AVAILABLE_FOR_ZONE      = "%s 无可用情报。",
+	INTEL_NONE_AVAILABLE               = "暂无情报。",
+	INTEL_NONE_AVAILABLE_MENU          = "暂无情报",
+	INTEL_NONE_AVAILABLE_FOR_ZONE      = "%s 暂无情报。",
 	INTEL_EXPIRED_FOR_ZONE             = "%s 的情报已过期。",
-	INTEL_HEADER                       = "%s 情报：",
+	INTEL_HEADER                       = "%s 的情报：",
 	INTEL_UPDATE_HEADER                = "%s 情报更新：\n%s",
-	INTEL_IDENTIFIED_SAMS              = "已识别防空系统：%s。",
+	INTEL_IDENTIFIED_SAMS              = "已识别的防空系统：%s。",
 	INTEL_STRUCTURES                   = "建筑：%s。",
-	INTEL_ADDITIONAL_CONTACTS          = "其他目标：%s。",
+	INTEL_ADDITIONAL_CONTACTS          = "其他接触目标：%s。",
 	INTEL_REMAINING_SAMS               = "剩余防空系统：%s。",
 	INTEL_STRUCTURES_REMAINING         = "剩余建筑：%s。",
-	INTEL_ADDITIONAL_CONTACTS_REMAINING = "剩余其他目标：%s。",
-	INTEL_SITE_DESTROYED               = "%s 已摧毁。",
-	INTEL_SITE_DETECTED                = "%s 已侦测。",
-	INTEL_STR_DESTROYED_DEGRADED       = "%s 搜索雷达(STR)已摧毁；阵地能力下降。",
-	INTEL_TR_DESTROYED_DEGRADED        = "%s 追踪雷达(TR)已摧毁；阵地能力下降。",
-	INTEL_ENEMY_REPAIRED_STR           = "敌方已修复 %s 搜索雷达(STR)。",
-	INTEL_ENEMY_REPAIRED_TR            = "敌方已修复 %s 追踪雷达(TR)。",
-	INTEL_COUNT_DESTROYED              = "%s 已摧毁。",
-	INTEL_COUNT_DETECTED               = "%s 已侦测。",
-	INTEL_ENEMY_REPAIRED_COUNT         = "敌方已修复 %s。",
-	INTEL_CONTACT_DETECTED             = "%s 已侦测：%s。",
+	INTEL_ADDITIONAL_CONTACTS_REMAINING = "剩余其他接触目标：%s。",
+	INTEL_SITE_DESTROYED               = "%s 已被摧毁。",
+	INTEL_SITE_DETECTED                = "%s 已被发现。",
+	INTEL_STR_DESTROYED_DEGRADED       = "%s 的 STR 已被摧毁；阵地能力下降。",
+	INTEL_TR_DESTROYED_DEGRADED        = "%s 的 TR 已被摧毁；阵地能力下降。",
+	INTEL_ENEMY_REPAIRED_STR           = "敌军已修复 %s 的 搜索雷达。",
+	INTEL_ENEMY_REPAIRED_TR            = "敌军已修复 %s 的 追踪雷达。",
+	INTEL_COUNT_DESTROYED              = "%s 已被摧毁。",
+	INTEL_COUNT_DETECTED               = "%s 已被发现。",
+	INTEL_ENEMY_REPAIRED_COUNT         = "敌军已修复 %s。",
+	INTEL_CONTACT_DETECTED             = "%s 已发现：%s。",
 	INTEL_CONTACT_DESTROYED            = "%s 已摧毁：%s。",
-	INTEL_STRUCTURE_CONTACT_DETECTED   = "%s 已侦测：%s。",
+	INTEL_STRUCTURE_CONTACT_DETECTED   = "%s 已发现：%s。",
 	INTEL_STRUCTURE_DESTROYED          = "%s 已摧毁：%s。",
-	INTEL_MANPAD_NEUTRALIZED           = "地面部队中的 MANPAD 威胁已排除。",
-	INTEL_MANPAD_IDENTIFIED            = "已识别地面部队中的 MANPAD 威胁。",
-	INTEL_ON_MOVE                      = "情报：%s 正在 %s 移动中。",
-	INTEL_AIR_STARTING_UP_AT           = "情报：侦测到 %s 正于 %s 启动引擎",
-	INTEL_AIR_TOOK_OFF_FROM            = "情报：%s 刚自 %s 起飞",
-	INTEL_AIR_INBOUND_LANDING_AT       = "情报：目视 %s 正进场，即将降落于 %s",
-	INTEL_ENEMY_CONVOY_MOVING_OUT_FROM = "情报：侦测到敌方车队自 %s 出发",
-	INTEL_ENEMY_CONVOY_ARRIVING_AT     = "情报：侦测到敌方车队即将抵达 %s",
-	INTEL_MASS_ATTACK                  = "情报：敌军正对 %s 发动大规模攻击",
-	INTEL_ARMOR_LINE                   = "装甲部队：%s。",
-	INTEL_ARMOR_REMAINING_LINE         = "剩余装甲部队：%s。",
+	INTEL_MANPAD_NEUTRALIZED           = "地面部队中的便携防空威胁已被清除。",
+	INTEL_MANPAD_IDENTIFIED            = "已确认地面部队存在便携防空威胁。",
+	INTEL_ON_MOVE                      = "情报：%s 正在 %s 区域内机动。",
+	INTEL_AIR_STARTING_UP_AT           = "情报：发现 %s 正在 %s 启动",
+	INTEL_AIR_TOOK_OFF_FROM            = "情报：%s 刚从 %s 起飞",
+	INTEL_AIR_INBOUND_LANDING_AT       = "情报：已目视确认 %s 正进场并即将在 %s 降落",
+	INTEL_ENEMY_CONVOY_MOVING_OUT_FROM = "情报：发现敌军车队正从 %s 出发",
+	INTEL_ENEMY_CONVOY_ARRIVING_AT     = "情报：发现敌军车队即将抵达 %s",
+	INTEL_MASS_ATTACK                  = "情报：敌军正对 %s 发起大规模进攻",
+	INTEL_ARMOR_LINE                   = "装甲：%s。",
+	INTEL_ARMOR_REMAINING_LINE         = "剩余装甲：%s。",
 	INTEL_ARTILLERY_LINE               = "炮兵：%s。",
 	INTEL_ARTILLERY_REMAINING_LINE     = "剩余炮兵：%s。",
 	INTEL_GROUND_FORCES_LINE           = "地面部队：%s。",
 	INTEL_GROUND_FORCES_REMAINING_LINE = "剩余地面部队：%s。",
-	INTEL_GROUND_FORCES_NONE           = "未侦测到",
-	INTEL_AAA_LINE                     = "防空火炮：%s。",
-	INTEL_AAA_REMAINING_LINE           = "剩余防空火炮：%s。",
-	INTEL_RADAR_DESTROYED_SUFFIX       = "（雷达已摧毁）",
-	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = "（%d 部雷达已摧毁）",
-	INTEL_SAM_STR_DESTROYED_SUFFIX     = "（搜索雷达已摧毁）",
-	INTEL_SAM_TR_DESTROYED_SUFFIX      = "（追踪雷达已摧毁）",
-	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d 个配备 MANPAD 的地面部队",
-	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d 个配备 MANPAD 的地面部队",
-	INTEL_COUNT_GROUND_FORCES_ONE      = "%d 个地面部队编组",
-	INTEL_COUNT_GROUND_FORCES_MANY     = "%d 个地面部队编组",
-	INTEL_COUNT_ARMORED_ONE            = "%d 个装甲编组",
-	INTEL_COUNT_ARMORED_MANY           = "%d 个装甲编组",
-	INTEL_COUNT_ARTILLERY_ONE          = "%d 个炮兵编组",
-	INTEL_COUNT_ARTILLERY_MANY         = "%d 个炮兵编组",
-	INTEL_COUNT_SHILKA_ONE             = "%d 个 Shilka 编组",
-	INTEL_COUNT_SHILKA_MANY            = "%d 个 Shilka 编组",
-	INTEL_COUNT_FLAK_ONE               = "%d 个高射砲编组",
-	INTEL_COUNT_FLAK_MANY              = "%d 个高射砲编组",
-	INTEL_COUNT_HEAVY_AAA_ONE          = "%d 个重型防空编组",
-	INTEL_COUNT_HEAVY_AAA_MANY         = "%d 个重型防空编组",
-	INTEL_COUNT_ZU23_AAA_ONE           = "%d 个 ZU-23 防空编组",
-	INTEL_COUNT_ZU23_AAA_MANY          = "%d 个 ZU-23 防空编组",
-	INTEL_COUNT_OTHER_AAA_ONE          = "%d 个其他防空编组",
-	INTEL_COUNT_OTHER_AAA_MANY         = "%d 个其他防空编组",
-	INTEL_COUNT_AAA_ONE                = "%d 个防空编组",
-	INTEL_COUNT_AAA_MANY               = "%d 个防空编组",
-	INTEL_COUNT_FLAK_RADAR_ONE         = "%d 部高射砲雷达",
-	INTEL_COUNT_FLAK_RADAR_MANY        = "%d 部高射砲雷达",
-	INTEL_COUNT_NEW_CONTACT_ONE        = "%d 个新目标",
-	INTEL_COUNT_NEW_CONTACT_MANY       = "%d 个新目标",
-	INTEL_COUNT_CONTACT_ONE            = "%d 个目标",
-	INTEL_COUNT_CONTACT_MANY           = "%d 个目标",
-	INTEL_COUNT_STRUCTURE_CONTACT_ONE  = "%d 个建筑目标",
-	INTEL_COUNT_STRUCTURE_CONTACT_MANY = "%d 个建筑目标",
+	INTEL_GROUND_FORCES_NONE           = "未发现",
+	INTEL_AAA_LINE                     = "高炮：%s。",
+	INTEL_AAA_REMAINING_LINE           = "剩余高炮：%s。",
+	INTEL_RADAR_DESTROYED_SUFFIX       = "（雷达已毁）",
+	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = "（%d 部雷达已毁）",
+	INTEL_SAM_STR_DESTROYED_SUFFIX     = "（STR 已毁）",
+	INTEL_SAM_TR_DESTROYED_SUFFIX      = "（TR 已毁）",
+	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d 个携带便携防空的地面分队",
+	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d 个携带便携防空的地面分队",
+	INTEL_COUNT_GROUND_FORCES_ONE      = "%d 个地面分队",
+	INTEL_COUNT_GROUND_FORCES_MANY     = "%d 个地面分队",
+	INTEL_COUNT_ARMORED_ONE            = "%d 个装甲分队",
+	INTEL_COUNT_ARMORED_MANY           = "%d 个装甲分队",
+	INTEL_COUNT_ARTILLERY_ONE          = "%d 个炮兵分队",
+	INTEL_COUNT_ARTILLERY_MANY         = "%d 个炮兵分队",
+	INTEL_COUNT_SHILKA_ONE             = "%d 个石勒喀分队",
+	INTEL_COUNT_SHILKA_MANY            = "%d 个石勒喀分队",
+	INTEL_COUNT_FLAK_ONE               = "%d 个高炮分队",
+	INTEL_COUNT_FLAK_MANY              = "%d 个高炮分队",
+	INTEL_COUNT_HEAVY_AAA_ONE          = "%d 个重型高炮分队",
+	INTEL_COUNT_HEAVY_AAA_MANY         = "%d 个重型高炮分队",
+	INTEL_COUNT_ZU23_AAA_ONE           = "%d 个 ZU-23 高炮分队",
+	INTEL_COUNT_ZU23_AAA_MANY          = "%d 个 ZU-23 高炮分队",
+	INTEL_COUNT_OTHER_AAA_ONE          = "%d 个其他高炮分队",
+	INTEL_COUNT_OTHER_AAA_MANY         = "%d 个其他高炮分队",
+	INTEL_COUNT_AAA_ONE                = "%d 个高炮分队",
+	INTEL_COUNT_AAA_MANY               = "%d 个高炮分队",
+	INTEL_COUNT_FLAK_RADAR_ONE         = "%d 部高炮雷达",
+	INTEL_COUNT_FLAK_RADAR_MANY        = "%d 部高炮雷达",
+	INTEL_COUNT_NEW_CONTACT_ONE        = "%d 个新接触目标",
+	INTEL_COUNT_NEW_CONTACT_MANY       = "%d 个新接触目标",
+	INTEL_COUNT_CONTACT_ONE            = "%d 个接触目标",
+	INTEL_COUNT_CONTACT_MANY           = "%d 个接触目标",
+	INTEL_COUNT_STRUCTURE_CONTACT_ONE  = "%d 个建筑接触目标",
+	INTEL_COUNT_STRUCTURE_CONTACT_MANY = "%d 个建筑接触目标",
 	INTEL_COUNT_STRUCTURE_ONE          = "%d 个建筑",
 	INTEL_COUNT_STRUCTURE_MANY         = "%d 个建筑",
 	ARTILLERY_ATTACK_GRID_1            = "%s：敌方炮兵正从 GRID %s 附近猛烈炮击我们！",
 	ARTILLERY_ATTACK_GRID_2            = "%s：敌方炮兵正从 GRID %s 附近攻击我们！",
 	ARTILLERY_ATTACK_GRID_3            = "敌方炮兵正从 GRID %s 附近向 %s 开火，请求支援！",
-	ARTILLERY_STILL_FIRING             = "情报：敌方炮兵仍在向 %s 开火。大致位置 %s，grid %s。已放置地图标记。",
+	ARTILLERY_STILL_FIRING             = "情报：敌方炮兵仍在向 %s 开火。大致位置 %s，高度 %s，grid %s。已放置地图标记。",
 	SURFACE_INTEL_LAST_KNOWN_1         = "%s：敌方 %s 最后已知位置在 GRID %s（%s），正从 %s 往 %s 移动。已放置地图标记。",
 	SURFACE_INTEL_LAST_KNOWN_2         = "%s：敌方 %s 接触更新，最后已知位置在 GRID %s（%s），正从 %s 往 %s 移动。已放置地图标记。",
 	SURFACE_INTEL_LAST_KNOWN_3         = "%s：敌方 %s 报告在 GRID %s（%s）附近，最后已知从 %s 往 %s 移动。已放置地图标记。",
+	SURFACE_INTEL_PROGRESS_HALFWAY_1   = "他们已经走到一半了。",
+	SURFACE_INTEL_PROGRESS_HALFWAY_2   = "车队大约已抵达前往目标的半途。",
+	SURFACE_INTEL_PROGRESS_HALFWAY_3   = "他们已到达路线中点。",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_1 = "他们快到了！",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_2 = "车队正在接近目标。",
+	SURFACE_INTEL_PROGRESS_ALMOST_THERE_3 = "他们正逼近目标，请尽快拦截。",
 	SURFACE_INTEL_MARKER_LAST_KNOWN    = "敌方 %s 最后已知位置\nGrid %s\n目标：%s\n放置：%s",
 	SURFACE_INTEL_MARKER_ARTILLERY_FIRING = "敌方炮兵开火\nGrid %s\n目标：%s\n放置：%s",
-
 	-- ============================================================
 	-- System / Combat Alerts
 	-- ============================================================
-	SYSTEM_ENGINE_CRASH                = "Foothold 引擎发生崩溃，请将伺服器日誌回报给 Leka。\n地图：%s\n版本：%s\n此后任务将无法保存，建议重新启动任务。",
-	COMBAT_RED_MASS_ATTACK             = "红方对 %s 发动大规模攻击（%d/%d 强制）",
-	COMBAT_HUNT_SCRAMBLE              = "%s，敌军已紧急起飞 2 架战机前来追击！",
-
+	SYSTEM_ENGINE_CRASH                = "Foothold 引擎已崩溃，请将服务器日志提交给 Leka。\n地图：%s\n版本：%s\n从现在开始任务将无法保存，重启任务可能有帮助。",
+	COMBAT_RED_MASS_ATTACK             = "红方已对 %s 发起大规模进攻（强制 %d/%d）",
+	COMBAT_HUNT_SCRAMBLE              = "%s，敌军正紧急起飞 2 架战斗机前来猎杀你！",
 -- ============================================================
 	-- Zone Admin / Labels
 	-- ============================================================
 	ZONE_LABEL_MISSION                 = "任务！",
-	ZONE_MISSION_TAG_ATTACK            = "攻击",
+	ZONE_MISSION_TAG_ATTACK            = "攻击目标",
 	ZONE_MISSION_TAG_BOMB_RUNWAY       = "轰炸跑道",
-	ZONE_MISSION_TAG_CAPTURE           = "占领",
-	ZONE_MISSION_TAG_DEAD              = "DEAD",
-	ZONE_MISSION_TAG_RECON             = "侦察",
-	ZONE_MISSION_TAG_RESUPPLY          = "补给",
-	ZONE_MISSION_TAG_SEAD              = "SEAD",
+	ZONE_MISSION_TAG_CAPTURE           = "需要占领",
+	ZONE_MISSION_TAG_DEAD              = "摧毁防空",
+	ZONE_MISSION_TAG_RECON             = "前往侦察",
+	ZONE_MISSION_TAG_RESUPPLY          = "需要补给",
+	ZONE_MISSION_TAG_SEAD              = "压制防空",
 	ZONE_LABEL_WAREHOUSE               = "[仓库]",
 	ZONE_LABEL_EMPTY_WAREHOUSE         = "仓库已空！",
-	ZONE_LABEL_LOW_WAREHOUSE           = "仓库存量低！",
-	ZONE_AIRBASE_NOT_FOUND             = "找不到机场 %s",
-	ZONE_ALL_SIDE_FULLY_UPGRADED       = "所有 %s 区域已完全升级。",
-	ZONE_ALL_RED_FULLY_UPGRADED        = "所有红方区域已完全升级。",
-	ZONE_ALL_BLUE_FULLY_UPGRADED       = "所有蓝方区域已完全升级。",
-	ZONE_UPGRADE_PROCESS_RUNNING       = "升级流程已在执行中。",
-	ZONE_COMMAND_ACCEPTED_PENDING      = "指令已接受，待执行",
+	ZONE_LABEL_LOW_WAREHOUSE           = "仓库库存偏低！",
+	ZONE_AIRBASE_NOT_FOUND             = "未找到机场 %s",
+	ZONE_ALL_SIDE_FULLY_UPGRADED       = "所有 %s 区域现已全部满级。",
+	ZONE_ALL_RED_FULLY_UPGRADED        = "所有红方区域现已全部满级。",
+	ZONE_ALL_BLUE_FULLY_UPGRADED       = "所有蓝方区域现已全部满级。",
+	ZONE_UPGRADE_PROCESS_RUNNING       = "升级流程已在进行中。",
+	ZONE_COMMAND_ACCEPTED_PENDING      = "命令已接受，等待执行",
 	ZONE_ERROR_NOT_FOUND_IN_MISSION    = "错误：任务中找不到区域 [%s]",
-	ZONE_INIT_MISSING_UPGRADE_GROUP    = "ZoneCommander 初始化：区域 [%s] 索引 [%s] 缺少升级群组 %s（将在可能时替换）",
-	ZONE_UPGRADE_GROUP_MISSING_SKIPPED = "升级群组 %s 缺失，已跳过。",
-	ZONE_FAILED_SPAWN_REPLACEMENT_GROUP = "替代群组生成失败：%s",
-	ZONE_FAILED_SPAWN_GROUP_FOR_UPGRADE = "升级群组生成失败：%s",
-	ZONE_LOST_GROUP                    = "%s 已失去群组 %s",
-	ZONE_NOW_NEUTRAL                   = "%s 现为中立",
+	ZONE_INIT_MISSING_UPGRADE_GROUP    = "ZoneCommander 初始化：区域 [%s] 的索引 [%s] 缺少升级编队 %s（如有可能将进行替换）",
+	ZONE_UPGRADE_GROUP_MISSING_SKIPPED = "升级编队 %s 缺失，已跳过。",
+	ZONE_FAILED_SPAWN_REPLACEMENT_GROUP = "生成替换编队失败：%s",
+	ZONE_FAILED_SPAWN_GROUP_FOR_UPGRADE = "为升级生成编队失败：%s",
+	ZONE_LOST_GROUP                    = "%s 损失了编队 %s",
+	ZONE_NOW_NEUTRAL                   = "%s 现已变为中立区",
 	ZONE_LOST_BY_BLUE                  = "我们失去了 %s！",
-	ZONE_WARNING_UNKNOWN_TARGETZONE    = "警告：未知目标区域=%s 群组=%s 区域=%s",
+	ZONE_WARNING_UNKNOWN_TARGETZONE    = "警告：group=%s zone=%s 中存在未知 targetzone=%s",
 	ZONE_CAPTURED_BY                   = "%s 已被 %s 占领",
-	ZONE_CAPTURED_BLUE_PROGRESS_DISABLED = "%s 已被蓝方占领\n\n该区域因进度已禁用，干得好！",
+	ZONE_CAPTURED_BLUE_PROGRESS_DISABLED = "%s 已被蓝方占领\n\n该区域因进度设置现已禁用，干得漂亮！",
 	ZONE_DESTROYED                     = "%s 已被摧毁",
-	ZONE_DESTROYED_NO_CAPTURE          = "%s 已被摧毁，无法再占领",
+	ZONE_DESTROYED_NO_CAPTURE          = "%s 已被摧毁，无法再被占领",
 	ZONE_REPAIRED                      = "%s 已修复",
-	ZONE_GROUP_REPAIRED                = "%s 的群组 %s 已修复",
-	ZONE_ALREADY_FULLY_UPGRADED        = "%s 已完全升级！",
-	ZONE_SPAWNGROUP_FAILED             = "SpawnGroup 失败 %s，请回报给 Leka",
-	ZONE_UPGRADED_COUNT                = "%s 升级进度 %d/%d",
+	ZONE_GROUP_REPAIRED                = "%s 内的编队 %s 已修复",
+	ZONE_ALREADY_FULLY_UPGRADED        = "%s 已经满级！",
+	ZONE_SPAWNGROUP_FAILED             = "SpawnGroup 失败：%s，请报告给 Leka",
+	ZONE_UPGRADED_COUNT                = "%s 已升级 %d/%d",
 	ZONE_DEFENSES_UPGRADED             = "%s 防御已升级",
 	ZONE_DESTROYED_NO_UPGRADE          = "%s 已被摧毁，无法再升级",
-	ZONE_ERROR_GROUP_TEMPLATE_MISSING  = "错误：群组 [%s] 范本缺失",
+	ZONE_ERROR_GROUP_TEMPLATE_MISSING  = "错误：编队 [%s] 缺少模板",
 	ZONE_ERROR_DYNAMIC_SET_COALITION   = "错误：无法解析动态集合 [%s] 的阵营",
-	ZONE_ERROR_GROUP_NOT_FOUND_MISSION = "错误：任务中找不到群组 [%s]",
-	ZONE_ERROR_TEMPLATE_NO_VALID_GROUPS = "错误：范本 [%s] 无有效群组项目",
-
-	ZONE_NO_ACTIVE_TO_CAPTURE          = "无可占领的有效区域",
-	ZONE_NO_ELIGIBLE_NEUTRAL           = "无可用中立区域",
+	ZONE_ERROR_GROUP_NOT_FOUND_MISSION = "错误：任务中找不到编队 [%s]",
+	ZONE_ERROR_TEMPLATE_NO_VALID_GROUPS = "错误：模板 [%s] 不包含有效的编队条目",
+	ZONE_NO_ACTIVE_TO_CAPTURE          = "没有可供占领的活动区域",
+	ZONE_NO_ELIGIBLE_NEUTRAL           = "没有可用的中立区域",
 	ZONE_SIDE_NEUTRAL                  = "中立",
 	ZONE_SIDE_RED                      = "红方",
 	ZONE_SIDE_BLUE                     = "蓝方",
@@ -13895,146 +16902,147 @@ MGRS: 37 S EU 31088 22294
 	ZONE_CONTROLLED_BY                 = " 控制方：%s",
 	ZONE_INTEL_MIN_REMAINING           = "情报：剩余 %d 分钟",
 	ZONE_UPGRADES_LINE                 = " 升级：%d/%d",
-	ZONE_GROUPS_HEADER                 = " 群组：",
+	ZONE_GROUPS_HEADER                 = " 编队：",
 	ZONE_GROUP_HEALTH                  = "  %s %d%%",
-	ZONE_UNRESOLVED_BUILT             = "  （未解析已建）：%s",
-	ZONE_EXPECTED_UPGRADES             = "  （预期升级）：%s",
-	ZONE_NO_BUILT_OR_UPGRADES          = "  （无已建项目且无预期升级）",
-	ZONE_BUY_INTEL_OR_JTAC             = "购买情报或部署 JTAC 以获取敌方单位信息。",
-	ZONE_IRREPARABLY_DAMAGED           = "警告：此区域已遭不可修复损坏，已无战术价值",
-	ZONE_FRIENDLY_REPOSITIONED         = "友军区域。所有单位已重新部署至前线附近。",
-	ZONE_FARP_AIRFIELD_OPERATIONAL     = "FARP／机场运作正常。",
-	ZONE_COORD_DDM                     = "DDM：%s",
-	ZONE_COORD_DMS                     = "DMS：%s",
-	ZONE_COORD_ALT                     = "高度：%d 公尺 | %d 英尺",
+	ZONE_UNRESOLVED_BUILT             = "  （built 中未解析）：%s",
+	ZONE_EXPECTED_UPGRADES             = "  （升级中预期存在）：%s",
+	ZONE_NO_BUILT_OR_UPGRADES          = "  （没有 built 条目，也没有预期升级项）",
+	ZONE_BUY_INTEL_OR_JTAC             = "购买情报或部署 JTAC 以获取敌军单位信息。",
+	ZONE_IRREPARABLY_DAMAGED           = "警告：该区域已遭到不可修复的破坏，不再具备使用价值",
+	ZONE_FRIENDLY_REPOSITIONED         = "友方区域。所有单位已重新部署到前线附近。",
+	ZONE_FARP_AIRFIELD_OPERATIONAL     = "FARP/机场可正常运作。",
+	ZONE_COORD_DDM                     = "DDM： %s",
+	ZONE_COORD_DMS                     = "DMS： %s",
+	ZONE_COORD_ALT                     = "高度：%d 米 | %d 英尺",
 	ZONE_COORD_MGRS                    = "MGRS：%s",
-	
 		-- ============================================================
 	-- JTAC
 	-- ============================================================
-	JTAC_CODE_SET                      = "JTAC 雷射代码已设为 %d（%s）",
-	JTAC_CODE_INVALID                  = "无效雷射代码，必须介于 1111 至 1788",
-	JTAC_AIR_STARTING_UP_AT            = "JTAC：发现 %s 正在启动于",
-	JTAC_AIR_TOOK_OFF_FROM             = "JTAC：%s 刚自以下地点起飞",
-	JTAC_AIR_INBOUND_LANDING_AT        = "JTAC：目视 %s 进场，即将降落于",
-	JTAC_ENEMY_CONVOY_MOVING_OUT_FROM  = "JTAC：发现敌方车队自以下地点出发",
-	JTAC_ENEMY_CONVOY_ARRIVING_AT      = "JTAC：发现敌方车队即将抵达",
+	JTAC_CODE_SET                      = "JTAC 激光编码已设为 %d（%s）",
+	JTAC_CODE_INVALID                  = "无效的激光编码。必须介于 1111 到 1788 之间",
+	JTAC_AIR_STARTING_UP_AT            = "JTAC：发现 %s 正在以下地点启动：",
+	JTAC_AIR_TOOK_OFF_FROM             = "JTAC：%s 刚从以下地点起飞：",
+	JTAC_AIR_INBOUND_LANDING_AT        = "JTAC：已确认 %s 正进场并即将在以下地点降落：",
+	JTAC_ENEMY_CONVOY_MOVING_OUT_FROM  = "JTAC：发现敌军车队正从以下地点出发：",
+	JTAC_ENEMY_CONVOY_ARRIVING_AT      = "JTAC：发现敌军车队即将抵达：",
 	JTAC_MENU_TITLE                    = "%s JTAC",
-	JTAC_MENU_TARGET_REPORT            = "目标回报",
+	JTAC_MENU_TARGET_REPORT            = "目标报告",
 	JTAC_MENU_NEXT_TARGET              = "下一个目标",
-	JTAC_MENU_SMOKE_ON_TARGET          = "目标标烟",
-	JTAC_MENU_CHANGE_SMOKE_COLOR       = "更改烟雾颜色",
-	JTAC_MENU_FLARE_ON_TARGET          = "目标照明弹",
-	JTAC_MENU_SET_PRIORITY             = "设置优先目标",
-	JTAC_MENU_SET_LASER_CODE           = "设置雷射代码",
+	JTAC_MENU_SMOKE_ON_TARGET          = "目标施放烟标",
+	JTAC_MENU_CHANGE_SMOKE_COLOR       = "切换烟标颜色",
+	JTAC_MENU_FLARE_ON_TARGET          = "目标施放照明弹",
+	JTAC_MENU_SET_PRIORITY             = "设置优先级",
+	JTAC_MENU_SET_LASER_CODE           = "设置激光编码",
 	JTAC_MENU_SELECT_TARGET            = "选择目标",
-	JTAC_MENU_NO_VALID_TARGETS         = "无可用目标",
-	JTAC_MENU_CURRENT_SUFFIX           = "（目前）",
-	JTAC_MENU_LASING_SUFFIX            = "（雷射指示中）",
+	JTAC_MENU_NO_VALID_TARGETS         = "没有有效目标",
+	JTAC_MENU_CURRENT_SUFFIX           = "（当前）",
+	JTAC_MENU_LASING_SUFFIX            = "（照射中）",
 	JTAC_PRIORITY_SAM                  = "防空系统",
-	JTAC_PRIORITY_STRUCTURES           = "建筑物",
-	JTAC_PRIORITY_INFANTRY             = "步兵单位",
-	JTAC_PRIORITY_ARMOR                = "装甲单位",
-	JTAC_PRIORITY_SUPPORT              = "后勤单位",
+	JTAC_PRIORITY_STRUCTURES           = "建筑",
+	JTAC_PRIORITY_INFANTRY             = "步兵",
+	JTAC_PRIORITY_ARMOR                = "装甲",
+	JTAC_PRIORITY_SUPPORT              = "支援单位",
 	JTAC_COLOR_GREEN                   = "绿色",
 	JTAC_COLOR_RED                     = "红色",
 	JTAC_COLOR_WHITE                   = "白色",
-	JTAC_COLOR_ORANGE                  = "橘色",
+	JTAC_COLOR_ORANGE                  = "橙色",
 	JTAC_COLOR_BLUE                    = "蓝色",
-	JTAC_DISTANCE_METERS               = "%d 公尺",
-	JTAC_SMOKE_TARGET_OFFSET           = "目标位于 %s %s，相对于 %s 烟雾，位置 %s",
-	JTAC_FLARE_TARGET_OFFSET           = "目标位于 %s %s，相对于红色照明弹，位置 %s",
-	JTAC_SMOKE_COLOR_SET               = "JTAC 烟雾颜色已设为 %s（%s）",
+	JTAC_DISTANCE_METERS               = "%d 米",
+	JTAC_SMOKE_TARGET_OFFSET           = "目标位于 %s 烟标 %s %s 处，距离 %s",
+	JTAC_FLARE_TARGET_OFFSET           = "目标位于红色照明弹 %s %s 处，距离 %s",
+	JTAC_SMOKE_COLOR_SET               = "%s 的 JTAC 烟标颜色已设为 %s",
 	JTAC_PRIORITY_TARGETS              = "优先目标：%s\n",
-	JTAC_NO_PRIORITY_TARGETS           = "JTAC：未发现优先目标",
-	JTAC_KILL_CONFIRMED                = "击杀确认，切换目标",
-	JTAC_NO_MORE_TARGETS               = "JTAC：无更多目标，离开中。",
-	JTAC_DEPLOYED                      = "JTAC 已部署，正在搜寻目标，请待命",
+	JTAC_NO_PRIORITY_TARGETS           = "JTAC：未找到优先目标",
+	JTAC_KILL_CONFIRMED                = "确认击杀，切换目标",
+	JTAC_NO_MORE_TARGETS               = "JTAC：没有更多目标，正在离场。",
+	JTAC_DEPLOYED                      = "JTAC 已部署，正在搜索目标，请待命",
 	JTAC_NO_TARGET                     = "无目标",
 	JTAC_NO_TARGET_TITLE               = "无目标",
-	JTAC_TARGET_MOVING                 = "\n目标正在向 %s 移动",
-	JTAC_LASING_REPORT                 = "雷射标定 %s 于 %s%s\n代码：%d\n",
-	JTAC_ALTITUDE_LINE                 = "\n\n高度：%d 公尺 | %d 英尺",
-	JTAC_9LINE_GROUP_NOT_FOUND         = "JTAC 编组部署后未找到：%s",
-
+	JTAC_TARGET_MOVING                 = "\n目标正在%s移动",
+	JTAC_LASING_REPORT                 = "正在照射 %s，坐标 %s%s\n编码：%d\n",
+	JTAC_ALTITUDE_LINE                 = "\n\n高度：%d 米 | %d 英尺",
+	JTAC_9LINE_GROUP_NOT_FOUND         = "JTAC 编队部署后未找到：%s",
 	-- ============================================================
 	-- Self JTAC / Laser Designator
 	-- ============================================================
-	SELF_JTAC_LASER_CODE_SET           = "雷射代码已设为 %d",
-	SELF_JTAC_MENU_TITLE               = "雷射指示器",
-	SELF_JTAC_MENU_SEARCH              = "搜寻",
+	SELF_JTAC_LASER_CODE_SET           = "激光编码已设为 %d",
+	SELF_JTAC_MENU_TITLE               = "激光指示器",
+	SELF_JTAC_MENU_SEARCH              = "搜索",
 	SELF_JTAC_MENU_TARGET_INFO         = "目标信息",
-	SELF_JTAC_MENU_MARK_WITH_SMOKE     = "烟雾标记",
-	SELF_JTAC_MENU_PRIORITY            = "优先目标",
+	SELF_JTAC_MENU_MARK_WITH_SMOKE     = "使用烟标标记",
+	SELF_JTAC_MENU_PRIORITY            = "优先级",
 	SELF_JTAC_MENU_OPTIONS             = "选项",
 	SELF_JTAC_MENU_TOGGLE_UNIT         = "切换 KM / NM",
-	SELF_JTAC_MENU_AUTO_SEARCH         = "自动搜寻（目前：%s）",
-	SELF_JTAC_MENU_AUTO_NEXT           = "自动切换目标（目前：%s）",
-	SELF_JTAC_MENU_CODE                = "代码",
+	SELF_JTAC_MENU_AUTO_SEARCH         = "自动搜索（当前：%s）",
+	SELF_JTAC_MENU_AUTO_NEXT           = "自动切换下一个目标（当前：%s）",
+	SELF_JTAC_MENU_HIDE_COORDINATES    = "隐藏坐标（当前：%s）",
+	SELF_JTAC_MENU_IGNORE_STRUCTURES   = "忽略建筑（当前：%s）",
+	SELF_JTAC_MENU_CODE                = "编码",
 	SELF_JTAC_STATE_ON                 = "开",
 	SELF_JTAC_STATE_OFF                = "关",
-	SELF_JTAC_TARGET_CLEARED           = "目标清除",
+	SELF_JTAC_TARGET_CLEARED           = "目标已清除",
 	SELF_JTAC_DISTANCE_UNIT            = "距离：%s",
-	SELF_JTAC_AUTO_SEARCH_STATE        = "自动搜寻 %s",
-	SELF_JTAC_AUTO_NEXT_STATE          = "自动切换 %s",
-	SELF_JTAC_FOCUSING_ON              = "锁定目标 %s",
-	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "目标超出范围，停止雷射",
+	SELF_JTAC_AUTO_SEARCH_STATE        = "自动搜索：%s",
+	SELF_JTAC_AUTO_NEXT_STATE          = "自动切换下个目标：%s",
+	SELF_JTAC_HIDE_COORDINATES_STATE   = "隐藏坐标：%s",
+	SELF_JTAC_IGNORE_STRUCTURES_STATE  = "忽略建筑：%s",
+	SELF_JTAC_FOCUSING_ON              = "正在锁定 %s",
+	SELF_JTAC_TARGET_OUT_OF_BOUNDS     = "目标超出边界，停止照射",
 	SELF_JTAC_TARGET_TYPE_UNIDENTIFIED = "未识别",
 	SELF_JTAC_TARGET_TYPE_STRUCTURE    = "建筑",
-	SELF_JTAC_REPORT                   = "雷射标定 %s\n代码：%d\n\n方位：%03d°  距离：%s\n",
-	SELF_JTAC_MARKING_BLUE_SMOKE       = "以蓝色烟雾标记",
+	SELF_JTAC_REPORT                   = "正在照射 %s\n编码：%d\n\n方位：%03d°  距离：%s\n",
+	SELF_JTAC_REPORT_HIDE_COORDINATES  = "正在照射 %s\n\n编码：%d\n\n方位：%03d°，距离：%s\n",
+	SELF_JTAC_MARKING_BLUE_SMOKE       = "正在施放蓝色烟标",
 	SELF_JTAC_INVALID_OBJECTIVE        = "无效目标",
 	SELF_JTAC_NO_OBJECTIVE             = "无目标",
-	SELF_JTAC_KILL_CONFIRMED           = "击杀确认",
-	SELF_JTAC_KILL_CONFIRMED_STOPPING  = "击杀确认，停止雷射",
-	SELF_JTAC_NO_PRIORITY_SEARCHING    = "未发现优先目标，正在搜寻其他目标...",
-	SELF_JTAC_TARGET_LOST              = "目标遗失",
-	SELF_JTAC_NO_TARGETS_FOUND         = "未发现目标",
-
+	SELF_JTAC_KILL_CONFIRMED           = "确认击杀",
+	SELF_JTAC_KILL_CONFIRMED_STOPPING  = "确认击杀。停止照射",
+	SELF_JTAC_NO_PRIORITY_SEARCHING    = "未找到优先目标，正在搜索其他目标……",
+	SELF_JTAC_TARGET_LOST              = "目标丢失",
+	SELF_JTAC_NO_TARGETS_FOUND         = "未找到目标",
 	-- ============================================================
 	-- Shop / Credits
 	-- ============================================================
-	SHOP_MENU_ALL                      = "阵营商店",
+	SHOP_MENU_ALL                      = "全队商店",
 	SHOP_ITEM_LABEL                    = "[%d] %s",
 	SHOP_COST_LINE                     = "[花费：%d] %s",
 	SHOP_AVAILABLE_SUFFIX              = " [可用：%s]",
-	SHOP_UNCLAIMED_CREDITS             = "未领取点数",
-	SHOP_GROUP_LABEL                   = "群组 %s",
-	SHOP_REASON_CTLD_ACTION            = "CTLD 行动",
-	SHOP_REASON_REFUND                 = "退款",
-	SHOP_INSUFFICIENT_RANK             = "%s 阶级不足。需要阶级 %d，目前为阶级 %d。",
-	SHOP_TEAM_CREDITS_SHORT            = "团队点数不足以购买 %s。需要 %d，目前拥有 %d。\n可透过完成任务获得更多点数。",
-	SHOP_CTLD_SPENT                    = "%s 花费 %d 点数于 CTLD %s。\n\n阵营剩余 %d 点数。",
-	SHOP_REFUNDED                      = "%s，已退还 %d 点数。",
-	SHOP_ITEM_NOT_FOUND                = "商店中找不到该项目",
-	SHOP_ALREADY_UNLOCKED              = "[%s] 已解锁，未消耗点数。",
-	SHOP_NOT_AVAILABLE_NOW             = "目前不可用",
-	SHOP_PERSONAL_CREDITS_REQUIRED     = "你需要先累积至少 %d 个人点数，%s 才能提升阶级。",
-	SHOP_ALL_ZONES_UPGRADED            = "所有区域已完全升级！无需补给。",
-	SHOP_NO_NEUTRAL_ZONES              = "未找到可用中立区域",
-	SHOP_NOT_ENOUGH_CREDITS_FOR_ITEM   = "点数不足以购买 [%s]",
+	SHOP_UNCLAIMED_CREDITS             = "未领取积分",
+	SHOP_GROUP_LABEL                   = "编队 %s",
+	SHOP_REASON_CTLD_ACTION            = "CTLD 操作",
+	SHOP_REASON_REFUND                 = "退还",
+	SHOP_INSUFFICIENT_RANK             = "%s 军衔不足。需要军衔 %d，你当前为 %d。",
+	SHOP_TEAM_CREDITS_SHORT            = "我方队伍没有足够积分购买 %s。需要 %d，目前仅有 %d。\n完成任务可以获得更多积分。",
+	SHOP_CTLD_SPENT                    = "%s 花费了 %d 积分用于 CTLD %s。\n\n阵营剩余 %d 积分。",
+	SHOP_REFUNDED                      = "%s，已退还 %d 积分。",
+	SHOP_ITEM_NOT_FOUND                = "商店中未找到该物品",
+	SHOP_ALREADY_UNLOCKED              = "[%s] 已解锁。未扣除积分。",
+	SHOP_NOT_AVAILABLE_NOW             = "当前时间不可用",
+	SHOP_PERSONAL_CREDITS_REQUIRED     = "你至少还需要获得 %d 个人积分，%s，才能提升军衔。",
+	SHOP_ALL_ZONES_UPGRADED            = "所有区域均已满级！无需再进行补给。",
+	SHOP_NO_NEUTRAL_ZONES              = "未找到有效的中立区域",
+	SHOP_NOT_ENOUGH_CREDITS_FOR_ITEM   = "[%s] 积分不足",
 	SHOP_CANNOT_AFFORD_ITEM            = "无法负担 [%s]",
 	SHOP_OUT_OF_STOCK                  = "[%s] 已售罄",
-	SHOP_BOUGHT_BY_PLAYER              = "%s 已购买：\n[%s]，花费 %d 点数。\n剩余 %d 点数。",
+	SHOP_BOUGHT_BY_PLAYER              = "%s 已购买：\n[%s]，花费 %d 积分。\n剩余 %d 积分。",
 	SHOP_WENT_OUT_OF_STOCK             = "[%s] 已售罄",
-	SHOP_BOUGHT                        = "已购买 [%s]，花费 %d\n剩余 %d 点数",
-
+	SHOP_BOUGHT                        = "已购买 [%s]，花费 %d\n剩余 %d 积分",
 	-- ============================================================
 	-- Joint Missions
 	-- ============================================================
-JOINT_NO_PLAYER_FOR_GROUP          = "此群组没有玩家",
-	JOINT_LEFT                         = "已离开联合任务",
-	JOINT_PLAYER_LEFT                  = "[%s] 已离开联合任务",
-	JOINT_YOU_HAVE_LEFT                = "你已离开联合任务",
-	JOINT_PLAYER_DIED_LEFT             = "[%s] 已阵亡并离开联合任务",
-	JOINT_LEFT_DUE_RESPAWN             = "因重生已离开联合任务",
-	JOINT_PLAYER_LEFT_DUE_RESPAWN      = "[%s] 因重生离开联合任务",
-	JOINT_ALREADY_ALONE                = "你已经是单人了",
+JOINT_NO_PLAYER_FOR_GROUP          = "未找到该编队对应的玩家",
+	JOINT_LEFT                         = "已退出联合任务",
+	JOINT_PLAYER_LEFT                  = "[%s] 已退出联合任务",
+	JOINT_YOU_HAVE_LEFT                = "你已退出联合任务",
+	JOINT_PLAYER_DIED_LEFT             = "[%s] 已阵亡并退出联合任务",
+	JOINT_LEFT_DUE_RESPAWN             = "因重生已退出联合任务",
+	JOINT_PLAYER_LEFT_DUE_RESPAWN      = "[%s] 因重生已退出联合任务",
+	JOINT_ALREADY_ALONE                = "你当前已是单人状态",
 	JOINT_CODE                         = "联合代码：%s",
 	JOINT_INVALID_CODE                 = "无效代码",
-	JOINT_SAME_COALITION               = "必须为相同阵营",
-	JOINT_CANT_JOIN_OWN                = "你不能加入自己的代码啦，去找队友！",
-	JOINT_ALREADY_SHARING              = "已在共享中",
+	JOINT_SAME_COALITION               = "必须属于同一阵营",
+	JOINT_CANT_JOIN_OWN                = "你不能加入自己的代码，去找个队友吧！",
+	JOINT_ALREADY_SHARING              = "已处于共享状态",
 	JOINT_JOINED                       = "已加入 %s",
 	JOINT_PLAYER_JOINED                = "[%s] 已加入你的联合任务",
 	JOINT_MENU_ROOT                    = "联合任务",
@@ -14048,11 +17056,11 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群组没有玩家",
 	JOINT_MENU_REQUEST_FROM            = "来自 %s 的请求",
 	JOINT_MENU_ACCEPT_REQUEST          = "接受",
 	JOINT_MENU_DENY_REQUEST            = "拒绝",
-	JOINT_MENU_LEAVE                   = "离开联合任务",
+	JOINT_MENU_LEAVE                   = "退出联合任务",
 	JOINT_MENU_STATUS                  = "联合任务状态",
-	JOINT_MENU_HELP                    = "说明",
-	JOINT_STATUS_WITH                  = "正与 %s 进行联合任务",
-	JOINT_STATUS_ALONE                 = "目前单人",
+	JOINT_MENU_HELP                    = "帮助",
+	JOINT_STATUS_WITH                  = "当前正与 %s 进行联合任务",
+	JOINT_STATUS_ALONE                 = "你当前单独行动",
 	JOINT_REQUEST_SENT                 = "已向 %s 发送联合任务请求。对方有 120 秒可接受。",
 	JOINT_REQUEST_ALREADY_SENT         = "已向 %s 发送请求。冷却：%d 秒。",
 	JOINT_REQUEST_RECEIVED             = "来自 %s 的联合任务请求。使用 任务列表 > 联合任务 > 待处理联合请求 来接受或拒绝。",
@@ -14064,21 +17072,20 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群组没有玩家",
 	JOINT_REQUEST_NOT_AVAILABLE        = "该玩家已不可用",
 	JOINT_STAT_SUFFIX                  = "（联合任务）",
 	JOINT_HELP_REQUESTS                = "联合任务可让两名玩家获得最高双倍的任务点数奖励。\n\n运作方式：\n- 打开“请求联合任务”并选择一名玩家。\n- 被选择的玩家会收到待处理请求，并有 120 秒可接受或拒绝。\n- 任务完成后双方皆可获得点数，一般击杀不适用。\n- 适用于 CAS、CAP、轰炸跑道与打击任务。\n- 若队友阵亡或离线，你仍可保留自身收益与额外奖励.",
-	JOINT_HELP                         = "联合任务可让两名玩家获得最高双倍的任务点数奖励。\n\n运作方式：\n• 主机选择「邀请加入联合任务」获取 4 位数代码。\n• 队友选择「加入其他玩家」并输入代码。\n• 任务完成后双方皆可获得点数，一般击杀不适用。\n• 适用于 CAS、CAP、轰炸跑道与打击任务。\n• 若队友阵亡或离线，你仍可保留自身收益与额外奖励。\n• 仅限同一阵营。",
-
+	JOINT_HELP                         = "联合任务可让两名玩家获得最高双倍的任务积分奖励。\n\n使用方法：\n• 房主选择“邀请加入联合任务”，获得一个 4 位代码。\n• 队友打开“加入其他玩家”，输入该代码。\n• 任务积分会同时奖励给双方，不包括普通击杀奖励。\n• 适用于 CAS、CAP、轰炸跑道、打击任务。\n• 如果你的搭档阵亡或消失，你仍会保留自己的收益和额外奖励。\n• 仅限同一阵营。",
 	-- ============================================================
 	-- Logistics / Supplies
 	-- ============================================================
-	LOGISTICS_MENU                     = "后勤菜单",
+	LOGISTICS_MENU                     = "后勤",
 	LOGISTICS_LOAD_SUPPLIES            = "装载补给",
 	LOGISTICS_LOAD_SUPPLIES_COUNT      = "装载 %d 份补给",
 	LOGISTICS_UNLOAD_SUPPLIES          = "卸载补给",
 	LOGISTICS_LIST_SUPPLY_ZONES        = "列出补给区域",
 	LOGISTICS_SUPPLIES_STATUS          = "补给状态",
-	LOGISTICS_SUPPLIES_HELP            = "补给说明",
+	LOGISTICS_SUPPLIES_HELP            = "补给帮助",
 	LOGISTICS_MARK_ZONE                = "标记区域",
 	LOGISTICS_STATICS                  = "静态物件",
-	LOGISTICS_OVERVIEW_HELP            = "后勤总览\n\n区域补给（升级 + 初始库存）\n• 使用「区域补给」获取补给箱。\n• 透过地勤进行装卸。\n• 1 箱 = 1 次区域升级。\n• 补给箱非常重，仅在机型允许时才携带多箱。\n• 可吊挂运输，或 1 箱内装 + 1 箱吊挂组合。\n• 每箱提供仓库各项物资 10 单位（炸弹、飞弹、导引炸弹、火箭、空对地飞弹等）。\n\n仓库补给（额外武器）\n• 使用「仓库补给」运送大量武器。\n• 仓库补给不会占领区域。\n\n部队占领\n• CTLD 部队可占领／升级区域。\n• 1 组部队 = 1 次升级。\n• 若区域已满级，多余部队将退还点数。",
+	LOGISTICS_OVERVIEW_HELP            = "后勤总览\n\n区域补给（升级 + 初始库存）\n• 使用“区域补给”领取补给箱。\n• 通过地勤进行装载/卸载。\n• 1 个箱子 = 1 次区域升级。\n• 箱子非常重。只有在你的飞机允许时才运输多个。\n• 你可以使用吊挂，或组合 1 个内部装载 + 1 个吊挂。\n• 每个箱子会补充每种仓库物资 10 件（炸弹、导弹、制导炸弹、火箭弹、空对地导弹等）。\n\n仓库补给（额外武器）\n• 使用“仓库补给”运送更多数量的武器。\n• 仓库补给不会占领区域。\n\n部队占领\n• CTLD 部队可占领/升级区域。\n• 1 个部队组 = 1 次升级。\n• 如果区域已经满级，额外部队会被退还。",
 	LOGISTICS_CANNOT_LOAD_IN_AIR       = "空中无法装载补给",
 	LOGISTICS_CANNOT_UNLOAD_IN_AIR     = "空中无法卸载补给",
 	LOGISTICS_SUPPLIES_LOADED          = "补给已装载",
@@ -14089,139 +17096,137 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群组没有玩家",
 	LOGISTICS_SUPPLIES_NOT_LOADED      = "补给未装载",
 	LOGISTICS_NO_SUPPLIES_LOADED       = "未装载任何补给",
 	LOGISTICS_WARNING_NOT_LOADED       = "警告：补给未装载",
-	LOGISTICS_LOAD_ONLY_FRIENDLY_OR_CARRIER = "仅能于友军补给区或航母上装载补给",
-	LOGISTICS_LOAD_ONLY_FRIENDLY       = "仅能于友军补给区内装载补给",
-	LOGISTICS_UNLOAD_ONLY_FRIENDLY_NEUTRAL = "仅能于友军或中立区域卸载补给",
+	LOGISTICS_LOAD_ONLY_FRIENDLY_OR_CARRIER = "只能在友方补给区内或航母上装载补给",
+	LOGISTICS_LOAD_ONLY_FRIENDLY       = "只能在友方补给区内装载补给",
+	LOGISTICS_UNLOAD_ONLY_FRIENDLY_NEUTRAL = "只能在友方或中立区域内卸载补给",
 	LOGISTICS_SUPPLIES_UNLOADED        = "补给已卸载",
 	LOGISTICS_SUPPLIES_UNLOADED_COUNT  = "已卸载 %d 份补给",
-	LOGISTICS_FRIENDLY_SUPPLY_ZONES    = "友军补给区域：",
-	LOGISTICS_CAPTURE_CREDITS          = "占领 +%s 点数",
-	LOGISTICS_RESUPPLY_CREDITS         = "补给 +%s 点数",
-	LOGISTICS_RESUPPLY_NO_DEMAND       = "补给 +%s 点数（无需求 -75%%）",
-	LOGISTICS_PLAYER_RESUPPLY_NO_DEMAND = "[%s] 补给 +%s 点数（无需求 -75%%）",
-	LOGISTICS_ZONE_NOT_FOUND           = "找不到区域",
-	LOGISTICS_ZONE_NOT_FRIENDLY        = "该区域非有效友军区域",
-	LOGISTICS_ZONE_NOT_NEUTRAL         = "该区域非中立",
-	LOGISTICS_ZONE_NO_RESUPPLY_NEEDED  = "区域 %s 无需补给",
-	LOGISTICS_SUPPLY_ALREADY_PROGRESS  = "%s 的补给任务已在进行中",
-	LOGISTICS_NO_AVAILABLE_SUPPLY      = "无可用补给车队",
-	LOGISTICS_NO_SUITABLE_SUPPLY       = "找不到适合 %s 的补给单位",
+	LOGISTICS_FRIENDLY_SUPPLY_ZONES    = "友方补给区域：",
+	LOGISTICS_CAPTURE_CREDITS          = "占领 +%s 积分",
+	LOGISTICS_RESUPPLY_CREDITS         = "补给 +%s 积分",
+	LOGISTICS_RESUPPLY_NO_DEMAND       = "补给 +%s 积分（因无需求减少 75%%）",
+	LOGISTICS_PLAYER_RESUPPLY_NO_DEMAND = "[%s] 补给 +%s 积分（因无需求减少 75%%）",
+	LOGISTICS_ZONE_NOT_FOUND           = "未找到区域",
+	LOGISTICS_ZONE_NOT_FRIENDLY        = "该区域不是有效的友方区域",
+	LOGISTICS_ZONE_NOT_NEUTRAL         = "该区域不是中立区",
+	LOGISTICS_ZONE_NO_RESUPPLY_NEEDED  = "区域 %s 当前不需要补给",
+	LOGISTICS_SUPPLY_ALREADY_PROGRESS  = "发往 %s 的补给已在进行中",
+	LOGISTICS_NO_AVAILABLE_SUPPLY      = "没有可用的补给车队",
+	LOGISTICS_NO_SUITABLE_SUPPLY       = "未找到适合 %s 的补给队伍",
 	LOGISTICS_LOOKING_FOR_PILOTS       = "正在寻找可用飞行员，请稍候",
 	LOGISTICS_NO_AVAILABLE_PILOTS      = "找不到可用飞行员",
-	LOGISTICS_FRIENDLY_CONVOY_MOVING   = "友军车队正从 %s 前往 %s",
+	LOGISTICS_FRIENDLY_CONVOY_MOVING   = "一支友军车队正从 %s 前往 %s",
 	LOGISTICS_FRIENDLY_RESUPPLY_TO     = "友军补给正前往 %s",
-	LOGISTICS_FRIENDLY_HELO_SCRAMBLE   = "友军直升机自 %s 紧急起飞前往 %s",
-	LOGISTICS_EMERGENCY_CAPTURE_TO     = "紧急占领任务前往 %s",
-	LOGISTICS_EMERGENCY_CAPTURE_VIA    = "紧急占领任务前往 %s，途经 %s",
-	LOGISTICS_FARP_HELO_ENROUTE_FROM_ETA = "友军直升机自 %s 出发前往建立 FARP，预计 %d 分钟抵达。",
-	LOGISTICS_FARP_HELO_ENROUTE_ETA    = "友军直升机正前往建立 FARP，预计 %d 分钟抵达。",
-	LOGISTICS_FARP_HELO_ENROUTE_FROM   = "友军直升机自 %s 出发前往建立 FARP。",
+	LOGISTICS_FRIENDLY_HELO_SCRAMBLE   = "一架友军直升机正从 %s 紧急起飞前往 %s",
+	LOGISTICS_EMERGENCY_CAPTURE_TO     = "紧急占领力量正前往 %s",
+	LOGISTICS_EMERGENCY_CAPTURE_VIA    = "紧急占领力量正经由 %s 前往 %s",
+	LOGISTICS_FARP_HELO_ENROUTE_FROM_ETA = "友军直升机正从 %s 前往建立 FARP。预计 %d 分钟后到达。",
+	LOGISTICS_FARP_HELO_ENROUTE_ETA    = "友军直升机正前往建立 FARP。预计 %d 分钟后到达。",
+	LOGISTICS_FARP_HELO_ENROUTE_FROM   = "友军直升机正从 %s 前往建立 FARP。",
 	LOGISTICS_FARP_HELO_ENROUTE        = "友军直升机正前往建立 FARP。",
-
 	-- ============================================================
 	-- Foothold CTLD
 	-- ============================================================
-	CTLD_AUTO_BUILD_FAILED_DESTROYED   = "[CTLD] 自动建造失败：投放货物在落地前已被摧毁。",
-	CTLD_AUTO_BUILD_SKIPPED_AIRBORNE   = "[CTLD] Hercules 投放自动建造已略过（飞机未在空中）。",
-	CTLD_MOVE_CARGO_BEFORE_HERCULES_AUTOBUILD = "[CTLD] 请先将 %s 从 %s 移开，再进行 Hercules 自动建造。",
-	CTLD_SAM_MERGE_FAILED_MISSING_TEMPLATE = "%s 合併失败：缺少模板数据。",
-	CTLD_SAM_MERGE_FAILED_NO_COMPONENT = "%s 合併失败：无组件模板。",
-	CTLD_SAM_MERGE_FAILED_APPEND       = "%s 合併失败：附加错误。",
-	CTLD_SAM_MERGE_FAILED_SPAWN        = "%s 合併失败：生成错误。",
-	CTLD_SAM_MERGE_COMPLETE            = "%s 合併完成：已将 %s 加入附近系统。",
-	CTLD_ZONE_SUPPLIES_DESTROYED       = "[CTLD] 区域补给于 %s（%s）被摧毁。",
+	CTLD_AUTO_BUILD_FAILED_DESTROYED   = "[CTLD] 自动建造失败：投放货物在落地前被摧毁。",
+	CTLD_AUTO_BUILD_SKIPPED_AIRBORNE   = "[CTLD] Hercules 空投自动建造已跳过（飞机未在空中）。",
+	CTLD_MOVE_CARGO_BEFORE_HERCULES_AUTOBUILD = "[CTLD] 在 Hercules 自动建造前，请先将 %s 移出 %s。",
+	CTLD_SAM_MERGE_FAILED_MISSING_TEMPLATE = "%s 合并失败：缺少模板数据。",
+	CTLD_SAM_MERGE_FAILED_NO_COMPONENT = "%s 合并失败：缺少组件模板。",
+	CTLD_SAM_MERGE_FAILED_APPEND       = "%s 合并失败：追加错误。",
+	CTLD_SAM_MERGE_FAILED_SPAWN        = "%s 合并失败：生成错误。",
+	CTLD_SAM_MERGE_COMPLETE            = "%s 合并完成：已将 %s 添加到附近系统。",
+	CTLD_ZONE_SUPPLIES_DESTROYED       = "[CTLD] %s 的区域补给已被摧毁（%s）。",
 	CTLD_ZONE_SUPPLIES_DELIVERED       = "区域补给 %s %s。",
 	CTLD_ZONE_SUPPLY_ACTION_CAPTURED   = "已占领",
 	CTLD_ZONE_SUPPLY_ACTION_UPGRADED   = "已升级",
-	CTLD_CRATE_LOADED_GROUND_CREW      = "货箱 %s 已由地勤装载！",
-	CTLD_CRATE_UNLOADED_GROUND_CREW    = "货箱 %s 已由地勤卸载！",
-	CTLD_CRATES_POSITIONED             = "已在你附近部署 %d 个 %s 货箱！",
+	CTLD_CRATE_LOADED_GROUND_CREW      = "箱子 %s 已由地勤装载！",
+	CTLD_CRATE_UNLOADED_GROUND_CREW    = "箱子 %s 已由地勤卸载！",
+	CTLD_CRATES_POSITIONED             = "已将 %d 个用于 %s 的箱子部署到你附近！",
 	CTLD_MENU_ZONE_SUPPLIES            = "区域补给",
-	CTLD_MENU_WAREHOUSE                = "仓库",
+	CTLD_MENU_WAREHOUSE                = "仓库补给",
 	CTLD_MENU_SUPPLIES                 = "补给",
-	CTLD_MENU_AMMO_TRUCK               = "弹药卡车",
-	CTLD_MENU_SQUAD_8                  = "8 人小队",
-	CTLD_MENU_PLATOON_16               = "16 人排",
-	CTLD_MENU_PLATOON_32               = "32 人排",
+	CTLD_MENU_AMMO_TRUCK               = "弹药车",
+	CTLD_MENU_SQUAD_8                  = "8人占领小队",
+	CTLD_MENU_PLATOON_16               = "16人占领小队",
+	CTLD_MENU_PLATOON_32               = "32人占领小队",
 	CTLD_MENU_ANTI_AIR_SOLDIERS        = "防空步兵",
-	CTLD_MENU_MORTAR_SQUAD             = "迫击砲小队",
+	CTLD_MENU_MORTAR_SQUAD             = "迫击炮班",
 	CTLD_MENU_ENGINEER_SOLDIER         = "工兵单位",
 	CTLD_MENU_ANTI_TANK                = "反坦克单位",
-	CTLD_MENU_SUPPORT                  = "后勤单位",
+	CTLD_MENU_SUPPORT                  = "支援",
 	CTLD_MENU_SAM_AAA                  = "防空系统",
 	CTLD_MENU_SAM_ADDON                = "防空增设",
 	CTLD_MENU_FARP                     = "FARP",
-	CTLD_MENU_HUMVEE_SCOUT             = "Humvee 侦察车",
-	CTLD_MENU_10_EVERYTHING            = "各 10",
-	CTLD_MENU_25_EVERYTHING            = "各 25",
-	CTLD_MENU_50_EVERYTHING            = "各 50",
-	CTLD_MENU_10_AA_MISSILES           = "10 枚空对空飞弹",
-	CTLD_MENU_25_AA_MISSILES           = "25 枚空对空飞弹",
-	CTLD_MENU_50_AA_MISSILES           = "50 枚空对空飞弹",
-	CTLD_MENU_10_AG_MISSILES           = "10 枚空对地飞弹",
-	CTLD_MENU_25_AG_MISSILES           = "25 枚空对地飞弹",
-	CTLD_MENU_50_AG_MISSILES           = "50 枚空对地飞弹",
-	CTLD_MENU_10_AG_ROCKETS            = "10 枚空对地火箭",
-	CTLD_MENU_25_AG_ROCKETS            = "25 枚空对地火箭",
-	CTLD_MENU_50_AG_ROCKETS            = "50 枚空对地火箭",
+	CTLD_MENU_HUMVEE_SCOUT             = "悍马侦察车",
+	CTLD_MENU_10_EVERYTHING            = "各类 10 件",
+	CTLD_MENU_25_EVERYTHING            = "各类 25 件",
+	CTLD_MENU_50_EVERYTHING            = "各类 50 件",
+	CTLD_MENU_10_AA_MISSILES           = "10 枚空对空导弹",
+	CTLD_MENU_25_AA_MISSILES           = "25 枚空对空导弹",
+	CTLD_MENU_50_AA_MISSILES           = "50 枚空对空导弹",
+	CTLD_MENU_10_AG_MISSILES           = "10 枚空对地导弹",
+	CTLD_MENU_25_AG_MISSILES           = "25 枚空对地导弹",
+	CTLD_MENU_50_AG_MISSILES           = "50 枚空对地导弹",
+	CTLD_MENU_10_AG_ROCKETS            = "10 组空对地火箭弹",
+	CTLD_MENU_25_AG_ROCKETS            = "25 组空对地火箭弹",
+	CTLD_MENU_50_AG_ROCKETS            = "50 组空对地火箭弹",
 	CTLD_MENU_10_AG_BOMBS              = "10 枚空对地炸弹",
 	CTLD_MENU_25_AG_BOMBS              = "25 枚空对地炸弹",
 	CTLD_MENU_50_AG_BOMBS              = "50 枚空对地炸弹",
-	CTLD_MENU_10_FUEL_TANKS_PYLONS     = "10 个（飞机副油箱）与挂架",
-	CTLD_MENU_25_FUEL_TANKS_PYLONS     = "25 个飞机副油箱与挂架",
-	CTLD_MENU_50_FUEL_TANKS_PYLONS     = "50 个飞机副油箱与挂架",
-	CTLD_MENU_10_MODDED_WEAPONS        = "10 个模组武器",
-	CTLD_MENU_25_MODDED_WEAPONS        = "25 个模组武器",
-	CTLD_MENU_50_MODDED_WEAPONS        = "50 个模组武器",
-	CTLD_SUPPLIES_RETURNED_TO_ZONE     = "%s 已返回至 %s。",
-	CTLD_SUPPLIES_DELIVERED_BY         = "%s 已由 %s 运送至 %s。",
-	CTLD_ZONE_SUPPLY_NOT_NEEDED_WAREHOUSE_APPLIED = "%s 目前不需要区域补给，已套用仓库补给。",
-	CTLD_LIMIT_REACHED_REMOVED_OLDEST  = "[CTLD] %s 已达上限 - 已移除最旧的 %s（%s）。",
-	CTLD_TROOP_LIMIT_REACHED_REMOVED_OLDEST = "[CTLD] %s 部队上限已达 - 已移除最旧的 %s（%s）。",
-	CTLD_WAREHOUSE_MISCONFIGURED_INVALID_AMOUNT = "[CTLD] %s 设置错误（数量无效）。",
-	CTLD_WAREHOUSE_NOT_AVAILABLE       = "[CTLD] %s 于 %s（%s）不可用。",
-	CTLD_WAREHOUSE_REMOVE_FAILED       = "[CTLD] 无法从 %s（%s）移除 %s。",
-	CTLD_SAVE_LOAD_DISABLED_DESANITIZE = "CTLD 无法存档/读取。请解除 DCS missionscripting.lua 限制。\n\n功能已禁用。",
+	CTLD_MENU_10_FUEL_TANKS_PYLONS     = "10 个副油箱与挂架",
+	CTLD_MENU_25_FUEL_TANKS_PYLONS     = "25 个副油箱与挂架",
+	CTLD_MENU_50_FUEL_TANKS_PYLONS     = "50 个副油箱与挂架",
+	CTLD_MENU_10_MODDED_WEAPONS        = "10 件模组武器",
+	CTLD_MENU_25_MODDED_WEAPONS        = "25 件模组武器",
+	CTLD_MENU_50_MODDED_WEAPONS        = "50 件模组武器",
+	CTLD_SUPPLIES_RETURNED_TO_ZONE     = "%s 已返还至 %s。",
+	CTLD_SUPPLIES_DELIVERED_BY         = "%s 已运送至 %s，由 %s 运输。",
+	CTLD_ZONE_SUPPLY_NOT_NEEDED_WAREHOUSE_APPLIED = "%s 当前不需要区域补给，但仓库补给仍已生效。",
+	CTLD_LIMIT_REACHED_REMOVED_OLDEST  = "[CTLD] 已达到 %s 上限，已移除最早的 %s（%s）。",
+	CTLD_TROOP_LIMIT_REACHED_REMOVED_OLDEST = "[CTLD] 已达到 %s 部队上限，已移除最早的 %s（%s）。",
+	CTLD_WAREHOUSE_MISCONFIGURED_INVALID_AMOUNT = "[CTLD] %s 配置错误（数量无效）。",
+	CTLD_WAREHOUSE_NOT_AVAILABLE       = "[CTLD] %s 在 %s 不可用（%s）。",
+	CTLD_WAREHOUSE_REMOVE_FAILED       = "[CTLD] 无法从 %s 移除 %s（%s）。",
+	CTLD_SAVE_LOAD_DISABLED_DESANITIZE = "CTLD 无法保存/读取。请对 DCS missionscripting.lua 进行 De-Sanitize。\n\n功能已禁用。",
 	CTLD_ENGINEERS_RETURNED_TO_BASE    = "工兵已返回基地！",
 	CTLD_TROOPS_RETURNED_TO_BASE       = "部队已返回基地！",
-	CTLD_TROOP_GROUP_ENTERED_ZONE      = "部队进入区域：%s",
+	CTLD_TROOP_GROUP_ENTERED_ZONE      = "部队已进入区域：%s",
 	CTLD_TROOP_ZONE_CAPTURED           = "已占领",
 	CTLD_TROOP_ZONE_UPGRADED           = "已升级",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "已占领并升级",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
-	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d 点数。",
+	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d 积分。",
 	CTLD_REASON_ENEMY_ZONE             = "敌方区域",
-	CTLD_REASON_NEUTRAL_ZONE_TIMEOUT   = "中立区域逾时",
+	CTLD_REASON_NEUTRAL_ZONE_TIMEOUT   = "中立区域超时",
 	CTLD_REASON_WAREHOUSE_LOGISTICS_DISABLED = "仓库后勤已禁用",
-	CTLD_REASON_NO_STORAGE             = "无储存空间",
-	CTLD_REASON_NO_APPLICABLE_INVENTORY = "无可用库存",
+	CTLD_REASON_NO_STORAGE             = "没有库存",
+	CTLD_REASON_NO_APPLICABLE_INVENTORY = "没有可适用库存",
 	CTLD_REASON_NOT_AVAILABLE          = "不可用",
-	CTLD_REASON_DEBIT_FAILED           = "扣款失败",
-	CTLD_REASON_NO_ITEMS               = "无 %s 项目",
+	CTLD_REASON_DEBIT_FAILED           = "扣减失败",
+	CTLD_REASON_NO_ITEMS               = "没有 %s 物品",
 	CTLD_REASON_INSUFFICIENT_STOCK     = "%s 库存不足",
-	CTLD_ADJUST_NO_ITEMS               = "未调整任何项目（跳过低量=%d）于 %s",
-
+	CTLD_ADJUST_NO_ITEMS               = "未调整任何物品（跳过低数量=%d）于 %s",
 	-- ============================================================
 	-- CSAR
 	-- ============================================================
-	CSAR_MENU                          = "CSAR",
+	CSAR_MENU                          = "搜救",
 	CSAR_INFO_CLOSEST_PILOT            = "最近飞行员信息",
 	CSAR_INFO_THREE_CLOSEST_PILOTS     = "最近三名飞行员信息",
-	CSAR_DEPLOY_SMOKE_CLOSEST          = "为最近飞行员施放烟雾",
-	CSAR_DEPLOY_FLARE_CLOSEST          = "为最近飞行员施放照明弹",
-	CSAR_SMOKE_NEAREST_ZONE            = "最近区域烟雾标记",
-	CSAR_FLARE_NEAREST_ZONE            = "最近区域照明弹标记",
+	CSAR_DEPLOY_SMOKE_CLOSEST          = "为最近飞行员投放烟标",
+	CSAR_DEPLOY_FLARE_CLOSEST          = "为最近飞行员投放照明弹",
+	CSAR_SMOKE_NEAREST_ZONE            = "为最近区域投放烟标",
+	CSAR_FLARE_NEAREST_ZONE            = "为最近区域投放照明弹",
 	CSAR_NO_EJECTED_PILOTS             = "附近没有弹射飞行员",
 	CSAR_NO_EJECTED_FRIENDLY_PILOTS    = "附近没有友军弹射飞行员",
-	CSAR_BLUE_SMOKE_MARKED             = "已以蓝色烟雾标记弹射飞行员",
-	CSAR_PILOT_EXTRACTION_HEADER       = "待救援飞行员：",
-	CSAR_DOWNED_PILOT                  = "坠落飞行员",
-	CSAR_ADDITIONAL_SURVIVOR           = "其他倖存者",
-	CSAR_RESCUE_HOSTILE                = "救援 %s（敌区 %s）：",
-	CSAR_HOSTILE_CAUTION               = "注意，附近有敌军",
-	CSAR_LOST_CREDITS                  = "损失：%s 点数",
-	CSAR_PLAYER_LOST_CREDITS           = "[%s] 损失：%s 点数",
-	CSAR_SAVE_TO_RETRIEVE              = "救出飞行员以取回损失点数",
+	CSAR_BLUE_SMOKE_MARKED             = "弹射飞行员已用蓝色烟标标记",
+	CSAR_PILOT_EXTRACTION_HEADER       = "需要救援的飞行员：",
+	CSAR_DOWNED_PILOT                  = "坠机飞行员",
+	CSAR_ADDITIONAL_SURVIVOR           = "额外幸存者",
+	CSAR_RESCUE_HOSTILE                = "在敌占区营救 %s（%s）：",
+	CSAR_HOSTILE_CAUTION               = "注意，附近有敌人",
+	CSAR_LOST_CREDITS                  = "损失：%s 积分",
+	CSAR_PLAYER_LOST_CREDITS           = "[%s] 损失：%s 积分",
+	CSAR_SAVE_TO_RETRIEVE              = "救出飞行员以取回损失的积分",
 	CSAR_NEAREST_PILOT_TO_YOU          = "最近的飞行员：",
 	CSAR_NEAREST_PILOT_LOST_CREDITS    = "%s - 损失：%s 点数",
 	CSAR_DISTANCE_NM_KM_LINE            = "距离：%s km | %s NM",
@@ -14229,8 +17234,8 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群组没有玩家",
 	CSAR_ADF_LINE                      = "ADF：%s kHz",
 	CSAR_DISTANCE_LINE                 = "距离：%s km | %s nm",
 	CSAR_BEARING_LINE                  = "方位：%d",
-	CSAR_MARKER_LOST_CREDITS           = "[%s] 损失：%s 点数",
-	CSAR_PLAYER_CAPTURED               = "[%s] 已在 %s 被敌军俘虏，视为阵亡。",
+	CSAR_MARKER_LOST_CREDITS           = "[%s] 损失：%s 积分",
+	CSAR_PLAYER_CAPTURED               = "[%s] 在 %s 被敌军俘获。推定阵亡。",
 	CSAR_PLAYER_LANDED_SAFELY          = "[%s] 已安全降落于 %s。",
 	CSAR_PLAYER_LANDED_RECOVERED_CREDITS = "[%s] 已安全降落于 %s，已取回所有损失点数：%s 点数。",
 	CSAR_PLAYER_HOME_SAFE              = "[%s] 现已安全返回 %s。",
@@ -14239,288 +17244,306 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群组没有玩家",
 	CSAR_PILOT_RUNNING_HOME            = "%s 正在跑向 %s。",
 	CSAR_RUNNING_HOME_STATUS           = "目前正跑向 %s。",
 	CSAR_PLAYER_KIA                    = "[%s] 阵亡。",
-	CSAR_DOWNED_PILOT_KIA              = "坠落飞行员已阵亡。",
-	CSAR_ENEMY_SURROUNDED_PLAYER       = "敌军已包围 [%s]，请立即救援。",
-	CSAR_ENEMY_SURROUNDED_PILOT        = "敌军已包围坠落飞行员，请立即救援。",
-	CSAR_WE_HEAR_YOU                   = "%s 我们收到！需要烟雾请求。",
-	CSAR_WE_HEAR_YOU_HOSTILE           = "%s 我们收到！注意附近有敌军，需要烟雾请求。",
-	CSAR_I_HEAR_YOU                    = "%s 我收到！需要烟雾请求。",
-	CSAR_I_HEAR_YOU_HOSTILE            = "%s 我收到！注意附近有敌军，需要烟雾请求。",
-	CSAR_CLOSE_LAND_SAFE               = "你已接近！请于安全区域降落，我们会前往你的位置。",
-	CSAR_CLOSE_CLOCK                   = "你已接近！我在你 %d 点钟方向。请于安全区域降落，我们会前往你的位置。",
-	CSAR_PICKING_UP_HOVER              = "正在接收 %s，保持悬停 %d 秒。",
-	CSAR_DIRECTION_FORWARD             = "前方",
-	CSAR_DIRECTION_RIGHT               = "右侧",
-	CSAR_DIRECTION_LEFT                = "左侧",
-	CSAR_DIRECTION_BACK                = "后方",
-	CSAR_GUIDANCE_MOVE                 = "%s %d 公尺%s",
+	CSAR_DOWNED_PILOT_KIA              = "坠机飞行员已阵亡。",
+	CSAR_ENEMY_SURROUNDED_PLAYER       = "敌军已包围 [%s]。请尽快救援。",
+	CSAR_ENEMY_SURROUNDED_PILOT        = "敌军已包围坠机飞行员。请尽快救援。",
+	CSAR_WE_HEAR_YOU                   = "%s 我们收到你的呼叫！如有需要请请求烟标。",
+	CSAR_WE_HEAR_YOU_HOSTILE           = "%s 我们收到你的呼叫！注意附近有敌人。如有需要请请求烟标。",
+	CSAR_I_HEAR_YOU                    = "%s 我听到你了！如有需要请请求烟标。",
+	CSAR_I_HEAR_YOU_HOSTILE            = "%s 我听到你了！注意附近有敌人。如有需要请请求烟标。",
+	CSAR_CLOSE_LAND_SAFE               = "你已经很近了！请在安全地点降落，我们会向你靠拢。",
+	CSAR_CLOSE_CLOCK                   = "你已经很近了！我在你 %d 点钟方向。请在安全地点降落，我们会向你靠拢。",
+	CSAR_PICKING_UP_HOVER              = "正在接应 %s。请保持悬停 %d 秒。",
+	CSAR_DIRECTION_FORWARD             = "前",
+	CSAR_DIRECTION_RIGHT               = "右",
+	CSAR_DIRECTION_LEFT                = "左",
+	CSAR_DIRECTION_BACK                = "后",
+	CSAR_GUIDANCE_MOVE                 = "%s %d 米%s",
 	CSAR_GUIDANCE_DESCEND_SUFFIX       = "，下降 %d 英尺",
-	CSAR_AT_MAX_CAPACITY               = "已达最大容量",
-	CSAR_RESCUED_WITH_CREDITS          = "[%s] 已救援 [%s]，+%s 点数。请降落于任一友军区域交付。",
-	CSAR_RESCUED                       = "[%s] 已救援 [%s]。请降落于任一友军区域交付。",
-	CSAR_PILOT_ONBOARD                 = "飞行员已上机 [%d/%d]",
-	CSAR_TOO_HIGH                      = "高度过高",
-	CSAR_TOO_FAST                      = "速度过快",
-	CSAR_NO_ONE_ONBOARD                = "无人登机",
-	CSAR_CANNOT_DROPOFF_IN_AIR         = "空中无法卸载飞行员",
+	CSAR_AT_MAX_CAPACITY               = "已达最大载员",
+	CSAR_RESCUED_WITH_CREDITS          = "[%s] 救起了 [%s]，+%s 积分。请在任意友军区域着陆并交付。",
+	CSAR_RESCUED                       = "[%s] 救起了 [%s]。请在任意友军区域着陆并交付。",
+	CSAR_PILOT_ONBOARD                 = "机上飞行员 [%d/%d]",
+	CSAR_TOO_HIGH                      = "你飞得太高了",
+	CSAR_TOO_FAST                      = "你速度过快",
+	CSAR_NO_ONE_ONBOARD                = "机上无人",
+	CSAR_CANNOT_DROPOFF_IN_AIR         = "空中无法交付飞行员",
 	CSAR_PILOTS_DROPPED_OFF            = "飞行员已交付",
 	CSAR_PLAYER_DROPPED_OFF            = "[%s] 已交付 %s。",
-	CSAR_COMING_TO_YOU_ETA             = "%s：正在前往你的位置。\n预计 %d 秒后抵达。",
-
+	CSAR_COMING_TO_YOU_ETA             = "%s：我正赶来。\n预计 %d 秒后到达。",
 -- ============================================================
 	-- Dynamic Air Support
 	-- ============================================================
-	DYNAMIC_CAP_CONTROL                = "CAP 控制",
-	DYNAMIC_CAP_REPOSITION_BY_ZONE     = "CAP：依区域重新部署",
-	DYNAMIC_CAP_REPOSITION_BY_POSITION = "CAP：依座标重新部署",
-	DYNAMIC_CAP_HOLD_RACETRACK         = "CAP：维持等待航线",
-	DYNAMIC_CAP_FLIGHTSWEEP            = "CAP：战斗扫荡",
-	DYNAMIC_CAP_DESTROY                = "CAP：销毁",
-	DYNAMIC_CAS_DESTROY                = "CAS：销毁",
-	DYNAMIC_BOMBER_DESTROY             = "轰炸机：销毁",
-	DYNAMIC_SEAD_DESTROY               = "SEAD：销毁",
-	DYNAMIC_DECOY_DESTROY              = "诱饵：销毁",
-	DYNAMIC_BUILDING_STRIKE_DESTROY    = "建筑打击：销毁",
+	DYNAMIC_CAP_CONTROL                = "空中战斗巡逻控制",
+	DYNAMIC_CAP_REPOSITION_BY_ZONE     = "空中战斗巡逻编队：按区域重定位",
+	DYNAMIC_CAP_REPOSITION_BY_POSITION = "空中战斗巡逻编队：按位置重定位",
+	DYNAMIC_CAP_HOLD_RACETRACK         = "空中战斗巡逻编队：保持航线盘旋",
+	DYNAMIC_CAP_FLIGHTSWEEP            = "空中战斗巡逻编队：空域清扫",
+	DYNAMIC_CAP_DESTROY                = "空中战斗巡逻编队：解散",
+	DYNAMIC_CAS_DESTROY                = "近距离空中支援编队：解散",
+	DYNAMIC_BOMBER_DESTROY             = "轰炸机编队：解散",
+	DYNAMIC_SEAD_DESTROY               = "防空压制编队：解散",
+	DYNAMIC_DECOY_DESTROY              = "空射诱饵编队：解散",
+	DYNAMIC_BUILDING_STRIKE_DESTROY    = "建筑打击：解散",
 	DYNAMIC_TANKERS_CONTROL            = "加油机控制",
+	DYNAMIC_CARRIER_NAVIGATION         = "航母导航",
+	DYNAMIC_CARRIER_INFO               = "航母信息",
+	DYNAMIC_CARRIER_GROUP              = "航母编队",
+	DYNAMIC_CARRIER_SAIL_TO_AREA       = "航行至 %s",
+	DYNAMIC_CARRIER_RED_CARRIER_REQUIRED = "Red Carrier 清除后才可使用航母导航。",
+	DYNAMIC_CARRIER_AREA_UNAVAILABLE   = "航母区域不可用：%s",
+	DYNAMIC_CARRIER_GROUP_UNAVAILABLE  = "%s 未启用。",
+	DYNAMIC_CARRIER_ROUTE_FAILED       = "%s 无法规划前往 %s 的水上航线。",
+	DYNAMIC_CARRIER_TARAWA_HELP        = "Tarawa 标记指令：\ntarawahelp - 显示此说明\ntarawahere - 航行至此标记并停止\ntarawahereandstop - 航行至此标记并停止\ntarawahere1 - 设置往返航线点 1\ntarawahere2 - 设置往返航线点 2 并开始航线\ntarawareturn - 返回航母区域。",
+	DYNAMIC_CARRIER_TARAWA_FREE_MOVE_DISABLED = "Tarawa 标记移动已停用。",
+	DYNAMIC_CARRIER_TARAWA_BLUE_ONLY   = "Tarawa 标记移动仅限蓝方使用。",
+	DYNAMIC_CARRIER_TARAWA_POINT_INVALID = "Tarawa 航线被拒绝：标记不在深水区。",
+	DYNAMIC_CARRIER_TARAWA_PATH_INVALID = "Tarawa 航线被拒绝：路径不够深或不够直接。",
+	DYNAMIC_CARRIER_TARAWA_TERRITORY_INVALID = "Tarawa 航线被拒绝：标记必须位于友方领土。",
+	DYNAMIC_CARRIER_TARAWA_POINT1_SET  = "Tarawa 往返航线点 1 已保存。放置 tarawahere2 以完成航线。",
+	DYNAMIC_CARRIER_TARAWA_POINT1_MISSING = "请先放置 tarawahere1，再放置 tarawahere2。",
+	DYNAMIC_CARRIER_TARAWA_MOVING_TO_MARKER = "Tarawa 正航行至标记。",
+	DYNAMIC_CARRIER_TARAWA_RACETRACK_SET = "Tarawa 往返航线已设置。",
+	DYNAMIC_CARRIER_TARAWA_STOPPED     = "Tarawa 已抵达标记并停止。",
+	DYNAMIC_CARRIER_TARAWA_RETURNING   = "Tarawa 正返回其航母区域。",
+	DYNAMIC_CARRIER_TARAWA_RETURN_FAILED = "Tarawa 无法规划返回航线。",
+	DYNAMIC_CARRIER_MOVING_TO_AREA     = "%s 正航行至 %s。",
+	DYNAMIC_CARRIER_NEW_LOCATION_AVAILABLE = "航母编队现在可以驶向新的位置。",
+	DYNAMIC_CARRIER_TURN_WARNING_5     = "%s 将在 5 分钟后转向。",
+	DYNAMIC_CARRIER_TURN_WARNING_1     = "%s 将在 1 分钟后转向。",
 	DYNAMIC_TANKER_INFO                = "加油机信息",
-	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco（软管）：移至区域",
-	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco（软管）：依座标移动",
+	DYNAMIC_TANKER_ARCO_MOVE_TO_ZONE   = "Arco（软管）：移动到区域",
+	DYNAMIC_TANKER_ARCO_MOVE_BY_POS    = "Arco（软管）：按位置移动",
 	DYNAMIC_TANKER_ARCO_ALTITUDE       = "Arco（软管）：高度",
 	DYNAMIC_TANKER_ARCO_SPEED          = "Arco（软管）：速度",
-	DYNAMIC_TANKER_TEXACO_MOVE_TO_ZONE = "Texaco（硬管）：移至区域",
-	DYNAMIC_TANKER_TEXACO_MOVE_BY_POS  = "Texaco（硬管）：依座标移动",
+	DYNAMIC_TANKER_TEXACO_MOVE_TO_ZONE = "Texaco（硬管）：移动到区域",
+	DYNAMIC_TANKER_TEXACO_MOVE_BY_POS  = "Texaco（硬管）：按位置移动",
 	DYNAMIC_TANKER_TEXACO_ALTITUDE     = "Texaco（硬管）：高度",
 	DYNAMIC_TANKER_TEXACO_SPEED        = "Texaco（硬管）：速度",
-	DYNAMIC_TANKER_ARCO_INFO           = "Arco（软管）：TCN 101Y | BTN 14 | 260.00 | 高度 %s 呎",
-	DYNAMIC_TANKER_TEXACO_INFO         = "Texaco（硬管）：TCN 102Y | BTN 20 | 266.00 | 高度 %s 呎",
+	DYNAMIC_TANKER_ARCO_INFO           = "Arco（软管）：TCN 101Y | BTN 14 | 260.00 | 高度 %s 英尺",
+	DYNAMIC_TANKER_TEXACO_INFO         = "Texaco（硬管）：TCN 102Y | BTN 20 | 266.00 | 高度 %s 英尺",
 	DYNAMIC_ORBIT                      = "盘旋",
-	DYNAMIC_HOT_HEADING                = "航向 %03d",
-	DYNAMIC_REPOSITION_HEADING         = "重新部署 %03d",
+	DYNAMIC_HOT_HEADING                = "战区航向 %03d",
+	DYNAMIC_REPOSITION_HEADING         = "重定位 %03d",
 	DYNAMIC_NM_DISTANCE                = "%d 海里",
 	DYNAMIC_NM_LEG                     = "%d 海里航段",
 	DYNAMIC_SPEED_KT                   = "%d 节",
-	DYNAMIC_CAP_EN_ROUTE_TO_ZONE       = "CAP 正前往 %s。",
-	DYNAMIC_CAP_REPOSITIONING_ZONE     = "CAP 正在 %s 重新部署新等待航线，航向 %d°，%d 海里航段。",
-	DYNAMIC_CAP_REPOSITIONING_ORBIT    = "CAP 即将%s前往 %s 并盘旋。",
-	DYNAMIC_CAP_REPOSITIONING_POSITION = "CAP 即将%s %s，建立新等待航线，航向 %d°，%d 海里航段。",
-	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "CAP 设置为（遭接战时接战）",
-	DYNAMIC_CAP_ENGAGE_ALL             = "CAP 设置为全面接战",
-	DYNAMIC_TANKER_BUSY                = "目前有玩家在加油机附近，请稍后再试。",
+	DYNAMIC_CAP_EN_ROUTE_TO_ZONE       = "空中战斗巡逻编队正前往 %s。",
+	DYNAMIC_CAP_REPOSITIONING_ZONE     = "空中战斗巡逻编队正在 %s 重定位并建立新的航线盘旋，航向 %d°，航段 %d 海里。",
+	DYNAMIC_CAP_REPOSITIONING_ORBIT    = "空中战斗巡逻编队即将对 %s 执行 %s 并盘旋。",
+	DYNAMIC_CAP_REPOSITIONING_POSITION = "空中战斗巡逻编队即将于 %s %s 建立新的航线盘旋，航向 %d°，航段 %d 海里。",
+	DYNAMIC_CAP_ENGAGE_IF_ENGAGED      = "空中战斗巡逻编队已设置为“仅在被攻击时交战”",
+	DYNAMIC_CAP_ENGAGE_ALL             = "空中战斗巡逻编队已设置为攻击所有目标",
+	DYNAMIC_TANKER_BUSY                = "当前有玩家在加油机附近。请稍后再试。",
+	DYNAMIC_TANKER_BUSY_BY_PLAYER      = "当前有玩家在加油机附近。请再试一次 %s。",
 	DYNAMIC_TANKER_EN_ROUTE_TO_ZONE    = "%s 正前往 %s。",
-	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s 正重新部署至 %s，建立新等待航线，航向 %d 度，%d 海里航段。",
-	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s 即将%s前往 %s 并盘旋。",
-	DYNAMIC_TANKER_REPOSITIONING_POS   = "%s 即将%s %s，建立新等待航线，航向 %d 度，%d 海里航段。",
-	DYNAMIC_TANKER_ALTITUDE_SET        = "%s 高度已设置为 %s 呎。",
-	DYNAMIC_TANKER_SPEED_SET           = "%s 速度已设置为 %d 节。",
+	DYNAMIC_TANKER_REPOSITIONING_ZONE  = "%s 正重定位至 %s，并建立新的航线盘旋，航向 %d°，航段 %d 海里。",
+	DYNAMIC_TANKER_REPOSITIONING_ORBIT = "%s 即将对 %s 执行 %s 并盘旋。",
+	DYNAMIC_TANKER_REPOSITIONING_POS   = "%s 即将于 %s %s 建立新的航线盘旋，航向 %d°，航段 %d 海里。",
+	DYNAMIC_TANKER_ALTITUDE_SET        = "%s 高度已设为 %s 英尺。",
+	DYNAMIC_TANKER_SPEED_SET           = "%s 速度已设为 %d 节。",
 	DYNAMIC_TANKER_APPROACHING_ARCO    = "正在接近 Arco，BTN 14，260.00",
 	DYNAMIC_TANKER_APPROACHING_TEXACO  = "正在接近 Texaco，BTN 20，266.00",
-	DYNAMIC_CAP_ORBITING_AT            = "CAP：于 %s 盘旋中",
-	DYNAMIC_CAP_ORBITING               = "CAP：盘旋中",
-	DYNAMIC_CAP_RACETRACK_AT           = "CAP：于 %s 等待航线，航向 %d°，航段 %d 海里",
-	DYNAMIC_CAP_RACETRACK              = "CAP：等待航线，航向 %d°，航段 %d 海里",
-	DYNAMIC_TANKER_ORBITING_AT         = "%s：于 %s 盘旋中",
+	DYNAMIC_CAP_ORBITING_AT            = "空中战斗巡逻编队：正在 %s 盘旋",
+	DYNAMIC_CAP_ORBITING               = "空中战斗巡逻编队：盘旋中",
+	DYNAMIC_CAP_RACETRACK_AT           = "空中战斗巡逻编队：正在 %s 执行航线盘旋，航向 %d°，航段 %d 海里",
+	DYNAMIC_CAP_RACETRACK              = "空中战斗巡逻编队：执行航线盘旋，航向 %d°，航段 %d 海里",
+	DYNAMIC_TANKER_ORBITING_AT         = "%s：正在 %s 盘旋",
 	DYNAMIC_TANKER_ORBITING            = "%s：盘旋中",
-	DYNAMIC_TANKER_RACETRACK_AT        = "%s：于 %s 等待航线，航向 %d 度，航段 %d 海里",
-	DYNAMIC_TANKER_RACETRACK           = "%s：等待航线，航向 %d 度，航段 %d 海里",
-	DYNAMIC_TANKER_SAVED_POSITION      = "已储存位置",
-	DYNAMIC_ARCO_STATION_ORBIT         = "Arco（BTN-14，260.00，TCN 101Y）\n已到站，盘旋中。",
-	DYNAMIC_ARCO_STATION_RACETRACK     = "Arco（BTN-14，260.00，TCN 101Y）\n已到站，建立等待航线，航向 %s 度，%s 海里航段。",
-	DYNAMIC_ARCO_STATION_ORBIT_AT      = "Arco（BTN-14，260.00，TCN 101Y）\n已到站，于 %s 盘旋中。",
-	DYNAMIC_ARCO_STATION_RACETRACK_AT  = "Arco（BTN-14，260.00，TCN 101Y）\n已到站 %s，建立等待航线，航向 %s 度，%s 海里航段。",
-	DYNAMIC_TEXACO_STATION_ORBIT       = "Texaco（BTN-20，266.00，TCN 102Y）\n已到站，盘旋中。",
-	DYNAMIC_TEXACO_STATION_RACETRACK   = "Texaco（BTN-20，266.00，TCN 102Y）\n已到站，建立等待航线，航向 %s 度，%s 海里航段。",
-	DYNAMIC_TEXACO_STATION_ORBIT_AT    = "Texaco（BTN-20，266.00，TCN 102Y）\n已到站，于 %s 盘旋中。",
-	DYNAMIC_TEXACO_STATION_RACETRACK_AT = "Texaco（BTN-20，266.00，TCN 102Y）\n已到站 %s，建立等待航线，航向 %s 度，%s 海里航段。",
-	DYNAMIC_DROGUE_UNLOCKED_SELECT     = "（软管）加油机已解锁，请选择出发区域。",
-	DYNAMIC_BOOM_UNLOCKED_SELECT       = "（硬管）加油机已解锁，请选择出发区域。",
-	DYNAMIC_REQUEST_CAP_FROM           = "从以下位置请求 CAP",
-	DYNAMIC_REQUEST_DROGUE_TANKER_FROM = "从以下位置请求（软管）加油机",
-	DYNAMIC_REQUEST_TEXACO_TANKER_FROM = "从以下位置请求 Texaco（硬管）加油机",
-
+	DYNAMIC_TANKER_RACETRACK_AT        = "%s：正在 %s 执行航线盘旋，航向 %d°，航段 %d 海里",
+	DYNAMIC_TANKER_RACETRACK           = "%s：执行航线盘旋，航向 %d°，航段 %d 海里",
+	DYNAMIC_TANKER_SAVED_POSITION      = "已保存位置",
+	DYNAMIC_ARCO_STATION_ORBIT         = "Arco（BTN-14，260.00，TCN 101Y）\n已到站盘旋。",
+	DYNAMIC_ARCO_STATION_RACETRACK     = "Arco（BTN-14，260.00，TCN 101Y）\n已到站，正在建立航线盘旋，航向 %s°，航段 %s 海里。",
+	DYNAMIC_ARCO_STATION_ORBIT_AT      = "Arco（BTN-14，260.00，TCN 101Y）\n已到站，正在 %s 盘旋。",
+	DYNAMIC_ARCO_STATION_RACETRACK_AT  = "Arco（BTN-14，260.00，TCN 101Y）\n已到达 %s，正在建立航线盘旋，航向 %s°，航段 %s 海里。",
+	DYNAMIC_TEXACO_STATION_ORBIT       = "Texaco（BTN-20，266.00，TCN 102Y）\n已到站盘旋。",
+	DYNAMIC_TEXACO_STATION_RACETRACK   = "Texaco（BTN-20，266.00，TCN 102Y）\n已到站，正在建立航线盘旋，航向 %s°，航段 %s 海里。",
+	DYNAMIC_TEXACO_STATION_ORBIT_AT    = "Texaco（BTN-20，266.00，TCN 102Y）\n已到站，正在 %s 盘旋。",
+	DYNAMIC_TEXACO_STATION_RACETRACK_AT = "Texaco（BTN-20，266.00，TCN 102Y）\n已到达 %s，正在建立航线盘旋，航向 %s°，航段 %s 海里。",
+	DYNAMIC_DROGUE_UNLOCKED_SELECT     = "软管 加油机已解锁。请选择出生区域。",
+	DYNAMIC_BOOM_UNLOCKED_SELECT       = "硬管 加油机已解锁。请选择出生区域。",
+	DYNAMIC_REQUEST_CAP_FROM           = "在此处请求 空中战斗巡逻",
+	DYNAMIC_REQUEST_DROGUE_TANKER_FROM = "在此处请求 软管 加油机",
+	DYNAMIC_REQUEST_TEXACO_TANKER_FROM = "在此处请求 硬管 加油机",
 	-- ============================================================
 	-- Escort / Ground Missions
 	-- ============================================================
 	ESCORT_MOVE                        = "前进",
 	ESCORT_HOLD_POSITION               = "原地待命",
-	ESCORT_DEPLOY_SMOKE_CONVOY         = "在护航车队附近施放烟雾",
-	ESCORT_GET_BEARING_CONVOY          = "获取护航车队方位",
-	ESCORT_MANUAL_HOLD                 = "手动停止",
-	ESCORT_ENABLE_FORCED_HOLD          = "启用强制停止",
-	ESCORT_DISABLE_FORCED_HOLD         = "取消强制停止",
+	ESCORT_DEPLOY_SMOKE_CONVOY         = "在车队附近施放烟标",
+	ESCORT_GET_BEARING_CONVOY          = "获取车队方位",
+	ESCORT_MANUAL_HOLD                 = "手动待命",
+	ESCORT_ENABLE_FORCED_HOLD          = "启用强制待命",
+	ESCORT_DISABLE_FORCED_HOLD         = "禁用强制待命",
 	ESCORT_RESTART_MISSION             = "重启任务",
-	ESCORT_SET_UP_FARP                 = "建立前进起降场？",
-	ESCORT_ALREADY_MOVING_PLAYER       = "护航车队：我们已经在移动了，%s。",
-	ESCORT_ALREADY_MOVING_SIR          = "护航车队：我们已经在移动了，长官。",
-	ESCORT_COPY_MOVING_PLAYER          = "护航车队：收到 %s，开始移动。",
-	ESCORT_MOVING                      = "护航车队：开始移动。",
-	ESCORT_ALREADY_STOPPED_PLAYER      = "护航车队：我们已经停下来了 %s。",
-	ESCORT_ALREADY_STOPPED_SIR         = "护航车队：我们已经停下来了，长官。",
-	ESCORT_COPY_HOLDING_PLAYER         = "护航车队：收到 %s，原地待命。",
-	ESCORT_HOLDING                     = "护航车队：原地待命。",
-	ESCORT_GROUND_UNIT_NOT_FOUND       = "找不到地面单位。",
-	ESCORT_BLUE_SMOKE_DEPLOYED         = "护航车队：蓝色烟雾已施放",
-	ESCORT_NO_ALIVE_UNITS              = "护航车队中找不到存活的单位。",
-	ESCORT_GROUP_NOT_FOUND             = "找不到护航车队。",
-	ESCORT_BEARING_DISTANCE            = "护航车队：%d°\n\n距离：%s 公里",
-	ESCORT_LEADER_POSITION_UNKNOWN     = "无法确定车队长的位置。",
-	ESCORT_FORCED_HOLD_ENABLED         = "护航车队：收到。已启用强制停止",
-	ESCORT_FORCED_HOLD_DISABLED        = "护航车队：收到。已取消强制停止",
-	ESCORT_RESTART_CANCELED            = "重启已取消。",
-	ESCORT_FARP_DEPLOYMENT_POSSIBLE    = "护航车队：可部署前进起降场——请从护航无线电菜单中选择",
-	ESCORT_FARP_CREATING               = "护航车队：收到——正在建立前进起降场，请稍候。我们会再往前移动一些",
-	ESCORT_FARP_PROCEEDING             = "护航车队：收到，继续执行任务",
-	ESCORT_CONVOY_HOLDING_INTEL        = "收到敌方车队正朝我方前进的情报！\n\n车队原地待命",
-	ESCORT_CHECKPOINT_AHEAD            = "前方发现敌方检查哨。\n\n车队原地待命，请清除威胁",
-	ESCORT_NEARING_TARGET              = "护航车队：即将抵达目标区域，请清除威胁\n\n车队原地待命",
-	ESCORT_ALRIGHT_MOVING              = "护航车队：好的，开始移动！",
-	ESCORT_UNKNOWN_CONTEXT             = "提供的内容不明。请确认车队状态。",
-	ESCORT_HALT_MSG_1                  = "侦察确认前方有敌方活动。\n\n车队原地待命，等待放行。",
-	ESCORT_HALT_MSG_2                  = "侦测到附近有敌方移动。\n\n车队已停止。请在恢復行进前确保区域安全。",
-	ESCORT_HALT_MSG_3                  = "确认前方有敌方存在。\n\n车队已停止，等待进一步指示。",
-	ESCORT_HALT_MSG_4                  = "发现潜在威胁。\n\n车队待命中。请清除区域以继续前进。",
-	ESCORT_MOVING_MSG_1                = "车队出发。\n\n保持警戒并维持目视。",
-	ESCORT_MOVING_MSG_2                = "车队开始移动。\n\n保持队形紧密，注意威胁。",
-	ESCORT_MOVING_MSG_3                = "车队行进中。\n\n侦察前方路线是否有敌军。",
-	ESCORT_MOVING_MSG_4                = "路线畅通。车队朝目的地推进中。",
-
+	ESCORT_SET_UP_FARP                 = "建立 FARP？",
+	ESCORT_ALREADY_MOVING_PLAYER       = "护送编队：我们已经在移动中，%s。",
+	ESCORT_ALREADY_MOVING_SIR          = "护送编队：我们已经在移动中，长官。",
+	ESCORT_COPY_MOVING_PLAYER          = "护送编队：收到，%s，正在前进。",
+	ESCORT_MOVING                      = "护送编队：前进中。",
+	ESCORT_ALREADY_STOPPED_PLAYER      = "护送编队：我们已经停下了，%s。",
+	ESCORT_ALREADY_STOPPED_SIR         = "护送编队：我们已经停下了，长官。",
+	ESCORT_COPY_HOLDING_PLAYER         = "护送编队：收到，%s，原地待命。",
+	ESCORT_HOLDING                     = "护送编队：原地待命。",
+	ESCORT_GROUND_UNIT_NOT_FOUND       = "未找到地面单位。",
+	ESCORT_BLUE_SMOKE_DEPLOYED         = "护送编队：已施放蓝色烟标",
+	ESCORT_NO_ALIVE_UNITS              = "护送编队中没有存活单位。",
+	ESCORT_GROUP_NOT_FOUND             = "未找到护送编队。",
+	ESCORT_BEARING_DISTANCE            = "护送编队：%d°\n\n距离：%s 千米",
+	ESCORT_LEADER_POSITION_UNKNOWN     = "无法确定编队长机位置。",
+	ESCORT_FORCED_HOLD_ENABLED         = "护送编队：好的，收到。已启用强制待命",
+	ESCORT_FORCED_HOLD_DISABLED        = "护送编队：收到。已禁用强制待命",
+	ESCORT_RESTART_CANCELED            = "已取消重启。",
+	ESCORT_FARP_DEPLOYMENT_POSSIBLE    = "护送编队：可部署 FARP，请从护送无线电菜单中选择",
+	ESCORT_FARP_CREATING               = "护送编队：收到，正在建立 FARP，请稍候。我们会再向前移动一点",
+	ESCORT_FARP_PROCEEDING             = "护送编队：收到，继续任务",
+	ESCORT_CONVOY_HOLDING_INTEL        = "我们收到敌军车队正朝我们驶来的情报！\n\n车队已原地待命",
+	ESCORT_CHECKPOINT_AHEAD            = "前方有敌军检查点。\n\n车队已原地待命，请清除目标",
+	ESCORT_NEARING_TARGET              = "护送编队：接近目标区域，请清除敌人\n\n车队已原地待命",
+	ESCORT_ALRIGHT_MOVING              = "护送编队：好的，继续前进！",
+	ESCORT_UNKNOWN_CONTEXT             = "提供的上下文未知。请确认车队状态。",
+	ESCORT_HALT_MSG_1                  = "侦察确认前方存在敌情。\n\n车队已原地待命，等待放行。",
+	ESCORT_HALT_MSG_2                  = "附近发现敌方活动。\n\n车队已停下。请先确保区域安全后再继续。",
+	ESCORT_HALT_MSG_3                  = "确认前方有敌军存在。\n\n车队已停止，等待进一步命令。",
+	ESCORT_HALT_MSG_4                  = "已识别潜在威胁。\n\n车队待命中。清除区域后方可继续。",
+	ESCORT_MOVING_MSG_1                = "车队开始出发。\n\n保持警惕并维持目视。",
+	ESCORT_MOVING_MSG_2                = "车队开始机动。\n\n保持紧密队形并注意威胁。",
+	ESCORT_MOVING_MSG_3                = "车队正在前进。\n\n注意搜索前方路线上的敌军。",
+	ESCORT_MOVING_MSG_4                = "路线已清空。车队正向目的地前进。",
 	-- ============================================================
 	-- Persistence / Warehouse
 	-- ============================================================
-	PERSISTENCE_SAVE_DISABLED          = "持久化已禁用，无法建立存档档案",
-	PERSISTENCE_SAVE_DESANITIZE        = "持久化已禁用，无法建立存档档案\n\n请解除 DCS missionscripting.lua 的沙盒限制",
-
+	PERSISTENCE_SAVE_DISABLED          = "持久化已禁用，无法创建存档文件",
+	PERSISTENCE_SAVE_DESANITIZE        = "持久化已禁用，无法创建存档文件\n\n请对 DCS missionscripting.lua 进行 De-Sanitize",
 	-- ============================================================
 	-- Admin / Diagnostics
 	-- ============================================================
-	LZ_NO_VALID_LANDING_SPOTS          = "[LZ] 区域 %s 没有有效的降落点",
-	SPAWN_INVALID_GROUP_NAME           = "错误：grname 为 nil 或不是有效字串",
-	SPAWN_MISSING_UPGRADE_GROUP        = "区域 %s 中缺少升级群组 %s，将尝试替换。",
-	SPAWN_FAILED_GROUP_IN_ZONE         = "无法在区域 %s 中生成群组：%s",
-	RESPAWN_TEMPLATE_NOT_FOUND         = "重生：找不到任务编辑器模板 '%s'",
-	RESPAWN_ADDGROUP_FAILED            = "重生：群组 '%s' 的 addGroup 失败",
-	RESPAWN_ADDGROUP_FAILED_REASON     = "重生：addGroup 失败——%s",
-	GROUP_NOT_FOUND_REPORT             = "找不到群组 %s，请向 Leka 回报",
-	REGISTER_GROUP_TARGET_FAILED       = "警告：RegisterGroupTarget 失败，找不到群组 %s。",
-	DIAGNOSTIC_PROCESS_AIR_NON_AIR     = "GroupCommander:processAir 被非空中单位 %s 呼叫，请回报给 Leka",
+	LZ_NO_VALID_LANDING_SPOTS          = "[LZ] 区域 %s 没有有效着陆点",
+	SPAWN_INVALID_GROUP_NAME           = "错误：grname 为空或不是有效字符串",
+	SPAWN_MISSING_UPGRADE_GROUP        = "区域 %s 缺少升级编队 %s。如有可能将进行替换。",
+	SPAWN_FAILED_GROUP_IN_ZONE         = "在区域 %s 生成编队失败：%s",
+	RESPAWN_TEMPLATE_NOT_FOUND         = "重生：未找到任务编辑器模板“%s”",
+	RESPAWN_ADDGROUP_FAILED            = "重生：为编队“%s”执行 addGroup 失败",
+	RESPAWN_ADDGROUP_FAILED_REASON     = "重生：addGroup 失败 - %s",
+	GROUP_NOT_FOUND_REPORT             = "未找到编队 %s，请报告给 Leka",
+	REGISTER_GROUP_TARGET_FAILED       = "警告：RegisterGroupTarget 失败，未找到编队 %s。",
+	DIAGNOSTIC_PROCESS_AIR_NON_AIR     = "GroupCommander:processAir 被用于非空中单位 %s，请报告给 Leka",
 	DIAGNOSTIC_RESPAWN_TIMERS_NIL      = "错误：请向 Leka 回报并附上日誌！respawnTimers nil %s name=%s mission=%s side=%s urgent=%s",
-	ADMIN_BUG_UNRESOLVED_ENTRIES       = "（BUG）%s 错误有未解决的条目：%s。请向 Leka 回报。",
-	ADMIN_STATUS_ZONE_ONLY             = "status 指令只能在区域内使用",
-	ADMIN_RANK_SET                     = "%s 的军阶已设置",
+	ADMIN_BUG_UNRESOLVED_ENTRIES       = "(BUG) %s 错误存在未解析条目：%s。请报告给 Leka。",
+	ADMIN_STATUS_ZONE_ONLY             = "状态命令只能在区域内使用",
+	ADMIN_RANK_SET                     = "%s 的军衔已设置",
 	ADMIN_TOP_HEADER                   = "[今日前 %d 名]",
-	ADMIN_TOP_LINE                     = "%d. [%s]\n点数：%d",
-	ADMIN_COMMAND_HELP                 = "可用指令：\nbuy——显示可购买的支援项目\nbuy:item——购买支援项目\nstatus——显示区域状态 60 秒\nstats——显示完整排行榜\ntop——显示排行榜前 5 名\nmystats——显示您的个人统计（仅限多人）\nmissions——显示所有进行中的任务",
-	ADMIN_DEBUG_HELP                   = "可用指令：\nspawn——在标记所在区域生成单位（若生成有效）。\nrensa——清空区域内的单位。\nintelstatus——即使未购买情报也强制显示状态讯息。\ncapture:——capture:2 或 capture:1，可用于占领中立区域\nmaxxa——将区域升级至当前阵营的最高等级。\nevent——在日誌中显示脚本中的事件\nevent:——若 canexecute 为 true 则启动事件。event:eventID\naddfunds:——addfunds:1000——为蓝方增加 1000 点数。\naddrank:——AddRank:player,1000——为玩家增加 1000 军阶点数。\ndebug:——在日誌中显示区域状态。\naddshop:——为该阵营新增商店，可从 F10 使用。\nremoveshop:——移除该阵营的商店。\nupgradera:——修复区域并补充群组中缺少的单位。\nupgradeallred:——将所有红方区域升级至最高等级。\nupgradeallblue:——将所有蓝方区域升级至最高等级。\nspawnnow:<side>——在保持限制/军阶的前提下快进指定阵营的空中生成（1=红方，2=蓝方）。\n-code:——纯 Lua 输入。可用于呼叫函式，例如\n-code:zones.name:upgrade() 来升级区域",
-
+	ADMIN_TOP_LINE                     = "%d. [%s]\n积分：%d",
+	ADMIN_COMMAND_HELP                 = "可用命令：\nbuy - 显示可购买的支援物品\nbuy:item - 购买支援物品\nstatus - 显示 60 秒区域状态\nstats - 显示完整排行榜\ntop - 显示排行榜前 5 名玩家\nmystats - 显示你的个人统计（仅 MP）\nmissions - 显示所有当前活动任务",
+	ADMIN_DEBUG_HELP                   = "可用命令：\nspawn - 在标记所在区域生成内容（如果该生成有效）。\nrensa - 清空一个区域内的单位。\nintelstatus - 即使未购买情报也强制显示状态消息。\ncapture: - 例如 capture:2 或 capture:1，可用于占领中立区域。\nmaxxa - 将当前阵营区域直接升到最高级。\nevent - 在日志中显示脚本中的事件。\nevent: - 若 canexecute 为 true，则启动对应事件。用法 event:eventID\naddfunds: - 例如 addfunds:1000，给蓝方阵营增加 1000 积分。\naddrank: - 例如 AddRank:player,1000，给玩家增加 1000 军衔积分。\ndebug: - 在日志中显示区域状态。\naddshop: - 为阵营添加商店，并可通过 F10 使用。\nremoveshop: - 移除该阵营商店。\nupgradera: - 修复一个区域，并补齐编队缺失单位。\nupgradeallred: - 将所有红方区域升满。\nupgradeallblue: - 将所有蓝方区域升满。\nspawnnow:<side> - 快进该阵营的空中生成（1=红，2=蓝），同时保持限制/军衔逻辑。\n-code: - 纯 Lua 入口，可用于调用函数，例如\n-code:zones.name:upgrade() 可升级对应区域",
 	-- ============================================================
 	-- Mission Completion / Player Rewards
 	-- ============================================================
-	MISSION_COMPLETE_AUTORESTART       = "敌方已被击败。\n\n任务完成。\n\n即将重新启动……",
-	MISSION_COMPLETE_MANUAL_RESTART    = "敌方已被击败。\n\n任务完成。\n\n您可以从无线电菜单重新启动任务。",
-	MISSION_RESTARTING_NOW             = "即将重新启动……",
-	PLAYER_ILLEGAL_NAME_CHARACTERS     = "您的名称包含非法字元（ ' / \\ ）。请移除后重新加入。",
+	MISSION_COMPLETE_AUTORESTART       = "敌军已被击败。\n\n任务完成。\n\n正在重启……",
+	MISSION_COMPLETE_MANUAL_RESTART    = "敌军已被击败。\n\n任务完成。\n\n你可以通过无线电菜单重启任务。",
+	MISSION_RESTARTING_NOW             = "正在重启……",
+	PLAYER_ILLEGAL_NAME_CHARACTERS     = "你的名称包含非法字符（' / \\）。请移除后重新加入。",
 	PLAYER_PROMOTED                   = "%s 已晋升为 %s！",
-	PLAYER_DEMOTED                    = "%s 已降级为 %s。",
-	PLAYER_EJECTED_CREDITS             = "[%s] 已弹射。+%d 点数（收入的 25%%）。击杀统计已清除。",
-	PLAYER_AIRCRAFT_LOST_CREDITS      = "[%s] 飞机损失，-%d 点数",
-	PLAYER_AIRCRAFT_LOST_RANK         = "[%s] 飞机损失，-%d 军阶点数",
-	PLAYER_LANDED_CLAIM_ZONE          = "[%s] 已降落于 %s。\n等待 %d 秒以领取点数……",
-	PLAYER_LANDED_CLAIM_CARRIER       = "[%s] 已降落于 %s。\n等待 10 秒以领取点数……",
-	PLAYER_REDEEM_HEADER              = "玩家兑换：",
-	PLAYER_REDEEM_CREW_HEADER         = "玩家兑换（机组）：",
-	PLAYER_REDEEM_LINE                = "%s：%d 点数",
-	MISSION_REWARD_COMPLETED_SOLO      = "%s 任务由 %s 完成。+%d 点数——降落后领取。",
-	MISSION_REWARD_COMPLETED_JOINT     = "%s 任务由 %s 和 %s 完成。每人 +%d 点数——降落后领取。",
-	MISSION_REWARD_COMPLETED_GROUP     = "%s 任务由 %s 完成。每人 +%d 点数——降落后领取。",
-	MISSION_REWARD_DESTROYED_SOLO      = "%s 被 %s 摧毁。+%d 点数——降落后领取。",
-	MISSION_REWARD_DESTROYED_JOINT     = "%s 被 %s 和 %s 摧毁。每人 +%d 点数——降落后领取。",
-	FRIENDLY_FIRE_UNIT                 = "！！友军误击！！\n[%s] 击杀了友军单位：%s",
-	FRIENDLY_FIRE_PLAYER               = "！！友军误击！！\n[%s] 击杀了友军玩家：%s",
-	FRIENDLY_FIRE_RANK_LOSS            = "\n[%s] 损失 %s 军阶点数",
-	REWARD_UNIT_KILL                   = "击杀单位 +%s 点数",
-	REWARD_AIRCRAFT_KILL               = "击杀飞机 +%s 点数",
-	REWARD_HELICOPTER_KILL             = "击杀直升机 +%s 点数",
-	REWARD_SAM_KILL                    = "击杀防空系统 +%s 点数",
-	REWARD_INFANTRY_KILL               = "击杀步兵 +%s 点数",
-	REWARD_GROUND_KILL                 = "击杀地面单位 +%s 点数",
-	REWARD_VEHICLE_KILL                = "击杀车辆 +%s 点数",
-	REWARD_SHIP_KILL                   = "击杀船舰 +%s 点数",
-	REWARD_STRUCTURE_KILL              = "摧毁建筑 +%s 点数",
-
+	PLAYER_DEMOTED                    = "%s 已降为 %s。",
+	PLAYER_EJECTED_CREDITS             = "[%s] 已弹射。+%d 积分（收益的 25%%）。击杀统计已丢失。",
+	PLAYER_AIRCRAFT_LOST_CREDITS      = "[%s] 飞机损失，-%d 积分",
+	PLAYER_AIRCRAFT_LOST_RANK         = "[%s] 飞机损失，-%d 军衔积分",
+	PLAYER_LANDED_CLAIM_ZONE          = "[%s] 已降落于 %s。\n等待 %d 秒后可领取积分……",
+	PLAYER_LANDED_CLAIM_CARRIER       = "[%s] 已降落于 %s。\n等待 10 秒后可领取积分……",
+	PLAYER_REDEEM_HEADER              = "玩家领取积分：",
+	PLAYER_REDEEM_CREW_HEADER         = "玩家领取积分（机组）：",
+	PLAYER_REDEEM_LINE                = "%s：%d 积分",
+	MISSION_REWARD_COMPLETED_SOLO      = "%s 任务由 %s 完成。+%d 积分，着陆后领取。",
+	MISSION_REWARD_COMPLETED_JOINT     = "%s 任务由 %s 与 %s 完成。每人 +%d 积分，着陆后领取。",
+	MISSION_REWARD_COMPLETED_GROUP     = "%s 任务由 %s 完成。每人 +%d 积分，着陆后领取。",
+	MISSION_REWARD_DESTROYED_SOLO      = "%s 已被 %s 摧毁。+%d 积分，着陆后领取。",
+	MISSION_REWARD_DESTROYED_JOINT     = "%s 已被 %s 与 %s 摧毁。每人 +%d 积分，着陆后领取。",
+	FRIENDLY_FIRE_UNIT                 = "!! 误伤友军 !!\n[%s] 击毁了友军单位：%s",
+	FRIENDLY_FIRE_PLAYER               = "!! 误伤友军 !!\n[%s] 击杀了友军玩家：%s",
+	FRIENDLY_FIRE_RANK_LOSS            = "\n[%s] 军衔损失 %s",
+	REWARD_UNIT_KILL                   = "单位击杀 +%s 积分",
+	REWARD_AIRCRAFT_KILL               = "飞机击杀 +%s 积分",
+	REWARD_HELICOPTER_KILL             = "直升机击杀 +%s 积分",
+	REWARD_SAM_KILL                    = "防空系统击杀 +%s 积分",
+	REWARD_INFANTRY_KILL               = "步兵击杀 +%s 积分",
+	REWARD_GROUND_KILL                 = "地面目标击杀 +%s 积分",
+	REWARD_VEHICLE_KILL                = "车辆击杀 +%s 积分",
+	REWARD_SHIP_KILL                   = "舰船击杀 +%s 积分",
+	REWARD_STRUCTURE_KILL              = "建筑击杀 +%s 积分",
 -- ============================================================
 	-- Dynamic Support Air / FARP
 	-- ============================================================
-	DYNAMIC_FARP_IN_OPERATION          = "%s 已开始运作！",
-	DYNAMIC_BUILD_FARP_GROUP_INVALID   = "群组无效：%s",
-	DYNAMIC_BUILD_FARP_NO_COORDINATE   = "BuildFarpHere：找不到群组座标：%s",
-	DYNAMIC_CHINOOK_LAUNCH_FAILED      = "无法起飞 Chinook",
+	DYNAMIC_FARP_IN_OPERATION          = "%s 已投入运作！",
+	DYNAMIC_BUILD_FARP_GROUP_INVALID   = "编队无效：%s",
+	DYNAMIC_BUILD_FARP_NO_COORDINATE   = "BuildFarpHere：未找到编队坐标：%s",
+	DYNAMIC_CHINOOK_LAUNCH_FAILED      = "无法放飞支奴干",
 	DYNAMIC_MARKER_NO_POSITION         = "未找到标记位置",
 	DYNAMIC_FARP_TOO_FAR               = "距离友军机场过远（最大 100 海里）",
-	DYNAMIC_SUPPORT_AIRBORNE_INGRESS   = "%s 编队已起飞，正前往 %s 进入点。",
-	DYNAMIC_SUPPORT_CAP_OUT_OF_MISSILES = "CAP 编队弹药用尽，返回基地",
-	DYNAMIC_SUPPORT_CAP_LANDED         = "CAP 编队已降落",
-	DYNAMIC_SUPPORT_CAP_KILLED         = "CAP 编队已全数损失",
-	DYNAMIC_SUPPORT_CAP_SCRAMBLING_ORBIT = "CAP 自 %s 紧急起飞，前往 %s 建立盘旋。",
-	DYNAMIC_SUPPORT_CAP_SCRAMBLING_RACETRACK = "CAP 自 %s 紧急起飞，前往 %s 建立等待航线，航向 %d°，航段 %d 英里。",
-	DYNAMIC_SUPPORT_CAP_ON_STATION_ORBIT = "CAP 已到站，盘旋于 %s。",
-	DYNAMIC_SUPPORT_CAP_ON_STATION_RACETRACK = "CAP 已抵达指定空域 %s，建立等待航线 %d°，航段 %d 英里。",
-	DYNAMIC_SUPPORT_CAS_COMPLETED      = "CAS 编队已顺利完成任务",
-	DYNAMIC_SUPPORT_CAS_WINCHESTER     = "CAS 编队弹药用尽，返回基地",
-	DYNAMIC_SUPPORT_CAS_LANDED         = "CAS 编队已降落",
-	DYNAMIC_SUPPORT_CAS_KILLED         = "CAS 编队已全数损失",
-	DYNAMIC_SUPPORT_CAS_SCRAMBLING     = "CAS 自 %s 紧急起飞攻击 %s",
-	DYNAMIC_SUPPORT_CAS_LAUNCHED       = "CAS 自 %s 起飞攻击 %s",
-	DYNAMIC_SUPPORT_DECOY_ETA          = "诱饵编队：预计 %d 分 %d 秒后发射。",
-	DYNAMIC_SUPPORT_DECOY_COMPLETED    = "诱饵编队已顺利完成任务",
-	DYNAMIC_SUPPORT_DECOY_ALL_AWAY     = "诱饵编队：全数投放完毕，返回基地。",
-	DYNAMIC_SUPPORT_DECOY_LANDED       = "诱饵编队已降落",
-	DYNAMIC_SUPPORT_DECOY_KILLED       = "诱饵编队已全数损失",
-	DYNAMIC_SUPPORT_DECOY_SCRAMBLING   = "诱饵编队自 %s 紧急起飞攻击 %s",
-	DYNAMIC_SUPPORT_DECOY_LAUNCHED     = "诱饵编队自 %s 起飞攻击 %s",
-	DYNAMIC_SUPPORT_NO_SEAD_TARGETS_REFUND = "%s 无有效 SEAD 目标，退还 %d 点数",
-	DYNAMIC_SUPPORT_SEAD_COMPLETED     = "SEAD 编队已顺利完成任务",
-	DYNAMIC_SUPPORT_SEAD_RTB           = "SEAD 编队返回基地",
-	DYNAMIC_SUPPORT_SEAD_LANDED        = "SEAD 编队已降落",
-	DYNAMIC_SUPPORT_SEAD_KILLED        = "SEAD 编队已全数损失",
-	DYNAMIC_SUPPORT_SEAD_SCRAMBLING    = "SEAD 自 %s 紧急起飞攻击 %s",
-	DYNAMIC_SUPPORT_SEAD_LAUNCHED      = "SEAD 自 %s 起飞攻击 %s",
-	DYNAMIC_SUPPORT_BOMBER_COMPLETED   = "轰炸机编队已顺利完成任务",
-	DYNAMIC_SUPPORT_BOMBER_RTB         = "轰炸机编队返回基地",
+	DYNAMIC_SUPPORT_AIRBORNE_INGRESS   = "%s 编队已起飞，正飞往 %s 的进入点。",
+	DYNAMIC_SUPPORT_CAP_OUT_OF_MISSILES = "空中战斗巡逻编队已无导弹，正在返航",
+	DYNAMIC_SUPPORT_CAP_LANDED         = "空中战斗巡逻编队已降落",
+	DYNAMIC_SUPPORT_CAP_KILLED         = "空中战斗巡逻编队已被摧毁",
+	DYNAMIC_SUPPORT_CAP_SCRAMBLING_ORBIT = "空中战斗巡逻编队正从 %s 紧急起飞，将在 %s 建立盘旋。",
+	DYNAMIC_SUPPORT_CAP_SCRAMBLING_RACETRACK = "空中战斗巡逻编队正从 %s 紧急起飞，将在 %s 建立航线盘旋，航向 %d°，航段 %d 海里。",
+	DYNAMIC_SUPPORT_CAP_ON_STATION_ORBIT = "空中战斗巡逻编队已到位，正在 %s 盘旋。",
+	DYNAMIC_SUPPORT_CAP_ON_STATION_RACETRACK = "空中战斗巡逻编队已到位，正在 %s 建立航线盘旋，航向 %d°，航段 %d 海里。",
+	DYNAMIC_SUPPORT_CAS_COMPLETED      = "近距离空中支援编队已成功完成任务",
+	DYNAMIC_SUPPORT_CAS_WINCHESTER     = "近距离空中支援编队弹药耗尽，正在返航",
+	DYNAMIC_SUPPORT_CAS_LANDED         = "近距离空中支援编队已降落",
+	DYNAMIC_SUPPORT_CAS_KILLED         = "近距离空中支援编队已被摧毁",
+	DYNAMIC_SUPPORT_CAS_SCRAMBLING     = "近距离空中支援编队正从 %s 紧急起飞攻击 %s",
+	DYNAMIC_SUPPORT_CAS_LAUNCHED       = "近距离空中支援编队已从 %s 起飞攻击 %s",
+	DYNAMIC_SUPPORT_DECOY_ETA          = "空射诱饵编队：预计 %d 分 %d 秒后开火。",
+	DYNAMIC_SUPPORT_DECOY_COMPLETED    = "空射诱饵编队已成功完成任务",
+	DYNAMIC_SUPPORT_DECOY_ALL_AWAY     = "空射诱饵编队：诱弹已全部投放。正在返航。",
+	DYNAMIC_SUPPORT_DECOY_LANDED       = "空射诱饵编队已降落",
+	DYNAMIC_SUPPORT_DECOY_KILLED       = "空射诱饵编队已被摧毁",
+	DYNAMIC_SUPPORT_DECOY_SCRAMBLING   = "空射诱饵编队正从 %s 紧急起飞攻击 %s",
+	DYNAMIC_SUPPORT_DECOY_LAUNCHED     = "空射诱饵编队已从 %s 起飞攻击 %s",
+	DYNAMIC_SUPPORT_NO_SEAD_TARGETS_REFUND = "%s 没有有效防空压制目标。已退还 %d 积分",
+	DYNAMIC_SUPPORT_SEAD_COMPLETED     = "防空压制编队已成功完成任务",
+	DYNAMIC_SUPPORT_SEAD_RTB           = "防空压制编队正在返航",
+	DYNAMIC_SUPPORT_SEAD_LANDED        = "防空压制编队已降落",
+	DYNAMIC_SUPPORT_SEAD_KILLED        = "防空压制编队已被摧毁",
+	DYNAMIC_SUPPORT_SEAD_SCRAMBLING    = "防空压制编队正从 %s 紧急起飞攻击 %s",
+	DYNAMIC_SUPPORT_SEAD_LAUNCHED      = "防空压制编队已从 %s 起飞攻击 %s",
+	DYNAMIC_SUPPORT_BOMBER_COMPLETED   = "轰炸机编队已成功完成任务",
+	DYNAMIC_SUPPORT_BOMBER_RTB         = "轰炸机编队正在返航",
 	DYNAMIC_SUPPORT_BOMBER_LANDED      = "轰炸机编队已降落",
-	DYNAMIC_SUPPORT_BOMBER_KILLED      = "轰炸机编队已全数损失",
-	DYNAMIC_SUPPORT_BOMBER_SCRAMBLING  = "轰炸机自 %s 紧急起飞攻击 %s",
-	DYNAMIC_SUPPORT_BOMBER_LAUNCHED    = "轰炸机自 %s 起飞攻击 %s",
-	DYNAMIC_SUPPORT_STRIKE_COMPLETED   = "打击编队已顺利完成任务",
-	DYNAMIC_SUPPORT_INFRASTRUCTURE_RTB = "基础设施编队返回基地",
+	DYNAMIC_SUPPORT_BOMBER_KILLED      = "轰炸机编队已被摧毁",
+	DYNAMIC_SUPPORT_BOMBER_SCRAMBLING  = "轰炸机编队正从 %s 紧急起飞攻击 %s",
+	DYNAMIC_SUPPORT_BOMBER_LAUNCHED    = "轰炸机编队已从 %s 起飞攻击 %s",
+	DYNAMIC_SUPPORT_STRIKE_COMPLETED   = "打击编队已成功完成任务",
+	DYNAMIC_SUPPORT_INFRASTRUCTURE_RTB = "基础设施打击编队正在返航",
 	DYNAMIC_SUPPORT_STRIKE_LANDED      = "打击编队已降落",
-	DYNAMIC_SUPPORT_STRIKE_KILLED      = "打击编队已全数损失",
-	DYNAMIC_SUPPORT_STRIKE_SCRAMBLING  = "打击编队自 %s 紧急起飞攻击 %s",
-	DYNAMIC_SUPPORT_STRIKE_LAUNCHED    = "打击编队自 %s 起飞攻击 %s",
-
+	DYNAMIC_SUPPORT_STRIKE_KILLED      = "打击编队已被摧毁",
+	DYNAMIC_SUPPORT_STRIKE_SCRAMBLING  = "打击编队正从 %s 紧急起飞攻击 %s",
+	DYNAMIC_SUPPORT_STRIKE_LAUNCHED    = "打击编队已从 %s 起飞攻击 %s",
 	-- ============================================================
 	-- Warehouse / Ground Convoys
 	-- ============================================================
-	WAREHOUSE_NO_ELIGIBLE_RED_ZONES    = "无可用红方区域",
-	WAREHOUSE_NO_VALID_UPGRADES        = "无可用升级",
-	WAREHOUSE_RED_REINFORCED           = "红方已于 %s 增援",
-	WAREHOUSE_MUST_PICK_FRIENDLY_ZONE  = "必须选择友军区域",
-	WAREHOUSE_ZONE_MUST_HAVE_AIRBASE   = "区域必须包含机场",
-	WAREHOUSE_ZONE_ALREADY_UPGRADED    = "区域已升级",
-	WAREHOUSE_ZONE_FULLY_UPGRADED_FIRST = "必须先完全升级该区域！",
-	WAREHOUSE_UNABLE_RESTOCK           = "无法补充仓库",
+	WAREHOUSE_NO_ELIGIBLE_RED_ZONES    = "没有可用的红方区域",
+	WAREHOUSE_NO_VALID_UPGRADES        = "没有有效升级项",
+	WAREHOUSE_RED_REINFORCED           = "红方部队已在 %s 获得增援",
+	WAREHOUSE_MUST_PICK_FRIENDLY_ZONE  = "必须选择友方区域",
+	WAREHOUSE_ZONE_MUST_HAVE_AIRBASE   = "该区域必须拥有机场",
+	WAREHOUSE_ZONE_ALREADY_UPGRADED    = "该区域已升级",
+	WAREHOUSE_ZONE_FULLY_UPGRADED_FIRST = "该区域必须先完全升级！",
+	WAREHOUSE_UNABLE_RESTOCK           = "无法补充仓库库存",
 	WAREHOUSE_LOGISTICS_DISABLED       = "仓库后勤已禁用",
-	WAREHOUSE_LOGISTIC_CENTER_CREATED  = "%s 已设为后勤中心，仓库已补充。",
-	WAREHOUSE_RESUPPLIED_50            = "%s 仓库已补充 50 单位。",
-	WAREHOUSE_PERSISTENCE_LOADED       = "[WarehousePersistence] 已载入 %d 个储存数据（来源：%s）",
+	WAREHOUSE_LOGISTIC_CENTER_CREATED  = "%s 现已成为后勤中心。仓库已补货。",
+	WAREHOUSE_RESUPPLIED_50            = "%s 仓库已补充 50 件物资。",
+	WAREHOUSE_PERSISTENCE_LOADED       = "[WarehousePersistence] 已载入 %d 个仓库数据（来源：%s）",
 	WAREHOUSE_PERSISTENCE_STARTED      = "WarehousePersistence 已启动",
-	WAREHOUSE_UNLIMITED_AIRCRAFT_DETECTED = "侦测到 %s 有无限制飞机",
-	WAREHOUSE_UNLIMITED_WAREHOUSE_DETECTED = "侦测到 %s 有无限制仓库",
-	GROUND_ATTACK_DISPATCHED           = "地面攻击车队已派往 %s。",
-	GROUND_ATTACK_ABORTED_NO_ENEMY      = "地面攻击取消，40 海里内无敌方区域。",
-	GROUND_ATTACK_CONVOY_DEPLOYING     = "车队自 %s 出发攻击 %s，预计 %d 分钟。",
-	GROUND_ATTACK_CONVOY_EN_ROUTE      = "车队前往攻击 %s，预计 %d 分钟。",
-	INTEL_ENEMY_SUPPLY_CONVOY_INBOUND  = "情报：敌方补给车队自 %s 出发，前往 %s。",
-	INTEL_ENEMY_ATTACK_CONVOY_INBOUND  = "情报：敌方攻击车队自 %s 出发，前往 %s。",
-}
+	WAREHOUSE_UNLIMITED_AIRCRAFT_DETECTED = "检测到 %s 存在无限飞机",
+	WAREHOUSE_UNLIMITED_WAREHOUSE_DETECTED = "检测到 %s 存在无限仓库",
+	GROUND_ATTACK_DISPATCHED           = "地面进攻车队已派往 %s。",
+	GROUND_ATTACK_ABORTED_NO_ENEMY      = "地面进攻车队已取消。40 海里内没有敌方区域。",
+	GROUND_ATTACK_CONVOY_DEPLOYING     = "车队正从 %s 出发进攻 %s。预计到达：%d 分钟。",
+	GROUND_ATTACK_CONVOY_EN_ROUTE      = "车队正在前往进攻 %s。预计到达：%d 分钟。",
+	INTEL_ENEMY_SUPPLY_CONVOY_INBOUND  = "情报：敌军补给车队正从 %s 开来，目标是 %s。",
+	INTEL_ENEMY_ATTACK_CONVOY_INBOUND  = "情报：敌军攻击车队正从 %s 开来，目标是 %s。",}
 
 local function normalizeLocale(locale)
 	if locale == nil or locale == "" then return FL.DefaultLocale end
@@ -14754,7 +17777,7 @@ local SharedLabels = {
 	SYRIA_SHOP_LABEL_ARMOR             = "Armor",
 }
 
-for _, locale in ipairs({ "EN", "DE", "FR", "ES", "RU", "PT-BR", "TR", "zh-TW", "zh-CN" }) do
+for _, locale in ipairs({ "EN", "DE", "FR", "ES", "RU", "PT-BR", "TR", "IT", "zh-TW", "zh-CN" }) do
 	FL:Register(locale, SharedLabels)
 end
 FL:Register("zh-TW", {
@@ -14771,6 +17794,483 @@ FL:Register("zh-CN", {
 	SYRIA_SHOP_LABEL_BOMB_RUN_LOWER    = "轰炸航线",
 	SYRIA_SHOP_LABEL_ARMOR             = "装甲",
 })
+
+local AIENLabels = {
+	EN = {
+		AIEN_FIRE_REQUEST              = "C2, Artillery, request fire mission, fire for Effect.",
+		AIEN_ZONE                      = "Zone: %s",
+		AIEN_ZONES                     = "Zones: %s",
+		AIEN_SHOOTERS                  = "Shooters: %s",
+		AIEN_ROUNDS                    = "%s rounds",
+		AIEN_TARGETS                   = "Targets: %s",
+		AIEN_CLEARED_FIRE              = "Cleared for fire when ready",
+		AIEN_FIRE_MISSION              = "Fire mission",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2, %s, identified enemy artillery fire. coordinates:",
+		AIEN_COUNTER_BATTERY_EVALUATING = "Trying to evaluate enemy position. Please wait",
+		AIEN_ARTY_TARGET_MOVING        = "C2, %s, we can't fire now, target is on the move.",
+		AIEN_THREAT_MBT                = "enemy tanks!",
+		AIEN_THREAT_IFV                = "enemy IFVs!",
+		AIEN_THREAT_APC                = "enemy APCs!",
+		AIEN_THREAT_AAA                = "enemy AAA!",
+		AIEN_THREAT_MANPADS            = "enemy MANPADS!",
+		AIEN_THREAT_SAM                = "enemy SAM!",
+		AIEN_THREAT_ARTY               = "enemy artillery!",
+		AIEN_THREAT_MLRS               = "enemy MLRS!",
+		AIEN_THREAT_LOGI               = "enemy logistics!",
+		AIEN_THREAT_INF                = "enemy infantry!",
+		AIEN_THREAT_RECCE              = "enemy recon!",
+		AIEN_THREAT_ATGM               = "enemy ATGM!",
+		AIEN_THREAT_UNKN               = "enemy contacts!",
+		AIEN_THREAT_PLANE              = "enemy plane!",
+		AIEN_THREAT_HELICOPTER         = "enemy helicopter!",
+		AIEN_THREAT_GROUND_UNITS       = "enemy ground units!",
+		AIEN_THREAT_SHIP               = "enemy ship!",
+		AIEN_THREAT_STRUCTURE          = "enemy structure!",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2, %s is under attack by %s %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2, %s is under attack! %s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2, %s, report under attack by %s Coordinates: %s, %s. %s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2, %s, report under attack. Coordinates: %s, %s. %s",
+		AIEN_TEST_UNDER_ATTACK         = "C2, %s, report under attack. Coordinates: %s.%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s, C2, , we're moving to engage hasty targets, coordinates:",
+		AIEN_TARGET_IS                 = "target is %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "We're trying to escape fire!!",
+		AIEN_REACTION_STUCK_SUPPORT    = "We're stuck here, we ask support if available",
+		AIEN_REACTION_SMOKE_COVER      = "Dropping smoke cover",
+		AIEN_REACTION_SAFER_AREA       = "We're moving in safer area",
+		AIEN_REACTION_AMBUSH           = "We're going to ambush the enemy",
+		AIEN_REACTION_URBAN_CONCEALMENT = "We're moving nearby the closest urbanized area for concealment",
+		AIEN_REACTION_GROUND_SUPPORT   = "We asked for ground support, they're on the way",
+		AIEN_REACTION_AIR_DEFENCE      = "Attack comes from airborne asset, we are moving within the closest air defence covered area",
+		AIEN_REACTION_INDIRECT_FIRE    = "We got the enemy position and asked for indirect fire mission.",
+	},
+	DE = {
+		AIEN_FIRE_REQUEST              = "C2, Artillerie, Feuerauftrag angefordert, Wirkungsschießen.",
+		AIEN_ZONE                      = "Zone: %s",
+		AIEN_ZONES                     = "Zonen: %s",
+		AIEN_SHOOTERS                  = "Schützen: %s",
+		AIEN_ROUNDS                    = "%s Schuss",
+		AIEN_TARGETS                   = "Ziele: %s",
+		AIEN_CLEARED_FIRE              = "Feuer frei, sobald bereit",
+		AIEN_FIRE_MISSION              = "Feuerauftrag",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2, %s, feindliches Artilleriefeuer erkannt. Koordinaten:",
+		AIEN_COUNTER_BATTERY_EVALUATING = "Versuche, die feindliche Position zu bestimmen. Bitte warten",
+		AIEN_ARTY_TARGET_MOVING        = "C2, %s, wir können derzeit nicht feuern, das Ziel bewegt sich.",
+		AIEN_THREAT_MBT                = "feindliche Panzer!",
+		AIEN_THREAT_IFV                = "feindliche IFVs!",
+		AIEN_THREAT_APC                = "feindliche APCs!",
+		AIEN_THREAT_AAA                = "feindliche FlaK!",
+		AIEN_THREAT_MANPADS            = "feindliche MANPADS!",
+		AIEN_THREAT_SAM                = "feindliche SAM!",
+		AIEN_THREAT_ARTY               = "feindliche Artillerie!",
+		AIEN_THREAT_MLRS               = "feindliche MLRS!",
+		AIEN_THREAT_LOGI               = "feindliche Logistik!",
+		AIEN_THREAT_INF                = "feindliche Infanterie!",
+		AIEN_THREAT_RECCE              = "feindliche Aufklärung!",
+		AIEN_THREAT_ATGM               = "feindliche ATGM!",
+		AIEN_THREAT_UNKN               = "feindliche Kontakte!",
+		AIEN_THREAT_PLANE              = "feindliches Flugzeug!",
+		AIEN_THREAT_HELICOPTER         = "feindlicher Hubschrauber!",
+		AIEN_THREAT_GROUND_UNITS       = "feindliche Bodeneinheiten!",
+		AIEN_THREAT_SHIP               = "feindliches Schiff!",
+		AIEN_THREAT_STRUCTURE          = "feindliche Struktur!",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2, %s wird von %s angegriffen %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2, %s wird angegriffen! %s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2, %s meldet Angriff durch %s Koordinaten: %s, %s. %s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2, %s meldet Angriff. Koordinaten: %s, %s. %s",
+		AIEN_TEST_UNDER_ATTACK         = "C2, %s meldet Angriff. Koordinaten: %s.%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s, C2, wir bewegen uns, um eilige Ziele anzugreifen, Koordinaten:",
+		AIEN_TARGET_IS                 = "Ziel ist %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "Wir versuchen, dem Feuer zu entkommen!!",
+		AIEN_REACTION_STUCK_SUPPORT    = "Wir sitzen hier fest, fordern Unterstützung an, falls verfügbar",
+		AIEN_REACTION_SMOKE_COVER      = "Werfen Rauchdeckung",
+		AIEN_REACTION_SAFER_AREA       = "Wir bewegen uns in einen sichereren Bereich",
+		AIEN_REACTION_AMBUSH           = "Wir werden den Feind aus dem Hinterhalt angreifen",
+		AIEN_REACTION_URBAN_CONCEALMENT = "Wir bewegen uns zur nächsten bebauten Fläche zur Deckung",
+		AIEN_REACTION_GROUND_SUPPORT   = "Wir haben Bodenunterstützung angefordert, sie ist unterwegs",
+		AIEN_REACTION_AIR_DEFENCE      = "Angriff kommt aus der Luft, wir bewegen uns in den nächsten Luftverteidigungsbereich",
+		AIEN_REACTION_INDIRECT_FIRE    = "Wir haben die feindliche Position und indirektes Feuer angefordert.",
+	},
+	FR = {
+		AIEN_FIRE_REQUEST              = "C2, Artillerie, demande de mission de tir, tir d'efficacité.",
+		AIEN_ZONE                      = "Zone : %s",
+		AIEN_ZONES                     = "Zones : %s",
+		AIEN_SHOOTERS                  = "Tireurs : %s",
+		AIEN_ROUNDS                    = "%s obus",
+		AIEN_TARGETS                   = "Cibles : %s",
+		AIEN_CLEARED_FIRE              = "Autorisé à tirer dès que prêt",
+		AIEN_FIRE_MISSION              = "Mission de tir",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2, %s, tir d'artillerie ennemi identifié. coordonnées :",
+		AIEN_COUNTER_BATTERY_EVALUATING = "Tentative d'évaluation de la position ennemie. Veuillez patienter",
+		AIEN_ARTY_TARGET_MOVING        = "C2, %s, impossible de tirer maintenant, la cible est en mouvement.",
+		AIEN_THREAT_MBT                = "chars ennemis !",
+		AIEN_THREAT_IFV                = "VCI ennemis !",
+		AIEN_THREAT_APC                = "VTT ennemis !",
+		AIEN_THREAT_AAA                = "AAA ennemie !",
+		AIEN_THREAT_MANPADS            = "MANPADS ennemis !",
+		AIEN_THREAT_SAM                = "SAM ennemis !",
+		AIEN_THREAT_ARTY               = "artillerie ennemie !",
+		AIEN_THREAT_MLRS               = "MLRS ennemis !",
+		AIEN_THREAT_LOGI               = "logistique ennemie !",
+		AIEN_THREAT_INF                = "infanterie ennemie !",
+		AIEN_THREAT_RECCE              = "reconnaissance ennemie !",
+		AIEN_THREAT_ATGM               = "ATGM ennemis !",
+		AIEN_THREAT_UNKN               = "contacts ennemis !",
+		AIEN_THREAT_PLANE              = "avion ennemi !",
+		AIEN_THREAT_HELICOPTER         = "hélicoptère ennemi !",
+		AIEN_THREAT_GROUND_UNITS       = "unités terrestres ennemies !",
+		AIEN_THREAT_SHIP               = "navire ennemi !",
+		AIEN_THREAT_STRUCTURE          = "structure ennemie !",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2, %s est attaquée par %s %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2, %s est attaquée ! %s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2, %s signale une attaque par %s Coordonnées : %s, %s. %s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2, %s signale une attaque. Coordonnées : %s, %s. %s",
+		AIEN_TEST_UNDER_ATTACK         = "C2, %s signale une attaque. Coordonnées : %s.%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s, C2, nous avançons pour engager des cibles d'opportunité, coordonnées :",
+		AIEN_TARGET_IS                 = "la cible est %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "Nous essayons d'échapper au feu !!",
+		AIEN_REACTION_STUCK_SUPPORT    = "Nous sommes bloqués ici, demandons du soutien si disponible",
+		AIEN_REACTION_SMOKE_COVER      = "Déploiement d'un écran de fumée",
+		AIEN_REACTION_SAFER_AREA       = "Nous nous déplaçons vers une zone plus sûre",
+		AIEN_REACTION_AMBUSH           = "Nous allons tendre une embuscade à l'ennemi",
+		AIEN_REACTION_URBAN_CONCEALMENT = "Nous nous déplaçons près de la zone urbanisée la plus proche pour nous dissimuler",
+		AIEN_REACTION_GROUND_SUPPORT   = "Nous avons demandé un soutien au sol, il est en route",
+		AIEN_REACTION_AIR_DEFENCE      = "L'attaque vient d'un appareil aérien, nous nous déplaçons dans la zone couverte par la défense aérienne la plus proche",
+		AIEN_REACTION_INDIRECT_FIRE    = "Nous avons la position ennemie et avons demandé une mission de tir indirect.",
+	},
+	ES = {
+		AIEN_FIRE_REQUEST              = "C2, Artillería, solicito misión de fuego, fuego de efecto.",
+		AIEN_ZONE                      = "Zona: %s",
+		AIEN_ZONES                     = "Zonas: %s",
+		AIEN_SHOOTERS                  = "Tiradores: %s",
+		AIEN_ROUNDS                    = "%s disparos",
+		AIEN_TARGETS                   = "Objetivos: %s",
+		AIEN_CLEARED_FIRE              = "Autorizado a disparar cuando esté listo",
+		AIEN_FIRE_MISSION              = "Misión de fuego",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2, %s, fuego de artillería enemigo identificado. coordenadas:",
+		AIEN_COUNTER_BATTERY_EVALUATING = "Intentando evaluar la posición enemiga. Espere, por favor",
+		AIEN_ARTY_TARGET_MOVING        = "C2, %s, no podemos disparar ahora, el objetivo está en movimiento.",
+		AIEN_THREAT_MBT                = "tanques enemigos!",
+		AIEN_THREAT_IFV                = "VCI enemigos!",
+		AIEN_THREAT_APC                = "APC enemigos!",
+		AIEN_THREAT_AAA                = "AAA enemiga!",
+		AIEN_THREAT_MANPADS            = "MANPADS enemigos!",
+		AIEN_THREAT_SAM                = "SAM enemigos!",
+		AIEN_THREAT_ARTY               = "artillería enemiga!",
+		AIEN_THREAT_MLRS               = "MLRS enemigos!",
+		AIEN_THREAT_LOGI               = "logística enemiga!",
+		AIEN_THREAT_INF                = "infantería enemiga!",
+		AIEN_THREAT_RECCE              = "reconocimiento enemigo!",
+		AIEN_THREAT_ATGM               = "ATGM enemigos!",
+		AIEN_THREAT_UNKN               = "contactos enemigos!",
+		AIEN_THREAT_PLANE              = "avión enemigo!",
+		AIEN_THREAT_HELICOPTER         = "helicóptero enemigo!",
+		AIEN_THREAT_GROUND_UNITS       = "unidades terrestres enemigas!",
+		AIEN_THREAT_SHIP               = "buque enemigo!",
+		AIEN_THREAT_STRUCTURE          = "estructura enemiga!",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2, %s está bajo ataque de %s %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2, %s está bajo ataque! %s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2, %s informa ataque de %s Coordenadas: %s, %s. %s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2, %s informa ataque. Coordenadas: %s, %s. %s",
+		AIEN_TEST_UNDER_ATTACK         = "C2, %s informa ataque. Coordenadas: %s.%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s, C2, nos movemos para atacar objetivos de oportunidad, coordenadas:",
+		AIEN_TARGET_IS                 = "el objetivo es %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "Estamos intentando escapar del fuego!!",
+		AIEN_REACTION_STUCK_SUPPORT    = "Estamos atrapados aquí, solicitamos apoyo si está disponible",
+		AIEN_REACTION_SMOKE_COVER      = "Desplegando cobertura de humo",
+		AIEN_REACTION_SAFER_AREA       = "Nos movemos a una zona más segura",
+		AIEN_REACTION_AMBUSH           = "Vamos a emboscar al enemigo",
+		AIEN_REACTION_URBAN_CONCEALMENT = "Nos movemos cerca de la zona urbanizada más próxima para ocultarnos",
+		AIEN_REACTION_GROUND_SUPPORT   = "Solicitamos apoyo terrestre, está en camino",
+		AIEN_REACTION_AIR_DEFENCE      = "El ataque viene de una aeronave, nos movemos al área cubierta por la defensa aérea más cercana",
+		AIEN_REACTION_INDIRECT_FIRE    = "Tenemos la posición enemiga y solicitamos una misión de fuego indirecto.",
+	},
+	IT = {
+		AIEN_FIRE_REQUEST              = "C2, Artiglieria, richiesta missione di fuoco, fuoco d'effetto.",
+		AIEN_ZONE                      = "Zona: %s",
+		AIEN_ZONES                     = "Zone: %s",
+		AIEN_SHOOTERS                  = "Unità di tiro: %s",
+		AIEN_ROUNDS                    = "%s colpi",
+		AIEN_TARGETS                   = "Bersagli: %s",
+		AIEN_CLEARED_FIRE              = "Autorizzati al fuoco quando pronti",
+		AIEN_FIRE_MISSION              = "Missione di fuoco",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2, %s, fuoco di artiglieria nemico identificato. coordinate:",
+		AIEN_COUNTER_BATTERY_EVALUATING = "Valutazione della posizione nemica in corso. Attendere",
+		AIEN_ARTY_TARGET_MOVING        = "C2, %s, non possiamo fare fuoco ora, il bersaglio è in movimento.",
+		AIEN_THREAT_MBT                = "carri nemici!",
+		AIEN_THREAT_IFV                = "IFV nemici!",
+		AIEN_THREAT_APC                = "APC nemici!",
+		AIEN_THREAT_AAA                = "AAA nemica!",
+		AIEN_THREAT_MANPADS            = "MANPADS nemici!",
+		AIEN_THREAT_SAM                = "SAM nemici!",
+		AIEN_THREAT_ARTY               = "artiglieria nemica!",
+		AIEN_THREAT_MLRS               = "MLRS nemici!",
+		AIEN_THREAT_LOGI               = "logistica nemica!",
+		AIEN_THREAT_INF                = "fanteria nemica!",
+		AIEN_THREAT_RECCE              = "ricognizione nemica!",
+		AIEN_THREAT_ATGM               = "ATGM nemici!",
+		AIEN_THREAT_UNKN               = "contatti nemici!",
+		AIEN_THREAT_PLANE              = "aereo nemico!",
+		AIEN_THREAT_HELICOPTER         = "elicottero nemico!",
+		AIEN_THREAT_GROUND_UNITS       = "unità terrestri nemiche!",
+		AIEN_THREAT_SHIP               = "nave nemica!",
+		AIEN_THREAT_STRUCTURE          = "struttura nemica!",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2, %s è sotto attacco da %s %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2, %s è sotto attacco! %s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2, %s segnala attacco da %s Coordinate: %s, %s. %s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2, %s segnala attacco. Coordinate: %s, %s. %s",
+		AIEN_TEST_UNDER_ATTACK         = "C2, %s segnala attacco. Coordinate: %s.%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s, C2, ci muoviamo per ingaggiare bersagli di opportunità, coordinate:",
+		AIEN_TARGET_IS                 = "il bersaglio è %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "Stiamo cercando di sfuggire al fuoco!!",
+		AIEN_REACTION_STUCK_SUPPORT    = "Siamo bloccati qui, chiediamo supporto se disponibile",
+		AIEN_REACTION_SMOKE_COVER      = "Rilascio copertura fumogena",
+		AIEN_REACTION_SAFER_AREA       = "Ci spostiamo in un'area più sicura",
+		AIEN_REACTION_AMBUSH           = "Tendiamo un'imboscata al nemico",
+		AIEN_REACTION_URBAN_CONCEALMENT = "Ci spostiamo vicino all'area urbanizzata più vicina per occultarci",
+		AIEN_REACTION_GROUND_SUPPORT   = "Abbiamo richiesto supporto terrestre, è in arrivo",
+		AIEN_REACTION_AIR_DEFENCE      = "L'attacco proviene da un mezzo aereo, ci spostiamo nella copertura della difesa aerea più vicina",
+		AIEN_REACTION_INDIRECT_FIRE    = "Abbiamo la posizione nemica e abbiamo richiesto una missione di fuoco indiretto.",
+	},
+	RU = {
+		AIEN_FIRE_REQUEST              = "C2, артиллерия, запрос огневой задачи, огонь на поражение.",
+		AIEN_ZONE                      = "Зона: %s",
+		AIEN_ZONES                     = "Зоны: %s",
+		AIEN_SHOOTERS                  = "Орудия: %s",
+		AIEN_ROUNDS                    = "%s выстрелов",
+		AIEN_TARGETS                   = "Цели: %s",
+		AIEN_CLEARED_FIRE              = "Огонь разрешен по готовности",
+		AIEN_FIRE_MISSION              = "Огневая задача",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2, %s, обнаружен огонь вражеской артиллерии. координаты:",
+		AIEN_COUNTER_BATTERY_EVALUATING = "Оцениваем позицию противника. Ожидайте",
+		AIEN_ARTY_TARGET_MOVING        = "C2, %s, сейчас не можем открыть огонь, цель движется.",
+		AIEN_THREAT_MBT                = "вражеские танки!",
+		AIEN_THREAT_IFV                = "вражеские БМП!",
+		AIEN_THREAT_APC                = "вражеские БТР!",
+		AIEN_THREAT_AAA                = "вражеская ЗА!",
+		AIEN_THREAT_MANPADS            = "вражеские ПЗРК!",
+		AIEN_THREAT_SAM                = "вражеские ЗРК!",
+		AIEN_THREAT_ARTY               = "вражеская артиллерия!",
+		AIEN_THREAT_MLRS               = "вражеские РСЗО!",
+		AIEN_THREAT_LOGI               = "вражеская логистика!",
+		AIEN_THREAT_INF                = "вражеская пехота!",
+		AIEN_THREAT_RECCE              = "вражеская разведка!",
+		AIEN_THREAT_ATGM               = "вражеские ПТРК!",
+		AIEN_THREAT_UNKN               = "вражеские контакты!",
+		AIEN_THREAT_PLANE              = "вражеский самолет!",
+		AIEN_THREAT_HELICOPTER         = "вражеский вертолет!",
+		AIEN_THREAT_GROUND_UNITS       = "вражеские наземные части!",
+		AIEN_THREAT_SHIP               = "вражеский корабль!",
+		AIEN_THREAT_STRUCTURE          = "вражеский объект!",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2, %s под атакой: %s %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2, %s под атакой! %s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2, %s докладывает об атаке: %s Координаты: %s, %s. %s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2, %s докладывает об атаке. Координаты: %s, %s. %s",
+		AIEN_TEST_UNDER_ATTACK         = "C2, %s докладывает об атаке. Координаты: %s.%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s, C2, выдвигаемся для атаки внезапных целей, координаты:",
+		AIEN_TARGET_IS                 = "цель: %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "Пытаемся выйти из-под огня!!",
+		AIEN_REACTION_STUCK_SUPPORT    = "Мы зажаты здесь, запрашиваем поддержку при наличии",
+		AIEN_REACTION_SMOKE_COVER      = "Ставим дымовую завесу",
+		AIEN_REACTION_SAFER_AREA       = "Перемещаемся в более безопасный район",
+		AIEN_REACTION_AMBUSH           = "Готовим засаду на противника",
+		AIEN_REACTION_URBAN_CONCEALMENT = "Перемещаемся к ближайшей застройке для укрытия",
+		AIEN_REACTION_GROUND_SUPPORT   = "Запросили наземную поддержку, она в пути",
+		AIEN_REACTION_AIR_DEFENCE      = "Атака идет с воздуха, перемещаемся под прикрытие ближайшей ПВО",
+		AIEN_REACTION_INDIRECT_FIRE    = "Получили позицию противника и запросили огневую задачу непрямой наводкой.",
+	},
+	["PT-BR"] = {
+		AIEN_FIRE_REQUEST              = "C2, Artilharia, solicito missão de fogo, fogo de efeito.",
+		AIEN_ZONE                      = "Zona: %s",
+		AIEN_ZONES                     = "Zonas: %s",
+		AIEN_SHOOTERS                  = "Atiradores: %s",
+		AIEN_ROUNDS                    = "%s disparos",
+		AIEN_TARGETS                   = "Alvos: %s",
+		AIEN_CLEARED_FIRE              = "Autorizado a atirar quando pronto",
+		AIEN_FIRE_MISSION              = "Missão de fogo",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2, %s, fogo de artilharia inimigo identificado. coordenadas:",
+		AIEN_COUNTER_BATTERY_EVALUATING = "Tentando avaliar a posição inimiga. Aguarde",
+		AIEN_ARTY_TARGET_MOVING        = "C2, %s, não podemos atirar agora, o alvo está em movimento.",
+		AIEN_THREAT_MBT                = "tanques inimigos!",
+		AIEN_THREAT_IFV                = "IFVs inimigos!",
+		AIEN_THREAT_APC                = "APCs inimigos!",
+		AIEN_THREAT_AAA                = "AAA inimiga!",
+		AIEN_THREAT_MANPADS            = "MANPADS inimigos!",
+		AIEN_THREAT_SAM                = "SAM inimigos!",
+		AIEN_THREAT_ARTY               = "artilharia inimiga!",
+		AIEN_THREAT_MLRS               = "MLRS inimigos!",
+		AIEN_THREAT_LOGI               = "logística inimiga!",
+		AIEN_THREAT_INF                = "infantaria inimiga!",
+		AIEN_THREAT_RECCE              = "reconhecimento inimigo!",
+		AIEN_THREAT_ATGM               = "ATGM inimigos!",
+		AIEN_THREAT_UNKN               = "contatos inimigos!",
+		AIEN_THREAT_PLANE              = "avião inimigo!",
+		AIEN_THREAT_HELICOPTER         = "helicóptero inimigo!",
+		AIEN_THREAT_GROUND_UNITS       = "unidades terrestres inimigas!",
+		AIEN_THREAT_SHIP               = "navio inimigo!",
+		AIEN_THREAT_STRUCTURE          = "estrutura inimiga!",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2, %s está sob ataque de %s %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2, %s está sob ataque! %s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2, %s informa ataque por %s Coordenadas: %s, %s. %s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2, %s informa ataque. Coordenadas: %s, %s. %s",
+		AIEN_TEST_UNDER_ATTACK         = "C2, %s informa ataque. Coordenadas: %s.%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s, C2, estamos avançando para engajar alvos de oportunidade, coordenadas:",
+		AIEN_TARGET_IS                 = "o alvo é %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "Estamos tentando escapar do fogo!!",
+		AIEN_REACTION_STUCK_SUPPORT    = "Estamos presos aqui, solicitamos apoio se disponível",
+		AIEN_REACTION_SMOKE_COVER      = "Lançando cobertura de fumaça",
+		AIEN_REACTION_SAFER_AREA       = "Estamos nos movendo para uma área mais segura",
+		AIEN_REACTION_AMBUSH           = "Vamos emboscar o inimigo",
+		AIEN_REACTION_URBAN_CONCEALMENT = "Estamos nos movendo para perto da área urbanizada mais próxima para ocultação",
+		AIEN_REACTION_GROUND_SUPPORT   = "Solicitamos apoio terrestre, ele está a caminho",
+		AIEN_REACTION_AIR_DEFENCE      = "O ataque vem de uma aeronave, estamos nos movendo para a área coberta pela defesa aérea mais próxima",
+		AIEN_REACTION_INDIRECT_FIRE    = "Temos a posição inimiga e solicitamos uma missão de fogo indireto.",
+	},
+	TR = {
+		AIEN_FIRE_REQUEST              = "C2, Topçu, ateş görevi talebi, tesir ateşi.",
+		AIEN_ZONE                      = "Bölge: %s",
+		AIEN_ZONES                     = "Bölgeler: %s",
+		AIEN_SHOOTERS                  = "Ateş birimleri: %s",
+		AIEN_ROUNDS                    = "%s atım",
+		AIEN_TARGETS                   = "Hedefler: %s",
+		AIEN_CLEARED_FIRE              = "Hazır olduğunda ateş serbest",
+		AIEN_FIRE_MISSION              = "Ateş görevi",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2, %s, düşman topçu ateşi tespit edildi. koordinatlar:",
+		AIEN_COUNTER_BATTERY_EVALUATING = "Düşman pozisyonu değerlendiriliyor. Lütfen bekleyin",
+		AIEN_ARTY_TARGET_MOVING        = "C2, %s, şu anda ateş edemiyoruz, hedef hareket halinde.",
+		AIEN_THREAT_MBT                = "düşman tankları!",
+		AIEN_THREAT_IFV                = "düşman ZMA'ları!",
+		AIEN_THREAT_APC                = "düşman ZPT'leri!",
+		AIEN_THREAT_AAA                = "düşman uçaksavarı!",
+		AIEN_THREAT_MANPADS            = "düşman MANPADS!",
+		AIEN_THREAT_SAM                = "düşman SAM!",
+		AIEN_THREAT_ARTY               = "düşman topçusu!",
+		AIEN_THREAT_MLRS               = "düşman ÇNRA!",
+		AIEN_THREAT_LOGI               = "düşman lojistiği!",
+		AIEN_THREAT_INF                = "düşman piyadesi!",
+		AIEN_THREAT_RECCE              = "düşman keşfi!",
+		AIEN_THREAT_ATGM               = "düşman ATGM!",
+		AIEN_THREAT_UNKN               = "düşman temasları!",
+		AIEN_THREAT_PLANE              = "düşman uçağı!",
+		AIEN_THREAT_HELICOPTER         = "düşman helikopteri!",
+		AIEN_THREAT_GROUND_UNITS       = "düşman kara birlikleri!",
+		AIEN_THREAT_SHIP               = "düşman gemisi!",
+		AIEN_THREAT_STRUCTURE          = "düşman yapısı!",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2, %s saldırı altında: %s %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2, %s saldırı altında! %s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2, %s saldırı bildiriyor: %s Koordinatlar: %s, %s. %s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2, %s saldırı bildiriyor. Koordinatlar: %s, %s. %s",
+		AIEN_TEST_UNDER_ATTACK         = "C2, %s saldırı bildiriyor. Koordinatlar: %s.%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s, C2, fırsat hedeflerini angaje etmek için ilerliyoruz, koordinatlar:",
+		AIEN_TARGET_IS                 = "hedef %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "Ateşten kaçmaya çalışıyoruz!!",
+		AIEN_REACTION_STUCK_SUPPORT    = "Burada sıkıştık, varsa destek istiyoruz",
+		AIEN_REACTION_SMOKE_COVER      = "Duman perdesi bırakılıyor",
+		AIEN_REACTION_SAFER_AREA       = "Daha güvenli bir bölgeye ilerliyoruz",
+		AIEN_REACTION_AMBUSH           = "Düşmana pusu kuracağız",
+		AIEN_REACTION_URBAN_CONCEALMENT = "Gizlenmek için en yakın yerleşim alanına ilerliyoruz",
+		AIEN_REACTION_GROUND_SUPPORT   = "Kara desteği istedik, yolda",
+		AIEN_REACTION_AIR_DEFENCE      = "Saldırı hava unsurundan geliyor, en yakın hava savunma korumasına ilerliyoruz",
+		AIEN_REACTION_INDIRECT_FIRE    = "Düşman pozisyonunu aldık ve dolaylı ateş görevi istedik.",
+	},
+	["zh-TW"] = {
+		AIEN_FIRE_REQUEST              = "C2，砲兵，請求火力任務，效力射擊。",
+		AIEN_ZONE                      = "區域：%s",
+		AIEN_ZONES                     = "區域：%s",
+		AIEN_SHOOTERS                  = "開火單位：%s",
+		AIEN_ROUNDS                    = "%s 發",
+		AIEN_TARGETS                   = "目標：%s",
+		AIEN_CLEARED_FIRE              = "準備完成即可開火",
+		AIEN_FIRE_MISSION              = "火力任務",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2，%s，偵測到敵方砲兵射擊。座標：",
+		AIEN_COUNTER_BATTERY_EVALUATING = "正在評估敵方位置。請稍候",
+		AIEN_ARTY_TARGET_MOVING        = "C2，%s，現在無法開火，目標正在移動。",
+		AIEN_THREAT_MBT                = "敵方坦克！",
+		AIEN_THREAT_IFV                = "敵方步兵戰車！",
+		AIEN_THREAT_APC                = "敵方裝甲運兵車！",
+		AIEN_THREAT_AAA                = "敵方高射炮！",
+		AIEN_THREAT_MANPADS            = "敵方肩射防空飛彈！",
+		AIEN_THREAT_SAM                = "敵方地對空飛彈！",
+		AIEN_THREAT_ARTY               = "敵方砲兵！",
+		AIEN_THREAT_MLRS               = "敵方多管火箭！",
+		AIEN_THREAT_LOGI               = "敵方後勤！",
+		AIEN_THREAT_INF                = "敵方步兵！",
+		AIEN_THREAT_RECCE              = "敵方偵察！",
+		AIEN_THREAT_ATGM               = "敵方反坦克飛彈！",
+		AIEN_THREAT_UNKN               = "敵方接觸！",
+		AIEN_THREAT_PLANE              = "敵機！",
+		AIEN_THREAT_HELICOPTER         = "敵方直升機！",
+		AIEN_THREAT_GROUND_UNITS       = "敵方地面單位！",
+		AIEN_THREAT_SHIP               = "敵艦！",
+		AIEN_THREAT_STRUCTURE          = "敵方設施！",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2，%s 正遭 %s 攻擊 %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2，%s 正遭攻擊！%s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2，%s 回報遭 %s 攻擊 座標：%s，%s。%s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2，%s 回報遭攻擊。座標：%s，%s。%s",
+		AIEN_TEST_UNDER_ATTACK         = "C2，%s 回報遭攻擊。座標：%s。%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s，C2，正在前進攻擊臨機目標，座標：",
+		AIEN_TARGET_IS                 = "目標是 %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "我們正在試圖脫離火力！！",
+		AIEN_REACTION_STUCK_SUPPORT    = "我們被困在這裡，請求可用支援",
+		AIEN_REACTION_SMOKE_COVER      = "正在施放煙幕掩護",
+		AIEN_REACTION_SAFER_AREA       = "我們正移動到較安全區域",
+		AIEN_REACTION_AMBUSH           = "我們將伏擊敵人",
+		AIEN_REACTION_URBAN_CONCEALMENT = "我們正移動到最近的城鎮區域隱蔽",
+		AIEN_REACTION_GROUND_SUPPORT   = "我們已請求地面支援，支援正在路上",
+		AIEN_REACTION_AIR_DEFENCE      = "攻擊來自空中單位，我們正移動到最近的防空掩護區",
+		AIEN_REACTION_INDIRECT_FIRE    = "我們取得敵方位置並已請求間接火力任務。",
+	},
+	["zh-CN"] = {
+		AIEN_FIRE_REQUEST              = "C2，炮兵，请求火力任务，效力射击。",
+		AIEN_ZONE                      = "区域：%s",
+		AIEN_ZONES                     = "区域：%s",
+		AIEN_SHOOTERS                  = "开火单位：%s",
+		AIEN_ROUNDS                    = "%s 发",
+		AIEN_TARGETS                   = "目标：%s",
+		AIEN_CLEARED_FIRE              = "准备完成即可开火",
+		AIEN_FIRE_MISSION              = "火力任务",
+		AIEN_COUNTER_BATTERY_DETECTED  = "C2，%s，侦测到敌方炮兵射击。坐标：",
+		AIEN_COUNTER_BATTERY_EVALUATING = "正在评估敌方位置。请稍候",
+		AIEN_ARTY_TARGET_MOVING        = "C2，%s，现在无法开火，目标正在移动。",
+		AIEN_THREAT_MBT                = "敌方坦克！",
+		AIEN_THREAT_IFV                = "敌方步兵战车！",
+		AIEN_THREAT_APC                = "敌方装甲运兵车！",
+		AIEN_THREAT_AAA                = "敌方高射炮！",
+		AIEN_THREAT_MANPADS            = "敌方肩射防空导弹！",
+		AIEN_THREAT_SAM                = "敌方地对空导弹！",
+		AIEN_THREAT_ARTY               = "敌方炮兵！",
+		AIEN_THREAT_MLRS               = "敌方多管火箭！",
+		AIEN_THREAT_LOGI               = "敌方后勤！",
+		AIEN_THREAT_INF                = "敌方步兵！",
+		AIEN_THREAT_RECCE              = "敌方侦察！",
+		AIEN_THREAT_ATGM               = "敌方反坦克导弹！",
+		AIEN_THREAT_UNKN               = "敌方接触！",
+		AIEN_THREAT_PLANE              = "敌机！",
+		AIEN_THREAT_HELICOPTER         = "敌方直升机！",
+		AIEN_THREAT_GROUND_UNITS       = "敌方地面单位！",
+		AIEN_THREAT_SHIP               = "敌舰！",
+		AIEN_THREAT_STRUCTURE          = "敌方设施！",
+		AIEN_ZONE_UNDER_ATTACK_BY      = "C2，%s 正遭 %s 攻击 %s",
+		AIEN_ZONE_UNDER_ATTACK         = "C2，%s 正遭攻击！%s",
+		AIEN_GROUP_UNDER_ATTACK_BY     = "C2，%s 报告遭 %s 攻击 坐标：%s，%s。%s",
+		AIEN_GROUP_UNDER_ATTACK        = "C2，%s 报告遭攻击。坐标：%s，%s。%s",
+		AIEN_TEST_UNDER_ATTACK         = "C2，%s 报告遭攻击。坐标：%s。%s",
+		AIEN_INITIATIVE_MOVING_ENGAGE  = "%s，C2，正在前进攻击临机目标，坐标：",
+		AIEN_TARGET_IS                 = "目标是 %s",
+		AIEN_REACTION_ESCAPE_FIRE      = "我们正在试图脱离火力！！",
+		AIEN_REACTION_STUCK_SUPPORT    = "我们被困在这里，请求可用支援",
+		AIEN_REACTION_SMOKE_COVER      = "正在施放烟幕掩护",
+		AIEN_REACTION_SAFER_AREA       = "我们正移动到较安全区域",
+		AIEN_REACTION_AMBUSH           = "我们将伏击敌人",
+		AIEN_REACTION_URBAN_CONCEALMENT = "我们正移动到最近的城镇区域隐蔽",
+		AIEN_REACTION_GROUND_SUPPORT   = "我们已请求地面支援，支援正在路上",
+		AIEN_REACTION_AIR_DEFENCE      = "攻击来自空中单位，我们正移动到最近的防空掩护区",
+		AIEN_REACTION_INDIRECT_FIRE    = "我们取得敌方位置并已请求间接火力任务。",
+	},
+}
+
+for locale, entries in pairs(AIENLabels) do
+	FL:Register(locale, entries)
+end
 
 local PGSetupLabels = {
 	EN = {
@@ -14957,7 +18457,82 @@ Elevation 6 feet
 
 2000 Pounds required]],
 		PG_MISSION_STRIKE_PORT_START       = "New strike mission: Strike the port of Bandar Lengeh",
-		PG_MISSION_STRIKE_PORT_END         = "Strike mission ended: Strike the port of Bandar Lengeh\n\nThe port is now out of order\nNo more ship supplies coming out of here.",
+		PG_MISSION_STRIKE_PORT_END         = "Strike mission ended: Strike the port of Bandar Lengeh\nThe port is now out of order\nNo more ship supplies coming out of here.",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "Strike Khasab Defence supply warehouse",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[Strike Khasab Defence supply warehouse to cripple supplies to Khasab-Defence.
+
+Coordinates:
+MGRS: 40 R DP 23721 94738
+Lat long: N 26°10'12" E 56°14'12"
+Lat long Decimal Minutes: N 26°10.201' E 56°14.203'
+
+Elevation 77 feet
+
+Reward 500
+
+2000 Pounds required]],
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "New strike mission: Strike Khasab Defence supply warehouse\nStrike this building to cripple supplies to Khasab-Defence",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "Strike mission ended: Strike Khasab Defence supply warehouse",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "Strike Sharjah Defence supply warehouse",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[Strike Sharjah Defence supply warehouse to cripple supplies to Sharjah-Defence.
+
+Coordinates:
+MGRS: 40 R CP 50215 01732
+Lat long: N 25°19'28" E 55°30'42"
+Lat long Decimal Minutes: N 25°19.480' E 55°30.709'
+
+Elevation 98 feet
+
+Reward 500
+
+2000 Pounds required]],
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "New strike mission: Strike Sharjah Defence supply warehouse\nStrike this building to cripple supplies to Sharjah-Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "Strike mission ended: Strike Sharjah Defence supply warehouse",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "Strike Qeshm Island Defence supply warehouse",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[Strike Qeshm Island Defence supply warehouse to cripple supplies to Qeshm-Island-Defence.
+
+Coordinates:
+MGRS: 40 R CQ 90060 60068
+Lat long: N 26°45'27" E 55°53'39"
+Lat long Decimal Minutes: N 26°45.457' E 55°53.658'
+
+Elevation 22 feet
+
+Reward 500
+
+2000 Pounds required]],
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "New strike mission: Strike Qeshm Island Defence supply warehouse\nStrike this building to cripple supplies to Qeshm-Island-Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "Strike mission ended: Strike Qeshm Island Defence supply warehouse",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "Strike Lar Defence supply warehouse",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[Strike Lar Defence supply warehouse to cripple supplies to Lar-Defence.
+
+Coordinates:
+MGRS: 40 R BR 41380 63385
+Lat long: N 27°40'11" E 54°22'41"
+Lat long Decimal Minutes: N 27°40.194' E 54°22.689'
+
+Elevation 2636 feet
+
+Reward 500
+
+2000 Pounds required]],
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "New strike mission: Strike Lar Defence supply warehouse\nStrike this building to cripple supplies to Lar-Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "Strike mission ended: Strike Lar Defence supply warehouse",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "Strike Al Dhafra Defence supply warehouse",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[Strike Al Dhafra Defence supply warehouse to cripple supplies to Al Dhafra-Defence.
+
+Coordinates:
+MGRS: 40 R BM 51040 85144
+Lat long: N 24°15'34" E 54°32'52"
+Lat long Decimal Minutes: N 24°15.568' E 54°32.870'
+
+Elevation 52 feet
+
+Reward 500
+
+2000 Pounds required]],
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "New strike mission: Strike Al Dhafra Defence supply warehouse\nStrike this building to cripple supplies to Al Dhafra-Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "Strike mission ended: Strike Al Dhafra Defence supply warehouse",
 		PG_MISSION_GENERALS_HIDEOUT_DESC = [[Strike the Generals hideout. He's at Lavan Island.
 
 Take him out before he runs away!
@@ -15178,7 +18753,82 @@ Höhe 6 Fuß
 
 2000 Pounds erforderlich]],
 		PG_MISSION_STRIKE_PORT_START       = "Neue Angriffsmission: Hafen von Bandar Lengeh angreifen",
-		PG_MISSION_STRIKE_PORT_END         = "Angriffsmission beendet: Hafen von Bandar Lengeh angreifen\n\nDer Hafen ist jetzt außer Betrieb\nVon hier kommen keine Schiffslieferungen mehr.",
+		PG_MISSION_STRIKE_PORT_END         = "Angriffsmission beendet: Hafen von Bandar Lengeh angreifen\nDer Hafen ist jetzt außer Betrieb\nVon hier kommen keine Schiffslieferungen mehr.",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "Versorgungslager Khasab Defence angreifen",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[Greife das Versorgungslager Khasab Defence an, um die Versorgung von Khasab-Defence zu schwächen.
+
+Koordinaten:
+MGRS: 40 R DP 23721 94738
+Breite/Länge: N 26°10'12" E 56°14'12"
+Breite/Länge Dezimalminuten: N 26°10.201' E 56°14.203'
+
+Höhe 77 Fuß
+
+Belohnung 500
+
+2000 Pfund Bombenlast erforderlich]],
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Khasab Defence angreifen\nGreife dieses Gebäude an, um die Versorgung von Khasab-Defence zu schwächen",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "Angriffsmission beendet: Versorgungslager Khasab Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "Versorgungslager Sharjah Defence angreifen",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[Greife das Versorgungslager Sharjah Defence an, um die Versorgung von Sharjah-Defence zu schwächen.
+
+Koordinaten:
+MGRS: 40 R CP 50215 01732
+Breite/Länge: N 25°19'28" E 55°30'42"
+Breite/Länge Dezimalminuten: N 25°19.480' E 55°30.709'
+
+Höhe 98 Fuß
+
+Belohnung 500
+
+2000 Pfund Bombenlast erforderlich]],
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Sharjah Defence angreifen\nGreife dieses Gebäude an, um die Versorgung von Sharjah-Defence zu schwächen",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "Angriffsmission beendet: Versorgungslager Sharjah Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "Versorgungslager Qeshm Island Defence angreifen",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[Greife das Versorgungslager Qeshm Island Defence an, um die Versorgung von Qeshm-Island-Defence zu schwächen.
+
+Koordinaten:
+MGRS: 40 R CQ 90060 60068
+Breite/Länge: N 26°45'27" E 55°53'39"
+Breite/Länge Dezimalminuten: N 26°45.457' E 55°53.658'
+
+Höhe 22 Fuß
+
+Belohnung 500
+
+2000 Pfund Bombenlast erforderlich]],
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Qeshm Island Defence angreifen\nGreife dieses Gebäude an, um die Versorgung von Qeshm-Island-Defence zu schwächen",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "Angriffsmission beendet: Versorgungslager Qeshm Island Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "Versorgungslager Lar Defence angreifen",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[Greife das Versorgungslager Lar Defence an, um die Versorgung von Lar-Defence zu schwächen.
+
+Koordinaten:
+MGRS: 40 R BR 41380 63385
+Breite/Länge: N 27°40'11" E 54°22'41"
+Breite/Länge Dezimalminuten: N 27°40.194' E 54°22.689'
+
+Höhe 2636 Fuß
+
+Belohnung 500
+
+2000 Pfund Bombenlast erforderlich]],
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Lar Defence angreifen\nGreife dieses Gebäude an, um die Versorgung von Lar-Defence zu schwächen",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "Angriffsmission beendet: Versorgungslager Lar Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "Versorgungslager Al Dhafra Defence angreifen",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[Greife das Versorgungslager Al Dhafra Defence an, um die Versorgung von Al Dhafra-Defence zu schwächen.
+
+Koordinaten:
+MGRS: 40 R BM 51040 85144
+Breite/Länge: N 24°15'34" E 54°32'52"
+Breite/Länge Dezimalminuten: N 24°15.568' E 54°32.870'
+
+Höhe 52 Fuß
+
+Belohnung 500
+
+2000 Pfund Bombenlast erforderlich]],
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Al Dhafra Defence angreifen\nGreife dieses Gebäude an, um die Versorgung von Al Dhafra-Defence zu schwächen",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "Angriffsmission beendet: Versorgungslager Al Dhafra Defence",
 		PG_MISSION_GENERALS_HIDEOUT_DESC = [[Greifen Sie das Versteck des Generals an. Er ist auf Lavan Island.
 
 Schalten Sie ihn aus, bevor er flieht!
@@ -15399,7 +19049,82 @@ Lat/long minutes décimales : N 26°33.035' E 54°53.102'
 
 2000 Pounds requis]],
 		PG_MISSION_STRIKE_PORT_START       = "Nouvelle mission de frappe : frapper le port de Bandar Lengeh",
-		PG_MISSION_STRIKE_PORT_END         = "Mission de frappe terminée : port de Bandar Lengeh\n\nLe port est maintenant hors service\nPlus aucun ravitaillement naval ne partira d'ici.",
+		PG_MISSION_STRIKE_PORT_END         = "Mission de frappe terminée : port de Bandar Lengeh\nLe port est maintenant hors service\nPlus aucun ravitaillement naval ne partira d'ici.",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Khasab Defence",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Khasab Defence pour affaiblir le ravitaillement de Khasab-Defence.
+
+Coordonnées:
+MGRS: 40 R DP 23721 94738
+Latitude/longitude: N 26°10'12" E 56°14'12"
+Minutes décimales: N 26°10.201' E 56°14.203'
+
+Altitude 77 pieds
+
+Récompense 500
+
+2000 livres de bombes requises]],
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Khasab Defence\nFrappez ce bâtiment pour affaiblir le ravitaillement de Khasab-Defence",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Khasab Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Sharjah Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Sharjah Defence pour affaiblir le ravitaillement de Sharjah-Defence.
+
+Coordonnées:
+MGRS: 40 R CP 50215 01732
+Latitude/longitude: N 25°19'28" E 55°30'42"
+Minutes décimales: N 25°19.480' E 55°30.709'
+
+Altitude 98 pieds
+
+Récompense 500
+
+2000 livres de bombes requises]],
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Sharjah Defence\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de Sharjah-Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Sharjah Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Qeshm Island Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Qeshm Island Defence pour affaiblir le ravitaillement de Qeshm-Island-Defence.
+
+Coordonnées:
+MGRS: 40 R CQ 90060 60068
+Latitude/longitude: N 26°45'27" E 55°53'39"
+Minutes décimales: N 26°45.457' E 55°53.658'
+
+Altitude 22 pieds
+
+Récompense 500
+
+2000 livres de bombes requises]],
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Qeshm Island Defence\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de Qeshm-Island-Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Qeshm Island Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement de Lar Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement de Lar Defence pour affaiblir le ravitaillement de Lar-Defence.
+
+Coordonnées:
+MGRS: 40 R BR 41380 63385
+Latitude/longitude: N 27°40'11" E 54°22'41"
+Minutes décimales: N 27°40.194' E 54°22.689'
+
+Altitude 2636 pieds
+
+Récompense 500
+
+2000 livres de bombes requises]],
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement de Lar Defence\n\nFrappez ce bâtiment pour affaiblir le ravitaillement de Lar-Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement de Lar Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement d'Al Dhafra Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[Frappez l'entrepôt de ravitaillement d'Al Dhafra Defence pour affaiblir le ravitaillement d'Al Dhafra-Defence.
+
+Coordonnées:
+MGRS: 40 R BM 51040 85144
+Latitude/longitude: N 24°15'34" E 54°32'52"
+Minutes décimales: N 24°15.568' E 54°32.870'
+
+Altitude 52 pieds
+
+Récompense 500
+
+2000 livres de bombes requises]],
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement d'Al Dhafra Defence\n\nFrappez ce bâtiment pour affaiblir le ravitaillement d'Al Dhafra-Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "Mission de frappe terminée : entrepôt de ravitaillement d'Al Dhafra Defence",
 		PG_MISSION_GENERALS_HIDEOUT_DESC = [[Frappez la cachette du général. Il est sur Lavan Island.
 
 Éliminez-le avant qu'il s'enfuie !
@@ -15620,7 +19345,82 @@ Elevación 6 pies
 
 2000 Pounds requeridas]],
 		PG_MISSION_STRIKE_PORT_START       = "Nueva misión de ataque: atacar el puerto de Bandar Lengeh",
-		PG_MISSION_STRIKE_PORT_END         = "Misión de ataque terminada: puerto de Bandar Lengeh\n\nEl puerto está fuera de servicio\nNo saldrán más suministros por barco desde aquí.",
+		PG_MISSION_STRIKE_PORT_END         = "Misión de ataque terminada: puerto de Bandar Lengeh\nEl puerto está fuera de servicio\nNo saldrán más suministros por barco desde aquí.",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Khasab Defence",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Khasab Defence para debilitar los suministros a Khasab-Defence.
+
+Coordenadas:
+MGRS: 40 R DP 23721 94738
+Lat long: N 26°10'12" E 56°14'12"
+Minutos decimales: N 26°10.201' E 56°14.203'
+
+Elevación 77 pies
+
+Recompensa 500
+
+Se requieren 2000 libras de bombas]],
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Khasab Defence\nAtaca este edificio para debilitar los suministros a Khasab-Defence",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Khasab Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Sharjah Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Sharjah Defence para debilitar los suministros a Sharjah-Defence.
+
+Coordenadas:
+MGRS: 40 R CP 50215 01732
+Lat long: N 25°19'28" E 55°30'42"
+Minutos decimales: N 25°19.480' E 55°30.709'
+
+Elevación 98 pies
+
+Recompensa 500
+
+Se requieren 2000 libras de bombas]],
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Sharjah Defence\nAtaca este edificio para debilitar los suministros a Sharjah-Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Sharjah Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Qeshm Island Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Qeshm Island Defence para debilitar los suministros a Qeshm-Island-Defence.
+
+Coordenadas:
+MGRS: 40 R CQ 90060 60068
+Lat long: N 26°45'27" E 55°53'39"
+Minutos decimales: N 26°45.457' E 55°53.658'
+
+Elevación 22 pies
+
+Recompensa 500
+
+Se requieren 2000 libras de bombas]],
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Qeshm Island Defence\nAtaca este edificio para debilitar los suministros a Qeshm-Island-Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Qeshm Island Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Lar Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Lar Defence para debilitar los suministros a Lar-Defence.
+
+Coordenadas:
+MGRS: 40 R BR 41380 63385
+Lat long: N 27°40'11" E 54°22'41"
+Minutos decimales: N 27°40.194' E 54°22.689'
+
+Elevación 2636 pies
+
+Recompensa 500
+
+Se requieren 2000 libras de bombas]],
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Lar Defence\nAtaca este edificio para debilitar los suministros a Lar-Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Lar Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "Atacar el almacén de suministros de Al Dhafra Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[Ataca el almacén de suministros de Al Dhafra Defence para debilitar los suministros a Al Dhafra-Defence.
+
+Coordenadas:
+MGRS: 40 R BM 51040 85144
+Lat long: N 24°15'34" E 54°32'52"
+Minutos decimales: N 24°15.568' E 54°32.870'
+
+Elevación 52 pies
+
+Recompensa 500
+
+Se requieren 2000 libras de bombas]],
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Al Dhafra Defence\n\nAtaca este edificio para debilitar los suministros a Al Dhafra-Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "Misión de ataque terminada: almacén de suministros de Al Dhafra Defence",
 		PG_MISSION_GENERALS_HIDEOUT_DESC = [[Ataca el escondite del general. Está en Lavan Island.
 
 Elimínalo antes de que huya!
@@ -15841,7 +19641,82 @@ MGRS: 40 R BQ 89307 38400
 
 Требуется 2000 Pounds]],
 		PG_MISSION_STRIKE_PORT_START       = "Новая ударная миссия: удар по порту Bandar Lengeh",
-		PG_MISSION_STRIKE_PORT_END         = "Ударная миссия завершена: порт Bandar Lengeh\n\nПорт выведен из строя\nОтсюда больше не будут идти морские поставки.",
+		PG_MISSION_STRIKE_PORT_END         = "Ударная миссия завершена: порт Bandar Lengeh\nПорт выведен из строя\nОтсюда больше не будут идти морские поставки.",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "Удар по складу снабжения Khasab Defence",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Khasab Defence, чтобы нарушить снабжение Khasab-Defence.
+
+Координаты:
+MGRS: 40 R DP 23721 94738
+Широта/долгота: N 26°10'12" E 56°14'12"
+Десятичные минуты: N 26°10.201' E 56°14.203'
+
+Высота 77 футов
+
+Награда 500
+
+Требуется 2000 фунтов бомбовой нагрузки]],
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Khasab Defence\nУничтожьте это здание, чтобы нарушить снабжение Khasab-Defence",
+		PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Khasab Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "Удар по складу снабжения Sharjah Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Sharjah Defence, чтобы нарушить снабжение Sharjah-Defence.
+
+Координаты:
+MGRS: 40 R CP 50215 01732
+Широта/долгота: N 25°19'28" E 55°30'42"
+Десятичные минуты: N 25°19.480' E 55°30.709'
+
+Высота 98 футов
+
+Награда 500
+
+Требуется 2000 фунтов бомбовой нагрузки]],
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Sharjah Defence\nУничтожьте это здание, чтобы нарушить снабжение Sharjah-Defence",
+		PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Sharjah Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "Удар по складу снабжения Qeshm Island Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Qeshm Island Defence, чтобы нарушить снабжение Qeshm-Island-Defence.
+
+Координаты:
+MGRS: 40 R CQ 90060 60068
+Широта/долгота: N 26°45'27" E 55°53'39"
+Десятичные минуты: N 26°45.457' E 55°53.658'
+
+Высота 22 фута
+
+Награда 500
+
+Требуется 2000 фунтов бомбовой нагрузки]],
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Qeshm Island Defence\nУничтожьте это здание, чтобы нарушить снабжение Qeshm-Island-Defence",
+		PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Qeshm Island Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "Удар по складу снабжения Lar Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Lar Defence, чтобы нарушить снабжение Lar-Defence.
+
+Координаты:
+MGRS: 40 R BR 41380 63385
+Широта/долгота: N 27°40'11" E 54°22'41"
+Десятичные минуты: N 27°40.194' E 54°22.689'
+
+Высота 2636 футов
+
+Награда 500
+
+Требуется 2000 фунтов бомбовой нагрузки]],
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Lar Defence\nУничтожьте это здание, чтобы нарушить снабжение Lar-Defence",
+		PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Lar Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "Удар по складу снабжения Al Dhafra Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[Нанесите удар по складу снабжения Al Dhafra Defence, чтобы нарушить снабжение Al Dhafra-Defence.
+
+Координаты:
+MGRS: 40 R BM 51040 85144
+Широта/долгота: N 24°15'34" E 54°32'52"
+Десятичные минуты: N 24°15.568' E 54°32.870'
+
+Высота 52 фута
+
+Награда 500
+
+Требуется 2000 фунтов бомбовой нагрузки]],
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Al Dhafra Defence\n\nУничтожьте это здание, чтобы нарушить снабжение Al Dhafra-Defence",
+		PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "Ударная миссия завершена: склад снабжения Al Dhafra Defence",
 		PG_MISSION_GENERALS_HIDEOUT_DESC = [[Нанесите удар по убежищу генерала. Он на Lavan Island.
 
 Уничтожьте его, пока он не сбежал!
@@ -16064,7 +19939,82 @@ Elevação 6 pés
 
 2000 Pounds necessários]],
 	PG_MISSION_STRIKE_PORT_START       = "Nova missão Strike: Atacar o porto de Bandar Lengeh",
-	PG_MISSION_STRIKE_PORT_END         = "Missão Strike encerrada: Atacar o porto de Bandar Lengeh\n\nO porto está fora de operação\nNão saem mais suprimentos navais daqui.",
+	PG_MISSION_STRIKE_PORT_END         = "Missão Strike encerrada: Atacar o porto de Bandar Lengeh\nO porto está fora de operação\nNão saem mais suprimentos navais daqui.",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Khasab Defence",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[Ataque o depósito de suprimentos de Khasab Defence para prejudicar os suprimentos para Khasab-Defence.
+
+Coordenadas:
+MGRS: 40 R DP 23721 94738
+Lat/Long: N 26°10'12" E 56°14'12"
+Minutos decimais: N 26°10.201' E 56°14.203'
+
+Elevação 77 pés
+
+Recompensa 500
+
+2000 libras de bombas necessárias]],
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Khasab Defence\nAtaque este edifício para prejudicar os suprimentos para Khasab-Defence",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "Missão Strike encerrada: depósito de suprimentos de Khasab Defence",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Sharjah Defence",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[Ataque o depósito de suprimentos de Sharjah Defence para prejudicar os suprimentos para Sharjah-Defence.
+
+Coordenadas:
+MGRS: 40 R CP 50215 01732
+Lat/Long: N 25°19'28" E 55°30'42"
+Minutos decimais: N 25°19.480' E 55°30.709'
+
+Elevação 98 pés
+
+Recompensa 500
+
+2000 libras de bombas necessárias]],
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Sharjah Defence\nAtaque este edifício para prejudicar os suprimentos para Sharjah-Defence",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "Missão Strike encerrada: depósito de suprimentos de Sharjah Defence",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Qeshm Island Defence",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[Ataque o depósito de suprimentos de Qeshm Island Defence para prejudicar os suprimentos para Qeshm-Island-Defence.
+
+Coordenadas:
+MGRS: 40 R CQ 90060 60068
+Lat/Long: N 26°45'27" E 55°53'39"
+Minutos decimais: N 26°45.457' E 55°53.658'
+
+Elevação 22 pés
+
+Recompensa 500
+
+2000 libras de bombas necessárias]],
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Qeshm Island Defence\nAtaque este edifício para prejudicar os suprimentos para Qeshm-Island-Defence",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "Missão Strike encerrada: depósito de suprimentos de Qeshm Island Defence",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Lar Defence",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[Ataque o depósito de suprimentos de Lar Defence para prejudicar os suprimentos para Lar-Defence.
+
+Coordenadas:
+MGRS: 40 R BR 41380 63385
+Lat/Long: N 27°40'11" E 54°22'41"
+Minutos decimais: N 27°40.194' E 54°22.689'
+
+Elevação 2636 pés
+
+Recompensa 500
+
+2000 libras de bombas necessárias]],
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Lar Defence\nAtaque este edifício para prejudicar os suprimentos para Lar-Defence",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "Missão Strike encerrada: depósito de suprimentos de Lar Defence",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Al Dhafra Defence",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[Ataque o depósito de suprimentos de Al Dhafra Defence para prejudicar os suprimentos para Al Dhafra-Defence.
+
+Coordenadas:
+MGRS: 40 R BM 51040 85144
+Lat/Long: N 24°15'34" E 54°32'52"
+Minutos decimais: N 24°15.568' E 54°32.870'
+
+Elevação 52 pés
+
+Recompensa 500
+
+2000 libras de bombas necessárias]],
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Al Dhafra Defence\nAtaque este edifício para prejudicar os suprimentos para Al Dhafra-Defence",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "Missão Strike encerrada: depósito de suprimentos de Al Dhafra Defence",
 	PG_MISSION_GENERALS_HIDEOUT_DESC = [[Ataque o esconderijo do general. Ele está em Lavan Island.
 
 Elimine-o antes que fuja!
@@ -16285,7 +20235,82 @@ Rakım 6 feet
 
 2000 Pounds gerekli]],
 	PG_MISSION_STRIKE_PORT_START       = "Yeni Strike görevi: Bandar Lengeh limanına strike",
-	PG_MISSION_STRIKE_PORT_END         = "Strike görevi sona erdi: Bandar Lengeh limanı\n\nLiman artık devre dışı\nBuradan artık gemi ikmali çıkmayacak.",
+	PG_MISSION_STRIKE_PORT_END         = "Strike görevi sona erdi: Bandar Lengeh limanı\nLiman artık devre dışı\nBuradan artık gemi ikmali çıkmayacak.",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "Khasab Defence ikmal deposuna strike",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[Khasab-Defence ikmalini aksatmak için Khasab Defence ikmal deposuna strike yapın.
+
+Koordinatlar:
+MGRS: 40 R DP 23721 94738
+Enlem boylam: N 26°10'12" E 56°14'12"
+Ondalık dakika: N 26°10.201' E 56°14.203'
+
+Rakım 77 fit
+
+Ödül 500
+
+2000 pound bomba gerekli]],
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "Yeni Strike görevi: Khasab Defence ikmal deposuna strike\nKhasab-Defence ikmalini aksatmak için bu binaya strike yapın",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "Strike görevi sona erdi: Khasab Defence ikmal deposu",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "Sharjah Defence ikmal deposuna strike",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[Sharjah-Defence ikmalini aksatmak için Sharjah Defence ikmal deposuna strike yapın.
+
+Koordinatlar:
+MGRS: 40 R CP 50215 01732
+Enlem boylam: N 25°19'28" E 55°30'42"
+Ondalık dakika: N 25°19.480' E 55°30.709'
+
+Rakım 98 fit
+
+Ödül 500
+
+2000 pound bomba gerekli]],
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "Yeni Strike görevi: Sharjah Defence ikmal deposuna strike\nSharjah-Defence ikmalini aksatmak için bu binaya strike yapın",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "Strike görevi sona erdi: Sharjah Defence ikmal deposu",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "Qeshm Island Defence ikmal deposuna strike",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[Qeshm-Island-Defence ikmalini aksatmak için Qeshm Island Defence ikmal deposuna strike yapın.
+
+Koordinatlar:
+MGRS: 40 R CQ 90060 60068
+Enlem boylam: N 26°45'27" E 55°53'39"
+Ondalık dakika: N 26°45.457' E 55°53.658'
+
+Rakım 22 fit
+
+Ödül 500
+
+2000 pound bomba gerekli]],
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "Yeni Strike görevi: Qeshm Island Defence ikmal deposuna strike\nQeshm-Island-Defence ikmalini aksatmak için bu binaya strike yapın",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "Strike görevi sona erdi: Qeshm Island Defence ikmal deposu",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "Lar Defence ikmal deposuna strike",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[Lar-Defence ikmalini aksatmak için Lar Defence ikmal deposuna strike yapın.
+
+Koordinatlar:
+MGRS: 40 R BR 41380 63385
+Enlem boylam: N 27°40'11" E 54°22'41"
+Ondalık dakika: N 27°40.194' E 54°22.689'
+
+Rakım 2636 fit
+
+Ödül 500
+
+2000 pound bomba gerekli]],
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "Yeni Strike görevi: Lar Defence ikmal deposuna strike\nLar-Defence ikmalini aksatmak için bu binaya strike yapın",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "Strike görevi sona erdi: Lar Defence ikmal deposu",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "Al Dhafra Defence ikmal deposuna strike",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[Al Dhafra-Defence ikmalini aksatmak için Al Dhafra Defence ikmal deposuna strike yapın.
+
+Koordinatlar:
+MGRS: 40 R BM 51040 85144
+Enlem boylam: N 24°15'34" E 54°32'52"
+Ondalık dakika: N 24°15.568' E 54°32.870'
+
+Rakım 52 fit
+
+Ödül 500
+
+2000 pound bomba gerekli]],
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "Yeni Strike görevi: Al Dhafra Defence ikmal deposuna strike\nAl Dhafra-Defence ikmalini aksatmak için bu binaya strike yapın",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "Strike görevi sona erdi: Al Dhafra Defence ikmal deposu",
 	PG_MISSION_GENERALS_HIDEOUT_DESC = [[Generalin saklandığı yere strike yapın. Lavan Island'da.
 
 Kaçmadan önce onu yok edin!
@@ -16507,7 +20532,82 @@ Lat long Decimal Minutes: N 26°33.035' E 54°53.102'
 
 需要 2000 磅炸弹]],
 	PG_MISSION_STRIKE_PORT_START       = "新打击任务：打击 Bandar Lengeh 港",
-	PG_MISSION_STRIKE_PORT_END         = "打击任务结束：打击 Bandar Lengeh 港\n\n该港口现已瘫痪\n这里不会再有船运补给出发。",
+	PG_MISSION_STRIKE_PORT_END         = "打击任务结束：打击 Bandar Lengeh 港\n该港口现已瘫痪\n这里不会再有船运补给出发。",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "打击 Khasab Defence 补给仓库",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[打击 Khasab Defence 补给仓库，以削弱前往 Khasab-Defence 的补给。
+
+坐标:
+MGRS: 40 R DP 23721 94738
+纬经度: N 26°10'12" E 56°14'12"
+十进制分: N 26°10.201' E 56°14.203'
+
+海拔 77 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "新打击任务：打击 Khasab Defence 补给仓库\n摧毁这座建筑以削弱前往 Khasab-Defence 的补给",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "打击任务结束：打击 Khasab Defence 补给仓库",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "打击 Sharjah Defence 补给仓库",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[打击 Sharjah Defence 补给仓库，以削弱前往 Sharjah-Defence 的补给。
+
+坐标:
+MGRS: 40 R CP 50215 01732
+纬经度: N 25°19'28" E 55°30'42"
+十进制分: N 25°19.480' E 55°30.709'
+
+海拔 98 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "新打击任务：打击 Sharjah Defence 补给仓库\n\n摧毁这座建筑以削弱前往 Sharjah-Defence 的补给",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "打击任务结束：打击 Sharjah Defence 补给仓库",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "打击 Qeshm Island Defence 补给仓库",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[打击 Qeshm Island Defence 补给仓库，以削弱前往 Qeshm-Island-Defence 的补给。
+
+坐标:
+MGRS: 40 R CQ 90060 60068
+纬经度: N 26°45'27" E 55°53'39"
+十进制分: N 26°45.457' E 55°53.658'
+
+海拔 22 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "新打击任务：打击 Qeshm Island Defence 补给仓库\n\n摧毁这座建筑以削弱前往 Qeshm-Island-Defence 的补给",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "打击任务结束：打击 Qeshm Island Defence 补给仓库",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "打击 Lar Defence 补给仓库",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[打击 Lar Defence 补给仓库，以削弱前往 Lar-Defence 的补给。
+
+坐标:
+MGRS: 40 R BR 41380 63385
+纬经度: N 27°40'11" E 54°22'41"
+十进制分: N 27°40.194' E 54°22.689'
+
+海拔 2636 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "新打击任务：打击 Lar Defence 补给仓库\n\n摧毁这座建筑以削弱前往 Lar-Defence 的补给",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "打击任务结束：打击 Lar Defence 补给仓库",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "打击 Al Dhafra Defence 补给仓库",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[打击 Al Dhafra Defence 补给仓库，以削弱前往 Al Dhafra-Defence 的补给。
+
+坐标:
+MGRS: 40 R BM 51040 85144
+纬经度: N 24°15'34" E 54°32'52"
+十进制分: N 24°15.568' E 54°32.870'
+
+海拔 52 英尺
+
+奖励 500
+
+需要 2000 磅投弹量]],
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "新打击任务：打击 Al Dhafra Defence 补给仓库\n\n摧毁这座建筑以削弱前往 Al Dhafra-Defence 的补给",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "打击任务结束：打击 Al Dhafra Defence 补给仓库",
 	PG_MISSION_GENERALS_HIDEOUT_DESC = [[打击将军藏身处。他在 Lavan Island。
 
 在他逃跑前干掉他！
@@ -16729,7 +20829,82 @@ Lat long Decimal Minutes: N 26°33.035' E 54°53.102'
 
 需要 2000 磅炸彈]],
 	PG_MISSION_STRIKE_PORT_START       = "新打擊任務：打擊 Bandar Lengeh 港",
-	PG_MISSION_STRIKE_PORT_END         = "打擊任務結束：打擊 Bandar Lengeh 港\n\n該港口現已癱瘓\n這裡不會再有船運補給出發。",
+	PG_MISSION_STRIKE_PORT_END         = "打擊任務結束：打擊 Bandar Lengeh 港\n該港口現已癱瘓\n這裡不會再有船運補給出發。",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "打擊 Khasab Defence 補給倉庫",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[打擊 Khasab Defence 補給倉庫，以削弱前往 Khasab-Defence 的補給。
+
+座標:
+MGRS: 40 R DP 23721 94738
+緯經度: N 26°10'12" E 56°14'12"
+十進制分: N 26°10.201' E 56°14.203'
+
+海拔 77 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "新打擊任務：打擊 Khasab Defence 補給倉庫\n摧毀這座建築以削弱前往 Khasab-Defence 的補給",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "打擊任務結束：打擊 Khasab Defence 補給倉庫",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "打擊 Sharjah Defence 補給倉庫",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[打擊 Sharjah Defence 補給倉庫，以削弱前往 Sharjah-Defence 的補給。
+
+座標:
+MGRS: 40 R CP 50215 01732
+緯經度: N 25°19'28" E 55°30'42"
+十進制分: N 25°19.480' E 55°30.709'
+
+海拔 98 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "新打擊任務：打擊 Sharjah Defence 補給倉庫\n摧毀這座建築以削弱前往 Sharjah-Defence 的補給",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "打擊任務結束：打擊 Sharjah Defence 補給倉庫",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "打擊 Qeshm Island Defence 補給倉庫",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[打擊 Qeshm Island Defence 補給倉庫，以削弱前往 Qeshm-Island-Defence 的補給。
+
+座標:
+MGRS: 40 R CQ 90060 60068
+緯經度: N 26°45'27" E 55°53'39"
+十進制分: N 26°45.457' E 55°53.658'
+
+海拔 22 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "新打擊任務：打擊 Qeshm Island Defence 補給倉庫\n摧毀這座建築以削弱前往 Qeshm-Island-Defence 的補給",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "打擊任務結束：打擊 Qeshm Island Defence 補給倉庫",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "打擊 Lar Defence 補給倉庫",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[打擊 Lar Defence 補給倉庫，以削弱前往 Lar-Defence 的補給。
+
+座標:
+MGRS: 40 R BR 41380 63385
+緯經度: N 27°40'11" E 54°22'41"
+十進制分: N 27°40.194' E 54°22.689'
+
+海拔 2636 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "新打擊任務：打擊 Lar Defence 補給倉庫\n摧毀這座建築以削弱前往 Lar-Defence 的補給",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "打擊任務結束：打擊 Lar Defence 補給倉庫",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "打擊 Al Dhafra Defence 補給倉庫",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[打擊 Al Dhafra Defence 補給倉庫，以削弱前往 Al Dhafra-Defence 的補給。
+
+座標:
+MGRS: 40 R BM 51040 85144
+緯經度: N 24°15'34" E 54°32'52"
+十進制分: N 24°15.568' E 54°32.870'
+
+海拔 52 英尺
+
+獎勵 500
+
+需要 2000 磅投彈量]],
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "新打擊任務：打擊 Al Dhafra Defence 補給倉庫\n摧毀這座建築以削弱前往 Al Dhafra-Defence 的補給",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "打擊任務結束：打擊 Al Dhafra Defence 補給倉庫",
 	PG_MISSION_GENERALS_HIDEOUT_DESC = [[打擊將軍藏身處。他在 Lavan Island。
 
 在他逃跑前幹掉他！
@@ -16765,6 +20940,303 @@ Lat long Decimal Minutes: N 26°48.164' E 53°19.962'
 	PG_MISSION_CELL_CONVOY_FAILED      = "車隊已被摧毀，小組位置仍未知\n任務失敗",
 	PG_MISSION_PORT_ABORTED            = "任務已中止！\n\n港口任務已不再需要",
 	PG_MISSION_GENERAL_FLED            = "打擊任務失敗！\n\n將軍已逃離藏身處",
+}
+
+PGSetupLabels.IT = {
+	PG_SETUP_INSURGENTS_CN76_INTEL     = "Intel:\nInsorti trovati nella griglia CN76, a est di Al Minhad AFB.\nRipulisci l'area",
+	PG_SETUP_INSURGENTS_CQ37_INTEL     = "Intel:\nInsorti trovati nella griglia CQ37, a nord di Moradi.\nRipulisci l'area",
+	PG_SETUP_SCUD_CITY_INTEL           = "Intel:\nAbbiamo rapporti su 10 missili SCUD nascosti in una città a nord-ovest di Ras Al Khaimah.\nDistruggili tutti.",
+	PG_SETUP_ZONE_DESTROYED_500        = "%s non esiste più\n+500 crediti",
+	PG_SETUP_SCUDS_DESTROYED           = "Ottimo lavoro! Tutti gli SCUD sono stati distrutti.\n+500 crediti",
+	PG_SETUP_NAVY_BLOCKING             = "Ripulisci Lavan Island, Kish Intl, Bandar Abbas, Sirri Island, Abu Musa, Tunb Island, Qeshm Island e Moradi prima che possiamo spostare qui la nostra flotta.",
+	PG_EVENT_QESHM_ARTY_ATTACK         = "Qeshm Island è sotto attacco dell'artiglieria nemica!\n\nPreparatevi!",
+	PG_EVENT_QESHM_ARTY_INTEL          = [[Abbiamo trovato l'artiglieria nemica!
+
+Distruggila prima che spari di nuovo!
+
+Coordinate:
+MGRS: 40 R DQ 04694 96858
+Lat long: N 27°05'26" E 56°02'19"
+Lat long Decimal Minutes: N 27°05.448' E 56°02.319'
+
+Altitudine: 12 piedi]],
+	PG_EVENT_KHASAB_SCUDS              = "Attenzione!!\n\nIl nemico ha lanciato SCUD verso Khasab!!",
+	PG_EVENT_SCUDS_FOXTROT_LAUNCHING   = "Gli SCUD vicino a Foxtrot (30) stanno lanciando verso %s",
+	PG_MISSION_SCUDS_30_TITLE          = "Distruggi SCUD, (30)",
+	PG_MISSION_SCUDS_30_DESC           = "SCUD avvistati a Foxtrot, 30).\nDistruggili prima che possano lanciare i missili",
+	PG_MISSION_SCUDS_START             = "Nuova missione: distruggi SCUD",
+	PG_MISSION_SCUDS_END               = "Missione terminata: distruggi SCUD",
+	PG_MISSION_HELO_HUNT_TARGET        = "caccia agli elicotteri",
+	PG_MISSION_HELO_HUNT_TITLE         = "Caccia agli elicotteri LAR",
+	PG_MISSION_HELO_HUNT_DESC          = "Un gran numero di KA-50 sta decollando da LAR verso le nostre basi alleate più vicine\nDistruggili prima che arrivino a tiro.",
+	PG_MISSION_HELO_HUNT_START         = "Nuova missione: caccia agli elicotteri\nUn gran numero di KA-50 sta decollando da LAR verso le nostre basi alleate più vicine\n\nDistruggili prima che arrivino a tiro.",
+	PG_MISSION_HELO_HUNT_END           = "Missione terminata: caccia agli elicotteri",
+	PG_MISSION_INTERCEPT_AIRSTRIKE_WEST_SE_DESC = "Aerei nemici stanno conducendo un attacco aereo da ovest verso sud-est\nDistruggili prima che arrivino a tiro.",
+	PG_MISSION_INTERCEPT_CARGO_DESC_BANDAR = "Trova e distruggi l'aereo cargo diretto a LAR\nAttualmente avvistato a est di BandarAbbas.",
+	PG_MISSION_INTERCEPT_CARGO_DESC_KHASAB = "Trova e distruggi l'aereo cargo diretto a LAR\nAttualmente avvistato a est di Khasab.",
+	PG_MISSION_INTERCEPT_CARGO_DESC_AL_AIN = "Trova e distruggi l'aereo cargo diretto a LAR\nAttualmente avvistato a est di Al Ain.",
+	PG_MISSION_INTERCEPT_CARGO_INACTIVE = "L'aereo cargo non è più attivo.",
+	PG_MISSION_INTERCEPT_BOMBERS_NORTH_DESC = "Bombardieri nemici avvistati a nord\nDistruggili prima che arrivino a tiro.",
+	PG_MISSION_ESCORT_CARGO_AL_DHAFRA_DESC = "Un aereo cargo alleato sta decollando da Al Dhafra. Proteggilo finché non lascia lo spazio aereo.",
+	PG_SETUP_CONVOY_LIBERATED          = "Convoglio liberato",
+	PG_SETUP_CONVOY_LOST_TRUCKS        = "%s ma abbiamo perso il %d%% dei camion.",
+	PG_SETUP_CONVOY_RECOVERED_ALL      = "%s. Abbiamo recuperato tutti i rifornimenti.",
+	PG_SETUP_REWARD_CREDITS            = "%s\n\n+%d crediti",
+	PG_SETUP_CREDITS_PER_HOUR          = "+%d crediti/ora",
+	PG_FLAVOR_AL_DHAFRA                = "WPT %s\nAl Dhafra",
+	PG_FLAVOR_CARRIER                  = "Gruppo portaerei",
+	PG_FLAVOR_AL_AIN                   = "WPT %s\nAin significa occhi. Al Ain è GLI occhi",
+	PG_FLAVOR_AL_HUTI                  = "WPT %s\nÈ il nome di una città vicina",
+	PG_FLAVOR_AL_MINHAD                = "WPT %s\nQui possiamo atterrare",
+	PG_FLAVOR_SHARJAH                  = "WPT %s\nPiù vicino all'area operativa",
+	PG_FLAVOR_FUJAIRAH                 = "WPT %s\nBella vista",
+	PG_FLAVOR_RAS_AL_KHAIMAH           = "WPT %s\nKhaimah significa tenda",
+	PG_FLAVOR_ALPHA                    = "WPT %s\nPosizione difensiva vicino al villaggio di Al Ima",
+	PG_FLAVOR_KHASAB                   = "WPT %s\nAeroporto di Khasab.\nCi permetterà di lanciare attacchi con elicotteri un po' più vicino all'azione.",
+	PG_FLAVOR_RED_CARRIER              = "WPT %s\n Area di pattuglia navale per iraniani e russi.\nEliminali. Il nostro gruppo navale arriverà dopo.",
+	PG_FLAVOR_CHARLIE                  = "WPT %s\nPosizione difensiva vicino a un vecchio bunker di comando.\nFornirà pattuglie aeree alleate per aiutare a catturare Bravo",
+	PG_FLAVOR_CONVOY                   = "WPT %s\nConvoglio di rifornimenti trattenuto a sud-ovest di Bravo.\nRiduci al minimo i danni ai camion mentre liberi quest'area.\nQuei rifornimenti ci servono davvero.",
+	PG_FLAVOR_BANDAR_ABBAS             = "WPT %s\nBase aerea vicino alla città di Bandar Abbas.\nCatturarla ci fornirà aerei preziosi da usare per la nostra causa.",
+	PG_FLAVOR_RADIO                    = "WPT %s\nBunker di comando alla periferia di Minab.\nSe lo catturiamo, potremo lanciare CAS dall'aeroporto vicino\ne ottenere Intel di cui abbiamo grande bisogno sul nemico.",
+	PG_FLAVOR_OIL_FIELDS               = "WPT %s\nEstrazione petrolifera e raffineria a ovest di BandarAbbas.\nCatturala per ottenere un flusso costante di entrate, oppure distruggila per colpire il portafoglio del nemico.",
+	PG_FLAVOR_DEHBAREZ                 = "WPT %s\nPosizione difensiva a nord-est di Minab",
+	PG_FLAVOR_PAREGAAN                 = "WPT %s\nPosizione difensiva a nord-est della Factory",
+	PG_FLAVOR_KHAMETS                  = "WPT %s\nPosizione difensiva a nord-ovest della Factory",
+	PG_FLAVOR_BANDAR_LENGEH            = "WPT %s\nAeroporto difensivo con risposta rapida per intercettazioni marittime",
+	PG_FLAVOR_SAMATHE                  = "WPT %s\nPosizione difensiva ben coperta dalle montagne",
+	PG_FLAVOR_ECHO                     = "WPT %s\nFARP vicino alla città di Krasnodar.\nCatturarlo ci permetterà di operare elicotteri nell'area.",
+	PG_FLAVOR_SUNNY                    = "WPT %s\nSunny è qui da qualche parte a costruire la fossa infinita.",
+	PG_FLAVOR_RAMP_KONGO               = "WPT %s\nLa leggenda dice che sia un posto dove la gente finge di volare.",
+	PG_FLAVOR_DELTA                    = "WPT %s\nPosizione difensiva in mezzo al nulla",
+	PG_FLAVOR_FACTORY                  = "WPT %s\nFabbrica di armi a nord-ovest di Bandar Abbas.\nPossiamo usarla per rifornire le basi vicine.\nFornirà anche un flusso costante di entrate.",
+	PG_FLAVOR_QESHM_ISLAND             = "WPT %s\nSede di un vecchio sito SA-2.\nSe lo catturiamo, potremmo riuscire a farne buon uso.",
+	PG_FLAVOR_FOXTROT                  = "WPT %s\nPosizione difensiva con una bella vista sulle corse dei cammelli",
+	PG_FLAVOR_LAR                      = "WPT %s\nBase aerea vicino alla città di Lar.\nLa base principale del nemico. Catturala per privarlo della sua risorsa più preziosa.",
+	PG_FLAVOR_KISH                     = "WPT %s\nC'è un convoglio mobile SAM SHORAD rosso intorno all'isola.\nQuest'isola è difesa da SA-6 e SA-3",
+	PG_FLAVOR_AL_KHATIM                = "WPT %s\nNon doveva andare così.",
+	PG_FLAVOR_AL_DAHID                 = "WPT %s\nNon doveva andare così.",
+	PG_FLAVOR_GOLF                     = "WPT %s\nUn altro dannato FARP.",
+	PG_FLAVOR_CHEMSITE                 = "WPT \nGrazie ai locali che hanno riconosciuto l'odore e ci hanno chiamati. Dobbiamo anche distruggere la fabbrica",
+	PG_FLAVOR_INSURGENT_CAMP           = "WPT \nGli insorti hanno preso questa piccola città. Aiutali!",
+	PG_FLAVOR_SECRET_TECH_FACILITY     = "WPT \nStanno costruendo missili per distruggere la nostra democrazia! ATTENZIONE, IL SITO È PESANTEMENTE DIFESO.",
+	PG_FLAVOR_FUEL_DEPOT               = "WPT \nAvete carburante? Noi abbiamo democrazia.",
+	PG_FLAVOR_TANK_FACTORY             = "WPT \nÈ dove li costruiscono.",
+	PG_FLAVOR_TUNB_ISLAND              = "WPT \nUna piccola isola.",
+	PG_FLAVOR_ABU_MUSA                 = "WPT \nUna buona posizione da avere.",
+	PG_FLAVOR_SIRRI                    = "WPT \nNon ha niente a che vedere con Siri!",
+	PG_FLAVOR_LAVAN                    = "WPT \nQuest'isola sarà utile da un punto di vista strategico.",
+	PG_FLAVOR_KHASAB_DEFENCE           = "WPT \n Questa posizione esterna difende Bravo / Khassab.",
+	PG_FLAVOR_SHARJAH_DEFENCE          = "WPT \n Questa posizione esterna difende Sharjah.",
+	PG_FLAVOR_QESHM_ISLAND_DEFENCE     = "WPT \n Questa posizione esterna difende Qeshm Island.",
+	PG_MISSION_TERROR_CELL_TARGET      = "cellula terroristica",
+	PG_MISSION_TERROR_CELL_MARK        = "Colpisci una cellula terroristica",
+	PG_MISSION_STRIKE_MISSION_TARGET   = "Missione d'attacco",
+	PG_MISSION_STRIKE_TERROR_CELL_TITLE = "Colpisci una cellula terroristica",
+	PG_MISSION_STRIKE_TERROR_CELL_AL_AIN_TITLE = "Colpisci una cellula terroristica",
+	PG_MISSION_STRIKE_TERROR_CELL_AL_AIN_DESC = [[Abbiamo Intel su una cellula situata da qualche parte
+nella città di Al Ain.
+Segui il convoglio finché non si ferma per rivelare la posizione.
+
+Ricompensa: 500
+
+MGRS: 40 R CM 74285 77694
+Lat long: N 24°12'24" E 55°45'43"
+Lat long Decimal Minutes: N 24°12.416' E 55°45.724'
+Altitudine: 922 piedi
+
+Non distruggere il convoglio prima che raggiunga la casa!]],
+	PG_MISSION_STRIKE_TERROR_CELL_AL_AIN_START = "Nuova missione: colpisci una cellula terroristica",
+	PG_MISSION_STRIKE_TERROR_CELL_START = "Nuova missione d'attacco: colpisci una cellula terroristica",
+	PG_MISSION_STRIKE_TERROR_CELL_END  = "Missione d'attacco terminata: colpisci una cellula terroristica",
+	PG_MISSION_STRIKE_TERROR_CELL_END_REWARD_500 = "Missione d'attacco terminata: colpisci una cellula terroristica\n+500 crediti",
+	PG_MISSION_STRIKE_TERROR_CELL_DELTA_DESC = [[Una nuova cellula terroristica è stata trovata,
+a nord-ovest di Delta.
+Eliminala!
+
+Ricompensa: 500
+
+MGRS: 40 R CR 44167 38964
+Lat long: N 27°27'55" E 55°25'22"
+Lat long Decimal Minutes: N 27°27.919' E 55°25.375'
+Altitudine 1207 piedi]],
+	PG_MISSION_STRIKE_TERROR_CELL_RAK_DESC = [[Una nuova cellula terroristica è stata trovata,
+a nord-ovest dell'aeroporto di Ras al khaimah.
+Eliminala!
+
+Ricompensa: 500
+
+MGRS: 40 R CP 80487 44056
+Lat long: N 25°42'34" E 55°48'31"
+Lat long Decimal Minutes: N 25°42.572' E 55°48.526'
+Altitudine 11 piedi]],
+	PG_MISSION_STRIKE_GENERAL_TARGET   = "colpisci il generale",
+	PG_MISSION_STRIKE_GENERAL_MARK     = "Colpisci il generale",
+	PG_MISSION_STRIKE_GENERAL_TITLE    = "Colpisci il generale",
+	PG_MISSION_STRIKE_GENERAL_PAREGAAN_DESC = [[Abbiamo la posizione di uno dei generali.
+A ovest di Paregaan, eliminalo!
+
+Coordinate:
+MGRS: 40 R CS 89440 02522
+Lat Long: N 28°02'36" E 55°52'30"
+Lat long Decimal Minutes: N 28°02.605' E 55°52.507'
+Altitudine: 2272 piedi
+
+Ricompensa: 750
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+	PG_MISSION_STRIKE_GENERAL_START    = "Nuova missione: colpisci il generale",
+	PG_MISSION_STRIKE_GENERAL_END      = "Missione terminata: colpisci il generale",
+	PG_MISSION_SAFEHOUSE_TARGET        = "rifugio nemico",
+	PG_MISSION_SAFEHOUSE_MARK          = "Colpisci il rifugio nemico",
+	PG_MISSION_SAFEHOUSE_TITLE         = "Colpisci il rifugio nemico",
+	PG_MISSION_SAFEHOUSE_DESC = [[È stato trovato un rifugio nemico,
+a sud di Lar Defence.
+Eliminalo!
+
+Ricompensa: 1000
+
+MGRS: 40 R BR 37453 60786
+Lat long: N 27°38'44" E 54°20'20"
+Lat long Decimal Minutes: N 27°38.742' E 54°20.336'
+Altitudine 2651 piedi]],
+	PG_MISSION_SAFEHOUSE_START         = "Nuova missione d'attacco: colpisci il rifugio nemico",
+	PG_MISSION_SAFEHOUSE_END           = "Missione d'attacco terminata: colpisci il rifugio nemico\n+1000 crediti",
+	PG_MISSION_STRIKE_PORT_TARGET      = "porto di Bandar Lengeh",
+	PG_MISSION_STRIKE_PORT_MARK        = "Colpisci il porto di Bandar Lengeh",
+	PG_MISSION_STRIKE_PORT_TITLE       = "Colpisci il porto di Bandar Lengeh",
+	PG_MISSION_STRIKE_PORT_DESC = [[Colpisci il porto di Bandar Lengeh per indebolire i rifornimenti verso le isole.
+
+Ricompensa 1000
+
+2 edifici a queste coordinate:
+
+MGRS: 40 R BQ 89571 38484
+Lat long: N 26°33'05" E 54°53'15"
+Lat long Decimal Minutes: N 26°33.084' E 54°53.260'
+Altitudine 7 piedi
+
+Sono richieste 2000 libbre
+
+E
+
+MGRS: 40 R BQ 89307 38400
+Lat long: N 26°33'02" E 54°53'06"
+Lat long Decimal Minutes: N 26°33.035' E 54°53.102'
+Altitudine 6 piedi
+
+Sono richieste 2000 libbre]],
+	PG_MISSION_STRIKE_PORT_START       = "Nuova missione d'attacco: colpisci il porto di Bandar Lengeh",
+	PG_MISSION_STRIKE_PORT_END         = "Missione d'attacco terminata: colpisci il porto di Bandar Lengeh\nIl porto è ora fuori uso\nDa qui non partiranno più rifornimenti navali.",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Khasab Defence",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_DESC = [[Colpisci il magazzino rifornimenti Khasab Defence per indebolire i rifornimenti verso Khasab-Defence.
+
+Coordinate:
+MGRS: 40 R DP 23721 94738
+Lat/long: N 26°10'12" E 56°14'12"
+Minuti decimali: N 26°10.201' E 56°14.203'
+
+Quota 77 piedi
+
+Ricompensa 500
+
+Richieste 2000 libbre di bombe]],
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Khasab Defence\nColpisci questo edificio per indebolire i rifornimenti verso Khasab-Defence",
+	PG_MISSION_STRIKE_KHASAB_DEFENCE_WAREHOUSE_END = "Missione d'attacco terminata: magazzino rifornimenti Khasab Defence",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Sharjah Defence",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_DESC = [[Colpisci il magazzino rifornimenti Sharjah Defence per indebolire i rifornimenti verso Sharjah-Defence.
+
+Coordinate:
+MGRS: 40 R CP 50215 01732
+Lat/long: N 25°19'28" E 55°30'42"
+Minuti decimali: N 25°19.480' E 55°30.709'
+
+Quota 98 piedi
+
+Ricompensa 500
+
+Richieste 2000 libbre di bombe]],
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Sharjah Defence\nColpisci questo edificio per indebolire i rifornimenti verso Sharjah-Defence",
+	PG_MISSION_STRIKE_SHARJAH_DEFENCE_WAREHOUSE_END = "Missione d'attacco terminata: magazzino rifornimenti Sharjah Defence",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Qeshm Island Defence",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_DESC = [[Colpisci il magazzino rifornimenti Qeshm Island Defence per indebolire i rifornimenti verso Qeshm-Island-Defence.
+
+Coordinate:
+MGRS: 40 R CQ 90060 60068
+Lat/long: N 26°45'27" E 55°53'39"
+Minuti decimali: N 26°45.457' E 55°53.658'
+
+Quota 22 piedi
+
+Ricompensa 500
+
+Richieste 2000 libbre di bombe]],
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Qeshm Island Defence\nColpisci questo edificio per indebolire i rifornimenti verso Qeshm-Island-Defence",
+	PG_MISSION_STRIKE_QESHM_DEFENCE_WAREHOUSE_END = "Missione d'attacco terminata: magazzino rifornimenti Qeshm Island Defence",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Lar Defence",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_DESC = [[Colpisci il magazzino rifornimenti Lar Defence per indebolire i rifornimenti verso Lar-Defence.
+
+Coordinate:
+MGRS: 40 R BR 41380 63385
+Lat/long: N 27°40'11" E 54°22'41"
+Minuti decimali: N 27°40.194' E 54°22.689'
+
+Quota 2636 piedi
+
+Ricompensa 500
+
+Richieste 2000 libbre di bombe]],
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Lar Defence\nColpisci questo edificio per indebolire i rifornimenti verso Lar-Defence",
+	PG_MISSION_STRIKE_LAR_DEFENCE_WAREHOUSE_END = "Missione d'attacco terminata: magazzino rifornimenti Lar Defence",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Al Dhafra Defence",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_DESC = [[Colpisci il magazzino rifornimenti Al Dhafra Defence per indebolire i rifornimenti verso Al Dhafra-Defence.
+
+Coordinate:
+MGRS: 40 R BM 51040 85144
+Lat/long: N 24°15'34" E 54°32'52"
+Minuti decimali: N 24°15.568' E 54°32.870'
+
+Quota 52 piedi
+
+Ricompensa 500
+
+Richieste 2000 libbre di bombe]],
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Al Dhafra Defence\nColpisci questo edificio per indebolire i rifornimenti verso Al Dhafra-Defence",
+	PG_MISSION_STRIKE_DHAFRA_DEFENCE_WAREHOUSE_END = "Missione d'attacco terminata: magazzino rifornimenti Al Dhafra Defence",
+	PG_MISSION_GENERALS_HIDEOUT_DESC = [[Colpisci il nascondiglio del generale. Si trova a Lavan Island.
+
+Eliminalo prima che fugga!
+
+Ricompensa: 500
+
+MGRS: 39 R YK 31880 66716
+Lat long: N 26°48'09" E 53°19'57"
+Lat long Decimal Minutes: N 26°48.164' E 53°19.962'
+Altitudine 7 piedi
+
+Sono richieste 2000 libbre]],
+	PG_MISSION_GENERALS_HIDEOUT_START  = "Nuova missione d'attacco: colpisci il nascondiglio del generale",
+	PG_MISSION_GENERALS_HIDEOUT_END    = "Missione d'attacco terminata: colpisci il nascondiglio del generale",
+	PG_MISSION_ON_THE_RUN_TARGET       = "bersaglio in fuga",
+	PG_MISSION_ON_THE_RUN_TITLE        = "Bersaglio di alto valore in fuga",
+	PG_MISSION_ON_THE_RUN_DESC = [[Il bersaglio di alto valore è in fuga e si muove verso ovest ad alta velocità da Golf!
+
+Le voci dicono che stia andando a Lar.
+
+Eliminalo prima che fugga! Hai solo UNA possibilità!
+
+Ricompensa: 1500
+
+]],
+	PG_MISSION_ON_THE_RUN_START        = "Nuova missione d'attacco: bersaglio di alto valore in fuga",
+	PG_MISSION_ON_THE_RUN_END          = "Missione d'attacco terminata: bersaglio di alto valore in fuga",
+	PG_MISSION_ARTY_FOXTROT_DESC       = "Il nemico ha schierato artiglieria vicino a Foxtrot. Distruggila prima che abbia la possibilità di sparare.",
+	PG_MISSION_DEFEND_BANDAR_ABBAS_TITLE = "Difendi BandarAbbas",
+	PG_MISSION_DEFEND_BANDAR_ABBAS_DESC = "Il nemico sta preparando un attacco totale contro BandarAbbas.\nDifendi l'aeroporto a ogni costo.",
+	PG_MISSION_DEFEND_BANDAR_ABBAS_START = "Nuova missione: difendi BandarAbbas",
+	PG_MISSION_DEFEND_BANDAR_ABBAS_END = "Missione terminata: difendi BandarAbbas",
+	PG_MISSION_CELL_CONVOY_FAILED      = "Il convoglio è distrutto e la cellula è ancora sconosciuta\nMissione fallita",
+	PG_MISSION_PORT_ABORTED            = "Missione annullata!\n\nLa missione del porto non è più necessaria",
+	PG_MISSION_GENERAL_FLED            = "Missione d'attacco fallita!\n\nIl generale è fuggito dal nascondiglio",
 }
 
 for locale, labels in pairs(PGSetupLabels) do
@@ -16919,6 +21391,152 @@ Lat Long Decimal Minutes: %s
 Elevation %s feet]],
 		AF_MISSION_EWR_START            = "New strike mission: Destroy the EWR at %s",
 		AF_MISSION_EWR_END              = "Strike mission ended: Destroy the EWR at %s",
+	},
+	IT = {
+		AF_SETUP_ENEMIES_DEFEATED_500 = "I nemici a %s sono stati sconfitti.\n+500 crediti",
+		CA_FLAVOR_ENEMY_CARRIER_ZONE = "Zona portaerei nemica",
+		AF_FLAVOR_KANDAHAR = "WPT %s\nKandahar\nNodo principale per logistica e operazioni ad ala fissa. Tienilo e controllerai il sud.\nEntrate rosse: +208 crediti/ora",
+		AF_FLAVOR_ALPHA = "WPT %s\nCheckpoint Alpha\nArea avanzata di prima linea che collega Kandahar alle rotte centrali.",
+		AF_FLAVOR_BOST = "WPT %s\nBost\nCaposaldo vicino a Bastion. Accorcia le tratte degli elicotteri e protegge la rotta di Dwyer.",
+		AF_FLAVOR_CAMP_BASTION = "WPT %s\nCamp Bastion\nGrande aeroporto della coalizione. La tua catena logistica più sicura inizia qui.\nEntrate rosse: +208 crediti/ora",
+		AF_FLAVOR_DWYER = "WPT %s\nDwyer\nPista avanzata che collega Bost a Nimroz. Se cade, Nimroz viene isolata rapidamente.",
+		AF_FLAVOR_NIMROZ = "WPT %s\nNimroz\nPista nel deserto e nodo logistico. Mantiene Farah rifornita e vivo il fronte ovest.",
+		AF_FLAVOR_FARAH = "WPT %s\nFarah\nPista avanzata sull'approccio occidentale. I rifornimenti qui mantengono la pressione su Shindand.",
+		AF_FLAVOR_SHINDAND = "WPT %s\nShindand\nBase aerea strategica tra Farah e Herat. Perfetta come punto di partenza per spingere a ovest.",
+		AF_FLAVOR_HERAT = "WPT %s\nHerat\nAncora occidentale. Una volta catturata, apre l'intero corridoio ovest.",
+		AF_FLAVOR_QALA_I_NAW = "WPT %s\nQala i Naw\nCollegamento occidentale. Se cade, il nord-ovest resta esposto.",
+		AF_FLAVOR_MAYMANA_ZAHIRADDIN = "WPT %s\nMaymana Zahiraddin Faryabi\nAvamposto settentrionale. Tienilo per bloccare il corridoio nord-occidentale.",
+		AF_FLAVOR_CHAGHCHARAN = "WPT %s\nChaghcharan\nCollegamento montano che unisce Herat/QalaiNaw con Bamyan e il nord-ovest.",
+		AF_FLAVOR_BAMYAN = "WPT %s\nBamyan\nControllo di rotta ad alta quota che collega la sacca di Kabul alla catena occidentale.",
+		AF_FLAVOR_BAGRAM = "WPT %s\nBagram\nBase aerea militare strategica a nord di Kabul.\nControlla la superiorità aerea sulla capitale e sul corridoio centrale.",
+		AF_FLAVOR_KABUL = "WPT %s\nKabul\nNodo capitale di alto valore. Aspettati forte resistenza e pressione costante.",
+		AF_FLAVOR_CHECKPOINT_KABUL_W = "WPT %s\nCheckpoint Kabul W\nCheckpoint occidentale. Strozzatura difensiva sull'approccio alla capitale.",
+		AF_FLAVOR_CHECKPOINT_KABUL_S = "WPT %s\nCheckpoint Kabul S\nApproccio meridionale verso Kabul. Il punto migliore per fermare la pressione da Delta e Gardez.",
+		AF_FLAVOR_CHECKPOINT_KABUL_E = "WPT %s\nCheckpoint Kabul E\nCheckpoint orientale verso Kabul. Punto principale di attrito per gli attacchi dalle colline.",
+		AF_FLAVOR_FOB_KUNAR = "WPT %s\nFOB Kunar\nBase operativa avanzata a est. Lanci brevi verso i nascondigli vicini.",
+		AF_FLAVOR_JALALABAD = "WPT %s\nJalalabad\nPorta verso est. I rifornimenti qui spingono avanti la linea di FOB Kunar.\nEntrate rosse: +208 crediti/ora",
+		AF_FLAVOR_GARDEZ = "WPT %s\nGardez\nApproccio meridionale a Kabul. Ottima per rifornimenti e pattuglie verso Jalalabad.",
+		AF_FLAVOR_CHECKPOINT_DELTA = "WPT %s\nCheckpoint Delta\nCancello dell'anello di Kabul. Controlla Delta per controllare l'accesso a Kabul e Bamyan.",
+		AF_FLAVOR_GHAZNI_HELIPORT = "WPT %s\nGhazni Heliport\nNodo per elicotteri che controlla la linea centrale tra Charlie e Delta.",
+		AF_FLAVOR_SHARANA = "WPT %s\nSharana\nPista sul fianco della montagna. Forte punto intermedio tra Charlie, Gardez e Ghazni.",
+		AF_FLAVOR_CHECKPOINT_CHARLIE = "WPT %s\nCheckpoint Charlie\nIncrocio centrale. Premi Tarinkot, Sharana e Ghazni da qui.",
+		AF_FLAVOR_CHECKPOINT_BRAVO = "WPT %s\nCheckpoint Bravo\nPunto di controllo del traffico che protegge il corridoio Kandahar ↔ Tarinkot.",
+		AF_FLAVOR_TARINKOT = "WPT %s\nTarinkot\nPista chiave nel centro-sud. Controlla le rotte verso Bravo/Charlie e la cintura degli insorti.\n+55 crediti/ora",
+		AF_FLAVOR_INSURGENT_QALAT = "Base insorti Qalat\nRoccaforte fortificata. Ripulirla riduce le incursioni lungo il corridoio Bravo.",
+		AF_FLAVOR_INSURGENT_DELARAM = "Base insorti Delaram\nNodo di imboscate stradali. Lasciarla attiva minaccia le linee di rifornimento di Bastion.",
+		AF_FLAVOR_INSURGENT_CHIMOZAY = "Base insorti Chimozay\nRete di campi rurali usata per molestare Farah e la rotta occidentale.",
+		AF_FLAVOR_INSURGENT_NILI = "Base insorti Nili\nBase nascosta nella valle. Aspettati MANPADS/tecniche sulle alture.",
+		AF_FLAVOR_INSURGENT_ALPHA = "Base insorti Alpha\nCampo di addestramento. Se ignorato, Tarinkot resta contesa.",
+		AF_FLAVOR_INSURGENT_QARABAGH = "Insorti Qarabagh\nSacca urbana e deposito rifornimenti. Ripulirla stabilizza il settore Charlie.",
+		AF_FLAVOR_INSURGENT_ASADABAD = "Base insorti Asadabad\nNascondiglio ai piedi delle montagne del Kunar. Colpiscilo per fermare la pressione su FOB Kunar.",
+		AF_FLAVOR_INSURGENT_KUNAR = "Base insorti Kunar\nCampo nella valle del fiume. Incursioni e rinforzi frequenti passano da qui.",
+		AF_FLAVOR_INSURGENT_SAROBI = "Base insorti Sarobi\nCaposaldo a est di Kabul. Ripulirlo riduce gli attacchi su Kabul E.",
+		AF_FLAVOR_INSURGENT_MOUNTAIN = "Base insorti Mountain\nRete di nascondigli montani. Aspettati AAA/MANPADS e unità difficili da trovare.",
+		AF_FLAVOR_FOB_FARID_BASHARAT = "FOB-Farid Basharat\nBase operativa avanzata abbandonata. Restano fortificazioni leggere. Catturala per stabilire un nuovo punto d'appoggio.",
+		AF_FLAVOR_FOB_AHMAD_SHAH_MASSOUD = "FOB-Ahmad Shah Massoud\nEx FOB della coalizione ora abbandonata. Prevista resistenza minima. Catturala per abilitare operazioni avanzate.",
+		AF_FLAVOR_FOB_ISMAIL_KHAN = "FOB-Ismail Khan\nFOB deserta con infrastrutture vecchie. Posizione strategica per il controllo regionale. Catturabile.",
+		AF_FLAVOR_FOB_HAMID_KARZAI = "FOB-Hamid Karzai\nUn tempo FOB logistica chiave, ora abbandonata. Metterla in sicurezza ripristina rifornimenti e accesso elicotteri.",
+		AF_FLAVOR_FOB_JAVID_BASHARAT = "FOB-Javid Basharat\nFOB remota e abbandonata. Restano difese limitate. Catturala per negare al nemico un'area di staging.",
+		AF_FLAVOR_FOB_SHANK = "FOB-Shank\nEx FOB principale ora in disuso. Aspettati presenza nemica sparsa. Catturala per riaprire operazioni aeree e terrestri.",
+		AF_FLAVOR_FOB_LAGMAN = "FOB-Lagman\nFOB abbandonata in terreno aspro. Punto di osservazione strategico sulle rotte circostanti. Catturabile.",
+		AF_FLAVOR_FOB_BOSTICK = "FOB-Bostick\nVecchia FOB di regione di confine lasciata senza personale. Il controllo di questo sito migliora la sicurezza regionale.",
+		AF_FLAVOR_FOB_DELARAM = "FOB-Delaram\nFOB abbandonata vicino a rotte di transito chiave. Catturala per ristabilire presenza avanzata e logistica.",
+		AF_FLAVOR_FOB_JAMSHEED = "FOB-Jamsheed\nFOB abbandonata vicino a una posizione chiave e a rotte di transito. Catturala per ristabilire presenza avanzata e logistica.",
+		AF_FLAVOR_FOB_FENTY = "FOB-Fenty\nFOB NATO abbandonata in terreno aspro sulla via per Tarinkot. Catturala per stabilire presenza settentrionale e logistica.",
+		AF_FLAVOR_SAM_ALPHA = "Sito SAM Alpha\nSito SAM fuori Farah. Procedi con cautela.",
+		AF_FLAVOR_SAM_BRAVO = "Sito SAM Bravo\nSito SAM lungo la rotta per Sharana. Procedi con cautela.",
+		AF_FLAVOR_SAM_CHARLIE = "Sito SAM Charlie\nSito SAM a ovest di FOB Hamid Karzai. Procedi con cautela.",
+		AF_FLAVOR_SAM_DELTA = "Sito SAM Delta\nSito SAM a ovest di Checkpoint Kabul W. Procedi con cautela.",
+		AF_FLAVOR_SAM_JAMSHEED = "Sito SAM Jamsheed\nLa leggenda del sito SAM Jamsheed è stata identificata. Usa estrema cautela in quest'area.",
+		AF_FLAVOR_URGOON = "Urgoon Heliport\nEliporto abbandonato che può essere catturato per avanzare la logistica dei magazzini.",
+		AF_FLAVOR_KHOST = "Khost\nAeroporto abbandonato che può essere catturato per avanzare la logistica dei magazzini.\n+55 crediti/ora",
+		AF_FLAVOR_HIDDEN = "Nascosto\nQuesto è nascosto.",
+		AF_MISSION_STRIKE_BIN_LADEN_LOCATION_TARGET = "Colpisci posizione nota di Bin Laden",
+		AF_MISSION_STRIKE_BIN_LADEN_LOCATION_TITLE = "Attacco al nascondiglio nemico",
+		AF_MISSION_STRIKE_BIN_LADEN_LOCATION_DESC = [[Abbiamo Intel su un edificio dove Bin Laden potrebbe essersi rifugiato.
+L'Intel indica che potrebbe trovarsi nella città di Bost, proprio vicino all'aeroporto.
+Non possiamo correre rischi e dobbiamo agire in fretta: fai saltare quell'edificio!
+
+Ricompensa: 500
+
+MGRS: 41 R PQ 31519 95368
+Lat long: N 31°35'09" E 64°23'10"
+Lat long Precise: N 31°35'09.18" E 64°23'10.11"
+Lat long Decimal Minutes: N 31°35.153' E 64°23.168'
+Altitudine 2550 piedi]],
+		AF_MISSION_STRIKE_BIN_LADEN_LOCATION_START = "Nuova missione d'attacco: colpisci posizione nota di Bin Laden",
+		AF_MISSION_STRIKE_BIN_LADEN_LOCATION_END = "Missione d'attacco terminata: colpisci posizione nota di Bin Laden",
+		AF_MISSION_CAPTURE_KHOST_TITLE = "Cattura Khost per aiutare le rotte di rifornimento",
+		AF_MISSION_CAPTURE_KHOST_DESC = [[Ci servono rotte di rifornimento per aerei attraverso il Pakistan.
+Cattura Khost per assistere le rotte di rifornimento.
+In seguito potrai anche usare la base per decollare nei momenti di necessità.]],
+		AF_MISSION_CAPTURE_KHOST_START = "Nuova missione di cattura: le forze speciali devono catturare Khost",
+		AF_MISSION_CAPTURE_KHOST_END = "Missione di cattura terminata: cattura Khost",
+		AF_MISSION_CAPTURE_URGOON_HELIPORT_TITLE = "Cattura Urgoon Heliport per aiutare le rotte di rifornimento",
+		AF_MISSION_CAPTURE_URGOON_HELIPORT_DESC = [[Ci servono più rotte di rifornimento per elicotteri attraverso il Pakistan.
+Cattura Urgoon Heliport per assistere le rotte di rifornimento.
+In seguito potrai anche usare la base per decollare nei momenti di necessità.]],
+		AF_MISSION_CAPTURE_URGOON_HELIPORT_START = "Nuova missione di cattura: le forze speciali devono catturare Urgoon Heliport",
+		AF_MISSION_CAPTURE_URGOON_HELIPORT_END = "Missione di cattura terminata: cattura Urgoon Heliport",
+		AF_MISSION_ASSOCIATES_TARGET = "Uccidi gli associati",
+		AF_MISSION_ASSOCIATES_TITLE = "Colpisci gli associati",
+		AF_MISSION_ASSOCIATES_DESC = [[Un associato noto è stato trovato 70 NM a est di Shindand.
+
+Eliminali prima che possano causare altri problemi.
+
+Ricompensa: 500
+
+MGRS: 41 S NS 65579 97245
+Lat long: N 33°24'45" E 63°42'19"
+Lat long Decimal Minutes: N 33°24.752' E 63°42.318'
+
+Altitudine 6973 piedi]],
+		AF_MISSION_ASSOCIATES_START = "Nuova missione d'attacco: colpisci gli associati",
+		AF_MISSION_ASSOCIATES_END = "Missione d'attacco terminata: colpisci gli associati",
+		AF_MISSION_ASSOCIATES_CONVOY_TARGET = "Caccia il convoglio degli associati",
+		AF_MISSION_ASSOCIATES_CONVOY_TITLE = "Caccia il convoglio degli associati",
+		AF_MISSION_ASSOCIATES_CONVOY_DESC = "",
+		AF_MISSION_ASSOCIATES_CONVOY_START = "Nuova missione d'attacco: caccia il convoglio degli associati!!!!",
+		AF_MISSION_ASSOCIATES_CONVOY_END = "Missione d'attacco terminata: caccia il convoglio degli associati",
+		AF_MISSION_BODYGUARDS_TARGET = "Uccidi le guardie del corpo",
+		AF_MISSION_BODYGUARDS_TITLE = "Colpisci le guardie del corpo",
+		AF_MISSION_BODYGUARDS_DESC = [[L'Intel indica che le guardie personali di Bin Laden sono state avvistate in questa posizione.
+Assicurati che lui e le sue guardie del corpo vengano eliminati.
+
+Ricompensa: 500
+
+MGRS GRID: 42 S UC 38879 58074
+Lat Long: N 33°57'03" E 67°15'23"
+Lat Long Decimal: N 33°57.050' E 67°15.383'
+
+Altitudine 7952 piedi]],
+		AF_MISSION_BODYGUARDS_START = "Nuova missione d'attacco: colpisci le guardie del corpo",
+		AF_MISSION_BODYGUARDS_END = "Missione d'attacco terminata: colpisci le guardie del corpo",
+		AF_MISSION_BIN_LADEN_ESCAPE_TARGET = "Dai la caccia a Bin Laden",
+		AF_MISSION_BIN_LADEN_ESCAPE_TITLE = "Dai la caccia a Bin Laden",
+		AF_MISSION_BIN_LADEN_ESCAPE_DESC = "",
+		AF_MISSION_BIN_LADEN_ESCAPE_START = "Nuova missione d'attacco: dai la caccia a Bin Laden!!!!",
+		AF_MISSION_BIN_LADEN_ESCAPE_END = "Missione d'attacco terminata: dai la caccia a Bin Laden",
+		AF_MISSION_ASSOCIATE_FLEEING  = "Uno degli associati sta fuggendo!! Uccidilo prima che scappi",
+		AF_MISSION_BIN_LADEN_FLEEING  = "Bin Laden sta fuggendo!! Uccidilo prima che scappi",
+		AF_MISSION_ESCORT_CARGO_KANDAHAR_DESC = "Un aereo cargo alleato sta decollando da Kandahar. Proteggilo finché non lascia lo spazio aereo.",
+		AF_MISSION_INTERCEPT_BOMBERS_DESC_QALA = "Bombardieri nemici avvistati a nord di Qala\nDistruggili prima che arrivino a tiro.",
+		AF_MISSION_INTERCEPT_BOMBERS_DESC_BAGRAM = "Bombardieri nemici avvistati a nord di Bagram\nDistruggili prima che arrivino a tiro.",
+		AF_MISSION_INTERCEPT_AIRSTRIKE_DESC_NE = "Aerei nemici stanno conducendo un attacco aereo da nord-est\nDistruggili prima che arrivino a tiro.",
+		AF_MISSION_EWR_TITLE            = "Distruggi l'EWR a %s",
+		AF_MISSION_EWR_DESC             = [[Abbiamo intelligence che mostra la posizione di un radar di allerta precoce situato vicino a %s.
+
+Distruggi questo EWR per aiutare contro le minacce dei siti SAM.
+
+Ricompensa: 300
+
+MGRS GRID: %s
+Lat Long Standard: %s
+Lat Long Decimal Minutes: %s
+
+Altitudine %s piedi]],
+		AF_MISSION_EWR_START            = "Nuova missione d'attacco: distruggi l'EWR a %s",
+		AF_MISSION_EWR_END              = "Missione d'attacco terminata: distruggi l'EWR a %s",
 	},
 	DE = {
 		AF_SETUP_ENEMIES_DEFEATED_500 = "Feinde bei %s wurden besiegt.\n+500 Kredits",
@@ -18285,6 +22903,191 @@ Lat long Decimal Minutes: N 68°00.469' E 35°06.168'
 Elevation 480 feet]],
 		KOLA_MISSION_LOVOZERO_CCC_START    = "New strike mission: Strike on LovozeroCCC Command Center",
 		KOLA_MISSION_LOVOZERO_CCC_END      = "Strike mission ended: Strike on LovozeroCCC Command Center",
+	},
+	IT = {
+		KOLA_FLAVOR_BODO                  = "WPT 1\nL'aeroporto è stato usato per l'aviazione militare fino al 2022.\nBella città nella Norvegia occidentale.",
+		KOLA_FLAVOR_ANDOYA                = "WPT 2\nIl 25 gennaio 1995 ha quasi dato inizio alla Terza guerra mondiale con un satellite scientifico.\nPer fortuna non è successo.",
+		KOLA_FLAVOR_BARDUFOSS             = "WPT 3\nQui si trova la scuola di aviazione dell'aeronautica norvegese.\nMolto nota tra i piloti.",
+		KOLA_FLAVOR_ALTA                  = "WPT 4\nZona neutrale che può essere catturata.",
+		KOLA_FLAVOR_BANAK                 = "WPT 5\nConosciuta anche come Lakselv.\nNatura splendida.",
+		KOLA_FLAVOR_BUOLBMAT              = "WPT 6\n",
+		KOLA_FLAVOR_KIRKENES              = "WPT 7\nBella città sul margine più nord-orientale della Norvegia\nConsigliata per le vacanze.",
+		KOLA_FLAVOR_KARASJOK              = "WPT 8\n",
+		KOLA_FLAVOR_GUOVDAGEAIDNU         = "WPT 9\n",
+		KOLA_FLAVOR_LUSPA                 = "WPT 10\n",
+		KOLA_FLAVOR_KIRUNA                = "WPT 11\nCittà mineraria. Attualmente la stanno spostando.\nSì. Casa per casa.\nNatura splendida.\n",
+		KOLA_FLAVOR_KALIXFORS             = "WPT 12\nArea di addestramento militare.",
+		KOLA_FLAVOR_SKOGSBASEN            = "WPT 13\n",
+		KOLA_FLAVOR_BERGSBASEN            = "WPT 14\n",
+		KOLA_FLAVOR_KVIKKJOKK             = "WPT 15\n",
+		KOLA_FLAVOR_GALLIVARE             = "WPT 16\nCasa della band Hooja.",
+		KOLA_FLAVOR_JOKKMOKK              = "WPT 17\nCentro della popolazione sami in Lapponia.\nE naturalmente luogo di addestramento per l'aeronautica svedese.",
+		KOLA_FLAVOR_VIDSEL                = "WPT 18\nSede del poligono di prova Vidsel.",
+		KOLA_FLAVOR_KALLAX                = "WPT 19\nSede dello squadrone F21.",
+		KOLA_FLAVOR_KALIX                 = "WPT 20\nPiccola città in uno dei luoghi\npiù belli della terra. Freddo però.",
+		KOLA_FLAVOR_KEMI_TORNIO           = "WPT 21\n",
+		KOLA_FLAVOR_TERVOLA               = "WPT 22\n",
+		KOLA_FLAVOR_ROVANIEMI             = "WPT 23\nCasa di Babbo Natale. Cercalo su Google.",
+		KOLA_FLAVOR_VUOJARVI              = "WPT 24\n",
+		KOLA_FLAVOR_SAVUKOSKI             = "WPT 25\n",
+		KOLA_FLAVOR_KELLOSELKA            = "WPT 26\n",
+		KOLA_FLAVOR_MAANINKAVAARA         = "WPT 27\n",
+		KOLA_FLAVOR_KUUSAMO               = "WPT 28\n",
+		KOLA_FLAVOR_KITTILA               = "WPT 29\n",
+		KOLA_FLAVOR_IVALO                 = "WPT 30\n",
+		KOLA_FLAVOR_ZAPOLYARNYY           = "WPT 31\n",
+		KOLA_FLAVOR_SEVEROMORSK1          = "WPT 32\n",
+		KOLA_FLAVOR_SEVEROMORSK3          = "WPT 33\n",
+		KOLA_FLAVOR_MURMANSK_INTERNATIONAL = "WPT 34\n",
+		KOLA_FLAVOR_PRIRECHNYI            = "WPT 35\n",
+		KOLA_FLAVOR_OLENYA                = "WPT 36\n",
+		KOLA_FLAVOR_MONCHEGORSK           = "WPT 37\n",
+		KOLA_FLAVOR_APATITY               = "WPT 38\n",
+		KOLA_FLAVOR_KOVDOR                = "WPT 39\n",
+		KOLA_FLAVOR_ALAKOURTTI            = "WPT 40\n",
+		KOLA_FLAVOR_SAMALVIK              = "SAMAlvik\n",
+		KOLA_FLAVOR_SKOGSFARP_ROUTE_KUUSAMO = "FARP nascosta nella foresta finlandese\nRotta per Kuusamo",
+		KOLA_FLAVOR_LAPLANDIYA            = "Grande area di stoccaggio. Distruggi bunker, serbatoi di carburante e stazione ferroviaria",
+		KOLA_FLAVOR_ZELENOBORSKIJ         = "Grande area di stoccaggio. Distruggi bunker, serbatoi di carburante e stazione ferroviaria",
+		KOLA_FLAVOR_LOVOZERO_CCC          = "Centro di comando. Distruggi il bunker.",
+		KOLA_FLAVOR_HIDDEN1               = "Nessuno lo sa, e non dovresti saperlo nemmeno tu",
+		KOLA_FLAVOR_STORAGE               = "Area di stoccaggio. Distruggi gli edifici per rendere neutrale la zona",
+		KOLA_FLAVOR_SHIPYARD              = "Cantiere navale. Distruggi edifici e unità per rendere neutrale la zona",
+		KOLA_EVENT_CARGO_INTERCEPTOR_SPOTTED = "Intercettore nemico avvistato in rotta verso il nostro trasporto cargo.",
+		KOLA_EVENT_CARGO_INTERCEPT_LAUNCHED = "Il nemico ha lanciato una missione di intercettazione contro il nostro trasporto cargo",
+		KOLA_MISSION_ESCORT_CARGO_BODO_DESC = "Un aereo cargo alleato sta decollando da Bodo. Proteggilo finché non lascia lo spazio aereo.",
+		KOLA_MISSION_INTERCEPT_CARGO_DESC_OLENYA = "Trova e distruggi l'aereo cargo diretto a Olenya\nAttualmente avvistato a nord di Banak.",
+		KOLA_MISSION_INTERCEPT_CARGO_DESC_IVALO = "Trova e distruggi l'aereo cargo diretto a Ivalo\nAttualmente avvistato a sud-est di Kuusamo.",
+		KOLA_MISSION_INTERCEPT_CARGO_DESC_KUUSAMO = "Trova e distruggi l'aereo cargo diretto a Kuusamo\nAttualmente avvistato a nord-ovest di Severomorsk1.",
+		KOLA_TARGET_DESTROY_SCUDS          = "Distruggi SCUD",
+		KOLA_EVENT_SCUDS_ZAPOLYARNYY_LAUNCHING = "Gli SCUD vicino a Zapolyarnyy (30) stanno lanciando verso %s",
+		KOLA_EVENT_SCUDS_KITTILA_LAUNCHING = "Gli SCUD vicino a Kittila (28) stanno lanciando verso %s",
+		KOLA_MISSION_SCUDS_ZAPOLYARNYY_TITLE = "Distruggi SCUD (30)",
+		KOLA_MISSION_SCUDS_ZAPOLYARNYY_DESC = "SCUD avvistati a Zapolyarnyy(30).\nDistruggili prima che possano lanciare i missili",
+		KOLA_MISSION_SCUDS_ZAPOLYARNYY_START = "Nuova missione: distruggi SCUD a Zapolyarnyy(30)",
+		KOLA_MISSION_SCUDS_KITTILA_TITLE   = "Distruggi SCUD (28)",
+		KOLA_MISSION_SCUDS_KITTILA_DESC    = "SCUD avvistati a Kittila(28).\nDistruggili prima che possano lanciare i missili",
+		KOLA_MISSION_SCUDS_KITTILA_START   = "Nuova missione: distruggi SCUD a Kittila(28)",
+		KOLA_MISSION_SCUDS_END             = "Missione terminata: distruggi SCUD",
+		KOLA_SETUP_OBJECT_MISSING          = "%s manca",
+		KOLA_TARGET_RUSSIAN_HIDEOUT        = "nascondiglio russo",
+		KOLA_MARK_RUSSIAN_HIDEOUT          = "Colpisci nascondiglio russo",
+		KOLA_MISSION_RUSSIAN_HIDEOUT_TITLE = "Colpisci nascondiglio russo",
+		KOLA_MISSION_RUSSIAN_HIDEOUT_DESC  = [[Colpisci un nascondiglio russo vicino a Jokkmokk a
+queste coordinate:
+
+MGRS: 34 W DU 47433 88501
+Lat long: N 66°36'39" E 19°48'47"
+Lat long Decimal Minutes: N 66°36.652' E 19°48.797'
+
+Altitudine: 869 piedi
+
+Ricompensa = 500]],
+		KOLA_MISSION_RUSSIAN_HIDEOUT_START = "Nuova missione: colpisci nascondiglio russo",
+		KOLA_MISSION_RUSSIAN_HIDEOUT_END   = "Missione terminata: colpisci nascondiglio russo",
+		KOLA_TARGET_HIGH_VALUE             = "Bersaglio di alto valore",
+		KOLA_MARK_HIGH_VALUE               = "Colpisci bersaglio di alto valore",
+		KOLA_MISSION_HIGH_VALUE_TITLE      = "Colpisci bersaglio di alto valore",
+		KOLA_MISSION_HIGH_VALUE_DESC       = [[Colpisci un edificio di alto valore a queste coordinate:
+
+MGRS: 36 W VV 21510 97955
+Lat long: N 67°35'12" E 31°09'18"
+Lat long Decimal Minutes: N 67°35.202' E 31°09.305'
+
+Altitudine: 539 piedi
+
+Ricompensa = 500]],
+		KOLA_MISSION_HIGH_VALUE_START      = "Nuova missione: colpisci bersaglio di alto valore",
+		KOLA_MISSION_HIGH_VALUE_END        = "Missione terminata: colpisci bersaglio di alto valore",
+		KOLA_TARGET_RIGHT_HAND_MAN         = "Braccio destro",
+		KOLA_MISSION_RIGHT_HAND_MAN_TITLE  = "Uccidi il braccio destro del generale",
+		KOLA_MISSION_RIGHT_HAND_MAN_DESC   = [[
+Abbiamo la posizione di uno dei bracci destri
+del generale nella città di Leirpollskogen. Eliminalo!.
+
+Coordinate:
+MGRS: 35 W NU 56829 15425
+Lat Long: N 70°26'16" E 28°31'15"
+Lat long Decimal Minutes: N 70°26.277' E 28°31.254'
+Altitudine: 108 piedi
+
+Ricompensa: 500
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+		KOLA_MISSION_RIGHT_HAND_MAN_START  = "Nuova missione: uccidi il braccio destro del generale",
+		KOLA_MISSION_RIGHT_HAND_MAN_END    = "Missione terminata: uccidi il braccio destro del generale",
+		KOLA_TARGET_LAPLANDIYA_STORAGE     = "Deposito Laplandiya",
+		KOLA_MISSION_LAPLANDIYA_STORAGE_TITLE = "Colpisci i magazzini del deposito Laplandiya",
+		KOLA_MISSION_LAPLANDIYA_STORAGE_DESC = [[Sono stati identificati 5 magazzini.
+Distruggili per eliminare l'attività nemica al loro interno.
+
+Ricompensa: 1250
+
+È richiesta una bomba penetrante da 2000 libbre.
+
+Coordinate della posizione:
+
+MGRS: 36 W WA 12643 73122
+Lat long: N 68°16'15" E 33°18'21"
+Lat long Precise: N 68°16'15.98" E 33°18'21.72"
+Lat long Decimal Minutes: N 68°16.266' E 33°18.362'
+Altitudine 623 piedi]],
+		KOLA_MISSION_LAPLANDIYA_STORAGE_START = "Nuova missione d'attacco: colpisci i magazzini di Laplandiya",
+		KOLA_MISSION_LAPLANDIYA_STORAGE_END = "Missione d'attacco terminata: colpisci i magazzini di Laplandiya",
+		KOLA_TARGET_ZELENOBORSKIJ_STORAGE  = "Deposito Zelenoborskij",
+		KOLA_MISSION_ZELENOBORSKIJ_STORAGE_TITLE = "Colpisci i magazzini del deposito Zelenoborskij",
+		KOLA_MISSION_ZELENOBORSKIJ_STORAGE_DESC = [[Sono stati identificati 5 magazzini.
+Distruggili per eliminare l'attività nemica al loro interno.
+
+Ricompensa: 1250
+
+È richiesta una bomba penetrante da 2000 libbre.
+
+Coordinate della posizione:
+
+MGRS: 36 W VV 69946 10495
+Lat long: N 66°48'40" E 32°18'57"
+Lat long Precise: N 66°48'40.21" E 32°18'57.66"
+Lat long Decimal Minutes: N 66°48.670' E 32°18.961'
+Altitudine 183 piedi]],
+		KOLA_MISSION_ZELENOBORSKIJ_STORAGE_START = "Nuova missione d'attacco: colpisci i magazzini di Zelenoborskij",
+		KOLA_MISSION_ZELENOBORSKIJ_STORAGE_END = "Missione d'attacco terminata: colpisci i magazzini di Zelenoborskij",
+		KOLA_TARGET_PYAOZERSKY_STORAGE     = "Deposito Pyaozersky",
+		KOLA_MISSION_PYAOZERSKY_STORAGE_TITLE = "Colpisci i magazzini del deposito Pyaozersky",
+		KOLA_MISSION_PYAOZERSKY_STORAGE_DESC = [[Sono stati identificati 3 magazzini.
+Distruggili per eliminare l'attività nemica al loro interno.
+
+Ricompensa: 1000
+
+È richiesta una bomba penetrante da 2000 libbre.
+
+Coordinate della posizione:
+
+MGRS: 36 W VT 14140 95420
+Lat long: N 65°46'07" E 31°07'30"
+Lat long Precise: N 65°46'07.63" E 31°07'30.01"
+Lat long Decimal Minutes: N 65°46.127' E 31°07.500'
+Altitudine 480 piedi]],
+		KOLA_MISSION_PYAOZERSKY_STORAGE_START = "Nuova missione d'attacco: colpisci i magazzini di Pyaozersky",
+		KOLA_MISSION_PYAOZERSKY_STORAGE_END = "Missione d'attacco terminata: colpisci i magazzini di Pyaozersky",
+		KOLA_TARGET_LOVOZERO_CCC           = "Centro di comando LovozeroCCC",
+		KOLA_MISSION_LOVOZERO_CCC_TITLE    = "Colpisci il centro di comando LovozeroCCC",
+		KOLA_MISSION_LOVOZERO_CCC_DESC     = [[È stato identificato un centro di comando nemico.
+Distruggilo per eliminare l'attività nemica al suo interno.
+
+Ricompensa: 500
+
+È richiesta una bomba penetrante da 2000 libbre.
+
+Coordinate della posizione:
+
+MGRS: 36 W WA 87863 45232
+Lat long: N 68°00'28" E 35°06'10"
+Lat long Precise: N 68°00'28.19" E 35°06'10.09"
+Lat long Decimal Minutes: N 68°00.469' E 35°06.168'
+Altitudine 480 piedi]],
+		KOLA_MISSION_LOVOZERO_CCC_START    = "Nuova missione d'attacco: colpisci il centro di comando LovozeroCCC",
+		KOLA_MISSION_LOVOZERO_CCC_END      = "Missione d'attacco terminata: colpisci il centro di comando LovozeroCCC",
 	},
 	DE = {
 		KOLA_FLAVOR_BODO                  = "WPT 1\nDer Flugplatz wurde bis 2022 militärisch genutzt.\nSchöne Stadt im Westen Norwegens.",
@@ -19847,13 +24650,22 @@ Lat long Decimal Minutes: %s
 Elevation: %s
 
 reward = %s]],
+		COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[Strike %s to cripple supplies to %s.
+
+Coordinates:
+MGRS: %s
+Lat long: %s
+Lat long Decimal Minutes: %s
+Elevation: %s
+
+reward = %s]],
 		COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "Strike Hannover supply storage",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Hannover supply storage",
-		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "New strike mission: Strike Hannover supply storage\nCoords are in the mission description",
+		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "New strike mission: Strike Hannover supply storage",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_END = "Mission ended: Strike Hannover supply storage",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "Strike Parchim SAM-Kilo supply storage",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Parchim SAM-Kilo supply storage",
-		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "New strike mission: Strike Parchim SAM-Kilo supply storage\nCoords are in the mission description",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "New strike mission: Strike Parchim SAM-Kilo supply storage",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_END = "Mission ended: Strike Parchim SAM-Kilo supply storage",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "Enemy assault on Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "The enemy have launched an assault on Mahlwinkel!!\n\nThey have deployed long range Artillery and unknown bandits inbound!\n\nreward = 250",
@@ -19864,6 +24676,110 @@ reward = %s]],
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Mahlwinkel supply warehouse",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "New strike mission: Strike Mahlwinkel supply warehouse for SAM-Delta",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_END = "Mission ended: Strike Mahlwinkel supply warehouse for SAM-Delta",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "Strike Salzungen FARP supply warehouse for SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Salzungen FARP supply warehouse",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "New strike mission: Strike Salzungen FARP supply warehouse for SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "Mission ended: Strike Salzungen FARP supply warehouse for SAM-Charlie",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "Strike Gelnhausen supply warehouse for SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Gelnhausen supply warehouse",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "New strike mission: Strike Gelnhausen supply warehouse for SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "Mission ended: Strike Gelnhausen supply warehouse for SAM-Bravo",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "Strike Schkeuditz supply warehouse for SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Schkeuditz supply warehouse",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "New strike mission: Strike Schkeuditz supply warehouse for SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "Mission ended: Strike Schkeuditz supply warehouse for SAM-Delta",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "Strike Laage supply warehouse for SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Laage supply warehouse",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "New strike mission: Strike Laage supply warehouse for SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "Mission ended: Strike Laage supply warehouse for SAM-Lima",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "Strike Neuruppin supply warehouse for SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Neuruppin supply warehouse",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "New strike mission: Strike Neuruppin supply warehouse for SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "Mission ended: Strike Neuruppin supply warehouse for SAM-Juliett",
+		COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "Strike the Ministry of Accurate Maps",
+		COLDWAR_MISSION_ACCURATE_MAPS_MARK = "Ministry of Accurate Maps",
+		COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[Strike the Ministry of Accurate Maps.
+
+Their maps are wrong, but their artillery keeps finding us anyway.
+
+Coordinates:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+Elevation: 1183 feet
+
+reward = 500]],
+		COLDWAR_MISSION_ACCURATE_MAPS_START = "New strike mission: Strike the Ministry of Accurate Maps",
+		COLDWAR_MISSION_ACCURATE_MAPS_END = "Mission ended: Strike the Ministry of Accurate Maps",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "Strike Totally Civilian Warehouse No. 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "Totally Civilian Warehouse No. 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[Strike Totally Civilian Warehouse No. 4.
+
+Recon says it is full of SAM parts. The sign says tractor equipment. Both cannot be true.
+
+Coordinates:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+Elevation: 20 feet
+
+reward = 500]],
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "New strike mission: Strike Totally Civilian Warehouse No. 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "Mission ended: Strike Totally Civilian Warehouse No. 4",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "Strike the Department of Peaceful Artillery",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "Department of Peaceful Artillery",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[Strike the Department of Peaceful Artillery.
+
+Cripple the office that insists all shelling is strictly defensive.
+
+Coordinates:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+Elevation: 760 feet
+
+reward = 500]],
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "New strike mission: Strike the Department of Peaceful Artillery",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "Mission ended: Strike the Department of Peaceful Artillery",
+		COLDWAR_MISSION_COMMITTEE_TITLE = "Strike the People’s Committee for Not Losing",
+		COLDWAR_MISSION_COMMITTEE_MARK = "People’s Committee for Not Losing",
+		COLDWAR_MISSION_COMMITTEE_DESC = [[Strike the People’s Committee for Not Losing.
+
+They are running out of maps, fuel, and excuses. Help with the last one.
+
+Coordinates:
+MGRS: 32 U NE 69783 31100
+Lat long: N 53°31'27" E 10°03'09"
+Lat long Decimal Minutes: N 53°31.451' E 10°03.158'
+Elevation: 11 feet
+
+reward = 500]],
+		COLDWAR_MISSION_COMMITTEE_START = "New strike mission: Strike the People’s Committee for Not Losing",
+		COLDWAR_MISSION_COMMITTEE_END = "Mission ended: Strike the People’s Committee for Not Losing",
+		COLDWAR_MISSION_MORALE_TRUCK_TITLE = "Destroy the Morale Enhancement Vehicle",
+		COLDWAR_MISSION_MORALE_TRUCK_DESC = [[Destroy the Morale Enhancement Vehicle.
+
+It has a loudspeaker, a political officer, and no useful tactical value. Prioritize accordingly.
+
+reward = 500]],
+		COLDWAR_MISSION_MORALE_TRUCK_START = "New strike mission: Destroy the Morale Enhancement Vehicle",
+		COLDWAR_MISSION_MORALE_TRUCK_END = "Mission ended: Destroy the Morale Enhancement Vehicle",
+		COLDWAR_TARGET_MORALE_TRUCK = "Morale Enhancement Vehicle",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "Eliminate Colonel Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[Eliminate Colonel Clipboard.
+
+Remove the man personally responsible for approving every bad idea in this sector.
+
+Coordinates:
+MGRS: 33 U VU 73163 27047
+Lat long: N 52°35'34" E 14°36'13"
+Lat long Decimal Minutes: N 52°35.567' E 14°36.230'
+Elevation: 36 feet
+
+reward = 500]],
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "New strike mission: Eliminate Colonel Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "Mission ended: Eliminate Colonel Clipboard",
+		COLDWAR_TARGET_COLONEL_CLIPBOARD = "Colonel Clipboard",
 		COLDWAR_MISSION_NAZI_REUNION_TITLE = "Strike the Nazi reunion",
 		COLDWAR_MISSION_NAZI_REUNION_MARK = "Strike the Nazis",
 		COLDWAR_MISSION_NAZI_REUNION_DESC = [[We have intel on a bunch of Nazis holding a reunion at theese coordinates:
@@ -19877,7 +24793,7 @@ Lat Long Precise: N 53°34'21.72" E 08°35'53.46"
 Elevation: 10 feet
 
 reward = 500]],
-		COLDWAR_MISSION_NAZI_REUNION_START = "New strike mission: Strike the Nazi reunion\nCoords are in the mission description",
+		COLDWAR_MISSION_NAZI_REUNION_START = "New strike mission: Strike the Nazi reunion",
 		COLDWAR_MISSION_NAZI_REUNION_END = "Mission ended: Strike the Nazi reunion",
 		COLDWAR_MISSION_KILL_COMMANDER_TITLE = "Kill the commander",
 		COLDWAR_MISSION_KILL_COMMANDER_MARK = "Kill the commander",
@@ -19892,7 +24808,7 @@ Lat Long Precise: N 49°34'24.08" E 08°10'02.27"
 Elevation: 577 feet
 
 reward = 500]],
-		COLDWAR_MISSION_KILL_COMMANDER_START = "New strike mission: Kill the commander\nCoords are in the mission description",
+		COLDWAR_MISSION_KILL_COMMANDER_START = "New strike mission: Kill the commander",
 		COLDWAR_MISSION_KILL_COMMANDER_END = "Mission ended: Kill the commander",
 		COLDWAR_MISSION_KILL_GENERAL_TITLE = "Kill the General",
 		COLDWAR_MISSION_KILL_GENERAL_MARK = "Kill the General",
@@ -19925,7 +24841,7 @@ Reward: 500
 
 Destroy the house and whoever is nearby.]],
 		COLDWAR_MISSION_KILL_GUNTER_START = "New strike mission: Kill Kommandant Günter",
-		COLDWAR_MISSION_KILL_GUNTER_END = "Strike mission ended: Kill Kommandant Günter\nCoords are in the mission description",
+		COLDWAR_MISSION_KILL_GUNTER_END = "Strike mission ended: Kill Kommandant Günter",
 		COLDWAR_MISSION_COMMS_TOWER_TITLE = "Strike enemy communication tower",
 		COLDWAR_MISSION_COMMS_TOWER_MARK = "Strike enemy communication tower",
 		COLDWAR_MISSION_COMMS_TOWER_DESC = [[Strike enemy communication tower at these coordinates:
@@ -19970,7 +24886,7 @@ Lat long Decimal Minutes: N 51°29.476' E 10°51.031'
 Elevation: 623 feet
 
 reward = 500]],
-		COLDWAR_MISSION_DESTROY_SCUDS_START = "New mission: Destroy enemy Scuds\nCoords are in the mission description",
+		COLDWAR_MISSION_DESTROY_SCUDS_START = "New mission: Destroy enemy Scuds",
 		COLDWAR_MISSION_DESTROY_SCUDS_END = "Mission ended: Destroy SCUDS",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_TITLE = "Strike on a construction site",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_DESC = [[We have intel on a construction site building a weapons factory.
@@ -19985,6 +24901,327 @@ Lat long Decimal Minutes: N 50°45.435' E 07°05.155'
 Elevation: 185 feet]],
 		COLDWAR_MISSION_CONSTRUCTION_SITE_START = "New mission: Strike on a construction site",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_END = "Strike mission ended: Strike a construction site",
+	},
+	IT = {
+		COLDWAR_FLAVOR_WPT              = "WPT %s\n",
+		COLDWAR_FLAVOR_SCHEISSE_FACTORY = "Se la merda si potesse produrre, sarebbe una delle migliori merde al mondo.",
+		COLDWAR_FLAVOR_CHEMICAL_FACTORY = "Qui si producono sostanze chimiche, e non è una buona cosa.",
+		COLDWAR_EVENT_SAM_DESTROYED     = "SAM nemico distrutto\n+200 crediti",
+		COLDWAR_EVENT_SCHEISSE_FACTORY_DESTROYED = "La Scheiße Factory ora è solo Scheiße\n+500 crediti",
+		COLDWAR_EVENT_CHEMICAL_FACTORY_DESTROYED = "Fabbrica chimica distrutta.\n+500 crediti",
+		COLDWAR_EVENT_RED_ARMY_CAMP_DESTROYED = "Campo dell'Armata Rossa distrutto.\n+500 crediti",
+		COLDWAR_EVENT_HAHN_ARTY_ATTACK  = "Hahn è sotto attacco dell'artiglieria nemica!\n\nPreparatevi!",
+		COLDWAR_EVENT_HAHN_ARTY_FOUND = [[Abbiamo trovato l'artiglieria nemica!
+
+Eliminala prima che spari di nuovo!
+
+Coordinate:
+MGRS: 32 U MA 15621 72886
+Lat long: N 50°18'07" E 07°48'54"
+Lat long Decimal Minutes: N 50°18.123' E 07°48.910'
+
+Altitudine: 234 piedi]],
+		COLDWAR_EVENT_FULDA_HELO_ATTACK = "3 elicotteri d'attacco nemici sono in arrivo su Fulda da Salzungen FARP!\n\nEliminali prima che inizino a sparare!",
+		COLDWAR_EVENT_SCHKEUDITZ_ASSAULT = "Il nemico ha lanciato un assalto su Schkeuditz\n\n2 bombardieri scortati da 2 jet sconosciuti!",
+		COLDWAR_TARGET_MAHLWINKEL_ARTILLERY = "Artiglieria Mahlwinkel",
+		COLDWAR_EVENT_MAHLWINKEL_ARTY_FOUND = [[Abbiamo trovato l'artiglieria nemica!
+
+Eliminala prima che spari di nuovo!
+
+Coordinate:
+MGRS: 32 U PD 64017 06031
+Lat long: N 52°22'47" E 11°24'35"
+Lat long Decimal Minutes: N 52°22.796' E 11°24.587'
+
+Altitudine: 234 piedi]],
+		COLDWAR_EVENT_BREMEN_AMBUSH     = "IMBOSCATA!!!!!\n\nInsorti nemici stanno emergendo da Bremen!",
+		COLDWAR_EVENT_NEURUPPIN_ARTY_BRACE = "Preparatevi!!\n\nAbbiamo rilevato colpi d'artiglieria in arrivo su Neuruppin!!",
+		COLDWAR_EVENT_NEURUPPIN_GROUND_ASSAULT = "Preparatevi!!\n\nIl nemico ha lanciato un assalto terrestre!\nSono in rotta verso Neuruppin",
+		COLDWAR_EVENT_LARZ_SCUD_BRACE   = "Preparatevi!!\n\nIl nemico ha lanciato SCUD verso Larz!!",
+		COLDWAR_EVENT_SAM_MIKE_INTEL    = "INTEL:\nAbbiamo trovato un altro sito SAM nemico, SAM-Mike, a nord di Peenemunde.",
+		COLDWAR_EVENT_INSURGENCY_CAMP_INTEL = "INTEL:\nAbbiamo trovato un altro campo nemico, a ovest di Parchim.",
+		COLDWAR_TARGET_INTERCEPT_BOMBERS = "Intercetta bombardieri nemici",
+		COLDWAR_MISSION_INTERCEPT_BOMBERS_TITLE = "Intercetta bombardieri",
+		COLDWAR_MISSION_INTERCEPT_BOMBERS_DESC = "Bombardieri nemici avvistati in arrivo da %s\nDistruggili prima che arrivino a tiro.",
+		COLDWAR_MISSION_INTERCEPT_BOMBERS_START = "Nuova missione: intercetta bombardieri in arrivo da %s",
+		COLDWAR_MISSION_INTERCEPT_BOMBERS_END = "Missione terminata: intercetta bombardieri",
+		COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_TITLE = "Intercetta attacco aereo nemico",
+		COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_DESC = "Aerei nemici stanno conducendo un attacco aereo da ovest verso sud-est\nDistruggili prima che arrivino a tiro.",
+		COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_START = "Nuova missione: intercetta attacco aereo nemico",
+		COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_END = "Missione terminata: intercetta attacco aereo nemico",
+		COLDWAR_MISSION_DEFEND_FRANKFURT_TITLE = "Difendi Frankfurt",
+		COLDWAR_MISSION_DEFEND_FRANKFURT_DESC = "Il nemico sta preparando un attacco totale contro Frankfurt.\nDifendi l'aeroporto a ogni costo.",
+		COLDWAR_MISSION_DEFEND_FRANKFURT_START = "Nuova missione: difendi Frankfurt",
+		COLDWAR_MISSION_DEFEND_FRANKFURT_END = "Missione terminata: difendi Frankfurt",
+		COLDWAR_TARGET_INTERCEPT_CARGO_PLANE = "Intercetta aereo cargo",
+		COLDWAR_MISSION_INTERCEPT_CARGO_TITLE = "Intercetta aereo cargo",
+		COLDWAR_MISSION_INTERCEPT_CARGO_DESC_MAHLWINKEL = "Trova e distruggi l'aereo cargo diretto a Mahlwinkel\nin arrivo da ovest.",
+		COLDWAR_MISSION_INTERCEPT_CARGO_DESC_HANNOVER = "Trova e distruggi l'aereo cargo diretto a Hannover\nin arrivo da sud-est.",
+		COLDWAR_MISSION_INTERCEPT_CARGO_DESC_PEENEMUNDE = "Trova e distruggi l'aereo cargo diretto a Peenemunde\nin arrivo da sud-ovest.",
+		COLDWAR_MISSION_INTERCEPT_CARGO_DESC_INACTIVE = "L'aereo cargo non è più attivo.",
+		COLDWAR_MISSION_INTERCEPT_CARGO_START = "Nuova missione: intercetta aereo cargo",
+		COLDWAR_MISSION_INTERCEPT_CARGO_END = "Missione terminata: intercetta aereo cargo",
+		COLDWAR_MISSION_STRIKE_SUPPLY_STORAGE_DESC = [[Colpisci %s per indebolire i rifornimenti
+ai 2 siti SAM nell'area.
+
+Coordinate:
+MGRS: %s
+Lat long: %s
+Lat long Decimal Minutes: %s
+Altitudine: %s
+
+Ricompensa = %s]],
+		COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[Colpisci %s per indebolire i rifornimenti a %s.
+
+Coordinate:
+MGRS: %s
+Lat long: %s
+Lat long Decimal Minutes: %s
+Altitudine: %s
+
+Ricompensa = %s]],
+		COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "Colpisci il deposito rifornimenti Hannover",
+		COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Deposito rifornimenti Hannover",
+		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Nuova missione d'attacco: colpisci il deposito rifornimenti Hannover",
+		COLDWAR_MISSION_HANNOVER_SUPPLY_END = "Missione terminata: colpisci il deposito rifornimenti Hannover",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "Colpisci il deposito rifornimenti SAM-Kilo Parchim",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Deposito rifornimenti SAM-Kilo Parchim",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Nuova missione d'attacco: colpisci il deposito rifornimenti SAM-Kilo Parchim",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_END = "Missione terminata: colpisci il deposito rifornimenti SAM-Kilo Parchim",
+		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "Assalto nemico su Mahlwinkel",
+		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "Il nemico ha lanciato un assalto su Mahlwinkel!!\n\nHa schierato artiglieria a lungo raggio e banditi sconosciuti in arrivo!\n\nRicompensa = 250",
+		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_START = "Nuova missione: assalto nemico su Mahlwinkel",
+		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_END = "Missione terminata: assalto nemico su Mahlwinkel",
+		COLDWAR_EVENT_RED_ARMY_CAMP_INTEL = "INTEL:\nAbbiamo intercettato comunicazioni radio nemiche del campo dell'Armata Rossa.\nAbbiamo triangolato la loro posizione vicino all'artiglieria nella griglia PD63",
+		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Mahlwinkel per SAM-Delta",
+		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Magazzino rifornimenti Mahlwinkel",
+		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Mahlwinkel per SAM-Delta",
+		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_END = "Missione terminata: colpisci il magazzino rifornimenti Mahlwinkel per SAM-Delta",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Salzungen FARP per SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Magazzino rifornimenti Salzungen FARP",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Salzungen FARP per SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "Missione terminata: colpisci il magazzino rifornimenti Salzungen FARP per SAM-Charlie",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Gelnhausen per SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Magazzino rifornimenti Gelnhausen",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Gelnhausen per SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "Missione terminata: colpisci il magazzino rifornimenti Gelnhausen per SAM-Bravo",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Schkeuditz per SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Magazzino rifornimenti Schkeuditz",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Schkeuditz per SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "Missione terminata: colpisci il magazzino rifornimenti Schkeuditz per SAM-Delta",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Laage per SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Magazzino rifornimenti Laage",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Laage per SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "Missione terminata: colpisci il magazzino rifornimenti Laage per SAM-Lima",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "Colpisci il magazzino rifornimenti Neuruppin per SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Magazzino rifornimenti Neuruppin",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "Nuova missione d'attacco: colpisci il magazzino rifornimenti Neuruppin per SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "Missione terminata: colpisci il magazzino rifornimenti Neuruppin per SAM-Juliett",
+		COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "Colpisci il Ministero delle Mappe Accurate",
+		COLDWAR_MISSION_ACCURATE_MAPS_MARK = "Ministero delle Mappe Accurate",
+		COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[Colpisci il Ministero delle Mappe Accurate.
+
+Le loro mappe sono sbagliate, ma la loro artiglieria continua comunque a trovarci.
+
+Coordinate:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+Elevazione: 1183 feet
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_ACCURATE_MAPS_START = "Nuova missione d'attacco: colpisci il Ministero delle Mappe Accurate",
+		COLDWAR_MISSION_ACCURATE_MAPS_END = "Missione terminata: colpisci il Ministero delle Mappe Accurate",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "Colpisci Magazzino Totalmente Civile N. 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "Magazzino Totalmente Civile N. 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[Colpisci Magazzino Totalmente Civile N. 4.
+
+La ricognizione dice che è pieno di pezzi SAM. Il cartello dice attrezzature agricole. Non possono essere vere entrambe.
+
+Coordinate:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+Elevazione: 20 feet
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "Nuova missione d'attacco: colpisci Magazzino Totalmente Civile N. 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "Missione terminata: colpisci Magazzino Totalmente Civile N. 4",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "Colpisci il Dipartimento dell'Artiglieria Pacifica",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "Dipartimento dell'Artiglieria Pacifica",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[Colpisci il Dipartimento dell'Artiglieria Pacifica.
+
+Metti fuori uso l'ufficio che insiste che tutti i bombardamenti sono rigorosamente difensivi.
+
+Coordinate:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+Elevazione: 760 feet
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "Nuova missione d'attacco: colpisci il Dipartimento dell'Artiglieria Pacifica",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "Missione terminata: colpisci il Dipartimento dell'Artiglieria Pacifica",
+		COLDWAR_MISSION_COMMITTEE_TITLE = "Colpisci il Comitato Popolare per Non Perdere",
+		COLDWAR_MISSION_COMMITTEE_MARK = "Comitato Popolare per Non Perdere",
+		COLDWAR_MISSION_COMMITTEE_DESC = [[Colpisci il Comitato Popolare per Non Perdere.
+
+Stanno finendo mappe, carburante e scuse. Aiutali con l'ultima.
+
+Coordinate:
+MGRS: 32 U NE 69783 31100
+Lat long: N 53°31'27" E 10°03'09"
+Lat long Decimal Minutes: N 53°31.451' E 10°03.158'
+Elevazione: 11 piedi
+
+ricompensa = 500]],
+		COLDWAR_MISSION_COMMITTEE_START = "Nuova missione d'attacco: colpisci il Comitato Popolare per Non Perdere",
+		COLDWAR_MISSION_COMMITTEE_END = "Missione terminata: colpisci il Comitato Popolare per Non Perdere",
+		COLDWAR_MISSION_MORALE_TRUCK_TITLE = "Distruggi il Veicolo di Miglioramento del Morale",
+		COLDWAR_MISSION_MORALE_TRUCK_DESC = [[Distruggi il Veicolo di Miglioramento del Morale.
+
+Ha un altoparlante, un ufficiale politico e nessun valore tattico utile. Assegna la priorità di conseguenza.
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_MORALE_TRUCK_START = "Nuova missione d'attacco: distruggi il Veicolo di Miglioramento del Morale",
+		COLDWAR_MISSION_MORALE_TRUCK_END = "Missione terminata: distruggi il Veicolo di Miglioramento del Morale",
+		COLDWAR_TARGET_MORALE_TRUCK = "Veicolo di Miglioramento del Morale",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "Elimina il Colonnello Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[Elimina il Colonnello Clipboard.
+
+Rimuovi l'uomo personalmente responsabile di approvare ogni pessima idea in questo settore.
+
+Coordinate:
+MGRS: 33 U VU 73163 27047
+Lat long: N 52°35'34" E 14°36'13"
+Lat long Decimal Minutes: N 52°35.567' E 14°36.230'
+Elevazione: 36 piedi
+
+ricompensa = 500]],
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "Nuova missione d'attacco: elimina il Colonnello Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "Missione terminata: elimina il Colonnello Clipboard",
+		COLDWAR_TARGET_COLONEL_CLIPBOARD = "Colonnello Clipboard",
+		COLDWAR_MISSION_NAZI_REUNION_TITLE = "Colpisci la riunione nazista",
+		COLDWAR_MISSION_NAZI_REUNION_MARK = "Colpisci i nazisti",
+		COLDWAR_MISSION_NAZI_REUNION_DESC = [[Abbiamo Intel su un gruppo di nazisti che tiene una riunione a queste coordinate:
+
+MK84 ?
+
+MGRS: 32 U ME 73392 36057
+Lat long: N 53°34'21" E 8°35'53"
+Lat long Decimal Minutes: N 53°34.362' E 08°35.891'
+Lat Long Precise: N 53°34'21.72" E 08°35'53.46"
+Altitudine: 10 piedi
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_NAZI_REUNION_START = "Nuova missione d'attacco: colpisci la riunione nazista",
+		COLDWAR_MISSION_NAZI_REUNION_END = "Missione terminata: colpisci la riunione nazista",
+		COLDWAR_MISSION_KILL_COMMANDER_TITLE = "Uccidi il comandante",
+		COLDWAR_MISSION_KILL_COMMANDER_MARK = "Uccidi il comandante",
+		COLDWAR_MISSION_KILL_COMMANDER_DESC = [[Abbiamo la posizione del comandante della 1a flottiglia U-boat
+
+Sarebbe bello se non fosse più in circolazione
+
+MGRS: 32 U MV 39796 91529
+Lat long: N 49°34'24" E 08°10'02"
+Lat long Decimal Minutes: N 49°34.401' E 08°10.037'
+Lat Long Precise: N 49°34'24.08" E 08°10'02.27"
+Altitudine: 577 piedi
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_KILL_COMMANDER_START = "Nuova missione d'attacco: uccidi il comandante",
+		COLDWAR_MISSION_KILL_COMMANDER_END = "Missione terminata: uccidi il comandante",
+		COLDWAR_MISSION_KILL_GENERAL_TITLE = "Uccidi il generale",
+		COLDWAR_MISSION_KILL_GENERAL_MARK = "Uccidi il generale",
+		COLDWAR_MISSION_KILL_GENERAL_DESC = [[Abbiamo la posizione di un generale russo.
+
+Sarebbe bello se non fosse più in circolazione.
+
+MGRS: 33 U VT 11966 21329
+Lat long: N 51°38'09" E 13°43'40"
+Lat long Decimal Minutes: N 51°38.164' E 13°43.675'
+Lat Long Precise: N 51°38'09.89" E 13°43'40.54"
+Altitudine: 358 piedi
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_KILL_GENERAL_START = "Nuova missione d'attacco: uccidi il generale",
+		COLDWAR_MISSION_KILL_GENERAL_END = "Missione terminata: uccidi il generale",
+		COLDWAR_MISSION_KILL_GUNTER_TITLE = "Uccidi Kommandant Günter",
+		COLDWAR_MISSION_KILL_GUNTER_MARK = "Uccidi Kommandant Günter",
+		COLDWAR_MISSION_KILL_GUNTER_DESC = [[Abbiamo la posizione di Kommandant Günter. Si trova
+a sud di Hildesheim Airport. Eliminalo!
+
+Coordinate:
+MGRS: 32 U NC 66314 77828
+Lat Long: N 52°08'49" E  09°58'08"
+Lat long Decimal Minutes: N 52°08.818' E 09°58.149'
+
+Altitudine: 394 piedi
+
+Ricompensa: 500
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+		COLDWAR_MISSION_KILL_GUNTER_START = "Nuova missione d'attacco: uccidi Kommandant Günter",
+		COLDWAR_MISSION_KILL_GUNTER_END = "Missione d'attacco terminata: uccidi Kommandant Günter",
+		COLDWAR_MISSION_COMMS_TOWER_TITLE = "Colpisci torre comunicazioni nemica",
+		COLDWAR_MISSION_COMMS_TOWER_MARK = "Colpisci torre comunicazioni nemica",
+		COLDWAR_MISSION_COMMS_TOWER_DESC = [[Colpisci la torre comunicazioni nemica a queste coordinate:
+
+MGRS: 32 U NC 51769 29542
+Lat long: N 51°42'51" E 09°44'57"
+Lat long Decimal Minutes: N 51°42.865' E 09°44.960'
+Altitudine: 1378 piedi
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_COMMS_TOWER_START = "Nuova missione d'attacco: colpisci torre comunicazioni nemica",
+		COLDWAR_MISSION_COMMS_TOWER_END = "Missione terminata: colpisci torre comunicazioni nemica",
+		COLDWAR_MISSION_PROPAGANDA_TITLE = "Colpisci centro trasmissioni propaganda nemico",
+		COLDWAR_MISSION_PROPAGANDA_MARK = "Colpisci centro trasmissioni propaganda nemico",
+		COLDWAR_MISSION_PROPAGANDA_DESC = [[Colpisci il centro trasmissioni propaganda nemico a queste coordinate:
+
+MGRS: 32 U PC 21450 87183
+Lat long: N 52°13'18" E 10°46'40"
+Lat long Decimal Minutes: N 52°13.300' E 10°46.678'
+Altitudine: 1043 piedi
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_PROPAGANDA_START = "Nuova missione d'attacco: colpisci centro trasmissioni propaganda nemico",
+		COLDWAR_MISSION_PROPAGANDA_END = "Missione terminata: colpisci centro trasmissioni propaganda nemico",
+		COLDWAR_EVENT_ESCORT_INTERCEPTOR_SPOTTED = "Intercettore nemico avvistato in rotta verso il nostro trasporto cargo.",
+		COLDWAR_EVENT_ESCORT_INTERCEPT_MISSION = "Il nemico ha lanciato una missione di intercettazione contro il nostro trasporto cargo",
+		COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_TITLE = "Scorta aereo cargo da Frankfurt",
+		COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_DESC = "Un aereo cargo alleato sta decollando da Frankfurt. Proteggilo finché non lascia lo spazio aereo.",
+		COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_START = "Nuova missione: scorta aereo cargo",
+		COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_END = "Missione terminata: scorta aereo cargo",
+		COLDWAR_MISSION_ESCORT_ACTIVE_PENDING = "Missione attiva in sospeso:\n\nScorta convoglio da %s a %s",
+		COLDWAR_TARGET_DESTROY_SCUDS = "Distruggi SCUD nemici",
+		COLDWAR_EVENT_SCUDS_LAUNCHING = "SCUD nemici in lancio verso %s",
+		COLDWAR_MISSION_DESTROY_SCUDS_TITLE = "Distruggi SCUD nemici",
+		COLDWAR_MISSION_DESTROY_SCUDS_DESC = [[Colpisci gli SCUD nemici prima che sparino.
+
+Coordinate:
+MGRS: 32 U PC 28469 06081
+Lat long: N 51°29'28" E 10°51'01"
+Lat long Decimal Minutes: N 51°29.476' E 10°51.031'
+
+Altitudine: 623 piedi
+
+Ricompensa = 500]],
+		COLDWAR_MISSION_DESTROY_SCUDS_START = "Nuova missione: distruggi SCUD nemici",
+		COLDWAR_MISSION_DESTROY_SCUDS_END = "Missione terminata: distruggi SCUD",
+		COLDWAR_MISSION_CONSTRUCTION_SITE_TITLE = "Colpisci un cantiere",
+		COLDWAR_MISSION_CONSTRUCTION_SITE_DESC = [[Abbiamo Intel su un cantiere che sta costruendo una fabbrica di armi.
+
+Distruggilo!
+
+Ricompensa: 500
+
+MGRS: 32 U LB 64995 24578
+Lat long: N 50°45'26" E 7°05'09"
+Lat long Decimal Minutes: N 50°45.435' E 07°05.155'
+Altitudine: 185 piedi]],
+		COLDWAR_MISSION_CONSTRUCTION_SITE_START = "Nuova missione: colpisci un cantiere",
+		COLDWAR_MISSION_CONSTRUCTION_SITE_END = "Missione d'attacco terminata: colpisci un cantiere",
 	},
 	DE = {
 		COLDWAR_FLAVOR_WPT              = "WPT %s\n",
@@ -20055,13 +25292,22 @@ Lat long Decimal Minutes: %s
 Höhe: %s
 
 Belohnung = %s]],
+		COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[Greife %s an, um die Versorgung von %s zu schwächen.
+
+Koordinaten:
+MGRS: %s
+Lat long: %s
+Lat long Decimal Minutes: %s
+Höhe: %s
+
+Belohnung = %s]],
 		COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "Versorgungslager Hannover angreifen",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Versorgungslager Hannover",
-		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Neue Angriffsmission: Versorgungslager Hannover angreifen\nKoordinaten stehen in der Missionsbeschreibung",
+		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Neue Angriffsmission: Versorgungslager Hannover angreifen",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_END = "Mission beendet: Versorgungslager Hannover angreifen",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "Versorgungslager Parchim SAM-Kilo angreifen",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Versorgungslager Parchim SAM-Kilo",
-		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Neue Angriffsmission: Versorgungslager Parchim SAM-Kilo angreifen\nKoordinaten stehen in der Missionsbeschreibung",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Neue Angriffsmission: Versorgungslager Parchim SAM-Kilo angreifen",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_END = "Mission beendet: Versorgungslager Parchim SAM-Kilo angreifen",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "Feindlicher Angriff auf Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "Der Feind hat einen Angriff auf Mahlwinkel gestartet!!\n\nEr hat Langstreckenartillerie eingesetzt, unbekannte Banditen nähern sich!\n\nBelohnung = 250",
@@ -20072,6 +25318,110 @@ Belohnung = %s]],
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Versorgungslager Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Mahlwinkel für SAM-Delta angreifen",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_END = "Mission beendet: Versorgungslager Mahlwinkel für SAM-Delta angreifen",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "Versorgungslager Salzungen FARP für SAM-Charlie angreifen",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Versorgungslager Salzungen FARP",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Salzungen FARP für SAM-Charlie angreifen",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "Mission beendet: Versorgungslager Salzungen FARP für SAM-Charlie angreifen",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "Versorgungslager Gelnhausen für SAM-Bravo angreifen",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Versorgungslager Gelnhausen",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Gelnhausen für SAM-Bravo angreifen",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "Mission beendet: Versorgungslager Gelnhausen für SAM-Bravo angreifen",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "Versorgungslager Schkeuditz für SAM-Delta angreifen",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Versorgungslager Schkeuditz",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Schkeuditz für SAM-Delta angreifen",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "Mission beendet: Versorgungslager Schkeuditz für SAM-Delta angreifen",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "Versorgungslager Laage für SAM-Lima angreifen",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Versorgungslager Laage",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Laage für SAM-Lima angreifen",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "Mission beendet: Versorgungslager Laage für SAM-Lima angreifen",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "Versorgungslager Neuruppin für SAM-Juliett angreifen",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Versorgungslager Neuruppin",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "Neue Angriffsmission: Versorgungslager Neuruppin für SAM-Juliett angreifen",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "Mission beendet: Versorgungslager Neuruppin für SAM-Juliett angreifen",
+		COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "Ministerium für präzise Karten angreifen",
+		COLDWAR_MISSION_ACCURATE_MAPS_MARK = "Ministerium für präzise Karten",
+		COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[Greife das Ministerium für präzise Karten an.
+
+Ihre Karten sind falsch, aber ihre Artillerie findet uns trotzdem immer wieder.
+
+Koordinaten:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+Höhe: 1183 feet
+
+Belohnung = 500]],
+		COLDWAR_MISSION_ACCURATE_MAPS_START = "Neue Angriffsmission: Ministerium für präzise Karten angreifen",
+		COLDWAR_MISSION_ACCURATE_MAPS_END = "Mission beendet: Ministerium für präzise Karten angreifen",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "Völlig ziviles Lagerhaus Nr. 4 angreifen",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "Völlig ziviles Lagerhaus Nr. 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[Greife das völlig zivile Lagerhaus Nr. 4 an.
+
+Aufklärung sagt, es ist voller SAM-Teile. Das Schild sagt Traktorausrüstung. Beides kann nicht stimmen.
+
+Koordinaten:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+Höhe: 20 feet
+
+Belohnung = 500]],
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "Neue Angriffsmission: Völlig ziviles Lagerhaus Nr. 4 angreifen",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "Mission beendet: Völlig ziviles Lagerhaus Nr. 4 angreifen",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "Abteilung für friedliche Artillerie angreifen",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "Abteilung für friedliche Artillerie",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[Greife die Abteilung für friedliche Artillerie an.
+
+Lege das Büro lahm, das darauf besteht, dass jeder Beschuss streng defensiv ist.
+
+Koordinaten:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+Höhe: 760 feet
+
+Belohnung = 500]],
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "Neue Angriffsmission: Abteilung für friedliche Artillerie angreifen",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "Mission beendet: Abteilung für friedliche Artillerie angreifen",
+		COLDWAR_MISSION_COMMITTEE_TITLE = "Volkskomitee für Nichtverlieren angreifen",
+		COLDWAR_MISSION_COMMITTEE_MARK = "Volkskomitee für Nichtverlieren",
+		COLDWAR_MISSION_COMMITTEE_DESC = [[Greife das Volkskomitee für Nichtverlieren an.
+
+Ihnen gehen Karten, Treibstoff und Ausreden aus. Hilf bei Letzterem.
+
+Koordinaten:
+MGRS: 32 U NE 69783 31100
+Breitengrad/Längengrad: N 53°31'27" E 10°03'09"
+Breitengrad/Längengrad Dezimalminuten: N 53°31.451' E 10°03.158'
+Höhe: 11 Fuß
+
+Belohnung = 500]],
+		COLDWAR_MISSION_COMMITTEE_START = "Neue Angriffsmission: Volkskomitee für Nichtverlieren angreifen",
+		COLDWAR_MISSION_COMMITTEE_END = "Mission beendet: Volkskomitee für Nichtverlieren angreifen",
+		COLDWAR_MISSION_MORALE_TRUCK_TITLE = "Moralverbesserungsfahrzeug zerstören",
+		COLDWAR_MISSION_MORALE_TRUCK_DESC = [[Zerstöre das Moralverbesserungsfahrzeug.
+
+Es hat einen Lautsprecher, einen politischen Offizier und keinen nützlichen taktischen Wert. Entsprechend priorisieren.
+
+Belohnung = 500]],
+		COLDWAR_MISSION_MORALE_TRUCK_START = "Neue Angriffsmission: Moralverbesserungsfahrzeug zerstören",
+		COLDWAR_MISSION_MORALE_TRUCK_END = "Mission beendet: Moralverbesserungsfahrzeug zerstören",
+		COLDWAR_TARGET_MORALE_TRUCK = "Moralverbesserungsfahrzeug",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "Colonel Clipboard ausschalten",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[Schalte Colonel Clipboard aus.
+
+Entferne den Mann, der persönlich dafür verantwortlich ist, jede schlechte Idee in diesem Sektor zu genehmigen.
+
+Koordinaten:
+MGRS: 33 U VU 73163 27047
+Breitengrad/Längengrad: N 52°35'34" E 14°36'13"
+Breitengrad/Längengrad Dezimalminuten: N 52°35.567' E 14°36.230'
+Höhe: 36 Fuß
+
+Belohnung = 500]],
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "Neue Angriffsmission: Colonel Clipboard ausschalten",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "Mission beendet: Colonel Clipboard ausschalten",
+		COLDWAR_TARGET_COLONEL_CLIPBOARD = "Colonel Clipboard",
 		COLDWAR_MISSION_NAZI_REUNION_TITLE = "Nazi-Treffen angreifen",
 		COLDWAR_MISSION_NAZI_REUNION_MARK = "Nazis angreifen",
 		COLDWAR_MISSION_NAZI_REUNION_DESC = [[Wir haben Informationen über eine Gruppe Nazis, die an diesen Koordinaten ein Treffen abhalten:
@@ -20085,7 +25435,7 @@ Lat Long Precise: N 53°34'21.72" E 08°35'53.46"
 Höhe: 10 Fuß
 
 Belohnung = 500]],
-		COLDWAR_MISSION_NAZI_REUNION_START = "Neue Angriffsmission: Nazi-Treffen angreifen\nKoordinaten stehen in der Missionsbeschreibung",
+		COLDWAR_MISSION_NAZI_REUNION_START = "Neue Angriffsmission: Nazi-Treffen angreifen",
 		COLDWAR_MISSION_NAZI_REUNION_END = "Mission beendet: Nazi-Treffen angreifen",
 		COLDWAR_MISSION_KILL_COMMANDER_TITLE = "Den Kommandanten töten",
 		COLDWAR_MISSION_KILL_COMMANDER_MARK = "Den Kommandanten töten",
@@ -20100,7 +25450,7 @@ Lat Long Precise: N 49°34'24.08" E 08°10'02.27"
 Höhe: 577 Fuß
 
 Belohnung = 500]],
-		COLDWAR_MISSION_KILL_COMMANDER_START = "Neue Angriffsmission: Den Kommandanten töten\nKoordinaten stehen in der Missionsbeschreibung",
+		COLDWAR_MISSION_KILL_COMMANDER_START = "Neue Angriffsmission: Den Kommandanten töten",
 		COLDWAR_MISSION_KILL_COMMANDER_END = "Mission beendet: Den Kommandanten töten",
 		COLDWAR_MISSION_KILL_GENERAL_TITLE = "Den General töten",
 		COLDWAR_MISSION_KILL_GENERAL_MARK = "Den General töten",
@@ -20133,7 +25483,7 @@ Belohnung: 500
 
 Zerstört das Haus und jeden, der sich in der Nähe befindet.]],
 		COLDWAR_MISSION_KILL_GUNTER_START = "Neue Angriffsmission: Kommandant Günter töten",
-		COLDWAR_MISSION_KILL_GUNTER_END = "Angriffsmission beendet: Kommandant Günter töten\nKoordinaten stehen in der Missionsbeschreibung",
+		COLDWAR_MISSION_KILL_GUNTER_END = "Angriffsmission beendet: Kommandant Günter töten",
 		COLDWAR_MISSION_COMMS_TOWER_TITLE = "Feindlichen Kommunikationsturm angreifen",
 		COLDWAR_MISSION_COMMS_TOWER_MARK = "Feindlichen Kommunikationsturm angreifen",
 		COLDWAR_MISSION_COMMS_TOWER_DESC = [[Greife den feindlichen Kommunikationsturm an diesen Koordinaten an:
@@ -20178,7 +25528,7 @@ Lat long Decimal Minutes: N 51°29.476' E 10°51.031'
 Höhe: 623 Fuß
 
 Belohnung = 500]],
-		COLDWAR_MISSION_DESTROY_SCUDS_START = "Neue Mission: Feindliche Scuds zerstören\nKoordinaten stehen in der Missionsbeschreibung",
+		COLDWAR_MISSION_DESTROY_SCUDS_START = "Neue Mission: Feindliche Scuds zerstören",
 		COLDWAR_MISSION_DESTROY_SCUDS_END = "Mission beendet: SCUDs zerstören",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_TITLE = "Angriff auf eine Baustelle",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_DESC = [[Wir haben Informationen über eine Baustelle, auf der eine Waffenfabrik entsteht.
@@ -20263,13 +25613,22 @@ Lat long Decimal Minutes: %s
 Altitude: %s
 
 récompense = %s]],
+		COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[Frappez %s pour affaiblir le ravitaillement de %s.
+
+Coordonnées:
+MGRS: %s
+Lat long: %s
+Lat long Decimal Minutes: %s
+Altitude: %s
+
+récompense = %s]],
 		COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "Frapper le dépôt de ravitaillement Hannover",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Dépôt de ravitaillement Hannover",
-		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Nouvelle mission de frappe : dépôt de ravitaillement Hannover\nLes coordonnées sont dans la description de mission",
+		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Nouvelle mission de frappe : dépôt de ravitaillement Hannover",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_END = "Mission terminée : dépôt de ravitaillement Hannover",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "Frapper le dépôt de ravitaillement Parchim SAM-Kilo",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Dépôt de ravitaillement Parchim SAM-Kilo",
-		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Nouvelle mission de frappe : dépôt de ravitaillement Parchim SAM-Kilo\nLes coordonnées sont dans la description de mission",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Nouvelle mission de frappe : dépôt de ravitaillement Parchim SAM-Kilo",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_END = "Mission terminée : dépôt de ravitaillement Parchim SAM-Kilo",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "Assaut ennemi sur Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "L'ennemi a lancé un assaut sur Mahlwinkel!!\n\nIl a déployé de l'artillerie longue portée et des bandits inconnus arrivent!\n\nrécompense = 250",
@@ -20280,6 +25639,110 @@ récompense = %s]],
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Entrepôt de ravitaillement Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement Mahlwinkel pour SAM-Delta",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_END = "Mission terminée : entrepôt de ravitaillement Mahlwinkel pour SAM-Delta",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement Salzungen FARP pour SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Entrepôt de ravitaillement Salzungen FARP",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement Salzungen FARP pour SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "Mission terminée : entrepôt de ravitaillement Salzungen FARP pour SAM-Charlie",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement Gelnhausen pour SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Entrepôt de ravitaillement Gelnhausen",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement Gelnhausen pour SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "Mission terminée : entrepôt de ravitaillement Gelnhausen pour SAM-Bravo",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement Schkeuditz pour SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Entrepôt de ravitaillement Schkeuditz",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement Schkeuditz pour SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "Mission terminée : entrepôt de ravitaillement Schkeuditz pour SAM-Delta",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement Laage pour SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Entrepôt de ravitaillement Laage",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement Laage pour SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "Mission terminée : entrepôt de ravitaillement Laage pour SAM-Lima",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "Frapper l'entrepôt de ravitaillement Neuruppin pour SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Entrepôt de ravitaillement Neuruppin",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "Nouvelle mission de frappe : entrepôt de ravitaillement Neuruppin pour SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "Mission terminée : entrepôt de ravitaillement Neuruppin pour SAM-Juliett",
+		COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "Frapper le Ministère des cartes exactes",
+		COLDWAR_MISSION_ACCURATE_MAPS_MARK = "Ministère des cartes exactes",
+		COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[Frappez le Ministère des cartes exactes.
+
+Leurs cartes sont fausses, mais leur artillerie continue de nous trouver.
+
+Coordonnées:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+Élévation: 1183 feet
+
+Récompense = 500]],
+		COLDWAR_MISSION_ACCURATE_MAPS_START = "Nouvelle mission de frappe : Ministère des cartes exactes",
+		COLDWAR_MISSION_ACCURATE_MAPS_END = "Mission terminée : Ministère des cartes exactes",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "Frapper l'entrepôt totalement civil n° 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "Entrepôt totalement civil n° 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[Frappez l'entrepôt totalement civil n° 4.
+
+La reconnaissance dit qu'il est plein de pièces SAM. Le panneau dit équipement de tracteur. Les deux ne peuvent pas être vrais.
+
+Coordonnées:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+Élévation: 20 feet
+
+Récompense = 500]],
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "Nouvelle mission de frappe : entrepôt totalement civil n° 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "Mission terminée : entrepôt totalement civil n° 4",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "Frapper le Département de l'artillerie pacifique",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "Département de l'artillerie pacifique",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[Frappez le Département de l'artillerie pacifique.
+
+Neutralisez le bureau qui insiste que tous les bombardements sont strictement défensifs.
+
+Coordonnées:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+Élévation: 760 feet
+
+Récompense = 500]],
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "Nouvelle mission de frappe : Département de l'artillerie pacifique",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "Mission terminée : Département de l'artillerie pacifique",
+		COLDWAR_MISSION_COMMITTEE_TITLE = "Frapper le Comité populaire pour ne pas perdre",
+		COLDWAR_MISSION_COMMITTEE_MARK = "Comité populaire pour ne pas perdre",
+		COLDWAR_MISSION_COMMITTEE_DESC = [[Frappez le Comité populaire pour ne pas perdre.
+
+Ils manquent de cartes, de carburant et d'excuses. Aidez-les pour le dernier point.
+
+Coordonnées :
+MGRS: 32 U NE 69783 31100
+Lat long: N 53°31'27" E 10°03'09"
+Lat long Decimal Minutes: N 53°31.451' E 10°03.158'
+Élévation : 11 pieds
+
+récompense = 500]],
+		COLDWAR_MISSION_COMMITTEE_START = "Nouvelle mission de frappe : Comité populaire pour ne pas perdre",
+		COLDWAR_MISSION_COMMITTEE_END = "Mission terminée : Comité populaire pour ne pas perdre",
+		COLDWAR_MISSION_MORALE_TRUCK_TITLE = "Détruire le véhicule d'amélioration du moral",
+		COLDWAR_MISSION_MORALE_TRUCK_DESC = [[Détruisez le véhicule d'amélioration du moral.
+
+Il a un haut-parleur, un officier politique et aucune valeur tactique utile. À prioriser en conséquence.
+
+Récompense = 500]],
+		COLDWAR_MISSION_MORALE_TRUCK_START = "Nouvelle mission de frappe : véhicule d'amélioration du moral",
+		COLDWAR_MISSION_MORALE_TRUCK_END = "Mission terminée : véhicule d'amélioration du moral",
+		COLDWAR_TARGET_MORALE_TRUCK = "Véhicule d'amélioration du moral",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "Éliminer le colonel Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[Éliminez le colonel Clipboard.
+
+Retirez l'homme personnellement responsable de l'approbation de chaque mauvaise idée dans ce secteur.
+
+Coordonnées :
+MGRS: 33 U VU 73163 27047
+Lat long: N 52°35'34" E 14°36'13"
+Lat long Decimal Minutes: N 52°35.567' E 14°36.230'
+Élévation : 36 pieds
+
+récompense = 500]],
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "Nouvelle mission de frappe : éliminer le colonel Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "Mission terminée : éliminer le colonel Clipboard",
+		COLDWAR_TARGET_COLONEL_CLIPBOARD = "Colonel Clipboard",
 		COLDWAR_MISSION_NAZI_REUNION_TITLE = "Frapper la réunion nazie",
 		COLDWAR_MISSION_NAZI_REUNION_MARK = "Frapper les Nazis",
 		COLDWAR_MISSION_NAZI_REUNION_DESC = [[Nous avons des renseignements sur un groupe de Nazis réunis à ces coordonnées:
@@ -20293,7 +25756,7 @@ Lat Long Precise: N 53°34'21.72" E 08°35'53.46"
 Altitude: 10 pieds
 
 récompense = 500]],
-		COLDWAR_MISSION_NAZI_REUNION_START = "Nouvelle mission de frappe : réunion nazie\nLes coordonnées sont dans la description de mission",
+		COLDWAR_MISSION_NAZI_REUNION_START = "Nouvelle mission de frappe : réunion nazie",
 		COLDWAR_MISSION_NAZI_REUNION_END = "Mission terminée : réunion nazie",
 		COLDWAR_MISSION_KILL_COMMANDER_TITLE = "Tuer le commandant",
 		COLDWAR_MISSION_KILL_COMMANDER_MARK = "Tuer le commandant",
@@ -20308,7 +25771,7 @@ Lat Long Precise: N 49°34'24.08" E 08°10'02.27"
 Altitude: 577 pieds
 
 récompense = 500]],
-		COLDWAR_MISSION_KILL_COMMANDER_START = "Nouvelle mission de frappe : tuer le commandant\nLes coordonnées sont dans la description de mission",
+		COLDWAR_MISSION_KILL_COMMANDER_START = "Nouvelle mission de frappe : tuer le commandant",
 		COLDWAR_MISSION_KILL_COMMANDER_END = "Mission terminée : tuer le commandant",
 		COLDWAR_MISSION_KILL_GENERAL_TITLE = "Tuer le Général",
 		COLDWAR_MISSION_KILL_GENERAL_MARK = "Tuer le Général",
@@ -20341,7 +25804,7 @@ Récompense: 500
 
 Détruisez la maison et toute personne à proximité.]],
 		COLDWAR_MISSION_KILL_GUNTER_START = "Nouvelle mission de frappe : tuer Kommandant Günter",
-		COLDWAR_MISSION_KILL_GUNTER_END = "Mission de frappe terminée : tuer Kommandant Günter\nLes coordonnées sont dans la description de mission",
+		COLDWAR_MISSION_KILL_GUNTER_END = "Mission de frappe terminée : tuer Kommandant Günter",
 		COLDWAR_MISSION_COMMS_TOWER_TITLE = "Frapper la tour de communication ennemie",
 		COLDWAR_MISSION_COMMS_TOWER_MARK = "Frapper la tour de communication ennemie",
 		COLDWAR_MISSION_COMMS_TOWER_DESC = [[Frappez la tour de communication ennemie à ces coordonnées:
@@ -20386,7 +25849,7 @@ Lat long Decimal Minutes: N 51°29.476' E 10°51.031'
 Altitude: 623 pieds
 
 récompense = 500]],
-		COLDWAR_MISSION_DESTROY_SCUDS_START = "Nouvelle mission : détruire les Scuds ennemis\nLes coordonnées sont dans la description de mission",
+		COLDWAR_MISSION_DESTROY_SCUDS_START = "Nouvelle mission : détruire les Scuds ennemis",
 		COLDWAR_MISSION_DESTROY_SCUDS_END = "Mission terminée : détruire les SCUDS",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_TITLE = "Frappe sur un chantier",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_DESC = [[Nous avons des renseignements sur un chantier construisant une usine d'armement.
@@ -20471,13 +25934,22 @@ Lat long Decimal Minutes: %s
 Elevación: %s
 
 recompensa = %s]],
+		COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[Ataca %s para debilitar los suministros a %s.
+
+Coordenadas:
+MGRS: %s
+Lat long: %s
+Lat long Decimal Minutes: %s
+Elevación: %s
+
+recompensa = %s]],
 		COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "Atacar almacén de suministros de Hannover",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Almacén de suministros de Hannover",
-		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Nueva misión de ataque: almacén de suministros de Hannover\nLas coordenadas están en la descripción de misión",
+		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Nueva misión de ataque: almacén de suministros de Hannover",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_END = "Misión terminada: almacén de suministros de Hannover",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "Atacar almacén de suministros Parchim SAM-Kilo",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Almacén de suministros Parchim SAM-Kilo",
-		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Nueva misión de ataque: almacén de suministros Parchim SAM-Kilo\nLas coordenadas están en la descripción de misión",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Nueva misión de ataque: almacén de suministros Parchim SAM-Kilo",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_END = "Misión terminada: almacén de suministros Parchim SAM-Kilo",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "Asalto enemigo sobre Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "El enemigo ha lanzado un asalto sobre Mahlwinkel!!\n\nHa desplegado artillería de largo alcance y contactos desconocidos entrantes!\n\nrecompensa = 250",
@@ -20488,6 +25960,110 @@ recompensa = %s]],
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Almacén de suministros de Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Mahlwinkel para SAM-Delta",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_END = "Misión terminada: almacén de suministros de Mahlwinkel para SAM-Delta",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "Atacar almacén de suministros de Salzungen FARP para SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Almacén de suministros de Salzungen FARP",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Salzungen FARP para SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "Misión terminada: almacén de suministros de Salzungen FARP para SAM-Charlie",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "Atacar almacén de suministros de Gelnhausen para SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Almacén de suministros de Gelnhausen",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Gelnhausen para SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "Misión terminada: almacén de suministros de Gelnhausen para SAM-Bravo",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "Atacar almacén de suministros de Schkeuditz para SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Almacén de suministros de Schkeuditz",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Schkeuditz para SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "Misión terminada: almacén de suministros de Schkeuditz para SAM-Delta",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "Atacar almacén de suministros de Laage para SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Almacén de suministros de Laage",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Laage para SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "Misión terminada: almacén de suministros de Laage para SAM-Lima",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "Atacar almacén de suministros de Neuruppin para SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Almacén de suministros de Neuruppin",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "Nueva misión de ataque: almacén de suministros de Neuruppin para SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "Misión terminada: almacén de suministros de Neuruppin para SAM-Juliett",
+		COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "Atacar el Ministerio de Mapas Precisos",
+		COLDWAR_MISSION_ACCURATE_MAPS_MARK = "Ministerio de Mapas Precisos",
+		COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[Ataca el Ministerio de Mapas Precisos.
+
+Sus mapas están equivocados, pero su artillería sigue encontrándonos.
+
+Coordenadas:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+Elevación: 1183 feet
+
+Recompensa = 500]],
+		COLDWAR_MISSION_ACCURATE_MAPS_START = "Nueva misión de ataque: Ministerio de Mapas Precisos",
+		COLDWAR_MISSION_ACCURATE_MAPS_END = "Misión terminada: Ministerio de Mapas Precisos",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "Atacar Almacén Totalmente Civil N.º 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "Almacén Totalmente Civil N.º 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[Ataca Almacén Totalmente Civil N.º 4.
+
+Reconocimiento dice que está lleno de piezas SAM. El cartel dice equipo de tractor. Ambas cosas no pueden ser ciertas.
+
+Coordenadas:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+Elevación: 20 feet
+
+Recompensa = 500]],
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "Nueva misión de ataque: Almacén Totalmente Civil N.º 4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "Misión terminada: Almacén Totalmente Civil N.º 4",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "Atacar el Departamento de Artillería Pacífica",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "Departamento de Artillería Pacífica",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[Ataca el Departamento de Artillería Pacífica.
+
+Inutiliza la oficina que insiste en que todos los bombardeos son estrictamente defensivos.
+
+Coordenadas:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+Elevación: 760 feet
+
+Recompensa = 500]],
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "Nueva misión de ataque: Departamento de Artillería Pacífica",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "Misión terminada: Departamento de Artillería Pacífica",
+		COLDWAR_MISSION_COMMITTEE_TITLE = "Atacar el Comité Popular para No Perder",
+		COLDWAR_MISSION_COMMITTEE_MARK = "Comité Popular para No Perder",
+		COLDWAR_MISSION_COMMITTEE_DESC = [[Ataca el Comité Popular para No Perder.
+
+Se están quedando sin mapas, combustible y excusas. Ayuda con lo último.
+
+Coordenadas:
+MGRS: 32 U NE 69783 31100
+Lat long: N 53°31'27" E 10°03'09"
+Lat long Decimal Minutes: N 53°31.451' E 10°03.158'
+Elevación: 11 pies
+
+recompensa = 500]],
+		COLDWAR_MISSION_COMMITTEE_START = "Nueva misión de ataque: Comité Popular para No Perder",
+		COLDWAR_MISSION_COMMITTEE_END = "Misión terminada: Comité Popular para No Perder",
+		COLDWAR_MISSION_MORALE_TRUCK_TITLE = "Destruir el Vehículo de Mejora de Moral",
+		COLDWAR_MISSION_MORALE_TRUCK_DESC = [[Destruye el Vehículo de Mejora de Moral.
+
+Tiene un altavoz, un oficial político y ningún valor táctico útil. Prioriza en consecuencia.
+
+Recompensa = 500]],
+		COLDWAR_MISSION_MORALE_TRUCK_START = "Nueva misión de ataque: Vehículo de Mejora de Moral",
+		COLDWAR_MISSION_MORALE_TRUCK_END = "Misión terminada: Vehículo de Mejora de Moral",
+		COLDWAR_TARGET_MORALE_TRUCK = "Vehículo de Mejora de Moral",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "Eliminar al Coronel Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[Elimina al Coronel Clipboard.
+
+Retira al hombre personalmente responsable de aprobar cada mala idea en este sector.
+
+Coordenadas:
+MGRS: 33 U VU 73163 27047
+Lat long: N 52°35'34" E 14°36'13"
+Lat long Decimal Minutes: N 52°35.567' E 14°36.230'
+Elevación: 36 pies
+
+recompensa = 500]],
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "Nueva misión de ataque: eliminar al Coronel Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "Misión terminada: eliminar al Coronel Clipboard",
+		COLDWAR_TARGET_COLONEL_CLIPBOARD = "Coronel Clipboard",
 		COLDWAR_MISSION_NAZI_REUNION_TITLE = "Atacar la reunión nazi",
 		COLDWAR_MISSION_NAZI_REUNION_MARK = "Atacar a los nazis",
 		COLDWAR_MISSION_NAZI_REUNION_DESC = [[Tenemos inteligencia sobre un grupo de nazis reunidos en estas coordenadas:
@@ -20501,7 +26077,7 @@ Lat Long Precise: N 53°34'21.72" E 08°35'53.46"
 Elevación: 10 pies
 
 recompensa = 500]],
-		COLDWAR_MISSION_NAZI_REUNION_START = "Nueva misión de ataque: reunión nazi\nLas coordenadas están en la descripción de misión",
+		COLDWAR_MISSION_NAZI_REUNION_START = "Nueva misión de ataque: reunión nazi",
 		COLDWAR_MISSION_NAZI_REUNION_END = "Misión terminada: reunión nazi",
 		COLDWAR_MISSION_KILL_COMMANDER_TITLE = "Matar al comandante",
 		COLDWAR_MISSION_KILL_COMMANDER_MARK = "Matar al comandante",
@@ -20516,7 +26092,7 @@ Lat Long Precise: N 49°34'24.08" E 08°10'02.27"
 Elevación: 577 pies
 
 recompensa = 500]],
-		COLDWAR_MISSION_KILL_COMMANDER_START = "Nueva misión de ataque: matar al comandante\nLas coordenadas están en la descripción de misión",
+		COLDWAR_MISSION_KILL_COMMANDER_START = "Nueva misión de ataque: matar al comandante",
 		COLDWAR_MISSION_KILL_COMMANDER_END = "Misión terminada: matar al comandante",
 		COLDWAR_MISSION_KILL_GENERAL_TITLE = "Matar al General",
 		COLDWAR_MISSION_KILL_GENERAL_MARK = "Matar al General",
@@ -20549,7 +26125,7 @@ Recompensa: 500
 
 Destruye la casa y a cualquiera que esté cerca.]],
 		COLDWAR_MISSION_KILL_GUNTER_START = "Nueva misión de ataque: matar a Kommandant Günter",
-		COLDWAR_MISSION_KILL_GUNTER_END = "Misión de ataque terminada: matar a Kommandant Günter\nLas coordenadas están en la descripción de misión",
+		COLDWAR_MISSION_KILL_GUNTER_END = "Misión de ataque terminada: matar a Kommandant Günter",
 		COLDWAR_MISSION_COMMS_TOWER_TITLE = "Atacar torre de comunicaciones enemiga",
 		COLDWAR_MISSION_COMMS_TOWER_MARK = "Atacar torre de comunicaciones enemiga",
 		COLDWAR_MISSION_COMMS_TOWER_DESC = [[Ataca la torre de comunicaciones enemiga en estas coordenadas:
@@ -20594,7 +26170,7 @@ Lat long Decimal Minutes: N 51°29.476' E 10°51.031'
 Elevación: 623 pies
 
 recompensa = 500]],
-		COLDWAR_MISSION_DESTROY_SCUDS_START = "Nueva misión: destruir Scuds enemigos\nLas coordenadas están en la descripción de misión",
+		COLDWAR_MISSION_DESTROY_SCUDS_START = "Nueva misión: destruir Scuds enemigos",
 		COLDWAR_MISSION_DESTROY_SCUDS_END = "Misión terminada: destruir SCUDS",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_TITLE = "Ataque a una obra en construcción",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_DESC = [[Tenemos inteligencia sobre una obra donde se construye una fábrica de armas.
@@ -20679,13 +26255,22 @@ MGRS: %s
 Высота: %s
 
 награда = %s]],
+		COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[Нанесите удар по %s, чтобы нарушить снабжение %s.
+
+Координаты:
+MGRS: %s
+Широта/долгота: %s
+Широта/долгота в десятичных минутах: %s
+Высота: %s
+
+награда = %s]],
 		COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "Удар по складу снабжения Hannover",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Склад снабжения Hannover",
-		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Новая ударная миссия: склад снабжения Hannover\nКоординаты указаны в описании миссии",
+		COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Новая ударная миссия: склад снабжения Hannover",
 		COLDWAR_MISSION_HANNOVER_SUPPLY_END = "Миссия завершена: склад снабжения Hannover",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "Удар по складу снабжения Parchim SAM-Kilo",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Склад снабжения Parchim SAM-Kilo",
-		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Новая ударная миссия: склад снабжения Parchim SAM-Kilo\nКоординаты указаны в описании миссии",
+		COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Новая ударная миссия: склад снабжения Parchim SAM-Kilo",
 		COLDWAR_MISSION_PARCHIM_SUPPLY_END = "Миссия завершена: склад снабжения Parchim SAM-Kilo",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "Вражеский штурм Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "Противник начал штурм Mahlwinkel!!\n\nОни развернули дальнобойную артиллерию, неизвестные самолеты приближаются!\n\nнаграда = 250",
@@ -20696,6 +26281,110 @@ MGRS: %s
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Склад снабжения Mahlwinkel",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Mahlwinkel для SAM-Delta",
 		COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_END = "Миссия завершена: склад снабжения Mahlwinkel для SAM-Delta",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "Удар по складу снабжения Salzungen FARP для SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Склад снабжения Salzungen FARP",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Salzungen FARP для SAM-Charlie",
+		COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "Миссия завершена: склад снабжения Salzungen FARP для SAM-Charlie",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "Удар по складу снабжения Gelnhausen для SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Склад снабжения Gelnhausen",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Gelnhausen для SAM-Bravo",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "Миссия завершена: склад снабжения Gelnhausen для SAM-Bravo",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "Удар по складу снабжения Schkeuditz для SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Склад снабжения Schkeuditz",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Schkeuditz для SAM-Delta",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "Миссия завершена: склад снабжения Schkeuditz для SAM-Delta",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "Удар по складу снабжения Laage для SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Склад снабжения Laage",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Laage для SAM-Lima",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "Миссия завершена: склад снабжения Laage для SAM-Lima",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "Удар по складу снабжения Neuruppin для SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Склад снабжения Neuruppin",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "Новая ударная миссия: склад снабжения Neuruppin для SAM-Juliett",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "Миссия завершена: склад снабжения Neuruppin для SAM-Juliett",
+		COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "Удар по Министерству точных карт",
+		COLDWAR_MISSION_ACCURATE_MAPS_MARK = "Министерство точных карт",
+		COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[Нанесите удар по Министерству точных карт.
+
+Их карты ошибаются, но их артиллерия все равно продолжает нас находить.
+
+Координаты:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+Высота: 1183 feet
+
+Награда = 500]],
+		COLDWAR_MISSION_ACCURATE_MAPS_START = "Новая ударная миссия: Министерство точных карт",
+		COLDWAR_MISSION_ACCURATE_MAPS_END = "Миссия завершена: Министерство точных карт",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "Удар по Совершенно гражданскому складу №4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "Совершенно гражданский склад №4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[Нанесите удар по Совершенно гражданскому складу №4.
+
+Разведка сообщает, что он полон деталей SAM. Табличка говорит, что там тракторное оборудование. Оба варианта не могут быть правдой.
+
+Координаты:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+Высота: 20 feet
+
+Награда = 500]],
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "Новая ударная миссия: Совершенно гражданский склад №4",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "Миссия завершена: Совершенно гражданский склад №4",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "Удар по Департаменту мирной артиллерии",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "Департамент мирной артиллерии",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[Нанесите удар по Департаменту мирной артиллерии.
+
+Выведите из строя офис, который настаивает, что все обстрелы строго оборонительные.
+
+Координаты:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+Высота: 760 feet
+
+Награда = 500]],
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "Новая ударная миссия: Департамент мирной артиллерии",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "Миссия завершена: Департамент мирной артиллерии",
+		COLDWAR_MISSION_COMMITTEE_TITLE = "Удар по Народному комитету не проигрывать",
+		COLDWAR_MISSION_COMMITTEE_MARK = "Народный комитет не проигрывать",
+		COLDWAR_MISSION_COMMITTEE_DESC = [[Нанесите удар по Народному комитету не проигрывать.
+
+У них заканчиваются карты, топливо и оправдания. Помогите с последним.
+
+Координаты:
+MGRS: 32 U NE 69783 31100
+Широта/долгота: N 53°31'27" E 10°03'09"
+Широта/долгота, десятичные минуты: N 53°31.451' E 10°03.158'
+Высота: 11 футов
+
+награда = 500]],
+		COLDWAR_MISSION_COMMITTEE_START = "Новая ударная миссия: Народный комитет не проигрывать",
+		COLDWAR_MISSION_COMMITTEE_END = "Миссия завершена: Народный комитет не проигрывать",
+		COLDWAR_MISSION_MORALE_TRUCK_TITLE = "Уничтожить машину повышения боевого духа",
+		COLDWAR_MISSION_MORALE_TRUCK_DESC = [[Уничтожьте машину повышения боевого духа.
+
+У нее есть громкоговоритель, политический офицер и никакой полезной тактической ценности. Приоритет очевиден.
+
+Награда = 500]],
+		COLDWAR_MISSION_MORALE_TRUCK_START = "Новая ударная миссия: машина повышения боевого духа",
+		COLDWAR_MISSION_MORALE_TRUCK_END = "Миссия завершена: машина повышения боевого духа",
+		COLDWAR_TARGET_MORALE_TRUCK = "Машина повышения боевого духа",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "Ликвидировать полковника Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[Ликвидируйте полковника Clipboard.
+
+Уберите человека, лично ответственного за утверждение каждой плохой идеи в этом секторе.
+
+Координаты:
+MGRS: 33 U VU 73163 27047
+Широта/долгота: N 52°35'34" E 14°36'13"
+Широта/долгота, десятичные минуты: N 52°35.567' E 14°36.230'
+Высота: 36 футов
+
+награда = 500]],
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "Новая ударная миссия: ликвидировать полковника Clipboard",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "Миссия завершена: ликвидировать полковника Clipboard",
+		COLDWAR_TARGET_COLONEL_CLIPBOARD = "Полковник Clipboard",
 		COLDWAR_MISSION_NAZI_REUNION_TITLE = "Удар по встрече нацистов",
 		COLDWAR_MISSION_NAZI_REUNION_MARK = "Удар по нацистам",
 		COLDWAR_MISSION_NAZI_REUNION_DESC = [[У нас есть разведданные о группе нацистов, собравшихся по этим координатам:
@@ -20709,7 +26398,7 @@ MGRS: 32 U ME 73392 36057
 Высота: 10 футов
 
 награда = 500]],
-		COLDWAR_MISSION_NAZI_REUNION_START = "Новая ударная миссия: встреча нацистов\nКоординаты указаны в описании миссии",
+		COLDWAR_MISSION_NAZI_REUNION_START = "Новая ударная миссия: встреча нацистов",
 		COLDWAR_MISSION_NAZI_REUNION_END = "Миссия завершена: встреча нацистов",
 		COLDWAR_MISSION_KILL_COMMANDER_TITLE = "Убить командира",
 		COLDWAR_MISSION_KILL_COMMANDER_MARK = "Убить командира",
@@ -20724,7 +26413,7 @@ MGRS: 32 U MV 39796 91529
 Высота: 577 футов
 
 награда = 500]],
-		COLDWAR_MISSION_KILL_COMMANDER_START = "Новая ударная миссия: убить командира\nКоординаты указаны в описании миссии",
+		COLDWAR_MISSION_KILL_COMMANDER_START = "Новая ударная миссия: убить командира",
 		COLDWAR_MISSION_KILL_COMMANDER_END = "Миссия завершена: убить командира",
 		COLDWAR_MISSION_KILL_GENERAL_TITLE = "Убить генерала",
 		COLDWAR_MISSION_KILL_GENERAL_MARK = "Убить генерала",
@@ -20757,7 +26446,7 @@ MGRS: 32 U NC 66314 77828
 
 Уничтожьте дом и всех, кто находится рядом.]],
 		COLDWAR_MISSION_KILL_GUNTER_START = "Новая ударная миссия: убить Kommandant Günter",
-		COLDWAR_MISSION_KILL_GUNTER_END = "Ударная миссия завершена: убить Kommandant Günter\nКоординаты указаны в описании миссии",
+		COLDWAR_MISSION_KILL_GUNTER_END = "Ударная миссия завершена: убить Kommandant Günter",
 		COLDWAR_MISSION_COMMS_TOWER_TITLE = "Удар по вражеской вышке связи",
 		COLDWAR_MISSION_COMMS_TOWER_MARK = "Удар по вражеской вышке связи",
 		COLDWAR_MISSION_COMMS_TOWER_DESC = [[Нанесите удар по вражеской вышке связи по этим координатам:
@@ -20802,7 +26491,7 @@ MGRS: 32 U PC 28469 06081
 Высота: 623 фута
 
 награда = 500]],
-		COLDWAR_MISSION_DESTROY_SCUDS_START = "Новая миссия: уничтожить вражеские Scud\nКоординаты указаны в описании миссии",
+		COLDWAR_MISSION_DESTROY_SCUDS_START = "Новая миссия: уничтожить вражеские Scud",
 		COLDWAR_MISSION_DESTROY_SCUDS_END = "Миссия завершена: уничтожить SCUD",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_TITLE = "Удар по строительной площадке",
 		COLDWAR_MISSION_CONSTRUCTION_SITE_DESC = [[У нас есть разведданные о строительной площадке, где строится оружейный завод.
@@ -20901,7 +26590,7 @@ Elevação: 623 pés
 
 Recompensa = 500]],
 	COLDWAR_MISSION_DESTROY_SCUDS_END = "Missão encerrada: Destruir SCUDS",
-	COLDWAR_MISSION_DESTROY_SCUDS_START = "Nova missão: Destruir SCUDS inimigos\nCoordenadas estão na descrição da missão",
+	COLDWAR_MISSION_DESTROY_SCUDS_START = "Nova missão: Destruir SCUDS inimigos",
 	COLDWAR_MISSION_DESTROY_SCUDS_TITLE = "Destruir SCUDS inimigos",
 	COLDWAR_MISSION_ESCORT_ACTIVE_PENDING = "Missão ativa pendente:\n\nEscoltar comboio de %s para %s",
 	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_DESC = "Avião de carga aliado está decolando de Frankfurt. Proteja-o até sair do espaço aéreo.",
@@ -20910,7 +26599,7 @@ Recompensa = 500]],
 	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_TITLE = "Escoltar avião de carga de Frankfurt",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_END = "Missão encerrada: Atacar depósito de suprimentos de Hannover",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Depósito de suprimentos de Hannover",
-	COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Nova missão Strike: Atacar depósito de suprimentos de Hannover\nCoordenadas estão na descrição da missão",
+	COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Nova missão Strike: Atacar depósito de suprimentos de Hannover",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "Atacar depósito de suprimentos de Hannover",
 	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_DESC = "Aeronaves inimigas conduzindo um airstrike do oeste para sudeste\nDestrua-as antes que entrem em alcance.",
 	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_END = "Missão encerrada: Interceptar airstrike inimigo",
@@ -20940,7 +26629,7 @@ Elevação: 577 pés
 Recompensa = 500]],
 	COLDWAR_MISSION_KILL_COMMANDER_END = "Missão encerrada: Eliminar o comandante",
 	COLDWAR_MISSION_KILL_COMMANDER_MARK = "Eliminar o comandante",
-	COLDWAR_MISSION_KILL_COMMANDER_START = "Nova missão Strike: Eliminar o comandante\nCoordenadas estão na descrição da missão",
+	COLDWAR_MISSION_KILL_COMMANDER_START = "Nova missão Strike: Eliminar o comandante",
 	COLDWAR_MISSION_KILL_COMMANDER_TITLE = "Eliminar o comandante",
 	COLDWAR_MISSION_KILL_GENERAL_DESC = [[Temos a localização de um General russo.
 
@@ -20970,7 +26659,7 @@ Elevação: 394 pés
 Recompensa: 500
 
 Destrua a casa e quem estiver por perto.]],
-	COLDWAR_MISSION_KILL_GUNTER_END = "Missão Strike encerrada: Eliminar Kommandant Günter\nCoordenadas estão na descrição da missão",
+	COLDWAR_MISSION_KILL_GUNTER_END = "Missão Strike encerrada: Eliminar Kommandant Günter",
 	COLDWAR_MISSION_KILL_GUNTER_MARK = "Eliminar Kommandant Günter",
 	COLDWAR_MISSION_KILL_GUNTER_START = "Nova missão Strike: Eliminar Kommandant Günter",
 	COLDWAR_MISSION_KILL_GUNTER_TITLE = "Eliminar Kommandant Günter",
@@ -20982,6 +26671,110 @@ Destrua a casa e quem estiver por perto.]],
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Depósito de suprimentos de Mahlwinkel",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Mahlwinkel para SAM-Delta",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Mahlwinkel para SAM-Delta",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "Missão encerrada: Atacar depósito de suprimentos de Salzungen FARP para SAM-Charlie",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Depósito de suprimentos de Salzungen FARP",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Salzungen FARP para SAM-Charlie",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Salzungen FARP para SAM-Charlie",
+	COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "Missão encerrada: Atacar depósito de suprimentos de Gelnhausen para SAM-Bravo",
+	COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Depósito de suprimentos de Gelnhausen",
+	COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Gelnhausen para SAM-Bravo",
+	COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Gelnhausen para SAM-Bravo",
+	COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "Missão encerrada: Atacar depósito de suprimentos de Schkeuditz para SAM-Delta",
+	COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Depósito de suprimentos de Schkeuditz",
+	COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Schkeuditz para SAM-Delta",
+	COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Schkeuditz para SAM-Delta",
+	COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "Missão encerrada: Atacar depósito de suprimentos de Laage para SAM-Lima",
+	COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Depósito de suprimentos de Laage",
+	COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Laage para SAM-Lima",
+	COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Laage para SAM-Lima",
+	COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "Missão encerrada: Atacar depósito de suprimentos de Neuruppin para SAM-Juliett",
+	COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Depósito de suprimentos de Neuruppin",
+	COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "Nova missão Strike: Atacar depósito de suprimentos de Neuruppin para SAM-Juliett",
+	COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "Atacar depósito de suprimentos de Neuruppin para SAM-Juliett",
+	COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[Ataque o Ministério dos Mapas Precisos.
+
+Os mapas deles estão errados, mas a artilharia deles continua nos encontrando.
+
+Coordenadas:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+Elevação: 1183 feet
+
+Recompensa = 500]],
+	COLDWAR_MISSION_ACCURATE_MAPS_END = "Missão encerrada: Atacar o Ministério dos Mapas Precisos",
+	COLDWAR_MISSION_ACCURATE_MAPS_MARK = "Ministério dos Mapas Precisos",
+	COLDWAR_MISSION_ACCURATE_MAPS_START = "Nova missão Strike: Atacar o Ministério dos Mapas Precisos",
+	COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "Atacar o Ministério dos Mapas Precisos",
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[Ataque o Depósito Totalmente Civil Nº 4.
+
+O reconhecimento diz que está cheio de peças de SAM. A placa diz equipamento de trator. As duas coisas não podem ser verdade.
+
+Coordenadas:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+Elevação: 20 feet
+
+Recompensa = 500]],
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "Missão encerrada: Atacar Depósito Totalmente Civil Nº 4",
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "Depósito Totalmente Civil Nº 4",
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "Nova missão Strike: Atacar Depósito Totalmente Civil Nº 4",
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "Atacar Depósito Totalmente Civil Nº 4",
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[Ataque o Departamento de Artilharia Pacífica.
+
+Prejudique o escritório que insiste que todo bombardeio é estritamente defensivo.
+
+Coordenadas:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+Elevação: 760 feet
+
+Recompensa = 500]],
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "Missão encerrada: Atacar o Departamento de Artilharia Pacífica",
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "Departamento de Artilharia Pacífica",
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "Nova missão Strike: Atacar o Departamento de Artilharia Pacífica",
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "Atacar o Departamento de Artilharia Pacífica",
+	COLDWAR_MISSION_COMMITTEE_DESC = [[Ataque o Comitê Popular para Não Perder.
+
+Eles estão ficando sem mapas, combustível e desculpas. Ajude com a última.
+
+Coordenadas:
+MGRS: 32 U NE 69783 31100
+Lat long: N 53°31'27" E 10°03'09"
+Lat long Decimal Minutes: N 53°31.451' E 10°03.158'
+Elevação: 11 pés
+
+recompensa = 500]],
+	COLDWAR_MISSION_COMMITTEE_END = "Missão encerrada: Atacar o Comitê Popular para Não Perder",
+	COLDWAR_MISSION_COMMITTEE_MARK = "Comitê Popular para Não Perder",
+	COLDWAR_MISSION_COMMITTEE_START = "Nova missão Strike: Atacar o Comitê Popular para Não Perder",
+	COLDWAR_MISSION_COMMITTEE_TITLE = "Atacar o Comitê Popular para Não Perder",
+	COLDWAR_MISSION_MORALE_TRUCK_DESC = [[Destrua o Veículo de Melhoria de Moral.
+
+Ele tem um alto-falante, um oficial político e nenhum valor tático útil. Priorize adequadamente.
+
+Recompensa = 500]],
+	COLDWAR_MISSION_MORALE_TRUCK_END = "Missão encerrada: Destruir o Veículo de Melhoria de Moral",
+	COLDWAR_MISSION_MORALE_TRUCK_START = "Nova missão Strike: Destruir o Veículo de Melhoria de Moral",
+	COLDWAR_MISSION_MORALE_TRUCK_TITLE = "Destruir o Veículo de Melhoria de Moral",
+	COLDWAR_TARGET_MORALE_TRUCK = "Veículo de Melhoria de Moral",
+	COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[Elimine o Coronel Clipboard.
+
+Remova o homem pessoalmente responsável por aprovar cada má ideia neste setor.
+
+Coordenadas:
+MGRS: 33 U VU 73163 27047
+Lat long: N 52°35'34" E 14°36'13"
+Lat long Decimal Minutes: N 52°35.567' E 14°36.230'
+Elevação: 36 pés
+
+recompensa = 500]],
+	COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "Missão encerrada: Eliminar o Coronel Clipboard",
+	COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "Nova missão Strike: Eliminar o Coronel Clipboard",
+	COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "Eliminar o Coronel Clipboard",
+	COLDWAR_TARGET_COLONEL_CLIPBOARD = "Coronel Clipboard",
 	COLDWAR_MISSION_NAZI_REUNION_DESC = [[Temos inteligência sobre um bando de nazistas fazendo uma reunião nestas coordenadas:
 
 MK84 ?
@@ -20995,11 +26788,11 @@ Elevação: 10 pés
 Recompensa = 500]],
 	COLDWAR_MISSION_NAZI_REUNION_END = "Missão encerrada: Ataque à reunião nazista",
 	COLDWAR_MISSION_NAZI_REUNION_MARK = "Atacar os nazistas",
-	COLDWAR_MISSION_NAZI_REUNION_START = "Nova missão Strike: Ataque à reunião nazista\nCoordenadas estão na descrição da missão",
+	COLDWAR_MISSION_NAZI_REUNION_START = "Nova missão Strike: Ataque à reunião nazista",
 	COLDWAR_MISSION_NAZI_REUNION_TITLE = "Ataque à reunião nazista",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_END = "Missão encerrada: Atacar depósito de suprimentos SAM-Kilo de Parchim",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Depósito de suprimentos SAM-Kilo de Parchim",
-	COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Nova missão Strike: Atacar depósito de suprimentos SAM-Kilo de Parchim\nCoordenadas estão na descrição da missão",
+	COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Nova missão Strike: Atacar depósito de suprimentos SAM-Kilo de Parchim",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "Atacar depósito de suprimentos SAM-Kilo de Parchim",
 	COLDWAR_MISSION_PROPAGANDA_DESC = [[Ataque o Centro de Transmissão de Propaganda inimigo nestas coordenadas:
 
@@ -21015,6 +26808,15 @@ Recompensa = 500]],
 	COLDWAR_MISSION_PROPAGANDA_TITLE = "Atacar Centro de Transmissão de Propaganda inimigo",
 	COLDWAR_MISSION_STRIKE_SUPPLY_STORAGE_DESC = [[Ataque %s para prejudicar os suprimentos dos
 2 sites SAM na área.
+
+Coordenadas:
+MGRS: %s
+Lat long: %s
+Lat long Decimal Minutes: %s
+Elevação: %s
+
+Recompensa = %s]],
+	COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[Ataque %s para prejudicar os suprimentos para %s.
 
 Coordenadas:
 MGRS: %s
@@ -21110,7 +26912,7 @@ Rakım: 623 feet
 
 Ödül = 500]],
 	COLDWAR_MISSION_DESTROY_SCUDS_END = "Görev sona erdi: SCUDS'yi yok et",
-	COLDWAR_MISSION_DESTROY_SCUDS_START = "Yeni görev: Düşman SCUDS'yi yok et\nKoordinatlar görev açıklamasında",
+	COLDWAR_MISSION_DESTROY_SCUDS_START = "Yeni görev: Düşman SCUDS'yi yok et",
 	COLDWAR_MISSION_DESTROY_SCUDS_TITLE = "Düşman SCUDS'yi yok et",
 	COLDWAR_MISSION_ESCORT_ACTIVE_PENDING = "Aktif görev beklemede:\n\n%s konumundan %s konumuna konvoy eskort et",
 	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_DESC = "Dost kargo uçağı Frankfurt'tan kalkıyor. Hava sahasından çıkana kadar koru.",
@@ -21119,7 +26921,7 @@ Rakım: 623 feet
 	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_TITLE = "Frankfurt'tan kargo uçağını eskort et",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_END = "Görev sona erdi: Hannover ikmal deposuna strike",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Hannover ikmal deposu",
-	COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Yeni Strike görevi: Hannover ikmal deposuna strike\nKoordinatlar görev açıklamasında",
+	COLDWAR_MISSION_HANNOVER_SUPPLY_START = "Yeni Strike görevi: Hannover ikmal deposuna strike",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "Hannover ikmal deposuna strike",
 	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_DESC = "Düşman uçakları batıdan güneydoğuya airstrike yapıyor\nMenzile girmeden önce yok edin.",
 	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_END = "Görev sona erdi: Düşman airstrike görevini intercept et",
@@ -21149,7 +26951,7 @@ Rakım: 577 feet
 Ödül = 500]],
 	COLDWAR_MISSION_KILL_COMMANDER_END = "Görev sona erdi: Komutanı öldür",
 	COLDWAR_MISSION_KILL_COMMANDER_MARK = "Komutanı öldür",
-	COLDWAR_MISSION_KILL_COMMANDER_START = "Yeni Strike görevi: Komutanı öldür\nKoordinatlar görev açıklamasında",
+	COLDWAR_MISSION_KILL_COMMANDER_START = "Yeni Strike görevi: Komutanı öldür",
 	COLDWAR_MISSION_KILL_COMMANDER_TITLE = "Komutanı öldür",
 	COLDWAR_MISSION_KILL_GENERAL_DESC = [[Bir Rus Generalin konumunu aldık.
 
@@ -21179,7 +26981,7 @@ Rakım: 394 feet
 Ödül: 500
 
 Evi ve yakındaki herkesi yok edin.]],
-	COLDWAR_MISSION_KILL_GUNTER_END = "Strike görevi sona erdi: Kommandant Günter'i öldür\nKoordinatlar görev açıklamasında",
+	COLDWAR_MISSION_KILL_GUNTER_END = "Strike görevi sona erdi: Kommandant Günter'i öldür",
 	COLDWAR_MISSION_KILL_GUNTER_MARK = "Kommandant Günter'i öldür",
 	COLDWAR_MISSION_KILL_GUNTER_START = "Yeni Strike görevi: Kommandant Günter'i öldür",
 	COLDWAR_MISSION_KILL_GUNTER_TITLE = "Kommandant Günter'i öldür",
@@ -21191,6 +26993,110 @@ Evi ve yakındaki herkesi yok edin.]],
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Mahlwinkel ikmal deposu",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "Yeni Strike görevi: SAM-Delta için Mahlwinkel ikmal deposuna strike",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_TITLE = "SAM-Delta için Mahlwinkel ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "Görev sona erdi: SAM-Charlie için Salzungen FARP ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Salzungen FARP ikmal deposu",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "Yeni Strike görevi: SAM-Charlie için Salzungen FARP ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "SAM-Charlie için Salzungen FARP ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "Görev sona erdi: SAM-Bravo için Gelnhausen ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Gelnhausen ikmal deposu",
+	COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "Yeni Strike görevi: SAM-Bravo için Gelnhausen ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "SAM-Bravo için Gelnhausen ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "Görev sona erdi: SAM-Delta için Schkeuditz ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Schkeuditz ikmal deposu",
+	COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "Yeni Strike görevi: SAM-Delta için Schkeuditz ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "SAM-Delta için Schkeuditz ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "Görev sona erdi: SAM-Lima için Laage ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Laage ikmal deposu",
+	COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "Yeni Strike görevi: SAM-Lima için Laage ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "SAM-Lima için Laage ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "Görev sona erdi: SAM-Juliett için Neuruppin ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Neuruppin ikmal deposu",
+	COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "Yeni Strike görevi: SAM-Juliett için Neuruppin ikmal deposuna strike",
+	COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "SAM-Juliett için Neuruppin ikmal deposuna strike",
+	COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[Kesin Haritalar Bakanlığına strike yapın.
+
+Haritaları yanlış, ama topçuları bizi yine de bulmaya devam ediyor.
+
+Koordinatlar:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+Rakım: 1183 feet
+
+ödül = 500]],
+	COLDWAR_MISSION_ACCURATE_MAPS_END = "Görev sona erdi: Kesin Haritalar Bakanlığına strike",
+	COLDWAR_MISSION_ACCURATE_MAPS_MARK = "Kesin Haritalar Bakanlığı",
+	COLDWAR_MISSION_ACCURATE_MAPS_START = "Yeni Strike görevi: Kesin Haritalar Bakanlığına strike",
+	COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "Kesin Haritalar Bakanlığına strike",
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[Tamamen Sivil Depo No. 4'e strike yapın.
+
+Keşif buranın SAM parçalarıyla dolu olduğunu söylüyor. Tabelada traktör ekipmanı yazıyor. İkisi birden doğru olamaz.
+
+Koordinatlar:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+Rakım: 20 feet
+
+ödül = 500]],
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "Görev sona erdi: Tamamen Sivil Depo No. 4'e strike",
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "Tamamen Sivil Depo No. 4",
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "Yeni Strike görevi: Tamamen Sivil Depo No. 4'e strike",
+	COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "Tamamen Sivil Depo No. 4'e strike",
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[Barışçıl Topçu Dairesine strike yapın.
+
+Tüm bombardımanın kesinlikle savunma amaçlı olduğunda ısrar eden ofisi felce uğratın.
+
+Koordinatlar:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+Rakım: 760 feet
+
+ödül = 500]],
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "Görev sona erdi: Barışçıl Topçu Dairesine strike",
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "Barışçıl Topçu Dairesi",
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "Yeni Strike görevi: Barışçıl Topçu Dairesine strike",
+	COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "Barışçıl Topçu Dairesine strike",
+	COLDWAR_MISSION_COMMITTEE_DESC = [[Kaybetmeme Halk Komitesine strike yapın.
+
+Haritaları, yakıtları ve bahaneleri tükeniyor. Sonuncusuna yardım edin.
+
+Koordinatlar:
+MGRS: 32 U NE 69783 31100
+Lat long: N 53°31'27" E 10°03'09"
+Lat long Decimal Minutes: N 53°31.451' E 10°03.158'
+İrtifa: 11 feet
+
+ödül = 500]],
+	COLDWAR_MISSION_COMMITTEE_END = "Görev sona erdi: Kaybetmeme Halk Komitesine strike",
+	COLDWAR_MISSION_COMMITTEE_MARK = "Kaybetmeme Halk Komitesi",
+	COLDWAR_MISSION_COMMITTEE_START = "Yeni Strike görevi: Kaybetmeme Halk Komitesine strike",
+	COLDWAR_MISSION_COMMITTEE_TITLE = "Kaybetmeme Halk Komitesine strike",
+	COLDWAR_MISSION_MORALE_TRUCK_DESC = [[Moral Artırma Aracını yok edin.
+
+Üzerinde bir hoparlör, bir siyasi subay ve hiçbir işe yarar taktik değer yok. Önceliği buna göre verin.
+
+ödül = 500]],
+	COLDWAR_MISSION_MORALE_TRUCK_END = "Görev sona erdi: Moral Artırma Aracını yok et",
+	COLDWAR_MISSION_MORALE_TRUCK_START = "Yeni Strike görevi: Moral Artırma Aracını yok et",
+	COLDWAR_MISSION_MORALE_TRUCK_TITLE = "Moral Artırma Aracını yok et",
+	COLDWAR_TARGET_MORALE_TRUCK = "Moral Artırma Aracı",
+	COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[Albay Clipboard'u ortadan kaldırın.
+
+Bu sektördeki her kötü fikri onaylamaktan bizzat sorumlu adamı kaldırın.
+
+Koordinatlar:
+MGRS: 33 U VU 73163 27047
+Lat long: N 52°35'34" E 14°36'13"
+Lat long Decimal Minutes: N 52°35.567' E 14°36.230'
+İrtifa: 36 feet
+
+ödül = 500]],
+	COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "Görev sona erdi: Albay Clipboard'u ortadan kaldır",
+	COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "Yeni Strike görevi: Albay Clipboard'u ortadan kaldır",
+	COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "Albay Clipboard'u ortadan kaldır",
+	COLDWAR_TARGET_COLONEL_CLIPBOARD = "Albay Clipboard",
 	COLDWAR_MISSION_NAZI_REUNION_DESC = [[Bu koordinatlarda toplanan bir grup Nazi hakkında Intel var:
 
 MK84 ?
@@ -21204,11 +27110,11 @@ Rakım: 10 feet
 Ödül = 500]],
 	COLDWAR_MISSION_NAZI_REUNION_END = "Görev sona erdi: Nazi toplantısına strike",
 	COLDWAR_MISSION_NAZI_REUNION_MARK = "Nazilere strike",
-	COLDWAR_MISSION_NAZI_REUNION_START = "Yeni Strike görevi: Nazi toplantısına strike\nKoordinatlar görev açıklamasında",
+	COLDWAR_MISSION_NAZI_REUNION_START = "Yeni Strike görevi: Nazi toplantısına strike",
 	COLDWAR_MISSION_NAZI_REUNION_TITLE = "Nazi toplantısına strike",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_END = "Görev sona erdi: Parchim SAM-Kilo ikmal deposuna strike",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Parchim SAM-Kilo ikmal deposu",
-	COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Yeni Strike görevi: Parchim SAM-Kilo ikmal deposuna strike\nKoordinatlar görev açıklamasında",
+	COLDWAR_MISSION_PARCHIM_SUPPLY_START = "Yeni Strike görevi: Parchim SAM-Kilo ikmal deposuna strike",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "Parchim SAM-Kilo ikmal deposuna strike",
 	COLDWAR_MISSION_PROPAGANDA_DESC = [[Düşman Propaganda Yayın Merkezine bu koordinatlarda strike:
 
@@ -21232,6 +27138,15 @@ Lat long Decimal Minutes: %s
 Rakım: %s
 
 Ödül = %s]],
+	COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[%s hedefine strike yaparak %s ikmalini sekteye uğratın.
+
+Koordinatlar:
+MGRS: %s
+Lat long: %s
+Lat long Decimal Minutes: %s
+Rakım: %s
+
+Ödül = %s]],
 	COLDWAR_TARGET_DESTROY_SCUDS = "Düşman SCUDS'yi yok et",
 	COLDWAR_TARGET_INTERCEPT_BOMBERS = "Düşman bombardıman uçaklarını intercept et",
 	COLDWAR_TARGET_INTERCEPT_CARGO_PLANE = "Kargo uçağını intercept et",
@@ -21240,13 +27155,13 @@ Rakım: %s
 
 ColdwarSetupLabels["zh-CN"] = {
 	COLDWAR_FLAVOR_WPT              = "WPT %s\n",
-	COLDWAR_FLAVOR_SCHEISSE_FACTORY = "如果垃圾也能被制造出来，这里会造出世界上最顶级的垃圾。",
+	COLDWAR_FLAVOR_SCHEISSE_FACTORY = "如果狗屎也能工业化生产，那这里产出来的大概会是世界顶级狗屎。",
 	COLDWAR_FLAVOR_CHEMICAL_FACTORY = "这里生产化学品，但不是什么好东西。",
-	COLDWAR_EVENT_SAM_DESTROYED     = "敌方 SAM 已摧毁\n+200 点数",
-	COLDWAR_EVENT_SCHEISSE_FACTORY_DESTROYED = "Scheiße Factory 现在只剩 Scheiße\n+500 点数",
-	COLDWAR_EVENT_CHEMICAL_FACTORY_DESTROYED = "化工厂已摧毁。\n+500 点数",
-	COLDWAR_EVENT_RED_ARMY_CAMP_DESTROYED = "红军营地已摧毁。\n+500 点数",
-	COLDWAR_EVENT_HAHN_ARTY_ATTACK  = "Hahn 正遭受敌方炮兵攻击！\n\n准备迎击！",
+	COLDWAR_EVENT_SAM_DESTROYED     = "敌军防空系统已摧毁\n+200 积分",
+	COLDWAR_EVENT_SCHEISSE_FACTORY_DESTROYED = "狗屎工厂现在真的只剩一堆狗屎了\n+500 积分",
+	COLDWAR_EVENT_CHEMICAL_FACTORY_DESTROYED = "化工厂已摧毁。\n+500 积分",
+	COLDWAR_EVENT_RED_ARMY_CAMP_DESTROYED = "红军营地已摧毁。\n+500 积分",
+	COLDWAR_EVENT_HAHN_ARTY_ATTACK  = "Hahn 正遭受敌军炮击！\n\n做好准备！",
 	COLDWAR_EVENT_HAHN_ARTY_FOUND = [[我们找到了敌方炮兵！
 
 在他们再次开火前将其摧毁！
@@ -21257,9 +27172,9 @@ MGRS: 32 U MA 15621 72886
 经纬度（十进制度分）：N 50°18.123' E 07°48.910'
 
 海拔：234 英尺]],
-	COLDWAR_EVENT_FULDA_HELO_ATTACK = "3 架敌方攻击直升机正从 Salzungen FARP 飞向 Fulda！\n\n在它们开始开火前将其击落！",
-	COLDWAR_EVENT_SCHKEUDITZ_ASSAULT = "敌方已对 Schkeuditz 发起突击\n\n2 架轰炸机由 2 架未知喷气机护航！",
-	COLDWAR_TARGET_MAHLWINKEL_ARTILLERY = "Mahlwinkel 炮兵",
+	COLDWAR_EVENT_FULDA_HELO_ATTACK = "3 架敌军武装直升机正从 Salzungen FARP 飞向 Fulda！\n\n在它们开火前将其击落！",
+	COLDWAR_EVENT_SCHKEUDITZ_ASSAULT = "敌军已对 Schkeuditz 发起强袭\n\n2 架轰炸机由 2 架不明战斗机护航！",
+	COLDWAR_TARGET_MAHLWINKEL_ARTILLERY = "Mahlwinkel 炮兵阵地",
 	COLDWAR_EVENT_MAHLWINKEL_ARTY_FOUND = [[我们找到了敌方炮兵！
 
 在他们再次开火前将其摧毁！
@@ -21270,33 +27185,33 @@ MGRS: 32 U PD 64017 06031
 经纬度（十进制度分）：N 52°22.796' E 11°24.587'
 
 海拔：234 英尺]],
-	COLDWAR_EVENT_BREMEN_AMBUSH     = "伏击！！！！！\n\n敌方叛乱分子正从 Bremen 出现！",
-	COLDWAR_EVENT_NEURUPPIN_ARTY_BRACE = "准备迎击！！\n\n我们侦测到炮弹正飞向 Neuruppin！！",
-	COLDWAR_EVENT_NEURUPPIN_GROUND_ASSAULT = "准备迎击！！\n\n敌方已发动地面突击！\n他们正沿路线前往 Neuruppin",
-	COLDWAR_EVENT_LARZ_SCUD_BRACE   = "准备迎击！！\n\n敌方已向 Larz 发射 SCUD！！",
-	COLDWAR_EVENT_SAM_MIKE_INTEL    = "情报：\n我们发现了另一个敌方 SAM 阵地，SAM-Mike，位于 Peenemunde 以北。",
-	COLDWAR_EVENT_INSURGENCY_CAMP_INTEL = "情报：\n我们发现了另一个敌方营地，位于 Parchim 以西。",
-	COLDWAR_TARGET_INTERCEPT_BOMBERS = "拦截敌方轰炸机",
+	COLDWAR_EVENT_BREMEN_AMBUSH     = "伏击！！！！！\n\n敌军叛乱分子正从 Bremen 出现！",
+	COLDWAR_EVENT_NEURUPPIN_ARTY_BRACE = "小心！！\n\n我们检测到有炮弹正飞向 Neuruppin！！",
+	COLDWAR_EVENT_NEURUPPIN_GROUND_ASSAULT = "小心！！\n\n敌军已发起地面突击！\n他们正朝 Neuruppin 前进",
+	COLDWAR_EVENT_LARZ_SCUD_BRACE   = "小心！！\n\n敌军已向 Larz 发射飞毛腿导弹！！",
+	COLDWAR_EVENT_SAM_MIKE_INTEL    = "情报：\n我们发现了另一处敌军 SAM 阵地，代号 SAM-Mike，位于 Peenemunde 以北。",
+	COLDWAR_EVENT_INSURGENCY_CAMP_INTEL = "情报：\n我们发现了另一处敌军营地，位于 Parchim 以西。",
+	COLDWAR_TARGET_INTERCEPT_BOMBERS = "拦截敌军轰炸机",
 	COLDWAR_MISSION_INTERCEPT_BOMBERS_TITLE = "拦截轰炸机",
-	COLDWAR_MISSION_INTERCEPT_BOMBERS_DESC = "发现敌方轰炸机从 %s 来袭\n在它们进入射程前将其摧毁。",
-	COLDWAR_MISSION_INTERCEPT_BOMBERS_START = "新任务：拦截从 %s 来袭的轰炸机",
+	COLDWAR_MISSION_INTERCEPT_BOMBERS_DESC = "发现敌军轰炸机正从 %s 来袭\n在其进入射程前将其击落。",
+	COLDWAR_MISSION_INTERCEPT_BOMBERS_START = "新任务：拦截来自 %s 的轰炸机",
 	COLDWAR_MISSION_INTERCEPT_BOMBERS_END = "任务结束：拦截轰炸机",
-	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_TITLE = "拦截敌方空袭",
-	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_DESC = "敌机正从西方向东南方向实施空袭\n在它们进入射程前将其摧毁。",
-	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_START = "新任务：拦截敌方空袭",
-	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_END = "任务结束：拦截敌方空袭",
-	COLDWAR_MISSION_DEFEND_FRANKFURT_TITLE = "防守 Frankfurt",
-	COLDWAR_MISSION_DEFEND_FRANKFURT_DESC = "敌方正准备对 Frankfurt 发起全面攻击。\n不惜一切代价守住机场。",
-	COLDWAR_MISSION_DEFEND_FRANKFURT_START = "新任务：防守 Frankfurt",
-	COLDWAR_MISSION_DEFEND_FRANKFURT_END = "任务结束：防守 Frankfurt",
-	COLDWAR_TARGET_INTERCEPT_CARGO_PLANE = "拦截货机",
-	COLDWAR_MISSION_INTERCEPT_CARGO_TITLE = "拦截货机",
-	COLDWAR_MISSION_INTERCEPT_CARGO_DESC_MAHLWINKEL = "找到并摧毁飞往 Mahlwinkel 的货机\n它正从西方来袭。",
-	COLDWAR_MISSION_INTERCEPT_CARGO_DESC_HANNOVER = "找到并摧毁飞往 Hannover 的货机\n它正从东南方来袭。",
-	COLDWAR_MISSION_INTERCEPT_CARGO_DESC_PEENEMUNDE = "找到并摧毁飞往 Peenemunde 的货机\n它正从西南方来袭。",
-	COLDWAR_MISSION_INTERCEPT_CARGO_DESC_INACTIVE = "货机已不再活动。",
-	COLDWAR_MISSION_INTERCEPT_CARGO_START = "新任务：拦截货机",
-	COLDWAR_MISSION_INTERCEPT_CARGO_END = "任务结束：拦截货机",
+	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_TITLE = "拦截敌军空袭",
+	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_DESC = "敌机正在自西向东南实施空袭\n在其进入射程前将其击落。",
+	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_START = "新任务：拦截敌军空袭",
+	COLDWAR_MISSION_INTERCEPT_AIRSTRIKE_END = "任务结束：拦截敌军空袭",
+	COLDWAR_MISSION_DEFEND_FRANKFURT_TITLE = "保卫 Frankfurt",
+	COLDWAR_MISSION_DEFEND_FRANKFURT_DESC = "敌军正准备对 Frankfurt 发起全面进攻。\n不惜一切代价保卫机场。",
+	COLDWAR_MISSION_DEFEND_FRANKFURT_START = "新任务：保卫 Frankfurt",
+	COLDWAR_MISSION_DEFEND_FRANKFURT_END = "任务结束：保卫 Frankfurt",
+	COLDWAR_TARGET_INTERCEPT_CARGO_PLANE = "拦截运输机",
+	COLDWAR_MISSION_INTERCEPT_CARGO_TITLE = "拦截运输机",
+	COLDWAR_MISSION_INTERCEPT_CARGO_DESC_MAHLWINKEL = "找到并击落正从西侧飞往 Mahlwinkel 的运输机。",
+	COLDWAR_MISSION_INTERCEPT_CARGO_DESC_HANNOVER = "找到并击落正从东南方向飞往 Hannover 的运输机。",
+	COLDWAR_MISSION_INTERCEPT_CARGO_DESC_PEENEMUNDE = "找到并击落正从西南方向飞往 Peenemunde 的运输机。",
+	COLDWAR_MISSION_INTERCEPT_CARGO_DESC_INACTIVE = "运输机任务目标已失效。",
+	COLDWAR_MISSION_INTERCEPT_CARGO_START = "新任务：拦截运输机",
+	COLDWAR_MISSION_INTERCEPT_CARGO_END = "任务结束：拦截运输机",
 	COLDWAR_MISSION_STRIKE_SUPPLY_STORAGE_DESC = [[打击 %s，以削弱该区域
 2 个 SAM 站点的补给。
 
@@ -21307,24 +27222,137 @@ MGRS: %s
 海拔：%s
 
 奖励 = %s]],
+	COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[打击 %s，以削弱前往 %s 的补给。
+
+坐标:
+MGRS: %s
+经纬度:%s
+经纬度（十进制度分）:%s
+海拔:%s
+
+奖励 = %s]],
 	COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "打击 Hannover 补给仓库",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Hannover 补给仓库",
-	COLDWAR_MISSION_HANNOVER_SUPPLY_START = "新打击任务：打击 Hannover 补给仓库\n坐标见任务说明",
+	COLDWAR_MISSION_HANNOVER_SUPPLY_START = "新打击任务：打击 Hannover 补给仓库",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_END = "任务结束：打击 Hannover 补给仓库",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "打击 Parchim SAM-Kilo 补给仓库",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Parchim SAM-Kilo 补给仓库",
-	COLDWAR_MISSION_PARCHIM_SUPPLY_START = "新打击任务：打击 Parchim SAM-Kilo 补给仓库\n坐标见任务说明",
+	COLDWAR_MISSION_PARCHIM_SUPPLY_START = "新打击任务：打击 Parchim SAM-Kilo 补给仓库",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_END = "任务结束：打击 Parchim SAM-Kilo 补给仓库",
-	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "敌方突击 Mahlwinkel",
-	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "敌方已对 Mahlwinkel 发起突击！！\n\n他们已部署远程炮兵，并有未知敌机来袭！\n\n奖励 = 250",
-	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_START = "新任务：敌方突击 Mahlwinkel",
-	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_END = "任务结束：敌方突击 Mahlwinkel",
-	COLDWAR_EVENT_RED_ARMY_CAMP_INTEL = "情报：\n我们截获了红军营地的敌方无线电通信。\n我们已三角定位到他们在 PD63 网格炮兵阵地附近的位置",
+	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "敌军进攻 Mahlwinkel",
+	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "敌军已对 Mahlwinkel 发起进攻！！\n\n他们部署了远程炮兵，另有不明敌机来袭！\n\n奖励 = 250",
+	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_START = "新任务：敌军进攻 Mahlwinkel",
+	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_END = "任务结束：敌军进攻 Mahlwinkel",
+	COLDWAR_EVENT_RED_ARMY_CAMP_INTEL = "情报：\n我们截获了红军营地的无线电通信。\n已将其位置三角定位在 Grid PD63 炮兵阵地附近",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_TITLE = "打击 Mahlwinkel 的 SAM-Delta 补给仓库",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Mahlwinkel 补给仓库",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "新打击任务：打击 Mahlwinkel 的 SAM-Delta 补给仓库",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_END = "任务结束：打击 Mahlwinkel 的 SAM-Delta 补给仓库",
-	COLDWAR_MISSION_NAZI_REUNION_TITLE = "打击纳粹集会",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "打击 Salzungen FARP 的 SAM-Charlie 补给仓库",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Salzungen FARP 补给仓库",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "新打击任务：打击 Salzungen FARP 的 SAM-Charlie 补给仓库",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "任务结束：打击 Salzungen FARP 的 SAM-Charlie 补给仓库",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "打击 Gelnhausen 的 SAM-Bravo 补给仓库",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Gelnhausen 补给仓库",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "新打击任务：打击 Gelnhausen 的 SAM-Bravo 补给仓库",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "任务结束：打击 Gelnhausen 的 SAM-Bravo 补给仓库",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "打击 Schkeuditz 的 SAM-Delta 补给仓库",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Schkeuditz 补给仓库",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "新打击任务：打击 Schkeuditz 的 SAM-Delta 补给仓库",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "任务结束：打击 Schkeuditz 的 SAM-Delta 补给仓库",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "打击 Laage 的 SAM-Lima 补给仓库",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Laage 补给仓库",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "新打击任务：打击 Laage 的 SAM-Lima 补给仓库",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "任务结束：打击 Laage 的 SAM-Lima 补给仓库",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "打击 Neuruppin 的 SAM-Juliett 补给仓库",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Neuruppin 补给仓库",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "新打击任务：打击 Neuruppin 的 SAM-Juliett 补给仓库",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "任务结束：打击 Neuruppin 的 SAM-Juliett 补给仓库",
+		COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "打击精确地图部",
+		COLDWAR_MISSION_ACCURATE_MAPS_MARK = "精确地图部",
+		COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[打击精确地图部。
+
+他们的地图是错的，但他们的炮兵还是总能找到我们。
+
+坐标:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+海拔: 1183 feet
+
+奖励 = 500]],
+		COLDWAR_MISSION_ACCURATE_MAPS_START = "新打击任务：打击精确地图部",
+		COLDWAR_MISSION_ACCURATE_MAPS_END = "任务结束：打击精确地图部",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "打击完全民用仓库 4 号",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "完全民用仓库 4 号",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[打击完全民用仓库 4 号。
+
+侦察说里面装满了 SAM 零件。标牌说是拖拉机设备。两者不可能都是真的。
+
+坐标:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+海拔: 20 feet
+
+奖励 = 500]],
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "新打击任务：打击完全民用仓库 4 号",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "任务结束：打击完全民用仓库 4 号",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "打击和平炮兵部",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "和平炮兵部",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[打击和平炮兵部。
+
+瘫痪那个坚持所有炮击都纯属防御的办公室。
+
+坐标:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+海拔: 760 feet
+
+奖励 = 500]],
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "新打击任务：打击和平炮兵部",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "任务结束：打击和平炮兵部",
+		COLDWAR_MISSION_COMMITTEE_TITLE = "打击不失败人民委员会",
+		COLDWAR_MISSION_COMMITTEE_MARK = "不失败人民委员会",
+		COLDWAR_MISSION_COMMITTEE_DESC = [[打击不失败人民委员会。
+
+他们快没有地图、燃料和借口了。帮他们处理最后一个。
+
+坐标：
+MGRS: 32 U NE 69783 31100
+经纬度: N 53°31'27" E 10°03'09"
+经纬度十进制分: N 53°31.451' E 10°03.158'
+海拔: 11 英尺
+
+奖励 = 500]],
+		COLDWAR_MISSION_COMMITTEE_START = "新打击任务：打击不失败人民委员会",
+		COLDWAR_MISSION_COMMITTEE_END = "任务结束：打击不失败人民委员会",
+		COLDWAR_MISSION_MORALE_TRUCK_TITLE = "摧毁士气增强车",
+		COLDWAR_MISSION_MORALE_TRUCK_DESC = [[摧毁士气增强车。
+
+它有一个扩音器、一个政治军官，而且没有任何有用的战术价值。优先处理。
+
+奖励 = 500]],
+		COLDWAR_MISSION_MORALE_TRUCK_START = "新打击任务：摧毁士气增强车",
+		COLDWAR_MISSION_MORALE_TRUCK_END = "任务结束：摧毁士气增强车",
+		COLDWAR_TARGET_MORALE_TRUCK = "士气增强车",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "清除 Clipboard 上校",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[清除 Clipboard 上校。
+
+移除这个亲自批准本区每一个坏主意的人。
+
+坐标：
+MGRS: 33 U VU 73163 27047
+经纬度: N 52°35'34" E 14°36'13"
+经纬度十进制分: N 52°35.567' E 14°36.230'
+海拔: 36 英尺
+
+奖励 = 500]],
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "新打击任务：清除 Clipboard 上校",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "任务结束：清除 Clipboard 上校",
+		COLDWAR_TARGET_COLONEL_CLIPBOARD = "Clipboard 上校",
+	COLDWAR_MISSION_NAZI_REUNION_TITLE = "打击纳粹聚会",
 	COLDWAR_MISSION_NAZI_REUNION_MARK = "打击纳粹",
 	COLDWAR_MISSION_NAZI_REUNION_DESC = [[我们收到情报，一群纳粹正在这些坐标举行集会：
 
@@ -21337,10 +27365,10 @@ MGRS: 32 U ME 73392 36057
 海拔：10 英尺
 
 奖励 = 500]],
-	COLDWAR_MISSION_NAZI_REUNION_START = "新打击任务：打击纳粹集会\n坐标见任务说明",
-	COLDWAR_MISSION_NAZI_REUNION_END = "任务结束：打击纳粹集会",
-	COLDWAR_MISSION_KILL_COMMANDER_TITLE = "击杀指挥官",
-	COLDWAR_MISSION_KILL_COMMANDER_MARK = "击杀指挥官",
+	COLDWAR_MISSION_NAZI_REUNION_START = "新打击任务：打击纳粹聚会",
+	COLDWAR_MISSION_NAZI_REUNION_END = "任务结束：打击纳粹聚会",
+	COLDWAR_MISSION_KILL_COMMANDER_TITLE = "刺杀指挥官",
+	COLDWAR_MISSION_KILL_COMMANDER_MARK = "刺杀指挥官",
 	COLDWAR_MISSION_KILL_COMMANDER_DESC = [[我们掌握了第 1 U-boat flotilla 指挥官的位置
 
 如果他不再出现，会是一件好事
@@ -21352,10 +27380,10 @@ MGRS: 32 U MV 39796 91529
 海拔：577 英尺
 
 奖励 = 500]],
-	COLDWAR_MISSION_KILL_COMMANDER_START = "新打击任务：击杀指挥官\n坐标见任务说明",
-	COLDWAR_MISSION_KILL_COMMANDER_END = "任务结束：击杀指挥官",
-	COLDWAR_MISSION_KILL_GENERAL_TITLE = "击杀将军",
-	COLDWAR_MISSION_KILL_GENERAL_MARK = "击杀将军",
+	COLDWAR_MISSION_KILL_COMMANDER_START = "新打击任务：刺杀指挥官",
+	COLDWAR_MISSION_KILL_COMMANDER_END = "任务结束：刺杀指挥官",
+	COLDWAR_MISSION_KILL_GENERAL_TITLE = "刺杀将军",
+	COLDWAR_MISSION_KILL_GENERAL_MARK = "刺杀将军",
 	COLDWAR_MISSION_KILL_GENERAL_DESC = [[我们掌握了一名俄军将军的位置。
 
 如果他不再出现，会是一件好事。
@@ -21367,10 +27395,10 @@ MGRS: 33 U VT 11966 21329
 海拔：358 英尺
 
 奖励 = 500]],
-	COLDWAR_MISSION_KILL_GENERAL_START = "新打击任务：击杀将军",
-	COLDWAR_MISSION_KILL_GENERAL_END = "任务结束：击杀将军",
-	COLDWAR_MISSION_KILL_GUNTER_TITLE = "击杀 Kommandant Günter",
-	COLDWAR_MISSION_KILL_GUNTER_MARK = "击杀 Kommandant Günter",
+	COLDWAR_MISSION_KILL_GENERAL_START = "新打击任务：刺杀将军",
+	COLDWAR_MISSION_KILL_GENERAL_END = "任务结束：刺杀将军",
+	COLDWAR_MISSION_KILL_GUNTER_TITLE = "刺杀 Kommandant Günter",
+	COLDWAR_MISSION_KILL_GUNTER_MARK = "刺杀 Kommandant Günter",
 	COLDWAR_MISSION_KILL_GUNTER_DESC = [[我们掌握了 Kommandant Günter 的位置，他在
 Hildesheim Airport 以南，干掉他！
 
@@ -21384,8 +27412,8 @@ MGRS: 32 U NC 66314 77828
 奖励：500
 
 摧毁房屋以及附近的任何人员。]],
-	COLDWAR_MISSION_KILL_GUNTER_START = "新打击任务：击杀 Kommandant Günter",
-	COLDWAR_MISSION_KILL_GUNTER_END = "打击任务结束：击杀 Kommandant Günter\n坐标见任务说明",
+	COLDWAR_MISSION_KILL_GUNTER_START = "新打击任务：刺杀 Kommandant Günter",
+	COLDWAR_MISSION_KILL_GUNTER_END = "打击任务结束：刺杀 Kommandant Günter",
 	COLDWAR_MISSION_COMMS_TOWER_TITLE = "打击敌方通信塔",
 	COLDWAR_MISSION_COMMS_TOWER_MARK = "打击敌方通信塔",
 	COLDWAR_MISSION_COMMS_TOWER_DESC = [[打击这些坐标上的敌方通信塔：
@@ -21396,10 +27424,10 @@ MGRS: 32 U NC 51769 29542
 海拔：1378 英尺
 
 奖励 = 500]],
-	COLDWAR_MISSION_COMMS_TOWER_START = "新打击任务：打击敌方通信塔",
-	COLDWAR_MISSION_COMMS_TOWER_END = "任务结束：打击敌方通信塔",
-	COLDWAR_MISSION_PROPAGANDA_TITLE = "打击敌方宣传广播中心",
-	COLDWAR_MISSION_PROPAGANDA_MARK = "打击敌方宣传广播中心",
+	COLDWAR_MISSION_COMMS_TOWER_START = "新打击任务：打击敌军通信塔",
+	COLDWAR_MISSION_COMMS_TOWER_END = "任务结束：打击敌军通信塔",
+	COLDWAR_MISSION_PROPAGANDA_TITLE = "打击敌军宣传广播中心",
+	COLDWAR_MISSION_PROPAGANDA_MARK = "打击敌军宣传广播中心",
 	COLDWAR_MISSION_PROPAGANDA_DESC = [[打击这些坐标上的敌方宣传广播中心：
 
 MGRS: 32 U PC 21450 87183
@@ -21408,19 +27436,19 @@ MGRS: 32 U PC 21450 87183
 海拔：1043 英尺
 
 奖励 = 500]],
-	COLDWAR_MISSION_PROPAGANDA_START = "新打击任务：打击敌方宣传广播中心",
-	COLDWAR_MISSION_PROPAGANDA_END = "任务结束：打击敌方宣传广播中心",
-	COLDWAR_EVENT_ESCORT_INTERCEPTOR_SPOTTED = "发现敌方拦截机正飞向我方货运运输机。",
-	COLDWAR_EVENT_ESCORT_INTERCEPT_MISSION = "敌方已对我方货运运输机发起拦截任务",
-	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_TITLE = "护送从 Frankfurt 起飞的货机",
-	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_DESC = "友军货机正从 Frankfurt 起飞。保护它直到离开空域。",
-	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_START = "新任务：护送货机",
-	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_END = "任务结束：护送货机",
-	COLDWAR_MISSION_ESCORT_ACTIVE_PENDING = "活动任务待处理：\n\n护送车队从 %s 到 %s",
-	COLDWAR_TARGET_DESTROY_SCUDS = "摧毁敌方 SCUD",
-	COLDWAR_EVENT_SCUDS_LAUNCHING = "敌方 SCUD 正向 %s 发射",
-	COLDWAR_MISSION_DESTROY_SCUDS_TITLE = "摧毁敌方 SCUD",
-	COLDWAR_MISSION_DESTROY_SCUDS_DESC = [[在敌方 SCUD 发射前实施打击。
+	COLDWAR_MISSION_PROPAGANDA_START = "新打击任务：打击敌军宣传广播中心",
+	COLDWAR_MISSION_PROPAGANDA_END = "任务结束：打击敌军宣传广播中心",
+	COLDWAR_EVENT_ESCORT_INTERCEPTOR_SPOTTED = "发现敌军截击机正朝我方运输机飞去。",
+	COLDWAR_EVENT_ESCORT_INTERCEPT_MISSION = "敌军已对我方运输机发起拦截任务",
+	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_TITLE = "护送来自 Frankfurt 的运输机",
+	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_DESC = "友军运输机正从 Frankfurt 起飞。保护它直至离开空域。",
+	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_START = "新任务：护送运输机",
+	COLDWAR_MISSION_ESCORT_CARGO_FRANKFURT_END = "任务结束：护送运输机",
+	COLDWAR_MISSION_ESCORT_ACTIVE_PENDING = "当前待执行任务：\n\n护送车队从 %s 前往 %s",
+	COLDWAR_TARGET_DESTROY_SCUDS = "摧毁敌军飞毛腿导弹",
+	COLDWAR_EVENT_SCUDS_LAUNCHING = "敌军飞毛腿导弹正向 %s 发射",
+	COLDWAR_MISSION_DESTROY_SCUDS_TITLE = "摧毁敌军飞毛腿导弹",
+	COLDWAR_MISSION_DESTROY_SCUDS_DESC = [[在敌方飞毛腿导弹发射前实施打击。
 
 坐标：
 MGRS: 32 U PC 28469 06081
@@ -21430,8 +27458,8 @@ MGRS: 32 U PC 28469 06081
 海拔：623 英尺
 
 奖励 = 500]],
-	COLDWAR_MISSION_DESTROY_SCUDS_START = "新任务：摧毁敌方 SCUD\n坐标见任务说明",
-	COLDWAR_MISSION_DESTROY_SCUDS_END = "任务结束：摧毁 SCUD",
+	COLDWAR_MISSION_DESTROY_SCUDS_START = "新任务：摧毁敌军飞毛腿导弹",
+	COLDWAR_MISSION_DESTROY_SCUDS_END = "任务结束：摧毁飞毛腿导弹",
 	COLDWAR_MISSION_CONSTRUCTION_SITE_TITLE = "打击建筑工地",
 	COLDWAR_MISSION_CONSTRUCTION_SITE_DESC = [[我们收到情报，有一处建筑工地正在建造武器工厂。
 
@@ -21516,13 +27544,22 @@ MGRS: %s
 海拔：%s
 
 獎勵 = %s]],
+	COLDWAR_MISSION_STRIKE_SINGLE_SAM_WAREHOUSE_DESC = [[打擊 %s，以削弱前往 %s 的補給。
+
+座標:
+MGRS: %s
+經緯度:%s
+經緯度（十進制度分）:%s
+海拔:%s
+
+獎勵 = %s]],
 	COLDWAR_MISSION_HANNOVER_SUPPLY_TITLE = "打擊 Hannover 補給倉庫",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_MARK = "Hannover 補給倉庫",
-	COLDWAR_MISSION_HANNOVER_SUPPLY_START = "新打擊任務：打擊 Hannover 補給倉庫\n座標見任務說明",
+	COLDWAR_MISSION_HANNOVER_SUPPLY_START = "新打擊任務：打擊 Hannover 補給倉庫",
 	COLDWAR_MISSION_HANNOVER_SUPPLY_END = "任務結束：打擊 Hannover 補給倉庫",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_TITLE = "打擊 Parchim SAM-Kilo 補給倉庫",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_MARK = "Parchim SAM-Kilo 補給倉庫",
-	COLDWAR_MISSION_PARCHIM_SUPPLY_START = "新打擊任務：打擊 Parchim SAM-Kilo 補給倉庫\n座標見任務說明",
+	COLDWAR_MISSION_PARCHIM_SUPPLY_START = "新打擊任務：打擊 Parchim SAM-Kilo 補給倉庫",
 	COLDWAR_MISSION_PARCHIM_SUPPLY_END = "任務結束：打擊 Parchim SAM-Kilo 補給倉庫",
 	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_TITLE = "敵方突擊 Mahlwinkel",
 	COLDWAR_MISSION_MAHLWINKEL_ASSAULT_DESC = "敵方已對 Mahlwinkel 發起突擊！！\n\n他們已部署遠程砲兵，並有未知敵機來襲！\n\n獎勵 = 250",
@@ -21533,6 +27570,110 @@ MGRS: %s
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_MARK = "Mahlwinkel 補給倉庫",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_START = "新打擊任務：打擊 Mahlwinkel 的 SAM-Delta 補給倉庫",
 	COLDWAR_MISSION_MAHLWINKEL_WAREHOUSE_END = "任務結束：打擊 Mahlwinkel 的 SAM-Delta 補給倉庫",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_TITLE = "打擊 Salzungen FARP 的 SAM-Charlie 補給倉庫",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_MARK = "Salzungen FARP 補給倉庫",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_START = "新打擊任務：打擊 Salzungen FARP 的 SAM-Charlie 補給倉庫",
+	COLDWAR_MISSION_SAM_CHARLIE_WAREHOUSE_END = "任務結束：打擊 Salzungen FARP 的 SAM-Charlie 補給倉庫",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_TITLE = "打擊 Gelnhausen 的 SAM-Bravo 補給倉庫",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_MARK = "Gelnhausen 補給倉庫",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_START = "新打擊任務：打擊 Gelnhausen 的 SAM-Bravo 補給倉庫",
+		COLDWAR_MISSION_SAM_BRAVO_WAREHOUSE_END = "任務結束：打擊 Gelnhausen 的 SAM-Bravo 補給倉庫",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_TITLE = "打擊 Schkeuditz 的 SAM-Delta 補給倉庫",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_MARK = "Schkeuditz 補給倉庫",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_START = "新打擊任務：打擊 Schkeuditz 的 SAM-Delta 補給倉庫",
+		COLDWAR_MISSION_SAM_DELTA_WAREHOUSE_END = "任務結束：打擊 Schkeuditz 的 SAM-Delta 補給倉庫",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_TITLE = "打擊 Laage 的 SAM-Lima 補給倉庫",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_MARK = "Laage 補給倉庫",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_START = "新打擊任務：打擊 Laage 的 SAM-Lima 補給倉庫",
+		COLDWAR_MISSION_SAM_LIMA_WAREHOUSE_END = "任務結束：打擊 Laage 的 SAM-Lima 補給倉庫",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_TITLE = "打擊 Neuruppin 的 SAM-Juliett 補給倉庫",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_MARK = "Neuruppin 補給倉庫",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_START = "新打擊任務：打擊 Neuruppin 的 SAM-Juliett 補給倉庫",
+		COLDWAR_MISSION_SAM_JULIETT_WAREHOUSE_END = "任務結束：打擊 Neuruppin 的 SAM-Juliett 補給倉庫",
+		COLDWAR_MISSION_ACCURATE_MAPS_TITLE = "打擊精確地圖部",
+		COLDWAR_MISSION_ACCURATE_MAPS_MARK = "精確地圖部",
+		COLDWAR_MISSION_ACCURATE_MAPS_DESC = [[打擊精確地圖部。
+
+他們的地圖是錯的，但他們的砲兵還是總能找到我們。
+
+座標:
+MGRS: 32 U NV 60897 87212
+Lat long: N 49°32'04" E 9°50'29"
+Lat long Decimal Minutes: N 49°32.067' E 9°50.498'
+海拔: 1183 feet
+
+獎勵 = 500]],
+		COLDWAR_MISSION_ACCURATE_MAPS_START = "新打擊任務：打擊精確地圖部",
+		COLDWAR_MISSION_ACCURATE_MAPS_END = "任務結束：打擊精確地圖部",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_TITLE = "打擊完全民用倉庫 4 號",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_MARK = "完全民用倉庫 4 號",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_DESC = [[打擊完全民用倉庫 4 號。
+
+偵察說裡面裝滿了 SAM 零件。標牌說是拖拉機設備。兩者不可能都是真的。
+
+座標:
+MGRS: 32 U PE 05504 14654
+Lat long: N 53°22'13" E 10°35'08"
+Lat long Decimal Minutes: N 53°22.227' E 10°35.146'
+海拔: 20 feet
+
+獎勵 = 500]],
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_START = "新打擊任務：打擊完全民用倉庫 4 號",
+		COLDWAR_MISSION_TOTALLY_CIVILIAN_END = "任務結束：打擊完全民用倉庫 4 號",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_TITLE = "打擊和平砲兵部",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_MARK = "和平砲兵部",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_DESC = [[打擊和平砲兵部。
+
+癱瘓那個堅持所有砲擊都純屬防禦的辦公室。
+
+座標:
+MGRS: 32 U MA 46742 71332
+Lat long: N 50°17'30" E 8°15'08"
+Lat long Decimal Minutes: N 50°17.502' E 8°15.140'
+海拔: 760 feet
+
+獎勵 = 500]],
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_START = "新打擊任務：打擊和平砲兵部",
+		COLDWAR_MISSION_PEACEFUL_ARTILLERY_END = "任務結束：打擊和平砲兵部",
+		COLDWAR_MISSION_COMMITTEE_TITLE = "打擊不失敗人民委員會",
+		COLDWAR_MISSION_COMMITTEE_MARK = "不失敗人民委員會",
+		COLDWAR_MISSION_COMMITTEE_DESC = [[打擊不失敗人民委員會。
+
+他們快沒有地圖、燃料和藉口了。幫他們處理最後一個。
+
+座標：
+MGRS: 32 U NE 69783 31100
+經緯度: N 53°31'27" E 10°03'09"
+經緯度十進制分: N 53°31.451' E 10°03.158'
+海拔: 11 英尺
+
+獎勵 = 500]],
+		COLDWAR_MISSION_COMMITTEE_START = "新打擊任務：打擊不失敗人民委員會",
+		COLDWAR_MISSION_COMMITTEE_END = "任務結束：打擊不失敗人民委員會",
+		COLDWAR_MISSION_MORALE_TRUCK_TITLE = "摧毀士氣增強車",
+		COLDWAR_MISSION_MORALE_TRUCK_DESC = [[摧毀士氣增強車。
+
+它有一個擴音器、一名政治軍官，而且沒有任何有用的戰術價值。優先處理。
+
+獎勵 = 500]],
+		COLDWAR_MISSION_MORALE_TRUCK_START = "新打擊任務：摧毀士氣增強車",
+		COLDWAR_MISSION_MORALE_TRUCK_END = "任務結束：摧毀士氣增強車",
+		COLDWAR_TARGET_MORALE_TRUCK = "士氣增強車",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_TITLE = "清除 Clipboard 上校",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_DESC = [[清除 Clipboard 上校。
+
+移除這個親自批准本區每一個壞主意的人。
+
+座標：
+MGRS: 33 U VU 73163 27047
+經緯度: N 52°35'34" E 14°36'13"
+經緯度十進制分: N 52°35.567' E 14°36.230'
+海拔: 36 英尺
+
+獎勵 = 500]],
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_START = "新打擊任務：清除 Clipboard 上校",
+		COLDWAR_MISSION_COLONEL_CLIPBOARD_END = "任務結束：清除 Clipboard 上校",
+		COLDWAR_TARGET_COLONEL_CLIPBOARD = "Clipboard 上校",
 	COLDWAR_MISSION_NAZI_REUNION_TITLE = "打擊納粹集會",
 	COLDWAR_MISSION_NAZI_REUNION_MARK = "打擊納粹",
 	COLDWAR_MISSION_NAZI_REUNION_DESC = [[我們收到情報，一群納粹正在這些座標舉行集會：
@@ -21546,7 +27687,7 @@ MGRS: 32 U ME 73392 36057
 海拔：10 英尺
 
 獎勵 = 500]],
-	COLDWAR_MISSION_NAZI_REUNION_START = "新打擊任務：打擊納粹集會\n座標見任務說明",
+	COLDWAR_MISSION_NAZI_REUNION_START = "新打擊任務：打擊納粹集會",
 	COLDWAR_MISSION_NAZI_REUNION_END = "任務結束：打擊納粹集會",
 	COLDWAR_MISSION_KILL_COMMANDER_TITLE = "擊殺指揮官",
 	COLDWAR_MISSION_KILL_COMMANDER_MARK = "擊殺指揮官",
@@ -21561,7 +27702,7 @@ MGRS: 32 U MV 39796 91529
 海拔：577 英尺
 
 獎勵 = 500]],
-	COLDWAR_MISSION_KILL_COMMANDER_START = "新打擊任務：擊殺指揮官\n座標見任務說明",
+	COLDWAR_MISSION_KILL_COMMANDER_START = "新打擊任務：擊殺指揮官",
 	COLDWAR_MISSION_KILL_COMMANDER_END = "任務結束：擊殺指揮官",
 	COLDWAR_MISSION_KILL_GENERAL_TITLE = "擊殺將軍",
 	COLDWAR_MISSION_KILL_GENERAL_MARK = "擊殺將軍",
@@ -21594,7 +27735,7 @@ MGRS: 32 U NC 66314 77828
 
 摧毀房屋以及附近的任何人員。]],
 	COLDWAR_MISSION_KILL_GUNTER_START = "新打擊任務：擊殺 Kommandant Günter",
-	COLDWAR_MISSION_KILL_GUNTER_END = "打擊任務結束：擊殺 Kommandant Günter\n座標見任務說明",
+	COLDWAR_MISSION_KILL_GUNTER_END = "打擊任務結束：擊殺 Kommandant Günter",
 	COLDWAR_MISSION_COMMS_TOWER_TITLE = "打擊敵方通訊塔",
 	COLDWAR_MISSION_COMMS_TOWER_MARK = "打擊敵方通訊塔",
 	COLDWAR_MISSION_COMMS_TOWER_DESC = [[打擊這些座標上的敵方通訊塔：
@@ -21639,7 +27780,7 @@ MGRS: 32 U PC 28469 06081
 海拔：623 英尺
 
 獎勵 = 500]],
-	COLDWAR_MISSION_DESTROY_SCUDS_START = "新任務：摧毀敵方 SCUD\n座標見任務說明",
+	COLDWAR_MISSION_DESTROY_SCUDS_START = "新任務：摧毀敵方 SCUD",
 	COLDWAR_MISSION_DESTROY_SCUDS_END = "任務結束：摧毀 SCUD",
 	COLDWAR_MISSION_CONSTRUCTION_SITE_TITLE = "打擊建築工地",
 	COLDWAR_MISSION_CONSTRUCTION_SITE_DESC = [[我們收到情報，有一處建築工地正在建造武器工廠。
@@ -22713,6 +28854,123 @@ MGRS: 38 S KF 32817 05697
 	IRAQ_MISSION_HELO_HUNT_END        = "任務結束：獵殺直升機",
 }
 
+IraqSetupLabels.IT = {
+	IRAQ_FLAVOR_WPT                  = "WPT %s\n",
+	IRAQ_FLAVOR_WPT_NA               = "WPT N/A\n",
+	IRAQ_FLAVOR_MINING_FACILITY      = "Controlla il kneeboard per le coordinate.\n",
+	IRAQ_FLAVOR_INSURGENT_CAMP       = "Controlla il kneeboard per le coordinate.\nDistruggi gli insorti e aggiungeremo 500 crediti al tuo conto",
+	IRAQ_FLAVOR_SECRET_TECH_FACILITY = "Controlla il kneeboard per le coordinate.\nDistruggi gli edifici e ripulisci completamente l'area",
+	IRAQ_FLAVOR_URANIUM              = "Controlla il kneeboard per le coordinate.\nDistruggi gli edifici e ripulisci completamente l'area",
+	IRAQ_FLAVOR_SCUD_CITY            = "WPT N/A\nTrova gli SCUD in città e distruggili. Ci sono anche installazioni AAA. Distruggi tutto.",
+	IRAQ_EVENT_SCUDS_LAUNCHING       = "Gli SCUD a Scud City stanno lanciando verso %s",
+	IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "Sito chimico distrutto. Ottimo lavoro\n+500 crediti",
+	IRAQ_EVENT_MINING_FACILITY_CLEARED = "Impianto minerario ripulito\n+500 crediti",
+	IRAQ_EVENT_SECRET_TECH_DISABLED  = "Struttura tecnologica segreta disattivata\n+500 crediti",
+	IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "Campo degli insorti distrutto. Ottimo lavoro\n+500 crediti",
+	IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "SAM nemico distrutto\n+200 crediti",
+	IRAQ_MISSION_INTERCEPT_CARGO_DESC = "Trova e distruggi l'aereo cargo nemico proveniente dalla Siria, che rifornisce una posizione sconosciuta.",
+	IRAQ_MISSION_INTERCEPT_AIRSTRIKE_DESC = "Aerei nemici stanno conducendo un attacco aereo da sud verso nord.\nDistruggili prima che arrivino a tiro.",
+	IRAQ_MISSION_INTERCEPT_BOMBERS_DESC = "Bombardieri nemici avvistati in arrivo dall'Iran. Sono scortati da 2 MiG-29.\nDistruggili prima che arrivino a tiro.",
+	IRAQ_EVENT_ENEMY_INTERCEPTOR_SPOTTED = "Intercettore nemico avvistato in rotta verso il nostro trasporto cargo.",
+	IRAQ_EVENT_ENEMY_INTERCEPT_MISSION = "Il nemico ha lanciato una missione di intercettazione contro il nostro trasporto cargo.",
+	IRAQ_MISSION_ESCORT_CARGO_DESC    = "Un aereo cargo alleato sta decollando da Erbil Airport. Proteggilo finché non lascia lo spazio aereo.",
+	IRAQ_MISSION_ESCORT_CARGO_START   = "Nuova missione d'attacco: scorta l'aereo cargo\n\nUn aereo cargo alleato sta decollando da Erbil Airport e si dirige a sud. Proteggilo finché non lascia lo spazio aereo.",
+	IRAQ_MISSION_ESCORT_CARGO_END     = "Missione d'attacco terminata: scorta l'aereo cargo",
+	IRAQ_MISSION_CONVOY_DESTROYED_FAILED = "Il convoglio è stato distrutto prima di raggiungere il bersaglio.\nMissione fallita",
+	IRAQ_MISSION_BAGHDADI_ASSOCIATE_TITLE = "Associato di Al-Baghdadi",
+	IRAQ_MISSION_BAGHDADI_ASSOCIATE_DESC = [[Abbiamo Intel su uno degli associati di Al-Baghdadi situato da qualche parte nella città di Kanaqin.
+
+MGRS: 38 S ND 36035 00754
+Lat long: N 34°20'50" E 45°23'30"
+Lat long Decimal Minutes: N 34°20.833' E 45°23.500'
+
+Altitudine: 609 piedi
+
+Ricompensa: 500
+
+Segui il convoglio finché non raggiunge la casa.
+Una volta confermata la posizione, uccidilo.
+
+Non distruggere il convoglio prima che raggiunga la casa!]],
+	IRAQ_MISSION_BAGHDADI_ASSOCIATE_START = "Nuova missione d'attacco: uccidi l'associato di Al-Baghdadi",
+	IRAQ_MISSION_BAGHDADI_ASSOCIATE_END = "Missione d'attacco terminata: associato di Al-Baghdadi",
+	IRAQ_MISSION_HIGH_VALUE_2_TITLE   = "Colpisci bersaglio di alto valore 2",
+	IRAQ_MISSION_HIGH_VALUE_2_MARKER  = "Bersaglio di alto valore 2",
+	IRAQ_MISSION_HIGH_VALUE_2_DESC = [[Colpisci un edificio di alto valore a queste coordinate:
+
+MGRS: 38 S MC 13902 71190
+Lat long: N 34°04'40" E 44°04'00"
+Lat long Decimal Minutes: N 34°04.676' E 44°04.010'
+
+Altitudine: 158 piedi
+
+Ricompensa: 500]],
+	IRAQ_MISSION_HIGH_VALUE_2_START   = "Nuova missione d'attacco: colpisci bersaglio di alto valore",
+	IRAQ_MISSION_HIGH_VALUE_2_END     = "Missione d'attacco terminata: colpisci bersaglio di alto valore",
+	IRAQ_MISSION_SADDAM_ASSOCIATE_TITLE = "Colpisci uno degli associati di Saddam Hussein",
+	IRAQ_MISSION_SADDAM_ASSOCIATE_DESC = [[Abbiamo la posizione di uno degli associati di Saddam Hussein vicino al confine siriano. Eliminalo!
+
+Coordinate:
+MGRS: 37 S FU 82033 06131
+Lat Long: N 34°22'50" E 40°58'47"
+Lat long Decimal Minutes: N 34°22.834' E 40°58.794'
+Altitudine: 631 piedi
+
+Ricompensa: 500
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+	IRAQ_MISSION_SADDAM_ASSOCIATE_START = "Nuova missione d'attacco: uccidi l'associato di Saddam Hussein",
+	IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Missione d'attacco terminata: uccidi l'associato di Saddam Hussein\n+500 crediti",
+	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Colpisci un edificio di alto valore a queste coordinate:
+
+MGRS: 38 S LD 64653 55710
+Lat long: N 34°50'04" E 43°31'11"
+Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+
+Altitudine: 463 piedi
+
+Ricompensa: 500]],
+	IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Uccidi l'associato di Al-Baghdadi",
+	IRAQ_MISSION_BAGHDADI_KALAR_DESC = [[Uno degli associati di Al-Baghdadi si trova da qualche parte nella città di Kalar.
+
+Coordinate:
+MGRS: 38 S ND 29164 32253
+Lat long: N 34°37'54" E 45°19'05"
+Lat long Decimal Minutes: N 34°37.905' E 45°19.090'
+Altitudine: 722 piedi
+
+Aspetta che raggiungano il loro nascondiglio e colpiscili, edificio incluso.
+
+Richiesta bomba da 2000 libbre
+
+Non uccidere il convoglio prima che raggiunga la casa!]],
+	IRAQ_MISSION_BAGHDADI_KALAR_START = "Nuova missione d'attacco: uccidi l'associato di Al-Baghdadi",
+	IRAQ_MISSION_BAGHDADI_KALAR_END = "Missione d'attacco terminata: uccidi l'associato di Al-Baghdadi",
+	IRAQ_MISSION_TARGET_LOCATION_UNKNOWN_FAILED = "Il convoglio è distrutto e la posizione del bersaglio è ancora sconosciuta\nMissione fallita",
+	IRAQ_TARGET_RIGHT_HAND_MAN        = "Braccio destro",
+	IRAQ_MISSION_RIGHT_HAND_MAN_TITLE = "Uccidi il braccio destro di Al-Baghdadi",
+	IRAQ_MISSION_RIGHT_HAND_MAN_DESC = [[Abbiamo la posizione del braccio destro di Al-Baghdadi nella città di Al-Qairawan. Eliminalo!
+
+Coordinate:
+MGRS: 38 S KF 32817 05697
+Lat Long: N 36°09'33" E 42°01'47"
+Lat long Decimal Minutes: N 36°09.562' E 42°01.887'
+Altitudine: 1055 piedi
+
+Ricompensa: 500
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+	IRAQ_MISSION_RIGHT_HAND_MAN_START = "Nuova missione d'attacco: uccidi il braccio destro di Al-Baghdadi",
+	IRAQ_MISSION_RIGHT_HAND_MAN_END   = "Missione d'attacco terminata: uccidi il braccio destro di Al-Baghdadi",
+	IRAQ_EVENT_ARTILLERY_LAUNCHING    = "L'artiglieria vicino a %s sta sparando verso %s",
+	IRAQ_MISSION_ARTY_FROM_DESC       = "Artiglieria avvistata in arrivo dalla direzione di %s.\nDistruggila prima che arrivi a tiro.",
+	IRAQ_MISSION_ARTY_CONVOY_START    = "Nuova missione: distruggi il convoglio di artiglieria da %s",
+	IRAQ_MISSION_HELO_HUNT_TITLE      = "Caccia agli elicotteri Balad Airbase",
+	IRAQ_MISSION_HELO_HUNT_DESC       = "Un gran numero di KA-50 sta decollando da Balad Airbase verso le nostre basi alleate più vicine.\nDistruggili prima che arrivino a tiro.",
+	IRAQ_MISSION_HELO_HUNT_START      = "Nuova missione: caccia agli elicotteri\nUn gran numero di KA-50 sta decollando da Balad Airbase verso le nostre basi alleate più vicine.\n\nDistruggili prima che arrivino a tiro.",
+	IRAQ_MISSION_HELO_HUNT_END        = "Missione terminata: caccia agli elicotteri",
+}
+
 for locale, labels in pairs(IraqSetupLabels) do
 	FL:Register(locale, labels)
 end
@@ -22754,6 +29012,7 @@ Elevation: 526 feet]],
 		SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "Insurgent Camp destroyed, good job\n+500 credits",
 		SINAI_SETUP_CHEMICAL_SITE_DESTROYED = "Chemical site destroyed, good job\n+500 credits",
 		SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "Missile Factory destroyed, good job\n+500 credits",
+		SINAI_SETUP_BORJ_OIL_DESTROYED = "Borj Oil production site destroyed, good job\n+500 credits",
 		SINAI_SETUP_ARTILLERY_FACTORY_DISABLED = "Artillery Factory disabled\n+500 credits",
 		SINAI_SETUP_SAM_HOTEL_DESTROYED  = "SAM Hotel is now destroyed, good job\n+500 credits",
 		SINAI_SETUP_SAM_INDIA_DESTROYED  = "SAM India is now destroyed, good job\n+500 credits",
@@ -22887,6 +29146,174 @@ Reward: 500]],
 		SINAI_MISSION_DESTROY_ARTILLERY_START = "New mission: Destroy artillery",
 		SINAI_MISSION_DESTROY_ARTILLERY_END = "Mission ended: Destroy artillery heading to Melez",
 	},
+	IT = {
+		SINAI_FLAVOR_START_ZONE           = "WPT \nZona iniziale",
+		SINAI_FLAVOR_ENEMY_CARRIER       = "WPT %s \nZona portaerei nemica",
+		SINAI_FLAVOR_KNEEBOARD_COORDS    = "Controlla il kneeboard per le coordinate.\n",
+		SINAI_FLAVOR_INSURGENT_CAMP      = "Controlla il kneeboard per le coordinate.\nDistruggi gli insorti e aggiungeremo 500 crediti al tuo conto",
+		SINAI_FLAVOR_SECRET_TECH_FACILITY = "Controlla il kneeboard per le coordinate.\nDistruggi gli edifici e ripulisci completamente l'area",
+		SINAI_FLAVOR_FUEL_DEPOT          = "Controlla il kneeboard per le coordinate.\nElimina il loro deposito carburante, inclusi i serbatoi",
+		SINAI_FLAVOR_AMMUNITION_DEPOT    = "Controlla il kneeboard per le coordinate.\nElimina il loro deposito munizioni, inclusi gli stoccaggi",
+		SINAI_FLAVOR_TANK_FACTORY        = "Controlla il kneeboard per le coordinate.\nDistruggi le fabbriche e il deposito carri",
+		SINAI_FLAVOR_CHEMICAL_SITE       = "Controlla il kneeboard per le coordinate.\nStanno costruendo armi chimiche qui. Distruggi gli edifici",
+		SINAI_FLAVOR_MISSILE_FACTORY     = "Controlla il kneeboard per le coordinate.\nSi dice che abbiano SCUD qui",
+		SINAI_FLAVOR_PORT_SAID           = "Controlla il kneeboard per le coordinate.\nDistruggi il porto",
+		SINAI_FLAVOR_BORJ_OIL            = "Controlla il kneeboard per le coordinate.\nDistruggi il bersaglio militante in quell'area.",
+		SINAI_FLAVOR_FRIENDLY_SAM        = "Controlla il kneeboard per le coordinate.\nSAM alleato",
+		SINAI_FLAVOR_RED_SAM_SHORAD      = "Controlla il kneeboard per le coordinate.\n%s e Red SAM SHORAD",
+		SINAI_EVENT_RAMON_SCUDS          = "Preparatevi!!\n\nIl nemico ha lanciato SCUD verso Ramon Airbase!!",
+		SINAI_EVENT_MELEZ_ARTILLERY      = "Preparatevi!!\n\nArtiglieria nemica sta sparando verso Melez!",
+		SINAI_EVENT_MELEZ_ARTILLERY_INTEL = [[Abbiamo trovato l'artiglieria nemica! A ovest di qui,
+
+Eliminali prima che sparino di nuovo!
+
+Coordinate:
+MGRS: 36 R VU 66855 52517
+Lat long: N 30°18'14" E 32°39'19"
+Lat long Decimal Minutes: N 30°18.237' E 32°39.317'
+
+Altitudine: 526 piedi]],
+		SINAI_SETUP_TANK_FACTORY_CLEARED = "Fabbrica carri ripulita\n+500 crediti",
+		SINAI_SETUP_FUEL_DEPOT_DISABLED  = "Deposito carburante disattivato, ottimo lavoro!\n+500 crediti",
+		SINAI_SETUP_MINING_FACILITY_CLEARED = "Impianto minerario ripulito\n+500 crediti",
+		SINAI_SETUP_AMMUNITION_DEPOT_CLEARED = "Deposito munizioni ripulito\n+500 crediti",
+		SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "Campo degli insorti distrutto, ottimo lavoro\n+500 crediti",
+		SINAI_SETUP_CHEMICAL_SITE_DESTROYED = "Sito chimico distrutto, ottimo lavoro\n+500 crediti",
+		SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "Fabbrica missili distrutta, ottimo lavoro\n+500 crediti",
+		SINAI_SETUP_BORJ_OIL_DESTROYED = "Sito di produzione petrolifera di Borj distrutto, ottimo lavoro\n+500 crediti",
+		SINAI_SETUP_ARTILLERY_FACTORY_DISABLED = "Fabbrica artiglieria disattivata\n+500 crediti",
+		SINAI_SETUP_SAM_HOTEL_DESTROYED  = "SAM Hotel ora è distrutto, ottimo lavoro\n+500 crediti",
+		SINAI_SETUP_SAM_INDIA_DESTROYED  = "SAM India ora è distrutto, ottimo lavoro\n+500 crediti",
+		SINAI_TARGET_SECRET_TECH_FACTORIES = "Fabbriche tecnologiche segrete",
+		SINAI_MISSION_SECRET_TECH_TITLE    = "Colpisci le fabbriche SecretTechFacility",
+		SINAI_MISSION_SECRET_TECH_DESC     = [[Sono stati identificati 3 bersagli Secret Tech Facility.
+Distruggili per eliminare questa base nemica e
+tutta l'attività al suo interno.
+
+È richiesta una bomba penetrante da 2000 libbre.
+Ricompensa: 750
+
+Bersaglio 1: centro di comando
+MGRS: 37 R BM 60888 37285
+Lat long: N 28°20'24" E 36°33'38"
+Lat long Precise: N 28°20'24.05" E 36°33'38.86"
+Lat long Decimal Minutes: N 28°20.400' E 36°33.647'
+Altitudine 2499 piedi
+
+Bersaglio 2: fabbrica
+MGRS: 37 R BM 60836 37586
+Lat long: N 28°20'33" E 36°33'36"
+Lat long Precise: N 28°20'33.78" E 36°33'36.74"
+Lat long Decimal Minutes: N 28°20.563' E 36°33.612'
+Altitudine 2493 piedi
+
+Bersaglio 3: edificio
+MGRS: 37 R BM 60832 37389
+Lat long: N 28°20'27" E 36°33'36"
+Lat long Precise: N 28°20'27.40" E 36°33'36.75"
+Lat long Decimal Minutes: N 28°20.456' E 36°33.612'
+Altitudine 2494 piedi]],
+		SINAI_MISSION_SECRET_TECH_START    = "Nuova missione d'attacco: colpisci le fabbriche SecretTechFacility",
+		SINAI_MISSION_SECRET_TECH_END      = "Missione d'attacco terminata: fabbriche SecretTechFacility",
+		SINAI_TARGET_CARGO_PLANE_MISSION   = "Missione aereo cargo",
+		SINAI_MISSION_INTERCEPT_CARGO_TITLE = "Intercetta aereo cargo",
+		SINAI_MISSION_INTERCEPT_CARGO_DESC = "Trova e distruggi l'aereo cargo nemico.",
+		SINAI_MISSION_INTERCEPT_CARGO_START = "Nuova missione: intercetta aereo cargo",
+		SINAI_MISSION_INTERCEPT_CARGO_END  = "Missione terminata: intercetta aereo cargo",
+		SINAI_EVENT_CARGO_INTERCEPTOR_SPOTTED = "Intercettore nemico avvistato in rotta verso il nostro trasporto cargo.",
+		SINAI_EVENT_CARGO_INTERCEPTOR_LAUNCHED = "Il nemico ha lanciato una missione di intercettazione contro il nostro trasporto cargo",
+		SINAI_MISSION_ESCORT_CARGO_TITLE   = "Scorta aereo cargo",
+		SINAI_MISSION_ESCORT_CARGO_DESC    = "Un aereo cargo alleato sta decollando da Ben Gurion diretto a sud. Proteggilo finché non lascia lo spazio aereo.",
+		SINAI_MISSION_ESCORT_CARGO_START   = "Nuova missione: scorta aereo cargo da Ben Gurion",
+		SINAI_MISSION_ESCORT_CARGO_END     = "Missione terminata: scorta aereo cargo",
+		SINAI_MISSION_ESCORT_FAILED_RESTART = "Missione fallita:\n\nIl convoglio è stato distrutto\n\nRiavvia la missione dal menu radio",
+		SINAI_TARGET_INTERCEPT_BOMBERS     = "Intercetta bombardieri nemici",
+		SINAI_MISSION_INTERCEPT_BOMBERS_TITLE = "Intercetta bombardieri",
+		SINAI_MISSION_INTERCEPT_BOMBERS_DESC = "Bombardieri nemici avvistati in arrivo dal sud dell'Egitto.\nDistruggili prima che arrivino a tiro.",
+		SINAI_MISSION_INTERCEPT_BOMBERS_START = "Nuova missione: intercetta bombardieri",
+		SINAI_MISSION_INTERCEPT_BOMBERS_END = "Missione terminata: intercetta bombardieri",
+		SINAI_TARGET_INTERCEPT_AIRSTRIKE   = "Intercetta attacco aereo nemico",
+		SINAI_MISSION_INTERCEPT_AIRSTRIKE_TITLE = "Intercetta attacco aereo nemico",
+		SINAI_MISSION_INTERCEPT_AIRSTRIKE_DESC = "Aerei nemici stanno conducendo un attacco aereo da ovest verso sud-est\nDistruggili prima che arrivino a tiro.",
+		SINAI_MISSION_INTERCEPT_AIRSTRIKE_START = "Nuova missione: intercetta attacco aereo nemico",
+		SINAI_MISSION_INTERCEPT_AIRSTRIKE_END = "Missione terminata: intercetta attacco aereo nemico",
+		SINAI_TARGET_FACTORY_STRIKE       = "Attacco alla fabbrica",
+		SINAI_MISSION_HIGH_VALUE_TITLE    = "Colpisci bersaglio di alto valore",
+		SINAI_MISSION_HIGH_VALUE_DESC     = [[Abbiamo la posizione di un bersaglio di alto valore.
+A sud-ovest di Wadi al Jandali, eliminalo!
+
+Coordinate:
+MGRS: 36 R UU 39157 01394
+Lat Long: N 29°49'57" E 31°20'06"
+Lat long Decimal Minutes: N 29°49.953' E 31°20.114'
+
+Altitudine: 86 piedi
+
+Ricompensa: 500
+
+Distruggi la casa e chiunque si trovi nelle vicinanze.]],
+		SINAI_MISSION_HIGH_VALUE_START    = "Nuova missione d'attacco: colpisci bersaglio di alto valore",
+		SINAI_MISSION_HIGH_VALUE_END      = "Missione d'attacco terminata: colpisci bersaglio di alto valore",
+		SINAI_TARGET_HIGH_VALUE_FACTORY   = "Fabbrica di alto valore",
+		SINAI_MISSION_HIGH_VALUE_FACTORY_TITLE = "Colpisci una fabbrica di alto valore",
+		SINAI_MISSION_FACTORY_BALUZA_DESC = [[Colpisci una fabbrica di alto valore appena a est di Baluza
+
+Coordinate:
+MGRS: 36 R WV 01224 31711
+Lat long: N 31°01'08" E 33°00'46"
+Lat long Decimal Minutes: N 31°01.141' E 33°00.769'
+
+Altitudine: 110 piedi
+
+Ricompensa: 500]],
+		SINAI_MISSION_FACTORY_MANSURAH_DESC = [[Colpisci una fabbrica di alto valore appena a nord di Al Mansurah
+
+Coordinate:
+MGRS: 36 R UV 48338 35521
+Lat long: N 31°02'37" E 31°24'38"
+Lat long Decimal Minutes: N 31°02.617' E 31°24.643'
+
+Altitudine: 7 piedi
+
+Ricompensa: 500]],
+		SINAI_MISSION_FACTORY_ISMAILIYAH_DESC = [[Colpisci una fabbrica di alto valore appena fuori Al Ismailiyah
+
+Coordinate:
+MGRS: 36 R VU 29372 86680
+Lat long: N 30°36'38" E 32°15'47"
+Lat long Decimal Minutes: N 30°36.636' E 32°15.790'
+
+Altitudine: 16 piedi
+
+Ricompensa: 500]],
+		SINAI_MISSION_HIGH_VALUE_FACTORY_START = "Nuova missione d'attacco: colpisci fabbrica di alto valore",
+		SINAI_MISSION_HIGH_VALUE_FACTORY_STRIKE_END = "Missione d'attacco terminata: colpisci fabbrica di alto valore",
+		SINAI_MISSION_HIGH_VALUE_FACTORY_END = "Missione terminata: colpisci fabbrica di alto valore",
+		SINAI_TARGET_DESTROY_SCUDS_MISSION = "Missione distruggi SCUD",
+		SINAI_TARGET_DESTROY_SCUDS        = "Distruggi SCUD",
+		SINAI_EVENT_GEBEL_SCUDS_LAUNCHING = "Gli SCUD vicino a Gebel El Basur Air Base (31) stanno lanciando verso %s",
+		SINAI_EVENT_QUWAYSINA_SCUDS_LAUNCHING = "Gli SCUD vicino a Quwaysina stanno lanciando verso %s",
+		SINAI_EVENT_BALUZA_SCUDS_LAUNCHING = "Gli SCUD vicino a Baluza stanno lanciando verso %s",
+		SINAI_MISSION_SCUDS_GEBEL_TITLE   = "Distruggi SCUD (31)",
+		SINAI_MISSION_SCUDS_GEBEL_DESC    = "SCUD avvistati a Gebel El Basur Air Base (31).\nDistruggili prima che possano lanciare i missili",
+		SINAI_MISSION_SCUDS_QUWAYSINA_TITLE = "Distruggi SCUD",
+		SINAI_MISSION_SCUDS_QUWAYSINA_DESC = "SCUD avvistati a Quwaysina.\nDistruggili prima che possano lanciare i missili",
+		SINAI_MISSION_SCUDS_START         = "Nuova missione: distruggi SCUD",
+		SINAI_MISSION_SCUDS_END           = "Missione terminata: distruggi SCUD",
+		SINAI_MISSION_SCUDS_BALUZA_TITLE  = "Distruggi SCUD",
+		SINAI_MISSION_SCUDS_BALUZA_DESC   = "SCUD avvistati a Baluza.\nDistruggili prima che possano lanciare i missili",
+		SINAI_TARGET_CARGO_SHIP           = "Nave cargo",
+		SINAI_MISSION_DESTROY_SHIPS_TITLE = "Distruggi navi cargo e da battaglia",
+		SINAI_MISSION_DESTROY_SHIPS_SUPPLY_DESC = "Intercetta e distruggi la nave di rifornimento nemica vicino a FARP-Mike diretta a FARP-Bravo.",
+		SINAI_MISSION_DESTROY_SHIPS_GENERAL_DESC = "Trova e distruggi le navi cargo e da battaglia nemiche in navigazione.\n\nDistruggi le navi!",
+		SINAI_MISSION_DESTROY_SHIPS_START = "Nuova missione: distruggi navi cargo e da battaglia",
+		SINAI_MISSION_DESTROY_SHIPS_END   = "Missione terminata: distruggi navi cargo e da battaglia",
+		SINAI_TARGET_DESTROY_ARTILLERY    = "Distruggi artiglieria",
+		SINAI_MISSION_DESTROY_ARTILLERY_TITLE = "Distruggi artiglieria",
+		SINAI_MISSION_DESTROY_ARTILLERY_DESC = "Artiglieria avvistata in movimento verso Melez dalla direzione di As Salihiyah.\nDistruggila prima che arrivi a tiro.",
+		SINAI_MISSION_DESTROY_ARTILLERY_START = "Nuova missione: distruggi artiglieria",
+		SINAI_MISSION_DESTROY_ARTILLERY_END = "Missione terminata: distruggi artiglieria diretta a Melez",
+	},
 	DE = {
 		SINAI_FLAVOR_START_ZONE           = "WPT \nStartzone",
 		SINAI_FLAVOR_ENEMY_CARRIER       = "WPT %s \nFeindliche Trägerzone",
@@ -22921,6 +29348,7 @@ Höhe: 526 Fuß]],
 		SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "Aufständischenlager zerstört, gute Arbeit\n+500 Kredits",
 		SINAI_SETUP_CHEMICAL_SITE_DESTROYED = "Chemiegelände zerstört, gute Arbeit\n+500 Kredits",
 		SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "Raketenfabrik zerstört, gute Arbeit\n+500 Kredits",
+		SINAI_SETUP_BORJ_OIL_DESTROYED = "Borj-Ölproduktionsanlage zerstört, gute Arbeit\n+500 Kredits",
 		SINAI_SETUP_ARTILLERY_FACTORY_DISABLED = "Artilleriefabrik deaktiviert\n+500 Kredits",
 		SINAI_SETUP_SAM_HOTEL_DESTROYED  = "SAM Hotel ist jetzt zerstört, gute Arbeit\n+500 Kredits",
 		SINAI_SETUP_SAM_INDIA_DESTROYED  = "SAM India ist jetzt zerstört, gute Arbeit\n+500 Kredits",
@@ -23088,6 +29516,7 @@ Altitude : 526 pieds]],
 		SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "Camp d'insurgés détruit, bon travail\n+500 crédits",
 		SINAI_SETUP_CHEMICAL_SITE_DESTROYED = "Site chimique détruit, bon travail\n+500 crédits",
 		SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "Usine de missiles détruite, bon travail\n+500 crédits",
+		SINAI_SETUP_BORJ_OIL_DESTROYED = "Site de production pétrolière de Borj détruit, bon travail\n+500 crédits",
 		SINAI_SETUP_ARTILLERY_FACTORY_DISABLED = "Usine d'artillerie neutralisée\n+500 crédits",
 		SINAI_SETUP_SAM_HOTEL_DESTROYED  = "SAM Hotel est maintenant détruit, bon travail\n+500 crédits",
 		SINAI_SETUP_SAM_INDIA_DESTROYED  = "SAM India est maintenant détruit, bon travail\n+500 crédits",
@@ -23255,6 +29684,7 @@ Elevación: 526 pies]],
 		SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "Campamento insurgente destruido, buen trabajo\n+500 créditos",
 		SINAI_SETUP_CHEMICAL_SITE_DESTROYED = "Sitio químico destruido, buen trabajo\n+500 créditos",
 		SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "Fábrica de misiles destruida, buen trabajo\n+500 créditos",
+		SINAI_SETUP_BORJ_OIL_DESTROYED = "Sitio de producción petrolera de Borj destruido, buen trabajo\n+500 créditos",
 		SINAI_SETUP_ARTILLERY_FACTORY_DISABLED = "Fábrica de artillería desactivada\n+500 créditos",
 		SINAI_SETUP_SAM_HOTEL_DESTROYED  = "SAM Hotel ha sido destruido, buen trabajo\n+500 créditos",
 		SINAI_SETUP_SAM_INDIA_DESTROYED  = "SAM India ha sido destruido, buen trabajo\n+500 créditos",
@@ -23422,6 +29852,7 @@ Lat long Decimal Minutes: N 30°18.237' E 32°39.317'
 		SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "Лагерь повстанцев уничтожен, хорошая работа\n+500 кредитов",
 		SINAI_SETUP_CHEMICAL_SITE_DESTROYED = "Химический объект уничтожен, хорошая работа\n+500 кредитов",
 		SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "Ракетный завод уничтожен, хорошая работа\n+500 кредитов",
+		SINAI_SETUP_BORJ_OIL_DESTROYED = "Нефтедобывающий объект Бордж уничтожен, хорошая работа\n+500 кредитов",
 		SINAI_SETUP_ARTILLERY_FACTORY_DISABLED = "Артиллерийский завод выведен из строя\n+500 кредитов",
 		SINAI_SETUP_SAM_HOTEL_DESTROYED  = "SAM Hotel уничтожен, хорошая работа\n+500 кредитов",
 		SINAI_SETUP_SAM_INDIA_DESTROYED  = "SAM India уничтожен, хорошая работа\n+500 кредитов",
@@ -23710,6 +30141,7 @@ Elevação 2494 pés]],
 	SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "Insurgent Camp destruído, bom trabalho\n+500 créditos",
 	SINAI_SETUP_MINING_FACILITY_CLEARED = "Mining Facility limpa\n+500 créditos",
 	SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "Missile Factory destruída, bom trabalho\n+500 créditos",
+	SINAI_SETUP_BORJ_OIL_DESTROYED = "Sítio de produção de petróleo de Borj destruído, bom trabalho\n+500 créditos",
 	SINAI_SETUP_SAM_HOTEL_DESTROYED = "SAM Hotel foi destruído, bom trabalho\n+500 créditos",
 	SINAI_SETUP_SAM_INDIA_DESTROYED = "SAM India foi destruído, bom trabalho\n+500 créditos",
 	SINAI_SETUP_TANK_FACTORY_CLEARED = "Tank Factory limpa\n+500 créditos",
@@ -23878,6 +30310,7 @@ Rakım 2494 feet]],
 	SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "Insurgent Camp yok edildi, iyi iş\n+500 kredi",
 	SINAI_SETUP_MINING_FACILITY_CLEARED = "Mining Facility temizlendi\n+500 kredi",
 	SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "Missile Factory yok edildi, iyi iş\n+500 kredi",
+	SINAI_SETUP_BORJ_OIL_DESTROYED = "Borj petrol üretim sahası yok edildi, iyi iş\n+500 kredi",
 	SINAI_SETUP_SAM_HOTEL_DESTROYED = "SAM Hotel artık yok edildi, iyi iş\n+500 kredi",
 	SINAI_SETUP_SAM_INDIA_DESTROYED = "SAM India artık yok edildi, iyi iş\n+500 kredi",
 	SINAI_SETUP_TANK_FACTORY_CLEARED = "Tank Factory temizlendi\n+500 kredi",
@@ -23927,6 +30360,7 @@ MGRS: 36 R VU 66855 52517
 	SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "叛乱营地已摧毁，干得好\n+500 点数",
 	SINAI_SETUP_CHEMICAL_SITE_DESTROYED = "化学设施已摧毁，干得好\n+500 点数",
 	SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "导弹工厂已摧毁，干得好\n+500 点数",
+	SINAI_SETUP_BORJ_OIL_DESTROYED = "Borj 石油生产点已摧毁，干得好\n+500 点数",
 	SINAI_SETUP_ARTILLERY_FACTORY_DISABLED = "炮兵工厂已停用\n+500 点数",
 	SINAI_SETUP_SAM_HOTEL_DESTROYED  = "SAM Hotel 已摧毁，干得好\n+500 点数",
 	SINAI_SETUP_SAM_INDIA_DESTROYED  = "SAM India 已摧毁，干得好\n+500 点数",
@@ -24095,6 +30529,7 @@ MGRS: 36 R VU 66855 52517
 	SINAI_SETUP_INSURGENT_CAMP_DESTROYED = "叛亂營地已摧毀，幹得好\n+500 點數",
 	SINAI_SETUP_CHEMICAL_SITE_DESTROYED = "化學設施已摧毀，幹得好\n+500 點數",
 	SINAI_SETUP_MISSILE_FACTORY_DESTROYED = "飛彈工廠已摧毀，幹得好\n+500 點數",
+	SINAI_SETUP_BORJ_OIL_DESTROYED = "Borj 石油生產點已摧毀，幹得好\n+500 點數",
 	SINAI_SETUP_ARTILLERY_FACTORY_DISABLED = "砲兵工廠已停用\n+500 點數",
 	SINAI_SETUP_SAM_HOTEL_DESTROYED  = "SAM Hotel 已摧毀，幹得好\n+500 點數",
 	SINAI_SETUP_SAM_INDIA_DESTROYED  = "SAM India 已摧毀，幹得好\n+500 點數",

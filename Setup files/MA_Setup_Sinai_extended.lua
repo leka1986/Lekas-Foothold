@@ -3561,6 +3561,7 @@ evc:addEvent({
         SCHEDULER:New(nil, spawnIntercept, {'interceptor-2'}, timers[2])
 	end,
 	canExecute = function()
+		if DisableFriendlyEscortMeMission == true then return false end
 		local gr = Group.getByName('escort-me')
 		if gr then return false end
 		local triggers = {'Ramon Airbase', 'Melez', 'Kedem-Hatzerim', 'El Gora', 'El Arish'}

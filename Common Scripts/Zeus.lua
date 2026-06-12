@@ -15,7 +15,7 @@ end
 function handleSpawnRequest(text, coord)
     local unitList = {
         "SA-8","SA-9","SA-13","SA-15","SA-19","Soldier","Truck","Shilka","Igla","Igla-S",
-        "RPG","BMP2","Tank","BTR80", "CTLD_CARGO_HMMWV",
+        "RPG","BMP2","Tank","BTR80", "CTLD_CARGO_HMMWV", "mig21",
         "JTAC9lineam","JTAC9linefm","Tankm1","CTLD_CARGO_L118","CTLD_CARGO_Scout","CTLD_CARGO_AmmoTruck", "CTLD_CARGO_GMLRS_HE"
     }
     for i = 1, #unitList do

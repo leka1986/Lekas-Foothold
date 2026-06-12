@@ -52,7 +52,51 @@ ewrs.HELO = 1
 ewrs.ATTACK = 2
 ewrs.FIGHTER = 3
 ewrs.version = "2.0.0"
-ewrs.rangeOptions = ewrs_rangeOptions or { km = {10,20,40,60,80,100,150}, nm = {5,10,20,40,60,80,100} }
+
+local function ewrsBuildRangeOptions(maxKm, maxNm)
+  local function build(values, maxValue)
+    local result = {}
+    local limit = tonumber(maxValue) or values[#values]
+    for _,value in ipairs(values) do
+      if value <= limit then
+        result[#result + 1] = value
+      end
+    end
+    if #result == 0 then
+      result[1] = values[1]
+    end
+    return result
+  end
+
+  return {
+    km = build({10,20,40,60,80,100,150}, maxKm),
+    nm = build({5,10,20,40,60,80,100}, maxNm)
+  }
+end
+
+ewrs.maxRangeKm = ewrs_maxRangeKm or 150
+ewrs.maxRangeNm = ewrs_maxRangeNm or 100
+ewrs.rangeOptions = ewrs_rangeOptions or ewrsBuildRangeOptions(ewrs.maxRangeKm, ewrs.maxRangeNm)
+
+local function ewrsGetMaxRangeOption(unit)
+  local maxOption = nil
+  for _,value in ipairs((ewrs.rangeOptions and ewrs.rangeOptions[unit]) or {}) do
+    local numberValue = tonumber(value)
+    if numberValue and (maxOption == nil or numberValue > maxOption) then
+      maxOption = numberValue
+    end
+  end
+  return maxOption
+end
+
+local function ewrsClampDefaultRangeLimit(rangeLimit, measurements)
+  local limit = tonumber(rangeLimit) or 0
+  if limit <= 0 then return limit end
+  local unit = measurements == "metric" and "km" or "nm"
+  local maxOption = ewrsGetMaxRangeOption(unit)
+  if maxOption and limit > maxOption then return maxOption end
+  return limit
+end
 
 ----SCRIPT OPTIONS----
 
@@ -61,12 +105,12 @@ ewrs.messageDisplayTime = ewrs_messageDisplayTime or 15 --How long EWRS BRA mess
 if ewrs_restrictToOneReference ~= nil then ewrs.restrictToOneReference = ewrs_restrictToOneReference else ewrs.restrictToOneReference = false end -- Disables the ability to change the BRA calls from pilot's own aircraft or bullseye. If this is true, set ewrs.defaultReference to the option you want to restrict to.
 ewrs.defaultReference = ewrs_defaultReference or "self" --The default reference for BRA calls - can be changed via f10 radio menu if ewrs.restrictToOneReference is false (self or bulls)
 ewrs.defaultMeasurements = ewrs_defaultMeasurements or "imperial" --Default measurement units - can be changed via f10 radio menu (imperial or metric)
+ewrs.defaultAircraftRangeLimit = ewrs_defaultAircraftRangeLimit or 60
+ewrs.defaultHelicopterRangeLimit = ewrs_defaultHelicopterRangeLimit or 20
 if ewrs_defaultShowTankers ~= nil then ewrs.defaultShowTankers = ewrs_defaultShowTankers else ewrs.defaultShowTankers = false end -- Default show tankers in picture report
-if ewrs_disableFightersBRA ~= nil then ewrs.disableFightersBRA = ewrs_disableFightersBRA else ewrs.disableFightersBRA = false end -- disables BRA messages to fighters when true
 if ewrs_enableRedTeam ~= nil then ewrs.enableRedTeam = ewrs_enableRedTeam else ewrs.enableRedTeam = true end -- enables / disables EWRS for the red team
 if ewrs_enableBlueTeam ~= nil then ewrs.enableBlueTeam = ewrs_enableBlueTeam else ewrs.enableBlueTeam = true end -- enables / disables EWRS for the blue team
 if ewrs_disableMessageWhenNoThreats ~= nil then ewrs.disableMessageWhenNoThreats = ewrs_disableMessageWhenNoThreats else ewrs.disableMessageWhenNoThreats = true end -- disables message when no threats are detected - Thanks Rivvern - NOTE: If using ewrs.onDemand = true, this has no effect
-if ewrs_useImprovedDetectionLogic ~= nil then ewrs.useImprovedDetectionLogic = ewrs_useImprovedDetectionLogic else ewrs.useImprovedDetectionLogic = true end --this makes the messages more realistic. If the radar doesn't know the type or distance to the detected threat, it will be reflected in the picture report / BRA message
 if ewrs_onDemand ~= nil then ewrs.onDemand = ewrs_onDemand else ewrs.onDemand = false end --Setting to true will disable the automated messages to everyone and will add an F10 menu to get picture / BRA message.
 ewrs.maxThreatDisplay = ewrs_maxThreatDisplay or 5 -- Max amounts of threats to display on picture report (0 will display all)
 if ewrs_allowBogeyDope ~= nil then ewrs.allowBogeyDope = ewrs_allowBogeyDope else ewrs.allowBogeyDope = true end -- Allows pilots to request a bogey dope even with the automated messages running. It will display only the cloest threat, and will always reference the players own aircraft.
@@ -153,11 +197,12 @@ local function ewrsUnitTypeLabel(unitType, translator)
   return unitType or T:Get("EWRS_UNKNOWN")
 end
 
-ewrs.runtimeCache = { units = {}, friendlyGroups = {}, groupSettings = {} }
+ewrs.runtimeCache = { units = {}, friendlyGroups = {}, friendlyAirUnits = {}, groupSettings = {} }
 
 function ewrs.resetRuntimeCache()
   ewrs.runtimeCache.units = {}
   ewrs.runtimeCache.friendlyGroups = {}
+  ewrs.runtimeCache.friendlyAirUnits = {}
   ewrs.runtimeCache.groupSettings = {}
 end
 
@@ -182,6 +227,26 @@ function ewrs.getCachedCoalitionGroups(coalitionId)
   local groups = coalition.getGroups(coalitionId) or {}
   ewrs.runtimeCache.friendlyGroups[coalitionId] = groups
   return groups
+end
+
+function ewrs.getCachedFriendlyAirUnits(coalitionId)
+  local cached = ewrs.runtimeCache.friendlyAirUnits[coalitionId]
+  if cached then return cached end
+  local friendlyUnits = {}
+  local groups = ewrs.getCachedCoalitionGroups(coalitionId)
+  for _,grp in ipairs(groups) do
+    local gname=grp:getName()
+    if gname~="Arco" and gname~="Texaco" then
+      local units=grp:getUnits() or{}
+      for _,u in ipairs(units) do
+        if u and u:isExist() and u:isActive() and u:inAir() and u:getLife()>0 then
+          friendlyUnits[#friendlyUnits+1]=u
+        end
+      end
+    end
+  end
+  ewrs.runtimeCache.friendlyAirUnits[coalitionId] = friendlyUnits
+  return friendlyUnits
 end
 
 function ewrs.getGroupSettingsTable(groupID)
@@ -284,7 +349,7 @@ local function ewrs_fetchPlayerProfile(playerName, category)
     elseif bucket == "default" then
       saved = profiles.default
     elseif bucket == "plane_special" then
-      saved = nil
+      saved = profiles.plane or profiles.default
     else
       saved = nil
     end
@@ -407,9 +472,7 @@ end
 
 function ewrs.update()
   ewrs.resetRuntimeCache()
-  timer.scheduleFunction(ewrs.update, nil, timer.getTime() + 5)
   ewrs.buildActivePlayers()
-  ewrs.buildF10Menu()
 end
 
 function ewrs.getAspect(bearing, heading)
@@ -526,56 +589,48 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
     end
     addTanker("Arco","Drouge")
     addTanker("Texaco","Boom")
+    addTanker("Shell","Boom")
   end
   if groupSettings.showFriendlies and not bogeyDope then
-    local friendCoal=activePlayer.side
-    local groups=ewrs.getCachedCoalitionGroups(friendCoal)
-    for _,grp in ipairs(groups) do
-      local gname=grp:getName()
-      if gname~="Arco" and gname~="Texaco" then
-        local units=grp:getUnits() or{}
-        for _,u in ipairs(units) do
-          if u and u:isExist() and u:isActive() and u:inAir() and u:getLife()>0 then
-            if u:getName()~=activePlayer.unitname then
-              local tp=u:getPosition()
-              local vel=u:getVelocity()
-              local bearing=(math.floor((ewrs.getBearing(referenceX,referenceZ,tp.p.x,tp.p.z)+2.5)/5)*5)%360
-              if bearing==0 then bearing=360 end
-              local heading=ewrs.getHeading(vel)
-              local aspect=ewrs.getAspect(bearing,heading)
-              local range=ewrs.getDistance(referenceX,referenceZ,tp.p.x,tp.p.z)
-              local altitude=tp.p.y
-              local speed=ewrs.getSpeed(vel)
-              if useMetric then
-                local km=range/1000
-                if km>=60 then range=UTILS.Round(km,-1) elseif km>=20 then range=UTILS.Round(km/5,0)*5 else range=UTILS.Round(km,0) end
-                speed=UTILS.Round(UTILS.MpsToKmph(speed),-1)
-                altitude=UTILS.Round(altitude,-1)
-              else
-                local nm=UTILS.MetersToNM(range)
-                if nm>=60 then range=UTILS.Round(nm,-1) elseif nm>=20 then range=UTILS.Round(nm/5,0)*5 else range=UTILS.Round(nm,0) end
-                speed=UTILS.Round(UTILS.MpsToKnots(speed),-1)
-                altitude=UTILS.Round(UTILS.MetersToFeet(altitude),-3)
-              end
-              if rangeLimit==0 or range<=rangeLimit then
-                local unit=UNIT:Find(u)
-                local bogeyType=nil
-                if unit then bogeyType=unit:GetNatoReportingName() end
-                if not bogeyType then bogeyType="Unknown" end
-                if not ewrs.shouldHideFriendlyReportingName(bogeyType) then
-                  local j=#threatTable+1
-                  threatTable[j]={}
-                  threatTable[j].unitType=bogeyType
-                  threatTable[j].isFriendly=true
-                  threatTable[j].bearing=bearing
-                  threatTable[j].range=range
-                  threatTable[j].altitude=altitude
-                  threatTable[j].speed=speed
-                  threatTable[j].heading=heading
-                  threatTable[j].aspect=aspect
-                end
-              end
-            end
+    local units=ewrs.getCachedFriendlyAirUnits(activePlayer.side)
+    for _,u in ipairs(units) do
+      if u:getName()~=activePlayer.unitname then
+        local tp=u:getPosition()
+        local vel=u:getVelocity()
+        local bearing=(math.floor((ewrs.getBearing(referenceX,referenceZ,tp.p.x,tp.p.z)+2.5)/5)*5)%360
+        if bearing==0 then bearing=360 end
+        local heading=ewrs.getHeading(vel)
+        local aspect=ewrs.getAspect(bearing,heading)
+        local range=ewrs.getDistance(referenceX,referenceZ,tp.p.x,tp.p.z)
+        local altitude=tp.p.y
+        local speed=ewrs.getSpeed(vel)
+        if useMetric then
+          local km=range/1000
+          if km>=60 then range=UTILS.Round(km,-1) elseif km>=20 then range=UTILS.Round(km/5,0)*5 else range=UTILS.Round(km,0) end
+          speed=UTILS.Round(UTILS.MpsToKmph(speed),-1)
+          altitude=UTILS.Round(altitude,-1)
+        else
+          local nm=UTILS.MetersToNM(range)
+          if nm>=60 then range=UTILS.Round(nm,-1) elseif nm>=20 then range=UTILS.Round(nm/5,0)*5 else range=UTILS.Round(nm,0) end
+          speed=UTILS.Round(UTILS.MpsToKnots(speed),-1)
+          altitude=UTILS.Round(UTILS.MetersToFeet(altitude),-3)
+        end
+        if rangeLimit==0 or range<=rangeLimit then
+          local unit=UNIT:Find(u)
+          local bogeyType=nil
+          if unit then bogeyType=unit:GetNatoReportingName() end
+          if not bogeyType then bogeyType="Unknown" end
+          if not ewrs.shouldHideFriendlyReportingName(bogeyType) then
+            local j=#threatTable+1
+            threatTable[j]={}
+            threatTable[j].unitType=bogeyType
+            threatTable[j].isFriendly=true
+            threatTable[j].bearing=bearing
+            threatTable[j].range=range
+            threatTable[j].altitude=altitude
+            threatTable[j].speed=speed
+            threatTable[j].heading=heading
+            threatTable[j].aspect=aspect
           end
         end
       end
@@ -645,7 +700,15 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
         end
       else
         messageGreeting = greeting
-        maxThreats = ewrs.maxFriendlyDisplay
+        local friendlyLimit = groupSettings.maxFriendlies
+        if friendlyLimit == nil then
+          friendlyLimit = ewrs.maxFriendlyDisplay
+        end
+        if friendlyLimit == 0 then
+          maxThreats = 999
+        else
+          maxThreats = friendlyLimit
+        end
       end
       
       table.insert(message,messageGreeting)
@@ -723,7 +786,7 @@ end
 
 function ewrs.onDemandMessage(args)
   local status, result = pcall(function()
-    ewrs.findRadarUnits()
+    ewrs.runtimeCache.friendlyAirUnits = {}
     ewrs.getDetectedTargets()
     for i = 1, #ewrs.activePlayers do
       if ewrs.activePlayers[i].groupID == args[1] then
@@ -875,11 +938,11 @@ function ewrs.getGroupCategory(unit)
 end
 
 
-function ewrs.addPlayer(playerName, groupID, unit)
+function ewrs.addPlayer(playerName, groupID, unit, unitType)
   if not playerName or not groupID or not unit then return end
 
   local isHelo = unit:hasAttribute("Helicopters")
-  local unitType = unit:getTypeName()
+  local unitType = unitType or unit:getTypeName()
   local isSpecialPlane = (not isHelo) and ewrs_isSpecialPlaneType(unitType)
   local autoShowFriendlies = isSpecialPlane
     if ewrs.groupSettings[tostring(groupID)]==nil then
@@ -891,7 +954,10 @@ function ewrs.addPlayer(playerName, groupID, unit)
     ewrs.activePlayers[i].player = playerName
     ewrs.activePlayers[i].groupID = groupID
     ewrs.activePlayers[i].unitname = unit:getName()
+    ewrs.activePlayers[i].unitType = unitType
     ewrs.activePlayers[i].side = unit:getCoalition() 
+    ewrs.groupUnitTypes = ewrs.groupUnitTypes or {}
+    ewrs.groupUnitTypes[tostring(groupID)] = unitType
   
     -- add default settings to settings table if it hasn't been done yet
     if ewrs.groupSettings[tostring(groupID)] == nil then
@@ -904,6 +970,41 @@ function ewrs.addPlayer(playerName, groupID, unit)
   if not status then
     env.error(string.format("EWRS addPlayer Error: %s", result))
   end
+end
+
+function ewrs.removeActivePlayersForGroup(groupID)
+  if not groupID then return end
+  local stringGroupID = tostring(groupID)
+  local kept = {}
+  for i = 1, #(ewrs.activePlayers or {}) do
+    local activePlayer = ewrs.activePlayers[i]
+    if tostring(activePlayer.groupID) ~= stringGroupID then
+      kept[#kept + 1] = activePlayer
+    end
+  end
+  ewrs.activePlayers = kept
+end
+
+function ewrs.registerPlayer(playerName, groupID, unit, unitType)
+  if not playerName or not groupID or not unit then return end
+  local stringGroupID = tostring(groupID)
+  ewrs.removeActivePlayersForGroup(groupID)
+  ewrs.groupUnitTypes = ewrs.groupUnitTypes or {}
+  ewrs.groupUnitTypes[stringGroupID] = unitType or unit:getTypeName()
+  ewrs.addPlayer(playerName, groupID, unit, ewrs.groupUnitTypes[stringGroupID])
+  ewrs.ensureGroupF10Menu(groupID)
+end
+
+function ewrs.pruneGroup(groupID)
+  if not groupID then return end
+  local stringGroupID = tostring(groupID)
+  ewrs.removeActivePlayersForGroup(groupID)
+  ewrs.groupUnitTypes = ewrs.groupUnitTypes or {}
+  ewrs.groupUnitTypes[stringGroupID] = nil
+  if EWRS_MENU_PARENT_BY_GROUP then
+    EWRS_MENU_PARENT_BY_GROUP[stringGroupID] = nil
+  end
+  ewrs.removeGroupF10Menu(groupID)
 end
 
 
@@ -963,11 +1064,11 @@ function ewrs.addGroupSettings(groupID,isHelo,showFriendlies)
   ewrs.groupSettings[groupID].reference=ewrs.defaultReference
   ewrs.groupSettings[groupID].measurements=ewrs.defaultMeasurements
   ewrs.groupSettings[groupID].messages=true
-  ewrs.groupSettings[groupID].rangeLimit=isHelo and 5 or 60
+  ewrs.groupSettings[groupID].rangeLimit=ewrsClampDefaultRangeLimit(isHelo and ewrs.defaultHelicopterRangeLimit or ewrs.defaultAircraftRangeLimit, ewrs.groupSettings[groupID].measurements)
   ewrs.groupSettings[groupID].maxThreats=ewrs.maxThreatDisplay
   ewrs.groupSettings[groupID].showFriendlies=showFriendlies and true or false
   ewrs.groupSettings[groupID].showTankers=ewrs.defaultShowTankers
-  ewrs.groupSettings[groupID].maxFriendlies=3
+  ewrs.groupSettings[groupID].maxFriendlies=ewrs.maxFriendlyDisplay
 end
 
 function ewrs.removeGroupF10Menu(groupID)
@@ -979,9 +1080,13 @@ function ewrs.removeGroupF10Menu(groupID)
   end
 end
 
+function ewrs.ensureGroupF10Menu(groupID)
+  ewrs.buildF10Menu(groupID)
+end
+
 function ewrs.refreshGroupF10Menu(groupID)
   ewrs.removeGroupF10Menu(groupID)
-  ewrs.buildF10Menu()
+  ewrs.ensureGroupF10Menu(groupID)
 end
 
 function ewrs.setGroupMaxFriendlies(args)
@@ -1085,11 +1190,13 @@ function ewrs.setGroupMessages(args)
   ewrs.refreshGroupF10Menu(groupID)
 end
 
-function ewrs.buildF10Menu()
+function ewrs.buildF10Menu(targetGroupID)
   local status, result = pcall(function()
+    local targetKey = targetGroupID and tostring(targetGroupID) or nil
     for i = 1, #ewrs.activePlayers do
       local groupID = ewrs.activePlayers[i].groupID
       local stringGroupID = tostring(groupID)
+      if not targetKey or stringGroupID == targetKey then
       local groupSettings = ewrs.getGroupSettingsTable(groupID)
       local T = L10N:ForGroup(groupID)
 
@@ -1181,6 +1288,7 @@ function ewrs.buildF10Menu()
 
         ewrs.builtF10Menus[stringGroupID] = rootPath
       end
+      end
     end
   end)
   
@@ -1198,6 +1306,7 @@ ewrs.currentlyDetectedBlueUnits = {}
 ewrs.redEwrUnits = {}
 ewrs.blueEwrUnits = {}
 ewrs.activePlayers = {}
+ewrs.groupUnitTypes = {}
 ewrs.groupSettings = {}
 ewrs.builtF10Menus = {}
 ewrs.notAvailable = 999999
@@ -1206,7 +1315,6 @@ ewrs.update()
 if not ewrs.onDemand then
   timer.scheduleFunction(function(param, time)
   ewrs.resetRuntimeCache()
-  ewrs.findRadarUnits()
   ewrs.getDetectedTargets()
   ewrs.inAuto=true
   for i = 1, #ewrs.activePlayers do

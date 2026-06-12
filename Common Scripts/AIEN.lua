@@ -62,6 +62,7 @@ AIEN.config.intelDbTimeout                    = 1200              -- seconds. Us
 AIEN.config.artyFireLastContactThereshold     = 180               -- seconds, max amount of time since last contact to consider an arty target ok
 AIEN.config.artyTargetMaxSpeed               = 0.5               -- m/s, max target speed for arty fire (<=0.5 m/s)
 AIEN.config.taskTimeout                       = 480               -- seconds after which a tasked group is removed from the database
+AIEN.config.underAttackTimeout                = 600               -- seconds after which a group can process new hit reactions
 AIEN.config.targetedTimeout                   = 240               -- seconds after which a targeted variable in inteldb is removed from database
 AIEN.config.artyTaskTimeout                   = 160               -- 160
 AIEN.config.artyTaskTimeoutGuided             = 900               -- 480
@@ -71,6 +72,9 @@ AIEN.config.counterBatteryRadarRange          = 50000             -- m, capable 
 AIEN.config.counterBatteryPlanDelay           = 160               -- s, will be also randomized on +-35%. Used to define the delay of the planned counter battery fire if available
 AIEN.config.smoke_source_num                  = 5                 -- number, between 4 and 9. Generated smokes for each unit when smoke reaction is called in. Any number below 4 or above 9 will be converted in the nearest threshold
 AIEN.config.delegationZoneLockTimeout         = 1200              -- s, zone delegation lock timeout (default 20 min)
+if AIEN.config.reactionRoamChance == nil then AIEN.config.reactionRoamChance = 10 end               -- %, chance to trigger zone patrol movement when no stronger response is launched
+if AIEN.config.reactionRoamCooldown == nil then AIEN.config.reactionRoamCooldown = 900 end           -- s, per-zone cooldown for reaction patrol movement
+if AIEN.config.reactionRoamStepDelay == nil then AIEN.config.reactionRoamStepDelay = 5 end           -- s, delay between each reaction patrol movement task
 
 -- SA evaluation variables
 AIEN.config.proxyBuildingDistance			  = 2500              -- m, if buildings are within this distance value, they are considered "close"
@@ -122,9 +126,10 @@ local rndMinRT_xper                     = 1                                     
 local rndMacRT_xper                     = 3                                         -- seconds counted as maximum basic reaction time after an event (beware, reaction time also depends on group averaged skill)
 local stupidIndex                       = 1                                         -- used to avoid infinite loops
 --AI processing timers
-local underAttack                       = {}                                        -- used when a group has been attacked, it keeps "tactical" tasking off for 10 mins leaving room for "reaction" decision making
+local underAttack                       = {}                                        -- used when a group has been attacked, keeping tactical tasking off while reactions cool down
 local movingGroups                      = 0                                         -- used to keep track of groups that are currently moving, so that no initiative actions can be taken if the number is more than allowed by AIEN.config.maxGroupInMovement
 local delegationZoneLocks               = {}                                        -- zone name => timer.getTime() when delegation started
+local reactionRoamZoneLocks             = {}                                        -- zone name => timer.getTime() when reaction patrol movement started
 
 
 --Dynamic and_or linked to other code
@@ -7843,6 +7848,84 @@ local function multyTypeMessage(var)
 
 end
 
+local function aienLocalization()
+    return rawget(_G, "FH_L10N") or rawget(_G, "FootholdLocalization")
+end
+
+local function aienText(key, fallback)
+    local localization = aienLocalization()
+    if localization and localization.Get then
+        local text = localization:Get(key)
+        if text and text ~= key then return text end
+    end
+    return fallback or key
+end
+
+local function aienFormat(key, fallback, ...)
+    local text = aienText(key, fallback)
+    if select("#", ...) == 0 then return text end
+    return string.format(text, ...)
+end
+
+local AIEN_THREAT_LABEL_KEYS = {
+    MBT = "AIEN_THREAT_MBT",
+    IFV = "AIEN_THREAT_IFV",
+    APC = "AIEN_THREAT_APC",
+    AAA = "AIEN_THREAT_AAA",
+    MANPADS = "AIEN_THREAT_MANPADS",
+    SAM = "AIEN_THREAT_SAM",
+    ARTY = "AIEN_THREAT_ARTY",
+    MLRS = "AIEN_THREAT_MLRS",
+    LOGI = "AIEN_THREAT_LOGI",
+    INF = "AIEN_THREAT_INF",
+    RECCE = "AIEN_THREAT_RECCE",
+    ATGM = "AIEN_THREAT_ATGM",
+    UNKN = "AIEN_THREAT_UNKN",
+}
+
+local AIEN_THREAT_LABEL_FALLBACKS = {
+    MBT = "enemy tanks!",
+    IFV = "enemy IFVs!",
+    APC = "enemy APCs!",
+    AAA = "enemy AAA!",
+    MANPADS = "enemy MANPADS!",
+    SAM = "enemy SAM!",
+    ARTY = "enemy artillery!",
+    MLRS = "enemy MLRS!",
+    LOGI = "enemy logistics!",
+    INF = "enemy infantry!",
+    RECCE = "enemy recon!",
+    ATGM = "enemy ATGM!",
+    UNKN = "enemy contacts!",
+}
+
+local AIEN_REACTION_MESSAGE_KEYS = {
+    ["We're trying to escape fire!!"] = "AIEN_REACTION_ESCAPE_FIRE",
+    ["We're stuck here, we ask support if available"] = "AIEN_REACTION_STUCK_SUPPORT",
+    ["Dropping smoke cover"] = "AIEN_REACTION_SMOKE_COVER",
+    ["We're moving in safer area"] = "AIEN_REACTION_SAFER_AREA",
+    ["We're going to ambush the enemy"] = "AIEN_REACTION_AMBUSH",
+    ["We're moving nearby the closest urbanized area for concealment"] = "AIEN_REACTION_URBAN_CONCEALMENT",
+    ["We asked for ground support, they're on the way"] = "AIEN_REACTION_GROUND_SUPPORT",
+    ["Attack comes from airborne asset, we are moving within the closest air defence covered area"] = "AIEN_REACTION_AIR_DEFENCE",
+    ["We got the enemy position and asked for indirect fire mission."] = "AIEN_REACTION_INDIRECT_FIRE",
+}
+
+local function aienThreatLabel(cls)
+    local class = tostring(cls or "UNKN")
+    local key = AIEN_THREAT_LABEL_KEYS[class] or AIEN_THREAT_LABEL_KEYS.UNKN
+    local fallback = AIEN_THREAT_LABEL_FALLBACKS[class] or AIEN_THREAT_LABEL_FALLBACKS.UNKN
+    return aienText(key, fallback)
+end
+
+local function aienReactionMessage(actionData)
+    if not actionData then return "" end
+    local fallback = tostring(actionData.message or "")
+    local key = AIEN_REACTION_MESSAGE_KEYS[fallback]
+    if not key then return fallback end
+    return aienText(key, fallback)
+end
+
 local function vecmag(vec)
 	return (vec.x^2 + vec.y^2 + vec.z^2)^0.5
 end
@@ -8812,6 +8895,147 @@ local function isDismountedGroupName(groupName)
         or string.find(lowerName, "dismounted", 1, true) ~= nil
 end
 
+local mobileAaaAttackGroupNames = {
+    ["Red SAM AAA"] = true,
+    ["Red SAM AAA 2"] = true,
+    ["Red SAM AAA 5"] = true,
+    ["Red SAM AAA 6"] = true,
+    ["Red SAM AAA 7"] = true,
+    ["Red SAM AAA 8"] = true,
+    ["Red SAM AAA 9"] = true,
+    ["Red SAM AAA 10"] = true,
+}
+
+local function isMobileAaaAttackGroupName(groupName)
+    if type(groupName) ~= "string" then
+        return false
+    end
+
+    for baseName in pairs(mobileAaaAttackGroupNames) do
+        if groupName == baseName or string.find(groupName, baseName .. " #", 1, true) == 1 then
+            return true
+        end
+    end
+    return false
+end
+
+local reactionRoamGroundPrefixes = {
+    "Enemy ground forces",
+    "Red Armour Group",
+    "Red Armor Group",
+    "Red Mech group",
+    "Red Special",
+    "Red Arty",
+    "Red SAM SHORAD",
+}
+
+local reactionRoamNavalPrefixes = {
+    "Grisha #",
+    "Molniya #",
+    "Moskva #",
+    "Neustrashimy #",
+    "Rezky #",
+    "SpeedBoats #",
+}
+
+local function isReactionRoamNavalGroupName(groupName)
+    if type(groupName) ~= "string" then
+        return false
+    end
+
+    for _, prefix in ipairs(reactionRoamNavalPrefixes) do
+        if groupName:find(prefix, 1, true) == 1 then
+            return true
+        end
+    end
+    return false
+end
+
+local function isReactionRoamEligibleGroupName(groupName)
+    if type(groupName) ~= "string" or isReactionRoamNavalGroupName(groupName) then
+        return false
+    end
+
+    local lowerName = string.lower(groupName)
+    if lowerName:find("fixed", 1, true) or lowerName:find("(p)", 1, true) then
+        return false
+    end
+
+    if isMobileAaaAttackGroupName(groupName) then
+        return true
+    end
+
+    for _, prefix in ipairs(reactionRoamGroundPrefixes) do
+        if groupName:find(prefix, 1, true) == 1 then
+            return true
+        end
+    end
+    return false
+end
+
+local function isReactionRoamZoneLocked(zoneName)
+    if not zoneName then
+        return true
+    end
+
+    local t = reactionRoamZoneLocks[zoneName]
+    if not t then
+        return false
+    end
+
+    if timer.getTime() - t >= AIEN.config.reactionRoamCooldown then
+        reactionRoamZoneLocks[zoneName] = nil
+        return false
+    end
+    return true
+end
+
+local function getReactionRoamCandidates(zoneObj, excludeGroupName, coalition)
+    local candidates = {}
+    if not zoneObj or not zoneObj.built then
+        return candidates
+    end
+
+    for _, gName in ipairs(zoneObj.built) do
+        if gName ~= excludeGroupName and isReactionRoamEligibleGroupName(gName) and not isDismountedGroupName(gName) then
+            local gObj = Group.getByName(gName)
+            if gObj and gObj:isExist() and gObj:getCoalition() == coalition then
+                local gid = gObj:getID()
+                if not underAttack[gid] then
+                    local gData = groundgroupsDb[gid]
+                    if gData and gData.tasked == false and gData.excluded ~= true then
+                        candidates[#candidates+1] = gName
+                    end
+                end
+            end
+        end
+    end
+    return candidates
+end
+
+local function maybeReactionRoamZone(zoneObj, excludeGroupName, coalition)
+    if not zoneObj or not zoneObj.zone or isReactionRoamZoneLocked(zoneObj.zone) then
+        return
+    end
+
+    if math.random(1, 100) > AIEN.config.reactionRoamChance then
+        return
+    end
+
+    local candidates = getReactionRoamCandidates(zoneObj, excludeGroupName, coalition)
+    if #candidates == 0 then
+        return
+    end
+
+    local scheduled = bc:roamGroupsInZoneNow(zoneObj.zone, candidates, {stepDelay = AIEN.config.reactionRoamStepDelay})
+    if scheduled and scheduled > 0 then
+        reactionRoamZoneLocks[zoneObj.zone] = timer.getTime()
+        if AIEN.config.AIEN_debugProcessDetail == true then
+            env.info(("AIEN.event_hit, reaction patrol movement scheduled in zone " .. tostring(zoneObj.zone) .. ", groups " .. tostring(scheduled)))
+        end
+    end
+end
+
 local function isZoneDelegationLocked(zoneName)
     if not zoneName then
         return false
@@ -9648,6 +9872,7 @@ local function getSA(group) -- built a situational awareness check
             sa.det                      = dbEntry["detection"]
             sa.rng                      = dbEntry["threat"]
             sa.cls                      = dbEntry["class"]
+            sa.mobileAaaAttackAllowed   = dbEntry.mobileAaaAttackAllowed == true
             sa.nearAlly                 = nil
             sa.nearEnemy                = nil
             if sa.pos and sa.coa then
@@ -9993,7 +10218,7 @@ local function groupfireAtPoint(var)
                     b.scheduled = true
                     timer.scheduleFunction(function()
                         local bb = AIEN._msgBatch[batchKey]; if not bb then return end
-                        local txt = "C2, Artillery, request fire mission, fire for Effect."
+                        local txt = aienText("AIEN_FIRE_REQUEST", "C2, Artillery, request fire mission, fire for Effect.")
 
                         local zoneList = {}
                         for name in pairs(bb.zones) do
@@ -10002,9 +10227,9 @@ local function groupfireAtPoint(var)
                         table.sort(zoneList)
                         if bb.hasUnknownZone == false then
                             if #zoneList == 1 then
-                                txt = txt .. "\nZone: " .. zoneList[1]
+                                txt = txt .. "\n" .. aienFormat("AIEN_ZONE", "Zone: %s", zoneList[1])
                             elseif #zoneList > 1 then
-                                txt = txt .. "\nZones: " .. table.concat(zoneList, ", ")
+                                txt = txt .. "\n" .. aienFormat("AIEN_ZONES", "Zones: %s", table.concat(zoneList, ", "))
                             end
                         end
 
@@ -10018,7 +10243,7 @@ local function groupfireAtPoint(var)
                             for _, it in ipairs(shooterList) do
                                 parts[#parts + 1] = tostring(it.count) .. "x " .. tostring(it.name)
                             end
-                            txt = txt .. "\nShooters: " .. table.concat(parts, ", ")
+                            txt = txt .. "\n" .. aienFormat("AIEN_SHOOTERS", "Shooters: %s", table.concat(parts, ", "))
                         end
 
                         local targetList = {}
@@ -10031,14 +10256,14 @@ local function groupfireAtPoint(var)
                             for _, it in ipairs(targetList) do
                                 local seg = tostring(it.count) .. "x " .. tostring(it.name)
                                 if it.rounds and it.rounds > 0 then
-                                    seg = seg .. " (" .. tostring(it.rounds) .. " rounds)"
+                                    seg = seg .. " (" .. aienFormat("AIEN_ROUNDS", "%s rounds", tostring(it.rounds)) .. ")"
                                 end
                                 parts[#parts + 1] = seg
                             end
-                            txt = txt .. "\nTargets: " .. table.concat(parts, ", ")
+                            txt = txt .. "\n" .. aienFormat("AIEN_TARGETS", "Targets: %s", table.concat(parts, ", "))
                         end
 
-                        txt = txt .. "\n" .. "Cleared for fire when ready"
+                        txt = txt .. "\n" .. aienText("AIEN_CLEARED_FIRE", "Cleared for fire when ready")
                         local vars = {"text", txt, 20, nil, nil, nil, bb.coal}
                         multyTypeMessage(vars)
                         AIEN._msgBatch[batchKey] = nil
@@ -10058,7 +10283,7 @@ local function groupfireAtPoint(var)
                     local MGRS_string = tostringMGRS(MGRS ,4)
                     local txt = ""
                     txt = txt .. tostring(group:getName())
-                    txt = txt .. "\n" .. "Fire mission"
+                    txt = txt .. "\n" .. aienText("AIEN_FIRE_MISSION", "Fire mission")
                    -- txt = txt .. "\n" .. tostring(MGRS_string) .. "\n" .. tostring(LL_string)
 
                     markIdStart = markIdStart + 1
@@ -10497,9 +10722,9 @@ local function counterBattery(hitPos, tgtPos, coa) -- this function emulates cou
                                         local MGRS_string = tostringMGRS(MGRS ,4)
                     
                                         local txt = ""
-                                        txt = txt .. "C2, " .. tostring(arty:getName()) .. ", identified enemy artillery fire. coordinates:"
+                                        txt = txt .. aienFormat("AIEN_COUNTER_BATTERY_DETECTED", "C2, %s, identified enemy artillery fire. coordinates:", tostring(arty:getName()))
                                         txt = txt .. "\n" .. tostring(MGRS_string) .. "\n" .. tostring(LL_string)                  
-                                        txt = txt .. "\n" .. "Trying to evaluate enemy position. Please wait"
+                                        txt = txt .. "\n" .. aienText("AIEN_COUNTER_BATTERY_EVALUATING", "Trying to evaluate enemy position. Please wait")
                                         
                                         local vars = {"text", txt, 20, nil, nil, nil, coa}
                     
@@ -11568,7 +11793,7 @@ local function ac_attack(group, ownPos, tgtPos, resume, sa, skill, returnToZone,
     
     if group and tgtPos then
         if sa and (sa.cls=="SAM" or sa.cls=="SHORAD"
-                or sa.cls=="AAA" or sa.cls=="ARTY"
+                or (sa.cls=="AAA" and sa.mobileAaaAttackAllowed ~= true) or sa.cls=="ARTY"
                 or sa.cls=="MLRS") then
         return false
         end
@@ -12810,12 +13035,13 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
                         if aData.resume == true then trigger.action.groupContinueMoving(gr) end
                         if AIEN.config.message_feed == true then
                             local threatTxt = nil
+                            local groundThreatTxt = aienText("AIEN_THREAT_GROUND_UNITS", "enemy ground units!")
                             local function mapCat(c)
-                                if c==0 then return "enemy plane!" end
-                                if c==1 then return "enemy helicopter!" end
-                                if c==2 then return "enemy ground units!" end
-                                if c==3 then return "enemy ship!" end
-                                if c==4 then return "enemy structure!" end
+                                if c==0 then return aienText("AIEN_THREAT_PLANE", "enemy plane!") end
+                                if c==1 then return aienText("AIEN_THREAT_HELICOPTER", "enemy helicopter!") end
+                                if c==2 then return groundThreatTxt end
+                                if c==3 then return aienText("AIEN_THREAT_SHIP", "enemy ship!") end
+                                if c==4 then return aienText("AIEN_THREAT_STRUCTURE", "enemy structure!") end
                             end
                             if type(eventCat)=="number" then threatTxt = mapCat(eventCat) end
                                 for _, s in pairs((saTbl and saTbl.targets) or {}) do
@@ -12830,7 +13056,7 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
                                 threatTxt = mapCat(cat)
                                 if threatTxt then break end
                             end
-                            if (not threatTxt) or (threatTxt == "enemy ground units!") then
+                            if (not threatTxt) or (threatTxt == groundThreatTxt) then
                                 local cls = eventCls or (saTbl and saTbl.lastHitCls)
                                 if not cls then
                                     for _, s in pairs((saTbl and saTbl.targets) or {}) do
@@ -12838,17 +13064,17 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
                                         if cls then break end
                                     end
                                 end
-                                local m = {MBT="enemy tanks!",IFV="enemy IFVs!",APC="enemy APCs!",AAA="enemy AAA!",MANPADS="enemy MANPADS!",SAM="enemy SAM!",ARTY="enemy artillery!",MLRS="enemy MLRS!",LOGI="enemy logistics!",INF="enemy infantry!",RECCE="enemy recon!",ATGM="enemy ATGM!",UNKN="enemy contacts!"}
-                                if cls and m[cls] then threatTxt = m[cls] end
+                                if cls and AIEN_THREAT_LABEL_KEYS[cls] then threatTxt = aienThreatLabel(cls) end
                             end
                             local z = bc:getZoneOfPoint(ownPos)
+                            local actionMessage = aienReactionMessage(aData)
                             if z and z.zone then
                                 local zoneName = z.zone
                                 local txt = ""
                                 if threatTxt then
-                                    txt = txt .. "C2, " .. tostring(zoneName) .. " is under attack by " .. tostring(threatTxt) .. " " .. tostring(aData.message or "")
+                                    txt = txt .. aienFormat("AIEN_ZONE_UNDER_ATTACK_BY", "C2, %s is under attack by %s %s", tostring(zoneName), tostring(threatTxt), tostring(actionMessage))
                                 else
-                                    txt = txt .. "C2, " .. tostring(zoneName) .. " is under attack! " .. tostring(aData.message or "")
+                                    txt = txt .. aienFormat("AIEN_ZONE_UNDER_ATTACK", "C2, %s is under attack! %s", tostring(zoneName), tostring(actionMessage))
                                 end
                                 local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
                                 multyTypeMessage(vars)
@@ -12860,9 +13086,9 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
                                     local MGRS_string = tostringMGRS(MGRS ,4)
                                     local txt = ""
                                     if threatTxt then
-                                        txt = txt .. "C2, " .. tostring(gr:getName()) .. ", report under attack by " .. tostring(threatTxt) .. " Coordinates: " .. tostring(LL_string) .. ", " .. tostring(MGRS_string) .. ". " .. tostring(aData.message or "")
+                                        txt = txt .. aienFormat("AIEN_GROUP_UNDER_ATTACK_BY", "C2, %s, report under attack by %s Coordinates: %s, %s. %s", tostring(gr:getName()), tostring(threatTxt), tostring(LL_string), tostring(MGRS_string), tostring(actionMessage))
                                     else
-                                        txt = txt .. "C2, " .. tostring(gr:getName()) .. ", report under attack. Coordinates: " .. tostring(LL_string) .. ", " .. tostring(MGRS_string) .. ". " .. tostring(aData.message or "")
+                                        txt = txt .. aienFormat("AIEN_GROUP_UNDER_ATTACK", "C2, %s, report under attack. Coordinates: %s, %s. %s", tostring(gr:getName()), tostring(LL_string), tostring(MGRS_string), tostring(actionMessage))
                                     end
                                     local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
                                     multyTypeMessage(vars)
@@ -12927,7 +13153,7 @@ function AIEN_testReactions(groupName, actionName)
             if actionName == aData.name then
 				actionFunc = aData.ac_function
 				actionResume = aData.resume
-				actionMess	 = aData.message
+				actionMess	 = aienReactionMessage(aData)
             end
         end
 
@@ -12976,7 +13202,7 @@ function AIEN_testReactions(groupName, actionName)
 						local LL_string = tostringLL(lat, lon, 0, true)
 
 						local txt = ""
-						local txt = txt .. "C2, " .. tostring(gr:getName()) .. ", report under attack. Coordinates: " .. tostring(LL_string) .. "." .. tostring(actionMess)
+						local txt = txt .. aienFormat("AIEN_TEST_UNDER_ATTACK", "C2, %s, report under attack. Coordinates: %s.%s", tostring(gr:getName()), tostring(LL_string), tostring(actionMess))
 						local vars = {"text", txt, 20, nil, nil, nil, gr:getCoalition()}
 
 						multyTypeMessage(vars)
@@ -13103,9 +13329,9 @@ local function populate_Db() -- this one is launched once at mission start and c
 
                         --env.info((tostring(ModuleName) .. ", populate_Db: MLRS guidance " .. tostring(gp:getName() .. ", class " .. tostring(foundGuidance) )))
                     end
+                    local groupName = gp:getName()
                     local excluded = false
                     local delegationOnly = false
-                    local groupName = gp:getName()
                     for _, tag in ipairs(AIEN.config.AIEN_xcl_tag) do
                         if string.find(groupName, tag, 1, true) then
                             excluded = true
@@ -13118,8 +13344,9 @@ local function populate_Db() -- this one is launched once at mission start and c
                             break
                         end
                     end
+                    local mobileAaaAttackAllowed = isMobileAaaAttackGroupName(groupName)
                     --local r = getMEroute(gp)
-                    groundgroupsDb[gp:getID()] = {group = gp, class = c, n = groupName, coa = gpcoa, detection = det, threat = thr, threatmin = thrmin, tasked = false, skill = s, hasMeRoute = hasRoute, artyWpnGuidance = foundGuidance, excluded = excluded, delegationOnly = delegationOnly}  --, route = r
+                    groundgroupsDb[gp:getID()] = {group = gp, class = c, n = groupName, coa = gpcoa, detection = det, threat = thr, threatmin = thrmin, tasked = false, skill = s, hasMeRoute = hasRoute, artyWpnGuidance = foundGuidance, excluded = excluded, delegationOnly = delegationOnly, mobileAaaAttackAllowed = mobileAaaAttackAllowed}  --, route = r
                     --env.info((tostring(ModuleName) .. ", populate_Db: adding to groundgroupsDb " .. tostring(gp:getName() .. ", class " .. tostring(c) )))
                 else
                     env.info((tostring(ModuleName) .. ", populate_Db: skipping group due to unable to identify class " .. tostring(gp:getName() )))
@@ -13341,7 +13568,7 @@ local function update_GROUND()
                             end
                         else
                             local t = now - underAttack[phase_index]
-                            if t > AIEN.config.taskTimeout*2 then
+                            if t > AIEN.config.underAttackTimeout then
                                 underAttack[phase_index] = nil
                                 if AIEN.config.AIEN_debugProcessDetail then
                                     env.info((tostring(ModuleName) .. ", update_GROUND, group name " .. tostring(gData.n) .. " removed from the under attack table"))
@@ -13858,7 +14085,7 @@ end
                                         if movingSkip and AIEN.config.message_feed then
                                             local cooldown = AIEN.config.artyFireLastContactThereshold or 180
                                             if not gData.lastMoveSkipMsg or (cycleTime - gData.lastMoveSkipMsg) >= cooldown then
-                                                trigger.action.outTextForCoalition(gData.coa, "C2, "..tostring(gData.n)..", we can't fire now, target is on the move.", 10)
+                                                trigger.action.outTextForCoalition(gData.coa, aienFormat("AIEN_ARTY_TARGET_MOVING", "C2, %s, we can't fire now, target is on the move.", tostring(gData.n)), 10)
                                                 gData.lastMoveSkipMsg = cycleTime
                                             end
                                         end
@@ -14013,12 +14240,12 @@ local function update_INITIATIVE()
                                                                     if lat and lon then
 
                                                                         local LL_string = tostringLL(lat, lon, 0, true)
-                                                                        local MGRS_string = tostringMGRS(MGRS ,4)
+																		local MGRS_string = tostringMGRS(MGRS ,4)
 
-                                                                        local txt = ""
-                                                                        txt = txt .. tostring(gData.n) .. ", C2, " .. ", we're moving to engage hasty targets, coordinates:"
-                                                                        txt = txt .. "\n" .. tostring(MGRS_string) .. "\n" .. tostring(LL_string)
-                                                                        txt = txt .. "\n" .. "target is " .. tostring(nearest.class)
+																		local txt = ""
+                                                                        txt = txt .. aienFormat("AIEN_INITIATIVE_MOVING_ENGAGE", "%s, C2, , we're moving to engage hasty targets, coordinates:", tostring(gData.n))
+																		txt = txt .. "\n" .. tostring(MGRS_string) .. "\n" .. tostring(LL_string)
+																		txt = txt .. "\n" .. aienFormat("AIEN_TARGET_IS", "target is %s", tostring(nearest.class))
                                                                         
                                                                         local vars = {"text", txt, 20, nil, nil, nil, gData.coa}
 
@@ -14260,21 +14487,25 @@ end
                 
                     if group and group:isExist() and groupAllowedForAI(group) == true then -- filtering both for existance and for exclusion tag being not there
                         
+                        local groupId = group:getID()
+                        local groupName = group:getName()
+                        local groupCoalition = group:getCoalition()
                         local AI_consent = true
-                        local db_group = groundgroupsDb[group:getID()]
+                        local db_group = groundgroupsDb[groupId]
+                        local allowMobileAaaReaction = db_group and db_group.mobileAaaAttackAllowed == true
                         if db_group and db_group.delegationOnly == true then
                             delegationOnly = true
                             if AIEN.config.AIEN_debugProcessDetail == true then
-                                env.info(("AIEN.event_hit, S_EVENT_HIT, group delegationOnly enabled: " .. tostring(group:getName()) ))
+                                env.info(("AIEN.event_hit, S_EVENT_HIT, group delegationOnly enabled: " .. tostring(groupName) ))
                             end
                         end
 
     
                         -- filter for coalition
-                        if group:getCoalition() == 2 and AIEN.config.blueAI == false then
+                        if groupCoalition == 2 and AIEN.config.blueAI == false then
                             AI_consent = false
                         end
-                        if group:getCoalition() == 1 and AIEN.config.redAI == false then
+                        if groupCoalition == 1 and AIEN.config.redAI == false then
                             AI_consent = false
                         end  
     
@@ -14293,7 +14524,7 @@ end
                         
                         if AI_consent == true then
 
-                            if shooterKnown and shooter:getCoalition() == group:getCoalition() then
+                            if shooterKnown and shooter:getCoalition() == groupCoalition then
 --[[                                 if AIEN.config.message_feed == true then
                                     local z = bc:getZoneOfPoint(position)
                                     if z and z.zone then
@@ -14316,7 +14547,7 @@ end
                                 end
                                 if suppressEffects == true then
                                     if AIEN.config.AIEN_debugProcessDetail == true then
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group is suppressed: " .. tostring(group:getName()) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group is suppressed: " .. tostring(groupName) ))
                                     end		
                                     groupSuppress(group)
                                 end
@@ -14324,7 +14555,7 @@ end
     
                             -- dismount part
                             if shooterKnown and AIEN.config.dismount == true and not delegationOnly then
-                                if not underAttack[group:getID()] then
+                                if not underAttack[groupId] then
                                     if shooter:hasAttribute("Air") then
                                         timer.scheduleFunction(groupDeployManpad, group, timer.getTime() + aie_random(8, 15))
                                         if AIEN.config.AIEN_debugProcessDetail == true then
@@ -14345,19 +14576,18 @@ end
     
                             -- reaction part
                             local choosenAct = nil
-                            if not underAttack[group:getID()] then -- if a group has already been identified as "attacked", it won't repeat all the whole process every time or it could became a freaking mess in case of multiple hits
+                            if not underAttack[groupId] then -- if a group has already been identified as "attacked", it won't repeat all the whole process every time or it could became a freaking mess in case of multiple hits
 
                                 -- Only stop the group on the first hit of the underAttack window.
                                 -- If we stop again on subsequent hits, reactions are skipped and the group can freeze.
-                                if not delegationOnly then trigger.action.groupStopMoving(group) end
+                                if not delegationOnly or allowMobileAaaReaction then trigger.action.groupStopMoving(group) end
                                 
                                 if AIEN.config.AIEN_debugProcessDetail == true then
-                                    env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) ))
+                                    env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) ))
                                 end					
     
                                 -- retrieve SA & Controller
                                 local con = group:getController()
-                                local db_group = groundgroupsDb[group:getID()]
                                 if con and db_group and db_group.sa then
     
                                     -- define if the attacker is known and and with what details
@@ -14382,7 +14612,7 @@ end
                                             BOMB      3
                                         --]]--
                                         if AIEN.config.AIEN_debugProcessDetail == true then
-                                            env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", w_cat: " .. tostring(w_cat) ))
+                                            env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", w_cat: " .. tostring(w_cat) ))
                                         end								
                                     end
     
@@ -14449,7 +14679,8 @@ end
                                     else -- try to address things when the shooter is unknown, based on weapon and effects
                                         if AIEN.config.AIEN_debugProcessDetail == true then
                                             env.info(("AIEN.event_hit, S_EVENT_HIT, shooter unknown"))
-                                        end	 
+                                        end
+                                        a_pos = position
     
                                         if w_cat then
                                             --[[-- 
@@ -14475,21 +14706,20 @@ end
                                     end
     
                                     if AIEN.config.AIEN_debugProcessDetail == true then
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", w_cat: " .. tostring(w_cat) ))
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", s_cat: " .. tostring(s_cat) ))
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", s_indirect: " .. tostring(s_indirect) ))
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", s_close: " .. tostring(s_close) ))
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", s_fireMis: " .. tostring(s_fireMis) ))
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", o_cls: " .. tostring(o_cls) ))
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", s_cls: " .. tostring(s_cls) ))
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(group:getName()) .. ", a_pos: " .. tostring(a_pos) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", w_cat: " .. tostring(w_cat) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", s_cat: " .. tostring(s_cat) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", s_indirect: " .. tostring(s_indirect) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", s_close: " .. tostring(s_close) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", s_fireMis: " .. tostring(s_fireMis) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", o_cls: " .. tostring(o_cls) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", s_cls: " .. tostring(s_cls) ))
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, group " .. tostring(groupName) .. ", a_pos: " .. tostring(a_pos) ))
                                     end	
     
-                                    local av_ac = deepCopy(reactionsDb)
-                                        av_ac = {}
-                                        if reactionsDb[10] then
-                                            av_ac[10] = reactionsDb[10]
-                                        end
+                                    local av_ac = {}
+                                    for i, action in pairs(reactionsDb) do
+                                        av_ac[i] = action
+                                    end
     
                                     -- remove not doable actions due to missin informations
                                     if s_fireMis < 1 or AI_consent == false then -- shooter position is not sufficiently recent
@@ -14510,6 +14740,9 @@ end
                                         end	                                  
                                         av_ac[6] = nil
                                         av_ac[8] = nil
+                                        av_ac[10] = nil
+                                    end
+                                    if not shooterKnown or not s_detected or (s_cat ~= 1 and s_cat ~= 2) then
                                         av_ac[10] = nil
                                     end
                                     if s_cat == 1 then -- shooter is helicopter
@@ -14537,7 +14770,7 @@ end
                                     end
                                     if AIEN.config.AIEN_debugProcessDetail then
                                         env.info( string.format(
-                                            "%s, skill level for %s = %d",ModuleName,group:getName(),db_group.skill or -1))
+                                            "%s, skill level for %s = %d",ModuleName,groupName,db_group.skill or -1))
                                     end
                                     -- filter available actions by skill
                                      local filter = db_group.skill
@@ -14550,7 +14783,11 @@ end
                                          end
                                     end
                                     if AIEN.config.AIEN_debugProcessDetail == true then
-                                        env.info(("AIEN.event_hit, S_EVENT_HIT, available actions " .. tostring(#av_ac) ))
+                                        local availableActions = 0
+                                        for _ in pairs(av_ac) do
+                                            availableActions = availableActions + 1
+                                        end
+                                        env.info(("AIEN.event_hit, S_EVENT_HIT, available actions " .. tostring(availableActions) ))
                                     end
                                     
                                     -- calculate points for each remaining actions
@@ -14586,9 +14823,9 @@ end
                                     end)
     
                                     -- record the attack, for preventing phases to act for 10 mins
-                                    underAttack[group:getID()] = timer.getTime()
+                                    underAttack[groupId] = timer.getTime()
 
-                                    if not delegationOnly then
+                                    if not delegationOnly or allowMobileAaaReaction then
                                         choosenAct = executeReactions(group, o_pos, a_pos, bc_ac, db_group.sa, db_group.skill, s_cat, s_cls)
                                     end
 
@@ -14597,7 +14834,7 @@ end
                                         if AIEN.config.firemissions == true then
                                             if shooterKnown and shooter:getPoint() and position then
                                                 if s_cat ~= 0 then
-                                                    counterBatteryDone = counterBattery(position, shooter:getPoint(), group:getCoalition()) == true
+                                                    counterBatteryDone = counterBattery(position, shooter:getPoint(), groupCoalition) == true
                                                 elseif AIEN.config.AIEN_debugProcessDetail == true then
                                                     env.info(("AIEN.event_hit, skipping counterBattery for airplane shooter"))
                                                 end
@@ -14605,15 +14842,21 @@ end
                                         end
                                     end
 
-                                    if group:getCoalition() == 1 and shooterKnown and a_pos and s_detected and not counterBatteryDone then
+                                    local delegationTasked = false
+                                    local reactionRoamZone = nil
+                                    if groupCoalition == 1 then
+                                        reactionRoamZone = bc:getZoneOfPoint(o_pos)
+                                    end
+
+                                    if groupCoalition == 1 and shooterKnown and a_pos and s_detected and not counterBatteryDone then
                                         local delegated = false
-                                        if s_cat == 1 and (o_cls == "SAM" or o_cls == "SHORAD" or o_cls == "ARTY" or o_cls == "MLRS") then
+                                        if s_cat == 1 and (o_cls == "SAM" or o_cls == "SHORAD" or o_cls == "ARTY" or o_cls == "MLRS" or (o_cls == "AAA" and allowMobileAaaReaction)) then
                                             delegated = true
                                             if AIEN.config.AIEN_debugProcessDetail == true then
                                                 env.info(("AIEN.event_hit, delegation eligible, hit cls " .. tostring(o_cls)))
                                             end
 
-                                            local z1 = bc:getZoneOfPoint(o_pos)
+                                            local z1 = reactionRoamZone
                                             if z1 and z1.built and #z1.built > 0 then
                                                 if isZoneDelegationLocked(z1.zone) then
                                                     if AIEN.config.AIEN_debugProcessDetail == true then
@@ -14624,27 +14867,32 @@ end
                                                 local bestGroup2
                                                 local bestScore1
                                                 local bestScore2
+                                                local secondCandidates = {}
 
                                                 for _, gName in ipairs(z1.built) do
                                                     local gObj = Group.getByName(gName)
-                                                    if gObj and gObj:isExist() and gObj:getCoalition() == group:getCoalition() then
+                                                    if gObj and gObj:isExist() and gObj:getCoalition() == groupCoalition then
                                                         local candidateName = gObj:getName()
-                                                        if candidateName ~= group:getName() and not isDismountedGroupName(candidateName) and not groupHasInfantryUnits(gObj) then
+                                                        if candidateName ~= groupName and not isDismountedGroupName(candidateName) and not groupHasInfantryUnits(gObj) then
                                                             local gid = gObj:getID()
                                                             if not underAttack[gid] then
                                                                 local gData = groundgroupsDb[gid]
-                                                                if gData and gData.tasked == false and gData.class ~= "INF" and gData.class ~= "MANPADS" and gData.sa and gData.sa.pos and gData.sa.cls and gData.sa.cls ~= "SAM" and gData.sa.cls ~= "SHORAD" and gData.sa.cls ~= "ARTY" and gData.sa.cls ~= "MLRS" then
+                                                                if gData and gData.tasked == false and gData.class ~= "INF" and gData.class ~= "MANPADS" and gData.sa and gData.sa.pos and gData.sa.cls and gData.sa.cls ~= "SAM" and gData.sa.cls ~= "SHORAD" and gData.sa.cls ~= "ARTY" and gData.sa.cls ~= "MLRS" and (gData.sa.cls ~= "AAA" or gData.mobileAaaAttackAllowed == true) then
                                                                     local dist = getDist(gData.sa.pos, o_pos)
                                                                     if dist < AIEN.config.supportDistance then
                                                                         local base = supportCounterAirClasses[gData.class] or 0
                                                                         if base > 0 then
                                                                             local score = base * 10000 - dist
-                                                                            if not bestScore1 or score > bestScore1 then
-                                                                                bestGroup2, bestScore2 = bestGroup1, bestScore1
-                                                                                bestGroup1, bestScore1 = gObj, score
-                                                                            elseif not bestScore2 or score > bestScore2 then
-                                                                                if not bestGroup1 or gObj:getName() ~= bestGroup1:getName() then
-                                                                                    bestGroup2, bestScore2 = gObj, score
+                                                                            if gData.mobileAaaAttackAllowed == true then
+                                                                                secondCandidates[#secondCandidates+1] = {group = gObj, data = gData, score = score}
+                                                                            else
+                                                                                if not bestScore1 or score > bestScore1 then
+                                                                                    bestGroup2, bestScore2 = bestGroup1, bestScore1
+                                                                                    bestGroup1, bestScore1 = gObj, score
+                                                                                elseif not bestScore2 or score > bestScore2 then
+                                                                                    if not bestGroup1 or gObj:getName() ~= bestGroup1:getName() then
+                                                                                        bestGroup2, bestScore2 = gObj, score
+                                                                                    end
                                                                                 end
                                                                             end
                                                                         end
@@ -14656,33 +14904,51 @@ end
                                                 end
 
                                                 if bestGroup1 then
-                                                    delegationZoneLocks[z1.zone] = timer.getTime()
                                                     local gid1 = bestGroup1:getID()
                                                     local gData1 = groundgroupsDb[gid1]
-                                                    gData1.tasked = true
-                                                    gData1.taskTime = timer.getTime()
-                                                    underAttack[gid1] = timer.getTime()
-                                                    ac_attack(bestGroup1, gData1.sa.pos, a_pos, true, gData1.sa, gData1.skill or 1, true, z1.zone)
+                                                    local attack1 = ac_attack(bestGroup1, gData1.sa.pos, a_pos, true, gData1.sa, gData1.skill or 1, true, z1.zone)
 
-                                                    if AIEN.config.AIEN_debugProcessDetail == true then
-                                                        env.info(("AIEN.event_hit, delegation task 1: " .. tostring(bestGroup1:getName())))
-                                                    end
-
-                                                    if bestGroup2 and math.random(1,100) <= 25 then
-                                                        local gid2 = bestGroup2:getID()
-                                                        local gData2 = groundgroupsDb[gid2]
-                                                        gData2.tasked = true
-                                                        gData2.taskTime = timer.getTime()
-                                                        underAttack[gid2] = timer.getTime()
-                                                        ac_attack(bestGroup2, gData2.sa.pos, a_pos, true, gData2.sa, gData2.skill or 1, true, z1.zone)
+                                                    if attack1 == true then
+                                                        delegationTasked = true
+                                                        delegationZoneLocks[z1.zone] = timer.getTime()
+                                                        gData1.tasked = true
+                                                        gData1.taskTime = timer.getTime()
+                                                        underAttack[gid1] = timer.getTime()
 
                                                         if AIEN.config.AIEN_debugProcessDetail == true then
-                                                            env.info(("AIEN.event_hit, delegation task 2: " .. tostring(bestGroup2:getName())))
+                                                            env.info(("AIEN.event_hit, delegation task 1: " .. tostring(bestGroup1:getName())))
                                                         end
-                                                    else
-                                                        if AIEN.config.AIEN_debugProcessDetail == true then
-                                                            env.info(("AIEN.event_hit, delegation task 2: no"))
+
+                                                        if bestGroup2 then
+                                                            local gid2 = bestGroup2:getID()
+                                                            secondCandidates[#secondCandidates+1] = {group = bestGroup2, data = groundgroupsDb[gid2], score = bestScore2}
                                                         end
+
+                                                        if #secondCandidates > 0 and math.random(1,100) <= 25 then
+                                                            local picked = secondCandidates[math.random(1, #secondCandidates)]
+                                                            local group2 = picked.group
+                                                            local gData2 = picked.data
+                                                            local gid2 = group2:getID()
+                                                            local attack2 = ac_attack(group2, gData2.sa.pos, a_pos, true, gData2.sa, gData2.skill or 1, true, z1.zone)
+
+                                                            if attack2 == true then
+                                                                gData2.tasked = true
+                                                                gData2.taskTime = timer.getTime()
+                                                                underAttack[gid2] = timer.getTime()
+
+                                                                if AIEN.config.AIEN_debugProcessDetail == true then
+                                                                    env.info(("AIEN.event_hit, delegation task 2: " .. tostring(group2:getName())))
+                                                                end
+                                                            elseif AIEN.config.AIEN_debugProcessDetail == true then
+                                                                env.info(("AIEN.event_hit, delegation task 2 failed: " .. tostring(group2:getName())))
+                                                            end
+                                                        else
+                                                            if AIEN.config.AIEN_debugProcessDetail == true then
+                                                                env.info(("AIEN.event_hit, delegation task 2: no"))
+                                                            end
+                                                        end
+                                                    elseif AIEN.config.AIEN_debugProcessDetail == true then
+                                                        env.info(("AIEN.event_hit, delegation task 1 failed: " .. tostring(bestGroup1:getName())))
                                                     end
                                                 else
                                                     if AIEN.config.AIEN_debugProcessDetail == true then
@@ -14701,7 +14967,7 @@ end
                                                 env.info(("AIEN.event_hit, delegation eligible, shooter cls " .. tostring(s_cls)))
                                             end
 
-                                            local z1 = bc:getZoneOfPoint(o_pos)
+                                            local z1 = reactionRoamZone
                                             if z1 and z1.built and #z1.built > 0 then
                                                 if isZoneDelegationLocked(z1.zone) then
                                                     if AIEN.config.AIEN_debugProcessDetail == true then
@@ -14716,9 +14982,9 @@ end
 
                                                 for _, gName in ipairs(z1.built) do
                                                     local gObj = Group.getByName(gName)
-                                                    if gObj and gObj:isExist() and gObj:getCoalition() == group:getCoalition() then
+                                                    if gObj and gObj:isExist() and gObj:getCoalition() == groupCoalition then
                                                         local candidateName = gObj:getName()
-                                                        if candidateName ~= group:getName() and not isDismountedGroupName(candidateName) and not groupHasInfantryUnits(gObj) then
+                                                        if candidateName ~= groupName and not isDismountedGroupName(candidateName) and not groupHasInfantryUnits(gObj) then
                                                             local gid = gObj:getID()
                                                             if not underAttack[gid] then
                                                                 local gData = groundgroupsDb[gid]
@@ -14751,7 +15017,10 @@ end
                                                     gData1.tasked = true
                                                     gData1.taskTime = timer.getTime()
                                                     underAttack[gid1] = timer.getTime()
-                                                    ac_attack(bestGroup1, gData1.sa.pos, a_pos, true, gData1.sa, gData1.skill or 1, true, z1.zone)
+                                                    local attack1 = ac_attack(bestGroup1, gData1.sa.pos, a_pos, true, gData1.sa, gData1.skill or 1, true, z1.zone)
+                                                    if attack1 == true then
+                                                        delegationTasked = true
+                                                    end
 
                                                     if AIEN.config.AIEN_debugProcessDetail == true then
                                                         env.info(("AIEN.event_hit, arty delegation task 1: " .. tostring(bestGroup1:getName())))
@@ -14763,7 +15032,10 @@ end
                                                         gData2.tasked = true
                                                         gData2.taskTime = timer.getTime()
                                                         underAttack[gid2] = timer.getTime()
-                                                        ac_attack(bestGroup2, gData2.sa.pos, a_pos, true, gData2.sa, gData2.skill or 1, true, z1.zone)
+                                                        local attack2 = ac_attack(bestGroup2, gData2.sa.pos, a_pos, true, gData2.sa, gData2.skill or 1, true, z1.zone)
+                                                        if attack2 == true then
+                                                            delegationTasked = true
+                                                        end
 
                                                         if AIEN.config.AIEN_debugProcessDetail == true then
                                                             env.info(("AIEN.event_hit, arty delegation task 2: " .. tostring(bestGroup2:getName())))
@@ -14799,6 +15071,10 @@ end
                                                 env.info(("AIEN.event_hit, delegation skipped, shooter not detected or position missing"))
                                             end
                                         end
+                                    end
+
+                                    if groupCoalition == 1 and counterBatteryDone ~= true and delegationTasked ~= true then
+                                        maybeReactionRoamZone(reactionRoamZone, groupName, groupCoalition)
                                     end
 
                                 end
@@ -14846,7 +15122,7 @@ local function event_birth(initiator)
             if gp then
                 if not groundgroupsDb[gp:getID()] then -- since event is launched for each unit, this prevent re-adding the same group multiple times
                     local c = getGroupClass(gp)
-                    local det, thr = getRanges(gp)
+                    local det, thr, thrmin = getRanges(gp)
                     local s = getGroupSkillNum(gp)
                     groupPreventDisperse(gp)
                     
@@ -14862,7 +15138,22 @@ local function event_birth(initiator)
                             end
                         end
                     end
-                    groundgroupsDb[gp:getID()] = {group = gp, class = c, n = gpName, coa = coalition, detection = det, threat = thr, tasked = false, skill = s, sa = {}, artyWpnGuidance = foundGuidance}
+                    local excluded = false
+                    local delegationOnly = false
+                    for _, tag in ipairs(AIEN.config.AIEN_xcl_tag) do
+                        if string.find(gpName, tag, 1, true) then
+                            excluded = true
+                            break
+                        end
+                    end
+                    for _, tag in ipairs(AIEN.config.AIEN_xcl_tag_delegation) do
+                        if string.find(gpName, tag, 1, true) then
+                            delegationOnly = true
+                            break
+                        end
+                    end
+                    local mobileAaaAttackAllowed = isMobileAaaAttackGroupName(gpName)
+                    groundgroupsDb[gp:getID()] = {group = gp, class = c, n = gpName, coa = coalition, detection = det, threat = thr, threatmin = thrmin, tasked = false, skill = s, sa = {}, artyWpnGuidance = foundGuidance, excluded = excluded, delegationOnly = delegationOnly, mobileAaaAttackAllowed = mobileAaaAttackAllowed}
                     if c == "ARTY" or c == "MLRS" then
                         if coalition == 2 then
                             AIEN.seedArtillerySA()
