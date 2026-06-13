@@ -130,6 +130,7 @@ Foothold_ctld.usesubcats = true
 Foothold_ctld.pilotmustopendoors = true
 Foothold_ctld.buildtime = 30
 Foothold_ctld.TroopUnloadDistGroundHook = 35
+Foothold_ctld.droppedbeacontimeout = 7200
 Foothold_ctld.onestepmenu = true
 Foothold_ctld.basetype = "uh1h_cargo"
 Foothold_ctld.RadioSoundFC3 = "beaconsilent.ogg"

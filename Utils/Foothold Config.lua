@@ -86,9 +86,9 @@ Please join us.]],
 }
 
 -- ============================================================================
--- Difficulty Scaling
+-- Difficulty
 -- ============================================================================
-
+GlobalSettings = GlobalSettings or {}
 -- Foothold non-supply spawn/respawn speed scaling (multiplier).
 -- This value multiplies AI respawn timers for attack/patrol missions.
 -- 1.0 = default (no change)
@@ -103,24 +103,23 @@ Please join us.]],
 -- Blue spawns twice as fast:  GlobalSettings.difficultyScaling = { [1]=1.0, [2]=0.5 }
 -- Red spawns 30% slower:      GlobalSettings.difficultyScaling = { [1]=1.3, [2]=1.0 }
 -- This does not affect the supply missions.
-GlobalSettings = GlobalSettings or {}
+-- < 1.0 = faster spawns (shorter timers)   | 0.5 = 2x faster
+-- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
 GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
 
 -- Supply-only spawn/respawn speed scaling (multiplier).
 -- This value multiplies AI respawn timers for supply missions only.
+-- < 1.0 = faster spawns (shorter timers)   | 0.5 = 2x faster
+-- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
 GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 
 -- ONLY VALID ON CAUCASUS, PERSIAN GULF, SYRIA AND AFGHANISTAN.
 -- if false, the mission will start from the other end. Carrier zone will be disabled.
 StartNormal = true
--- 
+ 
 -- When the mission is completed, if you want the server to restart automatically and reset everything, then set this to true.
 -- If false, you will have a menu where you can choose to restart the mission. 
 AutoRestart = false
---
--- ============================================================================
--- Difficulty Settings
--- ============================================================================
 
 -- Valid values: "easy" | "medium" | "hard"
 -- Here, you can adjust how many cap should spawn. medium, is the default (Balanaced)
@@ -134,13 +133,19 @@ FriendlyCapSupport      = "medium" -- BLUE CAP support limit. This can be furthe
 FriendlyCasSupport      = "medium" -- BLUE CAS support limit.  This can be further custommized in the advance section.
 FriendlySeadSupport     = "medium" -- BLUE SEAD support limit.  This can be further custommized in the advance section.
 
-AiPlaneSkill            = "Random"
--- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
+AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
 
-AiGroundSkill           = "Excellent"
--- AI skill used for spawned non-airplane units Red and blue share the same config value (ground/ship/etc) (MOOSE SPAWN:InitSkill).
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
+AiGroundSkill           = "Excellent" -- AI skill used for spawned non-airplane units Red and blue share the same config value (ground/ship/etc) (MOOSE SPAWN:InitSkill).
+
+-- If true, A-10 is invisible to RED enemy planes.
+InvisibleA10 = false
+
+-- Chance in percent that RED AI air missions may also engage helicopters.
+-- 0 disables helicopter targeting, 100 always allows it.
+-- If InvisibleA10 is true, this setting is ignored.
+ChanceAiAttackHelo = 0
 
 -- Controls whether SAM groups are hidden on MFDs.
 -- Valid values only: false | true | "random"
@@ -160,8 +165,6 @@ HideSAMOnMFD            = true -- if random, use "random" (string)
 -- If you do NOT want red supplies groups to be boosted in speed to spawn faster, set softSupplyBoostPerZone to 0.
 -- If you do NOT want red CAP groups to be boosted in speed to spawn faster, set softCapBoostPerZone to 0.
 -- The coolDownSec is how often this stuff triggers, you can increase / decrease.
-
-
 -- Valid values: "easy" | "medium" | "hard"
 RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 
@@ -196,7 +199,6 @@ medium = {
     hardForcePerZone = 2, -- Max hard-forced attack groups for one processed pressured zone
     hardForceTotalPerTick = 2, -- Total hard-forced attack groups allowed per check (all zones together)
     groupReuseCooldownSec = 1200, -- After one attack group is hard-forced, wait this long before that same group can be hard-forced again
-
 },
 
 hard = {
@@ -225,25 +227,20 @@ hard = {
 -- In the editor, Don't copy to all ships, make sure all planes in every warehouse are set to LIMITED!!!
 Era = "Modern" -- does not work in Afghanistan or kola
 
--- If true: remove SA-10 and SA-11 (replaced by older SAMs).
-NoSA10AndSA11 = false
+NoSA10AndSA11 = false -- If true: remove SA-10 and SA-11 (replaced by older SAMs).
 
 -- There is no Pantsir or Tor M2 in the coldwar Era, but in modern, you can stil replace them.
--- If true: Pantsir and Tor M2 will be replaced with random groups, including SA-15, SA-19, SA-8 and SA-13.
-NoTorM2AndPantsir = false
+NoTorM2AndPantsir = false -- If true: Pantsir and Tor M2 will be replaced with random groups, including SA-15, SA-19, SA-8 and SA-13.
 
--- If true: SA-15 will be replaced by random groups, including SA-19, SA-8, SA-13 and SA-9.
-NoSA15 = false
+NoSA15 = false -- If true: SA-15 will be replaced by random groups, including SA-19, SA-8, SA-13 and SA-9.
 
 -- Modular, Automatic and Network capable Targeting and Interception System for Air Defenses. (MANTIS)
--- MANTIS is based on Early warning radars (EWR) for detectiion. they will be off until players are detected by the EWR.
 -- Once the player is within, the sam system will turn on. If you fire HARP, Talds or Jsaw, they will turn off and move.
 -- Their movement depends if they are able to move, like the SA-6 and SA-11.
-DisableMantis = false
+DisableMantis = false -- MANTIS is based on Early warning radars (EWR) for detectiion. they will be off until players are detected by the EWR.
 
--- If true, include some static target types at certain zones (command centers,
 -- ammo depots, fuel tanks, factories).
-UseStatics = true
+UseStatics = true -- If true, include some static target types at certain zones (command centers,
 
 -- PVE_Only is a flag where you can decide if you want to disable players from spawning in red zones.
 -- This is when the player chooses Red coalition.
@@ -273,8 +270,8 @@ RankLoseWhenKilledAmount = 100
 -- If true, loads enhanced bomb blast effects (may cause stutters).
 SplashDamage = false
 
--- If true, show Foothold kill messages.
-ShowKills = false
+
+ShowKills = false -- If true, show Foothold kill messages.
 
 -- If true, limit shop purchases by personal credits earned (rank gates):
 --   >  250 cost requires   100 earned
@@ -289,9 +286,6 @@ RankingSystem = true
 -- friendly fire ranking penalty
 FriendlyFireRankPenalty = 500
 
--- If true, A-10 is invisible to RED enemy planes.
-InvisibleA10 = false
-
 -- If true, C-130J-30 AND Chinook! Use the internal (Ground crew for the Chinook and C-130 loading system only (not CTLD menu load).
 UseC130LoadAndUnload = true -- need to be true if using Logisticsystem as the cargo need to be tracked.
 
@@ -299,13 +293,16 @@ UseC130LoadAndUnload = true -- need to be true if using Logisticsystem as the ca
 -- If RankingSystem is true, then you can choose what level is required.
 CarrierRankRequirement = 5
 
-
 -- Works ONLY on Caucasus, Persian Gulf and Syria maps.
 -- If true, blue players can move Tarawa with map marker commands.
 -- tarawahere / tarawahereandstop sends Tarawa to the marker and stops there.
 -- tarawahere1 followed by tarawahere2 creates a racetrack between the two marker positions.
 -- tarawahelp displays the commands, or reports that Tarawa marker movement is disabled.
 AllowTarawaToMoveFreely = false
+
+-- If true, disables the friendly "Escort cargo plane" mission.
+-- false keeps the mission enabled.
+DisableFriendlyEscortMeMission = false
 
 -- ============================================================================
 -- Ecort
@@ -336,8 +333,7 @@ EscortTypeByPlayerType = {
 }
 
 -- Plane escort option for takeoff from the ground.
--- If true, the escort will takeoff from the ground instead of airspawn.
-EscortTakeoffFromGround = true
+EscortTakeoffFromGround = true -- If true, the escort will takeoff from the ground instead of airspawn.
 
 -- ============================================================================
 -- Logistics / Warehouse Mode
@@ -361,7 +357,7 @@ StrictSmartWeaponsInventory = false
 -- Every 15 minutes, BLUE zones gain this many resources (covers AI usage).
 AutoFillResources = 5
 
--- If the below is true, Blue AI will NOT deliver supplies, it will ONLY be done by the player.
+-- If true, Blue AI will NOT deliver supplies, it will ONLY be done by the player.
 NoAIBlueSupplies = false
 
 -- This option is the legacy option. this won't be used if WarehouseLogistics = true
@@ -763,7 +759,7 @@ CsarHoverSeconds = 10
 -- Chance (0-100) that hostile infantry will spawn at a CSAR location.
 CsarHostileInfantryChance = 25
 -- ============================================================================
--- Welcome Message settings
+-- WelcomeMessage callsigns
 -- ============================================================================
 -- Below, you can change the callsigns in the welcome message and their IFF codes.
 -- The IFF codes are only functional if you use LotATC and configure the same numbers there.
@@ -871,11 +867,6 @@ RedCasCountIgnoreTypes = {
 	["CH-47Fbl1"] = true,
 }
 
--- ============================================================================
--- CAP / CAS / SEAD Scaling (Stage Tables)
--- ============================================================================
-
--- Advance settings for CapDifficulty.
 -- The "amount" field in the case of CAP, 1 amount equals to 1 CAP Patrol and 1 CAP Attack. so 1 amount equal 2 groups.
 -- players in the table below are counted as active players if they are not in the CapCountIgnoreTypes.
 CapLimitStages = {
@@ -1089,6 +1080,7 @@ ArcoSpeed = 286 -- orbit speed for arco is hardcoded at 280, otherwise strange t
 -- Valid values: 10 | 20 | 40 | 60 | 80 | 100 | 150
 ewrs_maxRangeKm = 150 -- Highest metric EWRS detection range option shown in the F10 menu.
 
+-- Maximum detection range choices shown in the player F10 EWRS menu.
 -- Valid values: 5 | 10 | 20 | 40 | 60 | 80 | 100
 ewrs_maxRangeNm = 100 -- Highest imperial EWRS detection range option shown in the F10 menu.
 
@@ -1247,7 +1239,7 @@ allowedPlanes = {
   "MiG-19P","Mirage-F1AD","F/A-18A","Su-24MR","F-4E-45MC","MiG-23MLD","Mirage-F1CR","SA342Mistral","Mi-24V","F-15E","AJS37","UH-1H",
   "UH-60L","MB-339A","F-14A-135-GR", "F-14A-135-GR-Early", "F-15C","F-16A MLU","Mirage-F1BD","P3C_Orion","Mirage-F1M-EE","An-30M","F-5E-3_FC",
   "Mirage-F1EQ","A-10A", "Mirage-F1M-CE","Mirage-F1ED","Ka-27","E-2C","UH-60A","Mirage-F1C","Mirage-F1CE","AH-1W","MiG-21Bis","Mirage-F1BE",
-  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA",
+  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA","F-100D",
   "Mirage-F1C-200","Mirage-F1DDA","MiG-15bis","Mirage-F1CJ","Mirage-F1CK","Mirage-F1AZ", "A-10C_2", "Mirage-F1CT","A-10C","M-2000C","F-15ESE",
   "Mirage-F1EH","Mirage-F1CH","SA342Minigun","MiG-29A","Bronco-OV-10A","OH-6A", "Mirage-F1CG","F-5E-3","F-86F Sabre","F-14A","L-39C","C-101CC","SU22","A-4E-C",
   "SA342L","Mi-8MT","Mirage-F1EE","Mi-24P","CH-47Fbl1","FA-18C_hornet","F-16C_50", "MiG-29 Fulcrum","UH-60L_DAP","C-130J-30","F-14B","AH-64D_BLK_II","MH-6J","AH-6J","MH-60R","Mi-28NE"}
@@ -1275,6 +1267,8 @@ ForbiddWeaponsInAllEra = {
     "weapons.bombs.RN-28", -- Nukes for the Mig-21
 }
 
+-- This table will be used if StrictSmartWeaponsInventory is set to true.
+-- Smart weapons in this table will be HALF what we add to the warehouse.
 WarehouseWeaponCaps = {
 }
 

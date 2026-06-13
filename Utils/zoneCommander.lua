@@ -79,6 +79,8 @@ ParkingDistanceCache = {}
 ReconMissionClientSet = nil
 _awacsRepositionSched = nil
 FlightTimeRewardPerMinute = FlightTimeRewardPerMinute or 1
+ChanceAiAttackHelo = ChanceAiAttackHelo or 0
+DisableFriendlyEscortMeMission = DisableFriendlyEscortMeMission or false
 flightTimeTakeoffByPlayer = {}
 ForbiddWeaponsInAllEra = type(ForbiddWeaponsInAllEra) == "table" and ForbiddWeaponsInAllEra or {}
 local escortFarpToZone={}
@@ -20499,9 +20501,14 @@ function BattleCommander:EngageSeadMission(tgtzone, groupname, expend, altitude,
 	local mis = self:getDefaultWaypoints(startPos, attack, firstunitpos, altm, landUnitID)
 
 	local rngPlane = 15*1852
-	local searchPlane = InvisibleA10 and
-		{ id='EngageTargets', params={ maxDist=rngPlane, maxDistEnabled=true, targetTypes={'Multirole fighters','Interceptors','Bombers'} } } or
-		{ id='EngageTargets', params={ maxDist=rngPlane, maxDistEnabled=true, targetTypes={'Planes'} } }
+	local chanceAiAttackHelo = tonumber(ChanceAiAttackHelo) or 0
+	local searchPlaneTargetTypes = {'Planes'}
+	if InvisibleA10 then
+		searchPlaneTargetTypes = {'Multirole fighters','Interceptors','Bombers'}
+	elseif group:getCoalition() == 1 and chanceAiAttackHelo > 0 and math.random(1,100) <= chanceAiAttackHelo then
+		searchPlaneTargetTypes = {'Planes','Helicopters'}
+	end
+	local searchPlane = { id='EngageTargets', params={ maxDist=rngPlane, maxDistEnabled=true, targetTypes=searchPlaneTargetTypes } }
 	local pts = mis.params.route.points
 	if pts then
 		if pts[2] and pts[2].task and pts[2].task.params and pts[2].task.params.tasks then table.insert(pts[2].task.params.tasks, searchPlane) end
@@ -20687,13 +20694,20 @@ function SetUpCAP(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side)
 
 	local rng = (rangeNm or 25) * NM
 	local altm = (altitudeFt or 15000) * 0.3048
+	local chanceAiAttackHelo = tonumber(ChanceAiAttackHelo) or 0
+	local searchTargetTypes = { 'Planes' }
+	if InvisibleA10 then
+		searchTargetTypes = { 'Multirole fighters','Interceptors','Bombers' }
+	elseif side == 2 or (side == 1 and chanceAiAttackHelo > 0 and math.random(1,100) <= chanceAiAttackHelo) then
+		searchTargetTypes = { 'Planes','Helicopters' }
+	end
 
 	local search = {
 		id = 'EngageTargets',
 		params = {
 			maxDist = rng,
 			maxDistEnabled = true,
-			targetTypes = InvisibleA10 and { 'Multirole fighters','Interceptors','Bombers' } or ((side == 2) and { 'Planes','Helicopters' } or { 'Planes' }),
+			targetTypes = searchTargetTypes,
 			priority = 0
 		}
 	}
@@ -20814,7 +20828,14 @@ end
 		local gmoose = GROUP:FindByName(groupname) if not gmoose or not gmoose:IsAlive() then return 'Not available' end
 
 		local rngGround = 15 * 1852
-		local enroute = gmoose:EnRouteTaskEngageTargets(rngGround, InvisibleA10 and { 'Multirole fighters','Interceptors','Bombers','Ground Units' } or ((side == 2) and { 'Planes','Helicopters','Ground Units' } or { 'Planes','Ground Units' }), 0)
+		local chanceAiAttackHelo = tonumber(ChanceAiAttackHelo) or 0
+		local enrouteTargetTypes = { 'Planes','Ground Units' }
+		if InvisibleA10 then
+			enrouteTargetTypes = { 'Multirole fighters','Interceptors','Bombers','Ground Units' }
+		elseif side == 2 or (side == 1 and chanceAiAttackHelo > 0 and math.random(1,100) <= chanceAiAttackHelo) then
+			enrouteTargetTypes = { 'Planes','Helicopters','Ground Units' }
+		end
+		local enroute = gmoose:EnRouteTaskEngageTargets(rngGround, enrouteTargetTypes, 0)
 
 		local firstpos = nil
 		for _, v in pairs(zn.built) do
@@ -34094,9 +34115,16 @@ end
 
 		local side = self._sortieSide or self.side
 		local rangeNm = tonumber(self._currentCapOrbitDistanceNm) or 25
+		local chanceAiAttackHelo = tonumber(ChanceAiAttackHelo) or 0
+		local searchTargetTypes = { 'Planes' }
+		if InvisibleA10 then
+			searchTargetTypes = { 'Multirole fighters','Interceptors','Bombers' }
+		elseif side == 2 or (side == 1 and chanceAiAttackHelo > 0 and math.random(1,100) <= chanceAiAttackHelo) then
+			searchTargetTypes = { 'Planes','Helicopters' }
+		end
 		local search = gmoose:EnRouteTaskEngageTargets(
 			rangeNm * NM,
-			InvisibleA10 and { 'Multirole fighters','Interceptors','Bombers' } or ((side == 2) and { 'Planes','Helicopters' } or { 'Planes' }),
+			searchTargetTypes,
 			0
 		)
 		local speedKmh = (self.unitCategory == Unit.Category.HELICOPTER) and UTILS.MpsToKmph(70) or UTILS.MpsToKmph(280)
@@ -46028,6 +46056,18 @@ WEAPONSLIST.Items = {
         'weapons.bombs.SD_500_A',
         'weapons.bombs.Type_200A',
 		'weapons.bombs.PTAB_2_5KO',
+		'weapons.bombs.APC BTR-80 Skid [23826lb]',
+		'weapons.bombs.ART GVOZDIKA [34720lb]',
+		'weapons.bombs.ART GVOZDIKA [34720lb]',
+		'weapons.bombs.BLU-18/B_GROUP',
+		'weapons.bombs.BLU-3B_R_GROUP_R',
+		'weapons.bombs.BLU-3_R_GROUP_R',
+		'weapons.bombs.BLU-49/B',
+		'weapons.bombs.BLU-4B_R_GROUP_R',
+		'weapons.bombs.BOLT-117',
+		'weapons.bombs.HEMTT TFFT [34400lb]',
+		'weapons.bombs.IFV BMD-1 Skid [17930lb]',
+		'weapons.bombs.SAM CHAPARRAL Skid [21516lb]',
     },
 
 [WEAPONSLIST.ItemCategory.AG_GUIDED_BOMBS] = {
@@ -46165,6 +46205,12 @@ WEAPONSLIST.Items = {
         'weapons.droptanks.{IAFS_ComboPak_100}',
 		'weapons.droptanks.CHAP_TigerUHT_fueltank',
 		'weapons.droptanks.mh_tank',
+		'weapons.droptanks.GD_F100_TANK_200',
+		'weapons.droptanks.GD_F100_TANK_275_L',
+		'weapons.droptanks.GD_F100_TANK_275_R',
+		'weapons.droptanks.GD_F100_TANK_335_L',
+		'weapons.droptanks.GD_F100_TANK_335_R',
+		'weapons.droptanks.GD_F100_TANK_450',
 
     },
 
@@ -46197,6 +46243,13 @@ WEAPONSLIST.Items = {
 		'weapons.adapters.CHAP_AIM92LN',
 		'weapons.adapters.CHAP_FZ225',
 		'weapons.adapters.CHAP_HOT3LN',
+		'weapons.adapters.GD_F100_SUU-13',
+		'weapons.adapters.SidewinderPylon',
+		'weapons.adapters.apu-73',
+		'weapons.adapters.apu_470',
+		'weapons.adapters.apu_60',
+		'weapons.adapters.bdz_umk2b',
+		'weapons.adapters.mbdz_u2t',
         'weapons.containers.',
         'weapons.containers.16c_hts_pod',
         'weapons.containers.AAQ-28_LITENING',
@@ -46402,6 +46455,21 @@ WEAPONSLIST.Items = {
         'weapons.containers.{US_M10_SMOKE_TANK_RED}',
         'weapons.containers.{US_M10_SMOKE_TANK_WHITE}',
         'weapons.containers.{US_M10_SMOKE_TANK_YELLOW}',
+		'weapons.containers.BMP-3',
+		'weapons.containers.F100_CAMERA_KA71A',
+		'weapons.containers.F100_CAMERA_P2',
+		'weapons.containers.GD_F100_STRIKE_CAMERA',
+		'weapons.containers.GD_F100_SUU-13',
+		'weapons.containers.Gepard',
+		'weapons.containers.HB_ORD_SUU_7',
+		'weapons.containers.M1126',
+		'weapons.containers.Otokar_Cobra',
+		'weapons.containers.ZellRocket',
+		'weapons.containers.apu-73',
+		'weapons.containers.lav-25',
+		'weapons.containers.m-113',
+		'weapons.containers.uaz-469',
+		'weapons.containers.{GPU_5_POD}',
         'weapons.gunmounts.A20_TopTurret_M2_L',
         'weapons.gunmounts.A20_TopTurret_M2_R',
         'weapons.gunmounts.ACH_47_M230',
