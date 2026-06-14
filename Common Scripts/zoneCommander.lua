@@ -17203,7 +17203,15 @@ end
 					trigger.action.removeMark(event.idx)
 					success=true
 				end
-				if event.text and event.text:lower():find('^givemefarp') then
+				if event.text and event.text:lower():find('^givemefarpzell') then
+					local p=event.pos
+					local alt=land.getHeight({x=p.x,y=p.z})
+					local coord=COORDINATE:New(p.x,alt,p.z)
+					BuildAFARP(coord, { zell = true })
+					trigger.action.removeMark(event.idx)
+					success=true
+				end
+				if event.text and event.text:lower():find('^givemefarp') and not event.text:lower():find('^givemefarpzell') then
 					local p=event.pos
 					local alt=land.getHeight({x=p.x,y=p.z})
 					local coord=COORDINATE:New(p.x,alt,p.z)
@@ -24158,7 +24166,8 @@ function BattleCommander:printStats(unitid, top)
 
 -- hunter script
 function BattleCommander:initHunter(threshold)
-  self.huntThreshold      = threshold or 9999
+  self.hunterEnabled      = EnableHunter ~= false
+  self.huntThreshold      = self.hunterEnabled and (threshold or 9999) or math.huge
   self.huntKills          = {}
   self.huntDone           = {}
   self.huntBases          = nil
@@ -24302,6 +24311,7 @@ end
 
 
 function BattleCommander:registerHuntKill(pname, initiatorUnit)
+  if self.hunterEnabled == false then return end
   if not playerListBlue[pname] then return end
   if not initiatorUnit or not initiatorUnit:isExist() then return end
 
@@ -28433,6 +28443,15 @@ end
 
 -------------------------- RECAPTURE BLUE ZONE FROM DISABLED STATE ---------------------
 
+local function getPairedFarpZellAirbaseName(name)
+	if type(name) ~= "string" or name:find("^CTLD FARP ZELL ") then return nil end
+	local suffix = name:match("^CTLD FARP (.+)$")
+	if suffix then
+		return "CTLD FARP ZELL " .. suffix
+	end
+	return nil
+end
+
 function BattleCommander:addWarehouseItemsAtZone(zoneObj, coalition, amountPerItem)
     if not zoneObj then
         return false, "[Warehouse] No zone at this point."
@@ -28478,18 +28497,35 @@ function BattleCommander:addWarehouseItemsAtZone(zoneObj, coalition, amountPerIt
 		forbiddenWeaponsInAllEraSet[forbiddenWeapon] = true
 	end
 
-	for _, item in ipairs(items) do
-		if not forbiddenWeaponsInAllEraSet[item] then
-			if not (Era == "Coldwar" and WEAPONSLIST.IsRestricted(item)) then
-				local addAmount = amount
-				if rocketSet and rocketSet[item] then addAmount = addAmount * 3 end
-				addAmount = _getWarehouseRefillAmount(item, addAmount)
-				if addAmount > 0 then
-					storage:AddItem(item, addAmount)
-					added = added + 1
+	local function addItemsToStorage(targetStorage)
+		local count = 0
+		for _, item in ipairs(items) do
+			if not forbiddenWeaponsInAllEraSet[item] then
+				if not (Era == "Coldwar" and WEAPONSLIST.IsRestricted(item)) then
+					local addAmount = amount
+					if rocketSet and rocketSet[item] then addAmount = addAmount * 3 end
+					addAmount = _getWarehouseRefillAmount(item, addAmount)
+					if addAmount > 0 then
+						targetStorage:AddItem(item, addAmount)
+						count = count + 1
+					end
 				end
 			end
 		end
+		return count
+	end
+
+	added = addItemsToStorage(storage)
+
+	local zellName = getPairedFarpZellAirbaseName(abName) or getPairedFarpZellAirbaseName(zoneName)
+	local zellStorage = zellName and STORAGE:FindByName(zellName) or nil
+	local zellAdded = 0
+	if zellStorage then
+		zellAdded = addItemsToStorage(zellStorage)
+	end
+
+	if zellAdded > 0 then
+		return true, string.format("[Warehouse] Added %d item types x%d to %s and %d item types to %s (zone: %s).", added, amount, tostring(abName), zellAdded, tostring(zellName), tostring(zoneName or "unknown"))
 	end
 
     return true, string.format("[Warehouse] Added %d item types x%d to %s (zone: %s).",added, amount, tostring(abName), tostring(zoneName or "unknown"))
@@ -30752,7 +30788,6 @@ function GroupCommander:_assignHeloLogisticsRoute(groupName, targetZoneName, own
 			{ distance = 115, bearing = 240 },
 			{ distance = 115, bearing = 210 },
 			{ distance = 115, bearing = 180 },
-			{ distance = 115, bearing = 150 },
 		}
 		local farpCargoState = bc._farpCargoSpawnState[farpLaunch.name] or { index = 0 }
 		farpCargoState.index = ((tonumber(farpCargoState.index) or 0) % #farpCargoArc) + 1
@@ -45266,6 +45301,7 @@ do
 
 	local function _shouldSkip(name)
 		if not name or name == "" then return true end
+		if type(name) == "string" and name:find("^CTLD FARP ZELL ") then return false end
 		if name == 'CVN-72' or name == 'CVN-73' or name == 'CVN-74' or name == 'CVN-75' or name == 'CVN-59' or name == 'Tarawa' or name == 'HMS Invincible' then return true end
 		local dcsAb = Airbase.getByName(name)
 		if dcsAb and dcsAb.getDesc then
@@ -48076,8 +48112,8 @@ allowedPlanes = allowedPlanes or {
   "MiG-19P","Mirage-F1AD","F/A-18A","Su-24MR","F-4E-45MC","MiG-23MLD","Mirage-F1CR","SA342Mistral","Mi-24V","F-15E","AJS37","UH-1H",
   "UH-60L","MB-339A","F-14A-135-GR", "F-14A-135-GR-Early", "F-15C","F-16A MLU","Mirage-F1BD","P3C_Orion","Mirage-F1M-EE","An-30M","F-5E-3_FC",
   "Mirage-F1EQ","A-10A", "Mirage-F1M-CE","Mirage-F1ED","Ka-27","E-2C","UH-60A","Mirage-F1C","Mirage-F1CE","AH-1W","MiG-21Bis","Mirage-F1BE",
-  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA",
-  "Mirage-F1C-200","Mirage-F1DDA","MiG-15bis","Mirage-F1CJ","Mirage-F1CK","Mirage-F1AZ", "A-10C_2", "Mirage-F1CT","A-10C","M-2000C",
+  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA","F-100D",
+  "Mirage-F1C-200","Mirage-F1DDA","MiG-15bis","Mirage-F1CJ","Mirage-F1CK","Mirage-F1AZ", "A-10C_2", "Mirage-F1CT","A-10C","M-2000C","F-14A-95-GR",
   "Mirage-F1EH","Mirage-F1CH","SA342Minigun","MiG-29A","Bronco-OV-10A","OH-6A", "Mirage-F1CG","F-5E-3","F-86F Sabre","F-14A","L-39C","C-101CC","SU22",
   "SA342L","Mi-8MT","Mirage-F1EE","Mi-24P","CH-47Fbl1","FA-18C_hornet","F-16C_50", "MiG-29 Fulcrum","UH-60L_DAP","C-130J-30","F-14B","AH-64D_BLK_II","MH-6J","AH-6J","Mi-28NE","MH-60R"}
 
@@ -48086,8 +48122,8 @@ allowedPlanesRed = allowedPlanesRed or {
   "MiG-19P","Mirage-F1AD","F/A-18A","Su-24MR","F-4E-45MC","MiG-23MLD","Mirage-F1CR","SA342Mistral","Mi-24V","F-15E","AJS37","UH-1H",
   "UH-60L","MB-339A","F-14A-135-GR", "F-14A-135-GR-Early", "F-15C","F-16A MLU","Mirage-F1BD","P3C_Orion","Mirage-F1M-EE","An-30M","F-5E-3_FC",
   "Mirage-F1EQ","A-10A", "Mirage-F1M-CE","Mirage-F1ED","Ka-27","E-2C","UH-60A","Mirage-F1C","Mirage-F1CE","AH-1W","MiG-21Bis","Mirage-F1BE",
-  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA",
-  "Mirage-F1C-200","Mirage-F1DDA","MiG-15bis","Mirage-F1CJ","Mirage-F1CK","Mirage-F1AZ", "A-10C_2", "Mirage-F1CT","A-10C","M-2000C","F-15ESE",
+  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA","F-14A-95-GR",
+  "Mirage-F1C-200","Mirage-F1DDA","MiG-15bis","Mirage-F1CJ","Mirage-F1CK","Mirage-F1AZ", "A-10C_2", "Mirage-F1CT","A-10C","M-2000C","F-15ESE","F-100D",
   "Mirage-F1EH","Mirage-F1CH","SA342Minigun","MiG-29A","Bronco-OV-10A","OH-6A", "Mirage-F1CG","F-5E-3","F-86F Sabre","F-14A","L-39C","C-101CC","SU22","A-4E-C",
   "SA342L","Mi-8MT","Mirage-F1EE","Mi-24P","CH-47Fbl1","FA-18C_hornet","F-16C_50", "MiG-29 Fulcrum","UH-60L_DAP","C-130J-30","F-14B","AH-64D_BLK_II","MH-6J","AH-6J","Mi-28NE","MH-60R"}
 
@@ -48108,28 +48144,32 @@ function WEAPONSLIST.IsRestricted(itemName)
     return restrictedWeaponSet[itemName] == true
 end
 
-local planeUnlimitedCheckInitialized = false
+local planeUnlimitedCheckedAirbases = {}
+
+local function checkUnlimitedPlanesForAirbase(airbaseName)
+	if not airbaseName then return end
+	if planeUnlimitedCheckedAirbases[airbaseName] then return end
+	local storage = STORAGE:FindByName(airbaseName)
+	if not (storage and storage.GetInventory and storage.IsUnlimited) then return end
+	planeUnlimitedCheckedAirbases[airbaseName] = true
+	local ac = storage:GetInventory()
+	local samplePlane = nil
+	for name, _ in pairs(ac or {}) do
+		samplePlane = name
+		break
+	end
+	if samplePlane then
+		local ok, isUnlimited = pcall(storage.IsUnlimited, storage, samplePlane)
+		if ok and isUnlimited then
+			trigger.action.outText(L10N:Format("WAREHOUSE_UNLIMITED_AIRCRAFT_DETECTED", tostring(airbaseName)),15)
+		end
+	end
+end
 
 local function checkUnlimitedPlanesOnce(airbaseNames)
-	if planeUnlimitedCheckInitialized then return end
-	planeUnlimitedCheckInitialized = true
 	if type(airbaseNames) ~= "table" then return end
 	for _, airbaseName in ipairs(airbaseNames) do
-		local storage = STORAGE:FindByName(airbaseName)
-		if storage and storage.GetInventory and storage.IsUnlimited then
-			local ac = storage:GetInventory()
-			local samplePlane = nil
-			for name, _ in pairs(ac or {}) do
-				samplePlane = name
-				break
-			end
-			if samplePlane then
-				local ok, isUnlimited = pcall(storage.IsUnlimited, storage, samplePlane)
-				if ok and isUnlimited then
-					trigger.action.outText(L10N:Format("WAREHOUSE_UNLIMITED_AIRCRAFT_DETECTED", tostring(airbaseName)),15)
-				end
-			end
-		end
+		checkUnlimitedPlanesForAirbase(airbaseName)
 	end
 end
 
@@ -48220,7 +48260,7 @@ function checkWeaponsList(airbase)
 		if not storage.GetInventory then return end
 
 		local _, _, wp = storage:GetInventory()
-		if WarehouseLogistics ~= true or isLogisticCenterAirbase(airbaseName) then
+		if WarehouseLogistics ~= true or isLogisticCenterAirbase(airbaseName) or bc:_isDynamicShopSupplyBlockedAirbaseName(airbaseName) then
 			for name, _ in pairs(wp or {}) do
 				if not (restrictedWeaponSet and restrictedWeaponSet[name]) then
 					storage:SetItem(name, 1073741823)
@@ -48253,6 +48293,7 @@ function checkWeaponsList(airbase)
 
     if Era == 'Coldwar' then
         if airbase then
+            checkUnlimitedPlanesForAirbase(airbase)
             processColdwarAirbase(airbase)
             return
         end

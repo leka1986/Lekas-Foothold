@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-04-27T17:34:03+02:00-d9651e1dea4d2fb451853233bcc49e08ecf41cc9 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-06-14T13:45:08+02:00-23112c99545d8b052f850fe0680d77272d24433b ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -6608,7 +6608,6 @@ initiator=Initiator,
 world.onEvent(Event)
 end
 function BASE:CreateEventTakeoff(EventTime,Initiator)
-self:F({EventTime,Initiator})
 local Event={
 id=world.event.S_EVENT_TAKEOFF,
 time=EventTime,
@@ -13081,11 +13080,11 @@ self:I(string.format("Register Group: %s",tostring(DCSGroupName)))
 self:AddGroup(DCSGroupName,true)
 for DCSUnitId,DCSUnit in pairs(DCSGroup:getUnits())do
 local DCSUnitName=DCSUnit:getName()
-self:I(string.format("Register Unit: %s",tostring(DCSUnitName)))
+--self:T(string.format("Register Unit: %s",tostring(DCSUnitName)))
 self:AddUnit(tostring(DCSUnitName),true)
 end
 else
---self:E({"Group does not exist: ",DCSGroup})
+--self:T({"Group does not exist: ",DCSGroup})
 end
 return self
 end
@@ -13139,15 +13138,8 @@ end
 return self
 end
 function DATABASE:_RegisterAirbase(airbase)
-local IsSyria=UTILS.GetDCSMap()=="Syria"and true or false
-local countHSyria=0
 if airbase then
 local DCSAirbaseName=airbase:getName()
-if IsSyria and DCSAirbaseName=="H"and countHSyria>0 then
-return self
-elseif IsSyria and DCSAirbaseName=="H"and countHSyria==0 then
-countHSyria=countHSyria+1
-end
 local airbaseID=airbase:getID()
 local airbase=self:AddAirbase(DCSAirbaseName)
 local airbaseUID=airbase:GetID(true)
@@ -13571,6 +13563,7 @@ Coalitions={
 },
 },
 filterNoRegex=false,
+filterReplaceDash=true,
 }
 function SET_BASE:New(Database)
 local self=BASE:Inherit(self,FSM:New())
@@ -13632,11 +13625,17 @@ return ObjectFound
 end
 function SET_BASE:_SearchPattern(Name,Pattern,NoRegex,ReplaceDash)
 NoRegex=NoRegex or self.filterNoRegex
-if ReplaceDash==true then
+ReplaceDash=ReplaceDash or self.filterReplaceDash
+if ReplaceDash==true and NoRegex~=true then
 Pattern=Pattern:gsub("-","%%-")
 end
 local contain=string.find(Name,Pattern,1,NoRegex)
 return contain
+end
+function SET_BASE:FilterSetRegex(NoRegex,ReplaceDash)
+if NoRegex~=nil then self.filterNoRegex=NoRegex end
+self.filterReplaceDash=ReplaceDash or true
+return self
 end
 function SET_BASE:GetSet()
 return self.Set or{}
@@ -14475,7 +14474,7 @@ end
 if self.Filter.GroupPrefixes and MGroupInclude then
 local MGroupPrefix=false
 for GroupPrefixId,GroupPrefix in pairs(self.Filter.GroupPrefixes)do
-if self:_SearchPattern(MGroup:GetName(),GroupPrefix,false,true)then
+if self:_SearchPattern(MGroup:GetName(),GroupPrefix,self.filterNoRegex,self.filterReplaceDash)then
 MGroupPrefix=true
 end
 end
@@ -15114,7 +15113,7 @@ end
 if self.Filter.UnitPrefixes and MUnitInclude then
 local MUnitPrefix=false
 for UnitPrefixId,UnitPrefix in pairs(self.Filter.UnitPrefixes)do
-if self:_SearchPattern(MUnit:GetName(),UnitPrefix,false,true)then
+if self:_SearchPattern(MUnit:GetName(),UnitPrefix,self.filterNoRegex,self.filterReplaceDash)then
 MUnitPrefix=true
 end
 end
@@ -15525,7 +15524,7 @@ end
 if self.Filter.StaticPrefixes then
 local MStaticPrefix=false
 for StaticPrefixId,StaticPrefix in pairs(self.Filter.StaticPrefixes)do
-if self:_SearchPattern(MStatic:GetName(),StaticPrefix,false,true)then
+if self:_SearchPattern(MStatic:GetName(),StaticPrefix,self.filterNoRegex,self.filterReplaceDash)then
 MStaticPrefix=true
 end
 end
@@ -15949,7 +15948,7 @@ end
 if self.Filter.ClientPrefixes and MClientInclude then
 local MClientPrefix=false
 for ClientPrefixId,ClientPrefix in pairs(self.Filter.ClientPrefixes)do
-if self:_SearchPattern(MClient.UnitName,ClientPrefix)then
+if self:_SearchPattern(MClient.UnitName,ClientPrefix,self.filterNoRegex,self.filterReplaceDash)then
 MClientPrefix=true
 end
 end
@@ -15969,7 +15968,7 @@ if self.Filter.Playernames and MClientInclude then
 local MClientPlayername=false
 local playername=MClient:GetPlayerName()or"Unknown"
 for _,_Playername in pairs(self.Filter.Playernames)do
-if playername and self:_SearchPattern(playername,_Playername)then
+if playername and self:_SearchPattern(playername,_Playername,self.filterNoRegex,self.filterReplaceDash)then
 MClientPlayername=true
 end
 end
@@ -15979,7 +15978,7 @@ if self.Filter.Callsigns and MClientInclude then
 local MClientCallsigns=false
 local callsign=MClient:GetCallsign()
 for _,_Callsign in pairs(self.Filter.Callsigns)do
-if callsign and self:_SearchPattern(callsign,_Callsign,true)then
+if callsign and self:_SearchPattern(callsign,_Callsign,self.filterNoRegex,self.filterReplaceDash)then
 MClientCallsigns=true
 end
 end
@@ -16208,7 +16207,7 @@ end
 if self.Filter.ClientPrefixes then
 local MClientPrefix=false
 for ClientPrefixId,ClientPrefix in pairs(self.Filter.ClientPrefixes)do
-if self:_SearchPattern(MClient.UnitName,ClientPrefix)then
+if self:_SearchPattern(MClient.UnitName,ClientPrefix,self.filterNoRegex,self.filterReplaceDash)then
 MClientPrefix=true
 end
 end
@@ -16541,7 +16540,7 @@ local MZoneName=MZone:GetName()
 if self.Filter.Prefixes then
 local MZonePrefix=false
 for ZonePrefixId,ZonePrefix in pairs(self.Filter.Prefixes)do
-if self:_SearchPattern(MZoneName,ZonePrefix,false,true)then
+if self:_SearchPattern(MZoneName,ZonePrefix,self.filterNoRegex,self.filterReplaceDash)then
 MZonePrefix=true
 end
 end
@@ -16770,7 +16769,7 @@ local MZoneName=MZone:GetName()
 if self.Filter.Prefixes then
 local MZonePrefix=false
 for ZonePrefixId,ZonePrefix in pairs(self.Filter.Prefixes)do
-if self:_SearchPattern(MZoneName,ZonePrefix,false,true)then
+if self:_SearchPattern(MZoneName,ZonePrefix,self.filterNoRegex,self.filterReplaceDash)then
 MZonePrefix=true
 end
 end
@@ -16923,7 +16922,7 @@ local MZoneName=MZone:GetName()
 if self.Filter.Prefixes then
 local MZonePrefix=false
 for ZonePrefixId,ZonePrefix in pairs(self.Filter.Prefixes)do
-if self:_SearchPattern(MZoneName,ZonePrefix,false,true)then
+if self:_SearchPattern(MZoneName,ZonePrefix,self.filterNoRegex,self.filterReplaceDash)then
 MZonePrefix=true
 break
 end
@@ -17282,7 +17281,7 @@ end
 if self.Filter.GroupPrefixes and MGroupInclude then
 local MGroupPrefix=false
 for GroupPrefixId,GroupPrefix in pairs(self.Filter.GroupPrefixes)do
-if self:_SearchPattern(MGroup:GetName(),GroupPrefix,false,true)then
+if self:_SearchPattern(MGroup:GetName(),GroupPrefix,self.filterNoRegex,self.filterReplaceDash)then
 MGroupPrefix=true
 end
 end
@@ -17446,7 +17445,7 @@ local MSceneryName=MScenery:GetName()
 if self.Filter.Prefixes then
 local MSceneryPrefix=false
 for ZonePrefixId,ZonePrefix in pairs(self.Filter.Prefixes)do
-if self:_SearchPattern(MSceneryName,ZonePrefix,false,true)then
+if self:_SearchPattern(MSceneryName,ZonePrefix,self.filterNoRegex,self.filterReplaceDash)then
 MSceneryPrefix=true
 end
 end
@@ -17577,7 +17576,7 @@ end
 if self.Filter.StaticPrefixes then
 local DCargoPrefix=false
 for StaticPrefixId,StaticPrefix in pairs(self.Filter.StaticPrefixes)do
-if self:_SearchPattern(DCargo:GetName(),StaticPrefix,false,true)then
+if self:_SearchPattern(DCargo:GetName(),StaticPrefix,self.filterNoRegex,self.filterReplaceDash)then
 DCargoPrefix=true
 end
 end
@@ -17676,7 +17675,7 @@ end
 function SET_DYNAMICCARGO:FilterCurrentOwner(PlayerName)
 self:FilterFunction(
 function(cargo)
-if cargo and cargo.Owner and self:_SearchPattern(cargo.Owner,PlayerName,true)then
+if cargo and cargo.Owner and self:_SearchPattern(cargo.Owner,PlayerName,self.filterNoRegex,self.filterReplaceDash)then
 return true
 else
 return false
@@ -20902,6 +20901,9 @@ self.SpawnGrouping=Grouping
 return self
 end
 function SPAWN:InitRandomizeZones(SpawnZoneTable,RandomizePositionInZone)
+if not SpawnZoneTable then
+return self
+end
 local temptable={}
 for _,_temp in pairs(SpawnZoneTable)do
 temptable[#temptable+1]=_temp
@@ -21475,7 +21477,6 @@ if _notenough then
 if EmergencyAirSpawn and not self.SpawnUnControlled then
 self:E(string.format("WARNING: Group %s has no parking spots at %s ==> air start!",self.SpawnTemplatePrefix,SpawnAirbase:GetName()))
 autoparking=false
-spawnonground=false
 SpawnPoint.type=GROUPTEMPLATE.Takeoff[GROUP.Takeoff.Air][1]
 SpawnPoint.action=GROUPTEMPLATE.Takeoff[GROUP.Takeoff.Air][2]
 PointVec3.x=PointVec3.x+math.random(-500,500)
@@ -21486,9 +21487,16 @@ else
 PointVec3.y=PointVec3:GetLandHeight()+math.random(500,2500)
 end
 Takeoff=GROUP.Takeoff.Air
+spawnonground=false
 else
+if not Takeoff==GROUP.Takeoff.Runway then
 self:E(string.format("WARNING: Group %s has no parking spots at %s ==> No emergency air start or uncontrolled spawning ==> No spawn!",self.SpawnTemplatePrefix,SpawnAirbase:GetName()))
 return nil
+else
+Takeoff=GROUP.Takeoff.Runway
+spawnonground=false
+self:E(string.format("WARNING: Group %s set to runway spawning at %s, this only works in Single Player!",self.SpawnTemplatePrefix,SpawnAirbase:GetName()))
+end
 end
 end
 else
@@ -21543,7 +21551,7 @@ SpawnTemplate.uncontrolled=self.SpawnUnControlled
 local GroupSpawned=self:SpawnWithIndex(self.SpawnIndex)
 if Takeoff==GROUP.Takeoff.Air then
 for UnitID,UnitSpawned in pairs(GroupSpawned:GetUnits())do
-self:ScheduleOnce(5,BASE.CreateEventTakeoff,{GroupSpawned,timer.getTime(),UnitSpawned:GetDCSObject()})
+self:ScheduleOnce(5,BASE.CreateEventTakeoff,GroupSpawned,timer.getTime(),UnitSpawned:GetDCSObject())
 end
 end
 return GroupSpawned
@@ -32415,8 +32423,8 @@ AIRBASE.Syria={
 ["Adana_Sakirpasa"]="Adana Sakirpasa",
 ["Adiyaman"]="Adiyaman",
 ["Akrotiri"]="Akrotiri",
-["Al_Qusayr"]="Al Qusayr",
 ["Al_Dumayr"]="Al-Dumayr",
+["Al_Qusayr"]="Al Qusayr",
 ["Aleppo"]="Aleppo",
 ["An_Nasiriyah"]="An Nasiriyah",
 ["At_Tanf"]="At Tanf",
@@ -38235,7 +38243,7 @@ self:T("**** Calculating hit zone for "..(SEADWeaponName or"None"))
 if SEADWeapon and SEADWeapon:isExist()then
 local position=SEADWeapon:getPosition()
 local mheight=(type(height)=="number" and height) or (pos0 and pos0.y) or 0
-height=mheight
+height=mheight	  
 local wph=math.atan2(position.x.z,position.x.x)
 if wph<0 then
 wph=wph+2*math.pi
@@ -56085,7 +56093,7 @@ MANTIS.radiusscale[MANTIS.SamType.MEDIUM]=1.2
 MANTIS.radiusscale[MANTIS.SamType.SHORT]=1.75
 MANTIS.radiusscale[MANTIS.SamType.POINT]=3
 MANTIS.SamData={
-["Hawk"]={Range=45,Blindspot=0,Height=12,Type="Medium",Radar="Hawk"},
+["Hawk"]={Range=35,Blindspot=0,Height=12,Type="Medium",Radar="Hawk"},
 ["NASAMS"]={Range=14,Blindspot=0,Height=7,Type="Short",Radar="NSAMS",ARMCapacity=1},
 ["Patriot"]={Range=99,Blindspot=0,Height=25,Type="Long",Radar="Patriot str"},
 ["Rapier"]={Range=10,Blindspot=0,Height=3,Type="Short",Radar="rapier"},
@@ -56112,10 +56120,9 @@ MANTIS.SamData={
 ["SA-17"]={Range=50,Blindspot=3,Height=50,Type="Medium",Radar="SA-17",ARMCapacity=4},
 ["SA-20A"]={Range=150,Blindspot=5,Height=27,Type="Long",Radar="S-300PMU1",ARMCapacity=16},
 ["SA-20B"]={Range=200,Blindspot=4,Height=27,Type="Long",Radar="S-300PMU2",ARMCapacity=18},
-["SA-21"]={Range=380,Blindspot=5,Height=30,Type="Long",Radar="92N6E"},
-["S-300VM"]={Range=200,Blindspot=5,Height=30,Type="Long",Radar="9S32M",ARMCapacity=4},
-["S-300V4"]={Range=380,Blindspot=5,Height=30,Type="Long",Radar="9S32M",ARMCapacity=4},
-["S-400"]={Range=250,Blindspot=5,Height=27,Type="Long",Radar="92N6E",ARMCapacity=4},
+["S-300VM"]={Range=200,Blindspot=5,Height=30,Type="Long",Radar="9S32ME",ARMCapacity=4},
+["S-300V4"]={Range=380,Blindspot=5,Height=30,Type="Long",Radar="9S32M-1E",ARMCapacity=4},
+["S-400"]={Range=380,Blindspot=5,Height=30,Type="Long",Radar="92N6E",ARMCapacity=4},
 ["HQ-2"]={Range=50,Blindspot=6,Height=35,Type="Medium",Radar="HQ_2_Guideline_LN"},
 ["TAMIR IDFA"]={Range=20,Blindspot=0.6,Height=12.3,Type="Short",Radar="IRON_DOME_LN"},
 ["STUNNER IDFA"]={Range=250,Blindspot=1,Height=45,Type="Long",Radar="DAVID_SLING_LN"},
@@ -56124,6 +56131,7 @@ MANTIS.SamData={
 ["Pantsir S1"]={Range=20,Blindspot=1.2,Height=15,Type="Point",Radar="PantsirS1",Point="true",ARMCapacity=3},
 ["Tor M2"]={Range=12,Blindspot=1,Height=10,Type="Point",Radar="TorM2",Point="true",ARMCapacity=4},
 ["IRIS-T SLM"]={Range=40,Blindspot=0.5,Height=20,Type="Medium",Radar="CH_IRIST_SLM",ARMCapacity=12},
+["SON-9"]={Range=20,Blindspot=0,Height=14,Type="Point",Radar="SON_9",Point="true"},
 }
 MANTIS.SamDataHDS={
 ["SA-2 HDS"]={Range=56,Blindspot=7,Height=30,Type="Medium",Radar="V759"},
@@ -56131,10 +56139,8 @@ MANTIS.SamDataHDS={
 ["SA-10B HDS"]={Range=90,Blindspot=5,Height=25,Type="Long",Radar="5P85CE ln",ARMCapacity=8},
 ["SA-10C HDS"]={Range=75,Blindspot=5,Height=25,Type="Long",Radar="5P85SE ln",ARMCapacity=3},
 ["SA-17 HDS"]={Range=50,Blindspot=3,Height=50,Type="Medium",Radar="SA-17",ARMCapacity=4},
-["SA-12 HDS 2"]={Range=100,Blindspot=13,Height=30,Type="Long",Radar="S-300V 9A82 l",ARMCapacity=12},
-["SA-12 HDS 1"]={Range=75,Blindspot=6,Height=25,Type="Long",Radar="S-300V 9A83 l",ARMCapacity=12},
-["SA-23 HDS 2"]={Range=200,Blindspot=5,Height=37,Type="Long",Radar="S-300VM 9A82ME",ARMCapacity=14},
-["SA-23 HDS 1"]={Range=100,Blindspot=1,Height=50,Type="Long",Radar="S-300VM 9A83ME",ARMCapacity=14},
+["SA-12 HDS"]={Range=100,Blindspot=6,Height=30,Type="Long",Radar="S-300V 9A82 l",ARMCapacity=12},
+["SA-23 HDS"]={Range=200,Blindspot=1,Height=50,Type="Long",Radar="S-300VM 9A82ME",ARMCapacity=14},
 ["HQ-2 HDS"]={Range=50,Blindspot=6,Height=35,Type="Medium",Radar="HQ_2_Guideline_LN"},
 ["SAMPT Block 1 HDS"]={Range=120,Blindspot=1,Height=20,Type="long",Radar="SAMPT_MLT_Blk1"},
 ["SAMPT Block 1INT HDS"]={Range=150,Blindspot=1,Height=25,Type="long",Radar="SAMPT_MLT_Blk1NT"},
@@ -56197,6 +56203,138 @@ MANTIS.SamDataCH={
 ["RBS103BM CHM"]={Range=120,Blindspot=3,Height=24.5,Type="Long",Radar="LvS-103_Lavett103_HX_Rb103B"},
 ["Lvkv9040M CHM"]={Range=2,Blindspot=0.1,Height=1.2,Type="Point",Radar="LvKv9040",Point="true"},
 }
+MANTIS.JammerLoadouts={
+["1xALQ99"]={name="1x AN/ALQ-99",description="Baseline single pod. Full 64MHz-20GHz spectrum.",mult_LOW=1.12,mult_S=1.10,mult_IJ=1.12,mult_OPT=1.00,bt_mod=1.00,range_mod=1.00,tier="ALQ99"},
+["2xALQ99"]={name="2x AN/ALQ-99",description="Two pods. Improved ERP with log stacking.",mult_LOW=1.40,mult_S=1.36,mult_IJ=1.40,mult_OPT=1.02,bt_mod=1.00,range_mod=1.03,tier="ALQ99"},
+["3xALQ99"]={name="3x AN/ALQ-99 (Maximum Legacy)",description="Max legacy barrage. Highest broadband ERP.",mult_LOW=1.58,mult_S=1.52,mult_IJ=1.58,mult_OPT=1.04,bt_mod=1.00,range_mod=1.06,tier="ALQ99"},
+["1xALQ249"]={name="1x AN/ALQ-249 (AESA)",description="AESA 2-18GHz. High peak+wider window. Blind <2GHz.",mult_LOW=0.15,mult_S=1.82,mult_IJ=1.70,mult_OPT=1.00,bt_mod=1.28,range_mod=1.16,tier="ALQ249"},
+["2xALQ249"]={name="2x AN/ALQ-249",description="Two AESA pods. Strong S/IJ dominance.",mult_LOW=0.15,mult_S=2.30,mult_IJ=2.15,mult_OPT=1.00,bt_mod=1.38,range_mod=1.26,tier="ALQ249"},
+["3xALQ249"]={name="3x AN/ALQ-249 (Maximum AESA)",description="Max AESA ERP. Extreme S/IJ. No LOW coverage.",mult_LOW=0.15,mult_S=2.75,mult_IJ=2.58,mult_OPT=1.00,bt_mod=1.48,range_mod=1.35,tier="ALQ249"},
+["1xALQ99_1xALQ249"]={name="1x ALQ-99 + 1x ALQ-249",description="Balanced coverage. AESA S/IJ + ALQ-99 LOW-band.",mult_LOW=1.14,mult_S=1.90,mult_IJ=1.80,mult_OPT=1.01,bt_mod=1.22,range_mod=1.12,tier="Mixed"},
+["1xALQ99_2xALQ249"]={name="1x ALQ-99 + 2x ALQ-249 [Recommended]",description="Best all-around. High AESA ERP + LOW coverage.",mult_LOW=1.10,mult_S=2.38,mult_IJ=2.22,mult_OPT=1.01,bt_mod=1.35,range_mod=1.24,tier="Mixed"},
+["2xALQ99_1xALQ249"]={name="2x ALQ-99 + 1x ALQ-249",description="Strong LOW-band + AESA S/IJ boost.",mult_LOW=1.42,mult_S=2.10,mult_IJ=2.04,mult_OPT=1.03,bt_mod=1.25,range_mod=1.15,tier="Mixed"},
+}
+MANTIS.JammerLoadoutTiers={
+ALQ99={"1xALQ99","2xALQ99","3xALQ99"},
+ALQ249={"1xALQ249","2xALQ249","3xALQ249"},
+Mixed={"1xALQ99_1xALQ249","1xALQ99_2xALQ249","2xALQ99_1xALQ249"},
+}
+MANTIS.JammerJitterPercent=0.10
+MANTIS.JammerSAMParams={
+["Nike"]={peak=78,mu=55,sigma_L=22,tail_dist=110,band="S",floor=5},
+["Hawk"]={peak=30,mu=22,sigma_L=9,tail_dist=55,band="IJ",floor=3},
+["SA-2"]={peak=75,mu=40,sigma_L=16,tail_dist=90,band="S",floor=5},
+["SA-3"]={peak=45,mu=22,sigma_L=10,tail_dist=52,band="IJ",floor=5},
+["SA-5"]={peak=52,mu=75,sigma_L=26,tail_dist=145,band="S",floor=5},
+["SA-6"]={peak=33,mu=18,sigma_L=8,tail_dist=48,band="IJ",floor=3},
+["SA-8"]={peak=38,mu=10,sigma_L=4,tail_dist=24,band="IJ",floor=3},
+["SA-9"]={peak=3,mu=3,sigma_L=1,tail_dist=5,band="OPT",floor=0},
+["SA-10"]={peak=32,mu=50,sigma_L=20,tail_dist=95,band="S",floor=3},
+["SA-10B"]={peak=30,mu=52,sigma_L=20,tail_dist=100,band="S",floor=3},
+["SA-11"]={peak=52,mu=28,sigma_L=12,tail_dist=58,band="IJ",floor=3},
+["SA-13"]={peak=3,mu=3,sigma_L=1,tail_dist=5,band="OPT",floor=0},
+["SA-15"]={peak=30,mu=11,sigma_L=5,tail_dist=22,band="IJ",floor=3},
+["SA-17"]={peak=24,mu=32,sigma_L=14,tail_dist=68,band="IJ",floor=2},
+["SA-19"]={peak=25,mu=8,sigma_L=3.5,tail_dist=16,band="IJ",floor=2},
+["SA-20A"]={peak=22,mu=65,sigma_L=24,tail_dist=115,band="S",floor=2},
+["SA-20B"]={peak=20,mu=68,sigma_L=24,tail_dist=120,band="S",floor=2},
+["S-300VM"]={peak=16,mu=80,sigma_L=30,tail_dist=135,band="S",floor=2},
+["S-300V4"]={peak=14,mu=85,sigma_L=30,tail_dist=145,band="S",floor=2},
+["S-400"]={peak=18,mu=80,sigma_L=30,tail_dist=150,band="S",floor=2},
+["NASAMS"]={peak=25,mu=28,sigma_L=12,tail_dist=52,band="IJ",floor=2},
+["Patriot"]={peak=32,mu=62,sigma_L=24,tail_dist=110,band="S",floor=3},
+["Rapier"]={peak=12,mu=6,sigma_L=2.5,tail_dist=14,band="IJ",floor=0},
+["Gepard"]={peak=18,mu=6,sigma_L=2,tail_dist=18,band="IJ",floor=0},
+["Roland"]={peak=35,mu=5,sigma_L=2,tail_dist=12,band="IJ",floor=3},
+["HQ-7"]={peak=38,mu=8,sigma_L=3.5,tail_dist=18,band="IJ",floor=3},
+["HQ-2"]={peak=70,mu=38,sigma_L=15,tail_dist=80,band="S",floor=5},
+["C-RAM"]={peak=3,mu=3,sigma_L=1,tail_dist=5,band="OPT",floor=0},
+["Avenger"]={peak=3,mu=3,sigma_L=1,tail_dist=5,band="OPT",floor=0},
+["Chaparral"]={peak=3,mu=3,sigma_L=1,tail_dist=5,band="OPT",floor=0},
+["Linebacker"]={peak=3,mu=3,sigma_L=1,tail_dist=5,band="OPT",floor=0},
+["Silkworm"]={peak=35,mu=20,sigma_L=8,tail_dist=40,band="IJ",floor=3},
+["Dog Ear"]={peak=40,mu=10,sigma_L=4,tail_dist=20,band="IJ",floor=5},
+["Pantsir S1"]={peak=10,mu=9,sigma_L=4,tail_dist=20,band="IJ",floor=0},
+["Tor M2"]={peak=28,mu=14,sigma_L=6,tail_dist=30,band="IJ",floor=3},
+["IRIS-T SLM"]={peak=18,mu=22,sigma_L=10,tail_dist=50,band="IJ",floor=2},
+["SON-9"]={peak=48,mu=14,sigma_L=6,tail_dist=30,band="IJ",floor=5},
+["TAMIR IDFA"]={peak=19,mu=25,sigma_L=12,tail_dist=52,band="S",floor=2},
+["STUNNER IDFA"]={peak=16,mu=45,sigma_L=18,tail_dist=80,band="S",floor=2},
+["SA-10C HDS"]={peak=30,mu=50,sigma_L=20,tail_dist=92,band="S",floor=3},
+["SA-12 HDS"]={peak=35,mu=50,sigma_L=18,tail_dist=90,band="S",floor=3},
+["SAMPT Block 1 HDS"]={peak=28,mu=45,sigma_L=18,tail_dist=85,band="S",floor=3},
+["SAMPT Block 1INT HDS"]={peak=26,mu=48,sigma_L=18,tail_dist=88,band="S",floor=3},
+["SAMPT Block 2 HDS"]={peak=22,mu=52,sigma_L=20,tail_dist=92,band="S",floor=2},
+["RBS70 SMA"]={peak=5,mu=4,sigma_L=2,tail_dist=10,band="OPT",floor=0},
+["RBS90 SMA"]={peak=5,mu=4,sigma_L=2,tail_dist=10,band="OPT",floor=0},
+["RBS98M SMA"]={peak=25,mu=12,sigma_L=5,tail_dist=25,band="IJ",floor=3},
+["RBS103A SMA"]={peak=20,mu=55,sigma_L=20,tail_dist=90,band="S",floor=2},
+["RBS103B SMA"]={peak=22,mu=45,sigma_L=18,tail_dist=80,band="S",floor=2},
+["Lvkv9040M SMA"]={peak=15,mu=3,sigma_L=1,tail_dist=8,band="OPT",floor=0},
+["2S38 CHM"]={peak=8,mu=3,sigma_L=1,tail_dist=8,band="OPT",floor=0},
+["PGL-625 CHM"]={peak=12,mu=6,sigma_L=2.5,tail_dist=14,band="OPT",floor=0},
+["HQ-17A CHM"]={peak=30,mu=11,sigma_L=5,tail_dist=24,band="IJ",floor=3},
+["M903PAC3 CHM"]={peak=15,mu=58,sigma_L=22,tail_dist=105,band="S",floor=2},
+["TorM2M CHM"]={peak=26,mu=16,sigma_L=6,tail_dist=32,band="IJ",floor=3},
+["NASAMS3-AMRAAMER CHM"]={peak=20,mu=35,sigma_L=14,tail_dist=65,band="IJ",floor=2},
+["NASAMS3-AIM9X2 CHM"]={peak=10,mu=15,sigma_L=6,tail_dist=30,band="IJ",floor=0},
+["PGZ-09 CHM"]={peak=22,mu=5,sigma_L=2,tail_dist=14,band="IJ",floor=0},
+["PGZ-95 CHM"]={peak=15,mu=4,sigma_L=2,tail_dist=10,band="OPT",floor=0},
+["S350-9M100 CHM"]={peak=18,mu=35,sigma_L=15,tail_dist=78,band="IJ",floor=2},
+["HQ-22 CHM"]={peak=20,mu=70,sigma_L=26,tail_dist=120,band="S",floor=2},
+["IRIS-T SLM CHM"]={peak=18,mu=22,sigma_L=10,tail_dist=50,band="IJ",floor=2},
+["Skynex CHM"]={peak=12,mu=4,sigma_L=2,tail_dist=10,band="OPT",floor=0},
+["Skyshield CHM"]={peak=12,mu=4,sigma_L=2,tail_dist=10,band="OPT",floor=0},
+["BukM3-9M317M CHM"]={peak=22,mu=38,sigma_L=16,tail_dist=75,band="IJ",floor=2},
+["SkySabre CHM"]={peak=18,mu=18,sigma_L=7,tail_dist=40,band="IJ",floor=2},
+["Stormer CHM"]={peak=10,mu=5,sigma_L=2,tail_dist=12,band="OPT",floor=0},
+["THAAD CHM"]={peak=10,mu=90,sigma_L=38,tail_dist=140,band="IJ",floor=0},
+["WieselOzelot CHM"]={peak=3,mu=3,sigma_L=1,tail_dist=5,band="OPT",floor=0},
+["USInfantryFIM92K CHM"]={peak=3,mu=3,sigma_L=1,tail_dist=5,band="OPT",floor=0},
+}
+do
+local p=MANTIS.JammerSAMParams
+p["SA-21"]=p["S-400"]
+p["SA-22"]=p["Pantsir S1"]
+p["SA-23"]=p["S-300VM"]
+p["SA-23B"]=p["S-300V4"]
+p["SA-27"]=p["BukM3-9M317M CHM"]
+p["SA-28"]=p["S350-9M100 CHM"]
+p["BukM3-9M317MA CHM"]=p["BukM3-9M317M CHM"]
+p["S350-9M96D CHM"]=p["S350-9M100 CHM"]
+p["PantsirS1 CHM"]=p["Pantsir S1"]
+p["PantsirS2 CHM"]=p["Pantsir S1"]
+p["TorM2 CHM"]=p["Tor M2"]
+p["TorM2K CHM"]=p["Tor M2"]
+p["M903PAC2 CHM"]=p["Patriot"]
+p["M903PAC2KAT1 CHM"]=p["Patriot"]
+p["IRIS-T SLM CHM"]=p["IRIS-T SLM"]
+p["SA-2 HDS"]=p["SA-2"]
+p["SA-3 HDS"]=p["SA-3"]
+p["SA-10B HDS"]=p["SA-10B"]
+p["SA-17 HDS"]=p["SA-17"]
+p["SA-23 HDS"]=p["S-300VM"]
+p["HQ-2 HDS"]=p["HQ-2"]
+p["FlaRakRad CHM"]=p["Roland"]
+p["C-RAM CHM"]=p["C-RAM"]
+p["LD-3000 CHM"]=p["C-RAM"]
+p["LD-3000M CHM"]=p["C-RAM"]
+p["RBS70 CHM"]=p["RBS70 SMA"]
+p["RBS70M SMA"]=p["RBS70 SMA"]
+p["RBS70M CHM"]=p["RBS70 SMA"]
+p["RBS90 CHM"]=p["RBS90 SMA"]
+p["RBS90M SMA"]=p["RBS90 SMA"]
+p["RBS90M CHM"]=p["RBS90 SMA"]
+p["RBS98M CHM"]=p["RBS98M SMA"]
+p["RBS103A CHM"]=p["RBS103A SMA"]
+p["RBS103AM SMA"]=p["RBS103A SMA"]
+p["RBS103AM CHM"]=p["RBS103A SMA"]
+p["RBS103B CHM"]=p["RBS103B SMA"]
+p["RBS103BM SMA"]=p["RBS103B SMA"]
+p["RBS103BM CHM"]=p["RBS103B SMA"]
+p["Lvkv9040M CHM"]=p["Lvkv9040M SMA"]
+p["LAV-AD CHM"]=p["SA-9"]
+end
 do
 function MANTIS:New(name,samprefix,ewrprefix,hq,Coalition,dynamic,awacs,EmOnOff,Padding,Zones)
 local self=BASE:Inherit(self,FSM:New())
@@ -56346,7 +56484,8 @@ return false
 end
 local function SwitchSAMOn(Name,Group)
 local suppressed=self.SuppressedGroups[Name]or false
-if not suppressed and self.SamStateTracker[Name]=="GREEN"then
+local jammed=self._jammerEnabled and self._jammedSAMs and self._jammedSAMs[Name]or false
+if not suppressed and not jammed and self.SamStateTracker[Name]=="GREEN"then
 self.SamStateTracker[Name]="RED"
 if self.UseEmOnOff then
 Group:EnableEmission(true)
@@ -57217,6 +57356,11 @@ function MANTIS:SeadAllowSuppression(targetGroup,targetName,attackerGroup,weapon
 self:T(self.lid.."SeadAllowSuppression")
 self:T(string.format("MANTIS:SeadAllowSuppression REQUEST | target=%s | weapon=%s | tti=%s | delay=%s",tostring(targetName),
 tostring(weaponName),tostring(tti),tostring(delay)))
+if self._jammerEnabled and self._jammedSAMs and self._jammedSAMs[targetName]then
+self:T(string.format("MANTIS:SeadAllowSuppression DECISION -> DENIED (JAMMED %.0f%%) | target=%s",
+self._jammedSAMs[targetName]*100,tostring(targetName)))
+return false
+end
 local armcap=targetGroup:GetProperty("ARMCapacity")
 if not armcap then
 for _,sam in pairs(self.SAM_Table or{})do
@@ -57565,6 +57709,512 @@ end
 function MANTIS:onafterSeadSuppressionPlanned(From,Event,To,Group,Name,SuppressionStartTime,SuppressionEndTime,Attacker)
 self:T({From,Event,To,Name})
 return self
+end
+function MANTIS:AddJammer(clientSet,defaultLoadout)
+self:T(self.lid.."AddJammer")
+self._jammerEnabled=true
+if type(clientSet)=="string"then
+clientSet=SET_GROUP:New():FilterPrefixes(clientSet):FilterActive(true):FilterStart()
+end
+self._jammerClientSet=clientSet
+self._jammerDefaultLoadout=defaultLoadout or"1xALQ99_2xALQ249"
+self._jammerAircraft=self._jammerAircraft or{}
+self._jammerAISets=self._jammerAISets or{}
+self._jammerSnapshot=self._jammerSnapshot or{}
+self._jammedSAMs=self._jammedSAMs or{}
+self._jammerMenusBuilt=self._jammerMenusBuilt or{}
+if not self._jammerHasTransitions then
+self:AddTransition("*","JammerSuppression","*")
+self:AddTransition("*","JammerActivated","*")
+self:AddTransition("*","JammerDeactivated","*")
+self._jammerHasTransitions=true
+end
+if not self._jammerMenuScheduler then
+self._jammerMenuScheduler=SCHEDULER:New(nil,function()
+if not self._jammerEnabled then return end
+if self._jammerClientSet then
+self:_IterateJammerSet(self._jammerClientSet,function(unit,group)
+local unitName=unit:GetName()
+if not self._jammerAircraft[unitName]then
+self._jammerAircraft[unitName]={
+loadout=self._jammerDefaultLoadout,
+active=false,
+isClient=unit:IsPlayer(),
+hasLoadout=false,
+}
+elseif not self._jammerAircraft[unitName].isClient and unit:IsPlayer()then
+self._jammerAircraft[unitName].isClient=true
+end
+if self._jammerAircraft[unitName].isClient and not self._jammerMenusBuilt[unitName]then
+self:_SetupJammerMenu(unit,group)
+end
+end)
+end
+end,{},2,5)
+end
+self:I(string.format("%sJammer configured | default=%s",self.lid,self._jammerDefaultLoadout))
+return self
+end
+function MANTIS:AddJammerAI(aiSet,loadout)
+self:T(self.lid.."AddJammerAI")
+self._jammerEnabled=true
+self._jammerAircraft=self._jammerAircraft or{}
+self._jammerAISets=self._jammerAISets or{}
+self._jammerSnapshot=self._jammerSnapshot or{}
+self._jammedSAMs=self._jammedSAMs or{}
+self._jammerMenusBuilt=self._jammerMenusBuilt or{}
+local actualSet=aiSet
+if type(aiSet)=="string"then
+actualSet=SET_GROUP:New():FilterPrefixes(aiSet):FilterActive(true):FilterStart()
+end
+table.insert(self._jammerAISets,{set=actualSet,loadout=loadout or"1xALQ99_2xALQ249"})
+if not self._jammerHasTransitions then
+self:AddTransition("*","JammerSuppression","*")
+self:AddTransition("*","JammerActivated","*")
+self:AddTransition("*","JammerDeactivated","*")
+self._jammerHasTransitions=true
+end
+self:I(string.format("%sJammer AI configured | loadout=%s",self.lid,loadout or"1xALQ99_2xALQ249"))
+return self
+end
+function MANTIS:_JamGaussianExp(d,params,loadoutKey)
+if d<0 or d>200 then return 0 end
+if not params then return 0 end
+local cfg=self.JammerLoadouts[loadoutKey]
+if not cfg then return 0 end
+local peak,mu,sigma_L,tail_dist,band=params.peak,params.mu,params.sigma_L,params.tail_dist,params.band
+local floor=params.floor or 0
+local bm
+if band=="LOW"then bm=cfg.mult_LOW
+elseif band=="S"then bm=cfg.mult_S
+elseif band=="IJ"then bm=cfg.mult_IJ
+else bm=cfg.mult_OPT end
+local eff_sigma_L=sigma_L/cfg.bt_mod
+local eff_tail_dist=tail_dist*cfg.range_mod
+local eff_peak=math.min(95,peak*bm)
+local raw
+if d<mu then
+raw=eff_peak*math.exp(-0.5*((d-mu)/eff_sigma_L)^2)
+else
+local lambda=math.log(100.0)/eff_tail_dist
+raw=eff_peak*math.exp(-lambda*(d-mu))
+end
+local eff_floor=floor*bm
+if eff_floor>0 and d>mu then
+local floorLambda=math.log(100.0)/(eff_tail_dist*2.5)
+eff_floor=eff_floor*math.exp(-floorLambda*(d-mu))
+end
+raw=math.max(eff_floor,raw)
+local jitter=1.0+(math.random()*2-1)*(self.JammerJitterPercent or 0.10)
+raw=raw*jitter
+return math.max(0,math.min(95,raw))/100.0
+end
+function MANTIS:_BuildJammerKeyCache()
+self._jammerSortedHDS={}
+self._jammerSortedSMA={}
+self._jammerSortedCHM={}
+self._jammerSortedBase={}
+for key,_ in pairs(self.JammerSAMParams)do
+if string.find(key,"HDS",1,true)then table.insert(self._jammerSortedHDS,key)
+elseif string.find(key,"SMA",1,true)then table.insert(self._jammerSortedSMA,key)
+elseif string.find(key,"CHM",1,true)then table.insert(self._jammerSortedCHM,key)
+else table.insert(self._jammerSortedBase,key)end
+end
+local byLenDesc=function(a,b)return#a>#b end
+table.sort(self._jammerSortedHDS,byLenDesc)
+table.sort(self._jammerSortedSMA,byLenDesc)
+table.sort(self._jammerSortedCHM,byLenDesc)
+table.sort(self._jammerSortedBase,byLenDesc)
+self._jammerResolverCache={}
+return self
+end
+function MANTIS:_ResolveJammerParams(grpname)
+if not grpname then return nil end
+if not self._jammerSortedBase then self:_BuildJammerKeyCache()end
+local cached=self._jammerResolverCache[grpname]
+if cached~=nil then
+if cached==false then return nil end
+return cached
+end
+local function safeMatch(name,key)
+local startPos,endPos=string.find(name,key,1,true)
+if not startPos then return false end
+local nextChar=string.sub(name,endPos+1,endPos+1)
+if nextChar==""then return true end
+if string.match(nextChar,"%d")then return false end
+return true
+end
+local keyList
+if string.find(grpname,"HDS",1,true)then keyList=self._jammerSortedHDS
+elseif string.find(grpname,"SMA",1,true)then keyList=self._jammerSortedSMA
+elseif string.find(grpname,"CHM",1,true)then keyList=self._jammerSortedCHM end
+if keyList then
+for i=1,#keyList do
+if safeMatch(grpname,keyList[i])then
+local params=self.JammerSAMParams[keyList[i]]
+self._jammerResolverCache[grpname]=params
+return params
+end
+end
+end
+local baseKeys=self._jammerSortedBase
+for i=1,#baseKeys do
+if safeMatch(grpname,baseKeys[i])then
+local params=self.JammerSAMParams[baseKeys[i]]
+self._jammerResolverCache[grpname]=params
+return params
+end
+end
+self._jammerResolverCache[grpname]=false
+return nil
+end
+function MANTIS:_CountTable(t)
+local c=0
+for _ in pairs(t)do c=c+1 end
+return c
+end
+function MANTIS:_IterateJammerSet(set,fn)
+if not set then return self end
+if type(set.ForEachClient)=="function"then
+set:ForEachClient(function(client)
+if not client then return end
+local unit=client:GetClientGroupUnit()
+if not unit or not unit:IsAlive()then return end
+local group=unit:GetGroup()
+if not group then return end
+fn(unit,group)
+end)
+elseif type(set.ForEachGroupAlive)=="function"then
+set:ForEachGroupAlive(function(group)
+if not group then return end
+local units=group:GetUnits()
+if not units then return end
+for _,unit in pairs(units)do
+if unit and unit:IsAlive()then
+fn(unit,group)
+end
+end
+end)
+else
+self:E(self.lid.."ERROR: jammer set is not SET_GROUP, SET_CLIENT, or SET_PLAYER (no ForEachGroupAlive or ForEachClient method).")
+end
+return self
+end
+function MANTIS:_UpdateJammers()
+if not self._jammerEnabled then return self end
+self._jammerSnapshot={}
+if self._jammerClientSet then
+self:_IterateJammerSet(self._jammerClientSet,function(unit,group)
+local unitName=unit:GetName()
+if not self._jammerAircraft[unitName]then
+self._jammerAircraft[unitName]={
+loadout=self._jammerDefaultLoadout,
+active=false,
+isClient=unit:IsPlayer(),
+hasLoadout=false,
+}
+else
+if not self._jammerAircraft[unitName].isClient and unit:IsPlayer()then
+self._jammerAircraft[unitName].isClient=true
+end
+end
+if self._jammerAircraft[unitName].isClient and not self._jammerMenusBuilt[unitName]then
+self:_SetupJammerMenu(unit,group)
+end
+local state=self._jammerAircraft[unitName]
+if state.active and unit:InAir()then
+local coord=unit:GetCoordinate()
+if coord then
+table.insert(self._jammerSnapshot,{coord=coord,loadout=state.loadout,name=unitName})
+end
+end
+end)
+end
+for _,aiEntry in ipairs(self._jammerAISets or{})do
+self:_IterateJammerSet(aiEntry.set,function(unit,group)
+local unitName=unit:GetName()
+if not self._jammerAircraft[unitName]then
+self._jammerAircraft[unitName]={
+loadout=aiEntry.loadout,
+active=false,
+isClient=false,
+hasLoadout=true,
+}
+end
+local state=self._jammerAircraft[unitName]
+if state.active and unit:InAir()then
+local coord=unit:GetCoordinate()
+if coord then
+table.insert(self._jammerSnapshot,{coord=coord,loadout=state.loadout,name=unitName})
+end
+end
+end)
+end
+local toRemove={}
+for unitName,state in pairs(self._jammerAircraft)do
+local unit=UNIT:FindByName(unitName)
+if not unit or not unit:IsAlive()then
+table.insert(toRemove,unitName)
+end
+end
+for _,unitName in ipairs(toRemove)do
+if self._jammerAircraft[unitName]and self._jammerAircraft[unitName].active then
+self:__JammerDeactivated(1,unitName)
+end
+self._jammerAircraft[unitName]=nil
+self._jammerMenusBuilt[unitName]=nil
+end
+return self
+end
+function MANTIS:_ComputeJammedSAMs()
+self._jammedSAMs={}
+if not self._jammerEnabled then return self end
+if#self._jammerSnapshot==0 then return self end
+local M_TO_NM=1.0/1852.0
+local allSAMs={}
+local tables=self.automode
+and{self.SAM_Table_Long,self.SAM_Table_Medium,self.SAM_Table_Short,self.SAM_Table_PointDef}
+or{self.SAM_Table}
+for _,samTable in ipairs(tables)do
+for _,_data in pairs(samTable)do
+if not allSAMs[_data[1]]then allSAMs[_data[1]]=_data[2]end
+end
+end
+for samName,samCoord in pairs(allSAMs)do
+local params=self:_ResolveJammerParams(samName)
+if params then
+local survival=1.0
+for _,jammer in ipairs(self._jammerSnapshot)do
+local distNM=samCoord:Get2DDistance(jammer.coord)*M_TO_NM
+local pJam=self:_JamGaussianExp(distNM,params,jammer.loadout)
+if pJam>0 then survival=survival*(1.0-pJam)end
+end
+local combinedProb=1.0-survival
+if combinedProb>0 and math.random()<combinedProb then
+self._jammedSAMs[samName]=combinedProb
+end
+end
+end
+if self.debug or self.verbose then
+local activeCount=#(self._jammerSnapshot or{})
+local jamCount=self:_CountTable(self._jammedSAMs)
+if activeCount>0 or jamCount>0 then
+local lines={}
+table.insert(lines,string.format("%sJammer cycle: %d active aircraft, %d SAMs jammed",
+self.lid,activeCount,jamCount))
+for _,jammer in ipairs(self._jammerSnapshot)do
+local cfg=self.JammerLoadouts[jammer.loadout]
+table.insert(lines,string.format("  ACTIVE: %s | loadout=%s",
+jammer.name,cfg and cfg.name or jammer.loadout))
+end
+for samName,prob in pairs(self._jammedSAMs)do
+table.insert(lines,string.format("  JAMMED: %s @ %.0f%%",samName,prob*100))
+end
+local text=table.concat(lines,"\n")
+self:I(text)
+if self.debug then
+MESSAGE:New(text,10,"MANTIS"):ToAll()
+end
+end
+end
+return self
+end
+function MANTIS:_SetupJammerMenu(unit,group)
+local unitName=unit:GetName()
+local groupName=group:GetName()
+if self._jammerMenusBuilt[unitName]then return self end
+self._jammerMenusBuilt[unitName]=true
+if self._jammerGroupMenus and self._jammerGroupMenus[groupName]then
+self._jammerGroupMenus[groupName]:Remove()
+self._jammerGroupMenus[groupName]=nil
+end
+self._jammerGroupMenus=self._jammerGroupMenus or{}
+local rootMenu=MENU_GROUP:New(group,"Jammer Controls")
+self._jammerGroupMenus[groupName]=rootMenu
+local alq99Menu=MENU_GROUP:New(group,"ALQ-99 Loadouts",rootMenu)
+local alq249Menu=MENU_GROUP:New(group,"ALQ-249 Loadouts",rootMenu)
+local mixedMenu=MENU_GROUP:New(group,"Mixed Loadouts",rootMenu)
+local tierMenus={ALQ99=alq99Menu,ALQ249=alq249Menu,Mixed=mixedMenu}
+for tierName,keys in pairs(self.JammerLoadoutTiers)do
+local parentMenu=tierMenus[tierName]
+for _,loadoutKey in ipairs(keys)do
+local cfg=self.JammerLoadouts[loadoutKey]
+if cfg then
+MENU_GROUP_COMMAND:New(group,cfg.name,parentMenu,
+self._JammerMenuSetLoadout,self,unitName,loadoutKey,group,rootMenu)
+end
+end
+end
+MESSAGE:New("JAMMER ONLINE\nSelect a loadout from the Jammer Controls menu.",15,"JAMMER"):ToGroup(group)
+return self
+end
+function MANTIS:_JammerMenuSetLoadout(unitName,loadoutKey,group,rootMenu)
+local state=self._jammerAircraft[unitName]
+if not state then return end
+state.loadout=loadoutKey
+state.hasLoadout=true
+local cfg=self.JammerLoadouts[loadoutKey]
+MESSAGE:New(string.format("LOADOUT SELECTED: %s\n%s",cfg and cfg.name or loadoutKey,cfg and cfg.description or""),12,"JAMMER"):ToGroup(group)
+if not state._musicMenuAdded then
+state._musicMenuAdded=true
+state._musicOnMenu=nil
+state._musicOffMenu=nil
+self:_ShowMusicOn(unitName,group,rootMenu)
+end
+end
+function MANTIS:_ShowMusicOn(unitName,group,rootMenu)
+local state=self._jammerAircraft[unitName]
+if not state then return end
+if state._musicOffMenu then state._musicOffMenu:Remove()state._musicOffMenu=nil end
+state._musicOnMenu=MENU_GROUP_COMMAND:New(group,"Music On",rootMenu,
+function()
+local s=self._jammerAircraft[unitName]
+if not s then return end
+s.active=true
+MESSAGE:New(string.format("JAMMER ACTIVE\n%s",self.JammerLoadouts[s.loadout]and self.JammerLoadouts[s.loadout].name or s.loadout),10,"JAMMER"):ToGroup(group)
+self:__JammerActivated(1,unitName,s.loadout)
+self:_ShowMusicOff(unitName,group,rootMenu)
+end)
+end
+function MANTIS:_ShowMusicOff(unitName,group,rootMenu)
+local state=self._jammerAircraft[unitName]
+if not state then return end
+if state._musicOnMenu then state._musicOnMenu:Remove()state._musicOnMenu=nil end
+state._musicOffMenu=MENU_GROUP_COMMAND:New(group,"Music Off",rootMenu,
+function()
+local s=self._jammerAircraft[unitName]
+if not s then return end
+s.active=false
+MESSAGE:New("JAMMER SAFE",10,"JAMMER"):ToGroup(group)
+self:__JammerDeactivated(1,unitName)
+self:_ShowMusicOn(unitName,group,rootMenu)
+end)
+end
+function MANTIS:onafterJammerSuppression(From,Event,To,Group,Name,Probability)
+self:T({From,Event,To,Name,Probability})
+return self
+end
+function MANTIS:onafterJammerActivated(From,Event,To,UnitName,Loadout)
+self:T({From,Event,To,UnitName,Loadout})
+return self
+end
+function MANTIS:onafterJammerDeactivated(From,Event,To,UnitName)
+self:T({From,Event,To,UnitName})
+return self
+end
+function MANTIS:GetJammedSAMs()
+return self._jammedSAMs or{}
+end
+function MANTIS:GetActiveJammerCount()
+return self._jammerSnapshot and#self._jammerSnapshot or 0
+end
+function MANTIS:JammerDebug(toScreen)
+local lines={}
+table.insert(lines,"=== MANTIS JAMMER DEBUG REPORT ===")
+table.insert(lines,string.format("Enabled: %s | Default loadout: %s",
+tostring(self._jammerEnabled),tostring(self._jammerDefaultLoadout)))
+table.insert(lines,string.format("Has client set: %s | AI sets: %d",
+tostring(self._jammerClientSet~=nil),#(self._jammerAISets or{})))
+local count=0
+for unitName,state in pairs(self._jammerAircraft or{})do
+count=count+1
+table.insert(lines,string.format("  [%s] active=%s isClient=%s loadout=%s hasLoadout=%s",
+unitName,tostring(state.active),tostring(state.isClient),
+tostring(state.loadout),tostring(state.hasLoadout)))
+end
+table.insert(lines,string.format("Total tracked aircraft: %d",count))
+table.insert(lines,string.format("Active jammer snapshot: %d aircraft airborne+armed",#(self._jammerSnapshot or{})))
+local jcount=0
+for samName,prob in pairs(self._jammedSAMs or{})do
+jcount=jcount+1
+table.insert(lines,string.format("  JAMMED: %s @ %.0f%%",samName,prob*100))
+end
+table.insert(lines,string.format("Currently jammed SAMs: %d",jcount))
+table.insert(lines,"=== END REPORT ===")
+local report=table.concat(lines,"\n")
+self:I(report)
+if toScreen then
+MESSAGE:New(report,30,"JAMMER DEBUG"):ToAll()
+end
+return self
+end
+function MANTIS:JammerTestResolver(testName)
+local params=self:_ResolveJammerParams(testName)
+if not params then
+self:I(string.format("[JammerTestResolver] '%s' -> NO MATCH",testName))
+return"NO MATCH"
+end
+for key,p in pairs(self.JammerSAMParams)do
+if p==params then
+self:I(string.format("[JammerTestResolver] '%s' -> '%s' {peak=%d, mu=%d, band=%s, floor=%d}",
+testName,key,params.peak,params.mu,params.band,params.floor or 0))
+return key
+end
+end
+return"MATCHED (key unknown)"
+end
+function MANTIS:SetJammerLoadout(unitName,loadoutKey)
+if self._jammerAircraft and self._jammerAircraft[unitName]then
+self._jammerAircraft[unitName].loadout=loadoutKey
+self._jammerAircraft[unitName].hasLoadout=true
+end
+return self
+end
+function MANTIS:SetJammerActive(unitName,active)
+if self._jammerAircraft and self._jammerAircraft[unitName]then
+local wasActive=self._jammerAircraft[unitName].active
+self._jammerAircraft[unitName].active=active
+if active and not wasActive then
+self:__JammerActivated(1,unitName,self._jammerAircraft[unitName].loadout)
+elseif not active and wasActive then
+self:__JammerDeactivated(1,unitName)
+end
+end
+return self
+end
+if not MANTIS._CheckLoopOriginal then
+MANTIS._CheckLoopOriginal=MANTIS._CheckLoop
+end
+if not MANTIS._onbeforeStatusOriginal then
+MANTIS._onbeforeStatusOriginal=MANTIS.onbeforeStatus
+end
+function MANTIS:_CheckLoop(samset,detset,dlink,limit)
+local r,g,s=self:_CheckLoopOriginal(samset,detset,dlink,limit)
+if self._jammerEnabled and self._jammedSAMs then
+for _,_data in pairs(samset)do
+local name=_data[1]
+if self._jammedSAMs[name]and self.SamStateTracker[name]=="RED"then
+local samgroup=GROUP:FindByName(name)
+if samgroup and samgroup:IsAlive()then
+if self.UseEmOnOff then
+samgroup:EnableEmission(false)
+else
+samgroup:OptionAlarmStateGreen()
+end
+self.SamStateTracker[name]="GREEN"
+self:__JammerSuppression(1,samgroup,name,self._jammedSAMs[name])
+if self.ShoradLink then
+local Shorad=self.Shorad
+local shoradradius=self.checkradius
+local ontime=self.ShoradTime
+Shorad:WakeUpShorad(name,shoradradius,ontime,nil,true)
+self:__ShoradActivated(1,name,shoradradius,ontime)
+end
+if self.debug or self.verbose then
+self:T(string.format("%sJAMMED: %s forced GREEN (%.1f%%)",self.lid,name,self._jammedSAMs[name]*100))
+end
+end
+end
+end
+end
+return r,g,s
+end
+function MANTIS:onbeforeStatus(From,Event,To)
+if self._jammerEnabled then
+self:_UpdateJammers()
+self:_ComputeJammedSAMs()
+end
+return self:_onbeforeStatusOriginal(From,Event,To)
 end
 end
 SHORAD={
@@ -57949,7 +58599,7 @@ self:T("**** Calculating hit zone")
 if SEADWeapon and SEADWeapon:isExist()then
 local position=SEADWeapon:getPosition()
 local mheight=(type(height)=="number" and height) or (pos0 and pos0.y) or 0
-height=mheight
+height=mheight	  
 local wph=math.atan2(position.x.z,position.x.x)
 if wph<0 then
 wph=wph+2*math.pi
@@ -62766,14 +63416,20 @@ function AIRBOSS:DeleteRecoveryWindow(Window,Delay)
 if Delay and Delay>0 then
 self:ScheduleOnce(Delay,self.DeleteRecoveryWindow,self,Window)
 else
-for i,_recovery in pairs(self.recoverytimes)do
-local recovery=_recovery
-if Window and Window.ID==recovery.ID then
-if Window.OPEN then
-self:RecoveryStop()
-else
-table.remove(self.recoverytimes,i)
+if not Window then
+return
 end
+if Window.OPEN then
+Window.OPEN=false
+Window.OVER=true
+if self:IsRecovering()then
+self:RecoveryStop()
+end
+end
+for i=#self.recoverytimes,1,-1 do
+local recovery=self.recoverytimes[i]
+if recovery and recovery.ID==Window.ID then
+table.remove(self.recoverytimes,i)
 end
 end
 end
@@ -63455,12 +64111,16 @@ if time>=recovery.START then
 if time<recovery.STOP then
 if self:IsRecovering()then
 state="in progress"
-else
+elseif not recovery.OVER then
 self:RecoveryStart(recovery.CASE,recovery.OFFSET)
 state="starting now"
 recovery.OPEN=true
+else
+state="cancelled"
 end
+if not recovery.OVER then
 currwindow=recovery
+end
 else
 if self:IsRecovering()and not recovery.OVER then
 local _,npattern=self:_GetQueueInfo(self.Qpattern)
@@ -63582,10 +64242,10 @@ coord=nil
 end
 self:CarrierResumeRoute(coord)
 end
-if self.recoverywindow and self.recoverywindow.OPEN==true then
+if self.recoverywindow then
 self.recoverywindow.OPEN=false
 self.recoverywindow.OVER=true
-self:DeleteRecoveryWindow(self.recoverywindow)
+self:DeleteRecoveryWindow(self.recoverywindow,1)
 end
 self:_CheckRecoveryTimes()
 end
@@ -83462,6 +84122,366 @@ STOCK_UNLIMITED="Illimitato",
 BUILD_YES="SI",
 BUILD_NO="NO",
 },
+["PT-BR"]={
+CRATE_LOADED_GROUNDCREW="Caixa %s carregada pela equipe de solo!",
+CRATE_UNLOADED_GROUNDCREW="Caixa %s descarregada pela equipe de solo!",
+CRATE_LOADED_ID="Caixa ID %d para %s carregada!",
+LOADED_FULL="%d %s carregado.",
+LOADED_SETS_LEFTOVER="%d %s carregado(s), com %d caixa(s) sobrando.",
+LOADED_SETS="%d %s carregado(s).",
+LOADED_PARTIAL="Carregado apenas %d/%d caixa(s) de %s.",
+LOADED_PARTIAL_LIMIT="Carregado apenas %d/%d caixa(s) de %s. O limite de carga foi atingido!",
+LOADED_BATCH="%d %s carregado.",
+LOADED_BATCH_PARTIAL="Alguns conjuntos não puderam ser carregados completamente.",
+DROPPED_FULL="%d %s solto.",
+DROPPED_SETS_LEFTOVER="%d %s solto(s), com %d caixa(s) sobrando.",
+DROPPED_SETS="%d %s solto(s).",
+DROPPED_PARTIAL="%d/%d caixa(s) de %s solta(s).",
+DROPPED_INTO_ACTION="Unidades desembarcadas para a ação: %s!",
+DROPPED_BEACON="Baliza %s posicionada | FM %s Mhz | VHF %s KHz | UHF %s Mhz ",
+CRATES_POSITIONED="%d caixas para %s foram posicionadas perto de você!",
+CRATES_DROPPED="%d caixas para %s foram soltas!",
+BOARDED="%s embarcou!",
+BOARDING="%s embarcando!",
+TROOPS_RETURNED="As tropas retornaram à base!",
+TROOPS_LABEL="tropas",
+ENGINEERS_LABEL="engenheiros",
+DEPLOYED_NEAR_YOU="%s foram posicionados perto de você!",
+UNITS_REMOVED="%s foram removidos",
+BUILD_STARTED="Construção iniciada, pronta em %d segundos!",
+REPAIR_STARTED="Reparo iniciado usando %s, levando %d segundos",
+NO_UNIT_TO_REPAIR="Nenhuma unidade perto o suficiente para reparar!",
+CANT_REPAIR_WITH="Não é possível reparar esta unidade com %s",
+CRATES_MOVE_BEFORE_BUILD="*** As caixas precisam ser movidas antes da construção!",
+CHOPPER_CANNOT_CARRY="Desculpe, este helicóptero não pode carregar caixas!",
+TOO_HEAVY="Desculpe, isso é pesado demais para carregar!",
+FULLY_LOADED="Desculpe, estamos totalmente carregados!",
+CRAMMED="Desculpe, já estamos lotados!",
+NO_CAPACITY_NOW="Sem capacidade para carregar mais agora!",
+NO_MORE_CAPACITY="Não há mais capacidade para carregar caixas!",
+CANNOT_LOAD_NONE_OR_FULL="Não é possível carregar caixas: nenhuma encontrada ou sem capacidade restante.",
+NEED_TO_LAND_OR_HOVER_LOAD="Você precisa pousar ou pairar na posição para carregar!",
+HOVER_OVER_CRATES="Paire sobre as caixas para pegá-las!",
+LAND_OR_HOVER_OVER_CRATES="Pouse ou paire sobre as caixas para pegá-las!",
+MUST_LAND_OR_HOVER_CRATES="Você deve pousar ou pairar para carregar caixas!",
+NEED_TO_LAND_BUILD="Você precisa pousar / parar para construir algo, piloto!",
+NOT_CLOSE_ENOUGH_LOGISTICS="Você não está perto o suficiente de uma zona logística!",
+NOT_CLOSE_ENOUGH_DROP="Você não está perto o suficiente de uma zona de lançamento!",
+NOT_CLOSE_ENOUGH_ZONE_NM="Negativo, precisa estar a menos de %d nm de uma zona!",
+CANNOT_BUILD_LOADING_AREA="Você não pode construir em uma área de carregamento, piloto!",
+OPEN_DOORS_LOAD_CARGO="Você precisa abrir a(s) porta(s) para carregar carga!",
+OPEN_DOORS_LOAD_TROOPS="Você precisa abrir a(s) porta(s) para carregar tropas!",
+OPEN_DOORS_EXTRACT_TROOPS="Você precisa abrir a(s) porta(s) para extrair tropas!",
+OPEN_DOORS_UNLOAD_TROOPS="Você precisa abrir a(s) porta(s) para descarregar tropas!",
+OPEN_DOORS_DROP_CARGO="Você precisa abrir a(s) porta(s) para soltar carga!",
+ALL_GONE="Desculpe, todos os %s acabaram!",
+RAN_OUT_OF="Desculpe, ficamos sem %s",
+CARGO_NOT_AVAILABLE_ZONE="A carga solicitada não está disponível nesta zona!",
+ENOUGH_CRATES_NEARBY="Já há caixas suficientes por perto! Cuide delas primeiro!",
+NO_CRATES_WITHIN="Nenhuma caixa carregável em um raio de %d metros!",
+NO_CRATES_WITHIN_PLAIN="Nenhuma caixa em um raio de %d metros!",
+NO_CRATES_IN_RANGE="Nenhuma caixa encontrada no alcance!",
+NO_NAMED_CRATES_IN_RANGE="Nenhuma caixa \"%s\" encontrada no alcance!",
+NO_LOADABLE_CRATES="Desculpe, nenhuma caixa carregável por perto ou peso máximo de carga atingido!",
+NO_UNITS_TO_EXTRACT="Nenhuma unidade perto o suficiente para extrair!",
+NO_UNIT_CONFIG="Nenhuma configuração de unidade encontrada para %s",
+CANT_ONBOARD="Não é possível embarcar %s",
+TOO_MANY_UNITS_NEARBY="Você já tem %d unidades por perto!",
+NO_CRATE_GROUPS="Nenhum grupo de caixas encontrado para esta unidade!",
+NO_CRATE_SET="Nenhum conjunto de caixas encontrado ou índice inválido!",
+NO_CRATE_IN_SET="Nenhuma caixa encontrada nesse conjunto!",
+NO_TROOP_CHUNK="Nenhum bloco de carga de tropas encontrado para ID %d!",
+TROOP_CHUNK_EMPTY="O bloco de tropas está vazio para ID %d!",
+NOTHING_LOADED="Nada carregado!\nLimite de tropas: %d | Limite de caixas %d | Limite de peso %d kg",
+NOTHING_LOADED_AIRDROP="Nada carregado ou fora dos parâmetros de lançamento aéreo!",
+NOTHING_LOADED_HOVER="Nada carregado ou fora dos parâmetros de pairado!",
+NOTHING_IN_STOCK="Nada em estoque!",
+NOTHING_TO_PACK="Nada para empacotar nesta distância, piloto!",
+NOTHING_TO_REMOVE="Nada para remover nesta distância, piloto!",
+ROGER_ZONE="Entendido, zona %s %s!",
+HOVER_PARAMS_METRIC="Parâmetros de pairado (carregamento automático/soltar):\n - Altura mínima %dm \n - Altura máxima %dm \n - Velocidade máxima 2mps \n - Dentro dos parâmetros: %s",
+HOVER_PARAMS_IMPERIAL="Parâmetros de pairado (carregamento automático/soltar):\n - Altura mínima %dft \n - Altura máxima %dft \n - Velocidade máxima 6ftps \n - Dentro dos parâmetros: %s",
+FLIGHT_PARAMS_IMPERIAL="Parâmetros de voo (lançamento aéreo):\n - Altura mínima %dft \n - Altura máxima %dft \n - Dentro dos parâmetros: %s",
+FLIGHT_PARAMS_METRIC="Parâmetros de voo (lançamento aéreo):\n - Altura mínima %dm \n - Altura máxima %dm \n - Dentro dos parâmetros: %s",
+REPORT_CRATES_FOUND="Caixas encontradas por perto:",
+REPORT_REMOVING_CRATES="Removendo caixas encontradas por perto:",
+REPORT_TRANSPORT_CHECKOUT="Ficha de verificação de transporte",
+REPORT_INVENTORY="Ficha de inventário",
+REPORT_BUILD_CHECKLIST="Checklist de caixas construíveis",
+REPORT_REPAIR_CHECKLIST="Checklist de reparos",
+REPORT_BEACONS="Balizas de zona ativas",
+REPORT_SECTION_TROOPS="        -- TROPAS --",
+REPORT_SECTION_CRATES="       -- CAIXAS --",
+REPORT_SECTION_CRATES_GC="       -- CAIXAS carregadas pela equipe de solo --",
+REPORT_SECTION_NONE="        N E N H U M",
+REPORT_SECTION_NONE_ALT="     --- Nada encontrado! ---",
+REPORT_SECTION_NONE_REPAIR="     --- Nada encontrado ---",
+REPORT_GC_LOADABLE_HINT="Provavelmente carregável pela equipe de solo (F8)",
+REPORT_TOTAL_MASS="Massa total: %s kg. Carregável: %s kg.",
+REPORT_TROOPS_CRATES_COUNT="Tropas: %d(%d), Caixas: %d(%d)",
+REPORT_TROOPS_CRATETYPES_COUNT="Tropas: %d, Tipos de caixas: %d",
+REPORT_ROW_TROOP="Tropa: %s tamanho %d",
+REPORT_ROW_CRATE="Caixa: %s %d/%d",
+REPORT_ROW_CRATE_SIZE1="Caixa: %s tamanho 1",
+REPORT_ROW_GC_CRATE="Caixa carregada pela equipe de solo: %s tamanho 1",
+REPORT_ROW_DROPPED_CRATE="Caixa solta para %s, %dkg",
+REPORT_ROW_CRATE_KG="Caixa para %s, %dkg",
+REPORT_ROW_CRATE_REMOVED="Caixa para %s, %dkg removida",
+REPORT_ROW_UNIT_STOCK="Unidade: %s | Soldados: %d | Estoque: %s",
+REPORT_ROW_TYPE_CRATE_STOCK="Tipo: %s | Caixas por conjunto: %d | Estoque: %s",
+REPORT_ROW_TYPE_STOCK="Tipo: %s | Estoque: %s",
+REPORT_ROW_BUILD_CHECK="Tipo: %s | Necessário %d | Encontrado %d | Pode construir %s",
+REPORT_ROW_REPAIR_CHECK="Tipo: %s | Necessário %d | Encontrado %d | Pode reparar %s",
+REPORT_ROW_BEACON=" %s | FM %s Mhz | VHF %s KHz | UHF %s Mhz ",
+WEIGHT_LIMIT="Limite de peso atingido",
+CRATE_LIMIT="Limite de caixas atingido",
+MENU_CTLD="CTLD",
+MENU_MANAGE_TROOPS="Gerenciar tropas",
+MENU_MANAGE_CRATES="Gerenciar caixas",
+MENU_MANAGE_UNITS="Gerenciar unidades",
+MENU_LOAD_TROOPS="Carregar tropas",
+MENU_DROP_TROOPS="Desembarcar tropas",
+MENU_DROP_ALL_TROOPS="Desembarcar TODAS as tropas",
+MENU_EXTRACT_TROOPS="Extrair tropas",
+MENU_DROP_N_TROOPS="Desembarcar (%d) %s",
+MENU_GET_CRATES="Solicitar caixas",
+MENU_GET="Solicitar",
+MENU_GET_AND_LOAD="Solicitar e carregar",
+MENU_GET_ANYWAY="Solicitar mesmo assim",
+MENU_PARTIALLY_LOAD="Carregar parcialmente",
+MENU_OUT_OF_STOCK="Sem estoque",
+MENU_TROOP_LIMIT="Limite de tropas atingido",
+MENU_LOAD_CRATES="Carregar caixas",
+MENU_LOAD_ALL="Carregar TUDO",
+MENU_SHOW_LOADABLE_CRATES="Mostrar caixas carregáveis",
+MENU_NO_CRATES_FOUND_RESCAN="Nenhuma caixa encontrada! Procurar novamente?",
+MENU_USE_C130_LOAD="Usar sistema de carga do C-130",
+MENU_LOAD_SINGLE="Carregar",
+MENU_DROP_CRATES="Soltar caixas",
+MENU_DROP_ALL_CRATES="Soltar TODAS as caixas",
+MENU_DROP="Soltar",
+MENU_DROP_AND_BUILD="Soltar e construir",
+MENU_DROP_N_SETS="Soltar %d conjunto%s",
+MENU_NO_CRATES_TO_DROP="Nenhuma caixa para soltar!",
+MENU_BUILD_CRATES="Construir caixas",
+MENU_REPAIR="Reparar",
+MENU_PACK_CRATES="Empacotar caixas",
+MENU_PACK="Empacotar",
+MENU_SCAN_PACKABLE_UNITS="Procurar unidades empacotáveis por perto",
+MENU_NO_PACKABLE_UNITS_FOUND_RESCAN="Nenhuma unidade empacotável encontrada! Procurar novamente?",
+MENU_PACK_ALL="Empacotar próximas",
+MENU_PACK_AND_LOAD="Empacotar e carregar",
+MENU_PACK_AND_LOAD_ALL="Empacotar e carregar próximas",
+MENU_PACK_AND_REMOVE="Empacotar e remover",
+MENU_PACK_AND_REMOVE_ALL="Empacotar e remover próximas",
+MENU_REMOVE_CRATES="Remover caixas",
+MENU_REMOVE_CRATES_NEARBY="Remover caixas próximas",
+MENU_LIST_CRATES_NEARBY="Listar caixas próximas",
+MENU_CRATES_NEEDED="%d caixa%s %s (%dkg)",
+MENU_CRATE_SINGLE="%s (%dkg)",
+MENU_GET_UNITS="Solicitar unidades",
+MENU_REMOVE_UNITS_NEARBY="Remover unidades próximas",
+MENU_LIST_BOARDED_CARGO="Listar carga embarcada",
+MENU_INVENTORY="Inventário",
+MENU_LIST_ZONE_BEACONS="Listar balizas de zona ativas",
+MENU_SMOKES_FLARES_BEACONS="Fumaças, sinalizadores, balizas",
+MENU_SMOKE_ZONES_NEARBY="Fumaça em zonas próximas",
+MENU_DROP_SMOKE_NOW="Lançar fumaça agora",
+MENU_RED_SMOKE="Fumaça vermelha",
+MENU_BLUE_SMOKE="Fumaça azul",
+MENU_GREEN_SMOKE="Fumaça verde",
+MENU_ORANGE_SMOKE="Fumaça laranja",
+MENU_WHITE_SMOKE="Fumaça branca",
+MENU_FLARE_ZONES_NEARBY="Sinalizadores em zonas próximas",
+MENU_FIRE_FLARE_NOW="Disparar sinalizador agora",
+MENU_DROP_BEACON_NOW="Posicionar baliza agora",
+MENU_SHOW_FLIGHT_PARAMS="Mostrar parâmetros de voo",
+MENU_SHOW_HOVER_PARAMS="Mostrar parâmetros de pairado",
+STOCK_NONE="nenhum",
+STOCK_UNLIMITED="ilimitado",
+BUILD_YES="SIM",
+BUILD_NO="NÃO",
+},
+TR={
+CRATE_LOADED_GROUNDCREW="%s sandığı yer ekibi tarafından yüklendi!",
+CRATE_UNLOADED_GROUNDCREW="%s sandığı yer ekibi tarafından boşaltıldı!",
+CRATE_LOADED_ID="Sandık ID %d %s için yüklendi!",
+LOADED_FULL="%d %s yüklendi.",
+LOADED_SETS_LEFTOVER="%d %s yüklendi, %d sandık kaldı.",
+LOADED_SETS="%d %s yüklendi.",
+LOADED_PARTIAL="Yalnızca %d/%d sandık %s için yüklendi.",
+LOADED_PARTIAL_LIMIT="Yalnızca %d/%d sandık %s için yüklendi. Kargo limiti artık doldu!",
+LOADED_BATCH="%d %s yüklendi.",
+LOADED_BATCH_PARTIAL="Bazı setler tamamen yüklenemedi.",
+DROPPED_FULL="%d %s bırakıldı.",
+DROPPED_SETS_LEFTOVER="%d %s bırakıldı, %d sandık kaldı.",
+DROPPED_SETS="%d %s bırakıldı.",
+DROPPED_PARTIAL="%d/%d sandık %s için bırakıldı.",
+DROPPED_INTO_ACTION="Çatışma alanına konuşlandırılanlar: %s!",
+DROPPED_BEACON="Radyo işaretçisi %s bırakıldı | FM %s Mhz | VHF %s KHz | UHF %s Mhz ",
+CRATES_POSITIONED="%d sandık %s için yakınınıza yerleştirildi!",
+CRATES_DROPPED="%d sandık %s için bırakıldı!",
+BOARDED="%s bindirildi!",
+BOARDING="%s biniyor!",
+TROOPS_RETURNED="Birlikler üsse döndü!",
+TROOPS_LABEL="birlik",
+ENGINEERS_LABEL="mühendis",
+DEPLOYED_NEAR_YOU="%s yakınınıza konuşlandırıldı!",
+UNITS_REMOVED="%s kaldırıldı",
+BUILD_STARTED="İnşa başladı, %d saniye içinde hazır!",
+REPAIR_STARTED="%s kullanılarak onarım başladı, %d saniye sürecek",
+NO_UNIT_TO_REPAIR="Onarmak için yeterince yakın bir birim yok!",
+CANT_REPAIR_WITH="Bu birim %s ile onarılamaz",
+CRATES_MOVE_BEFORE_BUILD="*** İnşa etmeden önce sandıkların taşınması gerekiyor!",
+CHOPPER_CANNOT_CARRY="Üzgünüm, bu helikopter sandık taşıyamaz!",
+TOO_HEAVY="Üzgünüm, bu yük çok ağır!",
+FULLY_LOADED="Üzgünüm, tamamen doluyuz!",
+CRAMMED="Üzgünüm, zaten tıka basa doluyuz!",
+NO_CAPACITY_NOW="Şu anda daha fazla yüklemek için kapasite yok!",
+NO_MORE_CAPACITY="Sandık yüklemek için daha fazla kapasite yok!",
+CANNOT_LOAD_NONE_OR_FULL="Sandıklar yüklenemiyor: ya hiç bulunamadı ya da kapasite kalmadı.",
+NEED_TO_LAND_OR_HOVER_LOAD="Yüklemek için inmen veya pozisyonda asılı kalman gerekiyor!",
+HOVER_OVER_CRATES="Sandıkları almak için üzerlerinde asılı kal!",
+LAND_OR_HOVER_OVER_CRATES="Sandıkları almak için in veya üzerlerinde asılı kal!",
+MUST_LAND_OR_HOVER_CRATES="Sandık yüklemek için inmen veya asılı kalman gerekiyor!",
+NEED_TO_LAND_BUILD="Bir şey inşa etmek için inmen / durman gerekiyor, pilot!",
+NOT_CLOSE_ENOUGH_LOGISTICS="Lojistik bölgesine yeterince yakın değilsin!",
+NOT_CLOSE_ENOUGH_DROP="Bırakma bölgesine yeterince yakın değilsin!",
+NOT_CLOSE_ENOUGH_ZONE_NM="Negatif, bir bölgeye %d nm'den daha yakın olmalısın!",
+CANNOT_BUILD_LOADING_AREA="Yükleme alanında inşa yapamazsın, pilot!",
+OPEN_DOORS_LOAD_CARGO="Kargo yüklemek için kapı(ları) açman gerekiyor!",
+OPEN_DOORS_LOAD_TROOPS="Birlik yüklemek için kapı(ları) açman gerekiyor!",
+OPEN_DOORS_EXTRACT_TROOPS="Birlik tahliye etmek için kapı(ları) açman gerekiyor!",
+OPEN_DOORS_UNLOAD_TROOPS="Birlik boşaltmak için kapı(ları) açman gerekiyor!",
+OPEN_DOORS_DROP_CARGO="Kargo bırakmak için kapı(ları) açman gerekiyor!",
+ALL_GONE="Üzgünüm, tüm %s bitti!",
+RAN_OUT_OF="Üzgünüm, %s tükendi",
+CARGO_NOT_AVAILABLE_ZONE="İstenen kargo bu bölgede mevcut değil!",
+ENOUGH_CRATES_NEARBY="Yakında zaten yeterince sandık var! Önce onlarla ilgilen!",
+NO_CRATES_WITHIN="%d metre içinde yüklenebilir sandık yok!",
+NO_CRATES_WITHIN_PLAIN="%d metre içinde sandık yok!",
+NO_CRATES_IN_RANGE="Menzilde sandık bulunamadı!",
+NO_NAMED_CRATES_IN_RANGE="Menzilde \"%s\" sandığı bulunamadı!",
+NO_LOADABLE_CRATES="Üzgünüm, yakında yüklenebilir sandık yok veya maksimum kargo ağırlığına ulaşıldı!",
+NO_UNITS_TO_EXTRACT="Tahliye etmek için yeterince yakın birim yok!",
+NO_UNIT_CONFIG="%s için birim yapılandırması bulunamadı",
+CANT_ONBOARD="%s bindirilemiyor",
+TOO_MANY_UNITS_NEARBY="Yakında zaten %d birimin var!",
+NO_CRATE_GROUPS="Bu birim için sandık grubu bulunamadı!",
+NO_CRATE_SET="Sandık seti bulunamadı veya indeks geçersiz!",
+NO_CRATE_IN_SET="Bu sette sandık bulunamadı!",
+NO_TROOP_CHUNK="ID %d için birlik kargo parçası bulunamadı!",
+TROOP_CHUNK_EMPTY="ID %d için birlik parçası boş!",
+NOTHING_LOADED="Hiçbir şey yüklü değil!\nBirlik limiti: %d | Sandık limiti %d | Ağırlık limiti %d kg",
+NOTHING_LOADED_AIRDROP="Hiçbir şey yüklü değil veya havadan bırakma parametreleri dahilinde değil!",
+NOTHING_LOADED_HOVER="Hiçbir şey yüklü değil veya asılı kalma parametreleri dahilinde değil!",
+NOTHING_IN_STOCK="Stokta hiçbir şey yok!",
+NOTHING_TO_PACK="Bu mesafede paketlenecek bir şey yok, pilot!",
+NOTHING_TO_REMOVE="Bu mesafede kaldırılacak bir şey yok, pilot!",
+ROGER_ZONE="Anlaşıldı, %s bölgesi %s!",
+HOVER_PARAMS_METRIC="Asılı kalma parametreleri (otomatik yükleme/bırakma):\n - Minimum irtifa %dm \n - Maksimum irtifa %dm \n - Maksimum hız 2mps \n - Parametreler dahilinde: %s",
+HOVER_PARAMS_IMPERIAL="Asılı kalma parametreleri (otomatik yükleme/bırakma):\n - Minimum irtifa %dft \n - Maksimum irtifa %dft \n - Maksimum hız 6ftps \n - Parametreler dahilinde: %s",
+FLIGHT_PARAMS_IMPERIAL="Uçuş parametreleri (havadan bırakma):\n - Minimum irtifa %dft \n - Maksimum irtifa %dft \n - Parametreler dahilinde: %s",
+FLIGHT_PARAMS_METRIC="Uçuş parametreleri (havadan bırakma):\n - Minimum irtifa %dm \n - Maksimum irtifa %dm \n - Parametreler dahilinde: %s",
+REPORT_CRATES_FOUND="Yakında bulunan sandıklar:",
+REPORT_REMOVING_CRATES="Yakında bulunan sandıklar kaldırılıyor:",
+REPORT_TRANSPORT_CHECKOUT="Taşıma kontrol formu",
+REPORT_INVENTORY="Envanter formu",
+REPORT_BUILD_CHECKLIST="İnşa edilebilir sandık kontrol listesi",
+REPORT_REPAIR_CHECKLIST="Onarım kontrol listesi",
+REPORT_BEACONS="Aktif bölge radyo işaretçileri",
+REPORT_SECTION_TROOPS="        -- BİRLİKLER --",
+REPORT_SECTION_CRATES="       -- SANDIKLAR --",
+REPORT_SECTION_CRATES_GC="       -- Yer ekibiyle yüklenen SANDIKLAR --",
+REPORT_SECTION_NONE="        Y O K",
+REPORT_SECTION_NONE_ALT="     --- Hiçbir şey bulunamadı! ---",
+REPORT_SECTION_NONE_REPAIR="     --- Hiçbir şey bulunamadı ---",
+REPORT_GC_LOADABLE_HINT="Muhtemelen yer ekibiyle yüklenebilir (F8)",
+REPORT_TOTAL_MASS="Toplam kütle: %s kg. Yüklenebilir: %s kg.",
+REPORT_TROOPS_CRATES_COUNT="Birlikler: %d(%d), Sandıklar: %d(%d)",
+REPORT_TROOPS_CRATETYPES_COUNT="Birlikler: %d, Sandık tipleri: %d",
+REPORT_ROW_TROOP="Birlik: %s boyut %d",
+REPORT_ROW_CRATE="Sandık: %s %d/%d",
+REPORT_ROW_CRATE_SIZE1="Sandık: %s boyut 1",
+REPORT_ROW_GC_CRATE="Yer ekibiyle yüklenen sandık: %s boyut 1",
+REPORT_ROW_DROPPED_CRATE="%s için bırakılan sandık, %dkg",
+REPORT_ROW_CRATE_KG="%s için sandık, %dkg",
+REPORT_ROW_CRATE_REMOVED="%s için sandık, %dkg kaldırıldı",
+REPORT_ROW_UNIT_STOCK="Birim: %s | Askerler: %d | Stok: %s",
+REPORT_ROW_TYPE_CRATE_STOCK="Tip: %s | Set başına sandık: %d | Stok: %s",
+REPORT_ROW_TYPE_STOCK="Tip: %s | Stok: %s",
+REPORT_ROW_BUILD_CHECK="Tip: %s | Gerekli %d | Bulunan %d | İnşa edilebilir %s",
+REPORT_ROW_REPAIR_CHECK="Tip: %s | Gerekli %d | Bulunan %d | Onarılabilir %s",
+REPORT_ROW_BEACON=" %s | FM %s Mhz | VHF %s KHz | UHF %s Mhz ",
+WEIGHT_LIMIT="Ağırlık limitine ulaşıldı",
+CRATE_LIMIT="Sandık limitine ulaşıldı",
+MENU_CTLD="CTLD",
+MENU_MANAGE_TROOPS="Birlikleri yönet",
+MENU_MANAGE_CRATES="Sandıkları yönet",
+MENU_MANAGE_UNITS="Birimleri yönet",
+MENU_LOAD_TROOPS="Birlik yükle",
+MENU_DROP_TROOPS="Birlik indir",
+MENU_DROP_ALL_TROOPS="TÜM birlikleri indir",
+MENU_EXTRACT_TROOPS="Birlik tahliye et",
+MENU_DROP_N_TROOPS="(%d) %s indir",
+MENU_GET_CRATES="Sandık talep et",
+MENU_GET="Talep et",
+MENU_GET_AND_LOAD="Talep et ve yükle",
+MENU_GET_ANYWAY="Yine de talep et",
+MENU_PARTIALLY_LOAD="Kısmen yükle",
+MENU_OUT_OF_STOCK="Stokta yok",
+MENU_TROOP_LIMIT="Birlik limitine ulaşıldı",
+MENU_LOAD_CRATES="Sandık yükle",
+MENU_LOAD_ALL="TÜMÜNÜ yükle",
+MENU_SHOW_LOADABLE_CRATES="Yüklenebilir sandıkları göster",
+MENU_NO_CRATES_FOUND_RESCAN="Sandık bulunamadı! Tekrar tara?",
+MENU_USE_C130_LOAD="C-130 yükleme sistemini kullan",
+MENU_LOAD_SINGLE="Yükle",
+MENU_DROP_CRATES="Sandık bırak",
+MENU_DROP_ALL_CRATES="TÜM sandıkları bırak",
+MENU_DROP="Bırak",
+MENU_DROP_AND_BUILD="Bırak ve inşa et",
+MENU_DROP_N_SETS="%d set%.0s bırak",
+MENU_NO_CRATES_TO_DROP="Bırakılacak sandık yok!",
+MENU_BUILD_CRATES="Sandıkları inşa et",
+MENU_REPAIR="Onar",
+MENU_PACK_CRATES="Sandıkları paketle",
+MENU_PACK="Paketle",
+MENU_SCAN_PACKABLE_UNITS="Yakındaki paketlenebilir birimleri tara",
+MENU_NO_PACKABLE_UNITS_FOUND_RESCAN="Paketlenebilir birim bulunamadı! Tekrar tara?",
+MENU_PACK_ALL="Yakındakileri paketle",
+MENU_PACK_AND_LOAD="Paketle ve yükle",
+MENU_PACK_AND_LOAD_ALL="Yakındakileri paketle ve yükle",
+MENU_PACK_AND_REMOVE="Paketle ve kaldır",
+MENU_PACK_AND_REMOVE_ALL="Yakındakileri paketle ve kaldır",
+MENU_REMOVE_CRATES="Sandıkları kaldır",
+MENU_REMOVE_CRATES_NEARBY="Yakındaki sandıkları kaldır",
+MENU_LIST_CRATES_NEARBY="Yakındaki sandıkları listele",
+MENU_CRATES_NEEDED="%d sandık%.0s %s (%dkg)",
+MENU_CRATE_SINGLE="%s (%dkg)",
+MENU_GET_UNITS="Birim talep et",
+MENU_REMOVE_UNITS_NEARBY="Yakındaki birimleri kaldır",
+MENU_LIST_BOARDED_CARGO="Bindirilmiş kargoyu listele",
+MENU_INVENTORY="Envanter",
+MENU_LIST_ZONE_BEACONS="Aktif bölge radyo işaretçilerini listele",
+MENU_SMOKES_FLARES_BEACONS="Dumanlar, işaret fişekleri, radyo işaretçileri",
+MENU_SMOKE_ZONES_NEARBY="Yakındaki bölgelerde duman",
+MENU_DROP_SMOKE_NOW="Şimdi duman işareti bırak",
+MENU_RED_SMOKE="Kırmızı duman",
+MENU_BLUE_SMOKE="Mavi duman",
+MENU_GREEN_SMOKE="Yeşil duman",
+MENU_ORANGE_SMOKE="Turuncu duman",
+MENU_WHITE_SMOKE="Beyaz duman",
+MENU_FLARE_ZONES_NEARBY="Yakındaki bölgelerde işaret fişekleri",
+MENU_FIRE_FLARE_NOW="Şimdi işaret fişeği ateşle",
+MENU_DROP_BEACON_NOW="Şimdi radyo işaretçisi bırak",
+MENU_SHOW_FLIGHT_PARAMS="Uçuş parametrelerini göster",
+MENU_SHOW_HOVER_PARAMS="Asılı kalma parametrelerini göster",
+STOCK_NONE="yok",
+STOCK_UNLIMITED="sınırsız",
+BUILD_YES="EVET",
+BUILD_NO="HAYIR",
+},
 RU={
 CRATE_LOADED_GROUNDCREW="Ящик %s загружен наземной службой!",
 CRATE_UNLOADED_GROUNDCREW="Ящик %s выгружен наземной службой!",
@@ -83642,368 +84662,7 @@ STOCK_UNLIMITED="без ограничений",
 BUILD_YES="ДА",
 BUILD_NO="НЕТ",
 },
-}
-CTLD.Messages["PT-BR"]={
-CRATE_LOADED_GROUNDCREW="Caixa %s carregada pela equipe de solo!",
-CRATE_UNLOADED_GROUNDCREW="Caixa %s descarregada pela equipe de solo!",
-CRATE_LOADED_ID="Caixa ID %d para %s carregada!",
-LOADED_FULL="%d %s carregado.",
-LOADED_SETS_LEFTOVER="%d %s carregado(s), com %d caixa(s) sobrando.",
-LOADED_SETS="%d %s carregado(s).",
-LOADED_PARTIAL="Carregado apenas %d/%d caixa(s) de %s.",
-LOADED_PARTIAL_LIMIT="Carregado apenas %d/%d caixa(s) de %s. O limite de carga foi atingido!",
-LOADED_BATCH="%d %s carregado.",
-LOADED_BATCH_PARTIAL="Alguns conjuntos não puderam ser carregados completamente.",
-DROPPED_FULL="%d %s solto.",
-DROPPED_SETS_LEFTOVER="%d %s solto(s), com %d caixa(s) sobrando.",
-DROPPED_SETS="%d %s solto(s).",
-DROPPED_PARTIAL="%d/%d caixa(s) de %s solta(s).",
-DROPPED_INTO_ACTION="Unidades desembarcadas para a ação: %s!",
-DROPPED_BEACON="Baliza %s posicionada | FM %s Mhz | VHF %s KHz | UHF %s Mhz ",
-CRATES_POSITIONED="%d caixas para %s foram posicionadas perto de você!",
-CRATES_DROPPED="%d caixas para %s foram soltas!",
-BOARDED="%s embarcou!",
-BOARDING="%s embarcando!",
-TROOPS_RETURNED="As tropas retornaram à base!",
-TROOPS_LABEL="tropas",
-ENGINEERS_LABEL="engenheiros",
-DEPLOYED_NEAR_YOU="%s foram posicionados perto de você!",
-UNITS_REMOVED="%s foram removidos",
-BUILD_STARTED="Construção iniciada, pronta em %d segundos!",
-REPAIR_STARTED="Reparo iniciado usando %s, levando %d segundos",
-NO_UNIT_TO_REPAIR="Nenhuma unidade perto o suficiente para reparar!",
-CANT_REPAIR_WITH="Não é possível reparar esta unidade com %s",
-CRATES_MOVE_BEFORE_BUILD="*** As caixas precisam ser movidas antes da construção!",
-CHOPPER_CANNOT_CARRY="Desculpe, este helicóptero não pode carregar caixas!",
-TOO_HEAVY="Desculpe, isso é pesado demais para carregar!",
-FULLY_LOADED="Desculpe, estamos totalmente carregados!",
-CRAMMED="Desculpe, já estamos lotados!",
-NO_CAPACITY_NOW="Sem capacidade para carregar mais agora!",
-NO_MORE_CAPACITY="Não há mais capacidade para carregar caixas!",
-CANNOT_LOAD_NONE_OR_FULL="Não é possível carregar caixas: nenhuma encontrada ou sem capacidade restante.",
-NEED_TO_LAND_OR_HOVER_LOAD="Você precisa pousar ou pairar na posição para carregar!",
-HOVER_OVER_CRATES="Paire sobre as caixas para pegá-las!",
-LAND_OR_HOVER_OVER_CRATES="Pouse ou paire sobre as caixas para pegá-las!",
-MUST_LAND_OR_HOVER_CRATES="Você deve pousar ou pairar para carregar caixas!",
-NEED_TO_LAND_BUILD="Você precisa pousar / parar para construir algo, piloto!",
-NOT_CLOSE_ENOUGH_LOGISTICS="Você não está perto o suficiente de uma zona logística!",
-NOT_CLOSE_ENOUGH_DROP="Você não está perto o suficiente de uma zona de lançamento!",
-NOT_CLOSE_ENOUGH_ZONE_NM="Negativo, precisa estar a menos de %d nm de uma zona!",
-CANNOT_BUILD_LOADING_AREA="Você não pode construir em uma área de carregamento, piloto!",
-OPEN_DOORS_LOAD_CARGO="Você precisa abrir a(s) porta(s) para carregar carga!",
-OPEN_DOORS_LOAD_TROOPS="Você precisa abrir a(s) porta(s) para carregar tropas!",
-OPEN_DOORS_EXTRACT_TROOPS="Você precisa abrir a(s) porta(s) para extrair tropas!",
-OPEN_DOORS_UNLOAD_TROOPS="Você precisa abrir a(s) porta(s) para descarregar tropas!",
-OPEN_DOORS_DROP_CARGO="Você precisa abrir a(s) porta(s) para soltar carga!",
-ALL_GONE="Desculpe, todos os %s acabaram!",
-RAN_OUT_OF="Desculpe, ficamos sem %s",
-CARGO_NOT_AVAILABLE_ZONE="A carga solicitada não está disponível nesta zona!",
-ENOUGH_CRATES_NEARBY="Já há caixas suficientes por perto! Cuide delas primeiro!",
-NO_CRATES_WITHIN="Nenhuma caixa carregável em um raio de %d metros!",
-NO_CRATES_WITHIN_PLAIN="Nenhuma caixa em um raio de %d metros!",
-NO_CRATES_IN_RANGE="Nenhuma caixa encontrada no alcance!",
-NO_NAMED_CRATES_IN_RANGE="Nenhuma caixa \"%s\" encontrada no alcance!",
-NO_LOADABLE_CRATES="Desculpe, nenhuma caixa carregável por perto ou peso máximo de carga atingido!",
-NO_UNITS_TO_EXTRACT="Nenhuma unidade perto o suficiente para extrair!",
-NO_UNIT_CONFIG="Nenhuma configuração de unidade encontrada para %s",
-CANT_ONBOARD="Não é possível embarcar %s",
-TOO_MANY_UNITS_NEARBY="Você já tem %d unidades por perto!",
-NO_CRATE_GROUPS="Nenhum grupo de caixas encontrado para esta unidade!",
-NO_CRATE_SET="Nenhum conjunto de caixas encontrado ou índice inválido!",
-NO_CRATE_IN_SET="Nenhuma caixa encontrada nesse conjunto!",
-NO_TROOP_CHUNK="Nenhum bloco de carga de tropas encontrado para ID %d!",
-TROOP_CHUNK_EMPTY="O bloco de tropas está vazio para ID %d!",
-NOTHING_LOADED="Nada carregado!\nLimite de tropas: %d | Limite de caixas %d | Limite de peso %d kg",
-NOTHING_LOADED_AIRDROP="Nada carregado ou fora dos parâmetros de lançamento aéreo!",
-NOTHING_LOADED_HOVER="Nada carregado ou fora dos parâmetros de pairado!",
-NOTHING_IN_STOCK="Nada em estoque!",
-NOTHING_TO_PACK="Nada para empacotar nesta distância, piloto!",
-NOTHING_TO_REMOVE="Nada para remover nesta distância, piloto!",
-ROGER_ZONE="Entendido, zona %s %s!",
-HOVER_PARAMS_METRIC="Parâmetros de pairado (carregamento automático/soltar):\n - Altura mínima %dm \n - Altura máxima %dm \n - Velocidade máxima 2mps \n - Dentro dos parâmetros: %s",
-HOVER_PARAMS_IMPERIAL="Parâmetros de pairado (carregamento automático/soltar):\n - Altura mínima %dft \n - Altura máxima %dft \n - Velocidade máxima 6ftps \n - Dentro dos parâmetros: %s",
-FLIGHT_PARAMS_IMPERIAL="Parâmetros de voo (lançamento aéreo):\n - Altura mínima %dft \n - Altura máxima %dft \n - Dentro dos parâmetros: %s",
-FLIGHT_PARAMS_METRIC="Parâmetros de voo (lançamento aéreo):\n - Altura mínima %dm \n - Altura máxima %dm \n - Dentro dos parâmetros: %s",
-REPORT_CRATES_FOUND="Caixas encontradas por perto:",
-REPORT_REMOVING_CRATES="Removendo caixas encontradas por perto:",
-REPORT_TRANSPORT_CHECKOUT="Ficha de verificação de transporte",
-REPORT_INVENTORY="Ficha de inventário",
-REPORT_BUILD_CHECKLIST="Checklist de caixas construíveis",
-REPORT_REPAIR_CHECKLIST="Checklist de reparos",
-REPORT_BEACONS="Balizas de zona ativas",
-REPORT_SECTION_TROOPS="        -- TROPAS --",
-REPORT_SECTION_CRATES="       -- CAIXAS --",
-REPORT_SECTION_CRATES_GC="       -- CAIXAS carregadas pela equipe de solo --",
-REPORT_SECTION_NONE="        N E N H U M",
-REPORT_SECTION_NONE_ALT="     --- Nada encontrado! ---",
-REPORT_SECTION_NONE_REPAIR="     --- Nada encontrado ---",
-REPORT_GC_LOADABLE_HINT="Provavelmente carregável pela equipe de solo (F8)",
-REPORT_TOTAL_MASS="Massa total: %s kg. Carregável: %s kg.",
-REPORT_TROOPS_CRATES_COUNT="Tropas: %d(%d), Caixas: %d(%d)",
-REPORT_TROOPS_CRATETYPES_COUNT="Tropas: %d, Tipos de caixas: %d",
-REPORT_ROW_TROOP="Tropa: %s tamanho %d",
-REPORT_ROW_CRATE="Caixa: %s %d/%d",
-REPORT_ROW_CRATE_SIZE1="Caixa: %s tamanho 1",
-REPORT_ROW_GC_CRATE="Caixa carregada pela equipe de solo: %s tamanho 1",
-REPORT_ROW_DROPPED_CRATE="Caixa solta para %s, %dkg",
-REPORT_ROW_CRATE_KG="Caixa para %s, %dkg",
-REPORT_ROW_CRATE_REMOVED="Caixa para %s, %dkg removida",
-REPORT_ROW_UNIT_STOCK="Unidade: %s | Soldados: %d | Estoque: %s",
-REPORT_ROW_TYPE_CRATE_STOCK="Tipo: %s | Caixas por conjunto: %d | Estoque: %s",
-REPORT_ROW_TYPE_STOCK="Tipo: %s | Estoque: %s",
-REPORT_ROW_BUILD_CHECK="Tipo: %s | Necessário %d | Encontrado %d | Pode construir %s",
-REPORT_ROW_REPAIR_CHECK="Tipo: %s | Necessário %d | Encontrado %d | Pode reparar %s",
-REPORT_ROW_BEACON=" %s | FM %s Mhz | VHF %s KHz | UHF %s Mhz ",
-WEIGHT_LIMIT="Limite de peso atingido",
-CRATE_LIMIT="Limite de caixas atingido",
-MENU_CTLD="CTLD",
-MENU_MANAGE_TROOPS="Gerenciar tropas",
-MENU_MANAGE_CRATES="Gerenciar caixas",
-MENU_MANAGE_UNITS="Gerenciar unidades",
-MENU_LOAD_TROOPS="Carregar tropas",
-MENU_DROP_TROOPS="Desembarcar tropas",
-MENU_DROP_ALL_TROOPS="Desembarcar TODAS as tropas",
-MENU_EXTRACT_TROOPS="Extrair tropas",
-MENU_DROP_N_TROOPS="Desembarcar (%d) %s",
-MENU_GET_CRATES="Solicitar caixas",
-MENU_GET="Solicitar",
-MENU_GET_AND_LOAD="Solicitar e carregar",
-MENU_GET_ANYWAY="Solicitar mesmo assim",
-MENU_PARTIALLY_LOAD="Carregar parcialmente",
-MENU_OUT_OF_STOCK="Sem estoque",
-MENU_TROOP_LIMIT="Limite de tropas atingido",
-MENU_LOAD_CRATES="Carregar caixas",
-MENU_LOAD_ALL="Carregar TUDO",
-MENU_SHOW_LOADABLE_CRATES="Mostrar caixas carregáveis",
-MENU_NO_CRATES_FOUND_RESCAN="Nenhuma caixa encontrada! Procurar novamente?",
-MENU_USE_C130_LOAD="Usar sistema de carga do C-130",
-MENU_LOAD_SINGLE="Carregar",
-MENU_DROP_CRATES="Soltar caixas",
-MENU_DROP_ALL_CRATES="Soltar TODAS as caixas",
-MENU_DROP="Soltar",
-MENU_DROP_AND_BUILD="Soltar e construir",
-MENU_DROP_N_SETS="Soltar %d conjunto%s",
-MENU_NO_CRATES_TO_DROP="Nenhuma caixa para soltar!",
-MENU_BUILD_CRATES="Construir caixas",
-MENU_REPAIR="Reparar",
-MENU_PACK_CRATES="Empacotar caixas",
-MENU_PACK="Empacotar",
-MENU_SCAN_PACKABLE_UNITS="Procurar unidades empacotáveis por perto",
-MENU_NO_PACKABLE_UNITS_FOUND_RESCAN="Nenhuma unidade empacotável encontrada! Procurar novamente?",
-MENU_PACK_ALL="Empacotar próximas",
-MENU_PACK_AND_LOAD="Empacotar e carregar",
-MENU_PACK_AND_LOAD_ALL="Empacotar e carregar próximas",
-MENU_PACK_AND_REMOVE="Empacotar e remover",
-MENU_PACK_AND_REMOVE_ALL="Empacotar e remover próximas",
-MENU_REMOVE_CRATES="Remover caixas",
-MENU_REMOVE_CRATES_NEARBY="Remover caixas próximas",
-MENU_LIST_CRATES_NEARBY="Listar caixas próximas",
-MENU_CRATES_NEEDED="%d caixa%s %s (%dkg)",
-MENU_CRATE_SINGLE="%s (%dkg)",
-MENU_GET_UNITS="Solicitar unidades",
-MENU_REMOVE_UNITS_NEARBY="Remover unidades próximas",
-MENU_LIST_BOARDED_CARGO="Listar carga embarcada",
-MENU_INVENTORY="Inventário",
-MENU_LIST_ZONE_BEACONS="Listar balizas de zona ativas",
-MENU_SMOKES_FLARES_BEACONS="Fumaças, sinalizadores, balizas",
-MENU_SMOKE_ZONES_NEARBY="Fumaça em zonas próximas",
-MENU_DROP_SMOKE_NOW="Lançar fumaça agora",
-MENU_RED_SMOKE="Fumaça vermelha",
-MENU_BLUE_SMOKE="Fumaça azul",
-MENU_GREEN_SMOKE="Fumaça verde",
-MENU_ORANGE_SMOKE="Fumaça laranja",
-MENU_WHITE_SMOKE="Fumaça branca",
-MENU_FLARE_ZONES_NEARBY="Sinalizadores em zonas próximas",
-MENU_FIRE_FLARE_NOW="Disparar sinalizador agora",
-MENU_DROP_BEACON_NOW="Posicionar baliza agora",
-MENU_SHOW_FLIGHT_PARAMS="Mostrar parâmetros de voo",
-MENU_SHOW_HOVER_PARAMS="Mostrar parâmetros de pairado",
-STOCK_NONE="nenhum",
-STOCK_UNLIMITED="ilimitado",
-BUILD_YES="SIM",
-BUILD_NO="NÃO",
-}
-CTLD.Messages.TR={
-CRATE_LOADED_GROUNDCREW="%s sandığı yer ekibi tarafından yüklendi!",
-CRATE_UNLOADED_GROUNDCREW="%s sandığı yer ekibi tarafından boşaltıldı!",
-CRATE_LOADED_ID="Sandık ID %d %s için yüklendi!",
-LOADED_FULL="%d %s yüklendi.",
-LOADED_SETS_LEFTOVER="%d %s yüklendi, %d sandık kaldı.",
-LOADED_SETS="%d %s yüklendi.",
-LOADED_PARTIAL="Yalnızca %d/%d sandık %s için yüklendi.",
-LOADED_PARTIAL_LIMIT="Yalnızca %d/%d sandık %s için yüklendi. Kargo limiti artık doldu!",
-LOADED_BATCH="%d %s yüklendi.",
-LOADED_BATCH_PARTIAL="Bazı setler tamamen yüklenemedi.",
-DROPPED_FULL="%d %s bırakıldı.",
-DROPPED_SETS_LEFTOVER="%d %s bırakıldı, %d sandık kaldı.",
-DROPPED_SETS="%d %s bırakıldı.",
-DROPPED_PARTIAL="%d/%d sandık %s için bırakıldı.",
-DROPPED_INTO_ACTION="Çatışma alanına konuşlandırılanlar: %s!",
-DROPPED_BEACON="Radyo işaretçisi %s bırakıldı | FM %s Mhz | VHF %s KHz | UHF %s Mhz ",
-CRATES_POSITIONED="%d sandık %s için yakınınıza yerleştirildi!",
-CRATES_DROPPED="%d sandık %s için bırakıldı!",
-BOARDED="%s bindirildi!",
-BOARDING="%s biniyor!",
-TROOPS_RETURNED="Birlikler üsse döndü!",
-TROOPS_LABEL="birlik",
-ENGINEERS_LABEL="mühendis",
-DEPLOYED_NEAR_YOU="%s yakınınıza konuşlandırıldı!",
-UNITS_REMOVED="%s kaldırıldı",
-BUILD_STARTED="İnşa başladı, %d saniye içinde hazır!",
-REPAIR_STARTED="%s kullanılarak onarım başladı, %d saniye sürecek",
-NO_UNIT_TO_REPAIR="Onarmak için yeterince yakın bir birim yok!",
-CANT_REPAIR_WITH="Bu birim %s ile onarılamaz",
-CRATES_MOVE_BEFORE_BUILD="*** İnşa etmeden önce sandıkların taşınması gerekiyor!",
-CHOPPER_CANNOT_CARRY="Üzgünüm, bu helikopter sandık taşıyamaz!",
-TOO_HEAVY="Üzgünüm, bu yük çok ağır!",
-FULLY_LOADED="Üzgünüm, tamamen doluyuz!",
-CRAMMED="Üzgünüm, zaten tıka basa doluyuz!",
-NO_CAPACITY_NOW="Şu anda daha fazla yüklemek için kapasite yok!",
-NO_MORE_CAPACITY="Sandık yüklemek için daha fazla kapasite yok!",
-CANNOT_LOAD_NONE_OR_FULL="Sandıklar yüklenemiyor: ya hiç bulunamadı ya da kapasite kalmadı.",
-NEED_TO_LAND_OR_HOVER_LOAD="Yüklemek için inmen veya pozisyonda asılı kalman gerekiyor!",
-HOVER_OVER_CRATES="Sandıkları almak için üzerlerinde asılı kal!",
-LAND_OR_HOVER_OVER_CRATES="Sandıkları almak için in veya üzerlerinde asılı kal!",
-MUST_LAND_OR_HOVER_CRATES="Sandık yüklemek için inmen veya asılı kalman gerekiyor!",
-NEED_TO_LAND_BUILD="Bir şey inşa etmek için inmen / durman gerekiyor, pilot!",
-NOT_CLOSE_ENOUGH_LOGISTICS="Lojistik bölgesine yeterince yakın değilsin!",
-NOT_CLOSE_ENOUGH_DROP="Bırakma bölgesine yeterince yakın değilsin!",
-NOT_CLOSE_ENOUGH_ZONE_NM="Negatif, bir bölgeye %d nm'den daha yakın olmalısın!",
-CANNOT_BUILD_LOADING_AREA="Yükleme alanında inşa yapamazsın, pilot!",
-OPEN_DOORS_LOAD_CARGO="Kargo yüklemek için kapı(ları) açman gerekiyor!",
-OPEN_DOORS_LOAD_TROOPS="Birlik yüklemek için kapı(ları) açman gerekiyor!",
-OPEN_DOORS_EXTRACT_TROOPS="Birlik tahliye etmek için kapı(ları) açman gerekiyor!",
-OPEN_DOORS_UNLOAD_TROOPS="Birlik boşaltmak için kapı(ları) açman gerekiyor!",
-OPEN_DOORS_DROP_CARGO="Kargo bırakmak için kapı(ları) açman gerekiyor!",
-ALL_GONE="Üzgünüm, tüm %s bitti!",
-RAN_OUT_OF="Üzgünüm, %s tükendi",
-CARGO_NOT_AVAILABLE_ZONE="İstenen kargo bu bölgede mevcut değil!",
-ENOUGH_CRATES_NEARBY="Yakında zaten yeterince sandık var! Önce onlarla ilgilen!",
-NO_CRATES_WITHIN="%d metre içinde yüklenebilir sandık yok!",
-NO_CRATES_WITHIN_PLAIN="%d metre içinde sandık yok!",
-NO_CRATES_IN_RANGE="Menzilde sandık bulunamadı!",
-NO_NAMED_CRATES_IN_RANGE="Menzilde \"%s\" sandığı bulunamadı!",
-NO_LOADABLE_CRATES="Üzgünüm, yakında yüklenebilir sandık yok veya maksimum kargo ağırlığına ulaşıldı!",
-NO_UNITS_TO_EXTRACT="Tahliye etmek için yeterince yakın birim yok!",
-NO_UNIT_CONFIG="%s için birim yapılandırması bulunamadı",
-CANT_ONBOARD="%s bindirilemiyor",
-TOO_MANY_UNITS_NEARBY="Yakında zaten %d birimin var!",
-NO_CRATE_GROUPS="Bu birim için sandık grubu bulunamadı!",
-NO_CRATE_SET="Sandık seti bulunamadı veya indeks geçersiz!",
-NO_CRATE_IN_SET="Bu sette sandık bulunamadı!",
-NO_TROOP_CHUNK="ID %d için birlik kargo parçası bulunamadı!",
-TROOP_CHUNK_EMPTY="ID %d için birlik parçası boş!",
-NOTHING_LOADED="Hiçbir şey yüklü değil!\nBirlik limiti: %d | Sandık limiti %d | Ağırlık limiti %d kg",
-NOTHING_LOADED_AIRDROP="Hiçbir şey yüklü değil veya havadan bırakma parametreleri dahilinde değil!",
-NOTHING_LOADED_HOVER="Hiçbir şey yüklü değil veya asılı kalma parametreleri dahilinde değil!",
-NOTHING_IN_STOCK="Stokta hiçbir şey yok!",
-NOTHING_TO_PACK="Bu mesafede paketlenecek bir şey yok, pilot!",
-NOTHING_TO_REMOVE="Bu mesafede kaldırılacak bir şey yok, pilot!",
-ROGER_ZONE="Anlaşıldı, %s bölgesi %s!",
-HOVER_PARAMS_METRIC="Asılı kalma parametreleri (otomatik yükleme/bırakma):\n - Minimum irtifa %dm \n - Maksimum irtifa %dm \n - Maksimum hız 2mps \n - Parametreler dahilinde: %s",
-HOVER_PARAMS_IMPERIAL="Asılı kalma parametreleri (otomatik yükleme/bırakma):\n - Minimum irtifa %dft \n - Maksimum irtifa %dft \n - Maksimum hız 6ftps \n - Parametreler dahilinde: %s",
-FLIGHT_PARAMS_IMPERIAL="Uçuş parametreleri (havadan bırakma):\n - Minimum irtifa %dft \n - Maksimum irtifa %dft \n - Parametreler dahilinde: %s",
-FLIGHT_PARAMS_METRIC="Uçuş parametreleri (havadan bırakma):\n - Minimum irtifa %dm \n - Maksimum irtifa %dm \n - Parametreler dahilinde: %s",
-REPORT_CRATES_FOUND="Yakında bulunan sandıklar:",
-REPORT_REMOVING_CRATES="Yakında bulunan sandıklar kaldırılıyor:",
-REPORT_TRANSPORT_CHECKOUT="Taşıma kontrol formu",
-REPORT_INVENTORY="Envanter formu",
-REPORT_BUILD_CHECKLIST="İnşa edilebilir sandık kontrol listesi",
-REPORT_REPAIR_CHECKLIST="Onarım kontrol listesi",
-REPORT_BEACONS="Aktif bölge radyo işaretçileri",
-REPORT_SECTION_TROOPS="        -- BİRLİKLER --",
-REPORT_SECTION_CRATES="       -- SANDIKLAR --",
-REPORT_SECTION_CRATES_GC="       -- Yer ekibiyle yüklenen SANDIKLAR --",
-REPORT_SECTION_NONE="        Y O K",
-REPORT_SECTION_NONE_ALT="     --- Hiçbir şey bulunamadı! ---",
-REPORT_SECTION_NONE_REPAIR="     --- Hiçbir şey bulunamadı ---",
-REPORT_GC_LOADABLE_HINT="Muhtemelen yer ekibiyle yüklenebilir (F8)",
-REPORT_TOTAL_MASS="Toplam kütle: %s kg. Yüklenebilir: %s kg.",
-REPORT_TROOPS_CRATES_COUNT="Birlikler: %d(%d), Sandıklar: %d(%d)",
-REPORT_TROOPS_CRATETYPES_COUNT="Birlikler: %d, Sandık tipleri: %d",
-REPORT_ROW_TROOP="Birlik: %s boyut %d",
-REPORT_ROW_CRATE="Sandık: %s %d/%d",
-REPORT_ROW_CRATE_SIZE1="Sandık: %s boyut 1",
-REPORT_ROW_GC_CRATE="Yer ekibiyle yüklenen sandık: %s boyut 1",
-REPORT_ROW_DROPPED_CRATE="%s için bırakılan sandık, %dkg",
-REPORT_ROW_CRATE_KG="%s için sandık, %dkg",
-REPORT_ROW_CRATE_REMOVED="%s için sandık, %dkg kaldırıldı",
-REPORT_ROW_UNIT_STOCK="Birim: %s | Askerler: %d | Stok: %s",
-REPORT_ROW_TYPE_CRATE_STOCK="Tip: %s | Set başına sandık: %d | Stok: %s",
-REPORT_ROW_TYPE_STOCK="Tip: %s | Stok: %s",
-REPORT_ROW_BUILD_CHECK="Tip: %s | Gerekli %d | Bulunan %d | İnşa edilebilir %s",
-REPORT_ROW_REPAIR_CHECK="Tip: %s | Gerekli %d | Bulunan %d | Onarılabilir %s",
-REPORT_ROW_BEACON=" %s | FM %s Mhz | VHF %s KHz | UHF %s Mhz ",
-WEIGHT_LIMIT="Ağırlık limitine ulaşıldı",
-CRATE_LIMIT="Sandık limitine ulaşıldı",
-MENU_CTLD="CTLD",
-MENU_MANAGE_TROOPS="Birlikleri yönet",
-MENU_MANAGE_CRATES="Sandıkları yönet",
-MENU_MANAGE_UNITS="Birimleri yönet",
-MENU_LOAD_TROOPS="Birlik yükle",
-MENU_DROP_TROOPS="Birlik indir",
-MENU_DROP_ALL_TROOPS="TÜM birlikleri indir",
-MENU_EXTRACT_TROOPS="Birlik tahliye et",
-MENU_DROP_N_TROOPS="(%d) %s indir",
-MENU_GET_CRATES="Sandık talep et",
-MENU_GET="Talep et",
-MENU_GET_AND_LOAD="Talep et ve yükle",
-MENU_GET_ANYWAY="Yine de talep et",
-MENU_PARTIALLY_LOAD="Kısmen yükle",
-MENU_OUT_OF_STOCK="Stokta yok",
-MENU_TROOP_LIMIT="Birlik limitine ulaşıldı",
-MENU_LOAD_CRATES="Sandık yükle",
-MENU_LOAD_ALL="TÜMÜNÜ yükle",
-MENU_SHOW_LOADABLE_CRATES="Yüklenebilir sandıkları göster",
-MENU_NO_CRATES_FOUND_RESCAN="Sandık bulunamadı! Tekrar tara?",
-MENU_USE_C130_LOAD="C-130 yükleme sistemini kullan",
-MENU_LOAD_SINGLE="Yükle",
-MENU_DROP_CRATES="Sandık bırak",
-MENU_DROP_ALL_CRATES="TÜM sandıkları bırak",
-MENU_DROP="Bırak",
-MENU_DROP_AND_BUILD="Bırak ve inşa et",
-MENU_DROP_N_SETS="%d set%.0s bırak",
-MENU_NO_CRATES_TO_DROP="Bırakılacak sandık yok!",
-MENU_BUILD_CRATES="Sandıkları inşa et",
-MENU_REPAIR="Onar",
-MENU_PACK_CRATES="Sandıkları paketle",
-MENU_PACK="Paketle",
-MENU_SCAN_PACKABLE_UNITS="Yakındaki paketlenebilir birimleri tara",
-MENU_NO_PACKABLE_UNITS_FOUND_RESCAN="Paketlenebilir birim bulunamadı! Tekrar tara?",
-MENU_PACK_ALL="Yakındakileri paketle",
-MENU_PACK_AND_LOAD="Paketle ve yükle",
-MENU_PACK_AND_LOAD_ALL="Yakındakileri paketle ve yükle",
-MENU_PACK_AND_REMOVE="Paketle ve kaldır",
-MENU_PACK_AND_REMOVE_ALL="Yakındakileri paketle ve kaldır",
-MENU_REMOVE_CRATES="Sandıkları kaldır",
-MENU_REMOVE_CRATES_NEARBY="Yakındaki sandıkları kaldır",
-MENU_LIST_CRATES_NEARBY="Yakındaki sandıkları listele",
-MENU_CRATES_NEEDED="%d sandık%.0s %s (%dkg)",
-MENU_CRATE_SINGLE="%s (%dkg)",
-MENU_GET_UNITS="Birim talep et",
-MENU_REMOVE_UNITS_NEARBY="Yakındaki birimleri kaldır",
-MENU_LIST_BOARDED_CARGO="Bindirilmiş kargoyu listele",
-MENU_INVENTORY="Envanter",
-MENU_LIST_ZONE_BEACONS="Aktif bölge radyo işaretçilerini listele",
-MENU_SMOKES_FLARES_BEACONS="Dumanlar, işaret fişekleri, radyo işaretçileri",
-MENU_SMOKE_ZONES_NEARBY="Yakındaki bölgelerde duman",
-MENU_DROP_SMOKE_NOW="Şimdi duman işareti bırak",
-MENU_RED_SMOKE="Kırmızı duman",
-MENU_BLUE_SMOKE="Mavi duman",
-MENU_GREEN_SMOKE="Yeşil duman",
-MENU_ORANGE_SMOKE="Turuncu duman",
-MENU_WHITE_SMOKE="Beyaz duman",
-MENU_FLARE_ZONES_NEARBY="Yakındaki bölgelerde işaret fişekleri",
-MENU_FIRE_FLARE_NOW="Şimdi işaret fişeği ateşle",
-MENU_DROP_BEACON_NOW="Şimdi radyo işaretçisi bırak",
-MENU_SHOW_FLIGHT_PARAMS="Uçuş parametrelerini göster",
-MENU_SHOW_HOVER_PARAMS="Asılı kalma parametrelerini göster",
-STOCK_NONE="yok",
-STOCK_UNLIMITED="sınırsız",
-BUILD_YES="EVET",
-BUILD_NO="HAYIR",
-}
-CTLD.Messages["zh-TW"]={
+["zh-TW"]={
 CRATE_LOADED_GROUNDCREW="地勤已裝載貨箱 %s！",
 CRATE_UNLOADED_GROUNDCREW="地勤已卸載貨箱 %s！",
 CRATE_LOADED_ID="貨箱 ID %d（%s）已裝載！",
@@ -84182,8 +84841,8 @@ STOCK_NONE="無",
 STOCK_UNLIMITED="無限制",
 BUILD_YES="是",
 BUILD_NO="否",
-}
-CTLD.Messages["zh-CN"]={
+},
+["zh-CN"]={
 CRATE_LOADED_GROUNDCREW="地勤已装载货箱 %s！",
 CRATE_UNLOADED_GROUNDCREW="地勤已卸载货箱 %s！",
 CRATE_LOADED_ID="货箱 ID %d（%s）已装载！",
@@ -84362,6 +85021,7 @@ STOCK_NONE="无",
 STOCK_UNLIMITED="无限制",
 BUILD_YES="是",
 BUILD_NO="否",
+},
 }
 do
 CTLD_HERCULES={
@@ -91507,7 +92167,7 @@ local ScanUnitSet=self.engageZone:GetScannedSetUnit()
 local SeadUnitSet=SET_UNIT:New()
 for _,_unit in pairs(ScanUnitSet.Set)do
 local unit=_unit
-if unit and unit:IsAlive()and unit:HasSEAD()then
+if unit and unit:IsAlive()and unit.HasSEAD and unit:HasSEAD()then
 self:T("Adding UNIT for SEAD: "..unit:GetName())
 local task=CONTROLLABLE.TaskAttackUnit(nil,unit,GroupAttack,AI.Task.WeaponExpend.ALL,1,Direction,self.engageAltitude,2956984318)
 table.insert(DCStasks,task)
@@ -123613,7 +124273,7 @@ FuelCriticalThreshold=10,
 showpatrolpointmarks=false,
 EngageTargetTypes={"Air"},
 }
-EASYGCICAP.version="0.1.35"
+EASYGCICAP.version="0.1.36"
 function EASYGCICAP:New(Alias,AirbaseName,Coalition,EWRName)
 local self=BASE:Inherit(self,FSM:New())
 self.alias=Alias or AirbaseName.." CAP Wing"
@@ -123930,16 +124590,18 @@ end
 end
 end
 if self.noalert5>0 then
+for i=1,self.noalert5 do
 local alert
 if self.ClassName=="EASYGCICAP"then
 alert=AUFTRAG:NewALERT5(AUFTRAG.Type.INTERCEPT)
 elseif self.ClassName=="EASYA2G"then
 alert=AUFTRAG:NewALERT5(AUFTRAG.Type.BAI)
 end
-alert:SetRequiredAssets(self.noalert5)
+alert:SetRequiredAssets(self.capgrouping)
 alert:SetRepeat(99)
 CAP_Wing:AddMission(alert)
 table.insert(self.ListOfAuftrag,alert)
+end
 end
 self.wings[Airbasename]={CAP_Wing,AIRBASE:FindByName(Airbasename):GetZone(),Airbasename}
 return self
@@ -125063,7 +125725,7 @@ TARS_SESSION={}
 TARS_SESSION.debug=false
 TARS_SESSION.debugunitsearch=false
 TARS={}
-TARS.version="v2.3.1"
+TARS.version="v2.3.2"
 TARS.locale=TARS.locale or"en"
 TARS.debug=false
 TARS.mooseScoring=true
@@ -126087,7 +126749,7 @@ local unit=EventData.IniUnit
 if not unit then return end
 local instance=self:GetInstance(unit:GetName())
 if instance then instance:Delete()end
-local playerName=unit:GetPlayerName()
+local playerName=EventData.IniPlayerName
 if not playerName then return end
 local pName=playerName
 timer.scheduleFunction(function()
@@ -126097,6 +126759,7 @@ end
 end,nil,timer.getTime()+1)
 end
 function TARS:_OnEventEngineStartup(EventData)
+if EventData.IniPlayerName==nil then return end
 local unit=EventData.IniUnit
 if not unit or not unit:GetPlayerName()then return end
 local pName=unit:GetPlayerName()
@@ -126110,7 +126773,7 @@ function TARS:_OnEventDead(EventData)
 local unit=EventData.IniUnit
 if not unit then return end
 local name=unit:GetName()
-local playerName=unit:GetPlayerName()or unit:GetName()
+local playerName=EventData.IniPlayerName
 if TARS.groundMenus[playerName]then self:RemoveGroundMenu(playerName)end
 if self.detectedTargets[name]then
 local markID=self.marks.blue[name]or self.marks.red[name]
@@ -126123,11 +126786,12 @@ end
 function TARS:_OnEventPlayerLeaveUnit(EventData)
 local unit=EventData.IniUnit
 if not unit then return end
-local playerName=unit:GetPlayerName()or unit:GetName()
+local playerName=EventData.IniPlayerName
 if TARS.groundMenus[playerName]then self:RemoveGroundMenu(playerName)end
 end
 function TARS:_OnEventTakeOff(EventData)
 self:T(self.lid.."_OnEventTakeOff")
+if EventData.IniPlayerName==nil then return end
 local unit=EventData.IniUnit
 if not unit then return end
 local instance=self:GetInstance(unit:GetName())
@@ -126163,7 +126827,8 @@ end
 if instance and instance.lastTakeoffTime and(now-instance.lastTakeoffTime)<5 then
 return
 end
-local playerName=unit:GetPlayerName()or unit:GetName()
+local playerName=EventData.IniPlayerName
+if playerName==nil then return end
 local groundData=TARS.groundMenus[playerName]
 if not(groundData and groundData.approved)then return end
 local reconOk,refused=self:CheckIfRecon(unit)

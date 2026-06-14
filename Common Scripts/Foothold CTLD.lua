@@ -167,7 +167,7 @@ function reqRankOf(name)
 end
 
 
-CTLDPrices = CTLDPrices or {
+local CTLDPriceDefaults = {
   ["Engineer soldier"]       = { price = 50, reqRank = 1 },
   ["Squad 8"]                = { price = 50, reqRank = 1 },
   ["Platoon 16"]             = { price = 100, reqRank = 1 },
@@ -191,6 +191,7 @@ CTLDPrices = CTLDPrices or {
   ["NASAMS SR Add-on"]       = { price = 250, reqRank = 3 },
   ["NASAMS LN Add-on"]       = { price = 250, reqRank = 3 },
   ["FARP"]                   = { price = 500, reqRank = 1 },
+  ["FARP with ZELL"]         = { price = 750, reqRank = 1 },
   ["IRIS T STR Add-on"]      = { price = 750, reqRank = 3 },
   ["IRIS T LN Add-on"]       = { price = 500, reqRank = 3 },
   ["IRIS T C2 Add-on"]       = { price = 500, reqRank = 3 },
@@ -201,6 +202,16 @@ CTLDPrices = CTLDPrices or {
   ["FV-101 Scorpion"]        = { price = 250, reqRank = 2 },
   ["Avenger"]                = { price = 250, reqRank = 2 },
 }
+
+local function mergeCtldPriceDefaults(defaults, overrides)
+  local out = {}
+  for k, v in pairs(defaults) do out[k] = v end
+  for k, v in pairs(overrides or {}) do out[k] = v end
+  return out
+end
+
+CTLDPrices = mergeCtldPriceDefaults(CTLDPriceDefaults, CTLDPrices)
+
 CTLD_DEFAULT_PRICE = 0
 
 ---------------------------------------------------------------------------
@@ -253,6 +264,9 @@ Foothold_ctld:AddUnits("Humvee scout",{"CTLD_CARGO_Scout"}, CTLD_CARGO.Enum.VEHI
 Foothold_ctld:AddUnits("FV-107 Scimitar",{"CTLD_CARGO_Scimitar"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
 Foothold_ctld:AddUnits("FV-101 Scorpion",{"CTLD_CARGO_Scorpion"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
 Foothold_ctld:AddCratesCargo("FARP",{"CTLD_TROOP_FOB"},CTLD_CARGO.Enum.FOB,3,1200,10, "FARP",nil,nil,nil,"Cargos","ammo_cargo",nil, "cds_crate")
+if _DATABASE and _DATABASE.Templates and _DATABASE.Templates.Groups and _DATABASE.Templates.Groups["CTLD_TROOP_FOB_ZELL"] then
+Foothold_ctld:AddCratesCargo("FARP with ZELL",{"CTLD_TROOP_FOB_ZELL"},CTLD_CARGO.Enum.FOB,3,750,10, "FARP",nil,nil,nil,"Cargos","ammo_cargo",nil, "cds_crate")
+end
 
 local function addStaticFromType(name, typeName, mass, subCategory, unitTypes, displayName) return Foothold_ctld:AddStaticsCargoFromType(name, typeName, mass, nil, subCategory, true, nil, unitTypes, nil, nil, nil, displayName) end
 
@@ -1765,6 +1779,9 @@ local function EnforceMaxAtSpawnForTrackedUnits(TrackedUnits, MaxAtSpawnMap, Res
   local UnitsByName = {}
   for _, TrackedEntry in ipairs(TrackedUnits) do
     local CargoName = TrackedEntry.CargoName
+    if CargoName == "FARP with ZELL" then
+      CargoName = "FARP"
+    end
     UnitsByName[CargoName] = UnitsByName[CargoName] or {}
     table.insert(UnitsByName[CargoName], TrackedEntry)
   end
@@ -3479,6 +3496,108 @@ end
 local BuiltFARPCoordinates = {}
 local SpawnedFARPsFromSave = 0
 local NextFarpSaveSeq = 0
+local FARP_ZELL_AIRCRAFT = "F-100D"
+local FARP_ZELL_AIRCRAFT_AMOUNT = 1073741823
+local FARP_ZELL_LIQUID_AMOUNT = 10000000
+
+local function getFarpZellName(farpName)
+  local name = tostring(farpName)
+  local suffix = name:match("^CTLD FARP (.+)$")
+  if suffix then
+    return "CTLD FARP ZELL " .. suffix
+  end
+  return "CTLD FARP ZELL " .. name
+end
+
+local function fillFarpZellWarehouse(zellName, isFromSave)
+  if WarehouseLogistics == true and WarehousePersistence and WarehousePersistence.RegisterExtraAirbase then
+    WarehousePersistence.RegisterExtraAirbase(zellName)
+  end
+
+  bc:CopyWarehouse(zellName, isFromSave)
+  local storage = STORAGE:FindByName(zellName) or STORAGE:New(zellName)
+  if not storage or not storage.warehouse then
+    BASE:E("[FARP ZELL] storage not available for " .. tostring(zellName))
+    return
+  end
+
+  if isFromSave and WarehouseLogistics == true and WarehousePersistence and WarehousePersistence.Load then
+    local opts = { airbases = { zellName } }
+    if FootholdSavePath then opts.path = FootholdSavePath end
+    if FootholdSaveBaseName and tostring(FootholdSaveBaseName) ~= "" then
+      opts.filename = tostring(FootholdSaveBaseName) .. "_storage.csv"
+    end
+    WarehousePersistence.Load(bc, opts)
+  end
+
+  storage:SetItem(FARP_ZELL_AIRCRAFT, FARP_ZELL_AIRCRAFT_AMOUNT)
+  storage:SetLiquid(STORAGE.Liquid.JETFUEL, FARP_ZELL_LIQUID_AMOUNT)
+  storage:SetLiquid(STORAGE.Liquid.GASOLINE, FARP_ZELL_LIQUID_AMOUNT)
+  storage:SetLiquid(STORAGE.Liquid.DIESEL, FARP_ZELL_LIQUID_AMOUNT)
+  storage:SetLiquid(STORAGE.Liquid.MW50, FARP_ZELL_LIQUID_AMOUNT)
+end
+
+local function spawnFarpZell(FName, coord, isFromSave)
+  local zellName = getFarpZellName(FName)
+  local existingZell = AIRBASE:FindByName(zellName)
+  if existingZell then
+    SCHEDULER:New(nil, function() fillFarpZellWarehouse(zellName, isFromSave) end, {}, 1)
+    return zellName
+  end
+
+  local ammoCoord = STATIC:FindByName("AMMO - " .. FName):GetCoordinate()
+  local windCoord = STATIC:FindByName("WINDSOCK - " .. FName):GetCoordinate()
+  local ammoBearing = coord:HeadingTo(ammoCoord)
+  local windBearing = coord:HeadingTo(windCoord)
+  local step = (windBearing - ammoBearing + 360) % 360
+  if step > 180 then step = step - 360 end
+  local zellBearing = (windBearing + step + 360) % 360
+  local windPoint = windCoord:GetVec3()
+  local farpPoint = coord:GetVec3()
+  local dx = windPoint.x - farpPoint.x
+  local dz = windPoint.z - farpPoint.z
+  local zellDistance = math.sqrt(dx * dx + dz * dz)
+  local zellCoord = coord:Translate(zellDistance, zellBearing)
+  local zellPoint = zellCoord:GetVec3()
+  local x = zellPoint.x
+  local z = zellPoint.z
+  local y = land.getHeight({ x = x, y = z })
+
+
+  local groupData = {
+    visible = true,
+    hidden = false,
+    x = x,
+    y = z,
+    name = zellName,
+    units = {
+      [1] = {
+        tasks = {},
+        category = "Heliports",
+        type = "Zell",
+        shape_name = "ZELL",
+        rate = 50,
+        x = x,
+        y = z,
+        alt = y,
+        name = zellName,
+        heading = math.rad(zellBearing),
+        dead = false,
+        dynamicSpawn = true,
+        allowHotStart = true,
+      },
+    },
+  }
+
+  local spawned = coalition.addGroup(country.id.USA, -1, groupData)
+  if not spawned then
+    BASE:E("[FARP ZELL] failed to spawn " .. tostring(zellName))
+    return nil
+  end
+  world.onEvent({ id = EVENTS.Birth, time = timer.getTime(), initiator = spawned })
+  SCHEDULER:New(nil, function() fillFarpZellWarehouse(zellName, isFromSave) end, {}, 1)
+  return zellName
+end
 
 
 function BuildAFARP(Coordinate, stamp)
@@ -3486,9 +3605,11 @@ function BuildAFARP(Coordinate, stamp)
   if bc:getZoneOfPoint(farpPoint) then return end
   local saveName = nil
   local saveSeq = nil
+  local withZell = false
   if type(stamp) == "table" then
     saveName = stamp.name
     saveSeq = stamp.seq or stamp.timestamp
+    withZell = stamp.zell == true
   else
     saveSeq = stamp
   end
@@ -3560,6 +3681,9 @@ function BuildAFARP(Coordinate, stamp)
   else
       UTILS.SpawnFARPAndFunctionalStatics(FName, coord, ENUMS.FARPType.INVISIBLE, Foothold_ctld.coalition, country.id.USA, FarpNameNumber, FARPFreq, radio.modulation.AM, nil, nil, nil, 10000, 0,1073741823,nil, true, true, 3, 80, 80)
   end
+  if withZell then
+    spawnFarpZell(FName, coord, isFromSave)
+  end
   Foothold_ctld:AddCTLDZone(FName, CTLD.CargoZoneType.LOAD, SMOKECOLOR.Blue, true, false)
   MESSAGE:New(L10N:Format("DYNAMIC_FARP_IN_OPERATION", FName), 15):ToBlue()
   Foothold_ctld:RemoveStockCrates("CTLD_TROOP_FOB", 1)
@@ -3569,6 +3693,7 @@ function BuildAFARP(Coordinate, stamp)
     coord = Coordinate,
     seq = saveSeq,
     timestamp = saveSeq, -- kept for backward compatibility with older code
+    zell = withZell,
   })
 
   bc:registerDynamicFarp(FName, coord, Foothold_ctld.coalition)
@@ -3674,6 +3799,16 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
   end
     local currentTime = timer.getTime()
     local groupName   = Vehicle:GetName() or "unknown"
+
+    if string.find(groupName,"CTLD_TROOP_FOB_ZELL",1,true) then
+        local Coord = Vehicle:GetCoordinate()
+        Vehicle:Destroy(false)
+        BuildAFARP(Coord, { zell = true })
+        if Group then
+          awardCtldBuildReward(Group, Unit, CTLD_BUILD_REWARD_BY_CARGO["FARP"])
+        end
+        return
+    end
 
     if string.find(groupName,"CTLD_TROOP_FOB",1,true) then
         local Coord = Vehicle:GetCoordinate()
@@ -4310,7 +4445,7 @@ function SaveFARPS()
     local coord = e.coord
     if FName and coord and coord.GetVec2 then
       local vec2 = coord:GetVec2()
-      data = data .. string.format("%d;%s;%f;%f;\n", tonumber(e.seq) or 0, tostring(FName), vec2.x, vec2.y)
+      data = data .. string.format("%d;%s;%f;%f;%s;\n", tonumber(e.seq) or 0, tostring(FName), vec2.x, vec2.y, e.zell == true and "zell" or "")
     end
   end
 
@@ -4342,15 +4477,17 @@ function LoadFARPS()
         local b = dataset[2]
         local c = dataset[3]
         local d = dataset[4]
+        local e = dataset[5]
 
         local bx = tonumber(b)
         local cy = tonumber(c)
         local cx = tonumber(c)
         local dy = tonumber(d)
+        local hasZell = tostring(e or ""):lower() == "zell" or tostring(e or ""):lower() == "true" or tostring(e or "") == "1"
 
         if a and b and cx and dy then
-          -- New format: seq;name;x;y;
-          entries[#entries + 1] = { seq = a, name = tostring(b), x = cx, y = dy }
+          -- New format: seq;name;x;y;zell;
+          entries[#entries + 1] = { seq = a, name = tostring(b), x = cx, y = dy, zell = hasZell }
         elseif a and bx and cy then
           -- Previous format: seq;x;y;
           entries[#entries + 1] = { seq = a, name = nil, x = bx, y = cy }
@@ -4396,7 +4533,7 @@ function LoadFARPS()
     for i = 1, math.min(#entries, maxToSpawn) do
       local e = entries[i]
       local coord = COORDINATE:NewFromVec2({ x = e.x, y = e.y })
-      BuildAFARP(coord, { seq = e.seq, name = e.name })
+      BuildAFARP(coord, { seq = e.seq, name = e.name, zell = e.zell == true })
     end
   else
     BASE:E("***** ERROR Loading FARP Positions!")

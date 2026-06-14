@@ -45,9 +45,9 @@ end
 -- End of do not touch
 --
 -- ============================================================================
--- Localization
+-- Mission Rules
 -- ============================================================================
-
+--
 -- Global language use for Foothold.
 -- This does not set the menu's language as it can be changed in the players radio menu.
 -- This will be the language used for on screen messages and other global text.
@@ -66,24 +66,93 @@ FootholdLocale = "EN"
 if FootholdLocalization then
     FootholdLocalization:SetLocale(FootholdLocale)
 end
+-- "Modern" or "Coldwar" ("Gulfwar" if the map is Iraq).
+-- In the editor, Don't copy to all ships, make sure all planes in every warehouse are set to LIMITED!!!
+Era = "Modern" -- does not work in Afghanistan or kola
 
--- ============================================================================
--- Message Of The Day
--- ============================================================================
+-- ONLY VALID ON CAUCASUS, PERSIAN GULF, SYRIA AND AFGHANISTAN.
+-- if false, the mission will start from the other end. Carrier zone will be disabled.
+StartNormal = true
+ 
+-- When the mission is completed, if you want the server to restart automatically and reset everything, then set this to true.
+-- If false, you will have a menu where you can choose to restart the mission. 
+AutoRestart = false
 
--- Shows one server message to all players, then repeats it on a timer.
-MessageOfTheDay = {
-    enabled = false, -- Set to true to show this message to everyone.
-    durationSec = 15, -- How long the message stays on screen.
-    intervalSec = 1800, -- How often the message repeats.
-    text =
-[[Welcome to our server.
+NoSA10AndSA11 = false -- If true: remove SA-10 and SA-11 (replaced by older SAMs).
 
-Discord is here:
-https://discord.gg/your-link
+-- There is no Pantsir or Tor M2 in the coldwar Era, but in modern, you can stil replace them.
+NoTorM2AndPantsir = false -- If true: Pantsir and Tor M2 will be replaced with random groups, including SA-15, SA-19, SA-8 and SA-13.
 
-Please join us.]],
-}
+NoSA15 = false -- If true: SA-15 will be replaced by random groups, including SA-19, SA-8, SA-13 and SA-9.
+
+-- Modular, Automatic and Network capable Targeting and Interception System for Air Defenses. (MANTIS)
+-- Once the player is within, the sam system will turn on. If you fire HARP, Talds or Jsaw, they will turn off and move.
+-- Their movement depends if they are able to move, like the SA-6 and SA-11.
+DisableMantis = false -- MANTIS is based on Early warning radars (EWR) for detectiion. they will be off until players are detected by the EWR.
+
+-- ammo depots, fuel tanks, factories).
+UseStatics = true -- If true, include some static target types at certain zones (command centers,
+
+-- PVE_Only is a flag where you can decide if you want to disable players from spawning in red zones.
+-- This is when the player chooses Red coalition.
+PVE_Only = false -- If true, players can not spawn in red coalition zones.
+
+ -- If true, Red side can use CTLD on a basic level.
+Allow_Red_CTLD = false
+
+-- If true, supports filling modded weapons via WarehouseLogistics
+-- (not compatible with Coldwar/Gulfwar).
+-- Keep in mind, adding mods midsession, while there is a save file, those weapons will not be added to current saved airbases.
+-- this will be filled through time, from the AutoFillResources.
+AllowMods = false -- Should NOT be used with coldwar era.
+
+-- If true, when players die their coalition loses 100 credits per death.
+CreditLosewhenKilled = false
+
+-- If you want to change the amount, you can do it here.
+CreditLosewhenKilledAmount = 100
+
+-- If true, when players die they lose 100 rank credits (only if RankingSystem == true).
+RankLoseWhenKilled = true
+
+-- If you want to change the amount, you can do it here.
+RankLoseWhenKilledAmount = 100
+
+-- If true, loads enhanced bomb blast effects (may cause stutters).
+SplashDamage = false
+
+ShowKills = false -- If true, show Foothold kill messages.
+
+-- If true, limit shop purchases by personal credits earned (rank gates):
+--   >  250 cost requires   100 earned
+--   > 1000 cost requires  1000 earned
+--   > 2000 cost requires  2000 earned
+--   > 3000 cost requires  3000 earned
+StoreLimit = false
+
+-- If false, everyone can access the full shop.
+RankingSystem = true
+
+-- friendly fire ranking penalty
+FriendlyFireRankPenalty = 500
+
+-- If true, A-10 is invisible to RED enemy planes.
+InvisibleA10 = false
+
+-- Some missions have carriers and those can be controlled to move to another place. 
+-- If RankingSystem is true, then you can choose what level is required.
+CarrierRankRequirement = 5
+
+-- Works ONLY on Caucasus, Persian Gulf and Syria maps.
+-- If true, blue players can move Tarawa with map marker commands.
+-- tarawahere / tarawahereandstop sends Tarawa to the marker and stops there.
+-- tarawahere1 followed by tarawahere2 creates a racetrack between the two marker positions.
+-- tarawahelp displays the commands, or reports that Tarawa marker movement is disabled.
+AllowTarawaToMoveFreely = false
+
+-- If true, disables the friendly "Escort cargo plane" mission.
+-- false keeps the mission enabled.
+DisableFriendlyEscortMeMission = false
 
 -- ============================================================================
 -- Difficulty
@@ -113,25 +182,13 @@ GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
 -- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
 GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 
--- ONLY VALID ON CAUCASUS, PERSIAN GULF, SYRIA AND AFGHANISTAN.
--- if false, the mission will start from the other end. Carrier zone will be disabled.
-StartNormal = true
- 
--- When the mission is completed, if you want the server to restart automatically and reset everything, then set this to true.
--- If false, you will have a menu where you can choose to restart the mission. 
-AutoRestart = false
+-- Chance in percent that RED AI air missions may also engage helicopters.
+-- 0 disables helicopter targeting, 100 always allows it.
+-- If InvisibleA10 is true, this setting is ignored.
+ChanceAiAttackHelo = 0
 
--- Valid values: "easy" | "medium" | "hard"
--- Here, you can adjust how many cap should spawn. medium, is the default (Balanaced)
-CapDifficulty           = "medium" -- RED CAP amount.  This can be further custommized in the advance section.
-CasDifficulty           = "medium" -- RED CAS amount.  This can be further custommized in the advance section.
-SeadDifficulty          = "medium" -- RED SEAD amount.  This can be further custommized in the advance section.
-RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
-
-
-FriendlyCapSupport      = "medium" -- BLUE CAP support limit. This can be further custommized in the advance section.
-FriendlyCasSupport      = "medium" -- BLUE CAS support limit.  This can be further custommized in the advance section.
-FriendlySeadSupport     = "medium" -- BLUE SEAD support limit.  This can be further custommized in the advance section.
+-- Hunter is when you do a lot of damage to enemy units, RED dispatches a 2-ship to hunt you down.
+EnableHunter = true
 
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
 AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
@@ -139,20 +196,269 @@ AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red on
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
 AiGroundSkill           = "Excellent" -- AI skill used for spawned non-airplane units Red and blue share the same config value (ground/ship/etc) (MOOSE SPAWN:InitSkill).
 
--- If true, A-10 is invisible to RED enemy planes.
-InvisibleA10 = false
-
--- Chance in percent that RED AI air missions may also engage helicopters.
--- 0 disables helicopter targeting, 100 always allows it.
--- If InvisibleA10 is true, this setting is ignored.
-ChanceAiAttackHelo = 0
-
 -- Controls whether SAM groups are hidden on MFDs.
 -- Valid values only: false | true | "random"
 -- false    = always shown on MFD
 -- true     = always hidden on MFD (default)
 -- "random" = 50% chance hidden on each spawn
-HideSAMOnMFD            = true -- if random, use "random" (string)
+HideSAMOnMFD = true -- if random, use "random" (string)
+
+-- Valid values: "easy" | "medium" | "hard"
+-- Here, you can adjust how many cap should spawn. medium, is the default (Balanaced)
+CapDifficulty           = "medium" -- RED CAP amount.  This can be further custommized in the advance section.
+CasDifficulty           = "medium" -- RED CAS amount.  This can be further custommized in the advance section.
+SeadDifficulty          = "medium" -- RED SEAD amount.  This can be further custommized in the advance section.
+
+FriendlyCapSupport      = "medium" -- BLUE CAP support limit. This can be further custommized in the advance section.
+FriendlyCasSupport      = "medium" -- BLUE CAS support limit.  This can be further custommized in the advance section.
+FriendlySeadSupport     = "medium" -- BLUE SEAD support limit.  This can be further custommized in the advance section.
+RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
+
+-- ============================================================================
+-- Difficulty advanced
+-- ============================================================================
+
+-- The "amount" field in the case of CAP, 1 amount equals to 1 CAP Patrol and 1 CAP Attack. so 1 amount equal 2 groups.
+-- players in the table below are counted as active players if they are not in the CapCountIgnoreTypes.
+-- @gui label="RED CAP Limit"
+-- @gui linkedSetting="CapDifficulty"
+CapLimitStages = {
+	easy = {
+		{ player = 0,   amount = 0 },
+		{ player = 1,   amount = 1 },
+		{ player = 2,   amount = 1 },
+		{ player = 3,   amount = 2 },
+		{ player = 4,   amount = 3 },
+		{ player = 6,   amount = 4 },
+		{ player = 10,  amount = 5 },
+		{ player = 999, amount = 6 },
+	},
+	medium = {
+		{ player = 0,   amount = 1 },
+		{ player = 1,   amount = 1 },
+		{ player = 2,   amount = 2 },
+		{ player = 3,   amount = 3 },
+		{ player = 4,   amount = 3 },
+		{ player = 6,   amount = 4 },
+		{ player = 9,   amount = 5 },
+		{ player = 10,  amount = 6 },
+		{ player = 999, amount = 7 },
+	},
+	hard = {
+		{ player = 0,   amount = 1 },
+		{ player = 1,   amount = 2 },
+		{ player = 2,   amount = 3 },
+		{ player = 3,   amount = 4 },
+		{ player = 4,   amount = 5 },
+		{ player = 6,   amount = 5 },
+		{ player = 9,   amount = 6 },
+		{ player = 10,  amount = 7 },
+		{ player = 999, amount = 8 },
+	},
+}
+
+-- Advance settings for CasDifficulty.
+-- Players in the table below are counted as active players if they are not in the RedCasCountIgnoreTypes.
+-- The "amount" field in the table below is the amount of CAS flights that can be active at the same time.
+-- @gui label="RED CAS Limit"
+-- @gui linkedSetting="CasDifficulty"
+RedCasLimitStages = {
+	easy = {
+		{ player = 0,   amount = 0 },
+		{ player = 1,   amount = 0 },
+		{ player = 2,   amount = 1 },
+		{ player = 3,   amount = 1 },
+		{ player = 4,   amount = 2 },
+		{ player = 5,   amount = 2 },
+		{ player = 999, amount = 3 },
+	},
+	medium = {
+		{ player = 0,   amount = 1 },
+		{ player = 1,   amount = 1 },
+		{ player = 2,   amount = 2 },
+		{ player = 3,   amount = 2 },
+		{ player = 4,   amount = 3 },
+		{ player = 5,   amount = 3 },
+		{ player = 9,   amount = 4 },
+		{ player = 999, amount = 4 },
+	},
+	hard = {
+		{ player = 0,   amount = 1 },
+		{ player = 1,   amount = 2 },
+		{ player = 2,   amount = 2 },
+		{ player = 3,   amount = 3 },
+		{ player = 4,   amount = 4 },
+		{ player = 5,   amount = 4 },
+		{ player = 9,   amount = 6 },
+		{ player = 999, amount = 7 },
+	},
+}
+
+-- Advance settings for SeadDifficulty..
+-- Players in the table below are counted as active players if they are not in the RedCasCountIgnoreTypes.
+-- The "amount" field in the table below is the amount of SEAD flights that can be active at the same time.
+-- @gui label="RED SEAD Limit"
+-- @gui linkedSetting="SeadDifficulty"
+RedSeadLimitStages = {
+	easy = {
+		{ player = 0,   amount = 0 },
+		{ player = 1,   amount = 0 },
+		{ player = 2,   amount = 1 },
+		{ player = 3,   amount = 1 },
+		{ player = 4,   amount = 2 },
+		{ player = 5,   amount = 2 },
+		{ player = 999, amount = 3 },
+	},
+	medium = {
+		{ player = 0,   amount = 0 },
+		{ player = 1,   amount = 1 },
+		{ player = 2,   amount = 1 },
+		{ player = 3,   amount = 2 },
+		{ player = 4,   amount = 3 },
+		{ player = 5,   amount = 3 },
+		{ player = 9,   amount = 4 },
+		{ player = 999, amount = 4 },
+	},
+	hard = {
+		{ player = 0,   amount = 1 },
+		{ player = 1,   amount = 2 },
+		{ player = 2,   amount = 2 },
+		{ player = 3,   amount = 3 },
+		{ player = 4,   amount = 4 },
+		{ player = 5,   amount = 4 },
+		{ player = 9,   amount = 6 },
+		{ player = 999, amount = 7 },
+	},
+}
+
+-- Advance settings for RunwayStrikeDifficulty.
+-- Players in the table below are counted as active players if they are not in the RedCasCountIgnoreTypes.
+-- The "amount" field in the table below is the amount of Runway Strike flights that can be active at the same time.
+-- @gui label="RED Runway Strike Limit"
+-- @gui linkedSetting="RunwayStrikeDifficulty"
+RedRunwayStrikeLimitStages = {
+	easy = {
+		{ player = 0,   amount = 0 },
+		{ player = 1,   amount = 0 },
+		{ player = 2,   amount = 1 },
+		{ player = 3,   amount = 1 },
+		{ player = 4,   amount = 2 },
+		{ player = 5,   amount = 2 },
+		{ player = 999, amount = 3 },
+	},
+	medium = {
+		{ player = 0,   amount = 0 },
+		{ player = 1,   amount = 0 },
+		{ player = 2,   amount = 1 },
+		{ player = 3,   amount = 2 },
+		{ player = 4,   amount = 3 },
+		{ player = 5,   amount = 3 },
+		{ player = 9,   amount = 4 },
+		{ player = 999, amount = 4 },
+	},
+	hard = {
+		{ player = 0,   amount = 0 },
+		{ player = 1,   amount = 1 },
+		{ player = 2,   amount = 2 },
+		{ player = 3,   amount = 3 },
+		{ player = 4,   amount = 4 },
+		{ player = 5,   amount = 4 },
+		{ player = 9,   amount = 6 },
+		{ player = 999, amount = 7 },
+	},
+}
+
+-- Advance settings for FriendlyCapSupport.
+-- Players in the table below are counted as active players if they are not in the CapCountIgnoreTypes.
+-- The logic here, The less the players, the more AI will help you. The list in CapCountIgnoreTypes, is types that doesn't count as active players.
+-- @gui label="BLUE CAP Support"
+-- @gui linkedSetting="FriendlyCapSupport"
+BlueCapSupportStages = {
+	easy = {
+		{ player = 0,   amount = 2 },
+		{ player = 1,   amount = 2 },
+		{ player = 999, amount = 1 },
+	},
+	medium = {
+		{ player = 0,   amount = 1 },
+		{ player = 1,   amount = 1 },
+		{ player = 999, amount = 0 },
+	},
+	hard = {
+		{ player = 999, amount = 0 },
+	},
+}
+-- Advance settings for FriendlyCasSupport.
+-- Players in the table below are counted as active players if they are not in the BlueCasCountIgnoreTypes.
+-- The logic here, The less the players, the more AI will help you. The list in BlueCasCountIgnoreTypes, is types that doesn't count as active players.
+-- @gui label="BLUE CAS Support"
+-- @gui linkedSetting="FriendlyCasSupport"
+BlueCasSupportStages = {
+	easy = {
+		{ player = 0,   amount = 2 },
+		{ player = 1,   amount = 2 },
+		{ player = 999, amount = 1 },
+	},
+	medium = {
+		{ player = 0,   amount = 1 },
+		{ player = 1,   amount = 1 },
+		{ player = 999, amount = 0 },
+	},
+	hard = {
+		{ player = 999, amount = 0 },
+	},
+}
+-- players in the table below are counted as active players if they are not in the BlueCasCountIgnoreTypes.
+-- The logic here, The less the players, the more AI will help you. The list in BlueCasCountIgnoreTypes, is types that doesn't count as active players.
+-- Advance settings for FriendlySeadSupport.
+-- @gui label="BLUE SEAD Support"
+-- @gui linkedSetting="FriendlySeadSupport"
+BlueSeadSupportStages = {
+	easy = {
+		{ player = 0,   amount = 2 },
+		{ player = 1,   amount = 2 },
+		{ player = 999, amount = 1 },
+	},
+	medium = {
+		{ player = 0,   amount = 1 },
+		{ player = 1,   amount = 1 },
+		{ player = 999, amount = 0 },
+	},
+	hard = {
+		{ player = 999, amount = 0 },
+	},
+}
+
+-- Units that will NOT be counted when calculating how many players are "active"
+-- (used for CAP/CAS/SEAD scaling).
+-- If you set a type to true, it will not be counting that player, because C-130 for example can't fight A/A. This will make
+-- the Red CAP for example not spawn a jet for that player, because it's set to true in the ignore list.
+-- SAME for the CAS. For the Blue cas, you want to be ignored if your flying C-130, so Blue cas WILL help you.
+-- For the red CAS, they will NOT see you as a player so they will lay back and not spawn as often.
+-- removing or adding more planes here will change the amount of cap since they will
+-- be counted as active players or not.
+
+CapCountIgnoreTypes = {
+	["A-10C_2"] = true,
+	["Hercules"] = true,
+	["A-10A"] = true,
+	["A-10C"] = true,
+	["AV8BNA"] = true,
+	["AJS37"] = true,
+	["C-130J-30"] = true,
+}
+
+RedCasCountIgnoreTypes = {
+	["Hercules"] = true,
+	["C-130J-30"] = true,
+	["CH-47Fbl1"] = true,
+}
+
+BlueCasCountIgnoreTypes = {
+	["Hercules"] = true,
+	["C-130J-30"] = true,
+	["CH-47Fbl1"] = true,
+}
 
 -- ============================================================================
 -- RED Reactive Counterpressure
@@ -211,101 +517,107 @@ hard = {
     maxZonesPerTick = 1, -- Max number of pressured RED zones processed per check
     softSupplyBoostPerZone = 1, -- Set to 0 to disable RED supply soft reaction. Applied only when minPressureSoft is met.
     softCapBoostPerZone = 2, -- Set to 0 to disable RED CAP soft reaction. Applied only when minPressureSoft is met.
-    softSupplyCooldownSec = 1200, -- After a supply soft-boost in one RED zone, wait this long before supply soft-boost can happen there again 
+    softSupplyCooldownSec = 1200, -- After a supply soft-boost in one RED zone, wait this long before supply soft-boost can happen there again
     softCapCooldownSec = 900, -- After a CAP soft-boost in one RED zone, wait this long before CAP soft-boost can happen there again
     hardForcePerZone = 3, -- Max hard-forced attack groups for one processed pressured zone
     hardForceTotalPerTick = 3, -- Total hard-forced attack groups allowed per check (all zones together)
     groupReuseCooldownSec = 900, -- After one attack group is hard-forced, wait this long before that same group can be hard-forced again
 },
 }
+-- ============================================================================
+-- Message Of The Day
+-- ============================================================================
+
+-- Shows one server message to all players, then repeats it on a timer.
+MessageOfTheDay = {
+    enabled = false, -- Set to true to show this message to everyone.
+    durationSec = 15, -- How long the message stays on screen.
+    intervalSec = 1800, -- How often the message repeats.
+    text =
+[[Welcome to our server.
+
+Discord is here:
+https://discord.gg/your-link
+
+Please join us.]],
+}
+-- ============================================================================
+-- Welcome Message Callsigns
+-- ============================================================================
+-- Below, you can change the callsigns in the welcome message and their IFF codes.
+-- The IFF codes are only functional if you use LotATC and configure the same numbers there.
+-- If IFF is not important to you, keep the numbers as-is and only change the callsigns.
+
+-- @gui label="Welcome Message Callsigns"
+CallsignOverrides = {
+    ["F.A.18"] = {
+        ["Arctic1"] = {1400, 1401, 1402, 1403},
+        ["Bender2"] = {1404, 1405, 1406, 1407},
+        ["Crimson3"] = {1410, 1411, 1412, 1413},
+        ["Dusty4"] = {1300, 1301, 1302, 1303},
+        ["Lion3"] = {1310, 1311, 1312, 1313},
+    },
+    ["F.16CM"] = {
+        ["Indy9"] = {1500, 1501, 1502, 1503},
+        ["Jester1"] = {1510, 1511, 1512, 1513},
+        ["Venom4"] = {1610, 1611, 1612, 1613},
+    },
+    ["A.10C"] = {
+        ["Hawg8"] = {1330, 1331, 1332, 1333},
+        ["Tusk2"] = {1350, 1351, 1352, 1353},
+        ["Pig7"] = {1340, 1341, 1342, 1343},
+    },
+    ["AH.64D"] = {
+        ["Rage9"] = {1610, 1611, 1612, 1613},
+        ["Salty1"] = {1620, 1621, 1622, 1623},
+    },
+    ["Ka.50.III"] = {
+        ["Orca6"] = {1560, 1561, 1562, 1563},
+    },
+    ["AJS37"] = {
+        ["Fenris6"] = {1060, 1061, 1062, 1063},
+        ["Grim7"] = {1070, 1071, 1072, 1073},
+    },
+    ["UH.1H"] = {
+        ["Nitro5"] = {1050, 1051, 1052, 1053},
+    },
+    ["CH.47F"] = {
+        ["Greyhound3"] = {1370, 1371, 1372, 1373},
+    },
+    ["F.15E.S4"] = {
+        ["Hitman3"] = {1360, 1361, 1362, 1363},
+    },
+    ["AV.8B"] = {
+        ["Quarterback1"] = {1434, 1435, 1436, 1437},
+    },
+    ["M.2000"] = {
+        ["Quebec8"] = {1600, 1601, 1602, 1603},
+    },
+    [".OH.58D"] = {
+        ["Blackjack4"] = {1440, 1441, 1442, 1443},
+    },
+    ["F.14B"] = {
+        ["Elvis5"] = {1100, 1101, 1102, 1103},
+        ["Mustang4"] = {1104, 1105, 1106, 1107},
+    },
+    ["F.4E.45MC"] = {
+        ["Savage1"] = {0120, 0121, 0122, 0123},
+        ["Scary2"] = {0130, 0131, 0132, 0133},
+    },
+    ["MiG.29A.Fulcrum"] = {
+        ["Wedge7"] = {0524, 0525, 0526, 0527},
+    },
+    ["Mi.24P"] = {
+        ["Scorpion3"] = {0610, 0611, 0612, 0613},
+    },
+    ["C.130J.30"] = {
+        ["Mighty1"] = {1160, 1161, 1162, 1163},
+    },
+}
+
 
 -- ============================================================================
--- Mission Rules
--- ============================================================================
---
--- "Modern" or "Coldwar" ("Gulfwar" if the map is Iraq).
--- In the editor, Don't copy to all ships, make sure all planes in every warehouse are set to LIMITED!!!
-Era = "Modern" -- does not work in Afghanistan or kola
-
-NoSA10AndSA11 = false -- If true: remove SA-10 and SA-11 (replaced by older SAMs).
-
--- There is no Pantsir or Tor M2 in the coldwar Era, but in modern, you can stil replace them.
-NoTorM2AndPantsir = false -- If true: Pantsir and Tor M2 will be replaced with random groups, including SA-15, SA-19, SA-8 and SA-13.
-
-NoSA15 = false -- If true: SA-15 will be replaced by random groups, including SA-19, SA-8, SA-13 and SA-9.
-
--- Modular, Automatic and Network capable Targeting and Interception System for Air Defenses. (MANTIS)
--- Once the player is within, the sam system will turn on. If you fire HARP, Talds or Jsaw, they will turn off and move.
--- Their movement depends if they are able to move, like the SA-6 and SA-11.
-DisableMantis = false -- MANTIS is based on Early warning radars (EWR) for detectiion. they will be off until players are detected by the EWR.
-
--- ammo depots, fuel tanks, factories).
-UseStatics = true -- If true, include some static target types at certain zones (command centers,
-
--- PVE_Only is a flag where you can decide if you want to disable players from spawning in red zones.
--- This is when the player chooses Red coalition.
-PVE_Only = false -- If true, players can not spawn in red coalition zones.
-
- -- If true, Red side can use CTLD on a basic level.
-Allow_Red_CTLD = false
-
--- If true, supports filling modded weapons via WarehouseLogistics
--- (not compatible with Coldwar/Gulfwar).
--- Keep in mind, adding mods midsession, while there is a save file, those weapons will not be added to current saved airbases.
--- this will be filled through time, from the AutoFillResources.
-AllowMods = false -- Should NOT be used with coldwar era.
-
--- If true, when players die their coalition loses 100 credits per death.
-CreditLosewhenKilled = false
-
--- If you want to change the amount, you can do it here.
-CreditLosewhenKilledAmount = 100
-
--- If true, when players die they lose 100 rank credits (only if RankingSystem == true).
-RankLoseWhenKilled = true
-
--- If you want to change the amount, you can do it here.
-RankLoseWhenKilledAmount = 100
-
--- If true, loads enhanced bomb blast effects (may cause stutters).
-SplashDamage = false
-
-
-ShowKills = false -- If true, show Foothold kill messages.
-
--- If true, limit shop purchases by personal credits earned (rank gates):
---   >  250 cost requires   100 earned
---   > 1000 cost requires  1000 earned
---   > 2000 cost requires  2000 earned
---   > 3000 cost requires  3000 earned
-StoreLimit = false
-
--- If false, everyone can access the full shop.
-RankingSystem = true
-
--- friendly fire ranking penalty
-FriendlyFireRankPenalty = 500
-
--- If true, C-130J-30 AND Chinook! Use the internal (Ground crew for the Chinook and C-130 loading system only (not CTLD menu load).
-UseC130LoadAndUnload = true -- need to be true if using Logisticsystem as the cargo need to be tracked.
-
--- Some missions have carriers and those can be controlled to move to another place. 
--- If RankingSystem is true, then you can choose what level is required.
-CarrierRankRequirement = 5
-
--- Works ONLY on Caucasus, Persian Gulf and Syria maps.
--- If true, blue players can move Tarawa with map marker commands.
--- tarawahere / tarawahereandstop sends Tarawa to the marker and stops there.
--- tarawahere1 followed by tarawahere2 creates a racetrack between the two marker positions.
--- tarawahelp displays the commands, or reports that Tarawa marker movement is disabled.
-AllowTarawaToMoveFreely = false
-
--- If true, disables the friendly "Escort cargo plane" mission.
--- false keeps the mission enabled.
-DisableFriendlyEscortMeMission = false
-
--- ============================================================================
--- Ecort
+-- Escort
 -- ============================================================================
 
 -- Choose to have the option to get escorted by 2 jets. Recommended to A10 / C-130J, Harrier.
@@ -336,13 +648,16 @@ EscortTypeByPlayerType = {
 EscortTakeoffFromGround = true -- If true, the escort will takeoff from the ground instead of airspawn.
 
 -- ============================================================================
--- Logistics / Warehouse Mode
+-- Logistics / Warehouse
 -- ============================================================================
 
 -- If true, logistics/supply is done via warehouse + zone supplies only.
 -- You can only carry supplies using the rearming menu, then load cargo, not the ctld menu nor logistics menu.
 -- Neutral zones start without weapons; you must bring them or wait for AI delivery.
 WarehouseLogistics = true
+
+-- If true, C-130J-30 AND Chinook! Use the internal (Ground crew for the Chinook and C-130 loading system only (not CTLD menu load).
+UseC130LoadAndUnload = true -- need to be true if using Logisticsystem as the cargo need to be tracked.
 
 -- How much AI delivery brings per supply run.
 AIDeliveryamount = 20
@@ -353,6 +668,11 @@ SuppliesCargoTransport = true
 -- If true, smart weapons found in the WarehouseWeaponCaps table at the bottom, will be HALF what we add to the warehouse.
 -- This is to make the smart weapons harder to get.
 StrictSmartWeaponsInventory = false
+
+-- This table will be used if StrictSmartWeaponsInventory is set to true.
+-- Smart weapons in this table will be HALF what we add to the warehouse.
+WarehouseWeaponCaps = {
+}
 
 -- Every 15 minutes, BLUE zones gain this many resources (covers AI usage).
 AutoFillResources = 5
@@ -387,7 +707,7 @@ WarningNoSupplies = true
 
 -- Aircraft that should receive the "Supplies not loaded" warning on takeoff.
 -- Keep slingload-only aircraft set to false.
--- This does not mean supplies can now be carried. 
+-- This does not mean supplies can now be carried.
 -- This is if the aircraft can carry supplies, and no supplies is loaded, Then this will be a reminder.
 
 ZoneSupplyTakeoffWarningTypes = {
@@ -397,7 +717,7 @@ ZoneSupplyTakeoffWarningTypes = {
     ["CH-47Fbl1"]     = true,
     ["Ka-50_3"]       = true,  -- legacy mode
     ["MH-60R"]        = true,  -- legacy mode
-    ["Mi-24P"]        = true, 
+    ["Mi-24P"]        = true,
     ["Mi-8MT"]        = true,
     ["OH-6A"]         = true,  -- legacy mode
     ["UH-1H"]         = true,
@@ -417,31 +737,8 @@ ZoneSupplyTakeoffWarningTypes = {
 }
 
 -- ============================================================================
--- Shop Settings
+-- Shop / Rewards
 -- ============================================================================
-
--- if false, people can not use "adminbuy:cap" or "adminbuy:capture". need to use "buy".
--- adminbuy is to bypass the rank filter and can be used from the f10 map all though not in slot.
-AllowAdminBuy = true
-
--- Earning per kill by target type.
-RewardContribution = {
-	infantry         = 10,
-	ground           = 10,
-	sam              = 30,
-	airplane         = 50,
-	ship             = 200,
-	helicopter       = 50,
-	crate            = 100,
-	rescue           = 200,
-    structure        = 100,
-	["Zone upgrade"] = 100,
-	["Zone capture"] = 200,
-    ["Warehouse delivery"] = 150,
-}
-
--- Reward when done refueling, credits per 100 lbs.
-RefuelReward = 2
 
 -- Shop prices.
 ShopPrices = {
@@ -519,104 +816,45 @@ ShopRankRequirements = {
     zhimars        = 8,  -- Add HIMARS to a zone
 }
 
--- If true, the AI attack groups will take off from ground instead of airspawn. 
+-- Earning per kill by target type.
+RewardContribution = {
+	infantry         = 10,
+	ground           = 10,
+	sam              = 30,
+	airplane         = 50,
+	ship             = 200,
+	helicopter       = 50,
+	crate            = 100,
+	rescue           = 200,
+    structure        = 100,
+	["Zone upgrade"] = 100,
+	["Zone capture"] = 200,
+    ["Warehouse delivery"] = 150,
+}
+
+-- Reward when done refueling, credits per 100 lbs.
+RefuelReward = 2
+
+-- If true, the AI attack groups will take off from ground instead of airspawn.
 -- If false, AI will airspawn above friendly zone. Much faster engagements but less realistic.
 AIAttackTakeoffFromGround = true
 AIAttackTakeoffFromGroundExtraNM = 40 -- don't change this if you don't know what it is.
 
--- If true, you can buy supplies upgrades and they will spawn right away. 
+-- if false, people can not use "adminbuy:cap" or "adminbuy:capture". need to use "buy".
+-- adminbuy is to bypass the rank filter and can be used from the f10 map all though not in slot.
+AllowAdminBuy = true
+
+-- If true, you can buy supplies upgrades and they will spawn right away.
 -- If false, they will be delivered by helicopter.
 AllowScriptedSupplies = false
 
 -- ============================================================================
--- FlightTime Reward Settings
--- ============================================================================
-
--- Here you can customize flight time reward, this will reward the player for each minute they are airborne.
--- It will start counting after 5 minutes and will count the first 5 as valid flight minutes.
--- The idea is the reward the Logistics people for longer flight time.
-RewardFlightTime = true
---
--- Here you can define how much credits for each minutes flown.
--- Note, when you land, you'll see  "15 + Flight time", the 15 are minutes, not credits.
-FlightTimeRewardPerMinute = 2
---
--- If you want to reward all players no mater what aircraft, then set this to true, if set to false, you can choose who get the reward.
--- in the AllowedFlightTimeReward table below.
-RewardAllAircraft = false
---
---
-AllowedFlightTimeReward  = {
-    ['Ka-50'] = false,
-    ['Ka-50_3'] = false,
-    ['Mi-24P'] = false,
-    ['SA342Mistral'] = false,
-    ['SA342L'] = false,
-    ['SA342M'] = false,
-    ['SA342Minigun'] = false,
-    ['UH-60L'] = false,
-    ['UH-60L_DAP'] = false,
-    ['AH-64D_BLK_II'] = false,
-    ['UH-1H'] = false,
-    ['Mi-8MT'] = false,
-    ['OH58D'] = false,
-    ['Bronco-OV-10A'] = false,
-    ['OH-6A'] = false,
-    ['MH-6J'] = false,
-    ['AH-6J'] = false,
-    ['FA-18C_hornet'] = false,
-	['F-16C_50'] = false,
-	['F-14B'] = false,
-	['MiG-29 Fulcrum'] = false,
-	['C-130J-30'] = true,
-	['CH-47Fbl1'] = true,
-	['Hercules'] = true,
-}
-
--- ============================================================================
--- CTLD Settings
+-- CTLD
 -- ============================================================================
 --
 -- If false, CTLD crates/units are free.
 CTLDCost = true
 --
--- If true, engineers can capture/upgrade zones via CTLD.
--- If false, only regular troops can capture/upgrade zones.
-CaptureZoneWithEngineer = false
---
--- Define per-airframe CTLD load capabilities.
---
--- Each entry is:
---   { Cancrates, Cantroops, Cratelimit, Trooplimit, Length, Maxcargoweight }
---
--- Cancrates       = true/false  -- Can load CTLD crates.
--- Cantroops       = true/false  -- Can load CTLD troops.
--- Cratelimit      = number      -- Max number of crates this unit can carry.
--- Trooplimit      = number      -- Max number of troops this unit can carry.
--- Length          = number      -- Unit length (meters) used for load radius.
--- Maxcargoweight  = number      -- Max cargo weight (kg) this unit can carry.
---
--- CAUTION, CHANGING VALUES IN THE TABLE BELOW WILL MOSTLY HAVE NEGETIVE IMPACT ON THE CTLD CODE.
-CTLDUnitCapabilities = {
-    ["SA342Mistral"] = { false, true, 0, 2, 10, 400 },
-    ["SA342L"] = { false, true, 0, 2, 10, 400 },
-    ["SA342M"] = { false, true, 0, 2, 10, 400 },
-    ["SA342Minigun"] = { false, true, 0, 2, 10, 400 },
-    ["UH-1H"] = { true, true, 1, 8, 15, 800 },
-    ["Mi-8MT"] = { true, true, 3, 16, 15, 6000 },
-    ["Mi-8MTV2"] = { true, true, 3, 18, 15, 6000 },
-    ["Ka-50"] = { false, false, 0, 0, 15, 400 },
-    ["Ka-50_3"] = { false, false, 0, 0, 15, 400 },
-    ["Mi-24P"] = { true, true, 2, 8, 15, 1000 },
-    ["Mi-24V"] = { true, true, 2, 8, 15, 1000 },
-    ["C-130J-30"] = { true, true, 7, 64, 35, 21500 },
-    ["UH-60L"] = { true, true, 2, 20, 16, 3500 },
-    ["UH-60L_DAP"] = { true, true, 2, 20, 16, 3500 },
-    ["AH-64D_BLK_II"] = { false, false, 0, 0, 15, 400 },
-    ["MH-60R"] = { true, true, 2, 20, 16, 3500 },
-    ["CH-47Fbl1"] = { true, true, 5, 32, 20, 10800 },
-    ["OH58D"] = { false, false, 0, 0, 14, 400 },
-}
 
 -- This is the prices for each CTLD unit and their required rank. Rank 1 is the lowest.
 CTLDPrices = {
@@ -643,6 +881,7 @@ CTLDPrices = {
   ["NASAMS SR Add-on"]       = { price = 250, reqRank = 3 },
   ["NASAMS LN Add-on"]       = { price = 250, reqRank = 3 },
   ["FARP"]                   = { price = 500, reqRank = 1 },
+  ["FARP with ZELL"]         = { price = 750, reqRank = 1 },
   ["IRIS T STR Add-on"]      = { price = 750, reqRank = 3 },
   ["IRIS T LN Add-on"]       = { price = 500, reqRank = 3 },
   ["IRIS T C2 Add-on"]       = { price = 500, reqRank = 3 },
@@ -653,6 +892,7 @@ CTLDPrices = {
   ["FV-101 Scorpion"]        = { price = 250, reqRank = 2 },
   ["Avenger"]                = { price = 250, reqRank = 2 },
 }
+
 -- MAX_AT_SPAWN is how many units of each should load from the save file after the last session.
 MAX_AT_SPAWN = {
     ["Engineer soldier"]        = 0,
@@ -689,6 +929,12 @@ MAX_AT_SPAWN = {
     ["FV-101 Scorpion"]         = 2,
     ["Avenger"]                 = 2,
 }
+
+-- If true, engineers can capture/upgrade zones via CTLD.
+-- If false, only regular troops can capture/upgrade zones.
+CaptureZoneWithEngineer = false
+--
+
 -- MAX_SAVED_FARPS is how many farps should load from the save file after the last session.
 MAX_SAVED_FARPS      = 3
 --
@@ -698,13 +944,48 @@ MAX_SAVED_FARPS      = 3
 -- Note: this is session-only merge behavior; CTLD save/load logic is unchanged.
 IRIS_RESTORE_UNIT_HEALTH_ON_MERGE = false
 
+-- Define per-airframe CTLD load capabilities.
+--
+-- Each entry is:
+--   { Cancrates, Cantroops, Cratelimit, Trooplimit, Length, Maxcargoweight }
+--
+-- Cancrates       = true/false  -- Can load CTLD crates.
+-- Cantroops       = true/false  -- Can load CTLD troops.
+-- Cratelimit      = number      -- Max number of crates this unit can carry.
+-- Trooplimit      = number      -- Max number of troops this unit can carry.
+-- Length          = number      -- Unit length (meters) used for load radius.
+-- Maxcargoweight  = number      -- Max cargo weight (kg) this unit can carry.
+--
+-- CAUTION, CHANGING VALUES IN THE TABLE BELOW WILL MOSTLY HAVE NEGETIVE IMPACT ON THE CTLD CODE.
+CTLDUnitCapabilities = {
+    ["SA342Mistral"] = { false, true, 0, 2, 10, 400 },
+    ["SA342L"] = { false, true, 0, 2, 10, 400 },
+    ["SA342M"] = { false, true, 0, 2, 10, 400 },
+    ["SA342Minigun"] = { false, true, 0, 2, 10, 400 },
+    ["UH-1H"] = { true, true, 1, 8, 15, 800 },
+    ["Mi-8MT"] = { true, true, 3, 16, 15, 6000 },
+    ["Mi-8MTV2"] = { true, true, 3, 18, 15, 6000 },
+    ["Ka-50"] = { false, false, 0, 0, 15, 400 },
+    ["Ka-50_3"] = { false, false, 0, 0, 15, 400 },
+    ["Mi-24P"] = { true, true, 2, 8, 15, 1000 },
+    ["Mi-24V"] = { true, true, 2, 8, 15, 1000 },
+    ["C-130J-30"] = { true, true, 7, 64, 35, 21500 },
+    ["UH-60L"] = { true, true, 2, 20, 16, 3500 },
+    ["UH-60L_DAP"] = { true, true, 2, 20, 16, 3500 },
+    ["AH-64D_BLK_II"] = { false, false, 0, 0, 15, 400 },
+    ["MH-60R"] = { true, true, 2, 20, 16, 3500 },
+    ["CH-47Fbl1"] = { true, true, 5, 32, 20, 10800 },
+    ["OH58D"] = { false, false, 0, 0, 14, 400 },
+}
+
 -- ============================================================================
--- CSAR Settings
+-- CSAR
 -- ============================================================================
 
 -- CSAR allowed typeName: value is number of pilots that can be carried.
 -- If 0, the CSAR menu won't appear.
 
+-- @gui label="Allowed CSAR Aircraft"
 AllowedCsar = {
     ["Ka-50"]         = 0,
     ["Ka-50_3"]       = 0,
@@ -759,313 +1040,52 @@ CsarHoverSeconds = 10
 -- Chance (0-100) that hostile infantry will spawn at a CSAR location.
 CsarHostileInfantryChance = 25
 -- ============================================================================
--- WelcomeMessage callsigns
--- ============================================================================
--- Below, you can change the callsigns in the welcome message and their IFF codes.
--- The IFF codes are only functional if you use LotATC and configure the same numbers there.
--- If IFF is not important to you, keep the numbers as-is and only change the callsigns.
-
-CallsignOverrides = {
-    ["F.A.18"] = {
-        ["Arctic1"] = {1400, 1401, 1402, 1403},
-        ["Bender2"] = {1404, 1405, 1406, 1407},
-        ["Crimson3"] = {1410, 1411, 1412, 1413},
-        ["Dusty4"] = {1300, 1301, 1302, 1303},
-        ["Lion3"] = {1310, 1311, 1312, 1313},
-    },
-    ["F.16CM"] = {
-        ["Indy9"] = {1500, 1501, 1502, 1503},
-        ["Jester1"] = {1510, 1511, 1512, 1513},
-        ["Venom4"] = {1610, 1611, 1612, 1613},
-    },
-    ["A.10C"] = {
-        ["Hawg8"] = {1330, 1331, 1332, 1333},
-        ["Tusk2"] = {1350, 1351, 1352, 1353},
-        ["Pig7"] = {1340, 1341, 1342, 1343},
-    },
-    ["AH.64D"] = {
-        ["Rage9"] = {1610, 1611, 1612, 1613},
-        ["Salty1"] = {1620, 1621, 1622, 1623},
-    },
-    ["Ka.50.III"] = {
-        ["Orca6"] = {1560, 1561, 1562, 1563},
-    },
-    ["AJS37"] = {
-        ["Fenris6"] = {1060, 1061, 1062, 1063},
-        ["Grim7"] = {1070, 1071, 1072, 1073},
-    },
-    ["UH.1H"] = {
-        ["Nitro5"] = {1050, 1051, 1052, 1053},
-    },
-    ["CH.47F"] = {
-        ["Greyhound3"] = {1370, 1371, 1372, 1373},
-    },
-    ["F.15E.S4"] = {
-        ["Hitman3"] = {1360, 1361, 1362, 1363},
-    },
-    ["AV.8B"] = {
-        ["Quarterback1"] = {1434, 1435, 1436, 1437},
-    },
-    ["M.2000"] = {
-        ["Quebec8"] = {1600, 1601, 1602, 1603},
-    },
-    [".OH.58D"] = {
-        ["Blackjack4"] = {1440, 1441, 1442, 1443},
-    },
-    ["F.14B"] = {
-        ["Elvis5"] = {1100, 1101, 1102, 1103},
-        ["Mustang4"] = {1104, 1105, 1106, 1107},
-    },
-    ["F.4E.45MC"] = {
-        ["Savage1"] = {0120, 0121, 0122, 0123},
-        ["Scary2"] = {0130, 0131, 0132, 0133},
-    },
-    ["MiG.29A.Fulcrum"] = {
-        ["Wedge7"] = {0524, 0525, 0526, 0527},
-    },
-    ["Mi.24P"] = {
-        ["Scorpion3"] = {0610, 0611, 0612, 0613},
-    },
-    ["C.130J.30"] = {
-        ["Mighty1"] = {1160, 1161, 1162, 1163},
-    },
-}
-
-
--- ============================================================================
--- Advanced Settings
+-- Flight Time
 -- ============================================================================
 
--- Units that will NOT be counted when calculating how many players are "active"
--- (used for CAP/CAS/SEAD scaling).
--- If you set a type to true, it will not be counting that player, because C-130 for example can't fight A/A. This will make
--- the Red CAP for example not spawn a jet for that player, because it's set to true in the ignore list.
--- SAME for the CAS. For the Blue cas, you want to be ignored if your flying C-130, so Blue cas WILL help you.
--- For the red CAS, they will NOT see you as a player so they will lay back and not spawn as often.
--- removing or adding more planes here will change the amount of cap since they will
--- be counted as active players or not.
-
-CapCountIgnoreTypes = {
-	["A-10C_2"] = true,
-	["Hercules"] = true,
-	["A-10A"] = true,
-	["A-10C"] = true,
-	["AV8BNA"] = true,
-	["AJS37"] = true,
-	["C-130J-30"] = true,
-}
-
-BlueCasCountIgnoreTypes = {
-	["Hercules"] = true,
-	["C-130J-30"] = true,
-	["CH-47Fbl1"] = true,
-}
-
-RedCasCountIgnoreTypes = {
-	["Hercules"] = true,
-	["C-130J-30"] = true,
-	["CH-47Fbl1"] = true,
-}
-
--- The "amount" field in the case of CAP, 1 amount equals to 1 CAP Patrol and 1 CAP Attack. so 1 amount equal 2 groups.
--- players in the table below are counted as active players if they are not in the CapCountIgnoreTypes.
-CapLimitStages = {
-	easy = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 2 },
-		{ player = 4,   amount = 3 },
-		{ player = 6,   amount = 4 },
-		{ player = 10,  amount = 5 },
-		{ player = 999, amount = 6 },
-	},
-	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 3 },
-		{ player = 6,   amount = 4 },
-		{ player = 9,   amount = 5 },
-		{ player = 10,  amount = 6 },
-		{ player = 999, amount = 7 },
-	},
-	hard = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 2 },
-		{ player = 2,   amount = 3 },
-		{ player = 3,   amount = 4 },
-		{ player = 4,   amount = 5 },
-		{ player = 6,   amount = 5 },
-		{ player = 9,   amount = 6 },
-		{ player = 10,  amount = 7 },
-		{ player = 999, amount = 8 },
-	},
-}
-
--- Advance settings for CasDifficulty.
--- Players in the table below are counted as active players if they are not in the RedCasCountIgnoreTypes.
--- The "amount" field in the table below is the amount of CAS flights that can be active at the same time.
-RedCasLimitStages = {
-	easy = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 0 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 1 },
-		{ player = 4,   amount = 2 },
-		{ player = 5,   amount = 2 },
-		{ player = 999, amount = 3 },
-	},
-	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 2 },
-		{ player = 4,   amount = 3 },
-		{ player = 5,   amount = 3 },
-		{ player = 9,   amount = 4 },
-		{ player = 999, amount = 4 },
-	},
-	hard = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 2 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 4 },
-		{ player = 5,   amount = 4 },
-		{ player = 9,   amount = 6 },
-		{ player = 999, amount = 7 },
-	},
-}
-
--- Advance settings for SeadDifficulty..
--- Players in the table below are counted as active players if they are not in the RedCasCountIgnoreTypes.
--- The "amount" field in the table below is the amount of SEAD flights that can be active at the same time.
-RedSeadLimitStages = {
-	easy = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 0 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 1 },
-		{ player = 4,   amount = 2 },
-		{ player = 5,   amount = 2 },
-		{ player = 999, amount = 3 },
-	},
-	medium = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 2 },
-		{ player = 4,   amount = 3 },
-		{ player = 5,   amount = 3 },
-		{ player = 9,   amount = 4 },
-		{ player = 999, amount = 4 },
-	},
-	hard = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 2 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 4 },
-		{ player = 5,   amount = 4 },
-		{ player = 9,   amount = 6 },
-		{ player = 999, amount = 7 },
-	},
-}
-
--- Advance settings for RunwayStrikeDifficulty.
--- Players in the table below are counted as active players if they are not in the RedCasCountIgnoreTypes.
--- The "amount" field in the table below is the amount of Runway Strike flights that can be active at the same time.
-RedRunwayStrikeLimitStages = {
-	easy = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 0 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 1 },
-		{ player = 4,   amount = 2 },
-		{ player = 5,   amount = 2 },
-		{ player = 999, amount = 3 },
-	},
-	medium = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 0 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 2 },
-		{ player = 4,   amount = 3 },
-		{ player = 5,   amount = 3 },
-		{ player = 9,   amount = 4 },
-		{ player = 999, amount = 4 },
-	},
-	hard = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 4 },
-		{ player = 5,   amount = 4 },
-		{ player = 9,   amount = 6 },
-		{ player = 999, amount = 7 },
-	},
-}
-
--- Advance settings for FriendlyCapSupport.
--- Players in the table below are counted as active players if they are not in the CapCountIgnoreTypes.
--- The logic here, The less the players, the more AI will help you. The list in CapCountIgnoreTypes, is types that doesn't count as active players.
-BlueCapSupportStages = {
-	easy = {
-		{ player = 0,   amount = 2 },
-		{ player = 1,   amount = 2 },
-		{ player = 999, amount = 1 },
-	},
-	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
-		{ player = 999, amount = 0 },
-	},
-	hard = {
-		{ player = 999, amount = 0 },
-	},
-}
--- Advance settings for FriendlyCasSupport.
--- Players in the table below are counted as active players if they are not in the BlueCasCountIgnoreTypes.
--- The logic here, The less the players, the more AI will help you. The list in BlueCasCountIgnoreTypes, is types that doesn't count as active players.
-BlueCasSupportStages = {
-	easy = {
-		{ player = 0,   amount = 2 },
-		{ player = 1,   amount = 2 },
-		{ player = 999, amount = 1 },
-	},
-	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
-		{ player = 999, amount = 0 },
-	},
-	hard = {
-		{ player = 999, amount = 0 },
-	},
-}
--- players in the table below are counted as active players if they are not in the BlueCasCountIgnoreTypes.
--- The logic here, The less the players, the more AI will help you. The list in BlueCasCountIgnoreTypes, is types that doesn't count as active players.
--- Advance settings for FriendlySeadSupport.
-BlueSeadSupportStages = {
-	easy = {
-		{ player = 0,   amount = 2 },
-		{ player = 1,   amount = 2 },
-		{ player = 999, amount = 1 },
-	},
-	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
-		{ player = 999, amount = 0 },
-	},
-	hard = {
-		{ player = 999, amount = 0 },
-	},
+-- Here you can customize flight time reward, this will reward the player for each minute they are airborne.
+-- It will start counting after 5 minutes and will count the first 5 as valid flight minutes.
+-- The idea is the reward the Logistics people for longer flight time.
+RewardFlightTime = true
+--
+-- Here you can define how much credits for each minutes flown.
+-- Note, when you land, you'll see  "15 + Flight time", the 15 are minutes, not credits.
+FlightTimeRewardPerMinute = 2
+--
+-- If you want to reward all players no mater what aircraft, then set this to true, if set to false, you can choose who get the reward.
+-- in the AllowedFlightTimeReward table below.
+RewardAllAircraft = false
+--
+--
+AllowedFlightTimeReward  = {
+    ['Ka-50'] = false,
+    ['Ka-50_3'] = false,
+    ['Mi-24P'] = false,
+    ['SA342Mistral'] = false,
+    ['SA342L'] = false,
+    ['SA342M'] = false,
+    ['SA342Minigun'] = false,
+    ['UH-60L'] = false,
+    ['UH-60L_DAP'] = false,
+    ['AH-64D_BLK_II'] = false,
+    ['UH-1H'] = false,
+    ['Mi-8MT'] = false,
+    ['OH58D'] = false,
+    ['Bronco-OV-10A'] = false,
+    ['OH-6A'] = false,
+    ['MH-6J'] = false,
+    ['AH-6J'] = false,
+    ['FA-18C_hornet'] = false,
+	['F-16C_50'] = false,
+	['F-14B'] = false,
+	['MiG-29 Fulcrum'] = false,
+	['C-130J-30'] = true,
+	['CH-47Fbl1'] = true,
+	['Hercules'] = true,
 }
 
 -- ============================================================================
--- Tankers speed
+-- Tankers
 -- ============================================================================
 -- Airforce tanker speed (knots)
 TexacoSpeed = 286 -- orbit speed for texaco is hardcoded at 280, otherwise strange things happen.
@@ -1073,7 +1093,7 @@ TexacoSpeed = 286 -- orbit speed for texaco is hardcoded at 280, otherwise stran
 ArcoSpeed = 286 -- orbit speed for arco is hardcoded at 280, otherwise strange things happen.
 
 -- ============================================================================
--- EWRS Configuration
+-- EWRS
 -- ============================================================================
 
 -- Maximum detection range choices shown in the player F10 EWRS menu.
@@ -1106,16 +1126,16 @@ ewrs_allowBogeyDope = true -- Allows pilots to request closest-threat bogey dope
 ewrs_allowFriendlyPicture = true -- Allows pilots to request a friendly aircraft picture.
 ewrs_maxFriendlyDisplay = 5 -- Max friendly aircraft shown in friendly picture reports. Set to 0 to show all.
 ewrs_showType = true -- If true, EWRS reports aircraft type. If false, EWRS reports Unknown.
-ewrs_hiddenFriendlyReportingNames = { Sentry = true } -- Friendly reporting names hidden from friendly picture reports.
 ewrs_specialPlaneTypes = { -- Aircraft typeNames that show friendlies by default. Players can still override this in their F10 EWRS menu.
   ["F-4E-45MC"] = true,
   ["MiG-29 Fulcrum"] = true,
   ["F-5E-3_FC"] = true,
   ["C-130J-30"] = true,
 }
+ewrs_hiddenFriendlyReportingNames = { Sentry = true } -- Friendly reporting names hidden from friendly picture reports.
 
 -- ============================================================================
--- AIEN Configuration
+-- AIEN
 -- ============================================================================
 
 AIEN = AIEN or {}
@@ -1137,11 +1157,55 @@ phaseCycleTimerActive = 0.04   -- Main runtime cadence when work is pending. Try
 phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if needed.
 
 -- ============================================================================
--- Coldwar weapons restrictions and non coldwar warehouse restock aircraft
+-- Aircraft / Weapons
 -- ============================================================================
+-- In this list, you can either remove or add what is allowed in the coldwar era.
+-- @gui label="Allowed Aircraft"
+allowedPlanes = {
+    "A-10A", "A-10C", "A-10C_2", "A-4E-C", "AH-1W", "AH-64D_BLK_II", "AH-6J", "AJS37", "An-30M", "AV8BNA",
+    "Bronco-OV-10A", "C-101CC", "C-130J-30", "CH-47Fbl1", "E-2C", "F/A-18A", "F-100D", "F-14A",
+    "F-14A-135-GR", "F-14A-135-GR-Early", "F-14A-95-GR", "F-14B", "F-15C", "F-15E", "F-15ESE", "F-16A MLU",
+    "F-16C_50", "F-4E-45MC", "F-5E-3", "F-5E-3_FC", "F-86F Sabre", "FA-18C_hornet", "Hercules", "Ka-27",
+    "L-39C", "M-2000C", "MB-339A", "MB-339APAN", "MH-60R", "MH-6J", "Mi-24P", "Mi-24V", "Mi-28NE", "Mi-8MT",
+    "MiG-15bis", "MiG-15bis_FC", "MiG-19P", "MiG-21Bis", "MiG-23MLD", "MiG-29 Fulcrum", "MiG-29A",
+    "Mirage-F1AD", "Mirage-F1AZ", "Mirage-F1B", "Mirage-F1BD", "Mirage-F1BE", "Mirage-F1BQ", "Mirage-F1C",
+    "Mirage-F1C-200", "Mirage-F1CE", "Mirage-F1CG", "Mirage-F1CH", "Mirage-F1CJ", "Mirage-F1CK",
+    "Mirage-F1CR", "Mirage-F1CT", "Mirage-F1CZ", "Mirage-F1DDA", "Mirage-F1ED", "Mirage-F1EDA", "Mirage-F1EE",
+    "Mirage-F1EH", "Mirage-F1EQ", "Mirage-F1M-CE", "Mirage-F1M-EE", "OH58D", "OH-6A", "P3C_Orion", "SA342L",
+    "SA342M", "SA342Minigun", "SA342Mistral", "SU22", "Su-24MR", "Su-25", "UH-1H", "UH-60A", "UH-60L",
+    "UH-60L_DAP"
+}
+
+-- In this list, you can either remove or add what is allowed for the (RED SIDE) in the coldwar era.
+-- @gui label="Allowed RED Aircraft"
+allowedPlanesRed = {
+    "A-10A", "A-10C", "A-10C_2", "A-4E-C", "AH-1W", "AH-64D_BLK_II", "AH-6J", "AJS37", "An-30M", "AV8BNA",
+    "Bronco-OV-10A", "C-101CC", "C-130J-30", "CH-47Fbl1", "E-2C", "F/A-18A", "F-100D", "F-14A",
+    "F-14A-135-GR", "F-14A-135-GR-Early", "F-14A-95-GR", "F-14B", "F-15C", "F-15E", "F-15ESE", "F-16A MLU",
+    "F-16C_50", "F-4E-45MC", "F-5E-3", "F-5E-3_FC", "F-86F Sabre", "FA-18C_hornet", "Hercules", "Ka-27",
+    "L-39C", "M-2000C", "MB-339A", "MB-339APAN", "MH-60R", "MH-6J", "Mi-24P", "Mi-24V", "Mi-28NE", "Mi-8MT",
+    "MiG-15bis", "MiG-15bis_FC", "MiG-19P", "MiG-21Bis", "MiG-23MLD", "MiG-29 Fulcrum", "MiG-29A",
+    "Mirage-F1AD", "Mirage-F1AZ", "Mirage-F1B", "Mirage-F1BD", "Mirage-F1BE", "Mirage-F1BQ", "Mirage-F1C",
+    "Mirage-F1C-200", "Mirage-F1CE", "Mirage-F1CG", "Mirage-F1CH", "Mirage-F1CJ", "Mirage-F1CK",
+    "Mirage-F1CR", "Mirage-F1CT", "Mirage-F1CZ", "Mirage-F1DDA", "Mirage-F1ED", "Mirage-F1EDA", "Mirage-F1EE",
+    "Mirage-F1EH", "Mirage-F1EQ", "Mirage-F1M-CE", "Mirage-F1M-EE", "OH58D", "OH-6A", "P3C_Orion", "SA342L",
+    "SA342M", "SA342Minigun", "SA342Mistral", "SU22", "Su-24MR", "Su-25", "UH-1H", "UH-60A", "UH-60L",
+    "UH-60L_DAP"
+}
+-- The list is applied if AllowMods are true and on Modern era.
+-- Make sure you have the mods installed on the server and the client.
+-- @gui label="Mods aircraft list"
+restockAircraft = {
+    "A-29B", "A-4E-C", "B-52H", "Bell-47", "Bronco-OV-10A", "EA-18G", "Eurofighter", "EurofighterT",
+    "F111C", "F15EX", "F16A", "F16A_AA", "F-22A", "F-23A", "FA-18E", "FA-18ET", "FA-18F", "FA-18FT",
+    "Hercules", "JAS39Gripen", "JAS39Gripen_AG", "JAS39Gripen_BVR", "M2000D", "Mi-28NE","MiG-31BM", 
+    "SK-60", "SU22", "Su-25SM3", "Su-30MKA", "Su-30MKI", "Su-30MKM", "Su-30SM", "Su-35", "PUCARA",
+    "Su-35S", "T-45"
+}
 
 -- In the coldwar era, you can add or remove what to restrict
 -- Add "--" if you want to ALLOW a weapon, otherwise the weapon in the list below are removed from the warehouse.
+-- @gui label="Cold War Restricted Weapons"
 restrictedWeapons = {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
@@ -1233,45 +1297,13 @@ restrictedWeapons = {
 	"weapons.missiles.AGR_20A", -- laser rockets
 	"weapons.missiles.AGR_20_M282"} -- laser rockets
 
-
--- In this list, you can either remove or add what is allowed in the coldwar era.
-allowedPlanes = {
-  "MiG-19P","Mirage-F1AD","F/A-18A","Su-24MR","F-4E-45MC","MiG-23MLD","Mirage-F1CR","SA342Mistral","Mi-24V","F-15E","AJS37","UH-1H",
-  "UH-60L","MB-339A","F-14A-135-GR", "F-14A-135-GR-Early", "F-15C","F-16A MLU","Mirage-F1BD","P3C_Orion","Mirage-F1M-EE","An-30M","F-5E-3_FC",
-  "Mirage-F1EQ","A-10A", "Mirage-F1M-CE","Mirage-F1ED","Ka-27","E-2C","UH-60A","Mirage-F1C","Mirage-F1CE","AH-1W","MiG-21Bis","Mirage-F1BE",
-  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA","F-100D",
-  "Mirage-F1C-200","Mirage-F1DDA","MiG-15bis","Mirage-F1CJ","Mirage-F1CK","Mirage-F1AZ", "A-10C_2", "Mirage-F1CT","A-10C","M-2000C","F-15ESE",
-  "Mirage-F1EH","Mirage-F1CH","SA342Minigun","MiG-29A","Bronco-OV-10A","OH-6A", "Mirage-F1CG","F-5E-3","F-86F Sabre","F-14A","L-39C","C-101CC","SU22","A-4E-C",
-  "SA342L","Mi-8MT","Mirage-F1EE","Mi-24P","CH-47Fbl1","FA-18C_hornet","F-16C_50", "MiG-29 Fulcrum","UH-60L_DAP","C-130J-30","F-14B","AH-64D_BLK_II","MH-6J","AH-6J","MH-60R","Mi-28NE"}
-
--- In this list, you can either remove or add what is allowed for the (RED SIDE) in the coldwar era.
-allowedPlanesRed = {
-  "MiG-19P","Mirage-F1AD","F/A-18A","Su-24MR","F-4E-45MC","MiG-23MLD","Mirage-F1CR","SA342Mistral","Mi-24V","F-15E","AJS37","UH-1H",
-  "UH-60L","MB-339A","F-14A-135-GR", "F-14A-135-GR-Early", "F-15C","F-16A MLU","Mirage-F1BD","P3C_Orion","Mirage-F1M-EE","An-30M","F-5E-3_FC",
-  "Mirage-F1EQ","A-10A", "Mirage-F1M-CE","Mirage-F1ED","Ka-27","E-2C","UH-60A","Mirage-F1C","Mirage-F1CE","AH-1W","MiG-21Bis","Mirage-F1BE",
-  "MB-339APAN","Hercules","Su-25","SA342M","Mirage-F1EDA","OH58D","MiG-15bis_FC","Mirage-F1CZ", "Mirage-F1BQ", "Mirage-F1B","AV8BNA",
-  "Mirage-F1C-200","Mirage-F1DDA","MiG-15bis","Mirage-F1CJ","Mirage-F1CK","Mirage-F1AZ", "A-10C_2", "Mirage-F1CT","A-10C","M-2000C","F-15ESE",
-  "Mirage-F1EH","Mirage-F1CH","SA342Minigun","MiG-29A","Bronco-OV-10A","OH-6A", "Mirage-F1CG","F-5E-3","F-86F Sabre","F-14A","L-39C","C-101CC","SU22","A-4E-C",
-  "SA342L","Mi-8MT","Mirage-F1EE","Mi-24P","CH-47Fbl1","FA-18C_hornet","F-16C_50", "MiG-29 Fulcrum","UH-60L_DAP","C-130J-30","F-14B","AH-64D_BLK_II","MH-6J","AH-6J","MH-60R","Mi-28NE"}
-
--- This list is more or less mods that should be allowed in the warehouse. 
-restockAircraft = {
-"FA-18FT","EA-18G","F-22A","FA-18E","B-52H","FA-18F","FA-18ET","F15EX","A-29B","F-23A","Ka-50_3","Ka-50","Mi-28NE","SU22","AV8BNA","Su-30MKA","Su-30MKI","Su-30MKM","Su-30SM",
-"Bronco-OV-10A","JAS39Gripen_AG","MiG-31BM","JAS39Gripen","Su-35S","Su-35","JAS39Gripen_BVR","SK-60","T-45","A-4E-C",
-"Bell-47","Eurofighter","EurofighterT","F16A","F16A_AA","F111C","Hercules","M2000D","PUCARA","Su-25SM3"}
-
 -- This list can be used to add weapons you want to forbidd, This will forbidd all in the table in Modern era as well.
 -- For coldwar, you can still rely on restrictedWeapons.
+-- @gui label="Forbidden Weapons All Eras"
 ForbiddWeaponsInAllEra = {
     "weapons.bombs.RN-24", -- Nukes for the Mig-21
     "weapons.bombs.RN-28", -- Nukes for the Mig-21
 }
-
--- This table will be used if StrictSmartWeaponsInventory is set to true.
--- Smart weapons in this table will be HALF what we add to the warehouse.
-WarehouseWeaponCaps = {
-}
-
 
 -- Don't touch this.
 FootholdConfigLoadedOk = true

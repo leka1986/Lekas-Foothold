@@ -1486,6 +1486,7 @@ end
 function static:OnEventShot(EventData)
     local eventdata = EventData
     if eventdata and eventdata.weapon and eventdata.IniUnit and eventdata.IniPlayerName then
+        if eventdata.WeaponName == "ZELL Booster" then return end
         local initiator = eventdata.IniUnit
         local playerName = eventdata.IniPlayerName
 

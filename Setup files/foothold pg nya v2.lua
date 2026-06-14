@@ -706,6 +706,7 @@ else
         'RED_MIG25PD',
         'RED_MIG31',
         'RED_MIRAGE_F1BE',
+		'RED_F14_Export',
         'BLUE_HORNET',
         'BLUE_F15C',
         'BLUE_F16C',
@@ -793,10 +794,10 @@ else
 	}
 end
 	ArtilleryConvoyLong = {
-			"ArtilleryConvoyLong 1",
+		"ArtilleryConvoyLong 1",
 	}
 	ArtilleryConvoyShort = {
-			"ArtilleryConvoyShort 1",
+		"ArtilleryConvoyShort 1",
 	}
 	SupplyConvoy = {
 		"SupplyConvoy 1",
