@@ -24267,7 +24267,14 @@ function BattleCommander:_spawnHunterForPlayer(pname,u,termType)
     env.info(string.format('HUNT-DBG: could not resolve parking pair @%s', home:GetName()))
     return
   end
-local template = Era=='Coldwar' and 'RED_MIG23_TEMPLATE' or 'RED_MIG29_TEMPLATE'
+local redCapTemplates = {}
+for i = 1, #CapPlaneTemplate do
+	local templateName = CapPlaneTemplate[i]
+	if ResolveTemplateSide(templateName) == coalition.side.RED then
+		redCapTemplates[#redCapTemplates + 1] = templateName
+	end
+end
+local template = redCapTemplates[math.random(1, #redCapTemplates)]
 local aliasPlayer = tostring(pname or "PLAYER")
 aliasPlayer = aliasPlayer:gsub('"', "_"):gsub("'", "_")
 if aliasPlayer == "" then aliasPlayer = "PLAYER" end

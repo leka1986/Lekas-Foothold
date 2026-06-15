@@ -625,6 +625,7 @@ CallsignOverrides = {
 -- escortType: 1 = Hornet (F-18C in Coldwar with AIM-7),
 --             2 = Viper (F-15C in Coldwar with AIM-7)
 --             3 = MIG29S with R-77 (MiG-29A in Coldwar with R-27ET)
+-- @gui installPolicy="mergeRows"
 EscortTypeByPlayerType = {
     ["C-130J-30"]      = { true, 1 },
     ["AV8BNA"]         = { true, 1 },
@@ -681,6 +682,7 @@ AutoFillResources = 5
 NoAIBlueSupplies = false
 
 -- This option is the legacy option. this won't be used if WarehouseLogistics = true
+-- @gui installPolicy="mergeRows"
 AllowedToCarrySupplies = {
     ["Ka-50"]         = false,
     ["Ka-50_3"]       = true,
@@ -709,7 +711,7 @@ WarningNoSupplies = true
 -- Keep slingload-only aircraft set to false.
 -- This does not mean supplies can now be carried.
 -- This is if the aircraft can carry supplies, and no supplies is loaded, Then this will be a reminder.
-
+-- @gui installPolicy="mergeRows"
 ZoneSupplyTakeoffWarningTypes = {
     ["AH-64D_BLK_II"] = true,  -- This is for the legacy warehouse logistics or if you use troops to capture, with engineer.
     ["Bronco-OV-10A"] = true,  -- legacy mode
@@ -723,7 +725,6 @@ ZoneSupplyTakeoffWarningTypes = {
     ["UH-1H"]         = true,
     ["UH-60L"]        = true,
     ["UH-60L_DAP"]    = true,
-
     ["AH-6J"]         = false,
     ["Ka-50"]         = false,
     ["MH-6J"]         = false,
@@ -733,7 +734,6 @@ ZoneSupplyTakeoffWarningTypes = {
     ["SA342Minigun"]  = false,
     ["SA342Mistral"]  = false,
     ["Hercules"]      = false,  -- should not be set to true if using WarehouseLogistics. can not detect that generic cargo
-
 }
 
 -- ============================================================================
@@ -741,6 +741,7 @@ ZoneSupplyTakeoffWarningTypes = {
 -- ============================================================================
 
 -- Shop prices.
+-- @gui installPolicy="mergeRows"
 ShopPrices = {
 	smoke         = 20,   -- Smoke markers
     flare         = 20,   -- Flare markers
@@ -779,6 +780,7 @@ ShopPrices = {
 }
 
 -- Shop ranks.
+-- @gui installPolicy="mergeRows"
 ShopRankRequirements = {
 	jtac           = 2,  -- MQ-9 Reaper JTAC mission
 	dynamiccap     = 2,  -- CAP Flight
@@ -817,6 +819,7 @@ ShopRankRequirements = {
 }
 
 -- Earning per kill by target type.
+-- @gui installPolicy="mergeRows"
 RewardContribution = {
 	infantry         = 10,
 	ground           = 10,
@@ -857,6 +860,7 @@ CTLDCost = true
 --
 
 -- This is the prices for each CTLD unit and their required rank. Rank 1 is the lowest.
+-- @gui installPolicy="mergeRows"
 CTLDPrices = {
   ["Engineer soldier"]       = { price = 50, reqRank = 1 },
   ["Squad 8"]                = { price = 50, reqRank = 1 },
@@ -894,6 +898,7 @@ CTLDPrices = {
 }
 
 -- MAX_AT_SPAWN is how many units of each should load from the save file after the last session.
+-- @gui installPolicy="mergeRows"
 MAX_AT_SPAWN = {
     ["Engineer soldier"]        = 0,
     ["Mephisto"]                = 2,
@@ -982,10 +987,10 @@ CTLDUnitCapabilities = {
 -- CSAR
 -- ============================================================================
 
--- CSAR allowed typeName: value is number of pilots that can be carried.
--- If 0, the CSAR menu won't appear.
 
--- @gui label="Allowed CSAR Aircraft"
+-- If 0, the CSAR menu won't appear.
+-- CSAR allowed typeName: value is number of pilots that can be carried.
+-- @gui label="Allowed CSAR Aircraft" installPolicy="mergeRows"
 AllowedCsar = {
     ["Ka-50"]         = 0,
     ["Ka-50_3"]       = 0,
@@ -1057,6 +1062,7 @@ FlightTimeRewardPerMinute = 2
 RewardAllAircraft = false
 --
 --
+-- @gui installPolicy="mergeRows"
 AllowedFlightTimeReward  = {
     ['Ka-50'] = false,
     ['Ka-50_3'] = false,
@@ -1126,6 +1132,7 @@ ewrs_allowBogeyDope = true -- Allows pilots to request closest-threat bogey dope
 ewrs_allowFriendlyPicture = true -- Allows pilots to request a friendly aircraft picture.
 ewrs_maxFriendlyDisplay = 5 -- Max friendly aircraft shown in friendly picture reports. Set to 0 to show all.
 ewrs_showType = true -- If true, EWRS reports aircraft type. If false, EWRS reports Unknown.
+-- @gui installPolicy="mergeRows"
 ewrs_specialPlaneTypes = { -- Aircraft typeNames that show friendlies by default. Players can still override this in their F10 EWRS menu.
   ["F-4E-45MC"] = true,
   ["MiG-29 Fulcrum"] = true,
@@ -1160,7 +1167,7 @@ phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if
 -- Aircraft / Weapons
 -- ============================================================================
 -- In this list, you can either remove or add what is allowed in the coldwar era.
--- @gui label="Allowed Aircraft"
+-- @gui label="Allowed Aircraft" installPolicy="keepTable"
 allowedPlanes = {
     "A-10A", "A-10C", "A-10C_2", "A-4E-C", "AH-1W", "AH-64D_BLK_II", "AH-6J", "AJS37", "An-30M", "AV8BNA",
     "Bronco-OV-10A", "C-101CC", "C-130J-30", "CH-47Fbl1", "E-2C", "F/A-18A", "F-100D", "F-14A",
@@ -1177,7 +1184,7 @@ allowedPlanes = {
 }
 
 -- In this list, you can either remove or add what is allowed for the (RED SIDE) in the coldwar era.
--- @gui label="Allowed RED Aircraft"
+-- @gui label="Allowed RED Aircraft" installPolicy="keepTable"
 allowedPlanesRed = {
     "A-10A", "A-10C", "A-10C_2", "A-4E-C", "AH-1W", "AH-64D_BLK_II", "AH-6J", "AJS37", "An-30M", "AV8BNA",
     "Bronco-OV-10A", "C-101CC", "C-130J-30", "CH-47Fbl1", "E-2C", "F/A-18A", "F-100D", "F-14A",
@@ -1194,7 +1201,7 @@ allowedPlanesRed = {
 }
 -- The list is applied if AllowMods are true and on Modern era.
 -- Make sure you have the mods installed on the server and the client.
--- @gui label="Mods aircraft list"
+-- @gui label="Mods aircraft list" installPolicy="keepTable"
 restockAircraft = {
     "A-29B", "A-4E-C", "B-52H", "Bell-47", "Bronco-OV-10A", "EA-18G", "Eurofighter", "EurofighterT",
     "F111C", "F15EX", "F16A", "F16A_AA", "F-22A", "F-23A", "FA-18E", "FA-18ET", "FA-18F", "FA-18FT",
@@ -1205,7 +1212,7 @@ restockAircraft = {
 
 -- In the coldwar era, you can add or remove what to restrict
 -- Add "--" if you want to ALLOW a weapon, otherwise the weapon in the list below are removed from the warehouse.
--- @gui label="Cold War Restricted Weapons"
+-- @gui label="Cold War Restricted Weapons" installPolicy="keepTable"
 restrictedWeapons = {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
