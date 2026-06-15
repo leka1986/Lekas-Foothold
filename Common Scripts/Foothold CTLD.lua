@@ -4445,7 +4445,8 @@ function SaveFARPS()
     local coord = e.coord
     if FName and coord and coord.GetVec2 then
       local vec2 = coord:GetVec2()
-      data = data .. string.format("%d;%s;%f;%f;%s;\n", tonumber(e.seq) or 0, tostring(FName), vec2.x, vec2.y, e.zell == true and "zell" or "")
+      local lat, lon = coord:GetLLDDM()
+      data = data .. string.format("%d;%s;%f;%f;%s;%f;%f;\n", tonumber(e.seq) or 0, tostring(FName), vec2.x, vec2.y, e.zell == true and "zell" or "", lat, lon)
     end
   end
 
