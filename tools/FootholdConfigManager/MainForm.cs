@@ -581,6 +581,7 @@ internal sealed class MainForm : Form
         public List<MizKeptValue> KeptValues { get; } = new();
         public List<ConfigEntry> NewEntries { get; } = new();
         public List<(string Table, int ItemCount)> KeptStringListTables { get; } = new();
+        public List<MizKeptTableBlock> KeptTableBlocks { get; } = new();
         public List<(string Key, string Value)> PreservedTableRows { get; } = new();
         public List<(string Table, string Value)> PreservedListItems { get; } = new();
         public List<(string Key, string Value)> SkippedOldValues { get; } = new();
@@ -595,6 +596,7 @@ internal sealed class MainForm : Form
     private sealed class StoredMizDefaultsInfo
     {
         public string Id { get; set; } = "";
+        public string SourceKind { get; set; } = "miz";
         public string MizName { get; set; } = "";
         public string MizPath { get; set; } = "";
         public string ConfigPath { get; set; } = "";
@@ -615,6 +617,24 @@ internal sealed class MainForm : Form
         public string Key { get; }
         public string CurrentValue { get; }
         public string NewDefault { get; }
+    }
+
+    private sealed class MizKeptTableBlock
+    {
+        public MizKeptTableBlock(string key, string currentBlock, string newDefaultBlock, int currentItemCount, int newDefaultItemCount)
+        {
+            Key = key;
+            CurrentBlock = currentBlock;
+            NewDefaultBlock = newDefaultBlock;
+            CurrentItemCount = currentItemCount;
+            NewDefaultItemCount = newDefaultItemCount;
+        }
+
+        public string Key { get; }
+        public string CurrentBlock { get; }
+        public string NewDefaultBlock { get; }
+        public int CurrentItemCount { get; }
+        public int NewDefaultItemCount { get; }
     }
 
     private sealed class SelectableValueChoice
@@ -10119,9 +10139,11 @@ internal sealed class MainForm : Form
             }
 
             var previewText = BuildMizInstallPreviewText(mizPath, currentDocument.Path, preview);
-            var choices = preview.KeptValues
+            var valueChoices = preview.KeptValues
                 .Select(item => new SelectableValueChoice(item.Key, item.CurrentValue, item.NewDefault, item.Entry.EffectiveDescription))
                 .ToList();
+            var tableChoices = BuildKeptTableChoices(preview, "current table text", "new MIZ table text");
+            var choices = valueChoices.Concat(tableChoices).ToList();
             if (!ConfirmSelectableValuePreview(
                     previewText,
                     "Import MIZ Config Preview",
@@ -10137,13 +10159,8 @@ internal sealed class MainForm : Form
                 return;
             }
 
-            for (var i = 0; i < choices.Count; i++)
-            {
-                if (!choices[i].Selected)
-                {
-                    preview.KeptValues[i].Entry.ValueText = preview.KeptValues[i].NewDefault;
-                }
-            }
+            ApplyKeptTableChoices(newDocument, preview, tableChoices);
+            ApplyKeptValueChoices(newDocument, preview, valueChoices);
 
             if (!ValidateInstallMizDocument(newDocument, "The final imported MIZ config"))
             {
@@ -10218,6 +10235,7 @@ internal sealed class MainForm : Form
         var index = LoadStoredMizDefaultsIndex();
         var storedAt = DateTime.Now;
         var mizName = Path.GetFileName(mizPath);
+        var fullMizPath = Path.GetFullPath(mizPath);
         var id = storedAt.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + MakeSafeFileName(Path.GetFileNameWithoutExtension(mizName));
         var configPath = Path.Combine(StoredDefaultsDirectory, id + ".lua");
 
@@ -10225,21 +10243,169 @@ internal sealed class MainForm : Form
         var info = new StoredMizDefaultsInfo
         {
             Id = id,
+            SourceKind = "miz",
             MizName = mizName,
-            MizPath = Path.GetFullPath(mizPath),
+            MizPath = fullMizPath,
             ConfigPath = configPath,
             StoredAt = storedAt
         };
 
-        index.Items.RemoveAll(item => item.Id.Equals(info.Id, StringComparison.OrdinalIgnoreCase));
-        index.Items.Insert(0, info);
-        index.Items = index.Items
-            .Where(item => !string.IsNullOrWhiteSpace(item.ConfigPath) && File.Exists(item.ConfigPath))
-            .OrderByDescending(item => item.StoredAt)
-            .Take(20)
+        var sourceKey = GetStoredDefaultsSourceKey(info);
+        var replacedItems = index.Items
+            .Where(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase))
             .ToList();
+        foreach (var item in replacedItems)
+        {
+            if (!PathsEqual(item.ConfigPath, configPath))
+            {
+                TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
+            }
+        }
+
+        index.Items.RemoveAll(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
+        index.Items.Insert(0, info);
+        NormalizeStoredMizDefaultsIndex(index, deleteRemovedFiles: true);
         SaveStoredMizDefaultsIndex(index);
         return info;
+    }
+
+    private static List<StoredMizDefaultsInfo> LoadStoredRestoreDefaultsSources()
+    {
+        var index = LoadStoredMizDefaultsIndex();
+        if (NormalizeStoredMizDefaultsIndex(index, deleteRemovedFiles: true))
+        {
+            SaveStoredMizDefaultsIndex(index);
+        }
+
+        return index.Items.ToList();
+    }
+
+    private static bool NormalizeStoredMizDefaultsIndex(StoredMizDefaultsIndex index, bool deleteRemovedFiles)
+    {
+        var originalItems = index.Items.ToList();
+        var keptItems = new List<StoredMizDefaultsInfo>();
+        var removedItems = new List<StoredMizDefaultsInfo>();
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in index.Items
+                     .Where(item => !string.IsNullOrWhiteSpace(item.ConfigPath) && File.Exists(item.ConfigPath))
+                     .OrderByDescending(item => item.StoredAt))
+        {
+            var key = GetStoredDefaultsSourceKey(item);
+            if (string.IsNullOrWhiteSpace(key) || !seenKeys.Add(key))
+            {
+                removedItems.Add(item);
+                continue;
+            }
+
+            if (keptItems.Count < 20)
+            {
+                keptItems.Add(item);
+            }
+            else
+            {
+                removedItems.Add(item);
+            }
+        }
+
+        removedItems.AddRange(originalItems.Where(item => !keptItems.Contains(item) && !removedItems.Contains(item)));
+        if (deleteRemovedFiles)
+        {
+            foreach (var item in removedItems)
+            {
+                TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
+            }
+        }
+
+        index.Items = keptItems;
+        return originalItems.Count != keptItems.Count ||
+               originalItems.Where((item, itemIndex) => itemIndex >= keptItems.Count || !ReferenceEquals(item, keptItems[itemIndex])).Any();
+    }
+
+    private static string GetStoredDefaultsSourceKey(StoredMizDefaultsInfo info)
+    {
+        var sourcePath = !string.IsNullOrWhiteSpace(info.MizPath)
+            ? info.MizPath
+            : info.ConfigPath;
+        if (!string.IsNullOrWhiteSpace(sourcePath))
+        {
+            try
+            {
+                return "path:" + Path.GetFullPath(sourcePath);
+            }
+            catch
+            {
+                return "path:" + sourcePath;
+            }
+        }
+
+        return "name:" + info.MizName;
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Path.GetFullPath(left).Equals(Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return left.Equals(right, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static bool IsTemporaryRestoreDefaultsSource(StoredMizDefaultsInfo info)
+    {
+        return info.Id.StartsWith("file:", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void RemoveStoredMizDefaultsSource(StoredMizDefaultsInfo source)
+    {
+        var index = LoadStoredMizDefaultsIndex();
+        var sourceKey = GetStoredDefaultsSourceKey(source);
+        var removedItems = index.Items
+            .Where(item =>
+                item.Id.Equals(source.Id, StringComparison.OrdinalIgnoreCase) ||
+                GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var item in removedItems)
+        {
+            TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
+        }
+
+        index.Items.RemoveAll(item =>
+            item.Id.Equals(source.Id, StringComparison.OrdinalIgnoreCase) ||
+            GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
+        SaveStoredMizDefaultsIndex(index);
+    }
+
+    private static void TryDeleteOwnedStoredDefaultsConfig(string path)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                return;
+            }
+
+            var storedRoot = Path.GetFullPath(StoredDefaultsDirectory)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var fullPath = Path.GetFullPath(path);
+            if (fullPath.StartsWith(storedRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                File.Delete(fullPath);
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup only; the original MIZ/config source is never deleted here.
+        }
     }
 
     private static StoredMizDefaultsIndex LoadStoredMizDefaultsIndex()
@@ -10254,6 +10420,11 @@ internal sealed class MainForm : Form
             var index = JsonSerializer.Deserialize<StoredMizDefaultsIndex>(File.ReadAllText(StoredDefaultsIndexPath), StoredDefaultsJsonOptions)
                         ?? new StoredMizDefaultsIndex();
             index.Items ??= new List<StoredMizDefaultsInfo>();
+            foreach (var item in index.Items.Where(item => string.IsNullOrWhiteSpace(item.SourceKind)))
+            {
+                item.SourceKind = "miz";
+            }
+
             return index;
         }
         catch
@@ -10280,6 +10451,59 @@ internal sealed class MainForm : Form
         return safe.Length <= 80 ? safe : safe[..80];
     }
 
+    private StoredMizDefaultsInfo? CreateRestoreDefaultsSourceFromFile(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        if (Path.GetExtension(fullPath).Equals(".miz", StringComparison.OrdinalIgnoreCase))
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), "FootholdConfigDefaults-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(tempDir);
+                var extractedConfigPath = ExtractFootholdConfigFromMiz(fullPath, tempDir);
+                var defaultDocument = ConfigDocument.Load(extractedConfigPath);
+                defaultDocument.RepairStringListSeparators();
+                if (!ValidateMergeDocument(defaultDocument, "Restore Defaults validation failed", "The selected MIZ defaults"))
+                {
+                    return null;
+                }
+
+                return StoreMizDefaults(fullPath, extractedConfigPath);
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, recursive: true);
+                    }
+                }
+                catch
+                {
+                    // Temporary cleanup failure should not hide the selected source result.
+                }
+            }
+        }
+
+        var configDocument = ConfigDocument.Load(fullPath);
+        configDocument.RepairStringListSeparators();
+        if (!ValidateMergeDocument(configDocument, "Restore Defaults validation failed", "The selected config defaults"))
+        {
+            return null;
+        }
+
+        return new StoredMizDefaultsInfo
+        {
+            Id = "file:" + fullPath,
+            SourceKind = "config",
+            MizName = Path.GetFileName(fullPath),
+            MizPath = fullPath,
+            ConfigPath = fullPath,
+            StoredAt = File.GetLastWriteTime(fullPath)
+        };
+    }
+
     private void RestoreConfigDefaults()
     {
         if (_document is null)
@@ -10299,15 +10523,7 @@ internal sealed class MainForm : Form
             return;
         }
 
-        var defaults = LoadStoredMizDefaultsIndex().Items
-            .Where(item => !string.IsNullOrWhiteSpace(item.ConfigPath) && File.Exists(item.ConfigPath))
-            .OrderByDescending(item => item.StoredAt)
-            .ToList();
-        if (defaults.Count == 0)
-        {
-            MessageBox.Show(this, "No stored MIZ defaults were found. Use Import MIZ Config once to store defaults first.", "Restore Defaults", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
+        var defaults = LoadStoredRestoreDefaultsSources();
 
         var selection = PromptForRestoreDefaultsSelection(defaults, _document);
         if (selection is null)
@@ -10329,7 +10545,7 @@ internal sealed class MainForm : Form
     {
         var defaultDocument = ConfigDocument.Load(selection.Defaults.ConfigPath);
         defaultDocument.RepairStringListSeparators();
-        if (!ValidateMergeDocument(defaultDocument, "Restore Defaults validation failed", "The stored MIZ defaults"))
+        if (!ValidateMergeDocument(defaultDocument, "Restore Defaults validation failed", "The selected defaults source"))
         {
             return;
         }
@@ -10351,7 +10567,7 @@ internal sealed class MainForm : Form
             "Restored " +
             selection.SelectedItems.Count.ToString(CultureInfo.InvariantCulture) +
             " default item(s) from " +
-            selection.Defaults.MizName +
+            FormatRestoreDefaultsSourceName(selection.Defaults) +
             ".");
     }
 
@@ -10413,7 +10629,7 @@ internal sealed class MainForm : Form
 
         panel.Controls.Add(new Label
         {
-            Text = "Select stored defaults, then choose the categories or entries to restore. Changed entries are selected by default.",
+            Text = "Select a defaults source, then choose the categories or entries to restore. Changed entries are selected by default.",
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = MainBackground,
@@ -10424,12 +10640,14 @@ internal sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             RowCount = 1,
-            ColumnCount = 2,
+            ColumnCount = 4,
             BackColor = MainBackground,
             Margin = new Padding(0)
         };
         sourceRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(110)));
         sourceRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        sourceRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        sourceRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         sourceRow.Controls.Add(new Label
         {
             Text = "Default source",
@@ -10444,17 +10662,13 @@ internal sealed class MainForm : Form
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         StyleInput(sourceBox);
-        foreach (var item in defaults)
-        {
-            sourceBox.Items.Add(FormatStoredMizDefaults(item));
-        }
-
-        if (sourceBox.Items.Count > 0)
-        {
-            sourceBox.SelectedIndex = 0;
-        }
-
         sourceRow.Controls.Add(sourceBox, 1, 0);
+        var browseSourceButton = new Button { Text = "Browse..." };
+        var removeSourceButton = new Button { Text = "Remove", Enabled = false };
+        SizeDialogButton(browseSourceButton, 90);
+        SizeDialogButton(removeSourceButton, 90);
+        sourceRow.Controls.Add(browseSourceButton, 2, 0);
+        sourceRow.Controls.Add(removeSourceButton, 3, 0);
         panel.Controls.Add(sourceRow, 0, 1);
 
         var tree = new TreeView
@@ -10513,7 +10727,52 @@ internal sealed class MainForm : Form
         bottom.Controls.Add(buttons, 1, 0);
         panel.Controls.Add(bottom, 0, 3);
 
+        var sources = defaults.ToList();
         var changingChecks = false;
+        var refreshingSources = false;
+
+        StoredMizDefaultsInfo? GetSelectedSource()
+        {
+            return sourceBox.SelectedIndex >= 0 && sourceBox.SelectedIndex < sources.Count
+                ? sources[sourceBox.SelectedIndex]
+                : null;
+        }
+
+        void RefreshSourceBox(string? selectedId = null)
+        {
+            refreshingSources = true;
+            sourceBox.BeginUpdate();
+            try
+            {
+                sourceBox.Items.Clear();
+                foreach (var item in sources)
+                {
+                    sourceBox.Items.Add(FormatStoredMizDefaults(item));
+                }
+
+                if (sources.Count == 0)
+                {
+                    sourceBox.SelectedIndex = -1;
+                }
+                else if (!string.IsNullOrWhiteSpace(selectedId))
+                {
+                    var selectedIndex = sources.FindIndex(item => item.Id.Equals(selectedId, StringComparison.OrdinalIgnoreCase));
+                    sourceBox.SelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+                }
+                else
+                {
+                    sourceBox.SelectedIndex = 0;
+                }
+            }
+            finally
+            {
+                sourceBox.EndUpdate();
+                refreshingSources = false;
+            }
+
+            removeSourceButton.Enabled = GetSelectedSource() is not null;
+            LoadSelectedDefaults();
+        }
 
         List<RestoreDefaultItem> GetSelectedItems()
         {
@@ -10538,20 +10797,24 @@ internal sealed class MainForm : Form
             try
             {
                 tree.Nodes.Clear();
-                if (sourceBox.SelectedIndex < 0)
+                var selectedSource = GetSelectedSource();
+                removeSourceButton.Enabled = selectedSource is not null;
+                if (selectedSource is null)
                 {
-                    status.Text = "No stored defaults selected.";
+                    status.Text = "Choose a Foothold Config.lua or MIZ defaults source.";
                     restoreButton.Enabled = false;
+                    tickChangedButton.Enabled = false;
                     return;
                 }
 
-                var defaultDocument = ConfigDocument.Load(defaults[sourceBox.SelectedIndex].ConfigPath);
+                var defaultDocument = ConfigDocument.Load(selectedSource.ConfigPath);
                 defaultDocument.RepairStringListSeparators();
                 var errors = defaultDocument.Validate();
                 if (errors.Count > 0)
                 {
-                    status.Text = "Stored defaults failed validation: " + errors[0];
+                    status.Text = "Defaults source failed validation: " + errors[0];
                     restoreButton.Enabled = false;
+                    tickChangedButton.Enabled = false;
                     return;
                 }
 
@@ -10572,7 +10835,7 @@ internal sealed class MainForm : Form
             catch (Exception ex)
             {
                 tree.Nodes.Clear();
-                status.Text = "Could not load stored defaults: " + ex.Message;
+                status.Text = "Could not load defaults source: " + ex.Message;
                 restoreButton.Enabled = false;
                 tickChangedButton.Enabled = false;
             }
@@ -10671,13 +10934,102 @@ internal sealed class MainForm : Form
             UpdateSelectionStatus();
         };
 
-        sourceBox.SelectedIndexChanged += (_, _) => LoadSelectedDefaults();
-        LoadSelectedDefaults();
+        browseSourceButton.Click += (_, _) =>
+        {
+            using var fileDialog = new OpenFileDialog
+            {
+                Title = "Select restore defaults source",
+                Filter = "Foothold config or MIZ (*.lua;*.miz)|*.lua;*.miz|Lua config (*.lua)|*.lua|DCS mission (*.miz)|*.miz|All files (*.*)|*.*",
+                FileName = "Foothold Config.lua",
+                InitialDirectory = Path.GetDirectoryName(currentDocument.Path)
+            };
+
+            if (fileDialog.ShowDialog(dialog) != DialogResult.OK)
+            {
+                return;
+            }
+
+            try
+            {
+                var source = CreateRestoreDefaultsSourceFromFile(fileDialog.FileName);
+                if (source is null)
+                {
+                    return;
+                }
+
+                if (source.SourceKind.Equals("miz", StringComparison.OrdinalIgnoreCase))
+                {
+                    sources = LoadStoredRestoreDefaultsSources();
+                }
+                else
+                {
+                    sources.RemoveAll(item => item.Id.Equals(source.Id, StringComparison.OrdinalIgnoreCase));
+                    sources.Insert(0, source);
+                }
+
+                RefreshSourceBox(source.Id);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(dialog, ex.Message, "Select Defaults Source failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        };
+
+        removeSourceButton.Click += (_, _) =>
+        {
+            var selectedSource = GetSelectedSource();
+            if (selectedSource is null)
+            {
+                return;
+            }
+
+            if (MessageBox.Show(
+                    dialog,
+                    "Remove this defaults source from the list?" + Environment.NewLine +
+                    "The original MIZ/config file will not be deleted.",
+                    "Remove Defaults Source",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            var selectedIndex = sourceBox.SelectedIndex;
+            if (IsTemporaryRestoreDefaultsSource(selectedSource))
+            {
+                sources.RemoveAt(selectedIndex);
+            }
+            else
+            {
+                RemoveStoredMizDefaultsSource(selectedSource);
+                sources = LoadStoredRestoreDefaultsSources();
+            }
+
+            var nextSelectedId = selectedIndex >= 0 && selectedIndex < sources.Count
+                ? sources[selectedIndex].Id
+                : sources.LastOrDefault()?.Id;
+            RefreshSourceBox(nextSelectedId);
+        };
+
+        sourceBox.SelectedIndexChanged += (_, _) =>
+        {
+            if (!refreshingSources)
+            {
+                LoadSelectedDefaults();
+            }
+        };
+        RefreshSourceBox();
 
         ApplyDialogChrome(dialog);
         dialog.AcceptButton = restoreButton;
         dialog.CancelButton = cancelButton;
-        if (dialog.ShowDialog(this) != DialogResult.OK || sourceBox.SelectedIndex < 0)
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return null;
+        }
+
+        var finalSource = GetSelectedSource();
+        if (finalSource is null)
         {
             return null;
         }
@@ -10685,7 +11037,7 @@ internal sealed class MainForm : Form
         var selectedItems = GetSelectedItems();
         return selectedItems.Count == 0
             ? null
-            : new RestoreDefaultsSelection(defaults[sourceBox.SelectedIndex], selectedItems);
+            : new RestoreDefaultsSelection(finalSource, selectedItems);
     }
 
     private List<RestoreDefaultItem> BuildRestoreDefaultItems(ConfigDocument currentDocument, ConfigDocument defaultDocument)
@@ -10916,7 +11268,22 @@ internal sealed class MainForm : Form
 
     private static string FormatStoredMizDefaults(StoredMizDefaultsInfo info)
     {
-        return info.StoredAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + "  " + info.MizName;
+        var suffix = info.SourceKind.Equals("config", StringComparison.OrdinalIgnoreCase)
+            ? "  (config file)"
+            : "";
+        return info.StoredAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + "  " + FormatRestoreDefaultsSourceName(info) + suffix;
+    }
+
+    private static string FormatRestoreDefaultsSourceName(StoredMizDefaultsInfo info)
+    {
+        if (!string.IsNullOrWhiteSpace(info.MizName))
+        {
+            return info.MizName;
+        }
+
+        return string.IsNullOrWhiteSpace(info.ConfigPath)
+            ? "selected source"
+            : Path.GetFileName(info.ConfigPath);
     }
 
     private const string InstallPolicyKeepTable = "keepTable";
@@ -10994,6 +11361,18 @@ internal sealed class MainForm : Form
             if (!policy.Equals(InstallPolicyKeepTable, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
+            }
+
+            if (currentDocument.TryGetTableBlockText(newTable.Key, out var currentBlock) &&
+                newDocument.TryGetTableBlockText(newTable.Key, out var newDefaultBlock) &&
+                !TableBlockTextEquals(currentBlock, newDefaultBlock))
+            {
+                preview.KeptTableBlocks.Add(new MizKeptTableBlock(
+                    newTable.Key,
+                    currentBlock,
+                    newDefaultBlock,
+                    currentTable.Items.Count,
+                    newTable.Items.Count));
             }
 
             if (newDocument.ReplaceTableBodyFrom(currentDocument, newTable.Key))
@@ -11122,6 +11501,76 @@ internal sealed class MainForm : Form
         return defaultPolicy;
     }
 
+    private static bool TableBlockTextEquals(string left, string right)
+    {
+        return string.Equals(NormalizeTableBlockText(left), NormalizeTableBlockText(right), StringComparison.Ordinal);
+    }
+
+    private static string NormalizeTableBlockText(string text)
+    {
+        return text.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+    }
+
+    private static List<SelectableValueChoice> BuildKeptTableChoices(
+        MizMergePreview preview,
+        string selectedTableLabel,
+        string otherTableLabel)
+    {
+        return preview.KeptTableBlocks
+            .Select(table => new SelectableValueChoice(
+                table.Key + " (full table)",
+                table.CurrentItemCount.ToString(CultureInfo.InvariantCulture) + " parsed item(s), " + selectedTableLabel,
+                table.NewDefaultItemCount.ToString(CultureInfo.InvariantCulture) + " parsed item(s), " + otherTableLabel,
+                "Raw table text differs, including commented-out rows."))
+            .ToList();
+    }
+
+    private static void ApplyKeptTableChoices(
+        ConfigDocument targetDocument,
+        MizMergePreview preview,
+        IReadOnlyList<SelectableValueChoice> tableChoices)
+    {
+        ConfigDocument? defaultDocument = null;
+        for (var i = 0; i < tableChoices.Count; i++)
+        {
+            if (tableChoices[i].Selected)
+            {
+                continue;
+            }
+
+            defaultDocument ??= ConfigDocument.Load(targetDocument.Path);
+            defaultDocument.RepairStringListSeparators();
+            var table = preview.KeptTableBlocks[i];
+            if (!targetDocument.ReplaceTableBodyFrom(defaultDocument, table.Key))
+            {
+                throw new InvalidOperationException("Could not restore the new table text for " + table.Key + ".");
+            }
+        }
+    }
+
+    private static void ApplyKeptValueChoices(
+        ConfigDocument targetDocument,
+        MizMergePreview preview,
+        IReadOnlyList<SelectableValueChoice> valueChoices)
+    {
+        for (var i = 0; i < valueChoices.Count; i++)
+        {
+            if (valueChoices[i].Selected)
+            {
+                continue;
+            }
+
+            var keptValue = preview.KeptValues[i];
+            var entry = targetDocument.Entries.FirstOrDefault(candidate => candidate.DisplayKey.Equals(keptValue.Key, StringComparison.Ordinal));
+            if (entry is not null)
+            {
+                entry.ValueText = keptValue.NewDefault;
+            }
+        }
+    }
+
     private void ImportValuesFromOldConfig()
     {
         if (_document is null)
@@ -11189,9 +11638,11 @@ internal sealed class MainForm : Form
             }
 
             var previewText = BuildImportMergePreviewText(oldPath, currentPath, preview);
-            var choices = preview.KeptValues
+            var valueChoices = preview.KeptValues
                 .Select(item => new SelectableValueChoice(item.Key, item.CurrentValue, item.NewDefault, item.Entry.EffectiveDescription))
                 .ToList();
+            var tableChoices = BuildKeptTableChoices(preview, "imported table text", "current table text");
+            var choices = valueChoices.Concat(tableChoices).ToList();
             if (!ConfirmSelectableValuePreview(
                     previewText,
                     "Import Values Preview",
@@ -11207,13 +11658,8 @@ internal sealed class MainForm : Form
                 return;
             }
 
-            for (var i = 0; i < choices.Count; i++)
-            {
-                if (!choices[i].Selected)
-                {
-                    preview.KeptValues[i].Entry.ValueText = preview.KeptValues[i].NewDefault;
-                }
-            }
+            ApplyKeptTableChoices(mergedDocument, preview, tableChoices);
+            ApplyKeptValueChoices(mergedDocument, preview, valueChoices);
 
             if (!ValidateMergeDocument(mergedDocument, "Import Values validation failed", "The final Import Values config"))
             {
@@ -11736,8 +12182,8 @@ internal sealed class MainForm : Form
         var newRows = GetNewRowEntries(preview);
         var lines = new List<string>
         {
-            "Stored defaults:",
-            defaults.MizName,
+            "Defaults source:",
+            FormatRestoreDefaultsSourceName(defaults),
             "Stored at: " + defaults.StoredAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
             "",
             "Current config to replace:",
