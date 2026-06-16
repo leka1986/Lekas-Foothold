@@ -1,0 +1,438 @@
+{
+  "Entries": {
+    "FootholdLocale": {
+      "Label": "Foothold Locale",
+      "Category": null,
+      "Help": "Global language use for Foothold.\r\nThis does not set the menu's language as it can be changed in the players radio menu.\r\nThis will be the language used for on screen messages and other global text.\r\nSet FootholdLocale to one of:\r\n\"EN\"    English\r\n\"DE\"    German / Deutsch\r\n\"FR\"    French / Français\r\n\"ES\"    Spanish / Español\r\n\"RU\"    Russian / Русский\r\n\"PT-BR\" Brazilian Portuguese / Português (Brasil)\r\n\"TR\"    Turkish / Türkçe\r\n\"IT\"    Italian / Italiano\r\n\"zh-CN\" Simplified Chinese (Mainland China) / 简体中文\r\n\"zh-TW\" Traditional Chinese (Taiwan) / 繁體中文",
+      "ControlType": null,
+      "Advanced": false,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [
+        {
+          "Display": "EN",
+          "Literal": "\"EN\""
+        },
+        {
+          "Display": "DE",
+          "Literal": "\"DE\""
+        },
+        {
+          "Display": "FR",
+          "Literal": "\"FR\""
+        },
+        {
+          "Display": "ES",
+          "Literal": "\"ES\""
+        },
+        {
+          "Display": "RU",
+          "Literal": "\"RU\""
+        },
+        {
+          "Display": "PT-BR",
+          "Literal": "\"PT-BR\""
+        },
+        {
+          "Display": "TR",
+          "Literal": "\"TR\""
+        },
+        {
+          "Display": "IT",
+          "Literal": "\"IT\""
+        },
+        {
+          "Display": "zh-CN",
+          "Literal": "\"zh-CN\""
+        },
+        {
+          "Display": "zh-TW",
+          "Literal": "\"zh-TW\""
+        }
+      ],
+      "IsEmpty": false
+    },
+    "CallsignOverrides": {
+      "Label": "Welcome Message Callsigns",
+      "Category": null,
+      "Help": "Below, you can change the callsigns in the welcome message and their IFF codes.\r\nThe IFF codes are only functional if you use LotATC and configure the same numbers there.\r\nIf IFF is not important to you, keep the numbers as-is and only change the callsigns.",
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": "Auto",
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "RewardFlightTime": {
+      "Label": "Reward Flight Time",
+      "Category": null,
+      "Help": "Here you can customize flight time reward, this will reward the player for each minute they are airborne.\r\nIt will start counting after 5 minutes and will count the first 5 as valid flight minutes.\r\nThe idea is the reward the Logistics people for longer flight time.",
+      "ControlType": "dropdown",
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "AllowedFlightTimeReward": {
+      "Label": "Allowed Flight Time Reward",
+      "Category": null,
+      "Help": null,
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": "Auto",
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "BlueSeadSupportStages": {
+      "Label": "BLUE SEAD Support",
+      "Category": null,
+      "Help": "players in the table below are counted as active players if they are not in the BlueCasCountIgnoreTypes.\r\nThe logic here, The less the players, the more AI will help you. The list in BlueCasCountIgnoreTypes, is types that doesn't count as active players.\r\nAdvance settings for FriendlySeadSupport.",
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "CapCountIgnoreTypes": {
+      "Label": "CAP Count Ignore Types",
+      "Category": null,
+      "Help": "Aircraft types in this table do not count as active players for enemy CAP scaling.\r\nSet a row to true to ignore that aircraft type.",
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": "Auto",
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "BlueCasCountIgnoreTypes": {
+      "Label": "BLUE CAS Count Ignore Types",
+      "Category": null,
+      "Help": "Aircraft types in this table do not count as active players for BLUE CAS support scaling.\r\nSet a row to true to ignore that aircraft type.",
+      "ControlType": null,
+      "Advanced": false,
+      "Order": null,
+      "TableHeightMode": "Auto",
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "RedCasCountIgnoreTypes": {
+      "Label": "RED CAS Count Ignore Types",
+      "Category": null,
+      "Help": "Aircraft types in this table do not count as active players for RED CAS scaling.\r\nSet a row to true to ignore that aircraft type.",
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": "Auto",
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "ShopPrices": {
+      "Label": "Shop Prices",
+      "Category": null,
+      "Help": "Shop prices.",
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "RedReactiveConfig.easy": {
+      "Label": "Red Reactive Config Easy",
+      "Category": null,
+      "Help": null,
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "GlobalSettings.difficultyScaling": {
+      "Label": "Global Settings Difficulty Scaling",
+      "Category": null,
+      "Help": null,
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "CapLimitStages": {
+      "Label": "RED CAP Limit",
+      "Category": null,
+      "Help": null,
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
+    },
+    "CapDifficulty": {
+      "Label": "Cap Difficulty",
+      "Category": null,
+      "Help": null,
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [
+        {
+          "Display": "easy",
+          "Literal": "\"easy\""
+        },
+        {
+          "Display": "medium",
+          "Literal": "\"medium\""
+        },
+        {
+          "Display": "hard",
+          "Literal": "\"hard\""
+        }
+      ],
+      "IsEmpty": false
+    }
+  },
+  "CategoryLayouts": {
+    "CTLD": {
+      "Items": [
+        "CTLDCost",
+        "CTLDPrices",
+        "MAX_AT_SPAWN",
+        "CaptureZoneWithEngineer",
+        "MAX_SAVED_FARPS",
+        "IRIS_RESTORE_UNIT_HEALTH_ON_MERGE",
+        "CTLDUnitCapabilities"
+      ]
+    },
+    "Difficulty": {
+      "Items": [
+        "GlobalSettings.difficultyScaling",
+        "GlobalSettings.supplyDifficultyScaling",
+        "ChanceAiAttackHelo",
+        "EnableHunter",
+        "AiPlaneSkill",
+        "AiGroundSkill",
+        "HideSAMOnMFD",
+        "CapDifficulty",
+        "CasDifficulty",
+        "SeadDifficulty",
+        "FriendlyCapSupport",
+        "FriendlyCasSupport",
+        "FriendlySeadSupport",
+        "RunwayStrikeDifficulty"
+      ]
+    },
+    "Shop / Rewards": {
+      "Items": [
+        "ShopPrices",
+        "ShopRankRequirements",
+        "RewardContribution",
+        "RefuelReward",
+        "AIAttackTakeoffFromGround",
+        "AIAttackTakeoffFromGroundExtraNM",
+        "AllowAdminBuy",
+        "AllowScriptedSupplies"
+      ]
+    },
+    "EWRS": {
+      "Items": [
+        "ewrs_maxRangeKm",
+        "ewrs_maxRangeNm",
+        "ewrs_defaultAircraftRangeLimit",
+        "ewrs_defaultHelicopterRangeLimit",
+        "ewrs_messageUpdateInterval",
+        "ewrs_messageDisplayTime",
+        "ewrs_restrictToOneReference",
+        "ewrs_defaultReference",
+        "ewrs_defaultMeasurements",
+        "ewrs_defaultShowTankers",
+        "ewrs_enableRedTeam",
+        "ewrs_enableBlueTeam",
+        "ewrs_disableMessageWhenNoThreats",
+        "ewrs_onDemand",
+        "ewrs_maxThreatDisplay",
+        "ewrs_allowBogeyDope",
+        "ewrs_allowFriendlyPicture",
+        "ewrs_maxFriendlyDisplay",
+        "ewrs_showType",
+        "ewrs_specialPlaneTypes"
+      ]
+    },
+    "Difficulty advanced": {
+      "Items": [
+        "CapLimitStages",
+        "RedCasLimitStages",
+        "RedSeadLimitStages",
+        "RedRunwayStrikeLimitStages",
+        "BlueCapSupportStages",
+        "BlueCasSupportStages",
+        "BlueSeadSupportStages",
+        "CapCountIgnoreTypes",
+        "RedCasCountIgnoreTypes",
+        "BlueCasCountIgnoreTypes"
+      ]
+    },
+    "RED Reactive Counterpressure": {
+      "Items": [
+        "RedReactiveDifficulty",
+        "RedReactiveConfig.easy",
+        "RedReactiveConfig.medium",
+        "RedReactiveConfig.hard"
+      ]
+    },
+    "Message Of The Day": {
+      "Items": [
+        "MessageOfTheDay.enabled",
+        "MessageOfTheDay.durationSec",
+        "MessageOfTheDay.intervalSec",
+        "MessageOfTheDay.text"
+      ]
+    },
+    "Welcome Message Callsigns": {
+      "Items": [
+        "CallsignOverrides"
+      ]
+    },
+    "Escort": {
+      "Items": [
+        "EscortTypeByPlayerType",
+        "EscortTakeoffFromGround"
+      ]
+    },
+    "Logistics / Warehouse": {
+      "Items": [
+        "WarehouseLogistics",
+        "UseC130LoadAndUnload",
+        "AIDeliveryamount",
+        "SuppliesCargoTransport",
+        "StrictSmartWeaponsInventory",
+        "WarehouseWeaponCaps",
+        "AutoFillResources",
+        "NoAIBlueSupplies",
+        "AllowedToCarrySupplies",
+        "WarningNoSupplies",
+        "ZoneSupplyTakeoffWarningTypes"
+      ]
+    },
+    "Mission Rules": {
+      "Items": [
+        "FootholdLocale",
+        "Era",
+        "StartNormal",
+        "AutoRestart",
+        "NoSA10AndSA11",
+        "NoTorM2AndPantsir",
+        "NoSA15",
+        "DisableMantis",
+        "UseStatics",
+        "PVE_Only",
+        "Allow_Red_CTLD",
+        "AllowMods",
+        "CreditLosewhenKilled",
+        "CreditLosewhenKilledAmount",
+        "RankLoseWhenKilled",
+        "RankLoseWhenKilledAmount",
+        "SplashDamage",
+        "ShowKills",
+        "StoreLimit",
+        "RankingSystem",
+        "FriendlyFireRankPenalty",
+        "InvisibleA10",
+        "CarrierRankRequirement",
+        "AllowTarawaToMoveFreely",
+        "DisableFriendlyEscortMeMission"
+      ]
+    },
+    "CSAR": {
+      "Items": [
+        "AllowedCsar",
+        "CsarPilotSpawnWithoutCreditsChance",
+        "Max_CSAR_At_Once",
+        "Max_CSAR_AT_Mission_Restart",
+        "PilotWeight",
+        "CsarHoverDistance",
+        "CsarGuidanceDistance",
+        "CsarHoverHeight",
+        "CsarHoverSeconds",
+        "CsarHostileInfantryChance"
+      ]
+    },
+    "Flight Time": {
+      "Items": [
+        "RewardFlightTime",
+        "FlightTimeRewardPerMinute",
+        "RewardAllAircraft",
+        "AllowedFlightTimeReward"
+      ]
+    },
+    "Tankers": {
+      "Items": [
+        "TexacoSpeed",
+        "ArcoSpeed"
+      ]
+    },
+    "AIEN": {
+      "Items": [
+        "AIEN.config.dontInitialize",
+        "AIEN.config.blueAI",
+        "AIEN.config.redAI",
+        "AIEN.config.dismount",
+        "AIEN.config.message_feed",
+        "AIEN.config.initiative"
+      ]
+    },
+    "Aircraft / Weapons": {
+      "Items": [
+        "allowedPlanes",
+        "allowedPlanesRed",
+        "restockAircraft",
+        "restrictedWeapons",
+        "ForbiddWeaponsInAllEra"
+      ]
+    }
+  },
+  "CategoryLabels": {
+    "Welcome Message settings": "Welcome Message Callsigns"
+  },
+  "CategoryOrder": [
+    "Mission Rules",
+    "Difficulty",
+    "Difficulty advanced",
+    "RED Reactive Counterpressure",
+    "Message Of The Day",
+    "Welcome Message Callsigns",
+    "Escort",
+    "Logistics / Warehouse",
+    "Shop / Rewards",
+    "CTLD",
+    "CSAR",
+    "Flight Time",
+    "Tankers",
+    "EWRS",
+    "AIEN",
+    "Aircraft / Weapons"
+  ],
+  "HiddenCategories": [],
+  "AdvancedToggleVisible": true,
+  "RawValuesVisible": false,
+  "FooterVersion": "V 1.55"
+}

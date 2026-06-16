@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>FootholdConfigManager</AssemblyName>
+    <ApplicationIcon>FootholdConfigManager.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="backups\**\*.cs" />
+    <EmbeddedResource Include="Foothold Config.gui.json" LogicalName="FootholdConfigManager.DefaultGuiMetadata.json" Condition="Exists('Foothold Config.gui.json')" />
+    <EmbeddedResource Include="EmbeddedGuiMetadata.json" LogicalName="FootholdConfigManager.EmbeddedGuiMetadata.json" Condition="Exists('EmbeddedGuiMetadata.json')" />
+    <EmbeddedResource Include="EmbeddedBuildMode.txt" LogicalName="FootholdConfigManager.EmbeddedBuildMode.txt" Condition="Exists('EmbeddedBuildMode.txt')" />
+  </ItemGroup>
+</Project>
