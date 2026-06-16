@@ -132,7 +132,7 @@ internal sealed class MainForm : Form
             var darkPalette = IsDarkPalette();
             var fillColor = Enabled
                 ? darkPalette
-                    ? (_pressed ? Color.FromArgb(40, 40, 44) : _hover ? HeaderBackground : NormalBackColor)
+                    ? (_pressed ? SelectionBackground : _hover ? HeaderBackground : NormalBackColor)
                     : (_pressed ? SelectionBackground : _hover ? HeaderBackground : NormalBackColor)
                 : ButtonBackground;
             var textColor = Enabled ? PrimaryTextColor : HelpTextColor;
@@ -144,17 +144,11 @@ internal sealed class MainForm : Form
             e.Graphics.FillRectangle(fill, bounds);
             if (darkPalette)
             {
-                var sideBorderColor = Enabled && _hover
-                    ? Color.FromArgb(104, 108, 118)
+                var borderColor = Enabled && (_hover || _pressed)
+                    ? BrandColor
                     : BorderColor;
-                using var border = new Pen(sideBorderColor);
+                using var border = new Pen(borderColor, _pressed ? 2 : 1);
                 e.Graphics.DrawRectangle(border, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
-                if (Enabled && (_hover || _pressed))
-                {
-                    var topEdgeColor = _pressed ? Color.FromArgb(95, 185, 235) : BrandColor;
-                    using var topEdge = new Pen(topEdgeColor, _pressed ? 3 : 2);
-                    e.Graphics.DrawLine(topEdge, bounds.X + 1, bounds.Y + 1, bounds.Right - 2, bounds.Y + 1);
-                }
             }
             else
             {
