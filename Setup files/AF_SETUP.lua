@@ -1769,7 +1769,7 @@ local function clearFriendlySupplyMenu()
 end
 
 bc:registerShopItem('supplies2', LTGet("SYRIA_SHOP_ITEM_RESUPPLY_ZONE"), ShopPrices.supplies2, function(sender)
-    if not AllowScriptedSupplies and NoAIBlueSupplies == true then
+    if not AllowScriptedSupplies --[[ and NoAIBlueSupplies == true  ]]then
         return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
     end
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
@@ -1779,9 +1779,9 @@ function(sender, params)
     local useScriptedSupply = AllowScriptedSupplies or carrierSupplyTarget
 
     if not useScriptedSupply then
-        if NoAIBlueSupplies == true then
+--[[         if NoAIBlueSupplies == true then
             return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
-        end
+        end ]]
         if params.zone then
             return bc:requestFriendlySupplyMission(params.zone, params)
         end
@@ -2195,9 +2195,9 @@ end
 local supplyMenu=nil
 bc:registerShopItem('capture',LTGet("SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL"),ShopPrices.capture,
 function(sender)
-	if NoAIBlueSupplies == true then 
+--[[ 	if NoAIBlueSupplies == true then
 		return LTGet("SYRIA_SHOP_BLUE_AI_SUPPLIES_DISABLED")
-	end
+	end ]]
 	return LTGet("SYRIA_SHOP_CHOOSE_NEUTRAL_ZONE")
 end,
 function(sender,params)

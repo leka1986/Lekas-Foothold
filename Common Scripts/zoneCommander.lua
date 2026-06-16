@@ -33435,7 +33435,7 @@ function GroupCommander:shouldSpawn(ignore)
 		return false
 	end
 
-	if self.mission == 'supply' and self.side == 2 and NoAIBlueSupplies == true then
+	if self.mission == 'supply' and self.side == 2 and not self.ShopLaunchOnly and NoAIBlueSupplies == true then
 		return false
 	end
 
