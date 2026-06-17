@@ -3324,7 +3324,6 @@ evc:addEvent({
 	action = function()
 		RespawnGroup('KanaqinConvoy')
 		RespawnGroup('KanaqinConvoy-1')
-		RegisterGroupTarget("KanaqinConvoy-2",500,L10N:Get("SYRIA_MISSION_TARGET_STRIKE_MISSION"),"FindHimInKanaqin",true)
 	end,
 	canExecute = function()
 		if CustomFlags["FindHimInKanaqin"] then return false end
