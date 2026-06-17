@@ -3416,12 +3416,27 @@ internal sealed class MainForm : Form
         return trimmed.Length <= 42 ? trimmed : trimmed[..39] + "...";
     }
 
+    private static void CopyValidatedConfigFile(string sourcePath, string targetPath)
+    {
+        var sourceDocument = ConfigDocument.Load(sourcePath);
+        var errors = sourceDocument.Validate();
+        if (errors.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Source config failed validation. No file was changed." +
+                Environment.NewLine +
+                string.Join(Environment.NewLine, errors.Take(8)));
+        }
+
+        File.Copy(sourcePath, targetPath, overwrite: true);
+    }
+
     private void ApplyCopyPlan(string sourcePath, CopyTargetPlan plan)
     {
         var selectedChanges = plan.Changes.Where(change => plan.SelectedChangeIds.Contains(change.Id)).ToList();
         if (plan.Changes.Count == 0)
         {
-            File.Copy(sourcePath, plan.Profile.ConfigPath, overwrite: true);
+            CopyValidatedConfigFile(sourcePath, plan.Profile.ConfigPath);
             return;
         }
 
@@ -3432,37 +3447,35 @@ internal sealed class MainForm : Form
 
         if (selectedChanges.Count == plan.Changes.Count)
         {
-            File.Copy(sourcePath, plan.Profile.ConfigPath, overwrite: true);
+            CopyValidatedConfigFile(sourcePath, plan.Profile.ConfigPath);
             return;
         }
 
-        var originalTarget = ConfigDocument.Load(plan.Profile.ConfigPath);
-        File.Copy(sourcePath, plan.Profile.ConfigPath, overwrite: true);
+        var sourceDocument = ConfigDocument.Load(sourcePath);
         var output = ConfigDocument.Load(plan.Profile.ConfigPath);
-        foreach (var change in plan.Changes.Where(change => !plan.SelectedChangeIds.Contains(change.Id)))
+        foreach (var change in selectedChanges)
         {
             if (change.Kind == CopyChangeKind.Entry)
             {
-                var oldEntry = originalTarget.Entries.FirstOrDefault(entry => entry.DisplayKey.Equals(change.Key, StringComparison.Ordinal));
+                var sourceEntry = sourceDocument.Entries.FirstOrDefault(entry => entry.DisplayKey.Equals(change.Key, StringComparison.Ordinal));
                 var outputEntry = output.Entries.FirstOrDefault(entry => entry.DisplayKey.Equals(change.Key, StringComparison.Ordinal));
+                if (sourceEntry is null)
+                {
+                    throw new InvalidOperationException(change.Label + " is no longer in the source config. No file was changed.");
+                }
+
                 if (outputEntry is null)
                 {
-                    continue;
+                    throw new InvalidOperationException(change.Label + " is not in the target config. Full copy is required to add missing config entries.");
                 }
 
-                if (oldEntry is null)
-                {
-                    output.RemoveEntry(outputEntry);
-                    continue;
-                }
-
-                outputEntry.ValueText = oldEntry.ValueText;
+                outputEntry.ValueText = sourceEntry.ValueText;
                 continue;
             }
 
-            if (!output.ReplaceTableBlockFrom(originalTarget, change.Key))
+            if (!output.ReplaceTableBlockFrom(sourceDocument, change.Key))
             {
-                output.RemoveTableBlock(change.Key);
+                throw new InvalidOperationException(change.Label + " could not be copied into the target config. Full copy is required to add missing config tables.");
             }
         }
 
@@ -3547,6 +3560,11 @@ internal sealed class MainForm : Form
         buttons.Controls.Add(cancelButton);
         panel.Controls.Add(buttons, 0, 2);
 
+        var updatingSelectionUi = false;
+        var targetCheckBoxes = new Dictionary<CopyTargetPlan, CheckBox>();
+        var targetSummaryLabels = new Dictionary<CopyTargetPlan, Label>();
+        var changeCheckBoxes = new Dictionary<(CopyTargetPlan Plan, string ChangeId), CheckBox>();
+
         void AddRow(Control control)
         {
             rows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -3576,6 +3594,48 @@ internal sealed class MainForm : Form
                 : plan.SelectedChangeCount.ToString(CultureInfo.InvariantCulture) + " of " + plan.Changes.Count.ToString(CultureInfo.InvariantCulture) + " changes selected";
         }
 
+        bool CanCopy(CopyTargetPlan plan)
+        {
+            return plan.IsTargetSelected && plan.LoadError is null && (plan.Changes.Count == 0 || plan.SelectedChangeCount > 0);
+        }
+
+        void UpdateCopyButton()
+        {
+            copyButton.Enabled = plans.Any(CanCopy);
+        }
+
+        void UpdateSelectionUi(CopyTargetPlan plan)
+        {
+            updatingSelectionUi = true;
+            try
+            {
+                if (targetCheckBoxes.TryGetValue(plan, out var targetCheck) && targetCheck.Checked != plan.IsTargetSelected)
+                {
+                    targetCheck.Checked = plan.IsTargetSelected;
+                }
+
+                if (targetSummaryLabels.TryGetValue(plan, out var targetSummaryLabel))
+                {
+                    targetSummaryLabel.Text = TargetSummary(plan);
+                }
+
+                foreach (var change in plan.Changes)
+                {
+                    var isSelected = plan.SelectedChangeIds.Contains(change.Id);
+                    if (changeCheckBoxes.TryGetValue((plan, change.Id), out var changeCheck) && changeCheck.Checked != isSelected)
+                    {
+                        changeCheck.Checked = isSelected;
+                    }
+                }
+            }
+            finally
+            {
+                updatingSelectionUi = false;
+            }
+
+            UpdateCopyButton();
+        }
+
         void RebuildRows()
         {
             rows.SuspendLayout();
@@ -3584,6 +3644,9 @@ internal sealed class MainForm : Form
                 rows.Controls.Clear();
                 rows.RowStyles.Clear();
                 rows.RowCount = 0;
+                targetCheckBoxes.Clear();
+                targetSummaryLabels.Clear();
+                changeCheckBoxes.Clear();
 
                 foreach (var plan in plans)
                 {
@@ -3612,9 +3675,28 @@ internal sealed class MainForm : Form
                     };
                     targetCheck.CheckedChanged += (_, _) =>
                     {
+                        if (updatingSelectionUi)
+                        {
+                            return;
+                        }
+
                         plan.IsTargetSelected = targetCheck.Checked;
-                        RebuildRows();
+                        if (targetCheck.Checked)
+                        {
+                            plan.SelectedChangeIds.Clear();
+                            foreach (var change in plan.Changes)
+                            {
+                                plan.SelectedChangeIds.Add(change.Id);
+                            }
+                        }
+                        else
+                        {
+                            plan.SelectedChangeIds.Clear();
+                        }
+
+                        UpdateSelectionUi(plan);
                     };
+                    targetCheckBoxes[plan] = targetCheck;
                     targetRow.Controls.Add(targetCheck, 0, 0);
 
                     targetRow.Controls.Add(new Label
@@ -3627,7 +3709,7 @@ internal sealed class MainForm : Form
                         ForeColor = PrimaryTextColor
                     }, 1, 0);
 
-                    targetRow.Controls.Add(new Label
+                    var targetSummaryLabel = new Label
                     {
                         Text = TargetSummary(plan),
                         Dock = DockStyle.Fill,
@@ -3635,7 +3717,9 @@ internal sealed class MainForm : Form
                         AutoEllipsis = true,
                         BackColor = MainBackground,
                         ForeColor = plan.LoadError is null ? HelpTextColor : Color.Firebrick
-                    }, 2, 0);
+                    };
+                    targetSummaryLabels[plan] = targetSummaryLabel;
+                    targetRow.Controls.Add(targetSummaryLabel, 2, 0);
 
                     var detailsButton = new Button
                     {
@@ -3695,7 +3779,7 @@ internal sealed class MainForm : Form
                             var changeCheck = new CheckBox
                             {
                                 Checked = plan.SelectedChangeIds.Contains(change.Id),
-                                Enabled = plan.IsTargetSelected,
+                                Enabled = true,
                                 Dock = DockStyle.Fill,
                                 Margin = new Padding(0),
                                 BackColor = MainBackground,
@@ -3703,17 +3787,28 @@ internal sealed class MainForm : Form
                             };
                             changeCheck.CheckedChanged += (_, _) =>
                             {
+                                if (updatingSelectionUi)
+                                {
+                                    return;
+                                }
+
                                 if (changeCheck.Checked)
                                 {
                                     plan.SelectedChangeIds.Add(change.Id);
+                                    plan.IsTargetSelected = true;
                                 }
                                 else
                                 {
                                     plan.SelectedChangeIds.Remove(change.Id);
+                                    if (plan.SelectedChangeCount == 0)
+                                    {
+                                        plan.IsTargetSelected = false;
+                                    }
                                 }
 
-                                RebuildRows();
+                                UpdateSelectionUi(plan);
                             };
+                            changeCheckBoxes[(plan, change.Id)] = changeCheck;
                             detailPanel.Controls.Add(changeCheck, 0, detailRow);
                             detailPanel.Controls.Add(new Label
                             {
@@ -3745,7 +3840,7 @@ internal sealed class MainForm : Form
                 rows.ResumeLayout();
             }
 
-            copyButton.Enabled = plans.Any(plan => plan.IsTargetSelected && plan.LoadError is null && (plan.Changes.Count == 0 || plan.SelectedChangeCount > 0));
+            UpdateCopyButton();
             ApplyThemeToControl(dialog, restyleButtons: true);
         }
 
@@ -3759,7 +3854,7 @@ internal sealed class MainForm : Form
         }
 
         return plans
-            .Where(plan => plan.IsTargetSelected && plan.LoadError is null && (plan.Changes.Count == 0 || plan.SelectedChangeCount > 0))
+            .Where(CanCopy)
             .ToList();
     }
 
@@ -11796,15 +11891,80 @@ internal sealed class MainForm : Form
             Padding = new Padding(Zoomed(10)),
             BackColor = MainBackground
         };
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(48)));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, choices.Count == 0 ? Zoomed(44) : Zoomed(250)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(64)));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        var detailsRowStyle = new RowStyle(SizeType.Absolute, 0);
+        panel.RowStyles.Add(detailsRowStyle);
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(56)));
         dialog.Controls.Add(panel);
 
+        string Plural(int count, string singular, string plural)
+        {
+            return count.ToString(CultureInfo.InvariantCulture) + " " + (count == 1 ? singular : plural);
+        }
+
+        string FormatNewImportRowLabel(string row)
+        {
+            var firstLine = row.Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault()?.Trim() ?? row.Trim();
+            if (firstLine.StartsWith("NEW  ", StringComparison.OrdinalIgnoreCase))
+            {
+                firstLine = firstLine[5..].Trim();
+            }
+
+            var assignmentIndex = firstLine.IndexOf(" = ", StringComparison.Ordinal);
+            if (assignmentIndex > 0)
+            {
+                firstLine = firstLine[..assignmentIndex].Trim();
+            }
+            else
+            {
+                var colonIndex = firstLine.IndexOf(": ", StringComparison.Ordinal);
+                if (colonIndex > 0)
+                {
+                    firstLine = firstLine[..colonIndex].Trim();
+                }
+            }
+
+            return firstLine + " (NEW)";
+        }
+
+        var orderedChoices = choices.OrderBy(choice => choice.Key, StringComparer.OrdinalIgnoreCase).ToList();
+        var newRows = new List<(string Label, string Summary)>();
+        if (infoTabs is not null)
+        {
+            foreach (var tab in infoTabs.Where(tab =>
+                         tab.Title.Equals("New", StringComparison.OrdinalIgnoreCase) ||
+                         tab.Title.Equals("New Options", StringComparison.OrdinalIgnoreCase) ||
+                         tab.Title.Equals("New Rows", StringComparison.OrdinalIgnoreCase)))
+            {
+                newRows.AddRange(tab.Rows.Select(row => (FormatNewImportRowLabel(row), "NEW")));
+            }
+        }
+
+        string BuildCompactSummary()
+        {
+            var parts = new List<string>();
+            if (orderedChoices.Count > 0)
+            {
+                parts.Add(Plural(orderedChoices.Count, "change", "changes"));
+            }
+
+            if (newRows.Count > 0)
+            {
+                parts.Add(Plural(newRows.Count, "new item", "new items"));
+            }
+
+            return parts.Count == 0
+                ? "No changed values need a checkbox decision."
+                : string.Join(", ", parts) + ".";
+        }
+
         panel.Controls.Add(new Label
         {
-            Text = message,
+            Text = BuildCompactSummary() + Environment.NewLine + message,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = MainBackground,
@@ -11812,7 +11972,7 @@ internal sealed class MainForm : Form
         }, 0, 0);
 
         Control choiceControl;
-        if (choices.Count == 0)
+        if (orderedChoices.Count == 0 && newRows.Count == 0)
         {
             choiceControl = new Label
             {
@@ -11825,6 +11985,9 @@ internal sealed class MainForm : Form
         }
         else
         {
+            var groupName = _instanceBox.SelectedItem is InstanceItem instanceItem
+                ? instanceItem.Profile.Name
+                : "Current config";
             var choicePanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -11845,66 +12008,209 @@ internal sealed class MainForm : Form
                 WrapContents = false,
                 BackColor = MainBackground
             };
-            actionBar.Controls.Add(new Label
-            {
-                Text = "Tick = " + selectedActionLabel + ". Untick = " + otherActionLabel + ".",
-                AutoSize = true,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, Zoomed(7), Zoomed(12), 0),
-                BackColor = MainBackground,
-                ForeColor = PrimaryTextColor
-            });
             var selectAllButton = new Button { Text = selectedActionLabel, Margin = new Padding(Zoomed(2)) };
             var clearAllButton = new Button { Text = otherActionLabel, Margin = new Padding(Zoomed(2)) };
+            selectAllButton.Enabled = orderedChoices.Count > 0;
+            clearAllButton.Enabled = orderedChoices.Count > 0;
             SizeDialogButton(selectAllButton, 190);
             SizeDialogButton(clearAllButton, 170);
             actionBar.Controls.Add(selectAllButton);
             actionBar.Controls.Add(clearAllButton);
             choicePanel.Controls.Add(actionBar, 0, 0);
 
-            var list = new ListView
+            var scrollPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                CheckBoxes = true,
-                FullRowSelect = true,
-                GridLines = true,
-                BackColor = EditorBackground,
-                ForeColor = PrimaryTextColor
+                AutoScroll = true,
+                BackColor = MainBackground
             };
-            list.Columns.Add("Use", Zoomed(48));
-            list.Columns.Add("Setting", Zoomed(250));
-            list.Columns.Add(selectedValueLabel, Zoomed(210));
-            list.Columns.Add(otherValueLabel, Zoomed(210));
-            list.Columns.Add("Comment", Zoomed(280));
-            foreach (var choice in choices.OrderBy(choice => choice.Key, StringComparer.OrdinalIgnoreCase))
+            var rows = new TableLayoutPanel
             {
-                var item = new ListViewItem("");
-                item.Checked = choice.Selected;
-                item.Tag = choice;
-                item.SubItems.Add(choice.Key);
-                item.SubItems.Add(PreviewValue(choice.SelectedValue));
-                item.SubItems.Add(PreviewValue(choice.OtherValue));
-                item.SubItems.Add(PreviewHelp(choice.HelpText));
-                list.Items.Add(item);
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ColumnCount = 1,
+                BackColor = MainBackground,
+                Padding = new Padding(0, Zoomed(4), 0, Zoomed(4))
+            };
+            rows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            scrollPanel.Controls.Add(rows);
+
+            var updatingSelectionUi = false;
+            var childChecks = new List<CheckBox>();
+            CheckBox? parentCheck = null;
+            Label? parentSummaryLabel = null;
+
+            string BuildChangeSummary(SelectableValueChoice choice)
+            {
+                return PreviewValue(choice.OtherValue) + " -> " + PreviewValue(choice.SelectedValue);
+            }
+
+            string BuildGroupSummary()
+            {
+                if (orderedChoices.Count == 0)
+                {
+                    return Plural(newRows.Count, "new item", "new items");
+                }
+
+                var selectedCount = orderedChoices.Count(choice => choice.Selected);
+                if (selectedCount == 0)
+                {
+                    return "Not selected";
+                }
+
+                return selectedCount == orderedChoices.Count
+                    ? orderedChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes"
+                    : selectedCount.ToString(CultureInfo.InvariantCulture) + " of " + orderedChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes selected";
+            }
+
+            void RefreshSelectionUi()
+            {
+                updatingSelectionUi = true;
+                try
+                {
+                    var selectedCount = orderedChoices.Count(choice => choice.Selected);
+                    if (parentCheck is not null && parentCheck.Checked != (selectedCount > 0))
+                    {
+                        parentCheck.Checked = selectedCount > 0;
+                    }
+
+                    if (parentSummaryLabel is not null)
+                    {
+                        parentSummaryLabel.Text = BuildGroupSummary();
+                    }
+
+                    for (var i = 0; i < orderedChoices.Count && i < childChecks.Count; i++)
+                    {
+                        if (childChecks[i].Checked != orderedChoices[i].Selected)
+                        {
+                            childChecks[i].Checked = orderedChoices[i].Selected;
+                        }
+                    }
+                }
+                finally
+                {
+                    updatingSelectionUi = false;
+                }
+            }
+
+            void AddRow(Control control)
+            {
+                rows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                rows.Controls.Add(control, 0, rows.RowCount);
+                rows.RowCount++;
+            }
+
+            TableLayoutPanel MakeImportRow(int indent, CheckBox? checkBox, string label, string summary)
+            {
+                var row = new TableLayoutPanel
+                {
+                    AutoSize = true,
+                    Dock = DockStyle.Top,
+                    ColumnCount = 3,
+                    Padding = new Padding(0, Zoomed(2), 0, Zoomed(2)),
+                    BackColor = MainBackground
+                };
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(indent)));
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(360)));
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+                if (checkBox is not null)
+                {
+                    checkBox.Dock = DockStyle.Fill;
+                    checkBox.Margin = new Padding(0);
+                    checkBox.BackColor = MainBackground;
+                    checkBox.ForeColor = PrimaryTextColor;
+                    row.Controls.Add(checkBox, 0, 0);
+                }
+
+                row.Controls.Add(new Label
+                {
+                    Text = label,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    AutoEllipsis = true,
+                    BackColor = MainBackground,
+                    ForeColor = PrimaryTextColor
+                }, 1, 0);
+
+                row.Controls.Add(new Label
+                {
+                    Text = summary,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    AutoEllipsis = true,
+                    BackColor = MainBackground,
+                    ForeColor = HelpTextColor
+                }, 2, 0);
+
+                return row;
+            }
+
+            parentCheck = new CheckBox
+            {
+                Checked = orderedChoices.Any(choice => choice.Selected),
+                Enabled = orderedChoices.Count > 0
+            };
+            parentCheck.CheckedChanged += (_, _) =>
+            {
+                if (updatingSelectionUi)
+                {
+                    return;
+                }
+
+                foreach (var choice in orderedChoices)
+                {
+                    choice.Selected = parentCheck.Checked;
+                }
+
+                RefreshSelectionUi();
+            };
+            var parentRow = MakeImportRow(28, parentCheck, groupName, BuildGroupSummary());
+            parentSummaryLabel = parentRow.Controls.OfType<Label>().LastOrDefault();
+            AddRow(parentRow);
+
+            foreach (var choice in orderedChoices)
+            {
+                var changeCheck = new CheckBox { Checked = choice.Selected };
+                changeCheck.CheckedChanged += (_, _) =>
+                {
+                    if (updatingSelectionUi)
+                    {
+                        return;
+                    }
+
+                    choice.Selected = changeCheck.Checked;
+                    RefreshSelectionUi();
+                };
+                childChecks.Add(changeCheck);
+                AddRow(MakeImportRow(68, changeCheck, choice.Key, BuildChangeSummary(choice)));
+            }
+
+            foreach (var newRow in newRows.OrderBy(row => row.Label, StringComparer.OrdinalIgnoreCase))
+            {
+                AddRow(MakeImportRow(68, null, newRow.Label, newRow.Summary));
             }
 
             selectAllButton.Click += (_, _) =>
             {
-                foreach (ListViewItem item in list.Items)
+                foreach (var choice in orderedChoices)
                 {
-                    item.Checked = true;
+                    choice.Selected = true;
                 }
+
+                RefreshSelectionUi();
             };
             clearAllButton.Click += (_, _) =>
             {
-                foreach (ListViewItem item in list.Items)
+                foreach (var choice in orderedChoices)
                 {
-                    item.Checked = false;
+                    choice.Selected = false;
                 }
+
+                RefreshSelectionUi();
             };
 
-            choicePanel.Controls.Add(list, 0, 1);
+            choicePanel.Controls.Add(scrollPanel, 0, 1);
             choiceControl = choicePanel;
         }
 
@@ -11915,7 +12221,8 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             BorderStyle = BorderStyle.FixedSingle,
             Padding = new Padding(Zoomed(6)),
-            BackColor = EditorBackground
+            BackColor = EditorBackground,
+            Visible = false
         };
 
         var previewPanel = new TableLayoutPanel
@@ -12028,10 +12335,23 @@ internal sealed class MainForm : Form
             Text = "Cancel",
             DialogResult = DialogResult.Cancel
         };
+        var detailsButton = new Button
+        {
+            Text = "Show details"
+        };
+        detailsButton.Click += (_, _) =>
+        {
+            previewFrame.Visible = !previewFrame.Visible;
+            detailsRowStyle.Height = previewFrame.Visible ? Zoomed(220) : 0;
+            detailsButton.Text = previewFrame.Visible ? "Hide details" : "Show details";
+            panel.PerformLayout();
+        };
         SizeDialogButton(confirmButton);
         SizeDialogButton(cancelButton);
+        SizeDialogButton(detailsButton, 120);
         buttons.Controls.Add(confirmButton);
         buttons.Controls.Add(cancelButton);
+        buttons.Controls.Add(detailsButton);
         panel.Controls.Add(buttons, 0, 3);
 
         ApplyDialogChrome(dialog);

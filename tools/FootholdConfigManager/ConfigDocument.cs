@@ -271,13 +271,13 @@ internal sealed class ConfigEntry
 
         if (parts.Length == 0)
         {
-            lines.Add("[[]]");
+            lines.Add("[[]]" + Suffix);
             return lines;
         }
 
         if (parts.Length == 1)
         {
-            lines.Add("[[" + parts[0] + "]]");
+            lines.Add("[[" + parts[0] + "]]" + Suffix);
             return lines;
         }
 
@@ -287,7 +287,7 @@ internal sealed class ConfigEntry
             lines.Add(parts[i]);
         }
 
-        lines.Add(parts[^1] + "]]");
+        lines.Add(parts[^1] + "]]" + Suffix);
         return lines;
     }
 
@@ -1160,9 +1160,34 @@ internal sealed class ConfigDocument
             .ToList();
 
         errors.AddRange(ValidateStageTables());
+        errors.AddRange(ValidateClosedTableBlocks());
         errors.AddRange(ValidateStringListSeparators());
         errors.AddRange(ValidateSafeConfigTableFormat());
         errors.AddRange(ValidateMisplacedTopLevelRows());
+        errors.AddRange(LuaSyntaxValidator.Validate(RenderCurrentText(), Path));
+        return errors;
+    }
+
+    private List<string> ValidateClosedTableBlocks()
+    {
+        var errors = new List<string>();
+        for (var i = 0; i < _lines.Count; i++)
+        {
+            var match = AssignmentRegex.Match(_lines[i]);
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var lhsWithEquals = match.Groups["lhs"].Value;
+            var lhs = lhsWithEquals[..lhsWithEquals.LastIndexOf('=')].Trim();
+            var value = SplitValueAndSuffix(match.Groups["rest"].Value).value.TrimEnd();
+            if (IsTableStart(value) && FindTableEndLine(i) < i)
+            {
+                errors.Add($"{NormalizeKey(lhs)}: Lua table starts on line {i + 1} but is not closed.");
+            }
+        }
+
         return errors;
     }
 
@@ -1809,7 +1834,11 @@ internal sealed class ConfigDocument
                 continue;
             }
 
-            yield return (NormalizeKey(lhs), i, FindTableEndLine(i));
+            var endLine = FindTableEndLine(i);
+            if (endLine >= i)
+            {
+                yield return (NormalizeKey(lhs), i, endLine);
+            }
         }
     }
 
@@ -2480,7 +2509,7 @@ internal sealed class ConfigDocument
 
             startLine = i;
             endLine = FindTableEndLine(i);
-            return true;
+            return endLine >= startLine;
         }
 
         return false;
@@ -2502,6 +2531,11 @@ internal sealed class ConfigDocument
         }
 
         var endLine = FindTableEndLine(lineIndex);
+        if (endLine < lineIndex)
+        {
+            return false;
+        }
+
         table = new ConfigStringListTable
         {
             Key = key,
@@ -2532,6 +2566,11 @@ internal sealed class ConfigDocument
         }
 
         var endLine = FindTableEndLine(lineIndex);
+        if (endLine < lineIndex)
+        {
+            return false;
+        }
+
         var rows = ReadStageRows(lineIndex, endLine);
         if (rows.Count == 0)
         {
@@ -2684,13 +2723,13 @@ internal sealed class ConfigDocument
         for (var i = startLine; i < _lines.Count; i++)
         {
             depth += CountBraceDelta(_lines[i]);
-            if (depth <= 0 && i > startLine)
+            if (depth <= 0)
             {
                 return i;
             }
         }
 
-        return startLine;
+        return -1;
     }
 
     private static int CountBraceDelta(string line)
@@ -2850,6 +2889,7 @@ internal sealed class ConfigDocument
 
         var textLines = new List<string>();
         var endLine = -1;
+        var suffix = "";
         for (var i = lineIndex + 1; i < _lines.Count; i++)
         {
             var current = _lines[i];
@@ -2859,6 +2899,7 @@ internal sealed class ConfigDocument
             if (endIndex >= 0)
             {
                 textLines.Add(current[startIndex..endIndex]);
+                suffix = SplitValueAndSuffix(current[(endIndex + 2)..]).suffix;
                 endLine = i;
                 break;
             }
@@ -2886,7 +2927,7 @@ internal sealed class ConfigDocument
             InlineComment = inlineComment,
             GuiLabel = ReadGuiLabel(pendingComments),
             Prefix = lhsWithEquals,
-            Suffix = "",
+            Suffix = suffix,
             RawValue = string.Join(NewLine, textLines),
             Kind = ConfigValueKind.String,
             QuoteChar = '"',
