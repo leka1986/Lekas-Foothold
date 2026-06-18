@@ -11,10 +11,12 @@ internal sealed class MainForm : Form
 {
     private const string AdminPassword = "configfoothold";
     private const string DiscordInviteUrl = "https://discord.gg/cshgmgXuxE";
+    private const string GitHubRepositoryUrl = "https://github.com/leka1986/Lekas-Foothold";
     private const int TableActionColumnWidth = 168;
     private const int TableActionButtonWidth = 148;
     private const float BaseFontSize = 9F;
     private const string ToolbarSeparatorTag = "ToolbarSeparator";
+    private const string AboutLinkTag = "AboutLink";
     private static readonly JsonSerializerOptions StoredDefaultsJsonOptions = new() { WriteIndented = true };
     private static string StoredDefaultsDirectory => Path.Combine(RuntimeSettings.SettingsDirectory, "MizDefaults");
     private static string StoredDefaultsIndexPath => Path.Combine(StoredDefaultsDirectory, "index.json");
@@ -32,6 +34,34 @@ internal sealed class MainForm : Form
     private static Color BrandColor = Color.FromArgb(30, 136, 183);
 
     private sealed record UndoStep(string Description, Action Action, Action? RefreshAction);
+
+    private sealed record FirstRunMizCandidate(string Path, DateTime Modified)
+    {
+        public override string ToString()
+        {
+            return Modified.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + "  " + System.IO.Path.GetFileName(Path);
+        }
+    }
+
+    private sealed record FirstRunInstanceCandidate(string Name, string ProfilePath, int Score)
+    {
+        public string ConfigPath => System.IO.Path.Combine(ProfilePath, "Missions", "Saves", "Foothold Config.lua");
+
+        public override string ToString()
+        {
+            return Name + "  ->  " + ConfigPath;
+        }
+    }
+
+    private enum DcsDesanitizeStatus
+    {
+        FileNotSelected,
+        FileMissing,
+        NotDesanitized,
+        PartiallyDesanitized,
+        Desanitized,
+        UnknownFormat
+    }
 
     private enum ToolbarIconKind
     {
@@ -501,12 +531,14 @@ internal sealed class MainForm : Form
 
     private sealed class CopyChange
     {
-        public CopyChange(CopyChangeKind kind, string key, string label, string summary)
+        public CopyChange(CopyChangeKind kind, string key, string label, string summary, string currentText, string sourceText)
         {
             Kind = kind;
             Key = key;
             Label = label;
             Summary = summary;
+            CurrentText = currentText;
+            SourceText = sourceText;
             Id = kind.ToString() + ":" + key;
         }
 
@@ -514,6 +546,8 @@ internal sealed class MainForm : Form
         public string Key { get; }
         public string Label { get; }
         public string Summary { get; }
+        public string CurrentText { get; }
+        public string SourceText { get; }
         public string Id { get; }
     }
 
@@ -835,16 +869,19 @@ internal sealed class MainForm : Form
     private readonly Label _discordLabel = new();
     private readonly Label _zoomLabel = new();
     private ThemeIconButton? _themeButton;
+    private Button? _dcsDesanitizeButton;
+    private Button? _themeModeButton;
     private Button? _undoButton;
     private readonly List<Control> _topToolbarButtons = new();
+    private Control? _leftToolsPanel;
     private TableLayoutPanel? _rootLayout;
     private TableLayoutPanel? _topAreaLayout;
     private TableLayoutPanel? _toolbarLayout;
     private TableLayoutPanel? _instanceLayout;
     private TableLayoutPanel? _zoomLayout;
+    private DcsDesanitizeStatus _dcsDesanitizeStatus = DcsDesanitizeStatus.FileNotSelected;
     private SplitContainer? _mainSplit;
     private Panel? _statusPanel;
-    private Control? _zoomControl;
 
     private ConfigDocument? _document;
     private ConfigEntry? _activeEntry;
@@ -894,10 +931,12 @@ internal sealed class MainForm : Form
 
         BuildUi();
         ApplyThemeToShell();
+        RefreshDcsDesanitizeStatus(updateStatusLine: false);
         EnableMizDragDrop();
         FormClosing += (_, _) => SaveWindowSize();
         Load += (_, _) =>
         {
+            RefreshDcsDesanitizeStatus(updateStatusLine: false);
             LoadDefaultConfig();
             if (_requestAdminOnLoad)
             {
@@ -977,10 +1016,15 @@ internal sealed class MainForm : Form
         _zoomLabel.ForeColor = PrimaryTextColor;
         _descriptionBox.ForeColor = HelpTextColor;
         _formHost.BackColor = MainBackground;
+        if (_leftToolsPanel is not null)
+        {
+            _leftToolsPanel.BackColor = EditorBackground;
+        }
+
         UpdateFooterLabels();
         UpdateThemeButtonState();
+        UpdateDcsDesanitizeButtonState();
         UpdateUndoButtonState();
-        LayoutStatusBar();
     }
 
     private static void ApplyThemeToControl(Control control, bool restyleButtons)
@@ -1026,7 +1070,7 @@ internal sealed class MainForm : Form
 
             case Label label:
                 label.BackColor = MainBackground;
-                label.ForeColor = PrimaryTextColor;
+                label.ForeColor = Equals(label.Tag, AboutLinkTag) ? Color.DodgerBlue : PrimaryTextColor;
                 break;
 
             case SplitContainer split:
@@ -1053,15 +1097,19 @@ internal sealed class MainForm : Form
 
     private void UpdateThemeButtonState()
     {
-        if (_themeButton is null)
+        if (_themeButton is not null)
         {
-            return;
+            _themeButton.BackColor = MainBackground;
+            _themeButton.ForeColor = PrimaryTextColor;
+            _themeButton.SetDarkMode(_darkMode);
+            _toolTip.SetToolTip(_themeButton, _darkMode ? "Switch to light mode." : "Switch to dark mode.");
         }
 
-        _themeButton.BackColor = MainBackground;
-        _themeButton.ForeColor = PrimaryTextColor;
-        _themeButton.SetDarkMode(_darkMode);
-        _toolTip.SetToolTip(_themeButton, _darkMode ? "Switch to light mode." : "Switch to dark mode.");
+        if (_themeModeButton is not null)
+        {
+            _themeModeButton.Text = _darkMode ? "Dark mode" : "Light mode";
+            _toolTip.SetToolTip(_themeModeButton, _darkMode ? "Switch to light mode." : "Switch to dark mode.");
+        }
     }
 
     private void UpdateUndoButtonState()
@@ -1565,17 +1613,20 @@ internal sealed class MainForm : Form
 
         if (_zoomLayout is not null)
         {
-            _zoomLayout.Width = Zoomed(252);
             _zoomLayout.Height = Zoomed(32);
-            SetColumnWidth(_zoomLayout, 1, ToolbarButtonWidth("A-", 42));
-            SetColumnWidth(_zoomLayout, 2, Math.Max(Zoomed(62), TextRenderer.MeasureText("150%", Font).Width + Zoomed(16)));
-            SetColumnWidth(_zoomLayout, 3, ToolbarButtonWidth("A+", 42));
-            SetColumnWidth(_zoomLayout, 4, Zoomed(10));
-            SetColumnWidth(_zoomLayout, 5, Zoomed(36));
+        }
+
+        if (_leftToolsPanel is TableLayoutPanel toolsPanel)
+        {
+            toolsPanel.Padding = new Padding(0, Zoomed(5), 0, Zoomed(6));
+            SetRowHeight(toolsPanel, 0, Zoomed(6));
+            SetRowHeight(toolsPanel, 1, Zoomed(34));
+            SetRowHeight(toolsPanel, 2, Zoomed(34));
+            SetRowHeight(toolsPanel, 3, Zoomed(34));
+            SetRowHeight(toolsPanel, 4, Zoomed(34));
         }
 
         LayoutFooterLinks();
-        LayoutStatusBar();
     }
 
     private static void SetColumnWidth(TableLayoutPanel panel, int index, int width)
@@ -1654,81 +1705,14 @@ internal sealed class MainForm : Form
         _status.TextAlign = ContentAlignment.MiddleLeft;
         _status.ForeColor = PrimaryTextColor;
         panel.Controls.Add(_status);
-
-        var zoomControl = BuildZoomStatusControl();
-        _zoomControl = zoomControl;
-        panel.Controls.Add(zoomControl);
-
-        _footerLinks.Dock = DockStyle.Right;
-        _footerLinks.FlowDirection = FlowDirection.LeftToRight;
-        _footerLinks.WrapContents = false;
-        _footerLinks.AutoSize = false;
-        _footerLinks.Height = Zoomed(32);
-        _footerLinks.Padding = new Padding(0);
-        _footerLinks.Margin = new Padding(0);
-        _footerLinks.BackColor = MainBackground;
-
-        _brandLabel.Text = "By Leka";
-        _brandLabel.AutoSize = true;
-        _brandLabel.TextAlign = ContentAlignment.MiddleLeft;
-        _brandLabel.ForeColor = BrandColor;
-        _brandLabel.Cursor = Cursors.Hand;
-        _brandLabel.Margin = new Padding(0, Zoomed(7), Zoomed(10), 0);
-        _brandLabel.Click += (_, _) => HandleBrandClick();
-        _toolTip.SetToolTip(_brandLabel, "Triple-click to open the admin password prompt.");
-        _footerLinks.Controls.Add(_brandLabel);
-
-        _footerVersionLabel.AutoSize = true;
-        _footerVersionLabel.TextAlign = ContentAlignment.MiddleLeft;
-        _footerVersionLabel.ForeColor = PrimaryTextColor;
-        _footerVersionLabel.Margin = new Padding(0, Zoomed(7), Zoomed(10), 0);
-        _footerLinks.Controls.Add(_footerVersionLabel);
-
-        _discordLabel.Text = "Discord";
-        _discordLabel.AutoSize = true;
-        _discordLabel.TextAlign = ContentAlignment.MiddleLeft;
-        _discordLabel.ForeColor = BrandColor;
-        _discordLabel.Cursor = Cursors.Hand;
-        _discordLabel.Margin = new Padding(0, Zoomed(7), 0, 0);
-        _discordLabel.Click += (_, _) => OpenDiscordInvite();
-        _toolTip.SetToolTip(_discordLabel, "Open Foothold Discord.");
-        _footerLinks.Controls.Add(_discordLabel);
-        UpdateFooterLabels();
-        panel.Controls.Add(_footerLinks);
-
-        panel.Resize += (_, _) => LayoutStatusBar();
-        panel.HandleCreated += (_, _) => LayoutStatusBar();
-        _footerLinks.BringToFront();
-        zoomControl.BringToFront();
-
         return panel;
-    }
-
-    private void LayoutStatusBar()
-    {
-        if (_statusPanel is null || _zoomControl is null)
-        {
-            return;
-        }
-
-        _zoomControl.Left = Math.Max(0, (_statusPanel.ClientSize.Width - _zoomControl.Width) / 2);
-        _zoomControl.Top = Math.Max(0, (_statusPanel.ClientSize.Height - _zoomControl.Height) / 2);
     }
 
     private void UpdateFooterLabels()
     {
-        _footerLinks.BackColor = MainBackground;
-        _brandLabel.BackColor = MainBackground;
-        _brandLabel.ForeColor = BrandColor;
-        _footerVersionLabel.BackColor = MainBackground;
-        _footerVersionLabel.ForeColor = PrimaryTextColor;
-        _discordLabel.BackColor = MainBackground;
-        _discordLabel.ForeColor = BrandColor;
-
         var version = _document?.Metadata.FooterVersion?.Trim() ?? "";
         _footerVersionLabel.Text = version;
         _footerVersionLabel.Visible = !string.IsNullOrWhiteSpace(version);
-        LayoutFooterLinks();
     }
 
     private void LayoutFooterLinks()
@@ -1769,6 +1753,528 @@ internal sealed class MainForm : Form
         {
             MessageBox.Show(this, ex.Message, "Open Discord failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void OpenGitHubRepository()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = GitHubRepositoryUrl,
+                UseShellExecute = true
+            });
+            SetStatus("Opened GitHub repository.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Open GitHub failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void RefreshDcsDesanitizeStatus(bool updateStatusLine)
+    {
+        _dcsDesanitizeStatus = CheckDcsDesanitizeStatus(_settings.MissionScriptingPath);
+        UpdateDcsDesanitizeButtonState();
+        if (updateStatusLine)
+        {
+            SetStatus("MissionScripting: " + GetDcsDesanitizeStatusText(_dcsDesanitizeStatus) + ".");
+        }
+    }
+
+    private void UpdateDcsDesanitizeButtonState()
+    {
+        if (_dcsDesanitizeButton is null)
+        {
+            return;
+        }
+
+        _dcsDesanitizeButton.Text = _dcsDesanitizeStatus switch
+        {
+            DcsDesanitizeStatus.Desanitized => "MissionScripting OK",
+            DcsDesanitizeStatus.NotDesanitized => "MissionScripting not desanitized",
+            DcsDesanitizeStatus.PartiallyDesanitized => "MissionScripting partial",
+            DcsDesanitizeStatus.FileMissing => "MissionScripting missing",
+            DcsDesanitizeStatus.UnknownFormat => "MissionScripting check file",
+            _ => "MissionScripting"
+        };
+        SetToolbarHelp(_dcsDesanitizeButton, "Required for mission persistence/save files. Status: " + GetDcsDesanitizeStatusText(_dcsDesanitizeStatus) + ".");
+    }
+
+    private static string GetDcsDesanitizeStatusText(DcsDesanitizeStatus status)
+    {
+        return status switch
+        {
+            DcsDesanitizeStatus.Desanitized => "Desanitized",
+            DcsDesanitizeStatus.NotDesanitized => "Not desanitized",
+            DcsDesanitizeStatus.PartiallyDesanitized => "Partially desanitized",
+            DcsDesanitizeStatus.FileMissing => "File missing",
+            DcsDesanitizeStatus.UnknownFormat => "Unknown format",
+            _ => "File not selected"
+        };
+    }
+
+    private static DcsDesanitizeStatus CheckDcsDesanitizeStatus(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return DcsDesanitizeStatus.FileNotSelected;
+        }
+
+        if (!File.Exists(path))
+        {
+            return DcsDesanitizeStatus.FileMissing;
+        }
+
+        try
+        {
+            var text = File.ReadAllText(path);
+            var states = new[]
+            {
+                FindCommentedModuleLine(text, "io"),
+                FindCommentedModuleLine(text, "lfs"),
+                FindCommentedGlobalNilLine(text, "require"),
+                FindCommentedGlobalNilLine(text, "loadlib"),
+                FindCommentedGlobalNilLine(text, "package")
+            };
+
+            if (states.Any(state => state is null))
+            {
+                return DcsDesanitizeStatus.UnknownFormat;
+            }
+
+            var commentedCount = states.Count(state => state == true);
+            if (commentedCount == states.Length)
+            {
+                return DcsDesanitizeStatus.Desanitized;
+            }
+
+            return commentedCount == 0
+                ? DcsDesanitizeStatus.NotDesanitized
+                : DcsDesanitizeStatus.PartiallyDesanitized;
+        }
+        catch
+        {
+            return DcsDesanitizeStatus.UnknownFormat;
+        }
+    }
+
+    private static bool? FindCommentedModuleLine(string text, string moduleName)
+    {
+        var pattern = @"(?m)^\s*(?<comment>--\s*)?sanitizeModule\(\s*['""]" + Regex.Escape(moduleName) + @"['""]\s*\)\s*$";
+        var match = Regex.Match(text, pattern);
+        return match.Success ? match.Groups["comment"].Success : null;
+    }
+
+    private static bool? FindCommentedGlobalNilLine(string text, string name)
+    {
+        var pattern = @"(?m)^\s*(?<comment>--\s*)?_G\[\s*['""]" + Regex.Escape(name) + @"['""]\s*\]\s*=\s*nil\s*$";
+        var match = Regex.Match(text, pattern);
+        return match.Success ? match.Groups["comment"].Success : null;
+    }
+
+    private string GetMissionScriptingInitialDirectory()
+    {
+        var currentPath = _settings.MissionScriptingPath;
+        if (!string.IsNullOrWhiteSpace(currentPath))
+        {
+            var directory = Path.GetDirectoryName(currentPath);
+            if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
+            {
+                return directory;
+            }
+        }
+
+        var candidates = new[]
+        {
+            @"C:\Games\DCS World Server\Scripts",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Eagle Dynamics", "DCS World Server", "Scripts"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Eagle Dynamics", "DCS World", "Scripts"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Eagle Dynamics", "DCS World", "Scripts")
+        };
+
+        return candidates.FirstOrDefault(Directory.Exists) ?? RuntimeSettings.GetBestInitialDirectory();
+    }
+
+    private bool SelectMissionScriptingFile()
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Title = "Select MissionScripting.lua",
+            Filter = "MissionScripting.lua|MissionScripting.lua|Lua files (*.lua)|*.lua|All files (*.*)|*.*",
+            InitialDirectory = GetMissionScriptingInitialDirectory(),
+            FileName = "MissionScripting.lua",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return false;
+        }
+
+        var fullPath = Path.GetFullPath(dialog.FileName);
+        if (!Path.GetFileName(fullPath).Equals("MissionScripting.lua", StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(this, "Select the MissionScripting.lua file.", "MissionScripting.lua", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        _settings.MissionScriptingPath = fullPath;
+        _settings.Save();
+        RefreshDcsDesanitizeStatus(updateStatusLine: true);
+        return true;
+    }
+
+    private static string ApplyDcsDesanitizeText(string text)
+    {
+        text = CommentUncommentedLine(text, @"sanitizeModule\(\s*['""]io['""]\s*\)");
+        text = CommentUncommentedLine(text, @"sanitizeModule\(\s*['""]lfs['""]\s*\)");
+        text = CommentUncommentedLine(text, @"_G\[\s*['""]require['""]\s*\]\s*=\s*nil");
+        text = CommentUncommentedLine(text, @"_G\[\s*['""]loadlib['""]\s*\]\s*=\s*nil");
+        text = CommentUncommentedLine(text, @"_G\[\s*['""]package['""]\s*\]\s*=\s*nil");
+        return text;
+    }
+
+    private static string CommentUncommentedLine(string text, string codePattern)
+    {
+        var pattern = @"(?m)^(?<indent>\s*)(?<code>" + codePattern + @"\s*)$";
+        return Regex.Replace(text, pattern, match => match.Groups["indent"].Value + "--" + match.Groups["code"].Value);
+    }
+
+    private bool ApplyDcsDesanitize()
+    {
+        var path = _settings.MissionScriptingPath;
+        var status = CheckDcsDesanitizeStatus(path);
+        if (status is DcsDesanitizeStatus.FileNotSelected)
+        {
+            MessageBox.Show(this, "Select MissionScripting.lua first.", "MissionScripting.lua", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return false;
+        }
+
+        if (status is DcsDesanitizeStatus.FileMissing)
+        {
+            MessageBox.Show(this, "MissionScripting.lua was not found at the selected path.", "MissionScripting.lua", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        if (status is DcsDesanitizeStatus.UnknownFormat)
+        {
+            MessageBox.Show(this, "MissionScripting.lua has an unexpected format. No file was changed.", "MissionScripting.lua", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        if (status is DcsDesanitizeStatus.Desanitized)
+        {
+            MessageBox.Show(this, "MissionScripting.lua is already desanitized.", "MissionScripting.lua", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return true;
+        }
+
+        try
+        {
+            var text = File.ReadAllText(path!);
+            var updated = ApplyDcsDesanitizeText(text);
+            if (string.Equals(text, updated, StringComparison.Ordinal))
+            {
+                MessageBox.Show(this, "No matching sanitized lines were changed.", "MissionScripting.lua", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            File.WriteAllText(path!, updated);
+            RefreshDcsDesanitizeStatus(updateStatusLine: true);
+            return _dcsDesanitizeStatus is DcsDesanitizeStatus.Desanitized;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "MissionScripting.lua failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            RefreshDcsDesanitizeStatus(updateStatusLine: false);
+            return false;
+        }
+    }
+
+    private void OpenMissionScriptingLocation()
+    {
+        var path = _settings.MissionScriptingPath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            MessageBox.Show(this, "MissionScripting.lua was not found at the selected path.", "MissionScripting.lua", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = "/select,\"" + path + "\"",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Open file location failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ShowDcsDesanitizeDialog()
+    {
+        if (string.IsNullOrWhiteSpace(_settings.MissionScriptingPath))
+        {
+            SelectMissionScriptingFile();
+        }
+
+        RefreshDcsDesanitizeStatus(updateStatusLine: false);
+        using var dialog = new Form
+        {
+            Text = "MissionScripting.lua",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = new Size(Zoomed(720), Zoomed(282)),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 5,
+            Padding = new Padding(Zoomed(14)),
+            BackColor = MainBackground
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(38)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(50)));
+        dialog.Controls.Add(panel);
+
+        panel.Controls.Add(new Label
+        {
+            Text = "MissionScripting.lua",
+            Dock = DockStyle.Fill,
+            Font = new Font(Font, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = PrimaryTextColor,
+            BackColor = MainBackground
+        }, 0, 0);
+
+        var statusLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = PrimaryTextColor,
+            BackColor = MainBackground
+        };
+        panel.Controls.Add(statusLabel, 0, 1);
+
+        var pathBox = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            ReadOnly = true,
+            BackColor = InputBackground,
+            ForeColor = PrimaryTextColor,
+            BorderStyle = BorderStyle.FixedSingle
+        };
+        panel.Controls.Add(pathBox, 0, 2);
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Required for mission persistence/save files. Apply desanitize enables file access by commenting out io, lfs, require, loadlib, and package. os remains sanitized.",
+            Dock = DockStyle.Fill,
+            ForeColor = HelpTextColor,
+            BackColor = MainBackground
+        }, 0, 3);
+
+        var buttons = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 5,
+            RowCount = 1,
+            Padding = new Padding(0, Zoomed(7), 0, 0),
+            Margin = new Padding(0),
+            BackColor = MainBackground
+        };
+        for (var column = 0; column < buttons.ColumnCount; column++)
+        {
+            buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+        }
+
+        buttons.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        panel.Controls.Add(buttons, 0, 4);
+
+        var closeButton = new Button { Text = "Close", DialogResult = DialogResult.OK };
+        var applyButton = new Button { Text = "Apply desanitize" };
+        var checkButton = new Button { Text = "Check again" };
+        var selectButton = new Button { Text = "Select file" };
+        var openButton = new Button { Text = "Open location" };
+        foreach (var button in new[] { closeButton, applyButton, checkButton, selectButton, openButton })
+        {
+            SizeDialogButton(button, button == applyButton ? 132 : 112);
+            button.Dock = DockStyle.Fill;
+            button.Margin = new Padding(Zoomed(3), 0, Zoomed(3), 0);
+            StyleButton(button);
+            EnableButtonInteractiveChrome(button);
+        }
+
+        void RefreshDialog()
+        {
+            RefreshDcsDesanitizeStatus(updateStatusLine: false);
+            statusLabel.Text = "Status: " + GetDcsDesanitizeStatusText(_dcsDesanitizeStatus);
+            pathBox.Text = string.IsNullOrWhiteSpace(_settings.MissionScriptingPath) ? "(not selected)" : _settings.MissionScriptingPath;
+            applyButton.Enabled = _dcsDesanitizeStatus is DcsDesanitizeStatus.NotDesanitized or DcsDesanitizeStatus.PartiallyDesanitized;
+            openButton.Enabled = _dcsDesanitizeStatus is not DcsDesanitizeStatus.FileNotSelected;
+        }
+
+        selectButton.Click += (_, _) =>
+        {
+            SelectMissionScriptingFile();
+            RefreshDialog();
+        };
+        checkButton.Click += (_, _) => RefreshDialog();
+        applyButton.Click += (_, _) =>
+        {
+            ApplyDcsDesanitize();
+            RefreshDialog();
+        };
+        openButton.Click += (_, _) => OpenMissionScriptingLocation();
+
+        buttons.Controls.Add(selectButton, 0, 0);
+        buttons.Controls.Add(openButton, 1, 0);
+        buttons.Controls.Add(checkButton, 2, 0);
+        buttons.Controls.Add(applyButton, 3, 0);
+        buttons.Controls.Add(closeButton, 4, 0);
+
+        RefreshDialog();
+        dialog.AcceptButton = closeButton;
+        ApplyDialogChrome(dialog);
+        dialog.ShowDialog(this);
+    }
+
+    private void ShowAboutDialog()
+    {
+        using var dialog = new Form
+        {
+            Text = "About",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = new Size(Zoomed(360), Zoomed(190)),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 5,
+            Padding = new Padding(Zoomed(14)),
+            BackColor = MainBackground
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(28)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(28)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(46)));
+        dialog.Controls.Add(panel);
+
+        panel.Controls.Add(new Label
+        {
+            Text = "Foothold Config Manager",
+            Dock = DockStyle.Fill,
+            Font = new Font(Font, FontStyle.Bold),
+            ForeColor = PrimaryTextColor,
+            BackColor = MainBackground
+        }, 0, 0);
+
+        var version = _document?.Metadata.FooterVersion?.Trim();
+        panel.Controls.Add(new Label
+        {
+            Text = string.IsNullOrWhiteSpace(version) ? "Version unavailable" : version,
+            Dock = DockStyle.Fill,
+            ForeColor = HelpTextColor,
+            BackColor = MainBackground
+        }, 0, 1);
+
+        var byLabel = new Label
+        {
+            Text = "By Leka",
+            Dock = DockStyle.Fill,
+            ForeColor = BrandColor,
+            BackColor = MainBackground,
+            Cursor = Cursors.Hand
+        };
+        byLabel.Click += (_, _) => HandleBrandClick();
+        _toolTip.SetToolTip(byLabel, "Triple-click to open the admin password prompt.");
+        panel.Controls.Add(byLabel, 0, 2);
+
+        var linkPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = new Padding(0, Zoomed(4), 0, 0),
+            Margin = new Padding(0),
+            BackColor = MainBackground
+        };
+        var discordLink = MakeAboutLink("Discord", OpenDiscordInvite, "Open Foothold Discord.");
+        var gitHubLink = MakeAboutLink("GitHub", OpenGitHubRepository, "Open the Foothold GitHub repository.");
+        discordLink.Margin = new Padding(0, 0, Zoomed(16), 0);
+        gitHubLink.Margin = new Padding(0);
+        linkPanel.Controls.Add(discordLink);
+        linkPanel.Controls.Add(gitHubLink);
+        panel.Controls.Add(linkPanel, 0, 3);
+
+        var buttonPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 1,
+            Padding = new Padding(0, Zoomed(7), 0, 0),
+            Margin = new Padding(0),
+            BackColor = MainBackground
+        };
+        buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var closeButton = new Button
+        {
+            Text = "Close",
+            DialogResult = DialogResult.OK
+        };
+        SizeDialogButton(closeButton, 110);
+        closeButton.Anchor = AnchorStyles.Right;
+        closeButton.Margin = new Padding(0);
+        StyleButton(closeButton);
+        EnableButtonInteractiveChrome(closeButton);
+        buttonPanel.Controls.Add(closeButton, 0, 0);
+        panel.Controls.Add(buttonPanel, 0, 4);
+
+        dialog.AcceptButton = closeButton;
+        ApplyDialogChrome(dialog);
+        dialog.ShowDialog(this);
+    }
+
+    private Label MakeAboutLink(string text, Action action, string helpText)
+    {
+        var label = new Label
+        {
+            Text = text,
+            AutoSize = true,
+            ForeColor = Color.DodgerBlue,
+            Font = new Font(Font, FontStyle.Underline),
+            BackColor = MainBackground,
+            Cursor = Cursors.Hand,
+            Tag = AboutLinkTag
+        };
+        label.Click += (_, _) => action();
+        SetToolbarHelp(label, helpText);
+        return label;
     }
 
     private Control BuildZoomStatusControl()
@@ -1821,10 +2327,32 @@ internal sealed class MainForm : Form
             Margin = new Padding(2, 1, 2, 0)
         };
         StyleButton(button);
+        EnableButtonInteractiveChrome(button);
         button.AutoEllipsis = true;
         button.Click += (_, _) => action();
         SetToolbarHelp(button, helpText);
         return button;
+    }
+
+    private static void EnableButtonInteractiveChrome(Button button)
+    {
+        button.Cursor = button.Enabled ? Cursors.Hand : Cursors.Default;
+        button.MouseEnter += (_, _) =>
+        {
+            if (button.Enabled)
+            {
+                button.FlatAppearance.BorderColor = BrandColor;
+            }
+        };
+        button.MouseLeave += (_, _) =>
+        {
+            button.FlatAppearance.BorderColor = BorderColor;
+        };
+        button.EnabledChanged += (_, _) =>
+        {
+            button.Cursor = button.Enabled ? Cursors.Hand : Cursors.Default;
+            button.FlatAppearance.BorderColor = BorderColor;
+        };
     }
 
     private static void StyleButton(Button button)
@@ -2609,6 +3137,17 @@ internal sealed class MainForm : Form
         };
         _mainSplit = split;
 
+        var leftRail = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = MainBackground,
+            Padding = new Padding(0)
+        };
+        leftRail.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        leftRail.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
         _categoryList.Dock = DockStyle.Fill;
         _categoryList.BorderStyle = BorderStyle.FixedSingle;
         _categoryList.DrawMode = DrawMode.OwnerDrawFixed;
@@ -2628,7 +3167,9 @@ internal sealed class MainForm : Form
             }
         };
         split.Panel1.BackColor = MainBackground;
-        split.Panel1.Controls.Add(_categoryList);
+        leftRail.Controls.Add(_categoryList, 0, 0);
+        leftRail.Controls.Add(BuildLeftToolsPanel(), 0, 1);
+        split.Panel1.Controls.Add(leftRail);
 
         _formHost.Dock = DockStyle.Fill;
         _formHost.AutoScroll = true;
@@ -2637,6 +3178,109 @@ internal sealed class MainForm : Form
         split.Panel2.BackColor = MainBackground;
         split.Panel2.Controls.Add(_formHost);
         return split;
+    }
+
+    private Control BuildLeftToolsPanel()
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            ColumnCount = 1,
+            RowCount = 5,
+            BackColor = EditorBackground,
+            Padding = new Padding(0, Zoomed(5), 0, Zoomed(6)),
+            Margin = new Padding(0)
+        };
+        _leftToolsPanel = panel;
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(6)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+
+        panel.Controls.Add(new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = BorderColor,
+            Margin = new Padding(0, 0, 0, Zoomed(4))
+        }, 0, 0);
+
+        _dcsDesanitizeButton = MakeLeftToolButton("MissionScripting", ShowDcsDesanitizeDialog, "Required for mission persistence/save files.");
+        panel.Controls.Add(_dcsDesanitizeButton, 0, 1);
+        panel.Controls.Add(BuildLeftToolModeRow(), 0, 2);
+        panel.Controls.Add(BuildLeftToolZoomRow(), 0, 3);
+        panel.Controls.Add(BuildLeftToolLinkRow(), 0, 4);
+        return panel;
+    }
+
+    private Control BuildLeftToolModeRow()
+    {
+        var row = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            BackColor = EditorBackground,
+            Margin = new Padding(0)
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+        _themeModeButton = MakeLeftToolButton(_darkMode ? "Dark mode" : "Light mode", ToggleTheme, _darkMode ? "Switch to light mode." : "Switch to dark mode.");
+        row.Controls.Add(_themeModeButton, 0, 0);
+        return row;
+    }
+
+    private Control BuildLeftToolZoomRow()
+    {
+        var row = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            BackColor = EditorBackground,
+            Margin = new Padding(0)
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+
+        row.Controls.Add(MakeStatusZoomButton("A-", ZoomOut, "Make manager text smaller."), 0, 0);
+        _zoomLabel.TextAlign = ContentAlignment.MiddleCenter;
+        _zoomLabel.Dock = DockStyle.Fill;
+        _zoomLabel.Margin = new Padding(0);
+        _zoomLabel.AutoEllipsis = true;
+        _zoomLabel.ForeColor = PrimaryTextColor;
+        _zoomLabel.BackColor = EditorBackground;
+        SetToolbarHelp(_zoomLabel, "Current manager text zoom.");
+        UpdateZoomLabel();
+        row.Controls.Add(_zoomLabel, 1, 0);
+        row.Controls.Add(MakeStatusZoomButton("A+", ZoomIn, "Make manager text larger."), 2, 0);
+        _zoomLayout = row;
+        return row;
+    }
+
+    private Control BuildLeftToolLinkRow()
+    {
+        var row = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            BackColor = EditorBackground,
+            Margin = new Padding(0)
+        };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        row.Controls.Add(MakeLeftToolButton("About", ShowAboutDialog, "Show app version, author, Discord, and GitHub."), 0, 0);
+        return row;
+    }
+
+    private Button MakeLeftToolButton(string text, Action action, string helpText)
+    {
+        var button = MakeButton(text, action);
+        button.Dock = DockStyle.Fill;
+        button.Margin = new Padding(Zoomed(2), Zoomed(2), Zoomed(2), Zoomed(2));
+        button.TextAlign = ContentAlignment.MiddleCenter;
+        EnableButtonInteractiveChrome(button);
+        SetToolbarHelp(button, helpText);
+        return button;
     }
 
     private void ApplyCategoryListSizing()
@@ -2921,11 +3565,249 @@ internal sealed class MainForm : Form
         path = AppMode.IsExportedUserBuild ? null : ConfigDocument.FindDefaultConfig();
         if (path is null)
         {
-            SetStatus("Foothold Config.lua was not found. Place it in a Saved Games DCS Missions\\Saves folder, or use Open.");
+            var install = PromptForFirstRunInstall();
+            if (install is not null && InstallInitialConfigFromMiz(install.Value.MizPath, install.Value.Instance))
+            {
+                return;
+            }
+
+            SetStatus("Foothold Config.lua was not found. Use Open, or restart and install from a Foothold MIZ.");
             return;
         }
 
         LoadConfig(path);
+    }
+
+    private (string MizPath, FirstRunInstanceCandidate Instance)? PromptForFirstRunInstall()
+    {
+        var mizCandidates = FindFirstRunMizCandidates();
+        var instanceCandidates = FindFirstRunInstanceCandidates();
+        string? selectedMizPath = null;
+        FirstRunInstanceCandidate? selectedInstance = null;
+
+        using var dialog = new Form
+        {
+            Text = "Install Foothold Config",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.Sizable,
+            MinimizeBox = false,
+            MaximizeBox = true,
+            ClientSize = new Size(900, 560),
+            MinimumSize = new Size(760, 500),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 6,
+            Padding = new Padding(12),
+            BackColor = MainBackground
+        };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 12));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        dialog.Controls.Add(root);
+
+        root.Controls.Add(new Label
+        {
+            Text = "No Foothold Config.lua is configured yet. Choose the Foothold mission MIZ, then choose the DCS/Saved Games instance to install into.",
+            Dock = DockStyle.Fill,
+            ForeColor = PrimaryTextColor
+        }, 0, 0);
+
+        var mizPanel = BuildFirstRunChoicePanel("Foothold MIZ", out var mizList, out var browseMizButton);
+        root.Controls.Add(mizPanel, 0, 1);
+        foreach (var candidate in mizCandidates)
+        {
+            mizList.Items.Add(candidate);
+        }
+
+        var instancePanel = BuildFirstRunChoicePanel("DCS / Saved Games instance", out var instanceList, out var browseInstanceButton);
+        root.Controls.Add(instancePanel, 0, 3);
+        foreach (var candidate in instanceCandidates)
+        {
+            instanceList.Items.Add(candidate);
+        }
+
+        var targetLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            ForeColor = HelpTextColor,
+            AutoEllipsis = true
+        };
+        root.Controls.Add(targetLabel, 0, 4);
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, 8, 0, 0),
+            BackColor = MainBackground
+        };
+        var installButton = new Button
+        {
+            Text = "Install",
+            DialogResult = DialogResult.OK,
+            Width = 100,
+            Enabled = false
+        };
+        var cancelButton = new Button
+        {
+            Text = "Cancel",
+            DialogResult = DialogResult.Cancel,
+            Width = 100
+        };
+        buttons.Controls.Add(cancelButton);
+        buttons.Controls.Add(installButton);
+        root.Controls.Add(buttons, 0, 5);
+
+        void UpdateSelection()
+        {
+            selectedMizPath = mizList.SelectedItem is FirstRunMizCandidate miz ? miz.Path : selectedMizPath;
+            selectedInstance = instanceList.SelectedItem as FirstRunInstanceCandidate ?? selectedInstance;
+            targetLabel.Text = selectedInstance is null
+                ? "Target: choose an instance."
+                : "Target: " + selectedInstance.ConfigPath;
+            installButton.Enabled = !string.IsNullOrWhiteSpace(selectedMizPath) && selectedInstance is not null;
+        }
+
+        mizList.SelectedIndexChanged += (_, _) => UpdateSelection();
+        instanceList.SelectedIndexChanged += (_, _) => UpdateSelection();
+        browseMizButton.Click += (_, _) =>
+        {
+            using var fileDialog = new OpenFileDialog
+            {
+                Title = "Select Foothold mission MIZ",
+                Filter = "DCS mission (*.miz)|*.miz|All files (*.*)|*.*",
+                FileName = "*.miz",
+                InitialDirectory = GetExistingInitialDirectory(selectedMizPath) ?? RuntimeSettings.GetBestInitialDirectory()
+            };
+            if (fileDialog.ShowDialog(dialog) != DialogResult.OK)
+            {
+                return;
+            }
+
+            var fullPath = Path.GetFullPath(fileDialog.FileName);
+            var candidate = new FirstRunMizCandidate(fullPath, File.GetLastWriteTime(fullPath));
+            AddOrSelectListItem(mizList, candidate, item => item.Path.Equals(fullPath, StringComparison.OrdinalIgnoreCase));
+            UpdateSelection();
+        };
+        browseInstanceButton.Click += (_, _) =>
+        {
+            using var folderDialog = new FolderBrowserDialog
+            {
+                Description = "Select the DCS Saved Games instance folder",
+                SelectedPath = RuntimeSettings.GetBestInitialDirectory()
+            };
+            if (folderDialog.ShowDialog(dialog) != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (IsLikelySavedGamesRoot(folderDialog.SelectedPath))
+            {
+                MessageBox.Show(dialog, "Select an instance folder inside Saved Games, such as Dedicated1, DCS, or DCS.dcs_serverrelease.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var candidate = BuildCustomInstanceCandidate(folderDialog.SelectedPath);
+            AddOrSelectListItem(instanceList, candidate, item => item.ProfilePath.Equals(candidate.ProfilePath, StringComparison.OrdinalIgnoreCase));
+            UpdateSelection();
+        };
+
+        if (mizList.Items.Count > 0)
+        {
+            mizList.SelectedIndex = 0;
+        }
+
+        if (instanceList.Items.Count > 0)
+        {
+            instanceList.SelectedIndex = 0;
+        }
+
+        UpdateSelection();
+        dialog.AcceptButton = installButton;
+        dialog.CancelButton = cancelButton;
+        ApplyThemeToControl(dialog, restyleButtons: true);
+        ApplyDialogChrome(dialog);
+        return dialog.ShowDialog(this) == DialogResult.OK && selectedMizPath is not null && selectedInstance is not null
+            ? (selectedMizPath, selectedInstance)
+            : null;
+    }
+
+    private static TableLayoutPanel BuildFirstRunChoicePanel(string title, out ListBox list, out Button browseButton)
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 2,
+            BackColor = MainBackground
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        panel.Controls.Add(new Label
+        {
+            Text = title,
+            Dock = DockStyle.Fill,
+            ForeColor = PrimaryTextColor
+        }, 0, 0);
+
+        browseButton = new Button
+        {
+            Text = "Browse...",
+            Dock = DockStyle.Fill
+        };
+        panel.Controls.Add(browseButton, 1, 0);
+
+        list = new ListBox
+        {
+            Dock = DockStyle.Fill,
+            IntegralHeight = false,
+            HorizontalScrollbar = true
+        };
+        panel.Controls.Add(list, 0, 1);
+        panel.SetColumnSpan(list, 2);
+        return panel;
+    }
+
+    private static string? GetExistingInitialDirectory(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        var directory = File.Exists(path) ? Path.GetDirectoryName(path) : path;
+        return !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory)
+            ? directory
+            : null;
+    }
+
+    private static void AddOrSelectListItem<T>(ListBox list, T item, Func<T, bool> predicate)
+    {
+        for (var i = 0; i < list.Items.Count; i++)
+        {
+            if (list.Items[i] is T existing && predicate(existing))
+            {
+                list.SelectedIndex = i;
+                return;
+            }
+        }
+
+        list.Items.Insert(0, item!);
+        list.SelectedIndex = 0;
     }
 
     private void OpenConfig()
@@ -3211,6 +4093,30 @@ internal sealed class MainForm : Form
         return added;
     }
 
+    private void AddOrUpdateInstanceProfile(string name, string path)
+    {
+        path = Path.GetFullPath(path);
+        var existing = _settings.ServerProfiles.FirstOrDefault(profile => Path.GetFullPath(profile.ConfigPath).Equals(path, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            existing.Name = string.IsNullOrWhiteSpace(name) ? GuessInstanceName(path) : name.Trim();
+        }
+        else
+        {
+            var existingNames = _settings.ServerProfiles
+                .Select(profile => profile.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _settings.ServerProfiles.Add(new ServerProfileSettings
+            {
+                Name = MakeUniqueInstanceName(name, existingNames),
+                ConfigPath = path
+            });
+        }
+
+        _settings.Save();
+        RefreshInstanceList();
+    }
+
     private void RemoveInstance()
     {
         if (_instanceBox.SelectedItem is not InstanceItem item)
@@ -3357,7 +4263,15 @@ internal sealed class MainForm : Form
             var summary = targetEntry is null
                 ? "will be added"
                 : PreviewCopyValue(targetEntry.ValueText) + " -> " + PreviewCopyValue(sourceEntry.ValueText);
-            changes.Add((sourceEntry.LineIndex, new CopyChange(CopyChangeKind.Entry, sourceEntry.DisplayKey, sourceEntry.DisplayName, summary)));
+            changes.Add((
+                sourceEntry.LineIndex,
+                new CopyChange(
+                    CopyChangeKind.Entry,
+                    sourceEntry.DisplayKey,
+                    sourceEntry.DisplayName,
+                    summary,
+                    targetEntry?.ValueText ?? "(not present)",
+                    sourceEntry.ValueText)));
         }
 
         return changes
@@ -3392,7 +4306,15 @@ internal sealed class MainForm : Form
             return;
         }
 
-        changes.Add((order, new CopyChange(CopyChangeKind.Table, key, label, targetHasTable ? "table changed" : "table added")));
+        changes.Add((
+            order,
+            new CopyChange(
+                CopyChangeKind.Table,
+                key,
+                label,
+                targetHasTable ? "table changed" : "table added",
+                targetHasTable ? targetText : "(table not present)",
+                sourceText)));
     }
 
     private static string NormalizeCopyText(string text)
@@ -3414,6 +4336,163 @@ internal sealed class MainForm : Form
         }
 
         return trimmed.Length <= 42 ? trimmed : trimmed[..39] + "...";
+    }
+
+    private static string NormalizeInspectText(string text)
+    {
+        return text.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+    }
+
+    private static string LimitInspectLines(string text, int maxLines)
+    {
+        var lines = NormalizeInspectText(text).Split('\n');
+        if (lines.Length <= maxLines)
+        {
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        return string.Join(Environment.NewLine, lines.Take(maxLines)) +
+            Environment.NewLine +
+            "... " + (lines.Length - maxLines).ToString(CultureInfo.InvariantCulture) + " more line(s)";
+    }
+
+    private static string BuildCompactLineDiff(string currentText, string sourceText, int maxLines)
+    {
+        var currentLines = NormalizeInspectText(currentText).Split('\n');
+        var sourceLines = NormalizeInspectText(sourceText).Split('\n');
+        var output = new List<string>();
+        var max = Math.Max(currentLines.Length, sourceLines.Length);
+        for (var i = 0; i < max && output.Count < maxLines; i++)
+        {
+            var current = i < currentLines.Length ? currentLines[i] : null;
+            var source = i < sourceLines.Length ? sourceLines[i] : null;
+            if (string.Equals(current, source, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            output.Add("@@ line " + (i + 1).ToString(CultureInfo.InvariantCulture) + " @@");
+            if (current is not null)
+            {
+                output.Add("- " + current);
+            }
+
+            if (source is not null)
+            {
+                output.Add("+ " + source);
+            }
+        }
+
+        if (output.Count == 0)
+        {
+            return "Only whitespace or line ending differences were detected.";
+        }
+
+        if (output.Count >= maxLines)
+        {
+            output.Add("... more differences not shown");
+        }
+
+        return string.Join(Environment.NewLine, output);
+    }
+
+    private static string BuildCopyChangeDetailText(CopyChange change)
+    {
+        return string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                change.Label,
+                change.Summary,
+                "",
+                "Current:",
+                LimitInspectLines(change.CurrentText, change.Kind == CopyChangeKind.Table ? 40 : 12),
+                "",
+                "Copy from source:",
+                LimitInspectLines(change.SourceText, change.Kind == CopyChangeKind.Table ? 40 : 12),
+                "",
+                "First differences:",
+                BuildCompactLineDiff(change.CurrentText, change.SourceText, change.Kind == CopyChangeKind.Table ? 80 : 30)
+            });
+    }
+
+    private void ShowCopyChangeDetails(CopyChange change)
+    {
+        using var dialog = new Form
+        {
+            Text = change.Label + " Difference",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.Sizable,
+            MinimizeBox = false,
+            MaximizeBox = true,
+            ClientSize = new Size(Zoomed(820), Zoomed(560)),
+            MinimumSize = new Size(Zoomed(620), Zoomed(420)),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 3,
+            ColumnCount = 1,
+            Padding = new Padding(Zoomed(10)),
+            BackColor = MainBackground
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(54)));
+        dialog.Controls.Add(panel);
+
+        panel.Controls.Add(new Label
+        {
+            Text = change.Label + " - " + change.Summary,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        }, 0, 0);
+
+        var textBox = new RichTextBox
+        {
+            Dock = DockStyle.Fill,
+            ReadOnly = true,
+            BorderStyle = BorderStyle.FixedSingle,
+            ScrollBars = RichTextBoxScrollBars.Both,
+            WordWrap = false,
+            DetectUrls = false,
+            Font = new Font(FontFamily.GenericMonospace, Font.Size),
+            Text = BuildCopyChangeDetailText(change),
+            BackColor = EditorBackground,
+            ForeColor = PrimaryTextColor
+        };
+        panel.Controls.Add(textBox, 0, 1);
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, Zoomed(8), 0, 0),
+            BackColor = MainBackground
+        };
+        var closeButton = new Button
+        {
+            Text = "Close",
+            DialogResult = DialogResult.OK
+        };
+        SizeDialogButton(closeButton);
+        buttons.Controls.Add(closeButton);
+        panel.Controls.Add(buttons, 0, 2);
+
+        ApplyDialogChrome(dialog);
+        dialog.AcceptButton = closeButton;
+        dialog.CancelButton = closeButton;
+        dialog.ShowDialog(this);
     }
 
     private static void CopyValidatedConfigFile(string sourcePath, string targetPath)
@@ -3752,13 +4831,14 @@ internal sealed class MainForm : Form
                     {
                         AutoSize = true,
                         Dock = DockStyle.Top,
-                        ColumnCount = 3,
+                        ColumnCount = 4,
                         Padding = new Padding(Zoomed(32), 0, 0, Zoomed(8)),
                         BackColor = MainBackground
                     };
                     detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(28)));
                     detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(300)));
                     detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                    detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(34)));
 
                     if (plan.LoadError is not null)
                     {
@@ -3810,7 +4890,7 @@ internal sealed class MainForm : Form
                             };
                             changeCheckBoxes[(plan, change.Id)] = changeCheck;
                             detailPanel.Controls.Add(changeCheck, 0, detailRow);
-                            detailPanel.Controls.Add(new Label
+                            var label = new Label
                             {
                                 Text = change.Label,
                                 Dock = DockStyle.Fill,
@@ -3818,8 +4898,9 @@ internal sealed class MainForm : Form
                                 TextAlign = ContentAlignment.MiddleLeft,
                                 BackColor = MainBackground,
                                 ForeColor = PrimaryTextColor
-                            }, 1, detailRow);
-                            detailPanel.Controls.Add(new Label
+                            };
+                            detailPanel.Controls.Add(label, 1, detailRow);
+                            var summaryLabel = new Label
                             {
                                 Text = change.Summary,
                                 Dock = DockStyle.Fill,
@@ -3827,7 +4908,35 @@ internal sealed class MainForm : Form
                                 TextAlign = ContentAlignment.MiddleLeft,
                                 BackColor = MainBackground,
                                 ForeColor = HelpTextColor
-                            }, 2, detailRow);
+                            };
+                            detailPanel.Controls.Add(summaryLabel, 2, detailRow);
+                            var inspectButton = new Button
+                            {
+                                Text = "?",
+                                Dock = DockStyle.Fill,
+                                Margin = new Padding(Zoomed(4), 0, 0, 0),
+                                MinimumSize = new Size(Zoomed(28), DialogButtonHeight())
+                            };
+                            inspectButton.Click += (_, _) => ShowCopyChangeDetails(change);
+                            _toolTip.SetToolTip(inspectButton, "View this difference.");
+                            detailPanel.Controls.Add(inspectButton, 3, detailRow);
+
+                            var hoverControls = new Control[] { changeCheck, label, summaryLabel };
+                            void SetHover(bool hover)
+                            {
+                                var color = hover ? HeaderBackground : MainBackground;
+                                foreach (var control in hoverControls)
+                                {
+                                    control.BackColor = color;
+                                }
+                            }
+
+                            foreach (var control in hoverControls.Append(inspectButton))
+                            {
+                                control.MouseEnter += (_, _) => SetHover(true);
+                                control.MouseLeave += (_, _) => SetHover(false);
+                            }
+
                             detailRow++;
                         }
                     }
@@ -3897,6 +5006,167 @@ internal sealed class MainForm : Form
                 return candidate;
             }
         }
+    }
+
+    private static List<FirstRunMizCandidate> FindFirstRunMizCandidates()
+    {
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var roots = new[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            RuntimeSettings.GetBestInitialDirectory(),
+            AppContext.BaseDirectory
+        };
+
+        foreach (var root in roots)
+        {
+            AddFootholdMizCandidates(paths, root, recursive: false);
+        }
+
+        var savedGames = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games");
+        if (Directory.Exists(savedGames))
+        {
+            try
+            {
+                foreach (var profile in Directory.EnumerateDirectories(savedGames))
+                {
+                    var missions = Path.Combine(profile, "Missions");
+                    AddFootholdMizCandidates(paths, missions, recursive: true);
+                }
+            }
+            catch
+            {
+                // Manual Browse remains available if a folder cannot be scanned.
+            }
+        }
+
+        return paths
+            .Select(path => new FirstRunMizCandidate(path, File.GetLastWriteTime(path)))
+            .OrderByDescending(item => item.Modified)
+            .ThenBy(item => item.Path, StringComparer.OrdinalIgnoreCase)
+            .Take(50)
+            .ToList();
+    }
+
+    private static void AddFootholdMizCandidates(HashSet<string> paths, string? directory, bool recursive)
+    {
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(directory, "*.miz", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
+            {
+                if (Path.GetFileNameWithoutExtension(path).Contains("Foothold", StringComparison.OrdinalIgnoreCase))
+                {
+                    paths.Add(Path.GetFullPath(path));
+                }
+            }
+        }
+        catch
+        {
+            // Manual Browse remains available if a folder cannot be scanned.
+        }
+    }
+
+    private static List<FirstRunInstanceCandidate> FindFirstRunInstanceCandidates()
+    {
+        var savedGames = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games");
+        if (!Directory.Exists(savedGames))
+        {
+            return new List<FirstRunInstanceCandidate>();
+        }
+
+        var candidates = new List<FirstRunInstanceCandidate>();
+        try
+        {
+            foreach (var directory in Directory.EnumerateDirectories(savedGames))
+            {
+                var score = GetDcsProfileScore(directory);
+                if (score <= 0)
+                {
+                    continue;
+                }
+
+                candidates.Add(new FirstRunInstanceCandidate(new DirectoryInfo(directory).Name, Path.GetFullPath(directory), score));
+            }
+        }
+        catch
+        {
+            // Manual Browse remains available if a folder cannot be scanned.
+        }
+
+        return candidates
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static int GetDcsProfileScore(string directory)
+    {
+        var hasMissions = Directory.Exists(Path.Combine(directory, "Missions"));
+        var hasConfig = Directory.Exists(Path.Combine(directory, "Config"));
+        var hasMissionEditor = Directory.Exists(Path.Combine(directory, "MissionEditor"));
+        var hasScripts = Directory.Exists(Path.Combine(directory, "Scripts"));
+        var hasMods = Directory.Exists(Path.Combine(directory, "Mods"));
+        if (!hasMissions && !hasConfig && !hasMissionEditor && !hasScripts && !hasMods)
+        {
+            return 0;
+        }
+
+        var score = 0;
+        foreach (var child in new[] { "Missions", "Config", "Logs", "MissionEditor", "Scripts", "Mods" })
+        {
+            if (Directory.Exists(Path.Combine(directory, child)))
+            {
+                score++;
+            }
+        }
+
+        var name = new DirectoryInfo(directory).Name;
+        if (name.Contains("DCS", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("server", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("dedicated", StringComparison.OrdinalIgnoreCase))
+        {
+            score++;
+        }
+
+        return score;
+    }
+
+    private static bool IsLikelySavedGamesRoot(string directory)
+    {
+        var info = new DirectoryInfo(Path.GetFullPath(directory));
+        return info.Name.Equals("Saved Games", StringComparison.OrdinalIgnoreCase) &&
+               !Directory.Exists(Path.Combine(info.FullName, "Missions"));
+    }
+
+    private static FirstRunInstanceCandidate BuildCustomInstanceCandidate(string selectedDirectory)
+    {
+        var profilePath = NormalizeDcsProfileDirectory(selectedDirectory);
+        return new FirstRunInstanceCandidate(new DirectoryInfo(profilePath).Name, profilePath, 100);
+    }
+
+    private static string NormalizeDcsProfileDirectory(string selectedDirectory)
+    {
+        var directory = new DirectoryInfo(Path.GetFullPath(selectedDirectory));
+        if (directory.Name.Equals("Saves", StringComparison.OrdinalIgnoreCase) &&
+            directory.Parent?.Name.Equals("Missions", StringComparison.OrdinalIgnoreCase) == true &&
+            directory.Parent.Parent is not null)
+        {
+            return directory.Parent.Parent.FullName;
+        }
+
+        if (directory.Name.Equals("Missions", StringComparison.OrdinalIgnoreCase) && directory.Parent is not null)
+        {
+            return directory.Parent.FullName;
+        }
+
+        return directory.FullName;
     }
 
     private void ReloadConfig()
@@ -10270,6 +11540,64 @@ internal sealed class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "Import MIZ Config failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+            catch
+            {
+                // Temporary cleanup failure should not hide the install result.
+            }
+        }
+    }
+
+    private bool InstallInitialConfigFromMiz(string mizPath, FirstRunInstanceCandidate instance)
+    {
+        var targetPath = Path.GetFullPath(instance.ConfigPath);
+        if (File.Exists(targetPath))
+        {
+            AddOrUpdateInstanceProfile(instance.Name, targetPath);
+            LoadConfig(targetPath);
+            MessageBox.Show(this, "A Foothold Config.lua already exists at the selected target. It was opened and no file was overwritten.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return true;
+        }
+
+        var tempDir = Path.Combine(Path.GetTempPath(), "FootholdConfigManager-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            var extractedConfigPath = ExtractFootholdConfigFromMiz(mizPath, tempDir);
+            var newDocument = ConfigDocument.Load(extractedConfigPath);
+            newDocument.RepairStringListSeparators();
+            if (!ValidateMergeDocument(newDocument, "Install Foothold Config validation failed", "The Foothold Config.lua inside this MIZ"))
+            {
+                return false;
+            }
+
+            var targetDirectory = Path.GetDirectoryName(targetPath);
+            if (string.IsNullOrWhiteSpace(targetDirectory))
+            {
+                throw new InvalidOperationException("The selected install target is invalid.");
+            }
+
+            Directory.CreateDirectory(targetDirectory);
+            newDocument.SaveTo(targetPath);
+            var storedDefaults = StoreMizDefaults(mizPath, extractedConfigPath);
+            AddOrUpdateInstanceProfile(instance.Name, targetPath);
+            LoadConfig(targetPath);
+            SetStatus("Installed Foothold config from " + storedDefaults.MizName + " to " + instance.Name + ".");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Install Foothold Config failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
         }
         finally
         {

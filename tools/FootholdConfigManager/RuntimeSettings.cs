@@ -19,6 +19,7 @@ internal sealed class RuntimeSettings
     public List<string> RecentConfigPaths { get; set; } = new();
     public List<ServerProfileSettings> ServerProfiles { get; set; } = new();
     public string? MasterConfigPath { get; set; }
+    public string? MissionScriptingPath { get; set; }
     public List<string> DeployTargetFolders { get; set; } = new();
     public int UiZoomPercent { get; set; } = 100;
     public int WindowWidth { get; set; }
