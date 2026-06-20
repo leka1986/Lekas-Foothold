@@ -34,6 +34,7 @@ internal sealed class MainForm : Form
     private static Color BrandColor = Color.FromArgb(30, 136, 183);
 
     private sealed record UndoStep(string Description, Action Action, Action? RefreshAction);
+    private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly);
 
     private sealed record FirstRunMizCandidate(string Path, DateTime Modified)
     {
@@ -886,6 +887,7 @@ internal sealed class MainForm : Form
     private ConfigDocument? _document;
     private ConfigEntry? _activeEntry;
     private readonly RuntimeSettings _settings = RuntimeSettings.Load();
+    private readonly StringListCatalogStore _stringListCatalog = StringListCatalogStore.Load();
     private readonly bool _requestAdminOnLoad;
     private bool _adminUnlocked;
     private bool _loadingEntry;
@@ -1548,6 +1550,17 @@ internal sealed class MainForm : Form
         button.Width = DialogButtonWidth(button.Text, minimumWidth);
         button.Height = DialogButtonHeight();
         button.MinimumSize = new Size(button.Width, button.Height);
+    }
+
+    private static int GetComboBoxDropDownWidth(ComboBox comboBox)
+    {
+        var width = comboBox.Width;
+        foreach (var item in comboBox.Items)
+        {
+            width = Math.Max(width, TextRenderer.MeasureText(item?.ToString() ?? "", comboBox.Font).Width + SystemInformation.VerticalScrollBarWidth + 24);
+        }
+
+        return width;
     }
 
     private void ApplyDialogChrome(Form dialog)
@@ -3940,6 +3953,7 @@ internal sealed class MainForm : Form
             ClearCategoryPanelCache();
             _viewedStageDifficulties.Clear();
             _document = ConfigDocument.Load(path);
+            RememberStringListCatalog(_document);
             _pathBox.Text = path;
             LoadSections();
             LoadPresets();
@@ -3954,6 +3968,14 @@ internal sealed class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "Load failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void RememberStringListCatalog(ConfigDocument document)
+    {
+        if (_stringListCatalog.MergeFrom(document))
+        {
+            _stringListCatalog.Save();
         }
     }
 
@@ -7280,6 +7302,87 @@ internal sealed class MainForm : Form
 
     private Control BuildStringListEditor(ConfigStringListTable table)
     {
+        return IsBucketStringListEditor(table)
+            ? BuildStringListBucketEditor(table)
+            : BuildSimpleStringListEditor(table);
+    }
+
+    private static bool IsBucketStringListEditor(ConfigStringListTable table)
+    {
+        return table.GuiEditor?.Equals("bucket", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private Control BuildStringListBucketEditor(ConfigStringListTable table)
+    {
+        GuiMetadataEntry? metadata = null;
+        _document?.Metadata.Entries.TryGetValue(table.Key, out metadata);
+        var title = metadata?.Label ?? table.GuiLabel ?? GetConfiguredGroupLabel(table.Key);
+        var helpText = !string.IsNullOrWhiteSpace(metadata?.Help) ? metadata.Help : table.Description;
+        DataGridView? activeGrid = null;
+        DataGridView? inactiveGrid = null;
+        var group = new TableLayoutPanel
+        {
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            Height = Math.Min(640, Math.Max(220, table.Items.Count * 26 + 76)),
+            Width = GetStringListBucketEditorWidth(),
+            ColumnCount = 4,
+            RowCount = 2,
+            Padding = new Padding(0, 0, 0, 8)
+        };
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(54)));
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
+        group.RowStyles.Add(new RowStyle(SizeType.Absolute, GetTableHeaderRowHeight()));
+        group.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var header = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = GetTableHeaderPadding()
+        };
+        header.Controls.Add(new Label
+        {
+            Text = title,
+            AutoSize = true,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = GetTableHeaderLabelMargin()
+        });
+        if (!string.IsNullOrWhiteSpace(helpText))
+        {
+            header.Controls.Add(MakeHelpButton(title, helpText, table.Key));
+        }
+        group.Controls.Add(header, 0, 0);
+
+        group.Controls.Add(MakeStringListBucketHeader("Available / commented"), 2, 0);
+
+        activeGrid = MakeStringListBucketGrid(table.Key, "Active");
+        inactiveGrid = MakeStringListBucketGrid(table.Key + ":inactive", "Inactive");
+        DataGridView? selectedBucketGrid = activeGrid;
+        activeGrid.Enter += (_, _) => selectedBucketGrid = activeGrid;
+        inactiveGrid.Enter += (_, _) => selectedBucketGrid = inactiveGrid;
+        activeGrid.CellMouseDown += (_, _) => selectedBucketGrid = activeGrid;
+        inactiveGrid.CellMouseDown += (_, _) => selectedBucketGrid = inactiveGrid;
+        var movePanel = MakeStringListMovePanel(
+            MakeDesignerButton(">", () => DeactivateStringListItemRow(table, activeGrid, inactiveGrid), Zoomed(42)),
+            MakeDesignerButton("<", () => ActivateStringListItemRow(table, activeGrid, inactiveGrid), Zoomed(42)));
+        _toolTip.SetToolTip(movePanel, "Move selected items between active and commented.");
+        group.Controls.Add(activeGrid, 0, 1);
+        group.Controls.Add(movePanel, 1, 1);
+        group.Controls.Add(inactiveGrid, 2, 1);
+        group.Controls.Add(MakeTableActionPanel(
+            MakeDesignerButton("Add item", () => AddStringListItemRow(table, activeGrid, inactiveGrid), TableActionButtonWidth),
+            MakeDesignerButton("Remove selected", () => RemoveStringListItemRow(table, activeGrid, inactiveGrid, selectedBucketGrid), TableActionButtonWidth)), 3, 1);
+
+        RefreshStringListGrids(activeGrid, inactiveGrid, table);
+        ApplyStringListBucketLayout(group, activeGrid, inactiveGrid);
+        return group;
+    }
+
+    private Control BuildSimpleStringListEditor(ConfigStringListTable table)
+    {
         GuiMetadataEntry? metadata = null;
         _document?.Metadata.Entries.TryGetValue(table.Key, out metadata);
         var title = metadata?.Label ?? table.GuiLabel ?? GetConfiguredGroupLabel(table.Key);
@@ -7335,25 +7438,80 @@ internal sealed class MainForm : Form
         ApplyCompactTableLayout(group, grid);
         group.Controls.Add(grid, 0, 1);
         group.Controls.Add(MakeTableActionPanel(
-            MakeDesignerButton("Add item", () => AddStringListItemRow(table, grid), TableActionButtonWidth),
-            MakeDesignerButton("Remove selected", () => RemoveStringListItemRow(table, grid), TableActionButtonWidth)), 1, 1);
+            MakeDesignerButton("Add item", () => AddSimpleStringListItemRow(table, grid), TableActionButtonWidth),
+            MakeDesignerButton("Remove selected", () => RemoveSimpleStringListItemRow(table, grid), TableActionButtonWidth)), 1, 1);
 
-        grid.SuspendLayout();
-        try
-        {
-            foreach (var item in GetStringListItemsInSourceOrder(table))
-            {
-                var rowIndex = grid.Rows.Add(item.Value);
-                grid.Rows[rowIndex].Tag = item;
-            }
-        }
-        finally
-        {
-            grid.ResumeLayout();
-        }
-
+        RefreshSimpleStringListGrid(grid, table);
         ApplyCompactTableLayout(group, grid, 220, 640, GetTableHeightPadding(76));
         return group;
+    }
+
+    private static Label MakeStringListBucketHeader(string text)
+    {
+        return new Label
+        {
+            Text = text,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(0, 4, 0, 0),
+            ForeColor = HelpTextColor,
+            BackColor = MainBackground
+        };
+    }
+
+    private static DataGridView MakeStringListBucketGrid(string tag, string headerText)
+    {
+        var grid = new SmoothDataGridView
+        {
+            Tag = tag,
+            Dock = DockStyle.Fill,
+            AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false,
+            RowHeadersVisible = false,
+            MultiSelect = false,
+            ReadOnly = true,
+            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        };
+        grid.Columns.Add("value", headerText);
+        ConfigureFillColumn(grid.Columns["value"], 300);
+        return grid;
+    }
+
+    private static FlowLayoutPanel MakeStringListMovePanel(params Button[] buttons)
+    {
+        var panel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Padding = new Padding(6, 42, 0, 0)
+        };
+
+        foreach (var button in buttons)
+        {
+            button.Margin = new Padding(0, 0, 0, 8);
+            panel.Controls.Add(button);
+        }
+
+        return panel;
+    }
+
+    private int GetStringListBucketEditorWidth()
+    {
+        var availableWidth = _formHost.ClientSize.Width > 0
+            ? _formHost.ClientSize.Width - 48
+            : ClientSize.Width - 320;
+        return Math.Max(760, availableWidth);
+    }
+
+    private void ApplyStringListBucketLayout(TableLayoutPanel group, DataGridView activeGrid, DataGridView inactiveGrid)
+    {
+        group.Width = GetStringListBucketEditorWidth();
+        group.Height = Math.Max(
+            GetTableActionMinimumHeight(group),
+            GetConfiguredTableHeight(activeGrid, 220, 640, GetTableHeightPadding(76)));
+        inactiveGrid.Height = activeGrid.Height;
     }
 
     private static FlowLayoutPanel MakeTableActionPanel(params Button[] buttons)
@@ -7375,7 +7533,7 @@ internal sealed class MainForm : Form
         return panel;
     }
 
-    private void AddStringListItemRow(ConfigStringListTable table, DataGridView? grid)
+    private void AddSimpleStringListItemRow(ConfigStringListTable table, DataGridView? grid)
     {
         if (_document is null || grid is null)
         {
@@ -7391,12 +7549,12 @@ internal sealed class MainForm : Form
         try
         {
             var item = _document.AddStringListItem(table, value.Trim());
-            RefreshStringListGrid(grid, table);
+            RefreshSimpleStringListGrid(grid, table);
             SelectGridRowByTag(grid, item);
             SetUndoAction("add " + value.Trim(), () =>
             {
                 _document.RemoveStringListItem(table, item);
-                RefreshStringListGrid(grid, table);
+                RefreshSimpleStringListGrid(grid, table);
             });
             SetChangedStatus();
         }
@@ -7406,7 +7564,7 @@ internal sealed class MainForm : Form
         }
     }
 
-    private void RemoveStringListItemRow(ConfigStringListTable table, DataGridView? grid)
+    private void RemoveSimpleStringListItemRow(ConfigStringListTable table, DataGridView? grid)
     {
         if (_document is null || grid?.CurrentRow?.Tag is not ConfigStringListItem item)
         {
@@ -7423,15 +7581,217 @@ internal sealed class MainForm : Form
             var removedValue = item.Value;
             var selectedIndex = grid.CurrentRow.Index;
             _document.RemoveStringListItem(table, item);
-            RefreshStringListGrid(grid, table);
+            RefreshSimpleStringListGrid(grid, table);
             SelectGridRowByIndex(grid, selectedIndex);
             SetUndoAction("remove " + removedValue, () =>
             {
                 var restored = _document.AddStringListItem(table, removedValue);
-                RefreshStringListGrid(grid, table);
+                RefreshSimpleStringListGrid(grid, table);
                 SelectGridRowByTag(grid, restored);
             });
             SetChangedStatus();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Remove item failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private void AddStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid)
+    {
+        if (_document is null || activeGrid is null || inactiveGrid is null)
+        {
+            return;
+        }
+
+        var value = PromptForText("Add list item", "Value");
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        try
+        {
+            var itemValue = value.Trim();
+            _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(table.Key));
+            if (_stringListCatalog.Add(table.Key, itemValue))
+            {
+                _stringListCatalog.Save();
+            }
+
+            RefreshStringListGrids(activeGrid, inactiveGrid, table);
+            SelectBucketRowByValue(activeGrid, itemValue);
+            SetUndoAction("add " + itemValue, () =>
+            {
+                if (FindActiveStringListItem(table, itemValue) is { } active)
+                {
+                    _document.RemoveStringListItem(table, active);
+                }
+
+                RefreshStringListGrids(activeGrid, inactiveGrid, table);
+            });
+            SetChangedStatus();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Add item failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private void DeactivateStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid)
+    {
+        if (_document is null ||
+            activeGrid is null ||
+            inactiveGrid is null ||
+            activeGrid.CurrentRow?.Tag is not StringListBucketItem bucket ||
+            bucket.Item is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var itemValue = bucket.Value;
+            _document.DeactivateStringListItem(table, bucket.Item);
+            if (_stringListCatalog.Add(table.Key, itemValue))
+            {
+                _stringListCatalog.Save();
+            }
+
+            RefreshStringListGrids(activeGrid, inactiveGrid, table);
+            SelectBucketRowByValue(inactiveGrid, itemValue);
+            SetUndoAction("comment " + itemValue, () =>
+            {
+                    _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(table.Key));
+                RefreshStringListGrids(activeGrid, inactiveGrid, table);
+                SelectBucketRowByValue(activeGrid, itemValue);
+            });
+            SetChangedStatus();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Move item failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private void ActivateStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid)
+    {
+        if (_document is null ||
+            activeGrid is null ||
+            inactiveGrid is null ||
+            inactiveGrid.CurrentRow?.Tag is not StringListBucketItem bucket)
+        {
+            return;
+        }
+
+        try
+        {
+            var itemValue = bucket.Value;
+            _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(table.Key));
+            if (_stringListCatalog.Add(table.Key, itemValue))
+            {
+                _stringListCatalog.Save();
+            }
+
+            RefreshStringListGrids(activeGrid, inactiveGrid, table);
+            SelectBucketRowByValue(activeGrid, itemValue);
+            SetUndoAction("activate " + itemValue, () =>
+            {
+                if (FindActiveStringListItem(table, itemValue) is not { } active)
+                {
+                    return;
+                }
+
+                if (bucket.CatalogOnly)
+                {
+                    _document.RemoveStringListItem(table, active);
+                }
+                else
+                {
+                    _document.DeactivateStringListItem(table, active);
+                }
+
+                RefreshStringListGrids(activeGrid, inactiveGrid, table);
+                SelectBucketRowByValue(inactiveGrid, itemValue);
+            });
+            SetChangedStatus();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Move item failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private void RemoveStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid, DataGridView? selectedGrid)
+    {
+        if (_document is null || activeGrid is null || inactiveGrid is null)
+        {
+            return;
+        }
+
+        var removeInactive = ReferenceEquals(selectedGrid, inactiveGrid) || inactiveGrid.ContainsFocus;
+        var bucket = removeInactive
+            ? inactiveGrid.CurrentRow?.Tag as StringListBucketItem
+            : (activeGrid.CurrentRow?.Tag as StringListBucketItem) ?? inactiveGrid.CurrentRow?.Tag as StringListBucketItem;
+        if (bucket is null)
+        {
+            return;
+        }
+
+        if (MessageBox.Show(this, "Remove " + bucket.Value + " from this list and catalog?", "Remove item", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            var removedValue = bucket.Value;
+            var changedConfig = false;
+            if (bucket.IsActive && bucket.Item is not null)
+            {
+                _document.RemoveStringListItem(table, bucket.Item);
+                changedConfig = true;
+            }
+            else if (bucket.Item is not null)
+            {
+                _document.RemoveCommentedStringListItem(table, bucket.Item);
+                changedConfig = true;
+            }
+
+            var catalogChanged = _stringListCatalog.Remove(table.Key, removedValue);
+            if (catalogChanged)
+            {
+                _stringListCatalog.Save();
+            }
+
+            RefreshStringListGrids(activeGrid, inactiveGrid, table);
+            SetUndoAction("remove " + removedValue, () =>
+            {
+                if (bucket.IsActive)
+                {
+                    _document.AddStringListItem(table, removedValue);
+                }
+                else if (!bucket.CatalogOnly)
+                {
+                    _document.AddCommentedStringListItem(table, removedValue);
+                }
+
+                if (_stringListCatalog.Add(table.Key, removedValue))
+                {
+                    _stringListCatalog.Save();
+                }
+
+                RefreshStringListGrids(activeGrid, inactiveGrid, table);
+            });
+
+            if (changedConfig)
+            {
+                SetChangedStatus();
+            }
+            else if (catalogChanged)
+            {
+                SetStatus("Removed " + removedValue + " from the saved catalog.");
+            }
         }
         catch (Exception ex)
         {
@@ -7631,7 +7991,23 @@ internal sealed class MainForm : Form
         }
     }
 
-    private void RefreshStringListGrid(DataGridView grid, ConfigStringListTable table)
+    private void RefreshStringListGrids(DataGridView activeGrid, DataGridView inactiveGrid, ConfigStringListTable table)
+    {
+        var activeItems = GetStringListItemsInSourceOrder(table)
+            .Select(item => new StringListBucketItem(item.Value, item, IsActive: true, CatalogOnly: false))
+            .ToList();
+        var inactiveItems = GetInactiveStringListBucketItems(table);
+
+        SyncGridRows(activeGrid, activeItems, AddStringListBucketGridRow, UpdateStringListBucketGridRow);
+        SyncGridRows(inactiveGrid, inactiveItems, AddStringListBucketGridRow, UpdateStringListBucketGridRow);
+
+        if (activeGrid.Parent is TableLayoutPanel group)
+        {
+            ApplyStringListBucketLayout(group, activeGrid, inactiveGrid);
+        }
+    }
+
+    private void RefreshSimpleStringListGrid(DataGridView grid, ConfigStringListTable table)
     {
         var items = GetStringListItemsInSourceOrder(table);
         SyncGridRows(grid, items, AddStringListGridRow, UpdateStringListGridRow);
@@ -7642,12 +8018,58 @@ internal sealed class MainForm : Form
         }
     }
 
+    private List<StringListBucketItem> GetInactiveStringListBucketItems(ConfigStringListTable table)
+    {
+        var activeValues = table.Items
+            .Select(item => item.Value)
+            .ToHashSet(StringComparer.Ordinal);
+        var commentedByValue = GetCommentedStringListItemsInSourceOrder(table)
+            .GroupBy(item => item.Value, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        var values = new List<string>();
+        foreach (var value in _stringListCatalog.GetValues(table.Key))
+        {
+            if (!values.Any(existing => existing.Equals(value, StringComparison.Ordinal)))
+            {
+                values.Add(value);
+            }
+        }
+
+        foreach (var value in commentedByValue.Keys)
+        {
+            if (!values.Any(existing => existing.Equals(value, StringComparison.Ordinal)))
+            {
+                values.Add(value);
+            }
+        }
+
+        return values
+            .Where(value => !activeValues.Contains(value))
+            .Select(value => commentedByValue.TryGetValue(value, out var item)
+                ? new StringListBucketItem(value, item, IsActive: false, CatalogOnly: false)
+                : new StringListBucketItem(value, null, IsActive: false, CatalogOnly: true))
+            .ToList();
+    }
+
     private static List<ConfigStringListItem> GetStringListItemsInSourceOrder(ConfigStringListTable table)
     {
         return table.Items
             .OrderBy(item => item.LineIndex)
             .ThenBy(item => item.StartIndex)
             .ToList();
+    }
+
+    private static List<ConfigStringListItem> GetCommentedStringListItemsInSourceOrder(ConfigStringListTable table)
+    {
+        return table.CommentedItems
+            .OrderBy(item => item.LineIndex)
+            .ThenBy(item => item.StartIndex)
+            .ToList();
+    }
+
+    private static ConfigStringListItem? FindActiveStringListItem(ConfigStringListTable table, string value)
+    {
+        return table.Items.FirstOrDefault(item => item.Value.Equals(value, StringComparison.Ordinal));
     }
 
     private static void AddStringListGridRow(DataGridView grid, ConfigStringListItem item)
@@ -7660,6 +8082,32 @@ internal sealed class MainForm : Form
     {
         row.Cells["value"].Value = item.Value;
         row.Tag = item;
+    }
+
+    private static void AddStringListBucketGridRow(DataGridView grid, StringListBucketItem item)
+    {
+        var rowIndex = grid.Rows.Add(item.Value);
+        grid.Rows[rowIndex].Tag = item;
+    }
+
+    private static void UpdateStringListBucketGridRow(DataGridViewRow row, StringListBucketItem item)
+    {
+        row.Cells["value"].Value = item.Value;
+        row.Tag = item;
+    }
+
+    private static void SelectBucketRowByValue(DataGridView grid, string value)
+    {
+        foreach (DataGridViewRow row in grid.Rows)
+        {
+            if (row.Tag is StringListBucketItem item && item.Value.Equals(value, StringComparison.Ordinal))
+            {
+                grid.ClearSelection();
+                row.Selected = true;
+                grid.CurrentCell = row.Cells[0];
+                return;
+            }
+        }
     }
 
     private void RefreshTableGrid(DataGridView grid, List<ConfigEntry> entries)
@@ -11497,6 +11945,7 @@ internal sealed class MainForm : Form
                 return;
             }
 
+            RememberStringListCatalog(newDocument);
             var preview = MergeCurrentConfigIntoNewConfig(currentDocument, newDocument);
             if (!ValidateInstallMizDocument(newDocument, "The merged MIZ config"))
             {
@@ -11580,6 +12029,7 @@ internal sealed class MainForm : Form
                 return false;
             }
 
+            RememberStringListCatalog(newDocument);
             var targetDirectory = Path.GetDirectoryName(targetPath);
             if (string.IsNullOrWhiteSpace(targetDirectory))
             {
@@ -11692,6 +12142,29 @@ internal sealed class MainForm : Form
         return info;
     }
 
+    private static StoredMizDefaultsInfo StoreConfigDefaults(string configPath)
+    {
+        Directory.CreateDirectory(StoredDefaultsDirectory);
+        var index = LoadStoredMizDefaultsIndex();
+        var fullConfigPath = Path.GetFullPath(configPath);
+        var info = new StoredMizDefaultsInfo
+        {
+            Id = "config:" + fullConfigPath,
+            SourceKind = "config",
+            MizName = Path.GetFileName(fullConfigPath),
+            MizPath = fullConfigPath,
+            ConfigPath = fullConfigPath,
+            StoredAt = DateTime.Now
+        };
+
+        var sourceKey = GetStoredDefaultsSourceKey(info);
+        index.Items.RemoveAll(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
+        index.Items.Insert(0, info);
+        NormalizeStoredMizDefaultsIndex(index, deleteRemovedFiles: true);
+        SaveStoredMizDefaultsIndex(index);
+        return info;
+    }
+
     private static List<StoredMizDefaultsInfo> LoadStoredRestoreDefaultsSources()
     {
         var index = LoadStoredMizDefaultsIndex();
@@ -11780,11 +12253,6 @@ internal sealed class MainForm : Form
         {
             return left.Equals(right, StringComparison.OrdinalIgnoreCase);
         }
-    }
-
-    private static bool IsTemporaryRestoreDefaultsSource(StoredMizDefaultsInfo info)
-    {
-        return info.Id.StartsWith("file:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void RemoveStoredMizDefaultsSource(StoredMizDefaultsInfo source)
@@ -11916,15 +12384,7 @@ internal sealed class MainForm : Form
             return null;
         }
 
-        return new StoredMizDefaultsInfo
-        {
-            Id = "file:" + fullPath,
-            SourceKind = "config",
-            MizName = Path.GetFileName(fullPath),
-            MizPath = fullPath,
-            ConfigPath = fullPath,
-            StoredAt = File.GetLastWriteTime(fullPath)
-        };
+        return StoreConfigDefaults(fullPath);
     }
 
     private void RestoreConfigDefaults()
@@ -12173,6 +12633,8 @@ internal sealed class MainForm : Form
                     sourceBox.Items.Add(FormatStoredMizDefaults(item));
                 }
 
+                sourceBox.DropDownWidth = GetComboBoxDropDownWidth(sourceBox);
+
                 if (sources.Count == 0)
                 {
                     sourceBox.SelectedIndex = -1;
@@ -12380,16 +12842,7 @@ internal sealed class MainForm : Form
                     return;
                 }
 
-                if (source.SourceKind.Equals("miz", StringComparison.OrdinalIgnoreCase))
-                {
-                    sources = LoadStoredRestoreDefaultsSources();
-                }
-                else
-                {
-                    sources.RemoveAll(item => item.Id.Equals(source.Id, StringComparison.OrdinalIgnoreCase));
-                    sources.Insert(0, source);
-                }
-
+                sources = LoadStoredRestoreDefaultsSources();
                 RefreshSourceBox(source.Id);
             }
             catch (Exception ex)
@@ -12418,15 +12871,8 @@ internal sealed class MainForm : Form
             }
 
             var selectedIndex = sourceBox.SelectedIndex;
-            if (IsTemporaryRestoreDefaultsSource(selectedSource))
-            {
-                sources.RemoveAt(selectedIndex);
-            }
-            else
-            {
-                RemoveStoredMizDefaultsSource(selectedSource);
-                sources = LoadStoredRestoreDefaultsSources();
-            }
+            RemoveStoredMizDefaultsSource(selectedSource);
+            sources = LoadStoredRestoreDefaultsSources();
 
             var nextSelectedId = selectedIndex >= 0 && selectedIndex < sources.Count
                 ? sources[selectedIndex].Id
@@ -12693,20 +13139,26 @@ internal sealed class MainForm : Form
     {
         var suffix = info.SourceKind.Equals("config", StringComparison.OrdinalIgnoreCase)
             ? "  (config file)"
-            : "";
-        return info.StoredAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + "  " + FormatRestoreDefaultsSourceName(info) + suffix;
+            : "  (MIZ)";
+        return FormatRestoreDefaultsSourceName(info) + suffix;
     }
 
     private static string FormatRestoreDefaultsSourceName(StoredMizDefaultsInfo info)
     {
+        var sourcePath = !string.IsNullOrWhiteSpace(info.MizPath)
+            ? info.MizPath
+            : info.ConfigPath;
+        if (!string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return sourcePath;
+        }
+
         if (!string.IsNullOrWhiteSpace(info.MizName))
         {
             return info.MizName;
         }
 
-        return string.IsNullOrWhiteSpace(info.ConfigPath)
-            ? "selected source"
-            : Path.GetFileName(info.ConfigPath);
+        return "selected source";
     }
 
     private const string InstallPolicyKeepTable = "keepTable";
@@ -13043,6 +13495,7 @@ internal sealed class MainForm : Form
                 return;
             }
 
+            RememberStringListCatalog(importedDocument);
             var mergedDocument = ConfigDocument.Load(currentPath);
             var preview = MergeCurrentConfigIntoNewConfig(importedDocument, mergedDocument);
             if (!ValidateMergeDocument(mergedDocument, "Import Values validation failed", "The merged Import Values config"))

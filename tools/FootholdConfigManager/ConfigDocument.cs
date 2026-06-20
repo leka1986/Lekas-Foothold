@@ -51,6 +51,7 @@ internal sealed class ConfigStringListItem
     public required int LineIndex { get; set; }
     public required int StartIndex { get; set; }
     public required int Length { get; set; }
+    public bool IsCommented { get; set; }
 }
 
 internal sealed class ConfigStringListTable
@@ -59,10 +60,12 @@ internal sealed class ConfigStringListTable
     public required string Section { get; init; }
     public required string Description { get; init; }
     public string? GuiLabel { get; init; }
+    public string? GuiEditor { get; init; }
     public string? InstallPolicy { get; init; }
     public required int StartLineIndex { get; set; }
     public required int EndLineIndex { get; set; }
     public List<ConfigStringListItem> Items { get; } = new();
+    public List<ConfigStringListItem> CommentedItems { get; } = new();
 }
 
 internal sealed class ConfigStageRow
@@ -133,6 +136,7 @@ internal sealed class ConfigEntry
     public string? HelpOverride { get; private set; }
     public string? ControlTypeOverride { get; private set; }
     public bool? AdvancedOverride { get; private set; }
+    public string? GuiValidValues { get; init; }
 
     public string OriginalValueText { get; private set; } = "";
     public string ValueText { get; set; } = "";
@@ -401,6 +405,7 @@ internal sealed class ConfigEntry
 
             Choices.Add(new ConfigChoice(choice.Display.Trim(), literal.Trim()));
         }
+        UseChoiceDisplayForCurrentValue();
     }
 
     private static string? NormalizeNullable(string? value)
@@ -414,6 +419,15 @@ internal sealed class ConfigEntry
             StringComparer.OrdinalIgnoreCase.Equals(choice.Display, text) ||
             StringComparer.OrdinalIgnoreCase.Equals(choice.Literal, text) ||
             StringComparer.OrdinalIgnoreCase.Equals(UnquoteLuaString(choice.Literal), text));
+    }
+
+    public void UseChoiceDisplayForCurrentValue()
+    {
+        var choice = FindChoice(ValueText);
+        if (choice is not null)
+        {
+            InitializeValueText(choice.Display);
+        }
     }
 
     internal static List<string> SplitLuaValues(string text)
@@ -968,12 +982,17 @@ internal sealed class ConfigDocument
 
     public ConfigStringListItem AddStringListItem(ConfigStringListTable table, string value)
     {
+        return AddStringListItem(table, value, table.EndLineIndex);
+    }
+
+    private ConfigStringListItem AddStringListItem(ConfigStringListTable table, string value, int insertLine)
+    {
         if (table.Items.Any(item => item.Value.Equals(value, StringComparison.Ordinal)))
         {
             throw new InvalidOperationException("That list already has " + value + ".");
         }
 
-        var insertLine = table.EndLineIndex;
+        insertLine = Math.Clamp(insertLine, table.StartLineIndex + 1, table.EndLineIndex);
         EnsureStringListSeparatorBeforeInsert(table, insertLine);
         ShiftLineIndexes(insertLine, 1);
         var indent = GetStringListIndent(table);
@@ -991,6 +1010,106 @@ internal sealed class ConfigDocument
         table.Items.Add(item);
         _hasStructuralChanges = true;
         return item;
+    }
+
+    public ConfigStringListItem ActivateStringListValue(ConfigStringListTable table, string value, IReadOnlyList<string>? preferredOrder = null)
+    {
+        var existing = table.Items.FirstOrDefault(item => item.Value.Equals(value, StringComparison.Ordinal));
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var commented = table.CommentedItems
+            .OrderBy(item => item.LineIndex)
+            .ThenBy(item => item.StartIndex)
+            .FirstOrDefault(item => item.Value.Equals(value, StringComparison.Ordinal));
+        if (commented is not null)
+        {
+            var insertLine = commented.LineIndex;
+            RemoveCommentedStringListItem(table, commented);
+            return AddStringListItem(table, value, insertLine);
+        }
+
+        return AddStringListItem(table, value, FindStringListInsertLine(table, value, preferredOrder));
+    }
+
+    public ConfigStringListItem DeactivateStringListItem(ConfigStringListTable table, ConfigStringListItem item)
+    {
+        var value = item.Value;
+        var insertLine = item.LineIndex;
+        RemoveStringListItem(table, item);
+        return AddCommentedStringListItem(table, value, insertLine);
+    }
+
+    public ConfigStringListItem AddCommentedStringListItem(ConfigStringListTable table, string value)
+    {
+        return AddCommentedStringListItem(table, value, table.EndLineIndex);
+    }
+
+    private ConfigStringListItem AddCommentedStringListItem(ConfigStringListTable table, string value, int insertLine)
+    {
+        var existing = table.CommentedItems.FirstOrDefault(item => item.Value.Equals(value, StringComparison.Ordinal));
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        insertLine = Math.Clamp(insertLine, table.StartLineIndex + 1, table.EndLineIndex);
+        ShiftLineIndexes(insertLine, 1);
+        var indent = GetStringListIndent(table);
+        var quotedValue = QuoteStringListValue(value);
+        var line = indent + "--" + quotedValue + ",";
+        _lines.Insert(insertLine, line);
+
+        var item = new ConfigStringListItem
+        {
+            Value = value,
+            LineIndex = insertLine,
+            StartIndex = indent.Length + 2,
+            Length = quotedValue.Length,
+            IsCommented = true
+        };
+        table.CommentedItems.Add(item);
+        _hasStructuralChanges = true;
+        return item;
+    }
+
+    private int FindStringListInsertLine(ConfigStringListTable table, string value, IReadOnlyList<string>? preferredOrder)
+    {
+        if (preferredOrder is null || preferredOrder.Count == 0)
+        {
+            return table.EndLineIndex;
+        }
+
+        var valueOrder = IndexOfPreferredValue(preferredOrder, value);
+        if (valueOrder < 0)
+        {
+            return table.EndLineIndex;
+        }
+
+        var nextItem = table.Items
+            .Select(item => (Item: item, Order: IndexOfPreferredValue(preferredOrder, item.Value)))
+            .Where(item => item.Order > valueOrder)
+            .OrderBy(item => item.Order)
+            .ThenBy(item => item.Item.LineIndex)
+            .ThenBy(item => item.Item.StartIndex)
+            .FirstOrDefault();
+
+        return nextItem.Item is not null ? nextItem.Item.LineIndex : table.EndLineIndex;
+    }
+
+    private static int IndexOfPreferredValue(IReadOnlyList<string> preferredOrder, string value)
+    {
+        for (var i = 0; i < preferredOrder.Count; i++)
+        {
+            if (preferredOrder[i].Equals(value, StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     public void RemoveStringListItem(ConfigStringListTable table, ConfigStringListItem item)
@@ -1024,6 +1143,41 @@ internal sealed class ConfigDocument
         var suffix = line[(last.StartIndex + last.Length)..];
         _lines[item.LineIndex] = prefix + string.Join(", ", remaining.Select(QuoteStringListValue)) + suffix;
         table.Items.Remove(item);
+        RefreshStringListTableItems(table);
+        _hasStructuralChanges = true;
+    }
+
+    public void RemoveCommentedStringListItem(ConfigStringListTable table, ConfigStringListItem item)
+    {
+        var sameLineItems = table.CommentedItems
+            .Where(candidate => candidate.LineIndex == item.LineIndex)
+            .OrderBy(candidate => candidate.StartIndex)
+            .ToList();
+        if (sameLineItems.Count <= 1 && !_lines[item.LineIndex].Contains("}", StringComparison.Ordinal))
+        {
+            _lines.RemoveAt(item.LineIndex);
+            table.CommentedItems.Remove(item);
+            ShiftLineIndexes(item.LineIndex, -1);
+            _hasStructuralChanges = true;
+            return;
+        }
+
+        var remaining = sameLineItems
+            .Where(candidate => !ReferenceEquals(candidate, item))
+            .Select(candidate => candidate.Value)
+            .ToList();
+        var line = _lines[item.LineIndex];
+        if (sameLineItems.Count == 0)
+        {
+            return;
+        }
+
+        var first = sameLineItems[0];
+        var last = sameLineItems[^1];
+        var prefix = line[..first.StartIndex];
+        var suffix = line[(last.StartIndex + last.Length)..];
+        _lines[item.LineIndex] = prefix + string.Join(", ", remaining.Select(QuoteStringListValue)) + suffix;
+        table.CommentedItems.Remove(item);
         RefreshStringListTableItems(table);
         _hasStructuralChanges = true;
     }
@@ -2376,6 +2530,7 @@ internal sealed class ConfigDocument
                 var key = NormalizeKey(lhs);
                 var displayKey = BuildDisplayKey(tablePath, lhs);
                 var guiLabel = ReadGuiLabel(pendingComments);
+                var guiEditor = ReadGuiEditor(pendingComments);
                 var linkedSettingKey = ReadGuiLinkedSetting(pendingComments);
                 var installPolicy = ReadGuiInstallPolicy(pendingComments);
                 if (!string.IsNullOrWhiteSpace(guiLabel))
@@ -2391,7 +2546,7 @@ internal sealed class ConfigDocument
 
                 var tableParent = tablePath.LastOrDefault();
                 var description = BuildDescription(pendingComments, split.inlineComment, CollectFollowingComments(i + 1));
-                if (TryReadStringListTable(i, key, section, description, guiLabel, installPolicy, out var stringListTable))
+                if (TryReadStringListTable(i, key, section, description, guiLabel, guiEditor, installPolicy, out var stringListTable))
                 {
                     StringListTables.Add(stringListTable);
                     pendingComments.Clear();
@@ -2450,6 +2605,7 @@ internal sealed class ConfigDocument
                 Description = BuildDescription(pendingComments, split.inlineComment, CollectFollowingComments(i + 1)),
                 InlineComment = split.inlineComment,
                 GuiLabel = ReadGuiLabel(pendingComments),
+                GuiValidValues = ReadGuiValidValues(pendingComments),
                 Prefix = lhsWithEquals,
                 Suffix = split.suffix,
                 RawValue = value,
@@ -2461,6 +2617,7 @@ internal sealed class ConfigDocument
 
             entry.InitializeValueText(ToDisplayValue(value, kind));
             AddChoices(entry);
+            entry.UseChoiceDisplayForCurrentValue();
             AddTupleFields(entry);
             Entries.Add(entry);
             pendingComments.Clear();
@@ -2521,6 +2678,7 @@ internal sealed class ConfigDocument
         string section,
         string description,
         string? guiLabel,
+        string? guiEditor,
         string? installPolicy,
         out ConfigStringListTable table)
     {
@@ -2542,6 +2700,7 @@ internal sealed class ConfigDocument
             Section = section,
             Description = description,
             GuiLabel = guiLabel,
+            GuiEditor = guiEditor,
             InstallPolicy = installPolicy,
             StartLineIndex = lineIndex,
             EndLineIndex = endLine
@@ -2791,6 +2950,7 @@ internal sealed class ConfigDocument
     private void RefreshStringListTableItems(ConfigStringListTable table)
     {
         table.Items.Clear();
+        table.CommentedItems.Clear();
         for (var i = table.StartLineIndex; i <= table.EndLineIndex && i < _lines.Count; i++)
         {
             foreach (var token in ReadQuotedStringTokens(_lines[i]))
@@ -2803,15 +2963,43 @@ internal sealed class ConfigDocument
                     Length = token.Length
                 });
             }
+
+            foreach (var token in ReadCommentedStringListTokens(_lines[i]))
+            {
+                table.CommentedItems.Add(new ConfigStringListItem
+                {
+                    Value = ConfigEntry.UnquoteLuaString(token.Text),
+                    LineIndex = i,
+                    StartIndex = token.StartIndex,
+                    Length = token.Length,
+                    IsCommented = true
+                });
+            }
         }
     }
 
     private static List<(string Text, int StartIndex, int Length)> ReadQuotedStringTokens(string line)
     {
-        var tokens = new List<(string Text, int StartIndex, int Length)>();
         var commentIndex = FindCommentIndex(line);
         var limit = commentIndex >= 0 ? commentIndex : line.Length;
-        for (var i = 0; i < limit; i++)
+        return ReadQuotedStringTokens(line, 0, limit);
+    }
+
+    private static List<(string Text, int StartIndex, int Length)> ReadCommentedStringListTokens(string line)
+    {
+        var commentIndex = FindCommentIndex(line);
+        if (commentIndex < 0 || line[..commentIndex].Trim().Length > 0)
+        {
+            return new List<(string Text, int StartIndex, int Length)>();
+        }
+
+        return ReadQuotedStringTokens(line, commentIndex + 2, line.Length);
+    }
+
+    private static List<(string Text, int StartIndex, int Length)> ReadQuotedStringTokens(string line, int startIndex, int limit)
+    {
+        var tokens = new List<(string Text, int StartIndex, int Length)>();
+        for (var i = Math.Max(0, startIndex); i < Math.Min(limit, line.Length); i++)
         {
             var quote = line[i];
             if (quote is not ('"' or '\''))
@@ -3097,6 +3285,10 @@ internal sealed class ConfigDocument
     private static bool IsSectionDelimiter(string line)
     {
         var trimmed = line.Trim();
+        if (trimmed.StartsWith("-- @gui", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
         return trimmed.StartsWith("--", StringComparison.Ordinal) &&
                trimmed.Count(ch => ch == '=') >= 10;
     }
@@ -3137,6 +3329,11 @@ internal sealed class ConfigDocument
         return ReadGuiAttribute(comments, "label");
     }
 
+    private static string? ReadGuiEditor(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "editor");
+    }
+
     private static string? ReadGuiLinkedSetting(IEnumerable<string> comments)
     {
         return ReadGuiAttribute(comments, "linkedSetting");
@@ -3145,6 +3342,12 @@ internal sealed class ConfigDocument
     private static string? ReadGuiInstallPolicy(IEnumerable<string> comments)
     {
         return ReadGuiAttribute(comments, "installPolicy");
+    }
+
+    private static string? ReadGuiValidValues(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "validValues") ??
+               ReadGuiColonAttribute(comments, "validValues");
     }
 
     private static string? ReadGuiAttribute(IEnumerable<string> comments, string attributeName)
@@ -3169,6 +3372,38 @@ internal sealed class ConfigDocument
                 {
                     return value;
                 }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ReadGuiColonAttribute(IEnumerable<string> comments, string attributeName)
+    {
+        foreach (var comment in comments)
+        {
+            var trimmed = comment.Trim();
+            if (!trimmed.StartsWith("@gui", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var body = trimmed[4..].TrimStart();
+            if (!body.StartsWith(attributeName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var rest = body[attributeName.Length..].TrimStart();
+            if (!rest.StartsWith(":", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var value = rest[1..].Trim();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
             }
         }
 
@@ -3260,6 +3495,11 @@ internal sealed class ConfigDocument
 
     private static void AddChoices(ConfigEntry entry)
     {
+        if (AddGuiValidValueChoices(entry))
+        {
+            return;
+        }
+
         if (entry.Kind == ConfigValueKind.Boolean)
         {
             AddKnownChoices(entry);
@@ -3320,6 +3560,51 @@ internal sealed class ConfigDocument
         }
 
         AddKnownChoices(entry);
+    }
+
+    private static bool AddGuiValidValueChoices(ConfigEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.GuiValidValues))
+        {
+            return false;
+        }
+
+        var before = entry.Choices.Count;
+        foreach (var part in entry.GuiValidValues.Split('|'))
+        {
+            AddGuiValidValueChoice(entry, part);
+        }
+        return entry.Choices.Count > before;
+    }
+
+    private static void AddGuiValidValueChoice(ConfigEntry entry, string text)
+    {
+        var token = text.Trim().TrimEnd('.', ',', ';').Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return;
+        }
+
+        var equalsIndex = token.IndexOf('=');
+        var display = equalsIndex >= 0 ? token[..equalsIndex].Trim() : token;
+        var literal = equalsIndex >= 0 ? token[(equalsIndex + 1)..].Trim() : token;
+        if (string.IsNullOrWhiteSpace(display))
+        {
+            display = literal;
+        }
+
+        if (entry.Kind == ConfigValueKind.Number && literal.EndsWith("%", StringComparison.Ordinal))
+        {
+            literal = literal[..^1].Trim();
+        }
+        else if (entry.Kind == ConfigValueKind.String &&
+                 !literal.StartsWith("\"", StringComparison.Ordinal) &&
+                 !literal.StartsWith("'", StringComparison.Ordinal))
+        {
+            literal = QuoteWith(entry.QuoteChar, literal);
+        }
+
+        AddChoiceIfMissing(entry, display, literal);
     }
 
     private static bool AddScopedKnownChoices(ConfigEntry entry)
