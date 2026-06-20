@@ -813,6 +813,162 @@ internal sealed class ConfigDocument
         return true;
     }
 
+    public bool RewriteBucketStringListBodyFrom(ConfigDocument currentDocument, string key)
+    {
+        var targetTable = StringListTables.FirstOrDefault(table => table.Key.Equals(key, StringComparison.Ordinal));
+        var currentTable = currentDocument.StringListTables.FirstOrDefault(table => table.Key.Equals(key, StringComparison.Ordinal));
+        if (targetTable is null ||
+            currentTable is null ||
+            !TryFindTableBlock(key, out var targetStart, out var targetEnd) ||
+            targetEnd <= targetStart)
+        {
+            return false;
+        }
+
+        var activeValues = GetStringListValuesInSourceOrder(currentTable.Items);
+        var inactiveValues = GetStringListValuesInSourceOrder(currentTable.CommentedItems)
+            .Where(value => !activeValues.Contains(value))
+            .ToList();
+        var closingLine = GetBucketStringListClosingLine(targetEnd);
+        var replacement = BuildBucketStringListBody(targetTable, activeValues, inactiveValues);
+        replacement.Add(closingLine);
+
+        _lines.RemoveRange(targetStart + 1, targetEnd - targetStart);
+        _lines.InsertRange(targetStart + 1, replacement);
+        Parse();
+        ApplyMetadata();
+        _hasStructuralChanges = true;
+        return true;
+    }
+
+    private List<string> BuildBucketStringListBody(
+        ConfigStringListTable table,
+        IReadOnlyList<string> activeValues,
+        IReadOnlyList<string> inactiveValues)
+    {
+        var activeSet = activeValues.ToHashSet(StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var lines = new List<string>();
+        var indent = GetStringListIndent(table);
+
+        for (var i = table.StartLineIndex + 1; i <= table.EndLineIndex && i < _lines.Count; i++)
+        {
+            var sourceLine = GetBucketStringListBodyLine(table, i);
+            if (i == table.EndLineIndex && string.IsNullOrWhiteSpace(sourceLine))
+            {
+                continue;
+            }
+
+            var tokens = ReadBucketStringListLineTokens(sourceLine);
+            if (tokens.Count > 0)
+            {
+                foreach (var token in tokens)
+                {
+                    if (seen.Add(token))
+                    {
+                        lines.Add(RenderBucketStringListLine(indent, token, activeSet.Contains(token)));
+                    }
+                }
+
+                continue;
+            }
+
+            if (ShouldPreserveBucketStringListLine(sourceLine))
+            {
+                lines.Add(sourceLine);
+            }
+        }
+
+        foreach (var value in activeValues)
+        {
+            if (seen.Add(value))
+            {
+                lines.Add(RenderBucketStringListLine(indent, value, isActive: true));
+            }
+        }
+
+        foreach (var value in inactiveValues)
+        {
+            if (seen.Add(value))
+            {
+                lines.Add(RenderBucketStringListLine(indent, value, isActive: false));
+            }
+        }
+
+        return lines;
+    }
+
+    private string GetBucketStringListBodyLine(ConfigStringListTable table, int lineIndex)
+    {
+        var line = _lines[lineIndex];
+        if (lineIndex != table.EndLineIndex)
+        {
+            return line;
+        }
+
+        var braceIndex = line.IndexOf('}', StringComparison.Ordinal);
+        return braceIndex >= 0 ? line[..braceIndex] : line;
+    }
+
+    private string GetBucketStringListClosingLine(int endLineIndex)
+    {
+        var line = _lines[endLineIndex];
+        var braceIndex = line.IndexOf('}', StringComparison.Ordinal);
+        if (braceIndex < 0)
+        {
+            return "}";
+        }
+
+        var beforeBrace = line[..braceIndex];
+        if (string.IsNullOrWhiteSpace(beforeBrace))
+        {
+            return line;
+        }
+
+        var indent = Regex.Match(line, @"^\s*").Value;
+        var afterBrace = line[(braceIndex + 1)..].TrimStart();
+        return indent + "}" + (afterBrace.StartsWith(",", StringComparison.Ordinal) ? "," : "");
+    }
+
+    private static List<string> GetStringListValuesInSourceOrder(IEnumerable<ConfigStringListItem> items)
+    {
+        var values = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var value in items
+                     .OrderBy(item => item.LineIndex)
+                     .ThenBy(item => item.StartIndex)
+                     .Select(item => item.Value))
+        {
+            if (seen.Add(value))
+            {
+                values.Add(value);
+            }
+        }
+
+        return values;
+    }
+
+    private static List<string> ReadBucketStringListLineTokens(string line)
+    {
+        return ReadQuotedStringTokens(line)
+            .Concat(ReadCommentedStringListTokens(line))
+            .OrderBy(token => token.StartIndex)
+            .Select(token => ConfigEntry.UnquoteLuaString(token.Text))
+            .ToList();
+    }
+
+    private static bool ShouldPreserveBucketStringListLine(string line)
+    {
+        var trimmed = line.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ||
+               trimmed.StartsWith("--", StringComparison.Ordinal);
+    }
+
+    private static string RenderBucketStringListLine(string indent, string value, bool isActive)
+    {
+        return indent + (isActive ? "" : "--") + QuoteStringListValue(value) + ",";
+    }
+
     public bool RemoveTableBlock(string key)
     {
         if (!TryFindTableBlock(key, out var startLine, out var endLine))

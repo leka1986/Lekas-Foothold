@@ -17,6 +17,8 @@ internal sealed class MainForm : Form
     private const float BaseFontSize = 9F;
     private const string ToolbarSeparatorTag = "ToolbarSeparator";
     private const string AboutLinkTag = "AboutLink";
+    private const string ImportedNewHighlightTag = "ImportedNewHighlight";
+    private const string ImportedNewBadgeTag = "ImportedNewBadge";
     private static readonly JsonSerializerOptions StoredDefaultsJsonOptions = new() { WriteIndented = true };
     private static string StoredDefaultsDirectory => Path.Combine(RuntimeSettings.SettingsDirectory, "MizDefaults");
     private static string StoredDefaultsIndexPath => Path.Combine(StoredDefaultsDirectory, "index.json");
@@ -35,6 +37,7 @@ internal sealed class MainForm : Form
 
     private sealed record UndoStep(string Description, Action Action, Action? RefreshAction);
     private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly);
+    private sealed record ImportedNewEntryMarker(string Category, string DisplayKey);
 
     private sealed record FirstRunMizCandidate(string Path, DateTime Modified)
     {
@@ -898,10 +901,13 @@ internal sealed class MainForm : Form
     private bool _rawSearchBound;
     private bool _advancedToggleBound;
     private string? _renderedCategoryName;
+    private string? _activeImportedNewCategoryName;
     private Control? _rawEditorRoot;
     private readonly Dictionary<string, Control> _categoryPanelCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _dirtyCategoryPanels = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Point> _categoryScrollPositions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, HashSet<string>> _unseenImportedNewEntryKeysByCategory = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _activeImportedNewEntryKeys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _viewedStageDifficulties = new(StringComparer.Ordinal);
     private readonly List<(ConfigTupleField Field, Control Control)> _tupleControls = new();
     private Action? _designerSaveAction;
@@ -1070,6 +1076,16 @@ internal sealed class MainForm : Form
                 separator.ForeColor = PrimaryTextColor;
                 break;
 
+            case Label label when Equals(label.Tag, ImportedNewBadgeTag):
+                label.BackColor = GetNewBadgeBackColor();
+                label.ForeColor = GetNewBadgeTextColor();
+                break;
+
+            case Label label when Equals(label.Tag, ImportedNewHighlightTag):
+                label.BackColor = GetNewHighlightBackColor();
+                label.ForeColor = PrimaryTextColor;
+                break;
+
             case Label label:
                 label.BackColor = MainBackground;
                 label.ForeColor = Equals(label.Tag, AboutLinkTag) ? Color.DodgerBlue : PrimaryTextColor;
@@ -1084,7 +1100,9 @@ internal sealed class MainForm : Form
             default:
                 if (control is Panel or TableLayoutPanel or FlowLayoutPanel or TabControl or TabPage)
                 {
-                    control.BackColor = MainBackground;
+                    control.BackColor = Equals(control.Tag, ImportedNewHighlightTag)
+                        ? GetNewHighlightBackColor()
+                        : MainBackground;
                 }
 
                 control.ForeColor = PrimaryTextColor;
@@ -1226,7 +1244,7 @@ internal sealed class MainForm : Form
         actions.Controls.Add(MakeToolbarButton("Reload", ReloadConfig, "Reload the current config from disk and discard unsaved changes after confirmation.", ToolbarIconKind.Reload));
         actions.Controls.Add(MakeToolbarSeparator());
         actions.Controls.Add(MakeToolbarButton("Validate", ValidateConfig, "Check editable values for basic formatting errors before saving.", ToolbarIconKind.Validate));
-        actions.Controls.Add(MakeToolbarButton("Import Config File", ImportValuesFromOldConfig, "Import config values from another Foothold Config.lua file.", ToolbarIconKind.Import));
+        actions.Controls.Add(MakeToolbarButton("Import Config File", ImportValuesFromOldConfig, "Import Foothold Config.lua from another config file.", ToolbarIconKind.Import));
         actions.Controls.Add(MakeToolbarButton("Import MIZ Config", InstallConfigFromMiz, "Import Foothold Config.lua from a .miz file.", ToolbarIconKind.Install));
         actions.Controls.Add(MakeToolbarButton("Restore Defaults", RestoreConfigDefaults, "Restore from a default Foothold Config.lua previously stored during Import MIZ Config.", ToolbarIconKind.Restore));
         actions.Controls.Add(MakeToolbarSeparator());
@@ -3176,6 +3194,7 @@ internal sealed class MainForm : Form
         {
             if (!_loadingCategories)
             {
+                PrepareImportedNewMarkersForCategory(GetSelectedCategoryName());
                 RenderSelectedCategory();
             }
         };
@@ -3335,14 +3354,43 @@ internal sealed class MainForm : Form
                 args.Bounds.Height);
         }
 
+        var itemName = GetCategoryItemName(list.Items[args.Index]);
+        var displayText = list.Items[args.Index]?.ToString() ?? "";
+        var hasNewMarker = HasUnseenImportedNewEntries(itemName);
         var textBounds = new Rectangle(
             args.Bounds.X + Zoomed(8),
             args.Bounds.Y,
             Math.Max(0, args.Bounds.Width - Zoomed(12)),
             args.Bounds.Height);
+        if (hasNewMarker)
+        {
+            var badgeText = "NEW";
+            var badgeSize = TextRenderer.MeasureText(args.Graphics, badgeText, args.Font);
+            var badgeWidth = badgeSize.Width + Zoomed(12);
+            var badgeHeight = Math.Min(args.Bounds.Height - Zoomed(8), badgeSize.Height + Zoomed(4));
+            var badgeBounds = new Rectangle(
+                args.Bounds.Right - badgeWidth - Zoomed(8),
+                args.Bounds.Y + Math.Max(0, (args.Bounds.Height - badgeHeight) / 2),
+                badgeWidth,
+                badgeHeight);
+            textBounds.Width = Math.Max(0, badgeBounds.Left - textBounds.Left - Zoomed(6));
+
+            using var badgeBrush = new SolidBrush(GetNewBadgeBackColor());
+            using var badgePen = new Pen(GetNewBadgeBorderColor());
+            args.Graphics.FillRectangle(badgeBrush, badgeBounds);
+            args.Graphics.DrawRectangle(badgePen, badgeBounds);
+            TextRenderer.DrawText(
+                args.Graphics,
+                badgeText,
+                args.Font,
+                badgeBounds,
+                GetNewBadgeTextColor(),
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+        }
+
         TextRenderer.DrawText(
             args.Graphics,
-            list.Items[args.Index]?.ToString() ?? "",
+            displayText,
             args.Font,
             textBounds,
             textColor,
@@ -3356,6 +3404,26 @@ internal sealed class MainForm : Form
             focusBounds.Height -= 1;
             args.Graphics.DrawRectangle(focusPen, focusBounds);
         }
+    }
+
+    private static Color GetNewHighlightBackColor()
+    {
+        return IsDarkPalette() ? Color.FromArgb(42, 56, 46) : Color.FromArgb(221, 247, 231);
+    }
+
+    private static Color GetNewBadgeBackColor()
+    {
+        return IsDarkPalette() ? Color.FromArgb(30, 96, 68) : Color.FromArgb(187, 247, 208);
+    }
+
+    private static Color GetNewBadgeBorderColor()
+    {
+        return IsDarkPalette() ? Color.FromArgb(74, 222, 128) : Color.FromArgb(34, 197, 94);
+    }
+
+    private static Color GetNewBadgeTextColor()
+    {
+        return IsDarkPalette() ? Color.FromArgb(220, 252, 231) : Color.FromArgb(20, 83, 45);
     }
 
     private void ConfigureGrid()
@@ -3950,6 +4018,7 @@ internal sealed class MainForm : Form
     {
         try
         {
+            ClearImportedNewMarkers();
             ClearCategoryPanelCache();
             _viewedStageDifficulties.Clear();
             _document = ConfigDocument.Load(path);
@@ -5674,6 +5743,108 @@ internal sealed class MainForm : Form
         };
     }
 
+    private void ClearImportedNewMarkers()
+    {
+        _unseenImportedNewEntryKeysByCategory.Clear();
+        _activeImportedNewEntryKeys.Clear();
+        _activeImportedNewCategoryName = null;
+        _categoryList.Invalidate();
+    }
+
+    private void ApplyImportedNewMarkers(IReadOnlyList<ImportedNewEntryMarker> markers)
+    {
+        ClearImportedNewMarkers();
+        foreach (var marker in markers)
+        {
+            if (string.IsNullOrWhiteSpace(marker.Category) || string.IsNullOrWhiteSpace(marker.DisplayKey))
+            {
+                continue;
+            }
+
+            if (!_unseenImportedNewEntryKeysByCategory.TryGetValue(marker.Category, out var keys))
+            {
+                keys = new HashSet<string>(StringComparer.Ordinal);
+                _unseenImportedNewEntryKeysByCategory[marker.Category] = keys;
+            }
+
+            keys.Add(marker.DisplayKey);
+        }
+
+        foreach (var categoryName in _unseenImportedNewEntryKeysByCategory.Keys)
+        {
+            MarkCategoryPanelDirty(categoryName);
+        }
+
+        if (_unseenImportedNewEntryKeysByCategory.Count == 0)
+        {
+            return;
+        }
+
+        _categoryList.Invalidate();
+        var selectedCategory = GetSelectedCategoryName();
+        if (!string.IsNullOrWhiteSpace(selectedCategory) &&
+            _unseenImportedNewEntryKeysByCategory.ContainsKey(selectedCategory))
+        {
+            PrepareImportedNewMarkersForCategory(selectedCategory);
+            RenderSelectedCategory(force: true);
+        }
+    }
+
+    private bool PrepareImportedNewMarkersForCategory(string categoryName)
+    {
+        var previousCategory = _activeImportedNewCategoryName;
+        var changed = false;
+        if (!string.IsNullOrWhiteSpace(previousCategory) &&
+            !previousCategory.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
+        {
+            MarkCategoryPanelDirty(previousCategory);
+            changed = true;
+        }
+
+        _activeImportedNewEntryKeys.Clear();
+        _activeImportedNewCategoryName = null;
+
+        if (_unseenImportedNewEntryKeysByCategory.TryGetValue(categoryName, out var keys))
+        {
+            foreach (var key in keys)
+            {
+                _activeImportedNewEntryKeys.Add(key);
+            }
+
+            _unseenImportedNewEntryKeysByCategory.Remove(categoryName);
+            _activeImportedNewCategoryName = categoryName;
+            MarkCategoryPanelDirty(categoryName);
+            changed = true;
+        }
+
+        if (changed)
+        {
+            _categoryList.Invalidate();
+        }
+
+        return changed;
+    }
+
+    private bool HasUnseenImportedNewEntries(string categoryName)
+    {
+        return _unseenImportedNewEntryKeysByCategory.TryGetValue(categoryName, out var keys) && keys.Count > 0;
+    }
+
+    private bool IsImportedNewEntryHighlighted(ConfigEntry entry)
+    {
+        return _activeImportedNewEntryKeys.Contains(entry.DisplayKey);
+    }
+
+    private static List<ImportedNewEntryMarker> CaptureImportedNewMarkers(MizMergePreview preview)
+    {
+        return preview.NewEntries
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.EffectiveCategory) &&
+                            !string.IsNullOrWhiteSpace(entry.DisplayKey))
+            .Select(entry => new ImportedNewEntryMarker(entry.EffectiveCategory, entry.DisplayKey))
+            .Distinct()
+            .ToList();
+    }
+
     private static bool IsReservedCategory(string categoryName)
     {
         return categoryName.Equals("Admin Designer", StringComparison.OrdinalIgnoreCase) ||
@@ -6763,12 +6934,16 @@ internal sealed class MainForm : Form
 
     private Control BuildEntryEditor(ConfigEntry entry)
     {
+        var isNewImportEntry = IsImportedNewEntryHighlighted(entry);
+        var blockBackColor = isNewImportEntry ? GetNewHighlightBackColor() : MainBackground;
         var group = new TableLayoutPanel
         {
             AutoSize = true,
             Dock = DockStyle.Top,
             ColumnCount = 1,
-            Padding = new Padding(0, 0, 0, Zoomed(12))
+            Padding = new Padding(0, 0, 0, Zoomed(12)),
+            BackColor = blockBackColor,
+            Tag = isNewImportEntry ? ImportedNewHighlightTag : null
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
@@ -6778,7 +6953,9 @@ internal sealed class MainForm : Form
             AutoSize = true,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            Padding = GetTableHeaderPadding()
+            Padding = GetTableHeaderPadding(),
+            BackColor = blockBackColor,
+            Tag = isNewImportEntry ? ImportedNewHighlightTag : null
         };
 
         var label = new Label
@@ -6788,10 +6965,15 @@ internal sealed class MainForm : Form
             TextAlign = ContentAlignment.MiddleLeft,
             Margin = GetTableHeaderLabelMargin(),
             ForeColor = PrimaryTextColor,
-            BackColor = MainBackground
+            BackColor = blockBackColor,
+            Tag = isNewImportEntry ? ImportedNewHighlightTag : null
         };
         SetHelp(label, entry);
         header.Controls.Add(label);
+        if (isNewImportEntry)
+        {
+            header.Controls.Add(MakeNewBadgeLabel());
+        }
 
         var description = EntryDescription(entry);
         if (!string.IsNullOrWhiteSpace(description))
@@ -6819,8 +7001,9 @@ internal sealed class MainForm : Form
             Height = 36,
             Dock = DockStyle.Top,
             ForeColor = HelpTextColor,
-            BackColor = MainBackground,
-            Padding = new Padding(0, 4, 0, 0)
+            BackColor = blockBackColor,
+            Padding = new Padding(0, 4, 0, 0),
+            Tag = isNewImportEntry ? ImportedNewHighlightTag : null
         };
         SetHelp(help, entry);
         ConfigureEditableHelpControl(help, entry.DisplayKey, entry.DisplayName, description);
@@ -7297,6 +7480,22 @@ internal sealed class MainForm : Form
             ForeColor = HelpTextColor,
             BackColor = MainBackground,
             Padding = new Padding(8, 0, 0, 0)
+        };
+    }
+
+    private Label MakeNewBadgeLabel()
+    {
+        return new Label
+        {
+            Text = "NEW",
+            AutoSize = true,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Margin = new Padding(Zoomed(4), Zoomed(2), 0, 0),
+            Padding = new Padding(Zoomed(5), Zoomed(1), Zoomed(5), Zoomed(1)),
+            ForeColor = GetNewBadgeTextColor(),
+            BackColor = GetNewBadgeBackColor(),
+            BorderStyle = BorderStyle.FixedSingle,
+            Tag = ImportedNewBadgeTag
         };
     }
 
@@ -8524,7 +8723,7 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static void AddCallsignGridRow(DataGridView grid, ConfigEntry entry)
+    private void AddCallsignGridRow(DataGridView grid, ConfigEntry entry)
     {
         var values = entry.GetTupleValues();
         var rowIndex = grid.Rows.Add(
@@ -8535,9 +8734,10 @@ internal sealed class MainForm : Form
             values.Count > 2 ? values[2] : "",
             values.Count > 3 ? values[3] : "");
         grid.Rows[rowIndex].Tag = entry;
+        ApplyImportedNewRowHighlight(grid.Rows[rowIndex], entry);
     }
 
-    private static void UpdateCallsignGridRow(DataGridViewRow row, ConfigEntry entry)
+    private void UpdateCallsignGridRow(DataGridViewRow row, ConfigEntry entry)
     {
         var values = entry.GetTupleValues();
         row.Cells["aircraft"].Value = GetCallsignAircraft(entry);
@@ -8547,6 +8747,7 @@ internal sealed class MainForm : Form
         row.Cells["iff3"].Value = values.Count > 2 ? values[2] : "";
         row.Cells["iff4"].Value = values.Count > 3 ? values[3] : "";
         row.Tag = entry;
+        ApplyImportedNewRowHighlight(row, entry);
     }
 
     private void AddCallsignOverrideRow(string parentKey, List<ConfigEntry> entries, DataGridView? grid)
@@ -8994,13 +9195,14 @@ internal sealed class MainForm : Form
         cell.Value = entry.ValueText;
     }
 
-    private static void AddTableRow(DataGridView grid, ConfigEntry entry)
+    private void AddTableRow(DataGridView grid, ConfigEntry entry)
     {
         if (IsPriceRankEntry(entry) && TryReadPriceRank(entry.ValueText, out var price, out var rank))
         {
             var priceRankIndex = grid.Rows.Add(entry.Key, price, rank);
             grid.Rows[priceRankIndex].Tag = entry;
             ApplyTableRowTooltip(grid.Rows[priceRankIndex], entry);
+            ApplyImportedNewRowHighlight(grid.Rows[priceRankIndex], entry);
             return;
         }
 
@@ -9029,6 +9231,7 @@ internal sealed class MainForm : Form
             var index = grid.Rows.Add(cells.ToArray());
             grid.Rows[index].Tag = entry;
             ApplyTableRowTooltip(grid.Rows[index], entry);
+            ApplyImportedNewRowHighlight(grid.Rows[index], entry);
             return;
         }
 
@@ -9037,9 +9240,10 @@ internal sealed class MainForm : Form
         ApplyTableValueCell(row, entry);
         row.Tag = entry;
         ApplyTableRowTooltip(row, entry);
+        ApplyImportedNewRowHighlight(row, entry);
     }
 
-    private static void UpdateTableGridRow(DataGridViewRow row, ConfigEntry entry)
+    private void UpdateTableGridRow(DataGridViewRow row, ConfigEntry entry)
     {
         if (IsPriceRankEntry(entry) && TryReadPriceRank(entry.ValueText, out var price, out var rank))
         {
@@ -9048,6 +9252,7 @@ internal sealed class MainForm : Form
             row.Cells["rank"].Value = rank;
             row.Tag = entry;
             ApplyTableRowTooltip(row, entry);
+            ApplyImportedNewRowHighlight(row, entry);
             return;
         }
 
@@ -9075,12 +9280,22 @@ internal sealed class MainForm : Form
 
             row.Tag = entry;
             ApplyTableRowTooltip(row, entry);
+            ApplyImportedNewRowHighlight(row, entry);
             return;
         }
 
         ApplyTableValueCell(row, entry);
         row.Tag = entry;
         ApplyTableRowTooltip(row, entry);
+        ApplyImportedNewRowHighlight(row, entry);
+    }
+
+    private void ApplyImportedNewRowHighlight(DataGridViewRow row, ConfigEntry entry)
+    {
+        row.DefaultCellStyle.BackColor = IsImportedNewEntryHighlighted(entry)
+            ? GetNewHighlightBackColor()
+            : EditorBackground;
+        row.DefaultCellStyle.ForeColor = PrimaryTextColor;
     }
 
     private static void ApplyTableRowTooltip(DataGridViewRow row, ConfigEntry entry)
@@ -11981,9 +12196,11 @@ internal sealed class MainForm : Form
                 return;
             }
 
+            var importedNewMarkers = CaptureImportedNewMarkers(preview);
             var storedDefaults = StoreMizDefaults(mizPath, extractedConfigPath);
             newDocument.SaveTo(currentDocument.Path);
             LoadConfig(currentDocument.Path);
+            ApplyImportedNewMarkers(importedNewMarkers);
             SetStatus("Imported merged config from MIZ. Stored defaults from " + storedDefaults.MizName + ".");
         }
         catch (Exception ex)
@@ -13250,7 +13467,10 @@ internal sealed class MainForm : Form
                     newTable.Items.Count));
             }
 
-            if (newDocument.ReplaceTableBodyFrom(currentDocument, newTable.Key))
+            var keptTable = IsBucketStringListEditor(newTable)
+                ? newDocument.RewriteBucketStringListBodyFrom(currentDocument, newTable.Key)
+                : newDocument.ReplaceTableBodyFrom(currentDocument, newTable.Key);
+            if (keptTable)
             {
                 preview.KeptStringListTables.Add((newTable.Key, currentTable.Items.Count));
             }
@@ -13460,13 +13680,13 @@ internal sealed class MainForm : Form
 
         if (HasChanges())
         {
-            MessageBox.Show(this, "Save or reload pending changes before importing values from another config.", "Import Values", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "Save or reload pending changes before importing another config file.", "Import Config File", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
         using var dialog = new OpenFileDialog
         {
-            Title = "Select old Foothold Config.lua",
+            Title = "Select Foothold Config.lua",
             Filter = "Lua config (*.lua)|*.lua|All files (*.*)|*.*",
             FileName = "Foothold Config.lua",
             InitialDirectory = Path.GetDirectoryName(_document.Path)
@@ -13480,88 +13700,75 @@ internal sealed class MainForm : Form
         try
         {
             var currentPath = Path.GetFullPath(_document.Path);
-            var oldPath = Path.GetFullPath(dialog.FileName);
-            if (string.Equals(currentPath, oldPath, StringComparison.OrdinalIgnoreCase))
+            var sourcePath = Path.GetFullPath(dialog.FileName);
+            if (string.Equals(currentPath, sourcePath, StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show(this, "Select the old config file, not the config that is already open.", "Import Values", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Select another config file, not the config that is already open.", "Import Config File", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            var originalDocument = _document;
-            var importedDocument = ConfigDocument.Load(oldPath);
-            importedDocument.RepairStringListSeparators();
-            if (!ValidateMergeDocument(importedDocument, "Import Values validation failed", "The selected config"))
-            {
-                return;
-            }
-
-            RememberStringListCatalog(importedDocument);
-            var mergedDocument = ConfigDocument.Load(currentPath);
-            var preview = MergeCurrentConfigIntoNewConfig(importedDocument, mergedDocument);
-            if (!ValidateMergeDocument(mergedDocument, "Import Values validation failed", "The merged Import Values config"))
+            var currentDocument = _document;
+            var sourceDocument = ConfigDocument.Load(sourcePath);
+            sourceDocument.RepairStringListSeparators();
+            if (!ValidateMergeDocument(sourceDocument, "Import Config File validation failed", "The selected config"))
             {
                 return;
             }
 
-            if (preview.KeptValues.Count == 0 &&
-                preview.UnchangedCount == 0 &&
-                preview.KeptStringListTables.Count == 0 &&
-                preview.PreservedTableRows.Count == 0 &&
-                preview.PreservedListItems.Count == 0)
+            RememberStringListCatalog(sourceDocument);
+            var outputDocument = ConfigDocument.Load(sourcePath);
+            outputDocument.RepairStringListSeparators();
+            var preview = MergeCurrentConfigIntoNewConfig(currentDocument, outputDocument);
+            if (!ValidateMergeDocument(outputDocument, "Import Config File validation failed", "The merged Import Config File config"))
             {
-                MessageBox.Show(this, "No matching config keys were found in the old config.", "Import Values", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            var previewText = BuildImportMergePreviewText(oldPath, currentPath, preview);
+            if (preview.KeptValues.Count == 0 && preview.UnchangedCount == 0)
+            {
+                MessageBox.Show(this, "No matching config keys were found in the selected config.", "Import Config File", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var previewText = BuildImportMergePreviewText(sourcePath, currentPath, preview);
             var valueChoices = preview.KeptValues
                 .Select(item => new SelectableValueChoice(item.Key, item.CurrentValue, item.NewDefault, item.Entry.EffectiveDescription))
                 .ToList();
-            var tableChoices = BuildKeptTableChoices(preview, "imported table text", "current table text");
+            var tableChoices = BuildKeptTableChoices(preview, "current table text", "selected config table text");
             var choices = valueChoices.Concat(tableChoices).ToList();
             if (!ConfirmSelectableValuePreview(
                     previewText,
-                    "Import Values Preview",
-                    "Tick rows to import values from the selected config. Untick rows to keep current values.",
+                    "Import Config File Preview",
+                    "Tick rows to keep your current values. Untick rows to use the selected config defaults.",
                     "Import",
-                    "Imported value",
-                    "Current value",
-                    "Import selected values",
-                    "Keep current values",
+                    "Your current value",
+                    "Selected config default",
+                    "Keep your current values",
+                    "Use selected config value",
                     choices,
                     BuildMizInstallInfoTabs(preview)))
             {
                 return;
             }
 
-            ApplyKeptTableChoices(mergedDocument, preview, tableChoices);
-            ApplyKeptValueChoices(mergedDocument, preview, valueChoices);
+            ApplyKeptTableChoices(outputDocument, preview, tableChoices);
+            ApplyKeptValueChoices(outputDocument, preview, valueChoices);
 
-            if (!ValidateMergeDocument(mergedDocument, "Import Values validation failed", "The final Import Values config"))
+            if (!ValidateMergeDocument(outputDocument, "Import Config File validation failed", "The final Import Config File config"))
             {
                 return;
             }
 
-            _document = mergedDocument;
-            ClearCategoryPanelCache();
-            LoadSections();
-            ApplyAdvancedToggleVisibility();
-            LoadCategories();
-            SetUndoAction("import values", () =>
-            {
-                _document = originalDocument;
-                ClearCategoryPanelCache();
-                LoadSections();
-                ApplyAdvancedToggleVisibility();
-                LoadCategories();
-            }, () => RefreshCurrentView());
-
-            RefreshCurrentView();
-            SetStatus("Imported merged values from selected config. Use Save to write the config.");
+            var importedNewMarkers = CaptureImportedNewMarkers(preview);
+            var storedDefaults = StoreConfigDefaults(sourcePath);
+            outputDocument.SaveTo(currentPath);
+            LoadConfig(currentPath);
+            ApplyImportedNewMarkers(importedNewMarkers);
+            SetStatus("Imported merged config from " + FormatRestoreDefaultsSourceName(storedDefaults) + ".");
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Import Values failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, ex.Message, "Import Config File failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -14226,50 +14433,50 @@ internal sealed class MainForm : Form
             "Current config to update:",
             currentConfigPath,
             "",
-            "Matching values imported from selected config: " + preview.KeptValues.Count.ToString(CultureInfo.InvariantCulture),
+            "Matching values kept from current config: " + preview.KeptValues.Count.ToString(CultureInfo.InvariantCulture),
             "Matching values already the same: " + preview.UnchangedCount.ToString(CultureInfo.InvariantCulture),
-            "Current options kept: " + newOptions.Count.ToString(CultureInfo.InvariantCulture),
-            "Current rows kept: " + newRows.Count.ToString(CultureInfo.InvariantCulture),
-            "Imported full lists kept: " + preview.KeptStringListTables.Count.ToString(CultureInfo.InvariantCulture),
-            "Imported table rows preserved: " + preview.PreservedTableRows.Count.ToString(CultureInfo.InvariantCulture),
-            "Imported list items preserved: " + preview.PreservedListItems.Count.ToString(CultureInfo.InvariantCulture),
-            "Imported values skipped: " + preview.SkippedOldValues.Count.ToString(CultureInfo.InvariantCulture)
+            "New options from selected config kept: " + newOptions.Count.ToString(CultureInfo.InvariantCulture),
+            "New rows from selected config kept: " + newRows.Count.ToString(CultureInfo.InvariantCulture),
+            "Current full lists kept: " + preview.KeptStringListTables.Count.ToString(CultureInfo.InvariantCulture),
+            "Current table rows preserved: " + preview.PreservedTableRows.Count.ToString(CultureInfo.InvariantCulture),
+            "Current list items preserved: " + preview.PreservedListItems.Count.ToString(CultureInfo.InvariantCulture),
+            "Current values skipped: " + preview.SkippedOldValues.Count.ToString(CultureInfo.InvariantCulture)
         };
 
         AddPreviewSection(
             lines,
-            "Matching values imported from selected config",
+            "Matching values kept from current config",
             preview.KeptValues
                 .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(item => item.Key + ": " + PreviewValue(item.NewDefault) + " -> " + PreviewValue(item.CurrentValue)));
         AddPreviewSection(
             lines,
-            "Imported full lists kept",
+            "Current full lists kept",
             preview.KeptStringListTables
                 .OrderBy(item => item.Table, StringComparer.OrdinalIgnoreCase)
                 .Select(item => item.Table + ": " + item.ItemCount.ToString(CultureInfo.InvariantCulture) + " item(s)"));
         AddPreviewSection(
             lines,
-            "Imported table rows preserved",
+            "Current table rows preserved",
             preview.PreservedTableRows
                 .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(item => item.Key + ": " + PreviewValue(item.Value)));
         AddPreviewSection(
             lines,
-            "Imported list items preserved",
+            "Current list items preserved",
             preview.PreservedListItems
                 .OrderBy(item => item.Table, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(item => item.Value, StringComparer.OrdinalIgnoreCase)
                 .Select(item => item.Table + ": " + PreviewValue(item.Value)));
         AddPreviewSection(
             lines,
-            "Current options kept",
+            "New options from selected config kept",
             newOptions
                 .OrderBy(entry => entry.DisplayKey, StringComparer.OrdinalIgnoreCase)
                 .Select(entry => FormatEntryAssignment(entry)));
         AddPreviewSection(
             lines,
-            "Imported values skipped",
+            "Current values skipped",
             preview.SkippedOldValues
                 .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(item => item.Key + ": " + PreviewValue(item.Value)));
