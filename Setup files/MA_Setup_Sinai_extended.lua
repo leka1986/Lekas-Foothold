@@ -665,16 +665,16 @@ zones = {
 	farpmike = ZoneCommander:new({zone='FARP-Mike', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.farpmike}),
 	
 	
-	miningfacility = ZoneCommander:new({zone='MiningFacility', side=1, level=20, upgrades=upgrades.mission1, crates={}, flavorText=flavor.miningfacility}),
-	insurgentcamp = ZoneCommander:new({zone='InsurgentCamp', side=1, level=20, upgrades=upgrades.mission2InsurgentCamp, crates={}, flavorText=flavor.insurgentcamp}),
-	secrettechfacility = ZoneCommander:new({zone='SecretTechFacility', side=1, level=20, upgrades=upgrades.mission3, crates={}, flavorText=flavor.secrettechfacility}),
-	fueldepo = ZoneCommander:new({zone='FuelDepo', side=1, level=20, upgrades=upgrades.mission4fueldepo, crates={}, flavorText=flavor.fueldepo}),
-	ammonitiondepo = ZoneCommander:new({zone='AmmonitionDepo', side=1, level=20, upgrades=upgrades.mission1Ammo, crates={}, flavorText=flavor.ammonitiondepo}),
-	tankfactory = ZoneCommander:new({zone='TankFactory', side=1, level=20, upgrades=upgrades.mission2, crates={}, flavorText=flavor.tankfactory}),
-	chemsite = ZoneCommander:new({zone='ChemSite', side=1, level=20, upgrades=upgrades.mission3chemsite, crates={}, flavorText=flavor.chemsite}),
-	artilleryfactory = ZoneCommander:new({zone='ArtilleryFactory', side=1, level=20, upgrades=upgrades.mission4, crates={}, flavorText=flavor.artilleryfactory}),
-	borjoil = ZoneCommander:new({zone='Borj Oil production Site', side=1, level=20, upgrades=upgrades.borjoilFixed, crates={}, flavorText=flavor.borjoil}),
-	missilefactory = ZoneCommander:new({zone='MissileFactory', side=1, level=20, upgrades=upgrades.sam5missileFactory, crates={}, flavorText=flavor.missilefactory}),
+	miningfacility = ZoneCommander:new({zone='MiningFacility', side=1, level=20, upgrades=upgrades.mission1, crates={}, flavorText=flavor.miningfacility, income=0.4}),
+	insurgentcamp = ZoneCommander:new({zone='InsurgentCamp', side=1, level=20, upgrades=upgrades.mission2InsurgentCamp, crates={}, flavorText=flavor.insurgentcamp, income=0.3}),
+	secrettechfacility = ZoneCommander:new({zone='SecretTechFacility', side=1, level=20, upgrades=upgrades.mission3, crates={}, flavorText=flavor.secrettechfacility, income=0.5}),
+	fueldepo = ZoneCommander:new({zone='FuelDepo', side=1, level=20, upgrades=upgrades.mission4fueldepo, crates={}, flavorText=flavor.fueldepo, income=0.5}),
+	ammonitiondepo = ZoneCommander:new({zone='AmmunitionDepo', side=1, level=20, upgrades=upgrades.mission1Ammo, crates={}, flavorText=flavor.ammunitiondepo, income=0.5}),
+	tankfactory = ZoneCommander:new({zone='TankFactory', side=1, level=20, upgrades=upgrades.mission2, crates={}, flavorText=flavor.tankfactory, income=0.4}),
+	chemsite = ZoneCommander:new({zone='ChemSite', side=1, level=20, upgrades=upgrades.mission3chemsite, crates={}, flavorText=flavor.chemsite, income=0.3}),
+	artilleryfactory = ZoneCommander:new({zone='ArtilleryFactory', side=1, level=20, upgrades=upgrades.mission4, crates={}, flavorText=flavor.artilleryfactory, income=0.5}),
+	borjoil = ZoneCommander:new({zone='Borj Oil production Site', side=1, level=20, upgrades=upgrades.borjoilFixed, crates={}, flavorText=flavor.borjoil, income=0.5}),
+	missilefactory = ZoneCommander:new({zone='MissileFactory', side=1, level=20, upgrades=upgrades.sam5missileFactory, crates={}, flavorText=flavor.missilefactory, income=0.5}),
 	
 	samalpha = ZoneCommander:new({zone='SAM-Alpha', side=2, size='sam', level=20, upgrades=upgrades.sam3alpha, crates={}, flavorText=flavor.samalpha}),
 	sambravo = ZoneCommander:new({zone='SAM-Bravo', side=1, size='sam', level=20, upgrades=upgrades.sam1bravo, crates={}, flavorText=flavor.sambravo}),
@@ -2830,7 +2830,7 @@ local function pickRedUpgradeForZone(zoneObj)
 end
 
 local RED_ZONE_UPGRADE_ID = "redzoneupgrade"
-local RED_ZONE_UPGRADE_COST = 5000
+local RED_ZONE_UPGRADE_COST = 3000
 
 local function redZoneUpgradeAction()
 	local allow = buildRedAllowTable()
@@ -2871,7 +2871,7 @@ end
 bc:registerShopItem(RED_ZONE_UPGRADE_ID, LTGet("SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE"), RED_ZONE_UPGRADE_COST, redZoneUpgradeAction)
 
 local RED_MASS_ATTACK_ID = "redmassattack"
-local RED_MASS_ATTACK_COST = 6000
+local RED_MASS_ATTACK_COST = 2500
 
 local function redMassAttackAction()
 	if not bc.triggerRedMassAttack then

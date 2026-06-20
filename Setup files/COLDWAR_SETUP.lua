@@ -557,12 +557,12 @@ ZoneSizeExclusions = {
 }
 
 RandomUpgradeTemplates = {
-	small = { sam = 0, shorad = {1,2}, aaa = 2, ground = 1, armor = 1, arty = {0,1}, total = {5,7}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	small = { sam = 0, shorad = {0,2}, aaa = {0,2}, ground = {0,3}, armor = {0,2}, arty = {0,2}, total = {4,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
 	redarmycamp = { sam = 0, shorad = 0, aaa = 0, ground = {3,5}, armor = 0, arty = {0,5}, total = {6,8} },
-	medium = { sam = {0,1}, shorad = {1,2}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {6,9}, flakChance = 15, flakSecondChance = 0, flakMax = 1 },
-	big = { sam = 1, shorad = {2,3}, aaa = {1,2}, ground = 1, armor = 2, arty = 1, total = {7,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
-	extrabig = { sam = 2, shorad = {3,4}, aaa = 2, ground = 1, armor = {1,2}, arty = 1, total = {9,12}, flakChance = 40, flakSecondChance = 20, flakMax = 2 },
-	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {5,5}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	medium = { sam = {0,1}, shorad = {0,3}, aaa = {0,3}, ground = {0,3}, armor = {0,3}, arty = {0,3}, total = {4,9}, flakChance = 15, flakSecondChance = 0, flakMax = 1 },
+	big = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
+	extrabig = { sam = {0,2}, shorad = {0,4}, aaa = {0,2}, ground = {0,1}, armor = {0,2}, arty = {0,1}, total = {9,12}, flakChance = 40, flakSecondChance = 20, flakMax = 2 },
+	sam = { sam = {0,1}, shorad = {0,2}, aaa = {0,2}, ground = 0, armor = 0, arty = 0, total = {5,5}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
 }
 
 RandomUpgradeTemplatesBlue = {
@@ -672,8 +672,8 @@ zones = {
     hiddenground15   = ZoneCommander:new({zone='HiddenGround15',      side=0, level=35, upgrades=upgrades.hiddenground15,  crates={}, flavorText=flavor.hiddenground15, NeutralAtStart=true}),																																														  
     hiddensweden    = ZoneCommander:new({zone='HiddenSweden',       side=0, level=35, upgrades=upgrades.hiddensweden,   crates={}, flavorText=flavor.hiddensweden, NeutralAtStart=true}),
 
-    sheizefactory   = ZoneCommander:new({zone='Scheiße Factory',     side=1, level=20, upgrades=upgrades.Scheize,        crates={}, flavorText=flavor.sheizefactory}),
-    chemicalfactory = ZoneCommander:new({zone='Chemical Factory',    side=1, level=20, upgrades=upgrades.Chemical,       crates={}, flavorText=flavor.chemicalfactory}),
+    sheizefactory   = ZoneCommander:new({zone='Scheiße Factory',     side=1, level=20, upgrades=upgrades.Scheize,        crates={}, flavorText=flavor.sheizefactory, income=0.4}),
+    chemicalfactory = ZoneCommander:new({zone='Chemical Factory',    side=1, level=20, upgrades=upgrades.Chemical,       crates={}, flavorText=flavor.chemicalfactory, income=0.3}),
 }
 
 
@@ -3227,7 +3227,7 @@ bc:registerShopItem(RED_ZONE_UPGRADE_ID, LTGet("SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE
 end)
 
 local RED_MASS_ATTACK_ID = "redmassattack"
-local RED_MASS_ATTACK_COST = 4000
+local RED_MASS_ATTACK_COST = 2500
 
 local function redMassAttackAction()
 	if not bc.triggerRedMassAttack then

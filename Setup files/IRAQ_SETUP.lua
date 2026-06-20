@@ -579,12 +579,12 @@ zones = {
 	ramadisam = ZoneCommander:new({zone='Ramadi SAM', side=1, size='sam2', level=20, upgrades=upgrades.RamadiSamGroup, crates={},flavorText=flavor.ramadisam}),
 
 
-	oilsite = ZoneCommander:new({zone='Oil production Site', side=1, size='big', level=10, upgrades=upgrades.borjoilFixed, crates={}, flavorText=flavor.oilsite}),
-	miningfacility = ZoneCommander:new({zone='MiningFacility', side=1, level=20, upgrades=upgrades.MiningMission, crates={}, flavorText=flavor.miningfacility}),
-	insurgentcamp = ZoneCommander:new({zone='InsurgentCamp', side=1, level=20, upgrades=upgrades.mission2InsurgentCamp, crates={}, flavorText=flavor.insurgentcamp}),
-	secrettechfacility = ZoneCommander:new({zone='SecretTechFacility', side=1, level=20, upgrades=upgrades.mission3, crates={}, flavorText=flavor.secrettechfacility}),
+	oilsite = ZoneCommander:new({zone='Oil production Site', side=1, size='big', level=10, upgrades=upgrades.borjoilFixed, crates={}, flavorText=flavor.oilsite, income=0.5}),
+	miningfacility = ZoneCommander:new({zone='MiningFacility', side=1, level=20, upgrades=upgrades.MiningMission, crates={}, flavorText=flavor.miningfacility, income=0.4}),
+	insurgentcamp = ZoneCommander:new({zone='InsurgentCamp', side=1, level=20, upgrades=upgrades.mission2InsurgentCamp, crates={}, flavorText=flavor.insurgentcamp, income=0.3}),
+	secrettechfacility = ZoneCommander:new({zone='SecretTechFacility', side=1, level=20, upgrades=upgrades.mission3, crates={}, flavorText=flavor.secrettechfacility, income=0.5}),
 	uranium = ZoneCommander:new({zone='Uranium enrichment Site', side=1, level=20, upgrades=upgrades.mission3Uranium, crates={}, flavorText=flavor.uranium}),
-	chemsite = ZoneCommander:new({zone='Chemsite', side=1, level=20, upgrades=upgrades.ChemSiteMission, crates={}, flavorText=flavor.Chemsite}),
+	chemsite = ZoneCommander:new({zone='Chemsite', side=1, level=20, upgrades=upgrades.ChemSiteMission, crates={}, flavorText=flavor.Chemsite, income=0.3}),
 	hidden1 = ZoneCommander:new({zone='Hidden1', side=1, level=25, upgrades=upgrades.hidden1Group, crates={}, flavorText=flavor.hidden1}),
 	hidden2 = ZoneCommander:new({zone='Hidden2', side=0, level=20, upgrades=upgrades.hidden3Group, crates={}, flavorText=flavor.hidden2, NeutralAtStart=true}),
 	hidden3 = ZoneCommander:new({zone='Hidden3', side=1, level=25, upgrades=upgrades.hidden2Group, crates={}, flavorText=flavor.hidden3}),
@@ -2409,14 +2409,14 @@ bc.shopItems['intel'].groupZoneSelector = {
 ------------------------------------------- Zone upgrades --------------------------------------------
 -- red Shop
 local RED_ZONE_UPGRADE_ID = "redzoneupgrade"
-local RED_ZONE_UPGRADE_COST = 5000
+local RED_ZONE_UPGRADE_COST = 3000
 
 bc:registerShopItem(RED_ZONE_UPGRADE_ID, LTGet("SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE"), RED_ZONE_UPGRADE_COST, function(sender)
 	return bc:redZoneUpgradeAction()
 end)
 
 local RED_MASS_ATTACK_ID = "redmassattack"
-local RED_MASS_ATTACK_COST = 6000
+local RED_MASS_ATTACK_COST = 2500
 
 local function redMassAttackAction()
 	if not bc.triggerRedMassAttack then

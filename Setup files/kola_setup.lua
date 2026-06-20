@@ -2423,14 +2423,14 @@ bc.shopItems['intel'].groupZoneSelector = {
 ------------------------------------------- Zone upgrades --------------------------------------------
 -- red Shop
 local RED_ZONE_UPGRADE_ID = "redzoneupgrade"
-local RED_ZONE_UPGRADE_COST = 5000
+local RED_ZONE_UPGRADE_COST = 3000
 
 bc:registerShopItem(RED_ZONE_UPGRADE_ID, LTGet("SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE"), RED_ZONE_UPGRADE_COST, function(sender)
 	return bc:redZoneUpgradeAction()
 end)
 
 local RED_MASS_ATTACK_ID = "redmassattack"
-local RED_MASS_ATTACK_COST = 6000
+local RED_MASS_ATTACK_COST = 2500
 
 local function redMassAttackAction()
 	if not bc.triggerRedMassAttack then

@@ -27993,11 +27993,11 @@ Destroy the house and whoever is nearby.]],
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Strike mission ended: Kill Saddam Hussein's associate\n+500 credits",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Strike a high-value building at these coordinates:
 
-MGRS: 38 S LD 64653 55710
-Lat long: N 34°50'04" E 43°31'11"
-Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+Lat long: N 34°50.093' E 43°31.231'
+Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
 
-Elevation: 463 feet
+Elevation: 450 feet
 
 Reward: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Kill Al-Baghdadi associate",
@@ -28109,11 +28109,11 @@ Zerstört das Haus und alle in der Nähe.]],
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Angriffsmission beendet: Saddam Husseins Vertrauter\n+500 Kredits",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Greife ein hochwertiges Gebäude bei diesen Koordinaten an:
 
-MGRS: 38 S LD 64653 55710
-Lat long: N 34°50'04" E 43°31'11"
-Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+Lat long: N 34°50.093' E 43°31.231'
+Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
 
-Höhe: 463 Fuß
+Höhe: 450 Fuß
 
 Belohnung: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Al-Baghdadis Vertrauten töten",
@@ -28225,11 +28225,11 @@ Détruisez la maison et toute personne à proximité.]],
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Mission de frappe terminée : associé de Saddam Hussein\n+500 crédits",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Frappez un bâtiment de grande valeur à ces coordonnées :
 
-MGRS: 38 S LD 64653 55710
-Lat long: N 34°50'04" E 43°31'11"
-Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+Lat long: N 34°50.093' E 43°31.231'
+Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
 
-Altitude: 463 pieds
+Altitude: 450 pieds
 
 Récompense: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Éliminer l'associé d'Al-Baghdadi",
@@ -28341,11 +28341,11 @@ Destruye la casa y a cualquiera que esté cerca.]],
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Misión de ataque terminada: asociado de Saddam Hussein\n+500 créditos",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Ataca un edificio de alto valor en estas coordenadas:
 
-MGRS: 38 S LD 64653 55710
-Lat long: N 34°50'04" E 43°31'11"
-Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+Lat long: N 34°50.093' E 43°31.231'
+Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
 
-Elevación: 463 pies
+Elevación: 450 pies
 
 Recompensa: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Matar al asociado de Al-Baghdadi",
@@ -28457,11 +28457,11 @@ Lat long Decimal Minutes: N 34°22.834' E 40°58.794'
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Ударная миссия завершена: соратник Саддама Хусейна\n+500 кредитов",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Нанесите удар по зданию ценной цели по этим координатам:
 
-MGRS: 38 S LD 64653 55710
-Lat long: N 34°50'04" E 43°31'11"
-Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+Lat long: N 34°50.093' E 43°31.231'
+Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
 
-Высота: 463 фута
+Высота: 450 фута
 
 Награда: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Ликвидировать соратника Аль-Багдади",
@@ -28568,11 +28568,11 @@ Não mate o comboio antes que ele chegue à casa!]],
 	IRAQ_MISSION_HELO_HUNT_TITLE = "Helo Hunt Balad Airbase",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Ataque um prédio de alto valor nestas coordenadas:
 
-MGRS: 38 S LD 64653 55710
-Lat long: N 34°50'04" E 43°31'11"
-Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+Lat long: N 34°50.093' E 43°31.231'
+Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
 
-Elevação: 463 pés
+Elevação: 450 pés
 
 Recompensa: 500]],
 	IRAQ_MISSION_HIGH_VALUE_2_DESC = [[Ataque um prédio de alto valor nestas coordenadas:
@@ -28685,11 +28685,11 @@ Eve ulaşmadan konvoyu öldürmeyin!]],
 	IRAQ_MISSION_HELO_HUNT_TITLE = "Helo Hunt Balad Airbase",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Yüksek değerli bir binaya bu koordinatlarda strike:
 
-MGRS: 38 S LD 64653 55710
-Lat long: N 34°50'04" E 43°31'11"
-Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+Lat long: N 34°50.093' E 43°31.231'
+Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
 
-Rakım: 463 feet
+Rakım: 450 feet
 
 Ödül: 500]],
 	IRAQ_MISSION_HIGH_VALUE_2_DESC = [[Yüksek değerli bir binaya bu koordinatlarda strike:
@@ -28809,11 +28809,11 @@ MGRS: 37 S FU 82033 06131
 	IRAQ_MISSION_SADDAM_ASSOCIATE_END = "打击任务结束：击杀 Saddam Hussein 的同伙\n+500 点数",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[打击这些坐标上的高价值建筑：
 
-MGRS: 38 S LD 64653 55710
-经纬度：N 34°50'04" E 43°31'11"
-经纬度（十进制度分）：N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+经纬度：N 34°50'05" E 43°31'13"
+经纬度（十进制度分）：N 34°50.093' E 43°31.231'
 
-海拔：463 英尺
+海拔：450 英尺
 
 奖励：500]],
 	IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "击杀 Al-Baghdadi 同伙",
@@ -28926,11 +28926,10 @@ MGRS: 37 S FU 82033 06131
 	IRAQ_MISSION_SADDAM_ASSOCIATE_END = "打擊任務結束：擊殺 Saddam Hussein 的同夥\n+500 點數",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[打擊這些座標上的高價值建築：
 
-MGRS: 38 S LD 64653 55710
-經緯度：N 34°50'04" E 43°31'11"
-經緯度（十進制度分）：N 34°50.081' E 43°31.188'
-
-海拔：463 英尺
+MGRS: 38 S LD 64719 55731
+經緯度：N 34°50'05" E 43°31'13"
+經緯度（十進制度分）：N 34°50.093' E 43°31.231'
+海拔：450 英尺
 
 獎勵：500]],
 	IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "擊殺 Al-Baghdadi 同夥",
@@ -29043,11 +29042,11 @@ Distruggi la casa e chiunque si trovi nelle vicinanze.]],
 	IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Missione d'attacco terminata: uccidi l'associato di Saddam Hussein\n+500 crediti",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Colpisci un edificio di alto valore a queste coordinate:
 
-MGRS: 38 S LD 64653 55710
-Lat long: N 34°50'04" E 43°31'11"
-Lat long Decimal Minutes: N 34°50.081' E 43°31.188'
+MGRS: 38 S LD 64719 55731
+Lat long: N 34°50.093' E 43°31.231'
+Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
 
-Altitudine: 463 piedi
+Altitudine: 450 piedi
 
 Ricompensa: 500]],
 	IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Uccidi l'associato di Al-Baghdadi",
