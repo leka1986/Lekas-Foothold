@@ -81953,7 +81953,7 @@ if match then break end
 end
 return match,cargo
 end
-local data="Group,x,y,z,CargoName,CargoTemplates,CargoType,CratesNeeded,CrateMass,Structure,StaticCategory,StaticType,StaticShape,SpawnTime\n"
+local data="Group,x,y,z,CargoName,CargoTemplates,CargoType,CratesNeeded,CrateMass,Structure,StaticCategory,StaticType,StaticShape,SpawnTime,Latitude,Longitude\n"
 local n=0
 for _,_grp in pairs(grouptable)do
 local group=_grp
@@ -81992,8 +81992,9 @@ templates=templates.."}"
 cgotemp=templates
 end
 local location=group:GetVec3()
-local txt=string.format("%s,%d,%d,%d,%s,%s,%s,%d,%d,%s,%s,%s,%s,%f\n"
-,template,location.x,location.y,location.z,cgoname,cgotemp,cgotype,cgoneed,cgomass,strucdata,scat,stype,sshape or"none",spawntime)
+local lat,lon=coord.LOtoLL(location)
+local txt=string.format("%s,%d,%d,%d,%s,%s,%s,%d,%d,%s,%s,%s,%s,%f,%f,%f\n"
+,template,location.x,location.y,location.z,cgoname,cgotemp,cgotype,cgoneed,cgomass,strucdata,scat,stype,sshape or"none",spawntime,lat,lon)
 data=data..txt
 end
 end

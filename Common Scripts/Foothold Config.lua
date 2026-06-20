@@ -738,6 +738,12 @@ ZoneSupplyTakeoffWarningTypes = {
 -- Shop / Rewards
 -- ============================================================================
 
+-- Advance Capture becomes available when an enemy zone has this percent or less of its upgrade groups remaining.
+-- Percent of upgrade groups remaining before Advance Capture appears.
+-- This makes the capture of a zone quicker as the supply takes off prior.
+-- @gui label="Advance Capture Threshold %" validValues="20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50 | 55%=55 | 60%=60"
+AdvanceCaptureRemainingThreshold = 50
+
 -- Shop prices.
 -- @gui installPolicy="mergeRows"
 ShopPrices = {
@@ -765,6 +771,7 @@ ShopPrices = {
 	recon         = 50,   -- Deploy recon group
 	airdef        = 150,  -- Deploy air defence
 	capture       = 500,  -- Capture neutral zone
+	advancecapture = 500, -- Advance capture pressured enemy zone
 	intel         = 150,  -- Intel on enemy zone
 	zinf          = 500,  -- Add infantry squad to zone
 	zsam          = 2000, -- Add Hawk/Nasams system to a zone
@@ -792,6 +799,7 @@ ShopRankRequirements = {
 	dynamictexaco  = 3,  -- Dynamic Tanker (Boom)
 	farphere       = 4,  -- Deploy FARP
 	capture        = 1,  -- Capture neutral zone
+	advancecapture = 1,  -- Advance capture pressured enemy zone
 	smoke          = 1,  -- Smoke markers
 	flare          = 1,  -- Flare markers
 	illum          = 1,  -- Illumination bomb
@@ -1100,6 +1108,9 @@ ArcoSpeed = 286 -- orbit speed for arco is hardcoded at 280, otherwise strange t
 -- EWRS
 -- ============================================================================
 
+-- @gui validValues="Style 1=1 | Style 2=2"
+ewrs_defaultReportStyle = 1 -- Default EWRS report format. Style 1 keeps the current format. Style 2 uses compact separator lines. Players can change this via the F10 EWRS menu.
+
 -- Maximum detection range choices shown in the player F10 EWRS menu.
 -- Valid values: 10 | 20 | 40 | 60 | 80 | 100 | 150
 ewrs_maxRangeKm = 150 -- Highest metric EWRS detection range option shown in the F10 menu.
@@ -1130,6 +1141,7 @@ ewrs_allowBogeyDope = true -- Allows pilots to request closest-threat bogey dope
 ewrs_allowFriendlyPicture = true -- Allows pilots to request a friendly aircraft picture.
 ewrs_maxFriendlyDisplay = 5 -- Max friendly aircraft shown in friendly picture reports. Set to 0 to show all.
 ewrs_showType = true -- If true, EWRS reports aircraft type. If false, EWRS reports Unknown.
+ewrs_mergedRangeNm = 5 -- Style 2 only. Hostile contacts under this range show Merged. Set to 0 to disable.
 -- @gui installPolicy="mergeRows"
 ewrs_specialPlaneTypes = { -- Aircraft typeNames that show friendlies by default. Players can still override this in their F10 EWRS menu.
   ["F-4E-45MC"] = true,
@@ -1165,52 +1177,237 @@ phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if
 -- Aircraft / Weapons
 -- ============================================================================
 -- In this list, you can either remove or add what is allowed in the coldwar era.
--- @gui label="Allowed Aircraft" installPolicy="keepTable"
+-- @gui label="Allowed Aircraft" installPolicy="keepTable" editor="bucket"
 allowedPlanes = {
-    "A-10A", "A-10C", "A-10C_2", "A-4E-C", "AH-1W", "AH-64D_BLK_II", "AH-6J", "AJS37", "An-30M", "AV8BNA",
-    "Bronco-OV-10A", "C-101CC", "C-130J-30", "CH-47Fbl1", "E-2C", "F/A-18A", "F-100D", "F-14A",
-    "F-14A-135-GR", "F-14A-135-GR-Early", "F-14A-95-GR", "F-14B", "F-15C", "F-15E", "F-15ESE", "F-16A MLU",
-    "F-16C_50", "F-4E-45MC", "F-5E-3", "F-5E-3_FC", "F-86F Sabre", "FA-18C_hornet", "Hercules", "Ka-27",
-    "L-39C", "M-2000C", "MB-339A", "MB-339APAN", "MH-60R", "MH-6J", "Mi-24P", "Mi-24V", "Mi-28NE", "Mi-8MT",
-    "MiG-15bis", "MiG-15bis_FC", "MiG-19P", "MiG-21Bis", "MiG-23MLD", "MiG-29 Fulcrum", "MiG-29A",
-    "Mirage-F1AD", "Mirage-F1AZ", "Mirage-F1B", "Mirage-F1BD", "Mirage-F1BE", "Mirage-F1BQ", "Mirage-F1C",
-    "Mirage-F1C-200", "Mirage-F1CE", "Mirage-F1CG", "Mirage-F1CH", "Mirage-F1CJ", "Mirage-F1CK",
-    "Mirage-F1CR", "Mirage-F1CT", "Mirage-F1CZ", "Mirage-F1DDA", "Mirage-F1ED", "Mirage-F1EDA", "Mirage-F1EE",
-    "Mirage-F1EH", "Mirage-F1EQ", "Mirage-F1M-CE", "Mirage-F1M-EE", "OH58D", "OH-6A", "P3C_Orion", "SA342L",
-    "SA342M", "SA342Minigun", "SA342Mistral", "SU22", "Su-24MR", "Su-25", "UH-1H", "UH-60A", "UH-60L",
-    "UH-60L_DAP"
+    "A-10A",
+    "A-10C",
+    "A-10C_2",
+    "A-4E-C",
+    "AH-1W",
+    "AH-64D_BLK_II",
+    "AH-6J",
+    "AJS37",
+    "An-30M",
+    "AV8BNA",
+    "Bronco-OV-10A",
+    "C-101CC",
+    "C-130J-30",
+    "CH-47Fbl1",
+    "E-2C",
+    "F/A-18A",
+    "F-100D",
+    "F-14A",
+    "F-14A-135-GR",
+    "F-14A-135-GR-Early",
+    "F-14A-95-GR",
+    "F-14B",
+    "F-15C",
+    "F-15E",
+    "F-15ESE",
+    "F-16A MLU",
+    "F-16C_50",
+    "F-4E-45MC",
+    "F-5E-3",
+    "F-5E-3_FC",
+    "F-86F Sabre",
+    "FA-18C_hornet",
+    "Hercules",
+    "Ka-27",
+    "L-39C",
+    "M-2000C",
+    "MB-339A",
+    "MB-339APAN",
+    "MH-60R",
+    "MH-6J",
+    "Mi-24P",
+    "Mi-24V",
+    "Mi-28NE",
+    "Mi-8MT",
+    "MiG-15bis",
+    "MiG-15bis_FC",
+    "MiG-19P",
+    "MiG-21Bis",
+    "MiG-23MLD",
+    "MiG-29 Fulcrum",
+    "MiG-29A",
+    "Mirage-F1AD",
+    "Mirage-F1AZ",
+    "Mirage-F1B",
+    "Mirage-F1BD",
+    "Mirage-F1BE",
+    "Mirage-F1BQ",
+    "Mirage-F1C",
+    "Mirage-F1C-200",
+    "Mirage-F1CE",
+    "Mirage-F1CG",
+    "Mirage-F1CH",
+    "Mirage-F1CJ",
+    "Mirage-F1CK",
+    "Mirage-F1CR",
+    "Mirage-F1CT",
+    "Mirage-F1CZ",
+    "Mirage-F1DDA",
+    "Mirage-F1ED",
+    "Mirage-F1EDA",
+    "Mirage-F1EE",
+    "Mirage-F1EH",
+    "Mirage-F1EQ",
+    "Mirage-F1M-CE",
+    "Mirage-F1M-EE",
+    "OH58D",
+    "OH-6A",
+    "P3C_Orion",
+    "SA342L",
+    "SA342M",
+    "SA342Minigun",
+    "SA342Mistral",
+    "SU22",
+    "Su-24MR",
+    "Su-25",
+    "UH-1H",
+    "UH-60A",
+    "UH-60L",
+    "UH-60L_DAP",
 }
 
 -- In this list, you can either remove or add what is allowed for the (RED SIDE) in the coldwar era.
--- @gui label="Allowed RED Aircraft" installPolicy="keepTable"
+-- @gui label="Allowed RED Aircraft" installPolicy="keepTable" editor="bucket"
 allowedPlanesRed = {
-    "A-10A", "A-10C", "A-10C_2", "A-4E-C", "AH-1W", "AH-64D_BLK_II", "AH-6J", "AJS37", "An-30M", "AV8BNA",
-    "Bronco-OV-10A", "C-101CC", "C-130J-30", "CH-47Fbl1", "E-2C", "F/A-18A", "F-100D", "F-14A",
-    "F-14A-135-GR", "F-14A-135-GR-Early", "F-14A-95-GR", "F-14B", "F-15C", "F-15E", "F-15ESE", "F-16A MLU",
-    "F-16C_50", "F-4E-45MC", "F-5E-3", "F-5E-3_FC", "F-86F Sabre", "FA-18C_hornet", "Hercules", "Ka-27",
-    "L-39C", "M-2000C", "MB-339A", "MB-339APAN", "MH-60R", "MH-6J", "Mi-24P", "Mi-24V", "Mi-28NE", "Mi-8MT",
-    "MiG-15bis", "MiG-15bis_FC", "MiG-19P", "MiG-21Bis", "MiG-23MLD", "MiG-29 Fulcrum", "MiG-29A",
-    "Mirage-F1AD", "Mirage-F1AZ", "Mirage-F1B", "Mirage-F1BD", "Mirage-F1BE", "Mirage-F1BQ", "Mirage-F1C",
-    "Mirage-F1C-200", "Mirage-F1CE", "Mirage-F1CG", "Mirage-F1CH", "Mirage-F1CJ", "Mirage-F1CK",
-    "Mirage-F1CR", "Mirage-F1CT", "Mirage-F1CZ", "Mirage-F1DDA", "Mirage-F1ED", "Mirage-F1EDA", "Mirage-F1EE",
-    "Mirage-F1EH", "Mirage-F1EQ", "Mirage-F1M-CE", "Mirage-F1M-EE", "OH58D", "OH-6A", "P3C_Orion", "SA342L",
-    "SA342M", "SA342Minigun", "SA342Mistral", "SU22", "Su-24MR", "Su-25", "UH-1H", "UH-60A", "UH-60L",
-    "UH-60L_DAP"
+    "A-10A",
+    "A-10C",
+    "A-10C_2",
+    "A-4E-C",
+    "AH-1W",
+    "AH-64D_BLK_II",
+    "AH-6J",
+    "AJS37",
+    "An-30M",
+    "AV8BNA",
+    "Bronco-OV-10A",
+    "C-101CC",
+    "C-130J-30",
+    "CH-47Fbl1",
+    "E-2C",
+    "F/A-18A",
+    "F-100D",
+    "F-14A",
+    "F-14A-135-GR",
+    "F-14A-135-GR-Early",
+    "F-14A-95-GR",
+    "F-14B",
+    "F-15C",
+    "F-15E",
+    "F-15ESE",
+    "F-16A MLU",
+    "F-16C_50",
+    "F-4E-45MC",
+    "F-5E-3",
+    "F-5E-3_FC",
+    "F-86F Sabre",
+    "FA-18C_hornet",
+    "Hercules",
+    "Ka-27",
+    "L-39C",
+    "M-2000C",
+    "MB-339A",
+    "MB-339APAN",
+    "MH-60R",
+    "MH-6J",
+    "Mi-24P",
+    "Mi-24V",
+    "Mi-28NE",
+    "Mi-8MT",
+    "MiG-15bis",
+    "MiG-15bis_FC",
+    "MiG-19P",
+    "MiG-21Bis",
+    "MiG-23MLD",
+    "MiG-29 Fulcrum",
+    "MiG-29A",
+    "Mirage-F1AD",
+    "Mirage-F1AZ",
+    "Mirage-F1B",
+    "Mirage-F1BD",
+    "Mirage-F1BE",
+    "Mirage-F1BQ",
+    "Mirage-F1C",
+    "Mirage-F1C-200",
+    "Mirage-F1CE",
+    "Mirage-F1CG",
+    "Mirage-F1CH",
+    "Mirage-F1CJ",
+    "Mirage-F1CK",
+    "Mirage-F1CR",
+    "Mirage-F1CT",
+    "Mirage-F1CZ",
+    "Mirage-F1DDA",
+    "Mirage-F1ED",
+    "Mirage-F1EDA",
+    "Mirage-F1EE",
+    "Mirage-F1EH",
+    "Mirage-F1EQ",
+    "Mirage-F1M-CE",
+    "Mirage-F1M-EE",
+    "OH58D",
+    "OH-6A",
+    "P3C_Orion",
+    "SA342L",
+    "SA342M",
+    "SA342Minigun",
+    "SA342Mistral",
+    "SU22",
+    "Su-24MR",
+    "Su-25",
+    "UH-1H",
+    "UH-60A",
+    "UH-60L",
+    "UH-60L_DAP",
 }
 -- The list is applied if AllowMods are true and on Modern era.
 -- Make sure you have the mods installed on the server and the client.
--- @gui label="Mods aircraft list" installPolicy="keepTable"
+-- @gui label="Mods aircraft list" installPolicy="keepTable" editor="bucket"
 restockAircraft = {
-    "A-29B", "A-4E-C", "B-52H", "Bell-47", "Bronco-OV-10A", "EA-18G", "Eurofighter", "EurofighterT",
-    "F111C", "F15EX", "F16A", "F16A_AA", "F-22A", "F-23A", "FA-18E", "FA-18ET", "FA-18F", "FA-18FT",
-    "Hercules", "JAS39Gripen", "JAS39Gripen_AG", "JAS39Gripen_BVR", "M2000D", "Mi-28NE","MiG-31BM", 
-    "SK-60", "SU22", "Su-25SM3", "Su-30MKA", "Su-30MKI", "Su-30MKM", "Su-30SM", "Su-35", "PUCARA",
-    "Su-35S", "T-45"
+    "A-29B",
+    "A-4E-C",
+    "B-52H",
+    "Bell-47",
+    "Bronco-OV-10A",
+    "EA-18G",
+    "Eurofighter",
+    "EurofighterT",
+    "F111C",
+    "F15EX",
+    "F16A",
+    "F16A_AA",
+    "F-22A",
+    "F-23A",
+    "FA-18E",
+    "FA-18ET",
+    "FA-18F",
+    "FA-18FT",
+    "Hercules",
+    "JAS39Gripen",
+    "JAS39Gripen_AG",
+    "JAS39Gripen_BVR",
+    "M2000D",
+    "Mi-28NE",
+    "MiG-31BM",
+    "SK-60",
+    "SU22",
+    "Su-25SM3",
+    "Su-30MKA",
+    "Su-30MKI",
+    "Su-30MKM",
+    "Su-30SM",
+    "Su-35",
+    "PUCARA",
+    "Su-35S",
+    "T-45",
 }
 
 -- In the coldwar era, you can add or remove what to restrict
 -- Add "--" if you want to ALLOW a weapon, otherwise the weapon in the list below are removed from the warehouse.
--- @gui label="Cold War Restricted Weapons" installPolicy="keepTable"
+-- @gui label="Cold War Restricted Weapons" installPolicy="keepTable" editor="bucket"
 restrictedWeapons = {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",

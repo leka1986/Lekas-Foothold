@@ -117,6 +117,9 @@ if ewrs_allowBogeyDope ~= nil then ewrs.allowBogeyDope = ewrs_allowBogeyDope els
 if ewrs_allowFriendlyPicture ~= nil then ewrs.allowFriendlyPicture = ewrs_allowFriendlyPicture else ewrs.allowFriendlyPicture = true end -- Allows pilots to request picture of friendly aircraft
 ewrs.maxFriendlyDisplay = ewrs_maxFriendlyDisplay or 5 -- Limits the amount of friendly aircraft shown on friendly picture
 if ewrs_showType ~= nil then ewrs.showType = ewrs_showType else ewrs.showType = true end -- if true it will show the type of the unit
+ewrs.defaultReportStyle = tonumber(ewrs_defaultReportStyle) or 1
+if ewrs.defaultReportStyle ~= 2 then ewrs.defaultReportStyle = 1 end
+ewrs.mergedRangeNm = tonumber(ewrs_mergedRangeNm) or 5
 ewrs.hiddenFriendlyReportingNames = ewrs_hiddenFriendlyReportingNames or { Sentry = true }
 ewrs.specialPlaneTypes = ewrs_specialPlaneTypes or {
   ["F-4E-45MC"] = true,
@@ -182,6 +185,17 @@ local function ewrsMeasurementLabel(measurements, translator)
   if measurements == "imperial" then return T:Get("EWRS_MEASUREMENTS_IMPERIAL") end
   if measurements == "metric" then return T:Get("EWRS_MEASUREMENTS_METRIC") end
   return tostring(measurements)
+end
+
+local function ewrsReportStyleValue(value)
+  local style = tonumber(value) or 1
+  if style == 2 then return 2 end
+  return 1
+end
+
+local function ewrsReportStyleLabel(style, translator)
+  local T = translator or L10N
+  return T:Get(ewrsReportStyleValue(style) == 2 and "EWRS_REPORT_STYLE_2" or "EWRS_REPORT_STYLE_1")
 end
 
 local function ewrsAspectLabel(aspect, translator)
@@ -282,6 +296,7 @@ local function ewrs_clonePersistentSettings(src)
     showTankers = src.showTankers,
     maxFriendlies = src.maxFriendlies,
     messages = src.messages,
+    reportStyle = src.reportStyle,
     customized = src.customized or src._hasCustomizations or false,
   }
 end
@@ -289,7 +304,7 @@ end
 local function ewrs_settingsEqual(a, b)
   if a == b then return true end
   if type(a) ~= "table" or type(b) ~= "table" then return false end
-  local keys = {"reference","measurements","rangeLimit","maxThreats","showFriendlies","showTankers","maxFriendlies","messages"}
+  local keys = {"reference","measurements","rangeLimit","maxThreats","showFriendlies","showTankers","maxFriendlies","messages","reportStyle"}
   for _,key in ipairs(keys) do
     if a[key] ~= b[key] then
       return false
@@ -523,6 +538,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
     local heading=ewrs.getHeading(velocity)
     local aspect=ewrs.getAspect(bearing,heading)
     local range=ewrs.getDistance(referenceX,referenceZ,bogeypos.p.x,bogeypos.p.z)
+    local rawRangeNm=UTILS.MetersToNM(range)
     local altitude=bogeypos.p.y
     local speed=ewrs.getSpeed(velocity)
     if useMetric then
@@ -531,7 +547,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
       speed=UTILS.Round(UTILS.MpsToKmph(speed),-1)
       altitude=UTILS.Round(altitude,-1)
     else
-      local nm=UTILS.MetersToNM(range)
+      local nm=rawRangeNm
       if nm>=60 then range=UTILS.Round(nm,-1) elseif nm>=20 then range=UTILS.Round(nm/5,0)*5 else range=UTILS.Round(nm,0) end
       speed=UTILS.Round(UTILS.MpsToKnots(speed),-1)
       altitude=UTILS.Round(UTILS.MetersToFeet(altitude),-3)
@@ -542,6 +558,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
       threatTable[j].unitType=bogeyType
       threatTable[j].bearing=bearing
       threatTable[j].range=range
+      threatTable[j].rawRangeNm=rawRangeNm
       threatTable[j].altitude=altitude
       threatTable[j].speed=speed
       threatTable[j].heading=heading
@@ -657,6 +674,28 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
 end
 
 
+function ewrs.formatContactLine(contact, groupSettings, rangeUnits, altUnits, translator)
+  local T = translator or L10N
+  local unitType = ewrs.showType and ewrsUnitTypeLabel(contact.unitType, T) or T:Get("EWRS_UNKNOWN")
+  local asp = ewrsAspectLabel(contact.aspect, T)
+  if ewrsReportStyleValue(groupSettings.reportStyle) == 2 then
+    local line = T:Format("EWRS_CONTACT_LINE_STYLE_2", contact.bearing, contact.range.." "..rangeUnits, contact.altitude..altUnits, asp, unitType)
+    if not contact.isFriendly and contact.rawRangeNm and ewrs.mergedRangeNm > 0 and contact.rawRangeNm < ewrs.mergedRangeNm then
+      line = line .. " | " .. T:Get("EWRS_MERGED")
+    end
+    return line
+  end
+  return T:Format("EWRS_CONTACT_LINE", unitType, contact.bearing, contact.range..rangeUnits, contact.altitude..altUnits, asp)
+end
+
+function ewrs.getFriendlyHeader(groupSettings, translator)
+  local T = translator or L10N
+  if ewrsReportStyleValue(groupSettings.reportStyle) == 2 then
+    return T:Get("EWRS_FRIENDLY_HEADER_STYLE_2")
+  end
+  return T:Get("EWRS_FRIENDLY_HEADER")
+end
+
 
 function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
   local status, result = pcall(function()
@@ -725,8 +764,7 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
             if t.range==ewrs.notAvailable then
               table.insert(message,T:Format("EWRS_POSITION_UNKNOWN", ewrsUnitTypeLabel(t.unitType, T)))
             else
-              local asp = ewrsAspectLabel(t.aspect, T)
-              table.insert(message,T:Format("EWRS_CONTACT_LINE", (ewrs.showType and ewrsUnitTypeLabel(t.unitType, T) or T:Get("EWRS_UNKNOWN")), t.bearing, t.range..rangeUnits, t.altitude..altUnits, asp))
+              table.insert(message,ewrs.formatContactLine(t, groupSettings, rangeUnits, altUnits, T))
             end
             shown=shown+1
             if shown<maxThreats then table.insert(message,"\n") end
@@ -735,12 +773,11 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
         for k=1,#threatTable do
           local t=threatTable[k]
           if t and t.isFriendly then
-            if not friendlyHeader then if message[#message] ~= "\n" then table.insert(message,"\n") end table.insert(message,"\n"); table.insert(message,T:Get("EWRS_FRIENDLY_HEADER")); table.insert(message,"\n"); friendlyHeader=true end
+            if not friendlyHeader then if message[#message] ~= "\n" then table.insert(message,"\n") end table.insert(message,"\n"); table.insert(message,ewrs.getFriendlyHeader(groupSettings, T)); table.insert(message,"\n"); friendlyHeader=true end
             if t.range==ewrs.notAvailable then
               table.insert(message,T:Format("EWRS_POSITION_UNKNOWN", ewrsUnitTypeLabel(t.unitType, T)))
             else
-              local asp = ewrsAspectLabel(t.aspect, T)
-              table.insert(message,T:Format("EWRS_CONTACT_LINE", (ewrs.showType and ewrsUnitTypeLabel(t.unitType, T) or T:Get("EWRS_UNKNOWN")), t.bearing, t.range..rangeUnits, t.altitude..altUnits, asp))
+              table.insert(message,ewrs.formatContactLine(t, groupSettings, rangeUnits, altUnits, T))
             end
             if k<#threatTable then table.insert(message,"\n") end
           end
@@ -748,17 +785,11 @@ function ewrs.outText(activePlayer, threatTable, bogeyDope, greeting)
       else
         for k=1,maxThreats do
           if threatTable[k]==nil then break end
-          if greeting==nil and not friendlyHeader and threatTable[k].isFriendly then table.insert(message,"\n"); table.insert(message,T:Get("EWRS_FRIENDLY_HEADER")); table.insert(message,"\n"); friendlyHeader=true end
+          if greeting==nil and not friendlyHeader and threatTable[k].isFriendly then table.insert(message,"\n"); table.insert(message,ewrs.getFriendlyHeader(groupSettings, T)); table.insert(message,"\n"); friendlyHeader=true end
           if threatTable[k].range==ewrs.notAvailable then
             table.insert(message,T:Format("EWRS_POSITION_UNKNOWN", ewrsUnitTypeLabel(threatTable[k].unitType, T)))
           else
-            local asp = ewrsAspectLabel(threatTable[k].aspect, T)
-            table.insert(message,T:Format("EWRS_CONTACT_LINE",
-            (ewrs.showType and ewrsUnitTypeLabel(threatTable[k].unitType, T) or T:Get("EWRS_UNKNOWN")),
-            threatTable[k].bearing,
-            threatTable[k].range..rangeUnits,
-            threatTable[k].altitude..altUnits,
-            asp))
+            table.insert(message,ewrs.formatContactLine(threatTable[k], groupSettings, rangeUnits, altUnits, T))
           end
           if threatTable[k+1]~=nil then
           table.insert(message,"\n")
@@ -847,6 +878,7 @@ function ewrs.buildFriendlyTable(friendlyNames,activePlayer)
         local j=#friendlyTable+1
         friendlyTable[j]={}
         friendlyTable[j].unitType=bogeyType
+        friendlyTable[j].isFriendly=true
         friendlyTable[j].bearing=bearing
         friendlyTable[j].range=range
         friendlyTable[j].altitude=altitude
@@ -1069,6 +1101,7 @@ function ewrs.addGroupSettings(groupID,isHelo,showFriendlies)
   ewrs.groupSettings[groupID].showFriendlies=showFriendlies and true or false
   ewrs.groupSettings[groupID].showTankers=ewrs.defaultShowTankers
   ewrs.groupSettings[groupID].maxFriendlies=ewrs.maxFriendlyDisplay
+  ewrs.groupSettings[groupID].reportStyle=ewrs.defaultReportStyle
 end
 
 function ewrs.removeGroupF10Menu(groupID)
@@ -1174,6 +1207,18 @@ function ewrs.setGroupMeasurements(args)
   ewrs_flagSettingsDirty(groupSettings)
   local T = L10N:ForGroup(groupID)
   trigger.action.outTextForGroup(groupID,T:Format("EWRS_MEASUREMENT_UNITS_CHANGED", ewrsMeasurementLabel(newUnits, T)),ewrs.messageDisplayTime)
+  ewrs.persistGroupSettings(groupID)
+  ewrs.refreshGroupF10Menu(groupID)
+end
+
+function ewrs.setGroupReportStyle(args)
+  local groupID = args[1]
+  local settings = ewrs.getGroupSettingsTable(groupID)
+  local style = ewrsReportStyleValue(args[2])
+  settings.reportStyle = style
+  ewrs_flagSettingsDirty(settings)
+  local T = L10N:ForGroup(groupID)
+  trigger.action.outTextForGroup(groupID,T:Format("EWRS_REPORT_STYLE_CHANGED", ewrsReportStyleLabel(style, T)),ewrs.messageDisplayTime)
   ewrs.persistGroupSettings(groupID)
   ewrs.refreshGroupF10Menu(groupID)
 end
@@ -1285,6 +1330,12 @@ function ewrs.buildF10Menu(targetGroupID)
         local metricLabel = T:Get("EWRS_SET_TO_METRIC") .. ((groupSettings.measurements == "metric") and T:Get("EWRS_CURRENT_SUFFIX") or "")
         missionCommands.addCommandForGroup(groupID, imperialLabel,measurementsSetPath,ewrs.setGroupMeasurements,{groupID, "imperial"})
         missionCommands.addCommandForGroup(groupID, metricLabel,measurementsSetPath,ewrs.setGroupMeasurements,{groupID, "metric"})
+
+        local reportStylePath = missionCommands.addSubMenuForGroup(groupID,T:Get("EWRS_SET_REPORT_STYLE"),groupSettingsPath)
+        for _,style in ipairs({1,2}) do
+          local reportStyleLabel = ewrsReportStyleLabel(style, T) .. ((ewrsReportStyleValue(groupSettings.reportStyle) == style) and T:Get("EWRS_CURRENT_SUFFIX") or "")
+          missionCommands.addCommandForGroup(groupID, reportStyleLabel, reportStylePath, ewrs.setGroupReportStyle, {groupID, style})
+        end
 
         ewrs.builtF10Menus[stringGroupID] = rootPath
       end

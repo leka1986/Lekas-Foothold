@@ -2171,6 +2171,7 @@ local SHOP_PRICE_DEFAULTS = {
   recon         = 50,
   airdef        = 150,
   capture       = 500,
+  advancecapture = 500,
   intel         = 150,
   zinf          = 500,
   zsam          = 2000,
@@ -2196,6 +2197,7 @@ local SHOP_RANK_DEFAULTS = {
   dynamictexaco  = 3,
   farphere       = 4,
   capture        = 1,
+  advancecapture = 1,
   smoke          = 1,
   flare          = 1,
   illum          = 1,
@@ -2672,8 +2674,9 @@ bc.shopItems['capture'].groupZoneSelector = {
 			return handle
 		end
 
-		local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
-		local canUseFarp = bestCommander and (bestCommander.type == 'surface' or bestCommander.unitCategory == Unit.Category.HELICOPTER)
+		local advanceCaptureMenu = itemInfo and itemInfo.id == 'advancecapture'
+		local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj, advanceCaptureMenu and { heloOnly = true } or nil))
+		local canUseFarp = bestCommander and ((not advanceCaptureMenu and bestCommander.type == 'surface') or bestCommander.unitCategory == Unit.Category.HELICOPTER)
 		local hasFriendlyDynamicFarp = false
 		local hasNearbyFriendlyDynamicFarp = false
 		local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[2] or nil
@@ -2711,6 +2714,32 @@ bc.shopItems['capture'].groupZoneSelector = {
 		}, groupId, groupObj))
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_NEUTRAL_ZONES"),
+}
+
+bc:registerShopItem('advancecapture',LTGet("SYRIA_SHOP_ITEM_ADVANCE_CAPTURE"),ShopPrices.advancecapture,
+function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ADVANCE_CAPTURE_ZONE")
+end,
+function(sender,params)
+    if not params.zone then
+        return LTGet("SYRIA_SHOP_ADVANCE_CAPTURE_NOT_ELIGIBLE")
+    end
+    if not params.zone:canAdvanceCapture() then
+        return LTGet("SYRIA_SHOP_ADVANCE_CAPTURE_NOT_ELIGIBLE")
+    end
+    params.advanceCapture = true
+    local chosenZone=bc:getZoneByName(params.zone.zone)
+    return bc:requestCaptureMission(chosenZone, params)
+end)
+bc.shopItems['advancecapture'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	extraPredicate = function(zoneObj)
+		return zoneObj:canAdvanceCapture()
+	end,
+	zoneMenuBuilder = bc.shopItems['capture'].groupZoneSelector.zoneMenuBuilder,
+	sortPolicy = 'enemy_frontline',
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ADVANCE_CAPTURE_ZONES"),
 }
 --end of menu
 
@@ -3414,6 +3443,8 @@ bc.shopItems['zhimars'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['zhimars'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 bc.shopItems['capture'].groupZoneSelector.candidateBucket = 'neutral_capture_targets'
 bc.shopItems['capture'].groupZoneSelector.refreshTags = { 'neutral_capture_targets' }
+bc.shopItems['advancecapture'].groupZoneSelector.candidateBucket = 'advance_capture_targets'
+bc.shopItems['advancecapture'].groupZoneSelector.refreshTags = { 'advance_capture_targets' }
 bc.shopItems['intel'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['intel'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 bc.shopItems['intel'].groupZoneSelector.refreshTagsByCoalition = {
@@ -3533,6 +3564,7 @@ ShopPrices = ShopPrices or {
 	recon         = 50,   -- Deploy recon group (for combined arms)
 	airdef        = 150,  -- Deploy air defence (for combined arms)
 	capture       = 500,  -- Emergency capture zone
+	advancecapture = 500, -- Advance capture pressured enemy zone
 	intel         = 150,  -- Intel on enemy zone
 	zinf          = 500,  -- Upgrade zone with infantry
 	zsam          = 2000, -- Upgrade zone with Hawk/Nasams
@@ -3557,6 +3589,7 @@ ShopRankRequirements = ShopRankRequirements or {
 	dynamictexaco  = 3,  -- Dynamic Tanker (Boom)
 	farphere       = 4,  -- Deploy FARP
 	capture        = 1,  -- Emergency capture zone
+	advancecapture = 1,  -- Advance capture pressured enemy zone
 	smoke          = 1,  -- Smoke markers
 	flare          = 1,  -- Flare markers
 	illum          = 1,  -- Illumination bomb
@@ -3646,13 +3679,14 @@ bc:addShopItem(2, 'airdef', -1, 4, ShopRankRequirements.airdef, ShopCats.Combine
 
 -- Logistics & Strategic
 bc:addShopItem(2, 'capture', -1, 1, ShopRankRequirements.capture, ShopCats.LogisticsStrategic) -- emergency capture
-bc:addShopItem(2, 'supplies2', -1, 2, ShopRankRequirements.supplies2, ShopCats.LogisticsStrategic) -- upgrade friendly zone
+bc:addShopItem(2, 'advancecapture', -1, 2, ShopRankRequirements.advancecapture, ShopCats.LogisticsStrategic) -- advance capture
+bc:addShopItem(2, 'supplies2', -1, 3, ShopRankRequirements.supplies2, ShopCats.LogisticsStrategic) -- upgrade friendly zone
 if AllowScriptedSupplies then
-    bc:addShopItem(2, 'supplies', -1, 3, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
+    bc:addShopItem(2, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
 end
 if WarehouseLogistics then
-    bc:addShopItem(2, 'zlogc', -1, 4, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
-    bc:addShopItem(2, 'zwh50', -1, 5, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
+    bc:addShopItem(2, 'zlogc', -1, 5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
+    bc:addShopItem(2, 'zwh50', -1, 6, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
 end
 
 -- Other Support

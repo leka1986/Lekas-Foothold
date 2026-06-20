@@ -5208,16 +5208,6 @@ local _anyZoneSideIndex = {}
 local _densestZoneIndex = {}
 local _enemyDistIndex = {}
 
-local function _anyZoneOfSide(side)
-    local cached = _anyZoneSideIndex[side]; if cached then return cached end
-    local zi = Frontline._zoneInfo
-    if not zi then return nil end
-    for name,info in pairs(zi) do
-        if info and info.center and info.side == side then _anyZoneSideIndex[side] = name; return name end
-    end
-    return nil
-end
-
 local function _bearingDeg(a, b)
     return _bearingDegFromDelta(b.x - a.x, b.y - a.y)
 end
@@ -10405,8 +10395,37 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 					end
 				end
 			end
+			local advanceCaptureRefreshItemAvailable = false
+			if tokens and tokens.advance_capture_targets == true then
+				local advanceItem = self.shopItems and self.shopItems.advancecapture or nil
+				local advanceShopData = self.shops and self.shops[coalitionSide] and self.shops[coalitionSide].advancecapture or nil
+				if advanceItem and advanceItem.groupZoneSelector and advanceShopData then
+					advanceCaptureRefreshItemAvailable = true
+					priorityItemId = priorityItemId or "advancecapture"
+					local hasAdvanceCapture = false
+					for i = 1, #itemIds do
+						if itemIds[i] == "advancecapture" then
+							hasAdvanceCapture = true
+							break
+						end
+					end
+					if not hasAdvanceCapture then
+						itemIds[#itemIds + 1] = "advancecapture"
+					end
+				end
+			end
+			local queuedRefresh = false
 			if #itemIds > 0 then
-				self:_queueShopSelectorRefreshItemsForCoalition(coalitionSide, itemIds, priorityItemId)
+				queuedRefresh = self:_queueShopSelectorRefreshItemsForCoalition(coalitionSide, itemIds, priorityItemId)
+			end
+			if tokens and tokens.advance_capture_targets == true then
+				if advanceCaptureRefreshItemAvailable and queuedRefresh and self._advanceCaptureAvailableRefreshPending then
+					self._advanceCaptureAvailableMessages = self._advanceCaptureAvailableMessages or {}
+					for zoneName in pairs(self._advanceCaptureAvailableRefreshPending) do
+						self._advanceCaptureAvailableMessages[zoneName] = true
+					end
+				end
+				self._advanceCaptureAvailableRefreshPending = nil
 			end
 		end
 		self:_startShopSelectorRefreshWorker()
@@ -10464,7 +10483,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 
 	function BattleCommander:_queueShopSelectorRefreshItemsForCoalition(coalitionSide, itemIds, priorityItemId)
 		if not itemIds or #itemIds == 0 then
-			return
+			return false
 		end
 
 		self._shopSelectorRefreshWorkQueue = self._shopSelectorRefreshWorkQueue or {}
@@ -10473,7 +10492,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 
 		local groups = self:_getLivePlayerGroupsForCoalition(coalitionSide)
 		if #groups == 0 then
-			return
+			return false
 		end
 
 		itemIds = self:_orderShopSelectorRefreshItemIds(coalitionSide, itemIds)
@@ -10489,6 +10508,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 			end
 		end
 		local priorityJobs = nil
+		local queuedRefresh = false
 		local function takeQueuedPriorityJob(workKey)
 			local queue = self._shopSelectorRefreshWorkQueue
 			local head = self._shopSelectorRefreshWorkHead or 1
@@ -10508,6 +10528,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 				local groupObj = entry.groupObj
 				if self.groupSupportMenus[groupId] then
 					local workKey = tostring(coalitionSide) .. "|" .. tostring(groupId) .. "|" .. tostring(itemId)
+					queuedRefresh = true
 					if itemId == priorityItemId then
 						local job = nil
 						if self._shopSelectorRefreshWorkSeen[workKey] then
@@ -10545,6 +10566,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 				table.insert(self._shopSelectorRefreshWorkQueue, insertAt, priorityJobs[i])
 			end
 		end
+		return queuedRefresh
 	end
 
 	function BattleCommander:_startShopSelectorRefreshWorker()
@@ -10561,6 +10583,24 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		self._shopSelectorRefreshWorkerScheduler = SCHEDULER:New(nil, function(bcRef)
 			bcRef:_runShopSelectorRefreshWorkerTick()
 		end, {self}, delay, 0)
+	end
+
+	function BattleCommander:_flushAdvanceCaptureAvailableMessages()
+		local pending = self._advanceCaptureAvailableMessages
+		if not pending then
+			return
+		end
+		self._advanceCaptureAvailableMessages = nil
+
+		local zoneNames = {}
+		for zoneName in pairs(pending) do
+			zoneNames[#zoneNames + 1] = zoneName
+		end
+		table.sort(zoneNames)
+
+		for _, zoneName in ipairs(zoneNames) do
+			trigger.action.outTextForCoalition(coalition.side.BLUE, L10N:Format("SYRIA_SHOP_ADVANCE_CAPTURE_AVAILABLE", zoneName), 15)
+		end
 	end
 
 	function BattleCommander:_runShopSelectorRefreshWorkerTick()
@@ -10587,6 +10627,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 			self._shopSelectorRefreshWorkQueue = {}
 			self._shopSelectorRefreshWorkHead = 1
 			self._shopSelectorRefreshWorkSeen = {}
+			self:_flushAdvanceCaptureAvailableMessages()
 		else
 			self._shopSelectorRefreshWorkHead = head
 			self:_startShopSelectorRefreshWorker()
@@ -12929,7 +12970,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 			end
 		end
 
-		if id == 'capture' then
+		if id == 'capture' and not (type(alternateParams) == 'table' and alternateParams.advanceCapture == true) then
 			local foundAny = false
 			for _, v in ipairs(self:getZones()) do
 				if v.active and v.side == 0 and (not v.NeutralAtStart or v.firstCaptureByRed or v.suspended)
@@ -12969,7 +13010,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 		end
 
 		local pendingShopPurchase = nil
-		if (id == 'supplies' or id == 'supplies2' or id == 'capture') and type(alternateParams) == 'table' then
+		if (id == 'supplies' or id == 'supplies2' or id == 'capture' or id == 'advancecapture') and type(alternateParams) == 'table' then
 			pendingShopPurchase = self:_buildPendingShopPurchase(coalition, id, item, buyerGroupId, buyerGroupObj, itemName, coalitionItemName)
 			alternateParams._shopPurchaseContext = pendingShopPurchase
 		end
@@ -13476,20 +13517,43 @@ function findNearestAvailableSupplyCommander(chosenZone, opts)
 		local bestSurface=nil
 		local bestSurfaceDist=99999999
 		local hasInProgress = false
+		local heloOnly = opts and opts.heloOnly == true
+		local advanceCapture = opts and opts.advanceCapture == true
+		local targetAirbaseName = chosenZone and chosenZone.airbaseName
+		if type(targetAirbaseName) == "table" then
+			targetAirbaseName = targetAirbaseName[chosenZone.side]
+		end
+		local function categoryAllowed(grpCmd)
+			if heloOnly then
+				return grpCmd.unitCategory == Unit.Category.HELICOPTER
+			end
+			if advanceCapture then
+				return grpCmd.unitCategory == Unit.Category.HELICOPTER
+					or (grpCmd.unitCategory == Unit.Category.AIRPLANE and type(targetAirbaseName) == "string" and targetAirbaseName ~= "")
+					or grpCmd.type == 'surface'
+			end
+			return true
+		end
 		for _,zC in ipairs(bc.zones) do
 			if zC.side==2 and zC.active then
 				for _,grpCmd in ipairs(zC:_getSupplyCache()) do
 					if grpCmd.template and grpCmd.side ~= zC.side and grpCmd:_templateSupportsSide(zC.side) then
 						grpCmd.side = zC.side
 					end
-					if grpCmd.mission=='supply' and grpCmd.side==2 and not grpCmd.suspended and grpCmd.targetzone==chosenZone.zone then
+					if grpCmd.mission=='supply'
+						and grpCmd.side==2
+						and not grpCmd.suspended
+						and grpCmd.targetzone==chosenZone.zone
+						and not (advanceCapture and grpCmd._supplyReturnHome == true)
+						and categoryAllowed(grpCmd)
+					then
 						local st=grpCmd.state
 						if st=='takeoff' or st=='inair' or st=='landed' or st=='enroute' or st=='atdestination' then
 							hasInProgress = true
 							if not (opts and opts.allowParallel == true) then
 								return nil,'inprogress'
 							end
-						elseif st=='dead' or st=='inhangar' then
+						elseif (st=='dead' or st=='inhangar') and categoryAllowed(grpCmd) then
 							local znA=zC.zone
 							local znB=chosenZone.zone
 							local dist=ZONE_DISTANCES[znA] and ZONE_DISTANCES[znA][znB] or 99999999
@@ -13502,6 +13566,12 @@ function findNearestAvailableSupplyCommander(chosenZone, opts)
 					end
 				end
 			end
+		end
+		if advanceCapture then
+			if bestAir then return bestAir,nil,bestAirDist end
+			if bestSurface then return bestSurface,nil,bestSurfaceDist end
+			if hasInProgress then return nil,'inprogress' end
+			return nil,nil
 		end
 		if bestAir and bestSurface then
 			if bestSurfaceDist <= (bestAirDist / 3) then
@@ -13782,7 +13852,13 @@ function BattleCommander:_getDynamicShopSupplyCommander(originZone, targetZone)
 end
 
 function BattleCommander:_selectShopSupplyCommander(targetZone, opts, allowParallel)
-	local bestCommander, status, existingDist = findNearestAvailableSupplyCommander(targetZone, { allowParallel = allowParallel == true })
+	local advanceCapture = opts and opts.advanceCapture == true
+	local selectorOpts = {
+		allowParallel = allowParallel == true,
+		heloOnly = opts and opts.heloOnly == true or false,
+		advanceCapture = advanceCapture,
+	}
+	local bestCommander, status, existingDist = findNearestAvailableSupplyCommander(targetZone, selectorOpts)
 	if status == 'inprogress' and allowParallel ~= true then
 		return nil, status, nil
 	end
@@ -13794,7 +13870,7 @@ function BattleCommander:_selectShopSupplyCommander(targetZone, opts, allowParal
 		local existingIsShopSupply = bestCommander.mission == 'supply'
 			and bestCommander.side == 2
 			and bestCommander.ShopLaunchOnly == true
-		if dynamicChoice and self:_isDynamicShopSupplyMeaningfullyCloser(dynamicChoice.distMeters, existingDist) then
+		if not advanceCapture and dynamicChoice and self:_isDynamicShopSupplyMeaningfullyCloser(dynamicChoice.distMeters, existingDist) then
 			local dynamicCommander = self:_getDynamicShopSupplyCommander(dynamicChoice.origin, targetZone)
 			if dynamicCommander then
 				return dynamicCommander, nil, dynamicChoice
@@ -13961,17 +14037,25 @@ function BattleCommander:requestCaptureMission(chosenZone, options)
 		return L10N:Get("LOGISTICS_ZONE_NOT_FOUND")
 	end
 
-	if chosenZone.side ~= 0 then
+	local opts = type(options) == "table" and options or nil
+	local advanceCapture = opts and opts.advanceCapture == true
+	if chosenZone.side ~= 0 and not (advanceCapture and chosenZone.side == 1 and chosenZone.active and not chosenZone.suspended) then
 		return L10N:Get("SYRIA_SHOP_ZONE_NOT_NEUTRAL")
 	end
 
-	local opts = type(options) == "table" and options or nil
 	local pendingShopPurchase = opts and opts._shopPurchaseContext or nil
 	local bestCommander, status, launchChoice = self:_selectShopSupplyCommander(chosenZone, opts, false)
 	if not bestCommander then
 		if status == 'inprogress' then
 			return L10N:Format("LOGISTICS_SUPPLY_ALREADY_PROGRESS", chosenZone.zone)
 		end
+		return L10N:Get("LOGISTICS_NO_AVAILABLE_SUPPLY")
+	end
+	if advanceCapture
+		and bestCommander.type ~= 'surface'
+		and bestCommander.unitCategory ~= Unit.Category.HELICOPTER
+		and bestCommander.unitCategory ~= Unit.Category.AIRPLANE
+	then
 		return L10N:Get("LOGISTICS_NO_AVAILABLE_SUPPLY")
 	end
 
@@ -13984,6 +14068,11 @@ function BattleCommander:requestCaptureMission(chosenZone, options)
 	self:_attachPendingShopPurchase(bestCommander, pendingShopPurchase)
 	if bestCommander._pendingSurfaceRestore and bestCommander._pendingSurfaceRestore.captureFarpLaunch == true then
 		bestCommander._pendingSurfaceRestore = nil
+	end
+	if advanceCapture then
+		bestCommander._advanceCaptureWaitingForNeutral = true
+		bestCommander._advanceCaptureReleased = nil
+		bestCommander._advanceCaptureHold = nil
 	end
 
 	local originZoneName = bestCommander.zoneCommander and bestCommander.zoneCommander.zone or nil
@@ -14008,6 +14097,9 @@ function BattleCommander:requestCaptureMission(chosenZone, options)
 	bestCommander.state = 'preparing'
 	bestCommander.urgent = true
 	bestCommander.lastStateTime = timer.getAbsTime() - 999999
+	if advanceCapture then
+		self:markFsmGroupFilterDirty()
+	end
 
 	if bestCommander.unitCategory == Unit.Category.HELICOPTER then
 		bestCommander._pendingSupplyLaunchMessage = L10N:Format("LOGISTICS_FRIENDLY_HELO_SCRAMBLE", launchLabel, chosenZone.zone)
@@ -15481,6 +15573,22 @@ end
 			rec.capReturnHome = gc._capReturnHome == true
 			rec.capReturnHomeZone = gc._capReturnHomeZone
 		end
+		if gc._advanceCaptureWaitingForNeutral == true or gc._advanceCaptureReleased == true then
+			local hold = gc._advanceCaptureHold or (gc._externalHeloCargoRoute and gc._externalHeloCargoRoute.hold) or nil
+			rec.advanceCapture = true
+			rec.advanceCaptureWaitingForNeutral = gc._advanceCaptureWaitingForNeutral == true
+			rec.advanceCaptureReleased = gc._advanceCaptureReleased == true
+			rec.advanceCapturePhase = gc._advanceCaptureWaitingForNeutral == true and "holding" or "released"
+			rec.advanceCaptureExternalCargo = gc._advanceCaptureExternalCargo == true
+			if hold and hold.x and hold.z then
+				rec.advanceCaptureHold = {
+					x = tonumber(hold.x),
+					z = tonumber(hold.z),
+					aglM = tonumber(hold.aglM),
+					altitude = tonumber(hold.altitude),
+				}
+			end
+		end
 		if gc.dynamicHybrid == true then
 			rec.dynamicHybrid = true
 			rec.dynamicBaseName = gc._dynamicHybridBaseName or _airPersistenceDynamicBaseName(gc.name)
@@ -15512,6 +15620,19 @@ end
 				x = tonumber(gc.playerGroundAttackRoutePoint.x),
 				y = tonumber(gc.playerGroundAttackRoutePoint.y),
 			}
+		end
+		if gc._advanceCaptureWaitingForNeutral == true or gc._advanceCaptureReleased == true then
+			rec.advanceCapture = true
+			rec.advanceCaptureWaitingForNeutral = gc._advanceCaptureWaitingForNeutral == true
+			rec.advanceCaptureReleased = gc._advanceCaptureReleased == true
+			rec.advanceCapturePhase = gc._advanceCaptureWaitingForNeutral == true and "holding" or "released"
+			local hold = gc._advanceCaptureHold
+			if hold and hold.x and hold.z then
+				rec.advanceCaptureHold = {
+					x = tonumber(hold.x),
+					z = tonumber(hold.z),
+				}
+			end
 		end
 		if gc.dynamicHybrid == true then
 			rec.dynamicHybrid = true
@@ -17689,6 +17810,12 @@ end
 						gc._capAssistRetaskedTargetzone = saved.capRetaskedTargetzone
 						gc._capAssistRetaskedThisSortie = saved.capRetaskedThisSortie == true
 						gc._restoreCapReturnHome = saved.capReturnHome == true
+						gc._restoreAdvanceCapture = saved.advanceCapture == true
+						gc._restoreAdvanceCapturePhase = saved.advanceCapturePhase
+						gc._advanceCaptureWaitingForNeutral = saved.advanceCaptureWaitingForNeutral == true and true or nil
+						gc._advanceCaptureReleased = saved.advanceCaptureReleased == true and true or nil
+						gc._advanceCaptureHold = saved.advanceCaptureHold
+						gc._advanceCaptureExternalCargo = saved.advanceCaptureExternalCargo == true and true or nil
 						local savedTargetZone = saved.dynamicTargetZone or saved.targetZone
 						if savedTargetZone then
 							gc.targetzone = savedTargetZone
@@ -17744,6 +17871,12 @@ end
 					gc._capAssistRetaskedTargetzone = saved.capRetaskedTargetzone
 					gc._capAssistRetaskedThisSortie = saved.capRetaskedThisSortie == true
 					gc._restoreCapReturnHome = saved.capReturnHome == true
+					gc._restoreAdvanceCapture = saved.advanceCapture == true
+					gc._restoreAdvanceCapturePhase = saved.advanceCapturePhase
+					gc._advanceCaptureWaitingForNeutral = saved.advanceCaptureWaitingForNeutral == true and true or nil
+					gc._advanceCaptureReleased = saved.advanceCaptureReleased == true and true or nil
+					gc._advanceCaptureHold = saved.advanceCaptureHold
+					gc._advanceCaptureExternalCargo = saved.advanceCaptureExternalCargo == true and true or nil
 					local savedTargetZone = saved.dynamicTargetZone or saved.targetZone
 					if savedTargetZone then
 						gc.targetzone = savedTargetZone
@@ -20016,6 +20149,15 @@ function BattleCommander:_zoneMatchesShopSelectorBucket(zoneState, bucketName)
 			and zoneState.airbaseName ~= ""
 	elseif bucketName == "enemy_unsuspended" then
 		return zoneState.side == 1 and not zoneState.suspended
+	elseif bucketName == "advance_capture_targets" then
+		if zoneState.suspended then
+			return false
+		end
+		if zoneState.canAdvanceCapture then
+			return zoneState:canAdvanceCapture()
+		end
+		return zoneState.advanceCaptureEligible == true
+			or zoneState._advanceCaptureEligibleForMenu == true
 	elseif bucketName == "neutral_unsuspended" then
 		return zoneState.side == 0 and not zoneState.suspended
 	elseif bucketName == "neutral_capture_targets" then
@@ -20076,6 +20218,7 @@ function BattleCommander:_applyZoneShopSelectorDelta(zoneObj, previousState)
 		"blue_unsuspended",
 		"blue_airbase_unsuspended",
 		"enemy_unsuspended",
+		"advance_capture_targets",
 		"neutral_unsuspended",
 		"neutral_capture_targets",
 		"warehouse_targets",
@@ -20120,6 +20263,13 @@ function BattleCommander:_getZoneSelectorRefreshTags(zoneObj, previousState)
 		tags[#tags + 1] = "enemy_targets"
 	end
 
+	local touchesAdvanceCapture =
+		self:_zoneMatchesShopSelectorBucket(previousState, "advance_capture_targets")
+		or self:_zoneMatchesShopSelectorBucket(zoneObj, "advance_capture_targets")
+	if touchesAdvanceCapture then
+		tags[#tags + 1] = "advance_capture_targets"
+	end
+
 	local touchesNeutralCapture =
 		self:_zoneMatchesShopSelectorBucket(previousState, "neutral_capture_targets")
 		or self:_zoneMatchesShopSelectorBucket(zoneObj, "neutral_capture_targets")
@@ -20154,6 +20304,7 @@ function BattleCommander:updateBlueZoneCount()
 		blue_visible = {},
 		blue_airbase_unsuspended = {},
 		enemy_unsuspended = {},
+		advance_capture_targets = {},
 		neutral_unsuspended = {},
 		neutral_capture_targets = {},
 		warehouse_targets = {},
@@ -20203,6 +20354,9 @@ function BattleCommander:updateBlueZoneCount()
 				if not z.suspended then
 					redActiveZones[#redActiveZones + 1] = z
 					addSelectorCandidate("enemy_unsuspended", z)
+					if z:canAdvanceCapture() then
+						addSelectorCandidate("advance_capture_targets", z)
+					end
 				end
 			elseif z.side == 0 then
 				neutralActiveZones[#neutralActiveZones + 1] = z
@@ -24561,10 +24715,7 @@ function BattleCommander:_claimLandingRewards(player, coalitionSide, un, playRan
 			local rewardPerMinute = FlightTimeRewardPerMinute or 1
 			local reward = minutes * rewardPerMinute
 			if reward > 0 then bc:addContribution(player,coalitionSide,reward) end
-			for i=1,#crew do
-				local n=crew[i]
-				self:addTempStat(n,'Flight time',minutes)
-			end
+			self:addTempStat(player,'Flight time',minutes)
 		end
 	end
 	local redeemMsg = (#crew > 1) and L10N:Get("PLAYER_REDEEM_CREW_HEADER") or L10N:Get("PLAYER_REDEEM_HEADER")
@@ -25498,12 +25649,31 @@ function BattleCommander:loadFromDisk()
 					capRetaskedThisSortie = entry.capRetaskedThisSortie == true,
 					capReturnHome = entry.capReturnHome == true,
 					capReturnHomeZone = entry.capReturnHomeZone,
+					advanceCapture = entry.advanceCapture == true,
+					advanceCaptureWaitingForNeutral = entry.advanceCaptureWaitingForNeutral == true,
+					advanceCaptureReleased = entry.advanceCaptureReleased == true,
+					advanceCapturePhase = entry.advanceCapturePhase,
+					advanceCaptureExternalCargo = entry.advanceCaptureExternalCargo == true,
 				}
 				local capHoldingPoint = entry.capHoldingPoint
 				local capHoldingX = capHoldingPoint and tonumber(capHoldingPoint.x)
 				local capHoldingZ = capHoldingPoint and tonumber(capHoldingPoint.z or capHoldingPoint.y)
 				if capHoldingX and capHoldingZ then
 					rec.capHoldingPoint = { x = capHoldingX, z = capHoldingZ }
+				end
+				local advanceHold = entry.advanceCaptureHold
+				local advanceHoldX = advanceHold and tonumber(advanceHold.x)
+				local advanceHoldZ = advanceHold and tonumber(advanceHold.z or advanceHold.y)
+				if advanceHoldX and advanceHoldZ then
+					rec.advanceCaptureHold = {
+						x = advanceHoldX,
+						z = advanceHoldZ,
+						aglM = tonumber(advanceHold.aglM),
+						altitude = tonumber(advanceHold.altitude),
+					}
+				end
+				if rec.advanceCaptureWaitingForNeutral or rec.advanceCaptureReleased or rec.advanceCaptureHold then
+					rec.advanceCapture = true
 				end
 
 				if type(rec.dynamicBaseName) ~= "string" or rec.dynamicBaseName == "" then
@@ -25618,12 +25788,28 @@ function BattleCommander:loadFromDisk()
 					artilleryFireTargetZone = entry.artilleryFireTargetZone or entry.targetZone or entry.dynamicTargetZone,
 					supplyReturnHome = entry.supplyReturnHome == true,
 					artilleryReturnHome = entry.artilleryReturnHome == true,
+					advanceCapture = entry.advanceCapture == true,
+					advanceCaptureWaitingForNeutral = entry.advanceCaptureWaitingForNeutral == true,
+					advanceCaptureReleased = entry.advanceCaptureReleased == true,
+					advanceCapturePhase = entry.advanceCapturePhase,
 				}
 				local routePoint = entry.playerGroundAttackRoutePoint
 				local rpx = routePoint and tonumber(routePoint.x)
 				local rpy = routePoint and tonumber(routePoint.y)
 				if rpx and rpy then
 					rec.playerGroundAttackRoutePoint = { x = rpx, y = rpy }
+				end
+				local advanceHold = entry.advanceCaptureHold
+				local advanceHoldX = advanceHold and tonumber(advanceHold.x)
+				local advanceHoldZ = advanceHold and tonumber(advanceHold.z or advanceHold.y)
+				if advanceHoldX and advanceHoldZ then
+					rec.advanceCaptureHold = {
+						x = advanceHoldX,
+						z = advanceHoldZ,
+					}
+				end
+				if rec.advanceCaptureWaitingForNeutral or rec.advanceCaptureReleased or rec.advanceCaptureHold then
+					rec.advanceCapture = true
 				end
 
 				if type(rec.dynamicBaseName) ~= "string" or rec.dynamicBaseName == "" then
@@ -26236,6 +26422,8 @@ do
 		obj._supplyMenuTotalUpgrades = obj._supplyMenuTotalUpgrades or 0
 		obj._lastCanReceiveSupply = nil
 		obj._supplyReceiveStateChanged = false
+		obj._advanceCaptureEligibleForMenu = nil
+		obj._advanceCaptureEligibilitySeeded = false
 
 		if obj.upgrades then
 		local nb={} for i,v in ipairs(obj.upgrades.blue or {}) do nb[i]=v end
@@ -26313,6 +26501,7 @@ function ZoneCommander:suspend()
 			firstCaptureByRed = self.firstCaptureByRed,
 			airbaseName = self.airbaseName,
 			LogisticCenter = self.LogisticCenter,
+			advanceCaptureEligible = self._advanceCaptureEligibleForMenu,
 		}
 		self._suspendedLiveFsm = nil
 		for _, gc in ipairs(self.groups or {}) do
@@ -26395,6 +26584,7 @@ function ZoneCommander:suspend()
 			firstCaptureByRed = self.firstCaptureByRed,
 			airbaseName = self.airbaseName,
 			LogisticCenter = self.LogisticCenter,
+			advanceCaptureEligible = self._advanceCaptureEligibleForMenu,
 		}
 		if self._resuming and not internal then return end
 		local wasSuspended = self.suspended == true
@@ -27713,6 +27903,34 @@ end
 			end
 		end
 	end
+
+	function ZoneCommander:_hasLostOrDestroyedTrigger()
+		for _, v in ipairs(self.triggers or {}) do
+			if v.id ~= 'missioncompleted' and (v.eventType == 'lost' or v.eventType == 'destroyed') then
+				return true
+			end
+		end
+		return false
+	end
+
+	function ZoneCommander:_getAdvanceCaptureRemainingRatio()
+		local total = Utils.getTableSize(self:getFilteredUpgrades())
+		if total <= 0 then return nil end
+		return Utils.getTableSize(self.built or {}) / total
+	end
+
+	function ZoneCommander:canAdvanceCapture()
+		if not self.active or self.suspended or self.isHidden then return false end
+		if self.side ~= 1 then return false end
+		if self:_hasLostOrDestroyedTrigger() then return false end
+		local remainingRatio = self:_getAdvanceCaptureRemainingRatio()
+		local threshold = tonumber(AdvanceCaptureRemainingThreshold) or 0.50
+		if threshold > 1 then threshold = threshold / 100 end
+		threshold = math.max(0.20, math.min(0.60, threshold))
+		return remainingRatio ~= nil
+			and remainingRatio > 0
+			and remainingRatio <= threshold
+	end
 	--end zone triggers
 	-------------------------------------------------------- DISABLE FRIENDLY ZONE ---------------------------------------------------------------------------
 
@@ -28098,6 +28316,7 @@ function ZoneCommander:AwakenZone()
 		firstCaptureByRed = self.firstCaptureByRed,
 		airbaseName = self.airbaseName,
 		LogisticCenter = self.LogisticCenter,
+		advanceCaptureEligible = self._advanceCaptureEligibleForMenu,
 	}
 	local wasHidden = self.isHidden == true
 	if not self.isHidden then
@@ -28968,6 +29187,8 @@ function ZoneCommander:init()
 	end
 
 	self:_refreshSupplyMenuCache()
+	self._advanceCaptureEligibleForMenu = self:canAdvanceCapture()
+	self._advanceCaptureEligibilitySeeded = true
 
 	if isCarrierZoneName(self.zone) and self.side == 2 and self.active and not self.suspended then
 		SCHEDULER:New(self, function(z)
@@ -29182,7 +29403,11 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			if tzSupply.suspended then
 				return "supply_target_suspended"
 			end
-			if tzSupply.side ~= self.side and tzSupply.side ~= 0 then
+			local allowAdvanceCaptureHold = gc._advanceCaptureWaitingForNeutral == true
+				and gc._shopLaunchRequested == true
+				and (gc.type == 'surface' or gc.unitCategory == Unit.Category.HELICOPTER or gc.unitCategory == Unit.Category.AIRPLANE)
+				and gc.side == self.side
+			if tzSupply.side ~= self.side and tzSupply.side ~= 0 and not allowAdvanceCaptureHold then
 				return "supply_target_side_mismatch"
 			end
 			return nil
@@ -29486,6 +29711,52 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 					end
 				end
 			end
+			local advanceCaptureEligible = self:canAdvanceCapture()
+			if self._advanceCaptureEligibleForMenu ~= advanceCaptureEligible then
+				local advanceCaptureEligibilitySeeded = self._advanceCaptureEligibilitySeeded == true or self._advanceCaptureEligibleForMenu ~= nil
+				local previousAdvanceCaptureState = {
+					active = self.active,
+					suspended = self.suspended,
+					side = self.side,
+					isHidden = self.isHidden,
+					NeutralAtStart = self.NeutralAtStart,
+					firstCaptureByRed = self.firstCaptureByRed,
+					airbaseName = self.airbaseName,
+					LogisticCenter = self.LogisticCenter,
+					advanceCaptureEligible = self._advanceCaptureEligibleForMenu,
+				}
+				self._advanceCaptureEligibleForMenu = advanceCaptureEligible
+				self._advanceCaptureEligibilitySeeded = true
+				if advanceCaptureEligibilitySeeded and previousAdvanceCaptureState.advanceCaptureEligible == false and advanceCaptureEligible == true then
+					bc._advanceCaptureAvailableRefreshPending = bc._advanceCaptureAvailableRefreshPending or {}
+					bc._advanceCaptureAvailableRefreshPending[self.zone] = true
+				elseif advanceCaptureEligible == false then
+					if bc._advanceCaptureAvailableRefreshPending then
+						bc._advanceCaptureAvailableRefreshPending[self.zone] = nil
+					end
+					if bc._advanceCaptureAvailableMessages then
+						bc._advanceCaptureAvailableMessages[self.zone] = nil
+					end
+				end
+				bc:_applyZoneShopSelectorDelta(self, previousAdvanceCaptureState)
+				bc:requestShopSelectorRefreshForCoalition(coalition.side.BLUE, { 'advance_capture_targets' })
+			elseif self._advanceCaptureEligibilitySeeded ~= true then
+				self._advanceCaptureEligibilitySeeded = true
+			end
+			local advanceCaptureRemainingRatio = self:_getAdvanceCaptureRemainingRatio()
+			local advanceCaptureAbortActive = self.side == 1
+				and advanceCaptureRemainingRatio ~= nil
+				and advanceCaptureRemainingRatio >= (AdvanceCaptureAbortRemainingThreshold or 0.90)
+			if advanceCaptureAbortActive then
+				if self._advanceCaptureAbortThresholdActive ~= true then
+					local abortedCount = bc:_abortAdvanceCaptureHeldSupply(self.zone, advanceCaptureRemainingRatio)
+					if abortedCount > 0 then
+						self._advanceCaptureAbortThresholdActive = true
+					end
+				end
+			else
+				self._advanceCaptureAbortThresholdActive = nil
+			end
 			end
 
 			local empty = (next(self.built) == nil)
@@ -29505,6 +29776,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 				firstCaptureByRed = self.firstCaptureByRed,
 				airbaseName = self.airbaseName,
 				LogisticCenter = self.LogisticCenter,
+				advanceCaptureEligible = self._advanceCaptureEligibleForMenu,
 			}
 			local previousSide = self.side
 			self.side = 0
@@ -29515,6 +29787,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			bc:markFsmGroupFilterDirty()
 			bc:markReindexCombatFilterDirty()
 			bc:markSupplyCacheDirty()
+			bc:_releaseAdvanceCaptureHeldSupply(self.zone)
 			if self:_refreshSupplyMenuCache(false) then
 				bc:requestDelayedSupplyMenuRefresh()
 			end
@@ -29893,6 +30166,7 @@ function ZoneCommander:capture(newside,silent)
 			firstCaptureByRed = self.firstCaptureByRed,
 			airbaseName = self.airbaseName,
 			LogisticCenter = self.LogisticCenter,
+			advanceCaptureEligible = self._advanceCaptureEligibleForMenu,
 		}
         local previousSide = self.side
         self.side = newside
@@ -30371,6 +30645,9 @@ function GroupCommander:_destroyLogiCargo()
         if cargo and cargo:isExist() then cargo:destroy() end
         cargoByGroup[self.name] = nil
     end
+    if self._externalLogiCargoByGroup then
+        self._externalLogiCargoByGroup[self.name] = nil
+    end
 end
 
 function GroupCommander:_clearSupplyLaunchState(opts)
@@ -30443,6 +30720,18 @@ function GroupCommander:_enterHangar(isInitial)
     self._supplyEarlyDeathRetried = nil
     self._supplyRetrySkipBlockedHelo = nil
     self._supplyNoCargoDebitApplied = nil
+    self._advanceCaptureWaitingForNeutral = nil
+    self._advanceCaptureReleased = nil
+    self._advanceCaptureHold = nil
+    self._advanceCaptureExternalCargo = nil
+    self._advanceCaptureExternalCargoReady = nil
+    self._advanceCaptureExternalCargoReleaseNotBefore = nil
+    self._advanceCaptureExternalCargoReleaseFallbackAt = nil
+    self._advanceCaptureExternalCargoReleaseDelayed = nil
+    self._advanceCaptureExternalCargoFallbackWarned = nil
+    self._advanceCaptureReleaseFailedLogged = nil
+    self._restoreAdvanceCapture = nil
+    self._restoreAdvanceCapturePhase = nil
     self:_clearSupplyLaunchState({ keepPendingFarp = true, keepActiveFarp = true })
     _surfaceIntelClearLastKnownMarker(self.name)
     self._surfaceIntelRouteToken = (self._surfaceIntelRouteToken or 0) + 1
@@ -30713,6 +31002,88 @@ function GroupCommander:_assignPlaneRoute(grName, zoneName, altitude,ownZone, ow
 	return true
 end
 
+function GroupCommander:_assignPlaneAdvanceCaptureHoldRoute(groupName, targetZoneName, altitude, opts)
+	opts = opts or {}
+	local gr = Group.getByName(groupName); if not gr or not gr:isExist() or gr:getSize() == 0 then return false end
+	local un = gr:getUnit(1); if not un or not un:isExist() then return false end
+	local sp = un:getPoint(); if not sp then return nil end
+	local group = GROUP:FindByName(groupName); if not group or not group:IsAlive() then return false end
+	local plan = self._pendingRestorePlaneRoutePlan
+	if not plan or plan.zoneName ~= targetZoneName then
+		plan = self:_resolvePlaneRoutePlan(targetZoneName, sp.x, sp.z, altitude)
+	end
+	self._pendingRestorePlaneRoutePlan = nil
+	if not plan then return nil end
+
+	local hold = opts.hold or self._advanceCaptureHold or {}
+	local holdX = opts.holdX or hold.x
+	local holdZ = opts.holdZ or hold.z
+	if not holdX or not holdZ then
+		local routeDx, routeDz = plan.destx - sp.x, plan.desty - sp.z
+		local routeLength = math.sqrt((routeDx * routeDx) + (routeDz * routeDz))
+		local holdFraction = opts.holdFraction or 0.80
+		local minTargetDistanceM = UTILS.NMToMeters(opts.minTargetDistancePlaneNm or 25)
+		local holdDistanceM = routeLength * holdFraction
+		if routeLength <= minTargetDistanceM then
+			holdDistanceM = 0
+		else
+			holdDistanceM = math.min(holdDistanceM, routeLength - minTargetDistanceM)
+		end
+		if routeLength > 1 then
+			holdX = sp.x + ((routeDx / routeLength) * holdDistanceM)
+			holdZ = sp.z + ((routeDz / routeLength) * holdDistanceM)
+		else
+			holdX = sp.x
+			holdZ = sp.z
+		end
+	end
+	local holdAlt = tonumber(opts.altitude or hold.altitude) or plan.cruiseAlt or altitude or UTILS.FeetToMeters(10000)
+	local speedMps = tonumber(opts.speedMps) or UTILS.KnotsToMps(250)
+	local orbitTask = {
+		number = 1,
+		auto = false,
+		id = 'Orbit',
+		enabled = true,
+		params = {
+			pattern = AI.Task.OrbitPattern.CIRCLE,
+			point = { x = holdX, y = holdZ },
+			speed = speedMps,
+			speedEdited = true,
+			altitude = holdAlt,
+			altitudeEdited = true,
+			altitudeType = AI.Task.AltitudeType.BARO,
+			alt_type = AI.Task.AltitudeType.BARO,
+		}
+	}
+
+	local wp = {}
+	wp[#wp + 1] = { type = AI.Task.WaypointType.TAKEOFF, x = sp.x, y = sp.z, speed = 0, action = AI.Task.TurnMethod.FIN_POINT, alt = 0, alt_type = AI.Task.AltitudeType.RADIO }
+	wp[#wp + 1] = {
+		type = AI.Task.WaypointType.TURNING_POINT,
+		x = holdX,
+		y = holdZ,
+		speed = speedMps,
+		action = AI.Task.TurnMethod.FLY_OVER_POINT,
+		alt = holdAlt,
+		alt_type = AI.Task.AltitudeType.BARO,
+		task = { id = 'ComboTask', params = { tasks = { orbitTask } } },
+	}
+	group:Route(wp, 1)
+
+	self._advanceCaptureHold = { x = holdX, z = holdZ, altitude = holdAlt }
+	self._advanceCaptureWaitingForNeutral = true
+	self._advanceCaptureReleased = nil
+	self._advanceCaptureExternalCargo = nil
+	if self._pendingSupplyLaunchMessage then
+		trigger.action.outTextForCoalition(2, self._pendingSupplyLaunchMessage, 10)
+		self._pendingSupplyLaunchMessage = nil
+	end
+	if opts.completeShop ~= false then
+		self.zoneCommander.battleCommander:_completePendingShopPurchase(self)
+	end
+	return true
+end
+
 local function _buildMooseWaypointAirLike(coord, altType, wpType, wpAction, speedKmh, speedLocked, airbase, dcsTasks, description, timeReFuAr)
 	altType = altType or "RADIO"
 	if speedLocked == nil then speedLocked = true end
@@ -30759,6 +31130,85 @@ function COORDINATE:TaskCargoTransportation(cargoGroupId, dropZoneId)
 	return { number = 1, auto = false, id = 'CargoTransportation', params = { groupId = cargoGroupId, zoneId = dropZoneId } }
 end
 
+ExternalHeloCargoRoute = ExternalHeloCargoRoute or {}
+
+function ExternalHeloCargoRoute.TaskLoad(heloUnitId, cargoGroupId, cargoUnitId, taskNumber)
+	return {
+		enabled = true,
+		auto = false,
+		id = "ExternalCargoLoad",
+		number = taskNumber or 1,
+		params = {
+			unitIdTransport = heloUnitId,
+			groupId = cargoGroupId,
+			unitId = cargoUnitId,
+		}
+	}
+end
+
+function ExternalHeloCargoRoute.TaskUnload(zoneId, heloUnitId, taskNumber)
+	return {
+		enabled = true,
+		auto = false,
+		id = "ExternalCargoUnLoad",
+		number = taskNumber or 1,
+		params = {
+			zoneId = zoneId,
+			unitIdTransport = heloUnitId or -1,
+		}
+	}
+end
+
+function ExternalHeloCargoRoute.TaskRaceTrackOrbit(x, z, aglMeters, taskNumber)
+	local altitude = land.getHeight({ x = x, y = z }) + (aglMeters or 200)
+	return {
+		enabled = true,
+		auto = false,
+		id = "Orbit",
+		number = taskNumber or 1,
+		params = {
+			altitude = altitude,
+			pattern = "Race-Track",
+			speed = 0,
+			speedEdited = true,
+		}
+	}, altitude
+end
+
+function ExternalHeloCargoRoute.UnitVector(x1, z1, x2, z2, fallbackHeadingRad)
+	local dx, dz = x2 - x1, z2 - z1
+	local length = math.sqrt(dx * dx + dz * dz)
+	if length > 1 then
+		return dx / length, dz / length
+	end
+	fallbackHeadingRad = fallbackHeadingRad or 0
+	return math.cos(fallbackHeadingRad), math.sin(fallbackHeadingRad)
+end
+
+function ExternalHeloCargoRoute.PointBefore(targetX, targetZ, fromX, fromZ, distanceMeters, fallbackHeadingRad)
+	local ux, uz = ExternalHeloCargoRoute.UnitVector(fromX, fromZ, targetX, targetZ, fallbackHeadingRad)
+	return targetX - ux * distanceMeters, targetZ - uz * distanceMeters
+end
+
+function ExternalHeloCargoRoute.AirWaypoint(x, z, altitudeAglM, speedKmh, tasks, name)
+	return _buildMooseWaypointAirLike(
+		COORDINATE:New(x, altitudeAglM, z),
+		"RADIO",
+		"Turning Point",
+		"Turning Point",
+		speedKmh,
+		true,
+		nil,
+		tasks or {},
+		name
+	)
+end
+
+function GroupCommander:_applySupplyHeloDefaultRoe(controller)
+	if self.mission == 'supply' and self.unitCategory == Unit.Category.HELICOPTER then
+		controller:setOption(AI.Option.Air.id.ROE, AI.Option.Air.val.ROE.RETURN_FIRE)
+	end
+end
 
 function GroupCommander:_assignHeloLogisticsRoute(groupName, targetZoneName, ownZone, side, farpLaunch)
 	local staticType = "container_cargo"
@@ -30768,6 +31218,7 @@ function GroupCommander:_assignHeloLogisticsRoute(groupName, targetZoneName, own
 
 	local gr = Group.getByName(groupName); if not gr then env.info("No group found for name " .. groupName) return false end
 	local c = gr:getController(); if not c then env.info("No controller found for group " .. groupName) return false end
+	self:_applySupplyHeloDefaultRoe(c)
 	local un = gr:getUnit(1); if not un then env.info("No unit found for group " .. groupName) return false end
 	local pos = un:getPoint()
 	local destx, desty
@@ -30951,6 +31402,630 @@ function GroupCommander:_assignHeloLogisticsRoute(groupName, targetZoneName, own
 	return true
 end
 
+function GroupCommander:_spawnHeloExternalLogisticsCargo(cargoName, cargoX, cargoZ, side, cargoMassKg)
+	local cargoCountryId = side == 1 and country.id.RUSSIA or country.id.USA
+	local cargoGroupId = gid ; gid = gid + 1
+	local cargoUnitId = uid ; uid = uid + 1
+	local cargoY = land.getHeight({ x = cargoX, y = cargoZ })
+	local cargoData = {
+		name = cargoName,
+		type = "container_cargo",
+		category = "Cargos",
+		shape_name = "bw_container_cargo",
+		canCargo = true,
+		mass = cargoMassKg or 600,
+		rate = 100,
+		x = cargoX,
+		y = cargoZ,
+		heading = 0,
+		groupId = cargoGroupId,
+		unitId = cargoUnitId,
+	}
+	local cargo = coalition.addStaticObject(cargoCountryId, cargoData)
+	if not cargo then return nil end
+
+	local liveCargoUnitId = cargo.getID and cargo:getID() or cargoUnitId
+	local cargoMeta = {
+		name = cargoName,
+		groupId = cargoGroupId,
+		unitId = liveCargoUnitId,
+		requestedUnitId = cargoUnitId,
+		x = cargoX,
+		z = cargoZ,
+		y = cargoY,
+		massKg = cargoMassKg or 600,
+	}
+
+	self._logiCargoByGroup = self._logiCargoByGroup or {}
+	self._logiCargoByGroup[self.name] = cargoName
+	self._externalLogiCargoByGroup = self._externalLogiCargoByGroup or {}
+	self._externalLogiCargoByGroup[self.name] = cargoMeta
+	return cargoMeta, cargo
+end
+
+function GroupCommander:_assignHeloExternalCargoHoldRoute(groupName, targetZoneName, ownZone, side, opts)
+	opts = opts or {}
+	local gr = Group.getByName(groupName); if not gr then env.info("No group found for name " .. groupName) return false end
+	local c = gr:getController(); if not c then env.info("No controller found for group " .. groupName) return false end
+	self:_applySupplyHeloDefaultRoe(c)
+	local un = gr:getUnit(1); if not un then env.info("No unit found for group " .. groupName) return false end
+	local pos = un:getPoint(); if not pos then return nil end
+	local gmoose = GROUP:FindByName(groupName)
+	if not gmoose or not gmoose:IsAlive() then return false end
+
+	local targetZone = targetZoneName and getTriggerZone(targetZoneName) or nil
+	local targetX = opts.targetX or (targetZone and targetZone.point and targetZone.point.x)
+	local targetZ = opts.targetZ or (targetZone and targetZone.point and targetZone.point.z)
+	local heading = un.getHeading and un:getHeading() or 0
+	if not targetX or not targetZ then
+		targetX = pos.x + math.cos(heading) * UTILS.NMToMeters(5)
+		targetZ = pos.z + math.sin(heading) * UTILS.NMToMeters(5)
+	end
+
+	local ux, uz = ExternalHeloCargoRoute.UnitVector(pos.x, pos.z, targetX, targetZ, heading)
+	local cargoX = opts.cargoX
+	local cargoZ = opts.cargoZ
+	local farpLaunch = opts.farpLaunch
+	if (not cargoX or not cargoZ) and farpLaunch and farpLaunch.x and farpLaunch.z then
+		local bc = self.zoneCommander.battleCommander
+		bc._farpCargoSpawnState = bc._farpCargoSpawnState or {}
+		local farpCargoArc = {
+			{ distance = 115, bearing = 300 },
+			{ distance = 115, bearing = 270 },
+			{ distance = 115, bearing = 240 },
+			{ distance = 115, bearing = 210 },
+			{ distance = 115, bearing = 180 },
+		}
+		local farpCargoState = bc._farpCargoSpawnState[farpLaunch.name] or { index = 0 }
+		farpCargoState.index = ((tonumber(farpCargoState.index) or 0) % #farpCargoArc) + 1
+		farpCargoState.time = timer.getAbsTime()
+		bc._farpCargoSpawnState[farpLaunch.name] = farpCargoState
+
+		local farpCoord = COORDINATE:New(farpLaunch.x, land.getHeight({ x = farpLaunch.x, y = farpLaunch.z }), farpLaunch.z)
+		local cargoOffset = farpCargoArc[farpCargoState.index]
+		local cargoCoord = farpCoord:Translate(cargoOffset.distance, cargoOffset.bearing)
+		cargoX = cargoCoord.x
+		cargoZ = cargoCoord.z
+	end
+	if not cargoX or not cargoZ then
+		local prefix = ownZone and (ownZone .. "-land") or nil
+		local pooledLand = prefix and _getLandingSpotPoolForPrefix(prefix) or nil
+		if ownZone and (not pooledLand or #pooledLand == 0) then
+			pooledLand = _getForcedLandingSpotPool(ownZone)
+		end
+		local lastSpawn = self._lastGroundSpawnSpot and self._lastGroundSpawnSpot.zone or nil
+		if pooledLand and #pooledLand > 0 then
+			local pick = _pickRandomLandingSpot(pooledLand, lastSpawn)
+			if pick then
+				cargoX, cargoZ = pick.x, pick.z
+			end
+		else
+			local unitType = un and un.getTypeName and un:getTypeName() or nil
+			local caps = CTLD.UnitTypeCapabilities and unitType and CTLD.UnitTypeCapabilities[unitType] or nil
+			local spawnDist = ((caps and caps.length) or 20) + 2
+			local azDeg = math.deg(heading)
+			local cargoCoord = COORDINATE:New(pos.x, pos.y, pos.z):Translate(spawnDist, azDeg)
+			cargoX, cargoZ = cargoCoord.x, cargoCoord.z
+		end
+	end
+	if not cargoX or not cargoZ then
+		local azDeg = math.deg(heading)
+		local cargoCoord = COORDINATE:New(pos.x, pos.y, pos.z):Translate(20, azDeg)
+		cargoX, cargoZ = cargoCoord.x, cargoCoord.z
+	end
+	local loadApproachM = opts.loadApproachM or 100
+	local loadX, loadZ = ExternalHeloCargoRoute.PointBefore(cargoX, cargoZ, pos.x, pos.z, loadApproachM, heading)
+	local holdX = opts.holdX
+	local holdZ = opts.holdZ
+	if not holdX or not holdZ then
+		if opts.holdDistanceNm then
+			holdX = cargoX + ux * UTILS.NMToMeters(opts.holdDistanceNm)
+			holdZ = cargoZ + uz * UTILS.NMToMeters(opts.holdDistanceNm)
+		else
+			local holdFraction = opts.holdFraction or 0.80
+			local minTargetDistanceM = UTILS.NMToMeters(opts.minTargetDistanceNm or 10)
+			local holdDx, holdDz = targetX - cargoX, targetZ - cargoZ
+			local holdLength = math.sqrt((holdDx * holdDx) + (holdDz * holdDz))
+			local holdDistanceM = holdLength * holdFraction
+			if holdLength <= minTargetDistanceM then
+				holdDistanceM = 0
+			else
+				holdDistanceM = math.min(holdDistanceM, holdLength - minTargetDistanceM)
+			end
+			if holdLength > 1 then
+				holdX = cargoX + ((holdDx / holdLength) * holdDistanceM)
+				holdZ = cargoZ + ((holdDz / holdLength) * holdDistanceM)
+			else
+				holdX = cargoX
+				holdZ = cargoZ
+			end
+		end
+	end
+	local holdAglM = opts.holdAglM or 200
+	local loadAglM = opts.loadAglM or 25
+	local loadSpeedKmh = opts.loadSpeedKmh or 110
+	local speedKmh = opts.speedKmh or 289
+
+	local cargoMeta = opts.cargoMeta
+	if not cargoMeta then
+		local cargoName = opts.cargoName or string.format("%s_EXTCARGO_%d", tostring(self.name), math.random(100000, 999999))
+		cargoMeta = self:_spawnHeloExternalLogisticsCargo(cargoName, cargoX, cargoZ, side, opts.cargoMassKg or 600)
+	end
+	if not cargoMeta then return nil end
+
+	local heloUnitId = opts.heloUnitId or un:getID()
+	local loadTask = ExternalHeloCargoRoute.TaskLoad(heloUnitId, cargoMeta.groupId, cargoMeta.unitId, 1)
+	local orbitTask, holdAltitude = ExternalHeloCargoRoute.TaskRaceTrackOrbit(holdX, holdZ, holdAglM, 1)
+	local currentAglM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
+	local route = {}
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(pos.x, pos.z, currentAglM, loadSpeedKmh, {}, "Current")
+	addPreferVerticalOptionToWaypoint(route[1])
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(loadX, loadZ, loadAglM, loadSpeedKmh, { loadTask }, "External Cargo Load")
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(holdX, holdZ, holdAglM, speedKmh, { orbitTask }, "External Cargo Hold")
+	gmoose:Route(route, 1)
+
+	self._externalHeloCargoRoute = {
+		groupName = groupName,
+		targetZoneName = targetZoneName,
+		originZoneName = ownZone,
+		cargo = cargoMeta,
+		hold = { x = holdX, z = holdZ, aglM = holdAglM, altitude = holdAltitude },
+		load = { x = loadX, z = loadZ, cargoX = cargoX, cargoZ = cargoZ },
+		heloUnitId = heloUnitId,
+	}
+	if opts.advanceCapture == true or self._advanceCaptureWaitingForNeutral == true then
+		self._advanceCaptureHold = { x = holdX, z = holdZ, aglM = holdAglM, altitude = holdAltitude }
+		self._advanceCaptureExternalCargo = true
+		local now = timer.getAbsTime()
+		self._advanceCaptureExternalCargoReady = nil
+		self._advanceCaptureExternalCargoReleaseDelayed = nil
+		self._advanceCaptureExternalCargoFallbackWarned = nil
+		self._advanceCaptureReleaseFailedLogged = nil
+		self._advanceCaptureExternalCargoReleaseNotBefore = now + (opts.releaseDelaySec or 120)
+		self._advanceCaptureExternalCargoReleaseFallbackAt = now + (opts.releaseFallbackSec or 600)
+	end
+	if self._pendingSupplyLaunchMessage then
+		trigger.action.outTextForCoalition(2, self._pendingSupplyLaunchMessage, 10)
+		self._pendingSupplyLaunchMessage = nil
+	end
+	self.zoneCommander.battleCommander:_completePendingShopPurchase(self)
+	return true
+end
+
+function GroupCommander:_assignHeloExternalCargoHoldOrbitRoute(groupName, targetZoneName, side, opts)
+	opts = opts or {}
+	local gr = Group.getByName(groupName); if not gr then env.info("No group found for name " .. groupName) return false end
+	local c = gr:getController(); if not c then env.info("No controller found for group " .. groupName) return false end
+	self:_applySupplyHeloDefaultRoe(c)
+	local un = gr:getUnit(1); if not un then env.info("No unit found for group " .. groupName) return false end
+	local pos = un:getPoint(); if not pos then return nil end
+	local gmoose = GROUP:FindByName(groupName)
+	if not gmoose or not gmoose:IsAlive() then return false end
+
+	local hold = opts.hold or self._advanceCaptureHold or {}
+	local holdX = opts.holdX or hold.x
+	local holdZ = opts.holdZ or hold.z
+	local holdAglM = opts.holdAglM or hold.aglM or 200
+	if not holdX or not holdZ then
+		local targetZone = targetZoneName and getTriggerZone(targetZoneName) or nil
+		local targetX = opts.targetX or (targetZone and targetZone.point and targetZone.point.x)
+		local targetZ = opts.targetZ or (targetZone and targetZone.point and targetZone.point.z)
+		local heading = un.getHeading and un:getHeading() or 0
+		if not targetX or not targetZ then
+			targetX = pos.x + math.cos(heading) * UTILS.NMToMeters(4)
+			targetZ = pos.z + math.sin(heading) * UTILS.NMToMeters(4)
+		end
+		local ux, uz = ExternalHeloCargoRoute.UnitVector(pos.x, pos.z, targetX, targetZ, heading)
+		if opts.holdDistanceNm then
+			holdX = pos.x + ux * UTILS.NMToMeters(opts.holdDistanceNm)
+			holdZ = pos.z + uz * UTILS.NMToMeters(opts.holdDistanceNm)
+		else
+			local holdFraction = opts.holdFraction or 0.80
+			local minTargetDistanceM = UTILS.NMToMeters(opts.minTargetDistanceNm or 10)
+			local holdDx, holdDz = targetX - pos.x, targetZ - pos.z
+			local holdLength = math.sqrt((holdDx * holdDx) + (holdDz * holdDz))
+			local holdDistanceM = holdLength * holdFraction
+			if holdLength <= minTargetDistanceM then
+				holdDistanceM = 0
+			else
+				holdDistanceM = math.min(holdDistanceM, holdLength - minTargetDistanceM)
+			end
+			if holdLength > 1 then
+				holdX = pos.x + ((holdDx / holdLength) * holdDistanceM)
+				holdZ = pos.z + ((holdDz / holdLength) * holdDistanceM)
+			else
+				holdX = pos.x
+				holdZ = pos.z
+			end
+		end
+	end
+
+	local speedKmh = opts.speedKmh or 289
+	local orbitTask, holdAltitude = ExternalHeloCargoRoute.TaskRaceTrackOrbit(holdX, holdZ, holdAglM, 1)
+	local currentAglM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
+	local route = {}
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(pos.x, pos.z, currentAglM, speedKmh, {}, "Current")
+	addPreferVerticalOptionToWaypoint(route[1])
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(holdX, holdZ, holdAglM, speedKmh, { orbitTask }, "External Cargo Hold")
+	gmoose:Route(route, 1)
+
+	self._externalHeloCargoRoute = self._externalHeloCargoRoute or {}
+	self._externalHeloCargoRoute.groupName = groupName
+	self._externalHeloCargoRoute.targetZoneName = targetZoneName
+	self._externalHeloCargoRoute.hold = { x = holdX, z = holdZ, aglM = holdAglM, altitude = holdAltitude }
+	self._advanceCaptureHold = { x = holdX, z = holdZ, aglM = holdAglM, altitude = holdAltitude }
+	if opts.advanceCapture == true then
+		self._advanceCaptureExternalCargo = nil
+	end
+	if opts.supplyDebitOriginZone
+		and SuppliesCargoTransport == false
+		and WarehouseLogistics == true
+		and self.mission == 'supply'
+		and self.unitCategory == Unit.Category.HELICOPTER
+		and not self.NotCargo
+		and self._supplyNoCargoDebitApplied ~= true
+	then
+		if AIDeliveryamount == nil then AIDeliveryamount = 20 end
+		if AIDeliveryamount > 0 then
+			self:_adjustWarehouseStock(opts.supplyDebitOriginZone, -AIDeliveryamount)
+		end
+		self._supplyNoCargoDebitApplied = true
+	end
+	if opts.completeShop == true then
+		if self._pendingSupplyLaunchMessage then
+			trigger.action.outTextForCoalition(2, self._pendingSupplyLaunchMessage, 10)
+			self._pendingSupplyLaunchMessage = nil
+		end
+		self.zoneCommander.battleCommander:_completePendingShopPurchase(self)
+	end
+	return true
+end
+
+function GroupCommander:_resolveHeloExternalCargoDeliveryPlan(targetZoneName, fromX, fromZ, side, opts)
+	opts = opts or {}
+	local destx, destz, landingPickName
+	local useAirbase = false
+	local airb = nil
+	local targetZoneCommander = self.zoneCommander.battleCommander:getZoneByName(targetZoneName)
+
+	if opts.destX and opts.destZ then
+		destx, destz = opts.destX, opts.destZ
+		landingPickName = opts.unloadZoneName
+	end
+
+	if not destx and not useAirbase then
+		local prefix = targetZoneName and (targetZoneName .. "-land") or nil
+		local pooledLand = prefix and _getLandingSpotPoolForPrefix(prefix) or nil
+		if pooledLand and #pooledLand > 0 then
+			local pick = pooledLand[math.random(#pooledLand)]
+			destx, destz = pick.x, pick.z
+			landingPickName = pick.name
+		end
+	end
+
+	if not destx and not useAirbase then
+		local pooledForced = _getForcedLandingSpotPool(targetZoneName)
+		if pooledForced and #pooledForced > 0 then
+			local pick = pooledForced[math.random(#pooledForced)]
+			destx, destz = pick.x, pick.z
+			landingPickName = pick.name
+		end
+	end
+
+	if not destx and not useAirbase then
+		local abn = targetZoneCommander and targetZoneCommander.airbaseName
+		if not airb then
+			airb = abn and AIRBASE:FindByName(abn) or nil
+		end
+		if airb and airb:GetCoalition() == side then
+			useAirbase = true
+		end
+	end
+
+	if useAirbase then
+		local cc = airb:GetCoordinate()
+		local v = cc and cc.GetVec2 and cc:GetVec2() or nil
+		if v then
+			destx, destz = v.x, v.y
+		end
+	end
+
+	if not destx and not useAirbase then
+		local lz = self:_findFlatLZ(targetZoneName.."-", 200, math.tan(math.rad(12)))
+		if not lz then lz = self:_findFlatLZ(targetZoneName, 200, math.tan(math.rad(12))) end
+		if lz then destx, destz = lz.x, lz.z end
+	end
+	if not destx or not destz then return nil end
+
+	local unloadZoneName = opts.unloadZoneName or landingPickName or targetZoneName
+	local unloadZone = unloadZoneName and getMooseZone(unloadZoneName) or nil
+	if not unloadZone or not unloadZone.ZoneID then
+		unloadZoneName = targetZoneName
+		unloadZone = unloadZoneName and getMooseZone(unloadZoneName) or nil
+	end
+	if not unloadZone or not unloadZone.ZoneID then return nil end
+
+	local approachDistanceM = opts.unloadApproachM or UTILS.NMToMeters(2)
+	local ux, uz = ExternalHeloCargoRoute.UnitVector(fromX, fromZ, destx, destz, 0)
+	local approachX = destx - ux * approachDistanceM
+	local approachZ = destz - uz * approachDistanceM
+
+	return {
+		targetZoneName = targetZoneName,
+		destx = destx,
+		destz = destz,
+		approachX = approachX,
+		approachZ = approachZ,
+		unloadZoneName = unloadZoneName,
+		unloadZoneId = unloadZone.ZoneID,
+		useAirbase = useAirbase,
+		airbase = airb,
+	}
+end
+
+function GroupCommander:_assignHeloExternalCargoUnloadAndLandRoute(groupName, targetZoneName, side, opts)
+	opts = opts or {}
+	local gr = Group.getByName(groupName); if not gr then env.info("No group found for name " .. groupName) return false end
+	local c = gr:getController(); if not c then env.info("No controller found for group " .. groupName) return false end
+	self:_applySupplyHeloDefaultRoe(c)
+	local un = gr:getUnit(1); if not un then env.info("No unit found for group " .. groupName) return false end
+	local pos = un:getPoint(); if not pos then return nil end
+	local gmoose = GROUP:FindByName(groupName)
+	if not gmoose or not gmoose:IsAlive() then return false end
+
+	local plan = self:_resolveHeloExternalCargoDeliveryPlan(targetZoneName, pos.x, pos.z, side, opts)
+	if not plan then return nil end
+
+	local speedKmh = opts.speedKmh or 289
+	local approachAglM = opts.approachAglM or 200
+	local approachAlt = land.getHeight({ x = plan.approachX, y = plan.approachZ }) + approachAglM
+	local heloUnitId = opts.heloUnitId or un:getID()
+	local unloadUnitId = opts.unloadUnitIdTransport
+	if unloadUnitId == nil then unloadUnitId = -1 end
+	local unloadTask = ExternalHeloCargoRoute.TaskUnload(plan.unloadZoneId, unloadUnitId, 1)
+	local currentAglM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
+	local route = {}
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(pos.x, pos.z, currentAglM, speedKmh, {}, "Current")
+	addPreferVerticalOptionToWaypoint(route[1])
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.approachX, plan.approachZ, approachAglM, speedKmh, { unloadTask }, "External Cargo Unload 2 NM")
+
+	if plan.useAirbase then
+		route[#route + 1] = plan.airbase:GetCoordinate():WaypointAirLanding(speedKmh, plan.airbase, {}, "Landing")
+	else
+		local landTask = gmoose:TaskLandAtVec2({ x = plan.destx, y = plan.destz }, 60, side == 2, nil)
+		route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.destx, plan.destz, 0, speedKmh, { landTask }, "Landing")
+	end
+	gmoose:Route(route, 1)
+
+	self._externalHeloCargoRoute = self._externalHeloCargoRoute or {}
+	self._externalHeloCargoRoute.release = {
+		groupName = groupName,
+		targetZoneName = targetZoneName,
+		unloadZoneName = plan.unloadZoneName,
+		unloadZoneId = plan.unloadZoneId,
+		approach = { x = plan.approachX, z = plan.approachZ, aglM = approachAglM, altitude = approachAlt },
+		destination = { x = plan.destx, z = plan.destz },
+		heloUnitId = heloUnitId,
+	}
+	return true
+end
+
+function GroupCommander:_assignHeloExternalCargoLogisticsRoute(groupName, targetZoneName, ownZone, side, farpLaunch, opts)
+	local gr = Group.getByName(groupName); if not gr then env.info("No group found for name " .. groupName) return false end
+	local c = gr:getController(); if not c then env.info("No controller found for group " .. groupName) return false end
+	self:_applySupplyHeloDefaultRoe(c)
+	local un = gr:getUnit(1); if not un then env.info("No unit found for group " .. groupName) return false end
+	local pos = un:getPoint(); if not pos then return nil end
+	local gmoose = GROUP:FindByName(groupName)
+	if not gmoose or not gmoose:IsAlive() then return false end
+
+	local targetZone = targetZoneName and getTriggerZone(targetZoneName) or nil
+	local targetX = targetZone and targetZone.point and targetZone.point.x
+	local targetZ = targetZone and targetZone.point and targetZone.point.z
+	local heading = un.getHeading and un:getHeading() or 0
+	if not targetX or not targetZ then
+		targetX = pos.x + math.cos(heading) * UTILS.NMToMeters(5)
+		targetZ = pos.z + math.sin(heading) * UTILS.NMToMeters(5)
+	end
+
+	local ux, uz = ExternalHeloCargoRoute.UnitVector(pos.x, pos.z, targetX, targetZ, heading)
+	local cargoX
+	local cargoZ
+	if farpLaunch and farpLaunch.x and farpLaunch.z then
+		local bc = self.zoneCommander.battleCommander
+		bc._farpCargoSpawnState = bc._farpCargoSpawnState or {}
+		local farpCargoArc = {
+			{ distance = 115, bearing = 300 },
+			{ distance = 115, bearing = 270 },
+			{ distance = 115, bearing = 240 },
+			{ distance = 115, bearing = 210 },
+			{ distance = 115, bearing = 180 },
+		}
+		local farpCargoState = bc._farpCargoSpawnState[farpLaunch.name] or { index = 0 }
+		farpCargoState.index = ((tonumber(farpCargoState.index) or 0) % #farpCargoArc) + 1
+		farpCargoState.time = timer.getAbsTime()
+		bc._farpCargoSpawnState[farpLaunch.name] = farpCargoState
+
+		local farpCoord = COORDINATE:New(farpLaunch.x, land.getHeight({ x = farpLaunch.x, y = farpLaunch.z }), farpLaunch.z)
+		local cargoOffset = farpCargoArc[farpCargoState.index]
+		local cargoCoord = farpCoord:Translate(cargoOffset.distance, cargoOffset.bearing)
+		cargoX = cargoCoord.x
+		cargoZ = cargoCoord.z
+	end
+	if not cargoX or not cargoZ then
+		local prefix = ownZone and (ownZone .. "-land") or nil
+		local pooledLand = prefix and _getLandingSpotPoolForPrefix(prefix) or nil
+		if ownZone and (not pooledLand or #pooledLand == 0) then
+			pooledLand = _getForcedLandingSpotPool(ownZone)
+		end
+		local lastSpawn = self._lastGroundSpawnSpot and self._lastGroundSpawnSpot.zone or nil
+		if pooledLand and #pooledLand > 0 then
+			local pick = _pickRandomLandingSpot(pooledLand, lastSpawn)
+			if pick then
+				cargoX, cargoZ = pick.x, pick.z
+			end
+		else
+			local unitType = un and un.getTypeName and un:getTypeName() or nil
+			local caps = CTLD.UnitTypeCapabilities and unitType and CTLD.UnitTypeCapabilities[unitType] or nil
+			local spawnDist = ((caps and caps.length) or 20) + 2
+			local azDeg = math.deg(heading)
+			local cargoCoord = COORDINATE:New(pos.x, pos.y, pos.z):Translate(spawnDist, azDeg)
+			cargoX, cargoZ = cargoCoord.x, cargoCoord.z
+		end
+	end
+	if not cargoX or not cargoZ then
+		local azDeg = math.deg(heading)
+		local cargoCoord = COORDINATE:New(pos.x, pos.y, pos.z):Translate(20, azDeg)
+		cargoX, cargoZ = cargoCoord.x, cargoCoord.z
+	end
+	local loadX, loadZ = ExternalHeloCargoRoute.PointBefore(cargoX, cargoZ, pos.x, pos.z, 100, heading)
+	local plan = self:_resolveHeloExternalCargoDeliveryPlan(targetZoneName, cargoX, cargoZ, side)
+	if not plan then return nil end
+
+	local warmedDropName = _selectCargoDropSubZoneForLanding(targetZoneName, plan.unloadZoneName, plan.destx, plan.destz)
+	local warmedDropZone = warmedDropName and getMooseZone(warmedDropName) or nil
+	if warmedDropZone and warmedDropZone.ZoneID then
+		plan.unloadZoneName = warmedDropName
+		plan.unloadZoneId = warmedDropZone.ZoneID
+	end
+
+	local cargoName = string.format("%s_EXTCARGO_%d", tostring(self.name), math.random(100000, 999999))
+	local cargoMeta = self:_spawnHeloExternalLogisticsCargo(cargoName, cargoX, cargoZ, side, 600)
+	if not cargoMeta then return nil end
+	if AIDeliveryamount == nil then AIDeliveryamount = 20 end
+	if AIDeliveryamount > 0 then
+		self:_adjustWarehouseStock(ownZone, -AIDeliveryamount)
+	end
+
+	local heloUnitId = un:getID()
+	local loadTask = ExternalHeloCargoRoute.TaskLoad(heloUnitId, cargoMeta.groupId, cargoMeta.unitId, 1)
+	local unloadTask = ExternalHeloCargoRoute.TaskUnload(plan.unloadZoneId, -1, 1)
+	local currentAglM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
+	local loadSpeedKmh = 110
+	local speedKmh = 289
+	local loadAglM = 25
+	local approachAglM = UTILS.FeetToMeters(500)
+	local approachAlt = land.getHeight({ x = plan.approachX, y = plan.approachZ }) + approachAglM
+	local route = {}
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(pos.x, pos.z, currentAglM, loadSpeedKmh, {}, "Current")
+	addPreferVerticalOptionToWaypoint(route[1])
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(loadX, loadZ, loadAglM, loadSpeedKmh, { loadTask }, "External Cargo Load")
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.approachX, plan.approachZ, approachAglM, speedKmh, { unloadTask }, "External Cargo Unload 2 NM")
+
+	if plan.useAirbase then
+		route[#route + 1] = plan.airbase:GetCoordinate():WaypointAirLanding(speedKmh, plan.airbase, {}, "Landing")
+	else
+		local landTask = gmoose:TaskLandAtVec2({ x = plan.destx, y = plan.destz }, 60, side == 2, nil)
+		route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.destx, plan.destz, 0, speedKmh, { landTask }, "Landing")
+	end
+	gmoose:Route(route, 1)
+
+	self._externalHeloCargoRoute = {
+		groupName = groupName,
+		targetZoneName = targetZoneName,
+		originZoneName = ownZone,
+		cargo = cargoMeta,
+		load = { x = loadX, z = loadZ, cargoX = cargoX, cargoZ = cargoZ },
+		release = {
+			groupName = groupName,
+			targetZoneName = targetZoneName,
+			unloadZoneName = plan.unloadZoneName,
+			unloadZoneId = plan.unloadZoneId,
+			approach = { x = plan.approachX, z = plan.approachZ, aglM = approachAglM, altitude = approachAlt },
+			destination = { x = plan.destx, z = plan.destz },
+			heloUnitId = heloUnitId,
+		},
+		heloUnitId = heloUnitId,
+	}
+	if side == 1 and c then
+		c:setOption(AI.Option.Air.id.REACTION_ON_THREAT, AI.Option.Air.val.REACTION_ON_THREAT.ALLOW_ABORT_MISSION)
+	end
+	if self._pendingSupplyLaunchMessage then
+		trigger.action.outTextForCoalition(2, self._pendingSupplyLaunchMessage, 10)
+		self._pendingSupplyLaunchMessage = nil
+	end
+	self.zoneCommander.battleCommander:_completePendingShopPurchase(self)
+	return true
+end
+
+function GroupCommander:_advanceCaptureUsesExternalCargo(farpLaunch)
+	return WarehouseLogistics == true
+		and SuppliesCargoTransport ~= false
+		and self.unitCategory == Unit.Category.HELICOPTER
+		and not self.NotCargo
+		and not (farpLaunch and farpLaunch.routeOnly == true)
+end
+
+function GroupCommander:_assignAdvanceCaptureHoldRoute(groupName, targetZoneName, originZone, side, farpLaunch)
+	if self.unitCategory == Unit.Category.AIRPLANE then
+		return self:_assignPlaneAdvanceCaptureHoldRoute(groupName, targetZoneName, self.Altitude)
+	end
+	if self:_advanceCaptureUsesExternalCargo(farpLaunch) then
+		local assigned = self:_assignHeloExternalCargoHoldRoute(groupName, targetZoneName, originZone, side, { advanceCapture = true, farpLaunch = farpLaunch })
+		if assigned == true then
+			self._advanceCaptureExternalCargo = true
+		else
+			self._advanceCaptureExternalCargo = nil
+		end
+		return assigned
+	end
+
+	self._advanceCaptureExternalCargo = nil
+	return self:_assignHeloRoute(groupName, targetZoneName, originZone, { advanceCaptureHold = true })
+end
+
+function GroupCommander:_assignAdvanceCaptureOpenRoute(groupName, targetZoneName, originZone, side, farpLaunch)
+	local assigned
+
+	if self.unitCategory == Unit.Category.AIRPLANE then
+		assigned = self:_assignPlaneRoute(groupName, targetZoneName, self.Altitude, originZone, side)
+	elseif self:_advanceCaptureUsesExternalCargo(farpLaunch) then
+		assigned = self:_assignHeloExternalCargoLogisticsRoute(groupName, targetZoneName, originZone, side, farpLaunch)
+	elseif WarehouseLogistics == true and SuppliesCargoTransport == false and not self.NotCargo then
+		assigned = self:_assignHeloRoute(groupName, targetZoneName, originZone)
+	else
+		assigned = self:_assignHeloRoute(groupName, targetZoneName)
+	end
+
+	if assigned == true then
+		self._advanceCaptureWaitingForNeutral = nil
+		self._advanceCaptureReleased = true
+		self._advanceCaptureExternalCargo = nil
+		self._advanceCaptureExternalCargoReady = nil
+		self._advanceCaptureExternalCargoReleaseNotBefore = nil
+		self._advanceCaptureExternalCargoReleaseFallbackAt = nil
+		self._advanceCaptureExternalCargoReleaseDelayed = nil
+		self._advanceCaptureExternalCargoFallbackWarned = nil
+		self._advanceCaptureReleaseFailedLogged = nil
+	end
+	return assigned
+end
+
+function GroupCommander:_assignAdvanceCaptureReleasedRoute(groupName, targetZoneName, originZone, side, farpLaunch)
+	if self.unitCategory == Unit.Category.AIRPLANE then
+		self._advanceCaptureExternalCargo = nil
+		return self:_assignPlaneRoute(groupName, targetZoneName, self.Altitude, originZone, side)
+	end
+	if self._advanceCaptureExternalCargo == true then
+		local assigned = self:_assignHeloExternalCargoUnloadAndLandRoute(groupName, targetZoneName, side)
+		if assigned == true then
+			local gr = Group.getByName(groupName)
+			local c = gr and gr:getController() or nil
+			if c then self:_applySupplyHeloDefaultRoe(c) end
+		end
+		return assigned
+	end
+
+	self._advanceCaptureExternalCargo = nil
+	local assigned = self:_assignHeloRoute(groupName, targetZoneName)
+	if assigned == true then
+		local gr = Group.getByName(groupName)
+		local c = gr and gr:getController() or nil
+		if c then self:_applySupplyHeloDefaultRoe(c) end
+	end
+	return assigned
+end
+
 function ManualAdjustWarehouse(zoneName, deltaPerItem)
     if type(zoneName) ~= "string" then
         env.info("[ManualAdjustWarehouse] Missing zone name")
@@ -31006,14 +32081,16 @@ function GroupCommander:_resolveHeloRoutePlan(zoneName, fromX, fromZ, coalitionS
 	local destx, desty
 	local useAirbase = false
 
-	local prefix = zoneName and (zoneName .. "-land") or nil
-	local pooledLand = prefix and _getLandingSpotPoolForPrefix(prefix) or nil
-	if pooledLand and #pooledLand > 0 then
-		local pick = pooledLand[math.random(#pooledLand)]
-		destx, desty = pick.x, pick.z
+	if not destx and not useAirbase then
+		local prefix = zoneName and (zoneName .. "-land") or nil
+		local pooledLand = prefix and _getLandingSpotPoolForPrefix(prefix) or nil
+		if pooledLand and #pooledLand > 0 then
+			local pick = pooledLand[math.random(#pooledLand)]
+			destx, desty = pick.x, pick.z
+		end
 	end
 
-	if not destx then
+	if not destx and not useAirbase then
 		local pooledForced = _getForcedLandingSpotPool(zoneName)
 		if pooledForced and #pooledForced > 0 then
 			local pick = pooledForced[math.random(#pooledForced)]
@@ -31024,7 +32101,7 @@ function GroupCommander:_resolveHeloRoutePlan(zoneName, fromX, fromZ, coalitionS
 	local tz = self.zoneCommander.battleCommander:getZoneByName(zoneName)
 	local abn = tz and tz.airbaseName
 	local airb = abn and AIRBASE:FindByName(abn) or nil
-	if not destx and airb and airb:GetCoalition() == coalitionSide then
+	if not destx and not useAirbase and airb and airb:GetCoalition() == coalitionSide then
 		useAirbase = true
 	end
 
@@ -31135,9 +32212,11 @@ function GroupCommander:_getRestorePlaneSupplySpawnPoint(savedX, savedZ, zoneNam
 	return savedX, savedZ, nil
 end
 
-function GroupCommander:_assignHeloRoute(grName, zoneName, supplyDebitOriginZone)
+function GroupCommander:_assignHeloRoute(grName, zoneName, supplyDebitOriginZone, opts)
+	opts = opts or {}
     local gr = Group.getByName(grName); if not gr then env.info("No group found for name " .. grName) return false end
     local c = gr:getController(); if not c then env.info("No controller found for group " .. grName) return false end
+	self:_applySupplyHeloDefaultRoe(c)
     local un = gr:getUnit(1); if not un then env.info("No unit found for group " .. grName) return false end
     local pos = un:getPoint()
     local plan = self._pendingRestoreHeloRoutePlan
@@ -31148,7 +32227,45 @@ function GroupCommander:_assignHeloRoute(grName, zoneName, supplyDebitOriginZone
     if not plan then return nil end
 
     local spd = plan.spd
-    if plan.useAirbase then
+    if opts.advanceCaptureHold == true then
+        local gmoose = GROUP:FindByName(grName); if not gmoose or not gmoose:IsAlive() then return false end
+        local kmh = math.floor((spd or 280) * 3.6)
+        local hold = opts.hold or self._advanceCaptureHold or {}
+        local holdX = opts.holdX or hold.x
+        local holdZ = opts.holdZ or hold.z
+        local holdAglM = opts.holdAglM or hold.aglM or 200
+
+        if not holdX or not holdZ then
+            local holdDx, holdDz = plan.destx - pos.x, plan.desty - pos.z
+            local holdLength = math.sqrt((holdDx * holdDx) + (holdDz * holdDz))
+            local holdFraction = opts.holdFraction or 0.80
+            local minTargetDistanceM = UTILS.NMToMeters(opts.minTargetDistanceNm or 10)
+            local holdDistanceM = holdLength * holdFraction
+            if holdLength <= minTargetDistanceM then
+                holdDistanceM = 0
+            else
+                holdDistanceM = math.min(holdDistanceM, holdLength - minTargetDistanceM)
+            end
+            if holdLength > 1 then
+                holdX = pos.x + ((holdDx / holdLength) * holdDistanceM)
+                holdZ = pos.z + ((holdDz / holdLength) * holdDistanceM)
+            else
+                holdX = pos.x
+                holdZ = pos.z
+            end
+        end
+
+        local orbitTask, holdAltitude = ExternalHeloCargoRoute.TaskRaceTrackOrbit(holdX, holdZ, holdAglM, 1)
+        local currentAglM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
+        local route = {}
+        route[#route + 1] = COORDINATE:New(pos.x, currentAglM, pos.z):WaypointAirTurningPoint("RADIO", kmh, {}, "Current")
+        addPreferVerticalOptionToWaypoint(route[1])
+        route[#route + 1] = COORDINATE:New(holdX, holdAglM, holdZ):WaypointAirTurningPoint("RADIO", kmh, { orbitTask }, "Advance Capture Hold")
+
+        gmoose:Route(route, 1)
+        self._advanceCaptureHold = { x = holdX, z = holdZ, aglM = holdAglM, altitude = holdAltitude }
+        self._advanceCaptureExternalCargo = nil
+    elseif plan.useAirbase then
         local gmoose = GROUP:FindByName(grName); if not gmoose or not gmoose:IsAlive() then return false end
         local kmh = math.floor((spd or 280) * 3.6)
 
@@ -31187,12 +32304,203 @@ function GroupCommander:_assignHeloRoute(grName, zoneName, supplyDebitOriginZone
 		end
 		self._supplyNoCargoDebitApplied = true
 	end
-	if self._pendingSupplyLaunchMessage then
-		trigger.action.outTextForCoalition(2, self._pendingSupplyLaunchMessage, 10)
-		self._pendingSupplyLaunchMessage = nil
+	if opts.completeShop ~= false then
+		if self._pendingSupplyLaunchMessage then
+			trigger.action.outTextForCoalition(2, self._pendingSupplyLaunchMessage, 10)
+			self._pendingSupplyLaunchMessage = nil
+		end
+		self.zoneCommander.battleCommander:_completePendingShopPurchase(self)
 	end
-	self.zoneCommander.battleCommander:_completePendingShopPurchase(self)
 	return true
+end
+
+function GroupCommander:_advanceCaptureExternalCargoCanRelease(liveGroup, now)
+	if self._advanceCaptureExternalCargo ~= true then return true end
+	now = now or timer.getAbsTime()
+
+	local timeReady = not self._advanceCaptureExternalCargoReleaseNotBefore
+		or now >= self._advanceCaptureExternalCargoReleaseNotBefore
+	local holdReady = self._advanceCaptureExternalCargoReady == true
+	local hold = self._advanceCaptureHold
+	if not holdReady and hold and hold.x and hold.z and liveGroup and liveGroup:isExist() and liveGroup:getSize() > 0 then
+		local lead = liveGroup:getUnit(1)
+		local pos = lead and lead:isExist() and lead:getPoint() or nil
+		if pos then
+			local dx, dz = pos.x - hold.x, pos.z - hold.z
+			if math.sqrt((dx * dx) + (dz * dz)) <= UTILS.NMToMeters(1) then
+				holdReady = true
+				self._advanceCaptureExternalCargoReady = true
+			end
+		end
+	end
+
+	local fallbackReady = self._advanceCaptureExternalCargoReleaseFallbackAt
+		and now >= self._advanceCaptureExternalCargoReleaseFallbackAt
+	if fallbackReady and not (timeReady and holdReady) and self._advanceCaptureExternalCargoFallbackWarned ~= true then
+		env.info("[AdvanceCapture] external cargo release fallback for "..tostring(self.name).." to "..tostring(self.targetzone))
+		self._advanceCaptureExternalCargoFallbackWarned = true
+	end
+	return (timeReady and holdReady) or fallbackReady == true
+end
+
+function BattleCommander:_releaseAdvanceCaptureHeldSupply(zoneName)
+	local now = timer.getAbsTime()
+	for _, oz in ipairs(self.zones) do
+		for _, gc in ipairs(oz:_getSupplyCache() or {}) do
+			if gc
+				and gc._advanceCaptureWaitingForNeutral == true
+				and gc.mission == 'supply'
+				and gc.targetzone == zoneName
+				and not gc._supplyReturnHome
+			then
+				if (gc.unitCategory == Unit.Category.HELICOPTER or gc.unitCategory == Unit.Category.AIRPLANE)
+					and (gc.state == 'takeoff' or gc.state == 'inair')
+				then
+					local groupName = gc.spawnedName or gc.name
+					local liveGroup = groupName and Group.getByName(groupName) or nil
+					if liveGroup and liveGroup:isExist() and liveGroup:getSize() > 0 then
+						if gc:_advanceCaptureExternalCargoCanRelease(liveGroup, now) then
+							local assigned = gc:_assignAdvanceCaptureReleasedRoute(groupName, zoneName, oz.zone, gc.side)
+							if assigned == true then
+								gc._advanceCaptureWaitingForNeutral = nil
+								gc._advanceCaptureReleased = true
+								gc._advanceCaptureExternalCargoReady = nil
+								gc._advanceCaptureExternalCargoReleaseNotBefore = nil
+								gc._advanceCaptureExternalCargoReleaseFallbackAt = nil
+								gc._advanceCaptureExternalCargoReleaseDelayed = nil
+								gc._advanceCaptureExternalCargoFallbackWarned = nil
+								gc._advanceCaptureReleaseFailedLogged = nil
+								env.info("[AdvanceCapture] released held supply "..tostring(gc.name).." to "..tostring(zoneName))
+							else
+								env.info("[AdvanceCapture] failed to release held supply "..tostring(gc.name).." to "..tostring(zoneName))
+							end
+						else
+							if gc._advanceCaptureExternalCargoReleaseDelayed ~= true then
+								gc._advanceCaptureExternalCargoReleaseDelayed = true
+								env.info("[AdvanceCapture] delaying external cargo release for "..tostring(gc.name).." to "..tostring(zoneName))
+							end
+						end
+					end
+				elseif gc.type == 'surface' and gc.state == 'enroute' then
+					local liveGroup = gc:_getDcsGroupCached()
+					local lead = liveGroup and liveGroup:isExist() and liveGroup:getSize() > 0 and liveGroup:getUnit(1) or nil
+					local pos = lead and lead:isExist() and lead:getPoint() or nil
+					local ctrl = liveGroup and liveGroup:isExist() and liveGroup:getController() or nil
+					if pos and ctrl then
+						local routeOptions = {
+							useTargetRoadHook = true,
+							useTargetMultiRoadHooks = true,
+							allowNearestRoadStart = true,
+						}
+						local task = select(1, dc.BuildSupplyConvoyRouteFromPoint({ x = pos.x, y = pos.z }, zoneName, dc.DEFAULT_SPEED, false, routeOptions))
+						if task then
+							local groupName = liveGroup:getName()
+							gc._advanceCaptureWaitingForNeutral = nil
+							gc._advanceCaptureReleased = true
+							gc._advanceCaptureHold = nil
+							gc:_rememberSurfaceRoadPhase(task, false)
+							gc:_scheduleSurfaceIntelRouteReports(task, groupName)
+							ctrl:popTask()
+							SCHEDULER:New(nil, function()
+								local freshGroup = Group.getByName(groupName)
+								if not freshGroup or not freshGroup:isExist() then return end
+								local freshCtrl = freshGroup:getController()
+								if not freshCtrl then return end
+								freshCtrl:pushTask(task)
+							end, {}, 1)
+							env.info("[AdvanceCapture] released held surface supply "..tostring(gc.name).." to "..tostring(zoneName))
+						else
+							env.info("[AdvanceCapture] failed to release held surface supply "..tostring(gc.name).." to "..tostring(zoneName))
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+function BattleCommander:_abortAdvanceCaptureHeldSupply(zoneName, remainingRatio)
+	local function clearAdvanceCaptureState(gc)
+		gc._advanceCaptureWaitingForNeutral = nil
+		gc._advanceCaptureReleased = nil
+		gc._advanceCaptureHold = nil
+		gc._advanceCaptureExternalCargo = nil
+		gc._advanceCaptureExternalCargoReady = nil
+		gc._advanceCaptureExternalCargoReleaseNotBefore = nil
+		gc._advanceCaptureExternalCargoReleaseFallbackAt = nil
+		gc._advanceCaptureExternalCargoReleaseDelayed = nil
+		gc._advanceCaptureExternalCargoFallbackWarned = nil
+		gc._advanceCaptureReleaseFailedLogged = nil
+		gc._restoreAdvanceCapture = nil
+		gc._restoreAdvanceCapturePhase = nil
+	end
+
+	local abortedCount = 0
+	for _, oz in ipairs(self.zones) do
+		for _, gc in ipairs(oz:_getSupplyCache() or {}) do
+			if gc
+				and gc._advanceCaptureWaitingForNeutral == true
+				and gc.mission == 'supply'
+				and gc.targetzone == zoneName
+			then
+				if (gc.unitCategory == Unit.Category.HELICOPTER or gc.unitCategory == Unit.Category.AIRPLANE)
+					and (gc.state == 'takeoff' or gc.state == 'inair')
+				then
+					local groupName = gc.spawnedName or gc.name
+					if gc.state == 'inair' then
+						gc._supplyReturnHome = true
+						clearAdvanceCaptureState(gc)
+						if gc.unitCategory == Unit.Category.HELICOPTER then
+							gc:_assignHeloRoute(groupName, gc.zoneCommander.zone)
+						else
+							gc:_assignPlaneRoute(groupName, gc.zoneCommander.zone, gc.Altitude, gc.zoneCommander.zone, gc.side, true)
+						end
+						abortedCount = abortedCount + 1
+						env.info("[AdvanceCapture] aborting held supply "..tostring(gc.name).." to "..tostring(zoneName).." after repair ratio "..tostring(remainingRatio))
+					elseif gc.state == 'takeoff' then
+						local g = Group.getByName(groupName)
+						if g then g:destroy() end
+						gc:_destroyLogiCargo()
+						gc._supplyReturnHome = nil
+						clearAdvanceCaptureState(gc)
+						gc:_enterHangar(false)
+						abortedCount = abortedCount + 1
+						env.info("[AdvanceCapture] cancelled takeoff supply "..tostring(gc.name).." to "..tostring(zoneName).." after repair ratio "..tostring(remainingRatio))
+					end
+				elseif gc.type == 'surface' and gc.state == 'preparing' then
+					clearAdvanceCaptureState(gc)
+					gc:_enterHangar(false)
+					abortedCount = abortedCount + 1
+					env.info("[AdvanceCapture] cancelled preparing surface supply "..tostring(gc.name).." to "..tostring(zoneName).." after repair ratio "..tostring(remainingRatio))
+				elseif gc.type == 'surface' and gc.state == 'enroute' then
+					local liveGroup = gc:_getDcsGroupCached()
+					local lead = liveGroup and liveGroup:isExist() and liveGroup:getSize() > 0 and liveGroup:getUnit(1) or nil
+					local pos = lead and lead:isExist() and lead:getPoint() or nil
+					local ctrl = liveGroup and liveGroup:isExist() and liveGroup:getController() or nil
+					if pos and ctrl then
+						local task = select(1, dc.BuildSupplyConvoyRouteFromPoint({ x = pos.x, y = pos.z }, gc.zoneCommander.zone, dc.DEFAULT_SPEED))
+						if task then
+							local groupName = liveGroup:getName()
+							gc._supplyReturnHome = true
+							clearAdvanceCaptureState(gc)
+							gc:_rememberSurfaceRoadPhase(task, false)
+							ctrl:popTask()
+							SCHEDULER:New(nil, function()
+								local freshGroup = Group.getByName(groupName)
+								if not freshGroup or not freshGroup:isExist() then return end
+								local freshCtrl = freshGroup:getController()
+								if not freshCtrl then return end
+								freshCtrl:pushTask(task)
+							end, {}, 1)
+							abortedCount = abortedCount + 1
+							env.info("[AdvanceCapture] aborting held surface supply "..tostring(gc.name).." to "..tostring(zoneName).." after repair ratio "..tostring(remainingRatio))
+						end
+					end
+				end
+			end
+		end
+	end
+	return abortedCount
 end
 
 
@@ -33624,6 +34932,13 @@ function GroupCommander:shouldSpawn(ignore)
 			end
 		end
 		if self.mission == 'supply' then
+			local allowAdvanceCaptureHold = self._advanceCaptureWaitingForNeutral == true
+				and self._shopLaunchRequested == true
+				and (self.type == 'surface' or self.unitCategory == heli or self.unitCategory == plane)
+				and self.side == 2
+				and tg.side ~= self.side
+				and tg.side ~= 0
+			if allowAdvanceCaptureHold then return true end
 			if tg.side == 0 and (not tg.firstCaptureByRed or self.ForceUrgent) then
 				if isUrgent then return true end
 			end
@@ -33877,9 +35192,22 @@ function GroupCommander:_spawnFromGroundAt(resolved, originZone, targetZone, hot
     self._lastGroundSpawnSpot = { zone = p.name or base or originZone, x = lx, z = lz }
     local sp = SPAWN:NewFromTemplate(tpl, resolved, self:_getSpawnAlias(), true)
     if self.mission=='supply' and self.unitCategory==Unit.Category.HELICOPTER then
-		if WarehouseLogistics == true and SuppliesCargoTransport ~= false and (not self.NotCargo) then
+		if self._advanceCaptureWaitingForNeutral == true then
         sp = sp:OnSpawnGroup(function(g)timer.scheduleFunction(function()
-			local assigned = self:_assignHeloLogisticsRoute(g:GetName(), self.targetzone, originZone, self.side)
+			local targetZone = self.zoneCommander.battleCommander:getZoneByName(self.targetzone)
+			local assigned
+			if targetZone and (targetZone.side == 0 or targetZone.side == self.side) then
+				assigned = self:_assignAdvanceCaptureOpenRoute(g:GetName(), self.targetzone, originZone, self.side)
+			else
+				assigned = self:_assignAdvanceCaptureHoldRoute(g:GetName(), self.targetzone, originZone, self.side)
+			end
+			if assigned ~= true then
+				self._pendingSupplyLaunchMessage = nil
+			end
+		end, {}, timer.getTime() + 10) end)
+	elseif WarehouseLogistics == true and SuppliesCargoTransport ~= false and (not self.NotCargo) then
+        sp = sp:OnSpawnGroup(function(g)timer.scheduleFunction(function()
+			local assigned = self:_assignHeloExternalCargoLogisticsRoute(g:GetName(), self.targetzone, originZone, self.side, nil)
 			if assigned ~= true then
 				self._pendingSupplyLaunchMessage = nil
 			end
@@ -34314,6 +35642,54 @@ end
 		elseif self.mission == 'supply' and (self.unitCategory == Unit.Category.HELICOPTER or self.unitCategory == Unit.Category.AIRPLANE) then
 			local targetZone = self.zoneCommander.battleCommander:getZoneByName(self.targetzone)
 			local returnZone = originZone or self.zoneCommander.zone
+			local restoreAdvanceCapture = self._restoreAdvanceCapture == true
+				or self._advanceCaptureWaitingForNeutral == true
+				or self._advanceCaptureReleased == true
+			local restoreAdvancePhase = self._restoreAdvanceCapturePhase
+			self._restoreAdvanceCapture = nil
+			self._restoreAdvanceCapturePhase = nil
+			if restoreAdvanceCapture then
+				if self.unitCategory == Unit.Category.HELICOPTER then
+					if targetZone and targetZone.active and (targetZone.side == 0 or targetZone.side == side) then
+						self._advanceCaptureWaitingForNeutral = nil
+						self._advanceCaptureReleased = true
+						self:_assignHeloRoute(groupName, self.targetzone)
+					elseif restoreAdvancePhase == "holding" or self._advanceCaptureWaitingForNeutral == true then
+						self._advanceCaptureWaitingForNeutral = true
+						self._advanceCaptureReleased = nil
+						if SuppliesCargoTransport == false or self._advanceCaptureExternalCargo ~= true then
+							self:_assignHeloRoute(groupName, self.targetzone, nil, {
+								advanceCaptureHold = true,
+								hold = self._advanceCaptureHold,
+								completeShop = false,
+							})
+						else
+							self:_assignHeloExternalCargoHoldOrbitRoute(groupName, self.targetzone, side, { hold = self._advanceCaptureHold })
+							self._advanceCaptureExternalCargo = nil
+						end
+					else
+						self._advanceCaptureWaitingForNeutral = nil
+						self._advanceCaptureReleased = true
+						self:_assignHeloRoute(groupName, self.targetzone)
+					end
+					return
+				elseif self.unitCategory == Unit.Category.AIRPLANE then
+					if targetZone and targetZone.active and (targetZone.side == 0 or targetZone.side == side) then
+						self._advanceCaptureWaitingForNeutral = nil
+						self._advanceCaptureReleased = true
+						self:_assignPlaneRoute(groupName, self.targetzone, self.Altitude, originZone, side, true)
+					elseif restoreAdvancePhase == "holding" or self._advanceCaptureWaitingForNeutral == true then
+						self._advanceCaptureWaitingForNeutral = true
+						self._advanceCaptureReleased = nil
+						self:_assignPlaneAdvanceCaptureHoldRoute(groupName, self.targetzone, self.Altitude, { hold = self._advanceCaptureHold, completeShop = false })
+					else
+						self._advanceCaptureWaitingForNeutral = nil
+						self._advanceCaptureReleased = true
+						self:_assignPlaneRoute(groupName, self.targetzone, self.Altitude, originZone, side, true)
+					end
+					return
+				end
+			end
 			local validSupplyTarget = targetZone and targetZone.active and (targetZone.side == 0 or targetZone.side == side)
 			local restoreReturnHome = self._restoreSupplyReturnHome == true
 			self._restoreSupplyReturnHome = nil
@@ -34765,20 +36141,27 @@ end
 											end
 											timer.scheduleFunction(function(param)
 												local assigned
-												if param.retryNoCargo then
+												if param.gc._advanceCaptureWaitingForNeutral == true then
+													local targetZone = param.gc.zoneCommander.battleCommander:getZoneByName(param.targetZone)
+													if targetZone and (targetZone.side == 0 or targetZone.side == param.side) then
+														assigned = param.gc:_assignAdvanceCaptureOpenRoute(param.groupName, param.targetZone, param.originZone, param.side, param.farpLaunch)
+													else
+														assigned = param.gc:_assignAdvanceCaptureHoldRoute(param.groupName, param.targetZone, param.originZone, param.side, param.farpLaunch)
+													end
+												elseif param.retryNoCargo then
 													param.gc._supplyRetryNoCargo = nil
 													assigned = param.gc:_assignHeloRoute(param.groupName, param.targetZone)
 												elseif param.farpLaunch and param.farpLaunch.routeOnly == true then
 													assigned = param.gc:_assignHeloRoute(param.groupName, param.targetZone)
 												elseif param.farpLaunch and WarehouseLogistics == true and SuppliesCargoTransport ~= false and (not param.gc.NotCargo) then
-													assigned = param.gc:_assignHeloLogisticsRoute(param.groupName, param.targetZone, param.originZone, param.side, param.farpLaunch)
+													assigned = param.gc:_assignHeloExternalCargoLogisticsRoute(param.groupName, param.targetZone, param.originZone, param.side, param.farpLaunch)
 													-- assigned = param.gc:_assignHeloRoute(param.groupName, param.targetZone)
 												elseif param.farpLaunch and WarehouseLogistics == true and SuppliesCargoTransport == false and (not param.gc.NotCargo) then
 													assigned = param.gc:_assignHeloRoute(param.groupName, param.targetZone, param.originZone)
 												elseif param.farpLaunch then
 													assigned = param.gc:_assignHeloRoute(param.groupName, param.targetZone)
 												elseif WarehouseLogistics == true and SuppliesCargoTransport ~= false and (not param.gc.NotCargo) then
-													assigned = param.gc:_assignHeloLogisticsRoute(param.groupName, param.targetZone, param.originZone, param.side, param.farpLaunch)
+													assigned = param.gc:_assignHeloExternalCargoLogisticsRoute(param.groupName, param.targetZone, param.originZone, param.side, param.farpLaunch)
 												elseif WarehouseLogistics == true and SuppliesCargoTransport == false and (not param.gc.NotCargo) then
 													assigned = param.gc:_assignHeloRoute(param.groupName, param.targetZone, param.originZone)
 												else
@@ -34810,7 +36193,17 @@ end
 												self.zoneCommander.battleCommander.accounts[2] = math.max((self.zoneCommander.battleCommander.accounts[2] or 0) - self._pendingBlueSupplyCost, 0)
 												self._pendingBlueSupplyCost = nil end
 											timer.scheduleFunction(function(param)
-												local assigned = param.gc:_assignPlaneRoute(param.groupName, param.targetZone, param.altitude, param.originZone, param.side)
+												local assigned
+												if param.gc._advanceCaptureWaitingForNeutral == true then
+													local targetZone = param.gc.zoneCommander.battleCommander:getZoneByName(param.targetZone)
+													if targetZone and (targetZone.side == 0 or targetZone.side == param.side) then
+														assigned = param.gc:_assignAdvanceCaptureOpenRoute(param.groupName, param.targetZone, param.originZone, param.side)
+													else
+														assigned = param.gc:_assignPlaneAdvanceCaptureHoldRoute(param.groupName, param.targetZone, param.altitude)
+													end
+												else
+													assigned = param.gc:_assignPlaneRoute(param.groupName, param.targetZone, param.altitude, param.originZone, param.side)
+												end
 												if assigned ~= true then
 													param.gc._pendingSupplyLaunchMessage = nil
 													param.gc.zoneCommander.battleCommander:_failPendingShopPurchase(param.gc, "LOGISTICS_NO_AVAILABLE_PILOTS")
@@ -34993,6 +36386,34 @@ end
 					return
 				end
 			end
+			if self.mission == 'supply'
+				and self.unitCategory == heli
+				and self._advanceCaptureWaitingForNeutral == true
+				and self._advanceCaptureExternalCargo == true
+				and not self._supplyReturnHome
+			then
+				local tg = bcObj:getZoneByName(self.targetzone)
+				if tg and tg.active and (tg.side == 0 or tg.side == self.side)
+					and gr and gr:isExist() and gr:getSize() > 0
+					and self:_advanceCaptureExternalCargoCanRelease(gr, now)
+				then
+					local assigned = self:_assignAdvanceCaptureReleasedRoute(self.spawnedName or self.name, self.targetzone, originZone, self.side)
+					if assigned == true then
+						self._advanceCaptureWaitingForNeutral = nil
+						self._advanceCaptureReleased = true
+						self._advanceCaptureExternalCargoReady = nil
+						self._advanceCaptureExternalCargoReleaseNotBefore = nil
+						self._advanceCaptureExternalCargoReleaseFallbackAt = nil
+						self._advanceCaptureExternalCargoReleaseDelayed = nil
+						self._advanceCaptureExternalCargoFallbackWarned = nil
+						self._advanceCaptureReleaseFailedLogged = nil
+						env.info("[AdvanceCapture] released external cargo helo "..tostring(self.name).." to "..tostring(self.targetzone))
+					elseif self._advanceCaptureReleaseFailedLogged ~= true then
+						self._advanceCaptureReleaseFailedLogged = true
+						env.info("[AdvanceCapture] failed to release external cargo helo "..tostring(self.name).." to "..tostring(self.targetzone))
+					end
+				end
+			end
 			if self.mission=='supply' and not self._zonePinged then
 				local tg = bcObj:getZoneByName(self.targetzone)
 				if tg and gr and Utils.someOfGroupInZone(gr, tg.zone) then
@@ -35124,6 +36545,91 @@ end
 		end
 	end
 
+	function GroupCommander:_buildSurfaceAdvanceCaptureHoldTask(useZoneRoadHooks, useMultiRoadHooks, useTargetMultiRoadHooks)
+		local selectedTask, startVec2
+		if useZoneRoadHooks == true then
+			selectedTask, startVec2 = dc.GetSupplyConvoyRoute(self.zoneCommander.zone, self.targetzone, dc.DEFAULT_SPEED, true, useMultiRoadHooks == true, useTargetMultiRoadHooks == true)
+		else
+			selectedTask, startVec2 = dc.GetSupplyConvoyRoute(self.zoneCommander.zone, self.targetzone, dc.DEFAULT_SPEED)
+		end
+		if not (selectedTask and startVec2) then
+			return nil, nil, false
+		end
+
+		local task = UTILS.DeepCopy(selectedTask)
+		local route = task and task.params and task.params.route
+		local points = route and route.points
+		if type(points) ~= "table" or #points < 2 then
+			return nil, nil, false
+		end
+
+		local totalDistance = 0
+		local legs = {}
+		for i = 1, #points - 1 do
+			local a = points[i]
+			local b = points[i + 1]
+			local ax = a and tonumber(a.x) or nil
+			local ay = a and tonumber(a.y) or nil
+			local bx = b and tonumber(b.x) or nil
+			local by = b and tonumber(b.y) or nil
+			if ax and ay and bx and by then
+				local dx = bx - ax
+				local dy = by - ay
+				local len = math.sqrt((dx * dx) + (dy * dy))
+				legs[i] = len
+				totalDistance = totalDistance + len
+			else
+				legs[i] = 0
+			end
+		end
+
+		local minTargetDistanceM = UTILS.NMToMeters(4)
+		if totalDistance <= minTargetDistanceM then
+			env.info("[AdvanceCapture] surface hold route too short for "..tostring(self.name).." to "..tostring(self.targetzone).." distanceNm="..tostring(totalDistance / 1852))
+			return nil, nil, false
+		end
+
+		local holdDistance = math.min(totalDistance * 0.80, totalDistance - minTargetDistanceM)
+		if holdDistance <= 0 then
+			return nil, nil, false
+		end
+
+		local walked = 0
+		local newPoints = { UTILS.DeepCopy(points[1]) }
+		local holdX, holdY = nil, nil
+		for i = 1, #points - 1 do
+			local len = legs[i] or 0
+			local a = points[i]
+			local b = points[i + 1]
+			if len > 0 and walked + len >= holdDistance then
+				local ax, ay = tonumber(a.x), tonumber(a.y)
+				local bx, by = tonumber(b.x), tonumber(b.y)
+				local t = (holdDistance - walked) / len
+				holdX = ax + ((bx - ax) * t)
+				holdY = ay + ((by - ay) * t)
+				local holdPoint = UTILS.DeepCopy(b)
+				holdPoint.x = holdX
+				holdPoint.y = holdY
+				holdPoint.task = nil
+				newPoints[#newPoints + 1] = holdPoint
+				break
+			end
+			walked = walked + len
+			newPoints[#newPoints + 1] = UTILS.DeepCopy(points[i + 1])
+		end
+
+		if not holdX or not holdY then
+			return nil, nil, false
+		end
+
+		route.points = newPoints
+		self._advanceCaptureHold = { x = holdX, z = holdY }
+		self._advanceCaptureWaitingForNeutral = true
+		self._advanceCaptureReleased = nil
+		self._advanceCaptureExternalCargo = nil
+		return task, startVec2, false
+	end
+
 	function GroupCommander:_buildSurfaceMissionTask(useZoneRoadHooks, useMultiRoadHooks, useTargetMultiRoadHooks)
 		local isArtilleryMission = self.MissionType == 'ARTY'
 		if self.playerGroundAttack == true and self.playerGroundAttackRoutePoint and self.mission == 'attack' and not isArtilleryMission then
@@ -35141,6 +36647,15 @@ end
 			return task, startVec2, false
 		end
 		if self.mission == 'supply' then
+			if self._advanceCaptureWaitingForNeutral == true then
+				local targetZone = self.zoneCommander.battleCommander:getZoneByName(self.targetzone)
+				if targetZone and targetZone.side ~= self.side and targetZone.side ~= 0 then
+					return self:_buildSurfaceAdvanceCaptureHoldTask(useZoneRoadHooks, useMultiRoadHooks, useTargetMultiRoadHooks)
+				end
+				self._advanceCaptureWaitingForNeutral = nil
+				self._advanceCaptureReleased = true
+				self._advanceCaptureHold = nil
+			end
 			if useZoneRoadHooks == true then
 				local task, startVec2 = dc.GetSupplyConvoyRoute(self.zoneCommander.zone, self.targetzone, dc.DEFAULT_SPEED, true, useMultiRoadHooks == true, useTargetMultiRoadHooks == true)
 				return task, startVec2, false
@@ -35805,6 +37320,18 @@ end
 				local restorePointZone = bcObj:getZoneOfPoint({ x = px, y = land.getHeight({ x = px, y = pz }), z = pz })
 				local validAttackTarget = targetZone and targetZone.active and targetZone.side ~= restoreSide and targetZone.side ~= 0
 				local validSupplyTarget = targetZone and targetZone.active and (targetZone.side == restoreSide or targetZone.side == 0)
+				local restoreAdvanceCapture = self.mission == 'supply'
+					and (restoreData.advanceCapture == true
+						or restoreData.advanceCaptureWaitingForNeutral == true
+						or restoreData.advanceCaptureReleased == true
+						or restoreData.advanceCaptureHold ~= nil)
+				local restoreAdvanceWaiting = restoreAdvanceCapture and restoreData.advanceCaptureWaitingForNeutral == true
+				local validAdvanceCaptureTarget = restoreAdvanceWaiting
+					and targetZone
+					and targetZone.active
+					and targetZone.side ~= restoreSide
+					and targetZone.side ~= 0
+				local validSupplyRestoreTarget = validSupplyTarget or validAdvanceCaptureTarget
 				local validHomeZone = homeZone and homeZone.active and homeZone.side == restoreSide
 				local supplyReturnHome = restoreData.supplyReturnHome == true
 				local artilleryReturnHome = restoreData.artilleryReturnHome == true
@@ -35818,18 +37345,20 @@ end
 							allowRestore = validHomeZone
 						elseif targetZone and restorePointZone.zone == targetZone.zone then
 							if self.mission == 'supply' then
-								allowRestore = supplyReturnHome and validHomeZone or validSupplyTarget
+								allowRestore = supplyReturnHome and validHomeZone or validSupplyRestoreTarget
 							elseif self.mission == 'attack' then
 								allowRestore = validAttackTarget
 							else
 								allowRestore = restorePointZone.active and restorePointZone.side == restoreSide
 							end
+						elseif self.mission == 'supply' and validAdvanceCaptureTarget and not supplyReturnHome then
+							allowRestore = true
 						else
 							allowRestore = restorePointZone.active and restorePointZone.side == restoreSide
 						end
 					else
 						if self.mission == 'supply' then
-							allowRestore = supplyReturnHome and validHomeZone or validSupplyTarget
+							allowRestore = supplyReturnHome and validHomeZone or validSupplyRestoreTarget
 						elseif self.mission == 'attack' then
 							allowRestore = validAttackTarget
 						else
@@ -35852,6 +37381,9 @@ end
 				end
 
 				local savedState = (restoreData.savedState == 'atdestination') and 'atdestination' or 'enroute'
+				if restoreAdvanceWaiting then
+					savedState = 'enroute'
+				end
 				if artilleryReturnHome and savedState == 'atdestination' and not (restorePointZone and homeZone and restorePointZone.zone == homeZone.zone) then
 					savedState = 'enroute'
 				end
@@ -35875,6 +37407,9 @@ end
 
 				local allowCaptureFarpFallback = restoreData.captureFarpLaunch == true and self.mission == 'supply'
 				local selectedTask = nil
+				local selectedAdvanceCaptureWaiting = false
+				local selectedAdvanceCaptureReleased = false
+				local selectedAdvanceCaptureHold = nil
 				local freshSpawnGroupHeadingDeg = nil
 				if artilleryReturnHome then
 					if savedState == 'enroute' then
@@ -35886,8 +37421,37 @@ end
 						end
 					end
 				elseif savedState == 'enroute' and not artilleryOnStation then
-					local restoreZoneName = (self.mission == 'supply' and supplyReturnHome) and homeZoneName or nil
-					selectedTask = self:_buildSurfaceRestoreTask(px, pz, restoreZoneName)
+					if restoreAdvanceCapture and self.mission == 'supply' and not supplyReturnHome then
+						if validSupplyTarget then
+							selectedTask = self:_buildSurfaceRestoreTask(px, pz)
+							selectedAdvanceCaptureReleased = selectedTask ~= nil
+						elseif validAdvanceCaptureTarget then
+							local hold = restoreData.advanceCaptureHold
+							local hx = hold and tonumber(hold.x)
+							local hz = hold and tonumber(hold.z or hold.y)
+							if hx and hz then
+								local s_kmh = math.floor(((dc.DEFAULT_SPEED or 13.8) * 3.6) + 0.5)
+								selectedTask = {
+									id = "Mission",
+									params = {
+										route = {
+											points = {
+												ground_buildWP({ x = px, y = pz }, "Off Road", s_kmh),
+												ground_buildWP({ x = hx, y = hz }, "Off Road", s_kmh),
+											},
+										},
+									},
+								}
+								selectedAdvanceCaptureWaiting = true
+								selectedAdvanceCaptureHold = { x = hx, z = hz }
+							else
+								env.info("[SurfacePersistence] missing advance capture hold for "..tostring(self.name).." targetZone="..tostring(self.targetzone))
+							end
+						end
+					else
+						local restoreZoneName = (self.mission == 'supply' and supplyReturnHome) and homeZoneName or nil
+						selectedTask = self:_buildSurfaceRestoreTask(px, pz, restoreZoneName)
+					end
 					if not selectedTask then
 						if allowCaptureFarpFallback then
 							env.info("[SurfacePersistence] capture FARP route fallback to origin for "..tostring(self.name))
@@ -35951,6 +37515,17 @@ end
 						self.groundconvoyMessaged = restoreData.groundconvoyMessaged == true or artilleryReturnHome == true
 						self._supplyReturnHome = restoreData.supplyReturnHome == true
 						self._artilleryReturnHome = artilleryReturnHome
+						if restoreAdvanceCapture and self.mission == 'supply' and self._supplyReturnHome ~= true then
+							self._advanceCaptureWaitingForNeutral = selectedAdvanceCaptureWaiting and true or nil
+							self._advanceCaptureReleased = selectedAdvanceCaptureReleased and true or nil
+							self._advanceCaptureHold = selectedAdvanceCaptureWaiting and selectedAdvanceCaptureHold or nil
+							self._advanceCaptureExternalCargo = nil
+						else
+							self._advanceCaptureWaitingForNeutral = nil
+							self._advanceCaptureReleased = nil
+							self._advanceCaptureHold = nil
+							self._advanceCaptureExternalCargo = nil
+						end
 						self._artilleryOnStation = nil
 						self._artilleryFireTargetZone = nil
 						self._artilleryFireStartedAt = nil
@@ -44822,7 +46397,6 @@ seadActive = false
 seadGroup = nil
 seadTemplate = (Era == 'Coldwar') and "DynamicSead_Template_CW" or 'DynamicSead_Template'
 local seadSpawnIndex = 1
-local SEADTargetMenu = nil
 
 
 function despawnSead()
@@ -48144,8 +49718,6 @@ local restrictedWeaponSet = {}
 for _,weapon in ipairs(restrictedWeapons) do
     restrictedWeaponSet[weapon] = true
 end
-
-local restockWeapons = WEAPONSLIST.GetAllItems()
 
 function WEAPONSLIST.IsRestricted(itemName)
     return restrictedWeaponSet[itemName] == true
