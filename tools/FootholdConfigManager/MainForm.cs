@@ -6935,15 +6935,14 @@ internal sealed class MainForm : Form
     private Control BuildEntryEditor(ConfigEntry entry)
     {
         var isNewImportEntry = IsImportedNewEntryHighlighted(entry);
-        var blockBackColor = isNewImportEntry ? GetNewHighlightBackColor() : MainBackground;
+        var headerBackColor = isNewImportEntry ? GetNewHighlightBackColor() : MainBackground;
         var group = new TableLayoutPanel
         {
             AutoSize = true,
             Dock = DockStyle.Top,
             ColumnCount = 1,
             Padding = new Padding(0, 0, 0, Zoomed(12)),
-            BackColor = blockBackColor,
-            Tag = isNewImportEntry ? ImportedNewHighlightTag : null
+            BackColor = MainBackground
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
@@ -6954,7 +6953,7 @@ internal sealed class MainForm : Form
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             Padding = GetTableHeaderPadding(),
-            BackColor = blockBackColor,
+            BackColor = headerBackColor,
             Tag = isNewImportEntry ? ImportedNewHighlightTag : null
         };
 
@@ -6965,7 +6964,7 @@ internal sealed class MainForm : Form
             TextAlign = ContentAlignment.MiddleLeft,
             Margin = GetTableHeaderLabelMargin(),
             ForeColor = PrimaryTextColor,
-            BackColor = blockBackColor,
+            BackColor = headerBackColor,
             Tag = isNewImportEntry ? ImportedNewHighlightTag : null
         };
         SetHelp(label, entry);
@@ -7001,9 +7000,9 @@ internal sealed class MainForm : Form
             Height = 36,
             Dock = DockStyle.Top,
             ForeColor = HelpTextColor,
-            BackColor = blockBackColor,
+            BackColor = MainBackground,
             Padding = new Padding(0, 4, 0, 0),
-            Tag = isNewImportEntry ? ImportedNewHighlightTag : null
+            Tag = null
         };
         SetHelp(help, entry);
         ConfigureEditableHelpControl(help, entry.DisplayKey, entry.DisplayName, description);
