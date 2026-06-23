@@ -669,7 +669,7 @@ zones = {
 	insurgentcamp = ZoneCommander:new({zone='InsurgentCamp', side=1, level=20, upgrades=upgrades.mission2InsurgentCamp, crates={}, flavorText=flavor.insurgentcamp, income=0.3}),
 	secrettechfacility = ZoneCommander:new({zone='SecretTechFacility', side=1, level=20, upgrades=upgrades.mission3, crates={}, flavorText=flavor.secrettechfacility, income=0.5}),
 	fueldepo = ZoneCommander:new({zone='FuelDepo', side=1, level=20, upgrades=upgrades.mission4fueldepo, crates={}, flavorText=flavor.fueldepo, income=0.5}),
-	ammonitiondepo = ZoneCommander:new({zone='AmmunitionDepo', side=1, level=20, upgrades=upgrades.mission1Ammo, crates={}, flavorText=flavor.ammunitiondepo, income=0.5}),
+	ammonitiondepo = ZoneCommander:new({zone='AmmonitionDepo', side=1, level=20, upgrades=upgrades.mission1Ammo, crates={}, flavorText=flavor.AmmonitionDepo, income=0.5}),
 	tankfactory = ZoneCommander:new({zone='TankFactory', side=1, level=20, upgrades=upgrades.mission2, crates={}, flavorText=flavor.tankfactory, income=0.4}),
 	chemsite = ZoneCommander:new({zone='ChemSite', side=1, level=20, upgrades=upgrades.mission3chemsite, crates={}, flavorText=flavor.chemsite, income=0.3}),
 	artilleryfactory = ZoneCommander:new({zone='ArtilleryFactory', side=1, level=20, upgrades=upgrades.mission4, crates={}, flavorText=flavor.artilleryfactory, income=0.5}),
