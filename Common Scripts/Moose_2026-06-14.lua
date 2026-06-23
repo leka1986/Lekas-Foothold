@@ -7918,6 +7918,7 @@ local Line=Info.currentline or"?"
 local Name=Info.name or"?"
 local ErrorHandler=function(errmsg)
 env.info("Error in timer function: "..errmsg or"")
+local _s=self.ObjectSchedulers[CallID]or self.PersistentSchedulers[CallID];env.info("Timer context: call="..tostring(CallID).." master="..tostring(_s and _s.MasterObject).." source="..tostring(Source).." line="..tostring(Line).." name="..tostring(Name)..((bc and(" phase="..tostring(bc._fsmCrashPhase).." zone="..tostring(bc._fsmCrashCurrentZone).." group="..tostring(bc._fsmCrashCurrentGroup).." lastSpawn="..tostring(bc._lastSpawnAttempt)))or""))
 if BASE.Debug~=nil then
 env.info(BASE.Debug.traceback())
 end

@@ -18245,13 +18245,14 @@ end
 		if reason and not o._fsmCrashReported then
 			o._fsmCrashReported = true
 			trigger.action.outText(L10N:Format("SYSTEM_ENGINE_CRASH", map, version), 60)
-			env.info(string.format("[FSM-WATCHDOG] reason=%s map=%s version=%s phase=%s zone=%s group=%s lastStartAbs=%.1f lastDoneAbs=%.1f sinceStart=%.1f sinceDone=%.1f timeout=%.1f",
+			env.info(string.format("[FSM-WATCHDOG] reason=%s map=%s version=%s phase=%s zone=%s group=%s lastSpawn=%s lastStartAbs=%.1f lastDoneAbs=%.1f sinceStart=%.1f sinceDone=%.1f timeout=%.1f",
 				reason,
 				map,
 				version,
 				o._fsmCrashPhase,
 				o._fsmCrashCurrentZone,
 				o._fsmCrashCurrentGroup,
+				tostring(o._lastSpawnAttempt),
 				lastStart,
 				lastDone,
 				now - lastStart,
@@ -20979,7 +20980,7 @@ end
 		if group and zn.side == side then return 'Can not engage friendly zone' end
 		if not group then return 'Not available' end
 
-		local expCount = AI.Task.WeaponExpend.ALL
+		local expCount = AI.Task.WeaponExpend.ONE
 		if expendAmmount then expCount = expendAmmount end
 
 		local altm = 6000
@@ -25469,6 +25470,7 @@ end
 		self._fsmCrashPhase = 'zones'
 		self._fsmCrashCurrentZone = '<none>'
 		self._fsmCrashCurrentGroup = '<none>'
+		self._lastSpawnAttempt = nil
 		for i,v in ipairs(self.zones) do
 			v:_ensureCombatPoolsFresh()
 			v:update()
@@ -31776,8 +31778,8 @@ function GroupCommander:_assignHeloExternalCargoUnloadAndLandRoute(groupName, ta
 	local plan = self:_resolveHeloExternalCargoDeliveryPlan(targetZoneName, pos.x, pos.z, side, opts)
 	if not plan then return nil end
 
-	local speedKmh = opts.speedKmh or 289
-	local approachAglM = opts.approachAglM or 200
+	local speedKmh = opts.speedKmh or 259
+	local approachAglM = opts.approachAglM or UTILS.FeetToMeters(450)
 	local approachAlt = land.getHeight({ x = plan.approachX, y = plan.approachZ }) + approachAglM
 	local heloUnitId = opts.heloUnitId or un:getID()
 	local unloadUnitId = opts.unloadUnitIdTransport
@@ -31902,7 +31904,7 @@ function GroupCommander:_assignHeloExternalCargoLogisticsRoute(groupName, target
 	local unloadTask = ExternalHeloCargoRoute.TaskUnload(plan.unloadZoneId, -1, 1)
 	local currentAglM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
 	local loadSpeedKmh = 110
-	local speedKmh = 289
+	local speedKmh = 259
 	local loadAglM = 25
 	local approachAglM = UTILS.FeetToMeters(500)
 	local approachAlt = land.getHeight({ x = plan.approachX, y = plan.approachZ }) + approachAglM
@@ -34223,7 +34225,7 @@ local cand, capCand = {}, {}
     if not (EventData and EventData.IniUnit and EventData.weapon and EventData.IniPlayerName) then return end
     local wp=WEAPON:New(EventData.weapon)
     if not wp:IsBomb() then return end
-    --env.info('RUNWAY-DBG: '..EventData.IniPlayerName..' dropped '..wp:GetTypeName()..' on '..runwayTargetZone)
+    env.info('RUNWAY-DBG: '..EventData.IniPlayerName..' dropped bomb '..wp:GetTypeName()..' on '..runwayTargetZone)
     local pilot = EventData.IniPlayerName or 'Unknown hero'
 	local playerUnit = EventData.IniUnit
 	local playerGroup = playerUnit:GetGroup()
@@ -34271,7 +34273,7 @@ local cand, capCand = {}, {}
         end
       end
     end)
-    wp:StartTrack()
+    wp:StartTrack(0.1)
   end
   RunwayHandler:HandleEvent(EVENTS.Shot)
   return true
@@ -34290,7 +34292,6 @@ local function _buildReconMissionClientSet()
 	return SET_CLIENT:New()
 		:FilterCoalitions("blue")
 		:FilterCategories("plane")
-		:FilterCategories("helicopter")
 		:FilterActive(true)
 		:FilterStart()
 end
@@ -36268,6 +36269,7 @@ end
 											spawned = self:_spawnFromGroundAt(resolved, originZone, self.targetzone, tk)
 										else
 											if not self.Airbase then
+												bcObj._lastSpawnAttempt = "group="..tostring(self.name).." template="..tostring(resolved).." origin="..tostring(originZone).." target="..tostring(self.targetzone).." airbase="..tostring(SpawnType and SpawnType.airbase and SpawnType.airbase.GetName and SpawnType.airbase:GetName() or SpawnType and SpawnType.airbase).." spots="..tostring(SpawnType and SpawnType.spots and table.concat(SpawnType.spots,",") or nil)
 												spawned = sp:SpawnAtParkingSpot(SpawnType.airbase, SpawnType.spots, tk)
 												if not spawned then spawned = sp:SpawnAtAirbase(SpawnType.airbase, tk, nil, nil, false) end
 												if spawned and self.unitCategory == heli then spawned:OptionPreferVerticalLanding() end
@@ -39853,7 +39855,7 @@ end
 				end
 				local p = pObj:getPoint()
 				if p then
-					trigger.action.signalFlare(p, 0, math.floor(math.random(0,359)))
+					trigger.action.signalFlare(p, trigger.flareColor.Green, math.floor(math.random(0,359)))
 				end
 				return nil
 			end, { pilot = pilotObj }, timer.getTime() + (i * delaySec))
@@ -39878,6 +39880,7 @@ end
 			end
 			
 			if targetpilot then
+				self:printPilotInfo(targetpilot, gid, un, 15, true)
 				self:_signalPilotFlareBurst(targetpilot, 3, 5)
 			else
 				trigger.action.outTextForGroup(gid, T:Get("CSAR_NO_EJECTED_PILOTS"), 15)

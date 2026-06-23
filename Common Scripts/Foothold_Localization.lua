@@ -27936,6 +27936,9 @@ local IraqSetupLabels = {
 		IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "Chemical site destroyed. Good job\n+500 credits",
 		IRAQ_EVENT_MINING_FACILITY_CLEARED = "Mining Facility cleared\n+500 credits",
 		IRAQ_EVENT_SECRET_TECH_DISABLED  = "Secret tech facility disabled\n+500 credits",
+		IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "Oil production Site disabled\n+500 credits",
+		IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "Uranium enrichment Site disabled\n+500 credits",
+		IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City destroyed\n+500 credits",
 		IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "Insurgent Camp destroyed. Good job\n+500 credits",
 		IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "Enemy SAM destroyed\n+200 credits",
 		IRAQ_MISSION_INTERCEPT_CARGO_DESC = "Find and destroy the enemy cargo plane coming from Syria, supplying an unknown location.",
@@ -27993,11 +27996,12 @@ Destroy the house and whoever is nearby.]],
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Strike mission ended: Kill Saddam Hussein's associate\n+500 credits",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Strike a high-value building at these coordinates:
 
-MGRS: 38 S LD 64719 55731
-Lat long: N 34°50.093' E 43°31.231'
-Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+Lat long: N 34°50'04" E 43°31'42"
+Lat long Precise: N 34°50'04.67" E 43°31'42.63"
+Lat long Decimal Minutes: N 34°50.077' E 43°31.710'
 
-Elevation: 450 feet
+Elevation: 464 feet
 
 Reward: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Kill Al-Baghdadi associate",
@@ -28052,6 +28056,9 @@ Destroy the house and whoever is nearby.]],
 		IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "Chemischer Standort zerstört. Gute Arbeit\n+500 Kredits",
 		IRAQ_EVENT_MINING_FACILITY_CLEARED = "Bergbauanlage gesäubert\n+500 Kredits",
 		IRAQ_EVENT_SECRET_TECH_DISABLED  = "Geheime Technologieanlage deaktiviert\n+500 Kredits",
+		IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "Ölproduktionsanlage deaktiviert\n+500 Kredits",
+		IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "Urananreicherungsanlage deaktiviert\n+500 Kredits",
+		IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City zerstört\n+500 Kredits",
 		IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "Aufständischenlager zerstört. Gute Arbeit\n+500 Kredits",
 		IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "Feindliches SAM zerstört\n+200 Kredits",
 		IRAQ_MISSION_INTERCEPT_CARGO_DESC = "Findet und zerstört das feindliche Frachtflugzeug aus Syrien, das einen unbekannten Ort versorgt.",
@@ -28109,11 +28116,12 @@ Zerstört das Haus und alle in der Nähe.]],
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Angriffsmission beendet: Saddam Husseins Vertrauter\n+500 Kredits",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Greife ein hochwertiges Gebäude bei diesen Koordinaten an:
 
-MGRS: 38 S LD 64719 55731
-Lat long: N 34°50.093' E 43°31.231'
-Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+Lat long: N 34°50'04" E 43°31'42"
+Lat long Precise: N 34°50'04.67" E 43°31'42.63"
+Lat long Decimal Minutes: N 34°50.077' E 43°31.710'
 
-Höhe: 450 Fuß
+Höhe: 464 Fuß
 
 Belohnung: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Al-Baghdadis Vertrauten töten",
@@ -28168,6 +28176,9 @@ Zerstört das Haus und alle in der Nähe.]],
 		IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "Site chimique détruit. Bien joué\n+500 crédits",
 		IRAQ_EVENT_MINING_FACILITY_CLEARED = "Installation minière nettoyée\n+500 crédits",
 		IRAQ_EVENT_SECRET_TECH_DISABLED  = "Installation technologique secrète neutralisée\n+500 crédits",
+		IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "Site de production pétrolière neutralisé\n+500 crédits",
+		IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "Site d'enrichissement d'uranium neutralisé\n+500 crédits",
+		IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City détruite\n+500 crédits",
 		IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "Camp insurgé détruit. Bien joué\n+500 crédits",
 		IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "SAM ennemi détruit\n+200 crédits",
 		IRAQ_MISSION_INTERCEPT_CARGO_DESC = "Repérez et détruisez l'avion cargo ennemi venant de Syrie, qui ravitaille un lieu inconnu.",
@@ -28225,11 +28236,12 @@ Détruisez la maison et toute personne à proximité.]],
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Mission de frappe terminée : associé de Saddam Hussein\n+500 crédits",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Frappez un bâtiment de grande valeur à ces coordonnées :
 
-MGRS: 38 S LD 64719 55731
-Lat long: N 34°50.093' E 43°31.231'
-Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+Lat long: N 34°50'04" E 43°31'42"
+Lat long Precise: N 34°50'04.67" E 43°31'42.63"
+Lat long Decimal Minutes: N 34°50.077' E 43°31.710'
 
-Altitude: 450 pieds
+Altitude: 464 pieds
 
 Récompense: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Éliminer l'associé d'Al-Baghdadi",
@@ -28284,6 +28296,9 @@ Détruisez la maison et toute personne à proximité.]],
 		IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "Sitio químico destruido. Buen trabajo\n+500 créditos",
 		IRAQ_EVENT_MINING_FACILITY_CLEARED = "Instalación minera despejada\n+500 créditos",
 		IRAQ_EVENT_SECRET_TECH_DISABLED  = "Instalación tecnológica secreta desactivada\n+500 créditos",
+		IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "Sitio de producción petrolera desactivado\n+500 créditos",
+		IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "Sitio de enriquecimiento de uranio desactivado\n+500 créditos",
+		IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City destruida\n+500 créditos",
 		IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "Campamento insurgente destruido. Buen trabajo\n+500 créditos",
 		IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "SAM enemigo destruido\n+200 créditos",
 		IRAQ_MISSION_INTERCEPT_CARGO_DESC = "Encuentra y destruye el avión de carga enemigo que viene de Siria y abastece una ubicación desconocida.",
@@ -28341,11 +28356,12 @@ Destruye la casa y a cualquiera que esté cerca.]],
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Misión de ataque terminada: asociado de Saddam Hussein\n+500 créditos",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Ataca un edificio de alto valor en estas coordenadas:
 
-MGRS: 38 S LD 64719 55731
-Lat long: N 34°50.093' E 43°31.231'
-Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+Lat long: N 34°50'04" E 43°31'42"
+Lat long Precise: N 34°50'04.67" E 43°31'42.63"
+Lat long Decimal Minutes: N 34°50.077' E 43°31.710'
 
-Elevación: 450 pies
+Elevación: 464 pies
 
 Recompensa: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Matar al asociado de Al-Baghdadi",
@@ -28400,6 +28416,9 @@ Destruye la casa y a cualquiera que esté cerca.]],
 		IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "Химический объект уничтожен. Отличная работа\n+500 кредитов",
 		IRAQ_EVENT_MINING_FACILITY_CLEARED = "Горнодобывающий объект зачищен\n+500 кредитов",
 		IRAQ_EVENT_SECRET_TECH_DISABLED  = "Секретный технологический объект отключен\n+500 кредитов",
+		IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "Объект нефтедобычи отключен\n+500 кредитов",
+		IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "Объект обогащения урана отключен\n+500 кредитов",
+		IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City уничтожен\n+500 кредитов",
 		IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "Лагерь повстанцев уничтожен. Отличная работа\n+500 кредитов",
 		IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "Вражеский SAM уничтожен\n+200 кредитов",
 		IRAQ_MISSION_INTERCEPT_CARGO_DESC = "Найдите и уничтожьте вражеский транспортный самолет, летящий из Сирии и снабжающий неизвестный объект.",
@@ -28457,11 +28476,12 @@ Lat long Decimal Minutes: N 34°22.834' E 40°58.794'
 		IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Ударная миссия завершена: соратник Саддама Хусейна\n+500 кредитов",
 		IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Нанесите удар по зданию ценной цели по этим координатам:
 
-MGRS: 38 S LD 64719 55731
-Lat long: N 34°50.093' E 43°31.231'
-Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+Lat long: N 34°50'04" E 43°31'42"
+Lat long Precise: N 34°50'04.67" E 43°31'42.63"
+Lat long Decimal Minutes: N 34°50.077' E 43°31.710'
 
-Высота: 450 фута
+Высота: 464 фута
 
 Награда: 500]],
 		IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Ликвидировать соратника Аль-Багдади",
@@ -28516,6 +28536,9 @@ IraqSetupLabels["PT-BR"] = {
 	IRAQ_EVENT_MINING_FACILITY_CLEARED = "Mining Facility limpa\n+500 créditos",
 	IRAQ_EVENT_SCUDS_LAUNCHING = "SCUDS em Scud City estão lançando contra %s",
 	IRAQ_EVENT_SECRET_TECH_DISABLED = "Instalação de tecnologia secreta desativada\n+500 créditos",
+	IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "Local de produção de petróleo desativado\n+500 créditos",
+	IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "Local de enriquecimento de urânio desativado\n+500 créditos",
+	IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City destruída\n+500 créditos",
 	IRAQ_FLAVOR_INSURGENT_CAMP = "Verifique o kneeboard para coordenadas.\nDestrua os insurgentes e adicionaremos 500 créditos ao seu banco",
 	IRAQ_FLAVOR_MINING_FACILITY = "Verifique o kneeboard para coordenadas.\n",
 	IRAQ_FLAVOR_SCUD_CITY = "WPT N/A\nEncontre os SCUDS na cidade e destrua-os. Também há instalações AAA. Destrua tudo.",
@@ -28568,11 +28591,12 @@ Não mate o comboio antes que ele chegue à casa!]],
 	IRAQ_MISSION_HELO_HUNT_TITLE = "Helo Hunt Balad Airbase",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Ataque um prédio de alto valor nestas coordenadas:
 
-MGRS: 38 S LD 64719 55731
-Lat long: N 34°50.093' E 43°31.231'
-Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+Lat long: N 34°50'04" E 43°31'42"
+Lat long Precise: N 34°50'04.67" E 43°31'42.63"
+Lat long Decimal Minutes: N 34°50.077' E 43°31.710'
 
-Elevação: 450 pés
+Elevação: 464 pés
 
 Recompensa: 500]],
 	IRAQ_MISSION_HIGH_VALUE_2_DESC = [[Ataque um prédio de alto valor nestas coordenadas:
@@ -28633,6 +28657,9 @@ IraqSetupLabels.TR = {
 	IRAQ_EVENT_MINING_FACILITY_CLEARED = "Mining Facility temizlendi\n+500 kredi",
 	IRAQ_EVENT_SCUDS_LAUNCHING = "Scud City'deki SCUDS %s hedefine fırlatılıyor",
 	IRAQ_EVENT_SECRET_TECH_DISABLED = "Gizli teknoloji tesisi devre dışı bırakıldı\n+500 kredi",
+	IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "Petrol üretim tesisi devre dışı bırakıldı\n+500 kredi",
+	IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "Uranyum zenginleştirme tesisi devre dışı bırakıldı\n+500 kredi",
+	IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City yok edildi\n+500 kredi",
 	IRAQ_FLAVOR_INSURGENT_CAMP = "Koordinatlar için kneeboard'u kontrol et.\nİsyancıları yok edin, bankanıza 500 kredi ekleyeceğiz",
 	IRAQ_FLAVOR_MINING_FACILITY = "Koordinatlar için kneeboard'u kontrol et.\n",
 	IRAQ_FLAVOR_SCUD_CITY = "WPT N/A\nŞehirdeki SCUDS'yi bulun ve yok edin. AAA kurulumları da var. Her şeyi yok edin.",
@@ -28685,11 +28712,12 @@ Eve ulaşmadan konvoyu öldürmeyin!]],
 	IRAQ_MISSION_HELO_HUNT_TITLE = "Helo Hunt Balad Airbase",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Yüksek değerli bir binaya bu koordinatlarda strike:
 
-MGRS: 38 S LD 64719 55731
-Lat long: N 34°50.093' E 43°31.231'
-Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+Lat long: N 34°50'04" E 43°31'42"
+Lat long Precise: N 34°50'04.67" E 43°31'42.63"
+Lat long Decimal Minutes: N 34°50.077' E 43°31.710'
 
-Rakım: 450 feet
+Rakım: 464 feet
 
 Ödül: 500]],
 	IRAQ_MISSION_HIGH_VALUE_2_DESC = [[Yüksek değerli bir binaya bu koordinatlarda strike:
@@ -28752,6 +28780,9 @@ IraqSetupLabels["zh-CN"] = {
 	IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "化学设施已摧毁。干得好\n+500 点数",
 	IRAQ_EVENT_MINING_FACILITY_CLEARED = "采矿设施已清理\n+500 点数",
 	IRAQ_EVENT_SECRET_TECH_DISABLED  = "秘密技术设施已停用\n+500 点数",
+	IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "石油生产设施已停用\n+500 点数",
+	IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "铀浓缩设施已停用\n+500 点数",
+	IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City 已摧毁\n+500 点数",
 	IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "叛乱营地已摧毁。干得好\n+500 点数",
 	IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "敌方 SAM 已摧毁\n+200 点数",
 	IRAQ_MISSION_INTERCEPT_CARGO_DESC = "找到并摧毁来自叙利亚、正在向未知地点运送补给的敌方货机。",
@@ -28809,11 +28840,12 @@ MGRS: 37 S FU 82033 06131
 	IRAQ_MISSION_SADDAM_ASSOCIATE_END = "打击任务结束：击杀 Saddam Hussein 的同伙\n+500 点数",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[打击这些坐标上的高价值建筑：
 
-MGRS: 38 S LD 64719 55731
-经纬度：N 34°50'05" E 43°31'13"
-经纬度（十进制度分）：N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+经纬度：N 34°50'04" E 43°31'42"
+精确经纬度：N 34°50'04.67" E 43°31'42.63"
+经纬度（十进制度分）：N 34°50.077' E 43°31.710'
 
-海拔：450 英尺
+海拔：464 英尺
 
 奖励：500]],
 	IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "击杀 Al-Baghdadi 同伙",
@@ -28869,6 +28901,9 @@ IraqSetupLabels["zh-TW"] = {
 	IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "化學設施已摧毀。幹得好\n+500 點數",
 	IRAQ_EVENT_MINING_FACILITY_CLEARED = "採礦設施已清理\n+500 點數",
 	IRAQ_EVENT_SECRET_TECH_DISABLED  = "秘密技術設施已停用\n+500 點數",
+	IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "石油生產設施已停用\n+500 點數",
+	IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "鈾濃縮設施已停用\n+500 點數",
+	IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City 已摧毀\n+500 點數",
 	IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "叛亂營地已摧毀。幹得好\n+500 點數",
 	IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "敵方 SAM 已摧毀\n+200 點數",
 	IRAQ_MISSION_INTERCEPT_CARGO_DESC = "找到並摧毀來自敘利亞、正在向未知地點運送補給的敵方貨機。",
@@ -28926,10 +28961,12 @@ MGRS: 37 S FU 82033 06131
 	IRAQ_MISSION_SADDAM_ASSOCIATE_END = "打擊任務結束：擊殺 Saddam Hussein 的同夥\n+500 點數",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[打擊這些座標上的高價值建築：
 
-MGRS: 38 S LD 64719 55731
-經緯度：N 34°50'05" E 43°31'13"
-經緯度（十進制度分）：N 34°50.093' E 43°31.231'
-海拔：450 英尺
+MGRS: 38 S LD 65449 55691
+經緯度：N 34°50'04" E 43°31'42"
+精確經緯度：N 34°50'04.67" E 43°31'42.63"
+經緯度（十進制度分）：N 34°50.077' E 43°31.710'
+
+海拔：464 英尺
 
 獎勵：500]],
 	IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "擊殺 Al-Baghdadi 同夥",
@@ -28985,6 +29022,9 @@ IraqSetupLabels.IT = {
 	IRAQ_EVENT_CHEMICAL_SITE_DESTROYED = "Sito chimico distrutto. Ottimo lavoro\n+500 crediti",
 	IRAQ_EVENT_MINING_FACILITY_CLEARED = "Impianto minerario ripulito\n+500 crediti",
 	IRAQ_EVENT_SECRET_TECH_DISABLED  = "Struttura tecnologica segreta disattivata\n+500 crediti",
+	IRAQ_EVENT_OIL_PRODUCTION_DISABLED = "Sito di produzione petrolifera disattivato\n+500 crediti",
+	IRAQ_EVENT_URANIUM_ENRICHMENT_DISABLED = "Sito di arricchimento dell'uranio disattivato\n+500 crediti",
+	IRAQ_EVENT_SCUD_CITY_DESTROYED = "Scud City distrutta\n+500 crediti",
 	IRAQ_EVENT_INSURGENT_CAMP_DESTROYED = "Campo degli insorti distrutto. Ottimo lavoro\n+500 crediti",
 	IRAQ_EVENT_ENEMY_SAM_DESTROYED   = "SAM nemico distrutto\n+200 crediti",
 	IRAQ_MISSION_INTERCEPT_CARGO_DESC = "Trova e distruggi l'aereo cargo nemico proveniente dalla Siria, che rifornisce una posizione sconosciuta.",
@@ -29042,11 +29082,12 @@ Distruggi la casa e chiunque si trovi nelle vicinanze.]],
 	IRAQ_MISSION_SADDAM_ASSOCIATE_END = "Missione d'attacco terminata: uccidi l'associato di Saddam Hussein\n+500 crediti",
 	IRAQ_MISSION_HIGH_VALUE_1_DESC = [[Colpisci un edificio di alto valore a queste coordinate:
 
-MGRS: 38 S LD 64719 55731
-Lat long: N 34°50.093' E 43°31.231'
-Lat long Decimal Minutes: N 34°50.093' E 43°31.231'
+MGRS: 38 S LD 65449 55691
+Lat long: N 34°50'04" E 43°31'42"
+Lat long Precise: N 34°50'04.67" E 43°31'42.63"
+Lat long Decimal Minutes: N 34°50.077' E 43°31.710'
 
-Altitudine: 450 piedi
+Altitudine: 464 piedi
 
 Ricompensa: 500]],
 	IRAQ_MISSION_BAGHDADI_KALAR_TITLE = "Uccidi l'associato di Al-Baghdadi",
@@ -30788,6 +30829,194 @@ for locale, labels in pairs(SinaiSetupLabels) do
 end
 FL:Register("zh-TW", SinaiSetupLabels["zh-TW"] or SinaiSetupLabels.EN)
 FL:Register("zh-CN", SinaiSetupLabels["zh-CN"] or SinaiSetupLabels.EN)
+
+local SASetupLabels = {
+	SA_FLAVOR_PORT_STANLEY           = "WPT2\nCapital of the Falkland Islands and the second largest airfield.",
+	SA_FLAVOR_MOUNT_PLEASANT         = "WPT3\nThe purpose-built RAF airbase in the western Falklands.",
+	SA_FLAVOR_GOOSE_GREEN            = "WPT4\nSmall airfield and settlement, site of the Battle of Goose Green between the British Army and Argentine forces in the Falklands War. Currently home to a SuperDARN antenna array station.",
+	SA_FLAVOR_SAN_CARLOS_FOB         = "WPT5\nA FOB in the San Carlos settlement. Named after a visiting ship in 1768 and used as the main British Army beachhead in the Falklands War.",
+	SA_FLAVOR_RED_CARRIER_SOUTH      = "WPT6\nUSN & UK Carrier strike force.",
+	SA_FLAVOR_TOLHUIN                = "WPT7\nAeropuerto de Tolhuin Lago Fagnano is a public-use airport located 2 kilometres (1 mi) northeast of Tolhuin, a lakeside village in the Tierra del Fuego Province of Argentina.",
+	SA_FLAVOR_PUERTO_WILLIAMS        = "WPT8\nPuerto Williams is the city, port, and naval base on Navarino Island in Chile, and is also the southernmost permanently inhabited settlement in the world.",
+	SA_FLAVOR_USHUAIA                = "WPT9\nThis is the world's southernmost international airport and is often used by passengers as a cruise-ship gateway to the Antarctic. It can accommodate aircraft as big as a Boeing 747 after the new airport opened in 1995.",
+	SA_FLAVOR_RIO_GRANDE             = "WPT 10\nRío Grande is a city in Argentina, on the north coast of the eastern part of the Isla Grande de Tierra del Fuego. Home of the Hermes Quijada International Airport.",
+	SA_FLAVOR_PAMPA_GUANACO          = "WPT11\nAeropuerto Pampa Guanaco is a rural airport near Inútil Bay, serving Camerón in the Timaukel commune, part of the Tierra del Fuego province in the Magallanes Region of Chile.",
+	SA_FLAVOR_ALMIRANTE_SCHROEDERS   = "WPT12\nAeropuerto de Almirante Schroeders is a military airport on the northern point of Isla Dawson, an island midway through the Strait of Magellan in the Magallanes y Antártica Chilena Region of Chile.",
+	SA_FLAVOR_FARP_CAUPOLICAN        = "WPT13\n",
+	SA_FLAVOR_PORVENIR               = "WPT14\nAeródromo Capitán Fuentes Martínez is an airport 3.1 nm northeast of Porvenir, a port city off the Strait of Magellan in the Magallanes Region of Chile. East approach and departure are partially over the water.",
+	SA_FLAVOR_PUNTA_ARENAS           = "WPT15\nPunta Arenas is the capital of Chile's southernmost region. Home to flights to Antarctica as well as an important base for the Chilean Air Force.",
+	SA_FLAVOR_FRANCO_BIANCO          = "WPT16\nFranco Bianco Airport is located 3 nm northwest of Cerro Sombrero, a petroleum production town in the Magallanes Region of Chile. Cerro Sombrero is near the eastern entrance to the Strait of Magellan.",
+	SA_FLAVOR_FARP_SAYHUEQUE         = "WPT17\n",
+	SA_FLAVOR_FARP_LAUTARO           = "WPT18\n",
+	SA_FLAVOR_RIO_CHICO              = "WPT19\nRio Chico is Spanish for small river, and is the name of a part of Rio Gallegos, and a small civilian airport in southern part of the city of Rio Gallegos.",
+	SA_FLAVOR_RIO_GALLEGOS           = "WPT20\nRío Gallegos is the capital and largest settlement of the Patagonian province of Santa Cruz in Argentina. With an international airport and an important stop for flights between Chile and the Falkland Islands.",
+	SA_FLAVOR_RED_CARRIER_NORTH      = "WPT21\nThe forces have restricted this area due to ongoing battles and have sent in reinforcements.",
+	SA_FLAVOR_FARP_DRAKE             = "WPT22\n",
+	SA_FLAVOR_RIO_TURBIO             = "WPT23\nRío Turbio Airport is an airport serving Río Turbio, a town in the Santa Cruz Province of Argentina. The airport is just south of 28 de Noviembre, a town 10 kilometres (6 mi) southeast of Rio Turbio. The international border with Chile is just 3.7 nm west of the airport.",
+	SA_FLAVOR_PUERTO_NATALES         = "WPT24\nAeródromo Teniente Julio Gallardo near Puerto Natales, a city in the Magallanes Region of Chile. The airport is 4.3 nm north-northwest of Puerto Natales, which is on the Admiral Montt Gulf, a long fjord that reaches inland close to the border with Argentina. The airport is 7.5 nm from the border.",
+	SA_FLAVOR_FARP_CALFUCURA         = "WPT23\n",
+	SA_FLAVOR_EL_CALAFATE            = "WPT26\nAeropuerto Internacional de El Calafate is an airport in Santa Cruz Province, Argentina. It is located 13 nm east of the city of El Calafate. It is the westernmost Argentinian airport served by scheduled flights. In 2010, the airport was used by over 500,000 passengers.",
+	SA_FLAVOR_FARP_INACAYAL          = "WPT27\n",
+	SA_FLAVOR_COMANDANTE_LUIS_PIEDRABUENA = "WPT28\nA small airport just west of Santa Cruz Airport, a typical small airport where you can take flying lessons or go skydiving and parachute jumping.",
+	SA_FLAVOR_PUERTO_SANTA_CRUZ      = "WPT29\nSanta Cruz Airport, is an airport serving Puerto Santa Cruz, a town on the Santa Cruz River estuary in the Santa Cruz Province of Argentina. The airport is 2 nm inland from the town.",
+	SA_FLAVOR_FARP_GALVARINO         = "WPT30\n",
+	SA_FLAVOR_SAN_JULIAN             = "WPT31\nPuerto San Julián is the closest point on the mainland to the Falkland Islands. As such it was an important airbase for the Argentinian Air Force in the Falklands War.",
+	SA_FLAVOR_FARP_MAGELLAN          = "WPT32\n",
+	SA_FLAVOR_GOBERNADOR_GREGORES    = "WPT33\nGobernador Gregores Airport is an airport serving Gobernador Gregores, a town in the Santa Cruz Province of Argentina. The airport is 4 nm east-southeast of the town, on a low mesa above the Chico River.",
+	SA_FLAVOR_HIPICO_FLYING_CLUB     = "WPT34\nHipico Flying Club is a small flying club for enthusiast flyers taken over by rebels.",
+	SA_FLAVOR_FARP_GUEMES            = "WPT35\n",
+	SA_FLAVOR_FARP_ROCA              = "WPT36\n",
+	SA_FLAVOR_OHIGGINS               = "WPT37\nGeneral Bernardo O'Higgins Airport is an airport serving Chillán, a city in the Diguillín Province of Chile's Ñuble Region. The airport is 3.7 nm northeast of the city. The airport is named for Bernardo O'Higgins, the first Chilean head of state.",
+	SA_SETUP_ENEMIES_DEFEATED        = "Enemies at %s have been defeated.\n+500 credits",
+	SA_SETUP_MISSION_COMPLETE_MENU   = "Enemy has been defeated.\n\nMission Complete.\n\nYou can restart the mission from the radio menu.",
+	SA_SETUP_RESTART_MENU            = "Restart and Reset?",
+	SA_SETUP_RESTARTING_NOW          = "Restarting now..",
+	SA_SHOP_ITEM_CRUISE_MISSILE      = "Cruise Missile Strike",
+	SA_SHOP_ITEM_RESUPPLY_ZONE       = "Resupply friendly Zone",
+	SA_SHOP_ITEM_FULLY_UPGRADE_ZONE  = "Fully Upgrade Friendly Zone",
+	SA_SHOP_ITEM_CAP_FLIGHT          = "CAP Flight",
+	SA_SHOP_ITEM_TANKER_DROGUE       = "Unlock Tanker (Drogue)",
+	SA_SHOP_ITEM_TANKER_BOOM         = "Unlock Tanker (Boom)",
+	SA_SHOP_ITEM_CAS_FLIGHT          = "CAS Flight",
+	SA_SHOP_ITEM_TALD_DECOY          = "TALD DECOY Flight",
+	SA_SHOP_ITEM_SEAD_FLIGHT         = "SEAD Flight",
+	SA_SHOP_ITEM_BOMBER_FLIGHT       = "Bomber Flight",
+	SA_SHOP_ITEM_JTAC_MQ9            = "MQ-9 Reaper JTAC mission",
+	SA_SHOP_ITEM_JTAC_9LINE_AM       = "Jtac 9line AM",
+	SA_SHOP_ITEM_JTAC_9LINE_FM       = "Jtac 9line FM",
+	SA_SHOP_ITEM_GROUND_ATTACK       = "Ground attack",
+	SA_SHOP_ITEM_SMOKE_MARKERS       = "Smoke markers",
+	SA_SHOP_ITEM_FLARE_MARKERS       = "Flare markers",
+	SA_SHOP_ITEM_ILLUMINATION        = "Illumination bomb",
+	SA_SHOP_ITEM_DEPLOY_ARMOR        = "Deploy armor",
+	SA_SHOP_ITEM_DEPLOY_ARTILLERY    = "Deploy artillery",
+	SA_SHOP_ITEM_DEPLOY_RECON        = "Deploy recon group",
+	SA_SHOP_ITEM_DEPLOY_AIRDEF       = "Deploy air defence",
+	SA_SHOP_ITEM_CAPTURE_NEUTRAL     = "Capture neutral zone",
+	SA_SHOP_ITEM_ADVANCE_CAPTURE     = "Advance capture zone",
+	SA_SHOP_ITEM_INTEL_ENEMY         = "Intel on enemy zone",
+	SA_SHOP_ITEM_RED_ZONE_UPGRADE    = "Red zone upgrade",
+	SA_SHOP_ITEM_RED_MASS_ATTACK     = "Red mass airbase attack",
+	SA_SHOP_ITEM_UPGRADE_INFANTRY    = "Upgrade zone with infantry",
+	SA_SHOP_ITEM_UPGRADE_HAWK        = "Upgrade zone with Hawk",
+	SA_SHOP_ITEM_UPGRADE_NASAMS      = "Upgrade zone with Nasams",
+	SA_SHOP_ITEM_UPGRADE_HIMARS      = "Upgrade zone with HIMARS",
+	SA_SHOP_ITEM_LOGISTIC_CENTER     = "Make a zone logistic center",
+	SA_SHOP_ITEM_WAREHOUSE_50        = "Resupply warehouse with 50",
+	SA_SHOP_ITEM_UPGRADE_ARMOR       = "Upgrade zone with armor",
+	SA_SHOP_ITEM_UPGRADE_PATRIOT     = "Upgrade zone with Patriot",
+	SA_SHOP_ITEM_EXTRA_SLOT          = "Unlock extra upgrade slot",
+	SA_SHOP_ITEM_DEPLOY_FARP         = "Deploy FARP",
+	SA_SHOP_CAT_AI_ATTACK            = "AI Attack",
+	SA_SHOP_CAT_ZONE_UPGRADES        = "Zone Upgrades",
+	SA_SHOP_CAT_JTAC_INTEL           = "JTAC & Intel",
+	SA_SHOP_CAT_MARKING_TOOLS        = "Marking & Tools",
+	SA_SHOP_CAT_COMBINED_ARMS        = "Combined Arms",
+	SA_SHOP_CAT_LOGISTICS            = "Capture & resources",
+	SA_SHOP_CAT_OTHER_SUPPORT        = "Other Support",
+	SA_SHOP_LABEL_DECOY              = "Decoy",
+	SA_SHOP_LABEL_BOMB               = "Bomb",
+	SA_SHOP_LABEL_BOMB_RUN           = "Bomb run",
+	SA_SHOP_LABEL_BOMB_RUN_LOWER     = "bomb run",
+	SA_SHOP_LABEL_INFANTRY           = "Infantry",
+	SA_SHOP_LABEL_ARMOR              = "Armor",
+	SA_SHOP_CHOOSE_TARGET_ZONE       = "Choose target zone from Shop menu",
+	SA_SHOP_CHOOSE_ZONE              = "Choose zone from Shop menu",
+	SA_SHOP_CHOOSE_ZONE_FULLY_UPGRADE = "Choose zone from Shop menu to fully upgrade",
+	SA_SHOP_CHOOSE_SPAWN_ZONE        = "Choose spawn zone from F10 menu",
+	SA_SHOP_CHOOSE_DEPLOY_ZONE       = "Choose deploy zone from Shop menu",
+	SA_SHOP_CHOOSE_NEUTRAL_ZONE      = "Choose neutral zone from Shop menu",
+	SA_SHOP_CHOOSE_ADVANCE_CAPTURE_ZONE = "Choose pressured enemy zone from Shop menu",
+	SA_SHOP_CAN_ONLY_TARGET_ENEMY    = "Can only target enemy zone",
+	SA_SHOP_CAN_ONLY_TARGET_FRIENDLY = "Can only target friendly zone",
+	SA_SHOP_CAN_ONLY_SPAWN_FRIENDLY  = "Can only spawn from friendly zone",
+	SA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY = "Can only deploy at friendly zone",
+	SA_SHOP_ZONE_NO_RESUPPLY         = "Zone does not need resupply",
+	SA_SHOP_BLUE_AI_SUPPLIES_DISABLED = "Blue AI supplies are disabled",
+	SA_SHOP_DEPLOY_FROM_FARP         = "Deploy from FARP if available?",
+	SA_SHOP_NO_VALID_ENEMY_ZONES     = "No valid enemy zones right now.",
+	SA_SHOP_NO_VALID_FRIENDLY_ZONES  = "No valid friendly zones right now.",
+	SA_SHOP_NO_ELIGIBLE_NEUTRAL_ZONES = "No eligible neutral zones right now.",
+	SA_SHOP_NO_ELIGIBLE_ADVANCE_CAPTURE_ZONES = "No eligible advance capture zones right now.",
+	SA_SHOP_NO_ELIGIBLE_ZONE         = "No eligible zone",
+	SA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES = "No eligible airbase zones",
+	SA_SHOP_MUST_PICK_ENEMY_ZONE     = "Must pick an enemy zone",
+	SA_SHOP_MUST_PICK_FRIENDLY_ZONE  = "Must pick friendly zone",
+	SA_SHOP_ZONE_ALREADY_UPGRADED_EXTRA = "Zone already upgraded - purchase Global extra slot to add another",
+	SA_SHOP_ZONE_ALREADY_UPGRADED    = "Zone already upgraded",
+	SA_SHOP_ZONE_NOT_NEUTRAL         = "Zone is not neutral",
+	SA_SHOP_ADVANCE_CAPTURE_NOT_ELIGIBLE = "Zone is not eligible for advance capture",
+	SA_SHOP_MASS_ATTACK_UNAVAILABLE  = "Mass attack unavailable",
+	SA_SHOP_ALREADY_CHOOSING_ZONE    = "Already choosing a zone",
+	SA_SHOP_ALREADY_UNLOCKED         = "Already unlocked",
+	SA_SHOP_AIRCRAFT_STILL_AIRBORNE  = "%s is still airborne",
+	SA_SHOP_MISSION_STILL_PROGRESS   = "%s mission still in progress",
+	SA_SHOP_NO_FRIENDLY_SPAWN        = "No friendly zone available for %s spawn.",
+	SA_SHOP_JTAC_ALREADY_ACTIVE      = "JTAC already active over %s Choose another zone",
+	SA_SHOP_LAUNCHING_CRUISE         = "Launching cruise missiles at %s",
+	SA_SHOP_CAP_REQUESTED            = "CAP is requested. Select spawn zone.",
+	SA_SHOP_TANKER_DROGUE_UNLOCKED   = "(Drogue) Tanker is unlocked. Select spawn zone.",
+	SA_SHOP_TANKER_BOOM_UNLOCKED     = "(Boom) Tanker is unlocked. Select spawn zone.",
+	SA_SHOP_GATHERING_INTEL          = "Gathering intel on %s. Stand by for report...",
+	SA_SHOP_JTAC_TOMCAT_ACTIVE       = "Friendly Tomcat deployed over %s - JTACs active %d / 2",
+	SA_SHOP_JTAC_REAPER_ACTIVE       = "Reaper drone deployed over %s - JTACs active %d / 2",
+	SA_SHOP_JTAC_TOMCAT_AM           = "Friendly Tomcat deployed over %s. Contact Springfield on 241.00 AM ",
+	SA_SHOP_JTAC_REAPER_AM           = "Reaper drone deployed over %s. Contact Springfield on 241.00 AM ",
+	SA_SHOP_JTAC_TOMCAT_FM           = "Friendly Tomcat deployed over %s. Contact Uzi on 31.00 FM ",
+	SA_SHOP_JTAC_REAPER_FM           = "Reaper drone deployed over %s. Contact Uzi on 31.00 FM ",
+	SA_SHOP_TARGETS_RED_SMOKE        = "Targets marked with RED smoke at %s",
+	SA_SHOP_TARGETS_RED_FLARE        = "Targets marked with RED flare at %s",
+	SA_SHOP_TARGETS_ILLUMINATED      = "Targets illuminated at %s",
+	SA_SHOP_FRIENDLY_ARMOR_DEPLOYED  = "Friendly armor deployed at %s",
+	SA_SHOP_FRIENDLY_ARTY_DEPLOYED   = "Friendly artillery deployed at %s",
+	SA_SHOP_FRIENDLY_RECON_DEPLOYED  = "Friendly recon group deployed at %s",
+	SA_SHOP_FRIENDLY_AIRDEF_DEPLOYED = "Friendly air defence deployed at %s",
+	SA_SHOP_ZONE_FULLY_UPGRADED      = "%s is now fully upgraded!",
+	SA_SHOP_UPGRADE_ADDED            = "%s added to %s for %s",
+	SA_SHOP_UPGRADE_ADDED_EXTRA      = "%s added to %s for %s - buy the Global extra slot to upgrade this zone again",
+	SA_SHOP_UPGRADE_ADDED_EXTRA_LINE = "%s added to %s for %s\nBuy the Global extra slot to upgrade this zone again",
+	SA_SHOP_ALL_ZONES_SECOND_UPGRADE = "All zones can now buy a second upgrade",
+	SA_SHOP_FARP_MARKER_HELP         = "Deploy a FARP via map marker.\nUse marker text: buy:farphere.\nMust be outside all zones and at least 10 NM from enemy zones.",
+	SA_SHOP_SELECT_LOGISTIC_CENTER   = "Choose zone for Logistic Center",
+	SA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Select friendly fully-upgraded airbase zone from F10 menu.",
+	SA_SHOP_WAREHOUSE_LOGISTICS_DISABLED = "Warehouse logistics is disabled",
+	SA_DYNAMIC_RESUPPLY_TITLE        = "Resupply %s%s",
+	SA_DYNAMIC_RESUPPLY_DESC         = "Deliver supplies to %s",
+	SA_DYNAMIC_RESUPPLY_START_ONE    = "New mission: Resupply %s%s",
+	SA_DYNAMIC_RESUPPLY_START_TWO    = "New mission: Resupply %s%s, %s%s",
+	SA_DYNAMIC_RESUPPLY_END          = "Mission ended: Resupply %s",
+	SA_DYNAMIC_ATTACK_TITLE          = "Attack %s%s",
+	SA_DYNAMIC_ATTACK_DESC           = "Destroy enemy forces at %s",
+	SA_DYNAMIC_ATTACK_START_ONE      = "New mission: Attack %s%s",
+	SA_DYNAMIC_ATTACK_START_TWO      = "New mission: Attack %s%s, %s%s",
+	SA_DYNAMIC_ATTACK_END            = "Mission ended: Attack %s",
+	SA_DYNAMIC_CAPTURE_TITLE         = "Capture %s%s",
+	SA_DYNAMIC_CAPTURE_DESC          = "%s is neutral. Capture it by delivering supplies",
+	SA_DYNAMIC_CAPTURE_START         = "New mission: Capture %s%s",
+	SA_DYNAMIC_CAPTURE_END           = "Mission ended: Capture %s",
+	SA_DYNAMIC_RECON_TITLE           = "Recon %s%s",
+	SA_DYNAMIC_RECON_DESC            = "Fly over %s to complete recon mission.",
+	SA_DYNAMIC_RECON_START           = "New Recon mission: Fly over %s%s",
+	SA_DYNAMIC_RECON_END             = "Mission ended: Recon",
+	SA_DYNAMIC_RECON_END_TARGET      = "Mission ended: Recon %s",
+	SA_DYNAMIC_RECON_END_BY          = "Mission ended: Recon %s completed by %s",
+	SA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] and [%s] completed recon at %s!\nReward pending: %d credits each (land to redeem).\nIntel active for 10 minutes.",
+	SA_DYNAMIC_RECON_COMPLETED_SOLO  = "[%s] completed recon at %s.\nReward pending: %d credits (land to redeem).\nIntel active for 10 minutes.",
+	SA_ESCORT_FAILED_RETRY          = "Mission failed:\n\nConvoy was destroyed\n\nStandby, looking for a new group...",
+	SA_ESCORT_FAILED                = "Mission failed:\n\nConvoy was destroyed",
+	SA_ESCORT_COMPLETED_MULTI       = "Escort mission completed by %s\ncredit %d each - land to redeem",
+	SA_ESCORT_COMPLETED_SOLO        = "Escort mission completed by %s\ncredit %d - land to redeem",
+	SA_ESCORT_COMPLETED_NONE        = "Escort mission completed - no players alive.\nReward + %d",
+	SA_BOMB_RUNWAY_END_JOINT        = "Mission ended: Bomb runway at %s completed by %s and %s\ncredit %d each - land to redeem",
+	SA_BOMB_RUNWAY_END_SOLO         = "Mission ended: Bomb runway at %s completed by %s\ncredit %d - land to redeem",
+	SA_BOMB_RUNWAY_END_COMPLETED    = "Mission ended: Bomb runway at %s completed",
+	SA_BOMB_RUNWAY_END_CANCELED_ZONE = "Mission ended: Bomb runway at %s canceled",
+	SA_BOMB_RUNWAY_CANCELED         = "Mission canceled: Bomb runway",
+}
+
+for _, locale in ipairs({ "EN", "DE", "FR", "ES", "RU", "PT-BR", "TR", "IT", "zh-TW", "zh-CN" }) do
+	FL:Register(locale, SASetupLabels)
+end
 
 FH_L10N = FootholdLocalization
 

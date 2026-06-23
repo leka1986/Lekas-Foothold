@@ -939,7 +939,7 @@ local function getAirbaseWind(airbaseName, translator)
     end
 end
 
-local function fetchActiveRunway(zoneName, translator)
+local function fetchActiveRunway(zoneName, translator, includeCourse)
     local T = translator or L10N
     local zoneData = atisZones[zoneName]
     if not zoneData or not zoneData.airbaseName then
@@ -954,13 +954,22 @@ local function fetchActiveRunway(zoneName, translator)
     if not landingRunway and not takeoffRunway then
         return T:Get("WELCOME_NO_ACTIVE_RUNWAY")
     end
+    local function runwayLabel(runway)
+        if not runway then return nil end
+        local name = airbase:GetRunwayName(runway)
+        if not includeCourse then return name end
+        local coord = runway.center or runway.position
+        local magDecl = coord and coord:GetMagneticDeclination() or 0
+        local course = math.floor(((runway.heading or runway.magheading or 0) - magDecl + 360) % 360 + 0.5)
+        return string.format("%s (course %03d°M)", name, course)
+    end
     local landingRunwayName
     local takeoffRunwayName
     if landingRunway then
-        landingRunwayName = airbase:GetRunwayName(landingRunway)
+        landingRunwayName = runwayLabel(landingRunway)
     end
     if takeoffRunway then
-        takeoffRunwayName = airbase:GetRunwayName(takeoffRunway)
+        takeoffRunwayName = runwayLabel(takeoffRunway)
     end
     if landingRunwayName and takeoffRunwayName then
         if landingRunwayName == takeoffRunwayName then
@@ -1035,7 +1044,7 @@ local function sendATISInformation(client, group, zoneName)
         if wind==T:Get("WELCOME_WIND_UNAVAILABLE") or wind==T:Get("WELCOME_AIRBASE_NOT_FOUND") then
             MESSAGE:New(T:Format("WELCOME_ATIS_FOR_SIMPLE",zoneName,wind),15,""):ToUnit(client)
         else
-            local run = fetchActiveRunway(zoneName, T) or T:Get("WELCOME_RUNWAY_INFO_UNAVAILABLE")
+            local run = fetchActiveRunway(zoneName, T, true) or T:Get("WELCOME_RUNWAY_INFO_UNAVAILABLE")
             local altimeter = getAltimeter(T)
             local msg = T:Format("WELCOME_ATIS_FOR_FULL_PERIOD",zoneName,wind,altimeter,run)
             MESSAGE:New(msg,20,""):ToUnit(client)
@@ -1118,7 +1127,7 @@ function getClosestFriendlyAirbaseInfo(client)
         local altimeterMessage,runwayInfo = "",""
         if windMessage ~= T:Get("WELCOME_WIND_UNAVAILABLE") and windMessage ~= T:Get("WELCOME_AIRBASE_NOT_FOUND") then
             altimeterMessage = getAltimeter(T)
-            runwayInfo       = fetchActiveRunway(closestNormalZoneName, T) or T:Get("WELCOME_RUNWAY_INFO_UNAVAILABLE")
+            runwayInfo       = fetchActiveRunway(closestNormalZoneName, T, true) or T:Get("WELCOME_RUNWAY_INFO_UNAVAILABLE")
         end
         local airfieldLine = T:Format("WELCOME_CLOSEST_AIRFIELD",
         displayName,distanceInNM,closestNormalBearing,windMessage,altimeterMessage~=""and(", " .. altimeterMessage)or"", runwayInfo~= ""and("\n\n" .. runwayInfo)or"")

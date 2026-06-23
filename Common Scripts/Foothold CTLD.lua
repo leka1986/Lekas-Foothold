@@ -150,8 +150,13 @@ Foothold_ctld:__Start(2)
 -- CTLD: Pricing
 ---------------------------------------------------------------------------
 
+local CTLDPriceAliases = {
+    ["FARP Huey"] = "FARP",
+}
+
 function priceOf(name)
-    local v = CTLDPrices and CTLDPrices[name]
+    local alias = CTLDPriceAliases[name]
+    local v = CTLDPrices and (CTLDPrices[name] or (alias and CTLDPrices[alias]))
     if type(v) == "table" then
         return v.price or v.cost or CTLD_DEFAULT_PRICE or 0
     end
@@ -159,7 +164,8 @@ function priceOf(name)
 end
 
 function reqRankOf(name)
-    local v = CTLDPrices and CTLDPrices[name]
+    local alias = CTLDPriceAliases[name]
+    local v = CTLDPrices and (CTLDPrices[name] or (alias and CTLDPrices[alias]))
     if type(v) == "table" then
         return v.reqRank or 0
     end
@@ -263,6 +269,7 @@ Foothold_ctld:AddUnits("Avenger",{"CTLD_CARGO_Avenger"}, CTLD_CARGO.Enum.VEHICLE
 Foothold_ctld:AddUnits("Humvee scout",{"CTLD_CARGO_Scout"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
 Foothold_ctld:AddUnits("FV-107 Scimitar",{"CTLD_CARGO_Scimitar"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
 Foothold_ctld:AddUnits("FV-101 Scorpion",{"CTLD_CARGO_Scorpion"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
+Foothold_ctld:AddCratesCargo("FARP Huey",{"CTLD_TROOP_FOB"},CTLD_CARGO.Enum.FOB,3,700,10, "FARP",nil,nil,"UH-1H","Cargos","ammo_cargo",nil, "cds_crate")
 Foothold_ctld:AddCratesCargo("FARP",{"CTLD_TROOP_FOB"},CTLD_CARGO.Enum.FOB,3,1200,10, "FARP",nil,nil,nil,"Cargos","ammo_cargo",nil, "cds_crate")
 if _DATABASE and _DATABASE.Templates and _DATABASE.Templates.Groups and _DATABASE.Templates.Groups["CTLD_TROOP_FOB_ZELL"] then
 Foothold_ctld:AddCratesCargo("FARP with ZELL",{"CTLD_TROOP_FOB_ZELL"},CTLD_CARGO.Enum.FOB,3,750,10, "FARP",nil,nil,nil,"Cargos","ammo_cargo",nil, "cds_crate")
@@ -494,7 +501,7 @@ local IRIS_ROLE_TO_UNITTYPE = {
 local IRIS_BASELINE_COUNTS = { LN = 1, STR = 1, C2 = 1 }
 local IRIS_MERGE_DISTANCE = 400
 local IRIS_MERGE_SLOT_COUNT = 6
-local IRIS_MERGE_BASE_RADIUS = 90
+local IRIS_MERGE_BASE_RADIUS = 120
 local IRIS_MERGE_RING_STEP = 35
 IRIS_RESTORE_UNIT_HEALTH_ON_MERGE = IRIS_RESTORE_UNIT_HEALTH_ON_MERGE or false
 
@@ -532,6 +539,20 @@ local function samMergeSpreadLnHeadings(profile, units, baseHeading)
     unit.heading = heading
     unit.psi = heading
   end
+end
+
+local function samMergeRemoveJunkAtCoordinate(coord, radius)
+  if not coord or not coord.GetVec3 then return end
+  local vec3 = coord:GetVec3()
+  if not vec3 then return end
+  vec3.y = land.getHeight({ x = vec3.x, y = vec3.z })
+  world.removeJunk({
+    id = world.VolumeType.SPHERE,
+    params = {
+      point = vec3,
+      radius = radius or IRIS_MERGE_DISTANCE,
+    }
+  })
 end
 
 local function reflowIrisTemplateLayout(profile, systemTemplate, anchorUnit)
@@ -751,6 +772,35 @@ local function samMergeRoleFromUnitType(profile, typeName)
     end
   end
   return nil
+end
+
+local function samMergeReorderUnitsByRole(profile, systemTemplate)
+  if not profile or not systemTemplate or type(systemTemplate.units) ~= "table" then return false end
+  local roleRank = {}
+  for index, role in ipairs(profile.role_order or {}) do
+    roleRank[role] = index
+  end
+  if not next(roleRank) then return false end
+
+  local units = {}
+  for index, unit in ipairs(systemTemplate.units) do
+    local role = samMergeRoleFromUnitType(profile, unit and unit.type or nil)
+    units[#units + 1] = {
+      unit = unit,
+      roleRank = roleRank[role] or 100000,
+      originalIndex = index,
+    }
+  end
+
+  table.sort(units, function(a, b)
+    if a.roleRank == b.roleRank then return a.originalIndex < b.originalIndex end
+    return a.roleRank < b.roleRank
+  end)
+
+  for index, entry in ipairs(units) do
+    systemTemplate.units[index] = entry.unit
+  end
+  return true
 end
 
 local function samMergeIsSystemTemplateText(profile, text)
@@ -1110,7 +1160,9 @@ local function samMergeTryMergeComponentIntoNearbySystem(self, Group, Vehicle, c
     if Group then messageCtldToGroup(Group, "CTLD_SAM_MERGE_FAILED_APPEND", 10, tostring(profile.display_name or "SAM")) end
     return false
   end
+  samMergeReorderUnitsByRole(profile, systemTemplate)
   reflowIrisTemplateLayout(profile, systemTemplate, anchorUnit)
+  samMergeRemoveJunkAtCoordinate(systemGroup:GetCoordinate(), mergeDist)
 
   local newSystemName = string.format("%s-%d", tostring(profile.system_template or "CTLD_CARGO_SAM"), math.random(100000, 999999))
   local mergedGroup, err = samMergeSpawnMergedSystemTemplate(profile, systemTemplate, newSystemName)
@@ -4712,6 +4764,7 @@ ApplyIRISAugments = function(rows)
             end
 
             if changed then
+              samMergeReorderUnitsByRole(profile, template)
               reflowIrisTemplateLayout(profile, template, anchorUnit)
               local spawnName = string.format("%s-%d", tostring(profile.system_template or "CTLD_CARGO_SAM"), math.random(100000, 999999))
               local mergedGroup, err = samMergeSpawnMergedSystemTemplate(profile, template, spawnName)
