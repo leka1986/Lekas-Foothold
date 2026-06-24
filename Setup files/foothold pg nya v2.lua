@@ -3831,7 +3831,8 @@ SpawnFriendlyAssets()
 
 evc:init()
 local HuntNumber = SplashDamage and math.random(15,25) or math.random(8,15)
-bc:initHunter(HuntNumber)
+local AirHuntNumber = math.random(4,8)
+bc:initHunter(HuntNumber, AirHuntNumber)
 bandarforce = {
 	['Echo'] = { 'Bandar-force-1' , 'Bandar-force-2', 'Bandar-force-3'},
 	['Delta'] = { 'Bandar-tforce-1' },

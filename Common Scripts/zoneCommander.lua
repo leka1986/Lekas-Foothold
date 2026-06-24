@@ -24320,10 +24320,12 @@ function BattleCommander:printStats(unitid, top)
 
 
 -- hunter script
-function BattleCommander:initHunter(threshold)
+function BattleCommander:initHunter(threshold, airThreshold)
   self.hunterEnabled      = EnableHunter ~= false
   self.huntThreshold      = self.hunterEnabled and (threshold or 9999) or math.huge
+  self.huntAirThreshold   = self.hunterEnabled and (airThreshold or 9999) or math.huge
   self.huntKills          = {}
+  self.huntAirKills       = {}
   self.huntDone           = {}
   self.huntBases          = nil
 end
@@ -24460,7 +24462,7 @@ local hunter   = SPAWN:NewWithAlias(template, hunterAlias)
 		end
 	end
 	function Hunt:OnAfterDead(from,event,to)
-	bc.huntDone[pname]=nil ; bc.huntKills[pname]=0
+	bc.huntDone[pname]=nil ; bc.huntKills[pname]=0 ; bc.huntAirKills[pname]=0
 	end
 	function Hunt:OnAfterLanded(From, Event, To)
     	self:ScheduleOnce(5, function() self:Destroy() end)
@@ -24472,7 +24474,7 @@ local hunter   = SPAWN:NewWithAlias(template, hunterAlias)
 end
 
 
-function BattleCommander:registerHuntKill(pname, initiatorUnit)
+function BattleCommander:registerHuntKill(pname, initiatorUnit, killType)
   if self.hunterEnabled == false then return end
   if not playerListBlue[pname] then return end
   if not initiatorUnit or not initiatorUnit:isExist() then return end
@@ -24483,9 +24485,19 @@ function BattleCommander:registerHuntKill(pname, initiatorUnit)
   local t = initiatorUnit:getTypeName()
   if t=="A-10C_2" or t=="A-10A" or t=="AV8BNA" then return end
 
-  self.huntKills[pname] = (self.huntKills[pname] or 0) + 1
+  local kills
+  local threshold
+  if killType == "Air" then
+    self.huntAirKills[pname] = (self.huntAirKills[pname] or 0) + 1
+    kills = self.huntAirKills[pname]
+    threshold = self.huntAirThreshold
+  else
+    self.huntKills[pname] = (self.huntKills[pname] or 0) + 1
+    kills = self.huntKills[pname]
+    threshold = self.huntThreshold
+  end
 
-	if self.huntKills[pname] >= self.huntThreshold
+	if kills >= threshold
 	and not self.huntDone[pname] then
 	local roll = math.random(100)
 	--env.info(string.format("HUNT-DBG: roll=%d for %s", roll, pname))
@@ -25081,7 +25093,13 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 								end
 								if stat then
 									self.context:addTempStat(pname,stat,1)
-									if Hunt and (stat=='Ground Units' or stat=='SAM' or stat=='Infantry') then bc:registerHuntKill(pname, event.initiator) end
+									if Hunt then
+										if stat=='Ground Units' or stat=='SAM' or stat=='Infantry' then
+											bc:registerHuntKill(pname, event.initiator)
+										elseif stat=='Air' then
+											bc:registerHuntKill(pname, event.initiator, "Air")
+										end
+									end
 								end
 								if capMissionTarget ~= nil then
 									if (event.target:hasAttribute('Planes') or 
@@ -30278,6 +30296,9 @@ function ZoneCommander:capture(newside,silent)
 				local pending = zoneSupplyLandingOnce and zoneSupplyLandingOnce.pending
 				if pending and pending.zoneName == zoneObj.zone and pending.unit and pending.unit:isExist() then
 					excludeUnitName = pending.unit:getName()
+				end
+				if zoneObj.battleCommander.logisticCommander then
+					zoneObj.battleCommander.logisticCommander:_scheduleCapturedZoneMissionHandles(zoneObj)
 				end
 				local seenUnits = {}
 				local blueUnits = coalition.getPlayers(coalition.side.BLUE) or {}
@@ -39158,6 +39179,7 @@ LogisticCommander.AllowedFlightTimeReward = AllowedFlightTimeReward or {
 		obj.carriedPilots = {} -- groupid = count
 		obj.carriedPilotData = {}
 		obj.csarGroups = {}
+		obj.activeAircraftGroupsById = {}
 		obj.csarSet = SET_GROUP:New():FilterCoalitions("blue"):FilterCategoryHelicopter():FilterStart()
 		obj.csarVisibleMsg = {}
 		obj.csarCloseMsg = {}
@@ -39190,6 +39212,16 @@ end
 
 	function LogisticCommander:pruneGroupMenus(groupid, groupname)
 		self:_bumpGroupMenuToken(groupid)
+		self.activeAircraftGroupsById[groupid] = nil
+		if trackedGroups then
+			trackedGroups[groupid] = nil
+			if groupname then trackedGroups[groupname] = nil end
+		end
+		if missionGroupIDs then
+			for _, groupTable in pairs(missionGroupIDs) do
+				groupTable[groupid] = nil
+			end
+		end
 
 		local mooseGroup = groupname and GROUP:FindByName(groupname) or nil
 		if mooseGroup then
@@ -41513,13 +41545,37 @@ function LogisticCommander:_rejectPlayerSpawn(event, player, plist, chatMessage,
 	end
 end
 
-function LogisticCommander:_scheduleSpawnMissionHandle(zn, gr, unitCat)
+function LogisticCommander:_scheduleSpawnMissionHandle(zn, gr, unitCat, groupMenuToken)
 	if handleMission and unitCat == Unit.Category.HELICOPTER then
 		timer.scheduleFunction(function()
 			if gr and gr:isExist() then
+				if groupMenuToken and self.groupMenuTokens[gr:getID()] ~= groupMenuToken then return end
 				handleMission(zn.zone, gr:getName(), gr:getID(), gr)
 			end
 		end, {}, timer.getTime() + 30)
+	end
+end
+
+function LogisticCommander:_scheduleCapturedZoneMissionHandles(zoneObj)
+	local zoneMissions = getOrderedZoneMissions(zoneObj.zone)
+	if #zoneMissions == 0 then return end
+	local seenGroups = {}
+	for groupid, entry in pairs(self.activeAircraftGroupsById) do
+		if entry.coalition == coalition.side.BLUE
+		and self.groupMenuTokens[groupid] == entry.token
+		and not seenGroups[groupid] then
+			local gr = entry.groupObj
+			if gr and gr:isExist() then
+				local un = gr:getUnit(1)
+				if un and un:isExist() and Unit.getCategoryEx(un) == Unit.Category.HELICOPTER then
+					local zoneData = self.battleCommander:getZoneOfPoint(un:getPoint())
+					if zoneData and zoneData.zone == zoneObj.zone and zoneData.side == 2 then
+						seenGroups[groupid] = true
+						self:_scheduleSpawnMissionHandle(zoneObj, gr, Unit.Category.HELICOPTER, entry.token)
+					end
+				end
+			end
+		end
 	end
 end
 
@@ -41575,7 +41631,7 @@ function LogisticCommander:_bindSpawnGroupLocale(groupid, player)
 	return L10N:ForGroup(groupid)
 end
 
-function LogisticCommander:_registerSpawnPlayerGroup(groupid, groupname, groupObj, player, playerCoalition)
+function LogisticCommander:_registerSpawnPlayerGroup(groupid, groupname, groupObj, player, playerCoalition, unitCat, groupMenuToken)
 	local bc = self.battleCommander
 	bc.playerNames = bc.playerNames or {}
 	bc.playerNames[groupid] = player
@@ -41592,6 +41648,15 @@ function LogisticCommander:_registerSpawnPlayerGroup(groupid, groupname, groupOb
 	bc.groupByPlayer[player] = groupid
 	bc.groupNameByPlayer[player] = groupname
 	bc:_jointRegisterMenuOwner(groupid, groupname, player, playerCoalition)
+	if unitCat == Unit.Category.HELICOPTER then
+		self.activeAircraftGroupsById[groupid] = {
+			groupObj = groupObj,
+			coalition = playerCoalition,
+			token = groupMenuToken,
+		}
+	else
+		self.activeAircraftGroupsById[groupid] = nil
+	end
 end
 
 function LogisticCommander:_ensureStatsAndLanguageMenus(groupid, player, unitid, T, groupObj)
@@ -41823,7 +41888,7 @@ function LogisticCommander:init()
 				local T = self.context:_bindSpawnGroupLocale(groupid, player)
 
 				local groupMenuToken = self.context:_bumpGroupMenuToken(groupid)
-				self.context:_registerSpawnPlayerGroup(groupid, groupname, groupObj, player, playerCoalition)
+				self.context:_registerSpawnPlayerGroup(groupid, groupname, groupObj, player, playerCoalition, unitCat, groupMenuToken)
 				self.context:_ensureStatsAndLanguageMenus(groupid, player, event.initiator:getID(), T, groupObj)
 				self.context:_resetEwrsMenuForGroup(groupid)
 				if ewrs and ewrs.registerPlayer then

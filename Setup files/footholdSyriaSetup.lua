@@ -3872,7 +3872,8 @@ bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Silkworm Site", "
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Gecitkale", "true") ]]
 --bc:addCarrierNavigationSuspendConnection("CVN72_AREA_INCIRLIK_SOUTH", "Incirlik")
 local HuntNumber = SplashDamage and math.random(10,15) or math.random(8,15)
-bc:initHunter(HuntNumber)
+local AirHuntNumber = math.random(4,8)
+bc:initHunter(HuntNumber, AirHuntNumber)
 SCHEDULER:New(nil, function() bc:_buildHunterBaseList() end, {}, 1)
 
 SCHEDULER:New(nil, function() spawnAwacs(1,nil,10) end, {}, 5)

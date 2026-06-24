@@ -187,7 +187,7 @@ GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 -- If InvisibleA10 is true, this setting is ignored.
 ChanceAiAttackHelo = 0
 
--- Hunter is when you do a lot of damage to enemy units, RED dispatches a 2-ship to hunt you down.
+-- Hunter is when you do a lot of damage to enemy units (both planes and ground), RED dispatches a 2-ship to hunt you down.
 EnableHunter = true
 
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".

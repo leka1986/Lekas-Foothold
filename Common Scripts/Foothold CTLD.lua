@@ -101,7 +101,7 @@ end
 CTLD_Logging = false
 CTLD_Logging_DEEP = false
 
-Foothold_ctld = CTLD:New(coalition.side.BLUE,{"CH.47","Ka.50.3","SA342L", "UH.1H", "Hercules", "Mi.8MT","Ми.8МТВ2","Ми.24П", "Bronco.OV", "UH.60L", "Mi.24P", "OH58D", "KA.50", "AH.64D", "UH.60.DAP","C.130J.30","MH.60R"},"Lufttransportbrigade I")
+Foothold_ctld = CTLD:New(coalition.side.BLUE,{"CH.47","Ka.50.III","SA342L", "UH.1H", "Hercules", "Mi.8MT","Ми.8МТВ2","Ми.24П", "Bronco.OV", "UH.60L", "Mi.24P", "OH.58D", "KA.50", "AH.64D", "UH.60.DAP","C.130J.30","MH.60R"},"Lufttransportbrigade I")
 Foothold_ctld:SetGroupLocaleResolver(function(_, Group)
     return getFootholdLocalization():GetMooseGroupLocale(Group)
 end)
@@ -385,6 +385,7 @@ CTLDUnitCapabilities = CTLDUnitCapabilities or {
     ["Mi-8MT"] = { true, true, 3, 16, 15, 6000 },
     ["Mi-8MTV2"] = { true, true, 3, 18, 15, 6000 },
     ["Ka-50"] = { false, false, 0, 0, 15, 400 },
+    ["Ka-50_3"] = { false, false, 0, 0, 15, 400 },
     ["Mi-24P"] = { true, true, 2, 8, 15, 1000 },
     ["Mi-24V"] = { true, true, 2, 8, 15, 1000 },
     ["Hercules"] = { true, true, 8, 20, 25, 20000 },

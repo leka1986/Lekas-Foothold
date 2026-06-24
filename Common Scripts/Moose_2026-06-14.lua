@@ -3477,6 +3477,10 @@ if string.find(type_name,"SA342")and(unit:getDrawArgumentValue(34)==1)then
 BASE:T(unit_name.." front door(s) are open or doors removed")
 return true
 end
+if type_name == "Ka-50_3" and unit:getDrawArgumentValue(38) == 1 then
+BASE:T(unit_name .. " cockpit door is open")
+return true
+end
 if type_name=="C-130J-30"and(unit:getDrawArgumentValue(86)==1)then
 BASE:T(unit_name.." rear doors are open")
 return true
@@ -7967,10 +7971,10 @@ if Repeat~=0 and((Stop==0)or(Stop~=0 and CurrentTime<=StartTime+Stop))then
 local ScheduleTime=CurrentTime+Repeat+math.random(-(Randomize*Repeat/2),(Randomize*Repeat/2))+0.0001
 return ScheduleTime
 else
-self:Stop(Scheduler,CallID)
+self:_Reclaim(Scheduler,CallID)
 end
 else
-self:Stop(Scheduler,CallID)
+self:_Reclaim(Scheduler,CallID)
 end
 else
 self:I("<<<>"..Name..":"..Line.." ("..Source..")")
@@ -8033,6 +8037,12 @@ end
 function SCHEDULEDISPATCHER:NoTrace(Scheduler)
 self:F2({Scheduler=Scheduler})
 Scheduler.ShowTrace=false
+end
+function SCHEDULEDISPATCHER:_Reclaim(Scheduler,CallID)
+self:Stop(Scheduler,CallID)
+if self.Schedule[Scheduler]then self.Schedule[Scheduler][CallID]=nil end
+self.ObjectSchedulers[CallID]=nil
+self.PersistentSchedulers[CallID]=nil
 end
 EVENT={
 ClassName="EVENT",
