@@ -7708,8 +7708,15 @@ internal sealed class MainForm : Form
         group.Width = GetStringListBucketEditorWidth();
         group.Height = Math.Max(
             GetTableActionMinimumHeight(group),
-            GetConfiguredTableHeight(activeGrid, 220, 640, GetTableHeightPadding(76)));
+            GetStringListBucketHeight(activeGrid, inactiveGrid, 220, 640, GetTableHeightPadding(76)));
         inactiveGrid.Height = activeGrid.Height;
+    }
+
+    private int GetStringListBucketHeight(DataGridView activeGrid, DataGridView inactiveGrid, int minimumHeight, int maximumHeight, int heightPadding)
+    {
+        return Math.Max(
+            GetConfiguredTableHeight(activeGrid, minimumHeight, maximumHeight, heightPadding),
+            GetConfiguredTableHeight(inactiveGrid, minimumHeight, maximumHeight, heightPadding));
     }
 
     private static FlowLayoutPanel MakeTableActionPanel(params Button[] buttons)
