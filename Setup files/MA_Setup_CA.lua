@@ -37,11 +37,7 @@ end
 upgrades = {
 	redships = {
 		blue = {},
-		red = {'Molniya', 'Molniya', 'Rezky', 'Rezky', 'Neustrashimy', 'Moskva'}
-	},
-	blueships = {
-		blue = {'blueShip'},
-		red = {'Moskva'}
+		red = {'Molniya', 'Molniya', 'Rezky', 'Grisha', 'Molniya', 'Grisha', 'SpeedBoats', 'SpeedBoats','SpeedBoats'}
 	},
 	airfield1 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
@@ -97,33 +93,33 @@ upgrades = {
 		red = {'Red SAM AAA', 'Red SAM AAA 2', 'Red Armour Group 2', 'Red Armour Group 3', 'Kutaisi Fuel tank', 'Red SAM SHORAD SA-8', 'Kutaisi Fuel tank 2', 'Red SAM SA-6', 'Kutaisi Fuel tank 3', 'Kutaisi Fuel tank 4','Red SAM SHORAD Pantsir S1'}
 	},
 	
-	samalphaFixed = {
+	samindiaFixed = {
 		blue = {'blueArmor', 'bluePD1'},
 		red = {'Red SAM SHORAD SA-15', 'Red SAM SA-2', 'Red SAM SA-3'}
 	},
-	samFoxtrotFixed = {
+	sambravoFixed = {
 		blue = {},
 		red = {'Red SAM SHORAD SA-19', 'Red SAM AAA', 'Red SAM SA-2'}
 	},
-	sambravoFixed = {
+	samgolfFixed = {
 		blue = {'blueHAWK'},
 		red = {'Red SAM AAA','Red SAM SHORAD SA-15','Red SAM SA-2'}
 	},
 	
-	samgolf = {
+	samalphaFixed = {
 		blue = {'blueArmor', 'bluePD1'},
 		red = {'Red SAM SA-6', 'Red SAM SHORAD SA-19','Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15'}
 	},
 	
-	sam3 = {
+	samcharlieFixed = {
 		blue = {'blueArmor', 'bluePD2'},
 		red = {'Red SAM AAA','Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15', 'Red SAM SA-6', 'Red SAM SHORAD SA-8'}
 	},
-	samcharliefixed = {
+	samhotelFixed = {
 		blue = {'blueHAWK'},
 		red = {'Red SAM AAA', 'Red SAM AAA 2', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-19', 'Red SAM SA-6'}
 	},
-	sam4indiafixed = {
+	samdeltaFixed = {
 		blue = {'blueArmor', 'bluePD2'},
 		red = {'Red SAM AAA','Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8','Red SAM SHORAD SA-15','Red SAM SA-10', 'Red SAM SHORAD SA-15'}
 	},
@@ -132,7 +128,7 @@ upgrades = {
 		red = {'Red SAM AAA','Red SAM SHORAD SA-15','Red SAM SA-10', 'Red SAM SHORAD SA-15', 'Red SAM AAA 2'}
 	},
 	
-	samdeltaFixed = {
+	samfoxtrotFixed = {
 		blue = {'blueHAWK'},
 		red = {'Red SAM AAA','Red SAM SHORAD SA-19','Red SAM SA-10'}
 	},
@@ -154,13 +150,13 @@ upgrades = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
 		red = {'Enemy ground forces','Red Armour Group', 'Red Armour Group 4','Red SAM AAA','Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM AAA 2'}
 	},
-	Echo = {
-		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
-		red = {'Enemy ground forces','Echo Troops Tent 2','Red Armour Group', 'Red Armour Group 4','Red SAM AAA','Echo Troops Tent','Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8'}
-	},
 	Alpha = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
-		red = {'Enemy ground forces','Red Armour Group', 'Red Armour Group 4','Alpha Troops Tent','Red SAM AAA','Alpha Troops Tent 2','Red SAM AAA 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19'}
+		red = {'Enemy ground forces','Alpha Troops Tent 2','Red Armour Group', 'Red Armour Group 4','Red SAM AAA','Alpha Troops Tent','Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8'}
+	},
+	India = {
+		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
+		red = {'Enemy ground forces','Red Armour Group', 'Red Armour Group 4','India Troops Tent','Red SAM AAA','India Troops Tent 2','Red SAM AAA 2', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19'}
 	},
 	farp2 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD1'},
@@ -170,9 +166,9 @@ upgrades = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD2'},
 		red = {'Red Armour Group', 'Red Armour Group 4', 'Red Armour Group 2', 'Red Armour Group 3', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15'}
 	},
-	Golf = {
+	Foxtrot = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD2'},
-		red = {'Red Armour Group 2', 'Red Armour Group 3','Golf Troops Tent 2','Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-8','Golf Troops Tent', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-8'}
+		red = {'Red Armour Group 2', 'Red Armour Group 3','Foxtrot Troops Tent 2','Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-8','Foxtrot Troops Tent', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-8'}
 	},
 	farp4 = {
 		blue = {'blueInfantry', 'blueArmor', 'bluePD2'},
@@ -193,24 +189,12 @@ upgrades = {
 	insurgentcamp = {
 		blue = {'blueInfantry', 'blueArmor'},
 		red = {'Enemy Task forces', 'Red Armour Group 2', 'Red Armour Group 3', 'InsurgentCamp', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15'}
-	}, 
-	ChemSite = {
-		blue = {'blueInfantry', 'blueArmor'},
-		red = {'Enemy Task forces', 'Red SAM AAA','Chemical tank 3','Chemsite Factory','Chemical tank 2', 'Red Armour Group 2', 'Red Armour Group 3','Chemsite Factory 2','Chemical tank', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15'}
 	},
 	SecretTechFacility = {
 		blue = {'blueInfantry', 'blueArmor'},
 		red = {'Enemy Task forces', 'Red SAM AAA','SecretTechFacility Factory', 'Red Armour Group 2', 'Red Armour Group 3', 'Red SAM SHORAD SA-8','SecretTechFacility Factory 2', 'Red SAM SHORAD SA-15', 'SecretTechFacility HQ'}
 	}, 
-	ArtilleryFactory = {
-		blue = {'blueInfantry', 'blueArmor'},
-		red = {'Enemy Task forces', 'Red SAM AAA','Artillery Factory','Artillery Storage', 'Red Armour Group 2', 'Red Armour Group 3', 'Red SAM SHORAD SA-8','Artillery Storage 2', 'Red SAM SHORAD SA-15', 'Artillery Storage 3'}
-	},
-	fueldepo = {
-		blue = {'blueInfantry', 'blueArmor'},
-		red = {'Enemy Task forces','FuelDepo Refinery', 'Fuel Depo tank','Red SAM SHORAD SA-8', 'Red SAM AAA', 'Fuel Depo tank 2', 'Red Armour Group 2', 'Red Armour Group 3','Fuel Depo tank 3', 'Red SAM SHORAD SA-8', 'Fuel Depo tank 4'}
-	},
-	SAMEcho = {
+	samechoFixed = {
 		blue = {'blueHAWK'},
 		red = {'Red SAM AAA', 'Red SAM SHORAD SA-15', 'Red SAM SA-11','Red SAM SHORAD Pantsir S1'}
 	},
@@ -224,7 +208,7 @@ upgrades = {
 	},
 	Hidden1Group = {
 		blue = {},
-		red = {'HQ Fixed', 'Red EWR Fixed 1', 'Red EWR Fixed 3', 'Red EWR Fixed 2', 'Red EWR 4 Fixed'}
+		red = {'Red EWR Fixed 1', 'Red EWR Fixed 3', 'Red EWR Fixed 2', 'Red EWR 4 Fixed'}
 	},
 	Hidden2Group = {
 		blue = {},
@@ -259,51 +243,69 @@ upgrades = {
 
 flavor = {
 	redcarrier = L10N:Get("CA_FLAVOR_ENEMY_CARRIER_ZONE"),
-	bluecarrier = L10N:Format("SYRIA_FLAVOR_START_ZONE", ""),
 	
-	batumi = L10N:Format("SYRIA_FLAVOR_WPT", 2),
-	kobuleti = L10N:Format("SYRIA_FLAVOR_WPT", 3),
-	senaki = L10N:Format("SYRIA_FLAVOR_WPT", 4),
-	kutaisi = L10N:Format("SYRIA_FLAVOR_WPT", 5),
-	alpha = L10N:Format("SYRIA_FLAVOR_WPT", 6),
-	sukhumi = L10N:Format("SYRIA_FLAVOR_WPT", 7),
-	gudauta = L10N:Format("SYRIA_FLAVOR_WPT", 8),
-	sochi = L10N:Format("SYRIA_FLAVOR_WPT", 9),
-	bravo = L10N:Format("SYRIA_FLAVOR_WPT", 10),
-	charlie = L10N:Format("SYRIA_FLAVOR_WPT", 11),
-	delta = L10N:Format("SYRIA_FLAVOR_WPT", 12),
-	gelendzhik = L10N:Format("SYRIA_FLAVOR_WPT", 13),
-	novorossiysk = L10N:Format("SYRIA_FLAVOR_WPT", 14),
-	anapa = L10N:Format("SYRIA_FLAVOR_WPT", 15),
-	krymsk = L10N:Format("SYRIA_FLAVOR_WPT", 16),
-	echo = L10N:Format("SYRIA_FLAVOR_WPT", 17),
-	krasnodarc = L10N:Format("SYRIA_FLAVOR_WPT", 18),
-	krasnodarp = L10N:Format("SYRIA_FLAVOR_WPT", 19),
-	foxtrot = L10N:Format("SYRIA_FLAVOR_WPT", 20),
-	maykop = L10N:Format("SYRIA_FLAVOR_WPT", 21),
-	golf = L10N:Format("SYRIA_FLAVOR_WPT", 22),
-	hotel = L10N:Format("SYRIA_FLAVOR_WPT", 23),
-	india = L10N:Format("SYRIA_FLAVOR_WPT", 24),
-	mineralnye = L10N:Format("SYRIA_FLAVOR_WPT", 25),
-	nalchik = L10N:Format("SYRIA_FLAVOR_WPT", 26),
-	moxdok = L10N:Format("SYRIA_FLAVOR_WPT", 27),
-	beslan = L10N:Format("SYRIA_FLAVOR_WPT", 28),
-	juliett = L10N:Format("SYRIA_FLAVOR_WPT", 29),
-	kilo = L10N:Format("SYRIA_FLAVOR_WPT", 30),
-	lima = L10N:Format("SYRIA_FLAVOR_WPT", 31),
-	soganlug= L10N:Format("SYRIA_FLAVOR_WPT", 32),
-	tbilisi = L10N:Format("SYRIA_FLAVOR_WPT", 33),
-	vaziani = L10N:Format("SYRIA_FLAVOR_WPT", 34),
+	batumi = L10N:Format("SYRIA_FLAVOR_WPT", 43),
+	kobuleti = L10N:Format("SYRIA_FLAVOR_WPT", 42),
+	senaki = L10N:Format("SYRIA_FLAVOR_WPT", 41),
+	kutaisi = L10N:Format("SYRIA_FLAVOR_WPT", 40),
+	isunderi = L10N:Format("SYRIA_FLAVOR_WPT", 38),
+	ambrolauri = L10N:Format("SYRIA_FLAVOR_WPT", 46),
+	sachhere = L10N:Format("SYRIA_FLAVOR_WPT", 47),
+	kvomo = L10N:Format("SYRIA_FLAVOR_WPT", 50),
+	kilo = L10N:Format("SYRIA_FLAVOR_WPT", 57),
+	juliett = L10N:Format("SYRIA_FLAVOR_WPT", 56),
+	guso = L10N:Format("SYRIA_FLAVOR_WPT", 52),
+	chiora = L10N:Format("SYRIA_FLAVOR_WPT", 51),
+	chukuli = L10N:Format("SYRIA_FLAVOR_WPT", 37),
+	revari = L10N:Format("SYRIA_FLAVOR_WPT", 27),
+	india = L10N:Format("SYRIA_FLAVOR_WPT", 26),
+	sukhumi = L10N:Format("SYRIA_FLAVOR_WPT", 24),
+	gudauta = L10N:Format("SYRIA_FLAVOR_WPT", 21),
+	sochi = L10N:Format("SYRIA_FLAVOR_WPT", 19),
+	delta = L10N:Format("SYRIA_FLAVOR_WPT", 18),
+	charlie = L10N:Format("SYRIA_FLAVOR_WPT", 17),
+	bravo = L10N:Format("SYRIA_FLAVOR_WPT", 16),
+	gelendzhik = L10N:Format("SYRIA_FLAVOR_WPT", 6),
+	novorossiysk = L10N:Format("SYRIA_FLAVOR_WPT", 5),
+	holmskiy = L10N:Format("SYRIA_FLAVOR_WPT", 7),
+	krymsk = L10N:Format("SYRIA_FLAVOR_WPT", 4),
+	anapa = L10N:Format("SYRIA_FLAVOR_WPT", 1),
+	anastasia = L10N:Format("SYRIA_FLAVOR_WPT", 2),
+	alpha = L10N:Format("SYRIA_FLAVOR_WPT", 3),
+	krasnodarc = L10N:Format("SYRIA_FLAVOR_WPT", 9),
+	krasnodarp = L10N:Format("SYRIA_FLAVOR_WPT", 10),
+	echo = L10N:Format("SYRIA_FLAVOR_WPT", 11),
+	hady = L10N:Format("SYRIA_FLAVOR_WPT", 15),
+	mezmay = L10N:Format("SYRIA_FLAVOR_WPT", 14),
+	maykop = L10N:Format("SYRIA_FLAVOR_WPT", 12),
+	foxtrot = L10N:Format("SYRIA_FLAVOR_WPT", 13),
+	golf = L10N:Format("SYRIA_FLAVOR_WPT", 23),
+	riverside = L10N:Format("SYRIA_FLAVOR_WPT", 22),
+	hurzuk = L10N:Format("SYRIA_FLAVOR_WPT", 28),
+	luna = L10N:Format("SYRIA_FLAVOR_WPT", 29),
+	hotel = L10N:Format("SYRIA_FLAVOR_WPT", 30),
+	mineralnye = L10N:Format("SYRIA_FLAVOR_WPT", 31),
+	novopavlo = L10N:Format("SYRIA_FLAVOR_WPT", 32),
+	mozdok = L10N:Format("SYRIA_FLAVOR_WPT", 33),
+	terek = L10N:Format("SYRIA_FLAVOR_WPT", 34),
+	nalchik = L10N:Format("SYRIA_FLAVOR_WPT", 35),
+	tyra = L10N:Format("SYRIA_FLAVOR_WPT", 36),
+	zhemtala = L10N:Format("SYRIA_FLAVOR_WPT", 53),
+	digora = L10N:Format("SYRIA_FLAVOR_WPT", 54),
+	beslan = L10N:Format("SYRIA_FLAVOR_WPT", 55),
+	tyrini = L10N:Format("SYRIA_FLAVOR_WPT", 45),
+	khashuri = L10N:Format("SYRIA_FLAVOR_WPT", 48),
+	karaleti = L10N:Format("SYRIA_FLAVOR_WPT", 49),
+	lima = L10N:Format("SYRIA_FLAVOR_WPT", 58),
+	soganlug= L10N:Format("SYRIA_FLAVOR_WPT", 60),
+	tbilisi = L10N:Format("SYRIA_FLAVOR_WPT", 59),
+	vaziani = L10N:Format("SYRIA_FLAVOR_WPT", 61),
 	
-	miningfacility = L10N:Format("SYRIA_FLAVOR_WPT", ""),
-	insurgentcamp = L10N:Format("SYRIA_FLAVOR_WPT", ""),
-	secrettechfacility = L10N:Format("SYRIA_FLAVOR_WPT", ""),
-	fueldepo = L10N:Format("SYRIA_FLAVOR_WPT", ""),
-	ammonitiondepo = L10N:Format("SYRIA_FLAVOR_WPT", ""),
-	tankfactory = L10N:Format("SYRIA_FLAVOR_WPT", ""),
-	samsite = L10N:Format("SYRIA_FLAVOR_WPT", ""),
-	chemsite = L10N:Format("SYRIA_FLAVOR_WPT", ""),
-	artilleryfactory = L10N:Format("SYRIA_FLAVOR_WPT", ""),
+	miningfacility = L10N:Format("SYRIA_FLAVOR_WPT", 44),
+	insurgentcamp = L10N:Format("SYRIA_FLAVOR_WPT", 39),
+	secrettechfacility = L10N:Format("SYRIA_FLAVOR_WPT", 25),
+	ammonitiondepo = L10N:Format("SYRIA_FLAVOR_WPT", 20),
+	tankfactory = L10N:Format("SYRIA_FLAVOR_WPT", 8),
 	
 	samalpha = L10N:Format("SYRIA_FLAVOR_WPT", ""),
 	sambravo = L10N:Format("SYRIA_FLAVOR_WPT", ""),
@@ -320,42 +322,70 @@ flavor = {
 	sammike = L10N:Format("SYRIA_FLAVOR_WPT", "")
 }
 WaypointList = {
-    Batumi = ' (2)',
-    Kobuleti = ' (3)',
-    Senaki = ' (4)',
-    Kutaisi = ' (5)',
-    Alpha = ' (6)',
-    Sukhumi = ' (7)',
-    Gudauta = ' (8)',
-    Sochi = ' (9)',
-    Bravo = ' (10)',
-    Charlie = ' (11)',
-    Delta = ' (12)',
-    Gelendzhik = ' (13)',
-    Novorossiysk = ' (14)',
-    Anapa = ' (15)',
-    Krymsk = ' (16)',
-    Echo = ' (17)',
-    ["Krasnodar-Center"] = ' (18)',
-    ["Krasnodar-Pashkovsky"] = ' (19)',
-    Foxtrot = ' (20)',
-    Maykop = ' (21)',
-    Golf = ' (22)',
-    Hotel = ' (23)',
-    India = ' (24)',
-    Mineralnye = ' (25)',
-    Nalchik = ' (26)',
-    Mozdok = ' (27)',
-    Beslan = ' (28)',
-    Juliett = ' (29)',
-    Kilo = ' (30)',
-    Lima = ' (31)',
-    Soganlug = ' (32)',
-    Tbilisi = ' (33)',
-    Vaziani = ' (34)'
+    Anapa = ' (1)',
+    Anastasia = ' (2)',
+    Alpha = ' (3)',
+    Krymsk = ' (4)',
+    Novorossiysk = ' (5)',
+    Gelendzhik = ' (6)',
+    Holmskiy = ' (7)',
+    TankFactory = ' (8)',
+    ["Krasnodar-Center"] = ' (9)',
+    ["Krasnodar-Pashkovsky"] = ' (10)',
+    Echo = ' (11)',
+    Maykop = ' (12)',
+    Foxtrot = ' (13)',
+    Mezmay = ' (14)',
+    Hady = ' (15)',
+    Bravo = ' (16)',
+    Charlie = ' (17)',
+    Delta = ' (18)',
+    Sochi = ' (19)',
+    AmmonitionDepo = ' (20)',
+    Gudauta = ' (21)',
+    RiverSide = ' (22)',
+    Golf = ' (23)',
+    Sukhumi = ' (24)',
+    SecretTechFacility = ' (25)',
+    India = ' (26)',
+    Revari = ' (27)',
+    Hurzuk = ' (28)',
+    Luna = ' (29)',
+    Hotel = ' (30)',
+    Mineralnye = ' (31)',
+    Novopavlo = ' (32)',
+    Mozdok = ' (33)',
+    Terek = ' (34)',
+    Nalchik = ' (35)',
+    Tyra = ' (36)',
+    Chukuli = ' (37)',
+    Isunderi = ' (38)',
+    InsurgentCamp = ' (39)',
+    Kutaisi = ' (40)',
+    Senaki = ' (41)',
+    Kobuleti = ' (42)',
+    Batumi = ' (43)',
+    MiningFacility = ' (44)',
+    Tyrini = ' (45)',
+    Ambrolauri = ' (46)',
+    Sachhere = ' (47)',
+    Khashuri = ' (48)',
+    Karaleti = ' (49)',
+    Kvomo = ' (50)',
+    Chiora = ' (51)',
+    Guso = ' (52)',
+    ZHemtala = ' (53)',
+    Digora = ' (54)',
+    Beslan = ' (55)',
+    Juliett = ' (56)',
+    Kilo = ' (57)',
+    Lima = ' (58)',
+    Tbilisi = ' (59)',
+    Soganlug = ' (60)',
+    Vaziani = ' (61)'
 }
 
-FootholdSaveBaseName = (Era == 'Coldwar') and 'FootHold_CA_v0.2_Coldwar' or 'FootHold_CA_v0.2'
+FootholdSaveBaseName = (Era == 'Coldwar') and 'FootHold_CA_v0.3_Coldwar' or 'FootHold_CA_v0.3'
 
 local filepath = FootholdSaveBaseName .. '.lua'
 if lfs then
@@ -596,9 +626,8 @@ Hunt = true
 
 zones = {
 	redcarrier = ZoneCommander:new({zone='Red Carrier', side=1, level=25, upgrades=upgrades.redships, crates={}, flavorText=flavor.redcarrier}),
-	bluecarrier = ZoneCommander:new({zone='Blue Carrier', side=StartNormal and 2 or 0, level=25, upgrades=upgrades.blueships, crates={}, flavorText=flavor.bluecarrier}),
 	
-	batumi = ZoneCommander:new({zone='Batumi', side = StartNormal and 2 or 1, size= StartNormal and 'bignosam' or 'big', level=25, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.batumi}),
+	batumi = ZoneCommander:new({zone='Batumi', side=1, size='big', level=25, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.batumi}),
 	kobuleti = ZoneCommander:new({zone='Kobuleti', side=1, size='mediumbig', level=25, upgrades=upgrades.Kobuleti, crates={}, flavorText=flavor.kobuleti}),
 	senaki = ZoneCommander:new({zone='Senaki', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.senaki}),
 	kutaisi = ZoneCommander:new({zone='Kutaisi', side=1, size='medium', level=25, upgrades=upgrades.airfield4Kutaisi, crates={}, flavorText=flavor.kutaisi}),
@@ -607,7 +636,7 @@ zones = {
 	sochi = ZoneCommander:new({zone='Sochi', side=1, size='mediumbig', level=25, upgrades=upgrades.Sochi, crates={}, flavorText=flavor.sochi}),
 	gelendzhik = ZoneCommander:new({zone='Gelendzhik', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.gelendzhik}),
 	novorossiysk = ZoneCommander:new({zone='Novorossiysk', side=1, size='bignosam', level=25, upgrades=upgrades.Novorossiysk, crates={}, flavorText=flavor.novorossiysk}),
-	anapa = ZoneCommander:new({zone='Anapa', side=1, size='mediumbig', level=25, upgrades=upgrades.Anapa, crates={}, flavorText=flavor.anapa}),
+	anapa = ZoneCommander:new({zone='Anapa', side=StartNormal and 2 or 1, size=StartNormal and 'bignosam' or 'mediumbig', level=25, upgrades=upgrades.Anapa, crates={}, flavorText=flavor.anapa}),
 	krymsk = ZoneCommander:new({zone='Krymsk', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.krymsk}),
 	krasnodarc = ZoneCommander:new({zone='Krasnodar-Center', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.krasnodarc}),
 	krasnodarp = ZoneCommander:new({zone='Krasnodar-Pashkovsky', side=1, size='mediumbig', level=25, upgrades=upgrades.Pashkovsky, crates={}, flavorText=flavor.krasnodarp}),
@@ -620,28 +649,47 @@ zones = {
 	tbilisi = ZoneCommander:new({zone='Tbilisi', side = StartNormal and 1 or 2, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.tbilisi}),
 	vaziani = ZoneCommander:new({zone='Vaziani', side = StartNormal and 1 or 2, size='mediumbig', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.vaziani}),
 	
-	alpha = ZoneCommander:new({zone='Alpha', side=1, size='smallmedium', level=25, upgrades=upgrades.Alpha, crates={}, flavorText=flavor.alpha}),
-	bravo = ZoneCommander:new({zone='Bravo', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.bravo}),
+	india = ZoneCommander:new({zone='India', side=1, size='smallmedium', level=25, upgrades=upgrades.India, crates={}, flavorText=flavor.india}),
+	delta = ZoneCommander:new({zone='Delta', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.delta}),
 	charlie = ZoneCommander:new({zone='Charlie', side=1, size='smallmedium', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.charlie}),
-	delta = ZoneCommander:new({zone='Delta', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.delta}),
-	echo = ZoneCommander:new({zone='Echo', side=1, size='smallmedium', level=25, upgrades=upgrades.Echo, crates={}, flavorText=flavor.echo}),
-	foxtrot = ZoneCommander:new({zone='Foxtrot', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.foxtrot}),
-	golf = ZoneCommander:new({zone='Golf', side=1, size='smallmedium', level=25, upgrades=upgrades.Golf, crates={}, flavorText=flavor.golf}),
-	hotel = ZoneCommander:new({zone='Hotel', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.hotel}),
-	india = ZoneCommander:new({zone='India', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.india}),
+	bravo = ZoneCommander:new({zone='Bravo', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.bravo}),
+	alpha = ZoneCommander:new({zone='Alpha', side=1, size='smallmedium', level=25, upgrades=upgrades.Alpha, crates={}, flavorText=flavor.alpha}),
+	echo = ZoneCommander:new({zone='Echo', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.echo}),
+	foxtrot = ZoneCommander:new({zone='Foxtrot', side=1, size='smallmedium', level=25, upgrades=upgrades.Foxtrot, crates={}, flavorText=flavor.foxtrot}),
+	golf = ZoneCommander:new({zone='Golf', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.golf}),
+	riverside = ZoneCommander:new({zone='RiverSide', side=1, size='small', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.riverside}),
+	hotel = ZoneCommander:new({zone='Hotel', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.hotel}),
 	juliett = ZoneCommander:new({zone='Juliett', side=1, size='small', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.juliett}),
 	kilo = ZoneCommander:new({zone='Kilo', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.kilo}),
 	lima = ZoneCommander:new({zone='Lima', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.lima}),
+	tyrini = ZoneCommander:new({zone='Tyrini', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.tyrini}),
+	isunderi = ZoneCommander:new({zone='Isunderi', side=1, size='small', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.isunderi}),
+	ambrolauri = ZoneCommander:new({zone='Ambrolauri', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.ambrolauri}),
+	karaleti = ZoneCommander:new({zone='Karaleti', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.karaleti}),
+	kvomo = ZoneCommander:new({zone='Kvomo', side=1, size='small', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.kvomo}),
+	guso = ZoneCommander:new({zone='Guso', side=1, size='small', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.guso}),
+	digora = ZoneCommander:new({zone='Digora', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.digora}),
+	zhemtala = ZoneCommander:new({zone='ZHemtala', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.zhemtala}),
+	terek = ZoneCommander:new({zone='Terek', side=1, size='small', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.terek}),
+	revari = ZoneCommander:new({zone='Revari', side=1, size='small', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.revari}),
+	chukuli = ZoneCommander:new({zone='Chukuli', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.chukuli}),
+	hurzuk = ZoneCommander:new({zone='Hurzuk', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.hurzuk}),
+	mezmay = ZoneCommander:new({zone='Mezmay', side=1, size='small', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.mezmay}),
+	hady = ZoneCommander:new({zone='Hady', side=1, size='medium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.hady}),
+	holmskiy = ZoneCommander:new({zone='Holmskiy', side=1, size='smallmedium', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.holmskiy}),
+	anastasia = ZoneCommander:new({zone='Anastasia', side=1, size='medium', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.anastasia}),
+	chiora = ZoneCommander:new({zone='Chiora', side=1, size='small', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.chiora}),
+	khashuri = ZoneCommander:new({zone='Khashuri', side=1, size='small', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.khashuri}),
+	sachhere = ZoneCommander:new({zone='Sachhere', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.sachhere}),
+	luna = ZoneCommander:new({zone='Luna', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.luna}),
+	tyra = ZoneCommander:new({zone='Tyra', side=1, size='small', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.tyra}),
+	novopavlo = ZoneCommander:new({zone='Novopavlo', side=1, size='medium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.novopavlo}),
 	
 	miningfacility = ZoneCommander:new({zone='MiningFacility', side=1, size='small', level=25, upgrades=upgrades.MiningFacilityFixed, crates={}, flavorText=flavor.miningfacility, income=0.4}),
 	insurgentcamp = ZoneCommander:new({zone='InsurgentCamp', side=1, size='mediumbig', level=25, upgrades=upgrades.insurgentcamp, crates={}, flavorText=flavor.insurgentcamp, income=0.3}),
 	secrettechfacility = ZoneCommander:new({zone='SecretTechFacility', side=1, size='smallmedium', level=25, upgrades=upgrades.SecretTechFacility, crates={}, flavorText=flavor.secrettechfacility, income=0.5}),
-	fueldepo = ZoneCommander:new({zone='FuelDepo', side=1, size='smallmedium', level=20, upgrades=upgrades.fueldepo, crates={}, flavorText=flavor.fueldepo, income=0.5}),
 	ammonitiondepo = ZoneCommander:new({zone='AmmonitionDepo', side=1, size='small', level=25, upgrades=upgrades.ammunitiondepounits, crates={}, flavorText=flavor.ammonitiondepo, income=0.5}),
 	tankfactory = ZoneCommander:new({zone='TankFactory', side=1, size='smallmedium', level=25, upgrades=upgrades.TankFactory, crates={}, flavorText=flavor.tankfactory, income=0.4}),
-	chemsite = ZoneCommander:new({zone='ChemSite', side=1, size='smallmedium', level=25, upgrades=upgrades.ChemSite, crates={}, flavorText=flavor.chemsite, income=0.3}),
-	artilleryfactory = ZoneCommander:new({zone='ArtilleryFactory', side=1, size='smallmedium', level=25, upgrades=upgrades.ArtilleryFactory, crates={}, flavorText=flavor.artilleryfactory, income=0.5}),
-	samsite = ZoneCommander:new({zone='SAMSite', side=1, size='sam', level=25, upgrades=upgrades.sam5, crates={}, flavorText=flavor.samsite}),
     insurgencygriddl22 = ZoneCommander:new({zone='Insurgency Grid DL22', size=(math.random(1,2) == 1 and 'redarmycamp' or 'redarmycamp2'), side=1, level=20, upgrades=upgrades.farp2, crates={}, flavorText=flavor.insurgencygriddl22,NeutralAtStart=true,Popup=true}),
     insurgencygridmn47 = ZoneCommander:new({zone='Insurgency Grid MN47', size=(math.random(1,2) == 1 and 'redarmycamp' or 'redarmycamp2'), side=1, level=20, upgrades=upgrades.farp2, crates={}, flavorText=flavor.insurgencygridmn47,NeutralAtStart=true,Popup=true}),
     insurgencygridfj98 = ZoneCommander:new({zone='Insurgency Grid FJ98', size=(math.random(1,2) == 1 and 'redarmycamp' or 'redarmycamp2'), side=1, level=20, upgrades=upgrades.farp2, crates={}, flavorText=flavor.insurgencygridfj98,NeutralAtStart=true,Popup=true}),
@@ -649,15 +697,15 @@ zones = {
 
 -- Insurgency Grid DL22
 
-	samalpha = ZoneCommander:new({zone='SAM-Alpha', side=1, size='sam', level=25, upgrades=upgrades.samalphaFixed, crates={}, flavorText=flavor.samalpha,noLongRangeSam=true}),
-	sambravo = ZoneCommander:new({zone='SAM-Bravo', side=1, size='sam', level=25, upgrades=upgrades.sambravoFixed, crates={}, flavorText=flavor.sambravo, noLongRangeSam=true}),
-	samcharlie = ZoneCommander:new({zone='SAM-Charlie', side=1, size='sam', level=25, upgrades=upgrades.samcharliefixed, crates={}, flavorText=flavor.samcharlie}),
+	samindia = ZoneCommander:new({zone='SAM-India', side=1, size='sam', level=25, upgrades=upgrades.samindiaFixed, crates={}, flavorText=flavor.samindia,noLongRangeSam=true}),
+	samgolf = ZoneCommander:new({zone='SAM-Golf', side=1, size='sam', level=25, upgrades=upgrades.samgolfFixed, crates={}, flavorText=flavor.samgolf, noLongRangeSam=true}),
+	samhotel = ZoneCommander:new({zone='SAM-Hotel', side=1, size='sam', level=25, upgrades=upgrades.samhotelFixed, crates={}, flavorText=flavor.samhotel}),
+	samfoxtrot = ZoneCommander:new({zone='SAM-Foxtrot', side=1, size='sam', level=25, upgrades=upgrades.samfoxtrotFixed, crates={}, flavorText=flavor.samfoxtrot}),
+	samecho = ZoneCommander:new({zone='SAM-Echo', side=1, size='sam', level=25, upgrades=upgrades.samechoFixed, crates={}, flavorText=flavor.samecho}),
+	sambravo = ZoneCommander:new({zone='SAM-Bravo', side=1, size='sam', level=25, upgrades=upgrades.sambravoFixed, crates={}, flavorText=flavor.sambravo}),
+	samalpha = ZoneCommander:new({zone='SAM-Alpha', side=1, size='samspecial', level=25, upgrades=upgrades.samalphaFixed, crates={}, flavorText=flavor.samalpha}),
+	samcharlie = ZoneCommander:new({zone='SAM-Charlie', side=1, size='sam', level=25, upgrades=upgrades.samcharlieFixed, crates={}, flavorText=flavor.samcharlie}),
 	samdelta = ZoneCommander:new({zone='SAM-Delta', side=1, size='sam', level=25, upgrades=upgrades.samdeltaFixed, crates={}, flavorText=flavor.samdelta}),
-	samecho = ZoneCommander:new({zone='SAM-Echo', side=1, size='sam', level=25, upgrades=upgrades.SAMEcho, crates={}, flavorText=flavor.samecho}),
-	samfoxtrot = ZoneCommander:new({zone='SAM-Foxtrot', side=1, size='sam', level=25, upgrades=upgrades.samFoxtrotFixed, crates={}, flavorText=flavor.samfoxtrot}),
-	samgolf = ZoneCommander:new({zone='SAM-Golf', side=1, size='samspecial', level=25, upgrades=upgrades.samgolf, crates={}, flavorText=flavor.samgolf}),
-	samhotel = ZoneCommander:new({zone='SAM-Hotel', side=1, size='sam', level=25, upgrades=upgrades.sam3, crates={}, flavorText=flavor.samhotel}),
-	samindia = ZoneCommander:new({zone='SAM-India', side=1, size='sam', level=25, upgrades=upgrades.sam4indiafixed, crates={}, flavorText=flavor.samindia}),
 	samjuliett = ZoneCommander:new({zone='SAM-Juliett', side=1, size='sam', level=25, upgrades=upgrades.sam5, crates={}, flavorText=flavor.samjuliett}),
 	samkilo = ZoneCommander:new({zone='SAM-Kilo', side=1, size='sam', level=25, upgrades=upgrades.sam4kilofixed, crates={}, flavorText=flavor.samkilo}),
 	samlima = ZoneCommander:new({zone='SAM-Lima', side=1, size='sam', level=25, upgrades=upgrades.SamLimaFixedSA11, crates={}, flavorText=flavor.samlima}),
@@ -879,6 +927,7 @@ zones.delta.isHeloSpawn = true
 zones.gelendzhik.isHeloSpawn = true
 zones.novorossiysk.isHeloSpawn = true
 zones.anapa.isHeloSpawn = true
+zones.anastasia.isHeloSpawn = true
 zones.krymsk.isHeloSpawn = true
 zones.echo.isHeloSpawn = true
 zones.krasnodarc.isHeloSpawn = true
@@ -899,13 +948,31 @@ zones.soganlug.isHeloSpawn = true
 zones.tbilisi.isHeloSpawn = true
 zones.vaziani.isHeloSpawn = true
 zones.redcarrier.isHeloSpawn = true
-zones.bluecarrier.airbaseName = 'CVN-72'
-zones.bluecarrier.isHeloSpawn = true
+zones.hady.isHeloSpawn = true
+zones.tyra.isHeloSpawn = true
+zones.revari.isHeloSpawn = true
+zones.chukuli.isHeloSpawn = true
+zones.isunderi.isHeloSpawn = true
+zones.ambrolauri.isHeloSpawn = true
+zones.chiora.isHeloSpawn = true
+zones.sachhere.isHeloSpawn = true
+zones.guso.isHeloSpawn = true
+zones.kvomo.isHeloSpawn = true
+zones.tyrini.isHeloSpawn = true
+zones.khashuri.isHeloSpawn = true
+zones.terek.isHeloSpawn = true
+zones.holmskiy.isHeloSpawn = true
+zones.hurzuk.isHeloSpawn = true
+zones.riverside.isHeloSpawn = true
+zones.mezmay.isHeloSpawn = true
+zones.zhemtala.isHeloSpawn = true
+zones.digora.isHeloSpawn = true
+zones.luna.isHeloSpawn = true
+zones.karaleti.isHeloSpawn = true
+zones.novopavlo.isHeloSpawn = true
 
 -- AirBase names
 zones.batumi.airbaseName = 'Batumi'
-
-
 zones.kobuleti.airbaseName = 'Kobuleti'
 zones.kutaisi.airbaseName = 'Kutaisi'
 zones.maykop.airbaseName = 'Maykop-Khanskaya'
@@ -940,17 +1007,34 @@ zones.delta.airbaseName = 'Delta'
 zones.charlie.airbaseName = 'Charlie'
 zones.bravo.airbaseName = 'Bravo'
 zones.alpha.airbaseName = 'Alpha'
-
-zones.bluecarrier:addGroups({
-	GroupCommander:new({name='carrier-attack-Senaki', mission='attack',template='CapCarrierGroup',MissionType='CAP', targetzone='Senaki', Altitude = CapAltitude()}),
-	GroupCommander:new({name='carrier-patrol-Kobuleti', mission='patrol',template='CapCarrierGroup',MissionType='CAP', targetzone='Kobuleti', Altitude = CapAltitude()}),
-})
-
+zones.anastasia.airbaseName = 'Anastasia'
+zones.hady.airbaseName = 'Hady'
+zones.revari.airbaseName = 'Revari'
+zones.tyra.airbaseName = 'Tyra'
+zones.chukuli.airbaseName = 'Chukuli'
+zones.isunderi.airbaseName = 'Isunderi'
+zones.ambrolauri.airbaseName = 'Ambrolauri'
+zones.chiora.airbaseName = 'Chiora'
+zones.sachhere.airbaseName = 'Sachhere'
+zones.guso.airbaseName = 'Guso'
+zones.kvomo.airbaseName = 'Kvomo'
+zones.tyrini.airbaseName = 'Tyrini'
+zones.khashuri.airbaseName = 'Khashuri'
+zones.terek.airbaseName = 'Terek'
+zones.holmskiy.airbaseName = 'Holmskiy'
+zones.hurzuk.airbaseName = 'Hurzuk'
+zones.riverside.airbaseName = 'RiverSide'
+zones.mezmay.airbaseName = 'Mezmay'
+zones.zhemtala.airbaseName = 'ZHemtala'
+zones.digora.airbaseName = 'Digora'
+zones.luna.airbaseName = 'Luna'
+zones.karaleti.airbaseName = 'Karaleti'
+zones.novopavlo.airbaseName = 'Novopavlo'
 
 zones.kobuleti:addGroups({
-	GroupCommander:new({name='Support-SAM-Alpha', mission='supply', targetzone='SAM-Alpha',template='SupplyConvoy', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamAlphaWarehouse"])end}),
+	GroupCommander:new({name='Support-SAM-India', mission='supply', targetzone='SAM-India',template='SupplyConvoy', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamAlphaWarehouse"])end}),
 	GroupCommander:new({name='Kobuleti-supply-Senaki', mission='supply',template='HeloSupplyTemplate', targetzone='Senaki'}),
-	GroupCommander:new({name='Kobuleti-attack-patrol-Cap', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Batumi', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Kobuleti-patrol-Batumi-Cap', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Batumi', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Kobuleti-attack-Kutaisi-Cap', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='Kutaisi', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Kobuleti-patrol-Kutaisi-Cap', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Kutaisi', Altitude = CapAltitude()}),
 
@@ -962,19 +1046,19 @@ zones.batumi:addGroups({
 	GroupCommander:new({name='Batumi-attack-Kobuleti-Cap', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='Kobuleti', Altitude = CapAltitude()}),
 })
 zones.senaki:addGroups({
-	GroupCommander:new({name='Support-SAM-Bravo', mission='supply',template='SupplyConvoy', targetzone='SAM-Bravo', type='surface'}),
+	GroupCommander:new({name='Support-SAM-Golf', mission='supply',template='SupplyConvoy', targetzone='SAM-Golf', type='surface'}),
 	GroupCommander:new({name='senaki-supply-kutaisi', mission='supply',template='HeloSupplyTemplate', targetzone='Kutaisi'}),
-	GroupCommander:new({name='senaki-supply-alpha', mission='supply',template='HeloSupplyTemplate', targetzone='Alpha'}),
+	GroupCommander:new({name='senaki-supply-India', mission='supply',template='HeloSupplyTemplate', targetzone='India'}),
 	GroupCommander:new({name='senaki-patrol-senaki-Cap', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Senaki', Altitude = CapAltitude()}),
-	GroupCommander:new({name='senaki-attack-Alpha-Cap', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='Alpha', Altitude = CapAltitude()}),
-	GroupCommander:new({name='senaki-attack-Alpha-Cap', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='Alpha', Altitude = CapAltitude()}),
+	GroupCommander:new({name='senaki-attack-India-Cap', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='India', Altitude = CapAltitude()}),
+	GroupCommander:new({name='senaki-attack-India-Cap', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='India', Altitude = CapAltitude()}),
 
 
 })
 zones.kutaisi:addGroups({
 	GroupCommander:new({name='kutaisi-supply-senaki', mission='supply',template='HeloSupplyTemplate', targetzone='Senaki'}),
 	GroupCommander:new({name='kutaisi-supply-kobuleti', mission='supply', template='HeloSupplyTemplate', targetzone='Kobuleti'}),
-	GroupCommander:new({name='Support-SAM-Charlie', mission='supply',template='SupplyConvoy', targetzone='SAM-Charlie', type='surface'}),
+	GroupCommander:new({name='Support-SAM-Hotel', mission='supply',template='SupplyConvoy', targetzone='SAM-Hotel', type='surface'}),
 	GroupCommander:new({name='kutaisi-attack-kobuleti-Cas', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Kobuleti'}),
 	GroupCommander:new({name='kutaisi-attack-senaki-Cas', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Senaki'}),
 	GroupCommander:new({name='Kutaisi-patrol-Senaki-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Senaki', Altitude = CapAltitude()}),
@@ -987,13 +1071,13 @@ zones.kutaisi:addGroups({
 
 })
 zones.sukhumi:addGroups({
-	GroupCommander:new({name='Support-SAM-Delta', mission='supply',template='SupplyConvoy', targetzone='SAM-Delta', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamDeltaWarehouse"])end}),
-	GroupCommander:new({name='sukhumi-attack-Sochi', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='Sochi', Bluecondition = function() return not zones.samdelta.active end, Altitude = CapAltitude()}),
+	GroupCommander:new({name='Support-SAM-Foxtrot', mission='supply',template='SupplyConvoy', targetzone='SAM-Foxtrot', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamDeltaWarehouse"])end}),
+	GroupCommander:new({name='sukhumi-attack-Sochi', mission='attack',template='CapPlaneTemplate',MissionType='CAP', targetzone='Sochi', Bluecondition = function() return not zones.samfoxtrot.active end, Altitude = CapAltitude()}),
 	GroupCommander:new({name='Sukhumi-supply-gudauta', mission='supply',template='HeloSupplyTemplate', targetzone='Gudauta'}),
-	GroupCommander:new({name='Sukhumi-supply-alpha', mission='supply',template='HeloSupplyTemplate', targetzone='Alpha'}),
+	GroupCommander:new({name='Sukhumi-supply-India', mission='supply',template='HeloSupplyTemplate', targetzone='India'}),
 	GroupCommander:new({name='Sukhumi-attack-Kutaisi-RunwayStrike', mission='attack',template='RunwayStrikePlaneTemplate',MissionType='RUNWAYSTRIKE', targetzone='Kutaisi'}),
-	GroupCommander:new({name='Sukhumi-patrol-Alpha', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Alpha', Altitude = CapAltitude()}),
-	GroupCommander:new({name='Sukhumi-attack-Alpha', mission='attack',template='AttackConvoy', targetzone='Alpha', type='surface'}),
+	GroupCommander:new({name='Sukhumi-patrol-India', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='India', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Sukhumi-attack-India', mission='attack',template='AttackConvoy', targetzone='India', type='surface'}),
 	GroupCommander:new({name='Sukhumi-supply-Sochi', mission='supply',template='PlaneSupplyTemplate', targetzone='Sochi'}),
 })
 zones.gudauta:addGroups({
@@ -1013,41 +1097,42 @@ zones.sochi:addGroups({
 	GroupCommander:new({name='sochi-attack-Kutaisi-Cas', mission='attack',template='CapPlaneTemplate', MissionType='CAP', targetzone='Kutaisi', Altitude = CapAltitude()}),
 	GroupCommander:new({name='sochi-patrol-Sukhumi-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Sukhumi', Altitude = CapAltitude()}),
 	GroupCommander:new({name='sochi-patrol-Red-Carrier-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Red Carrier', Altitude = CapAltitude()}),
-	GroupCommander:new({name='sochi-supply-bravo', mission='supply',template='HeloSupplyTemplate', targetzone='Bravo'}),
+	GroupCommander:new({name='sochi-supply-Delta', mission='supply',template='HeloSupplyTemplate', targetzone='Delta'}),
 	GroupCommander:new({name='sochi-supply-gudauta', mission='supply',template='HeloSupplyTemplate', targetzone='Gudauta'}),
-	GroupCommander:new({name='Sochi-supply-mykop-by-air', mission='supply',template='PlaneSupplyTemplate', targetzone='Maykop'}),
+	GroupCommander:new({name='Sochi-supply-Maykop-by-air', mission='supply',template='PlaneSupplyTemplate', targetzone='Maykop'}),
 	GroupCommander:new({name='Sochi-supply-Maykop', mission='supply',template='PlaneSupplyTemplate', targetzone='Maykop'}),
 	GroupCommander:new({name='Sochi-supply-Anapa', mission='supply',template='PlaneSupplyTemplate', targetzone='Anapa'}),
 
 })
-zones.bravo:addGroups({
-	GroupCommander:new({name='Bravo-supply-Sochi', mission='supply',template='HeloSupplyTemplate', targetzone='Sochi'}),
-	GroupCommander:new({name='Bravo-supply-Charlie', mission='supply',template='HeloSupplyTemplate', targetzone='Charlie'}),
-	GroupCommander:new({name='Bravo-attack-Sochi', mission='attack',template='AttackConvoy', targetzone='Sochi', type='surface'}),
+zones.delta:addGroups({
+	GroupCommander:new({name='Delta-supply-Sochi', mission='supply',template='HeloSupplyTemplate', targetzone='Sochi'}),
+	GroupCommander:new({name='Delta-supply-Charlie', mission='supply',template='HeloSupplyTemplate', targetzone='Charlie'}),
+	GroupCommander:new({name='Delta-attack-Sochi', mission='attack',template='AttackConvoy', targetzone='Sochi', type='surface'}),
 })
-zones.alpha:addGroups({
-	GroupCommander:new({name='alpha-supply-sukhumi',template='HeloSupplyTemplate', mission='supply', targetzone='Sukhumi'}),
-	GroupCommander:new({name='Alpha-attack-kutaisi-Cas', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Kutaisi',diceChance = 30}),
+zones.india:addGroups({
+	GroupCommander:new({name='India-supply-sukhumi',template='HeloSupplyTemplate', mission='supply', targetzone='Sukhumi'}),
+	GroupCommander:new({name='India-attack-kutaisi-Cas', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Kutaisi',diceChance = 30}),
 	
 })
 zones.charlie:addGroups({
-	GroupCommander:new({name='Charlie-supply-Delta', mission='supply',template='HeloSupplyTemplate', targetzone='Delta'}),
-	GroupCommander:new({name='Charlie-attack-bravo', mission='attack',template='AttackConvoy', targetzone='Bravo', type='surface'}),
-	GroupCommander:new({name='Charlie-supply-bravo-Convoy', mission='supply',template='SupplyConvoy', targetzone='Bravo', type='surface'}),
+	GroupCommander:new({name='Charlie-supply-Bravo', mission='supply',template='HeloSupplyTemplate', targetzone='Bravo'}),
+	GroupCommander:new({name='Charlie-attack-Delta', mission='attack',template='AttackConvoy', targetzone='Delta', type='surface'}),
+	GroupCommander:new({name='Charlie-supply-Delta-Convoy', mission='supply',template='SupplyConvoy', targetzone='Delta', type='surface'}),
+	GroupCommander:new({name='Charlie-attack-Hady-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Hady', type='surface', SetActiveMission = true}),
 })
-zones.delta:addGroups({
-	GroupCommander:new({name='Delta-supply-Gelendzhik', mission='supply',template='HeloSupplyTemplate', targetzone='Gelendzhik'}),
-	GroupCommander:new({name='Delta-supply-Charlie', mission='supply',template='HeloSupplyTemplate', targetzone='Charlie'}),
+zones.bravo:addGroups({
+	GroupCommander:new({name='Bravo-supply-Gelendzhik', mission='supply',template='HeloSupplyTemplate', targetzone='Gelendzhik'}),
+	GroupCommander:new({name='Bravo-supply-Charlie', mission='supply',template='HeloSupplyTemplate', targetzone='Charlie'}),
 })
 zones.novorossiysk:addGroups({
-	GroupCommander:new({name='Support-SAM-Foxtrot', mission='supply',template='SupplyConvoy', targetzone='SAM-Foxtrot', type='surface'}),
+	GroupCommander:new({name='Support-SAM-Bravo', mission='supply',template='SupplyConvoy', targetzone='SAM-Bravo', type='surface'}),
 	GroupCommander:new({name='novorossiysk-supply-Anapa', mission='supply',template='HeloSupplyTemplate', targetzone='Anapa'}),
 	GroupCommander:new({name='novorossiysk-supply-Gelendzhik', mission='supply',template='HeloSupplyTemplate', targetzone='Gelendzhik'}),
 	GroupCommander:new({name='novorossiysk-supply-Krymsk', mission='supply',template='HeloSupplyTemplate', targetzone='Krymsk'}),
 	GroupCommander:new({name='Novorossiysk-attack-Gelendzhik-Arty', mission='attack', targetzone='Gelendzhik', type='surface', SetActiveMission = true}),
 })
 zones.gelendzhik:addGroups({
-	GroupCommander:new({name='Gelendzhik-supply-delta', mission='supply',template='HeloSupplyTemplate', targetzone='Delta'}),
+	GroupCommander:new({name='Gelendzhik-supply-Bravo', mission='supply',template='HeloSupplyTemplate', targetzone='Bravo'}),
 	GroupCommander:new({name='Gelendzhik-supply-Novorossiysk', mission='supply',template='HeloSupplyTemplate', targetzone='Novorossiysk'}),
 	GroupCommander:new({name='Gelendzhik-patrol-Charlie', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Charlie', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Gelendzhik-attack-Charlie', mission='attack',template='AttackConvoy', targetzone='Charlie',type='surface'}),
@@ -1066,7 +1151,7 @@ zones.anapa:addGroups({
 	GroupCommander:new({name='Anapa-supply-Novorossiysk', mission='supply',template='HeloSupplyTemplate', targetzone='Novorossiysk'}),
 	GroupCommander:new({name='Anapa-supply-Gelendzhik', mission='supply',template='HeloSupplyTemplate', targetzone='Gelendzhik'}),
 	GroupCommander:new({name='Anapa-supply-Sochi-by-air', mission='supply', template='PlaneSupplyTemplate', targetzone='Sochi'}),
-	GroupCommander:new({name='Anapa-supply-SAM-Golf', mission='supply',template='SupplyConvoy', targetzone='SAM-Golf', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamGolfWarehouse"])end}),
+	GroupCommander:new({name='Anapa-supply-SAM-Alpha', mission='supply',template='SupplyConvoy', targetzone='SAM-Alpha', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamGolfWarehouse"])end}),
 	GroupCommander:new({name='Anapa-supply-Krymsk-plane', mission='supply',template='PlaneSupplyTemplate', targetzone='Krymsk'}),
 	GroupCommander:new({name='Anapa-supply-KrasnodarC-plane', mission='supply',template='PlaneSupplyTemplate', targetzone='Krasnodar-Center'}),
 	GroupCommander:new({name='Anapa-supply-KrasnodarP-plane', mission='supply',template='PlaneSupplyTemplate', targetzone='Krasnodar-Pashkovsky'}),
@@ -1074,25 +1159,26 @@ zones.anapa:addGroups({
 zones.krymsk:addGroups({
 	GroupCommander:new({name='Krymsk-Patrol-Anapa-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Anapa', Altitude = CapAltitude()}),
 	GroupCommander:new({name='krymsk-supply-Anapa', mission='supply',template='HeloSupplyTemplate', targetzone='Anapa'}),
-	GroupCommander:new({name='Krymsk-supply-Echo', mission='supply', template='HeloSupplyTemplate', targetzone='Echo'}),
+	GroupCommander:new({name='Krymsk-supply-Alpha', mission='supply', template='HeloSupplyTemplate', targetzone='Alpha'}),
 	GroupCommander:new({name='Krymsk-attack-Anapa-Arty', mission='attack', targetzone='Anapa',type ='surface', SetActiveMission = true}),
-	GroupCommander:new({name='Krymsk-attack-Echo-Arty', mission='attack',template='ArtilleryConvoyShort',MissionType='ARTY',Reward=250, targetzone='Echo', type='surface', SetActiveMission = true}),
+	GroupCommander:new({name='Krymsk-attack-Alpha-Arty', mission='attack',template='ArtilleryConvoyShort',MissionType='ARTY',Reward=250, targetzone='Alpha', type='surface', SetActiveMission = true}),
+	GroupCommander:new({name='Krymsk-attack-Holmskiy-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Holmskiy', type='surface', SetActiveMission = true}),
 
 })
 
-zones.echo:addGroups({
-	GroupCommander:new({name='Echo-attack-Krymsk-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Krymsk'}),
-	GroupCommander:new({name='Echo-supply-krymsk', mission='supply', template='HeloSupplyTemplate', targetzone='Krymsk'}),
-	GroupCommander:new({name='Echo-attack-Krymsk-Arty', mission='attack', targetzone='Krymsk',type ='surface', SetActiveMission = true}),
-	GroupCommander:new({name='Echo-supply-krasnodar-center', mission='supply', template='HeloSupplyTemplate', targetzone='Krasnodar-Center'}),
-	GroupCommander:new({name='Echo-attack-krasnodar-Center-Arty', mission='attack',template='ArtilleryConvoyShort',MissionType='ARTY',Reward=250, targetzone='Krasnodar-Center', type='surface', SetActiveMission = true}),
+zones.alpha:addGroups({
+	GroupCommander:new({name='Alpha-attack-Krymsk-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Krymsk'}),
+	GroupCommander:new({name='Alpha-supply-krymsk', mission='supply', template='HeloSupplyTemplate', targetzone='Krymsk'}),
+	GroupCommander:new({name='Alpha-attack-Krymsk-Arty', mission='attack', targetzone='Krymsk',type ='surface', SetActiveMission = true}),
+	GroupCommander:new({name='Alpha-supply-krasnodar-center', mission='supply', template='HeloSupplyTemplate', targetzone='Krasnodar-Center'}),
+	GroupCommander:new({name='Alpha-attack-krasnodar-Center-Arty', mission='attack',template='ArtilleryConvoyShort',MissionType='ARTY',Reward=250, targetzone='Krasnodar-Center', type='surface', SetActiveMission = true}),
 
 })
 
 zones.krasnodarc:addGroups({
 	GroupCommander:new({name='krasnodarc-attack-Anapa-Cap', mission='attack',template='CapPlaneTemplate', MissionType='CAP', targetzone='Anapa', Altitude = CapAltitude()}),
 	GroupCommander:new({name='krasnodarc-attack-Anapa-Sead', mission='attack',template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Anapa', Altitude = SeadAltitude()}),
-	GroupCommander:new({name='krasnodarc-supply-Echo', mission='supply', template='HeloSupplyTemplate', targetzone='Echo'}),
+	GroupCommander:new({name='krasnodarc-supply-Alpha', mission='supply', template='HeloSupplyTemplate', targetzone='Alpha'}),
 	GroupCommander:new({name='krasnodarc-supply-krasnodarp', mission='supply', template='SupplyConvoy', targetzone='Krasnodar-Pashkovsky', type='surface'}),
 	GroupCommander:new({name='krasnodarc-attack-krasnodarp', mission='attack', template='AttackConvoy', targetzone='Krasnodar-Pashkovsky', type='surface'})
 })
@@ -1103,13 +1189,13 @@ zones.krasnodarp:addGroups({
 	GroupCommander:new({name='krasnodarp-patrol-Krymsk-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Krymsk', Altitude = CapAltitude(), Redcondition = function() return not zones.krasnodarc.side == 1 end}),
 	GroupCommander:new({name='krasnodarp-attack-Krymsk-Cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Krymsk', Altitude = CasAltitude(), Redcondition = function() return not zones.krasnodarc.side == 1 end}),
 	GroupCommander:new({name='krasnodarp-supply-Maykop', mission='supply',template='HeloSupplyTemplate', targetzone='Maykop'}),
-	GroupCommander:new({name='krasnodarp-supply-SAM-Hotel', mission='supply',template='SupplyConvoy', targetzone='SAM-Hotel', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamHotelWarehouse"])end}),
+	GroupCommander:new({name='krasnodarp-supply-SAM-Charlie', mission='supply',template='SupplyConvoy', targetzone='SAM-Charlie', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamHotelWarehouse"])end}),
 	GroupCommander:new({name='Support-supply-Krasnodar-Center', mission='supply',template='SupplyConvoy', targetzone='Krasnodar-Center', type='surface'}),
-	GroupCommander:new({name='krasnodarp-supply-Foxtrot', mission='supply',template='HeloSupplyTemplate', targetzone='Foxtrot'})
+	GroupCommander:new({name='krasnodarp-supply-Echo', mission='supply',template='HeloSupplyTemplate', targetzone='Echo'})
 })
 
-zones.foxtrot:addGroups({
-	GroupCommander:new({name='Foxtrot-supply-Maykop', mission='supply',template='HeloSupplyTemplate', targetzone='Maykop'})
+zones.echo:addGroups({
+	GroupCommander:new({name='Echo-supply-Maykop', mission='supply',template='HeloSupplyTemplate', targetzone='Maykop'})
 	
 })
 zones.maykop:addGroups({
@@ -1118,36 +1204,35 @@ zones.maykop:addGroups({
 	GroupCommander:new({name='Maykop-attack-Krasnodar-P', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Krasnodar-Pashkovsky', Altitude = CasAltitude()}),
 	GroupCommander:new({name='Maykop-attack-krymsk-Cap', mission='attack',template='CapPlaneTemplate', MissionType='CAP', targetzone='Krymsk', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Maykop-patrol-sochi-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Sochi', Altitude = CapAltitude()}),
-	GroupCommander:new({name='Maykop-Patrol-Krymsk-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Krymsk', Altitude = CapAltitude()}),
-	GroupCommander:new({name='Maykop-Patrol-Krymsk-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Anapa', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Maykop-patrol-Krymsk-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Krymsk', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Maykop-attack-Anapa-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Anapa', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Maykop-supply-Krasnodar-P', mission='supply',template='HeloSupplyTemplate', targetzone='Krasnodar-Pashkovsky'}),
 	GroupCommander:new({name='Maykop-supply-Krasnodar-C', mission='supply',template='HeloSupplyTemplate', targetzone='Krasnodar-Center'}),
-	GroupCommander:new({name='Maykop-supply-Foxtrot', mission='supply',template='HeloSupplyTemplate', targetzone='Foxtrot'}),
+	GroupCommander:new({name='Maykop-supply-Echo', mission='supply',template='HeloSupplyTemplate', targetzone='Echo'}),
 	GroupCommander:new({name='Maykop-supply-Charlie', mission='supply',template='HeloSupplyTemplate', targetzone='Charlie'}),
-	GroupCommander:new({name='Maykop-supply-Bravo', mission='supply',template='HeloSupplyTemplate', targetzone='Bravo'}),
-	GroupCommander:new({name='Maykop-supply-Golf', mission='supply',template='HeloSupplyTemplate', targetzone='Golf'}),
 	GroupCommander:new({name='Maykop-supply-Delta', mission='supply',template='HeloSupplyTemplate', targetzone='Delta'}),
-	GroupCommander:new({name='Maykop-supply-SAMSite', mission='supply',template='HeloSupplyTemplate', targetzone='SAMSite'}),
+	GroupCommander:new({name='Maykop-supply-Foxtrot', mission='supply',template='HeloSupplyTemplate', targetzone='Foxtrot'}),
+	GroupCommander:new({name='Maykop-supply-Bravo', mission='supply',template='HeloSupplyTemplate', targetzone='Bravo'}),
 	GroupCommander:new({name='Maykop-supply-Sochi', mission='supply',template='PlaneSupplyTemplate', targetzone='Sochi'}),
-	GroupCommander:new({name='Maykop-supply-mineralnye', mission='supply',template='PlaneSupplyTemplate', targetzone='Mineralnye'}),
-	GroupCommander:new({name='Maykop-supply-SAM-India', mission='supply',template='SupplyConvoy', targetzone='SAM-India', type='surface'}),
-	GroupCommander:new({name='Maykop-supply-Maykop', mission='supply',template='PlaneSupplyTemplate', targetzone='Mineralnye'}),
+	GroupCommander:new({name='Maykop-supply-SAM-Delta', mission='supply',template='SupplyConvoy', targetzone='SAM-Delta', type='surface'}),
+	GroupCommander:new({name='Maykop-supply-Mineralnye', mission='supply',template='PlaneSupplyTemplate', targetzone='Mineralnye'}),
 })
 
 
+zones.foxtrot:addGroups({
+	GroupCommander:new({name='Foxtrot-supply-Maykop', mission='supply',template='HeloSupplyTemplate', targetzone='Maykop'}),
+	GroupCommander:new({name='Foxtrot-supply-Golf', mission='supply',template='HeloSupplyTemplate', targetzone='Golf'}),
+	GroupCommander:new({name='Foxtrot-attack-Golf', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Maykop'}),
+	GroupCommander:new({name='Foxtrot-attack-Maykop-Arty', mission='attack', targetzone='Maykop',type ='surface', SetActiveMission = true}),
+
+})
 zones.golf:addGroups({
-	GroupCommander:new({name='Golf-supply-Maykop', mission='supply',template='HeloSupplyTemplate', targetzone='Maykop'}),
-	GroupCommander:new({name='Golf-supply-hotel', mission='supply',template='HeloSupplyTemplate', targetzone='Hotel'}),
-	GroupCommander:new({name='Golf-attack-hotel', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Maykop'}),
-	GroupCommander:new({name='Golf-attack-Maykop-Arty', mission='attack',MissionType='CAS', targetzone='Maykop', type='surface', SetActiveMission = true}),
+	GroupCommander:new({name='Golf-supply-Foxtrot', mission='supply',template='HeloSupplyTemplate', targetzone='Foxtrot'}),
+	GroupCommander:new({name='Golf-supply-Hotel', mission='supply',template='HeloSupplyTemplate', targetzone='Hotel'})
 })
 zones.hotel:addGroups({
 	GroupCommander:new({name='Hotel-supply-Golf', mission='supply',template='HeloSupplyTemplate', targetzone='Golf'}),
-	GroupCommander:new({name='hotel-supply-india', mission='supply',template='HeloSupplyTemplate', targetzone='India'})
-})
-zones.india:addGroups({
-	GroupCommander:new({name='India-supply-Hotel', mission='supply',template='HeloSupplyTemplate', targetzone='Hotel'}),
-	GroupCommander:new({name='India-supply-Mineralnye', mission='supply', template='HeloSupplyTemplate', targetzone='Mineralnye'})
+	GroupCommander:new({name='Hotel-supply-Mineralnye', mission='supply', template='HeloSupplyTemplate', targetzone='Mineralnye'})
 })
 zones.mozdok:addGroups({
 	GroupCommander:new({name='mozdok-attack-mineralnye-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Mineralnye'}),
@@ -1155,10 +1240,11 @@ zones.mozdok:addGroups({
 	GroupCommander:new({name='mozdok-attack-nalchik-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Nalchik'}),
 	GroupCommander:new({name='Mozdok-attack-beslan-Cap', mission='attack',template='CapPlaneTemplate', MissionType='CAP', targetzone='Beslan', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Mozdok-patrol-Mineralnye-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Mineralnye', Altitude = CapAltitude()}),
-	GroupCommander:new({name='Mozdok-Attack-Maykop-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Mineralnye', Altitude = CapAltitude()}),
-	GroupCommander:new({name='mozdok-supply-nalchik', mission='supply', template='PlaneSupplyTemplate', targetzone='Nalchik'}),
+	GroupCommander:new({name='Mozdok-attack-Maykop-Cap', mission='attack',template='CapPlaneTemplate', MissionType='CAP', targetzone='Mineralnye', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Mozdok-supply-Nalchik', mission='supply', template='PlaneSupplyTemplate', targetzone='Nalchik'}),
 	GroupCommander:new({name='Mozdok-supply-Beslan', mission='supply', template='PlaneSupplyTemplate', targetzone='Beslan'}),
 	GroupCommander:new({name='Mozdok-supply-Mineralnye', mission='supply',template='PlaneSupplyTemplate', targetzone='Mineralnye'}),
+	GroupCommander:new({name='Mozdok-supply-Novopavlo', mission='supply', template='HeloSupplyTemplate', targetzone='Novopavlo'}),
 	GroupCommander:new({name='Mozdok-Support-SAM-Kilo', mission='supply', template='SupplyConvoy', targetzone='SAM-Kilo', type='surface', condition = function(self) return not (self.side == 1 and CustomFlags["SamKiloWarehouse"])end})
 })
 
@@ -1168,6 +1254,7 @@ zones.nalchik:addGroups({
 	GroupCommander:new({name='Nalshik-attack-minieralnye-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Mineralnye', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Nalchik-supply-Beslan', mission='supply', template='HeloSupplyTemplate', targetzone='Beslan'}),
 	GroupCommander:new({name='nalchik-supply-Mineralnye', mission='supply', template='HeloSupplyTemplate', targetzone='Mineralnye'}),
+	GroupCommander:new({name='Nalchik-supply-Novopavlo', mission='supply', template='HeloSupplyTemplate', targetzone='Novopavlo'}),
 	GroupCommander:new({name='Nalchik-attack-Mineralnye-Arty', mission='attack', targetzone='Mineralnye', type='surface', SetActiveMission = true}),
 	GroupCommander:new({name='Nalchik-attack-Mozdok-Arty', mission='attack', targetzone='Mozdok', type='surface', SetActiveMission = true}),
 	GroupCommander:new({name='Nalchik-attack-Beslan-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='Beslan', type='surface', SetActiveMission = true}),
@@ -1183,6 +1270,7 @@ zones.beslan:addGroups({
 	GroupCommander:new({name='Beslan-attack-Tbilisi', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Tbilisi', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Beslan-patrol-Kilo', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Kilo', Altitude = CapAltitude()}),
 	GroupCommander:new({name='Beslan-patrol-Juliett', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Juliett', Altitude = CapAltitude()}),
+	GroupCommander:new({name='Beslan-attack-Terek-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Terek', type='surface', SetActiveMission = true}),
 
 })
 zones.juliett:addGroups({
@@ -1205,11 +1293,12 @@ zones.mineralnye:addGroups({
 	GroupCommander:new({name='Mineralnye-Attack-Maykop-Sead', mission='attack', template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Maykop', Altitude = SeadAltitude()}),
 	GroupCommander:new({name='Mineralnye-Attack-Maykop-RunwayStrike', mission='attack', template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Maykop', Altitude = RunwayStrikeAltitude()}),
 	GroupCommander:new({name='Mineralnye-supply-Nalchik', mission='supply', template='HeloSupplyTemplate', targetzone='Nalchik', Redcondition = function() return end}),
-	GroupCommander:new({name='Mineralnye-supply-India', mission='supply', template='HeloSupplyTemplate', targetzone='India'}),
+	GroupCommander:new({name='Mineralnye-supply-Hotel', mission='supply', template='HeloSupplyTemplate', targetzone='Hotel'}),
 	GroupCommander:new({name='Mineralnye-supply-Mozdok', mission='supply', template='PlaneSupplyTemplate', targetzone='Mozdok', Redcondition = function() return end}),
 	GroupCommander:new({name='Mineralnye-supply-Maykop', mission='supply', template='PlaneSupplyTemplate', targetzone='Maykop'}),
 	GroupCommander:new({name='Mineralnye-supply-Mozdok', mission='supply',template='PlaneSupplyTemplate', targetzone='Mozdok'}),
 	GroupCommander:new({name='Mineralnye-supply-Nalchik', mission='supply',template='PlaneSupplyTemplate', targetzone='Nalchik'}),
+	GroupCommander:new({name='Mineralnye-supply-Novopavlo', mission='supply', template='HeloSupplyTemplate', targetzone='Novopavlo'}),
 })
 zones.tbilisi:addGroups({
 	GroupCommander:new({name='tbilisi-supply-Soganlug', mission='supply', template='HeloSupplyTemplate', targetzone='Soganlug', Redcondition = function() return not CustomFlags["StrikeVaziani"] end}),
@@ -1225,11 +1314,11 @@ zones.vaziani:addGroups({
 	GroupCommander:new({name='vaziani-supply-Tbilisi', mission='supply',template='HeloSupplyTemplate', targetzone='Tbilisi', Redcondition = function() return not CustomFlags["StrikeVaziani"] end}),
 	GroupCommander:new({name='vaziani-supply-SAM-Lima', mission='supply', template='HeloSupplyTemplate', targetzone='SAM-Lima', type='surface', Redcondition = function() return not CustomFlags["StrikeVaziani"] end}),
 	GroupCommander:new({name='vaziani-supply-SAM-Mike', mission='supply', template='HeloSupplyTemplate', targetzone='SAM-Mike', type='surface', Redcondition = function() return not CustomFlags["StrikeVaziani"] end}),
-	GroupCommander:new({name='vaziani-attack-Kilo', mission='attack', template='CasHeloTemplate', targetzone='Kilo'}),
-	GroupCommander:new({name='vaziani-attack-Lima', mission='attack', template='CasHeloTemplate', targetzone='Lima'}),
+	GroupCommander:new({name='vaziani-attack-Kilo-Helo', mission='attack', template='CasHeloTemplate', targetzone='Kilo'}),
+	GroupCommander:new({name='vaziani-attack-Lima-Helo', mission='attack', template='CasHeloTemplate', targetzone='Lima'}),
 	GroupCommander:new({name='vaziani-attack-Soganlug', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Soganlug'}),
 	GroupCommander:new({name='vaziani-attack-Tbilisi', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tbilisi'}),
-	GroupCommander:new({name='vaziani-attack-Kilo', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Kilo', Altitude = CapAltitude()}),
+	GroupCommander:new({name='vaziani-attack-Kilo-Plane', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Kilo', Altitude = CapAltitude()}),
 	GroupCommander:new({name='vaziani-patrol-Beslan', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Beslan', Altitude = CapAltitude()}),
 	GroupCommander:new({name='vaziani-patrol-Tbilisi', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Tbilisi', Altitude = CapAltitude()}),
 	GroupCommander:new({name='vaziani-attack-Beslan', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Beslan', Altitude = CasAltitude()}),
@@ -1239,8 +1328,138 @@ zones.vaziani:addGroups({
 
 })
 
+zones.tyrini:addGroups({
+	GroupCommander:new({name='Tyrini-supply-Kutaisi', mission='supply', template='HeloSupplyTemplate', targetzone='Kutaisi'}),
+	GroupCommander:new({name='Tyrini-attack-Kutaisi-Arty', mission='attack', template='ArtilleryConvoyLong', MissionType='ARTY', targetzone='Kutaisi', type='surface', SetActiveMission = true}),
+})
+zones.isunderi:addGroups({
+	GroupCommander:new({name='Isunderi-supply-Kutaisi', mission='supply', template='HeloSupplyTemplate', targetzone='Kutaisi'}),
+	GroupCommander:new({name='Isunderi-supply-InsurgentCamp', mission='supply', template='HeloSupplyTemplate', targetzone='InsurgentCamp'}),
+	GroupCommander:new({name='Isunderi-attack-Ambrolauri-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Ambrolauri', type='surface', SetActiveMission = true}),
+})
+zones.ambrolauri:addGroups({
+	GroupCommander:new({name='Ambrolauri-supply-Isunderi', mission='supply', template='HeloSupplyTemplate', targetzone='Isunderi'}),
+	GroupCommander:new({name='Ambrolauri-supply-Tyrini', mission='supply', template='HeloSupplyTemplate', targetzone='Tyrini'}),
+})
+zones.karaleti:addGroups({
+	GroupCommander:new({name='Karaleti-supply-Lima', mission='supply', template='HeloSupplyTemplate', targetzone='Lima'}),
+	GroupCommander:new({name='Karaleti-supply-Kilo', mission='supply', template='HeloSupplyTemplate', targetzone='Kilo'}),
+	GroupCommander:new({name='Karaleti-attack-Kvomo-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Kvomo', type='surface', SetActiveMission = true}),
+})
+zones.kvomo:addGroups({
+	GroupCommander:new({name='Kvomo-supply-Karaleti', mission='supply', template='HeloSupplyTemplate', targetzone='Karaleti'}),
+	GroupCommander:new({name='Kvomo-supply-Ambrolauri', mission='supply', template='HeloSupplyTemplate', targetzone='Ambrolauri'}),
+	GroupCommander:new({name='Kvomo-supply-Kilo', mission='supply', template='HeloSupplyTemplate', targetzone='Kilo'}),
+	GroupCommander:new({name='Kvomo-attack-Karaleti-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Karaleti', type='surface', SetActiveMission = true}),
+})
+zones.guso:addGroups({
+	GroupCommander:new({name='Guso-supply-Kvomo', mission='supply', template='HeloSupplyTemplate', targetzone='Kvomo'}),
+	GroupCommander:new({name='Guso-supply-Juliett', mission='supply', template='HeloSupplyTemplate', targetzone='Juliett'}),
+	GroupCommander:new({name='Guso-supply-Kilo', mission='supply', template='HeloSupplyTemplate', targetzone='Kilo'}),
+	GroupCommander:new({name='Guso-supply-Beslan', mission='supply', template='HeloSupplyTemplate', targetzone='Beslan'}),
+})
+zones.digora:addGroups({
+	GroupCommander:new({name='Digora-supply-Guso', mission='supply', template='HeloSupplyTemplate', targetzone='Guso'}),
+	GroupCommander:new({name='Digora-supply-Beslan', mission='supply', template='HeloSupplyTemplate', targetzone='Beslan'}),
+})
+zones.zhemtala:addGroups({
+	GroupCommander:new({name='ZHemtala-supply-Nalchik', mission='supply', template='HeloSupplyTemplate', targetzone='Nalchik'}),
+	GroupCommander:new({name='ZHemtala-supply-Guso', mission='supply', template='HeloSupplyTemplate', targetzone='Guso'}),
+	GroupCommander:new({name='ZHemtala-supply-Digora', mission='supply', template='HeloSupplyTemplate', targetzone='Digora'}),
+})
+zones.terek:addGroups({
+	GroupCommander:new({name='Terek-supply-Nalchik', mission='supply', template='HeloSupplyTemplate', targetzone='Nalchik'}),
+	GroupCommander:new({name='Terek-supply-Beslan', mission='supply', template='HeloSupplyTemplate', targetzone='Beslan'}),
+	GroupCommander:new({name='Terek-supply-Mozdok', mission='supply', template='HeloSupplyTemplate', targetzone='Mozdok'}),
+	GroupCommander:new({name='Terek-attack-Beslan-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Beslan', type='surface', SetActiveMission = true}),
+})
+zones.revari:addGroups({
+	GroupCommander:new({name='Revari-supply-India', mission='supply', template='HeloSupplyTemplate', targetzone='India'}),
+	GroupCommander:new({name='Revari-supply-Isunderi', mission='supply', template='HeloSupplyTemplate', targetzone='Isunderi'}),
+})
+zones.chukuli:addGroups({
+	GroupCommander:new({name='Chukuli-supply-Isunderi', mission='supply', template='HeloSupplyTemplate', targetzone='Isunderi'}),
+	GroupCommander:new({name='Chukuli-supply-Ambrolauri', mission='supply', template='HeloSupplyTemplate', targetzone='Ambrolauri'}),
+	GroupCommander:new({name='Chukuli-supply-Revari', mission='supply', template='HeloSupplyTemplate', targetzone='Revari'}),
+})
+zones.chiora:addGroups({
+	GroupCommander:new({name='Chiora-supply-Chukuli', mission='supply', template='HeloSupplyTemplate', targetzone='Chukuli'}),
+	GroupCommander:new({name='Chiora-supply-Guso', mission='supply', template='HeloSupplyTemplate', targetzone='Guso'}),
+	GroupCommander:new({name='Chiora-supply-Ambrolauri', mission='supply', template='HeloSupplyTemplate', targetzone='Ambrolauri'}),
+	GroupCommander:new({name='Chiora-supply-Kvomo', mission='supply', template='HeloSupplyTemplate', targetzone='Kvomo'}),
+})
+zones.hurzuk:addGroups({
+	GroupCommander:new({name='Hurzuk-supply-Revari', mission='supply', template='HeloSupplyTemplate', targetzone='Revari'}),
+	GroupCommander:new({name='Hurzuk-supply-Golf', mission='supply', template='HeloSupplyTemplate', targetzone='Golf'}),
+})
+zones.riverside:addGroups({
+	GroupCommander:new({name='RiverSide-supply-Golf', mission='supply', template='HeloSupplyTemplate', targetzone='Golf'}),
+	GroupCommander:new({name='RiverSide-supply-Gudauta', mission='supply', template='HeloSupplyTemplate', targetzone='Gudauta'}),
+})
+zones.luna:addGroups({
+	GroupCommander:new({name='Luna-supply-Hotel', mission='supply', template='HeloSupplyTemplate', targetzone='Hotel'}),
+	GroupCommander:new({name='Luna-supply-Mineralnye', mission='supply', template='HeloSupplyTemplate', targetzone='Mineralnye'}),
+	GroupCommander:new({name='Luna-supply-Hurzuk', mission='supply', template='HeloSupplyTemplate', targetzone='Hurzuk'}),
+})
+zones.tyra:addGroups({
+	GroupCommander:new({name='Tyra-supply-Nalchik', mission='supply', template='HeloSupplyTemplate', targetzone='Nalchik'}),
+	GroupCommander:new({name='Tyra-supply-Hurzuk', mission='supply', template='HeloSupplyTemplate', targetzone='Hurzuk'}),
+	GroupCommander:new({name='Tyra-supply-Luna', mission='supply', template='HeloSupplyTemplate', targetzone='Luna'}),
+	GroupCommander:new({name='Tyra-supply-Chukuli', mission='supply', template='HeloSupplyTemplate', targetzone='Chukuli'}),
+	GroupCommander:new({name='Tyra-supply-ZHemtala', mission='supply', template='HeloSupplyTemplate', targetzone='ZHemtala'}),
+})
+zones.mezmay:addGroups({
+	GroupCommander:new({name='Mezmay-supply-Delta', mission='supply', template='HeloSupplyTemplate', targetzone='Delta'}),
+	GroupCommander:new({name='Mezmay-supply-Charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Charlie'}),
+	GroupCommander:new({name='Mezmay-supply-Maykop', mission='supply', template='HeloSupplyTemplate', targetzone='Maykop'}),
+	GroupCommander:new({name='Mezmay-supply-Foxtrot', mission='supply', template='HeloSupplyTemplate', targetzone='Foxtrot'}),
+	GroupCommander:new({name='Mezmay-supply-Sochi', mission='supply', template='HeloSupplyTemplate', targetzone='Sochi'}),
+	GroupCommander:new({name='Mezmay-attack-Maykop-Arty', mission='attack', template='ArtilleryConvoyLong', MissionType='ARTY', targetzone='Maykop', type='surface', SetActiveMission = true}),
+})
+zones.hady:addGroups({
+	GroupCommander:new({name='Hady-supply-Mezmay', mission='supply', template='HeloSupplyTemplate', targetzone='Mezmay'}),
+	GroupCommander:new({name='Hady-supply-Echo', mission='supply', template='HeloSupplyTemplate', targetzone='Echo'}),
+	GroupCommander:new({name='Hady-supply-Maykop', mission='supply', template='HeloSupplyTemplate', targetzone='Maykop'}),
+	GroupCommander:new({name='Hady-supply-Charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Charlie'}),
+	GroupCommander:new({name='Hady-supply-Bravo', mission='supply', template='HeloSupplyTemplate', targetzone='Bravo'}),
+	GroupCommander:new({name='Hady-attack-Charlie-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Charlie', type='surface', SetActiveMission = true}),
+})
+zones.holmskiy:addGroups({
+	GroupCommander:new({name='Holmskiy-supply-Gelendzhik', mission='supply', template='HeloSupplyTemplate', targetzone='Gelendzhik'}),
+	GroupCommander:new({name='Holmskiy-supply-Novorossiysk', mission='supply', template='HeloSupplyTemplate', targetzone='Novorossiysk'}),
+	GroupCommander:new({name='Holmskiy-supply-Krymsk', mission='supply', template='HeloSupplyTemplate', targetzone='Krymsk'}),
+	GroupCommander:new({name='Holmskiy-supply-TankFactory', mission='supply', template='HeloSupplyTemplate', targetzone='TankFactory'}),
+	GroupCommander:new({name='Holmskiy-attack-Krymsk-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Krymsk', type='surface', SetActiveMission = true}),
+})
+zones.anastasia:addGroups({
+	GroupCommander:new({name='Anastasia-supply-Anapa', mission='supply', template='HeloSupplyTemplate', targetzone='Anapa'}),
+	GroupCommander:new({name='Anastasia-supply-Krymsk', mission='supply', template='HeloSupplyTemplate', targetzone='Krymsk'}),
+	GroupCommander:new({name='Anastasia-supply-Alpha', mission='supply', template='HeloSupplyTemplate', targetzone='Alpha'}),
+})
+zones.khashuri:addGroups({
+	GroupCommander:new({name='Khashuri-supply-Tyrini', mission='supply', template='HeloSupplyTemplate', targetzone='Tyrini'}),
+	GroupCommander:new({name='Khashuri-supply-Karaleti', mission='supply', template='HeloSupplyTemplate', targetzone='Karaleti'}),
+	GroupCommander:new({name='Khashuri-attack-Karaleti-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Karaleti', type='surface', SetActiveMission = true}),
+})
+zones.sachhere:addGroups({
+	GroupCommander:new({name='Sachhere-supply-Ambrolauri', mission='supply', template='HeloSupplyTemplate', targetzone='Ambrolauri'}),
+	GroupCommander:new({name='Sachhere-supply-Tyrini', mission='supply', template='HeloSupplyTemplate', targetzone='Tyrini'}),
+	GroupCommander:new({name='Sachhere-supply-Khashuri', mission='supply', template='HeloSupplyTemplate', targetzone='Khashuri'}),
+	GroupCommander:new({name='Sachhere-supply-Kvomo', mission='supply', template='HeloSupplyTemplate', targetzone='Kvomo'}),
+	GroupCommander:new({name='Sachhere-supply-Karaleti', mission='supply', template='HeloSupplyTemplate', targetzone='Karaleti'}),
+	GroupCommander:new({name='Sachhere-attack-Tyrini-Arty', mission='attack', template='ArtilleryConvoyShort', MissionType='ARTY', targetzone='Tyrini', type='surface', SetActiveMission = true}),
+})
+
+zones.novopavlo:addGroups({
+	GroupCommander:new({name='Novopavlo-supply-Mineralnye', mission='supply', template='HeloSupplyTemplate', targetzone='Mineralnye'}),
+	GroupCommander:new({name='Novopavlo-supply-Nalchik', mission='supply', template='HeloSupplyTemplate', targetzone='Nalchik'}),
+	GroupCommander:new({name='Novopavlo-supply-Mozdok', mission='supply', template='HeloSupplyTemplate', targetzone='Mozdok'}),
+	GroupCommander:new({name='Novopavlo-attack-Mineralnye-Arty', mission='attack', template='ArtilleryConvoyLong', MissionType='ARTY', targetzone='Mineralnye', type='surface', SetActiveMission = true}),
+})
+
 	local CarrierNavRefreshZones = {
 		["Red Carrier"] = true,
+		["Batumi"] = true,
 		["Sochi"] = true,
 		["Charlie"] = true,
 		["Novorossiysk"] = true,
@@ -1248,31 +1467,28 @@ zones.vaziani:addGroups({
 
 function SpawnFriendlyAssets(changedZone)
 
-	if zones.redcarrier.wasBlue then
-		trigger.action.setMarkupTypeLine(zones.bluecarrier.index, 0)
-	end
 	if not CustomFlags[1] then
 		zones.hidden1:MakeRedZoneUpgraded()
 		CustomFlags[1] = true
 	end
 
 	if zones.hidden4.side == 1 and zones.hidden4.active then
-		if zones.batumi.side == 2 and zones.alpha.side == 2 then
+		if zones.batumi.side == 2 and zones.india.side == 2 then
 			zones.hidden4:DestroyHiddenZone()
 		end
 	elseif zones.hidden4.side == 0 and (
-	(zones.batumi.side == 2 and zones.alpha.side ~= 2) or
-	(zones.batumi.side ~= 2 and zones.alpha.side == 2) ) then
+	(zones.batumi.side == 2 and zones.india.side ~= 2) or
+	(zones.batumi.side ~= 2 and zones.india.side == 2) ) then
 		zones.hidden4:MakeZoneRedAndUpgrade()
 	end
 
 	if zones.hidden5.side == 1 and zones.hidden5.active then
-		if zones.sochi.side == 2 and zones.alpha.side == 2 then
+		if zones.sochi.side == 2 and zones.india.side == 2 then
 			zones.hidden5:DestroyHiddenZone()
 		end
 	elseif zones.hidden5.side == 0 and (
-	(zones.sochi.side == 2 and zones.alpha.side ~= 2) or
-	(zones.sochi.side ~= 2 and zones.alpha.side == 2) ) then
+	(zones.sochi.side == 2 and zones.india.side ~= 2) or
+	(zones.sochi.side ~= 2 and zones.india.side == 2) ) then
 		zones.hidden5:MakeZoneRedAndUpgrade()
 	end
 	if zones.hidden6.side == 1 and zones.hidden6.active then
@@ -1285,12 +1501,12 @@ function SpawnFriendlyAssets(changedZone)
 		zones.hidden6:MakeZoneRedAndUpgrade()
 	end
 	if zones.hidden7.side == 1 and zones.hidden7.active then
-		if zones.krasnodarp.side == 2 and zones.india.side == 2 then
+		if zones.krasnodarp.side == 2 and zones.hotel.side == 2 then
 			zones.hidden7:DestroyHiddenZone()
 		end
 	elseif zones.hidden7.side == 0 and (
-	(zones.krasnodarp.side == 2 and zones.india.side ~= 2) or
-	(zones.krasnodarp.side ~= 2 and zones.india.side == 2) ) then
+	(zones.krasnodarp.side == 2 and zones.hotel.side ~= 2) or
+	(zones.krasnodarp.side ~= 2 and zones.hotel.side == 2) ) then
 		zones.hidden7:MakeZoneRedAndUpgrade()
 	end
 	if not zones.insurgencygriddl22.isAwaken and zones.krymsk.side == 2 and not insurgencydl22campStarted then
@@ -1315,18 +1531,18 @@ function SpawnFriendlyAssets(changedZone)
 		bc:RefreshConnectionsLines("Beslan")
 		end, {}, timer.getTime() + math.random(5,30))
 	end
-	if not zones.insurgencygridfj98.isAwaken and zones.hotel.side == 2 and not insurgencyfj98campStarted then
+	if not zones.insurgencygridfj98.isAwaken and zones.golf.side == 2 and not insurgencyfj98campStarted then
 		insurgencyfj98campStarted = true
 		timer.scheduleFunction(function()
 		zones.insurgencygridfj98:AwakenZoneAndUpgrade()
 		trigger.action.outTextForCoalition(2, L10N:Get("CA_SETUP_INSURGENTS_FJ98_INTEL"), 30)
 		trigger.action.outSoundForCoalition(2, 'WarningSound.ogg')
-		bc:addConnection("Hotel", "Insurgency Grid FJ98")
+		bc:addConnection("Golf", "Insurgency Grid FJ98")
 		bc:buildConnectionMap()
-		bc:RefreshConnectionsLines("Hotel")
+		bc:RefreshConnectionsLines("Golf")
 		end, {}, timer.getTime() + math.random(5,30))
 	end
-	if not zones.insurgencygridel70.isAwaken and zones.maykop.side == 2 and not insurgencyel70campStarted and not zones.samindia.active then
+	if not zones.insurgencygridel70.isAwaken and zones.maykop.side == 2 and not insurgencyel70campStarted and not zones.samdelta.active then
 		insurgencyel70campStarted = true
 		timer.scheduleFunction(function()
 		zones.insurgencygridel70:AwakenZoneAndUpgrade()
@@ -1342,27 +1558,33 @@ function SpawnFriendlyAssets(changedZone)
 
 	if zones.redcarrier.side == 2 then zones.redcarrier:disableZone(true) end
 
-	if not zones.redcarrier.active then
+	local redCarrierBlue = not zones.redcarrier.active
+	local Batumi = zones.batumi.side == 2
+	local batumiCarrierUnlock = CustomFlags['StartNormalFalse'] == true and Batumi
+
+	if redCarrierBlue or batumiCarrierUnlock then
 		activateGroupIfNotActive('CVN-72')
 		activateGroupIfNotActive('CVN-74')
 		activateGroupIfNotActive('Tarawa')
 
 		if not bc.carrierNavigation or not next(bc.carrierNavigation) then
-			bc:deployCarrierNavigationArea("CVN72_AREA_SOCHI", true)
+			if batumiCarrierUnlock and not redCarrierBlue then
+				bc:deployCarrierNavigationArea("CVN72_AREA_BATUMI")
+			elseif CustomFlags['StartNormalFalse'] == true then
+				bc:deployCarrierNavigationArea("CVN72_AREA_SOCHI", true)
+			else
+				bc:deployCarrierNavigationArea("CVN72_AREA_NOVOROSSIYSK")
+			end
 		end
 	end
 
-	if zones.bluecarrier.active then zones.bluecarrier:disableZone(true) end
-
 	if changedZone and not CarrierNavRefreshZones[changedZone] then return end
-
-	local redCarrierBlue = not bc:getZoneByName("Red Carrier").active
 
 	if CustomFlags['StartNormalFalse'] == true then
 		bc:setCarrierNavigationAutoRoute({})
 
 		bc:setCarrierNavigationAreaAvailability({
-			CVN72_AREA_BATUMI = redCarrierBlue,
+			CVN72_AREA_BATUMI = redCarrierBlue or Batumi,
 
 			CVN72_AREA_TRANSITION_1 = {
 				available = redCarrierBlue,
@@ -1380,37 +1602,40 @@ function SpawnFriendlyAssets(changedZone)
 			},
 
 			CVN72_AREA_CHARLIE = {
-				available = bc:getZoneByName("Charlie").side == 2,
+				available = redCarrierBlue and bc:getZoneByName("Charlie").side == 2,
 				autoMove = false,
 			},
 
 			CVN72_AREA_NOVOROSSIYSK = {
-				available = bc:getZoneByName("Novorossiysk").side == 2,
+				available = bc:getZoneByName("Anapa").side == 2,
 				autoMove = false,
 			},
 		}, false)
 	else
 		bc:setCarrierNavigationAutoRoute({
-			"CVN72_AREA_BATUMI",
-			"CVN72_AREA_SOCHI",
-			"CVN72_AREA_CHARLIE",
 			"CVN72_AREA_NOVOROSSIYSK",
+			"CVN72_AREA_CHARLIE",
+			"CVN72_AREA_SOCHI",
+			"CVN72_AREA_BATUMI",
 		})
 
 		bc:setCarrierNavigationAreaAvailability({
-			CVN72_AREA_BATUMI = true,
-			CVN72_AREA_SOCHI = {
-				available = redCarrierBlue,
-				via = { "CVN72_AREA_TRANSITION_1", "CVN72_AREA_TRANSITION_2" },
-				autoMove = redCarrierBlue,
+			CVN72_AREA_NOVOROSSIYSK = {
+				available = true,
+				reverse = true,
 			},
 			CVN72_AREA_CHARLIE = {
-				available = bc:getZoneByName("Charlie").side == 2,
-				autoMove = bc:getZoneByName("Charlie").side == 2,
+				available = redCarrierBlue and bc:getZoneByName("Charlie").side == 2,
+				autoMove = redCarrierBlue and bc:getZoneByName("Charlie").side == 2,
 			},
-			CVN72_AREA_NOVOROSSIYSK = {
-				available = bc:getZoneByName("Novorossiysk").side == 2,
-				autoMove = bc:getZoneByName("Novorossiysk").side == 2,
+			CVN72_AREA_SOCHI = {
+				available = redCarrierBlue,
+				autoMove = redCarrierBlue,
+			},
+			CVN72_AREA_BATUMI = {
+				available = redCarrierBlue and bc:getZoneByName("Batumi").side == 2,
+				via = { "CVN72_AREA_TRANSITION_2", "CVN72_AREA_TRANSITION_1" },
+				autoMove = redCarrierBlue and bc:getZoneByName("Batumi").side == 2,
 			},
 			CVN72_AREA_TRANSITION_1 = {
 				available = redCarrierBlue,
@@ -1442,17 +1667,17 @@ missions = {
         missionGroup = "SochiEscortGroup",
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Sochi"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Sochi"),
-        TargetZone = "Bravo",
+        TargetZone = "Delta",
         radius = 2500,
         MissionType = "Escort",
         flag = 001,
 		ActivateZone = "hidden"
     },
-        ["Bravo"] = {	
-        zone = "Bravo",
-        missionGroup = "BravoEscortGroup",
-        menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Bravo"),
-        missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Bravo"),
+        ["Delta"] = {
+        zone = "Delta",
+        missionGroup = "DeltaEscortGroup",
+        menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Delta"),
+        missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Delta"),
         TargetZone = "Charlie",
         radius = 2500,
         MissionType = "Escort",
@@ -1464,17 +1689,17 @@ missions = {
         missionGroup = "CharlieEscortGroup",
         menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Charlie"),
         missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Charlie"),
-        TargetZone = "Delta",
+        TargetZone = "Bravo",
         radius = 2500,
         MissionType = "Escort",
         flag = 111,
 		ActivateZone = "hidden3"
     },
-        ["Delta"] = {	
-        zone = "Delta",
-        missionGroup = "DeltaEscortGroup",
-        menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Delta"),
-        missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Delta"),
+        ["Bravo"] = {
+        zone = "Bravo",
+        missionGroup = "BravoEscortGroup",
+        menuTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Bravo"),
+        missionTitle = LTFormat("CA_MISSION_GROUND_ESCORT_TITLE", "Bravo"),
         TargetZone = "Gelendzhik",
         radius = 2500,
         MissionType = "Escort",
@@ -1483,53 +1708,48 @@ missions = {
     },
 }
 
-bc:addConnection("Blue Carrier", "Batumi")
 bc:addConnection("Batumi","Kobuleti")
-bc:addConnection("Kobuleti","SAM-Alpha")
+bc:addConnection("Kobuleti","SAM-India")
 bc:addConnection("Kobuleti","Senaki")
 
 bc:addConnection("Senaki","Kutaisi")
-bc:addConnection("Kutaisi","Alpha")
-bc:addConnection("Alpha","Sukhumi")
-bc:addConnection("Alpha","InsurgentCamp",nil,true)
-bc:addConnection("Sukhumi","SAM-Delta",nil,true)
+bc:addConnection("Kutaisi","India")
+bc:addConnection("India","Sukhumi")
+bc:addConnection("India","InsurgentCamp",nil,true)
+bc:addConnection("Sukhumi","SAM-Foxtrot",nil,true)
 bc:addConnection("Sukhumi","SecretTechFacility",nil,true)
 bc:addConnection("Sukhumi","Gudauta")
 bc:addConnection("Sochi","Gudauta")
-bc:addConnection("Sochi","Bravo")
+bc:addConnection("Sochi","Delta")
 bc:addConnection("Sochi","Red Carrier")
 bc:addConnection("Sochi","AmmonitionDepo",nil,true)
-bc:addConnection("Bravo","Charlie")
-bc:addConnection("Charlie","Delta")
-bc:addConnection("Delta","Gelendzhik")
+bc:addConnection("Delta","Charlie")
+bc:addConnection("Charlie","Bravo")
+bc:addConnection("Bravo","Gelendzhik")
 
 bc:addConnection("Gelendzhik","Novorossiysk")
+bc:addConnection("Novorossiysk","Krymsk")
 bc:addConnection("Novorossiysk","Anapa")
-bc:addConnection("Anapa","SAM-Golf",nil,true)
+bc:addConnection("Anapa","SAM-Alpha",nil,true)
 bc:addConnection("Anapa","Krymsk")
-bc:addConnection("Krymsk","Echo")
-bc:addConnection("Echo","Krasnodar-Center")
-bc:addConnection("Krasnodar-Center","SAM-Hotel",nil,true)
+bc:addConnection("Krymsk","Alpha")
+bc:addConnection("Alpha","Krasnodar-Center")
+bc:addConnection("Krasnodar-Center","SAM-Charlie",nil,true)
 bc:addConnection("Krasnodar-Center","Krasnodar-Pashkovsky")
-bc:addConnection("Krasnodar-Pashkovsky","TankFactory",nil, true)
-bc:addConnection("Krasnodar-Pashkovsky","Foxtrot")
+bc:addConnection("Krasnodar-Center","TankFactory",nil, true)
+bc:addConnection("Krasnodar-Pashkovsky","Echo")
 bc:addConnection("Krasnodar-Pashkovsky","Maykop")
-bc:addConnection("Foxtrot","Maykop")
-bc:addConnection("Maykop","Golf")
-bc:addConnection("Maykop","SAMSite")
---bc:addConnection("SAMSite","Maykop")
-bc:addConnection("Maykop","SAM-India",nil,true)
+bc:addConnection("Echo","Maykop")
+bc:addConnection("Maykop","Foxtrot")
+bc:addConnection("Maykop","SAM-Delta",nil,true)
+bc:addConnection("Foxtrot","Golf")
 bc:addConnection("Golf","Hotel")
-bc:addConnection("Hotel","India")
-bc:addConnection("India","Mineralnye")
+bc:addConnection("Hotel","Mineralnye")
 bc:addConnection("Mineralnye","Nalchik")
 bc:addConnection("Mineralnye","Mozdok")
 bc:addConnection("Mineralnye","SAM-Juliett",nil,true)
 bc:addConnection("Mozdok","Nalchik")
 bc:addConnection("Mozdok","Beslan")
-bc:addConnection("Nalchik","ChemSite",nil,true)
-bc:addConnection("Nalchik","ArtilleryFactory")
-bc:addConnection("Beslan","ArtilleryFactory")
 
 bc:addConnection("Beslan","Juliett")
 bc:addConnection("Juliett","Kilo")
@@ -1543,14 +1763,84 @@ bc:addConnection("Vaziani","SAM-Mike")
 
 bc:addConnection("Batumi","MiningFacility")
 
-bc:addConnection("Mineralnye", "SAMSite")
 
-bc:addConnection("Senaki","SAM-Bravo",nil,true)
-bc:addConnection("Kutaisi","SAM-Charlie")
+bc:addConnection("Senaki","SAM-Golf",nil,true)
+bc:addConnection("Kutaisi","SAM-Hotel")
 
 bc:addConnection("Sochi","SAM-Echo",nil,true)
 
 bc:addConnection("Mozdok","SAM-Kilo",nil,true)
+
+bc:addConnection("Tyrini","Kutaisi",true)
+bc:addConnection("Isunderi","Kutaisi",true)
+bc:addConnection("Isunderi","InsurgentCamp",true)
+bc:addConnection("Ambrolauri","Isunderi",true)
+bc:addConnection("Ambrolauri","Tyrini",true)
+bc:addConnection("Karaleti","Lima",true)
+bc:addConnection("Karaleti","Kilo",true)
+bc:addConnection("Kvomo","Karaleti",true)
+bc:addConnection("Kvomo","Ambrolauri",true)
+bc:addConnection("Kvomo","Kilo",true)
+bc:addConnection("Guso","Kvomo",true)
+bc:addConnection("Guso","Juliett",true)
+bc:addConnection("Guso","Kilo",true)
+bc:addConnection("Guso","Beslan",true)
+bc:addConnection("Digora","Guso",true)
+bc:addConnection("Digora","Beslan",true)
+bc:addConnection("ZHemtala","Nalchik",true)
+bc:addConnection("ZHemtala","Guso",true)
+bc:addConnection("ZHemtala","Digora",true)
+bc:addConnection("Terek","Nalchik",true)
+bc:addConnection("Terek","Beslan",true)
+bc:addConnection("Terek","Mozdok",true)
+bc:addConnection("Revari","India",true)
+bc:addConnection("Revari","Isunderi",true)
+bc:addConnection("Chukuli","Isunderi",true)
+bc:addConnection("Chukuli","Ambrolauri",true)
+bc:addConnection("Chukuli","Revari",true)
+bc:addConnection("Chiora","Chukuli",true)
+bc:addConnection("Chiora","Guso",true)
+bc:addConnection("Chiora","Ambrolauri",true)
+bc:addConnection("Chiora","Kvomo",true)
+bc:addConnection("Hurzuk","Revari",true)
+bc:addConnection("Hurzuk","Golf",true)
+bc:addConnection("RiverSide","Golf",true)
+bc:addConnection("RiverSide","Gudauta",true)
+bc:addConnection("Luna","Hotel",true)
+bc:addConnection("Luna","Mineralnye",true)
+bc:addConnection("Luna","Hurzuk",true)
+bc:addConnection("Tyra","Nalchik",true)
+bc:addConnection("Tyra","Hurzuk",true)
+bc:addConnection("Tyra","Luna",true)
+bc:addConnection("Tyra","Chukuli",true)
+bc:addConnection("Tyra","ZHemtala",true)
+bc:addConnection("Mezmay","Delta",true)
+bc:addConnection("Mezmay","Charlie",true)
+bc:addConnection("Mezmay","Maykop",true)
+bc:addConnection("Mezmay","Foxtrot",true)
+bc:addConnection("Mezmay","Sochi",true)
+bc:addConnection("Hady","Mezmay",true)
+bc:addConnection("Hady","Echo",true)
+bc:addConnection("Hady","Maykop",true)
+bc:addConnection("Hady","Charlie",true)
+bc:addConnection("Hady","Bravo",true)
+bc:addConnection("Holmskiy","Gelendzhik",true)
+bc:addConnection("Holmskiy","Novorossiysk",true)
+bc:addConnection("Holmskiy","Krymsk",true)
+bc:addConnection("Holmskiy","TankFactory",true)
+bc:addConnection("Anastasia","Anapa",true)
+bc:addConnection("Anastasia","Krymsk",true)
+bc:addConnection("Anastasia","Alpha",true)
+bc:addConnection("Khashuri","Tyrini",true)
+bc:addConnection("Khashuri","Karaleti",true)
+bc:addConnection("Sachhere","Ambrolauri",true)
+bc:addConnection("Sachhere","Tyrini",true)
+bc:addConnection("Sachhere","Khashuri",true)
+bc:addConnection("Sachhere","Kvomo",true)
+bc:addConnection("Sachhere","Karaleti",true)
+bc:addConnection("Novopavlo","Mineralnye",true)
+bc:addConnection("Novopavlo","Nalchik",true)
+bc:addConnection("Novopavlo","Mozdok",true)
 
 bc:addHiddenConnection("Nalchik","Beslan")
 bc:addHiddenConnection("Mineralnye","Maykop")
@@ -1623,30 +1913,30 @@ zones.anapa:registerTrigger('captured', function(_, zone)
 	end
 end, 'anapacaptured')
 
-zones.samalpha:registerTrigger('lost', function(event, sender) 
+zones.samindia:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamalpha')
+end, 'disablesamindia')
 
 
-zones.sambravo:registerTrigger('lost', function(event, sender) 
+zones.samgolf:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesambravo')
+end, 'disablesamgolf')
 
-zones.samcharlie:registerTrigger('lost', function(event, sender) 
+zones.samhotel:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamcharlie')
+end, 'disablesamhotel')
 
-zones.samdelta:registerTrigger('lost', function(event, sender) 
+zones.samfoxtrot:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamdelta')
+end, 'disablesamfoxtrot')
 
 zones.samecho:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
@@ -1654,29 +1944,29 @@ zones.samecho:registerTrigger('lost', function(event, sender)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
 end, 'disablesamecho')
 
-zones.samfoxtrot:registerTrigger('lost', function(event, sender) 
+zones.sambravo:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamfoxtrot')
+end, 'disablesambravo')
 
-zones.samgolf:registerTrigger('lost', function(event, sender) 
+zones.samalpha:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamgolf')
+end, 'disablesamalpha')
 
-zones.samhotel:registerTrigger('lost', function(event, sender) 
+zones.samcharlie:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamhotel')
+end, 'disablesamcharlie')
 
-zones.samindia:registerTrigger('lost', function(event, sender) 
+zones.samdelta:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamindia')
+end, 'disablesamdelta')
 
 zones.samjuliett:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
@@ -1702,11 +1992,6 @@ zones.sammike:registerTrigger('lost', function(event, sender)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
 end, 'disablesammike')
 
-zones.samsite:registerTrigger('lost', function(event, sender) 
-	sender:disableZone(true)
-	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 500),20)
-end, 'disablesamsite')
 
 zones.miningfacility:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
@@ -1725,25 +2010,6 @@ zones.ammonitiondepo:registerTrigger('lost', function(event, sender)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_AMMUNITION_DEPO_DESTROYED"),20)
 end, 'disableammonitiondepo')
-
-zones.artilleryfactory:registerTrigger('lost', function(event, sender) 
-	sender:disableZone(true)
-	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_ARTILLERY_FACTORY_DESTROYED"),20)
-end, 'disableartilleryfactory')
-
-
-zones.chemsite:registerTrigger('lost', function(event, sender) 
-	sender:disableZone(true)
-	bc:addFunds(2,500)
-	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_CHEMSITE_DESTROYED"),20)
-end, 'disablechemsite')
-
-zones.fueldepo:registerTrigger('lost', function(event, sender) 
-	bc:addFunds(2,500)
-	sender:disableZone(true)
-	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_FUELDEPO_DISABLED"),20)
-end, 'disablefueldepo')
 
 zones.secrettechfacility:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
@@ -1853,7 +2119,7 @@ timer.scheduleFunction(function()
 		'Rezky #',
 		'Molniya #',
 		'Neustrashimy #',
-	}, 50, nil, { groupMin = 60, groupMax = 180, zoneMin = 120, zoneMax = 360, cycleMin = 3600, cycleMax = 3600, carrierRangeNm = 80 })
+	}, 50, nil, { groupMin = 60, groupMax = 180, zoneMin = 120, zoneMax = 360, cycleMin = 1800, cycleMax = 2300, carrierRangeNm = 80 })
 end, {}, timer.getTime() + 30)
 
 
@@ -3478,31 +3744,30 @@ bc:addShopItem(2, 'dynamicarco', 1, 1, ShopRankRequirements.dynamicarco, ShopCat
 bc:addShopItem(2, 'dynamictexaco', 1, 2, ShopRankRequirements.dynamictexaco, ShopCats.OtherSupport) -- Airforce tanker
 bc:addShopItem(2, 'farphere', -1, 3, ShopRankRequirements.farphere, ShopCats.OtherSupport) -- deploy FARP
 supplyZones = {
-	--'Blue Carrier',
 	'Red Carrier',
 	'Batumi',	
 	'Kobuleti', 
 	'Senaki', 
 	'Kutaisi', 
-	'Alpha', 
+	'India',
 	'Sukhumi', 
 	'Gudauta', 
 	'Sochi',
-	'Bravo',
-	'Charlie',
 	'Delta',
+	'Charlie',
+	'Bravo',
 	'Gelendzhik',
 	'Novorossiysk',
 	'Anapa',
 	'Krymsk',
-	'Echo',
+	'Alpha',
 	'Krasnodar-Center',
 	'Krasnodar-Pashkovsky',
-	'Foxtrot',
+	'Echo',
 	'Maykop',
+	'Foxtrot',
 	'Golf',
 	'Hotel',
-	'India',
 	'Mineralnye',
 	'Nalchik',
 	'Mozdok',
@@ -3532,29 +3797,26 @@ else
     StartNormal = not CustomFlags['StartNormalFalse']
 end
 
-local disableBlueCarrierAfterInit = not StartNormal
+local startNormalFalseAfterInit = not StartNormal
 
 if not bc.saveLoaded then
     applyRandomRedUpgrades()
     applyRandomBlueUpgrades()
 
     if not StartNormal then
-        if zones.bluecarrier.active then
-            zones.soganlug.LogisticCenter = true
-            zones.vaziani.LogisticCenter = true
-            zones.tbilisi.LogisticCenter = true
-        end
+        zones.soganlug.LogisticCenter = true
+        zones.vaziani.LogisticCenter = true
+        zones.tbilisi.LogisticCenter = true
 		DestroyOnce = true
     else
-        zones.batumi.LogisticCenter = true
-        bc:addConnection("Kutaisi","FuelDepo")
-		bc:addConnection("Gelendzhik","SAM-Foxtrot")
+        zones.anapa.LogisticCenter = true
+		bc:addConnection("Gelendzhik","SAM-Bravo")
+		DestroySamGolfOnce = true
     end
 else
     applyRandomUpgradesForNewZonesOnly()
     if StartNormal then
-        bc:addConnection("Kutaisi","FuelDepo")
-		bc:addConnection("Gelendzhik","SAM-Foxtrot")
+		bc:addConnection("Gelendzhik","SAM-Bravo")
     end
 end
 
@@ -3565,18 +3827,16 @@ if zones.insurgencygridmn47.side == 1 then
 bc:addConnection("Beslan", "Insurgency Grid MN47")
 end
 if zones.insurgencygridfj98.side == 1 then
-bc:addConnection("Hotel", "Insurgency Grid FJ98")
+bc:addConnection("Golf", "Insurgency Grid FJ98")
 end
 if zones.insurgencygridel70.side == 1 then
 bc:addConnection("Maykop", "Insurgency Grid EL70")
 end
 bc:init()
 
-if disableBlueCarrierAfterInit then
-	bc:addConnection("Novorossiysk","SAM-Foxtrot")
+if startNormalFalseAfterInit then
+	bc:addConnection("Novorossiysk","SAM-Bravo")
 	bc:addHiddenConnection("Soganlug", "Kutaisi")
-	bc:addConnection("Soganlug", "FuelDepo")
-	bc:RefreshConnectionsLines("FuelDepo")
 	bc:RefreshConnectionsLines("Kutaisi")
 end
 if DestroyOnce then
@@ -3584,12 +3844,12 @@ if DestroyOnce then
 	zones.samlima:disableZone(true)
 	zones.sammike:disableZone(true)
 end
-
-if zones.bluecarrier.active then 
-	zones.bluecarrier:disableZone(true)
+if DestroySamGolfOnce then
+	zones.samalpha:disableZone(true)
 end
 
-local carriersShouldBeActive = StartNormal or not zones.redcarrier.active
+local batumiCarrierUnlock = CustomFlags['StartNormalFalse'] == true and zones.batumi.side == 2
+local carriersShouldBeActive = StartNormal or not zones.redcarrier.active or batumiCarrierUnlock
 
 if carriersShouldBeActive then
 	activateGroupIfNotActive('CVN-72')
@@ -3617,20 +3877,22 @@ bc:buildCapSpawnBuckets()
 startWarehousePersistence()
 bc:enableCarrierNavigation()
 if carriersShouldBeActive and (not bc.carrierNavigation or not next(bc.carrierNavigation)) then
-	if CustomFlags['StartNormalFalse'] == true then
+	if batumiCarrierUnlock and zones.redcarrier.active then
+		bc:deployCarrierNavigationArea("CVN72_AREA_BATUMI")
+	elseif CustomFlags['StartNormalFalse'] == true then
 		bc:deployCarrierNavigationArea("CVN72_AREA_SOCHI", true)
 	else
-		bc:deployCarrierNavigationArea("CVN72_AREA_BATUMI")
+		bc:deployCarrierNavigationArea("CVN72_AREA_NOVOROSSIYSK",true)
 	end
 end
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BATUMI", "Batumi", true)
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Sochi", true)
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Gudauta", true)
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Bravo", true)
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Delta", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Bravo", true)
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Charlie", true)
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_CHARLIE", "Charlie", true)
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Delta", true)
+bc:addCarrierNavigationSuspendConnection("CVN72_AREA_SOCHI", "Bravo", true)
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_CHARLIE", "Gelendzhik", true)
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_CHARLIE", "Novorossiysk", true)
 bc:addCarrierNavigationSuspendConnection("CVN72_AREA_NOVOROSSIYSK", "Anapa", true)
@@ -3668,6 +3930,30 @@ DynamicHybridConfig = DynamicHybridConfig or {
 	minCapAttackNm = 35,
 	minPlaneAttackNm = 25,
 	minHeloAttackNm = 15,
+	forcedZoneCapabilities = {
+		["Tyrini"] = { groundAttack = true },
+		["Isunderi"] = { groundAttack = true },
+		["Ambrolauri"] = { groundAttack = true },
+		["Karaleti"] = { groundAttack = true },
+		["Kvomo"] = { groundAttack = true },
+		["Guso"] = { groundAttack = true },
+		["Digora"] = { groundAttack = true },
+		["ZHemtala"] = { groundAttack = true },
+		["Terek"] = { groundAttack = true },
+		["Revari"] = { groundAttack = true },
+		["Chukuli"] = { groundAttack = false, heloCas = true },
+		["Hurzuk"] = { groundAttack = false },
+		["Mezmay"] = { groundAttack = true },
+		["Hady"] = { groundAttack = true },
+		["Holmskiy"] = { groundAttack = true },
+		["Anastasia"] = { groundAttack = true },
+		["Chiora"] = { groundAttack = true },
+		["Khashuri"] = { groundAttack = true },
+		["Sachhere"] = { groundAttack = true },
+		["Luna"] = { groundAttack = true },
+		["Tyra"] = { groundAttack = true },
+		["Novopavlo"] = { groundAttack = true },
+	},
 	log = true,
 }
 bc:startDynamicHybridFiller(DynamicHybridConfig)
@@ -4590,22 +4876,22 @@ mc:trackMission({
 --------------------- Artillery STRIKE MISSION ----------------------
 mc:trackMission({
     title = LTGet("SYRIA_MISSION_ARTY_TITLE"),
-    description = LTFormat("SYRIA_MISSION_ARTY_DESC", "Krymsk", "Echo"),
+    description = LTFormat("SYRIA_MISSION_ARTY_DESC", "Krymsk", "Alpha"),
     messageStart = L10N:Get("SYRIA_MISSION_ARTY_START"),
     messageEnd = L10N:Get("SYRIA_MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Echo-attack-Krymsk-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Echo-attack-Krymsk-Arty')
+		RegisterGroupTarget('Alpha-attack-Krymsk-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Alpha-attack-Krymsk-Arty')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Echo-attack-Krymsk-Arty')
+		bc:cancelGroupTargetMission('Alpha-attack-Krymsk-Arty')
     end,
     isActive = function()
-        if not ActiveMission['Echo-attack-Krymsk-Arty'] then return false end
-        if Group.getByName('Echo-attack-Krymsk-Arty') then return true end
-        ActiveMission['Echo-attack-Krymsk-Arty'] = nil
+        if not ActiveMission['Alpha-attack-Krymsk-Arty'] then return false end
+        if Group.getByName('Alpha-attack-Krymsk-Arty') then return true end
+        ActiveMission['Alpha-attack-Krymsk-Arty'] = nil
         return false
     end
 })
@@ -4619,15 +4905,15 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Krymsk-Attack-Anapa-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Krymsk-Attack-Anapa-Arty')
+		RegisterGroupTarget('Krymsk-attack-Anapa-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Krymsk-attack-Anapa-Arty')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Krymsk-Attack-Anapa-Arty')
+		bc:cancelGroupTargetMission('Krymsk-attack-Anapa-Arty')
     end,
     isActive = function()
-        if not ActiveMission['Krymsk-Attack-Anapa-Arty'] then return false end
-        if Group.getByName('Krymsk-Attack-Anapa-Arty') then return true end
-        ActiveMission['Krymsk-Attack-Anapa-Arty'] = nil
+        if not ActiveMission['Krymsk-attack-Anapa-Arty'] then return false end
+        if Group.getByName('Krymsk-attack-Anapa-Arty') then return true end
+        ActiveMission['Krymsk-attack-Anapa-Arty'] = nil
         return false
     end
 })
@@ -4678,22 +4964,22 @@ mc:trackMission({
 
 mc:trackMission({
     title = LTGet("SYRIA_MISSION_ARTY_TITLE"),
-    description = LTFormat("SYRIA_MISSION_ARTY_DESC", "Maykop", "Golf"),
+    description = LTFormat("SYRIA_MISSION_ARTY_DESC", "Maykop", "Foxtrot"),
     messageStart = L10N:Get("SYRIA_MISSION_ARTY_START"),
     messageEnd = L10N:Get("SYRIA_MISSION_ARTY_END"),
     startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Golf-attack-Maykop-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Golf-attack-Maykop-Arty')
+		RegisterGroupTarget('Foxtrot-attack-Maykop-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Foxtrot-attack-Maykop-Arty')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Golf-attack-Maykop-Arty')
+		bc:cancelGroupTargetMission('Foxtrot-attack-Maykop-Arty')
     end,
     isActive = function()
-        if not ActiveMission['Golf-attack-Maykop-Arty'] then return false end
-        if Group.getByName('Golf-attack-Maykop-Arty') then return true end
-        ActiveMission['Golf-attack-Maykop-Arty'] = nil
+        if not ActiveMission['Foxtrot-attack-Maykop-Arty'] then return false end
+        if Group.getByName('Foxtrot-attack-Maykop-Arty') then return true end
+        ActiveMission['Foxtrot-attack-Maykop-Arty'] = nil
         return false
     end
 })
@@ -5697,8 +5983,8 @@ evc:addEvent({
 	if ActiveMission['SamDeltaWarehouse'] then return false end
 	if CustomFlags["SamDeltaWarehouse"] then return false end
 	if bc:getZoneByName('Sukhumi').side ~= 1 or bc:getZoneByName('Sukhumi').suspended then return false end
-	if bc:getZoneByName('SAM-Delta').side ~= 1 or bc:getZoneByName('SAM-Delta').suspended then return false end
-	if bc:getZoneByName('Alpha').side ~= 2 and bc:getZoneByName('Sochi').side ~= 2 then return false end
+	if bc:getZoneByName('SAM-Foxtrot').side ~= 1 or bc:getZoneByName('SAM-Foxtrot').suspended then return false end
+	if bc:getZoneByName('India').side ~= 2 and bc:getZoneByName('Sochi').side ~= 2 then return false end
 	return true
 	end,
 })
@@ -5721,7 +6007,7 @@ mc:trackMission({
 	end,
 	isActive = function()
 		if CustomFlags["SamDeltaWarehouse"] then return false end
-		if bc:getZoneByName('Sukhumi').side ~= 1 or bc:getZoneByName('SAM-Delta').side ~= 1 then return false end
+		if bc:getZoneByName('Sukhumi').side ~= 1 or bc:getZoneByName('SAM-Foxtrot').side ~= 1 then return false end
 		if ActiveMission['SamDeltaWarehouse'] then return true end
 		return false
 	end
@@ -5801,7 +6087,7 @@ evc:addEvent({
 	if ActiveMission['SamGolfWarehouse'] then return false end
 	if CustomFlags["SamGolfWarehouse"] then return false end
 	if bc:getZoneByName('Anapa').side ~= 1 or bc:getZoneByName('Anapa').suspended then return false end
-	if bc:getZoneByName('SAM-Golf').side ~= 1 or bc:getZoneByName('SAM-Golf').suspended then return false end
+	if bc:getZoneByName('SAM-Alpha').side ~= 1 or bc:getZoneByName('SAM-Alpha').suspended then return false end
 	if bc:getZoneByName('Krasnodar-Center').side ~= 2 and bc:getZoneByName('Gelendzhik').side ~= 2 then return false end
 	return true
 	end,
@@ -5825,7 +6111,7 @@ mc:trackMission({
 	end,
 	isActive = function()
 		if CustomFlags["SamGolfWarehouse"] then return false end
-		if bc:getZoneByName('Anapa').side ~= 1 or bc:getZoneByName('SAM-Golf').side ~= 1 then return false end
+		if bc:getZoneByName('Anapa').side ~= 1 or bc:getZoneByName('SAM-Alpha').side ~= 1 then return false end
 		if ActiveMission['SamGolfWarehouse'] then return true end
 		return false
 	end
@@ -5853,7 +6139,7 @@ evc:addEvent({
 	if ActiveMission['SamAlphaWarehouse'] then return false end
 	if CustomFlags["SamAlphaWarehouse"] then return false end
 	if bc:getZoneByName('Kobuleti').side ~= 1 or bc:getZoneByName('Kobuleti').suspended then return false end
-	if bc:getZoneByName('SAM-Alpha').side ~= 1 or bc:getZoneByName('SAM-Alpha').suspended then return false end
+	if bc:getZoneByName('SAM-India').side ~= 1 or bc:getZoneByName('SAM-India').suspended then return false end
 	if bc:getZoneByName('Batumi').side ~= 2 and bc:getZoneByName('Kutaisi').side ~= 2 then return false end
 	return true
 	end,
@@ -5877,7 +6163,7 @@ mc:trackMission({
 	end,
 	isActive = function()
 		if CustomFlags["SamAlphaWarehouse"] then return false end
-		if bc:getZoneByName('Kobuleti').side ~= 1 or bc:getZoneByName('SAM-Alpha').side ~= 1 then return false end
+		if bc:getZoneByName('Kobuleti').side ~= 1 or bc:getZoneByName('SAM-India').side ~= 1 then return false end
 		if ActiveMission['SamAlphaWarehouse'] then return true end
 		return false
 	end
@@ -5905,7 +6191,7 @@ evc:addEvent({
 	if ActiveMission['SamHotelWarehouse'] then return false end
 	if CustomFlags["SamHotelWarehouse"] then return false end
 	if bc:getZoneByName('Krasnodar-Pashkovsky').side ~= 1 or bc:getZoneByName('Krasnodar-Pashkovsky').suspended then return false end
-	if bc:getZoneByName('SAM-Hotel').side ~= 1 or bc:getZoneByName('SAM-Hotel').suspended then return false end
+	if bc:getZoneByName('SAM-Charlie').side ~= 1 or bc:getZoneByName('SAM-Charlie').suspended then return false end
 	if bc:getZoneByName('Krymsk').side ~= 2 and bc:getZoneByName('Maykop').side ~= 2 then return false end
 	return true
 	end,
@@ -5929,7 +6215,7 @@ mc:trackMission({
 	end,
 	isActive = function()
 		if CustomFlags["SamHotelWarehouse"] then return false end
-		if bc:getZoneByName('Krasnodar-Pashkovsky').side ~= 1 or bc:getZoneByName('SAM-Hotel').side ~= 1 then return false end
+		if bc:getZoneByName('Krasnodar-Pashkovsky').side ~= 1 or bc:getZoneByName('SAM-Charlie').side ~= 1 then return false end
 		if ActiveMission['SamHotelWarehouse'] then return true end
 		return false
 	end
@@ -5958,7 +6244,7 @@ evc:addEvent({
 	if CustomFlags["SamJuliettWarehouse"] then return false end
 	if bc:getZoneByName('Mineralnye').side ~= 1 or bc:getZoneByName('Mineralnye').suspended then return false end
 	if bc:getZoneByName('SAM-Juliett').side ~= 1 or bc:getZoneByName('SAM-Juliett').suspended then return false end
-	if bc:getZoneByName('Hotel').side ~= 2 and bc:getZoneByName('Nalchik').side ~= 2 and bc:getZoneByName('Mozdok').side ~= 2 then return false end
+	if bc:getZoneByName('Golf').side ~= 2 and bc:getZoneByName('Nalchik').side ~= 2 and bc:getZoneByName('Mozdok').side ~= 2 then return false end
 	return true
 	end,
 })
@@ -6117,18 +6403,41 @@ end
 ----------------------- END OF FLAGS --------------------------
 
 airbaseStatics = {
-	["Alpha"] = {"Farpalphaammo", "Farpalphafuel", "Farpalphatent1", "Farpalphatent2", "Farpalphatent3", "Farpalphatent4", "Farpalphacommand", "Farpalphawind"},
-    ["Bravo"] = {"Farbravoammo", "Farpbravofuel", "Farpbravotent1", "Farpbravotent2", "Farpbravotent3", "Farpbravotent4", "Farpbravocommand", "Farpbravowind"},
+	["India"] = {"Farpindiaammo", "Farpindiafuel", "Farpindiatent1", "Farpindiatent2", "Farpindiatent3", "Farpindiatent4", "Farpindiacommand", "Farpindiawind"},
+    ["Delta"] = {"Farpdeltaammo", "Farpdeltafuel", "Farpdeltatent1", "Farpdeltatent2", "Farpdeltatent3", "Farpdeltatent4", "Farpdeltacommand", "Farpdeltawind"},
     ["Charlie"] = {"Farpcharliammo", "Farpcharliefuel", "Farpcharlietent1", "Farpcharlietent2", "Farpcharlietent3", "Farpcharlietent4", "Farpcharlicenter", "Farpcharliewind"},
-    ["Delta"] = {"Farpdeltaammo", "Farpdeltafuel", "Farpdeltatent1", "Farpdeltatent2", "Farpdeltatent3", "Farpdeltatent4", "Farpdeltacenter", "Farpdeltawind"},
+    ["Bravo"] = {"Farpbravoammo", "Farpbravofuel", "Farpbravotent1", "Farpbravotent2", "Farpbravotent3", "Farpbravotent4", "Farpbravocenter", "Farpbravowind"},
+    ["Alpha"] = {"Farpalphaammo", "Farpalphafuel", "Farpalphatent1", "Farpalphatent2", "Farpalphatent3", "Farpalphatent4", "Farpalphacommand", "Farpalphawind"},
     ["Echo"] = {"Farpechoammo", "Farpechofuel", "Farpechotent1", "Farpechotent2", "Farpechotent3", "Farpechotent4", "Farpechocommand", "Farpechowind"},
     ["Foxtrot"] = {"Farpfoxtrotammo", "Farpfoxtrotfuel", "Farpfoxtrottent1", "Farpfoxtrottent2", "Farpfoxtrottent3", "Farpfoxtrottent4", "Farpfoxtrotcommand", "Farpfoxtrotwind"},
     ["Golf"] = {"Farpgolfammo", "Farpgolffuel", "Farpgolftent1", "Farpgolftent2", "Farpgolftent3", "Farpgolftent4", "Farpgolfcommand", "Farpgolfwind"},
     ["Hotel"] = {"Farphotelammo", "Farphotelfuel", "Farphoteltent1", "Farphoteltent2", "Farphoteltent3", "Farphoteltent4", "Farphotelcommand", "Farphotelwind"},
-    ["India"] = {"Farpindiaammo", "Farpindiafuel", "Farpindiatent1", "Farpindiatent2", "Farpindiatent3", "Farpindiatent4", "Farpindiacommand", "Farpindiawind"},
+    ["Anastasia"] = {"Farpanastasiaammo", "Farpanastasiafuel", "Farpanastasiatent1", "Farpanastasiatent2", "Farpanastasiatent3", "Farpanastasiatent4", "Farpanastasiacommand", "Farpanastasiawind"},
     ["Juliett"] = {"Farpjuliettammo", "Farpjuliettfuel", "Farpjulietttent1", "Farpjulietttent2", "Farpjulietttent3", "Farpjulietttent4", "Farpjulietttent1command", "Farpjuliettwind"},
     ["Kilo"] = {"Farpkiloammo", "Farpkilofuel", "Farpkilotent1", "Farpkilotent2", "Farpkilotent3", "Farpkilotent4", "Farpkilocommand", "Farpkilowind"},
     ["Lima"] = {"Farplimaammo", "Farplimafuel", "Farplimatent1", "Farplimatent2", "Farplimatent3", "Farplimatent4", "Farplimacommand", "Farplimawind"},
+    ["Chukuli"] = {"Farpchukuliammo", "Farpchukulifuel", "Farpchukulitent1", "Farpchukulitent2", "Farpchukulitent3", "Farpchukulitent4", "Farpchukulicommand", "Farpchukuliwind"},
+    ["Sachhere"] = {"Farpsachhereammo", "Farpsachherefuel", "Farpsachheretent1", "Farpsachheretent2", "Farpsachheretent3", "Farpsachheretent4", "Farpsachherecommand", "Farpsachherewind"},
+    ["Khashuri"] = {"Farpkhashuriammo", "Farpkhashurifuel", "Farpkhashuritent1", "Farpkhashuritent2", "Farpkhashuritent3", "Farpkhashuritent4", "Farpkhashuricommand", "Farpkhashuriwind"},
+    ["Terek"] = {"Farpterekammo", "Farpterekfuel", "Farpterektent1", "Farpterektent2", "Farpterektent3", "Farpterektent4", "Farpterekcommand", "Farpterekwind"},
+    ["Holmskiy"] = {"Farpholmskiyammo", "Farpholmskiyfuel", "Farpholmskiytent1", "Farpholmskiytent2", "Farpholmskiytent3", "Farpholmskiytent4", "Farpholmskiycommand", "Farpholmskiywind"},
+    ["Karaleti"] = {"Farpkaraletiammo", "Farpkaraletifuel", "Farpkaraletitent1", "Farpkaraletitent2", "Farpkaraletitent3", "Farpkaraletitent4", "Farpkaraleticommand", "Farpkaraletiwind"},
+    ["Novopavlo"] = {"Farpnovopavloammo", "Farpnovopavlofuel", "Farpnovopavlotent1", "Farpnovopavlotent2", "Farpnovopavlotent3", "Farpnovopavlotent4", "Farpnovopavlocommand", "Farpnovopavlowind"},
+    ["Luna"] = {"Farplunaammo", "Farplunafuel", "Farplunatent1", "Farplunatent2", "Farplunatent3", "Farplunatent4", "Farplunacommand", "Farplunawind"},
+    ["Hady"] = {"Farphadyammo", "Farphadyfuel","farphadytent", "farphadywind"},
+    ["Revari"] = {"Farprevariammo", "Farprevarifuel","farprevaritent", "farprevariwind"},
+    ["Tyra"] = {"Farptyraammo", "Farptyrafuel", "farptyratent", "farptyrawind"},
+    ["Isunderi"] = {"Farpisunderiammo", "Farpisunderifuel", "farpisunderitent", "farpisunderiwind"},
+    ["Ambrolauri"] = {"Farpambrolauriammo", "Farpambrolaurifuel", "farpambrolauritent", "farpambrolauriwind"},
+    ["Chiora"] = {"Farpchiorammo", "Farpchiorfuel", "farpchioratent", "farpchiorawind"},
+    ["Guso"] = {"Farpgusoammo", "Farpgusofuel", "farpgusotent", "farpgusowind"},
+    ["Kvomo"] = {"Farpkvomoammo", "Farpkvomofuel", "farpkvomotent", "farpkvomowind"},
+    ["Tyrini"] = {"Farptyrammo", "Farptyrfuel", "farptyrtent", "farptyrwind"},
+    ["Hurzuk"] = {"Farhurzukammo", "Farhurzukfuel", "farphurzuktent", "farphurzukwind"},
+    ["RiverSide"] = {"Farpriversideammo", "Farpriversidefuel", "farpriversidetent", "farpriversidewind"},
+    ["Mezmay"] = {"Farpmezmayammo", "Farpmezmayfuel", "Farpmezmaytent", "Farpmezmaywind"},
+    ["ZHemtala"] = {"Farpzhemtalaammo", "Farpzhemtalafuel", "Farpzhemtalatent", "Farpzhemtalawind"},
+    ["Digora"] = {"Farpdigoraammo", "Farpdigorafuel", "Farpdigoratent", "Farpdigorawind"},
 	    
 }
 

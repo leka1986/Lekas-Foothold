@@ -6060,7 +6060,7 @@ local function keyPairWithRouteMode(a, b, useZoneRoadHooks, useMultiRoadHooks, u
 end
 
 local function keyPairWithRange(a,b,r,anchorTag)
-	local rangeNm = tonumber(r) or 2
+	local rangeNm = tonumber(r) or 2.2
 	return string.format("%s>%s>%.3f>%s", tostring(a), tostring(b), rangeNm, tostring(anchorTag or "auto"))
 end
 
@@ -6070,11 +6070,15 @@ local function dcrandIndex(n)
 end
 
 function dc.ResolveArtilleryRangeNm(groupCommander)
-	local rangeNm = tonumber(groupCommander.artilleryRangeNm)
+	local rangeNm = tonumber(groupCommander and groupCommander.artilleryRangeNm)
 	if rangeNm and rangeNm > 0 then
 		return rangeNm
 	end
-	return 2
+	local templateName = string.lower(tostring(groupCommander and groupCommander.template or ""))
+	if string.find(templateName, "artilleryconvoylong", 1, true) then
+		return 8
+	end
+	return 2.2
 end
 
 local function collectArtyAnchorsByBase(baseName, out)
@@ -6664,12 +6668,9 @@ function dc.BuildArtilleryRoute(originZoneName, targetZoneName, speed, rangeNm, 
 	if anchorPoint and anchorPoint.x and anchorPoint.y then
 		firePoint = { x = anchorPoint.x, y = anchorPoint.y }
 	else
-		local tZone = getTriggerZone(targetZoneName)
-		local targetRadius = tonumber(tZone and tZone.radius) or 0
-		if targetRadius < 0 then targetRadius = 0 end
-		local effectiveRangeNm = tonumber(rangeNm) or 2
-		if effectiveRangeNm <= 0 then effectiveRangeNm = 2 end
-		local standoffMeters = targetRadius + (effectiveRangeNm * 1852)
+		local effectiveRangeNm = tonumber(rangeNm) or 2.2
+		if effectiveRangeNm <= 0 then effectiveRangeNm = 2.2 end
+		local standoffMeters = effectiveRangeNm * 1852
 
 		local dirx = startV2.x - targetCenter.x
 		local diry = startV2.y - targetCenter.y
@@ -6846,8 +6847,8 @@ function dc.GetSupplyConvoyRoute(originZoneName, targetZoneName, speed, useZoneR
 end
 
 function dc.GetArtilleryRoute(originZoneName, targetZoneName, speed, rangeNm)
-	local effectiveRangeNm = tonumber(rangeNm) or 2
-	if effectiveRangeNm <= 0 then effectiveRangeNm = 2 end
+	local effectiveRangeNm = tonumber(rangeNm) or 2.2
+	if effectiveRangeNm <= 0 then effectiveRangeNm = 2.2 end
 	local anchorName, anchorPoint = dc.ResolveArtilleryAnchor(originZoneName, targetZoneName)
 	local key = keyPairWithRange(originZoneName, targetZoneName, effectiveRangeNm, anchorName or "auto")
 	local cached = dc.ROUTE_CACHE.artillery[key]
@@ -9231,6 +9232,19 @@ do
 				targetIndex = self:_isCarrierNavigationAreaReversed(area) and 2 or 1
 			end
 		end
+		local distanceToFirstWaypoint = _carrierNavigationPointDistance(startPoint, station[targetIndex])
+		local restoreSaved = saved
+		if distanceToFirstWaypoint and distanceToFirstWaypoint < 2 * NM then
+			targetIndex = (targetIndex == 1) and 2 or 1
+			local headingToNextWaypoint = _carrierNavigationHeadingToPoint(startPoint, station[targetIndex])
+			if headingToNextWaypoint then
+				restoreSaved = DeepCopy(saved)
+				restoreSaved.headingDeg = headingToNextWaypoint
+				if restoreSaved.units and restoreSaved.units[1] then
+					restoreSaved.units[1].headingDeg = headingToNextWaypoint
+				end
+			end
+		end
 		local viaStation = self:_carrierNavigationGetViaStation(area, saved.lane, startPoint)
 		local routePoints = self:_carrierNavigationBuildRoutePoints(startPoint, station, targetIndex, saved.speedKt, viaStation)
 		if not routePoints then
@@ -9240,7 +9254,7 @@ do
 
 		local teleported = true
 		if saved.x and saved.z then
-			teleported = self:_carrierNavigationTeleportGroup(groupName, saved, routePoints)
+			teleported = self:_carrierNavigationTeleportGroup(groupName, restoreSaved, routePoints)
 		end
 		if not teleported then return false end
 
@@ -9257,6 +9271,10 @@ do
 					else
 						routeTargetIndex = param.context:_isCarrierNavigationAreaReversed(param.area) and 2 or 1
 					end
+				end
+				local routeDistanceToFirstWaypoint = _carrierNavigationPointDistance(routeStart, param.station[routeTargetIndex])
+				if routeDistanceToFirstWaypoint and routeDistanceToFirstWaypoint < 2 * NM then
+					routeTargetIndex = (routeTargetIndex == 1) and 2 or 1
 				end
 				local routeViaStation = param.context:_carrierNavigationGetViaStation(param.area, param.saved.lane, routeStart)
 				local freshRoutePoints, routeMeta = param.context:_carrierNavigationBuildRoutePoints(routeStart, param.station, routeTargetIndex, param.saved.speedKt, routeViaStation)
@@ -9284,8 +9302,8 @@ do
 			return nil
 		end
 
-		timer.scheduleFunction(applyCarrierNavigationRoute, { context = self, groupName = groupName, area = area, station = station, startPoint = startPoint, saved = saved }, timer.getTime() + 1)
-		timer.scheduleFunction(applyCarrierNavigationRoute, { context = self, groupName = groupName, area = area, station = station, startPoint = startPoint, saved = saved, reapply = true }, timer.getTime() + 5)
+		timer.scheduleFunction(applyCarrierNavigationRoute, { context = self, groupName = groupName, area = area, station = station, startPoint = startPoint, saved = restoreSaved }, timer.getTime() + 1)
+		timer.scheduleFunction(applyCarrierNavigationRoute, { context = self, groupName = groupName, area = area, station = station, startPoint = startPoint, saved = restoreSaved, reapply = true }, timer.getTime() + 5)
 
 		return true
 	end
@@ -19726,6 +19744,20 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 				end
 			end
 
+			local forcedCaps = self.dynamicHybrid and self.dynamicHybrid.config and self.dynamicHybrid.config.forcedZoneCapabilities
+			local forced = forcedCaps and forcedCaps[origin.zone]
+			if forced then
+				if forced.groundAttack == true or forced.groundattack == true then
+					caps.hasConvoy = true
+					caps.convoyTemplate = forced.groundAttackTemplate or forced.groundattackTemplate or caps.convoyTemplate or "AttackConvoy"
+				end
+				if (forced.heloCas == true or forced.HeloCas == true) and origin.airbaseName then
+					caps.hasCas = true
+					caps.hasCasHelo = true
+					caps.casHeloTemplate = forced.heloCasTemplate or forced.HeloCasTemplate or caps.casHeloTemplate or "CasHeloTemplate"
+				end
+			end
+
 			if not caps.capTemplate then caps.capTemplate = "CapPlaneTemplate" end
 			if not caps.capPatrolTemplate then caps.capPatrolTemplate = caps.capTemplate end
 			if not caps.capAttackTemplate then caps.capAttackTemplate = caps.capTemplate end
@@ -22177,6 +22209,29 @@ local function supplyArrowLog(message)
 	end
 end
 
+local function GetConnectionMapStyle()
+	local style = string.lower(tostring(ConnectionMapStyle or "arrow"))
+	if style == "line" or style == "lines" then
+		return "line"
+	end
+	return "arrow"
+end
+
+local function GetConnectionMapColor(fromZone, toZone, alpha)
+	local colorMode = string.lower(tostring(ConnectionMapColor or "dynamic"))
+	if colorMode == "white" then
+		return {1, 1, 1, alpha}
+	end
+
+	if fromZone.side == 2 and toZone.side ~= 1 then
+		return {0, 0, 1, alpha}
+	elseif fromZone.side == 1 and toZone.side ~= 2 then
+		return {1, 0, 0, alpha}
+	end
+
+	return {1, 1, 1, alpha}
+end
+
 local function GetConnectionEdgePoint(FromCustomZone, ToCustomZone)
 	local SourceX = FromCustomZone.point.x
 	local SourceY = FromCustomZone.point.y
@@ -22682,19 +22737,22 @@ local function drawConnectionArrow(selfRef, fromZone, toZone, fromCz, toCz, key,
 	local headPos, tailPos = GetConnectionArrowHeadTail(fromZone, toZone, fromCz, toCz, preserveDirection)
 	if (not fromZone.active) or (not toZone.active) then
 		--trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, {0.1,0.1,0.1,0.5}, 0.5)
+	elseif GetConnectionMapStyle() == "line" then
+		trigger.action.lineToAll(-1, arrowId, headPos, tailPos, GetConnectionMapColor(fromZone, toZone, 0.85), 4, true)
 	elseif fromZone.side == 2 and toZone.side ~= 1  then
 		supplyArrowLog(string.format("DEBUG: Drawing BLUE arrow for connection %d", logIndex))
-		trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, {0, 0, 1, 0.5}, 0.5)
+		trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, GetConnectionMapColor(fromZone, toZone, 0.5), 0.5)
 	elseif fromZone.side == 1 and toZone.side ~= 2 then
 		supplyArrowLog(string.format("DEBUG: Drawing RED arrow for connection %d", logIndex))
-		trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, {1, 0, 0, 0.5}, 0.5)
+		trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, GetConnectionMapColor(fromZone, toZone, 0.5), 0.5)
 	else
 		supplyArrowLog(string.format("DEBUG: Drawing NEUTRAL arrow for connection %d", logIndex))
-		trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, {1, 1, 1, 0.5}, 0.5)
+		trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, GetConnectionMapColor(fromZone, toZone, 0.5), 0.5)
 	end
 	selfRef.ConnectionArrowIds[key] = arrowId
 end
 
+local lineMode = GetConnectionMapStyle() == "line"
 for i, v in ipairs(self.connections) do
 local fromZone = self:getZoneByName(v.from)
 local toZone   = self:getZoneByName(v.to)
@@ -22706,7 +22764,7 @@ local to = (toZone and toZone._cz) or CustomZone:getByName(v.to)
 			if fromZone and toZone and from and to then
 				local key = v.from.."=>"..v.to
 				drawConnectionArrow(self, fromZone, toZone, from, to, key, i, v.drawBoth == true or v.preserveDirection == true)
-				if v.drawBoth == true then
+				if v.drawBoth == true and not lineMode then
 					drawConnectionArrow(self, toZone, fromZone, to, from, key.."::reverse", i, true)
 				end
 			else
@@ -22731,15 +22789,18 @@ function BattleCommander:RefreshConnectionsLines(zoneName)
 		selfRef.ConnectionArrowIds[key] = arrowId
 		if (not fromZone.active) or (not toZone.active) then
 			--trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, {0.1,0.1,0.1,0.5}, 0.5)
+		elseif GetConnectionMapStyle() == "line" then
+			trigger.action.lineToAll(-1, arrowId, headPos, tailPos, GetConnectionMapColor(fromZone, toZone, 0.85), 4, true)
 		elseif fromZone.side == 2 and toZone.side ~= 1  then
-			trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, {0, 0, 1, 0.5}, 0.5)
+			trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, GetConnectionMapColor(fromZone, toZone, 0.5), 0.5)
 		elseif fromZone.side == 1 and toZone.side ~= 2 then
-			trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, {1, 0, 0, 0.5}, 0.5)
+			trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, GetConnectionMapColor(fromZone, toZone, 0.5), 0.5)
 		else
-			trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, {1, 1, 1, 0.5}, 0.5)
+			trigger.action.arrowToAll(-1, arrowId, headPos, tailPos, {0, 0, 0, 0.5}, GetConnectionMapColor(fromZone, toZone, 0.5), 0.5)
 		end
 	end
 
+	local lineMode = GetConnectionMapStyle() == "line"
 	for i, v in ipairs(self.connections) do
 		if v.from == zoneName or v.to == zoneName then
 			local key = v.from.."=>"..v.to
@@ -22762,7 +22823,7 @@ function BattleCommander:RefreshConnectionsLines(zoneName)
 				local to = CustomZone:getByName(v.to)
 				if fromZone and toZone and from and to then
 					drawConnectionArrow(self, fromZone, toZone, from, to, key, v.drawBoth == true or v.preserveDirection == true)
-					if v.drawBoth == true then
+					if v.drawBoth == true and not lineMode then
 						drawConnectionArrow(self, toZone, fromZone, to, from, reverseKey, true)
 					end
 				end
@@ -24067,7 +24128,7 @@ local FootholdStatLabelKeys = {
 	['Flight time'] = "STATS_LABEL_FLIGHT_TIME",
 }
 
-local function localizedStatLabel(statKey)
+function localizedStatLabel(statKey)
 	local labelKey = FootholdStatLabelKeys[statKey]
 	if labelKey then
 		return L10N:Get(labelKey)
@@ -46204,14 +46265,14 @@ function spawnCasAt(zoneName, targetZoneName, offsetNM)
 	    CasMission:AddConditionSuccess(function() return bc.indexedZones[targetZoneName].side == 0 end)
 		CasMission:SetWeaponExpend(AI.Task.WeaponExpend.ONE)
 	    CasMission:SetEngageAsGroup(false)
-	    --CasMission:SetMissionSpeed(600)
+	    CasMission:SetMissionSpeed(500)
 	    _setDynamicSupportGroundIngress(CasMission, zoneName, forcedHomebase, targetCoord, casAttackOffsetNM, 27000, 700)
 	    CasMission:SetMissionAltitude(27000)
 		casGroup:AddMission(CasMission)
 	    function CasMission:OnAfterExecuting(From, Event, To)
 		    casGroup:SwitchROE(2)
 		    CasMission:SetFormation(131075)
-		    --CasMission:SetMissionSpeed(380)
+		    	casGroup:SetSpeed(380)
 	    end
 	    function CasMission:OnAfterSuccess(From, Event, To)
 		    if setStatic:Count() < 0 then
@@ -46929,18 +46990,23 @@ function spawnStructureAt(zoneName, targetZoneName,offsetNM)
 end
 
 
+
+
 if not DisableMantis then
 SCHEDULER:New(nil, function()
 
 FootholdMantis = MANTIS:New("Foothold MANTIS","Red SAM","Red EWR",nil,"red",true,nil)
 
 --FootholdMantis:SetSAMRange(100)
---FootholdMantis:SetDetectInterval(10)
+FootholdMantis:SetDetectInterval(15)
 FootholdMantis:SetAccousticDetectionOn(3000)
 ZoneTable_Mantis = SET_ZONE:New():FilterPrefixes("Scoot"):FilterStart()
 FootholdMantis:AddScootZones(ZoneTable_Mantis, 3, true, "Cone")
 FootholdMantis.autorelocate = true
 FootholdMantis:Start()
+-- FootholdMantis.debug = true
+-- BASE:TraceOn()
+-- BASE:TraceClass("MANTIS")
 end, {}, 3)
 end
 

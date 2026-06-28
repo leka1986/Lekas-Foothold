@@ -1,4 +1,7 @@
-if SplashDamage == true then
+local splashDamageTheatre = env.mission.theatre
+local splashDamageIsNormandy = splashDamageTheatre == "Normandy"
+
+if SplashDamage == true or splashDamageIsNormandy then
 --[[-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=
                                                                 Latest Changes                                       
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-	  
@@ -303,6 +306,18 @@ splash_damage_options = {
     ["tactical_explosion_fueltankspawn"] = false, --Spawn a fuel tank at the explosion location for effect/smoke
     
 }
+
+if splashDamageIsNormandy then
+    splash_damage_options["larger_explosions"] = true
+    splash_damage_options["damage_model"] = true
+    splash_damage_options["dynamic_blast_radius_modifier"] = 2
+    splash_damage_options["only_players_weapons"] = false
+    splash_damage_options["unit_disabled_health"] = 30
+    splash_damage_options["unit_cant_fire_health"] = 40
+    splash_damage_options["infantry_cant_fire_health"] = 60
+    splash_damage_options["cascade_scaling"] = 2
+    splash_damage_options["ordnance_protection"] = true
+end
 
 local script_enable = 1
 refreshRate = 0.1
@@ -863,6 +878,19 @@ explTable = {
 	["TOW2"] = { explosive = 6.5, shaped_charge = true, groundordnance = true },  --ATGM
 	
 	--*** Shells ***
+	
+	---***AAA set to 0.0000001 so there is no extra damage but there is light and sound - added for night time use***
+	["weapons.shells.Bofors_40mm_HE"] = { explosive = 0.0000001, groundordnance = true }, --WWII Bofors 40mm AAA
+	["weapons.shells.Flak18_Sprgr_39"] = { explosive = 0.0000001, groundordnance = true }, --WWII German 88mm Flak 18
+	["weapons.shells.Flak41_Sprgr_39"] = { explosive = 0.0000001, groundordnance = true }, --WWII German 88mm Flak 41
+	["weapons.shells.KS19_100HE"] = { explosive = 0.0000001, groundordnance = true }, --Modern Soviet 100mm AAA
+	["weapons.shells.QF94_AA_HE"] = { explosive = 0.0000001, groundordnance = true }, --WWII British 94mm AAA
+	["weapons.shells.ship_Bofors_40mm_HE"] = { explosive = 1, groundordnance = true }, --WWII Naval Bofors 40mm AAA
+	["weapons.shells.Sprgr_34_L70"] = { explosive = 0.0000001, groundordnance = true }, --WWII German 88mm Flak 36/37
+	["weapons.shells.Sprgr_38"] = { explosive = 0.0000001, groundordnance = true }, --WWII German 88mm Flak 38
+	["weapons.shells.Sprgr_39"] = { explosive = 0.0000001, groundordnance = true }, --WWII German 88mm Flak 18/36/37
+	["weapons.shells.Sprgr_43_L71"] = { explosive = 0.0000001, groundordnance = true }, --WWII German 88mm Flak 43
+	
 	["weapons.shells.M_105mm_HE"] = { explosive = 12, groundordnance = true }, --105mm HE shell, M119/M102 (~10-15 kg TNT equiv)
 	["weapons.shells.M_155mm_HE"] = { explosive = 60, groundordnance = true }, --155mm HE shell, M777/M109 (~50-70 kg TNT equiv)
 	["weapons.shells.2A60_120"] = { explosive = 18, groundordnance = true }, --120mm HE shell, 2B11 mortar (~15-20 kg TNT equiv)

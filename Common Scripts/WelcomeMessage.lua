@@ -52,6 +52,10 @@ local allZoneObjects = {}
 local atisAirbaseObjects = {}
 local atisZoneByAirbaseName = {}
 
+local function isNormandyTheatre()
+    return string.find(string.lower(tostring(env.mission.theatre or "")), "normandy", 1, true) ~= nil
+end
+
 local function GetAirbaseByNameCached(airbaseName)
     if type(airbaseName) ~= "string" or airbaseName == "" then
         return nil
@@ -74,9 +78,10 @@ local function BuildAllZonesFromFootholdZones()
         return built
     end
 
+    local includeAirbaseZones = isNormandyTheatre()
     for _, zone in pairs(zones) do
-        -- Match the previous manual list: only include the player/spawn bases.
-        if zone and zone.isHeloSpawn == true then
+        -- Normandy carrier/airfield zones are marked through airbaseName instead of isHeloSpawn.
+        if zone and (zone.isHeloSpawn == true or (includeAirbaseZones and zone.airbaseName ~= nil)) then
             local zoneName = zone.zone
             if type(zoneName) == "string" and zoneName ~= "" and not seen[zoneName] then
                 table.insert(built, zoneName)
@@ -739,7 +744,20 @@ local function getAltimeter(translator)
     return T:Format("WELCOME_ALTIMETER", pressureInHg)
 end
 
+local WelcomeCarrierInfo = {
+    ["CVN-73"] = { displayName = "George Washington", tacan = "73X" },
+    ["CVN-72"] = { displayName = "Abraham Lincoln", tacan = "72X" },
+    ["CVN-59"] = { displayName = "Forrestal", tacan = "59X" },
+    ["CVN-74"] = { displayName = "John C. Stennis", tacan = "74X" },
+    ["CVN-75"] = { displayName = "Harry S. Truman", tacan = "75X" },
+    ["Tarawa"] = { displayName = "Tarawa", tacan = "1X" },
+    ["ESSEX"] = { displayName = "ESSEX Carrier Class", frequency = "124.00 AM", morse = "ESS: . ... ..." },
+}
+
 local WelcomeCarrierNames = {"CVN-73","CVN-72","CVN-59","CVN-74","CVN-75","Tarawa"}
+if isNormandyTheatre() then
+    WelcomeCarrierNames[#WelcomeCarrierNames + 1] = "ESSEX"
+end
 local CarrierLink4ACLSUnitIds = {}
 
 local function getCarrierUnitAndController(name)
@@ -884,12 +902,24 @@ local function getBRC(cvnName, translator)
 end
 
 function hullPrettyAndTCN(name)
-    if name=="CVN-73" then return "George Washington","73X" end
-    if name=="CVN-72" then return "Abraham Lincoln","72X" end
-    if name=="CVN-59" then return "Forrestal","59X" end
-    if name=="CVN-74" then return "John C. Stennis","74X" end
-    if name=="CVN-75" then return "Harry S. Truman","75X" end
-    if name=="Tarawa" then return "Tarawa","1X" end
+    local info = WelcomeCarrierInfo[name]
+    if info then return info.displayName, info.tacan or info.frequency end
+end
+
+local function getCarrierRadioLine(name, translator)
+    local info = WelcomeCarrierInfo[name]
+    if not (info and info.frequency) then return nil end
+    local T = translator or L10N
+    return T:Format("WELCOME_CARRIER_FREQ_MORSE", info.frequency, info.morse or "")
+end
+
+local function getCarrierBriefingLine(name, translator)
+    local T = translator or L10N
+    local radioLine = getCarrierRadioLine(name, T)
+    if radioLine then
+        return radioLine .. "\n\n" .. getBRC(name, T)
+    end
+    return getBRC(name, T)
 end
 
 local function getCarrierWind(cvnName, translator)
@@ -1028,7 +1058,7 @@ local function sendATISInformation(client, group, zoneName)
                 local prettyName = hullPrettyAndTCN(carrierName)
                 table.insert(lines,
                     T:Format("WELCOME_ATIS_FOR_FULL",
-                                  prettyName, getCarrierWind(carrierName, T), altimeter, getBRC(carrierName, T)))
+                                  prettyName, getCarrierWind(carrierName, T), altimeter, getCarrierBriefingLine(carrierName, T)))
             end
         end
 
@@ -1096,8 +1126,15 @@ function getClosestFriendlyAirbaseInfo(client)
                     local cdist    = playerCoord:Get2DDistance(ccoord)
                     local cbrg     = (playerCoord:HeadingTo(ccoord,nil) - playerCoord:GetMagneticDeclination() + 360) % 360
                     local pretty,tacan = hullPrettyAndTCN(name)
-                    local msg = T:Format("WELCOME_CARRIER_INFO",
-                                              pretty,cdist*0.000539957,cbrg,tacan,getBRC(name, T))
+                    local radioLine = getCarrierRadioLine(name, T)
+                    local msg
+                    if radioLine then
+                        msg = T:Format("WELCOME_CARRIER_INFO_NAV",
+                                          pretty,cdist*0.000539957,cbrg,radioLine,getBRC(name, T))
+                    else
+                        msg = T:Format("WELCOME_CARRIER_INFO",
+                                          pretty,cdist*0.000539957,cbrg,tacan,getBRC(name, T))
+                    end
                     table.insert(lines,msg)
                 end
             end
@@ -1323,20 +1360,30 @@ function static:processPlayerSpawn(player, zoneNameOverride)
 		                local activeRunwayMessage = atisZones[zoneName] and fetchActiveRunway(zoneName, T) or "N/A"
 
 	                    local carrierHull=getNearestCarrierName(playerCoord)
-                    local carrierName,tacanCode,brcMessage,carrierWindMessage
+                    local carrierName,tacanCode,brcMessage,carrierWindMessage,carrierRadioLine,carrierBriefingLine
                     if carrierHull then
                         brcMessage=getBRC(carrierHull, T)
                         carrierWindMessage=getCarrierWind(carrierHull, T)
                         carrierName,tacanCode=hullPrettyAndTCN(carrierHull)
+                        carrierRadioLine=getCarrierRadioLine(carrierHull, T)
+                        carrierBriefingLine=getCarrierBriefingLine(carrierHull, T)
                     end
                     if isCarrierZoneName(zoneName) and carrierHull then
 
                     if assignedCallsign and assignedIFF then
                         greetingMessage = T:Format("WELCOME_GREETING_CARRIER_ASSIGNED", carrierName, rankDisplay, assignedCallsign, assignedIFF)
-                        detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED_TCN", carrierName, assignedCallsign, carrierWindMessage, temperatureMessage, altimeterMessage, tacanCode, brcMessage)
+                        if carrierRadioLine then
+                            detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED", carrierName, assignedCallsign, carrierWindMessage, temperatureMessage, altimeterMessage, carrierBriefingLine)
+                        else
+                            detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED_TCN", carrierName, assignedCallsign, carrierWindMessage, temperatureMessage, altimeterMessage, tacanCode, brcMessage)
+                        end
                     else
                         greetingMessage = T:Format("WELCOME_GREETING_CARRIER_STANDBY", carrierName, rankDisplay)
-                        detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED_TCN", carrierName, playerName, carrierWindMessage, temperatureMessage, altimeterMessage, tacanCode, brcMessage)
+                        if carrierRadioLine then
+                            detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED", carrierName, playerName, carrierWindMessage, temperatureMessage, altimeterMessage, carrierBriefingLine)
+                        else
+                            detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED_TCN", carrierName, playerName, carrierWindMessage, temperatureMessage, altimeterMessage, tacanCode, brcMessage)
+                        end
                     end
 	                else
 	                    if atisZones[zoneName] then
@@ -1415,7 +1462,13 @@ function static:processPlayerSpawn(player, zoneNameOverride)
                                         if followID[playerName] then followID[playerName]:Stop() followID[playerName]=nil end
                                         if isCarrierZoneName(zoneName) and carrierHull then
                                             sendGreetingToPlayer(UnitName, T:Format("WELCOME_GREETING_CARRIER_ASSIGNED", carrierName, playerName, fullCS, iff))
-                                            followID[playerName] = SCHEDULER:New(nil, sendDetailedMessageToPlayer, {playerUnitID, T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED_TCN", carrierName, fullCS, carrierWindMessage, temperatureMessage, altimeterMessage, tacanCode, brcMessage), playerGroupID, UnitName}, 60)
+                                            local detailText
+                                            if carrierRadioLine then
+                                                detailText = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED", carrierName, fullCS, carrierWindMessage, temperatureMessage, altimeterMessage, carrierBriefingLine)
+                                            else
+                                                detailText = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED_TCN", carrierName, fullCS, carrierWindMessage, temperatureMessage, altimeterMessage, tacanCode, brcMessage)
+                                            end
+                                            followID[playerName] = SCHEDULER:New(nil, sendDetailedMessageToPlayer, {playerUnitID, detailText, playerGroupID, UnitName}, 60)
                                         else
                                             sendGreetingToPlayer(UnitName, T:Format("WELCOME_GREETING_ZONE_ASSIGNED_ATIS", zoneName, playerName, fullCS, iff))
                                             followID[playerName] = SCHEDULER:New(nil, sendDetailedMessageToPlayer, {playerUnitID, T:Format("WELCOME_DETAIL_ZONE_ATIS", zoneName, fullCS, windMessage, temperatureMessage, altimeterMessage, activeRunwayMessage), playerGroupID, UnitName}, 60)
@@ -1457,13 +1510,14 @@ function static:processPlayerSpawn(player, zoneNameOverride)
                     local temperatureMsg            = getPlayerTemperature(carrierPos, T)
                     local brcMessage                = getBRC(carrierHull, T)
                     local windMessage               = getCarrierWind(carrierHull, T)
+                    local carrierBriefingLine       = getCarrierBriefingLine(carrierHull, T)
 
                     if assignedCallsign and assignedIFF then
                         greetingMessage = T:Format("WELCOME_GREETING_CARRIER_ASSIGNED",prettyName,rankDisplay,assignedCallsign,assignedIFF)
-                        detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED",prettyName,assignedCallsign,windMessage,temperatureMsg,altimeterMessage,brcMessage)
+                        detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED",prettyName,assignedCallsign,windMessage,temperatureMsg,altimeterMessage,carrierBriefingLine)
                     else
                         greetingMessage = T:Format("WELCOME_GREETING_CARRIER_STANDBY",prettyName,rankDisplay)
-                        detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED",prettyName,playerName,windMessage,temperatureMsg,altimeterMessage,brcMessage)
+                        detailedMessage = T:Format("WELCOME_DETAIL_CARRIER_ASSIGNED",prettyName,playerName,windMessage,temperatureMsg,altimeterMessage,carrierBriefingLine)
                     end
                     sendGreetingToPlayer(UnitName,greetingMessage)
                     if followID[playerName] then followID[playerName]:Stop() followID[playerName]=nil end

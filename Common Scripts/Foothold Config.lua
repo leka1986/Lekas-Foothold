@@ -1,4 +1,4 @@
--- Version V1.0.7
+-- Version V1.0.8
 -- ** CHANGE LOG **
 --
 -- Added CsarPilotSpawnWithoutCreditsChance,  - V1.0.3
@@ -9,13 +9,19 @@
 -- Added Escort allowed plane types. Added DisableMantis option. - V1.0.5
 -- Added FootholdLocale language option. - V1.0.6
 -- Added load error message for the config. - V1.0.7
+-- Added support for Foothold WW2.lua
 -- Use Notepad++ and use compare tool to see the changes.
+--
 --
 --
 -- DO NOT TOUCH THIS BLOCK
 --
 local savePath = (lfs and lfs.writedir and (lfs.writedir() .. "Missions\\Saves")) or nil
-local saveFile = "Foothold Config.lua"
+local ww2Maps = {
+    Normandy = true,
+}
+local saveFile = ww2Maps[env.mission.theatre] and "Foothold Config WW2.lua" or "Foothold Config.lua"
+local mizConfigPath = ww2Maps[env.mission.theatre] and ("l10n/DEFAULT/" .. saveFile) or nil
 
 local function reportFootholdConfigLoadError(err)
     FootholdConfigLoadError = tostring(err or "unknown error")
@@ -35,7 +41,20 @@ if savePath and not FootholdConfigLoaded and UTILS.CheckFileExists(savePath, sav
         FootholdConfigLoaded = true
         chunk()
         FootholdConfigLoadedOk = true
-        SCHEDULER:New(nil, function() trigger.action.outText("Loaded Foothold config externally.", 30) end, {}, 1)
+        SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " externally.", 30) end, {}, 1)
+        return
+    else
+        reportFootholdConfigLoadError(err)
+    end
+end
+
+if mizConfigPath and not FootholdConfigLoaded then
+    local chunk, err = loadfile(mizConfigPath)
+    if chunk then
+        FootholdConfigLoaded = true
+        chunk()
+        FootholdConfigLoadedOk = true
+        SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " from mission.", 30) end, {}, 1)
         return
     else
         reportFootholdConfigLoadError(err)
@@ -153,6 +172,20 @@ AllowTarawaToMoveFreely = false
 -- If true, disables the friendly "Escort cargo plane" mission.
 -- false keeps the mission enabled.
 DisableFriendlyEscortMeMission = false
+
+-- ============================================================================
+-- F10 Map
+-- ============================================================================
+-- Controls how supply connections are drawn on the F10 map.
+-- "arrow" keeps the current arrow display. "line" draws dashed lines instead.
+-- @gui label="Connection Display" validValues="Arrows=arrow | Lines=line"
+ConnectionMapStyle = "arrow"
+
+-- Controls the connection display color on the F10 map.
+-- "dynamic" uses BLUE, RED, and neutral colors based on zone ownership.
+-- "white" draws all connections white.
+-- @gui label="Connection Color" validValues="Dynamic=dynamic | White=white"
+ConnectionMapColor = "dynamic"
 
 -- ============================================================================
 -- Difficulty

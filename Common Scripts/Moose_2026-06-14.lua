@@ -7971,10 +7971,10 @@ if Repeat~=0 and((Stop==0)or(Stop~=0 and CurrentTime<=StartTime+Stop))then
 local ScheduleTime=CurrentTime+Repeat+math.random(-(Randomize*Repeat/2),(Randomize*Repeat/2))+0.0001
 return ScheduleTime
 else
-self:_Reclaim(Scheduler,CallID)
+self:Stop(Scheduler,CallID)
 end
 else
-self:_Reclaim(Scheduler,CallID)
+self:Stop(Scheduler,CallID)
 end
 else
 self:I("<<<>"..Name..":"..Line.." ("..Source..")")
@@ -79619,6 +79619,7 @@ end
 end
 end
 local dropTroopsMenu=MENU_GROUP:New(_group,self:_GetEntryForGroup("MENU_DROP_TROOPS",_group),toptroops):Refresh()
+toptroops.DropTroopsMenu=dropTroopsMenu
 if self.maxUnloadTroopsAllowed==-1 then
 MENU_GROUP_COMMAND:New(_group,self:_GetEntryForGroup("MENU_DROP_ALL_TROOPS",_group),dropTroopsMenu,self._UnloadTroops,self,_group,_unit):Refresh()
 end
