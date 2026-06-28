@@ -38,6 +38,24 @@ internal sealed class MainForm : Form
     private sealed record UndoStep(string Description, Action Action, Action? RefreshAction);
     private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly);
     private sealed record ImportedNewEntryMarker(string Category, string DisplayKey);
+    private sealed record ConfigVariantItem(string Label, string Path)
+    {
+        public override string ToString()
+        {
+            return Label;
+        }
+    }
+
+    private enum MissingInstanceRecoveryKind
+    {
+        Cancel,
+        SelectPath,
+        Remove
+    }
+
+    private sealed record MissingInstanceRecovery(MissingInstanceRecoveryKind Kind, string? Path);
+
+    private sealed record ExtractedMizConfig(string Path, string ConfigFileName);
 
     private sealed record FirstRunMizCandidate(string Path, DateTime Modified)
     {
@@ -49,11 +67,17 @@ internal sealed class MainForm : Form
 
     private sealed record FirstRunInstanceCandidate(string Name, string ProfilePath, int Score)
     {
-        public string ConfigPath => System.IO.Path.Combine(ProfilePath, "Missions", "Saves", "Foothold Config.lua");
+        public string SavesPath => System.IO.Path.Combine(ProfilePath, "Missions", "Saves");
+        public string ConfigPath => ConfigPathFor(RuntimeSettings.DefaultConfigFileName);
+
+        public string ConfigPathFor(string configFileName)
+        {
+            return System.IO.Path.Combine(SavesPath, configFileName);
+        }
 
         public override string ToString()
         {
-            return Name + "  ->  " + ConfigPath;
+            return Name + "  ->  " + SavesPath;
         }
     }
 
@@ -593,9 +617,10 @@ internal sealed class MainForm : Form
 
     private sealed class CopyTargetPlan
     {
-        public CopyTargetPlan(ServerProfileSettings profile, List<CopyChange> changes, string? loadError = null, bool contentMatches = true)
+        public CopyTargetPlan(ServerProfileSettings profile, string targetPath, List<CopyChange> changes, string? loadError = null, bool contentMatches = true)
         {
             Profile = profile;
+            TargetPath = targetPath;
             Changes = changes;
             LoadError = loadError;
             ContentMatches = contentMatches;
@@ -604,6 +629,7 @@ internal sealed class MainForm : Form
         }
 
         public ServerProfileSettings Profile { get; }
+        public string TargetPath { get; }
         public List<CopyChange> Changes { get; }
         public HashSet<string> SelectedChangeIds { get; }
         public string? LoadError { get; }
@@ -637,6 +663,7 @@ internal sealed class MainForm : Form
         public string SourceKind { get; set; } = "miz";
         public string MizName { get; set; } = "";
         public string MizPath { get; set; } = "";
+        public string ConfigFileName { get; set; } = RuntimeSettings.DefaultConfigFileName;
         public string ConfigPath { get; set; } = "";
         public DateTime StoredAt { get; set; }
     }
@@ -838,6 +865,7 @@ internal sealed class MainForm : Form
 
     private readonly TextBox _pathBox = new();
     private readonly ComboBox _instanceBox = new WheelSafeComboBox();
+    private readonly ComboBox _configVariantBox = new WheelSafeComboBox();
     private readonly TextBox _searchBox = new();
     private readonly TextBox _rawSearchBox = new();
     private readonly ComboBox _sectionFilter = new WheelSafeComboBox();
@@ -896,6 +924,7 @@ internal sealed class MainForm : Form
     private bool _loadingEntry;
     private bool _loadingForm;
     private bool _loadingInstances;
+    private bool _loadingConfigVariants;
     private bool _loadingCategories;
     private bool _gridConfigured;
     private bool _rawSearchBound;
@@ -1364,10 +1393,12 @@ internal sealed class MainForm : Form
 
     private Control BuildInstanceBar()
     {
-        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 7, BackColor = MainBackground };
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 9, BackColor = MainBackground };
         _instanceLayout = panel;
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth("Instance", 70)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth("Config", 55)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Normal", 95)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Advanced", 105)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Open File Location", 150)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Add", 90)));
@@ -1381,15 +1412,23 @@ internal sealed class MainForm : Form
         _instanceBox.SelectedIndexChanged += (_, _) => SwitchInstance();
         SetToolbarHelp(_instanceBox, "Select a saved server/config instance.");
         panel.Controls.Add(_instanceBox, 1, 0);
+        panel.Controls.Add(MakeLabel("Config"), 2, 0);
+        _configVariantBox.Dock = DockStyle.Fill;
+        _configVariantBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        StyleInput(_configVariantBox);
+        _configVariantBox.SelectedIndexChanged += (_, _) => SwitchConfigVariant();
+        SetToolbarHelp(_configVariantBox, "Switch between normal and WW2 configs in the same instance folder.");
+        panel.Controls.Add(_configVariantBox, 3, 0);
         _showAdvanced.Text = "Advanced";
         _showAdvanced.Dock = DockStyle.Fill;
         BindAdvancedToggle();
-        panel.Controls.Add(_showAdvanced, 2, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Open File Location", OpenCurrentConfigLocation, "Open Explorer with the current Foothold config selected."), 3, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Add", AddInstance, "Add another Foothold config instance."), 4, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Remove", RemoveInstance, "Remove the selected instance from this list. The config file is not deleted."), 5, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Copy To...", CopyCurrentConfigToInstances, "Replace selected instance configs with the currently open saved config. No backup is created."), 6, 0);
+        panel.Controls.Add(_showAdvanced, 4, 0);
+        panel.Controls.Add(MakeInstanceToolbarButton("Open File Location", OpenCurrentConfigLocation, "Open Explorer with the current Foothold config selected."), 5, 0);
+        panel.Controls.Add(MakeInstanceToolbarButton("Add", AddInstance, "Add another Foothold config instance."), 6, 0);
+        panel.Controls.Add(MakeInstanceToolbarButton("Remove", RemoveInstance, "Remove the selected instance from this list. The config file is not deleted."), 7, 0);
+        panel.Controls.Add(MakeInstanceToolbarButton("Copy To...", CopyCurrentConfigToInstances, "Replace selected instance configs with the currently open saved config. No backup is created."), 8, 0);
         RefreshInstanceList();
+        RefreshConfigVariantList();
         return panel;
     }
 
@@ -1628,11 +1667,12 @@ internal sealed class MainForm : Form
         if (_instanceLayout is not null)
         {
             SetColumnWidth(_instanceLayout, 0, LabelColumnWidth("Instance", 70));
-            SetColumnWidth(_instanceLayout, 2, ShouldShowAdvancedToggle() ? ToolbarButtonWidth("Advanced", 105) : 0);
-            SetColumnWidth(_instanceLayout, 3, ToolbarButtonWidth("Open File Location", 150));
-            SetColumnWidth(_instanceLayout, 4, ToolbarButtonWidth("Add", 90));
-            SetColumnWidth(_instanceLayout, 5, ToolbarButtonWidth("Remove", 100));
-            SetColumnWidth(_instanceLayout, 6, ToolbarButtonWidth("Copy To...", 110));
+            SetColumnWidth(_instanceLayout, 4, ShouldShowAdvancedToggle() ? ToolbarButtonWidth("Advanced", 105) : 0);
+            SetColumnWidth(_instanceLayout, 5, ToolbarButtonWidth("Open File Location", 150));
+            SetColumnWidth(_instanceLayout, 6, ToolbarButtonWidth("Add", 90));
+            SetColumnWidth(_instanceLayout, 7, ToolbarButtonWidth("Remove", 100));
+            SetColumnWidth(_instanceLayout, 8, ToolbarButtonWidth("Copy To...", 110));
+            ApplyConfigVariantSelectorVisibility(_configVariantBox.Items.Count > 1);
         }
 
         if (_mainSplit is not null)
@@ -3624,7 +3664,7 @@ internal sealed class MainForm : Form
             path = result.Path;
             if (result.AddAll)
             {
-                var added = AddDetectedInstances(savedGamesConfigs);
+                var added = AddDetectedInstances(savedGamesConfigs, path);
                 if (path is not null)
                 {
                     LoadConfig(path);
@@ -3756,7 +3796,7 @@ internal sealed class MainForm : Form
             selectedInstance = instanceList.SelectedItem as FirstRunInstanceCandidate ?? selectedInstance;
             targetLabel.Text = selectedInstance is null
                 ? "Target: choose an instance."
-                : "Target: " + selectedInstance.ConfigPath;
+                : "Target folder: " + selectedInstance.SavesPath;
             installButton.Enabled = !string.IsNullOrWhiteSpace(selectedMizPath) && selectedInstance is not null;
         }
 
@@ -3896,7 +3936,7 @@ internal sealed class MainForm : Form
         using var dialog = new OpenFileDialog
         {
             Filter = "Lua config (*.lua)|*.lua|All files (*.*)|*.*",
-            FileName = "Foothold Config.lua",
+            FileName = GetCurrentConfigFileName(_document),
             InitialDirectory = _document is null
                 ? GetInitialOpenDirectory()
                 : Path.GetDirectoryName(_document.Path)
@@ -3917,6 +3957,77 @@ internal sealed class MainForm : Form
         }
 
         return RuntimeSettings.GetBestInitialDirectory();
+    }
+
+    private static bool IsSupportedConfigFileName(string fileName)
+    {
+        return RuntimeSettings.SupportedConfigFileNames
+            .Any(supported => supported.Equals(fileName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string GetCurrentConfigFileName(ConfigDocument? document)
+    {
+        if (document is null)
+        {
+            return RuntimeSettings.DefaultConfigFileName;
+        }
+
+        var fileName = Path.GetFileName(document.Path);
+        return IsSupportedConfigFileName(fileName)
+            ? fileName
+            : RuntimeSettings.DefaultConfigFileName;
+    }
+
+    private static string GetConfigVariantLabel(string pathOrFileName)
+    {
+        var fileName = Path.GetFileName(pathOrFileName);
+        if (fileName.Equals(RuntimeSettings.Ww2ConfigFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            return "WW2";
+        }
+
+        if (fileName.Equals(RuntimeSettings.DefaultConfigFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            return "Normal";
+        }
+
+        return fileName;
+    }
+
+    private static List<string> GetSiblingConfigPaths(string configPath)
+    {
+        var directory = Path.GetDirectoryName(configPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return new List<string>();
+        }
+
+        return RuntimeSettings.SupportedConfigFileNames
+            .Select(fileName => Path.Combine(directory, fileName))
+            .Where(File.Exists)
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path.EndsWith(RuntimeSettings.DefaultConfigFileName, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ToList();
+    }
+
+    private static string GetSiblingConfigPath(string configPath, string configFileName)
+    {
+        var directory = Path.GetDirectoryName(configPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            throw new InvalidOperationException("The current config path is invalid.");
+        }
+
+        return Path.GetFullPath(Path.Combine(directory, configFileName));
+    }
+
+    private static string GetConfigFamilyKey(string configPath)
+    {
+        var fullPath = Path.GetFullPath(configPath);
+        return IsSupportedConfigFileName(Path.GetFileName(fullPath))
+            ? Path.GetDirectoryName(fullPath) ?? fullPath
+            : fullPath;
     }
 
     private (string? Path, bool AddAll) PromptForConfigPath(List<string> paths)
@@ -4022,7 +4133,7 @@ internal sealed class MainForm : Form
             ClearCategoryPanelCache();
             _viewedStageDifficulties.Clear();
             _document = ConfigDocument.Load(path);
-            RememberStringListCatalog(_document);
+            var loadWarnings = _document.LoadWarnings.ToList();
             _pathBox.Text = path;
             LoadSections();
             LoadPresets();
@@ -4031,8 +4142,24 @@ internal sealed class MainForm : Form
             LoadCategories();
             _settings.RememberConfig(path);
             RefreshInstanceList();
+            RefreshConfigVariantList();
             ClearUndo();
-            SetStatus($"Loaded {_document.Entries.Count.ToString(CultureInfo.InvariantCulture)} editable values.");
+            if (loadWarnings.Count > 0)
+            {
+                SetStatus("Repaired config while loading. Use Save to write the repair.");
+                MessageBox.Show(
+                    this,
+                    "The config was repaired while loading:" + Environment.NewLine +
+                    string.Join(Environment.NewLine, loadWarnings) + Environment.NewLine + Environment.NewLine +
+                    "Use Save to write the repair to the config file.",
+                    "Config repaired",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+            else
+            {
+                SetStatus($"Loaded {_document.Entries.Count.ToString(CultureInfo.InvariantCulture)} editable values.");
+            }
         }
         catch (Exception ex)
         {
@@ -4040,9 +4167,9 @@ internal sealed class MainForm : Form
         }
     }
 
-    private void RememberStringListCatalog(ConfigDocument document)
+    private void RefreshStringListCatalogFromDefaults(ConfigDocument document)
     {
-        if (_stringListCatalog.MergeFrom(document))
+        if (_stringListCatalog.RefreshFrom(document))
         {
             _stringListCatalog.Save();
         }
@@ -4075,6 +4202,87 @@ internal sealed class MainForm : Form
         }
     }
 
+    private void RefreshConfigVariantList()
+    {
+        _loadingConfigVariants = true;
+        try
+        {
+            _configVariantBox.Items.Clear();
+            if (_document is null)
+            {
+                _configVariantBox.Enabled = false;
+                ApplyConfigVariantSelectorVisibility(false);
+                return;
+            }
+
+            var currentPath = Path.GetFullPath(_document.Path);
+            var variants = GetSiblingConfigPaths(currentPath);
+            if (!variants.Any(path => path.Equals(currentPath, StringComparison.OrdinalIgnoreCase)))
+            {
+                variants.Insert(0, currentPath);
+            }
+
+            var selectedIndex = -1;
+            foreach (var path in variants)
+            {
+                var item = new ConfigVariantItem(GetConfigVariantLabel(path), path);
+                var index = _configVariantBox.Items.Add(item);
+                if (path.Equals(currentPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedIndex = index;
+                }
+            }
+
+            _configVariantBox.SelectedIndex = selectedIndex;
+            var showSelector = _configVariantBox.Items.Count > 1;
+            _configVariantBox.Enabled = showSelector;
+            ApplyConfigVariantSelectorVisibility(showSelector);
+        }
+        finally
+        {
+            _loadingConfigVariants = false;
+        }
+    }
+
+    private void ApplyConfigVariantSelectorVisibility(bool visible)
+    {
+        _configVariantBox.Visible = visible;
+        if (_instanceLayout is not null && _instanceLayout.ColumnStyles.Count > 3)
+        {
+            _instanceLayout.ColumnStyles[2].Width = visible ? LabelColumnWidth("Config", 55) : 0;
+            _instanceLayout.ColumnStyles[3].Width = visible ? ToolbarButtonWidth("Normal", 95) : 0;
+        }
+    }
+
+    private void SwitchConfigVariant()
+    {
+        if (_loadingConfigVariants || _configVariantBox.SelectedItem is not ConfigVariantItem item)
+        {
+            return;
+        }
+
+        var targetPath = Path.GetFullPath(item.Path);
+        if (_document is not null && Path.GetFullPath(_document.Path).Equals(targetPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (HasChanges())
+        {
+            MessageBox.Show(this, "Save or reload pending changes before switching config type.", "Switch Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            RefreshConfigVariantList();
+            return;
+        }
+
+        if (_instanceBox.SelectedItem is InstanceItem instanceItem)
+        {
+            instanceItem.Profile.ConfigPath = targetPath;
+            _settings.Save();
+        }
+
+        LoadConfig(targetPath);
+    }
+
     private void SwitchInstance()
     {
         if (_loadingInstances || _instanceBox.SelectedItem is not InstanceItem item)
@@ -4097,12 +4305,170 @@ internal sealed class MainForm : Form
 
         if (!File.Exists(targetPath))
         {
-            MessageBox.Show(this, "That instance config was not found:" + Environment.NewLine + targetPath, "Switch Instance", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            var recovery = PromptForMissingInstanceRecovery(item.Profile, targetPath);
+            if (recovery.Kind == MissingInstanceRecoveryKind.SelectPath && !string.IsNullOrWhiteSpace(recovery.Path))
+            {
+                item.Profile.ConfigPath = Path.GetFullPath(recovery.Path);
+                _settings.Save();
+                LoadConfig(item.Profile.ConfigPath);
+                return;
+            }
+
+            if (recovery.Kind == MissingInstanceRecoveryKind.Remove)
+            {
+                _settings.ServerProfiles.Remove(item.Profile);
+                _settings.Save();
+                RefreshInstanceList();
+                SetStatus("Instance removed: " + item.Profile.Name);
+                return;
+            }
+
             RefreshInstanceList();
             return;
         }
 
         LoadConfig(targetPath);
+    }
+
+    private MissingInstanceRecovery PromptForMissingInstanceRecovery(ServerProfileSettings profile, string missingPath)
+    {
+        var alternatives = GetSiblingConfigPaths(missingPath)
+            .Where(path => !path.Equals(missingPath, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        MissingInstanceRecovery result = new(MissingInstanceRecoveryKind.Cancel, null);
+
+        using var dialog = new Form
+        {
+            Text = "Switch Instance",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = new Size(Zoomed(720), Zoomed(alternatives.Count > 0 ? 340 : 250)),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = alternatives.Count > 0 ? 3 : 2,
+            ColumnCount = 1,
+            Padding = new Padding(Zoomed(16)),
+            BackColor = MainBackground
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        if (alternatives.Count > 0)
+        {
+            panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        }
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(24)));
+        dialog.Controls.Add(panel);
+
+        var message = new Label
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            MaximumSize = new Size(Zoomed(660), 0),
+            Text = "That instance config was not found:" + Environment.NewLine +
+                   missingPath + Environment.NewLine + Environment.NewLine +
+                   "Select a replacement config, remove the instance, or cancel.",
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+        panel.Controls.Add(message, 0, 0);
+
+        ListBox? list = null;
+        if (alternatives.Count > 0)
+        {
+            list = new ListBox
+            {
+                Dock = DockStyle.Fill,
+                HorizontalScrollbar = true
+            };
+            foreach (var path in alternatives)
+            {
+                list.Items.Add(GetConfigVariantLabel(path) + "  " + path);
+            }
+            list.SelectedIndex = 0;
+            panel.Controls.Add(list, 0, 1);
+        }
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, Zoomed(10), 0, 0),
+            BackColor = MainBackground
+        };
+        var cancelButton = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel };
+        SizeDialogButton(cancelButton);
+        cancelButton.Margin = new Padding(Zoomed(3));
+        buttons.Controls.Add(cancelButton);
+
+        var removeButton = new Button { Text = "Remove instance" };
+        SizeDialogButton(removeButton, 130);
+        removeButton.Margin = new Padding(Zoomed(3));
+        StyleButton(removeButton);
+        removeButton.Click += (_, _) =>
+        {
+            result = new MissingInstanceRecovery(MissingInstanceRecoveryKind.Remove, null);
+            dialog.DialogResult = DialogResult.OK;
+            dialog.Close();
+        };
+        buttons.Controls.Add(removeButton);
+
+        var selectButton = new Button { Text = "Select new file" };
+        SizeDialogButton(selectButton, 125);
+        selectButton.Margin = new Padding(Zoomed(3));
+        StyleButton(selectButton);
+        selectButton.Click += (_, _) =>
+        {
+            using var fileDialog = new OpenFileDialog
+            {
+                Title = "Select replacement config for " + profile.Name,
+                Filter = "Foothold config (*.lua)|*.lua|All files (*.*)|*.*",
+                FileName = RuntimeSettings.DefaultConfigFileName,
+                InitialDirectory = Path.GetDirectoryName(missingPath) ?? RuntimeSettings.GetBestInitialDirectory()
+            };
+            if (fileDialog.ShowDialog(dialog) == DialogResult.OK)
+            {
+                result = new MissingInstanceRecovery(MissingInstanceRecoveryKind.SelectPath, fileDialog.FileName);
+                dialog.DialogResult = DialogResult.OK;
+                dialog.Close();
+            }
+        };
+        buttons.Controls.Add(selectButton);
+
+        if (alternatives.Count > 0)
+        {
+            var switchButton = new Button { Text = "Switch to selected" };
+            SizeDialogButton(switchButton, 135);
+            switchButton.Margin = new Padding(Zoomed(3));
+            StyleButton(switchButton);
+            switchButton.Click += (_, _) =>
+            {
+                if (list is not null && list.SelectedIndex >= 0)
+                {
+                    result = new MissingInstanceRecovery(MissingInstanceRecoveryKind.SelectPath, alternatives[list.SelectedIndex]);
+                    dialog.DialogResult = DialogResult.OK;
+                    dialog.Close();
+                }
+            };
+            buttons.Controls.Add(switchButton);
+            dialog.AcceptButton = switchButton;
+            list!.DoubleClick += (_, _) => switchButton.PerformClick();
+        }
+
+        panel.Controls.Add(buttons, 0, alternatives.Count > 0 ? 2 : 1);
+        dialog.CancelButton = cancelButton;
+        ApplyThemeToControl(dialog, restyleButtons: true);
+
+        return dialog.ShowDialog(this) == DialogResult.OK
+            ? result
+            : new MissingInstanceRecovery(MissingInstanceRecoveryKind.Cancel, null);
     }
 
     private void AddInstance()
@@ -4111,7 +4477,7 @@ internal sealed class MainForm : Form
         {
             Title = "Select Foothold Config.lua for this instance",
             Filter = "Lua config (*.lua)|*.lua|All files (*.*)|*.*",
-            FileName = "Foothold Config.lua",
+            FileName = GetCurrentConfigFileName(_document),
             InitialDirectory = _document is null
                 ? RuntimeSettings.GetBestInitialDirectory()
                 : Path.GetDirectoryName(_document.Path)
@@ -4123,7 +4489,10 @@ internal sealed class MainForm : Form
         }
 
         var path = Path.GetFullPath(dialog.FileName);
-        var existing = _settings.ServerProfiles.FirstOrDefault(profile => Path.GetFullPath(profile.ConfigPath).Equals(path, StringComparison.OrdinalIgnoreCase));
+        var familyKey = GetConfigFamilyKey(path);
+        var existing = _settings.ServerProfiles.FirstOrDefault(profile =>
+            Path.GetFullPath(profile.ConfigPath).Equals(path, StringComparison.OrdinalIgnoreCase) ||
+            GetConfigFamilyKey(profile.ConfigPath).Equals(familyKey, StringComparison.OrdinalIgnoreCase));
         var name = PromptForText("Add Instance", "Instance name", existing?.Name ?? GuessInstanceName(path))?.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -4131,7 +4500,7 @@ internal sealed class MainForm : Form
         }
 
         if (_settings.ServerProfiles.Any(profile =>
-                !Path.GetFullPath(profile.ConfigPath).Equals(path, StringComparison.OrdinalIgnoreCase) &&
+                !GetConfigFamilyKey(profile.ConfigPath).Equals(familyKey, StringComparison.OrdinalIgnoreCase) &&
                 profile.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             MessageBox.Show(this, "An instance with that name already exists.", "Add Instance", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -4141,6 +4510,7 @@ internal sealed class MainForm : Form
         if (existing is not null)
         {
             existing.Name = name;
+            existing.ConfigPath = path;
         }
         else
         {
@@ -4156,15 +4526,22 @@ internal sealed class MainForm : Form
         SetStatus("Instance saved: " + name);
     }
 
-    private int AddDetectedInstances(List<string> paths)
+    private int AddDetectedInstances(List<string> paths, string? preferredPath)
     {
         var existingNames = _settings.ServerProfiles
             .Select(profile => profile.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var added = 0;
-        foreach (var path in paths.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var group in paths
+                     .Select(Path.GetFullPath)
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .GroupBy(GetConfigFamilyKey, StringComparer.OrdinalIgnoreCase))
         {
-            if (_settings.ServerProfiles.Any(profile => Path.GetFullPath(profile.ConfigPath).Equals(path, StringComparison.OrdinalIgnoreCase)))
+            var path = group.FirstOrDefault(item => !string.IsNullOrWhiteSpace(preferredPath) && PathsEqual(item, preferredPath)) ??
+                       group.FirstOrDefault(item => Path.GetFileName(item).Equals(RuntimeSettings.DefaultConfigFileName, StringComparison.OrdinalIgnoreCase)) ??
+                       group.First();
+            var familyKey = GetConfigFamilyKey(path);
+            if (_settings.ServerProfiles.Any(profile => GetConfigFamilyKey(profile.ConfigPath).Equals(familyKey, StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }
@@ -4187,10 +4564,14 @@ internal sealed class MainForm : Form
     private void AddOrUpdateInstanceProfile(string name, string path)
     {
         path = Path.GetFullPath(path);
-        var existing = _settings.ServerProfiles.FirstOrDefault(profile => Path.GetFullPath(profile.ConfigPath).Equals(path, StringComparison.OrdinalIgnoreCase));
+        var familyKey = GetConfigFamilyKey(path);
+        var existing = _settings.ServerProfiles.FirstOrDefault(profile =>
+            Path.GetFullPath(profile.ConfigPath).Equals(path, StringComparison.OrdinalIgnoreCase) ||
+            GetConfigFamilyKey(profile.ConfigPath).Equals(familyKey, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
         {
             existing.Name = string.IsNullOrWhiteSpace(name) ? GuessInstanceName(path) : name.Trim();
+            existing.ConfigPath = path;
         }
         else
         {
@@ -4206,6 +4587,17 @@ internal sealed class MainForm : Form
 
         _settings.Save();
         RefreshInstanceList();
+    }
+
+    private void UpdateSelectedInstanceConfigPath(string path)
+    {
+        if (_instanceBox.SelectedItem is not InstanceItem item)
+        {
+            return;
+        }
+
+        item.Profile.ConfigPath = Path.GetFullPath(path);
+        _settings.Save();
     }
 
     private void RemoveInstance()
@@ -4242,8 +4634,9 @@ internal sealed class MainForm : Form
         }
 
         var sourcePath = Path.GetFullPath(_document.Path);
+        var sourceConfigFileName = GetCurrentConfigFileName(_document);
         var targets = _settings.ServerProfiles
-            .Where(profile => !Path.GetFullPath(profile.ConfigPath).Equals(sourcePath, StringComparison.OrdinalIgnoreCase))
+            .Where(profile => !ResolveMatchingCopyTargetPath(profile.ConfigPath, sourceConfigFileName).Equals(sourcePath, StringComparison.OrdinalIgnoreCase))
             .OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (targets.Count == 0)
@@ -4252,8 +4645,8 @@ internal sealed class MainForm : Form
             return;
         }
 
-        var plans = targets.Select(target => BuildCopyTargetPlan(_document, target)).ToList();
-        var selectedPlans = PromptForCopyTargets(plans);
+        var plans = targets.Select(target => BuildCopyTargetPlan(_document, target, sourceConfigFileName)).ToList();
+        var selectedPlans = PromptForCopyTargets(plans, GetConfigVariantLabel(sourceConfigFileName));
         if (selectedPlans is null || selectedPlans.Count == 0)
         {
             return;
@@ -4290,24 +4683,39 @@ internal sealed class MainForm : Form
         SetStatus("Copied selected config to " + copied.Count.ToString(CultureInfo.InvariantCulture) + " instance(s). No backup created.");
     }
 
-    private CopyTargetPlan BuildCopyTargetPlan(ConfigDocument sourceDocument, ServerProfileSettings target)
+    private static string ResolveMatchingCopyTargetPath(string profileConfigPath, string sourceConfigFileName)
     {
+        var fullPath = Path.GetFullPath(profileConfigPath);
+        if (!IsSupportedConfigFileName(sourceConfigFileName) || !IsSupportedConfigFileName(Path.GetFileName(fullPath)))
+        {
+            return fullPath;
+        }
+
+        var directory = Path.GetDirectoryName(fullPath);
+        return string.IsNullOrWhiteSpace(directory)
+            ? fullPath
+            : Path.GetFullPath(Path.Combine(directory, sourceConfigFileName));
+    }
+
+    private CopyTargetPlan BuildCopyTargetPlan(ConfigDocument sourceDocument, ServerProfileSettings target, string sourceConfigFileName)
+    {
+        var targetPath = ResolveMatchingCopyTargetPath(target.ConfigPath, sourceConfigFileName);
         try
         {
-            if (!File.Exists(target.ConfigPath))
+            if (!File.Exists(targetPath))
             {
-                return new CopyTargetPlan(target, new List<CopyChange>(), "Config file was not found.");
+                return new CopyTargetPlan(target, targetPath, new List<CopyChange>(), GetConfigVariantLabel(sourceConfigFileName) + " config does not exist.");
             }
 
-            var targetDocument = ConfigDocument.Load(target.ConfigPath);
+            var targetDocument = ConfigDocument.Load(targetPath);
             var contentMatches = NormalizeCopyText(File.ReadAllText(sourceDocument.Path)).Equals(
-                NormalizeCopyText(File.ReadAllText(target.ConfigPath)),
+                NormalizeCopyText(File.ReadAllText(targetPath)),
                 StringComparison.Ordinal);
-            return new CopyTargetPlan(target, BuildCopyChanges(sourceDocument, targetDocument), contentMatches: contentMatches);
+            return new CopyTargetPlan(target, targetPath, BuildCopyChanges(sourceDocument, targetDocument), contentMatches: contentMatches);
         }
         catch (Exception ex)
         {
-            return new CopyTargetPlan(target, new List<CopyChange>(), ex.Message);
+            return new CopyTargetPlan(target, targetPath, new List<CopyChange>(), ex.Message);
         }
     }
 
@@ -4606,7 +5014,7 @@ internal sealed class MainForm : Form
         var selectedChanges = plan.Changes.Where(change => plan.SelectedChangeIds.Contains(change.Id)).ToList();
         if (plan.Changes.Count == 0)
         {
-            CopyValidatedConfigFile(sourcePath, plan.Profile.ConfigPath);
+            CopyValidatedConfigFile(sourcePath, plan.TargetPath);
             return;
         }
 
@@ -4617,12 +5025,12 @@ internal sealed class MainForm : Form
 
         if (selectedChanges.Count == plan.Changes.Count)
         {
-            CopyValidatedConfigFile(sourcePath, plan.Profile.ConfigPath);
+            CopyValidatedConfigFile(sourcePath, plan.TargetPath);
             return;
         }
 
         var sourceDocument = ConfigDocument.Load(sourcePath);
-        var output = ConfigDocument.Load(plan.Profile.ConfigPath);
+        var output = ConfigDocument.Load(plan.TargetPath);
         foreach (var change in selectedChanges)
         {
             if (change.Kind == CopyChangeKind.Entry)
@@ -4652,7 +5060,7 @@ internal sealed class MainForm : Form
         output.Save();
     }
 
-    private List<CopyTargetPlan>? PromptForCopyTargets(List<CopyTargetPlan> plans)
+    private List<CopyTargetPlan>? PromptForCopyTargets(List<CopyTargetPlan> plans, string sourceConfigLabel)
     {
         using var dialog = new Form
         {
@@ -4682,7 +5090,7 @@ internal sealed class MainForm : Form
 
         panel.Controls.Add(new Label
         {
-            Text = "Select instances to replace with the currently open config. No backup will be created.",
+            Text = "Select instances to replace with the currently open " + sourceConfigLabel + " config. No backup will be created.",
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = MainBackground,
@@ -4746,7 +5154,7 @@ internal sealed class MainForm : Form
         {
             if (plan.LoadError is not null)
             {
-                return "Cannot read config";
+                return plan.LoadError;
             }
 
             if (!plan.IsTargetSelected)
@@ -4935,7 +5343,7 @@ internal sealed class MainForm : Form
                     {
                         detailPanel.Controls.Add(new Label
                         {
-                            Text = plan.LoadError,
+                            Text = plan.LoadError + Environment.NewLine + plan.TargetPath,
                             Dock = DockStyle.Top,
                             AutoSize = true,
                             ForeColor = Color.Firebrick,
@@ -5619,7 +6027,7 @@ internal sealed class MainForm : Form
             return HasVisibleConfigCategoryContent(categoryName);
         }
 
-        return IsFixedCategory(categoryName) || ShouldShowDynamicCategory(categoryName);
+        return false;
     }
 
     private bool HasVisibleConfigCategoryContent(string categoryName)
@@ -7818,8 +8226,8 @@ internal sealed class MainForm : Form
         try
         {
             var itemValue = value.Trim();
-            _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(table.Key));
-            if (_stringListCatalog.Add(table.Key, itemValue))
+            _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(_document, table.Key));
+            if (_stringListCatalog.Add(_document, table.Key, itemValue))
             {
                 _stringListCatalog.Save();
             }
@@ -7858,7 +8266,7 @@ internal sealed class MainForm : Form
         {
             var itemValue = bucket.Value;
             _document.DeactivateStringListItem(table, bucket.Item);
-            if (_stringListCatalog.Add(table.Key, itemValue))
+            if (_stringListCatalog.Add(_document, table.Key, itemValue))
             {
                 _stringListCatalog.Save();
             }
@@ -7867,7 +8275,7 @@ internal sealed class MainForm : Form
             SelectBucketRowByValue(inactiveGrid, itemValue);
             SetUndoAction("comment " + itemValue, () =>
             {
-                    _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(table.Key));
+                    _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(_document, table.Key));
                 RefreshStringListGrids(activeGrid, inactiveGrid, table);
                 SelectBucketRowByValue(activeGrid, itemValue);
             });
@@ -7892,8 +8300,8 @@ internal sealed class MainForm : Form
         try
         {
             var itemValue = bucket.Value;
-            _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(table.Key));
-            if (_stringListCatalog.Add(table.Key, itemValue))
+            _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(_document, table.Key));
+            if (_stringListCatalog.Add(_document, table.Key, itemValue))
             {
                 _stringListCatalog.Save();
             }
@@ -7963,7 +8371,7 @@ internal sealed class MainForm : Form
                 changedConfig = true;
             }
 
-            var catalogChanged = _stringListCatalog.Remove(table.Key, removedValue);
+            var catalogChanged = _stringListCatalog.Remove(_document, table.Key, removedValue);
             if (catalogChanged)
             {
                 _stringListCatalog.Save();
@@ -7981,7 +8389,7 @@ internal sealed class MainForm : Form
                     _document.AddCommentedStringListItem(table, removedValue);
                 }
 
-                if (_stringListCatalog.Add(table.Key, removedValue))
+                if (_stringListCatalog.Add(_document, table.Key, removedValue))
                 {
                     _stringListCatalog.Save();
                 }
@@ -8225,6 +8633,7 @@ internal sealed class MainForm : Form
 
     private List<StringListBucketItem> GetInactiveStringListBucketItems(ConfigStringListTable table)
     {
+        var document = _document ?? throw new InvalidOperationException("No config is loaded.");
         var activeValues = table.Items
             .Select(item => item.Value)
             .ToHashSet(StringComparer.Ordinal);
@@ -8232,7 +8641,7 @@ internal sealed class MainForm : Form
             .GroupBy(item => item.Value, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         var values = new List<string>();
-        foreach (var value in _stringListCatalog.GetValues(table.Key))
+        foreach (var value in _stringListCatalog.GetValues(document, table.Key))
         {
             if (!values.Any(existing => existing.Equals(value, StringComparison.Ordinal)))
             {
@@ -10524,17 +10933,6 @@ internal sealed class MainForm : Form
                 .ToList()
             : GetConfigCategoryNamesInSourceOrder();
 
-        if (_document is not null)
-        {
-            foreach (var name in _document.Metadata.CategoryOrder)
-            {
-                if (!string.IsNullOrWhiteSpace(name) && !names.Contains(name, StringComparer.OrdinalIgnoreCase))
-                {
-                    names.Add(name);
-                }
-            }
-        }
-
         return names.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
@@ -10546,41 +10944,6 @@ internal sealed class MainForm : Form
                 .Select(category => category.Name)
                 .ToList()
             : GetConfigCategoryNamesInSourceOrder();
-
-        if (_document is not null)
-        {
-            foreach (var name in _document.Metadata.CategoryOrder)
-            {
-                if (!string.IsNullOrWhiteSpace(name) && !names.Contains(name, StringComparer.OrdinalIgnoreCase))
-                {
-                    names.Add(name);
-                }
-            }
-
-            foreach (var name in _document.Metadata.HiddenCategories)
-            {
-                if (!string.IsNullOrWhiteSpace(name) && !names.Contains(name, StringComparer.OrdinalIgnoreCase))
-                {
-                    names.Add(name);
-                }
-            }
-
-            foreach (var name in _document.Metadata.CategoryLayouts.Keys)
-            {
-                if (!string.IsNullOrWhiteSpace(name) && !names.Contains(name, StringComparer.OrdinalIgnoreCase))
-                {
-                    names.Add(name);
-                }
-            }
-
-            foreach (var name in GetConfigCategoryNamesInSourceOrder())
-            {
-                if (!names.Contains(name, StringComparer.OrdinalIgnoreCase))
-                {
-                    names.Add(name);
-                }
-            }
-        }
 
         return OrderCategoryNames(names);
     }
@@ -12157,16 +12520,46 @@ internal sealed class MainForm : Form
         try
         {
             Directory.CreateDirectory(tempDir);
-            var extractedConfigPath = ExtractFootholdConfigFromMiz(mizPath, tempDir);
+            var extractedConfig = ExtractFootholdConfigFromMiz(mizPath, tempDir, GetCurrentConfigFileName(_document));
             var currentDocument = _document;
-            var newDocument = ConfigDocument.Load(extractedConfigPath);
+            var targetPath = Path.GetFileName(currentDocument.Path).Equals(extractedConfig.ConfigFileName, StringComparison.OrdinalIgnoreCase)
+                ? currentDocument.Path
+                : GetSiblingConfigPath(currentDocument.Path, extractedConfig.ConfigFileName);
+            if (!PathsEqual(targetPath, currentDocument.Path) && File.Exists(targetPath))
+            {
+                currentDocument = ConfigDocument.Load(targetPath);
+            }
+
+            var newDocument = ConfigDocument.Load(extractedConfig.Path);
             newDocument.RepairStringListSeparators();
-            if (!ValidateInstallMizDocument(newDocument, "The Foothold Config.lua inside this MIZ"))
+            if (!ValidateInstallMizDocument(newDocument, "The " + extractedConfig.ConfigFileName + " inside this MIZ"))
             {
                 return;
             }
 
-            RememberStringListCatalog(newDocument);
+            RefreshStringListCatalogFromDefaults(newDocument);
+            if (!PathsEqual(targetPath, currentDocument.Path) && !File.Exists(targetPath))
+            {
+                if (!ConfirmInstallMissingMizConfigVariant(extractedConfig.ConfigFileName, targetPath, currentDocument.Path, mizPath))
+                {
+                    return;
+                }
+
+                var targetDirectory = Path.GetDirectoryName(targetPath);
+                if (string.IsNullOrWhiteSpace(targetDirectory))
+                {
+                    throw new InvalidOperationException("The target config path is invalid.");
+                }
+
+                Directory.CreateDirectory(targetDirectory);
+                var installedDefaults = StoreMizDefaults(mizPath, extractedConfig);
+                newDocument.SaveTo(targetPath);
+                UpdateSelectedInstanceConfigPath(targetPath);
+                LoadConfig(targetPath);
+                SetStatus("Installed " + extractedConfig.ConfigFileName + " from MIZ. Stored defaults from " + installedDefaults.MizName + ".");
+                return;
+            }
+
             var preview = MergeCurrentConfigIntoNewConfig(currentDocument, newDocument);
             if (!ValidateInstallMizDocument(newDocument, "The merged MIZ config"))
             {
@@ -12203,9 +12596,10 @@ internal sealed class MainForm : Form
             }
 
             var importedNewMarkers = CaptureImportedNewMarkers(preview);
-            var storedDefaults = StoreMizDefaults(mizPath, extractedConfigPath);
-            newDocument.SaveTo(currentDocument.Path);
-            LoadConfig(currentDocument.Path);
+            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig);
+            newDocument.SaveTo(targetPath);
+            UpdateSelectedInstanceConfigPath(targetPath);
+            LoadConfig(targetPath);
             ApplyImportedNewMarkers(importedNewMarkers);
             SetStatus("Imported merged config from MIZ. Stored defaults from " + storedDefaults.MizName + ".");
         }
@@ -12231,28 +12625,28 @@ internal sealed class MainForm : Form
 
     private bool InstallInitialConfigFromMiz(string mizPath, FirstRunInstanceCandidate instance)
     {
-        var targetPath = Path.GetFullPath(instance.ConfigPath);
-        if (File.Exists(targetPath))
-        {
-            AddOrUpdateInstanceProfile(instance.Name, targetPath);
-            LoadConfig(targetPath);
-            MessageBox.Show(this, "A Foothold Config.lua already exists at the selected target. It was opened and no file was overwritten.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return true;
-        }
-
         var tempDir = Path.Combine(Path.GetTempPath(), "FootholdConfigManager-" + Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(tempDir);
-            var extractedConfigPath = ExtractFootholdConfigFromMiz(mizPath, tempDir);
-            var newDocument = ConfigDocument.Load(extractedConfigPath);
+            var extractedConfig = ExtractFootholdConfigFromMiz(mizPath, tempDir, null);
+            var targetPath = Path.GetFullPath(instance.ConfigPathFor(extractedConfig.ConfigFileName));
+            if (File.Exists(targetPath))
+            {
+                AddOrUpdateInstanceProfile(instance.Name, targetPath);
+                LoadConfig(targetPath);
+                MessageBox.Show(this, "A " + extractedConfig.ConfigFileName + " already exists at the selected target. It was opened and no file was overwritten.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return true;
+            }
+
+            var newDocument = ConfigDocument.Load(extractedConfig.Path);
             newDocument.RepairStringListSeparators();
-            if (!ValidateMergeDocument(newDocument, "Install Foothold Config validation failed", "The Foothold Config.lua inside this MIZ"))
+            if (!ValidateMergeDocument(newDocument, "Install Foothold Config validation failed", "The " + extractedConfig.ConfigFileName + " inside this MIZ"))
             {
                 return false;
             }
 
-            RememberStringListCatalog(newDocument);
+            RefreshStringListCatalogFromDefaults(newDocument);
             var targetDirectory = Path.GetDirectoryName(targetPath);
             if (string.IsNullOrWhiteSpace(targetDirectory))
             {
@@ -12261,7 +12655,7 @@ internal sealed class MainForm : Form
 
             Directory.CreateDirectory(targetDirectory);
             newDocument.SaveTo(targetPath);
-            var storedDefaults = StoreMizDefaults(mizPath, extractedConfigPath);
+            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig);
             AddOrUpdateInstanceProfile(instance.Name, targetPath);
             LoadConfig(targetPath);
             SetStatus("Installed Foothold config from " + storedDefaults.MizName + " to " + instance.Name + ".");
@@ -12288,6 +12682,26 @@ internal sealed class MainForm : Form
         }
     }
 
+    private bool ConfirmInstallMissingMizConfigVariant(string configFileName, string targetPath, string currentPath, string mizPath)
+    {
+        var variantLabel = GetConfigVariantLabel(configFileName);
+        var currentLabel = GetConfigVariantLabel(currentPath);
+        var message =
+            "This MIZ contains a " + variantLabel + " config, but this instance does not have one yet." +
+            Environment.NewLine + Environment.NewLine +
+            "Current instance config:" + Environment.NewLine +
+            currentPath +
+            Environment.NewLine + Environment.NewLine +
+            "New config to create:" + Environment.NewLine +
+            targetPath +
+            Environment.NewLine + Environment.NewLine +
+            "Install it from this MIZ and switch this instance from " + currentLabel + " to " + variantLabel + "?" +
+            Environment.NewLine +
+            Path.GetFileName(mizPath);
+
+        return MessageBox.Show(this, message, "Install " + variantLabel + " Config", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+    }
+
     private bool ValidateInstallMizDocument(ConfigDocument document, string context)
     {
         return ValidateMergeDocument(document, "Import MIZ Config validation failed", context);
@@ -12305,43 +12719,159 @@ internal sealed class MainForm : Form
         return false;
     }
 
-    private static string ExtractFootholdConfigFromMiz(string mizPath, string tempDir)
+    private ExtractedMizConfig ExtractFootholdConfigFromMiz(string mizPath, string tempDir, string? preferredConfigFileName)
     {
         using var archive = ZipFile.OpenRead(mizPath);
-        var entry = archive.Entries
-            .Where(item => Path.GetFileName(item.FullName).Equals("Foothold Config.lua", StringComparison.OrdinalIgnoreCase))
+        var entries = archive.Entries
+            .Where(item => IsSupportedConfigFileName(Path.GetFileName(item.FullName)))
             .OrderBy(item => item.FullName.Contains("l10n/DEFAULT", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(item => item.FullName.Length)
-            .FirstOrDefault();
+            .ToList();
+        var entry = SelectMizConfigEntry(mizPath, entries, preferredConfigFileName);
         if (entry is null)
         {
-            throw new InvalidOperationException("Foothold Config.lua was not found inside this MIZ.");
+            throw new InvalidOperationException("Foothold Config.lua or Foothold Config WW2.lua was not found inside this MIZ.");
         }
 
-        var targetPath = Path.Combine(tempDir, "Foothold Config.lua");
+        var configFileName = Path.GetFileName(entry.FullName);
+        var targetPath = Path.Combine(tempDir, configFileName);
         using var input = entry.Open();
         using var output = File.Create(targetPath);
         input.CopyTo(output);
-        return targetPath;
+        return new ExtractedMizConfig(targetPath, configFileName);
     }
 
-    private static StoredMizDefaultsInfo StoreMizDefaults(string mizPath, string extractedConfigPath)
+    private ZipArchiveEntry? SelectMizConfigEntry(string mizPath, List<ZipArchiveEntry> entries, string? preferredConfigFileName)
+    {
+        if (entries.Count == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(preferredConfigFileName))
+        {
+            var preferred = entries.FirstOrDefault(item =>
+                Path.GetFileName(item.FullName).Equals(preferredConfigFileName, StringComparison.OrdinalIgnoreCase));
+            if (preferred is not null)
+            {
+                return preferred;
+            }
+        }
+
+        var distinctNames = entries
+            .Select(item => Path.GetFileName(item.FullName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (distinctNames.Count == 1)
+        {
+            return entries[0];
+        }
+
+        var selectedName = PromptForMizConfigFileName(mizPath, distinctNames);
+        return string.IsNullOrWhiteSpace(selectedName)
+            ? null
+            : entries.FirstOrDefault(item => Path.GetFileName(item.FullName).Equals(selectedName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string? PromptForMizConfigFileName(string mizPath, List<string> configFileNames)
+    {
+        using var dialog = new Form
+        {
+            Text = "Select MIZ Config",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = new Size(620, 260),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 3,
+            ColumnCount = 1,
+            Padding = new Padding(16),
+            BackColor = MainBackground
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+        dialog.Controls.Add(panel);
+
+        panel.Controls.Add(new Label
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            MaximumSize = new Size(560, 0),
+            Text = "This MIZ contains more than one Foothold config. Choose which one to use:" + Environment.NewLine +
+                   Path.GetFileName(mizPath),
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        }, 0, 0);
+
+        var list = new ListBox
+        {
+            Dock = DockStyle.Fill
+        };
+        foreach (var fileName in configFileNames)
+        {
+            list.Items.Add(GetConfigVariantLabel(fileName) + "  " + fileName);
+        }
+        list.SelectedIndex = 0;
+        panel.Controls.Add(list, 0, 1);
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, 10, 0, 0),
+            BackColor = MainBackground
+        };
+        var useButton = new Button { Text = "Use selected", DialogResult = DialogResult.OK };
+        var cancelButton = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel };
+        SizeDialogButton(useButton);
+        SizeDialogButton(cancelButton);
+        buttons.Controls.Add(useButton);
+        buttons.Controls.Add(cancelButton);
+        panel.Controls.Add(buttons, 0, 2);
+
+        dialog.AcceptButton = useButton;
+        dialog.CancelButton = cancelButton;
+        list.DoubleClick += (_, _) => dialog.DialogResult = DialogResult.OK;
+        ApplyThemeToControl(dialog, restyleButtons: true);
+
+        return dialog.ShowDialog(this) == DialogResult.OK && list.SelectedIndex >= 0
+            ? configFileNames[list.SelectedIndex]
+            : null;
+    }
+
+    private static StoredMizDefaultsInfo StoreMizDefaults(string mizPath, ExtractedMizConfig extractedConfig)
     {
         Directory.CreateDirectory(StoredDefaultsDirectory);
         var index = LoadStoredMizDefaultsIndex();
         var storedAt = DateTime.Now;
         var mizName = Path.GetFileName(mizPath);
         var fullMizPath = Path.GetFullPath(mizPath);
-        var id = storedAt.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + MakeSafeFileName(Path.GetFileNameWithoutExtension(mizName));
+        var configFileName = IsSupportedConfigFileName(extractedConfig.ConfigFileName)
+            ? extractedConfig.ConfigFileName
+            : RuntimeSettings.DefaultConfigFileName;
+        var id = storedAt.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) +
+                 "-" + MakeSafeFileName(Path.GetFileNameWithoutExtension(mizName)) +
+                 "-" + MakeSafeFileName(Path.GetFileNameWithoutExtension(configFileName));
         var configPath = Path.Combine(StoredDefaultsDirectory, id + ".lua");
 
-        File.Copy(extractedConfigPath, configPath, overwrite: true);
+        File.Copy(extractedConfig.Path, configPath, overwrite: true);
         var info = new StoredMizDefaultsInfo
         {
             Id = id,
             SourceKind = "miz",
             MizName = mizName,
             MizPath = fullMizPath,
+            ConfigFileName = configFileName,
             ConfigPath = configPath,
             StoredAt = storedAt
         };
@@ -12376,6 +12906,7 @@ internal sealed class MainForm : Form
             SourceKind = "config",
             MizName = Path.GetFileName(fullConfigPath),
             MizPath = fullConfigPath,
+            ConfigFileName = Path.GetFileName(fullConfigPath),
             ConfigPath = fullConfigPath,
             StoredAt = DateTime.Now
         };
@@ -12448,13 +12979,17 @@ internal sealed class MainForm : Form
             : info.ConfigPath;
         if (!string.IsNullOrWhiteSpace(sourcePath))
         {
+            var configKey = info.SourceKind.Equals("miz", StringComparison.OrdinalIgnoreCase) &&
+                            !string.IsNullOrWhiteSpace(info.ConfigFileName)
+                ? "|config:" + info.ConfigFileName
+                : "";
             try
             {
-                return "path:" + Path.GetFullPath(sourcePath);
+                return "path:" + Path.GetFullPath(sourcePath) + configKey;
             }
             catch
             {
-                return "path:" + sourcePath;
+                return "path:" + sourcePath + configKey;
             }
         }
 
@@ -12538,6 +13073,12 @@ internal sealed class MainForm : Form
             {
                 item.SourceKind = "miz";
             }
+            foreach (var item in index.Items.Where(item => string.IsNullOrWhiteSpace(item.ConfigFileName)))
+            {
+                item.ConfigFileName = IsSupportedConfigFileName(Path.GetFileName(item.ConfigPath))
+                    ? Path.GetFileName(item.ConfigPath)
+                    : RuntimeSettings.DefaultConfigFileName;
+            }
 
             return index;
         }
@@ -12574,15 +13115,15 @@ internal sealed class MainForm : Form
             try
             {
                 Directory.CreateDirectory(tempDir);
-                var extractedConfigPath = ExtractFootholdConfigFromMiz(fullPath, tempDir);
-                var defaultDocument = ConfigDocument.Load(extractedConfigPath);
+                var extractedConfig = ExtractFootholdConfigFromMiz(fullPath, tempDir, GetCurrentConfigFileName(_document));
+                var defaultDocument = ConfigDocument.Load(extractedConfig.Path);
                 defaultDocument.RepairStringListSeparators();
                 if (!ValidateMergeDocument(defaultDocument, "Restore Defaults validation failed", "The selected MIZ defaults"))
                 {
                     return null;
                 }
 
-                return StoreMizDefaults(fullPath, extractedConfigPath);
+                return StoreMizDefaults(fullPath, extractedConfig);
             }
             finally
             {
@@ -12656,6 +13197,7 @@ internal sealed class MainForm : Form
             return;
         }
 
+        RefreshStringListCatalogFromDefaults(defaultDocument);
         var outputDocument = ConfigDocument.Load(currentDocument.Path);
         foreach (var item in selection.SelectedItems)
         {
@@ -13048,7 +13590,7 @@ internal sealed class MainForm : Form
             {
                 Title = "Select restore defaults source",
                 Filter = "Foothold config or MIZ (*.lua;*.miz)|*.lua;*.miz|Lua config (*.lua)|*.lua|DCS mission (*.miz)|*.miz|All files (*.*)|*.*",
-                FileName = "Foothold Config.lua",
+                FileName = GetCurrentConfigFileName(currentDocument),
                 InitialDirectory = Path.GetDirectoryName(currentDocument.Path)
             };
 
@@ -13360,9 +13902,12 @@ internal sealed class MainForm : Form
 
     private static string FormatStoredMizDefaults(StoredMizDefaultsInfo info)
     {
+        var configName = !string.IsNullOrWhiteSpace(info.ConfigFileName) && IsSupportedConfigFileName(info.ConfigFileName)
+            ? " - " + GetConfigVariantLabel(info.ConfigFileName)
+            : "";
         var suffix = info.SourceKind.Equals("config", StringComparison.OrdinalIgnoreCase)
-            ? "  (config file)"
-            : "  (MIZ)";
+            ? "  (config file" + configName + ")"
+            : "  (MIZ" + configName + ")";
         return FormatRestoreDefaultsSourceName(info) + suffix;
     }
 
@@ -13694,7 +14239,7 @@ internal sealed class MainForm : Form
         {
             Title = "Select Foothold Config.lua",
             Filter = "Lua config (*.lua)|*.lua|All files (*.*)|*.*",
-            FileName = "Foothold Config.lua",
+            FileName = GetCurrentConfigFileName(_document),
             InitialDirectory = Path.GetDirectoryName(_document.Path)
         };
 
@@ -13721,7 +14266,6 @@ internal sealed class MainForm : Form
                 return;
             }
 
-            RememberStringListCatalog(sourceDocument);
             var outputDocument = ConfigDocument.Load(sourcePath);
             outputDocument.RepairStringListSeparators();
             var preview = MergeCurrentConfigIntoNewConfig(currentDocument, outputDocument);

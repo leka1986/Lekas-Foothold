@@ -6,6 +6,14 @@ namespace FootholdConfigManager;
 
 internal sealed class RuntimeSettings
 {
+    public const string DefaultConfigFileName = "Foothold Config.lua";
+    public const string Ww2ConfigFileName = "Foothold Config WW2.lua";
+    public static readonly string[] SupportedConfigFileNames =
+    {
+        DefaultConfigFileName,
+        Ww2ConfigFileName
+    };
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -107,11 +115,14 @@ internal sealed class RuntimeSettings
         var results = new List<string>();
         try
         {
-            foreach (var path in Directory.EnumerateFiles(savedGames, "Foothold Config.lua", SearchOption.AllDirectories))
+            foreach (var configFileName in SupportedConfigFileNames)
             {
-                if (IsMissionsSavesPath(path))
+                foreach (var path in Directory.EnumerateFiles(savedGames, configFileName, SearchOption.AllDirectories))
                 {
-                    results.Add(System.IO.Path.GetFullPath(path));
+                    if (IsMissionsSavesPath(path))
+                    {
+                        results.Add(System.IO.Path.GetFullPath(path));
+                    }
                 }
             }
         }
@@ -155,10 +166,21 @@ internal sealed class RuntimeSettings
                 ConfigPath = System.IO.Path.GetFullPath(profile.ConfigPath),
                 DeployTarget = profile.DeployTarget
             })
-            .GroupBy(profile => profile.ConfigPath, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(profile => GetProfileConfigFamilyKey(profile.ConfigPath), StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase)
             .ToList() ?? new List<ServerProfileSettings>();
+    }
+
+    private static string GetProfileConfigFamilyKey(string configPath)
+    {
+        var fileName = System.IO.Path.GetFileName(configPath);
+        if (SupportedConfigFileNames.Any(supported => supported.Equals(fileName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return System.IO.Path.GetDirectoryName(configPath) ?? configPath;
+        }
+
+        return configPath;
     }
 
     private static bool IsMissionsSavesPath(string path)

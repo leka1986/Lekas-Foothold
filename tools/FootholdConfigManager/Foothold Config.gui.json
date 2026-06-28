@@ -209,6 +209,18 @@
         }
       ],
       "IsEmpty": false
+    },
+    "AutoRestart": {
+      "Label": "Auto Restart",
+      "Category": null,
+      "Help": null,
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [],
+      "IsEmpty": false
     }
   },
   "CategoryLayouts": {
@@ -434,5 +446,5 @@
   "HiddenCategories": [],
   "AdvancedToggleVisible": true,
   "RawValuesVisible": false,
-  "FooterVersion": "V 1.6.4"
+  "FooterVersion": "V 1.7.0"
 }

@@ -717,6 +717,7 @@ internal sealed class ConfigDocument
     public List<ConfigEntry> Entries { get; } = new();
     public List<ConfigStringListTable> StringListTables { get; } = new();
     public List<ConfigStageTable> StageTables { get; } = new();
+    public List<string> LoadWarnings { get; } = new();
     public bool HasUnsavedChanges
     {
         get
@@ -748,10 +749,34 @@ internal sealed class ConfigDocument
         var newLine = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         var doc = new ConfigDocument(path, newLine);
         doc._lines.AddRange(Regex.Split(text, "\r\n|\n|\r"));
+        var originalText = string.Join(newLine, doc._lines);
+        var repairWarnings = doc.RepairMissingTopLevelTableClosers();
+        if (repairWarnings.Count > 0)
+        {
+            var repairErrors = doc.ValidateClosedTableBlocks();
+            repairErrors.AddRange(LuaSyntaxValidator.Validate(doc.RenderCurrentText(), path));
+            if (repairErrors.Count > 0)
+            {
+                doc._lines.Clear();
+                doc._lines.AddRange(Regex.Split(text, "\r\n|\n|\r"));
+                repairWarnings.Clear();
+            }
+        }
+
         doc.Parse();
         doc.Metadata = GuiMetadataStore.LoadForConfig(path);
         doc.ApplyMetadata();
-        doc._savedSnapshot = doc.RenderCurrentText();
+        if (repairWarnings.Count > 0)
+        {
+            doc.LoadWarnings.AddRange(repairWarnings);
+            doc._savedSnapshot = originalText;
+            doc._hasStructuralChanges = true;
+        }
+        else
+        {
+            doc._savedSnapshot = doc.RenderCurrentText();
+        }
+
         return doc;
     }
 
@@ -1499,6 +1524,103 @@ internal sealed class ConfigDocument
         }
 
         return errors;
+    }
+
+    private List<string> RepairMissingTopLevelTableClosers()
+    {
+        var warnings = new List<string>();
+        var guard = 0;
+        while (guard++ < 16 &&
+               TryFindMissingTopLevelTableCloser(out var tableKey, out var nextKey, out var insertLine))
+        {
+            _lines.Insert(insertLine, "}");
+            warnings.Add("Added missing closing brace for " + tableKey + " before " + nextKey + ".");
+        }
+
+        return warnings;
+    }
+
+    private bool TryFindMissingTopLevelTableCloser(out string tableKey, out string nextKey, out int insertLine)
+    {
+        tableKey = "";
+        nextKey = "";
+        insertLine = -1;
+        for (var i = 0; i < _lines.Count; i++)
+        {
+            if (!TryReadTopLevelAssignment(i, requireTableStart: true, out tableKey))
+            {
+                continue;
+            }
+
+            if (FindTableEndLine(i) >= i)
+            {
+                continue;
+            }
+
+            for (var nextLine = i + 1; nextLine < _lines.Count; nextLine++)
+            {
+                if (!TryReadTopLevelAssignment(nextLine, requireTableStart: true, out nextKey))
+                {
+                    continue;
+                }
+
+                insertLine = FindInsertionLineBeforeCommentBlock(nextLine);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryReadTopLevelAssignment(int lineIndex, bool requireTableStart, out string key)
+    {
+        key = "";
+        if (lineIndex < 0 || lineIndex >= _lines.Count)
+        {
+            return false;
+        }
+
+        var line = _lines[lineIndex];
+        if (string.IsNullOrWhiteSpace(line) ||
+            char.IsWhiteSpace(line[0]) ||
+            line.TrimStart().StartsWith("--", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var match = AssignmentRegex.Match(line);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        var lhsWithEquals = match.Groups["lhs"].Value;
+        key = NormalizeKey(lhsWithEquals[..lhsWithEquals.LastIndexOf('=')].Trim());
+        if (!requireTableStart)
+        {
+            return true;
+        }
+
+        var value = SplitValueAndSuffix(match.Groups["rest"].Value).value.TrimEnd();
+        return IsTableStart(value);
+    }
+
+    private int FindInsertionLineBeforeCommentBlock(int assignmentLine)
+    {
+        var insertLine = assignmentLine;
+        while (insertLine > 0)
+        {
+            var previous = _lines[insertLine - 1].Trim();
+            if (previous.Length == 0 || previous.StartsWith("--", StringComparison.Ordinal))
+            {
+                insertLine--;
+                continue;
+            }
+
+            break;
+        }
+
+        return insertLine;
     }
 
     private List<string> ValidateStringListSeparators()
