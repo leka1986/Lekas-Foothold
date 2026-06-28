@@ -3027,6 +3027,10 @@ DynamicHybridConfig = DynamicHybridConfig or {
 	minCapAttackNm = 35,
 	minPlaneAttackNm = 25,
 	minHeloAttackNm = 15,
+	forcedZoneCapabilities = {
+		["Mosul City"] = { groundAttack = true },
+		["Sulaimaniyah Airport"] = { groundAttack = true },
+	},
 	log = true,
 }
 bc:startDynamicHybridFiller(DynamicHybridConfig)

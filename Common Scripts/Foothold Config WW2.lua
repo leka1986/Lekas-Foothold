@@ -48,7 +48,7 @@ end
 -- ============================================================================
 -- Mission Rules
 -- ============================================================================
---
+
 -- Global language use for Foothold.
 -- This does not set the menu's language as it can be changed in the players radio menu.
 -- This will be the language used for on screen messages and other global text.
@@ -392,6 +392,7 @@ hard = {
 -- ============================================================================
 -- Message Of The Day
 -- ============================================================================
+
 -- Shows one server message to all players, then repeats it on a timer.
 MessageOfTheDay = {
     enabled = false, -- Set to true to show this message to everyone.
@@ -408,6 +409,7 @@ Please join us.]],
 -- ============================================================================
 -- Welcome Message Callsigns
 -- ============================================================================
+
 -- Below, you can change the callsigns in the welcome message and their IFF codes.
 -- The IFF codes are only functional if you use LotATC and configure the same numbers there.
 -- If IFF is not important to you, keep the numbers as-is and only change the callsigns.
@@ -482,6 +484,7 @@ AllowedToCarrySupplies = {
 -- ============================================================================
 -- Shop / Rewards
 -- ============================================================================
+
 -- Shop prices.
 -- @gui installPolicy="mergeRows"
 ShopPrices = {
@@ -522,28 +525,6 @@ ShopRankRequirements = {
 	zsam           = 6,  -- Add AA guns to a zone
 	zarm           = 7,  -- Add armor group to a zone
 	gslot          = 9,  -- Unlock extra upgrade slot
-}
-
--- Support menu category labels and display order.
--- Here, you can change the names if you want.
-ShopCategoryLabels = {
-	AIAttack = "AI Attack",
-	ZoneUpgrades = "Zone Upgrades",
-	JTACIntel = "JTAC & Intel",
-	MarkingTools = "Marking & Tools",
-	CombinedArms = "Combined Arms",
-	LogisticsStrategic = "Capture & resources",
-	OtherSupport = "Other Support",
-}
--- Here, you can reorder the menu. Don't change the names below, just rearange if you want to. you DON'T have to.
-ShopCategoryLabels.Order = {
-	ShopCategoryLabels.AIAttack,
-	ShopCategoryLabels.ZoneUpgrades,
-	ShopCategoryLabels.JTACIntel,
-	ShopCategoryLabels.MarkingTools, -- not used.
-	ShopCategoryLabels.CombinedArms,
-	ShopCategoryLabels.LogisticsStrategic,
-	ShopCategoryLabels.OtherSupport,
 }
 
 -- Earning per kill by target type.

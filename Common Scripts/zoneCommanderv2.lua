@@ -32725,17 +32725,18 @@ function GroupCommander:_assignHeloExternalCargoUnloadAndLandRoute(groupName, ta
 	local unloadUnitId = opts.unloadUnitIdTransport
 	if unloadUnitId == nil then unloadUnitId = -1 end
 	local unloadTask = ExternalHeloCargoRoute.TaskUnload(plan.unloadZoneId, unloadUnitId, 1)
+	local landTask = nil
+	if not plan.useAirbase then
+		landTask = gmoose:TaskLandAtVec2({ x = plan.destx, y = plan.destz }, 60, side == 2, nil)
+	end
 	local currentAglM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
 	local route = {}
 	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(pos.x, pos.z, currentAglM, speedKmh, {}, "Current")
 	addPreferVerticalOptionToWaypoint(route[1])
-	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.approachX, plan.approachZ, approachAglM, speedKmh, { unloadTask }, "External Cargo Unload 2 NM")
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.approachX, plan.approachZ, approachAglM, speedKmh, landTask and { unloadTask, landTask } or { unloadTask }, "External Cargo Unload 2 NM")
 
 	if plan.useAirbase then
 		route[#route + 1] = plan.airbase:GetCoordinate():WaypointAirLanding(speedKmh, plan.airbase, {}, "Landing")
-	else
-		local landTask = gmoose:TaskLandAtVec2({ x = plan.destx, y = plan.destz }, 60, side == 2, nil)
-		route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.destx, plan.destz, 0, speedKmh, { landTask }, "Landing")
 	end
 	gmoose:Route(route, 1)
 
@@ -32820,7 +32821,7 @@ function GroupCommander:_assignHeloExternalCargoLogisticsRoute(groupName, target
 		local cargoCoord = COORDINATE:New(pos.x, pos.y, pos.z):Translate(20, azDeg)
 		cargoX, cargoZ = cargoCoord.x, cargoCoord.z
 	end
-	local loadX, loadZ = ExternalHeloCargoRoute.PointBefore(cargoX, cargoZ, pos.x, pos.z, 100, heading)
+	local loadX, loadZ = ExternalHeloCargoRoute.PointBefore(cargoX, cargoZ, pos.x, pos.z, 130, heading)
 	local plan = self:_resolveHeloExternalCargoDeliveryPlan(targetZoneName, cargoX, cargoZ, side)
 	if not plan then return nil end
 
@@ -32844,21 +32845,22 @@ function GroupCommander:_assignHeloExternalCargoLogisticsRoute(groupName, target
 	local unloadTask = ExternalHeloCargoRoute.TaskUnload(plan.unloadZoneId, -1, 1)
 	local currentAglM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
 	local loadSpeedKmh = 110
-	local speedKmh = 259
+	local speedKmh = 240
 	local loadAglM = 25
 	local approachAglM = UTILS.FeetToMeters(500)
 	local approachAlt = land.getHeight({ x = plan.approachX, y = plan.approachZ }) + approachAglM
+	local landTask = nil
+	if not plan.useAirbase then
+		landTask = gmoose:TaskLandAtVec2({ x = plan.destx, y = plan.destz }, 60, side == 2, nil)
+	end
 	local route = {}
 	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(pos.x, pos.z, currentAglM, loadSpeedKmh, {}, "Current")
 	addPreferVerticalOptionToWaypoint(route[1])
 	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(loadX, loadZ, loadAglM, loadSpeedKmh, { loadTask }, "External Cargo Load")
-	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.approachX, plan.approachZ, approachAglM, speedKmh, { unloadTask }, "External Cargo Unload 2 NM")
+	route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.approachX, plan.approachZ, approachAglM, speedKmh, landTask and { unloadTask, landTask } or { unloadTask }, "External Cargo Unload 2 NM")
 
 	if plan.useAirbase then
 		route[#route + 1] = plan.airbase:GetCoordinate():WaypointAirLanding(speedKmh, plan.airbase, {}, "Landing")
-	else
-		local landTask = gmoose:TaskLandAtVec2({ x = plan.destx, y = plan.destz }, 60, side == 2, nil)
-		route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(plan.destx, plan.destz, 0, speedKmh, { landTask }, "Landing")
 	end
 	gmoose:Route(route, 1)
 
