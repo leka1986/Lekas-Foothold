@@ -454,11 +454,6 @@ CallsignOverrides = {
 -- Logistics / Warehouse
 -- ============================================================================
 
--- If true, logistics/supply is done via warehouse + zone supplies only.
--- You can only carry supplies using the rearming menu, then load cargo, not the ctld menu nor logistics menu.
--- Neutral zones start without weapons; you must bring them or wait for AI delivery.
-WarehouseLogistics = false -- Should remain false in WW2.
-
 -- If true, Blue AI will NOT deliver supplies, it will ONLY be done by the player.
 NoAIBlueSupplies = false
 

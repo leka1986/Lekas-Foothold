@@ -5510,8 +5510,13 @@ function Frontline.ReindexZoneCalcs()
 	Frontline.BuildZoneAwareness(160, { forwardJitterNm = 120, avoidEnemyMinNm = 40 })
 end
 
+function AwacsConfigured()
+	return type(AWACS_CFG) == "table" and (AWACS_CFG[1] or AWACS_CFG[2])
+end
+
 local function _computeAwacsStationWithZone(side)
-    local cfg = AWACS_CFG[side] or {}
+	if not AwacsConfigured() then return nil, nil end
+	local cfg = (type(AWACS_CFG) == "table" and AWACS_CFG[side]) or {}
     local zi  = _buildAwacsZoneInfo()
     local sep = cfg.sep or 0
     if (not _enemyDistIndex) or (next(_enemyDistIndex) == nil) then
@@ -5639,6 +5644,7 @@ end
 
 
 local function _computeAwacsStationWithZoneSecondary(side, avoidX, avoidZ, minSepNm)
+	if not AwacsConfigured() then return nil, nil end
     local cfg = AWACS_CFG[side] or {}
     local zi  = _buildAwacsZoneInfo()
     local sep = cfg.sep or 0
@@ -5752,6 +5758,7 @@ local function _computeAwacsStationWithZoneSecondary(side, avoidX, avoidZ, minSe
 end
 
 function RepositionAwacsToFront()
+	if not AwacsConfigured() then return end
 	local blueVec = nil
 	for side=1,2 do
 		local coord, z, h = _computeAwacsStationWithZone(side)
@@ -5873,6 +5880,7 @@ function setAwacsRacetrack(side, coord, heading, leg, zoneName)
 end
 
 function spawnAwacs(side, heading, leg)
+	if not AwacsConfigured() then return end
     local cfgSide = (side == 3) and 2 or side
     local cfg = AWACS_CFG[cfgSide] or {}
     local coord, z, ch, toward
@@ -12274,7 +12282,9 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 			if supplyZones and not supplyZonesSet[FName] then
 				supplyZones[#supplyZones + 1] = FName
 				supplyZonesSet[FName] = true
-				Foothold_ctld:ClearNoZoneSupplyThrottle()
+				if Foothold_ctld and Foothold_ctld.ClearNoZoneSupplyThrottle then
+					Foothold_ctld:ClearNoZoneSupplyThrottle()
+				end
 			end
 
 			if WarehousePersistence and WarehousePersistence.RegisterExtraAirbase then
@@ -31175,8 +31185,11 @@ function ZoneCommander:capture(newside,silent)
 
         SCHEDULER:New(bc, bc.abortSupplyToOpposite, {self.zone, self.side}, 10, 0)
         if _awacsRepositionSched then _awacsRepositionSched:Stop() end
+		if AwacsConfigured() then
         _awacsRepositionSched = SCHEDULER:New(nil, RepositionAwacsToFront, {}, 15)
-		
+		else
+			_awacsRepositionSched = nil
+		end
 		self.battleCommander:requestFrontlineRefresh()
 
 		if checkAndDisableFriendlyZones then
@@ -40014,27 +40027,45 @@ end
 LogisticCommander = {}
 do
 	LogisticCommander.allowedTypes = {}
-	LogisticCommander.allowedTypes['Ka-50'] = true
-	LogisticCommander.allowedTypes['Ka-50_3'] = true
-	LogisticCommander.allowedTypes['Mi-24P'] = true
-	LogisticCommander.allowedTypes['SA342Mistral'] = true
-	LogisticCommander.allowedTypes['SA342L'] = true
-	LogisticCommander.allowedTypes['SA342M'] = true
-	LogisticCommander.allowedTypes['SA342Minigun'] = true
-	LogisticCommander.allowedTypes['UH-60L'] = true
-	LogisticCommander.allowedTypes['UH-60L_DAP'] = true
-	LogisticCommander.allowedTypes['AH-64D_BLK_II'] = true
-	LogisticCommander.allowedTypes['UH-1H'] = true
-	LogisticCommander.allowedTypes['Mi-8MT'] = true
-	LogisticCommander.allowedTypes['Hercules'] = true
-	LogisticCommander.allowedTypes['OH58D'] = true
-	LogisticCommander.allowedTypes['CH-47Fbl1'] = true
-	LogisticCommander.allowedTypes['Bronco-OV-10A'] = true
-	LogisticCommander.allowedTypes['OH-6A'] = true
-	LogisticCommander.allowedTypes['C-130J-30'] = true
-	LogisticCommander.allowedTypes['MH-6J'] = true
-	LogisticCommander.allowedTypes['AH-6J'] = true
-	LogisticCommander.allowedTypes['MH-60R'] = true
+	if map == "Normandy" then
+		LogisticCommander.allowedTypes['P-51D-30-NA'] = true
+		LogisticCommander.allowedTypes['SpitfireLFMkIX'] = true
+		LogisticCommander.allowedTypes['MosquitoFBMkVI'] = true
+		LogisticCommander.allowedTypes['Bf-109K-4'] = true
+		LogisticCommander.allowedTypes['FW-190A8'] = true
+		LogisticCommander.allowedTypes['FW-190D9'] = true
+		LogisticCommander.allowedTypes['F4U-1D'] = true
+		LogisticCommander.allowedTypes['F4U-1D_CW'] = true
+		LogisticCommander.allowedTypes['I-16'] = true
+		LogisticCommander.allowedTypes['P-47D-30'] = true
+		LogisticCommander.allowedTypes['P-47D-30bl1'] = true
+		LogisticCommander.allowedTypes['P-47D-40'] = true
+		LogisticCommander.allowedTypes['P-51D'] = true
+		LogisticCommander.allowedTypes['SpitfireLFMkIXCW'] = true
+		LogisticCommander.allowedTypes['La-7'] = true
+	else
+		LogisticCommander.allowedTypes['Ka-50'] = true
+		LogisticCommander.allowedTypes['Ka-50_3'] = true
+		LogisticCommander.allowedTypes['Mi-24P'] = true
+		LogisticCommander.allowedTypes['SA342Mistral'] = true
+		LogisticCommander.allowedTypes['SA342L'] = true
+		LogisticCommander.allowedTypes['SA342M'] = true
+		LogisticCommander.allowedTypes['SA342Minigun'] = true
+		LogisticCommander.allowedTypes['UH-60L'] = true
+		LogisticCommander.allowedTypes['UH-60L_DAP'] = true
+		LogisticCommander.allowedTypes['AH-64D_BLK_II'] = true
+		LogisticCommander.allowedTypes['UH-1H'] = true
+		LogisticCommander.allowedTypes['Mi-8MT'] = true
+		LogisticCommander.allowedTypes['Hercules'] = true
+		LogisticCommander.allowedTypes['OH58D'] = true
+		LogisticCommander.allowedTypes['CH-47Fbl1'] = true
+		LogisticCommander.allowedTypes['Bronco-OV-10A'] = true
+		LogisticCommander.allowedTypes['OH-6A'] = true
+		LogisticCommander.allowedTypes['C-130J-30'] = true
+		LogisticCommander.allowedTypes['MH-6J'] = true
+		LogisticCommander.allowedTypes['AH-6J'] = true
+		LogisticCommander.allowedTypes['MH-60R'] = true
+	end
 
 LogisticCommander.AllowedToCarrySupplies = AllowedToCarrySupplies or {
     ['Ka-50'] = false,
@@ -40275,7 +40306,9 @@ end
 		self.groupMenus[groupid] = nil
 		self.staticMenus[groupid] = nil
 		self.groupIdToName[groupid] = nil
-		Foothold_ctld:ClearZoneSupplyOnboardForGroup(groupid)
+		if Foothold_ctld and Foothold_ctld.ClearZoneSupplyOnboardForGroup then
+			Foothold_ctld:ClearZoneSupplyOnboardForGroup(groupid)
+		end
 		if Foothold_redCtld and Foothold_redCtld.ClearZoneSupplyOnboardForGroup then
 			Foothold_redCtld:ClearZoneSupplyOnboardForGroup(groupid)
 		end
@@ -42931,8 +42964,10 @@ function LogisticCommander:init()
 							missionCommands.addCommandForGroup(groupid, T:Get("CSAR_INFO_THREE_CLOSEST_PILOTS"), csar, self.context.infoTopPilots, self.context, groupname, 3)
 							missionCommands.addCommandForGroup(groupid, T:Get("CSAR_DEPLOY_SMOKE_CLOSEST"), csar, self.context.markPilot, self.context, groupname)
 							missionCommands.addCommandForGroup(groupid, T:Get("CSAR_DEPLOY_FLARE_CLOSEST"), csar, self.context.flarePilot, self.context, groupname)
-						missionCommands.addCommandForGroup(groupid, T:Get("CSAR_SMOKE_NEAREST_ZONE"), csar, function() Foothold_ctld:SmokeZoneNearBy(GROUP:FindByName(groupname):GetUnit(1), false) end)
-						missionCommands.addCommandForGroup(groupid, T:Get("CSAR_FLARE_NEAREST_ZONE"), csar, function() Foothold_ctld:SmokeZoneNearBy(GROUP:FindByName(groupname):GetUnit(1), true) end)
+						if Foothold_ctld and Foothold_ctld.SmokeZoneNearBy then
+							missionCommands.addCommandForGroup(groupid, T:Get("CSAR_SMOKE_NEAREST_ZONE"), csar, function() Foothold_ctld:SmokeZoneNearBy(GROUP:FindByName(groupname):GetUnit(1), false) end)
+							missionCommands.addCommandForGroup(groupid, T:Get("CSAR_FLARE_NEAREST_ZONE"), csar, function() Foothold_ctld:SmokeZoneNearBy(GROUP:FindByName(groupname):GetUnit(1), true) end)
+						end
 					else
 						self.context.csarGroupMenus[groupid] = nil
 					end
@@ -43150,7 +43185,7 @@ function LogisticCommander:init()
 						self.context.carriedCargo[groupid] = nil
 						if playerCoalition == coalition.side.RED and Foothold_redCtld and Foothold_redCtld.ClearZoneSupplyOnboardForGroup then
 							Foothold_redCtld:ClearZoneSupplyOnboardForGroup(groupid)
-						else
+						elseif Foothold_ctld and Foothold_ctld.ClearZoneSupplyOnboardForGroup then
 							Foothold_ctld:ClearZoneSupplyOnboardForGroup(groupid)
 						end
 					end, {}, 0.5)
@@ -48946,7 +48981,6 @@ do
     env.info(string.format("[WarehousePersistence] Failed clearing storage file %s (%s)", tostring(full), tostring(err)))
     return false
   end
-
   
 	function WarehousePersistence.Save(zonesTbl, opts)
 		opts = opts or {}
