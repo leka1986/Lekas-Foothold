@@ -1147,6 +1147,89 @@ internal sealed class ConfigDocument
         return entry;
     }
 
+    public ConfigEntry RenameTableEntry(ConfigEntry entry, string newKey)
+    {
+        if (string.IsNullOrWhiteSpace(entry.ParentKey))
+        {
+            throw new InvalidOperationException("Only table rows can be renamed.");
+        }
+
+        newKey = newKey.Trim();
+        if (string.IsNullOrWhiteSpace(newKey))
+        {
+            throw new InvalidOperationException("Callsign cannot be empty.");
+        }
+
+        if (newKey.Any(char.IsControl))
+        {
+            throw new InvalidOperationException("Callsign cannot contain control characters.");
+        }
+
+        if (entry.Key.Equals(newKey, StringComparison.Ordinal))
+        {
+            return entry;
+        }
+
+        if (Entries.Any(candidate =>
+                !ReferenceEquals(candidate, entry) &&
+                candidate.ParentKey.Equals(entry.ParentKey, StringComparison.Ordinal) &&
+                candidate.Key.Equals(newKey, StringComparison.Ordinal)))
+        {
+            throw new InvalidOperationException("That aircraft already has a callsign named " + newKey + ".");
+        }
+
+        var index = Entries.IndexOf(entry);
+        if (index < 0)
+        {
+            throw new InvalidOperationException("Could not rename row because it is no longer in the document.");
+        }
+
+        if (entry.IsLongText)
+        {
+            throw new InvalidOperationException("Cannot rename a multi-line table row.");
+        }
+
+        if (entry.LineIndex < 0 || entry.LineIndex >= _lines.Count)
+        {
+            throw new InvalidOperationException("Could not rename row because its source line was not found.");
+        }
+
+        var renamed = new ConfigEntry
+        {
+            LineIndex = entry.LineIndex,
+            EndLineIndex = entry.EndLineIndex,
+            Section = entry.Section,
+            Key = newKey,
+            DisplayKey = entry.ParentKey + "." + newKey,
+            ParentKey = entry.ParentKey,
+            ParentDescription = entry.ParentDescription,
+            Description = entry.Description,
+            InlineComment = entry.InlineComment,
+            Prefix = GetEntryIndent(entry) + "[\"" + EscapeLuaKey(newKey) + "\"] = ",
+            Suffix = entry.Suffix,
+            RawValue = entry.RawValue,
+            Kind = entry.Kind,
+            QuoteChar = entry.QuoteChar,
+            InferredAdvanced = entry.InferredAdvanced,
+            IsLongText = entry.IsLongText,
+            GuiLabel = entry.GuiLabel,
+            GuiValidValues = entry.GuiValidValues
+        };
+        renamed.InitializeValueText(entry.RawValue);
+        renamed.ValueText = entry.ValueText;
+        AddChoices(renamed);
+        AddTupleFields(renamed);
+        if (Metadata.Entries.TryGetValue(renamed.DisplayKey, out var metadata))
+        {
+            renamed.ApplyMetadata(metadata);
+        }
+
+        Entries[index] = renamed;
+        _lines[renamed.LineIndex] = renamed.RenderLine();
+        _hasStructuralChanges = true;
+        return renamed;
+    }
+
     public void RemoveEntry(ConfigEntry entry)
     {
         var count = Math.Max(1, entry.EndLineIndex - entry.LineIndex + 1);

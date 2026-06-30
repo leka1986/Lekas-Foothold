@@ -33,9 +33,21 @@ internal sealed class MainForm : Form
     private static Color SelectionBackground = Color.FromArgb(36, 71, 102);
     private static Color SelectionText = Color.White;
     private static Color UndoBackground = Color.FromArgb(244, 232, 203);
+    private static Color UndoMutedBorder = Color.FromArgb(176, 128, 48);
+    private static Color UndoMutedText = Color.FromArgb(102, 75, 30);
+    private static Color SavePendingBackground = Color.FromArgb(218, 235, 249);
+    private static Color SavePendingHoverBackground = Color.FromArgb(202, 226, 246);
+    private static Color SavePendingBorder = Color.FromArgb(30, 115, 216);
     private static Color BrandColor = Color.FromArgb(30, 136, 183);
 
-    private sealed record UndoStep(string Description, Action Action, Action? RefreshAction);
+    private sealed record UndoStep(
+        string Description,
+        Action Action,
+        Action? RefreshAction,
+        string? CollapseKey = null,
+        string? BeforeValue = null,
+        string? AfterValue = null,
+        int CollapseGeneration = 0);
     private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly);
     private sealed record ImportedNewEntryMarker(string Category, string DisplayKey);
     private sealed record ConfigVariantItem(string Label, string Path)
@@ -124,6 +136,10 @@ internal sealed class MainForm : Form
         public ToolbarIconKind IconKind { get; }
 
         public Color NormalBackColor { get; set; }
+        public Color NormalBorderColor { get; set; }
+        public Color HoverBackColor { get; set; }
+        public Color HoverBorderColor { get; set; }
+        public Color PressedBackColor { get; set; }
 
         protected override void OnMouseEnter(EventArgs e)
         {
@@ -188,52 +204,59 @@ internal sealed class MainForm : Form
             }
 
             var darkPalette = IsDarkPalette();
+            var hoverBackColor = HoverBackColor.IsEmpty ? HeaderBackground : HoverBackColor;
+            var pressedBackColor = PressedBackColor.IsEmpty ? SelectionBackground : PressedBackColor;
             var fillColor = Enabled
                 ? darkPalette
-                    ? (_pressed ? SelectionBackground : _hover ? HeaderBackground : NormalBackColor)
-                    : (_pressed ? SelectionBackground : _hover ? HeaderBackground : NormalBackColor)
+                    ? (_pressed ? pressedBackColor : _hover ? hoverBackColor : NormalBackColor)
+                    : (_pressed ? pressedBackColor : _hover ? hoverBackColor : NormalBackColor)
                 : ButtonBackground;
-            var textColor = Enabled ? PrimaryTextColor : HelpTextColor;
+            var textColor = Enabled ? ForeColor : HelpTextColor;
 
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
             using var fill = new SolidBrush(fillColor);
             e.Graphics.FillRectangle(fill, bounds);
-            if (darkPalette)
-            {
-                var borderColor = Enabled && (_hover || _pressed)
-                    ? BrandColor
-                    : BorderColor;
-                using var border = new Pen(borderColor, _pressed ? 2 : 1);
-                e.Graphics.DrawRectangle(border, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
-            }
-            else
-            {
-                using var border = new Pen(BorderColor);
-                e.Graphics.DrawRectangle(border, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
-            }
+            var borderColor = Enabled && (_hover || _pressed)
+                ? HoverBorderColor.IsEmpty ? BrandColor : HoverBorderColor
+                : NormalBorderColor.IsEmpty ? BorderColor : NormalBorderColor;
+            using var border = new Pen(borderColor, _pressed ? 2 : 1);
+            e.Graphics.DrawRectangle(border, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
 
-            var iconSize = Math.Min(17, Math.Max(13, bounds.Height - 16));
-            var iconX = bounds.X + 6;
+            var undoIcon = IconKind == ToolbarIconKind.Undo;
+            var iconSize = undoIcon
+                ? Math.Min(22, Math.Max(18, bounds.Height - 10))
+                : Math.Min(17, Math.Max(13, bounds.Height - 16));
+            var textGap = undoIcon ? Math.Max(7, bounds.Height / 5) : 5;
+            var textPadding = undoIcon ? Math.Max(7, bounds.Height / 5) : 14;
+            var measuredText = TextRenderer.MeasureText(Text, Font, new Size(int.MaxValue, bounds.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+            var contentWidth = iconSize + textGap + measuredText.Width;
+            var iconX = undoIcon
+                ? bounds.X + Math.Max(textPadding, (bounds.Width - contentWidth) / 2)
+                : bounds.X + 6;
             var iconY = bounds.Y + Math.Max(0, (bounds.Height - iconSize) / 2);
             var iconBounds = new Rectangle(iconX, iconY, iconSize, iconSize);
             DrawToolbarIcon(e.Graphics, IconKind, iconBounds, textColor);
 
-            var textBounds = new RectangleF(
-                iconX + iconSize + 5,
+            var textX = iconX + iconSize + textGap;
+            var rightPadding = undoIcon ? textPadding : 14;
+            var textBounds = new Rectangle(
+                textX,
                 bounds.Y,
-                Math.Max(0, bounds.Width - iconSize - 14),
+                Math.Max(0, bounds.Right - rightPadding - textX),
                 bounds.Height);
-            using var textBrush = new SolidBrush(textColor);
-            using var textFormat = new StringFormat
-            {
-                Alignment = StringAlignment.Near,
-                LineAlignment = StringAlignment.Center,
-                Trimming = StringTrimming.EllipsisCharacter,
-                FormatFlags = StringFormatFlags.NoWrap
-            };
-            e.Graphics.DrawString(Text, Font, textBrush, textBounds, textFormat);
+            TextRenderer.DrawText(
+                e.Graphics,
+                Text,
+                Font,
+                textBounds,
+                textColor,
+                TextFormatFlags.SingleLine |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.NoPadding |
+                TextFormatFlags.NoPrefix);
         }
     }
 
@@ -903,7 +926,8 @@ internal sealed class MainForm : Form
     private ThemeIconButton? _themeButton;
     private Button? _dcsDesanitizeButton;
     private Button? _themeModeButton;
-    private Button? _undoButton;
+    private ToolbarIconButton? _undoButton;
+    private ToolbarIconButton? _saveButton;
     private readonly List<Control> _topToolbarButtons = new();
     private Control? _leftToolsPanel;
     private TableLayoutPanel? _rootLayout;
@@ -946,6 +970,7 @@ internal sealed class MainForm : Form
     private int _brandClickCount;
     private DateTime _lastBrandClickUtc = DateTime.MinValue;
     private readonly Stack<UndoStep> _undoStack = new();
+    private int _undoCollapseGeneration;
     private bool _restoringUndo;
     private int _uiZoomPercent;
     private bool _darkMode;
@@ -1013,6 +1038,11 @@ internal sealed class MainForm : Form
             SelectionBackground = Color.FromArgb(38, 79, 120);
             SelectionText = Color.White;
             UndoBackground = Color.FromArgb(79, 63, 28);
+            UndoMutedBorder = Color.FromArgb(126, 95, 45);
+            UndoMutedText = Color.FromArgb(222, 197, 141);
+            SavePendingBackground = Color.FromArgb(41, 57, 73);
+            SavePendingHoverBackground = Color.FromArgb(48, 70, 92);
+            SavePendingBorder = Color.FromArgb(86, 156, 214);
             BrandColor = Color.FromArgb(86, 156, 214);
             return;
         }
@@ -1028,6 +1058,11 @@ internal sealed class MainForm : Form
         SelectionBackground = Color.FromArgb(36, 71, 102);
         SelectionText = Color.White;
         UndoBackground = Color.FromArgb(244, 232, 203);
+        UndoMutedBorder = Color.FromArgb(176, 128, 48);
+        UndoMutedText = Color.FromArgb(102, 75, 30);
+        SavePendingBackground = Color.FromArgb(218, 235, 249);
+        SavePendingHoverBackground = Color.FromArgb(202, 226, 246);
+        SavePendingBorder = Color.FromArgb(30, 115, 216);
         BrandColor = Color.FromArgb(30, 136, 183);
     }
 
@@ -1061,7 +1096,7 @@ internal sealed class MainForm : Form
         UpdateFooterLabels();
         UpdateThemeButtonState();
         UpdateDcsDesanitizeButtonState();
-        UpdateUndoButtonState();
+        UpdateEditActionButtonStates();
     }
 
     private static void ApplyThemeToControl(Control control, bool restyleButtons)
@@ -1161,7 +1196,14 @@ internal sealed class MainForm : Form
         }
     }
 
-    private void UpdateUndoButtonState()
+    private void UpdateEditActionButtonStates()
+    {
+        var hasChanges = HasChanges();
+        UpdateUndoButtonState(hasChanges);
+        UpdateSaveButtonState(hasChanges);
+    }
+
+    private void UpdateUndoButtonState(bool hasChanges)
     {
         if (_undoButton is null)
         {
@@ -1169,12 +1211,52 @@ internal sealed class MainForm : Form
         }
 
         _undoButton.Enabled = _undoStack.Count > 0;
-        StyleButton(_undoButton);
+        StyleToolbarIconButton(_undoButton);
         if (_undoButton.Enabled)
         {
-            _undoButton.BackColor = UndoBackground;
-            _undoButton.ForeColor = PrimaryTextColor;
+            if (hasChanges)
+            {
+                _undoButton.NormalBackColor = UndoBackground;
+                _undoButton.NormalBorderColor = UndoMutedBorder;
+                _undoButton.HoverBackColor = SavePendingHoverBackground;
+                _undoButton.HoverBorderColor = UndoMutedBorder;
+                _undoButton.ForeColor = PrimaryTextColor;
+            }
+            else
+            {
+                _undoButton.NormalBackColor = ButtonBackground;
+                _undoButton.NormalBorderColor = UndoMutedBorder;
+                _undoButton.HoverBackColor = HeaderBackground;
+                _undoButton.HoverBorderColor = UndoMutedBorder;
+                _undoButton.ForeColor = UndoMutedText;
+            }
         }
+
+        _undoButton.Invalidate();
+    }
+
+    private void UpdateSaveButtonState(bool hasChanges)
+    {
+        if (_saveButton is null)
+        {
+            return;
+        }
+
+        StyleToolbarIconButton(_saveButton);
+        if (hasChanges)
+        {
+            _saveButton.NormalBackColor = SavePendingBackground;
+            _saveButton.NormalBorderColor = SavePendingBorder;
+            _saveButton.HoverBackColor = SavePendingHoverBackground;
+            _saveButton.HoverBorderColor = SavePendingBorder;
+            _saveButton.PressedBackColor = SelectionBackground;
+        }
+        else
+        {
+            _saveButton.HoverBorderColor = BorderColor;
+        }
+
+        _saveButton.Invalidate();
     }
 
     private void BuildUi()
@@ -1277,12 +1359,11 @@ internal sealed class MainForm : Form
         actions.Controls.Add(MakeToolbarButton("Import MIZ Config", InstallConfigFromMiz, "Import Foothold Config.lua from a .miz file.", ToolbarIconKind.Install));
         actions.Controls.Add(MakeToolbarButton("Restore Defaults", RestoreConfigDefaults, "Restore from a default Foothold Config.lua previously stored during Import MIZ Config.", ToolbarIconKind.Restore));
         actions.Controls.Add(MakeToolbarSeparator());
-        _undoButton = MakeToolbarButton("Undo", UndoLastChange, "Revert the last unsaved edit, add, or remove action.");
-        UpdateUndoButtonState();
-        SizeTopToolbarButton(_undoButton, 100);
-        _topToolbarButtons.Add(_undoButton);
+        _undoButton = MakeToolbarButton("Undo", UndoLastChange, "Revert the last unsaved edit, add, or remove action.", ToolbarIconKind.Undo);
         actions.Controls.Add(_undoButton);
-        actions.Controls.Add(MakeToolbarButton("Save", SaveConfig, "Write pending changes to the current config.", ToolbarIconKind.Save));
+        _saveButton = MakeToolbarButton("Save", SaveConfig, "Write pending changes to the current config.", ToolbarIconKind.Save);
+        actions.Controls.Add(_saveButton);
+        UpdateEditActionButtonStates();
         actions.Controls.Add(MakeToolbarSeparator());
         panel.Controls.Add(actions, 0, 0);
 
@@ -1329,7 +1410,7 @@ internal sealed class MainForm : Form
             ? ToolbarIconButtonWidth(button.Text, minimumWidth, button.Font)
             : TopToolbarButtonWidth(button.Text, minimumWidth, button.Font);
         button.Height = Math.Max(Zoomed(32), button.Font.Height + Zoomed(10));
-        button.Margin = new Padding(1, Zoomed(2), 1, 0);
+        button.Margin = new Padding(Zoomed(3), Zoomed(2), Zoomed(3), 0);
         if (button is Button b)
             b.TextAlign = ContentAlignment.MiddleCenter;
     }
@@ -1353,7 +1434,7 @@ internal sealed class MainForm : Form
             "Import Config File" => 60,
             "Import MIZ Config" => 60,
             "Restore Defaults" => 60,
-            "Undo" => 60,
+            "Undo" => 78,
             "Save" => 60,
             _ => 60
         };
@@ -1363,9 +1444,9 @@ internal sealed class MainForm : Form
     {
         if (Equals(control.Tag, ToolbarSeparatorTag))
         {
-            control.Width = Zoomed(1);
+            control.Width = Math.Max(Zoomed(2), 2);
             control.Height = Math.Max(Zoomed(24), Font.Height + Zoomed(6));
-            control.Margin = new Padding(Zoomed(5), Zoomed(5), Zoomed(5), 0);
+            control.Margin = new Padding(Zoomed(7), Zoomed(5), Zoomed(7), 0);
             control.BackColor = BorderColor;
         }
 
@@ -1583,8 +1664,9 @@ internal sealed class MainForm : Form
 
     private int ToolbarIconButtonWidth(string text, int minimum, Font font)
     {
-        // 6 left + 17 icon + 5 gap + text + 6 right = text + 34
-        return Math.Max(Zoomed(minimum), TextRenderer.MeasureText(text, font).Width + Zoomed(34));
+        var textWidth = TextRenderer.MeasureText(text, font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
+        // Match ToolbarIconButton.OnPaint: 6 left + 17 icon + 5 gap + 14 right.
+        return Math.Max(Zoomed(minimum), textWidth + 46);
     }
 
     private int LabelColumnWidth(string text, int minimum)
@@ -2440,6 +2522,10 @@ internal sealed class MainForm : Form
     private static void StyleToolbarIconButton(ToolbarIconButton button)
     {
         button.NormalBackColor = ButtonBackground;
+        button.NormalBorderColor = Color.Empty;
+        button.HoverBackColor = Color.Empty;
+        button.HoverBorderColor = Color.Empty;
+        button.PressedBackColor = Color.Empty;
         button.BackColor = MainBackground;
         button.ForeColor = button.Enabled ? PrimaryTextColor : HelpTextColor;
         button.Invalidate();
@@ -2550,11 +2636,20 @@ internal sealed class MainForm : Form
             case ToolbarIconKind.Undo:
                 graphics.DrawLines(pen, new[]
                 {
-                    Point(7.0F, 5.0F),
-                    Point(3.5F, 8.5F),
-                    Point(7.0F, 12.0F)
+                    Point(7.0F, 11.0F),
+                    Point(3.2F, 7.2F),
+                    Point(7.0F, 3.4F)
                 });
-                graphics.DrawArc(pen, Rect(5.0F, 5.0F, 10.0F, 8.0F), 185, 235);
+                graphics.DrawLine(pen, Point(3.2F, 7.2F), Point(10.8F, 7.2F));
+                graphics.DrawLines(pen, new[]
+                {
+                    Point(10.8F, 7.2F),
+                    Point(13.8F, 7.2F),
+                    Point(14.9F, 10.0F),
+                    Point(14.2F, 12.6F),
+                    Point(12.0F, 14.2F),
+                    Point(9.2F, 14.2F)
+                });
                 break;
 
             case ToolbarIconKind.Save:
@@ -2770,6 +2865,8 @@ internal sealed class MainForm : Form
         grid.EditingControlShowing += ApplyGridEditingControlTheme;
         grid.CellMouseClick -= OpenGridComboBoxCellOnFirstClick;
         grid.CellMouseClick += OpenGridComboBoxCellOnFirstClick;
+        grid.CellMouseDown -= EditCurrentGridCellOnClick;
+        grid.CellMouseDown += EditCurrentGridCellOnClick;
         grid.Enter -= RestoreGridSelectionHighlight;
         grid.Enter += RestoreGridSelectionHighlight;
         grid.MouseDown -= RestoreGridSelectionHighlightOnMouseDown;
@@ -2997,6 +3094,36 @@ internal sealed class MainForm : Form
         {
             comboBox.DroppedDown = true;
         }
+    }
+
+    private static void EditCurrentGridCellOnClick(object? sender, DataGridViewCellMouseEventArgs args)
+    {
+        if (sender is not DataGridView grid ||
+            args.Button != MouseButtons.Left ||
+            args.RowIndex < 0 ||
+            args.ColumnIndex < 0 ||
+            grid.ReadOnly ||
+            grid.IsCurrentCellInEditMode ||
+            grid.CurrentCell is null ||
+            grid.CurrentCell.RowIndex != args.RowIndex ||
+            grid.CurrentCell.ColumnIndex != args.ColumnIndex)
+        {
+            return;
+        }
+
+        var cell = grid.Rows[args.RowIndex].Cells[args.ColumnIndex];
+        if (cell.ReadOnly || grid.Columns[args.ColumnIndex].ReadOnly)
+        {
+            return;
+        }
+
+        if (grid.Columns[args.ColumnIndex] is DataGridViewComboBoxColumn ||
+            cell is DataGridViewComboBoxCell)
+        {
+            return;
+        }
+
+        grid.BeginEdit(true);
     }
 
     private static void StyleTabControl(TabControl tabControl)
@@ -7662,9 +7789,10 @@ internal sealed class MainForm : Form
 
         var oldValue = entry.ValueText;
         applyChange();
-        if (!StringComparer.Ordinal.Equals(entry.ValueText, oldValue))
+        var newValue = entry.ValueText;
+        if (!StringComparer.Ordinal.Equals(newValue, oldValue))
         {
-            SetUndoAction(description, () => entry.ValueText = oldValue, refreshAction);
+            SetEntryValueUndoAction(entry, description, oldValue, newValue, refreshAction);
         }
 
         SetChangedStatus();
@@ -8509,7 +8637,7 @@ internal sealed class MainForm : Form
             ApplyTableRow(grid.Rows[args.RowIndex], entry);
             if (!StringComparer.Ordinal.Equals(entry.ValueText, oldValue))
             {
-                SetUndoAction("edit " + entry.DisplayName, () => entry.ValueText = oldValue, () => RefreshTableGrid(grid, entries));
+                SetEntryValueUndoAction(entry, "edit " + entry.DisplayName, oldValue, entry.ValueText, () => RefreshTableGrid(grid, entries));
             }
 
             SetChangedStatus();
@@ -9084,7 +9212,6 @@ internal sealed class MainForm : Form
         grid.Columns.Add("aircraft", "Aircraft");
         grid.Columns["aircraft"].ReadOnly = true;
         grid.Columns.Add("callsign", "Callsign");
-        grid.Columns["callsign"].ReadOnly = true;
         grid.Columns.Add("iff1", "IFF 1");
         grid.Columns.Add("iff2", "IFF 2");
         grid.Columns.Add("iff3", "IFF 3");
@@ -9104,9 +9231,83 @@ internal sealed class MainForm : Form
         RefreshCallsignGrid(grid, entries);
 
         ApplyCompactTableLayout(group, grid, 220, 680, GetTableHeightPadding(76));
+        ConfigEntry? editingCallsignEntry = null;
+        string editingCallsignOriginal = "";
+        grid.CellDoubleClick += (_, args) =>
+        {
+            if (args.RowIndex < 0 ||
+                args.ColumnIndex < 0 ||
+                !grid.Columns[args.ColumnIndex].Name.Equals("callsign", StringComparison.Ordinal) ||
+                grid.Rows[args.RowIndex].Tag is not ConfigEntry)
+            {
+                return;
+            }
+
+            var cell = grid.Rows[args.RowIndex].Cells[args.ColumnIndex];
+            cell.ReadOnly = false;
+            grid.CurrentCell = cell;
+            grid.BeginEdit(true);
+        };
+        grid.CellBeginEdit += (_, args) =>
+        {
+            if (args.RowIndex < 0 ||
+                args.ColumnIndex < 0 ||
+                !grid.Columns[args.ColumnIndex].Name.Equals("callsign", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var cell = grid.Rows[args.RowIndex].Cells[args.ColumnIndex];
+            if (cell.ReadOnly ||
+                grid.Rows[args.RowIndex].Tag is not ConfigEntry entry)
+            {
+                args.Cancel = true;
+                return;
+            }
+
+            editingCallsignEntry = entry;
+            editingCallsignOriginal = entry.Key;
+        };
+        grid.CellEndEdit += (_, args) =>
+        {
+            if (args.RowIndex < 0 ||
+                args.ColumnIndex < 0 ||
+                !grid.Columns[args.ColumnIndex].Name.Equals("callsign", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var cell = grid.Rows[args.RowIndex].Cells[args.ColumnIndex];
+            cell.ReadOnly = true;
+            if (editingCallsignEntry is null)
+            {
+                return;
+            }
+
+            var oldEntry = editingCallsignEntry;
+            var oldKey = editingCallsignOriginal;
+            editingCallsignEntry = null;
+            editingCallsignOriginal = "";
+
+            var newKey = cell.Value?.ToString()?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(newKey) ||
+                oldKey.Equals(newKey, StringComparison.Ordinal))
+            {
+                cell.Value = oldKey;
+                return;
+            }
+
+            RenameCallsignOverrideFromGrid(entries, grid, oldEntry, oldKey, newKey, cell);
+        };
         grid.CellValueChanged += (_, args) =>
         {
             if (_loadingForm || args.RowIndex < 0 || grid.Rows[args.RowIndex].Tag is not ConfigEntry entry)
+            {
+                return;
+            }
+
+            if (args.ColumnIndex >= 0 &&
+                grid.Columns[args.ColumnIndex].Name.Equals("callsign", StringComparison.Ordinal))
             {
                 return;
             }
@@ -9115,7 +9316,7 @@ internal sealed class MainForm : Form
             ApplyCallsignOverrideRow(grid.Rows[args.RowIndex], entry);
             if (!StringComparer.Ordinal.Equals(entry.ValueText, oldValue))
             {
-                SetUndoAction("edit " + entry.DisplayName, () => entry.ValueText = oldValue, () => RefreshCallsignGrid(grid, entries));
+                SetEntryValueUndoAction(entry, "edit " + entry.DisplayName, oldValue, entry.ValueText, () => RefreshCallsignGrid(grid, entries));
             }
 
             SetChangedStatus();
@@ -9149,6 +9350,7 @@ internal sealed class MainForm : Form
             values.Count > 2 ? values[2] : "",
             values.Count > 3 ? values[3] : "");
         grid.Rows[rowIndex].Tag = entry;
+        grid.Rows[rowIndex].Cells["callsign"].ReadOnly = true;
         ApplyImportedNewRowHighlight(grid.Rows[rowIndex], entry);
     }
 
@@ -9162,7 +9364,64 @@ internal sealed class MainForm : Form
         row.Cells["iff3"].Value = values.Count > 2 ? values[2] : "";
         row.Cells["iff4"].Value = values.Count > 3 ? values[3] : "";
         row.Tag = entry;
+        row.Cells["callsign"].ReadOnly = true;
         ApplyImportedNewRowHighlight(row, entry);
+    }
+
+    private void RenameCallsignOverrideFromGrid(
+        List<ConfigEntry> entries,
+        DataGridView grid,
+        ConfigEntry oldEntry,
+        string oldKey,
+        string newKey,
+        DataGridViewCell editedCell)
+    {
+        if (_document is null)
+        {
+            editedCell.Value = oldKey;
+            return;
+        }
+
+        try
+        {
+            var renamed = _document.RenameTableEntry(oldEntry, newKey);
+            ReplaceEntryReference(entries, oldEntry, renamed);
+            var validationErrors = _document.Validate();
+            if (validationErrors.Count > 0)
+            {
+                var restored = _document.RenameTableEntry(renamed, oldKey);
+                ReplaceEntryReference(entries, renamed, restored);
+                RefreshCallsignGrid(grid, entries);
+                SelectGridRowByTag(grid, restored);
+                MessageBox.Show(this, string.Join(Environment.NewLine, validationErrors.Take(6)), "Rename callsign failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            RefreshCallsignGrid(grid, entries);
+            SelectGridRowByTag(grid, renamed);
+            SetUndoAction("rename " + oldKey, () =>
+            {
+                var restored = _document.RenameTableEntry(renamed, oldKey);
+                ReplaceEntryReference(entries, renamed, restored);
+                RefreshCallsignGrid(grid, entries);
+                SelectGridRowByTag(grid, restored);
+            });
+            SetChangedStatus();
+        }
+        catch (Exception ex)
+        {
+            editedCell.Value = oldKey;
+            MessageBox.Show(this, ex.Message, "Rename callsign failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private static void ReplaceEntryReference(List<ConfigEntry> entries, ConfigEntry oldEntry, ConfigEntry newEntry)
+    {
+        var index = entries.IndexOf(oldEntry);
+        if (index >= 0)
+        {
+            entries[index] = newEntry;
+        }
     }
 
     private void AddCallsignOverrideRow(string parentKey, List<ConfigEntry> entries, DataGridView? grid)
@@ -11923,12 +12182,12 @@ internal sealed class MainForm : Form
         if (HasChanges())
         {
             SetStatus("Changes are pending. Use Save to write the config.");
-            UpdateUndoButtonState();
+            UpdateEditActionButtonStates();
             return;
         }
 
-        ClearUndo();
-        SetStatus("No pending changes.");
+        UpdateEditActionButtonStates();
+        SetStatus(_undoStack.Count > 0 ? "No pending changes. Undo is still available." : "No pending changes.");
     }
 
     private void SetUndoAction(string description, Action action)
@@ -11944,13 +12203,56 @@ internal sealed class MainForm : Form
         }
 
         _undoStack.Push(new UndoStep(description, action, refreshAction));
-        UpdateUndoButtonState();
+        UpdateEditActionButtonStates();
+    }
+
+    private void SetEntryValueUndoAction(ConfigEntry entry, string description, string oldValue, string newValue, Action? refreshAction)
+    {
+        if (_restoringUndo)
+        {
+            return;
+        }
+
+        var collapseKey = "entry:" + entry.DisplayKey;
+        if (_undoStack.Count > 0)
+        {
+            var top = _undoStack.Peek();
+            if (top.CollapseGeneration == _undoCollapseGeneration &&
+                string.Equals(top.CollapseKey, collapseKey, StringComparison.Ordinal) &&
+                string.Equals(top.BeforeValue, newValue, StringComparison.Ordinal) &&
+                string.Equals(top.AfterValue, oldValue, StringComparison.Ordinal))
+            {
+                _undoStack.Pop();
+                UpdateEditActionButtonStates();
+                return;
+            }
+
+            if (top.CollapseGeneration == _undoCollapseGeneration &&
+                string.Equals(top.CollapseKey, collapseKey, StringComparison.Ordinal) &&
+                string.Equals(top.AfterValue, oldValue, StringComparison.Ordinal) &&
+                top.BeforeValue is not null)
+            {
+                _undoStack.Pop();
+                oldValue = top.BeforeValue;
+            }
+        }
+
+        var undoValue = oldValue;
+        _undoStack.Push(new UndoStep(
+            description,
+            () => entry.ValueText = undoValue,
+            refreshAction,
+            collapseKey,
+            undoValue,
+            newValue,
+            _undoCollapseGeneration));
+        UpdateEditActionButtonStates();
     }
 
     private void ClearUndo()
     {
         _undoStack.Clear();
-        UpdateUndoButtonState();
+        UpdateEditActionButtonStates();
     }
 
     private void UndoLastChange()
@@ -11962,7 +12264,6 @@ internal sealed class MainForm : Form
         }
 
         var step = _undoStack.Pop();
-        UpdateUndoButtonState();
 
         try
         {
@@ -11971,13 +12272,12 @@ internal sealed class MainForm : Form
             // Undo actions refresh the specific cached control/grid they changed.
             // Broad cache invalidation belongs in RefreshCurrentView callers.
             step.RefreshAction?.Invoke();
-            SetStatus(HasChanges()
+            var hasChanges = HasChanges();
+            SetStatus(hasChanges
                 ? "Undid " + step.Description + ". Use Save to write the config."
-                : "Undid " + step.Description + ". No pending changes.");
-            if (!HasChanges())
-            {
-                ClearUndo();
-            }
+                : _undoStack.Count > 0
+                    ? "Undid " + step.Description + ". No pending changes. Undo is still available."
+                    : "Undid " + step.Description + ". No pending changes.");
         }
         catch (Exception ex)
         {
@@ -11986,6 +12286,7 @@ internal sealed class MainForm : Form
         finally
         {
             _restoringUndo = false;
+            UpdateEditActionButtonStates();
         }
     }
 
@@ -15307,16 +15608,18 @@ internal sealed class MainForm : Form
 
         if (!HasChanges())
         {
-            SetStatus("No changes to save.");
+            UpdateEditActionButtonStates();
+            SetStatus(_undoStack.Count > 0 ? "No changes to save. Undo is still available." : "No changes to save.");
             return;
         }
 
         try
         {
             _document.Save();
-            ClearUndo();
+            _undoCollapseGeneration++;
             RefreshCurrentView(invalidateCachedPanels: false);
-            SetStatus("Saved config.");
+            UpdateEditActionButtonStates();
+            SetStatus(_undoStack.Count > 0 ? "Saved config. Undo is still available." : "Saved config.");
         }
         catch (Exception ex)
         {
