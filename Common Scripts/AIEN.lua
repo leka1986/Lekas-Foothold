@@ -1634,6 +1634,24 @@ if not tblThreatsRange then
             ["detection"] = 0,
             ["threatmin"] = 30,
         }, -- end of ["M-109"]
+        ["Wespe124"] =
+        {
+            ["threat"] = 10400,
+            ["detection"] = 0,
+            ["threatmin"] = 30,
+        }, -- end of ["Wespe124"]
+        ["LeFH_18-40-105"] =
+        {
+            ["threat"] = 10200,
+            ["detection"] = 0,
+            ["threatmin"] = 30,
+        }, -- end of ["LeFH_18-40-105"]
+        ["M2A1-105"] =
+        {
+            ["threat"] = 11100,
+            ["detection"] = 0,
+            ["threatmin"] = 30,
+        }, -- end of ["M2A1-105"]
         ["LAZ Bus"] = 
         {
             ["attr"] = 
@@ -10660,7 +10678,7 @@ local function counterBattery(hitPos, tgtPos, coa) -- this function emulates cou
                 for _, og in pairs(groundgroupsDb) do
                     if og.coa == coa and og.tasked == false then
                         if og.class == "ARTY" or og.class == "MLRS" then --  or og.class == "MLRS" -- not considering MLRS as they're intended for more area or tactical fire
-                            if og.group and og.group:isExist() == true and og.sa and og.sa.pos then
+                            if og.group and og.group:isExist() == true and og.sa and og.sa.pos and og.threat then
                                 local d = getDist(og.sa.pos, tgtPos)
                                 if d < og.threat*0.9 then
                                     if AIEN.config.AIEN_debugProcessDetail == true then

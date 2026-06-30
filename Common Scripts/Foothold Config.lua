@@ -1172,7 +1172,7 @@ ewrs_onDemand = false -- If true, disables automated EWRS reports and adds F10 r
 ewrs_maxThreatDisplay = 5 -- Max threats shown in picture reports. Set to 0 to show all.
 ewrs_allowBogeyDope = true -- Allows pilots to request closest-threat bogey dope even when automated reports are running.
 ewrs_allowFriendlyPicture = true -- Allows pilots to request a friendly aircraft picture.
-ewrs_maxFriendlyDisplay = 5 -- Max friendly aircraft shown in friendly picture reports. Set to 0 to show all.
+ewrs_maxFriendlyDisplay = 3 -- Max friendly aircraft shown in friendly picture reports. Set to 0 to show all.
 ewrs_showType = true -- If true, EWRS reports aircraft type. If false, EWRS reports Unknown.
 ewrs_mergedRangeNm = 5 -- Style 2 only. Hostile contacts under this range show Merged. Set to 0 to disable.
 -- @gui installPolicy="mergeRows"
@@ -1182,7 +1182,6 @@ ewrs_specialPlaneTypes = { -- Aircraft typeNames that show friendlies by default
   ["F-5E-3_FC"] = true,
   ["C-130J-30"] = true,
 }
-ewrs_hiddenFriendlyReportingNames = { Sentry = true } -- Friendly reporting names hidden from friendly picture reports.
 
 -- ============================================================================
 -- AIEN

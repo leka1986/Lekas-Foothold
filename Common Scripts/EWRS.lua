@@ -98,6 +98,12 @@ local function ewrsClampDefaultRangeLimit(rangeLimit, measurements)
   return limit
 end
 
+local function ewrsAltitudeDisplayModeValue(value)
+  local mode = string.lower(tostring(value or "modern"))
+  if mode == "wwii" or mode == "ww2" then return "wwii" end
+  return "modern"
+end
+
 ----SCRIPT OPTIONS----
 
 ewrs.messageUpdateInterval = ewrs_messageUpdateInterval or 60 --How often EWRS will update automated BRA messages (seconds)
@@ -119,6 +125,7 @@ ewrs.maxFriendlyDisplay = ewrs_maxFriendlyDisplay or 5 -- Limits the amount of f
 if ewrs_showType ~= nil then ewrs.showType = ewrs_showType else ewrs.showType = true end -- if true it will show the type of the unit
 ewrs.defaultReportStyle = tonumber(ewrs_defaultReportStyle) or 1
 if ewrs.defaultReportStyle ~= 2 then ewrs.defaultReportStyle = 1 end
+ewrs.altitudeDisplayMode = ewrsAltitudeDisplayModeValue(ewrs_altitudeDisplayMode)
 ewrs.mergedRangeNm = tonumber(ewrs_mergedRangeNm) or 5
 ewrs.hiddenFriendlyReportingNames = ewrs_hiddenFriendlyReportingNames or { Sentry = true }
 ewrs.specialPlaneTypes = ewrs_specialPlaneTypes or {
@@ -127,22 +134,42 @@ ewrs.specialPlaneTypes = ewrs_specialPlaneTypes or {
   ["F-5E-3_FC"] = true,
   ["C-130J-30"] = true,
 }
+ewrs.reportingNameOverrides = {
+  ["A-20G"] = "A-20G",
+  ["B-17G"] = "B-17G",
+  ["P-51D-30-NA"] = "Mustang",
+  ["SpitfireLFMkIX"] = "Spitfire",
+  ["MosquitoFBMkVI"] = "Mosquito",
+  ["Bf-109K-4"] = "Bf 109",
+  ["FW-190A8"] = "FW 190 A-8",
+  ["FW-190D9"] = "FW 190 D-9",
+  ["C-47"] = "Skytrain",
+  ["F4U-1D"] = "Corsair",
+  ["F4U-1D_CW"] = "Corsair",
+  ["I-16"] = "I-16",
+  ["Ju-88A4"] = "Ju 88 A-4",
+  ["P-47D-30"] = "Thunderbolt",
+  ["P-47D-30bl1"] = "Thunderbolt",
+  ["P-47D-40"] = "Thunderbolt",
+  ["P-51D"] = "Mustang",
+  ["SpitfireLFMkIXCW"] = "Spitfire",
+  ["La-7"] = "La-7",
+  ["TF-51D"] = "Mustang",
+}
 
 local function ewrs_isSpecialPlaneType(unitType)
   return unitType and ewrs.specialPlaneTypes[unitType] == true
 end
 
+local function ewrsGetUnitTypeName(unit)
+  if not unit then return nil end
+  if unit.getTypeName then return unit:getTypeName() end
+  if unit.GetTypeName then return unit:GetTypeName() end
+  return nil
+end
+
 local function ewrs_isSpecialPlaneUnit(unit)
-  if not unit then return false end
-  local typeName
-  if type(unit) == "table" then
-    if unit.getTypeName then
-      typeName = unit:getTypeName()
-    elseif unit.GetTypeName then
-      typeName = unit:GetTypeName()
-    end
-  end
-  return ewrs_isSpecialPlaneType(typeName)
+  return ewrs_isSpecialPlaneType(ewrsGetUnitTypeName(unit))
 end
 
 function ewrs.shouldHideFriendlyReportingName(name)
@@ -209,6 +236,22 @@ end
 local function ewrsUnitTypeLabel(unitType, translator)
   local T = translator or L10N
   return unitType or T:Get("EWRS_UNKNOWN")
+end
+
+local function ewrsReportingNameOverride(typeName)
+  local override = typeName and ewrs.reportingNameOverrides[typeName]
+  if type(override) == "string" and override ~= "" then return override end
+  return nil
+end
+
+local function ewrsContactUnitTypeLabel(contact, translator)
+  local T = translator or L10N
+  if not ewrs.showType then return T:Get("EWRS_UNKNOWN") end
+  local override = ewrsReportingNameOverride(contact.typeName)
+  if override then return override end
+  local unitType = ewrsUnitTypeLabel(contact.unitType, T)
+  if contact.isFriendly and unitType == "Bogey" then unitType = T:Get("EWRS_UNKNOWN") end
+  return unitType
 end
 
 ewrs.runtimeCache = { units = {}, friendlyGroups = {}, friendlyAirUnits = {}, groupSettings = {} }
@@ -531,6 +574,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
     local velocity=obj:getVelocity()
     local bogeypos=obj:getPosition()
     local bogeyType=nil
+    local dcsTypeName=ewrsGetUnitTypeName(obj)
     local unit=UNIT:Find(obj) if unit then bogeyType=unit:GetNatoReportingName() end
     if not bogeyType then bogeyType = "Unknown" end  
     local bearing = (math.floor((ewrs.getBearing(referenceX,referenceZ,bogeypos.p.x,bogeypos.p.z)+2.5)/5)*5) % 360
@@ -540,6 +584,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
     local range=ewrs.getDistance(referenceX,referenceZ,bogeypos.p.x,bogeypos.p.z)
     local rawRangeNm=UTILS.MetersToNM(range)
     local altitude=bogeypos.p.y
+    local altitudeFeet=UTILS.MetersToFeet(altitude)
     local speed=ewrs.getSpeed(velocity)
     if useMetric then
       local km=range/1000
@@ -556,10 +601,12 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
       local j=#threatTable+1
       threatTable[j]={}
       threatTable[j].unitType=bogeyType
+      threatTable[j].typeName=dcsTypeName
       threatTable[j].bearing=bearing
       threatTable[j].range=range
       threatTable[j].rawRangeNm=rawRangeNm
       threatTable[j].altitude=altitude
+      threatTable[j].altitudeFeet=altitudeFeet
       threatTable[j].speed=speed
       threatTable[j].heading=heading
       threatTable[j].aspect=aspect
@@ -579,6 +626,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
         local aspect=ewrs.getAspect(bearing,heading)
         local range=ewrs.getDistance(referenceX,referenceZ,tp.p.x,tp.p.z)
         local altitude=tp.p.y
+        local altitudeFeet=UTILS.MetersToFeet(altitude)
         local speed=ewrs.getSpeed(vel)
         if useMetric then
           local km=range/1000
@@ -599,6 +647,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
         threatTable[j].bearing=bearing
         threatTable[j].range=range
         threatTable[j].altitude=altitude
+        threatTable[j].altitudeFeet=altitudeFeet
         threatTable[j].speed=speed
         threatTable[j].heading=heading
         threatTable[j].aspect=aspect
@@ -620,6 +669,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
         local aspect=ewrs.getAspect(bearing,heading)
         local range=ewrs.getDistance(referenceX,referenceZ,tp.p.x,tp.p.z)
         local altitude=tp.p.y
+        local altitudeFeet=UTILS.MetersToFeet(altitude)
         local speed=ewrs.getSpeed(vel)
         if useMetric then
           local km=range/1000
@@ -635,16 +685,19 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
         if rangeLimit==0 or range<=rangeLimit then
           local unit=UNIT:Find(u)
           local bogeyType=nil
+          local dcsTypeName=ewrsGetUnitTypeName(u)
           if unit then bogeyType=unit:GetNatoReportingName() end
           if not bogeyType then bogeyType="Unknown" end
           if not ewrs.shouldHideFriendlyReportingName(bogeyType) then
             local j=#threatTable+1
             threatTable[j]={}
             threatTable[j].unitType=bogeyType
+            threatTable[j].typeName=dcsTypeName
             threatTable[j].isFriendly=true
             threatTable[j].bearing=bearing
             threatTable[j].range=range
             threatTable[j].altitude=altitude
+            threatTable[j].altitudeFeet=altitudeFeet
             threatTable[j].speed=speed
             threatTable[j].heading=heading
             threatTable[j].aspect=aspect
@@ -673,19 +726,34 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
   return threatTable
 end
 
+local function ewrsAltitudeText(contact, altUnits)
+  if ewrs.altitudeDisplayMode == "wwii" then
+    local altitudeFeet = tonumber(contact.altitudeFeet)
+    if not altitudeFeet then
+      local altitude = tonumber(contact.altitude) or 0
+      altitudeFeet = altUnits == "m" and UTILS.MetersToFeet(altitude) or altitude
+    end
+    if altitudeFeet < 5000 then return "Low" end
+    if altitudeFeet < 10000 then return "Medium" end
+    return "High"
+  end
+  return contact.altitude..altUnits
+end
+
 
 function ewrs.formatContactLine(contact, groupSettings, rangeUnits, altUnits, translator)
   local T = translator or L10N
-  local unitType = ewrs.showType and ewrsUnitTypeLabel(contact.unitType, T) or T:Get("EWRS_UNKNOWN")
+  local unitType = ewrsContactUnitTypeLabel(contact, T)
   local asp = ewrsAspectLabel(contact.aspect, T)
+  local altitudeText = ewrsAltitudeText(contact, altUnits)
   if ewrsReportStyleValue(groupSettings.reportStyle) == 2 then
-    local line = T:Format("EWRS_CONTACT_LINE_STYLE_2", contact.bearing, contact.range.." "..rangeUnits, contact.altitude..altUnits, asp, unitType)
+    local line = T:Format("EWRS_CONTACT_LINE_STYLE_2", contact.bearing, contact.range.." "..rangeUnits, altitudeText, asp, unitType)
     if not contact.isFriendly and contact.rawRangeNm and ewrs.mergedRangeNm > 0 and contact.rawRangeNm < ewrs.mergedRangeNm then
       line = line .. " | " .. T:Get("EWRS_MERGED")
     end
     return line
   end
-  return T:Format("EWRS_CONTACT_LINE", unitType, contact.bearing, contact.range..rangeUnits, contact.altitude..altUnits, asp)
+  return T:Format("EWRS_CONTACT_LINE", unitType, contact.bearing, contact.range..rangeUnits, altitudeText, asp)
 end
 
 function ewrs.getFriendlyHeader(groupSettings, translator)
@@ -855,12 +923,14 @@ function ewrs.buildFriendlyTable(friendlyNames,activePlayer)
     local unit=UNIT:Find(v)
     if unit then                                           -- << guard >>
       local bogeyType=unit:GetNatoReportingName()
+      local dcsTypeName=ewrsGetUnitTypeName(v)
       if not bogeyType then bogeyType = "Unknown" end
       if not ewrs.shouldHideFriendlyReportingName(bogeyType) and pos.p.x~=selfpos.p.x and pos.p.z~=selfpos.p.z then
         local bearing=ewrs.getBearing(referenceX,referenceZ,pos.p.x,pos.p.z)
         local heading=ewrs.getHeading(velocity)
         local range=ewrs.getDistance(referenceX,referenceZ,pos.p.x,pos.p.z)
         local altitude=pos.p.y
+        local altitudeFeet=UTILS.MetersToFeet(altitude)
         local speed=ewrs.getSpeed(velocity)
 
     if useMetric then
@@ -878,10 +948,12 @@ function ewrs.buildFriendlyTable(friendlyNames,activePlayer)
         local j=#friendlyTable+1
         friendlyTable[j]={}
         friendlyTable[j].unitType=bogeyType
+        friendlyTable[j].typeName=dcsTypeName
         friendlyTable[j].isFriendly=true
         friendlyTable[j].bearing=bearing
         friendlyTable[j].range=range
         friendlyTable[j].altitude=altitude
+        friendlyTable[j].altitudeFeet=altitudeFeet
         friendlyTable[j].speed=speed
         friendlyTable[j].heading=heading
       end
@@ -1021,6 +1093,8 @@ function ewrs.registerPlayer(playerName, groupID, unit, unitType)
   if not playerName or not groupID or not unit then return end
   local stringGroupID = tostring(groupID)
   ewrs.removeActivePlayersForGroup(groupID)
+  ewrs.groupSettings[stringGroupID] = nil
+  ewrs.runtimeCache.groupSettings[stringGroupID] = nil
   ewrs.groupUnitTypes = ewrs.groupUnitTypes or {}
   ewrs.groupUnitTypes[stringGroupID] = unitType or unit:getTypeName()
   ewrs.addPlayer(playerName, groupID, unit, ewrs.groupUnitTypes[stringGroupID])
@@ -1031,6 +1105,8 @@ function ewrs.pruneGroup(groupID)
   if not groupID then return end
   local stringGroupID = tostring(groupID)
   ewrs.removeActivePlayersForGroup(groupID)
+  ewrs.groupSettings[stringGroupID] = nil
+  ewrs.runtimeCache.groupSettings[stringGroupID] = nil
   ewrs.groupUnitTypes = ewrs.groupUnitTypes or {}
   ewrs.groupUnitTypes[stringGroupID] = nil
   if EWRS_MENU_PARENT_BY_GROUP then

@@ -1094,12 +1094,12 @@ zones.V1_Neuville:addCriticalObject('Fueltank-Neuville')
 for i,v in pairs(zones) do
 	bc:addZone(v)
 end
-zones.BigginHill.LogisticCenter = true
-zones.Orly.customSuspendNm = 999  -- never auto-suspend Orly
-zones.Paris.customSuspendNm = 999
-zones.Farnborough.customSuspendNm = 999
-zones.London.customSuspendNm = 999
-zones.Odiham.customSuspendNm = 999
+--zones.BigginHill.LogisticCenter = true
+--zones.Orly.customSuspendNm = 999  -- never auto-suspend Orly
+--zones.Paris.customSuspendNm = 999
+--zones.Farnborough.customSuspendNm = 999
+--zones.London.customSuspendNm = 999
+--zones.Odiham.customSuspendNm = 999
 
 zones.BigginHill.airbaseName = "Biggin Hill"
 zones.Odiham.airbaseName = "Odiham"
@@ -1139,6 +1139,39 @@ zones.Bernay.airbaseName = "Bernay Saint Martin"
 zones.SaintAndre.airbaseName = "Saint-Andre-de-lEure"
 zones.Orly.airbaseName = "Orly"
 zones.CarrierGroup.airbaseName = "ESSEX"
+
+zones.BigginHill.isHeloSpawn = true
+zones.Odiham.isHeloSpawn = true
+zones.Farnborough.isHeloSpawn = true
+zones.Manston.isHeloSpawn = true
+zones.Hawkinge.isHeloSpawn = true
+zones.Lympne.isHeloSpawn = true
+zones.Chailey.isHeloSpawn = true
+zones.Ford.isHeloSpawn = true
+zones.Tangmere.isHeloSpawn = true
+zones.Funtington.isHeloSpawn = true
+zones.NeedsOarPoint.isHeloSpawn = true
+zones.Friston.isHeloSpawn = true
+zones.Dunkirk.isHeloSpawn = true
+zones.SaintOmer.isHeloSpawn = true
+zones.Merville.isHeloSpawn = true
+zones.Abbeville.isHeloSpawn = true
+zones.Amiens.isHeloSpawn = true
+zones.SaintAubain.isHeloSpawn = true
+zones.Fecamp.isHeloSpawn = true
+zones.Rouen.isHeloSpawn = true
+zones.Carpiquet.isHeloSpawn = true
+zones.SainteCroix.isHeloSpawn = true
+zones.SaintPierre.isHeloSpawn = true
+zones.LonguesSurMer.isHeloSpawn = true
+zones.Cricqueville.isHeloSpawn = true
+zones.LeMolay.isHeloSpawn = true
+zones.Brucheville.isHeloSpawn = true
+zones.Maupertus.isHeloSpawn = true
+zones.Bernay.isHeloSpawn = true
+zones.SaintAndre.isHeloSpawn = true
+zones.Orly.isHeloSpawn = true
+zones.CarrierGroup.isHeloSpawn = true
 
 
 
@@ -2173,8 +2206,8 @@ SCHEDULER:New(nil, function() bc:_buildHunterBaseList() end, {}, 1)
 --     [2] = { alt=30000, speed=350, hdg=270, leg=15, sep=60 }   -- blue
 -- }
 
-GlobalSettings.autoSuspendNmBlue = 80   		-- suspend blue zones deeper than this nm
-GlobalSettings.autoSuspendNmRed = 110   		-- suspend red zones deeper than this nm
+GlobalSettings.autoSuspendNmBlue = 90   		-- suspend blue zones deeper than this nm
+GlobalSettings.autoSuspendNmRed = 90   		-- suspend red zones deeper than this nm
 
 evc = EventCommander:new({ decissionFrequency=10*60, decissionVariance=10*60, skipChance = 10})
 mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
@@ -3267,8 +3300,25 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
     missionGroupIDs[zoneName] = missionGroupIDs[zoneName] or {}
     missionGroupIDs[zoneName][groupID] = {
         groupID = groupID,
+        groupName = groupName,
         group = group
     }
+	if not mission._escortTargetCaptureCleanupRegistered then
+		mission._escortTargetCaptureCleanupRegistered = true
+		bc:getZoneByName(mission.TargetZone):registerTrigger('captured', function(_, targetZone)
+			if targetZone.side ~= 2 or IsGroupActive(mission.missionGroup) then return end
+			if missionGroupIDs[mission.zone] then
+				for _, data in pairs(missionGroupIDs[mission.zone]) do
+					removeMissionMenuForAll(mission.zone, data.groupID)
+					if trackedGroups[data.groupName] then
+						trackedGroups[data.groupName] = nil
+					end
+				end
+				missionGroupIDs[mission.zone] = nil
+			end
+			mc.missionFlags[mission.zone] = nil
+		end, mission.missionGroup .. 'targetcaptured')
+	end
 	if IsGroupActive(mission.missionGroup) then
 		trigger.action.outSoundForGroup(groupID, "ding.ogg")
 		trigger.action.outTextForGroup(groupID, L10N:Format("MISSION_ESCORT_ACTIVE_PENDING", mission.zone, mission.TargetZone), 30)
@@ -3295,12 +3345,13 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
         zoneName = zoneName,
         messageStart = function() return L10N:Format("MISSION_ESCORT_START", mission.TargetZone) end,
 		missionFail = function(self)
-		self.accept = false
 		if not IsGroupActive(mission.missionGroup) then
+			self.accept = false
 			mc.missionFlags[zoneName] = nil
 			if missionGroupIDs[zoneName] and next(missionGroupIDs[zoneName]) then
-				for groupName, data in pairs(missionGroupIDs[zoneName]) do
+				for _, data in pairs(missionGroupIDs[zoneName]) do
 					local groupID = data.groupID
+					local groupName = data.groupName
 					local group = data.group
 					trigger.action.outSoundForGroup(groupID, "cancel.ogg")
 					trigger.action.outTextForGroup(groupID, L10N:Get("SYRIA_ESCORT_FAILED_RETRY"), 30)
@@ -3323,8 +3374,9 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
 		startOver = function(self)
 			timer.scheduleFunction(function()
 		if missionGroupIDs[zoneName] then
-			for groupName, data in pairs(missionGroupIDs[zoneName]) do
+			for _, data in pairs(missionGroupIDs[zoneName]) do
 				local groupID = data.groupID
+				local groupName = data.groupName
 				local group = data.group
 				handleMission(zoneName, groupName, groupID, group)
 				return nil
@@ -3369,8 +3421,9 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
 					bc:addFunds(2, reward)
 				end
 				if missionGroupIDs[zoneName] then
-					for groupName, data in pairs(missionGroupIDs[zoneName]) do
+					for _, data in pairs(missionGroupIDs[zoneName]) do
 						local groupID = data.groupID
+						local groupName = data.groupName
 						local grp     = data.group
 						if grp and grp:isExist() then
 							removeMissionMenuForAll(mission.zone, groupID)

@@ -416,7 +416,7 @@ Please join us.]],
 -- @gui label="Welcome Message Callsigns"
 CallsignOverrides = {
     ["F4U.1D"] = {
-        ["BlackSheep1"] = {0, 0, 0, 0},
+        ["BlackSheep1"] = { 0, 0, 0, 0 },
     },
     ["Spitfire.LF.Mk"] = {
         ["Circus1"] = {0, 0, 0, 0},
@@ -629,6 +629,9 @@ AllowedFlightTimeReward  = {
 -- @gui validValues="Style 1=1 | Style 2=2"
 ewrs_defaultReportStyle = 2 -- Default EWRS report format. Style 1 keeps the current format. Style 2 uses compact separator lines. Players can change this via the F10 EWRS menu.
 
+-- @gui validValues="Modern=modern | WWII=wwii"
+ewrs_altitudeDisplayMode = "wwii" -- EWRS altitude display. Modern shows exact altitude; WWII shows Low, Medium, or High using <5000 ft, 5000-9999 ft, and 10000+ ft.
+
 -- Maximum detection range choices shown in the player F10 EWRS menu.
 -- Valid values: 10 | 20 | 40 | 60 | 80 | 100 | 150
 ewrs_maxRangeKm = 150 -- Highest metric EWRS detection range option shown in the F10 menu.
@@ -679,8 +682,6 @@ ewrs_specialPlaneTypes = { -- Aircraft typeNames that show friendlies by default
 	['La-7'] = true,
     ['TF-51D'] = true,
 }
-ewrs_hiddenFriendlyReportingNames = { Sentry = true } -- Friendly reporting names hidden from friendly picture reports.
-
 -- ============================================================================
 -- AIEN
 -- ============================================================================

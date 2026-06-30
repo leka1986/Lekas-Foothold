@@ -44,16 +44,6 @@ local FootholdLanguageOptions = {
 	{ locale = "zh-TW", label = "繁體中文" },
 }
 
-local function footholdLanguageLabel(locale)
-	local localeKey = string.upper(tostring(locale or ""))
-	for _, option in ipairs(FootholdLanguageOptions) do
-		if string.upper(tostring(option.locale or "")) == localeKey then
-			return option.label
-		end
-	end
-	return localeKey
-end
-
 local function localizedDynamicHeadingLabel(headingName, translator)
 	return L10N:DynamicHeadingLabel(headingName, translator)
 end
@@ -158,13 +148,6 @@ local forcedLandingSpotPoolByZone = {}
 local cargoDropSubZoneCandidatesByTarget = {}
 local cargoDropSubZoneChoicesByLanding = {}
 
-local function _resetLandingSpotPoolCaches()
-	landingSpotPoolByPrefix = {}
-	forcedLandingSpotPoolByZone = {}
-	cargoDropSubZoneCandidatesByTarget = {}
-	cargoDropSubZoneChoicesByLanding = {}
-end
-
 local function _getLandingSpotPoolForPrefix(prefix)
 	if not prefix or prefix == "" then return nil end
 	local cached = landingSpotPoolByPrefix[prefix]
@@ -228,14 +211,6 @@ local function _pickRandomLandingSpot(pool, excludedName)
 		end
 	end
 	return nil
-end
-
-local function _parseCargoDropTargetFromZoneName(zoneName)
-	local base = zoneName:match("^(.-)%-land%-forced%-%d+$")
-	if base then return base end
-	base = zoneName:match("^(.-)%-land%-%d+$")
-	if base then return base end
-	return zoneName:match("^(.-)%-%d+$")
 end
 
 local function _isCargoDropSubZoneForTarget(targetZoneName, zoneName)
@@ -307,47 +282,6 @@ local function _nearestCargoDropSubZoneChoices(targetZoneName, x, z, excludedNam
 	return choices
 end
 
-local function _buildCargoDropSubZoneCache()
-	cargoDropSubZoneCandidatesByTarget = {}
-	cargoDropSubZoneChoicesByLanding = {}
-	if not zoneByName then buildZoneByName() end
-
-	local targets = {}
-	for zoneName, _ in pairs(zoneByName or {}) do
-		local targetName = _parseCargoDropTargetFromZoneName(zoneName)
-		if targetName then
-			targets[targetName] = true
-		end
-	end
-
-	for targetName, _ in pairs(targets) do
-		_getCargoDropSubZoneCandidates(targetName)
-		cargoDropSubZoneChoicesByLanding[targetName] = cargoDropSubZoneChoicesByLanding[targetName] or {}
-
-		local landingPrefix = targetName .. "-land"
-		for landingName, spots in pairs(LandingSpots or {}) do
-			if landingName == landingPrefix or landingName:sub(1, #landingPrefix + 1) == landingPrefix .. "-" then
-				local z = getTriggerZone(landingName)
-				local point = z and z.point or nil
-				if point then
-					cargoDropSubZoneChoicesByLanding[targetName][landingName] = _nearestCargoDropSubZoneChoices(targetName, point.x, point.z, landingName, 2)
-				elseif spots and spots[1] then
-					cargoDropSubZoneChoicesByLanding[targetName][landingName] = _nearestCargoDropSubZoneChoices(targetName, spots[1].x, spots[1].z, landingName, 2)
-				end
-			end
-		end
-
-		local idx = 0
-		while true do
-			local forcedName = string.format("%s-land-forced-%d", targetName, idx)
-			local forcedZone = getTriggerZone(forcedName)
-			if not forcedZone or not forcedZone.point then break end
-			cargoDropSubZoneChoicesByLanding[targetName][forcedName] = _nearestCargoDropSubZoneChoices(targetName, forcedZone.point.x, forcedZone.point.z, forcedName, 2)
-			idx = idx + 1
-		end
-	end
-end
-
 local function _selectCargoDropSubZoneForLanding(targetZoneName, landingName, landingX, landingZ)
 	local choices = landingName
 		and cargoDropSubZoneChoicesByLanding[targetZoneName]
@@ -374,11 +308,11 @@ local NEAR_BLUE_METERS = 50 * NM
 
 local headingTrigCache = {}
 
-local function _headingToRad(deg)
-  if deg<=180 then return math.rad(deg) else return -math.rad(360-deg) end
-end
-
 local function _getHeadingTrig(headingDeg)
+  local function _headingToRad(deg)
+    if deg<=180 then return math.rad(deg) else return -math.rad(360-deg) end
+  end
+
   local hdg = headingDeg or 0
   local cached = headingTrigCache[hdg]
   if not cached then
@@ -515,6 +449,62 @@ local function _bearingDegFromDelta(dx, dy)
 end
 
 function PrecomputeLandingSpots(maxPerZone, attemptsPerZone, maxSlopeDeg)
+	local function _resetLandingSpotPoolCaches()
+		landingSpotPoolByPrefix = {}
+		forcedLandingSpotPoolByZone = {}
+		cargoDropSubZoneCandidatesByTarget = {}
+		cargoDropSubZoneChoicesByLanding = {}
+	end
+
+	local function _buildCargoDropSubZoneCache()
+		local function _parseCargoDropTargetFromZoneName(zoneName)
+			local base = zoneName:match("^(.-)%-land%-forced%-%d+$")
+			if base then return base end
+			base = zoneName:match("^(.-)%-land%-%d+$")
+			if base then return base end
+			return zoneName:match("^(.-)%-%d+$")
+		end
+
+		cargoDropSubZoneCandidatesByTarget = {}
+		cargoDropSubZoneChoicesByLanding = {}
+		if not zoneByName then buildZoneByName() end
+
+		local targets = {}
+		for zoneName, _ in pairs(zoneByName or {}) do
+			local targetName = _parseCargoDropTargetFromZoneName(zoneName)
+			if targetName then
+				targets[targetName] = true
+			end
+		end
+
+		for targetName, _ in pairs(targets) do
+			_getCargoDropSubZoneCandidates(targetName)
+			cargoDropSubZoneChoicesByLanding[targetName] = cargoDropSubZoneChoicesByLanding[targetName] or {}
+
+			local landingPrefix = targetName .. "-land"
+			for landingName, spots in pairs(LandingSpots or {}) do
+				if landingName == landingPrefix or landingName:sub(1, #landingPrefix + 1) == landingPrefix .. "-" then
+					local z = getTriggerZone(landingName)
+					local point = z and z.point or nil
+					if point then
+						cargoDropSubZoneChoicesByLanding[targetName][landingName] = _nearestCargoDropSubZoneChoices(targetName, point.x, point.z, landingName, 2)
+					elseif spots and spots[1] then
+						cargoDropSubZoneChoicesByLanding[targetName][landingName] = _nearestCargoDropSubZoneChoices(targetName, spots[1].x, spots[1].z, landingName, 2)
+					end
+				end
+			end
+
+			local idx = 0
+			while true do
+				local forcedName = string.format("%s-land-forced-%d", targetName, idx)
+				local forcedZone = getTriggerZone(forcedName)
+				if not forcedZone or not forcedZone.point then break end
+				cargoDropSubZoneChoicesByLanding[targetName][forcedName] = _nearestCargoDropSubZoneChoices(targetName, forcedZone.point.x, forcedZone.point.z, forcedName, 2)
+				idx = idx + 1
+			end
+		end
+	end
+
     maxPerZone = maxPerZone or 5
     attemptsPerZone = attemptsPerZone or 600
     maxSlopeDeg = maxSlopeDeg or 12
@@ -5140,21 +5130,20 @@ function Frontline.BuildFromZones(zonesTbl)
     return segs
 end
 
-local function nearestSegSigned(p)
-  local segs = Frontline._segs or {}
-  local best,bd = nil, math.huge
-  for i=1,#segs do
-    local s = segs[i]
-    local d = vlen(vsub(p, s.m))
-    if d < bd then best,bd = s, d end
-  end
-  if not best then return 1e9, nil end
-  local signed = vdot(vsub(p, best.m), best.n)
-  return signed, best
-end
-
-
 function Frontline.DistToFrontMeters(coord_or_vec2)
+  local function nearestSegSigned(p)
+    local segs = Frontline._segs or {}
+    local best,bd = nil, math.huge
+    for i=1,#segs do
+      local s = segs[i]
+      local d = vlen(vsub(p, s.m))
+      if d < bd then best,bd = s, d end
+    end
+    if not best then return 1e9, nil end
+    local signed = vdot(vsub(p, best.m), best.n)
+    return signed, best
+  end
+
   local p
   if coord_or_vec2.GetVec2 then
     local v = coord_or_vec2:GetVec2(); p = v2(v.x, v.y)
@@ -5260,23 +5249,6 @@ local function _minDistPointToEnemiesNm(px, pz, mySide)
     end
     if best2 == 1e18 then return 1e9 end
     return math.sqrt(best2) / 1852
-end
-
-local function _minDistToEnemyNm(zoneName, mySide)
-    local cached = _enemyDistIndex[zoneName]; if cached then return cached end
-    local zi = Frontline._zoneInfo or {}
-    local info = zi[zoneName]; if not info or not info.enemyNeighbors then return 1e9 end
-    local best2 = 1e18
-    for i=1,#info.enemyNeighbors do
-        local nb = info.enemyNeighbors[i]
-        local de = zi[nb.name]
-        if nb.side and nb.side ~= 0 and nb.side ~= (mySide or info.side) and de and de.active ~= false and nb.dist2 and nb.dist2 < best2 then
-            best2 = nb.dist2
-        end
-    end
-    local nm = (best2 == 1e18) and 1e9 or (math.sqrt(best2) / 1852)
-    _enemyDistIndex[zoneName] = nm
-    return nm
 end
 
 function _awacsAnyZoneOfSide(zi, side)
@@ -5495,6 +5467,23 @@ end
 
 
 function Frontline.ReindexZoneCalcs()
+    local function _minDistToEnemyNm(zoneName, mySide)
+        local cached = _enemyDistIndex[zoneName]; if cached then return cached end
+        local zi = Frontline._zoneInfo or {}
+        local info = zi[zoneName]; if not info or not info.enemyNeighbors then return 1e9 end
+        local best2 = 1e18
+        for i=1,#info.enemyNeighbors do
+            local nb = info.enemyNeighbors[i]
+            local de = zi[nb.name]
+            if nb.side and nb.side ~= 0 and nb.side ~= (mySide or info.side) and de and de.active ~= false and nb.dist2 and nb.dist2 < best2 then
+                best2 = nb.dist2
+            end
+        end
+        local nm = (best2 == 1e18) and 1e9 or (math.sqrt(best2) / 1852)
+        _enemyDistIndex[zoneName] = nm
+        return nm
+    end
+
     _anyZoneSideIndex = {}
     _densestZoneIndex = {}
     _enemyDistIndex = {}
@@ -6073,11 +6062,6 @@ local function keyPairWithRouteMode(a, b, useZoneRoadHooks, useMultiRoadHooks, u
 	return key
 end
 
-local function keyPairWithRange(a,b,r,anchorTag)
-	local rangeNm = tonumber(r) or 2.2
-	return string.format("%s>%s>%.3f>%s", tostring(a), tostring(b), rangeNm, tostring(anchorTag or "auto"))
-end
-
 local function dcrandIndex(n)
     if n <= 1 then return 1 end
     return 1 + math.floor(dcrand() * n)
@@ -6252,6 +6236,22 @@ end
 
 function isNormandyMap()
 	return tostring(map or ""):lower():find("normandy", 1, true) ~= nil
+end
+
+RedAiAircraftInternalCargoKg = RedAiAircraftInternalCargoKg or 100
+
+local function applyRedAiAircraftCargoWeight(groupName)
+	if not isNormandyMap() then return end
+	local cargoKg = tonumber(RedAiAircraftInternalCargoKg) or 100
+	local gr = Group.getByName(groupName)
+	if not gr or not gr:isExist() then return end
+
+	for i = 1, gr:getSize() do
+		local un = gr:getUnit(i)
+		if un and un:isExist() then
+			trigger.action.setUnitInternalCargo(un:getName(), cargoKg)
+		end
+	end
 end
 
 function dc.FindSafeWaterPoint(basePoint, maxRadius)
@@ -7258,6 +7258,11 @@ function dc.GetSupplyConvoyRoute(originZoneName, targetZoneName, speed, useZoneR
 end
 
 function dc.GetArtilleryRoute(originZoneName, targetZoneName, speed, rangeNm)
+	local function keyPairWithRange(a,b,r,anchorTag)
+		local rangeNm = tonumber(r) or 2.2
+		return string.format("%s>%s>%.3f>%s", tostring(a), tostring(b), rangeNm, tostring(anchorTag or "auto"))
+	end
+
 	local effectiveRangeNm = tonumber(rangeNm) or 2.2
 	if effectiveRangeNm <= 0 then effectiveRangeNm = 2.2 end
 	local anchorName, anchorPoint = dc.ResolveArtilleryAnchor(originZoneName, targetZoneName)
@@ -9069,7 +9074,8 @@ do
 	end
 
 	function BattleCommander:_carrierNavigationSetRoute(group, routePoints)
-		group:getController():setTask({
+		local controller = group:getController()
+		controller:setTask({
 			id = "Mission",
 			params = {
 				route = {
@@ -9077,6 +9083,7 @@ do
 				},
 			},
 		})
+		controller:setOption(24, 40)
 	end
 
 	function BattleCommander:_carrierNavigationRouteEtaToWaypoint(routePoints, waypointIndex, speedKt)
@@ -9535,7 +9542,7 @@ do
 		if spawnedGroup and spawnedGroup:isExist() then
 			local controller = spawnedGroup:getController()
 			if controller then
-				controller:setOption(24, 20)
+				controller:setOption(24, 40)
 				controller:setCommand({
 					id = 'SetInvisible',
 					params = { value = true }
@@ -22880,6 +22887,51 @@ end
 		return nil
 	end
 
+	function BattleCommander:_supplyConnectionKey(from, to)
+		return tostring(from) .. "=>" .. tostring(to)
+	end
+
+	function BattleCommander:_forgetActiveSupplyArrowId(arrowId)
+		if not arrowId then return end
+		for i = #_activeSupplyArrowIds, 1, -1 do
+			if _activeSupplyArrowIds[i] == arrowId then
+				table.remove(_activeSupplyArrowIds, i)
+				return
+			end
+		end
+	end
+
+	function BattleCommander:removeSupplyArrowForConnection(from, to)
+		if not self:shouldUseSupplyConnectionMap() then return false end
+		local key = self:_supplyConnectionKey(from, to)
+		local arrowId = self.SupplyArrowIdsByConnection and self.SupplyArrowIdsByConnection[key] or nil
+		if not arrowId then return true end
+		trigger.action.removeMark(arrowId)
+		self.SupplyArrowIdsByConnection[key] = nil
+		self:_forgetActiveSupplyArrowId(arrowId)
+		return true
+	end
+
+	function BattleCommander:_trainSupplyConnectionFromGroupName(groupName)
+		if type(groupName) ~= "string" then return nil, nil end
+		for _, prefix in ipairs(self.trainSupplyPrefixes or {}) do
+			if groupName:sub(1, #prefix) == prefix then
+				local route = groupName:sub(#prefix + 1)
+				local from, to = route:match("^(.-)%-resupply%-(.+)$")
+				if from and from ~= "" and to and to ~= "" then
+					return from, to
+				end
+			end
+		end
+		return nil, nil
+	end
+
+	function BattleCommander:removeSupplyArrowForTrainGroup(groupName)
+		local from, to = self:_trainSupplyConnectionFromGroupName(groupName)
+		if not from or not to then return false end
+		return self:removeSupplyArrowForConnection(from, to)
+	end
+
 BattleCommander.supplyArrowDebounce = BattleCommander.supplyArrowDebounce or {
 	lastCallTime = 0,
 	debounceDelay = 60,
@@ -22923,6 +22975,7 @@ end
 function BattleCommander:drawSupplyArrows()
 	if not self:shouldUseSupplyConnectionMap() then return end
 	self:_clearDrawMarkIds(_activeSupplyArrowIds)
+	self.SupplyArrowIdsByConnection = {}
 
 	if not self.connectionssupply or #self.connectionssupply == 0 then
 		return
@@ -22968,6 +23021,7 @@ function BattleCommander:drawSupplyArrows()
 		if not skipArrow and fromZone and toZone and from and to then
 			local arrowId = UTILS.GetMarkID()
 			table.insert(_activeSupplyArrowIds, arrowId)
+			self.SupplyArrowIdsByConnection[self:_supplyConnectionKey(v.from, v.to)] = arrowId
 			local headPos, tailPos = GetConnectionArrowHeadTail(fromZone, toZone, from, to, true)
 
 			if fromZone.side == 2 and toZone.side ~= 1 then
@@ -23039,7 +23093,9 @@ function BattleCommander:_destroyTrainSupplyGroup(groupName, notifyPlayers, rest
 	end
 
 	if self:shouldUseSupplyConnectionMap() then
-		self:drawSupplyArrowsDebounced()
+		if not self:removeSupplyArrowForTrainGroup(groupName) then
+			self:drawSupplyArrowsDebounced()
+		end
 	end
 	return true
 end
@@ -23132,6 +23188,7 @@ function BattleCommander:destroyRailwayDependentGroups(stationName)
 	local destroyedCount = 0
 	local destroyedNames = {}
 	local creditsAwarded = { [1] = 0, [2] = 0 }
+	local supplyArrowRemovalComplete = true
 	for _, groupName in ipairs(groupsToDestroy) do
 		local group = Group.getByName(groupName)
 		if group then
@@ -23139,6 +23196,9 @@ function BattleCommander:destroyRailwayDependentGroups(stationName)
 			local rewardCoalition = self:_getTrainSupplyRewardCoalition(groupName, groupCoalition)
 			group:destroy()
 			self:_markTrainSupplyGroupDestroyed(groupName)
+			if self:shouldUseSupplyConnectionMap() and not self:removeSupplyArrowForTrainGroup(groupName) then
+				supplyArrowRemovalComplete = false
+			end
 			destroyedCount = destroyedCount + 1
 			destroyedNames[#destroyedNames + 1] = groupName
 			if rewardCoalition then
@@ -23168,7 +23228,7 @@ function BattleCommander:destroyRailwayDependentGroups(stationName)
 			trigger.action.outTextForCoalition(1, message, 15)
 			trigger.action.outTextForCoalition(2, message, 15)
 		end
-		if self:shouldUseSupplyConnectionMap() then
+		if self:shouldUseSupplyConnectionMap() and not supplyArrowRemovalComplete then
 			self:drawSupplyArrowsDebounced()
 		end
 	end
@@ -36974,6 +37034,9 @@ end
 							end
 						end
 					end
+					if self.side == 1 and self.unitCategory == Unit.Category.AIRPLANE then
+						applyRedAiAircraftCargoWeight(gname)
+					end
 
 					local missionAssignDelay = (self.MissionType == 'CAS') and 0.5 or 2.5
 					self._restoreSupplyReturnHome = restoreData.supplyReturnHome == true
@@ -37046,6 +37109,9 @@ end
 								local sp = SPAWN:NewFromTemplate(tpl, resolved, self:_getSpawnAlias(), true)
 										local SpawnSkill = (self.side == 1) and tostring(AiPlaneSkill or "Excellent") or "Excellent"
 										sp = sp:InitSkill(SpawnSkill):OnSpawnGroup(function(g)
+										if self.side == 1 and self.unitCategory == Unit.Category.AIRPLANE then
+											applyRedAiAircraftCargoWeight(g:GetName())
+										end
 
 										if self.MissionType == 'CAP' and self.mission== 'patrol' then
 											local gr = Group.getByName(g:GetName()); if not gr then return end
@@ -42690,6 +42756,15 @@ end
 
 function LogisticCommander:_ensureStatsAndLanguageMenus(groupid, player, unitid, T, groupObj)
 	if not self.statsMenus[groupid] then
+		local function footholdLanguageLabel(locale)
+			local localeKey = string.upper(tostring(locale or ""))
+			for _, option in ipairs(FootholdLanguageOptions) do
+				if string.upper(tostring(option.locale or "")) == localeKey then
+					return option.label
+				end
+			end
+			return localeKey
+		end
 
 		local statsMenu = missionCommands.addSubMenuForGroup(groupid, T:Get("STATS_MENU_ROOT"))
 		local statsSubMenu = missionCommands.addSubMenuForGroup(groupid, T:Get("STATS_MENU_STATS"), statsMenu)
@@ -44893,6 +44968,7 @@ function handleMission(zoneName, groupName, groupID, group)
 				missionGroupIDs[zoneName] = missionGroupIDs[zoneName] or {}
 				missionGroupIDs[zoneName][groupID] = {
 					groupID = groupID,	
+					groupName = groupName,
 					group = group
 				}
                 missionMenus[groupID] = createControlMenuForGroup(group, mission, groupID)
@@ -48175,8 +48251,7 @@ function spawnNavyArtyAt(zoneName, targetZoneName, strikerZoneName)
 			end
 
 			if navyArtyGroup then
-				local missions = navyArtyGroup:GetMissions()
-				if missions and #missions == 0 then
+				if navyArtyGroup:CountRemainingMissison() == 0 then
 					trigger.action.outTextForCoalition(2, L10N:Get("NAVY_ARTY_ALL_MISSIONS_COMPLETE"), 15)
 					despawnNavyArty()
 					return
@@ -48314,6 +48389,7 @@ function spawnBomberStrikerAt(spawnZoneName, targetZoneName)
 		env.info("[BOMBER_LOG] ABORT: Failed to spawn bomber group")
 		return false
 	end
+	applyRedAiAircraftCargoWeight(spawnedGroup:GetName())
 	env.info("[BOMBER_LOG] Bomber group spawned: " .. spawnedGroup:GetName())
 
 	timer.scheduleFunction(function()
@@ -48321,6 +48397,7 @@ function spawnBomberStrikerAt(spawnZoneName, targetZoneName)
 		escortCoord:SetAltitude(5000)
 		local escortSpawnedGroup = SPAWN:New(bomberRedEscortTemplate):SpawnFromCoordinate(escortCoord)
 		if escortSpawnedGroup then
+			applyRedAiAircraftCargoWeight(escortSpawnedGroup:GetName())
 			timer.scheduleFunction(function()
 				local escortGroup = GROUP:FindByName(escortSpawnedGroup:GetName())
 				if not escortGroup or not escortGroup:IsAlive() then return end
@@ -48550,6 +48627,7 @@ function spawnRedInterceptorFor(blueBomberGroup, targetZoneName)
 		env.info("[BLUE_BOMBER_LOG] ABORT: Failed to spawn interceptor group")
 		return false
 	end
+	applyRedAiAircraftCargoWeight(spawnedGroup:GetName())
 
 	blueBomberLog(string.format("[BLUE_BOMBER_LOG] RED interceptor group spawned: %s", spawnedGroup:GetName()))
 

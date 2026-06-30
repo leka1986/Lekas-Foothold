@@ -4848,8 +4848,25 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
     missionGroupIDs[zoneName] = missionGroupIDs[zoneName] or {}
     missionGroupIDs[zoneName][groupID] = {
         groupID = groupID,
+        groupName = groupName,
         group = group
     }
+	if not mission._escortTargetCaptureCleanupRegistered then
+		mission._escortTargetCaptureCleanupRegistered = true
+		bc:getZoneByName(mission.TargetZone):registerTrigger('captured', function(_, targetZone)
+			if targetZone.side ~= 2 or IsGroupActive(mission.missionGroup) then return end
+			if missionGroupIDs[mission.zone] then
+				for _, data in pairs(missionGroupIDs[mission.zone]) do
+					removeMissionMenuForAll(mission.zone, data.groupID)
+					if trackedGroups[data.groupName] then
+						trackedGroups[data.groupName] = nil
+					end
+				end
+				missionGroupIDs[mission.zone] = nil
+			end
+			mc.missionFlags[mission.zone] = nil
+		end, mission.missionGroup .. 'targetcaptured')
+	end
 	    if IsGroupActive(mission.missionGroup) then
 		trigger.action.outSoundForGroup(groupID, "ding.ogg")
 		trigger.action.outTextForGroup(groupID, T:Format("SYRIA_ESCORT_ACTIVE_PENDING", mission.zone, mission.TargetZone), 30)
@@ -4878,12 +4895,13 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
         reward = 1000,
         messageStart = function() return L10N:Format("MISSION_ESCORT_START", mission.TargetZone) end,
 		missionFail = function(self)
-		self.accept = false
 		if not IsGroupActive(mission.missionGroup) then
+			self.accept = false
 			mc.missionFlags[zoneName] = nil
 			if missionGroupIDs[zoneName] and next(missionGroupIDs[zoneName]) then
-				for groupName, data in pairs(missionGroupIDs[zoneName]) do
+				for _, data in pairs(missionGroupIDs[zoneName]) do
 					local groupID = data.groupID
+					local groupName = data.groupName
 					local group = data.group
 					local T = L10N:ForGroup(groupID)
 					trigger.action.outSoundForGroup(groupID, "cancel.ogg")
@@ -4907,8 +4925,9 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
 		startOver = function(self)
 			timer.scheduleFunction(function()
 		if missionGroupIDs[zoneName] then
-			for groupName, data in pairs(missionGroupIDs[zoneName]) do
+			for _, data in pairs(missionGroupIDs[zoneName]) do
 				local groupID = data.groupID
+				local groupName = data.groupName
 				local group = data.group
 				handleMission(zoneName, groupName, groupID, group)
 				return nil
@@ -4951,8 +4970,9 @@ function generateEscortMission(zoneName, groupName, groupID, group, mission)
 					end
 				end
 				if missionGroupIDs[zoneName] then
-					for groupName, data in pairs(missionGroupIDs[zoneName]) do
+					for _, data in pairs(missionGroupIDs[zoneName]) do
 						local groupID = data.groupID
+						local groupName = data.groupName
 						local group   = data.group
 						removeMissionMenuForAll(mission.zone, groupID)
 						if trackedGroups[groupName] then
