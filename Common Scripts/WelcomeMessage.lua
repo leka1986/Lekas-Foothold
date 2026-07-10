@@ -51,6 +51,7 @@ local allZoneSet = {}
 local allZoneObjects = {}
 local atisAirbaseObjects = {}
 local atisZoneByAirbaseName = {}
+local GermanyCWMinRunwayLengthMeters = 1600
 
 local function isNormandyTheatre()
     return string.find(string.lower(tostring(env.mission.theatre or "")), "normandy", 1, true) ~= nil
@@ -69,6 +70,15 @@ local function GetAirbaseByNameCached(airbaseName)
         atisAirbaseObjects[airbaseName] = airbase
     end
     return airbase
+end
+
+local function GetAirbaseMaxRunwayLength(airbase)
+    local maxLength = 0
+    for _, runway in ipairs(airbase:GetRunways() or {}) do
+        local length = tonumber(runway.length or runway.Length or 0) or 0
+        if length > maxLength then maxLength = length end
+    end
+    return maxLength
 end
 
 local function BuildAllZonesFromFootholdZones()
@@ -134,7 +144,10 @@ local function BuildAtisZonesFromFootholdZones()
         if type(zoneName) == "string" and zoneName ~= "" and type(airbaseName) == "string" and airbaseName ~= "" then
             local airbase = GetAirbaseByNameCached(airbaseName)
             if airbase and airbase:IsAirdrome() then
-                built[zoneName] = { airbaseName = airbaseName }
+                built[zoneName] = {
+                    airbaseName = airbaseName,
+                    maxRunwayLengthMeters = GetAirbaseMaxRunwayLength(airbase),
+                }
                 atisZoneByAirbaseName[airbaseName] = zoneName
                 builtCount = builtCount + 1
             end
@@ -1141,10 +1154,11 @@ function getClosestFriendlyAirbaseInfo(client)
         end
     end
 
+    local minimumRunwayLength = env.mission.theatre == "GermanyCW" and GermanyCWMinRunwayLengthMeters or 0
     local closestNormalZoneName,closestNormalDistance,closestNormalBearing = nil,math.huge,nil
     for zoneName,details in pairs(atisZones) do
         local airbase = GetAirbaseByNameCached(details.airbaseName)
-        if airbase and airbase:GetCoalition() == playerSide then
+        if airbase and airbase:GetCoalition() == playerSide and details.maxRunwayLengthMeters >= minimumRunwayLength then
             local dist     = playerCoord:Get2DDistance(airbase:GetCoordinate())
             local trueBrg  = playerCoord:HeadingTo(airbase:GetCoordinate(),nil)
             local magDecl  = playerCoord:GetMagneticDeclination()

@@ -391,8 +391,6 @@ RandomBluePool = {
 	"bluePD",
 	"bluePD 2",
 	"bluePD1",
-	-- "bSamBig",
-	-- "bSamFinal",
 }
 
 if Era == 'Coldwar' then
@@ -409,6 +407,11 @@ end
 if NoSA15 == true then
 	deepSwap(RandomRedPool, SamSwapNoSA15)
 end
+
+RandomRedPickKeepChance = {
+	["Red SAM SHORAD Pantsir S1"] = 50,
+	["Red SAM SHORAD Tor M2"] = 50,
+}
 
 ZoneSizeExclusions = {
 	small = { "sa-10", "sa-11","sa-2","pantsir","tor m2" },

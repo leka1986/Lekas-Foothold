@@ -1370,7 +1370,7 @@ function DynamicBomber.AssignEscortTask(bomberGroupName, escortGroupName)
 						pos = { x = -20, y = UTILS.FeetToMeters(2000), z = 50 },
 						lastWptIndexFlag = false,
 						engagementDistMax = 40*NM,
-						targetTypes = { 'plane' }
+						targetTypes = { 'Planes' }
 					}
 				}
 			}}
@@ -1809,15 +1809,17 @@ function StrategicBomber.GetInterceptorChanceThreshold()
 	return StrategicBomber.InterceptorChanceByCapDifficulty[difficulty] or StrategicBomber.InterceptorChanceByCapDifficulty.medium
 end
 
-function StrategicBomber.GetClosestInterceptorAirbase(targetZoneName, side)
+function StrategicBomber.GetClosestInterceptorAirbase(targetZoneName, side, excludedZones)
 	local targetCoord = DynamicBomber.ZoneCoordinate(targetZoneName)
 	if not targetCoord then return nil end
+	if not bc._capRecoveryZones then bc:_rebuildCapRecoveryZones() end
 
 	local bestAirbase = nil
 	local bestZone = nil
 	local bestDistance = math.huge
-	for _, zoneObj in ipairs(bc:getZones()) do
-		if zoneObj.side == side
+	for _, zoneObj in ipairs(bc._capRecoveryZones or {}) do
+		if not (excludedZones and excludedZones[zoneObj.zone])
+			and zoneObj.side == side
 			and zoneObj.active
 			and not zoneObj.suspended
 			and not zoneObj.isHidden
@@ -1963,7 +1965,8 @@ function StrategicBomber.TrySpawnBlueInterceptor()
 	env.info(string.format("[StrategicBomber] interceptor roll=%d threshold=%d CapDifficulty=%s", roll, threshold, tostring(CapDifficulty or "medium")))
 	if roll > threshold then return false end
 
-	local homebase, homeZone, distance = StrategicBomber.GetClosestInterceptorAirbase(st.targetZone, 1)
+	local excludedZones = {}
+	local homebase, homeZone, distance = StrategicBomber.GetClosestInterceptorAirbase(st.targetZone, 1, excludedZones)
 	if not homebase then
 		env.info("[StrategicBomber] no valid red interceptor airbase for target "..tostring(st.targetZone))
 		return false
@@ -1972,9 +1975,44 @@ function StrategicBomber.TrySpawnBlueInterceptor()
 	local template = cfg.interceptorTemplates[math.random(1, #cfg.interceptorTemplates)]
 	StrategicBomber.interceptorSpawnIndex = (StrategicBomber.interceptorSpawnIndex or 0) + 1
 	local alias = (cfg.template or "StrategicBomber").."_interceptor_"..tostring(StrategicBomber.interceptorSpawnIndex)
-	local spawnedGroup = SPAWN:NewWithAlias(template, alias):SpawnAtAirbase(homebase, SPAWN.Takeoff.Hot)
+	local templateGroup = GROUP:FindByName(template)
+	local spawnedGroup = nil
+	while homebase do
+		local interceptorSpawn = SPAWN:NewWithAlias(template, alias)
+		local unitCount = math.max(1, #(interceptorSpawn.SpawnTemplate.units or {}))
+		local parkingData = homebase:FindFreeParkingSpotForAircraft(
+			templateGroup,
+			AIRBASE.TerminalType.FighterAircraft,
+			50,
+			true,
+			true,
+			false,
+			false,
+			unitCount,
+			nil
+		) or {}
+		if #parkingData >= unitCount then
+			spawnedGroup = interceptorSpawn:SpawnAtAirbase(
+				homebase,
+				SPAWN.Takeoff.Hot,
+				nil,
+				AIRBASE.TerminalType.FighterAircraft,
+				false,
+				parkingData
+			)
+			if spawnedGroup then break end
+			env.info("[StrategicBomber] failed to ground-spawn red interceptor at "..tostring(homebase:GetName()).."; trying next CAP airbase")
+		else
+			env.info(string.format("[StrategicBomber] red interceptor needs %d fighter parking spots at %s; found %d; trying next CAP airbase",
+				unitCount,
+				tostring(homebase:GetName()),
+				#parkingData))
+		end
+		excludedZones[homeZone.zone] = true
+		homebase, homeZone, distance = StrategicBomber.GetClosestInterceptorAirbase(st.targetZone, 1, excludedZones)
+	end
 	if not spawnedGroup then
-		env.info("[StrategicBomber] failed to spawn red interceptor at "..homebase:GetName())
+		env.info("[StrategicBomber] no red CAP airbase could ground-spawn interceptors for target "..tostring(st.targetZone))
 		return false
 	end
 
@@ -2100,6 +2138,22 @@ function StrategicBomber.StopPlayerEscortWatch()
 	end
 	StrategicBomber.playerEscortWatch = nil
 	StrategicBomber.playerEscortWatchToken = (StrategicBomber.playerEscortWatchToken or 0) + 1
+end
+
+local function newUnitEnvelopeZone(zoneName, trackedUnit, radius, altitudeTolerance)
+	local zone = ZONE_UNIT:New(zoneName, trackedUnit, radius)
+	-- ZONE_UNIT is 2D; include altitude so vertical entry and exit generate zone events.
+	function zone:IsCoordinateInZone(coordinate)
+		if not coordinate or not self.ZoneUNIT:IsAlive() then return false end
+		local objectPoint = coordinate:GetVec3()
+		local trackedPoint = self.ZoneUNIT:GetPointVec3()
+		if not objectPoint or not trackedPoint then return false end
+		if math.abs(objectPoint.y - trackedPoint.y) > altitudeTolerance then return false end
+		local dx = objectPoint.x - trackedPoint.x
+		local dz = objectPoint.z - trackedPoint.z
+		return (dx * dx + dz * dz) <= (radius * radius)
+	end
+	return zone
 end
 
 function StrategicBomber.GetClientPlayerName(client)
@@ -2251,7 +2305,9 @@ function StrategicBomber.StartPlayerEscortWatch(bomberGroup)
 	StrategicBomber.StopPlayerEscortWatch()
 	local token = StrategicBomber.playerEscortWatchToken
 	local cfg = StrategicBomber.GetConfig(2)
-	local zone = ZONE_UNIT:New("StrategicBomber_PlayerEscort_Prox", bomberUnit, cfg.playerEscortRadiusMeters or StrategicBomber.PlayerEscortRadiusMeters)
+	local radius = cfg.playerEscortRadiusMeters or StrategicBomber.PlayerEscortRadiusMeters
+	local altitudeTolerance = cfg.playerEscortAltitudeToleranceMeters or StrategicBomber.PlayerEscortAltitudeToleranceMeters
+	local zone = newUnitEnvelopeZone("StrategicBomber_PlayerEscort_Prox", bomberUnit, radius, altitudeTolerance)
 	zone.OnAfterEnteredZone = function(_, From, Event, To, triggeringClient)
 		StrategicBomber.QueuePlayerEscortQualification(triggeringClient, token)
 	end
@@ -2509,7 +2565,12 @@ function StrategicBomber.LaunchBlue(params)
 	local spawnedGroup = Respawn.SpawnAtPoint(cfg.template, selection.spawnCoord, selection.heading, 5, cfg.routeAltitudeFt or 25000, StrategicBomber.IasKnotsToTasMps(StrategicBomber.GetToIngressSpeedKt(cfg), UTILS.FeetToMeters(cfg.routeAltitudeFt or 25000)))
 	if not spawnedGroup then return StrategicBomber.Message("STRATEGIC_BOMBER_SPAWN_FAILED") end
 	DynamicBomber.SetUnlimitedFuel(spawnedGroup)
-	spawnedGroup:getController():setOption(AI.Option.Air.id.SILENCE, true)
+	local controller = spawnedGroup:getController()
+	local controller = spawnedGroup:getController()
+	controller:setOption(AI.Option.Air.id.SILENCE, true)
+	controller:setOption(AI.Option.Air.id.PROHIBIT_JETT, true)
+	controller:setOption(AI.Option.Air.id.FORCED_ATTACK, true)
+	controller:setOption(AI.Option.Air.id.REACTION_ON_THREAT, AI.Option.Air.val.REACTION_ON_THREAT.PASSIVE_DEFENCE)
 
 	local holdReason = nil
 	local hasBadSam, badSamText = StrategicBomber.GetBadSamsForZone(selection.targetZone.zone)
@@ -2549,8 +2610,19 @@ function StrategicBomber.LaunchBlue(params)
 			local st = StrategicBomber.GetState(2)
 			if not st or st.pushed or st.holdReason ~= args.holdReason then return nil end
 			if StrategicBomber.AssignHold(args.groupName, args.spawnCoord, args.altitudeFt, args.holdSpeedKt) then
-				if st.escortGroupName and DynamicBomber.AssignEscortTask(args.groupName, st.escortGroupName) then
-					st.escortTaskAssigned = true
+				if st.escortGroupName then
+					timer.scheduleFunction(function(assignArgs)
+						local currentState = StrategicBomber.GetState(2)
+						if not currentState or currentState.pushed or currentState.holdReason ~= assignArgs.holdReason or currentState.escortGroupName ~= assignArgs.escortGroupName then return nil end
+						if DynamicBomber.AssignEscortTask(assignArgs.groupName, assignArgs.escortGroupName) then
+							currentState.escortTaskAssigned = true
+						end
+						return nil
+					end, {
+						groupName = args.groupName,
+						escortGroupName = st.escortGroupName,
+						holdReason = args.holdReason,
+					}, timer.getTime() + 1)
 				end
 				local altitudeText = StrategicBomber.FormatAltitudeFeet(args.altitudeFt)
 				if args.escortMode == "player" then
@@ -24105,7 +24177,7 @@ end
 		if search then group:getController():setOption(AI.Option.Air.id.RADAR_USING,AI.Option.Air.val.RADAR_USING.FOR_CONTINUOUS_SEARCH) end
 		local weapons = 2147485694 + 30720 + 4161536
 		group:getController():setOption(AI.Option.Air.id.RTB_ON_OUT_OF_AMMO, weapons)
-		end
+	end
 
 	function BattleCommander:setDefaultAGSHIP(group)
 		group:getController():setOption(AI.Option.Air.id.JETT_TANKS_IF_EMPTY, true)
@@ -48598,17 +48670,17 @@ local function StartTankerProximityWatch(TankerGroup, ProximityZoneName, Proximi
 	local TankerUnit = UNIT:FindByName(LeadUnitDcs:getName())
 	if not TankerUnit then return nil end
 
-	local ProximityZone = ZONE_UNIT:New(ProximityZoneName, TankerUnit, ProximityRadiusMeters)
+	local ProximityZone = newUnitEnvelopeZone(ProximityZoneName, TankerUnit, ProximityRadiusMeters, AltitudeToleranceMeters)
+	local function NotifyApproachingClient(TriggeringClient)
+		if not TriggeringClient or not TriggeringClient:IsAlive() then return end
+		if not ProximityZone:IsCoordinateInZone(TriggeringClient:GetCoordinate()) then return end
+		MESSAGE:New(RadioMessageText, 20):ToClient(TriggeringClient)
+	end
 	ProximityZone.OnAfterEnteredZone = function(_, From, Event, To, TriggeringClient)
-		if not TriggeringClient then return end
-		local ClientCoordinates = TriggeringClient:GetPointVec3()
-		if not TankerUnit:IsAlive() then return end
-		local TankerCoordinates = TankerUnit:GetPointVec3()
-		if math.abs(ClientCoordinates.y - TankerCoordinates.y) <= AltitudeToleranceMeters then
-			MESSAGE:New(RadioMessageText, 20):ToClient(TriggeringClient)
-		end
+		NotifyApproachingClient(TriggeringClient)
 	end
 	ProximityZone:Trigger(BlueClients)
+	BlueClients:ForEachClient(NotifyApproachingClient)
 	return ProximityZone
 end
 
@@ -51602,7 +51674,7 @@ function spawnBomberStrikerAt(spawnZoneName, targetZoneName)
 								pos = { x = -20, y = UTILS.FeetToMeters(2000), z = 50 },
 								lastWptIndexFlag = false,
 								engagementDistMax = 40*NM,
-								targetTypes = { 'plane' }
+								targetTypes = { 'Planes' }
 							}
 						}
 					}}
@@ -51707,7 +51779,7 @@ function spawnBlueBomberStrikerAt(spawnZoneName, targetZoneName)
 								pos = { x = -20, y = UTILS.FeetToMeters(2000), z = 50 },
 								lastWptIndexFlag = false,
 								engagementDistMax = 40*NM,
-								targetTypes = { 'plane' }
+								targetTypes = { 'Planes' }
 							}
 						}
 					}}
