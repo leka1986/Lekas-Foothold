@@ -34,6 +34,24 @@ function allExcept(tbls, except)
 	return merge(tomerge)
 end
 
+local function BuildEnabledTemplateList(masterList, ...)
+	local result = {}
+	local enabledMaps = {...}
+
+	for _, template in ipairs(masterList) do
+		for _, enabled in ipairs(enabledMaps) do
+			if enabled[template] == true then
+				table.insert(result, template)
+				break
+			end
+		end
+	end
+
+	return result
+end
+
+local ColdWarTechEra = (Era == 'Coldwar' or Era == 'Vietnam')
+
 -----------------------------begin upgrade (this is what determines what spawns at each target location)---------------------------
 upgrades = {
 	airfieldStart = {
@@ -130,7 +148,7 @@ upgrades = {
 	},	
 	samjamsheed = {
 		blue = {},
-		red = { 'Red SAM SA15-Jamsheed IsNotShown-1', 'Red SAM SA-6 Jamsheed IsNotKnown', 'Red SAM SA-6 Jamsheed IsNotShown-2',  'Red SAM SA-2 Jamsheed IsNotShown', 'Red SAM SA-10 Fixed Jamsheed IsNotShown-1',  'Red SAM SA-18 Jamsheed IsNotShown-1',  'Red SAM SA-18 Jamsheed IsNotShown-2', 'Red SAM SA-18 Jamsheed IsNotShown-3', 'Red SAM SA-18 Jamsheed IsNotShown-4', 'Red SAM SA-18 Jamsheed IsNotShown-5','Red SAM SA-18 Jamsheed IsNotShown-6', 'Red SAM AAA Jamsheed IsNotShown', 'Red SAM AAA Jamsheed IsNotKnown-2' }
+		red = {  'Red SAM Manpad Jamsheed IsNotShown-1',  'Red SAM Manpad Jamsheed IsNotShown-2', 'Red SAM Manpad Jamsheed IsNotShown-3', 'Red SAM manpad Jamsheed IsNotShown-4', 'Red SAM manpad Jamsheed IsNotShown-5','Red SAM manpad Jamsheed IsNotShown-6', 'Red SAM AAA Jamsheed IsNotShown', 'Red SAM AAA Jamsheed IsNotKnown-2' }
 	},	
 }
 
@@ -229,7 +247,7 @@ WaypointList = {
 -----------------end waypoint number section------------------------------------------
 
 ---------------------------begin coldwar swap section---------------------------------
-FootholdSaveBaseName = (Era == 'Coldwar') and 'foothold_afghanistan_Coldwar' or 'foothold_afghanistan'
+FootholdSaveBaseName = (Era == 'Vietnam') and 'foothold_afghanistan_Vietnam' or ((Era == 'Coldwar') and 'foothold_afghanistan_Coldwar' or 'foothold_afghanistan')
 
 local filepath = FootholdSaveBaseName .. '.lua'
 if lfs then
@@ -247,8 +265,41 @@ local cwSwap = {
 	['bluePD'] 						= 'bluePD Coldwar',
 	['bluePD 2'] 					= 'bluePD 2 Coldwar',
 	['bluePD1'] 					= 'bluePD 2 Coldwar',
-	['Red SAM SHORAD Tor M2'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9', 'Red SAM SHORAD SA-15'} },
-	['Red SAM SHORAD Pantsir S1'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9', 'Red SAM SHORAD SA-15'} },
+}
+
+local vnSwap = {
+	['Enemy Task forces'] = 'Enemy task forces Vietnam',
+	['Enemy ground forces'] = 'Enemy ground forces Vietnam',
+	['Red Armour Group'] = 'Red Armor Group Vietnam 1',
+	['Red Armour Group 2'] = 'Red Armor Group Vietnam 2',
+	['Red Armour Group 3'] = 'Red Armor Group Vietnam 3',
+	['Red Armour Group 4'] = 'Red Armor Group Vietnam 4',
+	['Red Armor Group'] = 'Red Armor Group Vietnam 1',
+	['Red Armor Group6'] = 'Red Armor Group Vietnam 3',
+	['Red Armor Group7'] = 'Red Armor Group Vietnam 1',
+	['Red Armor Group8'] = 'Red Armor Group Vietnam 4',
+	['Red Armor Group9'] = 'Red Armor Group Vietnam 2',
+	['Red Mech group 1'] = 'Red Mech group Vietnam 1',
+	['Red Mech group 2'] = 'Red Mech group Vietnam 2',
+	['Red Mech group 3'] = 'Red Mech group Vietnam 3',
+	['Red Mech group 4'] = 'Red Mech group Vietnam 4',
+	['Red Mech group 5'] = 'Red Mech group Vietnam 1',
+	['Red Mech group 6'] = 'Red Mech group Vietnam 2',
+	['Red Special 1'] = 'Red Special Vietnam 1',
+	['Red Special 2'] = 'Red Special Vietnam 2',
+	['Red Special 3'] = 'Red Special Vietnam 1',
+	['Red Arty'] = 'Red Arty Vietnam 1',
+	['Red Arty 1'] = 'Red Arty Vietnam 1',
+	['Red Arty 2'] = 'Red Arty Vietnam 2',
+	['Red Arty 3'] = 'Red Arty Vietnam 3',
+	['Red Arty 4'] = 'Red Arty Vietnam 4',
+	['Red Arty 5'] = 'Red Arty Vietnam 1',
+	['Red Arty 6'] = 'Red Arty Vietnam 2',
+	['Red Arty 7'] = 'Red Arty Vietnam 3',
+	['Red Arty 8'] = 'Red Arty Vietnam 4',
+	['Red Arty 9'] = 'Red Arty Vietnam 1',
+	['Red SAM AAA'] = 'Red SAM AAA Vietnam 1',
+	['Red SAM AAA 2'] = 'Red SAM AAA Vietnam 1',
 }
 ----------------------end coldwar swap section-----------------------
 
@@ -333,35 +384,16 @@ local function deepSwap(t,s)
 	end
 end
 ------------------------begin coldwar swaps (this section swaps fixed assets for coldwar)-----------------------------
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 	deepSwap(upgrades,cwSwap)
 end
 
-local SamSwap = {
-	['Red SAM SA-10'] = { mode='random', list={'Red SAM SA-2', 'Red SAM SA-3', 'Red SAM SA-6'} },
-	['Red SAM SA-11'] = { mode='random', list={'Red SAM SA-2', 'Red SAM SA-3', 'Red SAM SA-6'} },
-	['Red SAM SA-10 Fixed Jamsheed IsNotShown-1'] = 'Red SAM SA-2 Fixed Jamsheed IsNotShown-1',
-	
-}
+if Era == 'Vietnam' then
+	deepSwap(upgrades,vnSwap)
+end
 
-local SamSwapNoTorM2AndPantsir = {
-	['Red SAM SHORAD Pantsir S1'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
-	['Red SAM SHORAD Tor M2'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
-}
 
-local SamSwapNoSA15 = {
-	['Red SAM SHORAD SA-15'] = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
-}
-----------------------------end coldwar fixed swaps -----------------------------------------
-if NoSA10AndSA11 == true then
-	deepSwap(upgrades,SamSwap)
-end
-if NoTorM2AndPantsir == true then
-	deepSwap(upgrades,SamSwapNoTorM2AndPantsir)
-end
-if NoSA15 == true then
-	deepSwap(upgrades,SamSwapNoSA15)
-end
+---------------------------end coldwar fixed swaps -----------------------------------------
 
 
 -- Randomized upgrade pools/templates (fresh start only)
@@ -430,24 +462,21 @@ RandomBluePool = {
 	"bluePD",
 	"bluePD 2",
 	"bluePD1",
-	-- "bSamBig",
-	-- "bSamFinal",
 }
 
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 	deepSwap(RandomRedPool, cwSwap)
 	deepSwap(RandomBluePool, cwSwap)
 end
 
-if NoSA10AndSA11 == true then
-	deepSwap(RandomRedPool, SamSwap)
+if Era == 'Vietnam' then
+	deepSwap(RandomRedPool, vnSwap)
 end
-if NoTorM2AndPantsir == true then
-	deepSwap(RandomRedPool, SamSwapNoTorM2AndPantsir)
-end
-if NoSA15 == true then
-	deepSwap(RandomRedPool, SamSwapNoSA15)
-end
+
+RandomRedPickKeepChance = {
+	["Red SAM SHORAD Pantsir S1"] = 50,
+	["Red SAM SHORAD Tor M2"] = 50,
+}
 
 ZoneSizeExclusions = {
 	small = { "sa-10", "sa-11","sa-2","pantsir","tor m2" },
@@ -464,7 +493,7 @@ RandomUpgradeTemplates = {
 	extrabig = { sam = {1,2}, shorad = {0,5}, aaa = {0,4}, ground = {0,4}, armor = {0,4}, arty = {0,4}, total = {7,12}, flakChance = 40, flakSecondChance = 20, flakMax = 2 },
 	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {5,5}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
 	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {5,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
-	samspecial = { sam = 2, shorad = {1,3}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {6,7}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
+	samspecial = { sam = 3, shorad = {1,3}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {6,8}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
 	insurgent = { sam = 0, shorad = {1,3}, aaa = {1,2}, ground = {1,2}, armor = 0, arty = 0, total = {6,7}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
 }
 
@@ -472,6 +501,7 @@ RandomUpgradeTemplatesBlue = {
 	small = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
 	smallmedium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
 	medium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+	mediumbig = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
 	big = { sam = 1, ground = 1, armor = 1, total = {3,4} },
 	extrabig = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
 	bignosam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
@@ -556,52 +586,8 @@ zones = {
 }
 ----------------------end zone definitions-----------------------------
 ---------------------------------begin template definitions (this defines templates for coldwar and modern)-----------------------
-if Era == "Coldwar" then
+if ColdWarTechEra then
 
-    CapPlaneTemplate = {
-        'RED_MIG29A_Load1',
-        'RED_MIG29A_Load2',
-        'RED_SU27_EW',
-        'RED_MIG21Bis_Load1',
-        'RED_MIG21Bis_Load2',
-        'RED_MIG23MLD',
-        'RED_MIG25PD',
-        'BLUE_HORNET_CW',
-        'BLUE_F15C_CW',
-        'BLUE_F14A',
-    }
-    CasPlaneTemplate = {
-		'RED_SU25_OneShip_Load1',
-		'RED_SU25_OneShip_Load2',
-		'RED_SU25_OneShip_Load3',
-        'RED_SU25_TwoShip_Load1',
-		'RED_SU25_TwoShip_Load2',
-		'RED_SU25_TwoShip_Load3',
-        'RED_Mirage_F1BQ_Load1',
-        'RED_Mirage_F1BQ_Load2',
-        'BLUE_F4E_Load1',
-        'BLUE_F4E_Load2',
-    }
-    SeadPlaneTemplate = {
-        'RED_SU-24M_TWOSHIP',
-        'RED_SU-24M_ONESHIP',
-    }
-    CasHeloTemplate = {
-        'RED_Mi-24V_ONESHIP',
-        'RED_Mi-24V_TWOSHIP',
-        'BLUE_AH-64D_OneShip_Load2',
-        'BLUE_AH-64D_TwoShip_Load2',
-		'OH_58D',
-        'OH_58D_TwoShip',
-    }
-    HeloSupplyTemplate = {
-        'RED_MI-8',
-        'RED_MI-8_2',
-        'BLUE_CH-47',
-        'BLUE_CH-47_2',
-        'BLUE_UH-60A',
-        'BLUE_UH-1H',    
-    }
     AttackConvoy = {
         "AttackConvoy CW 1",
         "AttackConvoy CW 2",
@@ -612,89 +598,18 @@ if Era == "Coldwar" then
         "GroundAttackConvoy CW 1",
         "GroundAttackConvoy CW 2",
     }
-	RunwayStrikePlaneTemplate = {
-        "RED_MIG-27K_RUNWAY",
-        "RED_MIRAGE_F1_RUNWAY",
-    }
-	CapCarrierGroup = {
-        'BLUE_F14A',
-        'BLUE_HORNET_CW',
-	}
+    if Era == 'Vietnam' then
+        AttackConvoy = {
+            "AttackConvoy CW 2",
+            "AttackConvoy CW 3",
+        }
+        GroundAttackConvoy = {
+            "GroundAttackConvoy VT 1",
+        }
+    end
 	
 else
 
-    CapPlaneTemplate = {
-        'RED_MIG29S_Load1',
-		'RED_MIG29S_Load2',
-        'RED_MIG29A_Load1',
-        'RED_MIG29A_Load2',
-        'RED_SU27_Load1',
-        'RED_SU27_Load2',
-        'RED_MIG21Bis_Load1',
-        'RED_MIG21Bis_Load2',
-        'RED_MIG23MLD',
-        'RED_MIG31',
-        'BLUE_HORNET',
-        'BLUE_F15C',
-        'BLUE_F16C',
-        'BLUE_F14B',
-        'BLUE_M-2000C',
-    }
-    HeloSupplyTemplate = {
-        'RED_MI-8',
-        'RED_MI-8_2',
-        'BLUE_CH-47',
-        'BLUE_CH-47_2',
-        'BLUE_UH-60A',
-    }
-    CasPlaneTemplate = {
-		'RED_SU25_OneShip_Load1',
-		'RED_SU25_OneShip_Load2',
-		'RED_SU25_OneShip_Load3',
-        'RED_SU25_TwoShip_Load1',
-		'RED_SU25_TwoShip_Load2',
-		'RED_SU25_TwoShip_Load3',
-		'RED_SU25T_OneShip_Load1',
-		'RED_SU25T_OneShip_Load2',
-		'RED_SU25T_OneShip_Load3',
-		'RED_SU25T_TwoShip_Load1',
-		'RED_SU25T_TwoShip_Load2',
-		'RED_SU25T_TwoShip_Load3',
-        'RED_Mirage_F1BQ_Load1',
-        'RED_Mirage_F1BQ_Load2',
-        'RED_MIG21_BIS_ONE_SHIP',
-        'RED_MIG21_BIS_TWO_SHIP',
-        'BLUE_F4E_Load1',
-        'BLUE_F4E_Load2',
-    }
-    SeadPlaneTemplate = {
-        'RED_JF17_ONESHIP_SEAD',
-        'RED_JF17_TWOSHIP_SEAD',
-        'RED_SU25T_ONESHIP_SEAD',
-        'RED_SU25T_TWOSHIP_SEAD',
-        'RED_SU-34_ONESHIP_Load1',
-        'RED_SU-34_ONESHIP_Load2',
-        'RED_SU-34_TWOSHIP_Load1',
-        'RED_SU-34_TWOSHIP_Load2',
-        'RED_SU-24M_TWOSHIP',
-        'RED_SU-24M_ONESHIP',
-    }
-    CasHeloTemplate ={
-        'RED_Mi-24P_ONESHIP',
-        'RED_Mi-24P_TWOSHIP',
-        'RED_M-28N_ONESHIP_Load1',
-        'RED_M-28N_ONESHIP_Load2',
-        'RED_M-28N_TWOSHIP_Load1',
-        'RED_M-28N_TWOSHIP_Load2',
-        'BLUE_AH-64D_ONESHIP',
-        'BLUE_AH-64D_TWOSHIP',
-        'BLUE_AH-64D_TwoShip_Load2',
-        'BLUE_AH-1W',
-        'BLUE_SA342M',
-        'BLUE_SA342M_TwoShip',
-        'OH_58D',
-        'OH_58D_TwoShip',
-    }
     AttackConvoy = {
         "AttackConvoy 1",
         "AttackConvoy 2",
@@ -706,22 +621,161 @@ else
         "GroundAttackConvoy 2",
         "GroundAttackConvoy 3",
     }
-	RunwayStrikePlaneTemplate = {
-        "RED_MIG-27K_RUNWAY",
-        "RED_SU-33_RUNWAY",
-        "RED_MIRAGE_F1_RUNWAY",
-    }
-	CapCarrierGroup = {
-        'BLUE_HORNET',
-        'BLUE_F14B',
-	}
 end
+
+-- Build final AI air template sets from Foothold Config.lua.
+AllCapPlaneTemplates = {
+	'RED_MIG15BIS_CAP_GUNS_TANKS',
+	'RED_MIG19P_CAP_K13A',
+	'RED_MIRAGE_F1CE_CAP_S530Fx2_MAGIC2x2',
+	'RED_MIRAGE_F1CE_CAP_R530F_EMx2_MAGIC2x2',
+	'RED_MIG29S_CAP_R77x3_R27ET_R73x2',
+	'RED_MIG29S_CAP_R77x2_R73x2_TANKSx3',
+	'RED_MIG29A_CAP_R73x6',
+	'RED_MIG29A_CAP_R73x4_R27ER2X',
+	'RED_SU27_CAP_R27Rx4_R27ER_R73x3_ECM',
+	'RED_SU27_CAP_R27ERx6_R73x2_ECM',
+	'RED_MIG21BIS_CAP_R3Rx4',
+	'RED_MIG21BIS_CAP_R3Rx2_R3Sx2',
+	'RED_MIG21BIS_CAP_R3Rx2_R35x2',
+	'RED_MIG23MLD_CAP_R24Rx2_R60Mx2',
+	'RED_MIG31_CAP_R33x4_R40Tx2',
+	'RED_SU27_CAP_R27ERx5_R73x3_ECM',
+	'RED_MIG25PD_CAP_R40Rx2_R60Mx2',
+	'BLUE_F86F_CAP_GAR8x2',
+	'BLUE_F100D_CAP_AIM9Ex2',
+	'BLUE_F5E3_CAP_AIM9Bx2',
+	'BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2',
+	'BLUE_F15C_CAP_AIM120Bx3_AIM120Cx5',
+	'BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M',
+	'BLUE_F14B_CAP_AIM54A_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2',
+	'BLUE_F14B_CAP_AIM54C_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2',
+	'BLUE_F14B_CAP_AIM54C_MK60x4_AIM7Mx2_AIM9Mx2_TANKSx2',
+	'BLUE_M2000C_CAP_S530Dx2_MAGIC2x2',
+	'BLUE_F4E_CAP_AIM7E2x4_AIM9Jx4_TANKSx3_ALE40',
+	'BLUE_FA18C_CAP_AIM7Mx6_AIM9Mx2',
+	'BLUE_F15C_CAP_AIM7Mx4_AIM9Mx4',
+	'BLUE_F14A_CAP_AIM54A_MK47x6_AIM9Mx2_TANKSx2',
+	'BLUE_F14A_CAP_AIM54A_MK47x2_AIM7Fx3_AIM9Lx2_TANKSx2',
+}
+
+AllCasPlaneTemplates = {
+	'RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_1SHIP',
+	'RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_1SHIP',
+	'RED_SU25_CAS_S25Lx6_B13x2_1SHIP',
+	'RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_2SHIP',
+	'RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_2SHIP',
+	'RED_SU25_CAS_S25Lx6_B13x2_1SHIP_DUPLICATE',
+	'RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_1SHIP',
+	'RED_SU25T_CAS_S25Lx6_B13x2_1SHIP',
+	'RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_1SHIP',
+	'RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_2SHIP',
+	'RED_SU25T_CAS_S25Lx6_B13x2_2SHIP',
+	'RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_2SHIP',
+	'RED_MIRAGE_F1BQ_CAS_SAMP400x2_SAMP250x2_2SHIP',
+	'RED_MIRAGE_F1BQ_CAS_MIXED_SNEB_SAMP_2SHIP',
+	'RED_MIG21BIS_CAS_RBK250x2_UB32x2_1SHIP',
+	'RED_MIG21BIS_CAS_RBK250x2_UB32x2_2SHIP',
+	'RED_MIG21BIS_CAS_S24Bx4_1SHIP',
+	'RED_MIG21BIS_CAS_S24Bx4_2SHIP',
+	'RED_MIG21BIS_CAS_KH66x2_FAB250x2_1SHIP',
+	'RED_MIG21BIS_CAS_KH66x2_FAB250x2_2SHIP',
+	'RED_MIG15BIS_CAS_FAB100Mx2_1SHIP',
+	'RED_MIG15BIS_CAS_FAB100Mx2_2SHIP',
+	'RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_1SHIP',
+	'RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_2SHIP',
+	'RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_1SHIP',
+	'RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_2SHIP',
+	'BLUE_F4E_CAS_WALLEYEIIx2_GBU12x2_PAVESPIKE_2SHIP',
+	'BLUE_F4E_CAS_AGM65Dx6_GBU12x2_PAVESPIKE_2SHIP',
+	'BLUE_F4E_CAS_M117x12_AIM7E2x3_TANKSx2_ALQ131',
+	'BLUE_F4E_CAS_AGM12Bx2_AIM7E2x3_TANK600_ALQ131',
+	'BLUE_F4E_CAS_WALLEYEIx4_TANK600_ALQ131',
+	'BLUE_F4E_CAS_WALLEYEIx2_AGM65Ax4_TANK600_ALQ131',
+	'BLUE_F100D_CAS_MK82x8_TANKSx2_2SHIP',
+	'BLUE_F100D_CAS_M117x6_TANKSx2_2SHIP',
+	'BLUE_F5E3_CAS_MK82LDx4_AIM9Bx2_TANK275_2SHIP',
+	'BLUE_F5E3_CAS_MK82SEx4_AIM9Bx2_TANK275_2SHIP',
+	'BLUE_F86F_CAS_AIM9Bx2_HVARx8_TANKSx2_2SHIP',
+	'BLUE_F86F_CAS_AIM9Bx2_M117x2_2SHIP',
+}
+
+AllSeadPlaneTemplates = {
+	'RED_JF17_SEAD_LD10x2_PL5EIIx2_SPJ_TANKSx2_1SHIP',
+	'RED_JF17_SEAD_LD10x2_PL5EIIx2_SPJ_TANKSx2_2SHIP',
+	'RED_SU25T_SEAD_KH58Ux2_KH25MPU_S24B_B13x2_R73x2_1SHIP',
+	'RED_SU25T_SEAD_KH58Ux2_KH25MPU_S24B_B13x2_R73x2_2SHIP',
+	'RED_SU34_SEAD_KH31Px4_R77x2_R27Rx2_R73x2_1SHIP',
+	'RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_1SHIP',
+	'RED_SU34_SEAD_KH31Px4_R77x2_R27Rx2_R73x2_2SHIP',
+	'RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_2SHIP',
+	'RED_SU24M_SEAD_KH58x2_FAB1500M54_L081_R60Mx4_2SHIP',
+	'RED_SU24M_SEAD_KH31Px2_KH25MLx2_FAB1500M54_L081_1SHIP',
+	'RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_1SHIP',
+	'RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_2SHIP',
+	'BLUE_F100D_SEAD_AGM45Ax2_CBU7x2_TANKSx2_2SHIP',
+	'BLUE_F4E_SEAD_AGM45Ax4_AIM7E2x3_TANK600_ALQ131',
+}
+
+AllRunwayStrikePlaneTemplates = {
+	'RED_MIG27K_RUNWAY_BETAB500x2_FAB250x2_R60Mx4_3SHIP',
+	'RED_SU33_RUNWAY_BETAB500x4_R27ERx4_R73x2_3SHIP',
+	'RED_MIRAGE_F1EE_RUNWAY_DURANDALx6_S530Fx2_AIM9JULIx2_3SHIP',
+	'RED_MIG21BIS_RUNWAY_BETAB500x2_R3Rx2_TANK490_3SHIP',
+}
+
+AllCasHeloTemplates = {
+	'RED_MI8_CAS_FAB100x6_1SHIP',
+	'RED_MI8_CAS_FAB100x6_2SHIP',
+	'RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_1SHIP',
+	'RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_2SHIP',
+	'RED_MI24P_CAS_9M114x8_B8x2_1SHIP',
+	'RED_MI24P_CAS_9M114x8_B8x2_2SHIP',
+	'RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_1SHIP',
+	'RED_MI28N_CAS_9M114x8_B8x2_1SHIP',
+	'RED_MI28N_CAS_9M114x8_B8x2_2SHIP',
+	'RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_2SHIP',
+	'RED_MI24V_CAS_B8x4_1SHIP',
+	'RED_MI24V_CAS_B8x4_2SHIP',
+	'BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_1SHIP',
+	'BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_2SHIP',
+	'BLUE_AH64D_CAS_AGM114Kx8_M261x2_1SHIP',
+	'BLUE_AH64D_CAS_AGM114Kx8_M261x2_2SHIP',
+	'BLUE_AH1W_CAS_AGM114Kx8_M260x2_1SHIP',
+	'BLUE_SA342M_CAS_HOT3x4_1SHIP',
+	'BLUE_SA342M_CAS_HOT3x4_2SHIP',
+	'BLUE_OH58D_CAS_AGM114x2_APKWS_1SHIP',
+	'BLUE_OH58D_CAS_AGM114x2_APKWS_2SHIP',
+	'BLUE_UH1H_CAS_XM158x2_M134x3_M60_1SHIP',
+	'BLUE_UH1H_CAS_XM158x2_M134x3_M60_2SHIP',
+}
+
+AllSupplyHeloTemplates = {
+	'RED_MI8_SUPPLY_KORD',
+	'RED_MI8_SUPPLY_KORD_PKT',
+	'BLUE_CH47_SUPPLY_M240Hx2',
+	'BLUE_CH47_SUPPLY_M60Dx3',
+	'BLUE_UH60A_SUPPLY_UNARMED',
+	'BLUE_UH1H_SUPPLY_UNARMED',
+}
+
+CapPlaneTemplate = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled, BlueCapPlaneEnabled)
+CasPlaneTemplate = BuildEnabledTemplateList(AllCasPlaneTemplates, RedCasPlaneEnabled, BlueCasPlaneEnabled)
+SeadPlaneTemplate = BuildEnabledTemplateList(AllSeadPlaneTemplates, RedSeadPlaneEnabled, BlueSeadPlaneEnabled)
+RunwayStrikePlaneTemplate = BuildEnabledTemplateList(AllRunwayStrikePlaneTemplates, RedRunwayStrikePlaneEnabled)
+CasHeloTemplate = BuildEnabledTemplateList(AllCasHeloTemplates, RedCasHeloEnabled, BlueCasHeloEnabled)
+HeloSupplyTemplate = BuildEnabledTemplateList(AllSupplyHeloTemplates, RedSupplyHeloEnabled, BlueSupplyHeloEnabled)
 	ArtilleryConvoyLong = {
 		"ArtilleryConvoyLong 1",
 	}
 	ArtilleryConvoyShort = {
 		"ArtilleryConvoyShort 1",
 	}
+	if Era == 'Vietnam' then
+		ArtilleryConvoyShort = {
+			"ArtilleryConvoyShort VT 1",
+		}
+	end
 	SupplyConvoy = {
 		"SupplyConvoy 1",
 		"SupplyConvoy 2",
@@ -1149,6 +1203,7 @@ zones.farah:addGroups({
 })
 
 -- SHINDAND (airport) -> connects to: Farah, Herat
+local shindandAttackFOBAhmadShahMassoudArty = Era == 'Vietnam' and 'Shindand-attack-FOB-AhmadShahMassoud VT' or 'Shindand-attack-FOB-AhmadShahMassoud'
 zones.shindand:addGroups({
     GroupCommander:new({name='shindand-supply-Farah-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Farah'}),
     GroupCommander:new({name='shindand-supply-Herat-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Herat'}),
@@ -1165,7 +1220,7 @@ zones.shindand:addGroups({
 
     -- Surface attack routes
     GroupCommander:new({name='Shindand-attack-Herat', mission='attack', targetzone='Herat', type='surface', SetActiveMission = true}),
-    GroupCommander:new({name='Shindand-attack-FOB-AhmadShahMassoud', mission='attack', targetzone='FOB-Ahmad Shah Massoud', type='surface', SetActiveMission = true}),
+    GroupCommander:new({name=shindandAttackFOBAhmadShahMassoudArty, mission='attack', targetzone='FOB-Ahmad Shah Massoud', type='surface', SetActiveMission = true}),
 })
 
 -- HERAT (airport) -> connects to: Shindand, Qala i Naw
@@ -1268,6 +1323,7 @@ zones.jamsheed:addGroups({
 })
 
 -- CHAGHCHARAN (airport) -> connects to: Maymana Zahiraddin Faryabi, Bamyan
+local chaghcharanAttackFOBDelaramArty = Era == 'Vietnam' and 'Chaghcharan-attack-FOBDelaram VT' or 'Chaghcharan-attack-FOBDelaram'
 zones.chaghcharan:addGroups({
     GroupCommander:new({name='chaghcharan-supply-Maymana-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi'}),
     GroupCommander:new({name='chaghcharan-supply-Bamyan-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Bamyan'}),
@@ -1283,7 +1339,7 @@ zones.chaghcharan:addGroups({
     GroupCommander:new({name='chaghcharan-patrol-Bamyan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
 
     -- Surface attack routes
-    GroupCommander:new({name='Chaghcharan-attack-FOBDelaram',  mission='attack', targetzone='FOB-Delaram', type='surface',SetActiveMission = true}),
+    GroupCommander:new({name=chaghcharanAttackFOBDelaramArty,  mission='attack', targetzone='FOB-Delaram', type='surface',SetActiveMission = true}),
 	GroupCommander:new({name='Chaghcharan-attack-FOB-Javid-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='FOB-Javid Basharat', type='surface',artilleryRangeNm= 7,SetActiveMission = true}),
 
 })
@@ -1687,6 +1743,7 @@ local SHOP_PRICE_DEFAULTS = {
   dynamicdecoy  = 300,
   dynamicsead   = 500,
   dynamicbomb   = 500,
+  strategicbomber = 1500,
   dynamicstatic = 500,
   cruisemsl     = 800,
   supplies2     = 200,
@@ -1719,6 +1776,7 @@ local SHOP_RANK_DEFAULTS = {
   dynamiccap     = 2,
   dynamiccas     = 5,
   dynamicbomb    = 4,
+  strategicbomber = 6,
   dynamicsead    = 4,
   groundattack   = 5,
   dynamicdecoy   = 1,
@@ -1897,7 +1955,7 @@ function(sender, params)
     if params.zone and params.zone.side == 2 and not params.zone.suspended then
 
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup((Era == 'Coldwar') and 'ca-tanks-Coldwar' or 'ca-tanks')
+		zn:spawnGroup(ColdWarTechEra and 'ca-tanks-Coldwar' or 'ca-tanks')
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_ARMOR_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -1991,7 +2049,7 @@ for _,n in ipairs({'jtacDroneColdwar1','jtacDroneColdwar2','jtacDrone1','jtacDro
     local g = Group.getByName(n)
     if g then g:destroy() end
 end
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 jtacDrones = {JTAC:new({name = 'jtacDroneColdwar1'}),JTAC:new({name = 'jtacDroneColdwar2'})}
 else
 jtacDrones = {JTAC:new({name = 'jtacDrone1'}),JTAC:new({name = 'jtacDrone2'})}
@@ -2017,7 +2075,7 @@ end,function(sender,params)
 		dr:deployAtZone(params.zone)
 		dr:showMenu()
 		table.insert(jtacQueue,dr)
-		if Era == 'Coldwar' then
+		if ColdWarTechEra then
 			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_ACTIVE", params.zone.zone, #jtacQueue),15)
 		else
 			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_JTAC_REAPER_ACTIVE", params.zone.zone, #jtacQueue),15)
@@ -2105,7 +2163,7 @@ local jtacTargetMenu2 = nil
 local droneAM
 Group.getByName('JTAC9lineamColdwar'):destroy()
 Group.getByName('JTAC9lineam'):destroy()
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 droneAM = JTAC9line:new({name = 'JTAC9lineamColdwar'})
 else
 droneAM = JTAC9line:new({name = 'JTAC9lineam'})
@@ -2116,8 +2174,8 @@ end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         droneAM:deployAtZone(params.zone)
-        jtacZones[params.zone.zone] = {drone = Era == 'Coldwar' and 'JTAC9lineamColdwar' or 'JTAC9lineam'}
-		if Era == 'Coldwar' then
+        jtacZones[params.zone.zone] = {drone = ColdWarTechEra and 'JTAC9lineamColdwar' or 'JTAC9lineam'}
+		if ColdWarTechEra then
 			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_AM", params.zone.zone), 30)
 		else
 			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_REAPER_AM", params.zone.zone), 30)
@@ -2139,7 +2197,7 @@ Group.getByName('JTAC9linefmColdwar'):destroy()
 Group.getByName('JTAC9linefm'):destroy()
 local jtacTargetMenu3 = nil
 local droneFM
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 droneFM = JTAC9line:new({name = 'JTAC9linefmColdwar'})
 else
 droneFM = JTAC9line:new({name = 'JTAC9linefm'})
@@ -2150,8 +2208,8 @@ end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         droneFM:deployAtZone(params.zone)
-        jtacZones[params.zone.zone] = {drone = Era == 'Coldwar' and 'JTAC9linefmColdwar' or 'JTAC9linefm'}
-		if Era == 'Coldwar' then
+        jtacZones[params.zone.zone] = {drone = ColdWarTechEra and 'JTAC9linefmColdwar' or 'JTAC9linefm'}
+		if ColdWarTechEra then
 			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_FM", params.zone.zone), 30)
 		else
 			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_REAPER_FM", params.zone.zone), 30)
@@ -2637,6 +2695,143 @@ bc.shopItems['dynamicbomb'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
 
+Group.getByName('RedBomberEvent'):destroy()
+Group.getByName('RedBomberEvent_CW'):destroy()
+Group.getByName('BlueBomberEvent'):destroy()
+Group.getByName('BlueBomberEvent_CW'):destroy()
+
+StrategicBomber.Configure({
+	[1] = {
+		template = ColdWarTechEra and 'RedBomberEvent_CW' or 'RedBomberEvent',
+		escortTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
+		displayNameKey = "STRATEGIC_BOMBER_NAME_RED",
+		missionId = "bomb",
+		targetSide = 2,
+		routeAltitudeFt = 25000,
+		attackAltitudeFt = 25000,
+		weaponExpend = AI.Task.WeaponExpend.HALF,
+		holdSpeedKt = 300,
+		toIngressSpeedKt = 380,
+		afterIngressSpeedKt = 350,
+		escortAltitudeFt = 27000,
+		pickOptions = {
+			weaponExpend = AI.Task.WeaponExpend.HALF,
+			attackAltitudeFt = 25000,
+			minTargetSpawnNm = 80,
+			minPlayerSpawnNm = 80,
+			avoidPlayerCoalition = "blue",
+			allowSuspendedSpawn = true,
+			preferNonSuspendedSpawn = true,
+			randomCandidateLimit = 5
+		},
+		ingressDistanceNm = 25,
+		rtbApproachDistanceNm = 30
+	},
+	[2] = {
+		template = ColdWarTechEra and 'BlueBomberEvent_CW' or 'BlueBomberEvent',
+		escortTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, BlueCapPlaneEnabled),
+		displayNameKey = ColdWarTechEra and "STRATEGIC_BOMBER_NAME_BLUE_CW" or "STRATEGIC_BOMBER_NAME_BLUE",
+		missionId = "bombBlue",
+		targetSide = 1,
+		routeAltitudeFt = 25000,
+		attackAltitudeFt = ColdWarTechEra and 12000 or 25000,
+		weaponExpend = AI.Task.WeaponExpend.TWO,
+		holdSpeedKt = 300,
+		toIngressSpeedKt = 380,
+		afterIngressSpeedKt = 350,
+		escortAltitudeFt = 27000,
+		interceptorTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
+		interceptorAltitudeFt = 25000,
+		minTargetSpawnNm = 60,
+		ingressDistanceNm = 25,
+		rtbApproachDistanceNm = 30,
+		recoveryZones = {
+			'Kandahar',
+			'Jalalabad',
+			'Kabul',
+			'Gardez',
+			'Sharana',
+			'Tarinkot',
+			'Bost',
+			'Camp Bastion',
+			'Dwyer',
+			'Farah',
+			'Herat',
+			'Bamyan',
+			'Chaghcharan',
+			'Qala i Naw',
+			'Maymana Zahiraddin Faryabi',
+			'Bagram',
+			'Khost',
+		},
+		recoveryMinRunwayLengthMeters = 2000,
+		playerEscortReward = 1000,
+		lossPenaltyCredits = 500
+	}
+})
+
+local strategicBomberShopName = function(T)
+	return LT(T):Get("STRATEGIC_BOMBER_SHOP_NAME")
+end
+
+bc:registerShopItem('strategicbomber', strategicBomberShopName, ShopPrices.strategicbomber,
+function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+end,
+function(sender, params)
+	if params and params.targetZone and params.originZone then
+		return StrategicBomber.LaunchBlue(params)
+	end
+
+	local targetZone = params and params.zone
+	if type(targetZone) == "string" then
+		targetZone = bc:getZoneByName(targetZone)
+	end
+	if not StrategicBomber.BlueTargetAllowed(targetZone) then
+		return LTGet("STRATEGIC_BOMBER_INVALID_TARGET")
+	end
+
+	local bestOrigin = nil
+	local bestDist = math.huge
+	for _, originZone in ipairs(bc:getZones()) do
+		if StrategicBomber.BlueOriginAllowed(originZone, targetZone) then
+			local dist = DynamicBomber.ZoneDistanceMeters(originZone.zone, targetZone.zone)
+			if dist < bestDist then
+				bestDist = dist
+				bestOrigin = originZone
+			end
+		end
+	end
+
+	if not bestOrigin then
+		return LTGet("STRATEGIC_BOMBER_NO_VALID_ORIGIN")
+	end
+
+	return StrategicBomber.LaunchBlue({
+		targetZone = targetZone,
+		originZone = bestOrigin,
+		escortMode = "ai"
+	})
+end)
+bc.shopItems['strategicbomber'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	extraPredicate = function(zoneObj)
+		if not StrategicBomber.BlueTargetAllowed(zoneObj) then return false end
+		for _, originZone in ipairs(bc:getZones()) do
+			if StrategicBomber.BlueOriginAllowed(originZone, zoneObj) then
+				return true
+			end
+		end
+		return false
+	end,
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		return StrategicBomber.BuildBlueShopMenu(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	end,
+	emptyLabel = LTGet("STRATEGIC_BOMBER_NO_VALID_TARGETS"),
+}
+
 bc:registerShopItem('groundattack', LTGet("SYRIA_SHOP_ITEM_GROUND_ATTACK"), ShopPrices.groundattack, function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
@@ -2796,6 +2991,12 @@ end
 
 bc:registerShopItem(RED_MASS_ATTACK_ID, LTGet("SYRIA_SHOP_ITEM_RED_MASS_ATTACK"), RED_MASS_ATTACK_COST, redMassAttackAction)
 
+local RED_STRATEGIC_BOMBER_ID = "strategicbomberRed"
+
+bc:registerShopItem(RED_STRATEGIC_BOMBER_ID, strategicBomberShopName, ShopPrices.strategicbomber, function(sender)
+	return StrategicBomber.LaunchRed()
+end)
+
 local infMenu=nil
 bc:registerShopItem('zinf',LTGet("SYRIA_SHOP_ITEM_UPGRADE_INFANTRY"),ShopPrices.zinf,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
@@ -2827,7 +3028,7 @@ bc.shopItems['zinf'].groupZoneSelector = {
 	extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
 }
-local samLabel = (Era == 'Coldwar') and LTGet("SYRIA_SHOP_ITEM_UPGRADE_HAWK")
+local samLabel = ColdWarTechEra and LTGet("SYRIA_SHOP_ITEM_UPGRADE_HAWK")
                                    or  LTGet("SYRIA_SHOP_ITEM_UPGRADE_NASAMS")
 local samMenu=nil
 bc:registerShopItem('zsam',samLabel,ShopPrices.zsam,function(sender)
@@ -2842,9 +3043,9 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		params.zone:addExtraSlot((Era == 'Coldwar') and 'bluePD Coldwar' or 'bluePD1')
+		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD Coldwar' or 'bluePD1')
 		bc:refreshZoneLabel(params.zone.zone)
-		local sys = (Era == 'Coldwar') and 'Hawk' or 'Nasams'
+		local sys = ColdWarTechEra and 'Hawk' or 'Nasams'
         if bc.globalExtraUnlock then
             trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", sys, params.zone.zone, tostring(ShopPrices.zsam)),10)
         else
@@ -2973,6 +3174,8 @@ bc.shopItems['dynamicbomb'].groupZoneSelector.candidateBucket = 'enemy_unsuspend
 bc.shopItems['dynamicbomb'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 bc.shopItems['groundattack'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['groundattack'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['strategicbomber'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['strategicbomber'].groupZoneSelector.refreshTags = { 'enemy_targets', 'friendly_targets' }
 if bc.shopItems['dynamicstatic'] and bc.shopItems['dynamicstatic'].groupZoneSelector then
 	bc.shopItems['dynamicstatic'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 	bc.shopItems['dynamicstatic'].groupZoneSelector.refreshTags = { 'enemy_targets' }
@@ -3029,7 +3232,7 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		local slotID = (Era == 'Coldwar') and 'blueArmor_cw' or 'blueArmor'
+		local slotID = ColdWarTechEra and 'blueArmor_cw' or 'blueArmor'
 		params.zone:addExtraSlot(slotID)
 		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
@@ -3116,6 +3319,7 @@ ShopPrices = ShopPrices or {
 	dynamicdecoy  = 300,  -- Dynamic Decoy
 	dynamicsead   = 500,  -- Dynamic SEAD
 	dynamicbomb   = 500,  -- Dynamic Bomb run
+	strategicbomber = 1500, -- Strategic Bomber
 	dynamicstatic = 500,  -- Dynamic building Strike
 	cruisemsl     = 800,  -- Cruise Missile Strike
 	supplies2     = 200,  -- Resupply friendly Zone
@@ -3148,6 +3352,7 @@ ShopRankRequirements = ShopRankRequirements or {
 	dynamiccap     = 2,  -- Dynamic CAP
 	dynamiccas     = 5,  -- Dynamic CAS
 	dynamicbomb    = 4,  -- Dynamic Bomb run
+	strategicbomber = 6, -- Strategic Bomber
 	dynamicsead    = 4,  -- Dynamic SEAD
 	groundattack   = 5,  -- Ground attack convoy
 	dynamicdecoy   = 1,  -- Dynamic Decoy
@@ -3184,7 +3389,10 @@ ShopRankRequirements = ShopRankRequirements or {
 -- first value below is how much in stock, the second number value is the ranking in the shop menu list, the third is the new ranking system.
 
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
-bc:addShopItem(1, 'redmassattack', -1, 2) -- red AI mass airbase attack
+bc:addShopItem(1, 'redmassattack', -1, 1) -- red AI mass airbase attack
+if Era ~= 'Vietnam' then
+bc:addShopItem(1, 'strategicbomberRed', -1, 2) -- red AI strategic bomber
+end
 
 ShopCategoryLabels = ShopCategoryLabels or {}
 local ShopCats = ShopCategoryLabels
@@ -3212,8 +3420,13 @@ bc:addShopItem(2, 'dynamiccap', -1, 1, ShopRankRequirements.dynamiccap, ShopCats
 bc:addShopItem(2, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats.AIAttack) -- CAS Flight
 bc:addShopItem(2, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack) -- Bomber Flight
 bc:addShopItem(2, 'dynamicsead', -1, 4, ShopRankRequirements.dynamicsead, ShopCats.AIAttack) -- SEAD Flight
+if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, ShopCats.AIAttack) -- TALD DECOY Flight
+end
 bc:addShopItem(2, 'groundattack', -1, 7, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
+if Era ~= 'Vietnam' then
+bc:addShopItem(2, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
+end
 if UseStatics == true then
     bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
 end
@@ -3230,13 +3443,17 @@ if Era == 'Modern' then
 end
 
 -- JTAC & Intel
+if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac, ShopCats.JTACIntel) -- MQ-9 Reaper JTAC mission
+end
 bc:addShopItem(2, 'smoke', -1, 2, ShopRankRequirements.smoke, ShopCats.JTACIntel) -- smoke on target
 bc:addShopItem(2, 'flare', -1, 3, ShopRankRequirements.flare, ShopCats.JTACIntel) -- flare on target
 bc:addShopItem(2, 'illum', -1, 4, ShopRankRequirements.illum, ShopCats.JTACIntel) -- illumination bomb
 bc:addShopItem(2, 'intel', -1, 5, ShopRankRequirements.intel, ShopCats.JTACIntel) -- Intel
+if Era ~= 'Vietnam' then
 bc:addShopItem(2, '9lineam', -1, 6, ShopRankRequirements['9lineam'], ShopCats.JTACIntel) -- free jtac
 bc:addShopItem(2, '9linefm', -1, 7, ShopRankRequirements['9linefm'], ShopCats.JTACIntel) -- free jtac
+end
 
 -- Combined Arms
 bc:addShopItem(2, 'armor', -1, 1, ShopRankRequirements.armor, ShopCats.CombinedArms) -- combined arms
@@ -3429,6 +3646,7 @@ budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequenc
 budgetAI:init()
 RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
 bc:startRewardPlayerContribution(15,RewardContribution)
+HercCargoDropSupply.init(bc)
 bc:buildZoneDistanceCache()
 buildTemplateCache()
 buildSubZoneRoadCache()
@@ -4410,15 +4628,15 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Chaghcharan-attack-FOBDelaram',250,L10N:Get("MISSION_ARTY_TITLE"),'Chaghcharan-attack-FOBDelaram')
+		RegisterGroupTarget(chaghcharanAttackFOBDelaramArty,250,L10N:Get("MISSION_ARTY_TITLE"),chaghcharanAttackFOBDelaramArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Chaghcharan-attack-FOBDelaram')
+		bc:cancelGroupTargetMission(chaghcharanAttackFOBDelaramArty)
     end,
     isActive = function()
-        if not ActiveMission['Chaghcharan-attack-FOBDelaram'] then return false end
-        if Group.getByName('Chaghcharan-attack-FOBDelaram') then return true end
-        ActiveMission['Chaghcharan-attack-FOBDelaram'] = nil
+        if not ActiveMission[chaghcharanAttackFOBDelaramArty] then return false end
+        if Group.getByName(chaghcharanAttackFOBDelaramArty) then return true end
+        ActiveMission[chaghcharanAttackFOBDelaramArty] = nil
         return false
     end
 })
@@ -4498,15 +4716,15 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Shindand-attack-FOB-AhmadShahMassoud',100,L10N:Get("MISSION_ARTY_TITLE"),'Shindand-attack-FOB-AhmadShahMassoud')
+		RegisterGroupTarget(shindandAttackFOBAhmadShahMassoudArty,100,L10N:Get("MISSION_ARTY_TITLE"),shindandAttackFOBAhmadShahMassoudArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Shindand-attack-FOB-AhmadShahMassoud')
+		bc:cancelGroupTargetMission(shindandAttackFOBAhmadShahMassoudArty)
     end,
     isActive = function()
-        if not ActiveMission['Shindand-attack-FOB-AhmadShahMassoud'] then return false end
-        if Group.getByName('Shindand-attack-FOB-AhmadShahMassoud') then return true end
-        ActiveMission['Shindand-attack-FOB-AhmadShahMassoud'] = nil
+        if not ActiveMission[shindandAttackFOBAhmadShahMassoudArty] then return false end
+        if Group.getByName(shindandAttackFOBAhmadShahMassoudArty) then return true end
+        ActiveMission[shindandAttackFOBAhmadShahMassoudArty] = nil
         return false
     end
 })
@@ -4802,6 +5020,7 @@ mc:trackMission({
     endAction = function()
         bc:cancelGroupTargetMission('Associates')
         RespawnGroup('AssociatesConvoy')
+		RegisterGroupTarget('AssociatesConvoy',500,L10N:Get("AF_MISSION_ASSOCIATES_CONVOY_TARGET"),'AssociatesConvoy',true)
         trigger.action.outTextForCoalition(2,L10N:Get("AF_MISSION_ASSOCIATE_FLEEING"),30)
 	end,
 	isActive = function()
@@ -4819,7 +5038,6 @@ evc:addEvent({
 	id='AssociatesConvoy',
 	StrikeMission = true,
 	action = function()
-    RegisterGroupTarget('AssociatesConvoy',500,L10N:Get("AF_MISSION_ASSOCIATES_CONVOY_TARGET"),'AssociatesConvoy',true)
 	end,
 	canExecute = function()
 		--if math.random(1,100) < 70 then return false end
@@ -5185,110 +5403,29 @@ mc:trackMission({
 -----------------------------------------------END EWRS - Sharana-----------------------------------------------------------
 ---------------------------------------------------- general missions -------------------------------------------------------
 
-local EscortCooldown = 3600
-local lastEscortCooldown   = -EscortCooldown
-Group.getByName('escort-me'):destroy()
-Group.getByName('interceptor-1'):destroy()
-Group.getByName('interceptor-2'):destroy()
-evc:addEvent({
-	id='escort',
-	action = function()
-		RespawnGroup('escort-me') 
-		
-	local function spawnIntercept(args)
-		local groupname = args[1]
-		--env.info('spawnIntercept called for '..tostring(groupname))
-		if Group.getByName('escort-me') then
-				local g = GROUP:FindByName(groupname,false)
-				if not g then
-					if math.random(1,100) > 30 then
-						if math.random(1,100) > 50 then
-							trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_EVENT_INTERCEPTOR_SPOTTED"),15)
-						else
-							trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_EVENT_INTERCEPT_MISSION"),15)
-						end
-						RespawnGroup(groupname)
-					end
-				end
-			end
-		end
-		local timers = {math.random(10*60,20*60), math.random(15*60,25*60)}
-		timer.scheduleFunction(spawnIntercept, {'interceptor-1'}, timer.getTime() + timers[1])
-		timer.scheduleFunction(spawnIntercept, {'interceptor-2'}, timer.getTime() + timers[2])
-	end,
-	canExecute = function()
-		if DisableFriendlyEscortMeMission == true then return false end
-		if timer.getTime() - lastEscortCooldown < EscortCooldown then return false end
-		local gr = Group.getByName('escort-me')
-		if gr then return false end
-		
-			if bc:getZoneByName('Kandahar').side == 2 and not bc:getZoneByName('Kandahar').suspended then
-				return true
-			end
-
-		
-		return false
-	end
-})
-mc:trackMission({
-    title = LTGet("SYRIA_MISSION_ESCORT_CARGO_TITLE"),
-    description = LTGet("AF_MISSION_ESCORT_CARGO_KANDAHAR_DESC"),
-    messageStart = LTGet("SYRIA_MISSION_ESCORT_CARGO_START"),
-    messageEnd = function(T) lastEscortCooldown = timer.getTime() return LT(T):Get("SYRIA_MISSION_ESCORT_CARGO_END") end,
-    startAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
-        end
-    end,
-    endAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "cancel.ogg")
-        end
-    end,
-    isActive = function()
-        if Group.getByName('escort-me') then return true end
-        return false
-    end
-})
 ------------------------------------------------ Bomber event ---------------------------------------------
-local bomb_COOLDOWN = 1800
-local lastbomb_COOLDOWN  = -bomb_COOLDOWN
-Group.getByName('evt-bomber'):destroy()
-local escGrp = Era=='Coldwar' and 'EscortBomberCW' or 'EscortBomber'
-
-evc:addEvent({
-	id='bomb',
-	action=function()
-		RespawnGroup('evt-bomber')
-        RegisterGroupTarget('evt-bomber',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb')
-		timer.scheduleFunction(function()
-			RespawnGroup(escGrp)
-				local tgts = {
-					'Sharana','FOB-Bostick','Checkpoint Charlie','FOB-Shank','Checkpoint Bravo','Tarinkot'}
-					if Group.getByName('evt-bomber') then
-						local bomber, bomberMission = StartBomberAuftrag('bomb', 'evt-bomber', tgts, escGrp)
-				end
-		end,{},timer.getTime()+1)
-	end,
-	canExecute=function()
-        if ActiveMission['bomb'] then return false end
-		if timer.getTime()-lastbomb_COOLDOWN<bomb_COOLDOWN then return false end
-		if Group.getByName('evt-bomber') then return false end
-        if bc:getZoneByName('Ghazni Heliport').side == 2 then return false end
-		--if math.random(1,100)<70 then return false end
-        local trg={'Tarinkot','Checkpoint Bravo','FOB-Shank'}
-        for _,v in ipairs(trg) do
-            if bc:getZoneByName(v).side==2 and not bc:getZoneByName(v).suspended then return true end
-        end
-		return false
-	end
-})
-
 mc:trackMission({
 	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
-	description = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_NE"),
-	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
-	messageEnd=function(T) lastbomb_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
+	description = function(T)
+		local desc = LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC")
+		local st = StrategicBomber.GetState(1)
+		if st and st.spawnZone and st.targetZone then
+			desc = desc .. "\n\n" .. LT(T):Format("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_DETAIL", st.spawnZone, st.targetZone)
+		end
+		return desc
+	end,
+	messageStart = function(T)
+		local msg = LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_START")
+		local st = StrategicBomber.GetState(1)
+		if st and st.spawnZone and st.targetZone then
+			msg = msg .. "\n\n" .. LT(T):Format("SYRIA_MISSION_INTERCEPT_BOMBERS_START_DETAIL", st.spawnZone, st.targetZone)
+		end
+		return msg
+	end,
+	messageEnd=function(T)
+		StrategicBomber.Clear(1)
+		return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END")
+	end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5298,143 +5435,19 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-        bc:cancelGroupTargetMission('bomb')
-    end,
+		bc:cancelGroupTargetMission('bomb')
+	end,
 	isActive = function()
-        if not ActiveMission['bomb'] then return false end
-        if Group.getByName('evt-bomber') then return true end
-        ActiveMission['bomb'] = nil
-        return false
+		return StrategicBomber.IsMissionActive(1)
 	end
 })
 
 -------------------------------------------- End of Bomber event ------------------------------------------
 
------------------------------------------------- Bomber 2 event ---------------------------------------------
-local bomb2_COOLDOWN = 1800
-local lastbomb2_COOLDOWN  = -bomb2_COOLDOWN
-Group.getByName('evt-bomber2'):destroy()
-local escGrp2 = Era=='Coldwar' and 'EscortBomber2CW' or 'EscortBomber2'
-
-evc:addEvent({
-	id='bomb2',
-	action=function()
-		RespawnGroup('evt-bomber2')
-        RegisterGroupTarget('evt-bomber2',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb2')
-		timer.scheduleFunction(function()
-			RespawnGroup(escGrp2)
-			local tgts = {
-					'Herat','Shindand','Farah','FOB-Ahmad Shah Massoud', 'FOB-Ismail Khan', 'Qala i Naw', 'FOB-Hamid Karzai', 'Maymana Zahiraddin Faryabi', 'FOB-Delaram'}
-					if Group.getByName('evt-bomber2') then
-						local bomber2, bomber2mission = StartBomberAuftrag('bomb2', 'evt-bomber2', tgts, escGrp2)
-					end
-		end,{},timer.getTime()+1)
-	end,
-	canExecute=function()
-        if ActiveMission['bomb2'] then return false end
-		if timer.getTime()-lastbomb2_COOLDOWN<bomb2_COOLDOWN then return false end
-		if Group.getByName('evt-bomber') then return false end
-		if Group.getByName('evt-bomber2') then return false end
-        if bc:getZoneByName('Qala i Naw').side == 2  then return false end
-
-		--if math.random(1,100)<70 then return false end
-			if bc:getZoneByName('Farah').side==2 and not bc:getZoneByName('Farah').suspended then return true end
-		return false
-	end
-})
-
-mc:trackMission({
-	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
-	description = LTGet("AF_MISSION_INTERCEPT_BOMBERS_DESC_QALA"),
-	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
-	messageEnd=function(T) lastbomb2_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
-	startAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
-        end
-    end,
-    endAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "cancel.ogg")
-        end
-        bc:cancelGroupTargetMission('bomb2')
-    end,
-	isActive = function()
-        if not ActiveMission['bomb2'] then return false end
-        if Group.getByName('evt-bomber2') then return true end
-        ActiveMission['bomb2'] = nil
-        return false
-	end
-})
-
--------------------------------------------- End of Bomber 2 event ------------------------------------------
-
------------------------------------------------- Bomber 3 event ---------------------------------------------
-local bomb3_COOLDOWN = 1800
-local lastbomb3_COOLDOWN  = -bomb3_COOLDOWN
-Group.getByName('evt-bomber3'):destroy()
-local escGrp3 = Era=='Coldwar' and 'EscortBomber3CW' or 'EscortBomber3'
-
-evc:addEvent({
-	id='bomb3',
-	action=function()
-		RespawnGroup('evt-bomber3')
-        RegisterGroupTarget('evt-bomber3',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb3')
-		timer.scheduleFunction(function()
-			local bomber3
-			RespawnGroup(escGrp3)
-				local tgts = {
-					'Bayman','Chaghcharan','FOB-Javid Basharat','Kabul','Checkpoint Kabul E','Checkpoint Kabul W','Checkpoint Kabul S'}
-
-				if Group.getByName('evt-bomber3') then
-					local bomber3, bomber3mission = StartBomberAuftrag('bomb3', 'evt-bomber3', tgts, escGrp3)
-
-				end
-		end,{},timer.getTime()+1)
-	end,
-	canExecute=function()
-        if ActiveMission['bomb3'] then return false end
-		if timer.getTime()-lastbomb3_COOLDOWN<bomb3_COOLDOWN then return false end
-		if Group.getByName('evt-bomber') then return false end
-		if Group.getByName('evt-bomber2') then return false end
-		if Group.getByName('evt-bomber3') then return false end
-		--if math.random(1,100)<70 then return false end
-        if bc:getZoneByName('FOB-Javid Basharat').side == 2 or bc:getZoneByName('Bagram').side == 2 then return false end
-		return true
-	end
-})
-
-mc:trackMission({
-	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
-	description = LTGet("AF_MISSION_INTERCEPT_BOMBERS_DESC_BAGRAM"),
-	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
-	messageEnd=function(T) lastbomb3_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
-	startAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
-        end
-    end,
-    endAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "cancel.ogg")
-        end
-        bc:cancelGroupTargetMission('bomb3')
-    end,
-	isActive = function()
-        if not ActiveMission['bomb3'] then return false end
-        if Group.getByName('evt-bomber3') then return true end
-        ActiveMission['bomb3'] = nil
-        return false
-	end
-})
-
--------------------------------------------- End of Bomber 3 event ------------------------------------------
-
-
 -------------------------------------------- CAS 1 --------------------------------------------
 local airstrike_COOLDOWN = 1800
 local lastairstrike_COOLDOWN  = -airstrike_COOLDOWN
-local casGrp = Era=='Coldwar' and 'evt-CAScw' or 'evt-CAS'
+local casGrp = ColdWarTechEra and 'evt-CAScw' or 'evt-CAS'
 Group.getByName('evt-CAS'):destroy()
 Group.getByName('evt-CAScw'):destroy()
 evc:addEvent({
@@ -5456,6 +5469,7 @@ evc:addEvent({
 		end,{},timer.getTime()+3)
 	end,
 	canExecute=function()
+		if Era == 'Vietnam' then return false end
         if ActiveMission['cas'] then return false end
 		if timer.getTime()-lastairstrike_COOLDOWN<airstrike_COOLDOWN then return false end
 		if Group.getByName(casGrp) then return false end

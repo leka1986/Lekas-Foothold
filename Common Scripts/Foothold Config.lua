@@ -66,6 +66,198 @@ end
 -- ============================================================================
 -- Mission Rules
 -- ============================================================================
+
+-- "Modern", "Coldwar", "Gulfwar" (Iraq Coldwar name), or "Vietnam".
+-- In the editor, Don't copy to all ships, make sure all planes in every warehouse are set to LIMITED!!!
+Era = "Modern" -- does not work in Afghanistan or kola
+
+-- Choose which RED SAM templates are allowed when the mission replaces or randomizes SAM groups.
+-- Untick a SAM type to prevent that template from being used.
+-- @gui label="RED SAM templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select RED SAM templates based on Era?"
+-- @gui untickRowsWhen="NoSA10AndSA11:true:SA-10|SA-11;NoTorM2AndPantsir:true:Tor M2|Pantsir S1;NoSA15:true:SA-15"
+RedTemplateEnabled = {
+    ["SA-2"] = true, -- eras=Modern|Coldwar|Vietnam; SA-2 [All]
+    ["SA-3"] = true, -- eras=Modern|Coldwar|Vietnam; SA-3 [All]
+    ["SA-5"] = true, -- eras=Modern|Coldwar; SA-5 [Modern/CW]
+    ["SA-6"] = true, -- eras=Modern|Coldwar; SA-6 [Modern/CW]
+    ["SA-8"] = true, -- eras=Modern|Coldwar; SA-8 [Modern/CW]
+    ["SA-9"] = true, -- eras=Modern|Coldwar; SA-9 [Modern/CW]
+    ["SA-13"] = true, -- eras=Modern|Coldwar; SA-13 [Modern/CW]
+    ["SA-15"] = true, -- eras=Modern|Coldwar; SA-15 [Modern/CW]
+    ["SA-19"] = true, -- eras=Modern|Coldwar; SA-19 [Modern/CW]
+    ["SA-10"] = true, -- eras=Modern|Coldwar; SA-10 [Modern/CW]
+    ["SA-11"] = true, -- eras=Modern|Coldwar; SA-11 [Modern/CW]
+    ["Tor M2"] = true, -- eras=Modern; Tor M2 [Modern]
+    ["Pantsir S1"] = true, -- eras=Modern; Pantsir S1 [Modern]
+	["MANPAD"] = true, -- eras=Modern|Coldwar; MANPAD [Modern/CW]
+}
+
+-- AI aircraft templates used by missions that support config-driven template selection.
+-- Rows with a checkmark are available for AI spawning.
+-- @gui label="RED CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+RedCapPlaneEnabled = {
+    ["RED_MIG29S_CAP_R77x3_R27ET_R73x2"] = true, -- eras=Modern; MiG-29S Fox 3 CAP [Modern]
+    ["RED_MIG29S_CAP_R77x2_R73x2_TANKSx3"] = true, -- eras=Modern; MiG-29S Fox 3 CAP [Modern]
+    ["RED_SU27_CAP_R27Rx4_R27ER_R73x3_ECM"] = true, -- eras=Modern; Su-27 Fox 1 CAP [Modern]
+    ["RED_SU27_CAP_R27ERx6_R73x2_ECM"] = true, -- eras=Modern; Su-27 Fox 1 CAP [Modern]
+    ["RED_MIG31_CAP_R33x4_R40Tx2"] = true, -- eras=Modern; MiG-31 Fox 1 CAP [Modern]
+    ["RED_MIRAGE_F1CE_CAP_S530Fx2_MAGIC2x2"] = true, -- eras=Modern|Coldwar; Mirage F1CE Fox 1 CAP [Modern/CW]
+    ["RED_MIRAGE_F1CE_CAP_R530F_EMx2_MAGIC2x2"] = true, -- eras=Modern|Coldwar; Mirage F1CE Fox 1 CAP [Modern/CW]
+    ["RED_MIG29A_CAP_R73x6"] = true, -- eras=Modern|Coldwar; MiG-29A IR CAP [Modern/CW]
+    ["RED_MIG29A_CAP_R73x4_R27ER2X"] = true, -- eras=Modern|Coldwar; MiG-29A Fox 1 CAP [Modern/CW]
+    ["RED_MIG23MLD_CAP_R24Rx2_R60Mx2"] = true, -- eras=Modern|Coldwar; MiG-23MLD Fox 1 CAP [Modern/CW]
+    ["RED_MIG21BIS_CAP_R3Rx4"] = false, -- eras=Coldwar|Vietnam; MiG-21bis Fox 1 CAP [CW/VN]
+    ["RED_MIG21BIS_CAP_R3Rx2_R35x2"] = false, -- eras=Coldwar|Vietnam; MiG-21bis Fox 1 CAP [CW/VN]
+    ["RED_SU27_CAP_R27ERx5_R73x3_ECM"] = false, -- eras=Coldwar; Su-27 Fox 1 CAP [CW]
+    ["RED_MIG25PD_CAP_R40Rx2_R60Mx2"] = false, -- eras=Coldwar; MiG-25PD Fox 1 CAP [CW]
+    ["RED_MIG15BIS_CAP_GUNS_TANKS"] = false, -- eras=Vietnam; MiG-15bis Guns CAP [VN]
+    ["RED_MIG19P_CAP_K13A"] = false, -- eras=Vietnam; MiG-19P IR CAP [VN]
+    ["RED_MIG21BIS_CAP_R3Rx2_R3Sx2"] = false, -- eras=Vietnam; MiG-21bis Fox 1 CAP [VN]
+}
+
+-- @gui label="BLUE CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+BlueCapPlaneEnabled = {
+    ["BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2"] = true, -- eras=Modern; F/A-18C Fox 3 CAP [Modern]
+    ["BLUE_F15C_CAP_AIM120Bx3_AIM120Cx5"] = true, -- eras=Modern; F-15C Fox 3 CAP [Modern]
+    ["BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M"] = true, -- eras=Modern; F-16C Fox 3 CAP [Modern]
+    ["BLUE_F14B_CAP_AIM54A_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54A-MK47 [Modern/CW]
+    ["BLUE_F14B_CAP_AIM54C_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54C-MK47 [Modern/CW]
+    ["BLUE_F14B_CAP_AIM54C_MK60x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54C-MK60 [Modern/CW]
+    ["BLUE_M2000C_CAP_S530Dx2_MAGIC2x2"] = true, -- eras=Modern; M-2000C Fox 1 CAP [Modern]
+    ["BLUE_F86F_CAP_GAR8x2"] = false, -- eras=Vietnam; F-86F IR CAP [VN]
+    ["BLUE_FA18C_CAP_AIM7Mx6_AIM9Mx2"] = false, -- eras=Coldwar; F/A-18C Fox 1 CAP [CW]
+    ["BLUE_F15C_CAP_AIM7Mx4_AIM9Mx4"] = false, -- eras=Coldwar; F-15C Fox 1 CAP [CW]
+    ["BLUE_F14A_CAP_AIM54A_MK47x6_AIM9Mx2_TANKSx2"] = false, -- eras=Coldwar; F-14A AIM54A-MK47x6 [CW]
+    ["BLUE_F14A_CAP_AIM54A_MK47x2_AIM7Fx3_AIM9Lx2_TANKSx2"] = false, -- eras=Coldwar; F-14A AIM54A-MK47/AIM7F [CW]
+    ["BLUE_F4E_CAP_AIM7E2x4_AIM9Jx4_TANKSx3_ALE40"] = false, -- eras=Vietnam|Coldwar; F-4E Fox 1 CAP [VN/CW]
+    ["BLUE_F100D_CAP_AIM9Ex2"] = false, -- eras=Vietnam; F-100D IR CAP [VN]
+    ["BLUE_F5E3_CAP_AIM9Bx2"] = false, -- eras=Vietnam; F-5E-3 IR CAP [VN]
+}
+
+-- @gui label="RED CAS Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+RedCasPlaneEnabled = {
+    ["RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_S25Lx6_B13x2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_S25Lx6_B13x2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
+    ["RED_MIG21BIS_CAS_RBK250x2_UB32x2_1SHIP"] = true, -- eras=Modern; MiG-21bis CAS [Modern]
+    ["RED_MIG21BIS_CAS_RBK250x2_UB32x2_2SHIP"] = true, -- eras=Modern; 2x MiG-21bis CAS [Modern]
+    ["RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_1SHIP"] = true, -- eras=Modern|Coldwar; Su-25 CAS [Modern/CW]
+    ["RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_1SHIP"] = true, -- eras=Modern|Coldwar; Su-25 CAS [Modern/CW]
+    ["RED_SU25_CAS_S25Lx6_B13x2_1SHIP"] = true, -- eras=Modern|Coldwar; Su-25 CAS [Modern/CW]
+    ["RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Su-25 CAS [Modern/CW]
+    ["RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Su-25 CAS [Modern/CW]
+    ["RED_SU25_CAS_S25Lx6_B13x2_1SHIP_DUPLICATE"] = true, -- eras=Modern|Coldwar; Su-25 CAS [Modern/CW]
+    ["RED_MIRAGE_F1BQ_CAS_SAMP400x2_SAMP250x2_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Mirage F1BQ CAS [Modern/CW]
+    ["RED_MIRAGE_F1BQ_CAS_MIXED_SNEB_SAMP_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Mirage F1BQ CAS [Modern/CW]
+    ["RED_MIG21BIS_CAS_S24Bx4_1SHIP"] = false, -- eras=Coldwar; MiG-21bis S-24B CAS [CW]
+    ["RED_MIG21BIS_CAS_S24Bx4_2SHIP"] = false, -- eras=Coldwar; 2x MiG-21bis S-24B CAS [CW]
+    ["RED_MIG21BIS_CAS_KH66x2_FAB250x2_1SHIP"] = false, -- eras=Vietnam; MiG-21bis Kh-66 CAS [VN]
+    ["RED_MIG21BIS_CAS_KH66x2_FAB250x2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-21bis Kh-66 CAS [VN]
+    ["RED_MIG15BIS_CAS_FAB100Mx2_1SHIP"] = false, -- eras=Vietnam; MiG-15bis CAS [VN]
+    ["RED_MIG15BIS_CAS_FAB100Mx2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-15bis CAS [VN]
+    ["RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_1SHIP"] = false, -- eras=Vietnam; MiG-19P Rocket CAS [VN]
+    ["RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-19P Rocket CAS [VN]
+    ["RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_1SHIP"] = false, -- eras=Vietnam; MiG-19P Bomb CAS [VN]
+    ["RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-19P Bomb CAS [VN]
+}
+
+-- @gui label="BLUE CAS Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+BlueCasPlaneEnabled = {
+    ["BLUE_F4E_CAS_WALLEYEIIx2_GBU12x2_PAVESPIKE_2SHIP"] = true, -- eras=Modern|Coldwar; 2x F-4E Guided CAS [Modern/CW]
+    ["BLUE_F4E_CAS_AGM65Dx6_GBU12x2_PAVESPIKE_2SHIP"] = true, -- eras=Modern|Coldwar; 2x F-4E Maverick CAS [Modern/CW]
+    ["BLUE_F86F_CAS_AIM9Bx2_HVARx8_TANKSx2_2SHIP"] = false, -- eras=Coldwar; 2x F-86F Rocket CAS [CW]
+    ["BLUE_F86F_CAS_AIM9Bx2_M117x2_2SHIP"] = false, -- eras=Coldwar; 2x F-86F M117 CAS [CW]
+    ["BLUE_F4E_CAS_M117x12_AIM7E2x3_TANKSx2_ALQ131"] = false, -- eras=Vietnam|Coldwar; 2x F-4E M117 CAS [VN/CW]
+    ["BLUE_F4E_CAS_AGM12Bx2_AIM7E2x3_TANK600_ALQ131"] = false, -- eras=Vietnam|Coldwar; 2x F-4E Bullpup CAS [VN/CW]
+    ["BLUE_F4E_CAS_WALLEYEIx4_TANK600_ALQ131"] = false, -- eras=Vietnam|Coldwar; F-4E Walleye I CAS [VN/CW]
+    ["BLUE_F4E_CAS_WALLEYEIx2_AGM65Ax4_TANK600_ALQ131"] = false, -- eras=Vietnam|Coldwar; F-4E Guided CAS [Late VN/CW]
+    ["BLUE_F100D_CAS_MK82x8_TANKSx2_2SHIP"] = false, -- eras=Vietnam; 2x F-100D Mk-82 CAS [VN]
+    ["BLUE_F100D_CAS_M117x6_TANKSx2_2SHIP"] = false, -- eras=Vietnam; 2x F-100D M117 CAS [VN]
+    ["BLUE_F5E3_CAS_MK82LDx4_AIM9Bx2_TANK275_2SHIP"] = false, -- eras=Vietnam; 2x F-5E-3 Mk-82 CAS [VN]
+    ["BLUE_F5E3_CAS_MK82SEx4_AIM9Bx2_TANK275_2SHIP"] = false, -- eras=Vietnam; 2x F-5E-3 Snakeye CAS [VN]
+}
+
+-- @gui label="RED SEAD Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+RedSeadPlaneEnabled = {
+    ["RED_JF17_SEAD_LD10x2_PL5EIIx2_SPJ_TANKSx2_1SHIP"] = true, -- eras=Modern; JF-17 SEAD [Modern]
+    ["RED_JF17_SEAD_LD10x2_PL5EIIx2_SPJ_TANKSx2_2SHIP"] = true, -- eras=Modern; 2x JF-17 SEAD [Modern]
+    ["RED_SU25T_SEAD_KH58Ux2_KH25MPU_S24B_B13x2_R73x2_1SHIP"] = true, -- eras=Modern; Su-25T SEAD [Modern]
+    ["RED_SU25T_SEAD_KH58Ux2_KH25MPU_S24B_B13x2_R73x2_2SHIP"] = true, -- eras=Modern; 2x Su-25T SEAD [Modern]
+    ["RED_SU34_SEAD_KH31Px4_R77x2_R27Rx2_R73x2_1SHIP"] = true, -- eras=Modern; Su-34 SEAD [Modern]
+    ["RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_1SHIP"] = true, -- eras=Modern; Su-34 SEAD [Modern]
+    ["RED_SU34_SEAD_KH31Px4_R77x2_R27Rx2_R73x2_2SHIP"] = true, -- eras=Modern; 2x Su-34 SEAD [Modern]
+    ["RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_2SHIP"] = true, -- eras=Modern; 2x Su-34 SEAD [Modern]
+    ["RED_SU24M_SEAD_KH58x2_FAB1500M54_L081_R60Mx4_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Su-24M SEAD [Modern/CW]
+    ["RED_SU24M_SEAD_KH31Px2_KH25MLx2_FAB1500M54_L081_1SHIP"] = true, -- eras=Modern|Coldwar; Su-24M SEAD [Modern/CW]
+    ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_1SHIP"] = false, -- eras=Coldwar; Su-17M4 SEAD [CW]
+    ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_2SHIP"] = false, -- eras=Coldwar; 2x Su-17M4 SEAD [CW]
+}
+
+-- @gui label="BLUE SEAD Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+BlueSeadPlaneEnabled = {
+    ["BLUE_F4E_SEAD_AGM45Ax4_AIM7E2x3_TANK600_ALQ131"] = false, -- eras=Vietnam|Coldwar; 2x F-4E Shrike SEAD [VN/CW]
+    ["BLUE_F100D_SEAD_AGM45Ax2_CBU7x2_TANKSx2_2SHIP"] = false, -- eras=Vietnam; 2x F-100D SEAD [VN]
+}
+
+-- @gui label="RED Runway Strike Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+RedRunwayStrikePlaneEnabled = {
+    ["RED_SU33_RUNWAY_BETAB500x4_R27ERx4_R73x2_3SHIP"] = true, -- eras=Modern; 3x Su-33 Runway [Modern]
+    ["RED_MIG27K_RUNWAY_BETAB500x2_FAB250x2_R60Mx4_3SHIP"] = true, -- eras=Modern|Coldwar; 3x MiG-27K Runway [Modern/CW]
+    ["RED_MIRAGE_F1EE_RUNWAY_DURANDALx6_S530Fx2_AIM9JULIx2_3SHIP"] = true, -- eras=Modern|Coldwar; 3x Mirage F1EE Runway [Modern/CW]
+    ["RED_MIG21BIS_RUNWAY_BETAB500x2_R3Rx2_TANK490_3SHIP"] = true, -- eras=Vietnam; 3x MiG-21bis BetAB Runway [VN]
+}
+
+-- @gui label="RED CAS Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+RedCasHeloEnabled = {
+    ["RED_MI24P_CAS_9M114x8_B8x2_1SHIP"] = true, -- eras=Modern; Mi-24P CAS [Modern]
+    ["RED_MI24P_CAS_9M114x8_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-24P CAS [Modern]
+    ["RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_1SHIP"] = true, -- eras=Modern; Mi-28N CAS [Modern]
+    ["RED_MI28N_CAS_9M114x8_B8x2_1SHIP"] = true, -- eras=Modern; Mi-28N CAS [Modern]
+    ["RED_MI28N_CAS_9M114x8_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-28N CAS [Modern]
+    ["RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_2SHIP"] = true, -- eras=Modern; 2x Mi-28N CAS [Modern]
+    ["RED_MI24V_CAS_B8x4_1SHIP"] = false, -- eras=Coldwar; Mi-24V CAS [CW]
+    ["RED_MI24V_CAS_B8x4_2SHIP"] = false, -- eras=Coldwar; 2x Mi-24V CAS [CW]
+    ["RED_MI8_CAS_FAB100x6_1SHIP"] = false, -- eras=Vietnam|Coldwar; Mi-8 FAB-100 CAS [VN/CW]
+    ["RED_MI8_CAS_FAB100x6_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Mi-8 FAB-100 CAS [VN/CW]
+    ["RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_1SHIP"] = false, -- eras=Vietnam|Coldwar; Mi-8 gunpod CAS [VN/CW]
+    ["RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Mi-8 gunpod CAS [VN/CW]
+}
+
+-- @gui label="BLUE CAS Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+BlueCasHeloEnabled = {
+    ["BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_1SHIP"] = true, -- eras=Modern; AH-64D CAS [Modern]
+    ["BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_2SHIP"] = true, -- eras=Modern; 2x AH-64D CAS [Modern]
+    ["BLUE_AH64D_CAS_AGM114Kx8_M261x2_1SHIP"] = true, -- eras=Modern; AH-64D CAS [Modern]
+    ["BLUE_AH64D_CAS_AGM114Kx8_M261x2_2SHIP"] = true, -- eras=Modern; 2x AH-64D CAS [Modern]
+    ["BLUE_AH1W_CAS_AGM114Kx8_M260x2_1SHIP"] = true, -- eras=Modern; AH-1W CAS [Modern]
+    ["BLUE_SA342M_CAS_HOT3x4_1SHIP"] = true, -- eras=Modern; SA342M CAS [Modern]
+    ["BLUE_SA342M_CAS_HOT3x4_2SHIP"] = true, -- eras=Modern; 2x SA342M CAS [Modern]
+    ["BLUE_OH58D_CAS_AGM114x2_APKWS_1SHIP"] = true, -- eras=Modern; OH-58D CAS [Modern]
+    ["BLUE_OH58D_CAS_AGM114x2_APKWS_2SHIP"] = true, -- eras=Modern; 2x OH-58D CAS [Modern]
+    ["BLUE_UH1H_CAS_XM158x2_M134x3_M60_1SHIP"] = false, -- eras=Coldwar|Vietnam; UH-1H CAS [CW/VN]
+    ["BLUE_UH1H_CAS_XM158x2_M134x3_M60_2SHIP"] = false, -- eras=Coldwar|Vietnam; 2x UH-1H CAS [CW/VN]
+}
+
+-- @gui label="RED Supply Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+RedSupplyHeloEnabled = {
+    ["RED_MI8_SUPPLY_KORD"] = true, -- eras=Modern|Coldwar|Vietnam; Mi-8 Supply [All]
+    ["RED_MI8_SUPPLY_KORD_PKT"] = true, -- eras=Modern|Coldwar|Vietnam; Mi-8 Supply [All]
+}
+
+-- @gui label="BLUE Supply Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+BlueSupplyHeloEnabled = {
+	["BLUE_CH47_SUPPLY_M240Hx2"] = true, -- eras=Modern|Coldwar; CH-47 Supply [Modern/CW]
+	["BLUE_CH47_SUPPLY_M60Dx3"] = true, -- eras=Modern|Coldwar; CH-47 Supply [Modern/CW]
+    ["BLUE_UH60A_SUPPLY_UNARMED"] = true, -- eras=Modern|Coldwar; UH-60A Supply [Modern/CW]
+    ["BLUE_UH1H_SUPPLY_UNARMED"] = false, -- eras=Coldwar|Vietnam; UH-1H Supply [CW/VN]
+}
+
+-- ============================================================================
+-- Mission options
+-- ============================================================================
 --
 -- Global language use for Foothold.
 -- This does not set the menu's language as it can be changed in the players radio menu.
@@ -85,9 +277,6 @@ FootholdLocale = "EN"
 if FootholdLocalization then
     FootholdLocalization:SetLocale(FootholdLocale)
 end
--- "Modern" or "Coldwar" ("Gulfwar" if the map is Iraq).
--- In the editor, Don't copy to all ships, make sure all planes in every warehouse are set to LIMITED!!!
-Era = "Modern" -- does not work in Afghanistan or kola
 
 -- ONLY VALID ON CAUCASUS, PERSIAN GULF, SYRIA AND AFGHANISTAN.
 -- if false, the mission will start from the other end. Carrier zone will be disabled.
@@ -96,13 +285,6 @@ StartNormal = true
 -- When the mission is completed, if you want the server to restart automatically and reset everything, then set this to true.
 -- If false, you will have a menu where you can choose to restart the mission. 
 AutoRestart = false
-
-NoSA10AndSA11 = false -- If true: remove SA-10 and SA-11 (replaced by older SAMs).
-
--- There is no Pantsir or Tor M2 in the coldwar Era, but in modern, you can stil replace them.
-NoTorM2AndPantsir = false -- If true: Pantsir and Tor M2 will be replaced with random groups, including SA-15, SA-19, SA-8 and SA-13.
-
-NoSA15 = false -- If true: SA-15 will be replaced by random groups, including SA-19, SA-8, SA-13 and SA-9.
 
 -- Modular, Automatic and Network capable Targeting and Interception System for Air Defenses. (MANTIS)
 -- Once the player is within, the sam system will turn on. If you fire HARP, Talds or Jsaw, they will turn off and move.
@@ -115,9 +297,6 @@ UseStatics = true -- If true, include some static target types at certain zones 
 -- PVE_Only is a flag where you can decide if you want to disable players from spawning in red zones.
 -- This is when the player chooses Red coalition.
 PVE_Only = false -- If true, players can not spawn in red coalition zones.
-
- -- If true, Red side can use CTLD on a basic level.
-Allow_Red_CTLD = false
 
 -- If true, supports filling modded weapons via WarehouseLogistics
 -- (not compatible with Coldwar/Gulfwar).
@@ -169,10 +348,6 @@ CarrierRankRequirement = 5
 -- tarawahelp displays the commands, or reports that Tarawa marker movement is disabled.
 AllowTarawaToMoveFreely = false
 
--- If true, disables the friendly "Escort cargo plane" mission.
--- false keeps the mission enabled.
-DisableFriendlyEscortMeMission = false
-
 -- ============================================================================
 -- F10 Map
 -- ============================================================================
@@ -215,19 +390,14 @@ GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
 -- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
 GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 
--- Chance in percent that RED AI air missions may also engage helicopters.
--- 0 disables helicopter targeting, 100 always allows it.
--- If InvisibleA10 is true, this setting is ignored.
-ChanceAiAttackHelo = 0
-
--- Hunter is when you do a lot of damage to enemy units (both planes and ground), RED dispatches a 2-ship to hunt you down.
-EnableHunter = true
-
--- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
+-- @gui label="Red AI Plane Skill" validValues="Average=Average | Good=Good | High=High | Excellent=Excellent | Random=Random"
 AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
 
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
-AiGroundSkill           = "Excellent" -- AI skill used for spawned non-airplane units Red and blue share the same config value (ground/ship/etc) (MOOSE SPAWN:InitSkill).
+RedAiGroundSkill        = "Excellent" -- AI skill used for spawned RED zone ground defenses (MOOSE SPAWN:InitSkill).
+
+-- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
+BlueAiGroundSkill       = "Excellent" -- AI skill used for spawned BLUE zone ground defenses (MOOSE SPAWN:InitSkill).
 
 -- Controls whether SAM groups are hidden on MFDs.
 -- Valid values only: false | true | "random"
@@ -235,6 +405,14 @@ AiGroundSkill           = "Excellent" -- AI skill used for spawned non-airplane 
 -- true     = always hidden on MFD (default)
 -- "random" = 50% chance hidden on each spawn
 HideSAMOnMFD = true -- if random, use "random" (string)
+
+-- Chance in percent that RED AI air missions may also engage helicopters.
+-- 0 disables helicopter targeting, 100 always allows it.
+-- If InvisibleA10 is true, this setting is ignored.
+ChanceAiAttackHelo = 0
+
+-- Hunter is when you do a lot of damage to enemy units (both planes and ground), RED dispatches a 2-ship to hunt you down.
+EnableHunter = true
 
 -- Valid values: "easy" | "medium" | "hard"
 -- Here, you can adjust how many cap should spawn. medium, is the default (Balanaced)
@@ -471,6 +649,7 @@ BlueSeadSupportStages = {
 -- removing or adding more planes here will change the amount of cap since they will
 -- be counted as active players or not.
 
+-- @gui editor="checkboxTable"
 CapCountIgnoreTypes = {
 	["A-10C_2"] = true,
 	["Hercules"] = true,
@@ -481,12 +660,14 @@ CapCountIgnoreTypes = {
 	["C-130J-30"] = true,
 }
 
+-- @gui editor="checkboxTable"
 RedCasCountIgnoreTypes = {
 	["Hercules"] = true,
 	["C-130J-30"] = true,
 	["CH-47Fbl1"] = true,
 }
 
+-- @gui editor="checkboxTable"
 BlueCasCountIgnoreTypes = {
 	["Hercules"] = true,
 	["C-130J-30"] = true,
@@ -713,7 +894,7 @@ AutoFillResources = 5
 NoAIBlueSupplies = false
 
 -- This option is the legacy option. this won't be used if WarehouseLogistics = true
--- @gui installPolicy="mergeRows"
+-- @gui installPolicy="mergeRows" editor="checkboxTable"
 AllowedToCarrySupplies = {
     ["Ka-50"]         = false,
     ["Ka-50_3"]       = true,
@@ -742,7 +923,7 @@ WarningNoSupplies = true
 -- Keep slingload-only aircraft set to false.
 -- This does not mean supplies can now be carried.
 -- This is if the aircraft can carry supplies, and no supplies is loaded, Then this will be a reminder.
--- @gui installPolicy="mergeRows"
+-- @gui installPolicy="mergeRows" editor="checkboxTable"
 ZoneSupplyTakeoffWarningTypes = {
     ["AH-64D_BLK_II"] = true,  -- This is for the legacy warehouse logistics or if you use troops to capture, with engineer.
     ["Bronco-OV-10A"] = true,  -- legacy mode
@@ -791,6 +972,7 @@ ShopPrices = {
 	dynamicsead   = 500,  -- SEAD Flight
 	groundattack  = 1000, -- Ground attack convoy
 	dynamicbomb   = 500,  -- Bomber Flight
+	strategicbomber = 1500, -- Strategic bomber
 	dynamicstatic = 500,  -- Static structure Flight
 	cruisemsl     = 800,  -- Cruise Missile Strike
 	supplies2     = 200,  -- Resupply friendly Zone
@@ -824,6 +1006,7 @@ ShopRankRequirements = {
 	dynamiccap     = 2,  -- CAP Flight
 	dynamiccas     = 5,  -- CAS Flight
 	dynamicbomb    = 4,  -- Bomber Flight
+	strategicbomber = 6, -- Strategic bomber
 	dynamicsead    = 4,  -- SEAD Flight
 	groundattack   = 5,  -- Ground attack convoy
 	dynamicdecoy   = 1,  -- TALD DECOY Flight
@@ -893,10 +1076,12 @@ AllowScriptedSupplies = false
 -- ============================================================================
 -- CTLD
 -- ============================================================================
---
+
 -- If false, CTLD crates/units are free.
 CTLDCost = true
---
+
+ -- If true, Red side can use CTLD on a basic level.
+Allow_Red_CTLD = false
 
 -- This is the prices for each CTLD unit and their required rank. Rank 1 is the lowest.
 -- @gui installPolicy="mergeRows"
@@ -977,11 +1162,11 @@ MAX_AT_SPAWN = {
 -- If true, engineers can capture/upgrade zones via CTLD.
 -- If false, only regular troops can capture/upgrade zones.
 CaptureZoneWithEngineer = false
---
+
 
 -- MAX_SAVED_FARPS is how many farps should load from the save file after the last session.
 MAX_SAVED_FARPS      = 3
---
+
 -- IRIS merge behavior toggle.
 -- true  = merge from full template (destroyed IRIS units can come back on merge).
 -- false = merge from currently alive IRIS composition + the new added unit.
@@ -1101,7 +1286,7 @@ FlightTimeRewardPerMinute = 2
 RewardAllAircraft = false
 --
 --
--- @gui installPolicy="mergeRows"
+-- @gui installPolicy="mergeRows" editor="checkboxTable"
 AllowedFlightTimeReward  = {
     ['Ka-50'] = false,
     ['Ka-50_3'] = false,
@@ -1175,7 +1360,7 @@ ewrs_allowFriendlyPicture = true -- Allows pilots to request a friendly aircraft
 ewrs_maxFriendlyDisplay = 3 -- Max friendly aircraft shown in friendly picture reports. Set to 0 to show all.
 ewrs_showType = true -- If true, EWRS reports aircraft type. If false, EWRS reports Unknown.
 ewrs_mergedRangeNm = 5 -- Style 2 only. Hostile contacts under this range show Merged. Set to 0 to disable.
--- @gui installPolicy="mergeRows"
+-- @gui installPolicy="mergeRows" editor="checkboxTable"
 ewrs_specialPlaneTypes = { -- Aircraft typeNames that show friendlies by default. Players can still override this in their F10 EWRS menu.
   ["F-4E-45MC"] = true,
   ["MiG-29 Fulcrum"] = true,
@@ -1208,15 +1393,16 @@ phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if
 -- ============================================================================
 -- Aircraft / Weapons
 -- ============================================================================
+
 -- In this list, you can either remove or add what is allowed in the coldwar era.
--- @gui label="Allowed Aircraft" installPolicy="keepTable" editor="bucket"
+-- @gui label="Allowed Aircraft" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar"
 allowedPlanes = {
     "A-10A",
     "A-10C",
-    "A-10C_2",
+    --"A-10C_2",
     "A-4E-C",
     "AH-1W",
-    "AH-64D_BLK_II",
+    --"AH-64D_BLK_II",
     "AH-6J",
     "AJS37",
     "An-30M",
@@ -1242,7 +1428,7 @@ allowedPlanes = {
     "F-5E-3",
     "F-5E-3_FC",
     "F-86F Sabre",
-    "FA-18C_hornet",
+    --"FA-18C_hornet",
     "Hercules",
     "Ka-27",
     "L-39C",
@@ -1303,7 +1489,7 @@ allowedPlanes = {
 }
 
 -- In this list, you can either remove or add what is allowed for the (RED SIDE) in the coldwar era.
--- @gui label="Allowed RED Aircraft" installPolicy="keepTable" editor="bucket"
+-- @gui label="Allowed RED Aircraft" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar"
 allowedPlanesRed = {
     "A-10A",
     "A-10C",
@@ -1395,9 +1581,43 @@ allowedPlanesRed = {
     "UH-60L",
     "UH-60L_DAP",
 }
+
+-- In this list, you can either remove or add what is allowed for BLUE warehouses in the Vietnam era.
+-- @gui label="Vietnam Allowed Aircraft" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam"
+allowedPlanesVietnam = {
+    "A-4E-C",
+    "Bronco-OV-10A",
+    "CH-47Fbl1",
+    "F-100D",
+    "F-4E-45MC",
+    "F-5E-3",
+    "F-86F Sabre",
+    "OH-6A",
+    "UH-1H",
+    -- "AH-1W",
+    -- "C-130J-30",
+    -- "F-5E-3_FC",
+    -- "Hercules",
+    -- "Mi-8MT",
+    -- "MiG-15bis",
+    -- "MiG-15bis_FC",
+    -- "MiG-19P",
+    -- "MiG-21Bis",
+}
+
+-- In this list, you can either remove or add what is allowed for RED warehouses in the Vietnam era.
+-- @gui label="Vietnam Allowed RED Aircraft" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam"
+allowedPlanesRedVietnam = {
+    "Mi-8MT",
+    "MiG-15bis",
+    "MiG-15bis_FC",
+    "MiG-19P",
+    "MiG-21Bis",
+    -- "SU22",
+}
 -- The list is applied if AllowMods are true and on Modern era.
 -- Make sure you have the mods installed on the server and the client.
--- @gui label="Mods aircraft list" installPolicy="keepTable" editor="bucket"
+-- @gui label="Mods aircraft list" installPolicy="keepTable" editor="bucket" visibleWhen="AllowMods:true"
 restockAircraft = {
     "A-29B",
     "A-4E-C",
@@ -1439,7 +1659,7 @@ restockAircraft = {
 
 -- In the coldwar era, you can add or remove what to restrict
 -- Add "--" if you want to ALLOW a weapon, otherwise the weapon in the list below are removed from the warehouse.
--- @gui label="Cold War Restricted Weapons" installPolicy="keepTable" editor="bucket"
+-- @gui label="Cold War Restricted Weapons" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar"
 restrictedWeapons = {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
@@ -1530,6 +1750,87 @@ restrictedWeapons = {
     "weapons.bombs.GBU-43/B(MOAB)",
 	"weapons.missiles.AGR_20A", -- laser rockets
 	"weapons.missiles.AGR_20_M282"} -- laser rockets
+
+-- In the Vietnam era, you can add or remove what to restrict.
+-- Add "--" if you want to ALLOW a weapon, otherwise weapons in the list below are removed from the warehouse.
+-- @gui label="Vietnam Restricted Weapons" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam"
+restrictedWeaponsVietnam = {
+    -- Guided weapon pods
+    --"weapons.containers.HB_ORD_Pave_Spike",
+    --"weapons.containers.HB_ORD_Pave_Spike_Fast",
+    -- "weapons.containers.HB_ALE_40_0_0",
+    -- "weapons.containers.HB_ALE_40_0_120",
+    -- "weapons.containers.HB_ALE_40_15_90",
+    -- "weapons.containers.HB_ALE_40_30_0",
+    -- "weapons.containers.HB_ALE_40_30_60",
+
+
+    -- Modern air-to-air missiles
+    "weapons.missiles.AIM-7F",
+    "weapons.missiles.AIM-9L",
+    "weapons.missiles.AIM-9P",
+    "weapons.missiles.AIM-9P3",
+    "weapons.missiles.AIM-9P5",
+    "weapons.missiles.AIM_7",
+    "weapons.missiles.AIM_9",
+    "weapons.missiles.CATM_9M",
+    "weapons.missiles.P_60",
+    "weapons.missiles.R-13M",
+    "weapons.missiles.R-13M1",
+    --"weapons.missiles.R-60",
+
+    -- Modern air-to-ground missiles
+    "weapons.missiles.AGM_65D",
+    "weapons.missiles.AGM_65G",
+    -- "weapons.missiles.AGM_65A",
+    "weapons.missiles.AGM_65B",
+    -- "weapons.missiles.X_25MR",
+    "weapons.missiles.OH_6_FIM_92", -- OH-6A Stinger
+    "weapons.missiles.AGM_114",
+    "weapons.missiles.AGM_114K",
+    "weapons.missiles.AGM_114L",
+    "weapons.missiles.AGR_20A", -- APKWS
+    "weapons.missiles.AGR_20_M282", -- APKWS
+    -- "weapons.adapters.M260", -- Bronco modern Hydra pod
+
+    -- Modern rockets
+    -- "weapons.nurs.HYDRA_70_M151",
+    -- "weapons.nurs.HYDRA_70_M156",
+    -- "weapons.nurs.HYDRA_70_M257",
+    -- "weapons.nurs.HYDRA_70_M274",
+    "weapons.nurs.C_8",
+    "weapons.nurs.C_8CM",
+    "weapons.nurs.C_8CM_BU",
+    "weapons.nurs.C_8CM_GN",
+    "weapons.nurs.C_8CM_RD",
+    "weapons.nurs.C_8CM_VT",
+    "weapons.nurs.C_8CM_WH",
+    "weapons.nurs.C_8CM_YE",
+    "weapons.nurs.C_8OFP2",
+    "weapons.nurs.C_8OM",
+
+    -- Modern guided/cluster bombs
+    -- "weapons.bombs.AGM_62",
+    -- "weapons.bombs.AGM_62_I",
+    "weapons.bombs.BDU_50LGB",
+    "weapons.bombs.BL_755",
+    "weapons.bombs.CBU_87",
+    "weapons.bombs.GBU_8_B",
+    --"weapons.bombs.GBU_10",
+    --"weapons.bombs.GBU_12",
+    "weapons.bombs.GBU_16",
+    "weapons.bombs.GBU_24",
+    "weapons.bombs.HB_F4E_GBU15V1",
+    --"weapons.bombs.ROCKEYE",
+    "weapons.bombs.SAMP250HD",
+    "weapons.bombs.SAMP250LD",
+    "weapons.bombs.Durandal",
+    "weapons.bombs.MK_82AIR",
+    "weapons.bombs.BDU_50HD",
+    "weapons.bombs.BDU_50LD",
+    "weapons.bombs.SAMP250HD",
+    "weapons.bombs.SAMP250LD",
+}
 
 -- This list can be used to add weapons you want to forbidd, This will forbidd all in the table in Modern era as well.
 -- For coldwar, you can still rely on restrictedWeapons.

@@ -134,11 +134,14 @@ GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
 -- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
 GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 
--- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
+-- @gui label="Red AI Plane Skill" validValues="Average=Average | Good=Good | High=High | Excellent=Excellent | Random=Random"
 AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
 
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
-AiGroundSkill           = "Excellent" -- AI skill used for spawned non-airplane units Red and blue share the same config value (ground/ship/etc) (MOOSE SPAWN:InitSkill).
+RedAiGroundSkill        = "Excellent" -- AI skill used for spawned RED zone ground defenses (MOOSE SPAWN:InitSkill).
+
+-- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
+BlueAiGroundSkill       = "Excellent" -- AI skill used for spawned BLUE zone ground defenses (MOOSE SPAWN:InitSkill).
 
 -- Valid values: "easy" | "medium" | "hard"
 -- Here, you can adjust how many cap should spawn. medium, is the default (Balanaced)
@@ -307,6 +310,31 @@ BlueCasSupportStages = {
 	},
 }
 
+-- Extra internal cargo weight added to RED WWII aircraft.
+-- Tick enabled to apply extra weight, then set the weight value.
+-- @gui label="RED Plane Extra Weight" editor="fieldTable" fields="enabled:Enabled:boolean | weight:Weight:number"
+AddWeightToPlaneRed = {
+    ["FW-190D9"] = { enabled = true, weight = 1000 },
+    ["Bf-109K-4"] = { enabled = true, weight = 1750 },
+    ["Ju-88A4"] = { enabled = true, weight = 1000 },
+    ["C-47"] = { enabled = true, weight = 1000 },
+
+}
+
+-- Extra internal cargo weight added to BLUE WWII aircraft.
+-- Tick enabled to apply extra weight, then set the weight value.
+-- @gui label="BLUE Plane Extra Weight" editor="fieldTable" fields="enabled:Enabled:boolean | weight:Weight:number"
+AddWeightToPlaneBlue = {
+    ["P-51D-30-NA"] = { enabled = true, weight = 750 },
+    ["SpitfireLFMkIX"] = { enabled = true, weight = 550 },
+    ["P-47D-40"] = { enabled = true, weight = 500 },
+    ["MosquitoFBMkVI"] = { enabled = true, weight = 650 },
+    ["A-20G"] = { enabled = true, weight = 1000 },
+    ["F4U-1D"] = { enabled = true, weight = 400 },
+    ["C-47"] = { enabled = true, weight = 2000 },
+    ["B-17G"] = { enabled = true, weight = 2000 },
+}
+
 -- Units that will NOT be counted when calculating how many players are "active"
 -- (used for CAP/CAS/SEAD scaling).
 -- If you set a type to true, it will not be counting that player, because C-130 for example can't fight A/A. This will make
@@ -458,7 +486,7 @@ CallsignOverrides = {
 NoAIBlueSupplies = false
 
 -- This option is the legacy option. this won't be used if WarehouseLogistics = true
--- @gui installPolicy="mergeRows"
+-- @gui installPolicy="mergeRows" editor="checkboxTable"
 AllowedToCarrySupplies = {
 	['P-51D-30-NA'] = true,
 	['SpitfireLFMkIX'] = true,
@@ -530,10 +558,13 @@ RewardContribution = {
 	sam              = 30,
 	airplane         = 50,
 	ship             = 200,
+	helicopter       = 50,
+	crate            = 100,
 	rescue           = 200,
     structure        = 100,
 	["Zone upgrade"] = 100,
 	["Zone capture"] = 200,
+    ["Warehouse delivery"] = 150,
 }
 
 
@@ -600,10 +631,10 @@ FlightTimeRewardPerMinute = 2
 -- If you want to reward all players no mater what aircraft, then set this to true, if set to false, you can choose who get the reward.
 -- in the AllowedFlightTimeReward table below.
 RewardAllAircraft = false
---
---
--- @gui installPolicy="mergeRows"
-AllowedFlightTimeReward  = {
+
+
+-- @gui label="Allowed Flight Time Reward" installPolicy="mergeRows" editor="checkboxTable"
+AllowedFlightTimeReward = {
     ['P-51D-30-NA'] = true,
 	['SpitfireLFMkIX'] = true,
 	['MosquitoFBMkVI'] = true,
@@ -663,7 +694,7 @@ ewrs_allowFriendlyPicture = true -- Allows pilots to request a friendly aircraft
 ewrs_maxFriendlyDisplay = 5 -- Max friendly aircraft shown in friendly picture reports. Set to 0 to show all.
 ewrs_showType = true -- If true, EWRS reports aircraft type. If false, EWRS reports Unknown.
 ewrs_mergedRangeNm = 5 -- Style 2 only. Hostile contacts under this range show Merged. Set to 0 to disable.
--- @gui installPolicy="mergeRows"
+-- @gui installPolicy="mergeRows" editor="checkboxTable"
 ewrs_specialPlaneTypes = { -- Aircraft typeNames that show friendlies by default. Players can still override this in their F10 EWRS menu.
     ['P-51D-30-NA'] = true,
 	['SpitfireLFMkIX'] = true,
@@ -704,6 +735,34 @@ phaseCycleTimerMin = 0.2       -- Affects initialization only. Raise to 0.3-0.5 
 phaseCycleTimerActive = 0.04   -- Main runtime cadence when work is pending. Try 0.06-0.08.
 phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if needed.
 
+
+-- ============================================================================
+-- Aircraft
+-- ============================================================================
+-- Aircraft that remain available in Normandy/WW2 warehouse aircraft stocks.
+-- @gui label="Allowed WW2 Warehouse Aircraft" installPolicy="mergeRows" editor="bucket"
+AllowedWW2Planes = {
+	"Bf-109K-4",
+	"F4U-1D",
+	"F4U-1D_CW",
+	"FW-190A8",
+	"FW-190D9",
+	"I-16",
+	"La-7",
+	"MosquitoFBMkVI",
+	"P-47D-30",
+	"P-47D-30bl1",
+	"P-47D-40",
+	"P-51D",
+	"P-51D-25-NA",
+	"P-51D-30-NA",
+	"SpitfireLFMkIX",
+	"SpitfireLFMkIXCW",
+	"TF-51D",
+	"Yak-52",
+	"Ju-88A4",
+	"B-17G",
+}
 
 -- Don't touch this.
 FootholdConfigLoadedOk = true

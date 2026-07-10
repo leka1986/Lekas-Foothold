@@ -51,7 +51,7 @@ local L10N = FH_L10N
 ewrs.HELO = 1
 ewrs.ATTACK = 2
 ewrs.FIGHTER = 3
-ewrs.version = "2.0.0"
+ewrs.version = "2.0.1"
 
 local function ewrsBuildRangeOptions(maxKm, maxNm)
   local function build(values, maxValue)
@@ -575,7 +575,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
     local bogeypos=obj:getPosition()
     local bogeyType=nil
     local dcsTypeName=ewrsGetUnitTypeName(obj)
-    local unit=UNIT:Find(obj) if unit then bogeyType=unit:GetNatoReportingName() end
+    local unit=UNIT:Find(obj) if unit and dcsTypeName then bogeyType=ewrsReportingNameOverride(dcsTypeName) or UTILS.GetReportingName(dcsTypeName) end
     if not bogeyType then bogeyType = "Unknown" end  
     local bearing = (math.floor((ewrs.getBearing(referenceX,referenceZ,bogeypos.p.x,bogeypos.p.z)+2.5)/5)*5) % 360
     if bearing == 0 then bearing = 360 end
@@ -686,7 +686,7 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
           local unit=UNIT:Find(u)
           local bogeyType=nil
           local dcsTypeName=ewrsGetUnitTypeName(u)
-          if unit then bogeyType=unit:GetNatoReportingName() end
+          if unit and dcsTypeName then bogeyType=ewrsReportingNameOverride(dcsTypeName) or UTILS.GetReportingName(dcsTypeName) end
           if not bogeyType then bogeyType="Unknown" end
           if not ewrs.shouldHideFriendlyReportingName(bogeyType) then
             local j=#threatTable+1
@@ -921,11 +921,12 @@ function ewrs.buildFriendlyTable(friendlyNames,activePlayer)
     local velocity=v:getVelocity()
     local pos=v:getPosition()
     local unit=UNIT:Find(v)
-    if unit then                                           -- << guard >>
-      local bogeyType=unit:GetNatoReportingName()
-      local dcsTypeName=ewrsGetUnitTypeName(v)
-      if not bogeyType then bogeyType = "Unknown" end
-      if not ewrs.shouldHideFriendlyReportingName(bogeyType) and pos.p.x~=selfpos.p.x and pos.p.z~=selfpos.p.z then
+      if unit then                                        -- << guard >>
+        local bogeyType=nil
+        local dcsTypeName=ewrsGetUnitTypeName(v)
+        if dcsTypeName then bogeyType=ewrsReportingNameOverride(dcsTypeName) or UTILS.GetReportingName(dcsTypeName) end
+        if not bogeyType then bogeyType = "Unknown" end
+        if not ewrs.shouldHideFriendlyReportingName(bogeyType) and pos.p.x~=selfpos.p.x and pos.p.z~=selfpos.p.z then
         local bearing=ewrs.getBearing(referenceX,referenceZ,pos.p.x,pos.p.z)
         local heading=ewrs.getHeading(velocity)
         local range=ewrs.getDistance(referenceX,referenceZ,pos.p.x,pos.p.z)
@@ -1456,3 +1457,4 @@ end, nil, timer.getTime() + 6)
 end
 --trigger.action.outText("EWRS by Steggles is now running",15)
 env.info("EWRS "..ewrs.version.." Running")
+env.info("Foothold EWRS "..ewrs.version.." loaded with dcsTypeName reporting-name fix")

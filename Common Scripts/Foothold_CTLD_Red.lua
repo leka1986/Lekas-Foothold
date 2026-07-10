@@ -471,19 +471,24 @@ Foothold_redCtld:AddTroopsCargo("Squad 8 AK47",{"CTLD_TROOPS_RED_Squad_8"},CTLD_
 
 Foothold_redCtld:AddCratesCargo("Scout BRDM 2",{"CTLD_CARGO_RED_Scout"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "Support")
 Foothold_redCtld:AddCratesCargo("Ammo Truck",{"CTLD_CARGO_RED_AmmoTruck"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "Support")
-Foothold_redCtld:AddCratesCargo("Arty SPM 259 Nona 3 NM",{"CTLD_CARGO_RED_ARTY_Nona"},CTLD_CARGO.Enum.VEHICLE,2,2000,6, "ARTY")
 Foothold_redCtld:AddCratesCargo("Arty SPH 253 Akatsia 8 NM",{"CTLD_CARGO_RED_ARTY_Akatsia"},CTLD_CARGO.Enum.VEHICLE,2,2500,6, "ARTY")
-Foothold_redCtld:AddCratesCargo("MLRS LC 80 MM 2.2 NM",{"CTLD_CARGO_RED_ARTY_BBM1"},CTLD_CARGO.Enum.VEHICLE,2,2500,6, "ARTY")
-Foothold_redCtld:AddCratesCargo("Kord 12.7 MM",{"CTLD_CARGO_RED_Kord"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "LIGHT ARMOR")
-Foothold_redCtld:AddCratesCargo("MRAP M-ATV",{"CTLD_CARGO_RED_MRAP"},CTLD_CARGO.Enum.VEHICLE,2,1000,6, "LIGHT ARMOR")
-Foothold_redCtld:AddCratesCargo("ATGM AT-3 SAGGER",{"CTLD_CARGO_RED_AT_3"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "ANTI TANK")
-
 Foothold_redCtld:AddCratesCargo("Truck with ZU-23",{"CTLD_CARGO_RED_ZU_23"},CTLD_CARGO.Enum.VEHICLE,2,1000,5, "SAM/AAA")
+
+if Era ~= "Vietnam" then
+Foothold_redCtld:AddCratesCargo("Arty SPM 259 Nona 3 NM",{"CTLD_CARGO_RED_ARTY_Nona"},CTLD_CARGO.Enum.VEHICLE,2,2000,6, "ARTY")
+Foothold_redCtld:AddCratesCargo("ATGM AT-3 SAGGER",{"CTLD_CARGO_RED_AT_3"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "ANTI TANK")
+Foothold_redCtld:AddCratesCargo("Kord 12.7 MM",{"CTLD_CARGO_RED_Kord"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "LIGHT ARMOR")
+Foothold_redCtld:AddCratesCargo("MLRS LC 80 MM 2.2 NM",{"CTLD_CARGO_RED_ARTY_BBM1"},CTLD_CARGO.Enum.VEHICLE,2,2500,6, "ARTY")
+Foothold_redCtld:AddCratesCargo("MRAP M-ATV",{"CTLD_CARGO_RED_MRAP"},CTLD_CARGO.Enum.VEHICLE,2,1000,6, "LIGHT ARMOR")
+end
+
+if isRedTemplateEnabled("SA-8") then
 Foothold_redCtld:AddCratesCargoNoMove("SA-8",{"CTLD_CARGO_RED_SA_8"},CTLD_CARGO.Enum.VEHICLE,2,3000,5, "SAM/AAA")
+end
 
+if isRedTemplateEnabled("SA-3") then
 Foothold_redCtld:AddCratesCargoNoMove("SA-3 SAM system",{"CTLD_CARGO_RED_SA_3"},CTLD_CARGO.Enum.VEHICLE,5,2500,4, "SAM/AAA")
-
-
+end
 
 --addRedStaticFromType("Red zone supplies CH-47", "cds_crate", 3500, "Zone supplies", {"CH-47Fbl1"}, "Zone supplies")
 addRedStaticFromType("Red zone supplies C-130J", "iso_container_small", 4000, "Zone supplies", {"C-130J-30"}, "Zone supplies")

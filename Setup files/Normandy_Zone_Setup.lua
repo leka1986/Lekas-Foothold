@@ -324,7 +324,7 @@ end
 Hunt = true
 
 zones = {
-    BigginHill = ZoneCommander:new({zone='BigginHill', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.BigginHill}),
+    BigginHill = ZoneCommander:new({zone='BigginHill', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.BigginHill, customSuspendNmBlue = 62}),
 	Odiham = ZoneCommander:new({zone='Odiham', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Odiham}),
 	Farnborough = ZoneCommander:new({zone='Farnborough', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Farnborough}),
 	Manston = ZoneCommander:new({zone='Manston', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Manston}),
@@ -366,7 +366,7 @@ zones = {
 	AxeCarrierGroup = ZoneCommander:new({zone='AxeCarrierGroup', side=1, level=20, upgrades=upgrades.AxeCarrierUpgrades, crates={}, flavorText=flavor.AxeCarrierGroup}),
 	Paris = ZoneCommander:new({zone='Paris', side=1, size='big', level=20, upgrades=upgrades.Paris, crates={}, flavorText=flavor.Paris, income=1}),
 	Orly = ZoneCommander:new({zone='Orly', side=1, size='big', level=20, upgrades=upgrades.Orly, crates={}, flavorText=flavor.Orly, income=1}),
-	London = ZoneCommander:new({zone='London', side=2, size='big', level=20, upgrades=upgrades.London, crates={}, flavorText=flavor.London, income=1}),
+	London = ZoneCommander:new({zone='London', side=2, size='big', level=20, upgrades=upgrades.London, crates={}, flavorText=flavor.London, income=1,customSuspendNmBlue = 70}),
 	PointeDesGroins = ZoneCommander:new({zone='Pointe des Groins', side=1, level=20, upgrades=upgrades.EWRPointeDesGroins, crates={}, flavorText=flavor.PointeDesGroins}),
 	PointeDuHoc = ZoneCommander:new({zone='Pointe du Hoc', side=1, level=20, upgrades=upgrades.EWRPointeDuHoc, crates={}, flavorText=flavor.PointeDuHoc}),
 	CapGrisNez = ZoneCommander:new({zone='Cap Gris-Nez', side=1, level=20, upgrades=upgrades.EWRCapGrisNez, crates={}, flavorText=flavor.CapGrisNez}),
@@ -575,11 +575,6 @@ CapPlaneTemplate = CapPlaneTemplate or {
 	'UKCapP51Template',
 	'UKCapSpitFireTemplate',
 }
--- HeloSupplyTemplate = HeloSupplyTemplate or {
---     'RED_MI-8',
---     'BLUE_CH-47',
---     'BLUE_UH-60A',
--- }
 CasPlaneTemplate = CasPlaneTemplate or {
 	'AXECasJU88Template',
 	'UKCasP47Template',
@@ -587,41 +582,10 @@ CasPlaneTemplate = CasPlaneTemplate or {
 	'UKCasA20Template',
 	'UKCasF4UDTemplate',
 }
--- SeadPlaneTemplate = SeadPlaneTemplate or {
---     'RED_JF17_ONESHIP',
---     'RED_JF17_TWOSHIP',
---     'RED_SU25T_ONESHIP',
---     'RED_SU25T_TWOSHIP',
---     'RED_SU-34_ONESHIP',
---     'RED_SU-34_TWOSHIP',
---     'RED_SU-24M_TWOSHIP',
---     'RED_SU-24M_ONESHIP',
--- 	'BLUE_HORNET_SEAD',
-	
--- }
--- CasHeloTemplate = CasHeloTemplate or {
---     'RED_Mi-24P_ONESHIP',
---     'RED_Mi-24P_TWOSHIP',
---     'RED_M-28N_ONESHIP',
---     'RED_M-28N_TWOSHIP',
---     'BLUE_AH-64D_ONESHIP',
---     'BLUE_AH-64D_TWOSHIP',
---     'BLUE_AH-1W',
---     'BLUE_SA342M',
--- }
--- AttackConvoy = AttackConvoy or {
---     "AttackConvoy 1",
---     "AttackConvoy 2",
---     "AttackConvoy 3",
---     "AttackConvoy 4",
--- }
 
 CapCarrierGroup = CapCarrierGroup or {
 	'UKCapF4UDTemplate',
 }
--- SeadCarrierGroup = SeadCarrierGroup or {
---     'BLUE_HORNET_SEAD',
--- }
 
 RunwayStrikePlaneTemplate = RunwayStrikePlaneTemplate or {
 	"UKCasMosquitoTemplate",
@@ -630,8 +594,6 @@ RunwayStrikePlaneTemplate = RunwayStrikePlaneTemplate or {
 RunwayStrikePlaneTemplate2 = RunwayStrikePlaneTemplate2 or {
 	"DynamicStructure_Template",
 }
-
-
 
 SupplyConvoy = SupplyConvoy or {
     "AxeConvoySupplyTemplate",
@@ -652,7 +614,6 @@ AntiShipPlaneTemplate = AntiShipPlaneTemplate or {
 	"UKAntishipP47Template",
 	"AXEAntiShipFw190D9Template",
 	"AXEAntishipJU88Template",
-	
 }
 
 BattleshipTemplate = BattleshipTemplate or {
@@ -1319,17 +1280,17 @@ end, 'disableV1Neuville')
 function SpawnFriendlyAssets()
 	if zones.Dover.active and zones.AxeCarrierGroup.side == 0 then
 		trigger.action.outText(L10N:Format("NORMANDY_SHIPS_STANDING_CAPTURE", L10N:Get("NORMANDY_ZONE_RED_CARRIER")), 15)
-		trigger.action.outSoundForCoalition(2, "admin.ogg")
+		trigger.action.outSoundForCoalition(2, "admin.wav")
 	end
 
 	if zones.Dover.active and zones.DunkirkPort.side == 0 then
 		trigger.action.outText(L10N:Format("NORMANDY_SHIPS_STANDING_CAPTURE", L10N:Get("NORMANDY_ZONE_DUNKIRK_PORT")), 15)
-		trigger.action.outSoundForCoalition(2, "admin.ogg")
+		trigger.action.outSoundForCoalition(2, "admin.wav")
 	end
 
 	if zones.Dover.active and zones.Calais.side == 0 then
 		trigger.action.outText(L10N:Format("NORMANDY_SHIPS_STANDING_CAPTURE", L10N:Get("NORMANDY_ZONE_CALAIS")), 15)
-		trigger.action.outSoundForCoalition(2, "admin.ogg")
+		trigger.action.outSoundForCoalition(2, "admin.wav")
 	end
 
 end
@@ -2180,6 +2141,7 @@ budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequenc
 budgetAI:init()
 RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
 bc:startRewardPlayerContribution(15,RewardContribution)
+HercCargoDropSupply.init(bc)
 bc:buildZoneDistanceCache()
 buildTemplateCache()
 buildSubZoneRoadCache()
@@ -2234,8 +2196,57 @@ end
 
 
 ----------------------------------------------- Bomber Red event ---------------------------------------------
-local bomb_COOLDOWN = 2100
+local bomb_COOLDOWN = 3600
 local lastbomb_COOLDOWN  = -bomb_COOLDOWN
+local WW2_BOMBER_MIN_PLAYER_SPAWN_NM = 40
+local WW2_BOMBER_MIN_TARGET_SPAWN_NM = 40
+
+local function getBomberSpawnAirbase(zone, coalitionSide)
+  local airbase = zone.airbaseName and AIRBASE:FindByName(zone.airbaseName) or nil
+  if airbase and airbase:IsAirdrome() and airbase:GetCoalition() == coalitionSide then
+    return airbase
+  end
+  return nil
+end
+
+local function isBomberSpawnAirbaseFarFromCachedPlayers(airbase)
+  local zonePoint = airbase:GetCoordinate():GetVec3()
+  for _, playerTable in ipairs(bc.playersState or {}) do
+    local latitude = tonumber(playerTable.latitude)
+    local longitude = tonumber(playerTable.longitude)
+    if latitude and longitude then
+      local playerPoint = coord.LLtoLO(latitude, longitude, tonumber(playerTable.altitude) or 0)
+      local dx = zonePoint.x - playerPoint.x
+      local dz = zonePoint.z - playerPoint.z
+      local distanceNm = UTILS.MetersToNM(math.sqrt(dx * dx + dz * dz))
+      if distanceNm < WW2_BOMBER_MIN_PLAYER_SPAWN_NM then
+        return false
+      end
+    end
+  end
+  return true
+end
+
+local function isRedReactivePressuredZone(zone)
+  local pressureByZone = bc._redReactivePressureByZone
+  if not pressureByZone then return false end
+  local pressureUntil = bc._redReactivePressureUntil
+  if pressureUntil and pressureUntil < timer.getTime() then return false end
+  return pressureByZone[zone.zone] ~= nil
+end
+
+local function isBomberSpawnAirbaseFarFromTarget(airbase, targetZone)
+  local spawnCoord = airbase:GetCoordinate()
+  local targetCoord = ZONE:FindByName(targetZone.zone):GetCoordinate()
+  local distanceNm = UTILS.MetersToNM(spawnCoord:Get2DDistance(targetCoord))
+  return distanceNm >= WW2_BOMBER_MIN_TARGET_SPAWN_NM
+end
+
+
+Group.getByName(bomberRedTemplate):destroy()
+Group.getByName(bomberRedEscortTemplate):destroy()
+Group.getByName(bomberBlueTemplate):destroy()
+Group.getByName(bomberBlueEscortTemplate):destroy()
 
 -- Updated bomber event to use spawnBomberStrikerAt with dynamic zone selection
 evc:addEvent({
@@ -2247,9 +2258,10 @@ action=function()
   local blueZones = {}
   
   for _, zone in ipairs(bc:getZones()) do
-    if zone.side == 1 and zone.active and not zone.zone:lower():find("hidden") then
+    local airbase = getBomberSpawnAirbase(zone, 1)
+    if zone.side == 1 and zone.active and not zone.suspended and not zone.zone:lower():find("hidden") and airbase and isBomberSpawnAirbaseFarFromCachedPlayers(airbase) and not isRedReactivePressuredZone(zone) then
       table.insert(redZones, zone.zone)
-    elseif zone.side == 2 and zone.active and not zone.zone:lower():find("hidden") then
+    elseif zone.side == 2 and zone.active and not zone.suspended and not zone.zone:lower():find("hidden") then
       table.insert(blueZones, zone.zone)
     end
   end
@@ -2262,22 +2274,29 @@ action=function()
     bomberMissionSpawnZone = spawnZone
     bomberMissionTargetZone = targetZone
     
-    spawnBomberStrikerAt(spawnZone, targetZone)
-    ActiveMission['bombRed'] = true  -- Mark mission as active
+    if spawnBomberStrikerAt(spawnZone, targetZone) then
+      RegisterGroupTarget(bomberRedTemplate,500,L10N:Get("NORMANDY_MISSION_INTERCEPT_BOMBERS_TITLE"),'bombRed')
+    else
+      bomberMissionSpawnZone = nil
+      bomberMissionTargetZone = nil
+    end
   end
 end,
 canExecute=function()
   if ActiveMission['bombRed'] then return false end  -- Defense-in-depth: check ActiveMission first
   if timer.getTime()-lastbomb_COOLDOWN < bomb_COOLDOWN then return false end
-  if bomberActive then return false end
   
-  -- Check if there are any blue zones to target
+  local hasRedSpawn = false
+  local hasBlueTarget = false
   for _, zone in ipairs(bc:getZones()) do
-    if zone.side == 2 and zone.active and not zone.zone:lower():find("hidden") then
-      return true
+    local airbase = getBomberSpawnAirbase(zone, 1)
+    if zone.side == 1 and zone.active and not zone.suspended and not zone.zone:lower():find("hidden") and airbase and isBomberSpawnAirbaseFarFromCachedPlayers(airbase) and not isRedReactivePressuredZone(zone) then
+      hasRedSpawn = true
+    elseif zone.side == 2 and zone.active and not zone.suspended and not zone.zone:lower():find("hidden") then
+      hasBlueTarget = true
     end
   end
-  return false
+  return hasRedSpawn and hasBlueTarget
 end
 })
 
@@ -2319,7 +2338,7 @@ startAction = function()
     end,
 isActive = function()
     if not ActiveMission['bombRed'] then return false end
-    if bomberActive then return true end
+    if Group.getByName(bomberRedTemplate) then return true end
     ActiveMission['bombRed'] = nil  -- Cleanup when mission ends
     return false
 end
@@ -2328,7 +2347,7 @@ end
 -------------------------------------------- End of Bomber Red event ------------------------------------------
 
 ----------------------------------------------- Bomber Blue event ---------------------------------------------
-local bombBlue_COOLDOWN = 1800
+local bombBlue_COOLDOWN = 2400
 local lastbombBlue_COOLDOWN = -bombBlue_COOLDOWN
 
 -- Blue bomber event to use spawnBlueBomberStrikerAt with dynamic zone selection
@@ -2336,39 +2355,49 @@ evc:addEvent({
 id='bombBlue',
 action=function()
   -- Spawn blue bombers from a blue zone to attack a red zone
-  -- Select random blue spawn zone and random red target zone
-  local blueZones = {}
-  local redZones = {}
+  -- Select random blue spawn / red target pair at least 40 NM apart
+  local validPairs = {}
   
-  for _, zone in ipairs(bc:getZones()) do
-    if zone.side == 2 and zone.active and not zone.zone:lower():find("hidden") then
-      table.insert(blueZones, zone.zone)
-    elseif zone.side == 1 and zone.active and not zone.zone:lower():find("hidden") then
-      table.insert(redZones, zone.zone)
+  for _, spawnZone in ipairs(bc:getZones()) do
+    local spawnAirbase = getBomberSpawnAirbase(spawnZone, 2)
+    if spawnZone.side == 2 and spawnZone.active and not spawnZone.suspended and not spawnZone.zone:lower():find("hidden") and spawnAirbase then
+      for _, targetZone in ipairs(bc:getZones()) do
+        if targetZone.side == 1 and targetZone.active and not targetZone.suspended and not targetZone.zone:lower():find("hidden") and isBomberSpawnAirbaseFarFromTarget(spawnAirbase, targetZone) then
+          validPairs[#validPairs + 1] = { spawn = spawnZone.zone, target = targetZone.zone }
+        end
+      end
     end
   end
   
-  if #blueZones > 0 and #redZones > 0 then
-    local spawnZone = blueZones[math.random(#blueZones)]
-    local targetZone = redZones[math.random(#redZones)]
+  if #validPairs > 0 then
+    local selectedPair = validPairs[math.random(#validPairs)]
+    local spawnZone = selectedPair.spawn
+    local targetZone = selectedPair.target
     
     -- Store zones for mission display
     bomberBlueMissionSpawnZone = spawnZone
     bomberBlueMissionTargetZone = targetZone
     
-    spawnBlueBomberStrikerAt(spawnZone, targetZone)
-    ActiveMission['bombBlue'] = true  -- Mark mission as active
+    if spawnBlueBomberStrikerAt(spawnZone, targetZone) then
+      ActiveMission['bombBlue'] = true  -- Mark mission as active
+    else
+      bomberBlueMissionSpawnZone = nil
+      bomberBlueMissionTargetZone = nil
+    end
   end
 end,
 canExecute=function()
   if ActiveMission['bombBlue'] then return false end  -- Defense-in-depth: check ActiveMission first
   if timer.getTime()-lastbombBlue_COOLDOWN < bombBlue_COOLDOWN then return false end
-  if bomberBlueActive then return false end
   
-  -- Check if there are any red zones to target
-  for _, zone in ipairs(bc:getZones()) do
-    if zone.side == 1 and zone.active and not zone.zone:lower():find("hidden") then
-      return true
+  for _, spawnZone in ipairs(bc:getZones()) do
+    local spawnAirbase = getBomberSpawnAirbase(spawnZone, 2)
+    if spawnZone.side == 2 and spawnZone.active and not spawnZone.suspended and not spawnZone.zone:lower():find("hidden") and spawnAirbase then
+      for _, targetZone in ipairs(bc:getZones()) do
+        if targetZone.side == 1 and targetZone.active and not targetZone.suspended and not targetZone.zone:lower():find("hidden") and isBomberSpawnAirbaseFarFromTarget(spawnAirbase, targetZone) then
+          return true
+        end
+      end
     end
   end
   return false
@@ -2417,7 +2446,7 @@ endAction = function()
 end,
 isActive = function()
 	if not ActiveMission['bombBlue'] then return false end
-	if bomberBlueActive then return true end
+	if Group.getByName(bomberBlueTemplate) then return true end
 	ActiveMission['bombBlue'] = nil  -- Cleanup when mission ends
 	return false
 end

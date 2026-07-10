@@ -228,13 +228,18 @@ CTLD_DEFAULT_PRICE = 0
 Foothold_ctld:AddTroopsCargo("Squad 8",{"CTLD_TROOPS_ATS"},CTLD_CARGO.Enum.TROOPS,8,80,10)
 Foothold_ctld:AddTroopsCargo("Platoon 16",{"CTLD_TROOPS_Platon16"},CTLD_CARGO.Enum.TROOPS,16,80,10)
 Foothold_ctld:AddTroopsCargo("Platoon 32",{"CTLD_TROOPS_Platon1"},CTLD_CARGO.Enum.TROOPS,32,80,10)
-Foothold_ctld:AddTroopsCargo("Anti-Air Soldiers",{"CTLD_TROOPS_AA"},CTLD_CARGO.Enum.TROOPS,5,80,10)
 Foothold_ctld:AddTroopsCargo("Mortar Squad",{"CTLD_TROOPS_MRS"},CTLD_CARGO.Enum.TROOPS,6,80,10)
--- vehicles and fobs
 Foothold_ctld:AddTroopsCargo("Engineer soldier",{"CTLD_TROOPS_Engineers"},CTLD_CARGO.Enum.ENGINEERS,1,80,10)
+
+if Era ~= "Vietnam" then
+Foothold_ctld:AddTroopsCargo("Anti-Air Soldiers",{"CTLD_TROOPS_AA"},CTLD_CARGO.Enum.TROOPS,5,80,10)
+end
+-- vehicles and fobs
+if Era ~= "Vietnam" then
 Foothold_ctld:AddCratesCargo("Mephisto",{"CTLD_CARGO_Mephisto"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500,10, "ANTI TANK")
 Foothold_ctld:AddCratesCargo("Humvee",{"CTLD_CARGO_HMMWV"},CTLD_CARGO.Enum.VEHICLE,2,1000,10, "ANTI TANK")
 Foothold_ctld:AddCratesCargo("Bradly",{"CTLD_CARGO_Bradly"},CTLD_CARGO.Enum.VEHICLE,2,1500,10, "ANTI TANK")
+end
 Foothold_ctld:AddCratesCargoNoMove("L118",{"CTLD_CARGO_L118"},CTLD_CARGO.Enum.VEHICLE,1,700,12, "Support",nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
 Foothold_ctld:AddCratesCargoNoMove("Ammo Truck",{"CTLD_CARGO_AmmoTruck"},CTLD_CARGO.Enum.VEHICLE,2,800,10, "Support")
 Foothold_ctld:AddCratesCargo("Humvee scout",{"CTLD_CARGO_Scout"},CTLD_CARGO.Enum.VEHICLE,2,1000,10, "Support")
@@ -259,19 +264,22 @@ Foothold_ctld:AddCratesCargoNoMove("IRIS T System", {"CTLD_CARGO_IRISTSLM_System
 Foothold_ctld:AddCratesCargoNoMove("C-RAM", {"CTLD_CARGO_CRAM"}, CTLD_CARGO.Enum.FOB, 2, 1000, 10, "SAM/AAA")
 Foothold_ctld:AddCratesCargoNoMove("HIMARS GMLRRS HE GUIDED",{"CTLD_CARGO_GMLRS_HE"},CTLD_CARGO.Enum.VEHICLE,2,3500,12, "Support", nil,nil,nil,"Cargos",nil,nil, "iso_container_small")
 end
+if Era ~= "Vietnam" then
 Foothold_ctld:AddCratesCargo("Linebacker",{"CTLD_CARGO_Linebacker"},CTLD_CARGO.Enum.VEHICLE,2,1500,10, "SAM/AAA")
 Foothold_ctld:AddCratesCargo("Vulcan",{"CTLD_CARGO_Vulcan"}, CTLD_CARGO.Enum.VEHICLE, 2, 1500,10, "SAM/AAA")
-
+end
 Foothold_ctld:AddUnits("Humvee",{"CTLD_CARGO_HMMWV"},CTLD_CARGO.Enum.VEHICLE,10, "ANTI TANK")
+Foothold_ctld:AddUnits("Humvee scout",{"CTLD_CARGO_Scout"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
+if Era ~= "Vietnam" then
 Foothold_ctld:AddUnits("Mephisto",{"CTLD_CARGO_Mephisto"},CTLD_CARGO.Enum.VEHICLE,10, "ANTI TANK")
 Foothold_ctld:AddUnits("Vulcan",{"CTLD_CARGO_Vulcan"}, CTLD_CARGO.Enum.VEHICLE, 10, "SAM/AAA")
 Foothold_ctld:AddUnits("Avenger",{"CTLD_CARGO_Avenger"}, CTLD_CARGO.Enum.VEHICLE, 10, "SAM/AAA")
-Foothold_ctld:AddUnits("Humvee scout",{"CTLD_CARGO_Scout"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
 Foothold_ctld:AddUnits("FV-107 Scimitar",{"CTLD_CARGO_Scimitar"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
 Foothold_ctld:AddUnits("FV-101 Scorpion",{"CTLD_CARGO_Scorpion"}, CTLD_CARGO.Enum.VEHICLE, 10, "Support")
+end
 Foothold_ctld:AddCratesCargo("FARP Huey",{"CTLD_TROOP_FOB"},CTLD_CARGO.Enum.FOB,3,700,10, "FARP",nil,nil,"UH-1H","Cargos","ammo_cargo",nil, "cds_crate")
 Foothold_ctld:AddCratesCargo("FARP",{"CTLD_TROOP_FOB"},CTLD_CARGO.Enum.FOB,3,1200,10, "FARP",nil,nil,nil,"Cargos","ammo_cargo",nil, "cds_crate")
-if _DATABASE and _DATABASE.Templates and _DATABASE.Templates.Groups and _DATABASE.Templates.Groups["CTLD_TROOP_FOB_ZELL"] then
+if _DATABASE.Templates.Groups["CTLD_TROOP_FOB_ZELL"] then
 Foothold_ctld:AddCratesCargo("FARP with ZELL",{"CTLD_TROOP_FOB_ZELL"},CTLD_CARGO.Enum.FOB,3,750,10, "FARP",nil,nil,nil,"Cargos","ammo_cargo",nil, "cds_crate")
 end
 
@@ -308,7 +316,7 @@ addStaticFromType("25 A/G Rockets", "cds_crate", 1000, "Warehouse", {"C-130J-30"
 addStaticFromType("25 A/G Bombs", "cds_crate", 1000, "Warehouse", {"C-130J-30"}, "25 A/G Bombs")
 addStaticFromType("25 Plane fuel-tanks and pylons", "cds_crate", 1000, "Warehouse", {"C-130J-30"}, "25 Plane fuel-tanks and pylons")
 
-if AllowMods and not Era=="Coldwar" then
+if AllowMods and Era == "Modern" then
 addStaticFromType("25 Modded weapons", "cds_crate", 1000, "Warehouse", {"C-130J-30"}, "25 Modded weapons")
 addStaticFromType("50 Modded weapons", "iso_container_small", 2000, "Warehouse", {"C-130J-30"}, "50 Modded weapons")
 addStaticFromType("10 Modded weapons", "ammo_cargo", 500, "Warehouse", {"CH-47Fbl1","UH-1H","Mi-8MT","Mi-24P","UH-60L_DAP","UH-60L"}, "10 Modded weapons")
@@ -406,7 +414,7 @@ end
 ---------------------------------------------------------------------------
 
 -- ZONES
-
+if Era ~= "Vietnam" then
 Foothold_ctld:AddCTLDZone("Tarawa",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,250,25)
 Foothold_ctld:AddCTLDZone("Khasab Tarawa",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,250,25)
 Foothold_ctld:AddCTLDZone("HMS Invincible",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,210,24)
@@ -415,7 +423,7 @@ Foothold_ctld:AddCTLDZone("CVN-73",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,
 Foothold_ctld:AddCTLDZone("CVN-74",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,330,35)
 Foothold_ctld:AddCTLDZone("CVN-59",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,325,35)
 Foothold_ctld:AddCTLDZone("FOB ALPHA",CTLD.CargoZoneType.SHIP,SMOKECOLOR.Blue,true,false,250,25)
-
+end
 for _, zoneObj in ipairs(bc:getZones()) do
     local zoneName = zoneObj.zone
     if not zoneName:lower():find("hidden") and not zoneName:lower():find("carrier") and not zoneName:lower():find("fob alpha") then
@@ -1241,7 +1249,7 @@ local WAREHOUSE_SUPPLY_TYPES = {
   ["50 Modded weapons"]                   = { categories = { "MODS" }, amount = 50, reward = 30, label = "50 Modded weapons" },
 }
 
-if AllowMods then
+if AllowMods and Era == "Modern" then
   WAREHOUSE_SUPPLY_TYPES["10 Mods"] = { categories = { "MODS" }, amount = 10, reward = 30, label = "10 Mods" }
   WAREHOUSE_SUPPLY_TYPES["25 Mods"] = { categories = { "MODS" }, amount = 25, reward = 15, label = "25 Mods" }
   WAREHOUSE_SUPPLY_TYPES["50 Mods"] = { categories = { "MODS" }, amount = 50, reward = 30, label = "50 Mods" }
@@ -3729,7 +3737,7 @@ function BuildAFARP(Coordinate, stamp)
   ZONE_RADIUS:New(FName, coord:GetVec2(), 150, false)
 
 
-  if Era=="Coldwar" then
+  if Era == "Coldwar" or Era == "Vietnam" then
       UTILS.SpawnFARPAndFunctionalStatics(FName, coord, ENUMS.FARPType.INVISIBLE, Foothold_ctld.coalition, country.id.USA, FarpNameNumber, FARPFreq, radio.modulation.AM, nil, nil, nil, 10000, 0,0,nil, true, true, 3, 80, 80)
   else
       UTILS.SpawnFARPAndFunctionalStatics(FName, coord, ENUMS.FARPType.INVISIBLE, Foothold_ctld.coalition, country.id.USA, FarpNameNumber, FARPFreq, radio.modulation.AM, nil, nil, nil, 10000, 0,1073741823,nil, true, true, 3, 80, 80)

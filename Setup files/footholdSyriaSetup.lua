@@ -19,10 +19,27 @@ function allExcept(tbls, except)
 	return merge(tomerge)
 end
 
+local function BuildEnabledTemplateList(masterList, ...)
+	local result = {}
+	local enabledMaps = {...}
+
+	for _, template in ipairs(masterList) do
+		for _, enabled in ipairs(enabledMaps) do
+			if enabled[template] == true then
+				table.insert(result, template)
+				break
+			end
+		end
+	end
+
+	return result
+end
+
 local L10N = FH_L10N
 local function LT(T) return T or L10N end
 local function LTGet(key) return L10N:DeferredGet(key) end
 local function LTFormat(key, ...) return L10N:DeferredFormat(key, ...) end
+local ColdWarTechEra = (Era == 'Coldwar' or Era == 'Vietnam')
 
 local function localizedHeadingLabel(headingName, T)
 	return L10N:DynamicHeadingLabel(headingName, T)
@@ -91,11 +108,11 @@ upgrades = {
 	},
 	HotelFixed = {
 		blue = {'bluePD2', 'blueHAWK', 'bluePD1'},
-		red = {'Red SAM SHORAD SA-19', 'Red SAM SA-2', 'Red SAM SHORAD SA-15', 'Red SAM AAA Fixed Hotel'}
+		red = {'Red SAM SHORAD SA-19','Red SAM AAA Fixed Hotel', 'Red SAM SA-2', 'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-19'}
 	},
 	sa5 = {
 		blue = {'bluePD2', 'bluePD1'},
-		red = {'Red Armour Group','Red SAM AAA','Red SAM SHORAD SA-15','Red Armour Group 2','Red SAM SHORAD Tor M2','Red SAM SA-5 Fixed'}
+		red = {'Red Armour Group','Red SAM AAA','Red SAM SHORAD SA-15','Red Armour Group 2','Red SAM SHORAD Tor M2',{ n = "Red SAM SA-5", p = true }}
 	},
 	insAirfield = {
 		blue = {'blueInfantry','bluePD2', 'bluePD1'},
@@ -111,7 +128,7 @@ upgrades = {
 	},
 	insGenericFoxtrotFixed = {
 		blue = {'blueInfantry','bluePD2', 'blueArmor'},
-		red = {'Enemy ground forces','Red Armour Group','Enemy ground forces','Red SAM AAA 2','Red SAM SHORAD SA-8 Fixed Foxtrot'}
+		red = {'Red SAM AAA Fixed Foxtrot','Enemy ground forces','Red Armour Group','Enemy ground forces','Red SAM AAA 2','Red SAM SHORAD SA-8'}
 	},
 	insMaximum = {
 		blue = {'blueInfantry'},
@@ -167,11 +184,11 @@ upgrades = {
 	},
 	bengurionDefence = {
 		blue = {},
-		red = {'Red SAM SHORAD SA-15 Fixed BenGurion','Red SAM SA-10 Fixed Benguriondefence', 'Red SAM SHORAD SA-19 Fixed Benguriondefence'}
+		red = {'Red SAM SHORAD SA-15',{ n = "Red SAM SA-10", p = true }, 'Red SAM SHORAD SA-19'}
 	},
 	SilkDefence = {
 		blue = {},
-		red = {'Silmworm Fixed 1','Red SAM AAA Silk Fixed','Red SAM SHORAD SA-15 Fixed'}
+		red = {'Silmworm Fixed 1','Red SAM AAA Silk Fixed','Red SAM SHORAD SA-15'}
 	},
 	ramatdavidDefence = {
 		blue = {},
@@ -190,7 +207,7 @@ upgrades = {
 	hidden1Group = {
 		blue = {},
 		red = {'Red EWR north Fixed', 'Red EWR Cyprus Fixed', 'Red EWR-southeast Fixed', 'Red EWR-south Fixed', 'HQ Fixed', 
-		'Red SAM SHORAD SA-15 Fixed HiddenGroup South', 'Red SAM SHORAD SA-15 EWR Group Fixed'}
+		'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15'}
 	},
 	hidden2Group = {
 		blue = {},
@@ -201,7 +218,7 @@ upgrades = {
 	hidden3Group = {
 		blue = {},
 		red = {'Red EWR north Fixed Coldwar', 'Red EWR Cyprus Fixed Coldwar', 'Red EWR-southeast Fixed Coldwar', 'Red EWR-south Fixed Coldwar', 'HQ Fixed', 
-		'Red SAM SHORAD SA-15 Fixed HiddenGroup South', 'Red SAM SHORAD SA-15 EWR Group Fixed'}
+		'Red SAM SHORAD SA-15', 'Red SAM SHORAD SA-15'}
 	},
 
 	PolisPaphosHiddenGroup = {
@@ -225,15 +242,46 @@ local cwSwap = {
 	['bluePD']  											= 'bluePD Coldwar',
 	['blueArmor']  											= 'blueArmor_Cw',
 	['blueHAWK']  											= 'blueHAWK_CW',
-	['Red SAM SHORAD Tor M2']  								= { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9', 'Red SAM SHORAD SA-15'} },
-	['Red SAM SHORAD Pantsir S1']  							= { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9', 'Red SAM SHORAD SA-15'} },
-	['Red SAM SHORAD Tor M2 Fixed Bravo']                	= 'Red SAM SHORAD SA-19 Fixed Bravo',
-	['Red SAM SHORAD Tor M2 Fixed SAITE']                 	= 'Red SAM SHORAD SA-19 Fixed SAITE',
-	['Red SAM SHORAD SA-15 Fixed']                        	= 'Red SAM SHORAD SA-8 Fixed',
-	['Red SAM SHORAD SA-15 Fixed HiddenGroup South']      	= 'Red SAM SHORAD SA-8 Fixed HiddenGroup South',
-	['Red SAM SHORAD SA-15 EWR Group Fixed']              	= 'Red SAM SHORAD SA-8 EWR Group Fixed',
-	['Red SAM SHORAD SA-15 Fixed BenGurion']              	= 'Red SAM SHORAD SA-8 Fixed BenGurion',
 
+}
+
+local vnSwap = {
+	['Enemy Task forces'] = 'Enemy task forces Vietnam',
+	['Enemy ground forces'] = 'Enemy ground forces Vietnam',
+	['Molniya'] = 'MissileBoat',
+	['Rezky'] = 'MissileBoat',
+	['Neustrashimy'] = 'MissileBoat',
+	['Grisha'] = 'FacLa',
+	['Red Armour Group'] = 'Red Armor Group Vietnam 1',
+	['Red Armour Group 2'] = 'Red Armor Group Vietnam 2',
+	['Red Armour Group 3'] = 'Red Armor Group Vietnam 3',
+	['Red Armour Group 4'] = 'Red Armor Group Vietnam 4',
+	['Red Armor Group'] = 'Red Armor Group Vietnam 1',
+	['Red Armor Group6'] = 'Red Armor Group Vietnam 1',
+	['Red Armor Group7'] = 'Red Armor Group Vietnam 2',
+	['Red Armor Group8'] = 'Red Armor Group Vietnam 3',
+	['Red Armor Group9'] = 'Red Armor Group Vietnam 4',
+	['Red Mech group 1'] = 'Red Mech group Vietnam 1',
+	['Red Mech group 2'] = 'Red Mech group Vietnam 2',
+	['Red Mech group 3'] = 'Red Mech group Vietnam 3',
+	['Red Mech group 4'] = 'Red Mech group Vietnam 4',
+	['Red Mech group 5'] = 'Red Mech group Vietnam 1',
+	['Red Mech group 6'] = 'Red Mech group Vietnam 2',
+	['Red Special 1'] = 'Red Special Vietnam 1',
+	['Red Special 2'] = 'Red Special Vietnam 2',
+	['Red Special 3'] = 'Red Special Vietnam 1',
+	['Red Arty'] = 'Red Arty Vietnam 1',
+	['Red Arty 1'] = 'Red Arty Vietnam 1',
+	['Red Arty 2'] = 'Red Arty Vietnam 2',
+	['Red Arty 3'] = 'Red Arty Vietnam 3',
+	['Red Arty 4'] = 'Red Arty Vietnam 4',
+	['Red Arty 5'] = 'Red Arty Vietnam 1',
+	['Red Arty 6'] = 'Red Arty Vietnam 2',
+	['Red Arty 7'] = 'Red Arty Vietnam 3',
+	['Red Arty 8'] = 'Red Arty Vietnam 4',
+	['Red Arty 9'] = 'Red Arty Vietnam 1',
+	['Red SAM AAA'] = 'Red SAM AAA Vietnam 1',
+	['Red SAM AAA 2'] = 'Red SAM AAA Vietnam 1',
 }
 
 local function deepSwap(t,s)
@@ -275,42 +323,14 @@ local function deepSwap(t,s)
 	end
 end
 
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 	deepSwap(upgrades,cwSwap)
 end
 
-
-local SamSwap = {
-	['Red SAM SA-10']   = { mode='random', list={'Red SAM SA-2', 'Red SAM SA-3', 'Red SAM SA-6'} },
-	['Red SAM SA-11']   = { mode='random', list={'Red SAM SA-2', 'Red SAM SA-3', 'Red SAM SA-6'} },}
-
-local SamSwapNoTorM2AndPantsir = {
-	['Red SAM SHORAD Tor M2 Fixed Bravo']                 = 'Red SAM SHORAD SA-19 Fixed Bravo',
-	['Red SAM SHORAD Tor M2 Fixed SAITE']                 = 'Red SAM SHORAD SA-19 Fixed SAITE',
-	['Red SAM SHORAD Tor M2']  							  = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
-	['Red SAM SHORAD Pantsir S1']  						  = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
-}
-
-local SamSwapNoSA15 = {
-	['Red SAM SHORAD SA-15 SAITE Fixed']                  = 'Red SAM SHORAD SA-8 SAITE Fixed',
-	['Red SAM SHORAD SA-15 Fixed Papa-2']                 = 'Red SAM SHORAD SA-8 Fixed Papa-2',
-	['Red SAM SHORAD SA-15 Fixed Papa-3']                 = 'Red SAM SHORAD SA-8 Fixed Papa-3',
-	['Red SAM SHORAD SA-15 Fixed']                        	= 'Red SAM SHORAD SA-8 Fixed',
-	['Red SAM SHORAD SA-15 Fixed HiddenGroup South']      	= 'Red SAM SHORAD SA-8 Fixed HiddenGroup South',
-	['Red SAM SHORAD SA-15 EWR Group Fixed']              	= 'Red SAM SHORAD SA-8 EWR Group Fixed',
-	['Red SAM SHORAD SA-15 Fixed BenGurion']              	= 'Red SAM SHORAD SA-8 Fixed BenGurion',
-	['Red SAM SHORAD SA-15']  							    = { mode='random', list={'Red SAM SHORAD SA-19', 'Red SAM SHORAD SA-8', 'Red SAM SHORAD SA-13', 'Red SAM SHORAD SA-9'} },
-}
-
-if NoSA10AndSA11 == true then
-	deepSwap(upgrades,SamSwap)
+if Era == 'Vietnam' then
+	deepSwap(upgrades,vnSwap)
 end
-if NoTorM2AndPantsir == true then
-	deepSwap(upgrades,SamSwapNoTorM2AndPantsir)
-end
-if NoSA15 == true then
-	deepSwap(upgrades,SamSwapNoSA15)
-end
+
 
 -- Randomized upgrade pools/templates (fresh start only)
 RandomRedPool = {
@@ -380,24 +400,23 @@ RandomBluePool = {
 	"blueArmor",
 	"bSamIR",
 	"bluePD",
-	"bluePD 2",
 	"bluePD1",
+	"blueHAWK",
 }
 
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 	deepSwap(RandomRedPool, cwSwap)
 	deepSwap(RandomBluePool, cwSwap)
 end
 
-if NoSA10AndSA11 == true then
-	deepSwap(RandomRedPool, SamSwap)
+if Era == 'Vietnam' then
+	deepSwap(RandomRedPool, vnSwap)
 end
-if NoTorM2AndPantsir == true then
-	deepSwap(RandomRedPool, SamSwapNoTorM2AndPantsir)
-end
-if NoSA15 == true then
-	deepSwap(RandomRedPool, SamSwapNoSA15)
-end
+
+RandomRedPickKeepChance = {
+	["Red SAM SHORAD Pantsir S1"] = 50,
+	["Red SAM SHORAD Tor M2"] = 50,
+}
 
 ZoneSizeExclusions = {
 	small = { "pantsir","tor m2" },
@@ -413,6 +432,8 @@ RandomUpgradeTemplates = {
 	bignosam = { sam = 0, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
 	extrabig = { sam = {1,2}, shorad = {0,5}, aaa = {0,4}, ground = {0,4}, armor = {0,4}, arty = {0,4}, total = {7,12}, flakChance = 40, flakSecondChance = 20, flakMax = 2 },
 	sam = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {3,5}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	shorad = { sam = 0, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = 0, arty = 0, total = {2,4}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	shoradsmall = { sam = 0, shorad = 2, aaa = 0, ground = 0, armor = 0, arty = 0, total = 2, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
 	sam2 = { sam = 1, shorad = {1,2}, aaa = {1,2}, ground = 0, armor = {0,1}, arty = 0, total = {3,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
 	samspecial = { sam = {2,3}, shorad = {0,4}, aaa = {0,3}, ground = 0, armor = 0, arty = 0, total = {5,9}, flakChance = 25, flakSecondChance = 8, flakMax = 2 },
 }
@@ -421,6 +442,7 @@ RandomUpgradeTemplatesBlue = {
 	small = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
 	smallmedium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
 	medium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+	mediumbig = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
 	big = { sam = 1, ground = 1, armor = 1, total = {3,4} },
 	extrabig = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
 	bignosam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
@@ -583,7 +605,7 @@ WaypointList = {
     ["Ben Gurion"] = ' (66)',
 }
 
-FootholdSaveBaseName = (Era == 'Coldwar') and 'footholdSyria_Extended_0.1_coldwar' or 'footholdSyria_Extended_0.1'
+FootholdSaveBaseName = (Era == 'Vietnam') and 'footholdSyria_Extended_0.1_vietnam' or ((Era == 'Coldwar') and 'footholdSyria_Extended_0.1_coldwar' or 'footholdSyria_Extended_0.1')
 
 local filepath = FootholdSaveBaseName .. '.lua'
 if lfs then
@@ -646,7 +668,7 @@ zones = {
 	durayhim = ZoneCommander:new({zone='Durayhim', side=1, level=20, upgrades=upgrades.insGeneric, crates={}, flavorText=flavor.durayhim}),
 	dam = ZoneCommander:new({zone='Dam', side=1, level=20,size='smallmedium', upgrades=upgrades.damupgrade, crates={}, flavorText=flavor.dam, income=0.5}),
 	tv = ZoneCommander:new({zone='TV Tower', side=1, level=20, upgrades=upgrades.insMinimum, crates={}, flavorText=flavor.tv}),
-	sa5 = ZoneCommander:new({zone='SA-5', side=1, level=20,size='small', upgrades=upgrades.sa5, crates={}, flavorText=flavor.sa5, customSuspendNmRed = 100}),
+	sa5 = ZoneCommander:new({zone='SA-5', side=1, level=20,size='sam', upgrades=upgrades.sa5, crates={}, flavorText=flavor.sa5, customSuspendNmRed = 100}),
 	milbase = ZoneCommander:new({zone='Military Base', side=1, level=20, upgrades=upgrades.milbase, crates={}, flavorText=flavor.milbase,customSuspendNmBlue = 60}),
 	carrier = ZoneCommander:new({zone='Carrier Group', side=StartNormal and 2 or 0, level=20, upgrades=upgrades.carrierFixed, crates={}, flavorText=flavor.carrier}),
 	refinery = ZoneCommander:new({zone='Refinery', side=1, level=20,size='smallmedium', upgrades=upgrades.generic, crates={}, flavorText=flavor.refinery, income=0.5,customSuspendNmBlue = 70}),
@@ -671,13 +693,13 @@ zones = {
 	shayrat = ZoneCommander:new({zone='Shayrat', side=1, size='bignosam', level=20, upgrades=upgrades.airfield, crates={}, flavorText=flavor.shayrat}),
 
 
-	benguriondefence = ZoneCommander:new({zone='Ben Gurion Defence', side=1, level=20, upgrades=upgrades.bengurionDefence, crates={}, flavorText=flavor.benguriondefence}),
+	benguriondefence = ZoneCommander:new({zone='Ben Gurion Defence', side=1,size='sam', level=20, upgrades=upgrades.bengurionDefence, crates={}, flavorText=flavor.benguriondefence}),
 	ramatdaviddefence = ZoneCommander:new({zone='Ramat David Defence', side=1, level=20,size='sam', upgrades=upgrades.ramatdavidDefence, crates={}, flavorText=flavor.ramatdaviddefence}),
 	jordandefence = ZoneCommander:new({zone='Jordan Defence',size='samspecial', side=1, level=20, upgrades=upgrades.jordanDefence, crates={}, flavorText=flavor.jordandefence}),
 	incirlikdefence = ZoneCommander:new({zone='Incirlik Defence', side=1,size='sam', level=20, upgrades=upgrades.incirlikdefence, crates={}, flavorText=flavor.incirlikdefence,customSuspendNm = ((CustomFlags['StartNormalFalse'] == false) or (CustomFlags['StartNormalFalse'] == nil and StartNormal)) and 140 or nil}),
 	
-	silkworm = ZoneCommander:new({zone='Silkworm Site', side=1, level=3, upgrades=upgrades.SilkDefence, crates={}, flavorText=flavor.silkworm}),
-	hidden1 = ZoneCommander:new({zone='Hidden1', side=0, level=25, upgrades=upgrades.hidden1Group, crates={}, flavorText=flavor.hidden1, NeutralAtStart=true}),
+	silkworm = ZoneCommander:new({zone='Silkworm Site', side=1, size='shorad', level=3, upgrades=upgrades.SilkDefence, crates={}, flavorText=flavor.silkworm}),
+	hidden1 = ZoneCommander:new({zone='Hidden1', side=0, size='shoradsmall', level=25, upgrades=upgrades.hidden1Group, crates={}, flavorText=flavor.hidden1, NeutralAtStart=true}),
 	hidden2 = ZoneCommander:new({zone='Hidden2', side=0, level=25, upgrades=upgrades.hidden2Group, crates={}, flavorText=flavor.hidden2, NeutralAtStart=true}),
 	hidden3 = ZoneCommander:new({zone='Hidden3', side=0, level=25, upgrades=upgrades.hidden2Group, crates={}, flavorText=flavor.hidden3, NeutralAtStart=true}),
 	hidden4 = ZoneCommander:new({zone='Hidden4', side=0, level=25, upgrades=upgrades.hidden2Group, crates={}, flavorText=flavor.hidden4, NeutralAtStart=true}),
@@ -685,52 +707,8 @@ zones = {
 
 }
 
-if Era == "Coldwar" then
+if ColdWarTechEra then
 
-    CapPlaneTemplate = {
-        'RED_MIG29A_Load1',
-        'RED_MIG29A_Load2',
-        'RED_SU27_EW',
-        'RED_MIG21Bis_Load1',
-        'RED_MIG21Bis_Load2',
-        'RED_MIG23MLD',
-        'RED_MIG25PD',
-        'BLUE_HORNET_CW',
-        'BLUE_F15C_CW',
-        'BLUE_F14A',
-    }
-    CasPlaneTemplate = {
-		'RED_SU25_OneShip_Load1',
-		'RED_SU25_OneShip_Load2',
-		'RED_SU25_OneShip_Load3',
-        'RED_SU25_TwoShip_Load1',
-		'RED_SU25_TwoShip_Load2',
-		'RED_SU25_TwoShip_Load3',
-        'RED_Mirage_F1BQ_Load1',
-        'RED_Mirage_F1BQ_Load2',
-        'BLUE_F4E_Load1',
-        'BLUE_F4E_Load2',
-    }
-    SeadPlaneTemplate = {
-        'RED_SU-24M_TWOSHIP',
-        'RED_SU-24M_ONESHIP',
-    }
-    CasHeloTemplate = {
-        'RED_Mi-24V_ONESHIP',
-        'RED_Mi-24V_TWOSHIP',
-        'BLUE_AH-64D_OneShip_Load2',
-        'BLUE_AH-64D_TwoShip_Load2',
-		'OH_58D',
-        'OH_58D_TwoShip',
-    }
-    HeloSupplyTemplate = {
-        'RED_MI-8',
-        'RED_MI-8_2',
-        'BLUE_CH-47',
-        'BLUE_CH-47_2',
-        'BLUE_UH-60A',
-        'BLUE_UH-1H',    
-    }
     AttackConvoy = {
         "AttackConvoy CW 1",
         "AttackConvoy CW 2",
@@ -742,92 +720,18 @@ if Era == "Coldwar" then
 		"GroundAttackConvoy CW 2",
 
 	}
-	RunwayStrikePlaneTemplate = {
-        "RED_MIG-27K_RUNWAY",
-        "RED_MIRAGE_F1_RUNWAY",
-    }
-	CapCarrierGroup = {
-        'BLUE_F14A',
-        'BLUE_HORNET_CW',
-	}
-	SeadCarrierGroup = {
-        'BLUE_F14_SEAD',
-	}
+    if Era == 'Vietnam' then
+        AttackConvoy = {
+            "AttackConvoy CW 2",
+            "AttackConvoy CW 3",
+        }
+        GroundAttackConvoy = {
+            "GroundAttackConvoy VT 1",
+        }
+    end
 	
 else
 
-    CapPlaneTemplate = {
-        'RED_MIG29S_Load1',
-		'RED_MIG29S_Load2',
-        'RED_MIG29A_Load1',
-        'RED_MIG29A_Load2',
-        'RED_SU27_Load1',
-        'RED_SU27_Load2',
-        'RED_MIG21Bis_Load1',
-        'RED_MIG21Bis_Load2',
-        'RED_MIG23MLD',
-        'RED_MIG31',
-        'BLUE_HORNET',
-        'BLUE_F15C',
-        'BLUE_F16C',
-        'BLUE_F14B',
-        'BLUE_M-2000C',
-    }
-    HeloSupplyTemplate = {
-        'RED_MI-8',
-        'RED_MI-8_2',
-        'BLUE_CH-47',
-        'BLUE_CH-47_2',
-        'BLUE_UH-60A',
-    }
-    CasPlaneTemplate = {
-		'RED_SU25_OneShip_Load1',
-		'RED_SU25_OneShip_Load2',
-		'RED_SU25_OneShip_Load3',
-        'RED_SU25_TwoShip_Load1',
-		'RED_SU25_TwoShip_Load2',
-		'RED_SU25_TwoShip_Load3',
-		'RED_SU25T_OneShip_Load1',
-		'RED_SU25T_OneShip_Load2',
-		'RED_SU25T_OneShip_Load3',
-		'RED_SU25T_TwoShip_Load1',
-		'RED_SU25T_TwoShip_Load2',
-		'RED_SU25T_TwoShip_Load3',
-        'RED_Mirage_F1BQ_Load1',
-        'RED_Mirage_F1BQ_Load2',
-        'RED_MIG21_BIS_ONE_SHIP',
-        'RED_MIG21_BIS_TWO_SHIP',
-        'BLUE_F4E_Load1',
-        'BLUE_F4E_Load2',
-    }
-    SeadPlaneTemplate = {
-        'RED_JF17_ONESHIP_SEAD',
-        'RED_JF17_TWOSHIP_SEAD',
-        'RED_SU25T_ONESHIP_SEAD',
-        'RED_SU25T_TWOSHIP_SEAD',
-        'RED_SU-34_ONESHIP_Load1',
-        'RED_SU-34_ONESHIP_Load2',
-        'RED_SU-34_TWOSHIP_Load1',
-        'RED_SU-34_TWOSHIP_Load2',
-        'RED_SU-24M_TWOSHIP',
-        'RED_SU-24M_ONESHIP',
-    }
-    CasHeloTemplate ={
-        'RED_Mi-24P_ONESHIP',
-        'RED_Mi-24P_TWOSHIP',
-        'RED_M-28N_ONESHIP_Load1',
-        'RED_M-28N_ONESHIP_Load2',
-        'RED_M-28N_TWOSHIP_Load1',
-        'RED_M-28N_TWOSHIP_Load2',
-        'BLUE_AH-64D_ONESHIP',
-        'BLUE_AH-64D_TWOSHIP',
-        'BLUE_AH-64D_TwoShip_Load2',
-        'BLUE_AH-1W',
-        'BLUE_SA342M',
-        'BLUE_SA342M_TwoShip',
-        'OH_58D',
-        'OH_58D_TwoShip',
-    }
     AttackConvoy = {
         "AttackConvoy 1",
         "AttackConvoy 2",
@@ -839,26 +743,161 @@ else
 		"GroundAttackConvoy 2",
 		"GroundAttackConvoy 3",
 	}
-	RunwayStrikePlaneTemplate = {
-        "RED_MIG-27K_RUNWAY",
-        "RED_SU-33_RUNWAY",
-        "RED_MIRAGE_F1_RUNWAY",
-		"BLUE_B1",
-    }
-	CapCarrierGroup = {
-        'BLUE_HORNET',
-        'BLUE_F14B',
-	}
-	SeadCarrierGroup = {
-        'BLUE_HORNET_SEAD',
-	}
 end
+
+-- Build final AI air template sets from Foothold Config.lua.
+AllCapPlaneTemplates = {
+	'RED_MIG15BIS_CAP_GUNS_TANKS',
+	'RED_MIG19P_CAP_K13A',
+	'RED_MIRAGE_F1CE_CAP_S530Fx2_MAGIC2x2',
+	'RED_MIRAGE_F1CE_CAP_R530F_EMx2_MAGIC2x2',
+	'RED_MIG29S_CAP_R77x3_R27ET_R73x2',
+	'RED_MIG29S_CAP_R77x2_R73x2_TANKSx3',
+	'RED_MIG29A_CAP_R73x6',
+	'RED_MIG29A_CAP_R73x4_R27ER2X',
+	'RED_SU27_CAP_R27Rx4_R27ER_R73x3_ECM',
+	'RED_SU27_CAP_R27ERx6_R73x2_ECM',
+	'RED_MIG21BIS_CAP_R3Rx4',
+	'RED_MIG21BIS_CAP_R3Rx2_R3Sx2',
+	'RED_MIG21BIS_CAP_R3Rx2_R35x2',
+	'RED_MIG23MLD_CAP_R24Rx2_R60Mx2',
+	'RED_MIG31_CAP_R33x4_R40Tx2',
+	'RED_SU27_CAP_R27ERx5_R73x3_ECM',
+	'RED_MIG25PD_CAP_R40Rx2_R60Mx2',
+	'BLUE_F86F_CAP_GAR8x2',
+	'BLUE_F100D_CAP_AIM9Ex2',
+	'BLUE_F5E3_CAP_AIM9Bx2',
+	'BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2',
+	'BLUE_F15C_CAP_AIM120Bx3_AIM120Cx5',
+	'BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M',
+	'BLUE_F14B_CAP_AIM54A_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2',
+	'BLUE_F14B_CAP_AIM54C_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2',
+	'BLUE_F14B_CAP_AIM54C_MK60x4_AIM7Mx2_AIM9Mx2_TANKSx2',
+	'BLUE_M2000C_CAP_S530Dx2_MAGIC2x2',
+	'BLUE_F4E_CAP_AIM7E2x4_AIM9Jx4_TANKSx3_ALE40',
+	'BLUE_FA18C_CAP_AIM7Mx6_AIM9Mx2',
+	'BLUE_F15C_CAP_AIM7Mx4_AIM9Mx4',
+	'BLUE_F14A_CAP_AIM54A_MK47x6_AIM9Mx2_TANKSx2',
+	'BLUE_F14A_CAP_AIM54A_MK47x2_AIM7Fx3_AIM9Lx2_TANKSx2',
+}
+
+AllCasPlaneTemplates = {
+	'RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_1SHIP',
+	'RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_1SHIP',
+	'RED_SU25_CAS_S25Lx6_B13x2_1SHIP',
+	'RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_2SHIP',
+	'RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_2SHIP',
+	'RED_SU25_CAS_S25Lx6_B13x2_1SHIP_DUPLICATE',
+	'RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_1SHIP',
+	'RED_SU25T_CAS_S25Lx6_B13x2_1SHIP',
+	'RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_1SHIP',
+	'RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_2SHIP',
+	'RED_SU25T_CAS_S25Lx6_B13x2_2SHIP',
+	'RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_2SHIP',
+	'RED_MIRAGE_F1BQ_CAS_SAMP400x2_SAMP250x2_2SHIP',
+	'RED_MIRAGE_F1BQ_CAS_MIXED_SNEB_SAMP_2SHIP',
+	'RED_MIG21BIS_CAS_RBK250x2_UB32x2_1SHIP',
+	'RED_MIG21BIS_CAS_RBK250x2_UB32x2_2SHIP',
+	'RED_MIG21BIS_CAS_S24Bx4_1SHIP',
+	'RED_MIG21BIS_CAS_S24Bx4_2SHIP',
+	'RED_MIG21BIS_CAS_KH66x2_FAB250x2_1SHIP',
+	'RED_MIG21BIS_CAS_KH66x2_FAB250x2_2SHIP',
+	'RED_MIG15BIS_CAS_FAB100Mx2_1SHIP',
+	'RED_MIG15BIS_CAS_FAB100Mx2_2SHIP',
+	'RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_1SHIP',
+	'RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_2SHIP',
+	'RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_1SHIP',
+	'RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_2SHIP',
+	'BLUE_F4E_CAS_WALLEYEIIx2_GBU12x2_PAVESPIKE_2SHIP',
+	'BLUE_F4E_CAS_AGM65Dx6_GBU12x2_PAVESPIKE_2SHIP',
+	'BLUE_F4E_CAS_M117x12_AIM7E2x3_TANKSx2_ALQ131',
+	'BLUE_F4E_CAS_AGM12Bx2_AIM7E2x3_TANK600_ALQ131',
+	'BLUE_F4E_CAS_WALLEYEIx4_TANK600_ALQ131',
+	'BLUE_F4E_CAS_WALLEYEIx2_AGM65Ax4_TANK600_ALQ131',
+	'BLUE_F100D_CAS_MK82x8_TANKSx2_2SHIP',
+	'BLUE_F100D_CAS_M117x6_TANKSx2_2SHIP',
+	'BLUE_F5E3_CAS_MK82LDx4_AIM9Bx2_TANK275_2SHIP',
+	'BLUE_F5E3_CAS_MK82SEx4_AIM9Bx2_TANK275_2SHIP',
+	'BLUE_F86F_CAS_AIM9Bx2_HVARx8_TANKSx2_2SHIP',
+	'BLUE_F86F_CAS_AIM9Bx2_M117x2_2SHIP',
+}
+
+AllSeadPlaneTemplates = {
+	'RED_JF17_SEAD_LD10x2_PL5EIIx2_SPJ_TANKSx2_1SHIP',
+	'RED_JF17_SEAD_LD10x2_PL5EIIx2_SPJ_TANKSx2_2SHIP',
+	'RED_SU25T_SEAD_KH58Ux2_KH25MPU_S24B_B13x2_R73x2_1SHIP',
+	'RED_SU25T_SEAD_KH58Ux2_KH25MPU_S24B_B13x2_R73x2_2SHIP',
+	'RED_SU34_SEAD_KH31Px4_R77x2_R27Rx2_R73x2_1SHIP',
+	'RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_1SHIP',
+	'RED_SU34_SEAD_KH31Px4_R77x2_R27Rx2_R73x2_2SHIP',
+	'RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_2SHIP',
+	'RED_SU24M_SEAD_KH58x2_FAB1500M54_L081_R60Mx4_2SHIP',
+	'RED_SU24M_SEAD_KH31Px2_KH25MLx2_FAB1500M54_L081_1SHIP',
+	'RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_1SHIP',
+	'RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_2SHIP',
+	'BLUE_F100D_SEAD_AGM45Ax2_CBU7x2_TANKSx2_2SHIP',
+	'BLUE_F4E_SEAD_AGM45Ax4_AIM7E2x3_TANK600_ALQ131',
+}
+
+AllRunwayStrikePlaneTemplates = {
+	'RED_MIG27K_RUNWAY_BETAB500x2_FAB250x2_R60Mx4_3SHIP',
+	'RED_SU33_RUNWAY_BETAB500x4_R27ERx4_R73x2_3SHIP',
+	'RED_MIRAGE_F1EE_RUNWAY_DURANDALx6_S530Fx2_AIM9JULIx2_3SHIP',
+	'RED_MIG21BIS_RUNWAY_BETAB500x2_R3Rx2_TANK490_3SHIP',
+}
+
+AllCasHeloTemplates = {
+	'RED_MI8_CAS_FAB100x6_1SHIP',
+	'RED_MI8_CAS_FAB100x6_2SHIP',
+	'RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_1SHIP',
+	'RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_2SHIP',
+	'RED_MI24P_CAS_9M114x8_B8x2_1SHIP',
+	'RED_MI24P_CAS_9M114x8_B8x2_2SHIP',
+	'RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_1SHIP',
+	'RED_MI28N_CAS_9M114x8_B8x2_1SHIP',
+	'RED_MI28N_CAS_9M114x8_B8x2_2SHIP',
+	'RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_2SHIP',
+	'RED_MI24V_CAS_B8x4_1SHIP',
+	'RED_MI24V_CAS_B8x4_2SHIP',
+	'BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_1SHIP',
+	'BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_2SHIP',
+	'BLUE_AH64D_CAS_AGM114Kx8_M261x2_1SHIP',
+	'BLUE_AH64D_CAS_AGM114Kx8_M261x2_2SHIP',
+	'BLUE_AH1W_CAS_AGM114Kx8_M260x2_1SHIP',
+	'BLUE_SA342M_CAS_HOT3x4_1SHIP',
+	'BLUE_SA342M_CAS_HOT3x4_2SHIP',
+	'BLUE_OH58D_CAS_AGM114x2_APKWS_1SHIP',
+	'BLUE_OH58D_CAS_AGM114x2_APKWS_2SHIP',
+	'BLUE_UH1H_CAS_XM158x2_M134x3_M60_1SHIP',
+	'BLUE_UH1H_CAS_XM158x2_M134x3_M60_2SHIP',
+}
+
+AllSupplyHeloTemplates = {
+	'RED_MI8_SUPPLY_KORD',
+	'RED_MI8_SUPPLY_KORD_PKT',
+	'BLUE_CH47_SUPPLY_M240Hx2',
+	'BLUE_CH47_SUPPLY_M60Dx3',
+	'BLUE_UH60A_SUPPLY_UNARMED',
+	'BLUE_UH1H_SUPPLY_UNARMED',
+}
+
+CapPlaneTemplate = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled, BlueCapPlaneEnabled)
+CasPlaneTemplate = BuildEnabledTemplateList(AllCasPlaneTemplates, RedCasPlaneEnabled, BlueCasPlaneEnabled)
+SeadPlaneTemplate = BuildEnabledTemplateList(AllSeadPlaneTemplates, RedSeadPlaneEnabled, BlueSeadPlaneEnabled)
+RunwayStrikePlaneTemplate = BuildEnabledTemplateList(AllRunwayStrikePlaneTemplates, RedRunwayStrikePlaneEnabled)
+CasHeloTemplate = BuildEnabledTemplateList(AllCasHeloTemplates, RedCasHeloEnabled, BlueCasHeloEnabled)
+HeloSupplyTemplate = BuildEnabledTemplateList(AllSupplyHeloTemplates, RedSupplyHeloEnabled, BlueSupplyHeloEnabled)
 	ArtilleryConvoyLong = {
 			"ArtilleryConvoyLong 1",
 	}
 	ArtilleryConvoyShort = {
 			"ArtilleryConvoyShort 1",
 	}
+	if Era == 'Vietnam' then
+		ArtilleryConvoyShort = {
+			"ArtilleryConvoyShort VT 1",
+		}
+	end
 	SupplyConvoy = {
 		"SupplyConvoy 1",
 		"SupplyConvoy 2",
@@ -911,9 +950,6 @@ zones.paphos:addGroups({
 
 })
 
-zones.carrier:addGroups({
-	GroupCommander:new({name='carrier-patrol-Akrotiri', mission='patrol', template='CapCarrierGroup', MissionType='CAP', targetzone='Akrotiri',type='carrier_air', Altitude = CapAltitude(), Bluecondition = function() return true end}),
-})
 
 zones.polis:addGroups({
 	GroupCommander:new({name='Polis-supply-Paphos', mission='supply', template='HeloSupplyTemplate', targetzone='Paphos'}),
@@ -973,14 +1009,6 @@ zones.gecitkale:addGroups({
 
 })
 
-zones.redcarrier:addGroups({
-	GroupCommander:new({name='CVN-73-supply-Incirlik', mission='supply', template='HeloSupplyTemplate', targetzone='Incirlik', Airbase='Tarawa',NotCargo=true, Bluecondition = function() return true end}),
-	GroupCommander:new({name='CVN-73-attack-Incirlik-Defence-Cas', mission='attack', template='CasHeloTemplate',MissionType='CAS', targetzone='Incirlik Defence', Airbase ='Tarawa', type='carrier_air', Bluecondition = function() return true end}),
-	GroupCommander:new({name='CVN-73-attack-Incirlik-Defence-Sead', mission='attack', template='SeadCarrierGroup',MissionType='SEAD', targetzone='Incirlik Defence',type='carrier_air', Altitude = SeadAltitude(), Bluecondition = function() return true end}),
-	GroupCommander:new({name='CVN-73-patrol-Red Carrier-Cap', mission='patrol', template='CapCarrierGroup',MissionType='CAP', targetzone='Red Carrier',type='carrier_air', Altitude = CapAltitude(), Bluecondition = function() return true end}),
-	GroupCommander:new({name='CVN-73-attack-Hotel-Sead', mission='attack', template='SeadCarrierGroup',MissionType='SEAD', targetzone='Hotel',type='carrier_air', Altitude = SeadAltitude(), Bluecondition = function() return true end}),
-	GroupCommander:new({name='CVN-73-attack-Incirlik-Sead', mission='attack', template='SeadCarrierGroup',MissionType='SEAD', targetzone='Incirlik', type='carrier_air', Altitude = SeadAltitude(), Bluecondition = function() return not zones.incirlikdefence.active end}),
-})
 
 zones.larnaca:addGroups({
 	GroupCommander:new({name='Larnaca-supply-Bassel Al-Assad', mission='supply', template='PlaneSupplyTemplate', targetzone='Bassel Al-Assad'}),
@@ -1073,6 +1101,8 @@ zones.juliett:addGroups({
 	GroupCommander:new({name='Juliett-supply-Refinery', mission='supply', template='HeloSupplyTemplate', targetzone='Refinery'})
 })
 
+local jirahAttackAleppoSurfaceArty = Era == 'Vietnam' and 'Jirah-attack-Aleppo-surface VT' or 'Jirah-attack-Aleppo-surface'
+local jirahAttackDurayhimArty = Era == 'Vietnam' and 'Jirah-attack-Durayhim VT' or 'Jirah-attack-Durayhim'
 zones.jirah:addGroups({
 	GroupCommander:new({name='Jirah-supply-Aleppo', mission='supply', template='HeloSupplyTemplate', targetzone='Aleppo'}),
 	GroupCommander:new({name='Jirah-supply-Tabqa', mission='supply', template='HeloSupplyTemplate', targetzone='Tabqa'}),
@@ -1085,8 +1115,8 @@ zones.jirah:addGroups({
 	GroupCommander:new({name='Jirah-attack-Duhur-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Abu al-Duhur', spawnDelayFactor = 2, Altitude = CasAltitude()}),
 	GroupCommander:new({name='Jirah-attack-Tabqa-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tabqa'}),
 	GroupCommander:new({name='Jirah-attack-Juliett-Cas', mission='attack', template='CasPlaneTemplate', MissionType='CAS', targetzone='Juliett', Altitude = CasAltitude()}),
-	GroupCommander:new({name='Jirah-attack-Aleppo-surface', mission='attack', targetzone='Aleppo', type='surface', SetActiveMisison = true}),
-	GroupCommander:new({name='Jirah-attack-Durayhim', mission='attack', targetzone='Durayhim', type='surface', SetActiveMisison = true}),
+	GroupCommander:new({name=jirahAttackAleppoSurfaceArty, mission='attack', targetzone='Aleppo', type='surface', SetActiveMisison = true}),
+	GroupCommander:new({name=jirahAttackDurayhimArty, mission='attack', targetzone='Durayhim', type='surface', SetActiveMisison = true}),
 	GroupCommander:new({name='Jirah-attack-Tabqa-Surface', mission='attack', targetzone='Tabqa',template='AttackConvoy', type='surface'}),
 })
 
@@ -1434,7 +1464,7 @@ function SpawnFriendlyAssets(changedZone)
 	if zones.silkworm.active and zones.redcarrier.side == 0 and not MessageSent then
 		MessageSent = true
 		trigger.action.outText(L10N:Get("SYRIA_SETUP_SILKWORM_BLOCKING"), 15)
-		trigger.action.outSoundForCoalition(2, "admin.ogg")
+		trigger.action.outSoundForCoalition(2, "admin.wav")
 	end
 	
 	if zones.hidden1.side == 1 and zones.hidden1.active then
@@ -1479,6 +1509,8 @@ function SpawnFriendlyAssets(changedZone)
 	if zones.redcarrier.side == 2 then zones.redcarrier:disableZone(true) end
 
 	if zones.carrier.active then zones.carrier:disableZone(true) end
+
+	if Era == 'Vietnam' then return end
 
 	if changedZone and not CarrierNavRefreshZones[changedZone] then return end
 
@@ -1615,7 +1647,7 @@ zones.radio.isHeloSpawn = true
 zones.india.isHeloSpawn = true
 zones.durayhim.isHeloSpawn = true
 zones.hotel.isHeloSpawn = true
-zones.carrier.isHeloSpawn = true
+if Era ~= 'Vietnam' then zones.carrier.isHeloSpawn = true end
 zones.thalah.isHeloSpawn = true
 zones.bengurion.isHeloSpawn = true
 zones.ramatdavid.isHeloSpawn = true
@@ -1624,7 +1656,7 @@ zones.kinghussein.isHeloSpawn = true
 zones.princehassan.isHeloSpawn = true
 zones.muwaffaq.isHeloSpawn = true
 zones.roshpina.isHeloSpawn = true
-zones.redcarrier.isHeloSpawn = true
+if Era ~= 'Vietnam' then zones.redcarrier.isHeloSpawn = true end
 
 zones.damascus.isHeloSpawn = true
 zones.annasiriyah.isHeloSpawn = true
@@ -1918,6 +1950,8 @@ SCHEDULER:New(nil,function()
 		"Rezky #",
 		"Grisha #",
 		"Neustrashimy #",
+		"MissileBoat #",
+		"FacLa #",
 	}, 30, nil, { groupMin = 60, groupMax = 180, zoneMin = 120, zoneMax = 360, cycleMin = 3600, cycleMax = 3600, carrierRangeNm = 90 })
 end,{},5,0)
 
@@ -2055,6 +2089,7 @@ local SHOP_PRICE_DEFAULTS = {
   dynamicdecoy  = 300,
   dynamicsead   = 500,
   dynamicbomb   = 500,
+  strategicbomber = 1500,
   groundattack  = 1000,
   cruisemsl     = 800,
   supplies2     = 200,
@@ -2086,6 +2121,7 @@ local SHOP_RANK_DEFAULTS = {
   dynamiccap     = 2,
   dynamiccas     = 5,
   dynamicbomb    = 4,
+  strategicbomber = 6,
   dynamicsead    = 4,
   groundattack   = 5,
   dynamicdecoy   = 1,
@@ -2638,6 +2674,152 @@ bc.shopItems['dynamicbomb'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
 
+Group.getByName('RedBomberEvent'):destroy()
+Group.getByName('RedBomberEvent_CW'):destroy()
+Group.getByName('BlueBomberEvent'):destroy()
+Group.getByName('BlueBomberEvent_CW'):destroy()
+
+StrategicBomber.Configure({
+	[1] = {
+		template = ColdWarTechEra and 'RedBomberEvent_CW' or 'RedBomberEvent',
+		escortTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
+		displayNameKey = "STRATEGIC_BOMBER_NAME_RED",
+		missionId = "bomb",
+		targetSide = 2,
+		routeAltitudeFt = 25000,
+		attackAltitudeFt = 25000,
+		weaponExpend = AI.Task.WeaponExpend.HALF,
+		holdSpeedKt = 300,
+		toIngressSpeedKt = 380,
+		afterIngressSpeedKt = 350,
+		escortAltitudeFt = 27000,
+		pickOptions = {
+			weaponExpend = AI.Task.WeaponExpend.HALF,
+			attackAltitudeFt = 25000,
+			minTargetSpawnNm = 80,
+			minPlayerSpawnNm = 80,
+			avoidPlayerCoalition = "blue",
+			allowSuspendedSpawn = true,
+			preferNonSuspendedSpawn = true,
+			randomCandidateLimit = 5
+		},
+		ingressDistanceNm = 25,
+		rtbApproachDistanceNm = 30
+	},
+	[2] = {
+		template = ColdWarTechEra and 'BlueBomberEvent_CW' or 'BlueBomberEvent',
+		escortTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, BlueCapPlaneEnabled),
+		displayNameKey = ColdWarTechEra and "STRATEGIC_BOMBER_NAME_BLUE_CW" or "STRATEGIC_BOMBER_NAME_BLUE",
+		missionId = "bombBlue",
+		targetSide = 1,
+		routeAltitudeFt = 25000,
+		attackAltitudeFt = ColdWarTechEra and 12000 or 25000,
+		weaponExpend = AI.Task.WeaponExpend.TWO,
+		holdSpeedKt = 300,
+		toIngressSpeedKt = 380,
+		afterIngressSpeedKt = 350,
+		escortAltitudeFt = 27000,
+		interceptorTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
+		interceptorAltitudeFt = 25000,
+		minTargetSpawnNm = 60,
+		ingressDistanceNm = 25,
+		rtbApproachDistanceNm = 30,
+		recoveryZones = {
+			'Akrotiri',
+			'Paphos',
+			'Gecitkale',
+			'Ercan',
+			'Larnaca',
+			'Bassel Al-Assad',
+			'Incirlik',
+			'Aleppo',
+			'Damascus',
+			'Beirut',
+			'Ben Gurion',
+			'Marka',
+			'Muwaffaq Salti',
+			'Abu al-Duhur',
+			'Hama',
+			'Hatay',
+			'Jirah',
+			'King Hussein Air College',
+			'Palmyra',
+			'Prince Hassan',
+			'Ramat David',
+			'Rayak',
+			'Rene Mouawad',
+			'Shayrat',
+			'Tabqa',
+			'Tiyas',
+		},
+		recoveryMinRunwayLengthMeters = 2300,
+		playerEscortReward = 1000,
+		lossPenaltyCredits = 500
+	}
+})
+
+local strategicBomberShopName = function(T)
+	return LT(T):Get("STRATEGIC_BOMBER_SHOP_NAME")
+end
+
+bc:registerShopItem('strategicbomber', strategicBomberShopName, ShopPrices.strategicbomber,
+function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+end,
+function(sender, params)
+	if params and params.targetZone and params.originZone then
+		return StrategicBomber.LaunchBlue(params)
+	end
+
+	local targetZone = params and params.zone
+	if type(targetZone) == "string" then
+		targetZone = bc:getZoneByName(targetZone)
+	end
+	if not StrategicBomber.BlueTargetAllowed(targetZone) then
+		return LTGet("STRATEGIC_BOMBER_INVALID_TARGET")
+	end
+
+	local bestOrigin = nil
+	local bestDist = math.huge
+	for _, originZone in ipairs(bc:getZones()) do
+		if StrategicBomber.BlueOriginAllowed(originZone, targetZone) then
+			local dist = DynamicBomber.ZoneDistanceMeters(originZone.zone, targetZone.zone)
+			if dist < bestDist then
+				bestDist = dist
+				bestOrigin = originZone
+			end
+		end
+	end
+
+	if not bestOrigin then
+		return LTGet("STRATEGIC_BOMBER_NO_VALID_ORIGIN")
+	end
+
+	return StrategicBomber.LaunchBlue({
+		targetZone = targetZone,
+		originZone = bestOrigin,
+		escortMode = "ai"
+	})
+end)
+bc.shopItems['strategicbomber'].groupZoneSelector = {
+	targetzoneside = 1,
+	includeSuspended = false,
+	sortPolicy = 'enemy_frontline',
+	extraPredicate = function(zoneObj)
+		if not StrategicBomber.BlueTargetAllowed(zoneObj) then return false end
+		for _, originZone in ipairs(bc:getZones()) do
+			if StrategicBomber.BlueOriginAllowed(originZone, zoneObj) then
+				return true
+			end
+		end
+		return false
+	end,
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		return StrategicBomber.BuildBlueShopMenu(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	end,
+	emptyLabel = LTGet("STRATEGIC_BOMBER_NO_VALID_TARGETS"),
+}
+
 ---------------------------------------------END DYNAMIC SHOP ------------------------------------------
 
 local jtacDrones
@@ -2646,7 +2828,7 @@ for _,n in ipairs({'jtacDroneColdwar1','jtacDroneColdwar2','jtacDrone1','jtacDro
     local g = Group.getByName(n)
     if g then g:destroy() end
 end
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 jtacDrones = {JTAC:new({name = 'jtacDroneColdwar1'}),JTAC:new({name = 'jtacDroneColdwar2'})}
 else
 jtacDrones = {JTAC:new({name = 'jtacDrone1'}),JTAC:new({name = 'jtacDrone2'})}
@@ -2672,7 +2854,7 @@ end,function(sender,params)
 		dr:deployAtZone(params.zone)
 		dr:showMenu()
 		table.insert(jtacQueue,dr)
-		if Era == 'Coldwar' then
+		if ColdWarTechEra then
 			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_ACTIVE", params.zone.zone, #jtacQueue),15)
 		else
 			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_JTAC_REAPER_ACTIVE", params.zone.zone, #jtacQueue),15)
@@ -2701,7 +2883,7 @@ local jtacTargetMenu2 = nil
 local droneAM
 Group.getByName('JTAC9lineamColdwar'):destroy()
 Group.getByName('JTAC9lineam'):destroy()
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 droneAM = JTAC9line:new({name = 'JTAC9lineamColdwar'})
 else
 droneAM = JTAC9line:new({name = 'JTAC9lineam'})
@@ -2712,8 +2894,8 @@ end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         droneAM:deployAtZone(params.zone)
-        jtacZones[params.zone.zone] = {drone = Era == 'Coldwar' and 'JTAC9lineamColdwar' or 'JTAC9lineam'}
-		if Era == 'Coldwar' then
+        jtacZones[params.zone.zone] = {drone = ColdWarTechEra and 'JTAC9lineamColdwar' or 'JTAC9lineam'}
+		if ColdWarTechEra then
 			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_AM", params.zone.zone), 30)
 
     	else
@@ -2736,7 +2918,7 @@ Group.getByName('JTAC9linefmColdwar'):destroy()
 Group.getByName('JTAC9linefm'):destroy()
 local jtacTargetMenu3 = nil
 local droneFM
-if Era == 'Coldwar' then
+if ColdWarTechEra then
 droneFM = JTAC9line:new({name = 'JTAC9linefmColdwar'})
 else
 droneFM = JTAC9line:new({name = 'JTAC9linefm'})
@@ -2747,9 +2929,9 @@ end,
 function(sender, params)
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         droneFM:deployAtZone(params.zone)
-        jtacZones[params.zone.zone] = {drone = Era == 'Coldwar' and 'JTAC9linefmColdwar' or 'JTAC9linefm'}
+        jtacZones[params.zone.zone] = {drone = ColdWarTechEra and 'JTAC9linefmColdwar' or 'JTAC9linefm'}
 
-		if Era == 'Coldwar' then
+		if ColdWarTechEra then
 			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_FM", params.zone.zone), 30)
 
     	else
@@ -2982,7 +3164,7 @@ function(sender, params)
 	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup((Era == 'Coldwar') and 'ca-tanks-Coldwar' or 'ca-tanks')
+		zn:spawnGroup(ColdWarTechEra and 'ca-tanks-Coldwar' or 'ca-tanks')
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_ARMOR_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -3227,6 +3409,12 @@ end
 
 bc:registerShopItem(RED_MASS_ATTACK_ID, LTGet("SYRIA_SHOP_ITEM_RED_MASS_ATTACK"), RED_MASS_ATTACK_COST, redMassAttackAction)
 
+local RED_STRATEGIC_BOMBER_ID = "strategicbomberRed"
+
+bc:registerShopItem(RED_STRATEGIC_BOMBER_ID, strategicBomberShopName, ShopPrices.strategicbomber, function(sender)
+	return StrategicBomber.LaunchRed()
+end)
+
 -- end of red
 
 local infMenu=nil
@@ -3261,7 +3449,7 @@ bc.shopItems['zinf'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
 }
 local samLabel = function(T)
-	return (Era == 'Coldwar') and LT(T):Get("SYRIA_SHOP_ITEM_UPGRADE_HAWK")
+	return ColdWarTechEra and LT(T):Get("SYRIA_SHOP_ITEM_UPGRADE_HAWK")
 	                           or  LT(T):Get("SYRIA_SHOP_ITEM_UPGRADE_NASAMS")
 end
 local samMenu=nil
@@ -3277,9 +3465,9 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		params.zone:addExtraSlot((Era == 'Coldwar') and 'bluePD Coldwar' or 'bluePD1')
+		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD Coldwar' or 'bluePD1')
 		bc:refreshZoneLabel(params.zone.zone)
-        local sys = (Era == 'Coldwar') and 'Hawk' or 'Nasams'
+        local sys = ColdWarTechEra and 'Hawk' or 'Nasams'
         if bc.globalExtraUnlock then
             trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", sys, params.zone.zone, tostring(ShopPrices.zsam)),10)
         else
@@ -3406,6 +3594,8 @@ bc.shopItems['dynamicsead'].groupZoneSelector.candidateBucket = 'enemy_unsuspend
 bc.shopItems['dynamicsead'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 bc.shopItems['dynamicbomb'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['dynamicbomb'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+bc.shopItems['strategicbomber'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
+bc.shopItems['strategicbomber'].groupZoneSelector.refreshTags = { 'enemy_targets', 'friendly_targets' }
 bc.shopItems['groundattack'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['groundattack'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 bc.shopItems['cruisemsl'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
@@ -3466,7 +3656,7 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		local slotID = (Era == 'Coldwar') and 'blueArmor_cw' or 'blueArmor'
+		local slotID = ColdWarTechEra and 'blueArmor_cw' or 'blueArmor'
 		params.zone:addExtraSlot(slotID)
 		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
@@ -3552,6 +3742,7 @@ ShopPrices = ShopPrices or {
 	dynamicdecoy  = 300,  -- TALD DECOY Flight
 	dynamicsead   = 500,  -- SEAD Flight
 	dynamicbomb   = 500,  -- Bomber Flight
+	strategicbomber = 1500, -- Strategic Bomber
 	groundattack  = 1000, -- Ground attack convoy
 	cruisemsl     = 800,  -- Cruise Missile Strike
 	supplies2     = 200,  -- Resupply friendly Zone
@@ -3583,6 +3774,7 @@ ShopRankRequirements = ShopRankRequirements or {
 	dynamiccap     = 2,  -- CAP Flight
 	dynamiccas     = 5,  -- CAS Flight
 	dynamicbomb    = 4,  -- Bomber Flight
+	strategicbomber = 6, -- Strategic Bomber
 	dynamicsead    = 4,  -- SEAD Flight
 	groundattack   = 5,  -- Ground attack convoy
 	dynamicdecoy   = 1,  -- TALD DECOY Flight
@@ -3643,15 +3835,25 @@ ShopCats.Order = {
 
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
 bc:addShopItem(1, 'redmassattack', -1, 1) -- red AI mass airbase attack
+if Era ~= 'Vietnam' then
+bc:addShopItem(1, 'strategicbomberRed', -1, 2) -- red AI strategic bomber
+end
 
 -- AI Attack
 bc:addShopItem(2, 'dynamiccap', -1, 1, ShopRankRequirements.dynamiccap, ShopCats.AIAttack) -- CAP Flight
 bc:addShopItem(2, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats.AIAttack) -- CAS Flight
 bc:addShopItem(2, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack) -- Bomber Flight
+if Era ~= 'Vietnam' then
+end
 bc:addShopItem(2, 'dynamicsead', -1, 4, ShopRankRequirements.dynamicsead, ShopCats.AIAttack) -- SEAD Flight
+if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, ShopCats.AIAttack) -- TALD DECOY Flight
+end
 bc:addShopItem(2, 'groundattack', -1, 6, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
 bc:addShopItem(2, 'cruisemsl', 12, 7, ShopRankRequirements.cruisemsl, ShopCats.AIAttack) -- Cruise missiles
+if Era ~= 'Vietnam' then
+bc:addShopItem(2, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
+end
 -- Zone Upgrades
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
 bc:addShopItem(2, 'zarm', -1, 2, ShopRankRequirements.zarm, ShopCats.ZoneUpgrades) -- add armour group to a zone
@@ -3664,13 +3866,17 @@ end
 
 -- JTAC & Intel
 
+if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac, ShopCats.JTACIntel) -- MQ-9 Reaper JTAC mission
+end
 bc:addShopItem(2, 'smoke', -1, 2, ShopRankRequirements.smoke, ShopCats.JTACIntel) -- smoke on target
 bc:addShopItem(2, 'flare', -1, 3, ShopRankRequirements.flare, ShopCats.JTACIntel) -- flare on target
 bc:addShopItem(2, 'illum', -1, 4, ShopRankRequirements.illum, ShopCats.JTACIntel) -- illumination bomb
 bc:addShopItem(2, 'intel', -1, 5, ShopRankRequirements.intel, ShopCats.JTACIntel) -- Intel
+if Era ~= 'Vietnam' then
 bc:addShopItem(2, '9lineam', -1, 6, ShopRankRequirements["9lineam"], ShopCats.JTACIntel) -- free jtac
 bc:addShopItem(2, '9linefm', -1, 7, ShopRankRequirements["9linefm"], ShopCats.JTACIntel) -- free jtac
+end
 
 
 -- Combined Arms
@@ -3824,8 +4030,6 @@ if disableBlueCarrierAfterInit then
 	zones.silkworm:disableZone(true)
 end
 	if DestroyOnce then
-		destroyGroupIfActive('Red SAM SHORAD SA-15 Fixed HiddenGroup South')
-		destroyGroupIfActive('Red SAM SHORAD SA-8 Fixed HiddenGroup South')
 		destroyGroupIfActive('Red EWR-south Fixed Coldwar')
 		destroyGroupIfActive('Red EWR-south Fixed')
 		destroyGroupIfActive('HQ Fixed')
@@ -3833,7 +4037,9 @@ end
 		zones.carrier:disableZone(true)
 		zones.benguriondefence:disableZone(true)
 		zones.silkworm:disableZone(true)
-		bc:deployCarrierNavigationArea("CVN72_AREA_RAMAT", true)
+		if Era ~= 'Vietnam' then
+			bc:deployCarrierNavigationArea("CVN72_AREA_RAMAT", true)
+		end
 	end
 
 budgetAI = BudgetCommander:new({ battleCommander = bc, side=1, decissionFrequency=20*60, decissionVariance=10*60, skipChance = 10})
@@ -3853,24 +4059,30 @@ Frontline.BuildFromZones(bc.indexedZones)
 Frontline.ReindexZoneCalcs()
 bc:buildCapSpawnBuckets()
 startWarehousePersistence()
-bc:enableCarrierNavigation()
-if not bc.carrierNavigation or not next(bc.carrierNavigation) then
-    if CustomFlags['StartNormalFalse'] == true then
-        bc:deployCarrierNavigationArea("CVN72_AREA_RAMAT", true)
-    else
-        bc:deployCarrierNavigationArea("CVN72_AREA_CYPRUS_SOUTH")
-    end
+if Era ~= 'Vietnam' then
+	bc:enableCarrierNavigation()
+	if not bc.carrierNavigation or not next(bc.carrierNavigation) then
+		if CustomFlags['StartNormalFalse'] == true then
+			bc:deployCarrierNavigationArea("CVN72_AREA_RAMAT", true)
+		else
+			bc:deployCarrierNavigationArea("CVN72_AREA_CYPRUS_SOUTH")
+		end
+	end
+	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Hotel",true)
+	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Incirlik",true) -- for Test
+	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Bassel Al-Assad",true)
+	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RAMAT", "Ben Gurion", "occupied")
+	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RAMAT", "Ramat David", "occupied")
+	--[[ bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Larnaca", "true")
+	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Akrotiri", "true")
+	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Silkworm Site", "true")
+	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Gecitkale", "true") ]]
+	--bc:addCarrierNavigationSuspendConnection("CVN72_AREA_INCIRLIK_SOUTH", "Incirlik")
+else
+	destroyGroupIfActive('CVN-72')
+	destroyGroupIfActive('CVN-74')
+	destroyGroupIfActive('Tarawa')
 end
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Hotel",true)
---bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Incirlik",true)
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Bassel Al-Assad",true)
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RAMAT", "Ben Gurion", "occupied")
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RAMAT", "Ramat David", "occupied")
---[[ bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Larnaca", "true")
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Akrotiri", "true")
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Silkworm Site", "true")
-bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Gecitkale", "true") ]]
---bc:addCarrierNavigationSuspendConnection("CVN72_AREA_INCIRLIK_SOUTH", "Incirlik")
 local HuntNumber = SplashDamage and math.random(10,15) or math.random(8,15)
 local AirHuntNumber = math.random(4,8)
 bc:initHunter(HuntNumber, AirHuntNumber)
@@ -3993,79 +4205,10 @@ mc:trackMission({
 })
 
 --------------------------------------- End of Oscar Scuds ---------------------------------------
----------------------------------------- Escort me mission ---------------------------------------
-local EscortCooldown = 2400
-local lastEscortCooldown   = -EscortCooldown
-Group.getByName('escort-me'):destroy()
-Group.getByName('interceptor-1'):destroy()
-Group.getByName('interceptor-2'):destroy()
-evc:addEvent({
-	id='escort',
-	action = function()
-		RespawnGroup('escort-me') 
-		
-	local function spawnIntercept(args)
-		local groupname = args[1]
-		--env.info('spawnIntercept called for '..tostring(groupname))
-		if Group.getByName('escort-me') then
-				local g = GROUP:FindByName(groupname,false)
-				if not g then
-					if math.random(1,100) > 30 then
-						if math.random(1,100) > 50 then
-							trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_EVENT_INTERCEPTOR_SPOTTED"),15)
-						else
-							trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_EVENT_INTERCEPT_MISSION"),15)
-						end
-						RespawnGroup(groupname)
-					end
-				end
-			end
-		end
-		local timers = {math.random(10*60,20*60), math.random(15*60,25*60)}
-		timer.scheduleFunction(spawnIntercept, {'interceptor-1'}, timer.getTime() + timers[1])
-		timer.scheduleFunction(spawnIntercept, {'interceptor-2'}, timer.getTime() + timers[2])
-	end,
-	canExecute = function()
-		if DisableFriendlyEscortMeMission == true then return false end
-		if timer.getTime() - lastEscortCooldown < EscortCooldown then return false end
-		local gr = Group.getByName('escort-me')
-		if gr then return false end
-		if bc:getZoneByName('Incirlik').side ~= 2 then return false end
-		local triggers = {'Abu al-Duhur', 'Hatay', 'Incirlik', 'Taftanaz', 'Hama'}
-		for _,v in ipairs(triggers) do
-			if bc:getZoneByName(v).side == 2 and not bc:getZoneByName(v).suspended then
-				return true
-			end
-		end
-		
-		return false
-	end
-})
-mc:trackMission({
-    title = LTGet("SYRIA_MISSION_ESCORT_CARGO_TITLE"),
-    description = LTGet("SYRIA_MISSION_ESCORT_CARGO_DESC"),
-    messageStart = LTGet("SYRIA_MISSION_ESCORT_CARGO_START"),
-    messageEnd = function(T) lastEscortCooldown = timer.getTime() return LT(T):Get("SYRIA_MISSION_ESCORT_CARGO_END") end,
-    startAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
-        end
-    end,
-    endAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "cancel.ogg")
-        end
-    end,
-    isActive = function()
-        if Group.getByName('escort-me') then return true end
-        return false
-    end
-})
----------------------------------------- End of Escort me mission ---------------------------------------
 -------------------------------------------- CAS 1 --------------------------------------------
 local airstrike_COOLDOWN = 1800
 local lastairstrike_COOLDOWN  = -airstrike_COOLDOWN
-local casGrp = Era=='Coldwar' and 'evt-CAScw' or 'evt-CAS'
+local casGrp = ColdWarTechEra and 'evt-CAScw' or 'evt-CAS'
 Group.getByName('evt-CAS'):destroy()
 Group.getByName('evt-CAScw'):destroy()
 evc:addEvent({
@@ -4087,6 +4230,7 @@ evc:addEvent({
 		end,{},timer.getTime()+3)
 	end,
 	canExecute=function()
+		if Era == 'Vietnam' then return false end
 		if ActiveMission['cas'] then return false end
 		if timer.getTime()-lastairstrike_COOLDOWN<airstrike_COOLDOWN then return false end
 		if Group.getByName(casGrp) then return false end
@@ -4127,7 +4271,7 @@ mc:trackMission({
 -------------------------------------------- CAS 2 --------------------------------------------
 local airstrike2_COOLDOWN = 1800
 local lastairstrike2_COOLDOWN  = -airstrike2_COOLDOWN
-local casGrp = Era=='Coldwar' and 'evt-CAScw2' or 'evt-CAS2'
+local casGrp = ColdWarTechEra and 'evt-CAScw2' or 'evt-CAS2'
 Group.getByName('evt-CAS2'):destroy()
 Group.getByName('evt-CAScw2'):destroy()
 evc:addEvent({
@@ -4148,6 +4292,7 @@ evc:addEvent({
 		end,{},timer.getTime()+3)
 	end,
 	canExecute=function()
+		if Era == 'Vietnam' then return false end
 		if ActiveMission['cas2'] then return false end
 		if timer.getTime()-lastairstrike2_COOLDOWN<airstrike2_COOLDOWN then return false end
 		if Group.getByName(casGrp) then return false end
@@ -4185,44 +4330,28 @@ mc:trackMission({
 })
 -------------------------------------------- End of CAS 2 -----------------------------------------
 ------------------------------------------------ Bomber event ---------------------------------------------
-local bomb_COOLDOWN = 1800
-local lastbomb_COOLDOWN  = -bomb_COOLDOWN
-Group.getByName('evt-bomber'):destroy()
-local escGrp = Era=='Coldwar' and 'EscortBomberCW' or 'EscortBomber'
-
-evc:addEvent({
-	id='bomb',
-	action=function()
-		RespawnGroup('evt-bomber')
-		RegisterGroupTarget('evt-bomber',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb')
-		timer.scheduleFunction(function()
-			RespawnGroup(escGrp)
-				local tgts = {
-					'Hatay','Abu al-Duhur','Hama','Jirah','Aleppo','Taftanaz','Palmyra',
-					'Bassel Al-Assad','Hotel','Juliett','Factory','India','Military Base'}
-					if Group.getByName('evt-bomber') then
-						local bomber, bomberMission = StartBomberAuftrag('bomb', 'evt-bomber', tgts, escGrp)
-				end
-		end,{},timer.getTime()+1)
-	end,
-	canExecute=function()
-		if ActiveMission['bomb'] then return false end
-		if timer.getTime()-lastbomb_COOLDOWN<bomb_COOLDOWN then return false end
-		if Group.getByName('evt-bomber') then return false end
-		--if math.random(1,100)<70 then return false end
-		local trg={'Abu al-Duhur','Aleppo','Hama','Tabqa','Palmyra'}
-		for _,v in ipairs(trg) do
-			if bc:getZoneByName(v).side==2 and not bc:getZoneByName(v).suspended then return true end
-		end
-		return false
-	end
-})
-
 mc:trackMission({
 	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
-	description = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_NE"),
-	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
-	messageEnd=function(T) lastbomb_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
+	description = function(T)
+		local desc = LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC")
+		local st = StrategicBomber.GetState(1)
+		if st and st.spawnZone and st.targetZone then
+			desc = desc .. "\n\n" .. LT(T):Format("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_DETAIL", st.spawnZone, st.targetZone)
+		end
+		return desc
+	end,
+	messageStart = function(T)
+		local msg = LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_START")
+		local st = StrategicBomber.GetState(1)
+		if st and st.spawnZone and st.targetZone then
+			msg = msg .. "\n\n" .. LT(T):Format("SYRIA_MISSION_INTERCEPT_BOMBERS_START_DETAIL", st.spawnZone, st.targetZone)
+		end
+		return msg
+	end,
+	messageEnd=function(T)
+		StrategicBomber.Clear(1)
+		return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END")
+	end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -4233,140 +4362,13 @@ mc:trackMission({
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
 		bc:cancelGroupTargetMission('bomb')
-    end,
+	end,
 	isActive = function()
-		if not ActiveMission['bomb'] then return false end
-		if Group.getByName('evt-bomber') then return true end
-		ActiveMission['bomb'] = nil
-		return false
+		return StrategicBomber.IsMissionActive(1)
 	end
 })
 
 -------------------------------------------- End of Bomber event ------------------------------------------
-
------------------------------------------------- Bomber 2 event ---------------------------------------------
-local bomb2_COOLDOWN = 3600
-local lastbomb2_COOLDOWN  = -bomb2_COOLDOWN
-Group.getByName('evt-bomber2'):destroy()
-local escGrp2 = Era=='Coldwar' and 'EscortBomber2CW' or 'EscortBomber2'
-
-evc:addEvent({
-	id='bomb2',
-	action=function()
-		RespawnGroup('evt-bomber2')
-		RegisterGroupTarget('evt-bomber2',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb2')
-		timer.scheduleFunction(function()
-			RespawnGroup(escGrp2)
-			local tgts = {
-					'Paphos','Ercan','Gecitkale','Pinarbashi','Larnaca','Incirlik'}
-					if Group.getByName('evt-bomber2') then
-						local bomber2, bomber2mission = StartBomberAuftrag('bomb2', 'evt-bomber2', tgts, escGrp2)
-					end
-		end,{},timer.getTime()+1)
-	end,
-	canExecute=function()
-		if ActiveMission['bomb2'] then return false end
-		if ActiveMission['bomb'] then return false end
-		if timer.getTime()-lastbomb2_COOLDOWN<bomb2_COOLDOWN then return false end
-		local trg={'Paphos','Incirlik'}
-		for _,v in ipairs(trg) do
-			if bc:getZoneByName(v).side==2 and not bc:getZoneByName(v).suspended then return true end
-		end
-		return false
-	end
-})
-
-mc:trackMission({
-	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
-	description = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_CYPRUS"),
-	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
-	messageEnd=function(T) lastbomb2_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
-	startAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
-        end
-    end,
-    endAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "cancel.ogg")
-        end
-		bc:cancelGroupTargetMission('bomb2')
-    end,
-	isActive = function()
-		if not ActiveMission['bomb2'] then return false end
-		if Group.getByName('evt-bomber2') then return true end
-		ActiveMission['bomb2'] = nil
-		return false
-	end
-})
-
--------------------------------------------- End of Bomber 2 event ------------------------------------------
-
------------------------------------------------- Bomber 2 event ---------------------------------------------
-local bomb3_COOLDOWN = 1800
-local lastbomb3_COOLDOWN  = -bomb3_COOLDOWN
-Group.getByName('evt-bomber3'):destroy()
-local escGrp3 = Era=='Coldwar' and 'EscortBomber3CW' or 'EscortBomber3'
-
-evc:addEvent({
-	id='bomb3',
-	action=function()
-		RespawnGroup('evt-bomber3')
-		RegisterGroupTarget('evt-bomber3',500,L10N:Get("SYRIA_MISSION_TARGET_INTERCEPT_BOMBERS"),'bomb3')
-		timer.scheduleFunction(function()
-			local bomber3
-			RespawnGroup(escGrp3)
-				local tgts = {
-					'Beirut','An Nasiriyah','Damascus','Thalah','King Hussein Air College','Prince Hassan', 'Ramat David'}
-
-				if Group.getByName('evt-bomber3') then
-					local bomber3, bomber3mission = StartBomberAuftrag('bomb3', 'evt-bomber3', tgts, escGrp3)
-
-				end
-		end,{},timer.getTime()+1)
-	end,
-	canExecute=function()
-		if ActiveMission['bomb3'] then return false end
-		if ActiveMission['bomb2'] then return false end
-		if ActiveMission['bomb'] then return false end
-		if timer.getTime()-lastbomb3_COOLDOWN<bomb3_COOLDOWN then return false end
-		if Group.getByName('evt-bomber') then return false end
-		if Group.getByName('evt-bomber2') then return false end
-		if Group.getByName('evt-bomber3') then return false end
-		--if math.random(1,100)<70 then return false end
-		local trg={'An Nasiriyah','Beirut','King Hussein Air College', 'Prince Hassan', 'Ramat David','Muwaffaq Salti','Beirut','Palmyra'}
-		for _,v in ipairs(trg) do
-			if bc:getZoneByName(v).side==2 and not bc:getZoneByName(v).suspended then return true end
-		end
-		return false
-	end
-})
-
-mc:trackMission({
-	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
-	description = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_DESC_CYPRUS"),
-	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_START"),
-	messageEnd=function(T) lastbomb3_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_BOMBERS_END") end,
-	startAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
-        end
-    end,
-    endAction = function()
-         if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "cancel.ogg")
-        end
-		bc:cancelGroupTargetMission('bomb3')
-    end,
-	isActive = function()
-		if not ActiveMission['bomb3'] then return false end
-		if Group.getByName('evt-bomber3') then return true end
-		ActiveMission['bomb3'] = nil
-		return false
-	end
-})
-
--------------------------------------------- End of Bomber 3 event ------------------------------------------
 
 ------------------------------------------------- Ship event ----------------------------------------------
 local Ship_COOLDOWN = 1800
@@ -4479,8 +4481,8 @@ duhurForce = {
 	['Aleppo'] = { 'evt-aleppo-duhur-attack' , 'evt-aleppo-duhur-deploy-1', 'evt-aleppo-duhur-deploy-2', 'evt-aleppo-duhur-deploy-3'},
 	['Tabqa'] = { 'evt-tabqa-duhur-sead' },
 	['November'] = { 'evt-november-duhur-arty', 'evt-november-duhur-arty2' },
-	['Hama']            = (Era == 'Coldwar') and { 'evt-hama-duhur-cas-coldwar' }     or { 'evt-hama-duhur-cas' },
-	['Bassel Al-Assad'] = (Era == 'Coldwar') and { 'evt-bassel-duhur-sead-Coldwar' } or { 'evt-bassel-duhur-sead' },
+	['Hama']            = ColdWarTechEra and { 'evt-hama-duhur-cas-coldwar' }     or { 'evt-hama-duhur-cas' },
+	['Bassel Al-Assad'] = ColdWarTechEra and { 'evt-bassel-duhur-sead-Coldwar' } or { 'evt-bassel-duhur-sead' },
 }
 for i,v in pairs(duhurForce) do
 	for _,v2 in ipairs(v) do
@@ -5192,7 +5194,9 @@ mc:trackMission({
     end,
     endAction = function()
 		bc:cancelGroupTargetMission('StrikeTarget2')
-		RespawnGroup('Red SAM SA-3 Fixed Event')
+		if isRedTemplateEnabled("SA-3") then
+			RespawnGroup('Red SAM SA-3 Fixed Event')
+		end
 	end,
 	isActive = function()
 		if CustomFlags["StrikeTarget2"] then return false end
@@ -5291,15 +5295,15 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Jirah-attack-Aleppo-surface',100,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Jirah-attack-Aleppo-surface')
+		RegisterGroupTarget(jirahAttackAleppoSurfaceArty,100,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),jirahAttackAleppoSurfaceArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Jirah-attack-Aleppo-surface')
+		bc:cancelGroupTargetMission(jirahAttackAleppoSurfaceArty)
     end,
     isActive = function()
-		if not ActiveMission['Jirah-attack-Aleppo-surface'] then return false end
-		if Group.getByName('Jirah-attack-Aleppo-surface') then return true end
-		ActiveMission['Jirah-attack-Aleppo-surface'] = nil
+		if not ActiveMission[jirahAttackAleppoSurfaceArty] then return false end
+		if Group.getByName(jirahAttackAleppoSurfaceArty) then return true end
+		ActiveMission[jirahAttackAleppoSurfaceArty] = nil
 		return false
     end
 })
@@ -5313,15 +5317,15 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
         end
-		RegisterGroupTarget('Jirah-attack-Durayhim',100,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Jirah-attack-Durayhim')
+		RegisterGroupTarget(jirahAttackDurayhimArty,100,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),jirahAttackDurayhimArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Jirah-attack-Durayhim')
+		bc:cancelGroupTargetMission(jirahAttackDurayhimArty)
     end,
     isActive = function()
-		if not ActiveMission['Jirah-attack-Durayhim'] then return false end
-		if Group.getByName('Jirah-attack-Durayhim') then return true end
-		ActiveMission['Jirah-attack-Durayhim'] = nil
+		if not ActiveMission[jirahAttackDurayhimArty] then return false end
+		if Group.getByName(jirahAttackDurayhimArty) then return true end
+		ActiveMission[jirahAttackDurayhimArty] = nil
 		return false
     end
 })

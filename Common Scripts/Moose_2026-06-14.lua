@@ -409,7 +409,7 @@ Goshawk="T-45",
 Starfighter="F-104",
 Tornado="Tornado",
 Atlas="A400",
-Lancer="B1-B",
+Lancer="B-1B",
 Stratofortress="B-52H",
 Herc="C-130",
 Hercules="C-130J-30",
@@ -79652,11 +79652,7 @@ local function addCrateMenuEntry(cargoObj,parentMenu,subcatmenus)
 if cargoObj.DontShowInMenu then
 return
 end
-local isStaticCargo=false
-if(cargoObj.GetType and cargoObj:GetType()==CTLD_CARGO.Enum.STATIC)or cargoObj.CargoType==CTLD_CARGO.Enum.STATIC then
-isStaticCargo=true
-end
-if isStaticCargo and cargoObj.UnitCanCarry and not cargoObj:UnitCanCarry(_unit)then
+if cargoObj.UnitCanCarry and not cargoObj:UnitCanCarry(_unit)then
 return
 end
 local parent=parentMenu
@@ -79712,7 +79708,7 @@ end
 return subcatmenus[catName]
 end
 for _,cargoObj in pairs(self.Cargo_Crates)do
-if not cargoObj.DontShowInMenu then
+if(not cargoObj.DontShowInMenu)and(not cargoObj.UnitCanCarry or cargoObj:UnitCanCarry(_unit))then
 local needed=cargoObj:GetCratesNeeded()or 1
 local txt
 local cargoLabel=self:_FormatCargoDisplayText(cargoObj.Name,cargoObj,_group)
@@ -79747,7 +79743,7 @@ end
 end
 else
 for _,cargoObj in pairs(self.Cargo_Crates)do
-if not cargoObj.DontShowInMenu then
+if(not cargoObj.DontShowInMenu)and(not cargoObj.UnitCanCarry or cargoObj:UnitCanCarry(_unit))then
 local needed=cargoObj:GetCratesNeeded()or 1
 local txt
 local cargoLabel=self:_FormatCargoDisplayText(cargoObj.Name,cargoObj,_group)
