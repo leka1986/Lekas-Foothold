@@ -221,6 +221,35 @@
       "TableMaxVisibleRows": null,
       "Choices": [],
       "IsEmpty": false
+    },
+    "Era": {
+      "Label": "Era",
+      "Category": null,
+      "Help": null,
+      "ControlType": null,
+      "Advanced": null,
+      "Order": null,
+      "TableHeightMode": null,
+      "TableMaxVisibleRows": null,
+      "Choices": [
+        {
+          "Display": "Modern",
+          "Literal": "\"Modern\""
+        },
+        {
+          "Display": "Coldwar",
+          "Literal": "\"Coldwar\""
+        },
+        {
+          "Display": "Gulfwar",
+          "Literal": "\"Gulfwar\""
+        },
+        {
+          "Display": "Vietnam",
+          "Literal": "\"Vietnam\""
+        }
+      ],
+      "IsEmpty": false
     }
   },
   "CategoryLayouts": {
@@ -349,6 +378,7 @@
       "Items": [
         "FootholdLocale",
         "Era",
+        "RedSamTemplateEnabled",
         "StartNormal",
         "AutoRestart",
         "NoSA10AndSA11",
@@ -427,6 +457,7 @@
   },
   "CategoryOrder": [
     "Mission Rules",
+    "Mission options",
     "Difficulty",
     "Difficulty advanced",
     "RED Reactive Counterpressure",
@@ -441,10 +472,11 @@
     "Tankers",
     "EWRS",
     "AIEN",
-    "Aircraft / Weapons"
+    "Aircraft / Weapons",
+    "F10 Map"
   ],
   "HiddenCategories": [],
   "AdvancedToggleVisible": true,
   "RawValuesVisible": false,
-  "FooterVersion": "V 1.7.5"
+  "FooterVersion": "V 1.8.0"
 }

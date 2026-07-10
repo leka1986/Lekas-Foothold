@@ -30,6 +30,8 @@ internal sealed class RuntimeSettings
     public string? MissionScriptingPath { get; set; }
     public List<string> DeployTargetFolders { get; set; } = new();
     public int UiZoomPercent { get; set; } = 100;
+    public int? WindowLeft { get; set; }
+    public int? WindowTop { get; set; }
     public int WindowWidth { get; set; }
     public int WindowHeight { get; set; }
     public bool DarkMode { get; set; }

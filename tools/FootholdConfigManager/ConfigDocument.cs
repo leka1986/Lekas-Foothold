@@ -34,14 +34,16 @@ internal sealed class ConfigChoice
 
 internal sealed class ConfigTupleField
 {
-    public ConfigTupleField(string name, ConfigTupleFieldKind kind)
+    public ConfigTupleField(string name, ConfigTupleFieldKind kind, string? key = null)
     {
         Name = name;
         Kind = kind;
+        Key = key;
     }
 
     public string Name { get; }
     public ConfigTupleFieldKind Kind { get; }
+    public string? Key { get; }
     public List<ConfigChoice> Choices { get; } = new();
 }
 
@@ -61,6 +63,7 @@ internal sealed class ConfigStringListTable
     public required string Description { get; init; }
     public string? GuiLabel { get; init; }
     public string? GuiEditor { get; init; }
+    public string? GuiVisibleWhen { get; init; }
     public string? InstallPolicy { get; init; }
     public required int StartLineIndex { get; set; }
     public required int EndLineIndex { get; set; }
@@ -105,6 +108,7 @@ internal sealed class ConfigStageTable
     public required string Description { get; init; }
     public string? GuiLabel { get; init; }
     public string? LinkedSettingKey { get; init; }
+    public string? GuiVisibleWhen { get; init; }
     public required int StartLineIndex { get; set; }
     public required int EndLineIndex { get; set; }
     public List<ConfigStageRow> Rows { get; } = new();
@@ -132,6 +136,14 @@ internal sealed class ConfigEntry
     public List<ConfigTupleField> TupleFields { get; } = new();
     public string? LabelOverride { get; private set; }
     public string? GuiLabel { get; init; }
+    public string? ParentGuiEditor { get; init; }
+    public string? ParentGuiFields { get; init; }
+    public string? ParentGuiUntickRowsWhen { get; init; }
+    public string? ParentGuiConfirmUntickRowsWhen { get; init; }
+    public string? ParentGuiConfirmSetRowsByEra { get; init; }
+    public string? ParentGuiRowLabel { get; init; }
+    public string? ParentGuiVisibleWhen { get; init; }
+    public string? GuiVisibleWhen { get; init; }
     public string? CategoryOverride { get; private set; }
     public string? HelpOverride { get; private set; }
     public string? ControlTypeOverride { get; private set; }
@@ -366,11 +378,42 @@ internal sealed class ConfigEntry
             return new List<string>();
         }
 
-        return SplitLuaValues(text[1..^1]).Select(value => value.Trim()).ToList();
+        var values = SplitLuaValues(text[1..^1]).Select(value => value.Trim()).ToList();
+        if (TupleFields.All(field => string.IsNullOrWhiteSpace(field.Key)))
+        {
+            return values;
+        }
+
+        var valuesByKey = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var value in values)
+        {
+            if (TrySplitNamedTupleValue(value, out var key, out var fieldValue))
+            {
+                valuesByKey[key] = fieldValue;
+            }
+        }
+
+        return TupleFields
+            .Select(field => field.Key is not null && valuesByKey.TryGetValue(field.Key, out var value) ? value : "")
+            .ToList();
     }
 
     public void SetTupleValues(IReadOnlyList<string> values)
     {
+        if (TupleFields.Any(field => !string.IsNullOrWhiteSpace(field.Key)))
+        {
+            var parts = new List<string>();
+            for (var i = 0; i < TupleFields.Count; i++)
+            {
+                var field = TupleFields[i];
+                var value = i < values.Count ? values[i].Trim() : "";
+                parts.Add((field.Key ?? field.Name) + " = " + value);
+            }
+
+            ValueText = "{ " + string.Join(", ", parts) + " }";
+            return;
+        }
+
         ValueText = "{ " + string.Join(", ", values.Select(value => value.Trim())) + " }";
     }
 
@@ -488,6 +531,21 @@ internal sealed class ConfigEntry
 
         values.Add(text[start..]);
         return values;
+    }
+
+    private static bool TrySplitNamedTupleValue(string text, out string key, out string value)
+    {
+        key = "";
+        value = "";
+        var match = Regex.Match(text.Trim(), @"^(?<key>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?<value>.*)$");
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        key = match.Groups["key"].Value;
+        value = match.Groups["value"].Value.Trim();
+        return true;
     }
 
     private static string FormatTupleDisplayValue(ConfigTupleField field, string value)
@@ -672,6 +730,13 @@ internal sealed class ConfigDocument
         public required string Key { get; init; }
         public required string DisplayKey { get; init; }
         public required string Description { get; init; }
+        public string? GuiEditor { get; init; }
+        public string? GuiFields { get; init; }
+        public string? GuiUntickRowsWhen { get; init; }
+        public string? GuiConfirmUntickRowsWhen { get; init; }
+        public string? GuiConfirmSetRowsByEra { get; init; }
+        public string? GuiRowLabel { get; init; }
+        public string? GuiVisibleWhen { get; init; }
     }
 
     private enum StringListLineIssue
@@ -1126,6 +1191,13 @@ internal sealed class ConfigDocument
             ParentKey = parentKey,
             ParentDescription = template.ParentDescription,
             Description = "",
+            ParentGuiEditor = template.ParentGuiEditor,
+            ParentGuiFields = template.ParentGuiFields,
+            ParentGuiUntickRowsWhen = template.ParentGuiUntickRowsWhen,
+            ParentGuiConfirmUntickRowsWhen = template.ParentGuiConfirmUntickRowsWhen,
+            ParentGuiConfirmSetRowsByEra = template.ParentGuiConfirmSetRowsByEra,
+            ParentGuiRowLabel = template.ParentGuiRowLabel,
+            ParentGuiVisibleWhen = template.ParentGuiVisibleWhen,
             Prefix = prefix,
             Suffix = ",",
             RawValue = valueText,
@@ -1213,6 +1285,14 @@ internal sealed class ConfigDocument
             InferredAdvanced = entry.InferredAdvanced,
             IsLongText = entry.IsLongText,
             GuiLabel = entry.GuiLabel,
+            ParentGuiEditor = entry.ParentGuiEditor,
+            ParentGuiFields = entry.ParentGuiFields,
+            ParentGuiUntickRowsWhen = entry.ParentGuiUntickRowsWhen,
+            ParentGuiConfirmUntickRowsWhen = entry.ParentGuiConfirmUntickRowsWhen,
+            ParentGuiConfirmSetRowsByEra = entry.ParentGuiConfirmSetRowsByEra,
+            ParentGuiRowLabel = entry.ParentGuiRowLabel,
+            ParentGuiVisibleWhen = entry.ParentGuiVisibleWhen,
+            GuiVisibleWhen = entry.GuiVisibleWhen,
             GuiValidValues = entry.GuiValidValues
         };
         renamed.InitializeValueText(entry.RawValue);
@@ -2892,6 +2972,12 @@ internal sealed class ConfigDocument
                 var displayKey = BuildDisplayKey(tablePath, lhs);
                 var guiLabel = ReadGuiLabel(pendingComments);
                 var guiEditor = ReadGuiEditor(pendingComments);
+                var guiVisibleWhen = ReadGuiVisibleWhen(pendingComments);
+                var guiFields = ReadGuiFields(pendingComments);
+                var guiUntickRowsWhen = ReadGuiUntickRowsWhen(pendingComments);
+                var guiConfirmUntickRowsWhen = ReadGuiConfirmUntickRowsWhen(pendingComments);
+                var guiConfirmSetRowsByEra = ReadGuiConfirmSetRowsByEra(pendingComments);
+                var guiRowLabel = ReadGuiRowLabel(pendingComments);
                 var linkedSettingKey = ReadGuiLinkedSetting(pendingComments);
                 var installPolicy = ReadGuiInstallPolicy(pendingComments);
                 if (!string.IsNullOrWhiteSpace(guiLabel))
@@ -2907,7 +2993,7 @@ internal sealed class ConfigDocument
 
                 var tableParent = tablePath.LastOrDefault();
                 var description = BuildDescription(pendingComments, split.inlineComment, CollectFollowingComments(i + 1));
-                if (TryReadStringListTable(i, key, section, description, guiLabel, guiEditor, installPolicy, out var stringListTable))
+                if (TryReadStringListTable(i, key, section, description, guiLabel, guiEditor, guiVisibleWhen, installPolicy, out var stringListTable))
                 {
                     StringListTables.Add(stringListTable);
                     pendingComments.Clear();
@@ -2915,7 +3001,7 @@ internal sealed class ConfigDocument
                     continue;
                 }
 
-                if (TryReadStageTable(i, key, section, description, guiLabel, linkedSettingKey, out var stageTable))
+                if (TryReadStageTable(i, key, section, description, guiLabel, linkedSettingKey, guiVisibleWhen, out var stageTable))
                 {
                     StageTables.Add(stageTable);
                     pendingComments.Clear();
@@ -2927,7 +3013,14 @@ internal sealed class ConfigDocument
                 {
                     Key = key,
                     DisplayKey = displayKey,
-                    Description = string.IsNullOrWhiteSpace(description) ? tableParent?.Description ?? "" : description
+                    Description = string.IsNullOrWhiteSpace(description) ? tableParent?.Description ?? "" : description,
+                    GuiEditor = guiEditor,
+                    GuiFields = guiFields,
+                    GuiUntickRowsWhen = guiUntickRowsWhen,
+                    GuiConfirmUntickRowsWhen = guiConfirmUntickRowsWhen,
+                    GuiConfirmSetRowsByEra = guiConfirmSetRowsByEra,
+                    GuiRowLabel = guiRowLabel,
+                    GuiVisibleWhen = guiVisibleWhen
                 });
                 pendingComments.Clear();
                 continue;
@@ -2966,6 +3059,14 @@ internal sealed class ConfigDocument
                 Description = BuildDescription(pendingComments, split.inlineComment, CollectFollowingComments(i + 1)),
                 InlineComment = split.inlineComment,
                 GuiLabel = ReadGuiLabel(pendingComments),
+                ParentGuiEditor = parent?.GuiEditor,
+                ParentGuiFields = parent?.GuiFields,
+                ParentGuiUntickRowsWhen = parent?.GuiUntickRowsWhen,
+                ParentGuiConfirmUntickRowsWhen = parent?.GuiConfirmUntickRowsWhen,
+                ParentGuiConfirmSetRowsByEra = parent?.GuiConfirmSetRowsByEra,
+                ParentGuiRowLabel = parent?.GuiRowLabel,
+                ParentGuiVisibleWhen = parent?.GuiVisibleWhen,
+                GuiVisibleWhen = ReadGuiVisibleWhen(pendingComments),
                 GuiValidValues = ReadGuiValidValues(pendingComments),
                 Prefix = lhsWithEquals,
                 Suffix = split.suffix,
@@ -3040,11 +3141,13 @@ internal sealed class ConfigDocument
         string description,
         string? guiLabel,
         string? guiEditor,
+        string? guiVisibleWhen,
         string? installPolicy,
         out ConfigStringListTable table)
     {
         table = null!;
-        if (!IsStringListTableKey(key))
+        if (!IsStringListTableKey(key) &&
+            !string.Equals(guiEditor, "bucket", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -3062,6 +3165,7 @@ internal sealed class ConfigDocument
             Description = description,
             GuiLabel = guiLabel,
             GuiEditor = guiEditor,
+            GuiVisibleWhen = guiVisibleWhen,
             InstallPolicy = installPolicy,
             StartLineIndex = lineIndex,
             EndLineIndex = endLine
@@ -3077,6 +3181,7 @@ internal sealed class ConfigDocument
         string description,
         string? guiLabel,
         string? linkedSettingKey,
+        string? guiVisibleWhen,
         out ConfigStageTable table)
     {
         table = null!;
@@ -3104,6 +3209,7 @@ internal sealed class ConfigDocument
             Description = description,
             GuiLabel = guiLabel,
             LinkedSettingKey = linkedSettingKey,
+            GuiVisibleWhen = guiVisibleWhen,
             StartLineIndex = lineIndex,
             EndLineIndex = endLine
         };
@@ -3475,6 +3581,14 @@ internal sealed class ConfigDocument
             Description = BuildDescription(pendingComments, inlineComment, CollectFollowingComments(endLine + 1)),
             InlineComment = inlineComment,
             GuiLabel = ReadGuiLabel(pendingComments),
+            ParentGuiEditor = parent?.GuiEditor,
+            ParentGuiFields = parent?.GuiFields,
+            ParentGuiUntickRowsWhen = parent?.GuiUntickRowsWhen,
+            ParentGuiConfirmUntickRowsWhen = parent?.GuiConfirmUntickRowsWhen,
+            ParentGuiConfirmSetRowsByEra = parent?.GuiConfirmSetRowsByEra,
+            ParentGuiRowLabel = parent?.GuiRowLabel,
+            ParentGuiVisibleWhen = parent?.GuiVisibleWhen,
+            GuiVisibleWhen = ReadGuiVisibleWhen(pendingComments),
             Prefix = lhsWithEquals,
             Suffix = suffix,
             RawValue = string.Join(NewLine, textLines),
@@ -3695,6 +3809,37 @@ internal sealed class ConfigDocument
         return ReadGuiAttribute(comments, "editor");
     }
 
+    private static string? ReadGuiFields(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "fields");
+    }
+
+    private static string? ReadGuiVisibleWhen(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "visibleWhen");
+    }
+
+    private static string? ReadGuiUntickRowsWhen(IEnumerable<string> comments)
+    {
+        var values = ReadGuiAttributes(comments, "untickRowsWhen");
+        return values.Count == 0 ? null : string.Join(";", values);
+    }
+
+    private static string? ReadGuiConfirmUntickRowsWhen(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "confirmUntickRowsWhen");
+    }
+
+    private static string? ReadGuiConfirmSetRowsByEra(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "confirmSetRowsByEra");
+    }
+
+    private static string? ReadGuiRowLabel(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "rowLabel");
+    }
+
     private static string? ReadGuiLinkedSetting(IEnumerable<string> comments)
     {
         return ReadGuiAttribute(comments, "linkedSetting");
@@ -3737,6 +3882,35 @@ internal sealed class ConfigDocument
         }
 
         return null;
+    }
+
+    private static List<string> ReadGuiAttributes(IEnumerable<string> comments, string attributeName)
+    {
+        var values = new List<string>();
+        foreach (var comment in comments)
+        {
+            var trimmed = comment.Trim();
+            if (!trimmed.StartsWith("@gui", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (Match match in GuiAttributeRegex.Matches(trimmed))
+            {
+                if (!match.Groups["name"].Value.Equals(attributeName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var value = ReadGuiAttributeValue(match);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    values.Add(value);
+                }
+            }
+        }
+
+        return values;
     }
 
     private static string? ReadGuiColonAttribute(IEnumerable<string> comments, string attributeName)
@@ -4038,6 +4212,7 @@ internal sealed class ConfigDocument
             AddChoiceIfMissing(entry, "Modern", QuoteWith(entry.QuoteChar, "Modern"));
             AddChoiceIfMissing(entry, "Coldwar", QuoteWith(entry.QuoteChar, "Coldwar"));
             AddChoiceIfMissing(entry, "Gulfwar", QuoteWith(entry.QuoteChar, "Gulfwar"));
+            AddChoiceIfMissing(entry, "Vietnam", QuoteWith(entry.QuoteChar, "Vietnam"));
         }
     }
 
@@ -4046,6 +4221,16 @@ internal sealed class ConfigDocument
         if (entry.Kind != ConfigValueKind.Raw)
         {
             return;
+        }
+
+        if (entry.ParentGuiEditor?.Equals("fieldTable", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var fields = ReadGuiFieldTableFields(entry.ParentGuiFields);
+            if (fields.Count > 0)
+            {
+                entry.TupleFields.AddRange(fields);
+                return;
+            }
         }
 
         var values = entry.GetTupleValues();
@@ -4076,6 +4261,45 @@ internal sealed class ConfigDocument
                 entry.TupleFields.Add(new ConfigTupleField(fieldNames[i], DetectTupleFieldKind(values[i])));
             }
         }
+    }
+
+    private static List<ConfigTupleField> ReadGuiFieldTableFields(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new List<ConfigTupleField>();
+        }
+
+        var fields = new List<ConfigTupleField>();
+        foreach (var part in text.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var pieces = part.Split(':', 3, StringSplitOptions.TrimEntries);
+            if (pieces.Length < 2 || !IsSimpleLuaIdentifier(pieces[0]))
+            {
+                continue;
+            }
+
+            var kind = pieces.Length >= 3 ? ParseGuiFieldKind(pieces[2]) : ConfigTupleFieldKind.Raw;
+            fields.Add(new ConfigTupleField(pieces[1], kind, pieces[0]));
+        }
+
+        return fields;
+    }
+
+    private static ConfigTupleFieldKind ParseGuiFieldKind(string value)
+    {
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "bool" or "boolean" or "checkbox" => ConfigTupleFieldKind.Boolean,
+            "number" or "numeric" or "int" or "integer" or "decimal" => ConfigTupleFieldKind.Number,
+            "choice" or "dropdown" => ConfigTupleFieldKind.Choice,
+            _ => ConfigTupleFieldKind.Raw
+        };
+    }
+
+    private static bool IsSimpleLuaIdentifier(string value)
+    {
+        return Regex.IsMatch(value, @"^[A-Za-z_][A-Za-z0-9_]*$");
     }
 
     private static List<ConfigChoice> ReadNumberChoices(string comments)

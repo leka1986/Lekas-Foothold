@@ -71,9 +71,12 @@ internal sealed class MainForm : Form
 
     private sealed record FirstRunMizCandidate(string Path, DateTime Modified)
     {
+        public bool IsConfigFile => IsSupportedConfigFileName(System.IO.Path.GetFileName(Path));
+
         public override string ToString()
         {
-            return Modified.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + "  " + System.IO.Path.GetFileName(Path);
+            var kind = IsConfigFile ? "  (config file)" : "";
+            return Modified.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + "  " + System.IO.Path.GetFileName(Path) + kind;
         }
     }
 
@@ -640,15 +643,24 @@ internal sealed class MainForm : Form
 
     private sealed class CopyTargetPlan
     {
-        public CopyTargetPlan(ServerProfileSettings profile, string targetPath, List<CopyChange> changes, string? loadError = null, bool contentMatches = true)
+        public CopyTargetPlan(
+            ServerProfileSettings profile,
+            string targetPath,
+            List<CopyChange> changes,
+            string? loadError = null,
+            bool contentMatches = true,
+            bool missingTargetConfig = false,
+            bool canCreateMissingConfig = false)
         {
             Profile = profile;
             TargetPath = targetPath;
             Changes = changes;
             LoadError = loadError;
             ContentMatches = contentMatches;
+            MissingTargetConfig = missingTargetConfig;
+            CanCreateMissingConfig = canCreateMissingConfig;
             SelectedChangeIds = changes.Select(change => change.Id).ToHashSet(StringComparer.Ordinal);
-            IsTargetSelected = loadError is null;
+            IsTargetSelected = loadError is null && !missingTargetConfig;
         }
 
         public ServerProfileSettings Profile { get; }
@@ -656,11 +668,24 @@ internal sealed class MainForm : Form
         public List<CopyChange> Changes { get; }
         public HashSet<string> SelectedChangeIds { get; }
         public string? LoadError { get; }
-        public bool ContentMatches { get; }
+        public bool ContentMatches { get; private set; }
+        public bool MissingTargetConfig { get; private set; }
+        public bool CanCreateMissingConfig { get; private set; }
         public bool IsTargetSelected { get; set; }
         public bool IsExpanded { get; set; }
 
         public int SelectedChangeCount => Changes.Count(change => SelectedChangeIds.Contains(change.Id));
+
+        public void MarkCreated()
+        {
+            MissingTargetConfig = false;
+            CanCreateMissingConfig = false;
+            ContentMatches = true;
+            IsTargetSelected = false;
+            IsExpanded = false;
+            Changes.Clear();
+            SelectedChangeIds.Clear();
+        }
     }
 
     private sealed class MizMergePreview
@@ -981,15 +1006,15 @@ internal sealed class MainForm : Form
         _requestAdminOnLoad = requestAdminOnLoad;
         Text = "Foothold Config Manager";
         ApplyApplicationIcon();
-        MinimumSize = new Size(1100, 720);
-        StartPosition = FormStartPosition.CenterScreen;
+        MinimumSize = GetMainMinimumSize(Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080));
+        StartPosition = FormStartPosition.Manual;
         _uiZoomPercent = Math.Clamp(_settings.UiZoomPercent, 80, 150);
         _darkMode = _settings.DarkMode;
         ApplyThemePalette();
         Font = new Font("Segoe UI", BaseFontSize * _uiZoomPercent / 100F);
         BackColor = MainBackground;
         ForeColor = PrimaryTextColor;
-        ApplySavedWindowSize();
+        ApplyInitialWindowBounds();
 
         BuildUi();
         ApplyThemeToShell();
@@ -1684,6 +1709,24 @@ internal sealed class MainForm : Form
         return Math.Max(Zoomed(30), Font.Height + Zoomed(12));
     }
 
+    private Size FittedDialogClientSize(int preferredWidth, int preferredHeight, int minimumWidth = 360, int minimumHeight = 220)
+    {
+        var area = Screen.FromControl(this)?.WorkingArea ?? Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
+        var maxWidth = Math.Max(Zoomed(minimumWidth), area.Width - Zoomed(80));
+        var maxHeight = Math.Max(Zoomed(minimumHeight), area.Height - Zoomed(100));
+        return new Size(
+            Math.Min(Zoomed(preferredWidth), maxWidth),
+            Math.Min(Zoomed(preferredHeight), maxHeight));
+    }
+
+    private Size FittedDialogMinimumSize(int preferredWidth, int preferredHeight, int floorWidth = 360, int floorHeight = 220)
+    {
+        var area = Screen.FromControl(this)?.WorkingArea ?? Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
+        return new Size(
+            Math.Min(Zoomed(preferredWidth), Math.Max(Zoomed(floorWidth), area.Width - Zoomed(80))),
+            Math.Min(Zoomed(preferredHeight), Math.Max(Zoomed(floorHeight), area.Height - Zoomed(100))));
+    }
+
     private void SizeDialogButton(Button button, int minimumWidth = 96)
     {
         button.Width = DialogButtonWidth(button.Text, minimumWidth);
@@ -1804,24 +1847,90 @@ internal sealed class MainForm : Form
         panel.RowStyles[index].Height = height;
     }
 
-    private void ApplySavedWindowSize()
+    private void ApplyInitialWindowBounds()
     {
-        if (_settings.WindowWidth <= 0 || _settings.WindowHeight <= 0)
+        var primaryArea = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
+        if (_settings.WindowWidth > 0 && _settings.WindowHeight > 0)
         {
+            var requestedSize = new Size(_settings.WindowWidth, _settings.WindowHeight);
+            if (_settings.WindowLeft.HasValue && _settings.WindowTop.HasValue)
+            {
+                var savedBounds = new Rectangle(_settings.WindowLeft.Value, _settings.WindowTop.Value, requestedSize.Width, requestedSize.Height);
+                var savedArea = FindWorkingAreaForBounds(savedBounds);
+                if (savedArea.HasValue)
+                {
+                    MinimumSize = GetMainMinimumSize(savedArea.Value);
+                    Bounds = FitBoundsToWorkingArea(new Rectangle(savedBounds.Location, ClampMainWindowSize(requestedSize, savedArea.Value)), savedArea.Value);
+                    return;
+                }
+            }
+
+            MinimumSize = GetMainMinimumSize(primaryArea);
+            Bounds = CenterBoundsInWorkingArea(ClampMainWindowSize(requestedSize, primaryArea), primaryArea);
             return;
         }
 
-        var workingArea = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
-        var width = Math.Clamp(_settings.WindowWidth, MinimumSize.Width, Math.Max(MinimumSize.Width, workingArea.Width));
-        var height = Math.Clamp(_settings.WindowHeight, MinimumSize.Height, Math.Max(MinimumSize.Height, workingArea.Height));
-        Size = new Size(width, height);
+        MinimumSize = GetMainMinimumSize(primaryArea);
+        Bounds = CenterBoundsInWorkingArea(ClampMainWindowSize(new Size(1400, 900), primaryArea), primaryArea);
+    }
+
+    private static Rectangle? FindWorkingAreaForBounds(Rectangle bounds)
+    {
+        foreach (var screen in Screen.AllScreens)
+        {
+            if (screen.WorkingArea.IntersectsWith(bounds) || screen.WorkingArea.Contains(bounds.Location))
+            {
+                return screen.WorkingArea;
+            }
+        }
+
+        return null;
+    }
+
+    private static Size GetMainMinimumSize(Rectangle workingArea)
+    {
+        return new Size(
+            Math.Max(1, Math.Min(1100, workingArea.Width - 40)),
+            Math.Max(1, Math.Min(720, workingArea.Height - 60)));
+    }
+
+    private Size ClampMainWindowSize(Size requestedSize, Rectangle workingArea)
+    {
+        var minimum = GetMainMinimumSize(workingArea);
+        var maxWidth = Math.Max(minimum.Width, workingArea.Width - Zoomed(40));
+        var maxHeight = Math.Max(minimum.Height, workingArea.Height - Zoomed(60));
+        return new Size(
+            Math.Clamp(requestedSize.Width, minimum.Width, maxWidth),
+            Math.Clamp(requestedSize.Height, minimum.Height, maxHeight));
+    }
+
+    private static Rectangle CenterBoundsInWorkingArea(Size size, Rectangle workingArea)
+    {
+        return new Rectangle(
+            workingArea.Left + Math.Max(0, (workingArea.Width - size.Width) / 2),
+            workingArea.Top + Math.Max(0, (workingArea.Height - size.Height) / 2),
+            size.Width,
+            size.Height);
+    }
+
+    private static Rectangle FitBoundsToWorkingArea(Rectangle bounds, Rectangle workingArea)
+    {
+        var leftMax = Math.Max(workingArea.Left, workingArea.Right - bounds.Width);
+        var topMax = Math.Max(workingArea.Top, workingArea.Bottom - bounds.Height);
+        return new Rectangle(
+            Math.Clamp(bounds.Left, workingArea.Left, leftMax),
+            Math.Clamp(bounds.Top, workingArea.Top, topMax),
+            bounds.Width,
+            bounds.Height);
     }
 
     private void SaveWindowSize()
     {
-        var size = WindowState == FormWindowState.Normal ? Size : RestoreBounds.Size;
-        _settings.WindowWidth = Math.Max(MinimumSize.Width, size.Width);
-        _settings.WindowHeight = Math.Max(MinimumSize.Height, size.Height);
+        var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+        _settings.WindowLeft = bounds.Left;
+        _settings.WindowTop = bounds.Top;
+        _settings.WindowWidth = Math.Max(MinimumSize.Width, bounds.Width);
+        _settings.WindowHeight = Math.Max(MinimumSize.Height, bounds.Height);
         _settings.Save();
     }
 
@@ -2183,7 +2292,7 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MinimizeBox = false,
             MaximizeBox = false,
-            ClientSize = new Size(Zoomed(720), Zoomed(282)),
+            ClientSize = FittedDialogClientSize(760, 330, 560, 300),
             Font = Font,
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
@@ -2201,7 +2310,7 @@ internal sealed class MainForm : Form
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(38)));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(50)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, (DialogButtonHeight() * 2) + Zoomed(18)));
         dialog.Controls.Add(panel);
 
         panel.Controls.Add(new Label
@@ -2244,18 +2353,19 @@ internal sealed class MainForm : Form
         var buttons = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 5,
-            RowCount = 1,
+            ColumnCount = 3,
+            RowCount = 2,
             Padding = new Padding(0, Zoomed(7), 0, 0),
             Margin = new Padding(0),
             BackColor = MainBackground
         };
         for (var column = 0; column < buttons.ColumnCount; column++)
         {
-            buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+            buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
         }
 
-        buttons.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        buttons.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        buttons.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
         panel.Controls.Add(buttons, 0, 4);
 
         var closeButton = new Button { Text = "Close", DialogResult = DialogResult.OK };
@@ -2267,7 +2377,7 @@ internal sealed class MainForm : Form
         {
             SizeDialogButton(button, button == applyButton ? 132 : 112);
             button.Dock = DockStyle.Fill;
-            button.Margin = new Padding(Zoomed(3), 0, Zoomed(3), 0);
+            button.Margin = new Padding(Zoomed(3), Zoomed(2), Zoomed(3), Zoomed(2));
             StyleButton(button);
             EnableButtonInteractiveChrome(button);
         }
@@ -2297,8 +2407,9 @@ internal sealed class MainForm : Form
         buttons.Controls.Add(selectButton, 0, 0);
         buttons.Controls.Add(openButton, 1, 0);
         buttons.Controls.Add(checkButton, 2, 0);
-        buttons.Controls.Add(applyButton, 3, 0);
-        buttons.Controls.Add(closeButton, 4, 0);
+        buttons.Controls.Add(applyButton, 0, 1);
+        buttons.SetColumnSpan(applyButton, 2);
+        buttons.Controls.Add(closeButton, 2, 1);
 
         RefreshDialog();
         dialog.AcceptButton = closeButton;
@@ -3234,7 +3345,7 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MinimizeBox = false,
             MaximizeBox = false,
-            ClientSize = new Size(340, 118),
+            ClientSize = new Size(Zoomed(340), Zoomed(118)),
             Font = Font
         };
 
@@ -3242,14 +3353,14 @@ internal sealed class MainForm : Form
         {
             Text = "Password",
             AutoSize = true,
-            Location = new Point(12, 14)
+            Location = new Point(Zoomed(12), Zoomed(14))
         };
         dialog.Controls.Add(label);
 
         var passwordBox = new TextBox
         {
-            Location = new Point(12, 36),
-            Width = 316,
+            Location = new Point(Zoomed(12), Zoomed(36)),
+            Width = Zoomed(316),
             UseSystemPasswordChar = true
         };
         dialog.Controls.Add(passwordBox);
@@ -3258,8 +3369,7 @@ internal sealed class MainForm : Form
         {
             Text = "OK",
             DialogResult = DialogResult.OK,
-            Location = new Point(166, 76),
-            Width = 76
+            Location = new Point(Zoomed(166), Zoomed(76))
         };
         dialog.Controls.Add(okButton);
 
@@ -3267,9 +3377,12 @@ internal sealed class MainForm : Form
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
-            Location = new Point(252, 76),
-            Width = 76
+            Location = new Point(Zoomed(252), Zoomed(76))
         };
+        SizeDialogButton(okButton);
+        SizeDialogButton(cancelButton);
+        cancelButton.Location = new Point(dialog.ClientSize.Width - cancelButton.Width - Zoomed(12), Zoomed(76));
+        okButton.Location = new Point(cancelButton.Left - okButton.Width - Zoomed(10), Zoomed(76));
         dialog.Controls.Add(cancelButton);
 
         dialog.AcceptButton = okButton;
@@ -3814,7 +3927,7 @@ internal sealed class MainForm : Form
         if (path is null)
         {
             var install = PromptForFirstRunInstall();
-            if (install is not null && InstallInitialConfigFromMiz(install.Value.MizPath, install.Value.Instance))
+            if (install is not null && InstallInitialConfigFromSource(install.Value.SourcePath, install.Value.Instance))
             {
                 return;
             }
@@ -3826,11 +3939,11 @@ internal sealed class MainForm : Form
         LoadConfig(path);
     }
 
-    private (string MizPath, FirstRunInstanceCandidate Instance)? PromptForFirstRunInstall()
+    private (string SourcePath, FirstRunInstanceCandidate Instance)? PromptForFirstRunInstall()
     {
         var mizCandidates = FindFirstRunMizCandidates();
         var instanceCandidates = FindFirstRunInstanceCandidates();
-        string? selectedMizPath = null;
+        string? selectedSourcePath = null;
         FirstRunInstanceCandidate? selectedInstance = null;
 
         using var dialog = new Form
@@ -3840,11 +3953,12 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.Sizable,
             MinimizeBox = false,
             MaximizeBox = true,
-            ClientSize = new Size(900, 560),
-            MinimumSize = new Size(760, 500),
+            ClientSize = FittedDialogClientSize(900, 580, 700, 460),
+            MinimumSize = FittedDialogMinimumSize(740, 520, 700, 460),
             Font = Font,
             BackColor = MainBackground,
-            ForeColor = PrimaryTextColor
+            ForeColor = PrimaryTextColor,
+            AutoScroll = true
         };
 
         var root = new TableLayoutPanel
@@ -3852,25 +3966,25 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 6,
-            Padding = new Padding(12),
+            Padding = new Padding(Zoomed(12)),
             BackColor = MainBackground
         };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(58)));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 12));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(10)));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(46)));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(18)));
         dialog.Controls.Add(root);
 
         root.Controls.Add(new Label
         {
-            Text = "No Foothold Config.lua is configured yet. Choose the Foothold mission MIZ, then choose the DCS/Saved Games instance to install into.",
+            Text = "No Foothold config is configured yet. Choose a Foothold mission MIZ or config file, then choose the DCS/Saved Games instance to install into.",
             Dock = DockStyle.Fill,
             ForeColor = PrimaryTextColor
         }, 0, 0);
 
-        var mizPanel = BuildFirstRunChoicePanel("Foothold MIZ", out var mizList, out var browseMizButton);
+        var mizPanel = BuildFirstRunChoicePanel("Foothold MIZ or config file", out var mizList, out var browseMizButton);
         root.Controls.Add(mizPanel, 0, 1);
         foreach (var candidate in mizCandidates)
         {
@@ -3897,34 +4011,34 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            Padding = new Padding(0, 8, 0, 0),
+            Padding = new Padding(0, Zoomed(8), 0, 0),
             BackColor = MainBackground
         };
         var installButton = new Button
         {
             Text = "Install",
             DialogResult = DialogResult.OK,
-            Width = 100,
             Enabled = false
         };
         var cancelButton = new Button
         {
             Text = "Cancel",
-            DialogResult = DialogResult.Cancel,
-            Width = 100
+            DialogResult = DialogResult.Cancel
         };
+        SizeDialogButton(installButton);
+        SizeDialogButton(cancelButton);
         buttons.Controls.Add(cancelButton);
         buttons.Controls.Add(installButton);
         root.Controls.Add(buttons, 0, 5);
 
         void UpdateSelection()
         {
-            selectedMizPath = mizList.SelectedItem is FirstRunMizCandidate miz ? miz.Path : selectedMizPath;
+            selectedSourcePath = mizList.SelectedItem is FirstRunMizCandidate miz ? miz.Path : selectedSourcePath;
             selectedInstance = instanceList.SelectedItem as FirstRunInstanceCandidate ?? selectedInstance;
             targetLabel.Text = selectedInstance is null
                 ? "Target: choose an instance."
                 : "Target folder: " + selectedInstance.SavesPath;
-            installButton.Enabled = !string.IsNullOrWhiteSpace(selectedMizPath) && selectedInstance is not null;
+            installButton.Enabled = !string.IsNullOrWhiteSpace(selectedSourcePath) && selectedInstance is not null;
         }
 
         mizList.SelectedIndexChanged += (_, _) => UpdateSelection();
@@ -3933,10 +4047,10 @@ internal sealed class MainForm : Form
         {
             using var fileDialog = new OpenFileDialog
             {
-                Title = "Select Foothold mission MIZ",
-                Filter = "DCS mission (*.miz)|*.miz|All files (*.*)|*.*",
+                Title = "Select Foothold mission MIZ or config file",
+                Filter = "Foothold mission or config (*.miz;*.lua)|*.miz;*.lua|DCS mission (*.miz)|*.miz|Foothold config (*.lua)|*.lua|All files (*.*)|*.*",
                 FileName = "*.miz",
-                InitialDirectory = GetExistingInitialDirectory(selectedMizPath) ?? RuntimeSettings.GetBestInitialDirectory()
+                InitialDirectory = GetExistingInitialDirectory(selectedSourcePath) ?? RuntimeSettings.GetBestInitialDirectory()
             };
             if (fileDialog.ShowDialog(dialog) != DialogResult.OK)
             {
@@ -3944,6 +4058,13 @@ internal sealed class MainForm : Form
             }
 
             var fullPath = Path.GetFullPath(fileDialog.FileName);
+            if (!fullPath.EndsWith(".miz", StringComparison.OrdinalIgnoreCase) &&
+                !IsSupportedConfigFileName(Path.GetFileName(fullPath)))
+            {
+                MessageBox.Show(dialog, "Choose a .miz file or a Foothold Config.lua / Foothold Config WW2.lua file.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             var candidate = new FirstRunMizCandidate(fullPath, File.GetLastWriteTime(fullPath));
             AddOrSelectListItem(mizList, candidate, item => item.Path.Equals(fullPath, StringComparison.OrdinalIgnoreCase));
             UpdateSelection();
@@ -3986,12 +4107,12 @@ internal sealed class MainForm : Form
         dialog.CancelButton = cancelButton;
         ApplyThemeToControl(dialog, restyleButtons: true);
         ApplyDialogChrome(dialog);
-        return dialog.ShowDialog(this) == DialogResult.OK && selectedMizPath is not null && selectedInstance is not null
-            ? (selectedMizPath, selectedInstance)
+        return dialog.ShowDialog(this) == DialogResult.OK && selectedSourcePath is not null && selectedInstance is not null
+            ? (selectedSourcePath, selectedInstance)
             : null;
     }
 
-    private static TableLayoutPanel BuildFirstRunChoicePanel(string title, out ListBox list, out Button browseButton)
+    private TableLayoutPanel BuildFirstRunChoicePanel(string title, out ListBox list, out Button browseButton)
     {
         var panel = new TableLayoutPanel
         {
@@ -4001,8 +4122,8 @@ internal sealed class MainForm : Form
             BackColor = MainBackground
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DialogButtonWidth("Browse...", 104)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(4)));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         panel.Controls.Add(new Label
@@ -4017,6 +4138,7 @@ internal sealed class MainForm : Form
             Text = "Browse...",
             Dock = DockStyle.Fill
         };
+        SizeDialogButton(browseButton, 104);
         panel.Controls.Add(browseButton, 1, 0);
 
         list = new ListBox
@@ -4166,7 +4288,7 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MinimizeBox = false,
             MaximizeBox = false,
-            ClientSize = new Size(720, 330),
+            ClientSize = FittedDialogClientSize(720, 330, 560, 260),
             Font = Font,
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
@@ -4177,9 +4299,9 @@ internal sealed class MainForm : Form
         {
             Text = "Multiple Foothold Config.lua files were found. Select the one to edit.",
             Dock = DockStyle.Top,
-            Height = 34,
+            Height = Zoomed(34),
             TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(10, 8, 10, 0),
+            Padding = new Padding(Zoomed(10), Zoomed(8), Zoomed(10), 0),
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
         };
@@ -4188,7 +4310,7 @@ internal sealed class MainForm : Form
         var list = new ListBox
         {
             Dock = DockStyle.Top,
-            Height = 230,
+            Height = Zoomed(230),
             HorizontalScrollbar = true
         };
         foreach (var path in paths)
@@ -4205,27 +4327,27 @@ internal sealed class MainForm : Form
         {
             Dock = DockStyle.Bottom,
             FlowDirection = FlowDirection.RightToLeft,
-            Height = 48,
-            Padding = new Padding(8)
+            Height = DialogButtonHeight() + Zoomed(18),
+            Padding = new Padding(Zoomed(8))
         };
         var okButton = new Button
         {
             Text = "Open",
-            DialogResult = DialogResult.OK,
-            Width = 90
+            DialogResult = DialogResult.OK
         };
         var cancelButton = new Button
         {
             Text = "Cancel",
-            DialogResult = DialogResult.Cancel,
-            Width = 90
+            DialogResult = DialogResult.Cancel
         };
+        SizeDialogButton(okButton);
+        SizeDialogButton(cancelButton);
         buttons.Controls.Add(okButton);
         var addAllButton = new Button
         {
-            Text = "Add All (" + paths.Count.ToString(CultureInfo.InvariantCulture) + ")",
-            Width = 110
+            Text = "Add All (" + paths.Count.ToString(CultureInfo.InvariantCulture) + ")"
         };
+        SizeDialogButton(addAllButton, 110);
         addAllButton.Click += (_, _) =>
         {
             addAll = true;
@@ -4773,7 +4895,7 @@ internal sealed class MainForm : Form
         }
 
         var plans = targets.Select(target => BuildCopyTargetPlan(_document, target, sourceConfigFileName)).ToList();
-        var selectedPlans = PromptForCopyTargets(plans, GetConfigVariantLabel(sourceConfigFileName));
+        var selectedPlans = PromptForCopyTargets(plans, sourcePath, GetConfigVariantLabel(sourceConfigFileName));
         if (selectedPlans is null || selectedPlans.Count == 0)
         {
             return;
@@ -4781,7 +4903,7 @@ internal sealed class MainForm : Form
 
         var copied = new List<string>();
         var failed = new List<string>();
-        foreach (var plan in selectedPlans.Where(plan => plan.IsTargetSelected && plan.LoadError is null && (plan.Changes.Count == 0 || plan.SelectedChangeCount > 0)))
+        foreach (var plan in selectedPlans.Where(CanApplyCopyPlan))
         {
             try
             {
@@ -4831,6 +4953,11 @@ internal sealed class MainForm : Form
         {
             if (!File.Exists(targetPath))
             {
+                if (sourceConfigFileName.Equals(RuntimeSettings.Ww2ConfigFileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new CopyTargetPlan(target, targetPath, new List<CopyChange>(), missingTargetConfig: true, canCreateMissingConfig: true);
+                }
+
                 return new CopyTargetPlan(target, targetPath, new List<CopyChange>(), GetConfigVariantLabel(sourceConfigFileName) + " config does not exist.");
             }
 
@@ -5121,7 +5248,7 @@ internal sealed class MainForm : Form
         dialog.ShowDialog(this);
     }
 
-    private static void CopyValidatedConfigFile(string sourcePath, string targetPath)
+    private static void CopyValidatedConfigFile(string sourcePath, string targetPath, bool overwrite = true)
     {
         var sourceDocument = ConfigDocument.Load(sourcePath);
         var errors = sourceDocument.Validate();
@@ -5133,11 +5260,43 @@ internal sealed class MainForm : Form
                 string.Join(Environment.NewLine, errors.Take(8)));
         }
 
-        File.Copy(sourcePath, targetPath, overwrite: true);
+        var targetDirectory = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(targetDirectory))
+        {
+            Directory.CreateDirectory(targetDirectory);
+        }
+
+        if (!overwrite && File.Exists(targetPath))
+        {
+            throw new InvalidOperationException("Target config already exists. No file was changed.");
+        }
+
+        File.Copy(sourcePath, targetPath, overwrite);
+    }
+
+    private static bool CanApplyCopyPlan(CopyTargetPlan plan)
+    {
+        if (!plan.IsTargetSelected || plan.LoadError is not null)
+        {
+            return false;
+        }
+
+        if (plan.MissingTargetConfig)
+        {
+            return plan.CanCreateMissingConfig;
+        }
+
+        return plan.Changes.Count == 0 || plan.SelectedChangeCount > 0;
     }
 
     private void ApplyCopyPlan(string sourcePath, CopyTargetPlan plan)
     {
+        if (plan.MissingTargetConfig)
+        {
+            CopyValidatedConfigFile(sourcePath, plan.TargetPath, overwrite: false);
+            return;
+        }
+
         var selectedChanges = plan.Changes.Where(change => plan.SelectedChangeIds.Contains(change.Id)).ToList();
         if (plan.Changes.Count == 0)
         {
@@ -5187,7 +5346,7 @@ internal sealed class MainForm : Form
         output.Save();
     }
 
-    private List<CopyTargetPlan>? PromptForCopyTargets(List<CopyTargetPlan> plans, string sourceConfigLabel)
+    private List<CopyTargetPlan>? PromptForCopyTargets(List<CopyTargetPlan> plans, string sourcePath, string sourceConfigLabel)
     {
         using var dialog = new Form
         {
@@ -5259,7 +5418,7 @@ internal sealed class MainForm : Form
             Text = "Cancel",
             DialogResult = DialogResult.Cancel
         };
-        SizeDialogButton(copyButton);
+        SizeDialogButton(copyButton, 130);
         SizeDialogButton(cancelButton);
         buttons.Controls.Add(copyButton);
         buttons.Controls.Add(cancelButton);
@@ -5279,6 +5438,11 @@ internal sealed class MainForm : Form
 
         string TargetSummary(CopyTargetPlan plan)
         {
+            if (plan.MissingTargetConfig)
+            {
+                return sourceConfigLabel + " config does not exist.";
+            }
+
             if (plan.LoadError is not null)
             {
                 return plan.LoadError;
@@ -5301,12 +5465,16 @@ internal sealed class MainForm : Form
 
         bool CanCopy(CopyTargetPlan plan)
         {
-            return plan.IsTargetSelected && plan.LoadError is null && (plan.Changes.Count == 0 || plan.SelectedChangeCount > 0);
+            return CanApplyCopyPlan(plan);
         }
 
         void UpdateCopyButton()
         {
-            copyButton.Enabled = plans.Any(CanCopy);
+            var selectedPlans = plans.Where(CanCopy).ToList();
+            copyButton.Enabled = selectedPlans.Count > 0;
+            copyButton.Text = selectedPlans.Count > 0 && selectedPlans.All(plan => plan.MissingTargetConfig)
+                ? "Create selected"
+                : "Copy";
         }
 
         void UpdateSelectionUi(CopyTargetPlan plan)
@@ -5372,7 +5540,7 @@ internal sealed class MainForm : Form
                     var targetCheck = new CheckBox
                     {
                         Checked = plan.IsTargetSelected,
-                        Enabled = plan.LoadError is null,
+                        Enabled = plan.LoadError is null || plan.CanCreateMissingConfig,
                         Dock = DockStyle.Fill,
                         Margin = new Padding(0),
                         BackColor = MainBackground,
@@ -5386,7 +5554,7 @@ internal sealed class MainForm : Form
                         }
 
                         plan.IsTargetSelected = targetCheck.Checked;
-                        if (targetCheck.Checked)
+                        if (targetCheck.Checked && !plan.MissingTargetConfig)
                         {
                             plan.SelectedChangeIds.Clear();
                             foreach (var change in plan.Changes)
@@ -5421,21 +5589,39 @@ internal sealed class MainForm : Form
                         TextAlign = ContentAlignment.MiddleLeft,
                         AutoEllipsis = true,
                         BackColor = MainBackground,
-                        ForeColor = plan.LoadError is null ? HelpTextColor : Color.Firebrick
+                        ForeColor = plan.LoadError is null || plan.MissingTargetConfig ? HelpTextColor : Color.Firebrick
                     };
                     targetSummaryLabels[plan] = targetSummaryLabel;
                     targetRow.Controls.Add(targetSummaryLabel, 2, 0);
 
+                    var targetButtonText = plan.CanCreateMissingConfig ? "Create config" : plan.IsExpanded ? "Hide details" : "Details";
                     var detailsButton = new Button
                     {
-                        Text = plan.IsExpanded ? "Hide details" : "Details",
-                        Enabled = plan.Changes.Count > 0 || plan.LoadError is not null,
+                        Text = targetButtonText,
+                        Enabled = plan.CanCreateMissingConfig || plan.Changes.Count > 0 || plan.LoadError is not null,
                         Dock = DockStyle.Fill,
                         Margin = new Padding(Zoomed(4), 0, 0, 0),
                         MinimumSize = new Size(detailsColumnWidth - Zoomed(4), DialogButtonHeight())
                     };
                     detailsButton.Click += (_, _) =>
                     {
+                        if (plan.CanCreateMissingConfig)
+                        {
+                            try
+                            {
+                                ApplyCopyPlan(sourcePath, plan);
+                                plan.MarkCreated();
+                                SetStatus("Created " + sourceConfigLabel + " config for " + plan.Profile.Name + ".");
+                                RebuildRows();
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show(dialog, plan.Profile.Name + ": " + ex.Message, "Copy To Instances", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
+
+                            return;
+                        }
+
                         var wasExpanded = plan.IsExpanded;
                         foreach (var item in plans)
                         {
@@ -5649,6 +5835,7 @@ internal sealed class MainForm : Form
         foreach (var root in roots)
         {
             AddFootholdMizCandidates(paths, root, recursive: false);
+            AddFootholdConfigCandidates(paths, root);
         }
 
         var savedGames = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games");
@@ -5688,6 +5875,30 @@ internal sealed class MainForm : Form
             foreach (var path in Directory.EnumerateFiles(directory, "*.miz", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
             {
                 if (Path.GetFileNameWithoutExtension(path).Contains("Foothold", StringComparison.OrdinalIgnoreCase))
+                {
+                    paths.Add(Path.GetFullPath(path));
+                }
+            }
+        }
+        catch
+        {
+            // Manual Browse remains available if a folder cannot be scanned.
+        }
+    }
+
+    private static void AddFootholdConfigCandidates(HashSet<string> paths, string? directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var configFileName in RuntimeSettings.SupportedConfigFileNames)
+            {
+                var path = Path.Combine(directory, configFileName);
+                if (File.Exists(path))
                 {
                     paths.Add(Path.GetFullPath(path));
                 }
@@ -7599,6 +7810,80 @@ internal sealed class MainForm : Form
         }
     }
 
+    private void RefreshVisibleWhenTargets(ConfigEntry entry)
+    {
+        var affectedCategories = GetCategoriesContainingVisibleWhenSource(entry);
+        if (affectedCategories.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var categoryName in affectedCategories)
+        {
+            MarkCategoryPanelDirty(categoryName);
+        }
+
+        if (affectedCategories.Contains(GetSelectedCategoryName(), StringComparer.OrdinalIgnoreCase))
+        {
+            RenderSelectedCategory(force: true);
+        }
+    }
+
+    private List<string> GetCategoriesContainingVisibleWhenSource(ConfigEntry sourceEntry)
+    {
+        if (_document is null)
+        {
+            return new List<string>();
+        }
+
+        var sourceKeys = new HashSet<string>(StringComparer.Ordinal)
+        {
+            sourceEntry.DisplayKey,
+            sourceEntry.Key
+        };
+
+        var categories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in _document.Entries)
+        {
+            if (VisibleWhenDependsOn(entry.GuiVisibleWhen, sourceKeys) ||
+                VisibleWhenDependsOn(entry.ParentGuiVisibleWhen, sourceKeys))
+            {
+                categories.Add(entry.EffectiveCategory);
+            }
+        }
+
+        foreach (var table in _document.StringListTables)
+        {
+            if (VisibleWhenDependsOn(table.GuiVisibleWhen, sourceKeys))
+            {
+                categories.Add(table.Section);
+            }
+        }
+
+        foreach (var table in _document.StageTables)
+        {
+            if (VisibleWhenDependsOn(table.GuiVisibleWhen, sourceKeys))
+            {
+                categories.Add(table.Section);
+            }
+        }
+
+        return categories
+            .Where(category => !string.IsNullOrWhiteSpace(category))
+            .ToList();
+    }
+
+    private static bool VisibleWhenDependsOn(string? ruleText, IReadOnlySet<string> sourceKeys)
+    {
+        if (string.IsNullOrWhiteSpace(ruleText))
+        {
+            return false;
+        }
+
+        return ParseVisibleWhenRules(ruleText)
+            .Any(rule => sourceKeys.Contains(rule.SourceKey));
+    }
+
     private void RefreshLinkedStageEditors(ConfigEntry entry)
     {
         if (_document is null)
@@ -7790,12 +8075,368 @@ internal sealed class MainForm : Form
         var oldValue = entry.ValueText;
         applyChange();
         var newValue = entry.ValueText;
+        string? followUpStatus = null;
         if (!StringComparer.Ordinal.Equals(newValue, oldValue))
         {
             SetEntryValueUndoAction(entry, description, oldValue, newValue, refreshAction);
+            var followUpStatuses = new List<string>();
+            var untickStatus = ApplyUntickRowsWhenRules(entry);
+            if (!string.IsNullOrWhiteSpace(untickStatus))
+            {
+                followUpStatuses.Add(untickStatus);
+            }
+
+            var eraStatus = ApplySetRowsByEraRules(entry);
+            if (!string.IsNullOrWhiteSpace(eraStatus))
+            {
+                followUpStatuses.Add(eraStatus);
+            }
+
+            followUpStatus = followUpStatuses.Count == 0 ? null : string.Join(" ", followUpStatuses);
+            RefreshVisibleWhenTargets(entry);
         }
 
         SetChangedStatus();
+        if (!string.IsNullOrWhiteSpace(followUpStatus))
+        {
+            SetStatus(followUpStatus);
+        }
+    }
+
+    private string? ApplyUntickRowsWhenRules(ConfigEntry sourceEntry)
+    {
+        if (_document is null)
+        {
+            return null;
+        }
+
+        var changedRows = new List<(ConfigEntry Entry, string OldValue)>();
+        var confirmedRowsByPrompt = new Dictionary<string, List<(ConfigEntry Entry, string OldValue)>>(StringComparer.Ordinal);
+        var queuedRows = new HashSet<ConfigEntry>();
+        foreach (var table in _document.Entries
+                     .Where(entry => !string.IsNullOrWhiteSpace(entry.ParentKey) &&
+                                     !string.IsNullOrWhiteSpace(entry.ParentGuiUntickRowsWhen))
+                     .GroupBy(entry => entry.ParentKey, StringComparer.Ordinal))
+        {
+            var tableRows = table.ToList();
+            var tableMetadata = tableRows.First();
+            var ruleText = tableMetadata.ParentGuiUntickRowsWhen ?? "";
+            var confirmPrompt = tableMetadata.ParentGuiConfirmUntickRowsWhen;
+            foreach (var rule in ParseUntickRowsWhenRules(ruleText))
+            {
+                if (!UntickRowsRuleMatches(sourceEntry, rule.SourceKey, rule.SourceValue))
+                {
+                    continue;
+                }
+
+                foreach (var rowKey in rule.RowKeys)
+                {
+                    var row = tableRows.FirstOrDefault(entry => entry.Key.Equals(rowKey, StringComparison.Ordinal));
+                    if (row is null ||
+                        row.Kind != ConfigValueKind.Boolean ||
+                        !row.ValueText.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                        !queuedRows.Add(row))
+                    {
+                        continue;
+                    }
+
+                    var changedRow = (row, row.ValueText);
+                    if (!string.IsNullOrWhiteSpace(confirmPrompt))
+                    {
+                        var prompt = confirmPrompt.Trim();
+                        if (!confirmedRowsByPrompt.TryGetValue(prompt, out var promptRows))
+                        {
+                            promptRows = new List<(ConfigEntry Entry, string OldValue)>();
+                            confirmedRowsByPrompt[prompt] = promptRows;
+                        }
+
+                        promptRows.Add(changedRow);
+                    }
+                    else
+                    {
+                        changedRows.Add(changedRow);
+                    }
+                }
+            }
+        }
+
+        foreach (var promptRows in confirmedRowsByPrompt)
+        {
+            if (PromptForUntickRows(promptRows.Key, promptRows.Value))
+            {
+                changedRows.AddRange(promptRows.Value);
+            }
+        }
+
+        if (changedRows.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var item in changedRows)
+        {
+            item.Entry.ValueText = "false";
+        }
+
+        SetUndoAction(
+            "disable " + FormatListForStatus(changedRows.Select(item => item.Entry.Key).Distinct(StringComparer.Ordinal).ToList()),
+            () =>
+            {
+                foreach (var item in changedRows)
+                {
+                    item.Entry.ValueText = item.OldValue;
+                }
+            },
+            () => RefreshVisibleTableRows(changedRows.Select(item => item.Entry)));
+        RefreshVisibleTableRows(changedRows.Select(item => item.Entry));
+        return FormatListForStatus(changedRows.Select(item => item.Entry.Key).Distinct(StringComparer.Ordinal).ToList()) + " disabled.";
+    }
+
+    private string? ApplySetRowsByEraRules(ConfigEntry sourceEntry)
+    {
+        if (_document is null || !IsEraSourceEntry(sourceEntry))
+        {
+            return null;
+        }
+
+        var selectedEra = NormalizeAircraftEra(sourceEntry.ValueText);
+        if (string.IsNullOrWhiteSpace(selectedEra))
+        {
+            return null;
+        }
+
+        var changedRows = new List<(ConfigEntry Entry, string OldValue, string NewValue)>();
+        var confirmedRows = new List<(ConfigEntry Entry, string OldValue, string NewValue)>();
+        var confirmPrompts = new HashSet<string>(StringComparer.Ordinal);
+        var queuedRows = new HashSet<ConfigEntry>();
+        foreach (var table in _document.Entries
+                     .Where(entry => !string.IsNullOrWhiteSpace(entry.ParentKey) &&
+                                     !string.IsNullOrWhiteSpace(entry.ParentGuiConfirmSetRowsByEra))
+                     .GroupBy(entry => entry.ParentKey, StringComparer.Ordinal))
+        {
+            var tableRows = table.ToList();
+            var tableMetadata = tableRows.First();
+            var confirmPrompt = tableMetadata.ParentGuiConfirmSetRowsByEra;
+            foreach (var row in tableRows)
+            {
+                if (row.Kind != ConfigValueKind.Boolean ||
+                    !TryReadRowEras(row, out var eras) ||
+                    !queuedRows.Add(row))
+                {
+                    continue;
+                }
+
+                var newValue = eras.Contains(selectedEra) ? "true" : "false";
+                if (row.ValueText.Equals(newValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var changedRow = (row, row.ValueText, newValue);
+                if (!string.IsNullOrWhiteSpace(confirmPrompt))
+                {
+                    confirmPrompts.Add(confirmPrompt.Trim());
+                    confirmedRows.Add(changedRow);
+                }
+                else
+                {
+                    changedRows.Add(changedRow);
+                }
+            }
+        }
+
+        if (confirmedRows.Count > 0)
+        {
+            var prompt = confirmPrompts.Count == 1
+                ? confirmPrompts.First()
+                : "Select matching templates based on Era?";
+            if (PromptForSetRowsByEra(prompt, confirmedRows, selectedEra))
+            {
+                changedRows.AddRange(confirmedRows);
+            }
+        }
+
+        if (changedRows.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var item in changedRows)
+        {
+            item.Entry.ValueText = item.NewValue;
+        }
+
+        SetUndoAction(
+            "update Era template rows for " + selectedEra,
+            () =>
+            {
+                foreach (var item in changedRows)
+                {
+                    item.Entry.ValueText = item.OldValue;
+                }
+            },
+            () => RefreshVisibleTableRows(changedRows.Select(item => item.Entry)));
+        RefreshVisibleTableRows(changedRows.Select(item => item.Entry));
+
+        var rowCount = changedRows.Select(item => item.Entry.DisplayKey).Distinct(StringComparer.Ordinal).Count();
+        return rowCount.ToString(CultureInfo.InvariantCulture) + " Era template row" +
+               (rowCount == 1 ? " updated." : "s updated.");
+    }
+
+    private bool PromptForUntickRows(string prompt, IReadOnlyList<(ConfigEntry Entry, string OldValue)> rows)
+    {
+        var rowCount = rows.Select(item => item.Entry.DisplayKey).Distinct(StringComparer.Ordinal).Count();
+        var message = prompt + Environment.NewLine + Environment.NewLine +
+                      "This will disable " + rowCount.ToString(CultureInfo.InvariantCulture) + " matching row" +
+                      (rowCount == 1 ? "." : "s.");
+        return MessageBox.Show(this, message, "Update config rows", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+    }
+
+    private bool PromptForSetRowsByEra(string prompt, IReadOnlyList<(ConfigEntry Entry, string OldValue, string NewValue)> rows, string selectedEra)
+    {
+        var rowCount = rows.Select(item => item.Entry.DisplayKey).Distinct(StringComparer.Ordinal).Count();
+        var enabledCount = rows.Count(item => item.NewValue.Equals("true", StringComparison.OrdinalIgnoreCase));
+        var disabledCount = rows.Count(item => item.NewValue.Equals("false", StringComparison.OrdinalIgnoreCase));
+        var message = prompt + Environment.NewLine + Environment.NewLine +
+                      "This will update " + rowCount.ToString(CultureInfo.InvariantCulture) + " matching row" +
+                      (rowCount == 1 ? "" : "s") + " for " + selectedEra + " (" +
+                      enabledCount.ToString(CultureInfo.InvariantCulture) + " enabled, " +
+                      disabledCount.ToString(CultureInfo.InvariantCulture) + " disabled).";
+        return MessageBox.Show(this, message, "Update config rows", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+    }
+
+    private static List<(string SourceKey, string SourceValue, List<string> RowKeys)> ParseUntickRowsWhenRules(string ruleText)
+    {
+        var rules = new List<(string SourceKey, string SourceValue, List<string> RowKeys)>();
+        foreach (var rawRule in ruleText.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = rawRule.Split(':', 3, StringSplitOptions.TrimEntries);
+            if (parts.Length != 3 || parts.Any(string.IsNullOrWhiteSpace))
+            {
+                continue;
+            }
+
+            var rowKeys = parts[2]
+                .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(row => !string.IsNullOrWhiteSpace(row))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            if (rowKeys.Count > 0)
+            {
+                rules.Add((parts[0], parts[1], rowKeys));
+            }
+        }
+
+        return rules;
+    }
+
+    private static bool UntickRowsRuleMatches(ConfigEntry sourceEntry, string sourceKey, string sourceValue)
+    {
+        return (sourceEntry.DisplayKey.Equals(sourceKey, StringComparison.Ordinal) ||
+                sourceEntry.Key.Equals(sourceKey, StringComparison.Ordinal)) &&
+               sourceEntry.ValueText.Equals(sourceValue, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsEraSourceEntry(ConfigEntry sourceEntry)
+    {
+        return sourceEntry.DisplayKey.Equals("Era", StringComparison.Ordinal) ||
+               sourceEntry.Key.Equals("Era", StringComparison.Ordinal);
+    }
+
+    private static bool TryReadRowEras(ConfigEntry entry, out HashSet<string> eras)
+    {
+        eras = new HashSet<string>(StringComparer.Ordinal);
+        if (string.IsNullOrWhiteSpace(entry.InlineComment))
+        {
+            return false;
+        }
+
+        var match = Regex.Match(entry.InlineComment, @"^\s*eras\s*=\s*(?<eras>[^;]+)\s*;", RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        foreach (var era in match.Groups["eras"].Value.Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var normalizedEra = NormalizeAircraftEra(era);
+            if (!string.IsNullOrWhiteSpace(normalizedEra))
+            {
+                eras.Add(normalizedEra);
+            }
+        }
+
+        return eras.Count > 0;
+    }
+
+    private static string NormalizeAircraftEra(string value)
+    {
+        var normalized = value.Trim();
+        if (normalized.Equals("Gulfwar", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("Gulf War", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("Coldwar", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("Cold War", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Coldwar";
+        }
+
+        if (normalized.Equals("Vietnam", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("Vietnamn", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("Vientnamn", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Vietnam";
+        }
+
+        if (normalized.Equals("Modern", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Modern";
+        }
+
+        return normalized;
+    }
+
+    private void RefreshVisibleTableRows(IEnumerable<ConfigEntry> rows)
+    {
+        var tableKeys = rows
+            .Select(row => row.ParentKey)
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.Ordinal)
+            .ToHashSet(StringComparer.Ordinal);
+        if (tableKeys.Count == 0)
+        {
+            return;
+        }
+
+        var roots = _categoryPanelCache.Values.Append(_formHost).Distinct();
+        var wasLoading = _loadingForm;
+        _loadingForm = true;
+        try
+        {
+            foreach (var grid in roots.SelectMany(EnumerateChildControls<DataGridView>))
+            {
+                if (grid.Tag is not string tableKey || !tableKeys.Contains(tableKey))
+                {
+                    continue;
+                }
+
+                RefreshTableGrid(grid, FindChildren(tableKey));
+            }
+        }
+        finally
+        {
+            _loadingForm = wasLoading;
+        }
+    }
+
+    private static string FormatListForStatus(IReadOnlyList<string> items)
+    {
+        return items.Count switch
+        {
+            0 => "",
+            1 => items[0],
+            2 => items[0] + " and " + items[1],
+            _ => string.Join(", ", items.Take(items.Count - 1)) + ", and " + items[^1]
+        };
     }
 
     private void RefreshControlValue(Action refresh)
@@ -8046,6 +8687,12 @@ internal sealed class MainForm : Form
         return table.GuiEditor?.Equals("bucket", StringComparison.OrdinalIgnoreCase) == true;
     }
 
+    private static bool ShowCatalogOnlyInactiveBucketItems(ConfigStringListTable table)
+    {
+        return table.Key.Equals("allowedPlanes", StringComparison.Ordinal) ||
+               table.Key.Equals("allowedPlanesRed", StringComparison.Ordinal);
+    }
+
     private Control BuildStringListBucketEditor(ConfigStringListTable table)
     {
         GuiMetadataEntry? metadata = null;
@@ -8056,7 +8703,7 @@ internal sealed class MainForm : Form
         DataGridView? inactiveGrid = null;
         var group = new TableLayoutPanel
         {
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            Anchor = AnchorStyles.Top | AnchorStyles.Left,
             Height = Math.Min(640, Math.Max(220, table.Items.Count * 26 + 76)),
             Width = GetStringListBucketEditorWidth(),
             ColumnCount = 4,
@@ -8236,7 +8883,7 @@ internal sealed class MainForm : Form
         var availableWidth = _formHost.ClientSize.Width > 0
             ? _formHost.ClientSize.Width - 48
             : ClientSize.Width - 320;
-        return Math.Max(760, availableWidth);
+        return Math.Min(Math.Max(760, availableWidth), Zoomed(1040));
     }
 
     private void ApplyStringListBucketLayout(TableLayoutPanel group, DataGridView activeGrid, DataGridView inactiveGrid)
@@ -8548,6 +9195,7 @@ internal sealed class MainForm : Form
         var helpText = !string.IsNullOrWhiteSpace(metadata?.Help)
             ? metadata.Help
             : entries.FirstOrDefault(entry => !string.IsNullOrWhiteSpace(entry.ParentDescription))?.ParentDescription ?? "";
+        var useCheckboxValueColumn = IsCheckboxTableEditor(metadata, entries);
         var isLocked = ShouldLockTableEditor(key, out var lockReason);
         DataGridView? grid = null;
         var group = new TableLayoutPanel
@@ -8601,7 +9249,7 @@ internal sealed class MainForm : Form
             SetToolbarHelp(grid, lockReason);
         }
         group.Controls.Add(grid, 0, 1);
-        BuildTableColumns(grid, entries);
+        BuildTableColumns(grid, entries, useCheckboxValueColumn);
         ApplyCompactTableLayout(group, grid);
         var addButton = MakeDesignerButton("Add row", () => AddTableEntryRow(key, entries, grid), TableActionButtonWidth);
         var removeButton = MakeDesignerButton("Remove selected", () => RemoveTableEntryRow(entries, grid), TableActionButtonWidth);
@@ -8769,11 +9417,14 @@ internal sealed class MainForm : Form
             .GroupBy(item => item.Value, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         var values = new List<string>();
-        foreach (var value in _stringListCatalog.GetValues(document, table.Key))
+        if (ShowCatalogOnlyInactiveBucketItems(table))
         {
-            if (!values.Any(existing => existing.Equals(value, StringComparison.Ordinal)))
+            foreach (var value in _stringListCatalog.GetValues(document, table.Key))
             {
-                values.Add(value);
+                if (!values.Any(existing => existing.Equals(value, StringComparison.Ordinal)))
+                {
+                    values.Add(value);
+                }
             }
         }
 
@@ -8900,7 +9551,7 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MinimizeBox = false,
             MaximizeBox = false,
-            ClientSize = new Size(420, 122),
+            ClientSize = new Size(Zoomed(420), Zoomed(122)),
             Font = Font
         };
 
@@ -8908,13 +9559,13 @@ internal sealed class MainForm : Form
         {
             Text = labelText,
             AutoSize = true,
-            Location = new Point(12, 14)
+            Location = new Point(Zoomed(12), Zoomed(14))
         });
 
         var textBox = new TextBox
         {
-            Location = new Point(12, 38),
-            Width = 396,
+            Location = new Point(Zoomed(12), Zoomed(38)),
+            Width = Zoomed(396),
             Text = defaultText
         };
         dialog.Controls.Add(textBox);
@@ -8923,16 +9574,18 @@ internal sealed class MainForm : Form
         {
             Text = "Add",
             DialogResult = DialogResult.OK,
-            Location = new Point(246, 78),
-            Width = 76
+            Location = new Point(Zoomed(246), Zoomed(78))
         };
         var cancelButton = new Button
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
-            Location = new Point(332, 78),
-            Width = 76
+            Location = new Point(Zoomed(332), Zoomed(78))
         };
+        SizeDialogButton(okButton);
+        SizeDialogButton(cancelButton);
+        cancelButton.Location = new Point(dialog.ClientSize.Width - cancelButton.Width - Zoomed(12), Zoomed(78));
+        okButton.Location = new Point(cancelButton.Left - okButton.Width - Zoomed(10), Zoomed(78));
         dialog.Controls.Add(okButton);
         dialog.Controls.Add(cancelButton);
 
@@ -8955,7 +9608,7 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MinimizeBox = false,
             MaximizeBox = false,
-            ClientSize = new Size(460, 174),
+            ClientSize = new Size(Zoomed(460), Zoomed(174)),
             Font = Font,
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
@@ -8965,14 +9618,14 @@ internal sealed class MainForm : Form
         {
             Text = "Aircraft",
             AutoSize = true,
-            Location = new Point(12, 14),
+            Location = new Point(Zoomed(12), Zoomed(14)),
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
         });
         var aircraftBox = new TextBox
         {
-            Location = new Point(12, 38),
-            Width = 436,
+            Location = new Point(Zoomed(12), Zoomed(38)),
+            Width = Zoomed(436),
             Text = defaultAircraft
         };
         StyleInput(aircraftBox);
@@ -8982,14 +9635,14 @@ internal sealed class MainForm : Form
         {
             Text = "Callsign",
             AutoSize = true,
-            Location = new Point(12, 72),
+            Location = new Point(Zoomed(12), Zoomed(72)),
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
         });
         var callsignBox = new TextBox
         {
-            Location = new Point(12, 96),
-            Width = 436
+            Location = new Point(Zoomed(12), Zoomed(96)),
+            Width = Zoomed(436)
         };
         StyleInput(callsignBox);
         dialog.Controls.Add(callsignBox);
@@ -8998,16 +9651,18 @@ internal sealed class MainForm : Form
         {
             Text = "Add",
             DialogResult = DialogResult.OK,
-            Location = new Point(286, 132),
-            Width = 76
+            Location = new Point(Zoomed(286), Zoomed(132))
         };
         var cancelButton = new Button
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
-            Location = new Point(372, 132),
-            Width = 76
+            Location = new Point(Zoomed(372), Zoomed(132))
         };
+        SizeDialogButton(addButton);
+        SizeDialogButton(cancelButton);
+        cancelButton.Location = new Point(dialog.ClientSize.Width - cancelButton.Width - Zoomed(12), Zoomed(132));
+        addButton.Location = new Point(cancelButton.Left - addButton.Width - Zoomed(10), Zoomed(132));
         StyleButton(addButton);
         StyleButton(cancelButton);
         dialog.Controls.Add(addButton);
@@ -9042,8 +9697,8 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.Sizable,
             MinimizeBox = false,
             MaximizeBox = true,
-            ClientSize = new Size(640, 420),
-            MinimumSize = new Size(460, 300),
+            ClientSize = FittedDialogClientSize(640, 420, 460, 300),
+            MinimumSize = FittedDialogMinimumSize(460, 300),
             Font = Font,
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
@@ -9053,7 +9708,7 @@ internal sealed class MainForm : Form
         {
             Text = title,
             AutoSize = true,
-            Location = new Point(12, 12),
+            Location = new Point(Zoomed(12), Zoomed(12)),
             ForeColor = PrimaryTextColor,
             BackColor = MainBackground
         });
@@ -9067,8 +9722,8 @@ internal sealed class MainForm : Form
             WordWrap = true,
             Text = defaultText,
             Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-            Location = new Point(12, 38),
-            Size = new Size(616, 320)
+            Location = new Point(Zoomed(12), Zoomed(38)),
+            Size = new Size(dialog.ClientSize.Width - Zoomed(24), dialog.ClientSize.Height - Zoomed(100))
         };
         StyleInput(textBox);
         dialog.Controls.Add(textBox);
@@ -9078,17 +9733,19 @@ internal sealed class MainForm : Form
             Text = "Save",
             DialogResult = DialogResult.OK,
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-            Location = new Point(466, 378),
-            Width = 76
+            Location = new Point(Zoomed(466), Zoomed(378))
         };
         var cancelButton = new Button
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
             Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-            Location = new Point(552, 378),
-            Width = 76
+            Location = new Point(Zoomed(552), Zoomed(378))
         };
+        SizeDialogButton(saveButton);
+        SizeDialogButton(cancelButton);
+        cancelButton.Location = new Point(dialog.ClientSize.Width - cancelButton.Width - Zoomed(12), dialog.ClientSize.Height - cancelButton.Height - Zoomed(12));
+        saveButton.Location = new Point(cancelButton.Left - saveButton.Width - Zoomed(10), cancelButton.Top);
         StyleButton(saveButton);
         StyleButton(cancelButton);
         dialog.Controls.Add(saveButton);
@@ -9137,7 +9794,10 @@ internal sealed class MainForm : Form
 
         if (template.TupleFields.Count > 0)
         {
-            return "{ " + string.Join(", ", template.TupleFields.Select(GetDefaultTupleValue)) + " }";
+            return "{ " + string.Join(", ", template.TupleFields.Select(field =>
+                string.IsNullOrWhiteSpace(field.Key)
+                    ? GetDefaultTupleValue(field)
+                    : field.Key + " = " + GetDefaultTupleValue(field))) + " }";
         }
 
         return template.Kind switch
@@ -9545,6 +10205,17 @@ internal sealed class MainForm : Form
         ConfigureFillColumn(column, 170);
     }
 
+    private static void ConfigureCheckboxValueColumn(DataGridView grid, DataGridViewColumn column)
+    {
+        var headerFont = grid.ColumnHeadersDefaultCellStyle.Font ?? grid.Font;
+        var headerWidth = TextRenderer.MeasureText(
+            column.HeaderText,
+            headerFont,
+            new Size(int.MaxValue, int.MaxValue),
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
+        ConfigureFixedColumn(column, Math.Max(72, headerWidth + 24));
+    }
+
     private static string FormatBooleanDisplay(string value)
     {
         return value.Equals("true", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
@@ -9766,7 +10437,13 @@ internal sealed class MainForm : Form
             : 0;
     }
 
-    private static void BuildTableColumns(DataGridView grid, List<ConfigEntry> entries)
+    private static bool IsCheckboxTableEditor(GuiMetadataEntry? metadata, IEnumerable<ConfigEntry> entries)
+    {
+        return string.Equals(metadata?.ControlType, "checkboxTable", StringComparison.OrdinalIgnoreCase) ||
+               entries.Any(entry => string.Equals(entry.ParentGuiEditor, "checkboxTable", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void BuildTableColumns(DataGridView grid, List<ConfigEntry> entries, bool useCheckboxValueColumn)
     {
         grid.Columns.Clear();
         grid.Columns.Add("name", "Item");
@@ -9819,12 +10496,21 @@ internal sealed class MainForm : Form
         ConfigureFillColumn(grid.Columns["name"], 260);
         if (!mixedValueKinds && firstKind == ConfigValueKind.Boolean)
         {
-            grid.Columns.Add(new DataGridViewComboBoxColumn
+            if (useCheckboxValueColumn)
             {
-                Name = "value",
-                HeaderText = "Value",
-                Items = { "true", "false" }
-            });
+                grid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "value", HeaderText = "Enabled" });
+                ConfigureCheckboxValueColumn(grid, grid.Columns["value"]);
+                return;
+            }
+            else
+            {
+                grid.Columns.Add(new DataGridViewComboBoxColumn
+                {
+                    Name = "value",
+                    HeaderText = "Value",
+                    Items = { "true", "false" }
+                });
+            }
         }
         else
         {
@@ -9839,6 +10525,12 @@ internal sealed class MainForm : Form
         var cell = row.Cells["value"];
         if (entry.Kind == ConfigValueKind.Boolean)
         {
+            if (cell is DataGridViewCheckBoxCell)
+            {
+                cell.Value = entry.ValueText.Equals("true", StringComparison.OrdinalIgnoreCase);
+                return;
+            }
+
             if (cell is not DataGridViewComboBoxCell)
             {
                 var comboCell = new DataGridViewComboBoxCell();
@@ -9871,9 +10563,10 @@ internal sealed class MainForm : Form
 
     private void AddTableRow(DataGridView grid, ConfigEntry entry)
     {
+        var rowName = GetTableRowDisplayName(entry);
         if (IsPriceRankEntry(entry) && TryReadPriceRank(entry.ValueText, out var price, out var rank))
         {
-            var priceRankIndex = grid.Rows.Add(entry.Key, price, rank);
+            var priceRankIndex = grid.Rows.Add(rowName, price, rank);
             grid.Rows[priceRankIndex].Tag = entry;
             ApplyTableRowTooltip(grid.Rows[priceRankIndex], entry);
             ApplyImportedNewRowHighlight(grid.Rows[priceRankIndex], entry);
@@ -9883,7 +10576,7 @@ internal sealed class MainForm : Form
         if (entry.TupleFields.Count > 0)
         {
             var values = entry.GetTupleValues();
-            var cells = new List<object> { entry.Key };
+            var cells = new List<object> { rowName };
             for (var i = 0; i < entry.TupleFields.Count; i++)
             {
                 var value = i < values.Count ? values[i] : "";
@@ -9909,7 +10602,7 @@ internal sealed class MainForm : Form
             return;
         }
 
-        var rowIndex = grid.Rows.Add(entry.Key, "");
+        var rowIndex = grid.Rows.Add(rowName, "");
         var row = grid.Rows[rowIndex];
         ApplyTableValueCell(row, entry);
         row.Tag = entry;
@@ -9921,7 +10614,7 @@ internal sealed class MainForm : Form
     {
         if (IsPriceRankEntry(entry) && TryReadPriceRank(entry.ValueText, out var price, out var rank))
         {
-            row.Cells["name"].Value = entry.Key;
+            row.Cells["name"].Value = GetTableRowDisplayName(entry);
             row.Cells["price"].Value = price;
             row.Cells["rank"].Value = rank;
             row.Tag = entry;
@@ -9930,7 +10623,7 @@ internal sealed class MainForm : Form
             return;
         }
 
-        row.Cells["name"].Value = entry.Key;
+        row.Cells["name"].Value = GetTableRowDisplayName(entry);
         if (entry.TupleFields.Count > 0)
         {
             var values = entry.GetTupleValues();
@@ -9972,9 +10665,28 @@ internal sealed class MainForm : Form
         row.DefaultCellStyle.ForeColor = PrimaryTextColor;
     }
 
+    private static string GetTableRowDisplayName(ConfigEntry entry)
+    {
+        if (entry.ParentGuiRowLabel?.Equals("comment", StringComparison.OrdinalIgnoreCase) == true &&
+            !string.IsNullOrWhiteSpace(entry.InlineComment))
+        {
+            return StripRowMetadataFromComment(entry.InlineComment);
+        }
+
+        return entry.Key;
+    }
+
+    private static string StripRowMetadataFromComment(string inlineComment)
+    {
+        var match = Regex.Match(inlineComment, @"^\s*eras\s*=\s*[^;]+;\s*(?<label>.*)$", RegexOptions.IgnoreCase);
+        return (match.Success ? match.Groups["label"].Value : inlineComment).Trim();
+    }
+
     private static void ApplyTableRowTooltip(DataGridViewRow row, ConfigEntry entry)
     {
-        var tooltip = entry.InlineComment;
+        var tooltip = entry.ParentGuiRowLabel?.Equals("comment", StringComparison.OrdinalIgnoreCase) == true
+            ? entry.Key
+            : entry.InlineComment;
         foreach (DataGridViewCell cell in row.Cells)
         {
             cell.ToolTipText = tooltip;
@@ -10017,9 +10729,15 @@ internal sealed class MainForm : Form
         }
 
         var cellValue = row.Cells[1].Value?.ToString() ?? "";
-        entry.ValueText = entry.Kind == ConfigValueKind.Boolean
-            ? ParseBooleanDisplay(cellValue)
-            : cellValue;
+        if (entry.Kind == ConfigValueKind.Boolean)
+        {
+            entry.ValueText = row.Cells[1] is DataGridViewCheckBoxCell
+                ? (row.Cells[1].Value is bool boolValue && boolValue ? "true" : "false")
+                : ParseBooleanDisplay(cellValue);
+            return;
+        }
+
+        entry.ValueText = cellValue;
     }
 
     private static bool IsPriceRankEntry(ConfigEntry entry)
@@ -10935,7 +11653,7 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MinimizeBox = false,
             MaximizeBox = false,
-            ClientSize = new Size(420, 122),
+            ClientSize = new Size(Zoomed(420), Zoomed(122)),
             Font = Font
         };
 
@@ -10943,13 +11661,13 @@ internal sealed class MainForm : Form
         {
             Text = labelText,
             AutoSize = true,
-            Location = new Point(12, 14)
+            Location = new Point(Zoomed(12), Zoomed(14))
         });
 
         var comboBox = new WheelSafeComboBox
         {
-            Location = new Point(12, 38),
-            Width = 396,
+            Location = new Point(Zoomed(12), Zoomed(38)),
+            Width = Zoomed(396),
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         foreach (var categoryName in categoryNames)
@@ -10963,16 +11681,18 @@ internal sealed class MainForm : Form
         {
             Text = "Move",
             DialogResult = DialogResult.OK,
-            Location = new Point(246, 78),
-            Width = 76
+            Location = new Point(Zoomed(246), Zoomed(78))
         };
         var cancelButton = new Button
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
-            Location = new Point(332, 78),
-            Width = 76
+            Location = new Point(Zoomed(332), Zoomed(78))
         };
+        SizeDialogButton(okButton);
+        SizeDialogButton(cancelButton);
+        cancelButton.Location = new Point(dialog.ClientSize.Width - cancelButton.Width - Zoomed(12), Zoomed(78));
+        okButton.Location = new Point(cancelButton.Left - okButton.Width - Zoomed(10), Zoomed(78));
         dialog.Controls.Add(okButton);
         dialog.Controls.Add(cancelButton);
         dialog.AcceptButton = okButton;
@@ -11021,7 +11741,7 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MinimizeBox = false,
             MaximizeBox = false,
-            ClientSize = new Size(520, 360),
+            ClientSize = FittedDialogClientSize(520, 360, 420, 300),
             Font = Font
         };
 
@@ -11029,16 +11749,16 @@ internal sealed class MainForm : Form
         {
             Text = "Select an item to add to this category.",
             Dock = DockStyle.Top,
-            Height = 34,
+            Height = Zoomed(34),
             TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(10, 8, 10, 0)
+            Padding = new Padding(Zoomed(10), Zoomed(8), Zoomed(10), 0)
         };
         dialog.Controls.Add(label);
 
         var list = new ListBox
         {
             Dock = DockStyle.Top,
-            Height = 260,
+            Height = Math.Max(Zoomed(180), dialog.ClientSize.Height - Zoomed(100)),
             IntegralHeight = false
         };
         foreach (var candidate in candidates)
@@ -11052,21 +11772,21 @@ internal sealed class MainForm : Form
         {
             Dock = DockStyle.Bottom,
             FlowDirection = FlowDirection.RightToLeft,
-            Height = 48,
-            Padding = new Padding(8)
+            Height = DialogButtonHeight() + Zoomed(18),
+            Padding = new Padding(Zoomed(8))
         };
         var addButton = new Button
         {
             Text = "Add",
-            DialogResult = DialogResult.OK,
-            Width = 90
+            DialogResult = DialogResult.OK
         };
         var cancelButton = new Button
         {
             Text = "Cancel",
-            DialogResult = DialogResult.Cancel,
-            Width = 90
+            DialogResult = DialogResult.Cancel
         };
+        SizeDialogButton(addButton);
+        SizeDialogButton(cancelButton);
         buttons.Controls.Add(addButton);
         buttons.Controls.Add(cancelButton);
         dialog.Controls.Add(buttons);
@@ -11253,19 +11973,121 @@ internal sealed class MainForm : Form
 
     private List<DesignerItem> GetDesignerItems(string categoryName, bool includeTableRows, bool includeAdvanced = false)
     {
+        List<DesignerItem> items;
         if (HasConfigCategory(categoryName))
         {
             // Config-backed categories use Lua source order; designer metadata still controls labels and rendering.
-            return GetConfigSourceDesignerItems(categoryName, includeTableRows, includeAdvanced);
+            items = GetConfigSourceDesignerItems(categoryName, includeTableRows, includeAdvanced);
+            return FilterVisibleDesignerItems(items);
         }
 
         if (_document is not null &&
             _document.Metadata.CategoryLayouts.TryGetValue(categoryName, out var layout))
         {
-            return GetSavedLayoutDesignerItems(categoryName, layout, includeTableRows, includeAdvanced);
+            items = GetSavedLayoutDesignerItems(categoryName, layout, includeTableRows, includeAdvanced);
+            return FilterVisibleDesignerItems(items);
         }
 
-        return GetAutoDesignerItems(categoryName, includeTableRows, includeAdvanced);
+        items = GetAutoDesignerItems(categoryName, includeTableRows, includeAdvanced);
+        return FilterVisibleDesignerItems(items);
+    }
+
+    private List<DesignerItem> FilterVisibleDesignerItems(IEnumerable<DesignerItem> items)
+    {
+        return items.Where(IsDesignerItemVisible).ToList();
+    }
+
+    private bool IsDesignerItemVisible(DesignerItem item)
+    {
+        var visibleWhen = GetDesignerItemVisibleWhen(item);
+        return string.IsNullOrWhiteSpace(visibleWhen) || VisibleWhenMatches(visibleWhen);
+    }
+
+    private static string? GetDesignerItemVisibleWhen(DesignerItem item)
+    {
+        if (item.StringListTable is not null)
+        {
+            return item.StringListTable.GuiVisibleWhen;
+        }
+
+        if (item.StageTable is not null)
+        {
+            return item.StageTable.GuiVisibleWhen;
+        }
+
+        var entry = item.Entries.FirstOrDefault();
+        return item.IsGroup
+            ? entry?.ParentGuiVisibleWhen ?? entry?.GuiVisibleWhen
+            : entry?.GuiVisibleWhen ?? entry?.ParentGuiVisibleWhen;
+    }
+
+    private bool VisibleWhenMatches(string ruleText)
+    {
+        foreach (var rule in ParseVisibleWhenRules(ruleText))
+        {
+            var sourceEntry = FindVisibleWhenSourceEntry(rule.SourceKey);
+            if (sourceEntry is null)
+            {
+                continue;
+            }
+
+            if (!VisibleWhenValueMatches(sourceEntry.ValueText, rule.Values))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private ConfigEntry? FindVisibleWhenSourceEntry(string key)
+    {
+        if (_document is null)
+        {
+            return null;
+        }
+
+        return _document.Entries.FirstOrDefault(entry => entry.DisplayKey.Equals(key, StringComparison.Ordinal)) ??
+               _document.Entries.FirstOrDefault(entry => entry.Key.Equals(key, StringComparison.Ordinal));
+    }
+
+    private static bool VisibleWhenValueMatches(string sourceValue, IReadOnlyList<string> expectedValues)
+    {
+        var normalizedSourceValue = NormalizeVisibleWhenValue(sourceValue);
+        return expectedValues.Any(value =>
+            NormalizeVisibleWhenValue(value).Equals(normalizedSourceValue, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeVisibleWhenValue(string value)
+    {
+        return ConfigEntry.UnquoteLuaString(value.Trim());
+    }
+
+    private static List<(string SourceKey, List<string> Values)> ParseVisibleWhenRules(string ruleText)
+    {
+        var rules = new List<(string SourceKey, List<string> Values)>();
+        foreach (var rawRule in ruleText.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var separator = rawRule.IndexOf(':');
+            if (separator <= 0 || separator >= rawRule.Length - 1)
+            {
+                continue;
+            }
+
+            var sourceKey = rawRule[..separator].Trim();
+            var values = rawRule[(separator + 1)..]
+                .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .ToList();
+            if (string.IsNullOrWhiteSpace(sourceKey) || values.Count == 0)
+            {
+                continue;
+            }
+
+            rules.Add((sourceKey, values));
+        }
+
+        return rules;
     }
 
     private List<DesignerItem> GetAutoDesignerItems(string categoryName, bool includeTableRows, bool includeAdvanced = false)
@@ -12238,10 +13060,15 @@ internal sealed class MainForm : Form
         }
 
         var undoValue = oldValue;
+        Action? undoRefreshAction = () =>
+        {
+            refreshAction?.Invoke();
+            RefreshVisibleWhenTargets(entry);
+        };
         _undoStack.Push(new UndoStep(
             description,
             () => entry.ValueText = undoValue,
-            refreshAction,
+            undoRefreshAction,
             collapseKey,
             undoValue,
             newValue,
@@ -12626,8 +13453,16 @@ internal sealed class MainForm : Form
         if (!StringComparer.Ordinal.Equals(_activeEntry.ValueText, oldValue))
         {
             var entry = _activeEntry;
-            SetUndoAction("edit " + entry.DisplayName, () => entry.ValueText = oldValue, () => RefreshCurrentView());
+            SetUndoAction(
+                "edit " + entry.DisplayName,
+                () => entry.ValueText = oldValue,
+                () =>
+                {
+                    RefreshCurrentView();
+                    RefreshVisibleWhenTargets(entry);
+                });
             RefreshLinkedStageEditors(entry);
+            RefreshVisibleWhenTargets(entry);
         }
 
         RefreshGrid();
@@ -12924,6 +13759,13 @@ internal sealed class MainForm : Form
         }
     }
 
+    private bool InstallInitialConfigFromSource(string sourcePath, FirstRunInstanceCandidate instance)
+    {
+        return sourcePath.EndsWith(".miz", StringComparison.OrdinalIgnoreCase)
+            ? InstallInitialConfigFromMiz(sourcePath, instance)
+            : InstallInitialConfigFromConfigFile(sourcePath, instance);
+    }
+
     private bool InstallInitialConfigFromMiz(string mizPath, FirstRunInstanceCandidate instance)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "FootholdConfigManager-" + Guid.NewGuid().ToString("N"));
@@ -12980,6 +13822,55 @@ internal sealed class MainForm : Form
             {
                 // Temporary cleanup failure should not hide the install result.
             }
+        }
+    }
+
+    private bool InstallInitialConfigFromConfigFile(string configPath, FirstRunInstanceCandidate instance)
+    {
+        try
+        {
+            var configFileName = Path.GetFileName(configPath);
+            if (!IsSupportedConfigFileName(configFileName))
+            {
+                MessageBox.Show(this, "Choose Foothold Config.lua or Foothold Config WW2.lua.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            var targetPath = Path.GetFullPath(instance.ConfigPathFor(configFileName));
+            if (File.Exists(targetPath))
+            {
+                AddOrUpdateInstanceProfile(instance.Name, targetPath);
+                LoadConfig(targetPath);
+                MessageBox.Show(this, "A " + configFileName + " already exists at the selected target. It was opened and no file was overwritten.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return true;
+            }
+
+            var newDocument = ConfigDocument.Load(configPath);
+            newDocument.RepairStringListSeparators();
+            if (!ValidateMergeDocument(newDocument, "Install Foothold Config validation failed", "The selected config file"))
+            {
+                return false;
+            }
+
+            RefreshStringListCatalogFromDefaults(newDocument);
+            var targetDirectory = Path.GetDirectoryName(targetPath);
+            if (string.IsNullOrWhiteSpace(targetDirectory))
+            {
+                throw new InvalidOperationException("The selected install target is invalid.");
+            }
+
+            Directory.CreateDirectory(targetDirectory);
+            newDocument.SaveTo(targetPath);
+            var storedDefaults = StoreConfigDefaults(configPath);
+            AddOrUpdateInstanceProfile(instance.Name, targetPath);
+            LoadConfig(targetPath);
+            SetStatus("Installed Foothold config from " + Path.GetFileName(storedDefaults.ConfigPath) + " to " + instance.Name + ".");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Install Foothold Config failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
         }
     }
 
@@ -13083,7 +13974,7 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MinimizeBox = false,
             MaximizeBox = false,
-            ClientSize = new Size(620, 260),
+            ClientSize = FittedDialogClientSize(620, 260, 500, 230),
             Font = Font,
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
@@ -13094,19 +13985,19 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             RowCount = 3,
             ColumnCount = 1,
-            Padding = new Padding(16),
+            Padding = new Padding(Zoomed(16)),
             BackColor = MainBackground
         };
         panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(18)));
         dialog.Controls.Add(panel);
 
         panel.Controls.Add(new Label
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            MaximumSize = new Size(560, 0),
+            MaximumSize = new Size(dialog.ClientSize.Width - Zoomed(60), 0),
             Text = "This MIZ contains more than one Foothold config. Choose which one to use:" + Environment.NewLine +
                    Path.GetFileName(mizPath),
             BackColor = MainBackground,
@@ -13129,7 +14020,7 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            Padding = new Padding(0, 10, 0, 0),
+            Padding = new Padding(0, Zoomed(10), 0, 0),
             BackColor = MainBackground
         };
         var useButton = new Button { Text = "Use selected", DialogResult = DialogResult.OK };
@@ -14268,8 +15159,15 @@ internal sealed class MainForm : Form
             newEntry.ValueText = currentEntry.ValueText;
         }
 
+        ApplyLegacySamTemplateMigration(currentByKey, newDocument, preview);
+
         foreach (var currentEntry in currentDocument.Entries.Where(entry => !newKeys.Contains(entry.DisplayKey)))
         {
+            if (IsLegacySamTemplateSetting(currentEntry.DisplayKey))
+            {
+                continue;
+            }
+
             if (TryMigrateMisplacedTopLevelValue(currentByKey, newTopLevelByKey, currentEntry, preview))
             {
                 continue;
@@ -14286,6 +15184,56 @@ internal sealed class MainForm : Form
 
         PreserveStringListItems(currentDocument, newDocument, preview);
         return preview;
+    }
+
+    private static bool IsLegacySamTemplateSetting(string key)
+    {
+        return key is "NoSA10AndSA11" or "NoTorM2AndPantsir" or "NoSA15";
+    }
+
+    private static void ApplyLegacySamTemplateMigration(
+        IReadOnlyDictionary<string, ConfigEntry> currentByKey,
+        ConfigDocument newDocument,
+        MizMergePreview preview)
+    {
+        foreach (var table in newDocument.Entries
+                     .Where(entry => !string.IsNullOrWhiteSpace(entry.ParentKey) &&
+                                     !string.IsNullOrWhiteSpace(entry.ParentGuiUntickRowsWhen))
+                     .GroupBy(entry => entry.ParentKey, StringComparer.Ordinal))
+        {
+            var ruleText = table.First().ParentGuiUntickRowsWhen ?? "";
+            foreach (var rule in ParseUntickRowsWhenRules(ruleText))
+            {
+                if (!currentByKey.TryGetValue(rule.SourceKey, out var sourceEntry) ||
+                    !sourceEntry.ValueText.Equals(rule.SourceValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var rowKey in rule.RowKeys)
+                {
+                    var targetEntry = table.FirstOrDefault(entry => entry.Key.Equals(rowKey, StringComparison.Ordinal));
+                    if (targetEntry is null || targetEntry.Kind != ConfigValueKind.Boolean)
+                    {
+                        continue;
+                    }
+
+                    if (currentByKey.ContainsKey(targetEntry.DisplayKey))
+                    {
+                        continue;
+                    }
+
+                    preview.NewEntries.Remove(targetEntry);
+                    if (targetEntry.ValueText.Equals("false", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    preview.KeptValues.Add(new MizKeptValue(targetEntry, "false", targetEntry.ValueText));
+                    targetEntry.ValueText = "false";
+                }
+            }
+        }
     }
 
     private static void ApplyStringListInstallPolicies(
@@ -14636,7 +15584,8 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.Sizable,
             MinimizeBox = false,
             MaximizeBox = true,
-            ClientSize = new Size(780, 540),
+            ClientSize = FittedDialogClientSize(780, 540, 560, 380),
+            MinimumSize = FittedDialogMinimumSize(560, 380),
             Font = Font
         };
 
@@ -14645,11 +15594,11 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             RowCount = 3,
             ColumnCount = 1,
-            Padding = new Padding(10)
+            Padding = new Padding(Zoomed(10))
         };
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(42)));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(18)));
         dialog.Controls.Add(panel);
 
         panel.Controls.Add(new Label
@@ -14678,15 +15627,15 @@ internal sealed class MainForm : Form
         var importButton = new Button
         {
             Text = confirmText,
-            DialogResult = DialogResult.OK,
-            Width = 90
+            DialogResult = DialogResult.OK
         };
         var cancelButton = new Button
         {
             Text = "Cancel",
-            DialogResult = DialogResult.Cancel,
-            Width = 90
+            DialogResult = DialogResult.Cancel
         };
+        SizeDialogButton(importButton);
+        SizeDialogButton(cancelButton);
         buttons.Controls.Add(importButton);
         buttons.Controls.Add(cancelButton);
         panel.Controls.Add(buttons, 0, 2);
