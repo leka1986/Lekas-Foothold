@@ -441,7 +441,7 @@ Please join us.]],
 -- Below, you can change the callsigns in the welcome message and their IFF codes.
 -- The IFF codes are only functional if you use LotATC and configure the same numbers there.
 -- If IFF is not important to you, keep the numbers as-is and only change the callsigns.
--- @gui label="Welcome Message Callsigns"
+-- @gui label="Welcome Message Callsigns" installPolicy="keepTable"
 CallsignOverrides = {
     ["F4U.1D"] = {
         ["BlackSheep1"] = { 0, 0, 0, 0 },

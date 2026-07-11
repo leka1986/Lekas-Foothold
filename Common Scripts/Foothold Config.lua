@@ -760,7 +760,7 @@ Please join us.]],
 -- Below, you can change the callsigns in the welcome message and their IFF codes.
 -- The IFF codes are only functional if you use LotATC and configure the same numbers there.
 -- If IFF is not important to you, keep the numbers as-is and only change the callsigns.
--- @gui label="Welcome Message Callsigns"
+-- @gui label="Welcome Message Callsigns" installPolicy="keepTable"
 CallsignOverrides = {
     ["F.A.18"] = {
         ["Arctic1"] = {1400, 1401, 1402, 1403},
