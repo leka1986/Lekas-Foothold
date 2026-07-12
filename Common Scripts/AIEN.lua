@@ -10657,6 +10657,89 @@ local function moveToPoint(group, Vec3destination, destRadius, destInnerRadius, 
     end
 end
 
+function AIEN.ReactToSmoke(zoneObj, groupName, chancePercent)
+    local group = Group.getByName(groupName)
+    if AIEN.config.reactions ~= true or not group or not group:isExist() or group:getSize() < 1 then return false end
+
+    local groupId = group:getID()
+    local groupData = groundgroupsDb[groupId]
+    if not groupData or groupData.excluded == true or groupData.tasked == true or underAttack[groupId] then return false end
+
+    local lead = group:getUnit(1)
+    local velocity = lead:getVelocity() or { x = 0, y = 0, z = 0 }
+    if math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z) >= 1 then return false end
+
+    local chance = math.max(0, math.min(100, tonumber(chancePercent) or 20))
+    if aie_random(1, 100) > chance then return false end
+
+    local reactionStarted = timer.getTime()
+    underAttack[groupId] = reactionStarted
+    timer.scheduleFunction(function(args)
+        if underAttack[args.groupId] == args.reactionStarted then
+            underAttack[args.groupId] = nil
+        end
+        return nil
+    end, {
+        groupId = groupId,
+        reactionStarted = reactionStarted,
+    }, reactionStarted + AIEN.config.disperseActionTime)
+
+    local delay = getReactionTime(groupData.skill)
+    timer.scheduleFunction(function(args)
+        local currentGroup = Group.getByName(args.groupName)
+        if not currentGroup or not currentGroup:isExist() or currentGroup:getSize() < 1 then
+            underAttack[args.groupId] = nil
+            return nil
+        end
+
+        local currentData = groundgroupsDb[args.groupId]
+        if not currentData or currentData.excluded == true or currentData.tasked == true then
+            underAttack[args.groupId] = nil
+            return nil
+        end
+
+        local currentLead = currentGroup:getUnit(1)
+        local currentVelocity = currentLead:getVelocity() or { x = 0, y = 0, z = 0 }
+        if math.sqrt(currentVelocity.x * currentVelocity.x + currentVelocity.y * currentVelocity.y + currentVelocity.z * currentVelocity.z) >= 1 then
+            underAttack[args.groupId] = nil
+            return nil
+        end
+
+        local currentPos = currentLead:getPoint()
+        local currentZone = bc:getZoneOfPoint(currentPos)
+        if not currentZone or currentZone.zone ~= args.zoneName then
+            underAttack[args.groupId] = nil
+            return nil
+        end
+
+        local destination = nil
+        for _ = 1, 10 do
+            local candidate = getRandTerrainPointInCircleOriginal(currentPos, 400, 150, true)
+            local candidateZone = candidate and bc:getZoneOfPoint(candidate) or nil
+            if candidateZone and candidateZone.zone == args.zoneName then
+                destination = candidate
+                break
+            end
+        end
+        if not destination then
+            underAttack[args.groupId] = nil
+            return nil
+        end
+
+        moveToPoint(currentGroup, destination, 0, 0, false, "Off Road", nil, nil, nil, nil, nil, "smoke_reaction")
+        if AIEN.config.AIEN_debugProcessDetail == true then
+            env.info((tostring(ModuleName) .. ", smoke reaction moving group " .. tostring(args.groupName)))
+        end
+        return nil
+    end, {
+        groupId = groupId,
+        groupName = groupName,
+        zoneName = zoneObj.zone,
+    }, timer.getTime() + delay)
+
+    return true
+end
+
 
 --###### COUNTER BATTERY FIRE ######################################################################
 

@@ -262,12 +262,13 @@ local cwSwap = {
 	['Red Armour Group 2']   		= 'Red Armor Group9',
 	['Red Armour Group 3']  		= 'Red Armor Group6',
 	['blueArmor']  					= 'blueArmor_cw',
-	['bluePD'] 						= 'bluePD Coldwar',
+	['bluePD'] 						= 'bluePD_CW',
 	['bluePD 2'] 					= 'bluePD 2 Coldwar',
 	['bluePD1'] 					= 'bluePD 2 Coldwar',
 }
 
 local vnSwap = {
+	['blueArmor_cw'] = 'blueArmor-VT',
 	['Enemy Task forces'] = 'Enemy task forces Vietnam',
 	['Enemy ground forces'] = 'Enemy ground forces Vietnam',
 	['Red Armour Group'] = 'Red Armor Group Vietnam 1',
@@ -471,6 +472,7 @@ end
 
 if Era == 'Vietnam' then
 	deepSwap(RandomRedPool, vnSwap)
+	deepSwap(RandomBluePool, vnSwap)
 end
 
 RandomRedPickKeepChance = {
@@ -2738,6 +2740,7 @@ StrategicBomber.Configure({
 		weaponExpend = AI.Task.WeaponExpend.TWO,
 		holdSpeedKt = 300,
 		toIngressSpeedKt = 380,
+		ingressSpeedKt = 550,
 		afterIngressSpeedKt = 350,
 		escortAltitudeFt = 27000,
 		interceptorTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
@@ -3043,7 +3046,7 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD Coldwar' or 'bluePD1')
+		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD_CW' or 'bluePD1')
 		bc:refreshZoneLabel(params.zone.zone)
 		local sys = ColdWarTechEra and 'Hawk' or 'Nasams'
         if bc.globalExtraUnlock then
@@ -3232,7 +3235,8 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		local slotID = ColdWarTechEra and 'blueArmor_cw' or 'blueArmor'
+		local slotID = Era == 'Vietnam' and 'blueArmor-VT'
+			or (Era == 'Coldwar' and 'blueArmor_cw' or 'blueArmor')
 		params.zone:addExtraSlot(slotID)
 		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
@@ -3424,9 +3428,7 @@ if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, ShopCats.AIAttack) -- TALD DECOY Flight
 end
 bc:addShopItem(2, 'groundattack', -1, 7, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
-if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
-end
 if UseStatics == true then
     bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
 end

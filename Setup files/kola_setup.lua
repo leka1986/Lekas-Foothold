@@ -345,11 +345,14 @@ local cwSwap = {
     ['Murmansk-naval-group-Fixed-red'] = 'Murmansk-naval-group-Fixed-red-Coldwar',
     ['Severomorsk-naval-group-Fixed-red'] = 'Severomorsk-naval-group-Fixed-red-coldwar',
     ['bluePD1']  = 'blueHAWK-Coldwar',
+    ['bluePD']  = 'bluePD_CW',
+    ['bluePD 2']  = 'blueHAWK-Coldwar',
     ['blueHAWK']  = 'blueHAWK-Coldwar',
     ['blueArmor']  = 'blueArmor-Coldwar',
 }
 
 local vnSwap = {
+    ['blueArmor-Coldwar'] = 'blueArmor-VT',
     ['Enemy Task forces'] = 'Enemy task forces Vietnam',
     ['Enemy ground forces'] = 'Enemy ground forces Vietnam',
     ['Molniya'] = 'MissileBoat',
@@ -518,6 +521,7 @@ end
 
 if Era == 'Vietnam' then
     deepSwap(RandomRedPool, vnSwap)
+    deepSwap(RandomBluePool, vnSwap)
 end
 
 RandomRedPickKeepChance = {
@@ -2425,6 +2429,7 @@ StrategicBomber.Configure({
 		weaponExpend = AI.Task.WeaponExpend.TWO,
 		holdSpeedKt = 300,
 		toIngressSpeedKt = 380,
+		ingressSpeedKt = 550,
 		afterIngressSpeedKt = 350,
 		escortAltitudeFt = 27000,
 		interceptorTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
@@ -2591,7 +2596,7 @@ function(sender, params)
     if params.zone and params.zone.side == 2 and not params.zone.suspended then
         
         local zn = CustomZone:getByName(params.zone.zone)
-        zn:spawnGroup('ca-tanks')
+        zn:spawnGroup(ColdWarTechEra and 'ca-tanks-Coldwar' or 'ca-tanks')
         trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_ARMOR_DEPLOYED", params.zone.zone), 15)
     else
         return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -3001,7 +3006,7 @@ bc.shopItems['zinf'].groupZoneSelector = {
 	extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
 }
-local samLabel = (Era == 'Coldwar') and LTGet("SYRIA_SHOP_ITEM_UPGRADE_HAWK")
+local samLabel = ColdWarTechEra and LTGet("SYRIA_SHOP_ITEM_UPGRADE_HAWK")
                                    or  LTGet("SYRIA_SHOP_ITEM_UPGRADE_NASAMS")
 local samMenu=nil
 bc:registerShopItem('zsam',samLabel,ShopPrices.zsam,function(sender)
@@ -3016,9 +3021,9 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		params.zone:addExtraSlot((Era == 'Coldwar') and 'blueHAWK-Coldwar' or 'bluePD1')
+		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD_CW' or 'bluePD1')
 		bc:refreshZoneLabel(params.zone.zone)
-		local sys = (Era == 'Coldwar') and 'Hawk' or 'Nasams'
+		local sys = ColdWarTechEra and 'Hawk' or 'Nasams'
         if bc.globalExtraUnlock then
             trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", sys, params.zone.zone, tostring(ShopPrices.zsam)),10)
         else
@@ -3201,7 +3206,8 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		local slotID = (Era == 'Coldwar') and 'blueArmor-Coldwar' or 'blueArmor'
+		local slotID = Era == 'Vietnam' and 'blueArmor-VT'
+			or (Era == 'Coldwar' and 'blueArmor-Coldwar' or 'blueArmor')
 		params.zone:addExtraSlot(slotID)
 		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
@@ -3395,9 +3401,7 @@ if UseStatics == true then
 end
 bc:addShopItem(2, 'cruisemsl', 12, 7, ShopRankRequirements.cruisemsl, ShopCats.AIAttack) -- Cruise missiles
 bc:addShopItem(2, 'groundattack', -1, 8, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
-if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'strategicbomber', -1, 9, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
-end
 
 -- Zone Upgrades
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone

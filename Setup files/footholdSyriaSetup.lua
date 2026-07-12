@@ -238,14 +238,16 @@ local cwSwap = {
 	['Neustrashimy']  										= 'Molniya',
 	['Rezky']  												= 'Grisha',
 	['bluePD2']  											= 'bluePD2 Coldwar',
+	['bluePD 2']  										= 'blueHAWK_CW',
 	['bluePD1']  											= 'bluePD Coldwar',
-	['bluePD']  											= 'bluePD Coldwar',
+	['bluePD']  											= 'bluePD_CW',
 	['blueArmor']  											= 'blueArmor_Cw',
 	['blueHAWK']  											= 'blueHAWK_CW',
 
 }
 
 local vnSwap = {
+	['blueArmor_Cw'] = 'blueArmor-VT',
 	['Enemy Task forces'] = 'Enemy task forces Vietnam',
 	['Enemy ground forces'] = 'Enemy ground forces Vietnam',
 	['Molniya'] = 'MissileBoat',
@@ -411,6 +413,7 @@ end
 
 if Era == 'Vietnam' then
 	deepSwap(RandomRedPool, vnSwap)
+	deepSwap(RandomBluePool, vnSwap)
 end
 
 RandomRedPickKeepChance = {
@@ -2717,6 +2720,7 @@ StrategicBomber.Configure({
 		weaponExpend = AI.Task.WeaponExpend.TWO,
 		holdSpeedKt = 300,
 		toIngressSpeedKt = 380,
+		ingressSpeedKt = 550,
 		afterIngressSpeedKt = 350,
 		escortAltitudeFt = 27000,
 		interceptorTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
@@ -3465,7 +3469,7 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD Coldwar' or 'bluePD1')
+		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD_CW' or 'bluePD1')
 		bc:refreshZoneLabel(params.zone.zone)
         local sys = ColdWarTechEra and 'Hawk' or 'Nasams'
         if bc.globalExtraUnlock then
@@ -3656,7 +3660,8 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		local slotID = ColdWarTechEra and 'blueArmor_cw' or 'blueArmor'
+		local slotID = Era == 'Vietnam' and 'blueArmor-VT'
+			or (Era == 'Coldwar' and 'blueArmor_cw' or 'blueArmor')
 		params.zone:addExtraSlot(slotID)
 		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
@@ -3851,9 +3856,7 @@ bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, Shop
 end
 bc:addShopItem(2, 'groundattack', -1, 6, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
 bc:addShopItem(2, 'cruisemsl', 12, 7, ShopRankRequirements.cruisemsl, ShopCats.AIAttack) -- Cruise missiles
-if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
-end
 -- Zone Upgrades
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
 bc:addShopItem(2, 'zarm', -1, 2, ShopRankRequirements.zarm, ShopCats.ZoneUpgrades) -- add armour group to a zone

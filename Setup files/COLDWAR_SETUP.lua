@@ -377,11 +377,14 @@ local cwSwap = {
 	['Red Armour Group 2']   = 'Red Armor Group7',
 	['Red Armour Group']  = 'Red Armor Group8',
 	['bluePD1']  = 'blueHAWK Coldwar',
+	['bluePD']  = 'bluePD_CW',
+	['bluePD 2']  = 'blueHAWK Coldwar',
 	['blueHAWK']  = 'blueHAWK Coldwar',
 	['blueArmor']  = 'blueArmor_cw',
 }
 
 local vnSwap = {
+	['blueArmor_cw'] = 'blueArmor-VT',
 	['Enemy Task forces'] = 'Enemy task forces Vietnam',
 	['Enemy ground forces'] = 'Enemy ground forces Vietnam',
 	['Molniya'] = 'MissileBoat',
@@ -543,6 +546,7 @@ end
 
 if Era == 'Vietnam' then
 	deepSwap(RandomRedPool, vnSwap)
+	deepSwap(RandomBluePool, vnSwap)
 end
 
 RandomRedPickKeepChance = {
@@ -1022,7 +1026,7 @@ zones.giebelstadt:addGroups({
 	GroupCommander:new({name='Giebelstadt-attack-Hahn-Sead', mission='attack',template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Hahn',Altitude = SeadAltitude()}),
 	GroupCommander:new({name='Giebelstadt-attack-Hahn-rwy', mission='attack',template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone='Hahn',Altitude = RunwayStrikeAltitude()}),
 	GroupCommander:new({name='Giebelstadt-attack-Frankfurt-Sead', mission='attack',template='SeadPlaneTemplate', MissionType='SEAD', targetzone='Frankfurt', Altitude = SeadAltitude()}),
-	GroupCommander:new({name='Giebelstadt-attack-Walldorf FARP', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Walldorf FARP', spawnDelayFactor = 2}),
+	GroupCommander:new({name='Giebelstadt-attack-Walldorf FARP', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Walldorf FARP', spawnDelayFactor = 2}),
 	GroupCommander:new({name='Giebelstadt-supply-Walldurn FARP', mission='supply', template='HeloSupplyTemplate', targetzone='Walldurn FARP'}),
 	GroupCommander:new({name='Giebelstadt-attack-Walldurn FARP-CasHelo', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Walldurn FARP'}),
 })
@@ -3235,10 +3239,11 @@ StrategicBomber.Configure({
 		missionId = "bombBlue",
 		targetSide = 1,
 		routeAltitudeFt = 25000,
-		attackAltitudeFt = ColdWarTechEra and 12000 or 25000,
+		attackAltitudeFt = ColdWarTechEra and 12000 or 30000,
 		weaponExpend = AI.Task.WeaponExpend.TWO,
 		holdSpeedKt = 300,
 		toIngressSpeedKt = 380,
+		ingressSpeedKt = 550,
 		afterIngressSpeedKt = 350,
 		escortAltitudeFt = 27000,
 		interceptorTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
@@ -3484,7 +3489,7 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		params.zone:addExtraSlot(ColdWarTechEra and 'blueHAWK Coldwar' or 'bluePD1')
+		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD_CW' or 'bluePD1')
 		bc:refreshZoneLabel(params.zone.zone)
 		local sys = ColdWarTechEra and 'Hawk' or 'Nasams'
         if bc.globalExtraUnlock then
@@ -3670,7 +3675,8 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		local slotID = ColdWarTechEra and 'blueArmor_cw' or 'blueArmor'
+		local slotID = Era == 'Vietnam' and 'blueArmor-VT'
+			or (Era == 'Coldwar' and 'blueArmor_cw' or 'blueArmor')
 		params.zone:addExtraSlot(slotID)
 		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
@@ -3858,9 +3864,7 @@ if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, ShopCats.AIAttack) -- TALD DECOY Flight
 end
 bc:addShopItem(2, 'groundattack', -1, 7, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
-if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
-end
 if UseStatics == true then
     bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
 end

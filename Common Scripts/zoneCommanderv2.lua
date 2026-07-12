@@ -1053,6 +1053,8 @@ end
 
 DynamicBomber = DynamicBomber or {}
 
+DynamicBomber.IngressAltitude = 30000 -- feet
+
 function DynamicBomber.BuildBombingTaskForZone(zoneName, weaponExpend, attackAltitudeM, attackQty)
 	local zn = zoneName and bc.indexedZones[zoneName] or nil
 	local attack = { id = 'ComboTask', params = { tasks = {} } }
@@ -1217,10 +1219,11 @@ function DynamicBomber.AssignIngressBombingTask(grpName, targetZoneName, escortG
     env.info("[DynamicBomber] landingHomebase="..tostring(homeAirbaseName).." resolved="..tostring(landingHomebase and landingHomebase:GetName()))
 	local destroyAtWp = DynamicBomber.BuildDestroyTask(escortGroup)
 	local rtbMessageTask = (rtbMessageSide and recoveryZoneName) and DynamicBomber.BuildRtbMessageTask(rtbMessageSide, recoveryZoneName) or nil
-    local ingressSpeedKmh = UTILS.KnotsToKmph(310)
+	local rtbSpeedKmh = UTILS.KnotsToKmph(310)
+	local ingressSpeedKmh = routeSpeedKmh or rtbSpeedKmh
     local wp = {}
-    wp[#wp+1] = COORDINATE:New(startPos.x, routeAltitudeM, startPos.z):WaypointAirTurningPoint("BARO", ingressSpeedKmh, { attack }, "Ingress Attack")
-    DynamicBomber.AppendBomberRtbRoute(wp, firstpos, routeAltitudeM, ingressSpeedKmh, destroyAtWp, landingHomebase, rtbApproachDistanceNm, startPos, rtbMessageTask)
+    wp[#wp+1] = COORDINATE:New(startPos.x, attackAltitudeM, startPos.z):WaypointAirTurningPoint("BARO", ingressSpeedKmh, { attack }, "Ingress Attack")
+    DynamicBomber.AppendBomberRtbRoute(wp, firstpos, routeAltitudeM, rtbSpeedKmh, destroyAtWp, landingHomebase, rtbApproachDistanceNm, startPos, rtbMessageTask)
 
     GROUP:FindByName(grpName):RoutePush(wp, 0)
     return true
@@ -1280,13 +1283,30 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 	local len = math.sqrt(dx * dx + dz * dz)
 	if len <= 0 then len = 1 end
 	local ux, uz = dx / len, dz / len
-	local ingressDistanceNm = 25
+	local ingressDistanceNm = opts.deferBombingTaskToIngress == true and 20 or 25
 	local appPos = {
 		x = firstpos.x - ux * UTILS.NMToMeters(ingressDistanceNm),
 		y = startPos.y,
 		z = firstpos.z - uz * UTILS.NMToMeters(ingressDistanceNm)
 	}
+	local setupDistanceNm = 30
+	local setupPos = {
+		x = firstpos.x - ux * UTILS.NMToMeters(setupDistanceNm),
+		y = startPos.y,
+		z = firstpos.z - uz * UTILS.NMToMeters(setupDistanceNm)
+	}
+	local climbDistanceNm = 25
+	local climbPos = {
+		x = firstpos.x - ux * UTILS.NMToMeters(climbDistanceNm),
+		y = startPos.y,
+		z = firstpos.z - uz * UTILS.NMToMeters(climbDistanceNm)
+	}
 	local speedKmh = opts.toIngressSpeedKt and StrategicBomber.IasKnotsToTasKmh(opts.toIngressSpeedKt, routeAltitudeM) or routeSpeedKmh or 1200
+	local ingressSpeedKt = opts.ingressSpeedKt or 550
+	local ingressAltitudeM = UTILS.FeetToMeters(DynamicBomber.IngressAltitude)
+	local setupSpeedKmh = StrategicBomber.IasKnotsToTasKmh(ingressSpeedKt, routeAltitudeM)
+	local setupSpeedMps = StrategicBomber.IasKnotsToTasMps(ingressSpeedKt, routeAltitudeM)
+	local ingressSpeedKmh = StrategicBomber.IasKnotsToTasKmh(ingressSpeedKt, ingressAltitudeM)
 	local afterIngressSpeedKmh = opts.afterIngressSpeedKt and StrategicBomber.IasKnotsToTasKmh(opts.afterIngressSpeedKt, routeAltitudeM) or speedKmh
 	local recovery = opts.recoverySide and StrategicBomber.ResolveRecoveryZone(opts.recoverySide, appPos) or nil
 	local homeAirbaseName = (recovery and recovery.airbaseName) or opts.homeAirbaseName
@@ -1301,7 +1321,33 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 	end
 	local destroyAtWp = DynamicBomber.BuildDestroyTask(escortGroup)
 	local ingressTasks = { attack }
+	local speedTasks = {}
+	local climbTasks = {}
 	if opts.deferBombingTaskToIngress == true then
+		local speedCommand = string.format("Group.getByName(%q):getController():setSpeed(%s, true)", grpName, tostring(setupSpeedMps))
+		speedTasks = {{
+			id = 'WrappedAction',
+			params = {
+				action = {
+					id = 'Script',
+					params = {
+						command = speedCommand
+					}
+				}
+			}
+		}}
+		local climbCommand = string.format("Group.getByName(%q):getController():setAltitude(%s, true, \"BARO\")", grpName, tostring(ingressAltitudeM))
+		climbTasks = {{
+			id = 'WrappedAction',
+			params = {
+				action = {
+					id = 'Script',
+					params = {
+						command = climbCommand
+					}
+				}
+			}
+		}}
 		local attackQtyArg = attackQty and tostring(attackQty) or "nil"
 		local rtbMessageSideArg = recovery and tostring(opts.recoverySide) or "nil"
 		local recoveryZoneArg = recovery and string.format("%q", recovery.zone.zone) or "nil"
@@ -1310,9 +1356,9 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 			grpName,
 			choice,
 			escortGroup or "",
-			tostring(afterIngressSpeedKmh),
+			tostring(ingressSpeedKmh),
 			tostring(opts.routeAltitudeFt or 25000),
-			tostring(opts.attackAltitudeFt or opts.routeAltitudeFt or 25000),
+			tostring(DynamicBomber.IngressAltitude),
 			tostring(weaponExpend),
 			attackQtyArg,
 			homeAirbaseName or "",
@@ -1334,7 +1380,13 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 	end
 	local wp = {}
 	wp[#wp+1] = COORDINATE:New(startPos.x, routeAltitudeM, startPos.z):WaypointAirTurningPoint("BARO", speedKmh, {}, "Start")
-	wp[#wp+1] = COORDINATE:New(appPos.x, routeAltitudeM, appPos.z):WaypointAirTurningPoint("BARO", speedKmh, ingressTasks, "Ingress "..tostring(ingressDistanceNm).." NM")
+	if opts.deferBombingTaskToIngress == true then
+		wp[#wp+1] = COORDINATE:New(setupPos.x, routeAltitudeM, setupPos.z):WaypointAirTurningPoint("BARO", speedKmh, speedTasks, "Speed up "..tostring(setupDistanceNm).." NM")
+		wp[#wp+1] = COORDINATE:New(climbPos.x, routeAltitudeM, climbPos.z):WaypointAirTurningPoint("BARO", setupSpeedKmh, climbTasks, "Climb "..tostring(climbDistanceNm).." NM")
+		wp[#wp+1] = COORDINATE:New(appPos.x, ingressAltitudeM, appPos.z):WaypointAirTurningPoint("BARO", ingressSpeedKmh, ingressTasks, "Ingress "..tostring(ingressDistanceNm).." NM")
+	else
+		wp[#wp+1] = COORDINATE:New(appPos.x, routeAltitudeM, appPos.z):WaypointAirTurningPoint("BARO", speedKmh, ingressTasks, "Ingress "..tostring(ingressDistanceNm).." NM")
+	end
 	--wp[#wp+1] = COORDINATE:New(firstpos.x, routeAltitudeM, firstpos.z):WaypointAirTurningPoint("BARO", speedKmh, { attack }, "Attack")
 	if opts.deferBombingTaskToIngress ~= true then
 		DynamicBomber.AppendBomberRtbRoute(wp, firstpos, routeAltitudeM, afterIngressSpeedKmh, destroyAtWp, landingHomebase, opts.rtbApproachDistanceNm, startPos, rtbMessageTask)
@@ -1364,13 +1416,20 @@ function DynamicBomber.AssignEscortTask(bomberGroupName, escortGroupName)
 			id = 'ComboTask',
 			params = { tasks = {
 				{
-					id = 'Escort',
+					id = 'Follow',
 					params = {
 						groupId = bgr:getID(),
 						pos = { x = -20, y = UTILS.FeetToMeters(2000), z = 50 },
 						lastWptIndexFlag = false,
-						engagementDistMax = 40*NM,
-						targetTypes = { 'Planes' }
+					}
+				},
+				{
+					id = 'EngageTargets',
+					params = {
+						maxDist = 40*NM,
+						maxDistEnabled = true,
+						targetTypes = { 'Planes' },
+						priority = 0
 					}
 				}
 			}}
@@ -1572,8 +1631,8 @@ StrategicBomber.interceptorSpawnIndex = StrategicBomber.interceptorSpawnIndex or
 StrategicBomber.InterceptorMissionId = StrategicBomber.InterceptorMissionId or "strategicBomberInterceptor"
 StrategicBomber.InterceptorChanceByCapDifficulty = StrategicBomber.InterceptorChanceByCapDifficulty or {
 	easy = 1,
-	medium = 5,
-	hard = 8,
+	medium = 3,
+	hard = 6,
 }
 
 function StrategicBomber.Configure(config)
@@ -2562,15 +2621,14 @@ function StrategicBomber.LaunchBlue(params)
 	local selection, err = StrategicBomber.ValidateBlueLaunch(params)
 	if not selection then return err end
 	local cfg = StrategicBomber.GetConfig(2)
-	local spawnedGroup = Respawn.SpawnAtPoint(cfg.template, selection.spawnCoord, selection.heading, 5, cfg.routeAltitudeFt or 25000, StrategicBomber.IasKnotsToTasMps(StrategicBomber.GetToIngressSpeedKt(cfg), UTILS.FeetToMeters(cfg.routeAltitudeFt or 25000)))
+	local spawnedGroup = Respawn.SpawnAtPoint(cfg.template, selection.spawnCoord, selection.heading, 5, cfg.routeAltitudeFt or 25000, StrategicBomber.IasKnotsToTasMps(StrategicBomber.GetToIngressSpeedKt(cfg), UTILS.FeetToMeters(cfg.routeAltitudeFt or 25000)), true)
 	if not spawnedGroup then return StrategicBomber.Message("STRATEGIC_BOMBER_SPAWN_FAILED") end
 	DynamicBomber.SetUnlimitedFuel(spawnedGroup)
 	local controller = spawnedGroup:getController()
-	local controller = spawnedGroup:getController()
-	controller:setOption(AI.Option.Air.id.SILENCE, true)
-	controller:setOption(AI.Option.Air.id.PROHIBIT_JETT, true)
-	controller:setOption(AI.Option.Air.id.FORCED_ATTACK, true)
-	controller:setOption(AI.Option.Air.id.REACTION_ON_THREAT, AI.Option.Air.val.REACTION_ON_THREAT.PASSIVE_DEFENCE)
+	--controller:setOption(AI.Option.Air.id.SILENCE, true)
+	--controller:setOption(AI.Option.Air.id.PROHIBIT_JETT, true)
+	--controller:setOption(AI.Option.Air.id.FORCED_ATTACK, true)
+	--controller:setOption(AI.Option.Air.id.REACTION_ON_THREAT, AI.Option.Air.val.REACTION_ON_THREAT.PASSIVE_DEFENCE)
 
 	local holdReason = nil
 	local hasBadSam, badSamText = StrategicBomber.GetBadSamsForZone(selection.targetZone.zone)
@@ -2681,6 +2739,7 @@ function StrategicBomber.PushBlue(groupId)
 		attackAltitudeFt = cfg.attackAltitudeFt or cfg.routeAltitudeFt or 25000,
 		weaponExpend = cfg.weaponExpend or AI.Task.WeaponExpend.ONE,
 		toIngressSpeedKt = StrategicBomber.GetToIngressSpeedKt(cfg),
+		ingressSpeedKt = cfg.ingressSpeedKt,
 		afterIngressSpeedKt = StrategicBomber.GetAfterIngressSpeedKt(cfg),
 		deferBombingTaskToIngress = true,
 		escortAlreadyAssigned = st.escortTaskAssigned == true,
@@ -7468,8 +7527,8 @@ end
 
 AWACS_GROUPS = {
     [1] = "AWACS_RED",
-    [2] = "AWACS_BLUE",
-    [3] = "AWACS_BLUE_SECONDARY"
+    [2] = (Era == "Vietnam") and "AWACS_BLUE_VT" or "AWACS_BLUE",
+    [3] = (Era == "Vietnam") and "AWACS_BLUE_VT_SECONDARY" or "AWACS_BLUE_SECONDARY"
 }
 
 
@@ -16975,12 +17034,36 @@ function BattleCommander:smokeTargets(zoneObj)
 		return
 	end
 	local _, units, statics = _collectZoneTargetAssets(zoneObj, "smoketargets")
-	local points = _collectUnitAndStaticPoints(units, statics)
+	local candidates = {}
+	for _, unit in ipairs(units or {}) do
+		if unit and unit:isExist() then
+			local point = unit:getPosition().p
+			if point then
+				candidates[#candidates + 1] = { point = point, groupName = unit:getGroup():getName() }
+			end
+		end
+	end
+	for _, static in ipairs(statics or {}) do
+		local point = static:getPoint()
+		if point then
+			candidates[#candidates + 1] = { point = point }
+		end
+	end
+
+	local smokedGroups = {}
 	for i = 1, 3 do
-		if #points == 0 then break end
-		local idx = math.random(1, #points)
-		trigger.action.smoke(points[idx], 1)
-		table.remove(points, idx)
+		if #candidates == 0 then break end
+		local idx = math.random(1, #candidates)
+		local candidate = candidates[idx]
+		trigger.action.smoke(candidate.point, 1)
+		if candidate.groupName then
+			smokedGroups[candidate.groupName] = true
+		end
+		table.remove(candidates, idx)
+	end
+
+	for groupName in pairs(smokedGroups) do
+		AIEN.ReactToSmoke(zoneObj, groupName, 20)
 	end
 end
 
@@ -23958,7 +24041,7 @@ end
 
 		local firstpos = nil
 		for _, v in pairs(zn.built) do
-			local task = self:getAttackTask(v, expCount, altm)
+			local task = self:getAttackTask(v, expCount, nil)
 			if task then
 				table.insert(attack.params.tasks, task)
 				if not firstpos then
@@ -52832,6 +52915,7 @@ WEAPONSLIST.Items = {
        'weapons.nurs.HYDRA_70_WTU1B',
        'weapons.nurs.M8rocket',
        'weapons.nurs.Mi28NE_BL13L',
+       'weapons.nurs.OH6Rocket FFAR',
        'weapons.nurs.R4M',
        'weapons.nurs.RS-82',
        'weapons.nurs.Rkt_90-1_HE',
@@ -52881,6 +52965,9 @@ WEAPONSLIST.Items = {
         'weapons.bombs.AN_M64',
         'weapons.bombs.AN_M65',
         'weapons.bombs.AN_M66',
+        'weapons.bombs.AN-M66A2',
+        'weapons.bombs.AN-M81',
+        'weapons.bombs.AN-M88',
         'weapons.bombs.BAP-100',
         'weapons.bombs.BAP_100',
         'weapons.bombs.BAT-120',
@@ -53043,6 +53130,14 @@ WEAPONSLIST.Items = {
         'weapons.bombs.KAB_500KrOD',
         'weapons.bombs.KAB_500S',
         'weapons.bombs.LS_6_100',
+		'weapons.bombs.MK-81SE',
+		'weapons.bombs.MK77mod0-WPN',
+		'weapons.bombs.MK77mod1-WPN',
+		'weapons.bombs.OH6_FRAG',
+		'weapons.bombs.OH6_SMOKE_BLUE',
+		'weapons.bombs.OH6_SMOKE_GREEN',
+		'weapons.bombs.OH6_SMOKE_RED',
+		'weapons.bombs.OH6_SMOKE_YELLOW',
 		'weapons.bombs.SONOBUOY',
 		'weapons.bombs.AO_25SL',
 
@@ -53059,6 +53154,10 @@ WEAPONSLIST.Items = {
         'weapons.droptanks.Bidon',
         'weapons.droptanks.C130J_Ext_Tank_L',
         'weapons.droptanks.C130J_Ext_Tank_R',
+        'weapons.droptanks.DFT_150_GAL_A4E',
+        'weapons.droptanks.DFT_300_GAL_A4E',
+        'weapons.droptanks.DFT_300_GAL_A4E_LR',
+        'weapons.droptanks.DFT_400_GAL_A4E',
         'weapons.droptanks.Drop tank 75gal',
         'weapons.droptanks.Drop_Tank_300_Liter',
         'weapons.droptanks.F-15E_Drop_Tank',
@@ -53158,6 +53257,37 @@ WEAPONSLIST.Items = {
 [WEAPONSLIST.ItemCategory.MISC] = {
     -- MISC (ADAPTERS / PODS / GUNMOUNTS / OTHER)
         -- new
+		-- A-4E-C / OH-6A / Bronco warehouse support
+		'weapons.adapters.A4E_SUU-7',
+		'weapons.adapters.aero-3b',
+		'weapons.adapters.BRU_42A',
+		'weapons.adapters.HB_F-4E_LAU-34',
+		'weapons.adapters.LAU-10',
+		'weapons.adapters.LAU-3',
+		'weapons.adapters.LAU-61',
+		'weapons.adapters.LAU-68',
+		'weapons.adapters.Lau_33_A',
+		'weapons.adapters.M260',
+		'weapons.adapters.mer_a4e',
+		'weapons.adapters.OH-6_XM158',
+		'weapons.adapters.XM158',
+		'weapons.containers.A4E_SUU-7',
+		'weapons.containers.aero-3b',
+		'weapons.containers.BRU_42A',
+		'weapons.containers.{C_A4E_CBU-1A}',
+		'weapons.containers.{C_A4E_CBU-2A}',
+		'weapons.containers.{C_A4E_CBU-2BA}',
+		'weapons.containers.{Mk4 HIPEG}',
+		'weapons.shells.20x110mm AP-I',
+		'weapons.shells.20x110mm AP-T',
+		'weapons.shells.20x110mm HE-I',
+		'weapons.shells.7.62x51mm',
+		'weapons.shells.OH-6 7.62x51mm HE-I',
+		'weapons.shells.OH-6 7.62x51mm M61',
+		'weapons.shells.OH-6 7.62x51mm M62',
+		'weapons.shells.OH-6 7.62x51mm M80',
+		'weapons.gunmounts.M_60',
+		'weapons.gunmounts.Mk11mod0',
 		"weapons.bombs.AH6_SMOKE_BLUE",
 		"weapons.bombs.AH6_SMOKE_GREEN",
 		"weapons.bombs.AH6_SMOKE_RED",
@@ -54079,9 +54209,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.bombs.AH6_SMOKE_GREEN",
 		"weapons.bombs.AH6_SMOKE_RED",
 		"weapons.bombs.AH6_SMOKE_YELLOW",
-		"weapons.bombs.AN-M66A2",
-		"weapons.bombs.AN-M81",
-		"weapons.bombs.AN-M88",
 		"weapons.bombs.AO_2_5RT",
 		"weapons.bombs.APC BTR-80 Air [23936lb]",
 		"weapons.bombs.APC BTR-82A Air [24998lb]",
@@ -54150,17 +54277,9 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.bombs.M485_FLARE",
 		"weapons.bombs.M71HD",
 		"weapons.bombs.M71LD",
-		"weapons.bombs.MK-81SE",
 		"weapons.bombs.Mk-82 500 lb GP Bomb",
 		"weapons.bombs.Mk-83 1000 lb GP Bomb",
 		"weapons.bombs.Mk-84 2000 lb GP Bomb",
-		"weapons.bombs.MK77mod0-WPN",
-		"weapons.bombs.MK77mod1-WPN",
-		"weapons.bombs.OH6_FRAG",
-		"weapons.bombs.OH6_SMOKE_BLUE",
-		"weapons.bombs.OH6_SMOKE_GREEN",
-		"weapons.bombs.OH6_SMOKE_RED",
-		"weapons.bombs.OH6_SMOKE_YELLOW",
 		"weapons.bombs.RBK_250S",
 		"weapons.bombs.RBK_500SOAB",
 		"weapons.bombs.RBK_500U_BETAB_M",
@@ -54209,7 +54328,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.nurs.M49PSRAK145HEAT",
 		"weapons.nurs.M56ARAK135HE",
 		"weapons.nurs.MO_10104M",
-		"weapons.nurs.OH6Rocket FFAR",
 		"weapons.nurs.PG_16V",
 		"weapons.nurs.PG_9V",
 		"weapons.nurs.SMERCH_9M55F",
@@ -54228,7 +54346,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.9M120_pylon",
 		"weapons.adapters.9M120_pylon2",
 		"weapons.adapters.9m120m",
-		"weapons.adapters.A4E_SUU-7",
 		"weapons.adapters.ACH_47F_Left",
 		"weapons.adapters.ACH_47F_Left_ATAS",
 		"weapons.adapters.ACH_47F_Left_Outboard",
@@ -54239,7 +54356,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.adapter_df4b",
 		"weapons.adapters.adapter_gdj_kd63",
 		"weapons.adapters.adapter_gdj_yj83k",
-		"weapons.adapters.aero-3b",
 		"weapons.adapters.AKU-58",
 		"weapons.adapters.aku-58",
 		"weapons.adapters.AMBER",
@@ -54297,7 +54413,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.BRU_33A",
 		"weapons.adapters.BRU_33AA",
 		"weapons.adapters.BRU_41A",
-		"weapons.adapters.BRU_42A",
 		"weapons.adapters.BRU_55",
 		"weapons.adapters.BRU_57",
 		"weapons.adapters.C-25PU",
@@ -54330,7 +54445,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.gdj-iv1",
 		"weapons.adapters.hb_a-6e_lau7_adu299",
 		"weapons.adapters.HB_F-4E_BRU-42",
-		"weapons.adapters.HB_F-4E_LAU-34",
 		"weapons.adapters.HB_F-4E_ORD_LAU_77",
 		"weapons.adapters.HB_F14_EXT_BRU34",
 		"weapons.adapters.HB_F14_EXT_BRU42",
@@ -54356,7 +54470,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.JF-17_GDJ-II19L",
 		"weapons.adapters.JF-17_GDJ-II19R",
 		"weapons.adapters.JF-17_PF12_twin",
-		"weapons.adapters.LAU-10",
 		"weapons.adapters.LAU-105",
 		"weapons.adapters.lau-105",
 		"weapons.adapters.LAU-115C",
@@ -54366,20 +54479,15 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.lau-118a",
 		"weapons.adapters.LAU-131",
 		"weapons.adapters.lau-131",
-		"weapons.adapters.LAU-3",
-		"weapons.adapters.LAU-61",
 		"weapons.adapters.lau-61",
-		"weapons.adapters.LAU-68",
 		"weapons.adapters.lau-68",
 		"weapons.adapters.LAU_127",
-		"weapons.adapters.Lau_33_A",
 		"weapons.adapters.LR-25",
 		"weapons.adapters.LWL_12",
 		"weapons.adapters.M-2000C_AUF2",
 		"weapons.adapters.M-2000c_BAP_Rack",
 		"weapons.adapters.M-2000C_LRF4",
 		"weapons.adapters.M-2000C_LRF4.edm",
-		"weapons.adapters.M260",
 		"weapons.adapters.M261",
 		"weapons.adapters.M272",
 		"weapons.adapters.M272_AGM114",
@@ -54399,14 +54507,12 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.mbd3-u6-68",
 		"weapons.adapters.MER-5E",
 		"weapons.adapters.mer2",
-		"weapons.adapters.mer_a4e",
 		"weapons.adapters.Mi28_9K114_Shturm",
 		"weapons.adapters.Mi28_9K114_Shturm_g",
 		"weapons.adapters.Mi28NE_305E_dual_pylon",
 		"weapons.adapters.Mi28NE_305E_pylon",
 		"weapons.adapters.Mi28NE_BL13L",
 		"weapons.adapters.null",
-		"weapons.adapters.OH-6_XM158",
 		"weapons.adapters.OH58D_HRACK_L",
 		"weapons.adapters.OH58D_HRACK_R",
 		"weapons.adapters.OH58D_M260",
@@ -54463,7 +54569,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.uh60l_lwl12",
 		"weapons.adapters.vap_ammo_box_wood_small",
 		"weapons.adapters.WingLauncher",
-		"weapons.adapters.XM158",
 
 		"weapons.containers.2-c9",
 		"weapons.containers.22_RBF.edm",
@@ -54471,9 +54576,7 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.2c6m",
 		"weapons.containers.A29B_SMOKE-POD",
 		"weapons.containers.A29B_SMOKE-POD",
-		"weapons.containers.A4E_SUU-7",
 		"weapons.containers.ab-212_cable",
-		"weapons.containers.aero-3b",
 		"weapons.containers.agrarspray",
 		"weapons.containers.ALQ-167",
 		"weapons.containers.AN/ASG-34 Legion IRST Pod (Cosmetic)",
@@ -54497,7 +54600,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.BLUE",
 		"weapons.containers.bmd-1",
 		"weapons.containers.bmp-1",
-		"weapons.containers.BRU_42A",
 		"weapons.containers.BTR-80",
 		"weapons.containers.Damocles Targeting Pod",
 		"weapons.containers.ECLAIR-M Pod",
@@ -54526,7 +54628,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.marder",
 		"weapons.containers.null",
 		"weapons.containers.ORANGE",
-		"weapons.containers.OV-10A_Paratrooper",
 		"weapons.containers.RED",
 		"weapons.containers.sh2f_mad",
 		"weapons.containers.stretchers_bell47",
@@ -54553,9 +54654,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.{ANDR0ID_MH47_DUAL_STBD}",
 		"weapons.containers.{ANDR0ID_MK19}",
 		"weapons.containers.{ANDR0ID_XM197}",
-		"weapons.containers.{C_A4E_CBU-1A}",
-		"weapons.containers.{C_A4E_CBU-2A}",
-		"weapons.containers.{C_A4E_CBU-2BA}",
 		"weapons.containers.{CANON PUCA LEFT}",
 		"weapons.containers.{CANON PUCA RIGHT}",
 		"weapons.containers.{DAP_6_A29B}",
@@ -54574,7 +54672,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.{Herc_M61_Vulcan_Rotary_Cannon}",
 		"weapons.containers.{JAS39_EWS39}",
 		"weapons.containers.{M134 SittingMinigun}",
-		"weapons.containers.{Mk4 HIPEG}",
 		"weapons.containers.{OH-58_M134P_3000}",
 		"weapons.containers.{OH-6_M129}",
 		"weapons.containers.{OH58_GAU-19}",
@@ -54587,7 +54684,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.{OH6_GIAT_M261_1}",
 		"weapons.containers.{OH6_GIAT_M261_2}",
 		"weapons.containers.{OH6_GIAT_M261_3}",
-		"weapons.containers.{OV10_SMOKE}",
 		"weapons.containers.{SPRAY_F}",
 		"weapons.containers.{SPRAY_H}",
 		"weapons.containers.{SPRAY_P}",
@@ -54596,10 +54692,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.{SPRAYER_P}",
 		"weapons.droptanks.A-29B TANK",
 		"weapons.droptanks.AA42R",
-		"weapons.droptanks.DFT_150_GAL_A4E",
-		"weapons.droptanks.DFT_300_GAL_A4E",
-		"weapons.droptanks.DFT_300_GAL_A4E_LR",
-		"weapons.droptanks.DFT_400_GAL_A4E",
 		"weapons.droptanks.dragonfly_fuel_tanks",
 		"weapons.droptanks.Drop Tank 1000 Litre",
 		"weapons.droptanks.Drop tank 1100 litre",
@@ -54622,10 +54714,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.droptanks.sh2f_tank_r",
 		"weapons.droptanks.Su-25sm3_PTB-800.edm",
 
-		"weapons.shells.20x110mm AP-I",
-		"weapons.shells.20x110mm AP-T",
-		"weapons.shells.20x110mm HE-I",
-		"weapons.shells.7.62x51mm",
 		"weapons.shells.AH-6 7.62x51mm M61",
 		"weapons.shells.AH-6 7.62x51mm M62",
 		"weapons.shells.AH-6 7.62x51mm M80",
@@ -54641,10 +54729,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.shells.Mauser7.92x57_S.m.K._L",
 		"weapons.shells.MG_20x64_APT",
 		"weapons.shells.MG_20x64_HEI",
-		"weapons.shells.OH-6 7.62x51mm HE-I",
-		"weapons.shells.OH-6 7.62x51mm M61",
-		"weapons.shells.OH-6 7.62x51mm M62",
-		"weapons.shells.OH-6 7.62x51mm M80",
 
 		"weapons.gunmounts.AH-6_Door_Gun",
 		"weapons.gunmounts.AH-6_HMP400",
@@ -54653,9 +54737,7 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.gunmounts.Akan M/55 30mm",
 		"weapons.gunmounts.bk_27",
 		"weapons.gunmounts.DroneBombMount",
-		"weapons.gunmounts.M_60",
 		"weapons.gunmounts.MG_20",
-		"weapons.gunmounts.Mk11mod0",
 		"weapons.gunmounts.sppu_gun",
 		"weapons.gunmounts.{22_SPPU_reversed}",
 		"weapons.gunmounts.{22_SPPU}",

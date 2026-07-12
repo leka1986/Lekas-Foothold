@@ -427,6 +427,8 @@ local cwSwap = {
 	['Neustrashimy']  								= 'Molniya',
 	['blueArmor']  									= 'blueArmor-Coldwar',
 	['bluePD1']  									= 'blueHAWK-Coldwar',
+	['bluePD']  									= 'bluePD_CW',
+	['bluePD 2']  									= 'blueHAWK-Coldwar',
 	['blueHAWK']  									= 'blueHAWK-Coldwar',
 	['Red Arty 4']  								= 'Red Arty 3',
 	['Red Arty 2']  								= 'Red Arty 3',
@@ -435,6 +437,7 @@ local cwSwap = {
 }
 
 local vnSwap = {
+	['blueArmor-Coldwar'] = 'blueArmor-VT',
 	['Enemy Task forces'] = 'Enemy task forces Vietnam',
 	['Enemy ground forces'] = 'Enemy ground forces Vietnam',
 	['Molniya'] = 'MissileBoat',
@@ -595,6 +598,7 @@ if ColdWarTechEra then
 end
 if Era == 'Vietnam' then
 	deepSwap(RandomRedPool, vnSwap)
+	deepSwap(RandomBluePool, vnSwap)
 end
 
 RandomRedPickKeepChance = {
@@ -1961,8 +1965,9 @@ end
 end, 'sochicaptured')
 
 Group.getByName('Anapa-Attack-Group'):destroy()
-if Era == 'Vietnam' then return end
+
 zones.anapa:registerTrigger('captured', function(_, zone)
+	if Era == 'Vietnam' then return end
     if zone ~= zones.anapa then return end
 	local kr = bc:getZoneByName('Anapa')
 	if kr.side == 2 and not CustomFlags['anapacaptured'] then
@@ -2681,6 +2686,7 @@ StrategicBomber.Configure({
 		weaponExpend = AI.Task.WeaponExpend.TWO,
 		holdSpeedKt = 300,
 		toIngressSpeedKt = 380,
+		ingressSpeedKt = 550,
 		afterIngressSpeedKt = 350,
 		escortAltitudeFt = 27000,
 		interceptorTemplates = BuildEnabledTemplateList(AllCapPlaneTemplates, RedCapPlaneEnabled),
@@ -3529,7 +3535,7 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		params.zone:addExtraSlot(ColdWarTechEra and 'blueHAWK-Coldwar' or 'bluePD1') --checked
+		params.zone:addExtraSlot(ColdWarTechEra and 'bluePD_CW' or 'bluePD1') --checked
 		bc:refreshZoneLabel(params.zone.zone)
 		local sys = ColdWarTechEra and 'Hawk' or 'Nasams'
         if bc.globalExtraUnlock then
@@ -3718,7 +3724,8 @@ function(sender,params)
 			end
 			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		local slotID = ColdWarTechEra and 'blueArmor-Coldwar' or 'blueArmor' -- checked
+		local slotID = Era == 'Vietnam' and 'blueArmor-VT'
+			or (Era == 'Coldwar' and 'blueArmor-Coldwar' or 'blueArmor') -- checked
 		params.zone:addExtraSlot(slotID)
 		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
@@ -3911,9 +3918,7 @@ if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, ShopCats.AIAttack) -- TALD DECOY Flight
 end
 bc:addShopItem(2, 'groundattack', -1, 7, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
-if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
-end
 
 if UseStatics == true then
     bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
