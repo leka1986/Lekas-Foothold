@@ -16,17 +16,17 @@ Lekas Foothold is officially supported on:
 - Kola
 - Iraq
 - Afghanistan (created by Santaowns)
-- WWII Normandy (created by @sevenfifty777)
+- WWII Normandy (created by [@sevenfifty777](https://github.com/sevenfifty777))
 
 Foothold includes the Foothold Config Manager, where you can hand-pick numerous options. You can select different eras, including Modern, Cold War/Gulf War, and Vietnam. You can also choose which opposing and BLUE-side aircraft are available.
 
 Foothold has a fully custom ranking system tied to the shop, CTLD, and various player activities. Examples include moving the carrier through the radio menu or using map markers to reposition the Tarawa.
 
-There is also a fully custom warehouse logistics system built around Foothold’s custom CTLD logic. Foothold uses AIEN (AI Enhancement) by @Chromium18, which has also been customized for Foothold.
+There is also a fully custom warehouse logistics system built around Foothold’s custom CTLD logic. Foothold uses AIEN (AI Enhancement) by [@Chromium18](https://github.com/Chromium18), which has also been customized for Foothold.
 
-We also use the Splash Damage script by @stephenpostlethwaite, with additional custom work for Foothold.
+We also use the Splash Damage script by [@stephenpostlethwaite](https://github.com/stephenpostlethwaite), with additional custom work for Foothold.
 
-Foothold is primarily designed for PvE, although nothing prevents it from being used for PvP. Some maps support PvP better than others, particularly WWII Normandy.
+Foothold is primarily designed for PvE.
 
 The Foothold Config Manager is intuitive and supports multiple mission instances, making server management easier. It allows you to configure shop prices, CTLD prices, callsigns, warehouse items, and many other options.
 
