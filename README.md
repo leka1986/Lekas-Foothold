@@ -2,40 +2,40 @@
 
 Welcome to Lekas Foothold.
 
-Foothold was originally created by dzsekeb. All credits due to him for the original mission.
+Foothold was originally created by dzsekeb. All credit for the original mission goes to him.
 
-Foothold today is not even Foothold, just using that old name, but it's all bbut Foothold. Everything is changed.
+Today, Foothold is almost an entirely different mission that retains the old name. Nearly everything has changed.
 
-Lekas Foothold is officially supported on
+Lekas Foothold is officially supported on:
+
 - Caucasus
-- persian gulf
+- Persian Gulf
 - Sinai
 - Syria
-- Coldwar Germany
+- Cold War Germany
 - Kola
 - Iraq
 - Afghanistan (created by Santaowns)
-- WWII Normandy ( Created by @sevenfifty777
+- WWII Normandy (created by @sevenfifty777)
 
-Foothold offers Foothold manager where you can handpick tons of options. You can select diffrent era, From modern,cold war/Gulfwar and vietnam.
-You can also handpick which aircraft you want as an oponent and change the blue side aircraft.
+Foothold includes the Foothold Config Manager, where you can hand-pick numerous options. You can select different eras, including Modern, Cold War/Gulf War, and Vietnam. You can also choose which opposing and BLUE-side aircraft are available.
 
-In foothold, there is a complete custom Ranking system which is tied to the shop, CTLD and varius things you can do. Like the example of moving the carrier from the radio menu or using mapmarker to move the Tarawa.
+Foothold has a fully custom ranking system tied to the shop, CTLD, and various player activities. Examples include moving the carrier through the radio menu or using map markers to reposition the Tarawa.
 
-There is also a complete custom warehouse logistic system which is in place and works using the CTLD logic which is also Foothold custom. Foothold also uses AIEN (AI ENhancement script) by @Chromium18, also custom for Foothold.
+There is also a fully custom warehouse logistics system built around Foothold’s custom CTLD logic. Foothold uses AIEN (AI Enhancement) by @Chromium18, which has also been customized for Foothold.
 
-We also use Splashdamage Script by @stephenpostlethwaite, Custom work for Foothold.
+We also use the Splash Damage script by @stephenpostlethwaite, with additional custom work for Foothold.
 
-Foothold is primarily used for PVE all though , there is no stopper for PVE/PE. Some maps supports it more like WW2 Normandy.
+Foothold is primarily designed for PvE, although nothing prevents it from being used for PvP. Some maps support PvP better than others, particularly WWII Normandy.
 
+The Foothold Config Manager is intuitive and supports multiple mission instances, making server management easier. It allows you to configure shop prices, CTLD prices, callsigns, warehouse items, and many other options.
 
-Config Manager in Foothold is very intuitive and can be easly used with Foothold, It can work with many instances and makes the server managing very easy.
-In the manager, you can choose many options, edit shop prices, CTLD prices, edit callsigns, warehouse items and many other options. 
-The mission it self have a config file inside the miz, but for the config to be used, the config needs to have a **copy** of the Foothold Config.lua placed in the missions/saves folder.
+Each mission contains a configuration file inside the `.miz`. For the external configuration to be used, a copy of `Foothold Config.lua` must be placed in the `Missions\Saves` folder.
 
-The manager will install the config for you if you do this the first time when opening it, You simply use "Import miz config", that will read the config from inside the miz, and copy that config to your target saved games. If this did not work, please place it manually. In cause you have both server and client on that PC.
+The manager can install the configuration the first time you open it. Select **Import MIZ Config** to read the configuration from the selected `.miz` and copy it to the target Saved Games instance. If this does not work, place the file manually. If both the server and client are installed on the same PC, make sure you select the correct Saved Games instance.
 
-<img width="1964" height="1185" alt="image" src="https://github.com/user-attachments/assets/e13e8c1a-e3f5-4186-881e-7998133423be" />
+<img width="1950" height="1197" alt="image" src="https://github.com/user-attachments/assets/ebe77550-2e8b-4a9d-b378-2a452986dacb" />
+
 
 
 
