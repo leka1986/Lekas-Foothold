@@ -15125,10 +15125,140 @@ internal sealed class MainForm : Form
     private const string InstallPolicyMergeRows = "mergeRows";
     private const string InstallPolicyReplaceTable = "replaceTable";
 
-    private MizMergePreview MergeCurrentConfigIntoNewConfig(ConfigDocument currentDocument, ConfigDocument newDocument)
+    internal static int RunMergeRegressionSelfTest()
+    {
+        const string keptTableKey = "NestedOverrides";
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "FootholdConfigManager-MergeSelfTest-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(tempDirectory);
+            var currentPath = Path.Combine(tempDirectory, "current.lua");
+            var incomingPath = Path.Combine(tempDirectory, "incoming.lua");
+            var mergedPath = Path.Combine(tempDirectory, "merged.lua");
+            File.WriteAllText(currentPath, """
+                NestedOverrides = {
+                    ["F.A.18"] = {
+                        ["Custom1"] = {9000, 9001, 9002, 9003},
+                        ["Crimson3"] = {9900, 9901, 9902, 9903},
+                        ["Added2"] = {9200, 9201, 9202, 9203},
+                    },
+                }
+
+                CustomNested = {
+                    ["Group"] = {
+                        ["CurrentRow"] = {1, 2},
+                    },
+                }
+                """, new System.Text.UTF8Encoding(false));
+            File.WriteAllText(incomingPath, """
+                -- Incoming nested-table header — keep this.
+                -- @gui installPolicy="keepTable"
+                NestedOverrides = {
+                    ["F.A.18"] = {
+                        ["Arctic1"] = {1400, 1401, 1402, 1403},
+                        ["Bender2"] = {1404, 1405, 1406, 1407},
+                        ["Crimson3"] = {1410, 1411, 1412, 1413},
+                    },
+                }
+
+                -- @gui installPolicy="keepTable"
+                CustomNested = {
+                    ["Group"] = {
+                        ["DefaultRow"] = {3, 4},
+                    },
+                }
+
+                NewOption = 42
+                """, new System.Text.UTF8Encoding(false));
+
+            var currentDocument = ConfigDocument.Load(currentPath);
+            var incomingDocument = ConfigDocument.Load(incomingPath);
+            var preview = MergeCurrentConfigIntoNewConfig(currentDocument, incomingDocument);
+
+            static void Require(bool condition, string message)
+            {
+                if (!condition)
+                {
+                    throw new InvalidOperationException(message);
+                }
+            }
+
+            Require(incomingDocument.GetInstallPolicy(keptTableKey)?.Equals(InstallPolicyKeepTable, StringComparison.OrdinalIgnoreCase) == true,
+                "The nested-table keep policy was not retained.");
+            Require(incomingDocument.GetInstallPolicy("CustomNested")?.Equals(InstallPolicyKeepTable, StringComparison.OrdinalIgnoreCase) == true,
+                "The generic nested-table keep policy was not retained.");
+            Require(incomingDocument.TryGetTableBlockText(keptTableKey, out var keptTableBlock),
+                "The merged nested table was not found.");
+            Require(keptTableBlock.Contains("[\"Custom1\"]", StringComparison.Ordinal),
+                "A renamed nested row was not preserved.");
+            Require(keptTableBlock.Contains("[\"Added2\"]", StringComparison.Ordinal),
+                "An added nested row was not preserved.");
+            Require(keptTableBlock.Contains("[\"Crimson3\"] = {9900, 9901, 9902, 9903}", StringComparison.Ordinal),
+                "A same-key tuple edit was not preserved.");
+            Require(!keptTableBlock.Contains("[\"Arctic1\"]", StringComparison.Ordinal),
+                "The default row replaced a renamed nested row.");
+            Require(!keptTableBlock.Contains("[\"Bender2\"]", StringComparison.Ordinal),
+                "A removed default nested row returned during merge.");
+            Require(incomingDocument.TryGetTableBlockText("CustomNested", out var customNestedBlock) &&
+                    customNestedBlock.Contains("[\"CurrentRow\"]", StringComparison.Ordinal) &&
+                    !customNestedBlock.Contains("[\"DefaultRow\"]", StringComparison.Ordinal),
+                "A generic nested keepTable body was not preserved.");
+            Require(incomingDocument.Entries.Any(entry => entry.DisplayKey.Equals("NewOption", StringComparison.Ordinal) &&
+                                                          entry.ValueText.Equals("42", StringComparison.Ordinal)),
+                "An unrelated incoming option was not retained.");
+            Require(preview.KeptTableBlocks.Select(table => table.Key).ToHashSet(StringComparer.Ordinal)
+                    .SetEquals(new[] { keptTableKey, "CustomNested" }),
+                "The full-table preview choices did not match the kept tables.");
+            Require(!preview.NewEntries.Any(entry => entry.DisplayKey.StartsWith(keptTableKey + ".", StringComparison.Ordinal)) &&
+                    !preview.SkippedOldValues.Any(entry => entry.Key.StartsWith(keptTableKey + ".", StringComparison.Ordinal)),
+                "Nested kept rows leaked into per-row new or skipped results.");
+
+            var tableChoices = BuildKeptTableChoices(preview, "current table text", "incoming table text");
+            tableChoices.Single(choice => choice.Key.Equals(keptTableKey + " (full table)", StringComparison.Ordinal)).Selected = false;
+            ApplyKeptTableChoices(incomingDocument, preview, tableChoices);
+            Require(incomingDocument.TryGetTableBlockText(keptTableKey, out var restoredKeptTableBlock) &&
+                    restoredKeptTableBlock.Contains("[\"Arctic1\"]", StringComparison.Ordinal) &&
+                    restoredKeptTableBlock.Contains("[\"Bender2\"]", StringComparison.Ordinal) &&
+                    !restoredKeptTableBlock.Contains("[\"Custom1\"]", StringComparison.Ordinal),
+                "Unticking the full-table choice did not restore the incoming nested-table defaults.");
+            Require(incomingDocument.TryGetTableBlockText("CustomNested", out var stillKeptNestedBlock) &&
+                    stillKeptNestedBlock.Contains("[\"CurrentRow\"]", StringComparison.Ordinal),
+                "Unticking one full-table choice changed another selected table.");
+
+            incomingDocument.SaveTo(mergedPath);
+            var mergedText = File.ReadAllText(mergedPath, new System.Text.UTF8Encoding(false, true));
+            Require(mergedText.Contains("-- Incoming nested-table header — keep this.", StringComparison.Ordinal),
+                "The incoming table header was not preserved.");
+
+            Console.WriteLine("Merge regression self-test passed.");
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Merge regression self-test failed: " + ex.Message);
+            return 1;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+            catch
+            {
+                // Best-effort test cleanup only.
+            }
+        }
+    }
+
+    private static MizMergePreview MergeCurrentConfigIntoNewConfig(ConfigDocument currentDocument, ConfigDocument newDocument)
     {
         var preview = new MizMergePreview();
         ApplyStringListInstallPolicies(currentDocument, newDocument, preview);
+        ApplyNonStringKeepTableInstallPolicies(currentDocument, newDocument, preview);
 
         var currentByKey = currentDocument.Entries
             .GroupBy(entry => entry.DisplayKey, StringComparer.Ordinal)
@@ -15275,6 +15405,60 @@ internal sealed class MainForm : Form
                 preview.KeptStringListTables.Add((newTable.Key, currentTable.Items.Count));
             }
         }
+    }
+
+    private static void ApplyNonStringKeepTableInstallPolicies(
+        ConfigDocument currentDocument,
+        ConfigDocument newDocument,
+        MizMergePreview preview)
+    {
+        var stringListKeys = newDocument.StringListTables
+            .Select(table => table.Key)
+            .ToHashSet(StringComparer.Ordinal);
+        var candidateKeys = newDocument.GetTopLevelTableKeysWithInstallPolicy(InstallPolicyKeepTable)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        foreach (var key in candidateKeys)
+        {
+            if (stringListKeys.Contains(key))
+            {
+                continue;
+            }
+
+            var policy = ResolveInstallPolicy(newDocument, key, InstallPolicyMergeRows);
+            if (!policy.Equals(InstallPolicyKeepTable, StringComparison.OrdinalIgnoreCase) ||
+                !currentDocument.TryGetTableBlockText(key, out var currentBlock) ||
+                !newDocument.TryGetTableBlockText(key, out var newDefaultBlock))
+            {
+                continue;
+            }
+
+            var currentItemCount = CountEntriesUnderTable(currentDocument, key);
+            var newDefaultItemCount = CountEntriesUnderTable(newDocument, key);
+            if (!TableBlockTextEquals(currentBlock, newDefaultBlock))
+            {
+                preview.KeptTableBlocks.Add(new MizKeptTableBlock(
+                    key,
+                    currentBlock,
+                    newDefaultBlock,
+                    currentItemCount,
+                    newDefaultItemCount));
+            }
+
+            if (!newDocument.ReplaceTableBodyFrom(currentDocument, key))
+            {
+                throw new InvalidOperationException("Could not keep the current table text for " + key + ".");
+            }
+        }
+    }
+
+    private static int CountEntriesUnderTable(ConfigDocument document, string key)
+    {
+        var nestedPrefix = key + ".";
+        return document.Entries.Count(entry =>
+            entry.ParentKey.Equals(key, StringComparison.Ordinal) ||
+            entry.ParentKey.StartsWith(nestedPrefix, StringComparison.Ordinal));
     }
 
     private static bool TryMigrateMisplacedTopLevelValue(

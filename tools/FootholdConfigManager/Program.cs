@@ -5,6 +5,11 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length > 0 && args[0].Equals("--self-test-merge", StringComparison.OrdinalIgnoreCase))
+        {
+            return MainForm.RunMergeRegressionSelfTest();
+        }
+
         if (args.Length > 0 && args[0].Equals("--check", StringComparison.OrdinalIgnoreCase))
         {
             var settings = RuntimeSettings.Load();

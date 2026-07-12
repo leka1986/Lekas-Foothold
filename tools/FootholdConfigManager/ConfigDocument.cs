@@ -767,6 +767,7 @@ internal sealed class ConfigDocument
     private readonly List<string> _lines = new();
     private readonly Dictionary<string, string> _guiLabels = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _guiInstallPolicies = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _topLevelGuiInstallPolicies = new(StringComparer.Ordinal);
     private string _savedSnapshot = "";
     private bool _hasStructuralChanges;
 
@@ -853,6 +854,13 @@ internal sealed class ConfigDocument
     public string? GetInstallPolicy(string key)
     {
         return _guiInstallPolicies.TryGetValue(key, out var policy) ? policy : null;
+    }
+
+    public IEnumerable<string> GetTopLevelTableKeysWithInstallPolicy(string policy)
+    {
+        return _topLevelGuiInstallPolicies
+            .Where(item => item.Value.Equals(policy, StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.Key);
     }
 
     public bool TryGetTableBlockText(string key, out string text)
@@ -2889,6 +2897,7 @@ internal sealed class ConfigDocument
         StageTables.Clear();
         _guiLabels.Clear();
         _guiInstallPolicies.Clear();
+        _topLevelGuiInstallPolicies.Clear();
         var section = "General";
         var pendingComments = new List<string>();
         var tablePath = new List<TableContext>();
@@ -2989,6 +2998,10 @@ internal sealed class ConfigDocument
                 {
                     _guiInstallPolicies[displayKey] = installPolicy;
                     _guiInstallPolicies[key] = installPolicy;
+                    if (tablePath.Count == 0)
+                    {
+                        _topLevelGuiInstallPolicies[key] = installPolicy;
+                    }
                 }
 
                 var tableParent = tablePath.LastOrDefault();
