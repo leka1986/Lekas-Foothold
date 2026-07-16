@@ -8127,6 +8127,7 @@ SimulationFreeze=world.event.S_EVENT_SIMULATION_FREEZE or-1,
 SimulationUnfreeze=world.event.S_EVENT_SIMULATION_UNFREEZE or-1,
 HumanAircraftRepairStart=world.event.S_EVENT_HUMAN_AIRCRAFT_REPAIR_START or-1,
 HumanAircraftRepairFinish=world.event.S_EVENT_HUMAN_AIRCRAFT_REPAIR_FINISH or-1,
+GroupChangeOption=world.event.S_EVENT_GROUP_CHANGE_OPTION or-1,
 NewDynamicCargo=world.event.S_EVENT_NEW_DYNAMIC_CARGO or-1,
 DynamicCargoLoaded=world.event.S_EVENT_DYNAMIC_CARGO_LOADED or-1,
 DynamicCargoUnloaded=world.event.S_EVENT_DYNAMIC_CARGO_UNLOADED or-1,
@@ -8500,6 +8501,12 @@ Side="I",
 Event="OnEventHumanAircraftRepairFinish",
 Text="S_EVENT_HUMAN_AIRCRAFT_REPAIR_FINISH"
 },
+[EVENTS.GroupChangeOption]={
+Order=1,
+Side="I",
+Event="OnEventGroupChangeOption",
+Text="S_EVENT_GROUP_CHANGE_OPTION"
+},
 [EVENTS.NewDynamicCargo]={
 Order=1,
 Side="I",
@@ -8756,6 +8763,14 @@ if Event.id and Event.id==EVENTS.MissionEnd then
 self.MissionEnd=true
 end
 if Event.initiator then
+if Event.id==EVENTS.GroupChangeOption then
+Event.IniDCSGroup=Event.initiator
+Event.IniDCSGroupName=Group.getName(Event.initiator)
+Event.IniGroupName=Event.IniDCSGroupName
+Event.IniGroup=GROUP:FindByName(Event.IniDCSGroupName)
+Event.IniCoalition=Group.getCoalition(Event.initiator)
+Event.IniGroupCategory=Group.getCategory(Event.initiator)
+else
 Event.IniObjectCategory=Object.getCategory(Event.initiator)
 if Event.IniObjectCategory==Object.Category.STATIC then
 if Event.id==31 then
@@ -8847,6 +8862,7 @@ Event.IniTypeName=Event.IniDCSUnit:getTypeName()
 if not Event.IniUnit then
 _DATABASE:_RegisterAirbase(Event.initiator)
 Event.IniUnit=AIRBASE:FindByName(Event.IniDCSUnitName)
+end
 end
 end
 end

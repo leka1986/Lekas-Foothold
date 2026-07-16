@@ -17,6 +17,58 @@
 --
 local savePath = (lfs and lfs.writedir and (lfs.writedir() .. "Missions\\Saves")) or nil
 local saveFile = "Foothold Config WW2.lua"
+local externalConfigChunk = nil
+-- Add new top-level config tables here so an omitted external table triggers the warning.
+FootholdConfigTrackedTableNames = {
+    "CapLimitStages",
+    "RedCasLimitStages",
+    "RedRunwayStrikeLimitStages",
+    "BlueCapSupportStages",
+    "BlueCasSupportStages",
+    "AddWeightToPlaneRed",
+    "AddWeightToPlaneBlue",
+    "CapCountIgnoreTypes",
+    "RedCasCountIgnoreTypes",
+    "BlueCasCountIgnoreTypes",
+    "RedReactiveConfig",
+    "MessageOfTheDay",
+    "CallsignOverrides",
+    "AllowedToCarrySupplies",
+    "ShopPrices",
+    "ShopRankRequirements",
+    "RewardContribution",
+    "AllowedCsar",
+    "AllowedFlightTimeReward",
+    "ewrs_specialPlaneTypes",
+    "AllowedWW2Planes",
+}
+
+local function applyExternalConfigWithFallbackWarning()
+    local internalTableDefaults = {}
+    for _, tableName in ipairs(FootholdConfigTrackedTableNames) do
+        internalTableDefaults[tableName] = _G[tableName]
+    end
+
+    externalConfigChunk()
+
+    local internalDefaultsApplied = false
+    for tableName, internalDefault in pairs(internalTableDefaults) do
+        if _G[tableName] == internalDefault then
+            internalDefaultsApplied = true
+            break
+        end
+    end
+    if not internalDefaultsApplied then return end
+
+    env.warning("[FOOTHOLD_CONFIG_EXTERNAL_OUTDATED] External Foothold config is outdated. Internal defaults were applied where required.")
+
+    local warningCount = 0
+    SCHEDULER:New(nil, function()
+        warningCount = warningCount + 1
+        trigger.action.outText(FootholdLocalization:Get("FOOTHOLD_CONFIG_EXTERNAL_OUTDATED"), 9)
+        if warningCount >= 12 then return false end
+    end, {}, 1, 10)
+end
 
 local function reportFootholdConfigLoadError(err)
     FootholdConfigLoadError = tostring(err or "unknown error")
@@ -33,14 +85,15 @@ if savePath and not FootholdConfigLoaded and UTILS.CheckFileExists(savePath, sav
     local externalConfigPath = savePath .. "\\" .. saveFile
     local chunk, err = loadfile(externalConfigPath)
     if chunk then
-        FootholdConfigLoaded = true
-        chunk()
-        FootholdConfigLoadedOk = true
-        SCHEDULER:New(nil, function() trigger.action.outText("Loaded Foothold config externally.", 30) end, {}, 1)
-        return
+        externalConfigChunk = chunk
     else
         reportFootholdConfigLoadError(err)
     end
+end
+
+if externalConfigChunk then
+    FootholdConfigLoaded = true
+    FootholdConfigLoadedOk = nil
 end
 --
 -- End of do not touch
@@ -522,7 +575,7 @@ ShopPrices = {
 	supplies      = 1000, -- Fully Upgrade Friendly Zone
 	capture       = 500,  -- Capture neutral zone
 	advancecapture = 500, -- Advance capture pressured enemy zone
-	intel         = 150,  -- Intel on enemy zone
+	intel         = 150,  -- Operational Intelligence (60 min)
 	zinf          = 500,  -- Add infantry squad to zone
 	zsam          = 1000, -- Add AA guns to a zone
 	zarm          = 1000, -- Add armor group to a zone
@@ -541,7 +594,7 @@ ShopRankRequirements = {
 	smoke          = 1,  -- Smoke markers
 	flare          = 1,  -- Flare markers
 	illum          = 1,  -- Illumination bomb
-	intel          = 5,  -- Intel on enemy zone
+	intel          = 5,  -- Operational Intelligence (60 min)
 	supplies2      = 1,  -- Resupply friendly Zone
 	supplies       = 6,  -- Fully Upgrade Friendly Zone
 	zinf           = 5,  -- Add infantry squad to zone
@@ -765,6 +818,14 @@ AllowedWW2Planes = {
 }
 
 -- Don't touch this.
+if externalConfigChunk then
+    applyExternalConfigWithFallbackWarning()
+    if FootholdLocalization then
+        FootholdLocalization:SetLocale(FootholdLocale)
+    end
+    SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " externally.", 30) end, {}, 1)
+end
+
 FootholdConfigLoadedOk = true
 
 -- ============================================================================

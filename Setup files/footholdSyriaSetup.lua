@@ -767,6 +767,7 @@ AllCapPlaneTemplates = {
 	'RED_MIG31_CAP_R33x4_R40Tx2',
 	'RED_SU27_CAP_R27ERx5_R73x3_ECM',
 	'RED_MIG25PD_CAP_R40Rx2_R60Mx2',
+	'RED_L39C_CAP_R3S2X',
 	'BLUE_F86F_CAP_GAR8x2',
 	'BLUE_F100D_CAP_AIM9Ex2',
 	'BLUE_F5E3_CAP_AIM9Bx2',
@@ -811,6 +812,10 @@ AllCasPlaneTemplates = {
 	'RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_2SHIP',
 	'RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_1SHIP',
 	'RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_2SHIP',
+	'RED_L39C_CAS_S5M2XHE_1SHIP',
+	'RED_L39C_CAS_S5M2XHE_2SHIP',
+	'RED_L39C_CAS_FAB100Mx2_1SHIP',
+	'RED_L39C_CAS_FAB100Mx2_2SHIP',
 	'BLUE_F4E_CAS_WALLEYEIIx2_GBU12x2_PAVESPIKE_2SHIP',
 	'BLUE_F4E_CAS_AGM65Dx6_GBU12x2_PAVESPIKE_2SHIP',
 	'BLUE_F4E_CAS_M117x12_AIM7E2x3_TANKSx2_ALQ131',
@@ -3417,7 +3422,7 @@ local RED_STRATEGIC_BOMBER_ID = "strategicbomberRed"
 
 bc:registerShopItem(RED_STRATEGIC_BOMBER_ID, strategicBomberShopName, ShopPrices.strategicbomber, function(sender)
 	return StrategicBomber.LaunchRed()
-end)
+end, nil, 50)
 
 -- end of red
 
@@ -3521,38 +3526,24 @@ bc.shopItems['zhimars'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
 }
 
-local logiMenu=nil
 bc:registerShopItem('zlogc',LTGet("SYRIA_SHOP_ITEM_LOGISTIC_CENTER"),ShopPrices.zlogc,function(sender)
-    if logiMenu then
-        return LTGet("SYRIA_SHOP_ALREADY_CHOOSING_ZONE")
-    end
-    local allow = bc:buildLogisticAllowTable()
-    if not next(allow) then
-        return LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES")
-    end
-    local pickZone=function(zName)
-        if not logiMenu then return end
-        local zoneObj = bc:getZoneByName(zName)
-        local result = bc:applyLogisticCenterUpgrade(zoneObj)
-        if result == true then
-            missionCommands.removeItemForCoalition(2,logiMenu)
-            logiMenu=nil
-        else
-            if type(result) == 'string' then
-                trigger.action.outTextForCoalition(2,result,10)
-            end
-            return result
-        end
-    end
-    logiMenu = bc:showTargetZoneMenu(2,L10N:Get("SYRIA_SHOP_SELECT_LOGISTIC_CENTER"),pickZone,2,nil,allow)
-    trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE"),15)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
-    if params.zone then
-        return bc:applyLogisticCenterUpgrade(params.zone)
-    end
-    return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
+	if params.zone then
+		return bc:applyLogisticCenterUpgrade(params.zone)
+	end
+	return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 end)
+bc.shopItems['zlogc'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not zoneObj.LogisticCenter
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
+}
 
 local warehouseMenu=nil
 bc:registerShopItem('zwh50',LTGet("SYRIA_SHOP_ITEM_WAREHOUSE_50"),ShopPrices.zwh50,function(sender)
@@ -3644,6 +3635,8 @@ bc.shopItems['intel'].groupZoneSelector.refreshTagsByCoalition = {
 	[1] = { 'friendly_targets' },
 	[2] = { 'enemy_targets' },
 }
+bc.shopItems['zlogc'].groupZoneSelector.candidateBucket = 'blue_airbase_unsuspended'
+bc.shopItems['zlogc'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 bc.shopItems['zwh50'].groupZoneSelector.candidateBucket = 'warehouse_targets'
 bc.shopItems['zwh50'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 

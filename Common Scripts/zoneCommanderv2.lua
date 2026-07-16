@@ -1622,6 +1622,7 @@ StrategicBomber.state = StrategicBomber.state or {}
 StrategicBomber.cooldownUntil = StrategicBomber.cooldownUntil or {}
 StrategicBomber.monitorToken = StrategicBomber.monitorToken or {}
 StrategicBomber.lastResult = StrategicBomber.lastResult or {}
+StrategicBomber.landingCleanupGroups = StrategicBomber.landingCleanupGroups or {}
 StrategicBomber.playerEscortWatch = StrategicBomber.playerEscortWatch or nil
 StrategicBomber.playerEscortWatchToken = StrategicBomber.playerEscortWatchToken or 0
 StrategicBomber.PlayerEscortRadiusMeters = StrategicBomber.PlayerEscortRadiusMeters or UTILS.NMToMeters(2)
@@ -1641,6 +1642,7 @@ function StrategicBomber.Configure(config)
 	StrategicBomber.cooldownUntil = StrategicBomber.cooldownUntil or {}
 	StrategicBomber.monitorToken = StrategicBomber.monitorToken or {}
 	StrategicBomber.lastResult = StrategicBomber.lastResult or {}
+	StrategicBomber.landingCleanupGroups = StrategicBomber.landingCleanupGroups or {}
 	StrategicBomber.playerEscortWatchToken = StrategicBomber.playerEscortWatchToken or 0
 end
 
@@ -2112,6 +2114,17 @@ function StrategicBomber.RecordResult(side, status)
 	}
 end
 
+function StrategicBomber.QueueSupportLandingCleanup(st)
+	local interceptor = st.interceptorGroupName and Group.getByName(st.interceptorGroupName) or nil
+	if interceptor and interceptor:isExist() and interceptor:getSize() > 0 then
+		StrategicBomber.landingCleanupGroups[st.interceptorGroupName] = { side = 2, role = "interceptor" }
+	end
+	local escort = st.escortGroupName and Group.getByName(st.escortGroupName) or nil
+	if escort and escort:isExist() and escort:getSize() > 0 then
+		StrategicBomber.landingCleanupGroups[st.escortGroupName] = { side = 2, role = "escort" }
+	end
+end
+
 function StrategicBomber.MarkRecoveredByGroupName(groupName)
 	for side, st in pairs(StrategicBomber.state or {}) do
 		local cfg = StrategicBomber.GetConfig(side)
@@ -2119,9 +2132,13 @@ function StrategicBomber.MarkRecoveredByGroupName(groupName)
 			st.status = "recovered"
 			StrategicBomber.PayPlayerEscortRewards(side)
 			StrategicBomber.RecordResult(side, "recovered")
-			local escortName = StrategicBomber.GetEscortGroupName(side)
-			local escort = escortName and Group.getByName(escortName) or nil
-			if escort then escort:destroy() end
+			if side == 2 then
+				StrategicBomber.QueueSupportLandingCleanup(st)
+			else
+				local escortName = StrategicBomber.GetEscortGroupName(side)
+				local escort = escortName and Group.getByName(escortName) or nil
+				if escort then escort:destroy() end
+			end
 			StrategicBomber.Clear(side)
 			return true
 		end
@@ -2129,19 +2146,33 @@ function StrategicBomber.MarkRecoveredByGroupName(groupName)
 	return false
 end
 
-function StrategicBomber.MarkInterceptorLandedByGroupName(groupName, landedUnit)
-	for _, st in pairs(StrategicBomber.state or {}) do
-		if st.interceptorGroupName == groupName then
-			landedUnit:destroy()
-			local interceptor = Group.getByName(groupName)
-			if not interceptor or not interceptor:isExist() or interceptor:getSize() == 0 then
-				st.interceptorGroupName = nil
-				StrategicBomber.ClearInterceptorMission()
-			end
-			return true
+function StrategicBomber.MarkSupportAircraftLandedByGroupName(groupName, landedUnit)
+	local cleanup = StrategicBomber.landingCleanupGroups[groupName]
+	if not cleanup then
+		local st = StrategicBomber.GetState(2)
+		if st and st.interceptorGroupName == groupName then
+			cleanup = { side = 2, role = "interceptor" }
+		elseif st and st.escortGroupName == groupName then
+			cleanup = { side = 2, role = "escort" }
 		end
 	end
-	return false
+	if not cleanup then return false end
+
+	local group = Group.getByName(groupName)
+	local lastUnit = not group or not group:isExist() or group:getSize() <= 1
+	landedUnit:destroy()
+	if lastUnit then
+		StrategicBomber.landingCleanupGroups[groupName] = nil
+		local st = StrategicBomber.GetState(cleanup.side)
+		local currentInterceptor = st and cleanup.role == "interceptor" and st.interceptorGroupName == groupName
+		if currentInterceptor then
+			st.interceptorGroupName = nil
+		elseif st and cleanup.role == "escort" and st.escortGroupName == groupName then
+			st.escortGroupName = nil
+		end
+		if currentInterceptor then StrategicBomber.ClearInterceptorMission() end
+	end
+	return true
 end
 
 function StrategicBomber.Finish(side, status)
@@ -2161,9 +2192,13 @@ function StrategicBomber.Finish(side, status)
 			end
 		end
 	end
-	local escortName = StrategicBomber.GetEscortGroupName(side)
-	local escort = escortName and Group.getByName(escortName) or nil
-	if escort then escort:destroy() end
+	if side == 2 and st then
+		StrategicBomber.QueueSupportLandingCleanup(st)
+	else
+		local escortName = StrategicBomber.GetEscortGroupName(side)
+		local escort = escortName and Group.getByName(escortName) or nil
+		if escort then escort:destroy() end
+	end
 	local bomber = cfg and cfg.template and Group.getByName(cfg.template) or nil
 	if bomber then bomber:destroy() end
 	StrategicBomber.Clear(side)
@@ -2435,7 +2470,8 @@ function StrategicBomber.Clear(side)
 	local cfg = StrategicBomber.GetConfig(side)
 	local st = StrategicBomber.GetState(side)
 	local interceptor = st and st.interceptorGroupName and Group.getByName(st.interceptorGroupName) or nil
-	if interceptor then interceptor:destroy() end
+	local interceptorQueued = st and st.interceptorGroupName and StrategicBomber.landingCleanupGroups[st.interceptorGroupName] ~= nil
+	if interceptor and not interceptorQueued then interceptor:destroy() end
 	if side == 2 then StrategicBomber.ClearInterceptorMission() end
 	StrategicBomber.monitorToken[side] = (StrategicBomber.monitorToken[side] or 0) + 1
 	if side == 2 then StrategicBomber.StopPlayerEscortWatch() end
@@ -2793,7 +2829,8 @@ end
 
 function StrategicBomber.DestroyBlue(groupId)
 	local cfg = StrategicBomber.GetConfig(2)
-	if cfg and Group.getByName(cfg.template) then
+	local st = StrategicBomber.GetState(2)
+	if cfg and (Group.getByName(cfg.template) or st) then
 		StrategicBomber.DestroySide(2)
 		if groupId then trigger.action.outTextForGroup(groupId, L10N:GetForGroup(groupId, "STRATEGIC_BOMBER_DESTROYED"), 10) end
 	else
@@ -2814,7 +2851,7 @@ function StrategicBomber.LaunchRed()
 
 	local escortTemplate = cfg.escortTemplates[math.random(1, #cfg.escortTemplates)]
 	local escortGroupName = StrategicBomber.GetEscortGroupName(1)
-	local spawnedGroup = Respawn.SpawnAtPoint(cfg.template, selection.spawnCoord, selection.heading, 5, cfg.routeAltitudeFt or 25000, StrategicBomber.IasKnotsToTasMps(StrategicBomber.GetToIngressSpeedKt(cfg), UTILS.FeetToMeters(cfg.routeAltitudeFt or 25000)))
+	local spawnedGroup = Respawn.SpawnAtPoint(cfg.template, selection.spawnCoord, selection.heading, 5, cfg.routeAltitudeFt or 25000, StrategicBomber.IasKnotsToTasMps(StrategicBomber.GetToIngressSpeedKt(cfg), UTILS.FeetToMeters(cfg.routeAltitudeFt or 25000)), true)
 	if not spawnedGroup then return StrategicBomber.Message("STRATEGIC_BOMBER_SPAWN_FAILED") end
 	spawnedGroup:getController():setOption(AI.Option.Air.id.SILENCE, true)
 
@@ -3011,6 +3048,8 @@ do
 		["Cherbourg-9"] = true,
 		["Cherbourg-10"] = true,
 		["Cherbourg-11"] = true,
+		["Calais-9"] = true,
+		["Calais-10"] = true,
 	}
 
 	local function shouldSkipNormandySpawnSurfaceCheck(zoneName, allowed)
@@ -3554,6 +3593,9 @@ function SpawnCustom(grname, zoneName, side)
 				local desc = Unit and Unit.getDescByName and Unit.getDescByName(unit.type)
 				local attrs = desc and desc.attributes
 				local sensorSlot = getCustomSamSensorSlotIndex(unit, attrs, unitText)
+				if samFamily == "SA-11" and unitText:find("9s18", 1, true) then
+					sensorSlot = 1
+				end
 				if sensorSlot == 1 then
 					table.insert(plan.SENSOR, 1, i)
 					plan.SENSOR_SLOT[i] = 1
@@ -4684,6 +4726,8 @@ do
 				if site.degraded then
 					if siteName == "SA-6" then
 						entries[#entries + 1] = siteName .. T:Get("INTEL_SAM_STR_DESTROYED_SUFFIX")
+					elseif siteName == "SA-11" then
+						entries[#entries + 1] = siteName .. T:Get("INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX")
 					else
 						entries[#entries + 1] = siteName .. T:Get("INTEL_SAM_TR_DESTROYED_SUFFIX")
 					end
@@ -5039,12 +5083,16 @@ do
 				if newState.degraded then
 					if siteName == "SA-6" then
 						updates[#updates + 1] = L10N:Format("INTEL_STR_DESTROYED_DEGRADED", siteName)
+					elseif siteName == "SA-11" then
+						updates[#updates + 1] = L10N:Format("INTEL_SNOWDRIFT_DESTROYED_DEGRADED", siteName)
 					else
 						updates[#updates + 1] = L10N:Format("INTEL_TR_DESTROYED_DEGRADED", siteName)
 					end
 				else
 					if siteName == "SA-6" then
 						updates[#updates + 1] = L10N:Format("INTEL_ENEMY_REPAIRED_STR", siteName)
+					elseif siteName == "SA-11" then
+						updates[#updates + 1] = L10N:Format("INTEL_ENEMY_REPAIRED_COUNT", siteName .. " SnowDrift")
 					else
 						updates[#updates + 1] = L10N:Format("INTEL_ENEMY_REPAIRED_TR", siteName)
 					end
@@ -11372,13 +11420,12 @@ do
 		if not current then return false end
 
 		local startPoint = { x = current.x, z = current.z }
-		local targetIndex = self:_getCarrierNavigationAreaEntryIndex(area)
-		if not targetIndex then
-			if area.zone and area.zone:isInside({ x = startPoint.x, y = 0, z = startPoint.z }) then
-				targetIndex = self:_carrierNavigationRouteTargetIndex(startPoint, _carrierNavigationHeadingFromUnit(lead) or saved.headingDeg, station, saved.nextStationIndex)
-			else
-				targetIndex = self:_isCarrierNavigationAreaReversed(area) and 2 or 1
-			end
+		local targetIndex
+		if area.zone and area.zone:isInside({ x = startPoint.x, y = 0, z = startPoint.z }) then
+			targetIndex = self:_carrierNavigationRouteTargetIndex(startPoint, _carrierNavigationHeadingFromUnit(lead) or saved.headingDeg, station, saved.nextStationIndex)
+		else
+			targetIndex = self:_getCarrierNavigationAreaEntryIndex(area)
+			if not targetIndex then targetIndex = self:_isCarrierNavigationAreaReversed(area) and 2 or 1 end
 		end
 
 		local viaStation = self:_carrierNavigationGetViaStation(area, saved.lane, startPoint)
@@ -14448,8 +14495,8 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		return value
 	end
 
-	function BattleCommander:registerShopItem(id, name, cost, action, altAction)
-		self.shopItems[id] = { name=name, cost=cost, action=action, altAction = altAction }
+	function BattleCommander:registerShopItem(id, name, cost, action, altAction, aiPurchaseChance)
+		self.shopItems[id] = { name=name, cost=cost, action=action, altAction = altAction, aiPurchaseChance = aiPurchaseChance }
 	end
 	
 function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
@@ -17387,7 +17434,7 @@ end
 local function _buildRedPoolsForZone(zoneObj)
 	local zoneSize = getZoneSize(zoneObj)
 	local pools = { sam = {}, shorad = {}, aaa = {}, ground = {}, armor = {}, arty = {}, other = {} }
-	fillPoolsFrom(getGlobalRedPool(), pools, zoneSize)
+	fillPoolsFrom(getGlobalRedPool(), pools, zoneObj, zoneSize)
 	local existing = _buildUpgradeNameSet(zoneObj)
 
 	local function filterPool(src)
@@ -17464,7 +17511,8 @@ function BattleCommander:redZoneUpgradeAction()
 	for _, z in pairs(self:getZones()) do
 		local max = 1 + (self.globalExtraUnlock and 1 or 0)
 		local used = (type(z.getUpgradesUsed) == "function") and z:getUpgradesUsed(1) or (z.upgradesUsed or 0)
-		if z.side == 1 and z.active and not z.suspended and not z.isHidden and not isCarrierZoneName(z.zone) and used < max then
+		local customSamSlotsEnabled = type(CustomSamSpawnSlots) == "table" and CustomSamSpawnSlots[z.zone] == true
+		if z.side == 1 and z.active and not z.suspended and not z.isHidden and not isCarrierZoneName(z.zone) and not customSamSlotsEnabled and used < max then
 			allow[z.zone] = true
 		end
 	end
@@ -17522,7 +17570,9 @@ function BattleCommander:applyLogisticCenterUpgrade(zoneObj)
 	if type(zoneObj.updateLabel) == 'function' then
 		zoneObj:updateLabel()
 	end
-	self:requestShopSelectorRefreshForCoalition(2, { 'zwh50' })
+	self._shopSelectorBucketsDirty = true
+	self:updateBlueZoneCount()
+	self:requestShopSelectorRefreshForCoalition(2, { 'warehouse_targets' })
 	trigger.action.outTextForCoalition(2, L10N:Format("WAREHOUSE_LOGISTIC_CENTER_CREATED", zoneObj.zone), 15)
 	return true
 end
@@ -18709,6 +18759,10 @@ end
 	local carrierNavigation = self:_exportCarrierNavigationPersistence()
 	if carrierNavigation then
 		states.carrierNavigation = carrierNavigation
+	end
+	local redMassAttackMission = self:_exportRedMassAttackMissionPersistence()
+	if redMassAttackMission then
+		states.redMassAttackMission = redMassAttackMission
 	end
     return states
 end
@@ -23443,91 +23497,481 @@ function BattleCommander:updateBlueZoneCount()
 	self._shopSelectorBucketsDirty = false
 end
 
-function BattleCommander:triggerRedMassAttack()
-	self:updateBlueZoneCount()
-	local blueAirbaseByZone = {}
-	for _, z in ipairs(self._blueAirbaseZones or {}) do
-		if z and z.side == 2 and z.active and not z.suspended and not z.isHidden then
-			if z.airbaseName and z.airbaseName ~= "" and not isCarrierZoneName(z.zone) then
-				blueAirbaseByZone[z.zone] = z
-			end
-		end
-	end
-	if not next(blueAirbaseByZone) then
-		return "No valid blue airbase zones"
-	end
+BattleCommander.redMassAttackSettings = BattleCommander.redMassAttackSettings or {
+	missionId = "RedMassAttack",
+	minimumGroups = 4,
+	limits = {
+		CAP = 2,
+		CAS = 2,
+		SEAD = 1,
+		RUNWAYSTRIKE = 1,
+	},
+	typeOrder = {
+		"CAP",
+		"CAS",
+		"SEAD",
+		"RUNWAYSTRIKE",
+	},
+	liveStates = {
+		takeoff = true,
+		inair = true,
+	},
+}
 
-	local candidates = {}
-	for _, zc in ipairs(self.zones) do
-		if zc and zc.side == 1 and zc.active and not zc.suspended and not zc.isHidden then
-			for _, gc in ipairs(zc.groups or {}) do
-				if gc and gc.side == 1 and gc.mission == 'attack' and gc.targetzone then
-					if blueAirbaseByZone[gc.targetzone] then
-						candidates[gc.targetzone] = true
-					end
-				end
-			end
-		end
+function BattleCommander:_getRedMassAttackLiveGroup(gc)
+	local groupName = gc and (gc.spawnedName or gc.name) or nil
+	local group = groupName and Group.getByName(groupName) or nil
+	if group and group:isExist() and group:getSize() > 0 then
+		return group, groupName
 	end
-	if not next(candidates) then
-		return "No red attack groups targeting a blue airbase zone"
-	end
+	return nil, nil
+end
 
-	local list = {}
-	for zName in pairs(candidates) do list[#list + 1] = zName end
-	local targetName = list[math.random(1, #list)]
-	local total = 0
-	local forced = 0
-	local limits = { CAP = 2, SEAD = 1, RUNWAYSTRIKE = 1, CAS = 2 }
-	local liveCounts = {}
-	local pendingByType = { CAP = {}, SEAD = {}, RUNWAYSTRIKE = {}, CAS = {} }
-	for _, zc in ipairs(self.zones) do
-		if zc and zc.side == 1 and zc.active and not zc.suspended and not zc.isHidden then
-			for _, gc in ipairs(zc.groups or {}) do
-				if gc and gc.side == 1 and gc.mission == 'attack' and gc.targetzone == targetName then
-					total = total + 1
-					local mt = gc.MissionType
-					if mt and limits[mt] then
-						local st = gc.state
-						local live = (st == 'takeoff' or st == 'inair' or st == 'landed' or st == 'enroute' or st == 'atdestination')
-						if live then
-							liveCounts[mt] = (liveCounts[mt] or 0) + 1
-						elseif gc.forceSpawnNow then
-							local bucket = pendingByType[mt]
-							bucket[#bucket + 1] = gc
+function BattleCommander:_newRedMassAttackPools()
+	local pools = {}
+	for _, missionType in ipairs(BattleCommander.redMassAttackSettings.typeOrder) do
+		pools[missionType] = {
+			live = {},
+			assigned = {},
+			retask = {},
+		}
+	end
+	return pools
+end
+
+function BattleCommander:_redMassAttackCanUseDormantGroup(gc, now)
+	if gc.side ~= coalition.side.RED then return false end
+	if gc.mission ~= 'attack' then return false end
+	if not BattleCommander.redMassAttackSettings.limits[gc.MissionType] then return false end
+	if gc.type ~= 'air' and gc.type ~= 'carrier_air' then return false end
+	if not RED_REACTIVE_BOOST_STATES[gc.state] or gc.Spawned then return false end
+	if self:_getRedMassAttackLiveGroup(gc) then return false end
+
+	local reactive = self.redReactive
+	local cooldownAt = reactive and reactive.groupCooldownByName and reactive.groupCooldownByName[gc.name] or nil
+	if cooldownAt and now < cooldownAt then return false end
+	return true
+end
+
+function BattleCommander:_buildRedMassAttackPlan(targetZone, now)
+	local targetName = targetZone.zone
+	local plan = {
+		targetZone = targetName,
+		pools = self:_newRedMassAttackPools(),
+		filled = 0,
+		roles = 0,
+		score = 0,
+		forceSlots = 0,
+	}
+	local hasSeadTargets = self:HasSeadTargets(targetName)
+
+	for _, sourceZone in ipairs(self.zones) do
+		if sourceZone.side == coalition.side.RED and sourceZone.active and not sourceZone.suspended and not sourceZone.isHidden then
+			for _, gc in ipairs(sourceZone.groups or {}) do
+				local missionType = gc and gc.MissionType or nil
+				local pools = missionType and plan.pools[missionType] or nil
+				if pools and gc.side == coalition.side.RED and gc.mission == 'attack'
+					and (gc.type == 'air' or gc.type == 'carrier_air')
+					and (missionType ~= 'SEAD' or hasSeadTargets)
+				then
+					local row = {
+						gc = gc,
+						source = sourceZone.zone,
+						distance = (ZONE_DISTANCES[sourceZone.zone] and ZONE_DISTANCES[sourceZone.zone][targetName]) or math.huge,
+					}
+					if gc.targetzone == targetName and BattleCommander.redMassAttackSettings.liveStates[gc.state] then
+						local _, groupName = self:_getRedMassAttackLiveGroup(gc)
+						if groupName then
+							row.groupName = groupName
+							pools.live[#pools.live + 1] = row
+						end
+					elseif self:_redMassAttackCanUseDormantGroup(gc, now) and self:_retaskDistanceAllowed(gc, targetName) then
+						if gc.targetzone == targetName then
+							pools.assigned[#pools.assigned + 1] = row
+						else
+							pools.retask[#pools.retask + 1] = row
 						end
 					end
 				end
 			end
 		end
 	end
-	if total == 0 then
-		return "No red attack groups targeting "..targetName
+
+	for _, missionType in ipairs(BattleCommander.redMassAttackSettings.typeOrder) do
+		local available = 0
+		for _, mode in ipairs({ "live", "assigned", "retask" }) do
+			local rows = plan.pools[missionType][mode]
+			table.sort(rows, function(a, b)
+				if a.distance == b.distance then
+					if a.source == b.source then return a.gc.name < b.gc.name end
+					return a.source < b.source
+				end
+				return a.distance < b.distance
+			end)
+			available = available + #rows
+		end
+		local filledForType = math.min(BattleCommander.redMassAttackSettings.limits[missionType], available)
+		local liveFilled = math.min(BattleCommander.redMassAttackSettings.limits[missionType], #plan.pools[missionType].live)
+		local dormantAvailable = #plan.pools[missionType].assigned + #plan.pools[missionType].retask
+		plan.forceSlots = plan.forceSlots + math.min(BattleCommander.redMassAttackSettings.limits[missionType] - liveFilled, dormantAvailable)
+		if filledForType > 0 then plan.roles = plan.roles + 1 end
+		plan.filled = plan.filled + filledForType
+	end
+	plan.score = (plan.filled * 10) + plan.roles
+	return plan
+end
+
+function BattleCommander:_chooseRedMassAttackPlan()
+	self:updateBlueZoneCount()
+	local now = timer.getAbsTime()
+	local bestScore = -1
+	local bestPlans = {}
+	for _, targetZone in ipairs(self._blueAirbaseZones or {}) do
+		if targetZone.side == coalition.side.BLUE and targetZone.active and not targetZone.suspended and not targetZone.isHidden
+			and targetZone.airbaseName and targetZone.airbaseName ~= "" and not isCarrierZoneName(targetZone.zone)
+		then
+			local plan = self:_buildRedMassAttackPlan(targetZone, now)
+			local capAvailable = math.min(BattleCommander.redMassAttackSettings.limits.CAP,
+				#plan.pools.CAP.live + #plan.pools.CAP.assigned + #plan.pools.CAP.retask)
+			local strikeAvailable = plan.filled - capAvailable
+			if plan.filled >= BattleCommander.redMassAttackSettings.minimumGroups and capAvailable > 0 and strikeAvailable > 0 and plan.forceSlots > 0 then
+				if plan.score > bestScore then
+					bestScore = plan.score
+					bestPlans = { plan }
+				elseif plan.score == bestScore then
+					bestPlans[#bestPlans + 1] = plan
+				end
+			end
+		end
+	end
+	if #bestPlans == 0 then return nil end
+	return bestPlans[math.random(1, #bestPlans)]
+end
+
+function BattleCommander:_restoreRedMassAttackParticipant(participant, targetName)
+	if participant.restored then return end
+	participant.restored = true
+	local gc = participant.gc or self:_findGroupCommanderByLiveGroupName(participant.commanderName)
+	if not gc then return end
+	gc.SpawnHot = participant.originalSpawnHot
+	if not participant.originalTarget or gc.targetzone ~= targetName then return end
+	gc.targetzone = participant.originalTarget
+	gc._retasked = gc.targetzone ~= gc._baseTargetzone
+	gc._spawnEvalCache = nil
+	gc._spawnEvalLast = nil
+	self:markFsmGroupFilterDirty()
+	self:markReindexCombatFilterDirty()
+end
+
+function BattleCommander:_rollbackRedMassAttackLaunch(state)
+	for _, participant in ipairs(state.participants) do
+		if participant.spawnedByMission and participant.launchSnapshot then
+			local group = Group.getByName(participant.groupName)
+			if group and group:isExist() then group:destroy() end
+			local gc = participant.gc
+			local snapshot = participant.launchSnapshot
+			gc:_enterHangar(false)
+			gc.targetzone = snapshot.targetzone
+			gc._baseTargetzone = snapshot.baseTargetzone
+			gc._retasked = snapshot.retasked
+			gc.SpawnHot = snapshot.SpawnHot
+			gc.spawnedName = snapshot.spawnedName
+			gc.Spawned = snapshot.Spawned
+			gc.state = snapshot.state
+			gc.lastStateTime = snapshot.lastStateTime
+			gc.diceRolled = snapshot.diceRolled
+			gc._dcsGroup = snapshot.dcsGroup
+			gc._nextDormantFsmCheckAt = snapshot.nextDormantFsmCheckAt
+			gc._dormantFsmReason = snapshot.dormantFsmReason
+		end
+	end
+	self:markFsmGroupFilterDirty()
+	self:markReindexCombatFilterDirty()
+end
+
+function BattleCommander:_launchRedMassAttackPlan(plan)
+	local state = {
+		id = BattleCommander.redMassAttackSettings.missionId,
+		active = false,
+		targetZone = plan.targetZone,
+		participants = {},
+		counts = {},
+		forced = 0,
+		startedAt = timer.getAbsTime(),
+	}
+	local usedCommanders = {}
+	local usedSources = {}
+
+	local function addParticipant(row, mode, groupName, snapshot)
+		local gc = row.gc
+		if usedCommanders[gc.name] then return false end
+		usedCommanders[gc.name] = true
+		usedSources[row.source] = (usedSources[row.source] or 0) + 1
+		state.counts[gc.MissionType] = (state.counts[gc.MissionType] or 0) + 1
+		state.participants[#state.participants + 1] = {
+			gc = gc,
+			commanderName = gc.name,
+			groupName = groupName,
+			missionType = gc.MissionType,
+			sourceZone = row.source,
+			originalTarget = snapshot and snapshot.targetzone or gc.targetzone,
+			originalSpawnHot = snapshot and snapshot.SpawnHot or gc.SpawnHot,
+			retasked = mode == "retask",
+			spawnedByMission = mode ~= "live",
+			launchSnapshot = snapshot,
+		}
+		return true
 	end
 
-	local function spawnUpTo(limit, liveCount, bucket)
-		local remaining = limit - (liveCount or 0)
-		while remaining > 0 and #bucket > 0 do
-			local idx = math.random(1, #bucket)
-			local gc = bucket[idx]
-			bucket[idx] = bucket[#bucket]
-			bucket[#bucket] = nil
-			if self:_retaskDistanceAllowed(gc, targetName) then
-				gc:forceSpawnNow(targetName)
-				forced = forced + 1
-				remaining = remaining - 1
+	local function tryRow(row, mode)
+		local gc = row.gc
+		if usedCommanders[gc.name] then return false end
+		if mode == "live" then
+			local _, groupName = self:_getRedMassAttackLiveGroup(gc)
+			if not groupName then return false end
+			return addParticipant(row, mode, groupName, nil)
+		end
+
+		local snapshot = {
+			targetzone = gc.targetzone,
+			baseTargetzone = gc._baseTargetzone,
+			retasked = gc._retasked,
+			SpawnHot = gc.SpawnHot,
+			spawnedName = gc.spawnedName,
+			Spawned = gc.Spawned,
+			state = gc.state,
+			lastStateTime = gc.lastStateTime,
+			diceRolled = gc.diceRolled,
+			dcsGroup = gc._dcsGroup,
+			nextDormantFsmCheckAt = gc._nextDormantFsmCheckAt,
+			dormantFsmReason = gc._dormantFsmReason,
+		}
+		gc:forceSpawnNow(plan.targetZone)
+		local _, groupName = self:_getRedMassAttackLiveGroup(gc)
+		if groupName and BattleCommander.redMassAttackSettings.liveStates[gc.state] then
+			state.forced = state.forced + 1
+			return addParticipant(row, mode, groupName, snapshot)
+		end
+
+		gc.targetzone = snapshot.targetzone
+		gc._baseTargetzone = snapshot.baseTargetzone
+		gc._retasked = snapshot.retasked
+		gc.SpawnHot = snapshot.SpawnHot
+		gc.spawnedName = snapshot.spawnedName
+		gc.Spawned = snapshot.Spawned
+		gc.state = snapshot.state
+		gc.lastStateTime = snapshot.lastStateTime
+		gc.diceRolled = snapshot.diceRolled
+		gc._dcsGroup = snapshot.dcsGroup
+		gc._nextDormantFsmCheckAt = snapshot.nextDormantFsmCheckAt
+		gc._dormantFsmReason = snapshot.dormantFsmReason
+		return false
+	end
+
+	for _, missionType in ipairs(BattleCommander.redMassAttackSettings.typeOrder) do
+		local limit = BattleCommander.redMassAttackSettings.limits[missionType]
+		local pools = plan.pools[missionType]
+		for _, row in ipairs(pools.live) do
+			if (state.counts[missionType] or 0) >= limit then break end
+			tryRow(row, "live")
+		end
+		for _, mode in ipairs({ "assigned", "retask" }) do
+			local attempted = {}
+			for pass = 1, 2 do
+				for _, row in ipairs(pools[mode]) do
+					if (state.counts[missionType] or 0) >= limit then break end
+					if not attempted[row.gc.name] and (pass == 2 or not usedSources[row.source]) then
+						attempted[row.gc.name] = true
+						tryRow(row, mode)
+					end
+				end
 			end
 		end
 	end
 
-	spawnUpTo(limits.CAP, liveCounts.CAP, pendingByType.CAP)
-	spawnUpTo(limits.SEAD, liveCounts.SEAD, pendingByType.SEAD)
-	spawnUpTo(limits.RUNWAYSTRIKE, liveCounts.RUNWAYSTRIKE, pendingByType.RUNWAYSTRIKE)
-	spawnUpTo(limits.CAS, liveCounts.CAS, pendingByType.CAS)
+	local total = #state.participants
+	local capCount = state.counts.CAP or 0
+	local strikeCount = total - capCount
+	if total < BattleCommander.redMassAttackSettings.minimumGroups or capCount == 0 or strikeCount == 0 or state.forced == 0 then
+		self:_rollbackRedMassAttackLaunch(state)
+		return nil
+	end
 
-	trigger.action.outTextForCoalition(1, L10N:Format("COMBAT_RED_MASS_ATTACK", targetName, forced, total), 15)
-	trigger.action.outTextForCoalition(2, L10N:Format("INTEL_MASS_ATTACK", targetName), 15)
-	trigger.action.outSoundForCoalition(2, "Intel.ogg")
+	for _, participant in ipairs(state.participants) do
+		participant.launchSnapshot = nil
+	end
+	state.active = true
+	self.redMassAttackMission = state
+	ActiveMission[BattleCommander.redMassAttackSettings.missionId] = true
+	return state
+end
+
+function BattleCommander:isRedMassAttackMissionActive()
+	local state = self.redMassAttackMission
+	if not state or not state.active or not ActiveMission[BattleCommander.redMassAttackSettings.missionId] then return false end
+	local alive = 0
+	for _, participant in ipairs(state.participants) do
+		local group = Group.getByName(participant.groupName)
+		if group and group:isExist() and group:getSize() > 0 then
+			alive = alive + 1
+		else
+			self:_restoreRedMassAttackParticipant(participant, state.targetZone)
+		end
+	end
+	if alive > 0 then return true end
+	state.active = false
+	ActiveMission[BattleCommander.redMassAttackSettings.missionId] = nil
+	return false
+end
+
+function BattleCommander:_exportRedMassAttackMissionPersistence()
+	local state = self.redMassAttackMission
+	if not state or not state.active then return nil end
+	local saved = {
+		targetZone = state.targetZone,
+		participants = {},
+	}
+	for _, participant in ipairs(state.participants) do
+		saved.participants[#saved.participants + 1] = {
+			commanderName = participant.commanderName,
+			groupName = participant.groupName,
+			missionType = participant.missionType,
+			sourceZone = participant.sourceZone,
+			originalTarget = participant.originalTarget,
+			originalSpawnHot = participant.originalSpawnHot,
+			retasked = participant.retasked == true,
+		}
+	end
+	return saved
+end
+
+function BattleCommander:_restorePendingRedMassAttackMission()
+	local saved = self._pendingRedMassAttackMission
+	if type(saved) ~= "table" then return true end
+	local dynamic = self.dynamicHybrid
+	if dynamic and dynamic.started and dynamic.config and dynamic.config.enabled and dynamic.config.runOnce and not dynamic.bootstrapDone then
+		return false
+	end
+	if self._pendingAirAiPersistence then return false end
+
+	local targetName = saved.targetZone
+	local targetZone = targetName and self:getZoneByName(targetName) or nil
+	local participants = {}
+	local counts = {}
+	if targetZone and targetZone.side == coalition.side.BLUE and targetZone.active then
+		for _, participant in ipairs(saved.participants or {}) do
+			local gc = self:_findGroupCommanderByLiveGroupName(participant.commanderName)
+			if gc then
+				local retargetedOnRestore = participant.retasked == true and gc.targetzone ~= targetName
+				if retargetedOnRestore then
+					gc.targetzone = targetName
+					gc._retasked = gc.targetzone ~= gc._baseTargetzone
+					gc._spawnEvalCache = nil
+					gc._spawnEvalLast = nil
+				end
+				local _, groupName = self:_getRedMassAttackLiveGroup(gc)
+				if groupName then
+					local missionType = participant.missionType or gc.MissionType
+					counts[missionType] = (counts[missionType] or 0) + 1
+					participants[#participants + 1] = {
+						gc = gc,
+						commanderName = gc.name,
+						groupName = groupName,
+						missionType = missionType,
+						sourceZone = participant.sourceZone or gc.zoneCommander.zone,
+						originalTarget = participant.originalTarget,
+						originalSpawnHot = participant.originalSpawnHot,
+						retasked = participant.retasked == true,
+					}
+					if retargetedOnRestore then
+						timer.scheduleFunction(function(args)
+							local group = Group.getByName(args.groupName)
+							if group and group:isExist() and group:getSize() > 0 then
+								args.gc:_assignMissionAfterInAirRestore(args.groupName, args.gc.zoneCommander.zone)
+							end
+						end, { gc = gc, groupName = groupName }, timer.getTime() + 1)
+					end
+				end
+			end
+		end
+	else
+		for _, participant in ipairs(saved.participants or {}) do
+			local gc = self:_findGroupCommanderByLiveGroupName(participant.commanderName)
+			if gc then
+				gc.SpawnHot = participant.originalSpawnHot
+				if participant.retasked == true and participant.originalTarget and gc.targetzone == targetName then
+					gc.targetzone = participant.originalTarget
+					gc._retasked = gc.targetzone ~= gc._baseTargetzone
+					gc._spawnEvalCache = nil
+					gc._spawnEvalLast = nil
+					local _, groupName = self:_getRedMassAttackLiveGroup(gc)
+					if groupName then
+						timer.scheduleFunction(function(args)
+							local group = Group.getByName(args.groupName)
+							if group and group:isExist() and group:getSize() > 0 then
+								args.gc:_assignMissionAfterInAirRestore(args.groupName, args.gc.zoneCommander.zone)
+							end
+						end, { gc = gc, groupName = groupName }, timer.getTime() + 1)
+					end
+				end
+			end
+		end
+		self:markFsmGroupFilterDirty()
+		self:markReindexCombatFilterDirty()
+	end
+
+	self._pendingRedMassAttackMission = nil
+	if #participants > 0 then
+		self.redMassAttackMission = {
+			id = BattleCommander.redMassAttackSettings.missionId,
+			active = true,
+			targetZone = targetName,
+			participants = participants,
+			counts = counts,
+			forced = 0,
+			startedAt = timer.getAbsTime(),
+			restored = true,
+		}
+		ActiveMission[BattleCommander.redMassAttackSettings.missionId] = true
+		self:markFsmGroupFilterDirty()
+		self:markReindexCombatFilterDirty()
+	end
+	return true
+end
+
+function BattleCommander:scheduleRedMassAttackMissionRestore()
+	if not self._pendingRedMassAttackMission then return end
+	timer.scheduleFunction(function(args, time)
+		if args.commander:_restorePendingRedMassAttackMission() then return nil end
+		args.attempts = args.attempts + 1
+		if args.attempts >= 15 then
+			args.commander._pendingRedMassAttackMission = nil
+			return nil
+		end
+		return time + 5
+	end, { commander = self, attempts = 0 }, timer.getTime() + 8)
+end
+
+function BattleCommander:triggerRedMassAttack()
+	if ActiveMission[BattleCommander.redMassAttackSettings.missionId]
+		or (self.redMassAttackMission and self.redMassAttackMission.active)
+	then
+		return L10N:Get("SHOP_NOT_AVAILABLE_NOW")
+	end
+	local dynamic = self.dynamicHybrid
+	if dynamic and dynamic.started and dynamic.config and dynamic.config.enabled and dynamic.config.runOnce and not dynamic.bootstrapDone then
+		return L10N:Get("SHOP_NOT_AVAILABLE_NOW")
+	end
+
+	local plan = self:_chooseRedMassAttackPlan()
+	if not plan then return L10N:Get("SHOP_NOT_AVAILABLE_NOW") end
+	local state = self:_launchRedMassAttackPlan(plan)
+	if not state then return L10N:Get("SHOP_NOT_AVAILABLE_NOW") end
+
+	local total = #state.participants
+	trigger.action.outTextForCoalition(coalition.side.RED, L10N:Format("COMBAT_RED_MASS_ATTACK", state.targetZone, state.forced, total), 15)
+	trigger.action.outTextForCoalition(coalition.side.BLUE, L10N:Format("INTEL_MASS_ATTACK", state.targetZone), 15)
+	trigger.action.outSoundForCoalition(coalition.side.BLUE, "Intel.ogg")
 	return true
 end
 
@@ -27916,7 +28360,8 @@ local hunter   = SPAWN:NewWithAlias(template, hunterAlias)
 			end
 			return
 		end
-		trigger.action.outTextForCoalition(2, L10N:Format("COMBAT_HUNT_SCRAMBLE", pname), 30)
+		local scrambleMessageKey = map == "Normandy" and "COMBAT_HUNT_SCRAMBLE_WW2" or "COMBAT_HUNT_SCRAMBLE"
+		trigger.action.outTextForCoalition(2, L10N:Format(scrambleMessageKey, pname), 30)
 		local BlueVictory = USERSOUND:New("Watch your six.ogg")
 		local PlayerUnit = CLIENT:FindByPlayerName(pname)
 		if PlayerUnit then
@@ -28268,7 +28713,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
                     return
                 end
 
-                if StrategicBomber.MarkInterceptorLandedByGroupName(groupname, unit) then
+                if StrategicBomber.MarkSupportAircraftLandedByGroupName(groupname, unit) then
                     return
                 end
             end
@@ -29198,6 +29643,7 @@ function BattleCommander:loadFromDisk()
 			end
 		end
 		self._pendingAirAiPersistence = nil
+		self._pendingRedMassAttackMission = nil
 		self._pendingCsarPilotPersistence = nil
 
 		local function _parseAirAiPersistence(raw)
@@ -29561,7 +30007,7 @@ function BattleCommander:loadFromDisk()
 						end
 					if pruned then
 						local compacted = {}
-						for i = 1, #out do
+						for i = 1, #(list or {}) do
 							local n = out[i]
 							if n then
 								compacted[#compacted + 1] = n
@@ -29830,7 +30276,7 @@ function BattleCommander:loadFromDisk()
 							zn.suspended = true
 							env.info("[SUSPEND-LOAD] "..zn.zone)
 							zn.remainingUnitsSnapshot = BuildPersistedSuspendedSnapshot(v)
-							local nameSnapshot = randomChanged and {} or BuildPersistedSuspendedNameSnapshot(v)
+							local nameSnapshot = BuildPersistedSuspendedNameSnapshot(v)
 							zn.remainingUnitNamesSnapshot = next(nameSnapshot) and nameSnapshot or nil
 							zn.remainingUnits = nil
 							zn.remainingUnitNames = nil
@@ -29948,6 +30394,9 @@ function BattleCommander:loadFromDisk()
 			
 			if zonePersistance.customFlags then
 				CustomFlags = zonePersistance.customFlags
+			end
+			if type(zonePersistance.redMassAttackMission) == "table" then
+				self._pendingRedMassAttackMission = zonePersistance.redMassAttackMission
 			end
 
 			if zonePersistance.ewrsSettings then
@@ -31600,6 +32049,58 @@ end
 function applyRandomUpgradesForNewZonesOnly()
     local savedZones = zonePersistance.zones
 
+	local function buildSavedUpgradeNames(saved, side)
+		local names = {}
+		local base = side == 1 and saved.randomUpgradesRed or saved.randomUpgradesBlue
+		for _, entry in ipairs(base or {}) do
+			local name = getUpgradeEntryName(entry)
+			if name then names[#names + 1] = name end
+		end
+		local extra = saved.extraUpgrade
+		if type(extra) == "string" then
+			if side == 2 then names[#names + 1] = extra end
+		elseif type(extra) == "table" then
+			for _, entry in ipairs(extra) do
+				if type(entry) == "table" then
+					local name = entry.name
+					if name and (entry.side == side or (entry.side == nil and side == 2)) then
+						names[#names + 1] = name
+					end
+				elseif side == 2 then
+					names[#names + 1] = entry
+				end
+			end
+		end
+		return names
+	end
+
+	local function buildTemplateUnitTypes(groupName)
+		local tpl = ResolveNamedGroupTemplate(groupName)
+		if not tpl or type(tpl.units) ~= "table" then return nil end
+		local unitTypes = {}
+		for _, unit in ipairs(tpl.units) do
+			local unitType = unit and unit.type
+			if type(unitType) == "string" and unitType ~= "" then
+				unitTypes[#unitTypes + 1] = unitType
+			end
+		end
+		return #unitTypes > 0 and unitTypes or nil
+	end
+
+	local function unitTypeSlotsMatch(savedSlot, currentTypes)
+		local savedTypes = CopyUnitTypeSlot(savedSlot)
+		if #savedTypes ~= #currentTypes then return false end
+		local needed = {}
+		for _, unitType in ipairs(currentTypes) do
+			needed[unitType] = (needed[unitType] or 0) + 1
+		end
+		for _, unitType in ipairs(savedTypes) do
+			if not needed[unitType] or needed[unitType] == 0 then return false end
+			needed[unitType] = needed[unitType] - 1
+		end
+		return true
+	end
+
     for _, z in pairs(zones) do
         local saved = savedZones[z.zone]
         local shouldSeed = (saved == nil) or (saved.randomUpgradesRed == nil and saved.randomUpgradesBlue == nil)
@@ -31634,6 +32135,48 @@ function applyRandomUpgradesForNewZonesOnly()
                 z._refreshRandomUpgrades = true
             end
         end
+
+		if saved and z.suspended and type(z.remainingUnitsSnapshot) == "table" and (z.side == 1 or z.side == 2) then
+			local currentUpgrades = z.side == 1 and z.upgrades.red or z.upgrades.blue
+			local savedUpgradeNames = buildSavedUpgradeNames(saved, z.side)
+			local snapshotIndexes = {}
+			for index in pairs(z.remainingUnitsSnapshot) do
+				if type(index) == "number" and index >= 1 and index % 1 == 0 then
+					snapshotIndexes[#snapshotIndexes + 1] = index
+				end
+			end
+			table.sort(snapshotIndexes)
+
+			for _, index in ipairs(snapshotIndexes) do
+				local currentName = getUpgradeEntryName(currentUpgrades and currentUpgrades[index])
+				local savedName = savedUpgradeNames[index]
+				local replacementTypes = nil
+				local refreshSnapshot = false
+
+				if not currentName then
+					refreshSnapshot = true
+				elseif isStaticUpgrade(currentName) or tostring(currentName):find("dismounted", 1, true) then
+					replacementTypes = {}
+					refreshSnapshot = savedName ~= currentName or not IsSavedUnitSlotEmpty(z.remainingUnitsSnapshot[index])
+				else
+					replacementTypes = buildTemplateUnitTypes(currentName)
+					if replacementTypes then
+						refreshSnapshot = savedName ~= currentName or not unitTypeSlotsMatch(z.remainingUnitsSnapshot[index], replacementTypes)
+					end
+				end
+
+				if refreshSnapshot then
+					z.remainingUnitsSnapshot[index] = currentName and replacementTypes or nil
+					if z.remainingUnitNamesSnapshot then z.remainingUnitNamesSnapshot[index] = nil end
+					if z.spawnSubZones then z.spawnSubZones[index] = nil end
+					env.info(string.format("[SUSPEND-LOAD] %s refreshed slot %d snapshot: %s -> %s", tostring(z.zone), index, tostring(savedName), tostring(currentName)))
+				end
+			end
+
+			if z.remainingUnitNamesSnapshot and not next(z.remainingUnitNamesSnapshot) then
+				z.remainingUnitNamesSnapshot = nil
+			end
+		end
     end
 end
 
@@ -33720,6 +34263,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			}
 			local previousSide = self.side
 			self.spawnSubZones = {}
+			self.LogisticCenter = false
 			self.side = 0
 			bc:markCapTargetStateDirty()
 			if #_zoneIntelGetActiveSidesForZone(self.zone) > 0 then
@@ -33955,7 +34499,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 				msg = msg .. "\n " .. L10N:Get("ZONE_LABEL_MISSION")
 			end
 		end
-		if labelSide == coalition.side.BLUE and self.LogisticCenter then
+		if labelSide == coalition.side.BLUE and self.side == coalition.side.BLUE and self.LogisticCenter then
 			msg = msg .. "\n [WH]"
 		end
 		if labelSide == coalition.side.BLUE and self.side == 2 and WarehouseLowSupplies and WarehouseLowSupplies[self.zone] and not self.LogisticCenter then
@@ -42035,6 +42579,10 @@ do
 			for i=1,maxAttempts,1 do
 				local choice = math.random(1, #canAfford)
 				local picked = table.remove(canAfford, choice)
+				local aiPurchaseChance = self.battleCommander.shopItems[picked].aiPurchaseChance
+				if aiPurchaseChance and math.random(1,100) > aiPurchaseChance then
+					break
+				end
 				local err = self.battleCommander:buyShopItem(self.side, picked)
 				if not err then
 					break
@@ -46828,20 +47376,109 @@ end
 
 MissionCommander = {}
 do
+	MissionCommander.autoEwrEventId = "AutoEwrStrike"
+	MissionCommander.autoEwrFallbackFrequency = 5 * 60
+	local AUTO_EWR_RANGE_METERS = UTILS.NMToMeters(70)
+	local AUTO_EWR_REWARD = 300
+	local AUTO_EWR_START_KEYS = {
+		"MISSION_EWR_START_1",
+		"MISSION_EWR_START_2",
+		"MISSION_EWR_START_3",
+	}
+	-- These targets keep their hand-authored setup-file missions.
+	local AUTO_EWR_IGNORED_GROUPS = {
+		["Red EWR Camp Bastion Fixed"] = true,
+		["Red EWR Nimroz Fixed"] = true,
+		["Red EWR Herat Fixed"] = true,
+		["Red EWR Chaghcharan Fixed"] = true,
+		["Red EWR Jamsheed Fixed"] = true,
+		["Red EWR Bagram Fixed"] = true,
+		["Red EWR Sharana Fixed"] = true,
+		["Red EWR-south Fixed"] = true,
+		["Red EWR-southeast Fixed"] = true,
+	}
+
+	local function getAutoEwrUpgradeName(entry)
+		if type(entry) == "table" then
+			return entry.n or entry.name or entry[1]
+		end
+		return entry
+	end
+
+	local function isAutoEwrUpgradeName(groupName)
+		return type(groupName) == "string"
+			and groupName:find("Red EWR", 1, true) ~= nil
+			and groupName:find("Fixed", 1, true) ~= nil
+	end
+
+	local function getAutoEwrTemplatePoint(groupName)
+		local template = ResolveNamedGroupTemplate(groupName)
+		local firstUnit = template and template.units and template.units[1] or nil
+		local x = firstUnit and firstUnit.x or (template and template.x)
+		local z = firstUnit and firstUnit.y or (template and template.y)
+		if not x or not z then return nil end
+		return {
+			x = x,
+			y = land.getHeight({ x = x, y = z }),
+			z = z,
+		}
+	end
+
+	local function formatAutoEwrDms(value, positiveHemisphere, negativeHemisphere, decimals)
+		local scale = 10 ^ decimals
+		local total = math.floor((math.abs(value) * 3600 * scale) + 0.5)
+		local degrees = math.floor(total / (3600 * scale))
+		local remainder = total - (degrees * 3600 * scale)
+		local minutes = math.floor(remainder / (60 * scale))
+		local seconds = (remainder - (minutes * 60 * scale)) / scale
+		local hemisphere = value >= 0 and positiveHemisphere or negativeHemisphere
+		if decimals == 0 then
+			return string.format("%s %d°%02d'%02d\"", hemisphere, degrees, minutes, seconds)
+		end
+		return string.format("%s %d°%02d'%05.2f\"", hemisphere, degrees, minutes, seconds)
+	end
+
+	local function formatAutoEwrDdm(value, positiveHemisphere, negativeHemisphere)
+		local scale = 1000
+		local total = math.floor((math.abs(value) * 60 * scale) + 0.5)
+		local degrees = math.floor(total / (60 * scale))
+		local minutes = (total - (degrees * 60 * scale)) / scale
+		local hemisphere = value >= 0 and positiveHemisphere or negativeHemisphere
+		return string.format("%s %d°%06.3f'", hemisphere, degrees, minutes)
+	end
+
+	local function buildAutoEwrCoordinates(point)
+		local lat, lon = coord.LOtoLL(point)
+		local coordinate = COORDINATE:NewFromVec3(point)
+		return {
+			mgrs = coordinate:ToStringMGRS():gsub("^MGRS%s*", ""),
+			dms = formatAutoEwrDms(lat, "N", "S", 0).." "..formatAutoEwrDms(lon, "E", "W", 0),
+			dmsPrecise = formatAutoEwrDms(lat, "N", "S", 2).." "..formatAutoEwrDms(lon, "E", "W", 2),
+			ddm = formatAutoEwrDdm(lat, "N", "S").." "..formatAutoEwrDdm(lon, "E", "W"),
+			elevationFeet = math.floor((coordinate:GetLandHeight() * 3.280839895) + 0.5),
+		}
+	end
+
     function MissionCommander:new(obj)
         obj = obj or {}
         obj.missions = {}
         obj.missionsType = {}
         obj.missionFlags = {}
 		obj.autoArtyTrackedGroups = obj.autoArtyTrackedGroups or {}
+		obj.autoEwrTargets = obj.autoEwrTargets or {}
+		obj.autoEwrTargetList = obj.autoEwrTargetList or {}
+		obj.autoEwrByZone = obj.autoEwrByZone or {}
+		obj.autoEwrPending = obj.autoEwrPending or {}
 		obj.strikeMenuByGroup = obj.strikeMenuByGroup or {}
 		obj.intelMenuByGroup = obj.intelMenuByGroup or {}
         if obj.checkFrequency then
             obj.checkFrequency = 15
         end
         setmetatable(obj, self)
-        self.__index = self
+		self.__index = self
 		obj:autoTrackArtyMissions()
+		obj:autoTrackEwrMissions()
+		obj:autoTrackRedMassAttackMission()
         return obj
     end
 
@@ -46855,12 +47492,13 @@ do
 						local targetZoneName = tostring(gc.targetzone or '')
 						local reward = gc.Reward or 250
 						local statName = L10N:Get("MISSION_ARTY_TITLE")
+						local messageStart = self.autoArtyStartMessageKey and L10N:Format(self.autoArtyStartMessageKey, originZoneName, targetZoneName) or L10N:Format("MISSION_ARTY_START", targetZoneName)
 
 						self:trackMission({
 							_autoArtyGroup = groupName,
 							title = statName,
 							description = L10N:Format("MISSION_ARTY_DESCRIPTION", originZoneName, targetZoneName),
-							messageStart = L10N:Format("MISSION_ARTY_START", targetZoneName),
+							messageStart = messageStart,
 							messageEnd = L10N:Get("MISSION_ARTY_END"),
 							startAction = function()
 								if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
@@ -46887,6 +47525,222 @@ do
 				end
 			end
 		end
+	end
+
+	local function isAutoEwrGroupAlive(groupName)
+		local group = Group.getByName(groupName)
+		return group and group:isExist() and group:getSize() > 0
+	end
+
+	function MissionCommander:isAutoEwrEligible(target)
+		local groupName = target.groupName
+		if CustomFlags[groupName] then return false end
+		if ActiveMission[groupName] then return false end
+		if not isAutoEwrGroupAlive(groupName) then return false end
+		for _, zoneData in pairs(target.zones) do
+			if zoneData.zone.side == coalition.side.BLUE then return true end
+		end
+		return false
+	end
+
+	function MissionCommander:queueAutoEwrMission(target)
+		local groupName = target.groupName
+		if self.autoEwrPending[groupName] then return end
+		if not self:isAutoEwrEligible(target) then return end
+
+		self.autoEwrPending[groupName] = {
+			target = target,
+			readyAt = timer.getTime() + math.random(60, 300),
+		}
+		target.startMessageKey = AUTO_EWR_START_KEYS[math.random(1, #AUTO_EWR_START_KEYS)]
+	end
+
+	function MissionCommander:getReadyAutoEwrTargets()
+		local ready = {}
+		local now = timer.getTime()
+		for groupName, pending in pairs(self.autoEwrPending) do
+			if not self:isAutoEwrEligible(pending.target) then
+				self.autoEwrPending[groupName] = nil
+			elseif now >= pending.readyAt then
+				ready[#ready + 1] = pending.target
+			end
+		end
+		return ready
+	end
+
+	function MissionCommander:startQueuedAutoEwrMission()
+		local ready = self:getReadyAutoEwrTargets()
+		if #ready == 0 then return end
+		local target = ready[math.random(1, #ready)]
+		self.autoEwrPending[target.groupName] = nil
+		RegisterGroupTarget(
+			target.groupName,
+			AUTO_EWR_REWARD,
+			L10N:Get("MISSION_EWR_TITLE"),
+			target.groupName,
+			true
+		)
+	end
+
+	function MissionCommander:registerAutoEwrEvent()
+		if self.autoEwrEventRegistered or #self.autoEwrTargetList == 0 then return end
+		local commander = self
+		evc:addEvent({
+			id = MissionCommander.autoEwrEventId,
+			StrikeMission = true,
+			action = function()
+				commander:startQueuedAutoEwrMission()
+			end,
+			canExecute = function()
+				return #commander:getReadyAutoEwrTargets() > 0
+			end,
+		})
+		self.autoEwrEventRegistered = true
+	end
+
+	function MissionCommander:startAutoEwrFallbackScheduler()
+		if not self.autoEwrEventRegistered or evc.strikeFrequency or self.autoEwrFallbackScheduled then return end
+		self.autoEwrFallbackScheduled = true
+		timer.scheduleFunction(function(_, time)
+			evc:triggerEvent(MissionCommander.autoEwrEventId)
+			return time + MissionCommander.autoEwrFallbackFrequency
+		end, nil, timer.getTime() + MissionCommander.autoEwrFallbackFrequency)
+	end
+
+	function MissionCommander:queueAutoEwrMissionsForZone(zoneObj)
+		if not zoneObj or zoneObj.side ~= coalition.side.BLUE then return end
+		local targets = self.autoEwrByZone[zoneObj.zone]
+		if not targets then return end
+		for _, target in ipairs(targets) do
+			self:queueAutoEwrMission(target)
+		end
+	end
+
+	function MissionCommander:autoTrackEwrMissions()
+		local seen = {}
+		for _, ownerZone in ipairs(self.battleCommander.zones) do
+			for _, entry in ipairs(ownerZone.upgrades and ownerZone.upgrades.red or {}) do
+				local groupName = getAutoEwrUpgradeName(entry)
+				if isAutoEwrUpgradeName(groupName) and not AUTO_EWR_IGNORED_GROUPS[groupName] and not seen[groupName] then
+					seen[groupName] = true
+					local point = getAutoEwrTemplatePoint(groupName)
+					if point then
+						local target = {
+							groupName = groupName,
+							point = point,
+							coordinates = buildAutoEwrCoordinates(point),
+							zones = {},
+						}
+						self.autoEwrTargets[groupName] = target
+						self.autoEwrTargetList[#self.autoEwrTargetList + 1] = target
+					else
+						env.info("[MissionCommander] Fixed EWR template position missing: "..tostring(groupName))
+					end
+				end
+			end
+		end
+
+		for _, target in ipairs(self.autoEwrTargetList) do
+			for _, zoneObj in ipairs(self.battleCommander.zones) do
+				local zone = CustomZone:getByName(zoneObj.zone)
+				if zone and zone.point then
+					local distanceMeters = UTILS.VecDist2D(
+						{ x = target.point.x, y = target.point.z },
+						{ x = zone.point.x, y = zone.point.z }
+					)
+					if distanceMeters <= AUTO_EWR_RANGE_METERS then
+						local zoneData = {
+							zone = zoneObj,
+							distanceNm = UTILS.MetersToNM(distanceMeters),
+						}
+						target.zones[zoneObj.zone] = zoneData
+						self.autoEwrByZone[zoneObj.zone] = self.autoEwrByZone[zoneObj.zone] or {}
+						self.autoEwrByZone[zoneObj.zone][#self.autoEwrByZone[zoneObj.zone] + 1] = target
+					end
+				end
+			end
+		end
+
+		for zoneName, targets in pairs(self.autoEwrByZone) do
+			local zoneData = targets[1] and targets[1].zones[zoneName] or nil
+			if zoneData then
+				zoneData.zone:registerTrigger('captured', function(_, capturedZone)
+					self:queueAutoEwrMissionsForZone(capturedZone)
+				end, 'autoEwrMissions')
+			end
+		end
+
+		for _, target in ipairs(self.autoEwrTargetList) do
+			local groupName = target.groupName
+			local coordinates = target.coordinates
+			self:trackMission({
+				_autoEwrGroup = groupName,
+				customFlagName = groupName,
+				title = L10N:DeferredGet("MISSION_EWR_TITLE"),
+				description = L10N:DeferredFormat(
+					"MISSION_EWR_DESCRIPTION",
+					AUTO_EWR_REWARD,
+					coordinates.mgrs,
+					coordinates.dms,
+					coordinates.dmsPrecise,
+					coordinates.ddm,
+					coordinates.elevationFeet
+				),
+				messageStart = function(translator)
+					return (translator or L10N):Get(target.startMessageKey or AUTO_EWR_START_KEYS[1])
+				end,
+				messageEnd = L10N:DeferredGet("MISSION_EWR_END"),
+				startAction = function()
+					if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+						trigger.action.outSoundForCoalition(coalition.side.BLUE, "ding.ogg")
+					end
+				end,
+				endAction = function()
+					if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+						trigger.action.outSoundForCoalition(coalition.side.BLUE, "cancel.ogg")
+					end
+					bc:cancelGroupTargetMission(groupName)
+				end,
+				isActive = function()
+					if CustomFlags[groupName] then return false end
+					if not ActiveMission[groupName] then return false end
+					if isAutoEwrGroupAlive(groupName) then return true end
+					ActiveMission[groupName] = nil
+					return false
+				end,
+			})
+		end
+		self:registerAutoEwrEvent()
+	end
+
+	function MissionCommander:autoTrackRedMassAttackMission()
+		if self.redMassAttackTracked then return end
+		local commander = self
+		self:trackMission({
+			title = function(translator)
+				local state = commander.battleCommander.redMassAttackMission
+				return (translator or L10N):Format("MISSION_MASS_ATTACK_TITLE", state and state.targetZone or "")
+			end,
+			description = function(translator)
+				local state = commander.battleCommander.redMassAttackMission
+				local targetName = state and state.targetZone or ""
+				local groupCount = state and #state.participants or 0
+				return (translator or L10N):Format("MISSION_MASS_ATTACK_DESCRIPTION", targetName, groupCount)
+			end,
+			messageEnd = function(translator)
+				local state = commander.battleCommander.redMassAttackMission
+				return (translator or L10N):Format("MISSION_MASS_ATTACK_END", state and state.targetZone or "")
+			end,
+			endAction = function()
+				if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+					trigger.action.outSoundForCoalition(coalition.side.BLUE, "cancel.ogg")
+				end
+			end,
+			isActive = function()
+				return commander.battleCommander:isRedMassAttackMissionActive()
+			end,
+		})
+		self.redMassAttackTracked = true
 	end
 
 	function MissionCommander:decodeMessage(param, translator)
@@ -47298,6 +48152,13 @@ do
 
 	function MissionCommander:init()
 		--missionCommands.addCommandForCoalition(self.side, 'Missions', nil, self.printMissions, self)
+		for _, zoneObj in ipairs(self.battleCommander.zones) do
+			if zoneObj.side == coalition.side.BLUE then
+				self:queueAutoEwrMissionsForZone(zoneObj)
+			end
+		end
+		self:startAutoEwrFallbackScheduler()
+		self.battleCommander:scheduleRedMassAttackMissionRestore()
 		timer.scheduleFunction(self.checkMissions, self, timer.getTime() + 15)
 	end
 

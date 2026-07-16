@@ -506,7 +506,7 @@ Reward 500
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Deploy air defence",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Capture neutral zone",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "Advance capture zone",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Intel on enemy zone",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Satellite Intel",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Red zone upgrade",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Red mass airbase attack",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Upgrade zone with infantry",
@@ -560,7 +560,7 @@ Reward 500
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "All zones can now buy a second upgrade",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Choose zone for Logistic Center",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Select friendly fully-upgraded airbase zone from F10 menu.",
-	SYRIA_SHOP_GATHERING_INTEL         = "Gathering intel on %s. Stand by for report...",
+	SYRIA_SHOP_GATHERING_INTEL         = "Reconnaissance satellites are being retasked over %s. Stand by for the initial report. Updated intelligence will remain available for 60 minutes.",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "Launching cruise missiles at %s",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "%s mission still in progress",
 	SYRIA_SHOP_JAMMING_TARGET          = "Jamming target",
@@ -916,8 +916,8 @@ Reward: 1000]],
 	SYRIA_DYNAMIC_RECON_END            = "Mission ended: Recon",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "Mission ended: Recon %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "Mission ended: Recon %s completed by %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] and [%s] completed recon at %s!\nReward pending: %d credits each (land to redeem).\nIntel active for 10 minutes.",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] completed recon at %s.\nReward pending: %d credits (land to redeem).\nIntel active for 10 minutes.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] and [%s] completed a reconnaissance pass over %s!\nReward pending: %d credits each (land to redeem).\nAirborne reconnaissance data is being analyzed. Stand by for the initial report.\nUpdated intelligence will remain available for 10 minutes.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] completed a reconnaissance pass over %s.\nReward pending: %d credits (land to redeem).\nAirborne reconnaissance data is being analyzed. Stand by for the initial report.\nUpdated intelligence will remain available for 10 minutes.",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "Active mission is pending:\n\nEscort convoy from %s to %s",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Special mission available:\n\nEscort convoy from %s to %s",
 	SYRIA_ESCORT_DESC                  = "\nEscort a convoy to %s\nThe roads are filled with hostile enemies.",
@@ -1028,6 +1028,23 @@ Reward: 1000]],
 	MISSION_ARTY_DESCRIPTION           = "Artillery has been spotted leaving %s headed to %s.\nDestroy them before they get in range.",
 	MISSION_ARTY_START                 = "New mission: Destroy artillery headed to %s",
 	MISSION_ARTY_END                   = "Mission ended: Destroy artillery",
+	MISSION_MASS_ATTACK_TITLE          = "Defend %s",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "Enemy aircraft are conducting a mass attack on %s.\nDefend the zone and destroy the attacking aircraft.\n\nAttacking groups: %d",
+	MISSION_MASS_ATTACK_END            = "Mission ended: Mass attack on %s",
+	MISSION_EWR_TITLE                  = "Strike on enemy EWR",
+	MISSION_EWR_DESCRIPTION            = [[We have detected an enemy EWR. Take it out.
+
+Reward: %d
+
+MGRS: %s
+Lat long: %s
+Lat long Precise: %s
+Lat long Decimal Minutes: %s
+Elevation %d feet]],
+	MISSION_EWR_START_1                = "New strike mission: Strike on enemy EWR",
+	MISSION_EWR_START_2                = "New strike mission: Enemy EWR detected",
+	MISSION_EWR_START_3                = "New strike mission: Destroy the enemy EWR",
+	MISSION_EWR_END                    = "Strike mission ended: Enemy EWR",
 
 	-- ============================================================
 	-- Zone / Intel
@@ -1048,6 +1065,7 @@ Reward: 1000]],
 	INTEL_SITE_DETECTED                = "%s detected.",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s STR destroyed; site degraded.",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s TR destroyed; site degraded.",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift destroyed; site degraded.",
 	INTEL_ENEMY_REPAIRED_STR           = "Enemy repaired %s STR.",
 	INTEL_ENEMY_REPAIRED_TR            = "Enemy repaired %s TR.",
 	INTEL_COUNT_DESTROYED              = "%s destroyed.",
@@ -1079,6 +1097,7 @@ Reward: 1000]],
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d radar destroyed)",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR destroyed)",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR destroyed)",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = " (SnowDrift destroyed)",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d ground forces with MANPAD",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d ground forces with MANPAD",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d ground forces group",
@@ -1116,6 +1135,7 @@ Reward: 1000]],
 	SYSTEM_ENGINE_CRASH                = "Foothold engine crashed, report it to Leka with the server log.\nMap: %s\nVersion: %s\nThe mission can't not save from this point, restart the mission might help.",
 	COMBAT_RED_MASS_ATTACK             = "Red mass attack launched on %s (%d/%d forced)",
 	COMBAT_HUNT_SCRAMBLE              = "%s, Enemy is scrambling 2 jets to hunt you down!",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s, Enemy is scrambling 2 bandits to hunt you down!",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "Enemy train %s destroyed!",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "Strategic asset destroyed: +%d credits",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "Enemy supply chain disrupted! Train routes are now cut off.",
@@ -2381,7 +2401,7 @@ Belohnung 500
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Luftverteidigung einsetzen",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Neutrale Zone erobern",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "Vorzeitige Eroberung der Zone",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Aufklärung über feindliche Zone",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Satellitenaufklärung",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Rote Zone ausbauen",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Roter Massenangriff auf Flugplätze",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Zone mit Infanterie ausbauen",
@@ -2435,7 +2455,7 @@ Belohnung 500
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "Alle Zonen können jetzt ein zweites Upgrade kaufen",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Zone für Logistikzentrum wählen",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Freundliche, vollständig ausgebaute Flugplatz-Zone im F10-Menü wählen.",
-	SYRIA_SHOP_GATHERING_INTEL         = "Sammle Aufklärung über %s. Bericht folgt...",
+	SYRIA_SHOP_GATHERING_INTEL         = "Aufklärungssatelliten werden über %s neu ausgerichtet. Bitte warten Sie auf den ersten Bericht. Aktualisierte Aufklärungsdaten bleiben 60 Minuten lang verfügbar.",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "Starte Marschflugkörper auf %s",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "%s-Mission läuft noch",
 	SYRIA_SHOP_JAMMING_TARGET          = "Störziel",
@@ -2791,8 +2811,8 @@ Belohnung: 1000]],
 	SYRIA_DYNAMIC_RECON_END            = "Mission beendet: Aufklärung",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "Mission beendet: Aufklärung %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "Mission beendet: Aufklärung %s abgeschlossen von %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] und [%s] haben die Aufklärung bei %s abgeschlossen!\nBelohnung ausstehend: %d Kredits pro Spieler (landen zum Einlösen).\nAufklärung 10 Minuten aktiv.",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] hat die Aufklärung bei %s abgeschlossen.\nBelohnung ausstehend: %d Kredits (landen zum Einlösen).\nAufklärung 10 Minuten aktiv.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] und [%s] haben einen Aufklärungsflug über %s abgeschlossen!\nBelohnung ausstehend: %d Kredits pro Spieler (landen zum Einlösen).\nLuftaufklärungsdaten werden ausgewertet. Bitte warten Sie auf den ersten Bericht.\nAktualisierte Aufklärungsdaten bleiben 10 Minuten lang verfügbar.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] hat einen Aufklärungsflug über %s abgeschlossen.\nBelohnung ausstehend: %d Kredits (landen zum Einlösen).\nLuftaufklärungsdaten werden ausgewertet. Bitte warten Sie auf den ersten Bericht.\nAktualisierte Aufklärungsdaten bleiben 10 Minuten lang verfügbar.",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "Aktive Mission ausstehend:\n\nKonvoi von %s nach %s eskortieren",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Spezialmission verfügbar:\n\nKonvoi von %s nach %s eskortieren",
 	SYRIA_ESCORT_DESC                  = "\nEskortiere einen Konvoi nach %s\nDie Straßen sind voller feindlicher Kräfte.",
@@ -2903,6 +2923,23 @@ Belohnung: 1000]],
 	MISSION_ARTY_DESCRIPTION           = "Artillerie wurde beim Verlassen von %s in Richtung %s gesichtet.\nZerstöre sie, bevor sie in Reichweite kommt.",
 	MISSION_ARTY_START                 = "Neue Mission: Artillerie auf dem Weg nach %s zerstören",
 	MISSION_ARTY_END                   = "Mission beendet: Artillerie zerstören",
+	MISSION_MASS_ATTACK_TITLE          = "%s verteidigen",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "Feindliche Flugzeuge führen einen Großangriff auf %s durch.\nVerteidige die Zone und zerstöre die angreifenden Flugzeuge.\n\nAngreifende Gruppen: %d",
+	MISSION_MASS_ATTACK_END            = "Mission beendet: Großangriff auf %s",
+	MISSION_EWR_TITLE                  = "Angriff auf feindliches EWR",
+	MISSION_EWR_DESCRIPTION            = [[Wir haben ein feindliches EWR entdeckt. Schalte es aus.
+
+Belohnung: %d
+
+MGRS: %s
+Breiten-/Längengrad: %s
+Breiten-/Längengrad präzise: %s
+Breiten-/Längengrad in Dezimalminuten: %s
+Höhe %d Fuß]],
+	MISSION_EWR_START_1                = "Neue Angriffsmission: Angriff auf feindliches EWR",
+	MISSION_EWR_START_2                = "Neue Angriffsmission: Feindliches EWR entdeckt",
+	MISSION_EWR_START_3                = "Neue Angriffsmission: Zerstöre das feindliche EWR",
+	MISSION_EWR_END                    = "Angriffsmission beendet: Feindliches EWR",
 
 	-- ============================================================
 	-- Zone / Intel
@@ -2923,6 +2960,7 @@ Belohnung: 1000]],
 	INTEL_SITE_DETECTED                = "%s entdeckt.",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s STR zerstört; Stellung geschwächt.",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s TR zerstört; Stellung geschwächt.",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift zerstört; Stellung geschwächt.",
 	INTEL_ENEMY_REPAIRED_STR           = "Feind hat %s STR repariert.",
 	INTEL_ENEMY_REPAIRED_TR            = "Feind hat %s TR repariert.",
 	INTEL_COUNT_DESTROYED              = "%s zerstört.",
@@ -2954,6 +2992,7 @@ Belohnung: 1000]],
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d Radar zerstört)",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR zerstört)",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR zerstört)",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = " (SnowDrift zerstört)",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d Bodentruppen mit MANPAD",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d Bodentruppen mit MANPAD",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d Bodentruppengruppe",
@@ -3006,6 +3045,7 @@ Belohnung: 1000]],
 	SYSTEM_ENGINE_CRASH                = "Foothold-Engine ist abgestürzt, melde dies Leka mit dem Server-Log.\nKarte: %s\nVersion: %s\nDie Mission kann ab diesem Punkt nicht mehr speichern. Ein Neustart der Mission kann helfen.",
 	COMBAT_RED_MASS_ATTACK             = "Roter Großangriff auf %s gestartet (%d/%d erzwungen)",
 	COMBAT_HUNT_SCRAMBLE              = "%s, der Feind startet 2 Jets, um dich zu jagen!",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s, der Feind lässt 2 Jagdflugzeuge starten, um dich zu jagen!",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "Feindlicher Zug %s zerstört!",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "Strategisches Ziel zerstört: +%d Credits",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "Feindliche Nachschubkette unterbrochen! Zugrouten sind jetzt unterbrochen.",
@@ -4256,7 +4296,7 @@ Récompense 500
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Déployer défense aérienne",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Capturer zone neutre",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "Capture avancée de zone",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Renseignement sur zone ennemie",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Renseignement satellitaire",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Amélioration zone rouge",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Attaque massive rouge sur aérodrome",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Améliorer zone avec infanterie",
@@ -4310,7 +4350,7 @@ Récompense 500
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "Toutes les zones peuvent maintenant acheter une deuxième amélioration",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Choisir zone pour centre logistique",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Sélectionnez une zone d'aérodrome alliée totalement améliorée dans le menu F10.",
-	SYRIA_SHOP_GATHERING_INTEL         = "Collecte de renseignement sur %s. Attendez le rapport...",
+	SYRIA_SHOP_GATHERING_INTEL         = "Des satellites de reconnaissance sont réorientés au-dessus de %s. Attendez le rapport initial. Les renseignements actualisés resteront disponibles pendant 60 minutes.",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "Lancement de missiles de croisière sur %s",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "Mission %s encore en cours",
 	SYRIA_SHOP_JAMMING_TARGET          = "Cible de brouillage",
@@ -4666,8 +4706,8 @@ Récompense : 1000]],
 	SYRIA_DYNAMIC_RECON_END            = "Mission terminée : Reconnaissance",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "Mission terminée : Reconnaissance %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "Mission terminée : Reconnaissance %s terminée par %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] et [%s] ont terminé la reconnaissance à %s !\nRécompense en attente : %d crédits chacun (atterrir pour encaisser).\nRenseignement actif pendant 10 minutes.",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] a terminé la reconnaissance à %s.\nRécompense en attente : %d crédits (atterrir pour encaisser).\nRenseignement actif pendant 10 minutes.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] et [%s] ont effectué un passage de reconnaissance au-dessus de %s !\nRécompense en attente : %d crédits chacun (atterrir pour encaisser).\nLes données de reconnaissance aérienne sont en cours d'analyse. Attendez le rapport initial.\nLes renseignements actualisés resteront disponibles pendant 10 minutes.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] a effectué un passage de reconnaissance au-dessus de %s.\nRécompense en attente : %d crédits (atterrir pour encaisser).\nLes données de reconnaissance aérienne sont en cours d'analyse. Attendez le rapport initial.\nLes renseignements actualisés resteront disponibles pendant 10 minutes.",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "Mission active en attente :\n\nEscorter convoi de %s à %s",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Mission spéciale disponible :\n\nEscorter convoi de %s à %s",
 	SYRIA_ESCORT_DESC                  = "\nEscorter un convoi vers %s\nLes routes sont remplies d'ennemis.",
@@ -4778,6 +4818,23 @@ Récompense : 1000]],
 	MISSION_ARTY_DESCRIPTION           = "Artillerie repérée quittant %s en direction de %s.\nDétruisez-la avant qu'elle soit à portée.",
 	MISSION_ARTY_START                 = "Nouvelle mission : détruire l'artillerie en route vers %s",
 	MISSION_ARTY_END                   = "Mission terminée : détruire l'artillerie",
+	MISSION_MASS_ATTACK_TITLE          = "Défendre %s",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "Des appareils ennemis lancent une attaque massive sur %s.\nDéfendez la zone et détruisez les appareils attaquants.\n\nGroupes attaquants : %d",
+	MISSION_MASS_ATTACK_END            = "Mission terminée : attaque massive sur %s",
+	MISSION_EWR_TITLE                  = "Frappe sur un EWR ennemi",
+	MISSION_EWR_DESCRIPTION            = [[Nous avons détecté un EWR ennemi. Détruisez-le.
+
+Récompense : %d
+
+MGRS : %s
+Latitude/longitude : %s
+Latitude/longitude précise : %s
+Latitude/longitude en minutes décimales : %s
+Altitude %d pieds]],
+	MISSION_EWR_START_1                = "Nouvelle mission de frappe : frappe sur un EWR ennemi",
+	MISSION_EWR_START_2                = "Nouvelle mission de frappe : EWR ennemi détecté",
+	MISSION_EWR_START_3                = "Nouvelle mission de frappe : détruisez l'EWR ennemi",
+	MISSION_EWR_END                    = "Mission de frappe terminée : EWR ennemi",
 
 	-- ============================================================
 	-- Zone / Intel
@@ -4798,6 +4855,7 @@ Récompense : 1000]],
 	INTEL_SITE_DETECTED                = "%s détecté.",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s STR détruit ; site dégradé.",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s TR détruit ; site dégradé.",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift détruit ; site dégradé.",
 	INTEL_ENEMY_REPAIRED_STR           = "L'ennemi a réparé %s STR.",
 	INTEL_ENEMY_REPAIRED_TR            = "L'ennemi a réparé %s TR.",
 	INTEL_COUNT_DESTROYED              = "%s détruit.",
@@ -4829,6 +4887,7 @@ Récompense : 1000]],
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d radar détruit)",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR détruit)",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR détruit)",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = " (SnowDrift détruit)",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d forces terrestres avec MANPAD",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d forces terrestres avec MANPAD",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d groupe de forces terrestres",
@@ -4881,6 +4940,7 @@ Récompense : 1000]],
 	SYSTEM_ENGINE_CRASH                = "Le moteur Foothold a crashé, signalez-le à Leka avec le journal serveur.\nCarte : %s\nVersion : %s\nLa mission ne peut plus sauvegarder à partir de maintenant. Redémarrer la mission peut aider.",
 	COMBAT_RED_MASS_ATTACK             = "Attaque massive rouge lancée sur %s (%d/%d forcés)",
 	COMBAT_HUNT_SCRAMBLE              = "%s, l'ennemi fait décoller 2 chasseurs pour vous traquer!",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s, l'ennemi fait décoller 2 chasseurs pour vous traquer !",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "Train ennemi %s détruit!",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "Actif stratégique détruit : +%d crédits",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "Chaîne d'approvisionnement ennemie perturbée! Les routes ferroviaires sont coupées.",
@@ -6131,7 +6191,7 @@ Se requieren 2000 libras]],
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Desplegar defensa aérea",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Capturar zona neutral",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "Captura avanzada de zona",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Inteligencia sobre zona enemiga",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Inteligencia satelital",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Mejora de zona roja",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Ataque masivo rojo a aeródromo",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Mejorar zona con infantería",
@@ -6185,7 +6245,7 @@ Se requieren 2000 libras]],
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "Todas las zonas ahora pueden comprar una segunda mejora",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Elige zona para centro logístico",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Selecciona una zona de aeródromo amiga completamente mejorada desde el menú F10.",
-	SYRIA_SHOP_GATHERING_INTEL         = "Recopilando inteligencia sobre %s. Espera el informe...",
+	SYRIA_SHOP_GATHERING_INTEL         = "Los satélites de reconocimiento están siendo redirigidos sobre %s. Espera el informe inicial. La inteligencia actualizada estará disponible durante 60 minutos.",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "Lanzando misiles de crucero contra %s",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "La misión %s sigue en curso",
 	SYRIA_SHOP_JAMMING_TARGET          = "Objetivo de interferencia",
@@ -6541,8 +6601,8 @@ Recompensa: 1000]],
 	SYRIA_DYNAMIC_RECON_END            = "Misión terminada: Reconocimiento",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "Misión terminada: Reconocimiento %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "Misión terminada: Reconocimiento %s completada por %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "¡[%s] y [%s] completaron reconocimiento en %s!\nRecompensa pendiente: %d créditos cada uno (aterriza para cobrar).\nInteligencia activa durante 10 minutos.",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] completó reconocimiento en %s.\nRecompensa pendiente: %d créditos (aterriza para cobrar).\nInteligencia activa durante 10 minutos.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "¡[%s] y [%s] completaron una pasada de reconocimiento sobre %s!\nRecompensa pendiente: %d créditos cada uno (aterriza para cobrar).\nSe están analizando los datos de reconocimiento aéreo. Espera el informe inicial.\nLa inteligencia actualizada estará disponible durante 10 minutos.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] completó una pasada de reconocimiento sobre %s.\nRecompensa pendiente: %d créditos (aterriza para cobrar).\nSe están analizando los datos de reconocimiento aéreo. Espera el informe inicial.\nLa inteligencia actualizada estará disponible durante 10 minutos.",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "Misión activa pendiente:\n\nEscoltar convoy de %s a %s",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Misión especial disponible:\n\nEscoltar convoy de %s a %s",
 	SYRIA_ESCORT_DESC                  = "\nEscolta un convoy a %s\nLas carreteras están llenas de enemigos hostiles.",
@@ -6653,6 +6713,23 @@ Recompensa: 1000]],
 	MISSION_ARTY_DESCRIPTION           = "Artillería detectada saliendo de %s rumbo a %s.\nDestrúyela antes de que entre en alcance.",
 	MISSION_ARTY_START                 = "Nueva misión: destruir artillería rumbo a %s",
 	MISSION_ARTY_END                   = "Misión terminada: destruir artillería",
+	MISSION_MASS_ATTACK_TITLE          = "Defender %s",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "Aeronaves enemigas están realizando un ataque masivo contra %s.\nDefiende la zona y destruye las aeronaves atacantes.\n\nGrupos atacantes: %d",
+	MISSION_MASS_ATTACK_END            = "Misión terminada: ataque masivo contra %s",
+	MISSION_EWR_TITLE                  = "Ataque contra un EWR enemigo",
+	MISSION_EWR_DESCRIPTION            = [[Hemos detectado un EWR enemigo. Destrúyelo.
+
+Recompensa: %d
+
+MGRS: %s
+Latitud/longitud: %s
+Latitud/longitud precisa: %s
+Latitud/longitud en minutos decimales: %s
+Elevación %d pies]],
+	MISSION_EWR_START_1                = "Nueva misión de ataque: ataque contra un EWR enemigo",
+	MISSION_EWR_START_2                = "Nueva misión de ataque: EWR enemigo detectado",
+	MISSION_EWR_START_3                = "Nueva misión de ataque: destruye el EWR enemigo",
+	MISSION_EWR_END                    = "Misión de ataque terminada: EWR enemigo",
 
 	-- ============================================================
 	-- Zone / Intel
@@ -6673,6 +6750,7 @@ Recompensa: 1000]],
 	INTEL_SITE_DETECTED                = "%s detectado.",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s STR destruido; sitio degradado.",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s TR destruido; sitio degradado.",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift destruido; sitio degradado.",
 	INTEL_ENEMY_REPAIRED_STR           = "El enemigo reparó %s STR.",
 	INTEL_ENEMY_REPAIRED_TR            = "El enemigo reparó %s TR.",
 	INTEL_COUNT_DESTROYED              = "%s destruido.",
@@ -6704,6 +6782,7 @@ Recompensa: 1000]],
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d radar destruido)",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR destruido)",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR destruido)",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = " (SnowDrift destruido)",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d fuerzas terrestres con MANPAD",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d fuerzas terrestres con MANPAD",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d grupo de fuerzas terrestres",
@@ -6756,6 +6835,7 @@ Recompensa: 1000]],
 	SYSTEM_ENGINE_CRASH                = "El motor de Foothold se ha bloqueado, repórtalo a Leka con el registro del servidor.\nMapa: %s\nVersión: %s\nLa misión no puede guardar desde este punto. Reiniciar la misión puede ayudar.",
 	COMBAT_RED_MASS_ATTACK             = "Ataque masivo rojo lanzado contra %s (%d/%d forzados)",
 	COMBAT_HUNT_SCRAMBLE              = "¡%s, el enemigo está enviando 2 jets para cazarte!",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "¡%s, el enemigo está enviando 2 cazas para cazarte!",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "¡Tren enemigo %s destruido!",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "Activo estratégico destruido: +%d créditos",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "¡Cadena de suministro enemiga interrumpida! Las rutas de tren están cortadas.",
@@ -8009,7 +8089,7 @@ MGRS: 38 T MP 68815 48119
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Развернуть ПВО",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Захватить нейтральную зону",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "Предварительный захват зоны",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Разведданные по вражеской зоне",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Спутниковая разведка",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Улучшение красной зоны",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Массированная атака красных на аэродром",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Улучшить зону пехотой",
@@ -8063,7 +8143,7 @@ MGRS: 38 T MP 68815 48119
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "Все зоны теперь могут купить второе улучшение",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Выберите зону для логистического центра",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Выберите дружественную полностью улучшенную зону аэродрома в меню F10.",
-	SYRIA_SHOP_GATHERING_INTEL         = "Сбор разведданных по %s. Ожидайте доклад...",
+	SYRIA_SHOP_GATHERING_INTEL         = "Разведывательные спутники перенаправляются над %s. Ожидайте первоначальный доклад. Обновляемые разведданные будут доступны в течение 60 минут.",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "Запуск крылатых ракет по %s",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "Миссия %s еще выполняется",
 	SYRIA_SHOP_JAMMING_TARGET          = "Цель для РЭБ",
@@ -8419,8 +8499,8 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	SYRIA_DYNAMIC_RECON_END            = "Миссия завершена: Разведка",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "Миссия завершена: Разведка %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "Миссия завершена: Разведка %s выполнена %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] и [%s] завершили разведку в %s!\nОжидается награда: %d кредитов каждому (приземлитесь для получения).\nРазведданные активны 10 минут.",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] завершил разведку в %s.\nОжидается награда: %d кредитов (приземлитесь для получения).\nРазведданные активны 10 минут.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] и [%s] завершили разведывательный пролёт над %s!\nОжидается награда: %d кредитов каждому (приземлитесь для получения).\nДанные воздушной разведки анализируются. Ожидайте первоначальный доклад.\nОбновляемые разведданные будут доступны в течение 10 минут.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] завершил разведывательный пролёт над %s.\nОжидается награда: %d кредитов (приземлитесь для получения).\nДанные воздушной разведки анализируются. Ожидайте первоначальный доклад.\nОбновляемые разведданные будут доступны в течение 10 минут.",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "Активная миссия ожидает:\n\nСопроводить конвой из %s в %s",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Доступна специальная миссия:\n\nСопроводить конвой из %s в %s",
 	SYRIA_ESCORT_DESC                  = "\nСопроводите конвой к %s\nДороги заполнены вражескими силами.",
@@ -8531,6 +8611,23 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	MISSION_ARTY_DESCRIPTION           = "Артиллерия замечена при выходе из %s в направлении %s.\nУничтожьте ее до выхода на дальность стрельбы.",
 	MISSION_ARTY_START                 = "Новая миссия: уничтожить артиллерию, идущую к %s",
 	MISSION_ARTY_END                   = "Миссия завершена: уничтожить артиллерию",
+	MISSION_MASS_ATTACK_TITLE          = "Защитить %s",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "Авиация противника проводит массированную атаку на %s.\nЗащитите зону и уничтожьте атакующие самолёты.\n\nАтакующие группы: %d",
+	MISSION_MASS_ATTACK_END            = "Миссия завершена: массированная атака на %s",
+	MISSION_EWR_TITLE                  = "Удар по вражеской РЛС раннего предупреждения",
+	MISSION_EWR_DESCRIPTION            = [[Мы обнаружили вражескую РЛС раннего предупреждения. Уничтожьте её.
+
+Награда: %d
+
+MGRS: %s
+Широта/долгота: %s
+Точные широта/долгота: %s
+Широта/долгота в десятичных минутах: %s
+Высота %d футов]],
+	MISSION_EWR_START_1                = "Новая ударная миссия: удар по вражеской РЛС раннего предупреждения",
+	MISSION_EWR_START_2                = "Новая ударная миссия: обнаружена вражеская РЛС раннего предупреждения",
+	MISSION_EWR_START_3                = "Новая ударная миссия: уничтожьте вражескую РЛС раннего предупреждения",
+	MISSION_EWR_END                    = "Ударная миссия завершена: вражеская РЛС раннего предупреждения",
 
 	-- ============================================================
 	-- Zone / Intel
@@ -8551,6 +8648,7 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	INTEL_SITE_DETECTED                = "%s обнаружен.",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s STR уничтожен; позиция ослаблена.",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s TR уничтожен; позиция ослаблена.",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift уничтожен; позиция ослаблена.",
 	INTEL_ENEMY_REPAIRED_STR           = "Противник восстановил %s STR.",
 	INTEL_ENEMY_REPAIRED_TR            = "Противник восстановил %s TR.",
 	INTEL_COUNT_DESTROYED              = "%s уничтожено.",
@@ -8582,6 +8680,7 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d РЛС уничтожено)",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR уничтожен)",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR уничтожен)",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = " (SnowDrift уничтожен)",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d наземная группа с ПЗРК",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d наземных групп с ПЗРК",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d группа наземных сил",
@@ -8634,6 +8733,7 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	SYSTEM_ENGINE_CRASH                = "Движок Foothold аварийно остановился, сообщите Leka и приложите лог сервера.\nКарта: %s\nВерсия: %s\nС этого момента миссия не может сохраняться. Перезапуск миссии может помочь.",
 	COMBAT_RED_MASS_ATTACK             = "Красная массированная атака начата на %s (%d/%d принудительно)",
 	COMBAT_HUNT_SCRAMBLE              = "%s, противник поднимает 2 самолета, чтобы выследить вас!",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s, противник поднимает 2 истребителя, чтобы выследить вас!",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "Вражеский поезд %s уничтожен!",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "Стратегический объект уничтожен: +%d кредитов",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "Вражеская линия снабжения нарушена! Железнодорожные маршруты теперь перерезаны.",
@@ -9887,7 +9987,7 @@ Requer 2000 libras]],
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Implantar defesa aérea",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Capturar zona neutra",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "Captura avançada de zona",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Inteligência sobre zona inimiga",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Inteligência por satélite",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Melhoria de zona vermelha",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Ataque aéreo massivo vermelho a base aérea",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Melhorar zona com infantaria",
@@ -9941,7 +10041,7 @@ Requer 2000 libras]],
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "Todas as zonas agora podem comprar uma segunda melhoria",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Escolha a zona para o centro logístico",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Selecione pelo menu F10 uma zona de base aérea aliada totalmente melhorada.",
-	SYRIA_SHOP_GATHERING_INTEL         = "Coletando inteligência sobre %s. Aguarde o relatório...",
+	SYRIA_SHOP_GATHERING_INTEL         = "Satélites de reconhecimento estão sendo redirecionados sobre %s. Aguarde o relatório inicial. Informações atualizadas permanecerão disponíveis por 60 minutos.",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "Lançando mísseis de cruzeiro contra %s",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "Missão %s ainda em andamento",
 	SYRIA_SHOP_JAMMING_TARGET          = "Interferindo no alvo",
@@ -10297,8 +10397,8 @@ Recompensa: 1000]],
 	SYRIA_DYNAMIC_RECON_END            = "Missão encerrada: reconhecimento",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "Missão encerrada: reconhecimento %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "Missão encerrada: reconhecimento %s concluído por %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] e [%s] concluíram reconhecimento em %s!\nRecompensa pendente: %d créditos para cada (pouse para resgatar).\nInteligência ativa por 10 minutos.",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] concluiu reconhecimento em %s.\nRecompensa pendente: %d créditos (pouse para resgatar).\nInteligência ativa por 10 minutos.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] e [%s] concluíram uma passagem de reconhecimento sobre %s!\nRecompensa pendente: %d créditos para cada (pouse para resgatar).\nOs dados de reconhecimento aéreo estão sendo analisados. Aguarde o relatório inicial.\nInformações atualizadas permanecerão disponíveis por 10 minutos.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] concluiu uma passagem de reconhecimento sobre %s.\nRecompensa pendente: %d créditos (pouse para resgatar).\nOs dados de reconhecimento aéreo estão sendo analisados. Aguarde o relatório inicial.\nInformações atualizadas permanecerão disponíveis por 10 minutos.",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "Missão ativa pendente:\n\nEscoltar comboio de %s para %s",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Missão especial disponível:\n\nEscoltar comboio de %s para %s",
 	SYRIA_ESCORT_DESC                  = "\nEscolte um comboio até %s\nAs estradas estão cheias de forças hostis.",
@@ -10409,6 +10509,23 @@ Recompensa: 1000]],
 	MISSION_ARTY_DESCRIPTION           = "Artilharia foi avistada saindo de %s rumo a %s.\nDestrua-a antes que entre no alcance.",
 	MISSION_ARTY_START                 = "Nova missão: destruir artilharia rumo a %s",
 	MISSION_ARTY_END                   = "Missão encerrada: destruir artilharia",
+	MISSION_MASS_ATTACK_TITLE          = "Defender %s",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "Aeronaves inimigas estão realizando um ataque em massa contra %s.\nDefenda a zona e destrua as aeronaves atacantes.\n\nGrupos atacantes: %d",
+	MISSION_MASS_ATTACK_END            = "Missão encerrada: ataque em massa contra %s",
+	MISSION_EWR_TITLE                  = "Ataque ao EWR inimigo",
+	MISSION_EWR_DESCRIPTION            = [[Detectamos um EWR inimigo. Destrua-o.
+
+Recompensa: %d
+
+MGRS: %s
+Latitude/longitude: %s
+Latitude/longitude precisa: %s
+Latitude/longitude em minutos decimais: %s
+Elevação %d pés]],
+	MISSION_EWR_START_1                = "Nova missão de ataque: ataque ao EWR inimigo",
+	MISSION_EWR_START_2                = "Nova missão de ataque: EWR inimigo detectado",
+	MISSION_EWR_START_3                = "Nova missão de ataque: destrua o EWR inimigo",
+	MISSION_EWR_END                    = "Missão de ataque encerrada: EWR inimigo",
 
 	-- ============================================================
 	-- Zone / Intel
@@ -10429,6 +10546,7 @@ Recompensa: 1000]],
 	INTEL_SITE_DETECTED                = "%s detectado.",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s STR destruído; posição degradada.",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s TR destruído; posição degradada.",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift destruído; posição degradada.",
 	INTEL_ENEMY_REPAIRED_STR           = "Inimigo reparou %s STR.",
 	INTEL_ENEMY_REPAIRED_TR            = "Inimigo reparou %s TR.",
 	INTEL_COUNT_DESTROYED              = "%s destruído.",
@@ -10460,6 +10578,7 @@ Recompensa: 1000]],
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d radar destruído)",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR destruído)",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR destruído)",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = " (SnowDrift destruído)",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d força terrestre com MANPAD",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d forças terrestres com MANPAD",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d grupo de forças terrestres",
@@ -10512,6 +10631,7 @@ Recompensa: 1000]],
 	SYSTEM_ENGINE_CRASH                = "O motor Foothold travou, reporte a Leka com o log do servidor.\nMapa: %s\nVersão: %s\nA missão não pode salvar a partir deste ponto; reiniciar a missão pode ajudar.",
 	COMBAT_RED_MASS_ATTACK             = "Ataque em massa vermelho lançado contra %s (%d/%d forçados)",
 	COMBAT_HUNT_SCRAMBLE              = "%s, o inimigo está acionando 2 caças para caçar você!",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s, o inimigo está decolando 2 caças para caçar você!",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "Trem inimigo %s destruído!",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "Ativo estratégico destruído: +%d créditos",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "Linha de suprimento inimiga interrompida! Rotas ferroviárias agora estão cortadas.",
@@ -11762,7 +11882,7 @@ Rakım 507 fit
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Hava savunması konuşlandır",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Tarafsız bölgeyi ele geçir",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "İleri ele geçirme görevi",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Düşman bölgesi hakkında Intel",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Uydu İstihbaratı",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Kırmızı bölge yükseltmesi",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Kırmızı toplu hava üssü saldırısı",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Bölgeyi piyade ile yükselt",
@@ -11816,7 +11936,7 @@ Rakım 507 fit
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "Tüm bölgeler artık ikinci bir yükseltme satın alabilir",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Lojistik Merkezi için bölge seç",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "F10 menüsünden tamamen yükseltilmiş dost hava üssü bölgesi seç.",
-	SYRIA_SHOP_GATHERING_INTEL         = "%s hakkında istihbarat toplanıyor. Rapor için bekle...",
+	SYRIA_SHOP_GATHERING_INTEL         = "Keşif uyduları %s üzerine yeniden yönlendiriliyor. İlk rapor için bekleyin. Güncellenmiş istihbarat 60 dakika boyunca kullanılabilir olacak.",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "%s hedefine seyir füzeleri fırlatılıyor",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "%s görevi hâlâ devam ediyor",
 	SYRIA_SHOP_JAMMING_TARGET          = "Hedef karıştırılıyor",
@@ -12171,8 +12291,8 @@ Rakım: 1251 fit
 	SYRIA_DYNAMIC_RECON_END            = "Görev sona erdi: keşif",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "Görev sona erdi: %s keşfi",
 	SYRIA_DYNAMIC_RECON_END_BY         = "Görev sona erdi: %s keşfi %s tarafından tamamlandı",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] ve [%s], %s bölgesinde keşfi tamamladı!\nBekleyen ödül: kişi başı %d kredi (almak için iniş yap).\nİstihbarat 10 dakika aktif.",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s], %s bölgesinde keşfi tamamladı.\nBekleyen ödül: %d kredi (almak için iniş yap).\nİstihbarat 10 dakika aktif.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] ve [%s], %s üzerinde bir keşif geçişini tamamladı!\nBekleyen ödül: kişi başı %d kredi (almak için iniş yap).\nHavadan keşif verileri analiz ediliyor. İlk rapor için bekleyin.\nGüncellenmiş istihbarat 10 dakika boyunca kullanılabilir olacak.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s], %s üzerinde bir keşif geçişini tamamladı.\nBekleyen ödül: %d kredi (almak için iniş yap).\nHavadan keşif verileri analiz ediliyor. İlk rapor için bekleyin.\nGüncellenmiş istihbarat 10 dakika boyunca kullanılabilir olacak.",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "Etkin görev beklemede:\n\nKonvoya %s konumundan %s konumuna kadar eskortluk et",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Özel görev mevcut:\n\nKonvoya %s konumundan %s konumuna kadar eskortluk et",
 	SYRIA_ESCORT_DESC                  = "\n%s hedefine giden konvoya eskortluk et\nYollar düşman kuvvetleriyle dolu.",
@@ -12283,6 +12403,23 @@ Rakım: 1251 fit
 	MISSION_ARTY_DESCRIPTION           = "Topçu birlikleri %s konumundan %s yönüne hareket ederken tespit edildi.\nMenzile girmeden onları yok et.",
 	MISSION_ARTY_START                 = "Yeni görev: %s yönüne ilerleyen topçuyu yok et",
 	MISSION_ARTY_END                   = "Görev sona erdi: topçuyu yok et",
+	MISSION_MASS_ATTACK_TITLE          = "%s bölgesini savun",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "Düşman uçakları %s bölgesine büyük bir saldırı düzenliyor.\nBölgeyi savun ve saldıran uçakları yok et.\n\nSaldıran gruplar: %d",
+	MISSION_MASS_ATTACK_END            = "Görev sona erdi: %s bölgesine büyük saldırı",
+	MISSION_EWR_TITLE                  = "Düşman EWR'sine saldırı",
+	MISSION_EWR_DESCRIPTION            = [[Bir düşman EWR'si tespit ettik. Yok et.
+
+Ödül: %d
+
+MGRS: %s
+Enlem/boylam: %s
+Hassas enlem/boylam: %s
+Ondalık dakika cinsinden enlem/boylam: %s
+Rakım %d fit]],
+	MISSION_EWR_START_1                = "Yeni taarruz görevi: düşman EWR'sine saldırı",
+	MISSION_EWR_START_2                = "Yeni taarruz görevi: düşman EWR'si tespit edildi",
+	MISSION_EWR_START_3                = "Yeni taarruz görevi: düşman EWR'sini yok et",
+	MISSION_EWR_END                    = "Taarruz görevi sona erdi: düşman EWR'si",
 
 	-- ============================================================
 	-- Zone / Intel
@@ -12303,6 +12440,7 @@ Rakım: 1251 fit
 	INTEL_SITE_DETECTED                = "%s tespit edildi.",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s STR yok edildi; mevzi zayıflatıldı.",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s TR yok edildi; mevzi zayıflatıldı.",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift yok edildi; mevzi zayıflatıldı.",
 	INTEL_ENEMY_REPAIRED_STR           = "Düşman %s STR'yi onardı.",
 	INTEL_ENEMY_REPAIRED_TR            = "Düşman %s TR'yi onardı.",
 	INTEL_COUNT_DESTROYED              = "%s yok edildi.",
@@ -12334,6 +12472,7 @@ Rakım: 1251 fit
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d radar yok edildi)",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR yok edildi)",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR yok edildi)",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = " (SnowDrift yok edildi)",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d MANPAD'li kara kuvveti grubu",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d MANPAD'li kara kuvveti grubu",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d kara kuvveti grubu",
@@ -12386,6 +12525,7 @@ Rakım: 1251 fit
 	SYSTEM_ENGINE_CRASH                = "Foothold motoru çöktü, sunucu loguyla birlikte Leka'ya bildir.\nHarita: %s\nSürüm: %s\nGörev bu noktadan sonra kayıt yapamaz; görevi yeniden başlatmak yardımcı olabilir.",
 	COMBAT_RED_MASS_ATTACK             = "Kırmızı tarafın büyük saldırısı %s hedefine başlatıldı (%d/%d zorunlu)",
 	COMBAT_HUNT_SCRAMBLE              = "%s, düşman seni avlamak için 2 jeti acil kaldırıyor!",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s, düşman seni avlamak için 2 avcı uçağını havalandırıyor!",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "Düşman treni %s imha edildi!",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "Stratejik varlık imha edildi: +%d kredi",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "Düşman ikmal hattı kesildi! Tren rotaları artık kapalı.",
@@ -13634,7 +13774,7 @@ Ricompensa 500
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "Schierare la difesa aerea",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "Cattura zona neutra",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "Cattura avanzata zona",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Informazioni di intelligence sul territorio nemico",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "Intelligence satellitare",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "Miglioramento della zona rossa",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "Massiccio attacco rosso all'aeroporto.",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "Migliorare l'area con la fanteria",
@@ -13688,7 +13828,7 @@ Ricompensa 500
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "Ora tutte le aree possono acquistare un secondo aggiornamento",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "Scegliere l'area per il centro logistico",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "Seleziona un'area aeroportuale alleata completamente potenziata dal menu F10.",
-	SYRIA_SHOP_GATHERING_INTEL         = "Raccolta di informazioni su %s. In attesa del rapporto...",
+	SYRIA_SHOP_GATHERING_INTEL         = "I satelliti da ricognizione vengono riposizionati su %s. Attendere il rapporto iniziale. Le informazioni aggiornate resteranno disponibili per 60 minuti.",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "Lancio di missili da crociera su %s",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "Missione %s ancora in corso",
 	SYRIA_SHOP_JAMMING_TARGET          = "Obiettivo di disturbo",
@@ -14044,8 +14184,8 @@ Ricompensa : 1000]],
 	SYRIA_DYNAMIC_RECON_END            = "Missione completata: Ricognizione",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "Missione completata: Ricognizione %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "Missione completata: Ricognizione %s completata da %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] e [%s] completata la ricognizione a %s!\nRicompensa in sospeso: %d crediti ciascuno (terreno da collezionare).\nInformazioni interattive per 10 minuti.",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] ha completato la ricognizione a %s.\nRicompensa in sospeso: %d crediti (terreno da riscuotere).\nInformazioni interattive per 10 minuti.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] e [%s] hanno completato un passaggio di ricognizione su %s!\nRicompensa in sospeso: %d crediti ciascuno (atterrare per riscuotere).\nI dati della ricognizione aerea sono in fase di analisi. Attendere il rapporto iniziale.\nLe informazioni aggiornate resteranno disponibili per 10 minuti.",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] ha completato un passaggio di ricognizione su %s.\nRicompensa in sospeso: %d crediti (atterrare per riscuotere).\nI dati della ricognizione aerea sono in fase di analisi. Attendere il rapporto iniziale.\nLe informazioni aggiornate resteranno disponibili per 10 minuti.",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "Missione attiva in corso :\n\nScortare il convoglio di %s a %s",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "Missione speciale disponibile :\n\nScortare il convoglio da %s a %s",
 	SYRIA_ESCORT_DESC                  = "\nScortare un convoglio verso %s\nLe strade sono piene di nemici.",
@@ -14156,6 +14296,23 @@ Ricompensa : 1000]],
 	MISSION_ARTY_DESCRIPTION           = "Artiglieria avvistata mentre lascia %s in direzione di %s.\nDistruggilo prima che entri nel raggio d'azione.",
 	MISSION_ARTY_START                 = "Nuova missione: distruggere l'artiglieria lungo il percorso verso %s",
 	MISSION_ARTY_END                   = "Missione compiuta: distruggere l'artiglieria",
+	MISSION_MASS_ATTACK_TITLE          = "Difendi %s",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "Velivoli nemici stanno conducendo un attacco massiccio contro %s.\nDifendi la zona e distruggi i velivoli attaccanti.\n\nGruppi attaccanti: %d",
+	MISSION_MASS_ATTACK_END            = "Missione terminata: attacco massiccio contro %s",
+	MISSION_EWR_TITLE                  = "Attacco all'EWR nemico",
+	MISSION_EWR_DESCRIPTION            = [[Abbiamo rilevato un EWR nemico. Distruggilo.
+
+Ricompensa: %d
+
+MGRS: %s
+Latitudine/longitudine: %s
+Latitudine/longitudine precisa: %s
+Latitudine/longitudine in minuti decimali: %s
+Quota %d piedi]],
+	MISSION_EWR_START_1                = "Nuova missione d'attacco: attacco all'EWR nemico",
+	MISSION_EWR_START_2                = "Nuova missione d'attacco: EWR nemico rilevato",
+	MISSION_EWR_START_3                = "Nuova missione d'attacco: distruggi l'EWR nemico",
+	MISSION_EWR_END                    = "Missione d'attacco terminata: EWR nemico",
 
 	-- ============================================================
 	-- Zone / Intel
@@ -14176,6 +14333,7 @@ Ricompensa : 1000]],
 	INTEL_SITE_DETECTED                = "%s rilevato.",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s STR sito distrutto e degradato.",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s TR sito distrutto e degradato.",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift distrutto; sito degradato.",
 	INTEL_ENEMY_REPAIRED_STR           = "Il nemico ha riparato %s STR.",
 	INTEL_ENEMY_REPAIRED_TR            = "Il nemico ha riparato %s TR.",
 	INTEL_COUNT_DESTROYED              = "%s distrutto.",
@@ -14207,6 +14365,7 @@ Ricompensa : 1000]],
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = " (%d radar distrutto)",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = " (STR distrutto)",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = " (TR distrutto)",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = " (SnowDrift distrutto)",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d fforze di terra con MANPADS",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d Forze di terra dotate di MANPADS",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d gruppo delle forze di terra",
@@ -14259,6 +14418,7 @@ Ricompensa : 1000]],
 	SYSTEM_ENGINE_CRASH                = "Il motore Foothold si è bloccato; si prega di segnalarlo a Leka utilizzando il log del server.\nMappa : %s\nVersione : %s\nDa questo punto in poi non sarà più possibile salvare la missione. Riavviare la missione potrebbe risolvere il problema.",
 	COMBAT_RED_MASS_ATTACK             = "Attacco massiccio rosso lanciato su %s (%d/%d forzato))",
 	COMBAT_HUNT_SCRAMBLE              = "%s, Il nemico sta inviando due aerei da combattimento per darti la caccia!",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s, il nemico sta facendo decollare due caccia per darti la caccia!",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "Treno nemico %s distrutto!",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "Risorsa strategica distrutta: +%d crediti",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "Linea di rifornimento nemica interrotta! Le rotte ferroviarie sono ora tagliate.",
@@ -15507,7 +15667,7 @@ MGRS: 38 T MP 68815 48119
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "部署防空部隊",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "佔領中立區域",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "提前佔領區域",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "敵方區域情報",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "衛星情報",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "紅方區域升級",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "紅方大規模空軍基地攻擊",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "為區域升級步兵",
@@ -15561,7 +15721,7 @@ MGRS: 38 T MP 68815 48119
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "所有區域現在可購買第二項升級",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "選擇設為後勤中心的區域",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "從 F10 選單選擇已完全升級的友軍機場區域。",
-	SYRIA_SHOP_GATHERING_INTEL         = "正在收集 %s 的情報，請稍候...",
+	SYRIA_SHOP_GATHERING_INTEL         = "偵察衛星正在重新部署至 %s 上空。請等待初步報告。更新情報將持續提供 60 分鐘。",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "正在對 %s 發射戰斧飛彈",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "%s 任務仍在進行中",
 	SYRIA_SHOP_JAMMING_TARGET          = "正在干擾目標",
@@ -15917,8 +16077,8 @@ MGRS: 37 S EU 31088 22294
 	SYRIA_DYNAMIC_RECON_END            = "任務結束：偵察",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "任務結束：偵察 %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "任務結束：%s 已完成偵察 %s",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] 與 [%s] 已在 %s 完成偵察！\n獎勵待領：各 %d 點數（降落後領取）。\n情報有效時間 10 分鐘。",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] 已在 %s 完成偵察。\n獎勵待領：%d 點數（降落後領取）。\n情報有效時間 10 分鐘。",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] 與 [%s] 已完成飛越 %s 的偵察航程！\n獎勵待領：各 %d 點數（降落後領取）。\n正在分析空中偵察資料。請等待初步報告。\n更新情報將持續提供 10 分鐘。",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] 已完成飛越 %s 的偵察航程。\n獎勵待領：%d 點數（降落後領取）。\n正在分析空中偵察資料。請等待初步報告。\n更新情報將持續提供 10 分鐘。",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "當前任務待執行：\n\n護送車隊從 %s 至 %s",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "特殊任務可用：\n\n護送車隊從 %s 至 %s",
 	SYRIA_ESCORT_DESC                  = "\n護送車隊至 %s\n道路上充滿敵對威脅。",
@@ -16029,8 +16189,25 @@ MGRS: 37 S EU 31088 22294
 	MISSION_ARTY_DESCRIPTION           = "偵測到砲兵自 %s 出發前往 %s。\n在其進入攻擊範圍前將其摧毀。",
 	MISSION_ARTY_START                 = "新任務：摧毀前往 %s 的砲兵",
 	MISSION_ARTY_END                   = "任務結束：摧毀砲兵",
+	MISSION_MASS_ATTACK_TITLE          = "防守 %s",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "敵方航空兵正對 %s 發動大規模攻擊。\n防守該區域並摧毀來襲航空兵。\n\n來襲編隊：%d",
+	MISSION_MASS_ATTACK_END            = "任務結束：敵方對 %s 的大規模攻擊",
+	MISSION_EWR_TITLE                  = "打擊敵方 EWR",
+	MISSION_EWR_DESCRIPTION            = [[我們偵測到敵方 EWR。將其摧毀。
 
--- ============================================================
+獎勵：%d
+
+MGRS：%s
+經緯度：%s
+精確經緯度：%s
+經緯度（十進位分）：%s
+海拔 %d 英尺]],
+	MISSION_EWR_START_1                = "新打擊任務：打擊敵方 EWR",
+	MISSION_EWR_START_2                = "新打擊任務：偵測到敵方 EWR",
+	MISSION_EWR_START_3                = "新打擊任務：摧毀敵方 EWR",
+	MISSION_EWR_END                    = "打擊任務結束：敵方 EWR",
+
+	-- ============================================================
 	-- Zone / Intel
 	-- ============================================================
 	INTEL_NONE_AVAILABLE               = "無可用情報。",
@@ -16049,6 +16226,7 @@ MGRS: 37 S EU 31088 22294
 	INTEL_SITE_DETECTED                = "%s 已偵測。",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s 搜索雷達(STR)已摧毀；陣地能力下降。",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s 追蹤雷達(TR)已摧毀；陣地能力下降。",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s SnowDrift 已摧毀；陣地能力下降。",
 	INTEL_ENEMY_REPAIRED_STR           = "敵方已修復 %s 搜索雷達(STR)。",
 	INTEL_ENEMY_REPAIRED_TR            = "敵方已修復 %s 追蹤雷達(TR)。",
 	INTEL_COUNT_DESTROYED              = "%s 已摧毀。",
@@ -16080,6 +16258,7 @@ MGRS: 37 S EU 31088 22294
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = "（%d 部雷達已摧毀）",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = "（搜索雷達已摧毀）",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = "（追蹤雷達已摧毀）",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = "（SnowDrift 已摧毀）",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d 個配備 MANPAD 的地面部隊",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d 個配備 MANPAD 的地面部隊",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d 個地面部隊編組",
@@ -16132,6 +16311,7 @@ MGRS: 37 S EU 31088 22294
 	SYSTEM_ENGINE_CRASH                = "Foothold 引擎發生崩潰，請將伺服器日誌回報給 Leka。\n地圖：%s\n版本：%s\n此後任務將無法保存，建議重新啟動任務。",
 	COMBAT_RED_MASS_ATTACK             = "紅方對 %s 發動大規模攻擊（%d/%d 強制）",
 	COMBAT_HUNT_SCRAMBLE              = "%s，敵軍已緊急起飛 2 架戰機前來追擊！",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s，敵軍正緊急起飛 2 架戰鬥機前來追擊！",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "敵方列車 %s 已摧毀！",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "戰略資產已摧毀：+%d 點數",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "敵方補給鏈已中斷！列車路線現在已被切斷。",
@@ -17375,7 +17555,7 @@ MGRS: 38 T MP 68815 48119
 	SYRIA_SHOP_ITEM_DEPLOY_AIRDEF      = "部署防空部队",
 	SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL    = "占领中立区域",
 	SYRIA_SHOP_ITEM_ADVANCE_CAPTURE    = "提前占领区域",
-	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "获取敌方区域情报",
+	SYRIA_SHOP_ITEM_INTEL_ENEMY        = "卫星情报",
 	SYRIA_SHOP_ITEM_RED_ZONE_UPGRADE   = "红方区域升级",
 	SYRIA_SHOP_ITEM_RED_MASS_ATTACK    = "红方大规模机场进攻",
 	SYRIA_SHOP_ITEM_UPGRADE_INFANTRY   = "部署步兵升级区域",
@@ -17429,7 +17609,7 @@ MGRS: 38 T MP 68815 48119
 	SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE = "所有区域现已可购买第二个升级项",
 	SYRIA_SHOP_SELECT_LOGISTIC_CENTER  = "请选择要设为后勤中心的区域",
 	SYRIA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE = "请从 F10 菜单选择已满级的友方机场区域。",
-	SYRIA_SHOP_GATHERING_INTEL         = "正在收集 %s 的情报，请稍候……",
+	SYRIA_SHOP_GATHERING_INTEL         = "侦察卫星正在重新部署至 %s 上空。请等待初步报告。更新情报将在 60 分钟内持续提供。",
 	SYRIA_SHOP_LAUNCHING_CRUISE        = "正在向 %s 发射巡航导弹",
 	SYRIA_SHOP_MISSION_STILL_PROGRESS  = "%s 任务仍在进行中",
 	SYRIA_SHOP_JAMMING_TARGET          = "正在压制目标",
@@ -17785,8 +17965,8 @@ MGRS: 37 S EU 31088 22294
 	SYRIA_DYNAMIC_RECON_END            = "任务结束：侦察",
 	SYRIA_DYNAMIC_RECON_END_TARGET     = "任务结束：侦察 %s",
 	SYRIA_DYNAMIC_RECON_END_BY         = "任务结束：%s 的侦察由 %s 完成",
-	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] 与 [%s] 已在 %s 完成侦察！\n奖励待领取：每人 %d 积分（着陆后领取）。\n情报有效 10 分钟。",
-	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] 已在 %s 完成侦察。\n奖励待领取：%d 积分（着陆后领取）。\n情报有效 10 分钟。",
+	SYRIA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] 与 [%s] 已完成飞越 %s 的侦察航程！\n奖励待领取：每人 %d 积分（着陆后领取）。\n正在分析空中侦察数据。请等待初步报告。\n更新情报将在 10 分钟内持续提供。",
+	SYRIA_DYNAMIC_RECON_COMPLETED_SOLO = "[%s] 已完成飞越 %s 的侦察航程。\n奖励待领取：%d 积分（着陆后领取）。\n正在分析空中侦察数据。请等待初步报告。\n更新情报将在 10 分钟内持续提供。",
 	SYRIA_ESCORT_ACTIVE_PENDING        = "当前有待执行任务：\n\n护送车队从 %s 前往 %s",
 	SYRIA_ESCORT_SPECIAL_AVAILABLE     = "特殊任务可用：\n\n护送车队从 %s 前往 %s",
 	SYRIA_ESCORT_DESC                  = "\n护送一支车队前往 %s\n道路上遍布敌军。",
@@ -17895,6 +18075,23 @@ MGRS: 37 S EU 31088 22294
 	MISSION_ARTY_DESCRIPTION           = "发现炮兵从 %s 向 %s 移动。\n在其进入射程前将其摧毁。",
 	MISSION_ARTY_START                 = "新任务：摧毁前往 %s 的炮兵",
 	MISSION_ARTY_END                   = "任务结束：摧毁炮兵",
+	MISSION_MASS_ATTACK_TITLE          = "防守 %s",
+	MISSION_MASS_ATTACK_DESCRIPTION    = "敌方航空兵正在对 %s 发起大规模进攻。\n防守该区域并摧毁来袭航空兵。\n\n来袭编队：%d",
+	MISSION_MASS_ATTACK_END            = "任务结束：敌方对 %s 的大规模进攻",
+	MISSION_EWR_TITLE                  = "打击敌方 EWR",
+	MISSION_EWR_DESCRIPTION            = [[我们探测到敌方 EWR。将其摧毁。
+
+奖励：%d
+
+MGRS：%s
+经纬度：%s
+精确经纬度：%s
+经纬度（十进制度分）：%s
+海拔 %d 英尺]],
+	MISSION_EWR_START_1                = "新打击任务：打击敌方 EWR",
+	MISSION_EWR_START_2                = "新打击任务：探测到敌方 EWR",
+	MISSION_EWR_START_3                = "新打击任务：摧毁敌方 EWR",
+	MISSION_EWR_END                    = "打击任务结束：敌方 EWR",
 -- ============================================================
 	-- Zone / Intel
 	-- ============================================================
@@ -17914,6 +18111,7 @@ MGRS: 37 S EU 31088 22294
 	INTEL_SITE_DETECTED                = "%s 已被发现。",
 	INTEL_STR_DESTROYED_DEGRADED       = "%s 的 STR 已被摧毁；阵地能力下降。",
 	INTEL_TR_DESTROYED_DEGRADED        = "%s 的 TR 已被摧毁；阵地能力下降。",
+	INTEL_SNOWDRIFT_DESTROYED_DEGRADED = "%s 的 SnowDrift 已被摧毁；阵地能力下降。",
 	INTEL_ENEMY_REPAIRED_STR           = "敌军已修复 %s 的 搜索雷达。",
 	INTEL_ENEMY_REPAIRED_TR            = "敌军已修复 %s 的 追踪雷达。",
 	INTEL_COUNT_DESTROYED              = "%s 已被摧毁。",
@@ -17945,6 +18143,7 @@ MGRS: 37 S EU 31088 22294
 	INTEL_RADAR_DESTROYED_COUNT_SUFFIX = "（%d 部雷达已毁）",
 	INTEL_SAM_STR_DESTROYED_SUFFIX     = "（STR 已毁）",
 	INTEL_SAM_TR_DESTROYED_SUFFIX      = "（TR 已毁）",
+	INTEL_SAM_SNOWDRIFT_DESTROYED_SUFFIX = "（SnowDrift 已毁）",
 	INTEL_COUNT_GROUND_MANPAD_ONE      = "%d 个携带便携防空的地面分队",
 	INTEL_COUNT_GROUND_MANPAD_MANY     = "%d 个携带便携防空的地面分队",
 	INTEL_COUNT_GROUND_FORCES_ONE      = "%d 个地面分队",
@@ -17996,6 +18195,7 @@ MGRS: 37 S EU 31088 22294
 	SYSTEM_ENGINE_CRASH                = "Foothold 引擎已崩溃，请将服务器日志提交给 Leka。\n地图：%s\n版本：%s\n从现在开始任务将无法保存，重启任务可能有帮助。",
 	COMBAT_RED_MASS_ATTACK             = "红方已对 %s 发起大规模进攻（强制 %d/%d）",
 	COMBAT_HUNT_SCRAMBLE              = "%s，敌军正紧急起飞 2 架战斗机前来猎杀你！",
+	COMBAT_HUNT_SCRAMBLE_WW2          = "%s，敌军正紧急起飞 2 架战斗机前来追击你！",
 	TRAIN_SUPPLY_ENEMY_TRAIN_DESTROYED = "敌方列车 %s 已摧毁！",
 	TRAIN_SUPPLY_STRATEGIC_ASSET_REWARD = "战略资产已摧毁：+%d 点数",
 	TRAIN_SUPPLY_CHAIN_DISRUPTED      = "敌方补给链已中断！列车线路现已被切断。",
@@ -18778,6 +18978,22 @@ function FL:Register(locale, entries)
 		self.Messages[localeKey][key] = value
 	end
 	return self
+end
+
+local externalConfigOutdatedMessages = {
+	EN = "FOOTHOLD CONFIG WARNING:\n\nYour external Foothold config is outdated. Please update it.\nInternal defaults have been applied where required.",
+	DE = "WARNUNG ZUR FOOTHOLD-KONFIGURATION:\n\nDeine externe Foothold-Konfiguration ist veraltet. Bitte aktualisiere sie.\nBei Bedarf wurden interne Standardwerte angewendet.",
+	FR = "AVERTISSEMENT DE CONFIGURATION FOOTHOLD :\n\nVotre configuration Foothold externe est obsolète. Veuillez la mettre à jour.\nLes valeurs internes par défaut ont été appliquées lorsque nécessaire.",
+	ES = "ADVERTENCIA DE CONFIGURACIÓN DE FOOTHOLD:\n\nTu configuración externa de Foothold está desactualizada. Por favor, actualízala.\nSe han aplicado los valores internos predeterminados cuando ha sido necesario.",
+	RU = "ПРЕДУПРЕЖДЕНИЕ О КОНФИГУРАЦИИ FOOTHOLD:\n\nВаша внешняя конфигурация Foothold устарела. Пожалуйста, обновите её.\nВнутренние значения по умолчанию были применены там, где это требовалось.",
+	["PT-BR"] = "AVISO DE CONFIGURAÇÃO DO FOOTHOLD:\n\nSua configuração externa do Foothold está desatualizada. Atualize-a, por favor.\nOs valores padrão internos foram aplicados onde necessário.",
+	TR = "FOOTHOLD YAPILANDIRMA UYARISI:\n\nHarici Foothold yapılandırmanız güncel değil. Lütfen güncelleyin.\nGereken yerlerde dahili varsayılan değerler uygulandı.",
+	IT = "AVVISO CONFIGURAZIONE FOOTHOLD:\n\nLa configurazione Foothold esterna è obsoleta. Si prega di aggiornarla.\nLe impostazioni predefinite interne sono state applicate dove necessario.",
+	["zh-TW"] = "FOOTHOLD 設定警告：\n\n您的外部 Foothold 設定檔已過時，請更新。\n已在必要處套用內部預設值。",
+	["zh-CN"] = "FOOTHOLD 配置警告：\n\n您的外部 Foothold 配置已过时，请更新。\n已在必要时应用内部默认值。",
+}
+for locale, message in pairs(externalConfigOutdatedMessages) do
+	FL:Register(locale, { FOOTHOLD_CONFIG_EXTERNAL_OUTDATED = message })
 end
 
 function FL:Get(key, locale)
@@ -31915,6 +32131,8 @@ FL:Register("zh-CN", SinaiSetupLabels["zh-CN"] or SinaiSetupLabels.EN)
 local NormandySetupLabels = {
 	EN = {
 		NORMANDY_FLAVOR_WPT = "WPT %s\n",
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "Operational Intelligence (60 min)",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "Intelligence reports from agents and field units are being compiled for %s. Stand by for the initial briefing. Updated intelligence will remain available for 60 minutes.",
 		NORMANDY_RADAR_CLEARED = "Radar at %s Cleared\n+%d credits",
 		NORMANDY_V1_SITE_DESTROYED = "V1 Launch Site at %s Destroyed\n+%d credits",
 		NORMANDY_SHIPS_STANDING_CAPTURE = "Our ships are standing to capture %s",
@@ -31940,6 +32158,7 @@ local NormandySetupLabels = {
 		NORMANDY_MISSION_BOMBER_STRIKE_START_DETAIL = "Allied bombers launched from %s\nTarget: %s",
 		NORMANDY_MISSION_BOMBER_STRIKE_START_WARNING = "WARNING: Expect enemy interceptors!",
 		NORMANDY_MISSION_BOMBER_STRIKE_END = "Mission ended: Bomber Strike",
+		NORMANDY_MISSION_ARTY_START = "New mission: Destroy artillery moving from %s toward %s",
 		NORMANDY_MISSION_NAVAL_ARTY_TITLE = "Naval Artillery CAP",
 		NORMANDY_MISSION_NAVAL_ARTY_DESC = "Allied Naval artillery Group on the way to French coast\nCover their advance from Strikers and Fighters.",
 		NORMANDY_MISSION_NAVAL_ARTY_START = "New mission: Cover Naval Artillery Group",
@@ -31969,6 +32188,8 @@ local NormandySetupLabels = {
 	},
 	DE = {
 		NORMANDY_FLAVOR_WPT = "WPT %s\n",
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "Operative Aufklärung (60 Min.)",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "Aufklärungsberichte von Agenten und Feldeinheiten werden für %s zusammengestellt. Bitte warten Sie auf die erste Lagebesprechung. Aktualisierte Aufklärungsdaten bleiben 60 Minuten lang verfügbar.",
 		NORMANDY_RADAR_CLEARED = "Radar bei %s geräumt\n+%d Credits",
 		NORMANDY_V1_SITE_DESTROYED = "V1-Startanlage bei %s zerstört\n+%d Credits",
 		NORMANDY_SHIPS_STANDING_CAPTURE = "Unsere Schiffe stehen bereit, um %s einzunehmen",
@@ -31994,6 +32215,7 @@ local NormandySetupLabels = {
 		NORMANDY_MISSION_BOMBER_STRIKE_START_DETAIL = "Alliierte Bomber von %s gestartet\nZiel: %s",
 		NORMANDY_MISSION_BOMBER_STRIKE_START_WARNING = "WARNUNG: Rechne mit feindlichen Abfangjägern!",
 		NORMANDY_MISSION_BOMBER_STRIKE_END = "Mission beendet: Bomberangriff",
+		NORMANDY_MISSION_ARTY_START = "Neue Mission: Zerstöre Artillerie auf dem Weg von %s nach %s",
 		NORMANDY_MISSION_NAVAL_ARTY_TITLE = "Marineartillerie-CAP",
 		NORMANDY_MISSION_NAVAL_ARTY_DESC = "Alliierte Marineartilleriegruppe ist auf dem Weg zur französischen Küste\nDecke ihren Vormarsch gegen Angriffsflugzeuge und Jäger.",
 		NORMANDY_MISSION_NAVAL_ARTY_START = "Neue Mission: Marineartilleriegruppe decken",
@@ -32023,6 +32245,8 @@ local NormandySetupLabels = {
 	},
 	FR = {
 		NORMANDY_FLAVOR_WPT = "WPT %s\n",
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "Renseignement opérationnel (60 min)",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "Les rapports de renseignement d'agents et d'unités sur le terrain sont en cours de compilation pour %s. Attendez le briefing initial. Les renseignements actualisés resteront disponibles pendant 60 minutes.",
 		NORMANDY_RADAR_CLEARED = "Radar à %s neutralisé\n+%d crédits",
 		NORMANDY_V1_SITE_DESTROYED = "Site de lancement V1 à %s détruit\n+%d crédits",
 		NORMANDY_SHIPS_STANDING_CAPTURE = "Nos navires sont prêts à capturer %s",
@@ -32048,6 +32272,7 @@ local NormandySetupLabels = {
 		NORMANDY_MISSION_BOMBER_STRIKE_START_DETAIL = "Bombardiers alliés partis de %s\nCible : %s",
 		NORMANDY_MISSION_BOMBER_STRIKE_START_WARNING = "AVERTISSEMENT : attendez-vous à des intercepteurs ennemis !",
 		NORMANDY_MISSION_BOMBER_STRIKE_END = "Mission terminée : Frappe de bombardiers",
+		NORMANDY_MISSION_ARTY_START = "Nouvelle mission : détruire l'artillerie en route de %s vers %s",
 		NORMANDY_MISSION_NAVAL_ARTY_TITLE = "CAP artillerie navale",
 		NORMANDY_MISSION_NAVAL_ARTY_DESC = "Un groupe d'artillerie navale allié est en route vers la côte française\nCouvrez sa progression contre les avions d'attaque et les chasseurs.",
 		NORMANDY_MISSION_NAVAL_ARTY_START = "Nouvelle mission : couvrir le groupe d'artillerie navale",
@@ -32077,6 +32302,8 @@ local NormandySetupLabels = {
 	},
 	ES = {
 		NORMANDY_FLAVOR_WPT = "WPT %s\n",
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "Inteligencia operacional (60 min)",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "Se están recopilando informes de inteligencia de agentes y unidades de campo para %s. Espera el informe inicial. La inteligencia actualizada estará disponible durante 60 minutos.",
 		NORMANDY_RADAR_CLEARED = "Radar en %s despejado\n+%d créditos",
 		NORMANDY_V1_SITE_DESTROYED = "Sitio de lanzamiento V1 en %s destruido\n+%d créditos",
 		NORMANDY_SHIPS_STANDING_CAPTURE = "Nuestros buques están listos para capturar %s",
@@ -32102,6 +32329,7 @@ local NormandySetupLabels = {
 		NORMANDY_MISSION_BOMBER_STRIKE_START_DETAIL = "Bombarderos aliados lanzados desde %s\nObjetivo: %s",
 		NORMANDY_MISSION_BOMBER_STRIKE_START_WARNING = "ADVERTENCIA: espera interceptores enemigos!",
 		NORMANDY_MISSION_BOMBER_STRIKE_END = "Misión terminada: Ataque de bombarderos",
+		NORMANDY_MISSION_ARTY_START = "Nueva misión: destruye la artillería que se dirige de %s hacia %s",
 		NORMANDY_MISSION_NAVAL_ARTY_TITLE = "CAP de artillería naval",
 		NORMANDY_MISSION_NAVAL_ARTY_DESC = "Grupo de artillería naval aliado en ruta hacia la costa francesa\nCubre su avance contra aviones de ataque y cazas.",
 		NORMANDY_MISSION_NAVAL_ARTY_START = "Nueva misión: Cubrir grupo de artillería naval",
@@ -32131,6 +32359,8 @@ local NormandySetupLabels = {
 	},
 	RU = {
 		NORMANDY_FLAVOR_WPT = "WPT %s\n",
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "Оперативная разведка (60 мин.)",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "Для %s собираются разведывательные донесения от агентов и полевых подразделений. Ожидайте первоначальный брифинг. Обновляемые разведданные будут доступны в течение 60 минут.",
 		NORMANDY_RADAR_CLEARED = "Радар в %s уничтожен\n+%d кредитов",
 		NORMANDY_V1_SITE_DESTROYED = "Стартовая площадка V1 в %s уничтожена\n+%d кредитов",
 		NORMANDY_SHIPS_STANDING_CAPTURE = "Наши корабли готовы захватить %s",
@@ -32156,6 +32386,7 @@ local NormandySetupLabels = {
 		NORMANDY_MISSION_BOMBER_STRIKE_START_DETAIL = "Союзные бомбардировщики вылетели из %s\nЦель: %s",
 		NORMANDY_MISSION_BOMBER_STRIKE_START_WARNING = "ПРЕДУПРЕЖДЕНИЕ: Ожидайте вражеские перехватчики!",
 		NORMANDY_MISSION_BOMBER_STRIKE_END = "Миссия завершена: Удар бомбардировщиков",
+		NORMANDY_MISSION_ARTY_START = "Новая миссия: уничтожить артиллерию, идущую из %s к %s",
 		NORMANDY_MISSION_NAVAL_ARTY_TITLE = "CAP морской артиллерии",
 		NORMANDY_MISSION_NAVAL_ARTY_DESC = "Группа союзной морской артиллерии движется к французскому побережью\nПрикройте ее продвижение от ударных самолетов и истребителей.",
 		NORMANDY_MISSION_NAVAL_ARTY_START = "Новая миссия: Прикрыть группу морской артиллерии",
@@ -32185,6 +32416,8 @@ local NormandySetupLabels = {
 	},
 	TR = {
 		NORMANDY_FLAVOR_WPT = "WPT %s\n",
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "Operasyonel İstihbarat (60 dk.)",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "Ajanlardan ve saha birliklerinden gelen istihbarat raporları %s için derleniyor. İlk brifing için bekleyin. Güncellenmiş istihbarat 60 dakika boyunca kullanılabilir olacak.",
 		NORMANDY_RADAR_CLEARED = "%s bölgesindeki radar temizlendi\n+%d kredi",
 		NORMANDY_V1_SITE_DESTROYED = "%s bölgesindeki V1 fırlatma sahası imha edildi\n+%d kredi",
 		NORMANDY_SHIPS_STANDING_CAPTURE = "Gemilerimiz %s bölgesini ele geçirmek için hazır bekliyor",
@@ -32210,6 +32443,7 @@ local NormandySetupLabels = {
 		NORMANDY_MISSION_BOMBER_STRIKE_START_DETAIL = "Müttefik bombardıman uçakları %s bölgesinden kalktı\nHedef: %s",
 		NORMANDY_MISSION_BOMBER_STRIKE_START_WARNING = "UYARI: Düşman önleme uçakları bekleniyor!",
 		NORMANDY_MISSION_BOMBER_STRIKE_END = "Görev sona erdi: bombardıman görevi",
+		NORMANDY_MISSION_ARTY_START = "Yeni görev: %s konumundan %s yönüne ilerleyen topçuyu yok et",
 		NORMANDY_MISSION_NAVAL_ARTY_TITLE = "Deniz topçusu CAP",
 		NORMANDY_MISSION_NAVAL_ARTY_DESC = "Müttefik deniz topçu grubu Fransız kıyısına doğru ilerliyor\nİlerleyişlerini taarruz uçaklarına ve avcı uçaklarına karşı koru.",
 		NORMANDY_MISSION_NAVAL_ARTY_START = "Yeni görev: deniz topçu grubunu koru",
@@ -32239,6 +32473,8 @@ local NormandySetupLabels = {
 	},
 	IT = {
 		NORMANDY_FLAVOR_WPT = "WPT %s\n",
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "Intelligence operativa (60 min)",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "I rapporti di intelligence di agenti e unità sul campo vengono raccolti per %s. Attendere il briefing iniziale. Le informazioni aggiornate resteranno disponibili per 60 minuti.",
 		NORMANDY_RADAR_CLEARED = "Radar a %s neutralizzato\n+%d crediti",
 		NORMANDY_V1_SITE_DESTROYED = "Sito di lancio V1 a %s distrutto\n+%d crediti",
 		NORMANDY_SHIPS_STANDING_CAPTURE = "Le nostre navi sono pronte a catturare %s",
@@ -32264,6 +32500,7 @@ local NormandySetupLabels = {
 		NORMANDY_MISSION_BOMBER_STRIKE_START_DETAIL = "Bombardieri alleati partiti da %s\nBersaglio: %s",
 		NORMANDY_MISSION_BOMBER_STRIKE_START_WARNING = "ATTENZIONE: aspettati intercettori nemici!",
 		NORMANDY_MISSION_BOMBER_STRIKE_END = "Missione compiuta: attacco bombardieri",
+		NORMANDY_MISSION_ARTY_START = "Nuova missione: distruggi l'artiglieria in movimento da %s verso %s",
 		NORMANDY_MISSION_NAVAL_ARTY_TITLE = "CAP artiglieria navale",
 		NORMANDY_MISSION_NAVAL_ARTY_DESC = "Gruppo di artiglieria navale alleato in rotta verso la costa francese\nCopri la sua avanzata contro aerei d'attacco e caccia.",
 		NORMANDY_MISSION_NAVAL_ARTY_START = "Nuova missione: coprire il gruppo di artiglieria navale",
@@ -32293,6 +32530,8 @@ local NormandySetupLabels = {
 	},
 	["PT-BR"] = {
 		NORMANDY_FLAVOR_WPT = "WPT %s\n",
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "Inteligência operacional (60 min)",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "Relatórios de inteligência de agentes e unidades em campo estão sendo compilados para %s. Aguarde o briefing inicial. Informações atualizadas permanecerão disponíveis por 60 minutos.",
 		NORMANDY_RADAR_CLEARED = "Radar em %s neutralizado\n+%d créditos",
 		NORMANDY_V1_SITE_DESTROYED = "Local de lançamento V1 em %s destruído\n+%d créditos",
 		NORMANDY_SHIPS_STANDING_CAPTURE = "Nossos navios estão prontos para capturar %s",
@@ -32318,6 +32557,7 @@ local NormandySetupLabels = {
 		NORMANDY_MISSION_BOMBER_STRIKE_START_DETAIL = "Bombardeiros aliados lançados de %s\nAlvo: %s",
 		NORMANDY_MISSION_BOMBER_STRIKE_START_WARNING = "AVISO: espere interceptadores inimigos!",
 		NORMANDY_MISSION_BOMBER_STRIKE_END = "Missão encerrada: ataque de bombardeiros",
+		NORMANDY_MISSION_ARTY_START = "Nova missão: destrua a artilharia em movimento de %s rumo a %s",
 		NORMANDY_MISSION_NAVAL_ARTY_TITLE = "CAP de artilharia naval",
 		NORMANDY_MISSION_NAVAL_ARTY_DESC = "Grupo de artilharia naval aliado a caminho da costa francesa\nCubra seu avanço contra aeronaves de ataque e caças.",
 		NORMANDY_MISSION_NAVAL_ARTY_START = "Nova missão: cobrir grupo de artilharia naval",
@@ -32345,13 +32585,23 @@ local NormandySetupLabels = {
 		NORMANDY_TRAIN_REMAINS_DESTROYED = "O trem %s continua destruído desde a missão anterior",
 		NORMANDY_V1_REMAINS_DESTROYED = "O lançador V1 %s continua destruído desde a missão anterior",
 	},
+	["zh-TW"] = {
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "作戰情報（60 分鐘）",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "來自特工與前線部隊的情報報告正在為 %s 進行彙整。請等待初步簡報。更新情報將持續提供 60 分鐘。",
+	},
+	["zh-CN"] = {
+		NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL = "作战情报（60 分钟）",
+		NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL = "来自特工和前线部队的情报报告正在为 %s 进行汇总。请等待初步简报。更新情报将在 60 分钟内持续提供。",
+	},
 }
 
 for locale, labels in pairs(NormandySetupLabels) do
 	FL:Register(locale, labels)
 end
-FL:Register("zh-TW", NormandySetupLabels["zh-TW"] or NormandySetupLabels.EN)
-FL:Register("zh-CN", NormandySetupLabels["zh-CN"] or NormandySetupLabels.EN)
+FL:Register("zh-TW", NormandySetupLabels.EN)
+FL:Register("zh-TW", NormandySetupLabels["zh-TW"])
+FL:Register("zh-CN", NormandySetupLabels.EN)
+FL:Register("zh-CN", NormandySetupLabels["zh-CN"])
 
 local SASetupLabels = {
 	SA_FLAVOR_PORT_STANLEY           = "WPT2\nCapital of the Falkland Islands and the second largest airfield.",
@@ -32417,7 +32667,7 @@ local SASetupLabels = {
 	SA_SHOP_ITEM_DEPLOY_AIRDEF       = "Deploy air defence",
 	SA_SHOP_ITEM_CAPTURE_NEUTRAL     = "Capture neutral zone",
 	SA_SHOP_ITEM_ADVANCE_CAPTURE     = "Advance capture zone",
-	SA_SHOP_ITEM_INTEL_ENEMY         = "Intel on enemy zone",
+	SA_SHOP_ITEM_INTEL_ENEMY         = "Satellite Intel",
 	SA_SHOP_ITEM_RED_ZONE_UPGRADE    = "Red zone upgrade",
 	SA_SHOP_ITEM_RED_MASS_ATTACK     = "Red mass airbase attack",
 	SA_SHOP_ITEM_UPGRADE_INFANTRY    = "Upgrade zone with infantry",
@@ -32480,7 +32730,7 @@ local SASetupLabels = {
 	SA_SHOP_CAP_REQUESTED            = "CAP is requested. Select spawn zone.",
 	SA_SHOP_TANKER_DROGUE_UNLOCKED   = "(Drogue) Tanker is unlocked. Select spawn zone.",
 	SA_SHOP_TANKER_BOOM_UNLOCKED     = "(Boom) Tanker is unlocked. Select spawn zone.",
-	SA_SHOP_GATHERING_INTEL          = "Gathering intel on %s. Stand by for report...",
+	SA_SHOP_GATHERING_INTEL          = "Reconnaissance satellites are being retasked over %s. Stand by for the initial report. Updated intelligence will remain available for 60 minutes.",
 	SA_SHOP_JTAC_TOMCAT_ACTIVE       = "Friendly Tomcat deployed over %s - JTACs active %d / 2",
 	SA_SHOP_JTAC_REAPER_ACTIVE       = "Reaper drone deployed over %s - JTACs active %d / 2",
 	SA_SHOP_JTAC_TOMCAT_AM           = "Friendly Tomcat deployed over %s. Contact Springfield on 241.00 AM ",
@@ -32523,8 +32773,8 @@ local SASetupLabels = {
 	SA_DYNAMIC_RECON_END             = "Mission ended: Recon",
 	SA_DYNAMIC_RECON_END_TARGET      = "Mission ended: Recon %s",
 	SA_DYNAMIC_RECON_END_BY          = "Mission ended: Recon %s completed by %s",
-	SA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] and [%s] completed recon at %s!\nReward pending: %d credits each (land to redeem).\nIntel active for 10 minutes.",
-	SA_DYNAMIC_RECON_COMPLETED_SOLO  = "[%s] completed recon at %s.\nReward pending: %d credits (land to redeem).\nIntel active for 10 minutes.",
+	SA_DYNAMIC_RECON_COMPLETED_JOINT = "[%s] and [%s] completed a reconnaissance pass over %s!\nReward pending: %d credits each (land to redeem).\nAirborne reconnaissance data is being analyzed. Stand by for the initial report.\nUpdated intelligence will remain available for 10 minutes.",
+	SA_DYNAMIC_RECON_COMPLETED_SOLO  = "[%s] completed a reconnaissance pass over %s.\nReward pending: %d credits (land to redeem).\nAirborne reconnaissance data is being analyzed. Stand by for the initial report.\nUpdated intelligence will remain available for 10 minutes.",
 	SA_ESCORT_FAILED_RETRY          = "Mission failed:\n\nConvoy was destroyed\n\nStandby, looking for a new group...",
 	SA_ESCORT_FAILED                = "Mission failed:\n\nConvoy was destroyed",
 	SA_ESCORT_COMPLETED_MULTI       = "Escort mission completed by %s\ncredit %d each - land to redeem",

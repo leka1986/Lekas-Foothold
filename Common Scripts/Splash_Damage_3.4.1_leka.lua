@@ -89,7 +89,7 @@ splash_damage_options = {
     ---------------------------------------------------------------------- Cascading -------------------------------------------------------------------------  
     ["cascade_scaling"] = 1.5,    --multiplier for secondary (cascade) blast damage, 1 damage fades out too soon, 2 or 3 damage seems a good balance
     ["cascade_damage_threshold"] = 0.1, --if the calculated blast damage doesn't exceed this value, there will be no secondary explosion damage on the unit. If this value is too small, the appearance of explosions far outside of an expected radius looks incorrect.
-    ["cascade_explode_threshold"] = 60,   --only trigger cascade explosion if the unit's current health is <= this percent of its maximum, setting can help blow nearby jeeps but not tanks
+    ["cascade_explode_threshold"] = 80,   --only trigger cascade explosion if the unit's current health is <= this percent of its maximum, setting can help blow nearby jeeps but not tanks
     ["always_cascade_explode"] = false, --switch if you want everything to explode like with the original script
     
 	
@@ -704,9 +704,9 @@ explTable = {
     ["GBU_31_V_3B"] = { explosive = 582 },
     ["GBU_31_V_2B"] = { explosive = 582 },
     ["GBU_31_V_4B"] = { explosive = 582 },
-    ["GBU_32_V_2B"] = { explosive = 202 },
-    ["GBU_38"] = { explosive = 100 },
-    ["GBU_54_V_1B"] = { explosive = 100 },
+    ["GBU_32_V_2B"] = { explosive = 274 }, -- 202 prior
+    ["GBU_38"] = { explosive = 118 }, -- 100 prior 
+    ["GBU_54_V_1B"] = { explosive = 118 }, -- 100 prior
   
     --*** GLIDE BOMBS (JSOW) ***
     ["AGM_154A"] = { explosive = 0, cluster = true, submunition_count = 145, submunition_explosive = 2, submunition_name = "BLU-97/B" }, --JSOW-A, confirmed 145 BLU-97 bomblets from datamine

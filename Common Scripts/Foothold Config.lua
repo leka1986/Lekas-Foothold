@@ -1,4 +1,4 @@
--- Version V1.0.8
+-- Version V1.0.9
 -- ** CHANGE LOG **
 --
 -- Added CsarPilotSpawnWithoutCreditsChance,  - V1.0.3
@@ -9,7 +9,8 @@
 -- Added Escort allowed plane types. Added DisableMantis option. - V1.0.5
 -- Added FootholdLocale language option. - V1.0.6
 -- Added load error message for the config. - V1.0.7
--- Added support for Foothold WW2.lua
+-- Added support for Foothold WW2.lua. V1.0.8
+-- Added Bunch off shit to the config. V1.0.9
 -- Use Notepad++ and use compare tool to see the changes.
 --
 --
@@ -22,6 +23,83 @@ local ww2Maps = {
 }
 local saveFile = ww2Maps[env.mission.theatre] and "Foothold Config WW2.lua" or "Foothold Config.lua"
 local mizConfigPath = ww2Maps[env.mission.theatre] and ("l10n/DEFAULT/" .. saveFile) or nil
+local externalConfigChunk = nil
+-- Add new top-level config tables here so an omitted external table triggers the warning.
+FootholdConfigTrackedTableNames = {
+    "RedTemplateEnabled",
+    "RedCapPlaneEnabled",
+    "BlueCapPlaneEnabled",
+    "RedCasPlaneEnabled",
+    "BlueCasPlaneEnabled",
+    "RedSeadPlaneEnabled",
+    "BlueSeadPlaneEnabled",
+    "RedRunwayStrikePlaneEnabled",
+    "RedCasHeloEnabled",
+    "BlueCasHeloEnabled",
+    "RedSupplyHeloEnabled",
+    "BlueSupplyHeloEnabled",
+    "CapLimitStages",
+    "RedCasLimitStages",
+    "RedSeadLimitStages",
+    "RedRunwayStrikeLimitStages",
+    "BlueCapSupportStages",
+    "BlueCasSupportStages",
+    "BlueSeadSupportStages",
+    "CapCountIgnoreTypes",
+    "RedCasCountIgnoreTypes",
+    "BlueCasCountIgnoreTypes",
+    "RedReactiveConfig",
+    "MessageOfTheDay",
+    "CallsignOverrides",
+    "EscortTypeByPlayerType",
+    "WarehouseWeaponCaps",
+    "AllowedToCarrySupplies",
+    "ZoneSupplyTakeoffWarningTypes",
+    "ShopPrices",
+    "ShopRankRequirements",
+    "RewardContribution",
+    "CTLDPrices",
+    "MAX_AT_SPAWN",
+    "CTLDUnitCapabilities",
+    "AllowedCsar",
+    "AllowedFlightTimeReward",
+    "ewrs_specialPlaneTypes",
+    "allowedPlanes",
+    "allowedPlanesRed",
+    "allowedPlanesVietnam",
+    "allowedPlanesRedVietnam",
+    "restockAircraft",
+    "restrictedWeapons",
+    "restrictedWeaponsVietnam",
+    "ForbiddWeaponsInAllEra",
+}
+
+local function applyExternalConfigWithFallbackWarning()
+    local internalTableDefaults = {}
+    for _, tableName in ipairs(FootholdConfigTrackedTableNames) do
+        internalTableDefaults[tableName] = _G[tableName]
+    end
+
+    externalConfigChunk()
+
+    local internalDefaultsApplied = false
+    for tableName, internalDefault in pairs(internalTableDefaults) do
+        if _G[tableName] == internalDefault then
+            internalDefaultsApplied = true
+            break
+        end
+    end
+    if not internalDefaultsApplied then return end
+
+    env.warning("[FOOTHOLD_CONFIG_EXTERNAL_OUTDATED] External Foothold config is outdated. Internal defaults were applied where required.")
+
+    local warningCount = 0
+    SCHEDULER:New(nil, function()
+        warningCount = warningCount + 1
+        trigger.action.outText(FootholdLocalization:Get("FOOTHOLD_CONFIG_EXTERNAL_OUTDATED"), 9)
+        if warningCount >= 12 then return false end
+    end, {}, 1, 10)
+end
 
 local function reportFootholdConfigLoadError(err)
     FootholdConfigLoadError = tostring(err or "unknown error")
@@ -38,11 +116,7 @@ if savePath and not FootholdConfigLoaded and UTILS.CheckFileExists(savePath, sav
     local externalConfigPath = savePath .. "\\" .. saveFile
     local chunk, err = loadfile(externalConfigPath)
     if chunk then
-        FootholdConfigLoaded = true
-        chunk()
-        FootholdConfigLoadedOk = true
-        SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " externally.", 30) end, {}, 1)
-        return
+        externalConfigChunk = chunk
     else
         reportFootholdConfigLoadError(err)
     end
@@ -53,12 +127,26 @@ if mizConfigPath and not FootholdConfigLoaded then
     if chunk then
         FootholdConfigLoaded = true
         chunk()
+        if externalConfigChunk then
+            FootholdConfigLoadedOk = nil
+            applyExternalConfigWithFallbackWarning()
+            if FootholdLocalization then
+                FootholdLocalization:SetLocale(FootholdLocale)
+            end
+            SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " externally.", 30) end, {}, 1)
+        else
+            SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " from mission.", 30) end, {}, 1)
+        end
         FootholdConfigLoadedOk = true
-        SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " from mission.", 30) end, {}, 1)
         return
     else
         reportFootholdConfigLoadError(err)
     end
+end
+
+if externalConfigChunk and not FootholdConfigLoaded then
+    FootholdConfigLoaded = true
+    FootholdConfigLoadedOk = nil
 end
 --
 -- End of do not touch
@@ -105,14 +193,15 @@ RedCapPlaneEnabled = {
     ["RED_MIRAGE_F1CE_CAP_R530F_EMx2_MAGIC2x2"] = true, -- eras=Modern|Coldwar; Mirage F1CE Fox 1 CAP [Modern/CW]
     ["RED_MIG29A_CAP_R73x6"] = true, -- eras=Modern|Coldwar; MiG-29A IR CAP [Modern/CW]
     ["RED_MIG29A_CAP_R73x4_R27ER2X"] = true, -- eras=Modern|Coldwar; MiG-29A Fox 1 CAP [Modern/CW]
+    ["RED_MIG25PD_CAP_R40Rx2_R60Mx2"] = true, --eras=Modern|Coldwar; MiG-25PD Fox 1 CAP [Modern/CW]
+    ["RED_SU27_CAP_R27ERx5_R73x3_ECM"] = true, -- eras=Modern|Coldwar; Su-27 Fox 1 CAP [Modern/CW]
     ["RED_MIG23MLD_CAP_R24Rx2_R60Mx2"] = true, -- eras=Modern|Coldwar; MiG-23MLD Fox 1 CAP [Modern/CW]
     ["RED_MIG21BIS_CAP_R3Rx4"] = false, -- eras=Coldwar|Vietnam; MiG-21bis Fox 1 CAP [CW/VN]
     ["RED_MIG21BIS_CAP_R3Rx2_R35x2"] = false, -- eras=Coldwar|Vietnam; MiG-21bis Fox 1 CAP [CW/VN]
-    ["RED_SU27_CAP_R27ERx5_R73x3_ECM"] = false, -- eras=Coldwar; Su-27 Fox 1 CAP [CW]
-    ["RED_MIG25PD_CAP_R40Rx2_R60Mx2"] = false, -- eras=Coldwar; MiG-25PD Fox 1 CAP [CW]
     ["RED_MIG15BIS_CAP_GUNS_TANKS"] = false, -- eras=Vietnam; MiG-15bis Guns CAP [VN]
     ["RED_MIG19P_CAP_K13A"] = false, -- eras=Vietnam; MiG-19P IR CAP [VN]
     ["RED_MIG21BIS_CAP_R3Rx2_R3Sx2"] = false, -- eras=Vietnam; MiG-21bis Fox 1 CAP [VN]
+    ["RED_L39C_CAP_R3S2X"] = false, -- eras=Vietnam; L-39C Fox 2 CAP [VN]
 }
 
 -- @gui label="BLUE CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
@@ -123,8 +212,7 @@ BlueCapPlaneEnabled = {
     ["BLUE_F14B_CAP_AIM54A_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54A-MK47 [Modern/CW]
     ["BLUE_F14B_CAP_AIM54C_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54C-MK47 [Modern/CW]
     ["BLUE_F14B_CAP_AIM54C_MK60x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54C-MK60 [Modern/CW]
-    ["BLUE_M2000C_CAP_S530Dx2_MAGIC2x2"] = true, -- eras=Modern; M-2000C Fox 1 CAP [Modern]
-    ["BLUE_F86F_CAP_GAR8x2"] = false, -- eras=Vietnam; F-86F IR CAP [VN]
+    ["BLUE_M2000C_CAP_S530Dx2_MAGIC2x2"] = true, -- eras=Modern|Coldwar; M-2000C Fox 1 CAP [Modern/CW]
     ["BLUE_FA18C_CAP_AIM7Mx6_AIM9Mx2"] = false, -- eras=Coldwar; F/A-18C Fox 1 CAP [CW]
     ["BLUE_F15C_CAP_AIM7Mx4_AIM9Mx4"] = false, -- eras=Coldwar; F-15C Fox 1 CAP [CW]
     ["BLUE_F14A_CAP_AIM54A_MK47x6_AIM9Mx2_TANKSx2"] = false, -- eras=Coldwar; F-14A AIM54A-MK47x6 [CW]
@@ -132,6 +220,7 @@ BlueCapPlaneEnabled = {
     ["BLUE_F4E_CAP_AIM7E2x4_AIM9Jx4_TANKSx3_ALE40"] = false, -- eras=Vietnam|Coldwar; F-4E Fox 1 CAP [VN/CW]
     ["BLUE_F100D_CAP_AIM9Ex2"] = false, -- eras=Vietnam; F-100D IR CAP [VN]
     ["BLUE_F5E3_CAP_AIM9Bx2"] = false, -- eras=Vietnam; F-5E-3 IR CAP [VN]
+    ["BLUE_F86F_CAP_GAR8x2"] = false, -- eras=Vietnam; F-86F IR CAP [VN]
 }
 
 -- @gui label="RED CAS Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
@@ -156,12 +245,17 @@ RedCasPlaneEnabled = {
     ["RED_MIG21BIS_CAS_S24Bx4_2SHIP"] = false, -- eras=Coldwar; 2x MiG-21bis S-24B CAS [CW]
     ["RED_MIG21BIS_CAS_KH66x2_FAB250x2_1SHIP"] = false, -- eras=Vietnam; MiG-21bis Kh-66 CAS [VN]
     ["RED_MIG21BIS_CAS_KH66x2_FAB250x2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-21bis Kh-66 CAS [VN]
-    ["RED_MIG15BIS_CAS_FAB100Mx2_1SHIP"] = false, -- eras=Vietnam; MiG-15bis CAS [VN]
-    ["RED_MIG15BIS_CAS_FAB100Mx2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-15bis CAS [VN]
+    ["RED_MIG15BIS_CAS_FAB100Mx2_1SHIP"] = false, -- eras=Vietnam; MiG-15bis Bomb CAS [VN]
+    ["RED_MIG15BIS_CAS_FAB100Mx2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-15bis Bomb CAS [VN]
     ["RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_1SHIP"] = false, -- eras=Vietnam; MiG-19P Rocket CAS [VN]
     ["RED_MIG19P_CAS_K13Ax2_ORO57Kx2_PTB760x2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-19P Rocket CAS [VN]
     ["RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_1SHIP"] = false, -- eras=Vietnam; MiG-19P Bomb CAS [VN]
     ["RED_MIG19P_CAS_K13Ax2_FAB250x2_ORO57Kx2_2SHIP"] = false, -- eras=Vietnam; 2x MiG-19P Bomb CAS [VN]
+    ["RED_L39C_CAS_S5M2XHE_1SHIP"] = false, -- eras=Vietnam; L-39C Rockets CAS [VN]
+    ["RED_L39C_CAS_S5M2XHE_2SHIP"] = false, -- eras=Vietnam; 2x L-39C Rockets CAS [VN]
+    ["RED_L39C_CAS_FAB100Mx2_1SHIP"] = false, -- eras=Vietnam; L-39C Bomb CAS [VN]
+    ["RED_L39C_CAS_FAB100Mx2_2SHIP"] = false, -- eras=Vietnam; 2x L-39C Bomb CAS [VN]
+
 }
 
 -- @gui label="BLUE CAS Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
@@ -192,8 +286,8 @@ RedSeadPlaneEnabled = {
     ["RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_2SHIP"] = true, -- eras=Modern; 2x Su-34 SEAD [Modern]
     ["RED_SU24M_SEAD_KH58x2_FAB1500M54_L081_R60Mx4_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Su-24M SEAD [Modern/CW]
     ["RED_SU24M_SEAD_KH31Px2_KH25MLx2_FAB1500M54_L081_1SHIP"] = true, -- eras=Modern|Coldwar; Su-24M SEAD [Modern/CW]
-    ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_1SHIP"] = false, -- eras=Coldwar; Su-17M4 SEAD [CW]
-    ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_2SHIP"] = false, -- eras=Coldwar; 2x Su-17M4 SEAD [CW]
+    ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_1SHIP"] = false, -- eras=Vietnam|Coldwar; Su-17M4 SEAD [CW/VN]
+    ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Su-17M4 SEAD [CW/VN]
 }
 
 -- @gui label="BLUE SEAD Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
@@ -207,7 +301,7 @@ RedRunwayStrikePlaneEnabled = {
     ["RED_SU33_RUNWAY_BETAB500x4_R27ERx4_R73x2_3SHIP"] = true, -- eras=Modern; 3x Su-33 Runway [Modern]
     ["RED_MIG27K_RUNWAY_BETAB500x2_FAB250x2_R60Mx4_3SHIP"] = true, -- eras=Modern|Coldwar; 3x MiG-27K Runway [Modern/CW]
     ["RED_MIRAGE_F1EE_RUNWAY_DURANDALx6_S530Fx2_AIM9JULIx2_3SHIP"] = true, -- eras=Modern|Coldwar; 3x Mirage F1EE Runway [Modern/CW]
-    ["RED_MIG21BIS_RUNWAY_BETAB500x2_R3Rx2_TANK490_3SHIP"] = true, -- eras=Vietnam; 3x MiG-21bis BetAB Runway [VN]
+    ["RED_MIG21BIS_RUNWAY_BETAB500x2_R3Rx2_TANK490_3SHIP"] = false, -- eras=Vietnam; 3x MiG-21bis BetAB Runway [VN]
 }
 
 -- @gui label="RED CAS Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
@@ -987,7 +1081,7 @@ ShopPrices = {
 	airdef        = 150,  -- Deploy air defence
 	capture       = 500,  -- Capture neutral zone
 	advancecapture = 500, -- Advance capture pressured enemy zone
-	intel         = 150,  -- Intel on enemy zone
+	intel         = 150,  -- Satellite Intel (60 min)
 	zinf          = 500,  -- Add infantry squad to zone
 	zsam          = 2000, -- Add Hawk/Nasams system to a zone
 	zlogc         = 2000, -- Make a zone logistic center
@@ -1019,7 +1113,7 @@ ShopRankRequirements = {
 	smoke          = 1,  -- Smoke markers
 	flare          = 1,  -- Flare markers
 	illum          = 1,  -- Illumination bomb
-	intel          = 5,  -- Intel on enemy zone
+	intel          = 5,  -- Satellite Intel (60 min)
 	supplies2      = 1,  -- Resupply friendly Zone
 	supplies       = 6,  -- Fully Upgrade Friendly Zone
 	zinf           = 5,  -- Add infantry squad to zone
@@ -1594,6 +1688,7 @@ allowedPlanesVietnam = {
     "F-86F Sabre",
     "OH-6A",
     "UH-1H",
+    "Su-17M4",
     -- "AH-1W",
     -- "C-130J-30",
     -- "F-5E-3_FC",
@@ -1929,6 +2024,14 @@ ForbiddWeaponsInAllEra = {
 }
 
 -- Don't touch this.
+if externalConfigChunk then
+    applyExternalConfigWithFallbackWarning()
+    if FootholdLocalization then
+        FootholdLocalization:SetLocale(FootholdLocale)
+    end
+    SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " externally.", 30) end, {}, 1)
+end
+
 FootholdConfigLoadedOk = true
 
 -- ============================================================================

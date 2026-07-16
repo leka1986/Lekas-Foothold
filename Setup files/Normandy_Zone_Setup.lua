@@ -1803,14 +1803,14 @@ bc.shopItems['dynamicstatic'].groupZoneSelector = {
 end
 ---------------------------------------------END DYNAMIC SHOP ------------------------------------------
 
-bc:registerShopItem('intel',L10N:Get("SYRIA_SHOP_ITEM_INTEL_ENEMY"),ShopPrices.intel,function(sender)
+bc:registerShopItem('intel',L10N:Get("NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL"),ShopPrices.intel,function(sender)
 	return L10N:Get("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
 		intelActiveZones[params.zone.zone] = true
 		startZoneIntel(params.zone.zone)
-		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
+		trigger.action.outTextForCoalition(2, L10N:Format("NORMANDY_SHOP_GATHERING_OPERATIONAL_INTEL", params.zone.zone), 10)
 	else
 		return L10N:Get("SYRIA_SHOP_MUST_PICK_ENEMY_ZONE")
 	end
@@ -2091,34 +2091,34 @@ supplyZones = {
 	'Ford',
 	'Tangmere',
 	'Funtington',
-	'NeedsOarPoint',
+	'Needs Oar Point',
 	'Friston',
 	'Dunkirk',
-	'SaintOmer',
+	'Saint-Omer',
 	'Merville',
 	'Abbeville',
 	'Amiens',
-	'SaintAubain',
+	'Saint-Aubain',
 	'Fecamp',
 	'Rouen',
 	'Carpiquet',
-	'SainteCroix',
-	'SaintPierre',
-	'LonguesSurMer',
+	'Sainte-Croix',
+	'Saint-Pierre',
+	'Longues-Sur-Mer',
 	'Cricqueville',
-	'LeMolay',
+	'Le Molay',
 	'Brucheville',
 	'Maupertus',
 	'Bernay',
-	'SaintAndre',
+	'Saint-Andre',
 	'CarrierGroup',
 	'AxeCarrierGroup',
-	'DunkirkPort',
+	'Dunkirk-Port',
 	'Calais',
 	'Cherbourg',
 	'Caen',
 	'Valognes',
-	'LeHavre',
+	'Le Havre',
 	'Paris',
 	'Orly',
 	'London',
@@ -2172,7 +2172,7 @@ GlobalSettings.autoSuspendNmBlue = 90   		-- suspend blue zones deeper than this
 GlobalSettings.autoSuspendNmRed = 90   		-- suspend red zones deeper than this nm
 
 evc = EventCommander:new({ decissionFrequency=10*60, decissionVariance=10*60, skipChance = 10})
-mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
+mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60, autoArtyStartMessageKey = "NORMANDY_MISSION_ARTY_START"})
 
 DynamicHybridConfig = DynamicHybridConfig or {
 	enabled = true,
@@ -4263,14 +4263,14 @@ function generateSupplyMission()
 		local from, to = bc:getConnectionZones(connection)
 		if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 and
 			((not to.suspended) or from.suspended) then
-			if from and to and attackFrontSet[from.zone] and to.side == 2 and to:canRecieveSupply() then
+			if from and to and to.zone ~= 'CarrierGroup' and attackFrontSet[from.zone] and to.side == 2 and to:canRecieveSupply() then
 				local found = false
 				for _, zoneName in ipairs(preferred) do
 					if zoneName == to.zone then found = true break end
 				end
 				if not found then table.insert(preferred, to.zone) end
 			end
-			if from and to and attackFrontSet[to.zone] and from.side == 2 and from:canRecieveSupply() then
+			if from and to and from.zone ~= 'CarrierGroup' and attackFrontSet[to.zone] and from.side == 2 and from:canRecieveSupply() then
 				local found = false
 				for _, zoneName in ipairs(preferred) do
 					if zoneName == from.zone then found = true break end
@@ -4281,7 +4281,7 @@ function generateSupplyMission()
 	end
 
 	for _, v in ipairs(bc.zones) do
-		if v.side == 2 and v:canRecieveSupply() then
+		if v.zone ~= 'CarrierGroup' and v.side == 2 and v:canRecieveSupply() then
 			local found = false
 			for _, zoneName in ipairs(validzones) do
 				if zoneName == v.zone then found = true break end
