@@ -37,6 +37,7 @@ The manager can install the configuration the first time you open it. Select **I
 <img width="1950" height="1197" alt="image" src="https://github.com/user-attachments/assets/ebe77550-2e8b-4a9d-b378-2a452986dacb" />
 
 
+[Watch the Foothold video playlist](https://www.youtube.com/playlist?list=PL2Fv_TsrZbNC_KMMPBkTHmWoRW6rzDwHH)
 
 
 Here you can download the latest MIZ files, tools, and other Foothold-related files.
