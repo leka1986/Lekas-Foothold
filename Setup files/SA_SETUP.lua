@@ -2835,14 +2835,14 @@ bc.shopItems['advancecapture'].groupZoneSelector = {
 --end of menu
 
 local intelMenu=nil
-bc:registerShopItem('intel',LTGet("SA_SHOP_ITEM_INTEL_ENEMY"),ShopPrices.intel,function(sender)
+bc:registerShopItem('intel',LTGet("SYRIA_SHOP_ITEM_INTEL_ENEMY"),ShopPrices.intel,function(sender)
 	return LTGet("SA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
 		intelActiveZones[params.zone.zone] = true
 		startZoneIntel(params.zone.zone)
-		trigger.action.outTextForCoalition(2, L10N:Format("SA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_GATHERING_INTEL", params.zone.zone), 10)
 	else
 		return LTGet("SA_SHOP_MUST_PICK_ENEMY_ZONE")
 	end
@@ -2976,31 +2976,8 @@ bc.shopItems['zhimars'].groupZoneSelector = {
 	emptyLabel = LTGet("SA_SHOP_NO_ELIGIBLE_ZONE"),
 }
 
-local logiMenu=nil
 bc:registerShopItem('zlogc',LTGet("SA_SHOP_ITEM_LOGISTIC_CENTER"),ShopPrices.zlogc,function(sender)
-	if logiMenu then
-		return LTGet("SA_SHOP_ALREADY_CHOOSING_ZONE")
-	end
-	local allow = bc:buildLogisticAllowTable()
-	if not next(allow) then
-		return LTGet("SA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES")
-	end
-	local pickZone=function(zName)
-		if not logiMenu then return end
-		local zoneObj = bc:getZoneByName(zName)
-		local result = bc:applyLogisticCenterUpgrade(zoneObj)
-		if result == true then
-			missionCommands.removeItemForCoalition(2,logiMenu)
-			logiMenu=nil
-		else
-			if type(result) == 'string' then
-				trigger.action.outTextForCoalition(2,result,10)
-			end
-			return result
-		end
-	end
-	logiMenu = bc:showTargetZoneMenu(2,L10N:Get("SA_SHOP_SELECT_LOGISTIC_CENTER"),pickZone,2,nil,allow)
-	trigger.action.outTextForCoalition(2,L10N:Get("SA_SHOP_SELECT_FULLY_UPGRADED_AIRBASE"),15)
+	return LTGet("SA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
 	if params.zone then
@@ -3008,6 +2985,15 @@ function(sender,params)
 	end
 	return LTGet("SA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 end)
+bc.shopItems['zlogc'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not zoneObj.LogisticCenter
+	end,
+	emptyLabel = LTGet("SA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
+}
 
 local warehouseMenu=nil
 bc:registerShopItem('zwh50',LTGet("SA_SHOP_ITEM_WAREHOUSE_50"),ShopPrices.zwh50,function(sender)
@@ -3093,6 +3079,8 @@ bc.shopItems['intel'].groupZoneSelector.refreshTagsByCoalition = {
 	[2] = { 'enemy_targets' },
 	[1] = { 'friendly_targets' },
 }
+bc.shopItems['zlogc'].groupZoneSelector.candidateBucket = 'blue_airbase_unsuspended'
+bc.shopItems['zlogc'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 bc.shopItems['zwh50'].groupZoneSelector.candidateBucket = 'warehouse_targets'
 bc.shopItems['zwh50'].groupZoneSelector.refreshTags = { 'warehouse_targets' }
 
@@ -3958,7 +3946,7 @@ mc:trackMission({
 				bc:addContribution(jp, 2, reward)
 				bc:addTempStat(jp, "Recon mission (Joint mission)", 1)
 				bc:addTempStat(reconMissionWinner, "Recon mission (Joint mission)", 1)
-				trigger.action.outTextForCoalition(2, L10N:Format("SA_DYNAMIC_RECON_COMPLETED_JOINT", reconMissionWinner, jp, target, reward), 20)
+				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_JOINT", reconMissionWinner, jp, target, reward), 20)
 				local jgn = bc.groupNameByPlayer[jp]
 				local jgr = Group.getByName(jgn)
 				if jgr then
@@ -3973,7 +3961,7 @@ mc:trackMission({
 				end
 			else
 				bc:addTempStat(reconMissionWinner, "Recon mission", 1)
-				trigger.action.outTextForCoalition(2, L10N:Format("SA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
+				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
 			end
 			startZoneIntel(target, 10 * 60)
 			reconMissionCooldownUntil = timer.getTime() + 900
