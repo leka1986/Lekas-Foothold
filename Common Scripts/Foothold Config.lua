@@ -157,7 +157,7 @@ end
 
 -- "Modern", "Coldwar", "Gulfwar" (Iraq Coldwar name), or "Vietnam".
 -- In the editor, Don't copy to all ships, make sure all planes in every warehouse are set to LIMITED!!!
-Era = "Modern" -- does not work in Afghanistan or kola
+Era = "Modern"
 
 -- Choose which RED SAM templates are allowed when the mission replaces or randomizes SAM groups.
 -- Untick a SAM type to prevent that template from being used.

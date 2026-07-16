@@ -18002,7 +18002,7 @@ end
 				L10N:Format("ARTILLERY_ATTACK_GRID_3", vagueGrid, targetName),
 			}
 			trigger.action.outTextForCoalition(2, fireMessages[math.random(1, #fireMessages)], 15)
-			trigger.action.outSoundForCoalition(2, "Intel.ogg")
+			trigger.action.outSoundForCoalition(2, "Intel_short.ogg")
 		end, {}, 240)
 
 		SCHEDULER:New(nil, function()
@@ -23971,7 +23971,7 @@ function BattleCommander:triggerRedMassAttack()
 	local total = #state.participants
 	trigger.action.outTextForCoalition(coalition.side.RED, L10N:Format("COMBAT_RED_MASS_ATTACK", state.targetZone, state.forced, total), 15)
 	trigger.action.outTextForCoalition(coalition.side.BLUE, L10N:Format("INTEL_MASS_ATTACK", state.targetZone), 15)
-	trigger.action.outSoundForCoalition(coalition.side.BLUE, "Intel.ogg")
+	trigger.action.outSoundForCoalition(coalition.side.BLUE, "Intel_short.ogg")
 	return true
 end
 
@@ -34194,6 +34194,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 					end
 				end
 			end
+			if map ~= "Normandy" then
 			local advanceCaptureEligible = self:canAdvanceCapture()
 			if self._advanceCaptureEligibleForMenu ~= advanceCaptureEligible then
 				local advanceCaptureEligibilitySeeded = self._advanceCaptureEligibilitySeeded == true or self._advanceCaptureEligibleForMenu ~= nil
@@ -34239,6 +34240,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 				end
 			else
 				self._advanceCaptureAbortThresholdActive = nil
+			end
 			end
 			end
 
@@ -39664,6 +39666,42 @@ function GroupCommander:_jtacMessage(txt, instant, z, soundFile)
     return false
 end
 
+	function GroupCommander:_queueSurfaceConvoyDepartureIntel(originZone)
+		local bcObj = self.zoneCommander.battleCommander
+		bcObj._surfaceConvoyDepartureIntel = bcObj._surfaceConvoyDepartureIntel or {}
+		local pending = bcObj._surfaceConvoyDepartureIntel
+		local entry = pending[originZone]
+		if entry then
+			entry.count = entry.count + 1
+			return
+		end
+
+		pending[originZone] = {
+			count = 1,
+			groupCommander = self,
+		}
+		timer.scheduleFunction(function(args)
+			local queued = args.battleCommander._surfaceConvoyDepartureIntel[args.originZone]
+			if not queued then return end
+			args.battleCommander._surfaceConvoyDepartureIntel[args.originZone] = nil
+
+			local jtacMessage
+			local intelMessage
+			if queued.count == 1 then
+				jtacMessage = L10N:Get("JTAC_ENEMY_CONVOY_MOVING_OUT_FROM")
+				intelMessage = L10N:Format("INTEL_ENEMY_CONVOY_MOVING_OUT_FROM", args.originZone)
+			else
+				jtacMessage = L10N:Format("JTAC_ENEMY_CONVOYS_MOVING_OUT_FROM", queued.count)
+				intelMessage = L10N:Format("INTEL_ENEMY_CONVOYS_MOVING_OUT_FROM", queued.count, args.originZone)
+			end
+			queued.groupCommander:_jtacMessage(jtacMessage, nil, args.originZone, "Intel_short.ogg")
+			_zoneIntelBroadcast(args.originZone, intelMessage, 25, "Intel_short.ogg")
+		end, {
+			battleCommander = bcObj,
+			originZone = originZone,
+		}, timer.getTime() + 0.1)
+	end
+
 function GroupCommander:_spawnFromGroundAt(resolved, originZone, targetZone, hot)
 	if self.unitCategory == Unit.Category.AIRPLANE then return nil end
     local tpl = self:_getAirTemplate(resolved); if not tpl then return nil end
@@ -40865,8 +40903,8 @@ end
 					if gv and Utils.someOfGroupInZone(gv, originZone) then
 					local tp = self:_getAirType()
 					self.pinged = false
-					self:_jtacMessage(L10N:Format("JTAC_AIR_STARTING_UP_AT", tp), nil, originZone, "Intel.ogg")
-					_zoneIntelBroadcast(originZone, L10N:Format("INTEL_AIR_STARTING_UP_AT", tp, tostring(originZone)), 25, "Intel.ogg")
+					self:_jtacMessage(L10N:Format("JTAC_AIR_STARTING_UP_AT", tp), nil, originZone, "Intel_short.ogg")
+					_zoneIntelBroadcast(originZone, L10N:Format("INTEL_AIR_STARTING_UP_AT", tp, tostring(originZone)), 25, "Intel_short.ogg")
 					self._zonePinged = nil
 					self.pinged = true
 					end
@@ -40892,8 +40930,8 @@ end
 			elseif gr and Utils.someOfGroupInAir(gr) then
 					if self.pinged then
 					local tp = self:_getAirType()
-					self:_jtacMessage(L10N:Format("JTAC_AIR_TOOK_OFF_FROM", tp), true, originZone, "Intel.ogg")
-					_zoneIntelBroadcast(originZone, L10N:Format("INTEL_AIR_TOOK_OFF_FROM", tp, tostring(originZone)), 25, "Intel.ogg")
+					self:_jtacMessage(L10N:Format("JTAC_AIR_TOOK_OFF_FROM", tp), true, originZone, "Intel_short.ogg")
+					_zoneIntelBroadcast(originZone, L10N:Format("INTEL_AIR_TOOK_OFF_FROM", tp, tostring(originZone)), 25, "Intel_short.ogg")
 					end
 					--env.info("Group [" .. self.name .. "] is airborne")
 					self.state = 'inair'
@@ -40950,8 +40988,8 @@ end
 				local tg = bcObj:getZoneByName(self.targetzone)
 				if tg and gr and Utils.someOfGroupInZone(gr, tg.zone) then
 					local tp = self:_getAirType()
-					self:_jtacMessage(L10N:Format("JTAC_AIR_INBOUND_LANDING_AT", tp),true,tg.zone, "Intel.ogg")
-					_zoneIntelBroadcast(tg.zone, L10N:Format("INTEL_AIR_INBOUND_LANDING_AT", tp, tostring(tg.zone)), 25, "Intel.ogg")
+					self:_jtacMessage(L10N:Format("JTAC_AIR_INBOUND_LANDING_AT", tp),true,tg.zone, "Intel_short.ogg")
+					_zoneIntelBroadcast(tg.zone, L10N:Format("INTEL_AIR_INBOUND_LANDING_AT", tp, tostring(tg.zone)), 25, "Intel_short.ogg")
 					self._zonePinged = true
 				end
 			end
@@ -42269,8 +42307,7 @@ end
 					end
                     if isUrgent then env.info("Group [" .. self.name .. "] is spawning urgently!") else env.info("Group [" .. self.name .. "] is spawning normally.") end
                 end
-                self:_jtacMessage(L10N:Get("JTAC_ENEMY_CONVOY_MOVING_OUT_FROM"), nil, self.zoneCommander.zone, "Intel.ogg")
-				_zoneIntelBroadcast(self.zoneCommander.zone, L10N:Format("INTEL_ENEMY_CONVOY_MOVING_OUT_FROM", tostring(self.zoneCommander.zone)), 25, "Intel.ogg")
+				self:_queueSurfaceConvoyDepartureIntel(self.zoneCommander.zone)
                 self.state = 'enroute'
 				self.groundconvoyMessaged = false
                 self.lastStateTime = now
@@ -42309,8 +42346,8 @@ end
 			end
 			if arrivalZone and gr and Utils.someOfGroupInZone(gr, arrivalZone.zone) then
 				if not self._supplyReturnHome and self._artilleryReturnHome ~= true and self.side ~= 2 then
-					self:_jtacMessage(L10N:Get("JTAC_ENEMY_CONVOY_ARRIVING_AT"), true, arrivalZone.zone, "Intel.ogg")
-					_zoneIntelBroadcast(arrivalZone.zone, L10N:Format("INTEL_ENEMY_CONVOY_ARRIVING_AT", tostring(arrivalZone.zone)), 25, "Intel.ogg")
+					self:_jtacMessage(L10N:Get("JTAC_ENEMY_CONVOY_ARRIVING_AT"), true, arrivalZone.zone, "Intel_short.ogg")
+					_zoneIntelBroadcast(arrivalZone.zone, L10N:Format("INTEL_ENEMY_CONVOY_ARRIVING_AT", tostring(arrivalZone.zone)), 25, "Intel_short.ogg")
 				end
 				self.state = 'atdestination'
 				self.lastStateTime = now
@@ -42321,11 +42358,11 @@ end
 						if self.mission == 'supply' then
 							trigger.action.outTextForCoalition(2,L10N:Format("INTEL_ENEMY_SUPPLY_CONVOY_INBOUND", self.zoneCommander.zone, self.targetzone),15)
 							self.groundconvoyMessaged = true
-							trigger.action.outSoundForCoalition(2, "Intel.ogg")
+							trigger.action.outSoundForCoalition(2, "Intel_short.ogg")
 						else
 							trigger.action.outTextForCoalition(2,L10N:Format("INTEL_ENEMY_ATTACK_CONVOY_INBOUND", self.zoneCommander.zone, self.targetzone),15)
 							self.groundconvoyMessaged = true
-							trigger.action.outSoundForCoalition(2, "Intel.ogg")
+							trigger.action.outSoundForCoalition(2, "Intel_short.ogg")
 						end
 					end
 				end

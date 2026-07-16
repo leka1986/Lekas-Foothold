@@ -1482,7 +1482,6 @@ local SHOP_PRICE_DEFAULTS = {
   supplies2     = 200,
   supplies      = 1000,
   capture       = 500,
-  advancecapture = 500,
   intel         = 150,
   zinf          = 500,
   zsam          = 1000,
@@ -1496,7 +1495,6 @@ local SHOP_RANK_DEFAULTS = {
   dynamicbomb    = 4,
   dynamicstatic  = 4,
   capture        = 1,
-  advancecapture = 1,
   smoke          = 1,
   flare          = 1,
   illum          = 1,
@@ -1597,33 +1595,6 @@ bc.shopItems['capture'].groupZoneSelector = {
 	emptyLabel = L10N:Get("SYRIA_SHOP_NO_ELIGIBLE_NEUTRAL_ZONES"),
 }
 --end of menu
-
-bc:registerShopItem('advancecapture',L10N:Get("SYRIA_SHOP_ITEM_ADVANCE_CAPTURE"),ShopPrices.advancecapture,
-function(sender)
-	return L10N:Get("SYRIA_SHOP_CHOOSE_ADVANCE_CAPTURE_ZONE")
-end,
-function(sender,params)
-    if not params.zone then
-        return L10N:Get("SYRIA_SHOP_ADVANCE_CAPTURE_NOT_ELIGIBLE")
-    end
-    if not params.zone:canAdvanceCapture() then
-        return L10N:Get("SYRIA_SHOP_ADVANCE_CAPTURE_NOT_ELIGIBLE")
-    end
-    params.advanceCapture = true
-    params.disableDynamicSupply = true
-    local chosenZone=bc:getZoneByName(params.zone.zone)
-    return bc:requestCaptureMission(chosenZone, params)
-end)
-bc.shopItems['advancecapture'].groupZoneSelector = {
-	targetzoneside = 1,
-	includeSuspended = false,
-	extraPredicate = function(zoneObj)
-		return zoneObj:canAdvanceCapture()
-	end,
-	sortPolicy = 'enemy_frontline',
-	emptyLabel = L10N:Get("SYRIA_SHOP_NO_ELIGIBLE_ADVANCE_CAPTURE_ZONES"),
-}
---end of advance capture
 
 -----------------------------------------------DYNAMIC SHOP ------------------------------------------
 
@@ -1936,8 +1907,6 @@ bc.shopItems['zsam'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 
 bc.shopItems['capture'].groupZoneSelector.candidateBucket = 'neutral_capture_targets'
 bc.shopItems['capture'].groupZoneSelector.refreshTags = { 'neutral_capture_targets' }
-bc.shopItems['advancecapture'].groupZoneSelector.candidateBucket = 'advance_capture_targets'
-bc.shopItems['advancecapture'].groupZoneSelector.refreshTags = { 'advance_capture_targets' }
 bc.shopItems['intel'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['intel'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 
@@ -1998,7 +1967,6 @@ ShopPrices = ShopPrices or {
 	supplies2     = 200,  -- Resupply friendly Zone
 	supplies      = 1000, -- Fully Upgrade Friendly Zone
 	capture       = 500,  -- Emergency capture zone
-	advancecapture = 500, -- Advance capture pressured enemy zone
 	intel         = 150,  -- Intel on enemy zone
 	zinf          = 500,  -- Upgrade zone with infantry
 	zsam          = 1000, -- Upgrade zone with AA guns
@@ -2012,7 +1980,6 @@ ShopRankRequirements = ShopRankRequirements or {
 	dynamicbomb    = 4,  -- Dynamic Bomb run
 	dynamicstatic  = 4,  -- Dynamic building Strike
 	capture        = 1,  -- Emergency capture zone
-	advancecapture = 1, -- Advance capture pressured enemy zone
 	smoke          = 1,  -- Smoke markers
 	flare          = 1,  -- Flare markers
 	illum          = 1,  -- Illumination bomb
@@ -2074,7 +2041,6 @@ bc:addShopItem(2, 'intel', -1, 5, ShopRankRequirements.intel, ShopCats.JTACIntel
 
 -- Logistics & Strategic
 bc:addShopItem(2, 'capture', -1, 1, ShopRankRequirements.capture, ShopCats.LogisticsStrategic) -- emergency capture
-bc:addShopItem(2, 'advancecapture', -1, 2, ShopRankRequirements.advancecapture, ShopCats.LogisticsStrategic) -- advance capture pressured enemy zone
 bc:addShopItem(2, 'supplies2', -1, 3, ShopRankRequirements.supplies2, ShopCats.LogisticsStrategic) -- upgrade friendly zone
 if AllowScriptedSupplies then
     bc:addShopItem(2, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
