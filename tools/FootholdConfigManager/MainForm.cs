@@ -76,7 +76,7 @@ internal sealed class MainForm : Form
         public override string ToString()
         {
             var kind = IsConfigFile ? "  (config file)" : "";
-            return Modified.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + "  " + System.IO.Path.GetFileName(Path) + kind;
+            return System.IO.Path.GetFileName(Path) + kind + "  —  " + (System.IO.Path.GetDirectoryName(Path) ?? Path);
         }
     }
 
@@ -948,6 +948,8 @@ internal sealed class MainForm : Form
     private readonly Label _footerVersionLabel = new();
     private readonly Label _discordLabel = new();
     private readonly Label _zoomLabel = new();
+    private ContextMenuStrip? _updateConfigMenu;
+    private ContextMenuStrip? _manageInstanceMenu;
     private ThemeIconButton? _themeButton;
     private Button? _dcsDesanitizeButton;
     private Button? _themeModeButton;
@@ -1122,6 +1124,30 @@ internal sealed class MainForm : Form
         UpdateThemeButtonState();
         UpdateDcsDesanitizeButtonState();
         UpdateEditActionButtonStates();
+        StyleToolbarMenus();
+    }
+
+    private void StyleToolbarMenus()
+    {
+        StyleToolbarMenu(_updateConfigMenu);
+        StyleToolbarMenu(_manageInstanceMenu);
+    }
+
+    private void StyleToolbarMenu(ContextMenuStrip? menu)
+    {
+        if (menu is null)
+        {
+            return;
+        }
+
+        menu.Font = Font;
+        menu.BackColor = ButtonBackground;
+        menu.ForeColor = PrimaryTextColor;
+        foreach (ToolStripItem item in menu.Items)
+        {
+            item.BackColor = ButtonBackground;
+            item.ForeColor = PrimaryTextColor;
+        }
     }
 
     private static void ApplyThemeToControl(Control control, bool restyleButtons)
@@ -1376,13 +1402,28 @@ internal sealed class MainForm : Form
             BackColor = MainBackground
         };
         _topToolbarButtons.Clear();
-        actions.Controls.Add(MakeToolbarButton("Open", OpenConfig, "Select a Foothold Config.lua file to edit.", ToolbarIconKind.Open));
+        actions.Controls.Add(MakeToolbarButton("Open Config", OpenConfig, "Select a Foothold Config.lua file to edit.", ToolbarIconKind.Open));
         actions.Controls.Add(MakeToolbarButton("Reload", ReloadConfig, "Reload the current config from disk and discard unsaved changes after confirmation.", ToolbarIconKind.Reload));
         actions.Controls.Add(MakeToolbarSeparator());
         actions.Controls.Add(MakeToolbarButton("Validate", ValidateConfig, "Check editable values for basic formatting errors before saving.", ToolbarIconKind.Validate));
-        actions.Controls.Add(MakeToolbarButton("Import Config File", ImportValuesFromOldConfig, "Import Foothold Config.lua from another config file.", ToolbarIconKind.Import));
-        actions.Controls.Add(MakeToolbarButton("Import MIZ Config", InstallConfigFromMiz, "Import Foothold Config.lua from a .miz file.", ToolbarIconKind.Install));
-        actions.Controls.Add(MakeToolbarButton("Restore Defaults", RestoreConfigDefaults, "Restore from a default Foothold Config.lua previously stored during Import MIZ Config.", ToolbarIconKind.Restore));
+        _updateConfigMenu?.Dispose();
+        _updateConfigMenu = new ContextMenuStrip
+        {
+            ShowImageMargin = false,
+            ShowCheckMargin = false
+        };
+        _updateConfigMenu.Items.Add("Update from MIZ…", null, (_, _) => InstallConfigFromMiz());
+        _updateConfigMenu.Items.Add("Update from Config File…", null, (_, _) => ImportValuesFromOldConfig());
+        StyleToolbarMenus();
+        ToolbarIconButton updateConfigButton = null!;
+        updateConfigButton = MakeToolbarButton(
+            "Update Config ▼",
+            () => _updateConfigMenu.Show(updateConfigButton, new Point(0, updateConfigButton.Height)),
+            "Update the current config from a Foothold MIZ or another config file.",
+            ToolbarIconKind.Import);
+        updateConfigButton.ContextMenuStrip = _updateConfigMenu;
+        actions.Controls.Add(updateConfigButton);
+        actions.Controls.Add(MakeToolbarButton("Restore Defaults", RestoreConfigDefaults, "Restore from defaults previously stored during Update from MIZ.", ToolbarIconKind.Restore));
         actions.Controls.Add(MakeToolbarSeparator());
         _undoButton = MakeToolbarButton("Undo", UndoLastChange, "Revert the last unsaved edit, add, or remove action.", ToolbarIconKind.Undo);
         actions.Controls.Add(_undoButton);
@@ -1453,11 +1494,10 @@ internal sealed class MainForm : Form
     {
         return text switch
         {
-            "Open" => 60,
+            "Open Config" => 60,
             "Reload" => 60,
             "Validate" => 60,
-            "Import Config File" => 60,
-            "Import MIZ Config" => 60,
+            "Update Config ▼" => 60,
             "Restore Defaults" => 60,
             "Undo" => 78,
             "Save" => 60,
@@ -1499,7 +1539,7 @@ internal sealed class MainForm : Form
 
     private Control BuildInstanceBar()
     {
-        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 9, BackColor = MainBackground };
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 8, BackColor = MainBackground };
         _instanceLayout = panel;
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth("Instance", 70)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -1507,8 +1547,7 @@ internal sealed class MainForm : Form
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Normal", 95)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Advanced", 105)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Open File Location", 150)));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Add", 90)));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Remove", 100)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Manage ▼", 105)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Copy To...", 110)));
 
         panel.Controls.Add(MakeLabel("Instance"), 0, 0);
@@ -1530,9 +1569,32 @@ internal sealed class MainForm : Form
         BindAdvancedToggle();
         panel.Controls.Add(_showAdvanced, 4, 0);
         panel.Controls.Add(MakeInstanceToolbarButton("Open File Location", OpenCurrentConfigLocation, "Open Explorer with the current Foothold config selected."), 5, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Add", AddInstance, "Add another Foothold config instance."), 6, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Remove", RemoveInstance, "Remove the selected instance from this list. The config file is not deleted."), 7, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Copy To...", CopyCurrentConfigToInstances, "Replace selected instance configs with the currently open saved config. No backup is created."), 8, 0);
+
+        _manageInstanceMenu?.Dispose();
+        _manageInstanceMenu = new ContextMenuStrip
+        {
+            ShowImageMargin = false,
+            ShowCheckMargin = false
+        };
+        _manageInstanceMenu.Items.Add("Add instance…", null, (_, _) => AddInstance());
+        var renameInstanceItem = _manageInstanceMenu.Items.Add("Rename selected instance…", null, (_, _) => RenameInstance());
+        var removeInstanceItem = _manageInstanceMenu.Items.Add("Remove selected instance", null, (_, _) => RemoveInstance());
+        _manageInstanceMenu.Opening += (_, _) =>
+        {
+            var hasSelectedInstance = _instanceBox.SelectedItem is InstanceItem;
+            renameInstanceItem.Enabled = hasSelectedInstance;
+            removeInstanceItem.Enabled = hasSelectedInstance;
+        };
+        StyleToolbarMenus();
+
+        Button manageInstanceButton = null!;
+        manageInstanceButton = MakeInstanceToolbarButton(
+            "Manage ▼",
+            () => _manageInstanceMenu.Show(manageInstanceButton, new Point(0, manageInstanceButton.Height)),
+            "Add, rename, or remove Foothold config instances.");
+        manageInstanceButton.ContextMenuStrip = _manageInstanceMenu;
+        panel.Controls.Add(manageInstanceButton, 6, 0);
+        panel.Controls.Add(MakeInstanceToolbarButton("Copy To...", CopyCurrentConfigToInstances, "Replace selected instance configs with the currently open saved config. No backup is created."), 7, 0);
         RefreshInstanceList();
         RefreshConfigVariantList();
         return panel;
@@ -1794,11 +1856,12 @@ internal sealed class MainForm : Form
             SetColumnWidth(_instanceLayout, 0, LabelColumnWidth("Instance", 70));
             SetColumnWidth(_instanceLayout, 4, ShouldShowAdvancedToggle() ? ToolbarButtonWidth("Advanced", 105) : 0);
             SetColumnWidth(_instanceLayout, 5, ToolbarButtonWidth("Open File Location", 150));
-            SetColumnWidth(_instanceLayout, 6, ToolbarButtonWidth("Add", 90));
-            SetColumnWidth(_instanceLayout, 7, ToolbarButtonWidth("Remove", 100));
-            SetColumnWidth(_instanceLayout, 8, ToolbarButtonWidth("Copy To...", 110));
+            SetColumnWidth(_instanceLayout, 6, ToolbarButtonWidth("Manage ▼", 105));
+            SetColumnWidth(_instanceLayout, 7, ToolbarButtonWidth("Copy To...", 110));
             ApplyConfigVariantSelectorVisibility(_configVariantBox.Items.Count > 1);
         }
+
+        StyleToolbarMenus();
 
         if (_mainSplit is not null)
         {
@@ -3919,7 +3982,7 @@ internal sealed class MainForm : Form
                 return;
             }
 
-            SetStatus("Multiple Foothold configs found. Use Open to select one.");
+            SetStatus("Multiple Foothold configs found. Use Open Config to select one.");
             return;
         }
 
@@ -3927,39 +3990,57 @@ internal sealed class MainForm : Form
         if (path is null)
         {
             var install = PromptForFirstRunInstall();
-            if (install is not null && InstallInitialConfigFromSource(install.Value.SourcePath, install.Value.Instance))
+            if (install is null)
+            {
+                SetStatus("No Foothold config is open. Use Open Config or restart to run setup again.");
+                return;
+            }
+
+            if (InstallInitialConfigFromSource(
+                    install.Value.SourcePath,
+                    install.Value.Instance,
+                    install.Value.ConfigFileName))
             {
                 return;
             }
 
-            SetStatus("Foothold Config.lua was not found. Use Open, or restart and install from a Foothold MIZ.");
+            SetStatus("Foothold config was not installed. Use Open Config or restart to try again.");
             return;
         }
 
         LoadConfig(path);
     }
 
-    private (string SourcePath, FirstRunInstanceCandidate Instance)? PromptForFirstRunInstall()
+    private (string SourcePath, FirstRunInstanceCandidate Instance, string ConfigFileName)? PromptForFirstRunInstall()
     {
         var mizCandidates = FindFirstRunMizCandidates();
         var instanceCandidates = FindFirstRunInstanceCandidates();
         string? selectedSourcePath = null;
+        string? selectedConfigFileName = null;
         FirstRunInstanceCandidate? selectedInstance = null;
 
         using var dialog = new Form
         {
-            Text = "Install Foothold Config",
+            Text = "Set up Foothold Config",
             StartPosition = FormStartPosition.CenterParent,
             FormBorderStyle = FormBorderStyle.Sizable,
             MinimizeBox = false,
             MaximizeBox = true,
-            ClientSize = FittedDialogClientSize(900, 580, 700, 460),
-            MinimumSize = FittedDialogMinimumSize(740, 520, 700, 460),
-            Font = Font,
+            ClientSize = FittedDialogClientSize(820, 540, 700, 460),
+            MinimumSize = FittedDialogMinimumSize(700, 460, 700, 460),
+            Font = new Font("Segoe UI", (BaseFontSize + 1.25F) * _uiZoomPercent / 100F),
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor,
             AutoScroll = true
         };
+
+        var setupButtonHeight = Math.Max(Zoomed(34), dialog.Font.Height + Zoomed(14));
+        void SizeSetupButton(Button button, int minimumWidth = 108)
+        {
+            button.Font = dialog.Font;
+            button.Width = Math.Max(Zoomed(minimumWidth), TextRenderer.MeasureText(button.Text, dialog.Font).Width + Zoomed(44));
+            button.Height = setupButtonHeight;
+        }
 
         var root = new TableLayoutPanel
         {
@@ -3969,29 +4050,94 @@ internal sealed class MainForm : Form
             Padding = new Padding(Zoomed(12)),
             BackColor = MainBackground
         };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(58)));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(10)));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(46)));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(18)));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(92)));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, setupButtonHeight + Zoomed(18)));
         dialog.Controls.Add(root);
 
-        root.Controls.Add(new Label
+        var header = new TableLayoutPanel
         {
-            Text = "No Foothold config is configured yet. Choose a Foothold mission MIZ or config file, then choose the DCS/Saved Games instance to install into.",
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = MainBackground
+        };
+        header.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(38)));
+        header.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        header.Controls.Add(new Label
+        {
+            Text = "Welcome to Foothold Manager",
+            Dock = DockStyle.Fill,
+            Font = new Font(dialog.Font.FontFamily, dialog.Font.Size + 1.5F, FontStyle.Bold),
+            ForeColor = PrimaryTextColor
+        }, 0, 0);
+        var stepLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            ForeColor = HelpTextColor
+        };
+        header.Controls.Add(stepLabel, 0, 1);
+        root.Controls.Add(header, 0, 0);
+
+        var mizPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 5,
+            BackColor = MainBackground
+        };
+        mizPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(40)));
+        mizPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, setupButtonHeight + Zoomed(12)));
+        mizPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(32)));
+        mizPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(82)));
+        mizPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        mizPanel.Controls.Add(new Label
+        {
+            Text = "Foothold mission file (.miz)",
             Dock = DockStyle.Fill,
             ForeColor = PrimaryTextColor
         }, 0, 0);
-
-        var mizPanel = BuildFirstRunChoicePanel("Foothold MIZ or config file", out var mizList, out var browseMizButton);
-        root.Controls.Add(mizPanel, 0, 1);
-        foreach (var candidate in mizCandidates)
+        var chooseMizRow = new FlowLayoutPanel
         {
-            mizList.Items.Add(candidate);
-        }
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Margin = new Padding(0),
+            BackColor = MainBackground
+        };
+        var browseMizButton = new Button { Text = "Choose MIZ..." };
+        SizeSetupButton(browseMizButton, 160);
+        chooseMizRow.Controls.Add(browseMizButton);
+        mizPanel.Controls.Add(chooseMizRow, 0, 1);
+        mizPanel.Controls.Add(new Label
+        {
+            Text = "Selected mission",
+            Dock = DockStyle.Fill,
+            ForeColor = PrimaryTextColor
+        }, 0, 2);
+        var selectedMizBox = new TextBox
+        {
+            Text = "No MIZ selected.",
+            Dock = DockStyle.Fill,
+            ReadOnly = true,
+            Multiline = true,
+            WordWrap = false,
+            ScrollBars = ScrollBars.Horizontal,
+            Font = dialog.Font
+        };
+        mizPanel.Controls.Add(selectedMizBox, 0, 3);
+        root.Controls.Add(mizPanel, 0, 1);
 
-        var instancePanel = BuildFirstRunChoicePanel("DCS / Saved Games instance", out var instanceList, out var browseInstanceButton);
+        var instancePanel = BuildFirstRunChoicePanel("DCS Saved Games profile", out var instanceList, out var browseInstanceButton);
+        SizeSetupButton(browseInstanceButton, 132);
+        var browseLeftMargin = Zoomed(3);
+        var browseRightMargin = Zoomed(14);
+        browseInstanceButton.Margin = new Padding(browseLeftMargin, Zoomed(3), browseRightMargin, Zoomed(3));
+        instancePanel.ColumnStyles[1].Width = browseInstanceButton.Width + browseLeftMargin + browseRightMargin;
+        instancePanel.RowStyles[0].Height = setupButtonHeight + Zoomed(4);
         root.Controls.Add(instancePanel, 0, 3);
         foreach (var candidate in instanceCandidates)
         {
@@ -4002,7 +4148,8 @@ internal sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             ForeColor = HelpTextColor,
-            AutoEllipsis = true
+            AutoEllipsis = true,
+            Padding = new Padding(0, Zoomed(4), 0, 0)
         };
         root.Controls.Add(targetLabel, 0, 4);
 
@@ -4016,41 +4163,113 @@ internal sealed class MainForm : Form
         };
         var installButton = new Button
         {
-            Text = "Install",
+            Text = "Install and open",
             DialogResult = DialogResult.OK,
+            Enabled = false,
+            Visible = false
+        };
+        var nextButton = new Button
+        {
+            Text = "Next",
             Enabled = false
         };
-        var cancelButton = new Button
+        var backButton = new Button
         {
-            Text = "Cancel",
+            Text = "Back",
+            Visible = false
+        };
+        var exitButton = new Button
+        {
+            Text = "Open Manager",
             DialogResult = DialogResult.Cancel
         };
-        SizeDialogButton(installButton);
-        SizeDialogButton(cancelButton);
-        buttons.Controls.Add(cancelButton);
+        SizeSetupButton(installButton, 150);
+        SizeSetupButton(nextButton);
+        SizeSetupButton(backButton);
+        SizeSetupButton(exitButton, 140);
         buttons.Controls.Add(installButton);
+        buttons.Controls.Add(nextButton);
+        buttons.Controls.Add(backButton);
+        buttons.Controls.Add(exitButton);
         root.Controls.Add(buttons, 0, 5);
 
         void UpdateSelection()
         {
-            selectedSourcePath = mizList.SelectedItem is FirstRunMizCandidate miz ? miz.Path : selectedSourcePath;
             selectedInstance = instanceList.SelectedItem as FirstRunInstanceCandidate ?? selectedInstance;
-            targetLabel.Text = selectedInstance is null
-                ? "Target: choose an instance."
-                : "Target folder: " + selectedInstance.SavesPath;
-            installButton.Enabled = !string.IsNullOrWhiteSpace(selectedSourcePath) && selectedInstance is not null;
+            nextButton.Enabled = !string.IsNullOrWhiteSpace(selectedSourcePath);
+            if (selectedInstance is null || string.IsNullOrWhiteSpace(selectedConfigFileName))
+            {
+                targetLabel.Text = "Choose a DCS Saved Games profile.";
+                installButton.Enabled = false;
+                return;
+            }
+
+            var targetPath = selectedInstance.ConfigPathFor(selectedConfigFileName);
+            targetLabel.Text = "Config will be installed at:" + Environment.NewLine + targetPath + Environment.NewLine +
+                               (File.Exists(targetPath)
+                                   ? "The existing config will be opened and will not be overwritten."
+                                   : Directory.Exists(selectedInstance.SavesPath)
+                                       ? "The Missions\\Saves folder already exists."
+                                       : "The Missions\\Saves folder will be created.");
+            installButton.Enabled = true;
         }
 
-        mizList.SelectedIndexChanged += (_, _) => UpdateSelection();
+        void ShowStep(int step)
+        {
+            var showMizStep = step == 1;
+            mizPanel.Visible = showMizStep;
+            instancePanel.Visible = !showMizStep;
+            targetLabel.Visible = !showMizStep;
+            root.RowStyles[1].SizeType = showMizStep ? SizeType.Percent : SizeType.Absolute;
+            root.RowStyles[1].Height = showMizStep ? 100 : 0;
+            root.RowStyles[3].SizeType = showMizStep ? SizeType.Absolute : SizeType.Percent;
+            root.RowStyles[3].Height = showMizStep ? 0 : 100;
+            root.RowStyles[4].SizeType = SizeType.Absolute;
+            root.RowStyles[4].Height = showMizStep ? 0 : Zoomed(76);
+            nextButton.Visible = showMizStep;
+            backButton.Visible = !showMizStep;
+            installButton.Visible = !showMizStep;
+            stepLabel.Text = showMizStep
+                ? "Step 1 of 2 — Choose the Foothold mission file whose config you want to install."
+                : "Step 2 of 2 — Choose the DCS Saved Games profile used by this mission. Foothold Manager will use or create its Missions\\Saves folder.";
+            dialog.AcceptButton = showMizStep ? nextButton : installButton;
+            UpdateSelection();
+        }
+
         instanceList.SelectedIndexChanged += (_, _) => UpdateSelection();
+        nextButton.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(selectedSourcePath))
+            {
+                return;
+            }
+
+            try
+            {
+                selectedConfigFileName = ResolveFirstRunConfigFileName(selectedSourcePath);
+                if (string.IsNullOrWhiteSpace(selectedConfigFileName))
+                {
+                    return;
+                }
+
+                ShowStep(2);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(dialog, ex.Message, "Foothold mission could not be used", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        };
+        backButton.Click += (_, _) => ShowStep(1);
         browseMizButton.Click += (_, _) =>
         {
             using var fileDialog = new OpenFileDialog
             {
-                Title = "Select Foothold mission MIZ or config file",
-                Filter = "Foothold mission or config (*.miz;*.lua)|*.miz;*.lua|DCS mission (*.miz)|*.miz|Foothold config (*.lua)|*.lua|All files (*.*)|*.*",
+                Title = "Select Foothold mission MIZ",
+                Filter = "DCS mission (*.miz)|*.miz|All files (*.*)|*.*",
                 FileName = "*.miz",
-                InitialDirectory = GetExistingInitialDirectory(selectedSourcePath) ?? RuntimeSettings.GetBestInitialDirectory()
+                InitialDirectory = GetExistingInitialDirectory(selectedSourcePath) ??
+                                   GetExistingInitialDirectory(mizCandidates.FirstOrDefault(candidate => !candidate.IsConfigFile)?.Path) ??
+                                   RuntimeSettings.GetBestInitialDirectory()
             };
             if (fileDialog.ShowDialog(dialog) != DialogResult.OK)
             {
@@ -4058,22 +4277,25 @@ internal sealed class MainForm : Form
             }
 
             var fullPath = Path.GetFullPath(fileDialog.FileName);
-            if (!fullPath.EndsWith(".miz", StringComparison.OrdinalIgnoreCase) &&
-                !IsSupportedConfigFileName(Path.GetFileName(fullPath)))
+            if (!fullPath.EndsWith(".miz", StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show(dialog, "Choose a .miz file or a Foothold Config.lua / Foothold Config WW2.lua file.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(dialog, "Choose a DCS mission .miz file.", "Set up Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            var candidate = new FirstRunMizCandidate(fullPath, File.GetLastWriteTime(fullPath));
-            AddOrSelectListItem(mizList, candidate, item => item.Path.Equals(fullPath, StringComparison.OrdinalIgnoreCase));
+            selectedSourcePath = fullPath;
+            selectedConfigFileName = null;
+            selectedMizBox.Text = "File: " + Path.GetFileName(fullPath) + Environment.NewLine +
+                                  "Location: " + (Path.GetDirectoryName(fullPath) ?? fullPath);
+            browseMizButton.Text = "Choose another MIZ...";
+            SizeSetupButton(browseMizButton, 190);
             UpdateSelection();
         };
         browseInstanceButton.Click += (_, _) =>
         {
             using var folderDialog = new FolderBrowserDialog
             {
-                Description = "Select the DCS Saved Games instance folder",
+                Description = "Select the DCS Saved Games profile folder",
                 SelectedPath = RuntimeSettings.GetBestInitialDirectory()
             };
             if (folderDialog.ShowDialog(dialog) != DialogResult.OK)
@@ -4083,7 +4305,7 @@ internal sealed class MainForm : Form
 
             if (IsLikelySavedGamesRoot(folderDialog.SelectedPath))
             {
-                MessageBox.Show(dialog, "Select an instance folder inside Saved Games, such as Dedicated1, DCS, or DCS.dcs_serverrelease.", "Install Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(dialog, "Select a DCS profile folder inside Saved Games, such as DCS or DCS.dcs_serverrelease.", "Set up Foothold Config", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -4092,24 +4314,40 @@ internal sealed class MainForm : Form
             UpdateSelection();
         };
 
-        if (mizList.Items.Count > 0)
-        {
-            mizList.SelectedIndex = 0;
-        }
-
         if (instanceList.Items.Count > 0)
         {
             instanceList.SelectedIndex = 0;
         }
 
         UpdateSelection();
-        dialog.AcceptButton = installButton;
-        dialog.CancelButton = cancelButton;
+        ShowStep(1);
+        dialog.CancelButton = exitButton;
         ApplyThemeToControl(dialog, restyleButtons: true);
         ApplyDialogChrome(dialog);
-        return dialog.ShowDialog(this) == DialogResult.OK && selectedSourcePath is not null && selectedInstance is not null
-            ? (selectedSourcePath, selectedInstance)
+        return dialog.ShowDialog(this) == DialogResult.OK &&
+               selectedSourcePath is not null &&
+               selectedInstance is not null &&
+               selectedConfigFileName is not null
+            ? (selectedSourcePath, selectedInstance, selectedConfigFileName)
             : null;
+    }
+
+    private string? ResolveFirstRunConfigFileName(string sourcePath)
+    {
+        if (!sourcePath.EndsWith(".miz", StringComparison.OrdinalIgnoreCase))
+        {
+            var configFileName = Path.GetFileName(sourcePath);
+            if (!IsSupportedConfigFileName(configFileName))
+            {
+                throw new InvalidOperationException("Choose a Foothold mission MIZ, Foothold Config.lua, or Foothold Config WW2.lua file.");
+            }
+
+            return configFileName;
+        }
+
+        using var archive = ZipFile.OpenRead(sourcePath);
+        var entry = SelectMizConfigEntry(sourcePath, FindFootholdConfigEntries(archive), null);
+        return entry is null ? null : Path.GetFileName(entry.FullName);
     }
 
     private TableLayoutPanel BuildFirstRunChoicePanel(string title, out ListBox list, out Button browseButton)
@@ -4722,27 +4960,71 @@ internal sealed class MainForm : Form
 
     private void AddInstance()
     {
-        using var dialog = new OpenFileDialog
-        {
-            Title = "Select Foothold Config.lua for this instance",
-            Filter = "Lua config (*.lua)|*.lua|All files (*.*)|*.*",
-            FileName = GetCurrentConfigFileName(_document),
-            InitialDirectory = _document is null
-                ? RuntimeSettings.GetBestInitialDirectory()
-                : Path.GetDirectoryName(_document.Path)
-        };
-
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        var source = PromptForNewInstanceSource();
+        if (source is null)
         {
             return;
         }
 
-        var path = Path.GetFullPath(dialog.FileName);
+        var path = Path.GetFullPath(source.Value.Path);
+        string? copySourcePath = null;
+        if (source.Value.CopyCurrentConfig)
+        {
+            if (_document is null)
+            {
+                MessageBox.Show(this, "Open the config you want to copy first.", "Add Instance", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (HasChanges())
+            {
+                if (MessageBox.Show(
+                        this,
+                        "The current config has unsaved changes. Save it before creating the new instance?",
+                        "Add Instance",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question) != DialogResult.Yes)
+                {
+                    return;
+                }
+
+                SaveConfig();
+                if (HasChanges())
+                {
+                    MessageBox.Show(this, "The current config could not be saved. No instance was created.", "Add Instance", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            copySourcePath = Path.GetFullPath(_document.Path);
+            var savesDirectory = ResolveNewInstanceSavesDirectory(path);
+            path = Path.GetFullPath(Path.Combine(savesDirectory, GetCurrentConfigFileName(_document)));
+        }
+        else if (HasChanges())
+        {
+            if (MessageBox.Show(
+                    this,
+                    "The current config has unsaved changes. Save it before switching to the new instance?",
+                    "Add Instance",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            SaveConfig();
+            if (HasChanges())
+            {
+                MessageBox.Show(this, "The current config could not be saved. The instance was not added.", "Add Instance", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+        }
+
         var familyKey = GetConfigFamilyKey(path);
         var existing = _settings.ServerProfiles.FirstOrDefault(profile =>
             Path.GetFullPath(profile.ConfigPath).Equals(path, StringComparison.OrdinalIgnoreCase) ||
             GetConfigFamilyKey(profile.ConfigPath).Equals(familyKey, StringComparison.OrdinalIgnoreCase));
-        var name = PromptForText("Add Instance", "Instance name", existing?.Name ?? GuessInstanceName(path))?.Trim();
+        var name = PromptForInstanceName(path, existing?.Name ?? GuessInstanceName(path))?.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
             return;
@@ -4754,6 +5036,31 @@ internal sealed class MainForm : Form
         {
             MessageBox.Show(this, "An instance with that name already exists.", "Add Instance", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
+        }
+
+        if (copySourcePath is not null && !PathsEqual(copySourcePath, path))
+        {
+            if (File.Exists(path) && MessageBox.Show(
+                    this,
+                    Path.GetFileName(path) + " already exists at:" + Environment.NewLine +
+                    path + Environment.NewLine + Environment.NewLine +
+                    "Replace it with the currently open config? No backup will be created.",
+                    "Replace Existing Config?",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                CopyValidatedConfigFile(copySourcePath, path);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Add Instance Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
         }
 
         if (existing is not null)
@@ -4771,8 +5078,258 @@ internal sealed class MainForm : Form
         }
 
         _settings.Save();
-        RefreshInstanceList();
-        SetStatus("Instance saved: " + name);
+        LoadConfig(path);
+    }
+
+    private (string Path, bool CopyCurrentConfig)? PromptForNewInstanceSource()
+    {
+        (string Path, bool CopyCurrentConfig)? result = null;
+        using var dialog = new Form
+        {
+            Text = "Add Foothold Instance",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = FittedDialogClientSize(720, 300, 600, 260),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 4,
+            Padding = new Padding(Zoomed(16)),
+            BackColor = MainBackground
+        };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(66)));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(20)));
+        dialog.Controls.Add(root);
+
+        root.Controls.Add(new Label
+        {
+            Text = "Choose an existing Foothold config, or create a new instance by copying the config that is currently open.",
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            ForeColor = PrimaryTextColor
+        }, 0, 0);
+
+        var configButton = new Button { Text = "Choose config file…" };
+        SizeDialogButton(configButton, 180);
+        var configChoice = BuildInstanceSourceChoice(
+            "Existing config file",
+            "Use an existing Foothold Config.lua or Foothold Config WW2.lua file.",
+            configButton);
+        root.Controls.Add(configChoice, 0, 1);
+
+        var folderButton = new Button
+        {
+            Text = "Choose folder…",
+            Enabled = _document is not null
+        };
+        SizeDialogButton(folderButton, 180);
+        var folderDescription = _document is null
+            ? "Open a config first, then return here to copy it into a new instance."
+            : "Copy " + GetCurrentConfigFileName(_document) + " into a DCS profile, Missions, or Saves folder.";
+        var folderChoice = BuildInstanceSourceChoice("New instance folder", folderDescription, folderButton);
+        root.Controls.Add(folderChoice, 0, 2);
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, Zoomed(8), 0, 0),
+            BackColor = MainBackground
+        };
+        var cancelButton = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel };
+        SizeDialogButton(cancelButton);
+        buttons.Controls.Add(cancelButton);
+        root.Controls.Add(buttons, 0, 3);
+
+        configButton.Click += (_, _) =>
+        {
+            using var fileDialog = new OpenFileDialog
+            {
+                Title = "Select an existing Foothold config",
+                Filter = "Foothold config (*.lua)|Foothold Config.lua;Foothold Config WW2.lua|Lua config (*.lua)|*.lua|All files (*.*)|*.*",
+                FileName = GetCurrentConfigFileName(_document),
+                InitialDirectory = _document is null
+                    ? RuntimeSettings.GetBestInitialDirectory()
+                    : Path.GetDirectoryName(_document.Path)
+            };
+            if (fileDialog.ShowDialog(dialog) != DialogResult.OK)
+            {
+                return;
+            }
+
+            result = (Path.GetFullPath(fileDialog.FileName), false);
+            dialog.DialogResult = DialogResult.OK;
+        };
+        folderButton.Click += (_, _) =>
+        {
+            using var folderDialog = new FolderBrowserDialog
+            {
+                Description = "Choose a DCS Saved Games profile, Missions folder, or Missions\\Saves folder",
+                SelectedPath = _document is null
+                    ? RuntimeSettings.GetBestInitialDirectory()
+                    : Path.GetDirectoryName(_document.Path) ?? RuntimeSettings.GetBestInitialDirectory(),
+                ShowNewFolderButton = true
+            };
+            if (folderDialog.ShowDialog(dialog) != DialogResult.OK)
+            {
+                return;
+            }
+
+            result = (Path.GetFullPath(folderDialog.SelectedPath), true);
+            dialog.DialogResult = DialogResult.OK;
+        };
+
+        dialog.CancelButton = cancelButton;
+        ApplyDialogChrome(dialog);
+        return dialog.ShowDialog(this) == DialogResult.OK ? result : null;
+    }
+
+    private Control BuildInstanceSourceChoice(string title, string description, Button button)
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = new Padding(0, Zoomed(4), 0, Zoomed(4)),
+            Padding = new Padding(Zoomed(12), Zoomed(6), Zoomed(8), Zoomed(6)),
+            BackColor = EditorBackground,
+            ForeColor = PrimaryTextColor
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, button.Width + Zoomed(14)));
+
+        var text = new Label
+        {
+            Text = title + Environment.NewLine + description,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            ForeColor = PrimaryTextColor
+        };
+        button.Anchor = AnchorStyles.Right;
+        panel.Controls.Add(text, 0, 0);
+        panel.Controls.Add(button, 1, 0);
+        return panel;
+    }
+
+    private string? PromptForInstanceName(string configPath, string defaultName)
+    {
+        using var dialog = new Form
+        {
+            Text = "Add Foothold Instance",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = FittedDialogClientSize(720, 225, 600, 210),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 5,
+            Padding = new Padding(Zoomed(16)),
+            BackColor = MainBackground
+        };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(24)));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Math.Max(Zoomed(34), Font.Height + Zoomed(14))));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(24)));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Math.Max(Zoomed(34), Font.Height + Zoomed(14))));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        dialog.Controls.Add(root);
+
+        root.Controls.Add(new Label
+        {
+            Text = "Instance name",
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = PrimaryTextColor
+        }, 0, 0);
+        var nameBox = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Text = defaultName,
+            Margin = new Padding(0, Zoomed(2), 0, Zoomed(4))
+        };
+        root.Controls.Add(nameBox, 0, 1);
+
+        root.Controls.Add(new Label
+        {
+            Text = "Config file",
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = PrimaryTextColor
+        }, 0, 2);
+        var pathBox = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Text = configPath,
+            ReadOnly = true,
+            Margin = new Padding(0, Zoomed(2), 0, Zoomed(4))
+        };
+        root.Controls.Add(pathBox, 0, 3);
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, Zoomed(8), 0, 0),
+            BackColor = MainBackground
+        };
+        var cancelButton = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel };
+        var addButton = new Button { Text = "Add instance", DialogResult = DialogResult.OK };
+        SizeDialogButton(cancelButton);
+        SizeDialogButton(addButton, 120);
+        buttons.Controls.Add(cancelButton);
+        buttons.Controls.Add(addButton);
+        root.Controls.Add(buttons, 0, 4);
+
+        dialog.AcceptButton = addButton;
+        dialog.CancelButton = cancelButton;
+        dialog.Shown += (_, _) =>
+        {
+            pathBox.SelectionStart = 0;
+            pathBox.SelectionLength = 0;
+            nameBox.Focus();
+            nameBox.SelectAll();
+        };
+        ApplyDialogChrome(dialog);
+        return dialog.ShowDialog(this) == DialogResult.OK ? nameBox.Text : null;
+    }
+
+    private static string ResolveNewInstanceSavesDirectory(string selectedDirectory)
+    {
+        var directory = new DirectoryInfo(Path.GetFullPath(selectedDirectory));
+        if (directory.Name.Equals("Saves", StringComparison.OrdinalIgnoreCase))
+        {
+            return directory.FullName;
+        }
+
+        if (directory.Name.Equals("Missions", StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.Combine(directory.FullName, "Saves");
+        }
+
+        var profileDirectory = NormalizeDcsProfileDirectory(directory.FullName);
+        return Path.Combine(profileDirectory, "Missions", "Saves");
     }
 
     private int AddDetectedInstances(List<string> paths, string? preferredPath)
@@ -4847,6 +5404,35 @@ internal sealed class MainForm : Form
 
         item.Profile.ConfigPath = Path.GetFullPath(path);
         _settings.Save();
+    }
+
+    private void RenameInstance()
+    {
+        if (_instanceBox.SelectedItem is not InstanceItem item)
+        {
+            MessageBox.Show(this, "Select an instance to rename.", "Rename Instance", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var currentName = item.Profile.Name;
+        var name = PromptForText("Rename Instance", "Instance name", currentName, "Rename")?.Trim();
+        if (string.IsNullOrWhiteSpace(name) || name.Equals(currentName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (_settings.ServerProfiles.Any(profile =>
+                !ReferenceEquals(profile, item.Profile) &&
+                profile.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            MessageBox.Show(this, "An instance with that name already exists.", "Rename Instance", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        item.Profile.Name = name;
+        _settings.Save();
+        RefreshInstanceList();
+        SetStatus("Instance renamed: " + currentName + " → " + name);
     }
 
     private void RemoveInstance()
@@ -9542,7 +10128,7 @@ internal sealed class MainForm : Form
         }
     }
 
-    private string? PromptForText(string title, string labelText, string defaultText = "")
+    private string? PromptForText(string title, string labelText, string defaultText = "", string confirmText = "Add")
     {
         using var dialog = new Form
         {
@@ -9572,7 +10158,7 @@ internal sealed class MainForm : Form
 
         var okButton = new Button
         {
-            Text = "Add",
+            Text = confirmText,
             DialogResult = DialogResult.OK,
             Location = new Point(Zoomed(246), Zoomed(78))
         };
@@ -13759,20 +14345,26 @@ internal sealed class MainForm : Form
         }
     }
 
-    private bool InstallInitialConfigFromSource(string sourcePath, FirstRunInstanceCandidate instance)
+    private bool InstallInitialConfigFromSource(
+        string sourcePath,
+        FirstRunInstanceCandidate instance,
+        string preferredConfigFileName)
     {
         return sourcePath.EndsWith(".miz", StringComparison.OrdinalIgnoreCase)
-            ? InstallInitialConfigFromMiz(sourcePath, instance)
+            ? InstallInitialConfigFromMiz(sourcePath, instance, preferredConfigFileName)
             : InstallInitialConfigFromConfigFile(sourcePath, instance);
     }
 
-    private bool InstallInitialConfigFromMiz(string mizPath, FirstRunInstanceCandidate instance)
+    private bool InstallInitialConfigFromMiz(
+        string mizPath,
+        FirstRunInstanceCandidate instance,
+        string preferredConfigFileName)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "FootholdConfigManager-" + Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(tempDir);
-            var extractedConfig = ExtractFootholdConfigFromMiz(mizPath, tempDir, null);
+            var extractedConfig = ExtractFootholdConfigFromMiz(mizPath, tempDir, preferredConfigFileName);
             var targetPath = Path.GetFullPath(instance.ConfigPathFor(extractedConfig.ConfigFileName));
             if (File.Exists(targetPath))
             {
@@ -13914,12 +14506,7 @@ internal sealed class MainForm : Form
     private ExtractedMizConfig ExtractFootholdConfigFromMiz(string mizPath, string tempDir, string? preferredConfigFileName)
     {
         using var archive = ZipFile.OpenRead(mizPath);
-        var entries = archive.Entries
-            .Where(item => IsSupportedConfigFileName(Path.GetFileName(item.FullName)))
-            .OrderBy(item => item.FullName.Contains("l10n/DEFAULT", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(item => item.FullName.Length)
-            .ToList();
-        var entry = SelectMizConfigEntry(mizPath, entries, preferredConfigFileName);
+        var entry = SelectMizConfigEntry(mizPath, FindFootholdConfigEntries(archive), preferredConfigFileName);
         if (entry is null)
         {
             throw new InvalidOperationException("Foothold Config.lua or Foothold Config WW2.lua was not found inside this MIZ.");
@@ -13931,6 +14518,15 @@ internal sealed class MainForm : Form
         using var output = File.Create(targetPath);
         input.CopyTo(output);
         return new ExtractedMizConfig(targetPath, configFileName);
+    }
+
+    private static List<ZipArchiveEntry> FindFootholdConfigEntries(ZipArchive archive)
+    {
+        return archive.Entries
+            .Where(item => IsSupportedConfigFileName(Path.GetFileName(item.FullName)))
+            .OrderBy(item => item.FullName.Contains("l10n/DEFAULT", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(item => item.FullName.Length)
+            .ToList();
     }
 
     private ZipArchiveEntry? SelectMizConfigEntry(string mizPath, List<ZipArchiveEntry> entries, string? preferredConfigFileName)
