@@ -1,0 +1,15 @@
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Release\net8.0-windows\win-x64\FootholdConfigManager.exe
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Release\net8.0-windows\win-x64\FootholdConfigManager.deps.json
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Release\net8.0-windows\win-x64\FootholdConfigManager.runtimeconfig.json
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Release\net8.0-windows\win-x64\FootholdConfigManager.dll
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Release\net8.0-windows\win-x64\FootholdConfigManager.pdb
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\FootholdConfigManager.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\FootholdConfigManager.AssemblyInfoInputs.cache
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\FootholdConfigManager.AssemblyInfo.cs
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\FootholdConfigManager.csproj.CoreCompileInputs.cache
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\FootholdConfigManager.sourcelink.json
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\FootholdConfigManager.dll
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\refint\FootholdConfigManager.dll
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\FootholdConfigManager.pdb
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\FootholdConfigManager.genruntimeconfig.cache
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Release\net8.0-windows\win-x64\ref\FootholdConfigManager.dll

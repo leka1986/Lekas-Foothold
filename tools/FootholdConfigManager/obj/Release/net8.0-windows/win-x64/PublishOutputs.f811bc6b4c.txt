@@ -1,0 +1,5 @@
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Current\FootholdConfigManager.exe
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Current\FootholdConfigManager.dll
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Current\FootholdConfigManager.deps.json
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Current\FootholdConfigManager.runtimeconfig.json
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Current\FootholdConfigManager.pdb

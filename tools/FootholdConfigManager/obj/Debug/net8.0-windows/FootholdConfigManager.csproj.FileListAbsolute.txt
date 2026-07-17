@@ -1,0 +1,15 @@
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Debug\net8.0-windows\FootholdConfigManager.exe
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Debug\net8.0-windows\FootholdConfigManager.deps.json
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Debug\net8.0-windows\FootholdConfigManager.runtimeconfig.json
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Debug\net8.0-windows\FootholdConfigManager.dll
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\bin\Debug\net8.0-windows\FootholdConfigManager.pdb
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\FootholdConfigManager.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\FootholdConfigManager.AssemblyInfoInputs.cache
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\FootholdConfigManager.AssemblyInfo.cs
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\FootholdConfigManager.csproj.CoreCompileInputs.cache
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\FootholdConfigManager.sourcelink.json
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\FootholdConfigManager.dll
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\refint\FootholdConfigManager.dll
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\FootholdConfigManager.pdb
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\FootholdConfigManager.genruntimeconfig.cache
+C:\Users\alisa\Saved Games\Lekas-Foothold\tools\FootholdConfigManager\obj\Debug\net8.0-windows\ref\FootholdConfigManager.dll

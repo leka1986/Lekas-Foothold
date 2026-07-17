@@ -19,9 +19,12 @@ internal sealed class MainForm : Form
     private const string AboutLinkTag = "AboutLink";
     private const string ImportedNewHighlightTag = "ImportedNewHighlight";
     private const string ImportedNewBadgeTag = "ImportedNewBadge";
+    private const int ConfigBackupRetention = 5;
     private static readonly JsonSerializerOptions StoredDefaultsJsonOptions = new() { WriteIndented = true };
     private static string StoredDefaultsDirectory => Path.Combine(RuntimeSettings.SettingsDirectory, "MizDefaults");
     private static string StoredDefaultsIndexPath => Path.Combine(StoredDefaultsDirectory, "index.json");
+    private static string ConfigBackupsDirectory => Path.Combine(RuntimeSettings.SettingsDirectory, "Backups");
+    private static string ConfigBackupsIndexPath => Path.Combine(ConfigBackupsDirectory, "index.json");
     private static Color MainBackground = Color.FromArgb(221, 229, 234);
     private static Color EditorBackground = Color.FromArgb(238, 243, 246);
     private static Color InputBackground = Color.FromArgb(248, 251, 253);
@@ -546,6 +549,7 @@ internal sealed class MainForm : Form
     }
 
     private sealed record StageDifficultyButtonTag(string TableKey, string Difficulty);
+    private sealed record RestoreCategoryTag(string Label);
 
     private sealed class InstanceItem
     {
@@ -714,6 +718,23 @@ internal sealed class MainForm : Form
         public string ConfigFileName { get; set; } = RuntimeSettings.DefaultConfigFileName;
         public string ConfigPath { get; set; } = "";
         public DateTime StoredAt { get; set; }
+    }
+
+    private sealed class ConfigBackupIndex
+    {
+        public List<ConfigBackupInfo> Items { get; set; } = new();
+    }
+
+    private sealed class ConfigBackupInfo
+    {
+        public string Id { get; set; } = "";
+        public string? InstanceName { get; set; }
+        public string OriginalConfigPath { get; set; } = "";
+        public string ConfigFileName { get; set; } = RuntimeSettings.DefaultConfigFileName;
+        public string BackupPath { get; set; } = "";
+        public string SourceKind { get; set; } = "miz";
+        public string SourcePath { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
     }
 
     private sealed class MizKeptValue
@@ -14297,7 +14318,8 @@ internal sealed class MainForm : Form
             if (!ConfirmSelectableValuePreview(
                     previewText,
                     "Import MIZ Config Preview",
-                    "Tick rows to keep your current values. Untick rows to use the new MIZ defaults.",
+                    "Tick rows to keep your current values. Untick rows to use the new MIZ defaults." + Environment.NewLine +
+                    "Your current config will be backed up automatically before this update.",
                     "Import",
                     "Your current value",
                     "New MIZ default",
@@ -14319,6 +14341,7 @@ internal sealed class MainForm : Form
 
             var importedNewMarkers = CaptureImportedNewMarkers(preview);
             var storedDefaults = StoreMizDefaults(mizPath, extractedConfig);
+            BackupCurrentConfigBeforeMizUpdate(currentDocument.Path, mizPath);
             newDocument.SaveTo(targetPath);
             UpdateSelectedInstanceConfigPath(targetPath);
             LoadConfig(targetPath);
@@ -14894,6 +14917,204 @@ internal sealed class MainForm : Form
         return safe.Length <= 80 ? safe : safe[..80];
     }
 
+    private static string GetConfigBackupPathKey(string configPath)
+    {
+        try
+        {
+            return Path.GetFullPath(configPath);
+        }
+        catch
+        {
+            return configPath;
+        }
+    }
+
+    private static string GetStandaloneBackupFolderName(string configPath)
+    {
+        var fullPath = Path.GetFullPath(configPath);
+        var configDirectory = Directory.GetParent(fullPath);
+        var friendlyName = configDirectory?.Name ?? "Config";
+        if (configDirectory is not null &&
+            configDirectory.Name.Equals("Saves", StringComparison.OrdinalIgnoreCase) &&
+            configDirectory.Parent?.Name.Equals("Missions", StringComparison.OrdinalIgnoreCase) == true &&
+            configDirectory.Parent.Parent is not null)
+        {
+            friendlyName = configDirectory.Parent.Parent.Name;
+        }
+
+        var familyKey = GetConfigFamilyKey(fullPath).ToUpperInvariant();
+        var hashBytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(familyKey));
+        var shortHash = Convert.ToHexString(hashBytes)[..8].ToLowerInvariant();
+        return MakeSafeFileName(friendlyName) + "-" + shortHash;
+    }
+
+    private static string GetAvailableConfigBackupPath(string directory, string configFileName, DateTime createdAt)
+    {
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(configFileName);
+        var extension = Path.GetExtension(configFileName);
+        var stem = createdAt.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) +
+                   "-" + MakeSafeFileName(fileNameWithoutExtension);
+        var candidate = Path.Combine(directory, stem + extension);
+        for (var suffix = 2; File.Exists(candidate); suffix++)
+        {
+            candidate = Path.Combine(directory, stem + "-" + suffix.ToString(CultureInfo.InvariantCulture) + extension);
+        }
+
+        return candidate;
+    }
+
+    private static ConfigBackupIndex LoadConfigBackupIndex(string indexPath)
+    {
+        if (!File.Exists(indexPath))
+        {
+            return new ConfigBackupIndex();
+        }
+
+        try
+        {
+            var index = JsonSerializer.Deserialize<ConfigBackupIndex>(File.ReadAllText(indexPath), StoredDefaultsJsonOptions)
+                        ?? new ConfigBackupIndex();
+            index.Items ??= new List<ConfigBackupInfo>();
+            return index;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("The config backup index could not be read.", ex);
+        }
+    }
+
+    private static void SaveConfigBackupIndex(ConfigBackupIndex index, string backupsDirectory, string indexPath)
+    {
+        Directory.CreateDirectory(backupsDirectory);
+        var temporaryPath = indexPath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(index, StoredDefaultsJsonOptions));
+            File.Move(temporaryPath, indexPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
+    }
+
+    private static void TryDeleteOwnedConfigBackup(string path, string backupsDirectory)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                return;
+            }
+
+            var backupRoot = Path.GetFullPath(backupsDirectory)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var fullPath = Path.GetFullPath(path);
+            if (fullPath.StartsWith(backupRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                File.Delete(fullPath);
+            }
+        }
+        catch
+        {
+            // Retention cleanup is best effort; a valid backup must not block the completed update.
+        }
+    }
+
+    private static List<ConfigBackupInfo> ApplyConfigBackupRetention(ConfigBackupIndex index)
+    {
+        var originalItems = index.Items.ToList();
+        var keptItems = originalItems
+            .Where(item => !string.IsNullOrWhiteSpace(item.OriginalConfigPath) &&
+                           !string.IsNullOrWhiteSpace(item.BackupPath) &&
+                           File.Exists(item.BackupPath))
+            .GroupBy(item => GetConfigBackupPathKey(item.OriginalConfigPath), StringComparer.OrdinalIgnoreCase)
+            .SelectMany(group => group
+                .OrderByDescending(item => item.CreatedAt)
+                .Take(ConfigBackupRetention))
+            .OrderByDescending(item => item.CreatedAt)
+            .ToList();
+        var keptPaths = keptItems
+            .Select(item => GetConfigBackupPathKey(item.BackupPath))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var removedItems = originalItems
+            .Where(item => !keptPaths.Contains(GetConfigBackupPathKey(item.BackupPath)))
+            .ToList();
+        index.Items = keptItems;
+        return removedItems;
+    }
+
+    private void BackupCurrentConfigBeforeMizUpdate(string configPath, string mizPath)
+    {
+        StoreConfigBackup(
+            configPath,
+            mizPath,
+            _settings.ServerProfiles,
+            ConfigBackupsDirectory,
+            ConfigBackupsIndexPath);
+    }
+
+    private static ConfigBackupInfo StoreConfigBackup(
+        string configPath,
+        string sourceMizPath,
+        IReadOnlyCollection<ServerProfileSettings> profiles,
+        string backupsDirectory,
+        string indexPath)
+    {
+        var fullConfigPath = Path.GetFullPath(configPath);
+        if (!File.Exists(fullConfigPath))
+        {
+            throw new FileNotFoundException("The current config could not be backed up because it no longer exists.", fullConfigPath);
+        }
+
+        var configFamilyKey = GetConfigFamilyKey(fullConfigPath);
+        var profile = profiles.FirstOrDefault(candidate =>
+            PathsEqual(GetConfigFamilyKey(candidate.ConfigPath), configFamilyKey));
+        var relativeDirectory = profile is null
+            ? Path.Combine("Standalone", GetStandaloneBackupFolderName(fullConfigPath))
+            : MakeSafeFileName(profile.Name);
+        var backupDirectory = Path.Combine(backupsDirectory, relativeDirectory);
+        Directory.CreateDirectory(backupDirectory);
+
+        var createdAt = DateTime.Now;
+        var configFileName = Path.GetFileName(fullConfigPath);
+        var backupPath = GetAvailableConfigBackupPath(backupDirectory, configFileName, createdAt);
+        File.Copy(fullConfigPath, backupPath, overwrite: false);
+
+        try
+        {
+            var info = new ConfigBackupInfo
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                InstanceName = profile?.Name,
+                OriginalConfigPath = fullConfigPath,
+                ConfigFileName = configFileName,
+                BackupPath = backupPath,
+                SourceKind = "miz",
+                SourcePath = Path.GetFullPath(sourceMizPath),
+                CreatedAt = createdAt
+            };
+            var index = LoadConfigBackupIndex(indexPath);
+            index.Items.Insert(0, info);
+            var removedItems = ApplyConfigBackupRetention(index);
+            SaveConfigBackupIndex(index, backupsDirectory, indexPath);
+            foreach (var removedItem in removedItems)
+            {
+                TryDeleteOwnedConfigBackup(removedItem.BackupPath, backupsDirectory);
+            }
+
+            return info;
+        }
+        catch
+        {
+            TryDeleteOwnedConfigBackup(backupPath, backupsDirectory);
+            throw;
+        }
+    }
+
     private StoredMizDefaultsInfo? CreateRestoreDefaultsSourceFromFile(string path)
     {
         var fullPath = Path.GetFullPath(path);
@@ -15303,6 +15524,8 @@ internal sealed class MainForm : Form
                     {
                         child.Checked = args.Node.Checked;
                     }
+
+                    UpdateRestoreCategoryCheck(args.Node);
                 }
             }
             finally
@@ -15548,7 +15771,11 @@ internal sealed class MainForm : Form
                      .OrderBy(group => group.Min(item => item.Order)))
         {
             var categoryName = string.IsNullOrWhiteSpace(group.Key) ? "Uncategorized" : group.Key;
-            var category = new TreeNode(GetCategoryDisplayName(categoryName));
+            var categoryLabel = GetCategoryDisplayName(categoryName);
+            var category = new TreeNode(categoryLabel)
+            {
+                Tag = new RestoreCategoryTag(categoryLabel)
+            };
             var hasChangedItems = false;
             foreach (var item in group.OrderBy(item => item.Order).ThenBy(item => item.Label, StringComparer.OrdinalIgnoreCase))
             {
@@ -15593,16 +15820,25 @@ internal sealed class MainForm : Form
         {
             SetRestoreNodeChecked(child, isChecked);
         }
+
+        UpdateRestoreCategoryCheck(node);
     }
 
     private static void UpdateRestoreCategoryCheck(TreeNode? category)
     {
-        if (category is null || category.Tag is RestoreDefaultItem)
+        if (category?.Tag is not RestoreCategoryTag tag)
         {
             return;
         }
 
-        category.Checked = category.Nodes.Count > 0 && category.Nodes.Cast<TreeNode>().All(node => node.Checked);
+        var selectedCount = category.Nodes.Cast<TreeNode>().Count(node => node.Checked);
+        category.Checked = category.Nodes.Count > 0 && selectedCount == category.Nodes.Count;
+        category.Text = selectedCount switch
+        {
+            0 => tag.Label,
+            var count when count == category.Nodes.Count => tag.Label + " — all selected (" + count.ToString(CultureInfo.InvariantCulture) + ")",
+            _ => tag.Label + " — " + selectedCount.ToString(CultureInfo.InvariantCulture) + " of " + category.Nodes.Count.ToString(CultureInfo.InvariantCulture) + " selected"
+        };
     }
 
     private StoredMizDefaultsInfo? PromptForStoredMizDefaults(List<StoredMizDefaultsInfo> defaults)
@@ -15745,6 +15981,9 @@ internal sealed class MainForm : Form
                         ["CurrentRow"] = {1, 2},
                     },
                 }
+
+                KeepCurrentOption = false
+                UseIncomingOption = false
                 """, new System.Text.UTF8Encoding(false));
             File.WriteAllText(incomingPath, """
                 -- Incoming nested-table header — keep this.
@@ -15764,6 +16003,8 @@ internal sealed class MainForm : Form
                     },
                 }
 
+                KeepCurrentOption = true
+                UseIncomingOption = true
                 NewOption = 42
                 """, new System.Text.UTF8Encoding(false));
 
@@ -15812,6 +16053,11 @@ internal sealed class MainForm : Form
             var tableChoices = BuildKeptTableChoices(preview, "current table text", "incoming table text");
             tableChoices.Single(choice => choice.Key.Equals(keptTableKey + " (full table)", StringComparison.Ordinal)).Selected = false;
             ApplyKeptTableChoices(incomingDocument, preview, tableChoices);
+            var valueChoices = preview.KeptValues
+                .Select(item => new SelectableValueChoice(item.Key, item.CurrentValue, item.NewDefault, item.Entry.EffectiveDescription))
+                .ToList();
+            valueChoices.Single(choice => choice.Key.Equals("UseIncomingOption", StringComparison.Ordinal)).Selected = false;
+            ApplyKeptValueChoices(incomingDocument, preview, valueChoices);
             Require(incomingDocument.TryGetTableBlockText(keptTableKey, out var restoredKeptTableBlock) &&
                     restoredKeptTableBlock.Contains("[\"Arctic1\"]", StringComparison.Ordinal) &&
                     restoredKeptTableBlock.Contains("[\"Bender2\"]", StringComparison.Ordinal) &&
@@ -15820,11 +16066,74 @@ internal sealed class MainForm : Form
             Require(incomingDocument.TryGetTableBlockText("CustomNested", out var stillKeptNestedBlock) &&
                     stillKeptNestedBlock.Contains("[\"CurrentRow\"]", StringComparison.Ordinal),
                 "Unticking one full-table choice changed another selected table.");
+            Require(incomingDocument.Entries.Any(entry => entry.DisplayKey.Equals("KeepCurrentOption", StringComparison.Ordinal) &&
+                                                          entry.ValueText.Equals("false", StringComparison.Ordinal)),
+                "Unticking a full-table choice discarded a checked current scalar value.");
+            Require(incomingDocument.Entries.Any(entry => entry.DisplayKey.Equals("UseIncomingOption", StringComparison.Ordinal) &&
+                                                          entry.ValueText.Equals("true", StringComparison.Ordinal)),
+                "An unchecked scalar choice did not use the incoming default.");
 
             incomingDocument.SaveTo(mergedPath);
             var mergedText = File.ReadAllText(mergedPath, new System.Text.UTF8Encoding(false, true));
             Require(mergedText.Contains("-- Incoming nested-table header — keep this.", StringComparison.Ordinal),
                 "The incoming table header was not preserved.");
+
+            var backupsDirectory = Path.Combine(tempDirectory, "Backups");
+            var backupIndexPath = Path.Combine(backupsDirectory, "index.json");
+            var profiles = new List<ServerProfileSettings>
+            {
+                new() { Name = "Alpha", ConfigPath = currentPath }
+            };
+            for (var backupIndex = 0; backupIndex < ConfigBackupRetention + 1; backupIndex++)
+            {
+                StoreConfigBackup(currentPath, incomingPath, profiles, backupsDirectory, backupIndexPath);
+            }
+
+            var namedBackups = LoadConfigBackupIndex(backupIndexPath).Items
+                .Where(item => PathsEqual(item.OriginalConfigPath, currentPath))
+                .ToList();
+            Require(namedBackups.Count == ConfigBackupRetention,
+                "Named-instance backup retention did not keep exactly five copies.");
+            Require(namedBackups.All(item => item.InstanceName == "Alpha" &&
+                                             Directory.GetParent(item.BackupPath)?.Name == "Alpha"),
+                "Named-instance backups were not stored in the instance folder.");
+
+            var ww2Path = Path.Combine(tempDirectory, RuntimeSettings.Ww2ConfigFileName);
+            File.Copy(currentPath, ww2Path);
+            StoreConfigBackup(ww2Path, incomingPath, profiles, backupsDirectory, backupIndexPath);
+            Require(LoadConfigBackupIndex(backupIndexPath).Items.Count(item => PathsEqual(item.OriginalConfigPath, currentPath)) == ConfigBackupRetention,
+                "A WW2 backup pruned Normal-config backups from the same instance.");
+
+            var standaloneSaves = Path.Combine(tempDirectory, "StandaloneProfile", "Missions", "Saves");
+            Directory.CreateDirectory(standaloneSaves);
+            var standalonePath = Path.Combine(standaloneSaves, RuntimeSettings.DefaultConfigFileName);
+            File.Copy(currentPath, standalonePath);
+            var standaloneBackup = StoreConfigBackup(
+                standalonePath,
+                incomingPath,
+                Array.Empty<ServerProfileSettings>(),
+                backupsDirectory,
+                backupIndexPath);
+            Require(standaloneBackup.InstanceName is null &&
+                    Directory.GetParent(standaloneBackup.BackupPath)?.Parent?.Name == "Standalone",
+                "A directly opened config was not stored under the standalone backup folder.");
+
+            var restoreCategory = new TreeNode("Difficulty advanced")
+            {
+                Tag = new RestoreCategoryTag("Difficulty advanced")
+            };
+            restoreCategory.Nodes.Add(new TreeNode("RED CAP Limit") { Checked = true });
+            restoreCategory.Nodes.Add(new TreeNode("RED CAS Limit"));
+            restoreCategory.Nodes.Add(new TreeNode("RED SEAD Limit"));
+            UpdateRestoreCategoryCheck(restoreCategory);
+            Require(!restoreCategory.Checked && restoreCategory.Text == "Difficulty advanced — 1 of 3 selected",
+                "A collapsed Restore Defaults category did not show its partial selection count.");
+            SetRestoreNodeChecked(restoreCategory, true);
+            Require(restoreCategory.Checked && restoreCategory.Text == "Difficulty advanced — all selected (3)",
+                "A collapsed Restore Defaults category did not show its full selection count.");
+            SetRestoreNodeChecked(restoreCategory, false);
+            Require(!restoreCategory.Checked && restoreCategory.Text == "Difficulty advanced",
+                "An empty Restore Defaults category did not clear its selection count.");
 
             Console.WriteLine("Merge regression self-test passed.");
             return 0;
@@ -16051,6 +16360,12 @@ internal sealed class MainForm : Form
 
     private static int CountEntriesUnderTable(ConfigDocument document, string key)
     {
+        var stageTable = document.StageTables.FirstOrDefault(table => table.Key.Equals(key, StringComparison.Ordinal));
+        if (stageTable is not null)
+        {
+            return stageTable.Rows.Count;
+        }
+
         var nestedPrefix = key + ".";
         return document.Entries.Count(entry =>
             entry.ParentKey.Equals(key, StringComparison.Ordinal) ||
@@ -16232,16 +16547,13 @@ internal sealed class MainForm : Form
     {
         for (var i = 0; i < valueChoices.Count; i++)
         {
-            if (valueChoices[i].Selected)
-            {
-                continue;
-            }
-
             var keptValue = preview.KeptValues[i];
             var entry = targetDocument.Entries.FirstOrDefault(candidate => candidate.DisplayKey.Equals(keptValue.Key, StringComparison.Ordinal));
             if (entry is not null)
             {
-                entry.ValueText = keptValue.NewDefault;
+                entry.ValueText = valueChoices[i].Selected
+                    ? keptValue.CurrentValue
+                    : keptValue.NewDefault;
             }
         }
     }
@@ -16499,7 +16811,101 @@ internal sealed class MainForm : Form
             return firstLine + " (NEW)";
         }
 
-        var orderedChoices = choices.OrderBy(choice => choice.Key, StringComparer.OrdinalIgnoreCase).ToList();
+        var categoryNames = GetDesignerCategoryNames()
+            .Where(categoryName => !IsReservedCategory(categoryName))
+            .ToList();
+        var choicePositions = new Dictionary<string, (int CategoryIndex, string CategoryName, string CategoryLabel, int ItemIndex)>(StringComparer.Ordinal);
+
+        void AddChoicePosition(string key, int categoryIndex, string categoryName, string categoryLabel, int itemIndex)
+        {
+            if (!string.IsNullOrWhiteSpace(key) && !choicePositions.ContainsKey(key))
+            {
+                choicePositions[key] = (categoryIndex, categoryName, categoryLabel, itemIndex);
+            }
+        }
+
+        for (var categoryIndex = 0; categoryIndex < categoryNames.Count; categoryIndex++)
+        {
+            var categoryName = categoryNames[categoryIndex];
+            var categoryLabel = GetCategoryDisplayName(categoryName);
+            var categoryItems = GetDesignerItems(categoryName, includeTableRows: true, includeAdvanced: true);
+            for (var itemIndex = 0; itemIndex < categoryItems.Count; itemIndex++)
+            {
+                var item = categoryItems[itemIndex];
+                AddChoicePosition(item.Key, categoryIndex, categoryName, categoryLabel, itemIndex);
+                foreach (var entry in item.Entries)
+                {
+                    AddChoicePosition(entry.DisplayKey, categoryIndex, categoryName, categoryLabel, itemIndex);
+                }
+
+                if (item.StringListTable is not null)
+                {
+                    AddChoicePosition(item.StringListTable.Key, categoryIndex, categoryName, categoryLabel, itemIndex);
+                }
+
+                if (item.StageTable is not null)
+                {
+                    AddChoicePosition(item.StageTable.Key, categoryIndex, categoryName, categoryLabel, itemIndex);
+                }
+            }
+        }
+
+        string GetChoiceConfigKey(SelectableValueChoice choice)
+        {
+            const string fullTableSuffix = " (full table)";
+            return choice.Key.EndsWith(fullTableSuffix, StringComparison.Ordinal)
+                ? choice.Key[..^fullTableSuffix.Length]
+                : choice.Key;
+        }
+
+        (int CategoryIndex, string CategoryName, string CategoryLabel, int ItemIndex) ResolveChoicePosition(SelectableValueChoice choice)
+        {
+            var key = GetChoiceConfigKey(choice);
+            if (choicePositions.TryGetValue(key, out var configuredPosition))
+            {
+                return configuredPosition;
+            }
+
+            var entry = _document?.Entries.FirstOrDefault(candidate => candidate.DisplayKey.Equals(key, StringComparison.Ordinal));
+            var stringListTable = _document?.StringListTables.FirstOrDefault(candidate => candidate.Key.Equals(key, StringComparison.Ordinal));
+            var stageTable = _document?.StageTables.FirstOrDefault(candidate => candidate.Key.Equals(key, StringComparison.Ordinal));
+            var categoryName = entry?.EffectiveCategory ?? stringListTable?.Section ?? stageTable?.Section ?? "Other";
+            var categoryIndex = categoryNames.FindIndex(candidate => candidate.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+            var itemIndex = entry?.LineIndex ?? stringListTable?.StartLineIndex ?? stageTable?.StartLineIndex ?? int.MaxValue;
+            return (
+                categoryIndex >= 0 ? categoryIndex : int.MaxValue,
+                categoryName,
+                categoryName.Equals("Other", StringComparison.OrdinalIgnoreCase) ? "Other" : GetCategoryDisplayName(categoryName),
+                itemIndex);
+        }
+
+        var orderedChoiceRows = choices
+            .Select((choice, originalIndex) =>
+            {
+                var position = ResolveChoicePosition(choice);
+                return new
+                {
+                    Choice = choice,
+                    position.CategoryIndex,
+                    position.CategoryName,
+                    position.CategoryLabel,
+                    position.ItemIndex,
+                    OriginalIndex = originalIndex
+                };
+            })
+            .OrderBy(row => row.CategoryIndex)
+            .ThenBy(row => row.CategoryLabel, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(row => row.ItemIndex)
+            .ThenBy(row => row.OriginalIndex)
+            .ToList();
+        var orderedChoices = orderedChoiceRows.Select(row => row.Choice).ToList();
+        var choiceGroups = orderedChoiceRows
+            .GroupBy(row => (row.CategoryIndex, row.CategoryName, row.CategoryLabel))
+            .Select(group => (
+                CategoryName: group.Key.CategoryName,
+                CategoryLabel: group.Key.CategoryLabel,
+                Choices: group.Select(row => row.Choice).ToList()))
+            .ToList();
         var newRows = new List<(string Label, string Summary)>();
         if (infoTabs is not null)
         {
@@ -16605,6 +17011,8 @@ internal sealed class MainForm : Form
 
             var updatingSelectionUi = false;
             var childChecks = new List<CheckBox>();
+            var categoryChecks = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
+            var categorySummaryLabels = new Dictionary<string, Label>(StringComparer.OrdinalIgnoreCase);
             CheckBox? parentCheck = null;
             Label? parentSummaryLabel = null;
 
@@ -16613,22 +17021,35 @@ internal sealed class MainForm : Form
                 return PreviewValue(choice.OtherValue) + " -> " + PreviewValue(choice.SelectedValue);
             }
 
-            string BuildGroupSummary()
+            string BuildGroupSummary(IReadOnlyCollection<SelectableValueChoice> groupChoices)
             {
-                if (orderedChoices.Count == 0)
+                if (groupChoices.Count == 0)
                 {
                     return Plural(newRows.Count, "new item", "new items");
                 }
 
-                var selectedCount = orderedChoices.Count(choice => choice.Selected);
+                var selectedCount = groupChoices.Count(choice => choice.Selected);
                 if (selectedCount == 0)
                 {
                     return "Not selected";
                 }
 
-                return selectedCount == orderedChoices.Count
-                    ? orderedChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes"
-                    : selectedCount.ToString(CultureInfo.InvariantCulture) + " of " + orderedChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes selected";
+                return selectedCount == groupChoices.Count
+                    ? groupChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes"
+                    : selectedCount.ToString(CultureInfo.InvariantCulture) + " of " + groupChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes selected";
+            }
+
+            static CheckState GetSelectionState(IReadOnlyCollection<SelectableValueChoice> groupChoices)
+            {
+                var selectedCount = groupChoices.Count(choice => choice.Selected);
+                if (selectedCount == 0)
+                {
+                    return CheckState.Unchecked;
+                }
+
+                return selectedCount == groupChoices.Count
+                    ? CheckState.Checked
+                    : CheckState.Indeterminate;
             }
 
             void RefreshSelectionUi()
@@ -16636,15 +17057,27 @@ internal sealed class MainForm : Form
                 updatingSelectionUi = true;
                 try
                 {
-                    var selectedCount = orderedChoices.Count(choice => choice.Selected);
-                    if (parentCheck is not null && parentCheck.Checked != (selectedCount > 0))
+                    if (parentCheck is not null)
                     {
-                        parentCheck.Checked = selectedCount > 0;
+                        parentCheck.CheckState = GetSelectionState(orderedChoices);
                     }
 
                     if (parentSummaryLabel is not null)
                     {
-                        parentSummaryLabel.Text = BuildGroupSummary();
+                        parentSummaryLabel.Text = BuildGroupSummary(orderedChoices);
+                    }
+
+                    foreach (var group in choiceGroups)
+                    {
+                        if (categoryChecks.TryGetValue(group.CategoryName, out var categoryCheck))
+                        {
+                            categoryCheck.CheckState = GetSelectionState(group.Choices);
+                        }
+
+                        if (categorySummaryLabels.TryGetValue(group.CategoryName, out var categorySummaryLabel))
+                        {
+                            categorySummaryLabel.Text = BuildGroupSummary(group.Choices);
+                        }
                     }
 
                     for (var i = 0; i < orderedChoices.Count && i < childChecks.Count; i++)
@@ -16714,49 +17147,92 @@ internal sealed class MainForm : Form
                 return row;
             }
 
+            static void BoldImportRow(TableLayoutPanel row)
+            {
+                foreach (var label in row.Controls.OfType<Label>())
+                {
+                    label.Font = new Font(label.Font, FontStyle.Bold);
+                }
+            }
+
             parentCheck = new CheckBox
             {
-                Checked = orderedChoices.Any(choice => choice.Selected),
+                ThreeState = true,
+                AutoCheck = false,
+                CheckState = GetSelectionState(orderedChoices),
                 Enabled = orderedChoices.Count > 0
             };
-            parentCheck.CheckedChanged += (_, _) =>
+            parentCheck.Click += (_, _) =>
             {
-                if (updatingSelectionUi)
-                {
-                    return;
-                }
-
+                var selectAll = orderedChoices.Any(choice => !choice.Selected);
                 foreach (var choice in orderedChoices)
                 {
-                    choice.Selected = parentCheck.Checked;
+                    choice.Selected = selectAll;
                 }
 
                 RefreshSelectionUi();
             };
-            var parentRow = MakeImportRow(28, parentCheck, groupName, BuildGroupSummary());
+            var parentRow = MakeImportRow(28, parentCheck, groupName, BuildGroupSummary(orderedChoices));
+            BoldImportRow(parentRow);
             parentSummaryLabel = parentRow.Controls.OfType<Label>().LastOrDefault();
             AddRow(parentRow);
 
-            foreach (var choice in orderedChoices)
+            foreach (var group in choiceGroups)
             {
-                var changeCheck = new CheckBox { Checked = choice.Selected };
-                changeCheck.CheckedChanged += (_, _) =>
+                var groupChoices = group.Choices;
+                var categoryCheck = new CheckBox
                 {
-                    if (updatingSelectionUi)
+                    ThreeState = true,
+                    AutoCheck = false,
+                    CheckState = GetSelectionState(groupChoices)
+                };
+                categoryCheck.Click += (_, _) =>
+                {
+                    var selectAll = groupChoices.Any(choice => !choice.Selected);
+                    foreach (var choice in groupChoices)
                     {
-                        return;
+                        choice.Selected = selectAll;
                     }
 
-                    choice.Selected = changeCheck.Checked;
                     RefreshSelectionUi();
                 };
-                childChecks.Add(changeCheck);
-                AddRow(MakeImportRow(68, changeCheck, choice.Key, BuildChangeSummary(choice)));
+                var categoryRow = MakeImportRow(48, categoryCheck, group.CategoryLabel, BuildGroupSummary(groupChoices));
+                BoldImportRow(categoryRow);
+                categoryChecks[group.CategoryName] = categoryCheck;
+                var categorySummaryLabel = categoryRow.Controls.OfType<Label>().LastOrDefault();
+                if (categorySummaryLabel is not null)
+                {
+                    categorySummaryLabels[group.CategoryName] = categorySummaryLabel;
+                }
+                AddRow(categoryRow);
+
+                foreach (var choice in groupChoices)
+                {
+                    var changeCheck = new CheckBox { Checked = choice.Selected };
+                    changeCheck.CheckedChanged += (_, _) =>
+                    {
+                        if (updatingSelectionUi)
+                        {
+                            return;
+                        }
+
+                        choice.Selected = changeCheck.Checked;
+                        RefreshSelectionUi();
+                    };
+                    childChecks.Add(changeCheck);
+                    AddRow(MakeImportRow(88, changeCheck, choice.Key, BuildChangeSummary(choice)));
+                }
             }
 
-            foreach (var newRow in newRows.OrderBy(row => row.Label, StringComparer.OrdinalIgnoreCase))
+            if (newRows.Count > 0)
             {
-                AddRow(MakeImportRow(68, null, newRow.Label, newRow.Summary));
+                var newItemsRow = MakeImportRow(48, null, "New items", Plural(newRows.Count, "new item", "new items"));
+                BoldImportRow(newItemsRow);
+                AddRow(newItemsRow);
+                foreach (var newRow in newRows.OrderBy(row => row.Label, StringComparer.OrdinalIgnoreCase))
+                {
+                    AddRow(MakeImportRow(88, null, newRow.Label, newRow.Summary));
+                }
             }
 
             selectAllButton.Click += (_, _) =>
