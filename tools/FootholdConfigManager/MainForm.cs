@@ -2381,7 +2381,6 @@ internal sealed class MainForm : Form
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
         };
-
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -5955,6 +5954,7 @@ internal sealed class MainForm : Form
 
     private List<CopyTargetPlan>? PromptForCopyTargets(List<CopyTargetPlan> plans, string sourcePath, string sourceConfigLabel)
     {
+        using var categoryFont = new Font(Font, FontStyle.Bold);
         using var dialog = new Form
         {
             Text = "Copy To Instances",
@@ -6031,10 +6031,103 @@ internal sealed class MainForm : Form
         buttons.Controls.Add(cancelButton);
         panel.Controls.Add(buttons, 0, 2);
 
+        var categoryNames = GetDesignerCategoryNames()
+            .Where(categoryName => !IsReservedCategory(categoryName))
+            .ToList();
+        var changePositions = new Dictionary<string, (int CategoryIndex, string CategoryName, string CategoryLabel, int ItemIndex)>(StringComparer.Ordinal);
+
+        void AddChangePosition(string key, int categoryIndex, string categoryName, string categoryLabel, int itemIndex)
+        {
+            if (!string.IsNullOrWhiteSpace(key) && !changePositions.ContainsKey(key))
+            {
+                changePositions[key] = (categoryIndex, categoryName, categoryLabel, itemIndex);
+            }
+        }
+
+        for (var categoryIndex = 0; categoryIndex < categoryNames.Count; categoryIndex++)
+        {
+            var categoryName = categoryNames[categoryIndex];
+            var categoryLabel = GetCategoryDisplayName(categoryName);
+            var categoryItems = GetDesignerItems(categoryName, includeTableRows: true, includeAdvanced: true);
+            for (var itemIndex = 0; itemIndex < categoryItems.Count; itemIndex++)
+            {
+                var item = categoryItems[itemIndex];
+                AddChangePosition(item.Key, categoryIndex, categoryName, categoryLabel, itemIndex);
+                foreach (var entry in item.Entries)
+                {
+                    AddChangePosition(entry.DisplayKey, categoryIndex, categoryName, categoryLabel, itemIndex);
+                }
+
+                if (item.StringListTable is not null)
+                {
+                    AddChangePosition(item.StringListTable.Key, categoryIndex, categoryName, categoryLabel, itemIndex);
+                }
+
+                if (item.StageTable is not null)
+                {
+                    AddChangePosition(item.StageTable.Key, categoryIndex, categoryName, categoryLabel, itemIndex);
+                }
+            }
+        }
+
+        (int CategoryIndex, string CategoryName, string CategoryLabel, int ItemIndex) ResolveChangePosition(CopyChange change)
+        {
+            if (changePositions.TryGetValue(change.Key, out var configuredPosition))
+            {
+                return configuredPosition;
+            }
+
+            var entry = _document?.Entries.FirstOrDefault(candidate => candidate.DisplayKey.Equals(change.Key, StringComparison.Ordinal)) ??
+                        _document?.Entries.FirstOrDefault(candidate =>
+                            !string.IsNullOrWhiteSpace(candidate.ParentKey) &&
+                            GetCopyTableRootKey(candidate.ParentKey).Equals(change.Key, StringComparison.Ordinal));
+            var stringListTable = _document?.StringListTables.FirstOrDefault(candidate => candidate.Key.Equals(change.Key, StringComparison.Ordinal));
+            var stageTable = _document?.StageTables.FirstOrDefault(candidate => candidate.Key.Equals(change.Key, StringComparison.Ordinal));
+            var categoryName = entry?.EffectiveCategory ?? stringListTable?.Section ?? stageTable?.Section ?? "Other";
+            var categoryIndex = categoryNames.FindIndex(candidate => candidate.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+            var itemIndex = entry?.LineIndex ?? stringListTable?.StartLineIndex ?? stageTable?.StartLineIndex ?? int.MaxValue;
+            return (
+                categoryIndex >= 0 ? categoryIndex : int.MaxValue,
+                categoryName,
+                categoryName.Equals("Other", StringComparison.OrdinalIgnoreCase) ? "Other" : GetCategoryDisplayName(categoryName),
+                itemIndex);
+        }
+
+        List<(string CategoryName, string CategoryLabel, List<CopyChange> Changes)> GetChangeGroups(CopyTargetPlan plan)
+        {
+            return plan.Changes
+                .Select((change, originalIndex) =>
+                {
+                    var position = ResolveChangePosition(change);
+                    return new
+                    {
+                        Change = change,
+                        position.CategoryIndex,
+                        position.CategoryName,
+                        position.CategoryLabel,
+                        position.ItemIndex,
+                        OriginalIndex = originalIndex
+                    };
+                })
+                .OrderBy(row => row.CategoryIndex)
+                .ThenBy(row => row.CategoryLabel, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(row => row.ItemIndex)
+                .ThenBy(row => row.OriginalIndex)
+                .GroupBy(row => (row.CategoryIndex, row.CategoryName, row.CategoryLabel))
+                .Select(group => (
+                    CategoryName: group.Key.CategoryName,
+                    CategoryLabel: group.Key.CategoryLabel,
+                    Changes: group.Select(row => row.Change).ToList()))
+                .ToList();
+        }
+
         var updatingSelectionUi = false;
         var targetCheckBoxes = new Dictionary<CopyTargetPlan, CheckBox>();
         var targetSummaryLabels = new Dictionary<CopyTargetPlan, Label>();
+        var categoryCheckBoxes = new Dictionary<(CopyTargetPlan Plan, string CategoryName), CheckBox>();
+        var categorySummaryLabels = new Dictionary<(CopyTargetPlan Plan, string CategoryName), Label>();
         var changeCheckBoxes = new Dictionary<(CopyTargetPlan Plan, string ChangeId), CheckBox>();
+        var categoryExpandedStates = new Dictionary<(CopyTargetPlan Plan, string CategoryName), bool>();
 
         void AddRow(Control control)
         {
@@ -6070,6 +6163,44 @@ internal sealed class MainForm : Form
                 : plan.SelectedChangeCount.ToString(CultureInfo.InvariantCulture) + " of " + plan.Changes.Count.ToString(CultureInfo.InvariantCulture) + " changes selected";
         }
 
+        string CategorySummary(CopyTargetPlan plan, IReadOnlyCollection<CopyChange> changes)
+        {
+            var selectedCount = changes.Count(change => plan.SelectedChangeIds.Contains(change.Id));
+            if (selectedCount == 0)
+            {
+                return "Not selected";
+            }
+
+            return selectedCount == changes.Count
+                ? changes.Count.ToString(CultureInfo.InvariantCulture) + " changes"
+                : selectedCount.ToString(CultureInfo.InvariantCulture) + " of " + changes.Count.ToString(CultureInfo.InvariantCulture) + " changes selected";
+        }
+
+        static CheckState GetSelectionState(CopyTargetPlan plan, IReadOnlyCollection<CopyChange> changes)
+        {
+            var selectedCount = changes.Count(change => plan.SelectedChangeIds.Contains(change.Id));
+            if (selectedCount == 0)
+            {
+                return CheckState.Unchecked;
+            }
+
+            return selectedCount == changes.Count
+                ? CheckState.Checked
+                : CheckState.Indeterminate;
+        }
+
+        static CheckState GetTargetSelectionState(CopyTargetPlan plan)
+        {
+            if (!plan.IsTargetSelected)
+            {
+                return CheckState.Unchecked;
+            }
+
+            return plan.Changes.Count == 0 || plan.SelectedChangeCount == plan.Changes.Count
+                ? CheckState.Checked
+                : CheckState.Indeterminate;
+        }
+
         bool CanCopy(CopyTargetPlan plan)
         {
             return CanApplyCopyPlan(plan);
@@ -6089,14 +6220,27 @@ internal sealed class MainForm : Form
             updatingSelectionUi = true;
             try
             {
-                if (targetCheckBoxes.TryGetValue(plan, out var targetCheck) && targetCheck.Checked != plan.IsTargetSelected)
+                if (targetCheckBoxes.TryGetValue(plan, out var targetCheck))
                 {
-                    targetCheck.Checked = plan.IsTargetSelected;
+                    targetCheck.CheckState = GetTargetSelectionState(plan);
                 }
 
                 if (targetSummaryLabels.TryGetValue(plan, out var targetSummaryLabel))
                 {
                     targetSummaryLabel.Text = TargetSummary(plan);
+                }
+
+                foreach (var group in GetChangeGroups(plan))
+                {
+                    if (categoryCheckBoxes.TryGetValue((plan, group.CategoryName), out var categoryCheck))
+                    {
+                        categoryCheck.CheckState = GetSelectionState(plan, group.Changes);
+                    }
+
+                    if (categorySummaryLabels.TryGetValue((plan, group.CategoryName), out var categorySummaryLabel))
+                    {
+                        categorySummaryLabel.Text = CategorySummary(plan, group.Changes);
+                    }
                 }
 
                 foreach (var change in plan.Changes)
@@ -6126,6 +6270,8 @@ internal sealed class MainForm : Form
                 rows.RowCount = 0;
                 targetCheckBoxes.Clear();
                 targetSummaryLabels.Clear();
+                categoryCheckBoxes.Clear();
+                categorySummaryLabels.Clear();
                 changeCheckBoxes.Clear();
 
                 foreach (var plan in plans)
@@ -6146,22 +6292,26 @@ internal sealed class MainForm : Form
 
                     var targetCheck = new CheckBox
                     {
-                        Checked = plan.IsTargetSelected,
+                        ThreeState = true,
+                        AutoCheck = false,
+                        CheckState = GetTargetSelectionState(plan),
                         Enabled = plan.LoadError is null || plan.CanCreateMissingConfig,
                         Dock = DockStyle.Fill,
                         Margin = new Padding(0),
                         BackColor = MainBackground,
                         ForeColor = PrimaryTextColor
                     };
-                    targetCheck.CheckedChanged += (_, _) =>
+                    targetCheck.Click += (_, _) =>
                     {
                         if (updatingSelectionUi)
                         {
                             return;
                         }
 
-                        plan.IsTargetSelected = targetCheck.Checked;
-                        if (targetCheck.Checked && !plan.MissingTargetConfig)
+                        var selectAll = !plan.IsTargetSelected ||
+                                        (!plan.MissingTargetConfig && plan.SelectedChangeCount < plan.Changes.Count);
+                        plan.IsTargetSelected = selectAll;
+                        if (selectAll && !plan.MissingTargetConfig)
                         {
                             plan.SelectedChangeIds.Clear();
                             foreach (var change in plan.Changes)
@@ -6254,7 +6404,7 @@ internal sealed class MainForm : Form
                         Padding = new Padding(Zoomed(32), 0, 0, Zoomed(8)),
                         BackColor = MainBackground
                     };
-                    detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(28)));
+                    detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(48)));
                     detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(300)));
                     detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
                     detailPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(34)));
@@ -6273,90 +6423,172 @@ internal sealed class MainForm : Form
                     else
                     {
                         var detailRow = 0;
-                        foreach (var change in plan.Changes)
+                        foreach (var group in GetChangeGroups(plan))
                         {
-                            var changeCheck = new CheckBox
+                            var groupChanges = group.Changes;
+                            var isCategoryExpanded = !categoryExpandedStates.TryGetValue((plan, group.CategoryName), out var expanded) || expanded;
+                            var categoryCheck = new CheckBox
                             {
-                                Checked = plan.SelectedChangeIds.Contains(change.Id),
-                                Enabled = true,
+                                ThreeState = true,
+                                AutoCheck = false,
+                                CheckState = GetSelectionState(plan, groupChanges),
                                 Dock = DockStyle.Fill,
                                 Margin = new Padding(0),
                                 BackColor = MainBackground,
                                 ForeColor = PrimaryTextColor
                             };
-                            changeCheck.CheckedChanged += (_, _) =>
+                            categoryCheck.Click += (_, _) =>
                             {
-                                if (updatingSelectionUi)
+                                var selectAll = groupChanges.Any(change => !plan.SelectedChangeIds.Contains(change.Id));
+                                foreach (var change in groupChanges)
                                 {
-                                    return;
-                                }
-
-                                if (changeCheck.Checked)
-                                {
-                                    plan.SelectedChangeIds.Add(change.Id);
-                                    plan.IsTargetSelected = true;
-                                }
-                                else
-                                {
-                                    plan.SelectedChangeIds.Remove(change.Id);
-                                    if (plan.SelectedChangeCount == 0)
+                                    if (selectAll)
                                     {
-                                        plan.IsTargetSelected = false;
+                                        plan.SelectedChangeIds.Add(change.Id);
+                                    }
+                                    else
+                                    {
+                                        plan.SelectedChangeIds.Remove(change.Id);
                                     }
                                 }
 
+                                plan.IsTargetSelected = plan.SelectedChangeCount > 0;
                                 UpdateSelectionUi(plan);
                             };
-                            changeCheckBoxes[(plan, change.Id)] = changeCheck;
-                            detailPanel.Controls.Add(changeCheck, 0, detailRow);
-                            var label = new Label
+                            categoryCheckBoxes[(plan, group.CategoryName)] = categoryCheck;
+                            detailPanel.Controls.Add(categoryCheck, 0, detailRow);
+
+                            var categoryLabel = new Label
                             {
-                                Text = change.Label,
+                                Text = group.CategoryLabel,
                                 Dock = DockStyle.Fill,
                                 AutoEllipsis = true,
                                 TextAlign = ContentAlignment.MiddleLeft,
                                 BackColor = MainBackground,
-                                ForeColor = PrimaryTextColor
+                                ForeColor = PrimaryTextColor,
+                                Font = categoryFont
                             };
-                            detailPanel.Controls.Add(label, 1, detailRow);
-                            var summaryLabel = new Label
+                            detailPanel.Controls.Add(categoryLabel, 1, detailRow);
+
+                            var categorySummaryLabel = new Label
                             {
-                                Text = change.Summary,
+                                Text = CategorySummary(plan, groupChanges),
                                 Dock = DockStyle.Fill,
                                 AutoEllipsis = true,
                                 TextAlign = ContentAlignment.MiddleLeft,
                                 BackColor = MainBackground,
-                                ForeColor = HelpTextColor
+                                ForeColor = HelpTextColor,
+                                Font = categoryFont
                             };
-                            detailPanel.Controls.Add(summaryLabel, 2, detailRow);
-                            var inspectButton = new Button
+                            categorySummaryLabels[(plan, group.CategoryName)] = categorySummaryLabel;
+                            detailPanel.Controls.Add(categorySummaryLabel, 2, detailRow);
+
+                            var expandCategoryButton = new Button
                             {
-                                Text = "?",
+                                Text = isCategoryExpanded ? "−" : "+",
                                 Dock = DockStyle.Fill,
                                 Margin = new Padding(Zoomed(4), 0, 0, 0),
                                 MinimumSize = new Size(Zoomed(28), DialogButtonHeight())
                             };
-                            inspectButton.Click += (_, _) => ShowCopyChangeDetails(change);
-                            _toolTip.SetToolTip(inspectButton, "View this difference.");
-                            detailPanel.Controls.Add(inspectButton, 3, detailRow);
-
-                            var hoverControls = new Control[] { changeCheck, label, summaryLabel };
-                            void SetHover(bool hover)
+                            expandCategoryButton.Click += (_, _) =>
                             {
-                                var color = hover ? HeaderBackground : MainBackground;
-                                foreach (var control in hoverControls)
-                                {
-                                    control.BackColor = color;
-                                }
-                            }
-
-                            foreach (var control in hoverControls.Append(inspectButton))
-                            {
-                                control.MouseEnter += (_, _) => SetHover(true);
-                                control.MouseLeave += (_, _) => SetHover(false);
-                            }
-
+                                categoryExpandedStates[(plan, group.CategoryName)] = !isCategoryExpanded;
+                                RebuildRows();
+                            };
+                            _toolTip.SetToolTip(expandCategoryButton, isCategoryExpanded ? "Hide this category." : "Show this category.");
+                            detailPanel.Controls.Add(expandCategoryButton, 3, detailRow);
                             detailRow++;
+
+                            if (!isCategoryExpanded)
+                            {
+                                continue;
+                            }
+
+                            foreach (var change in groupChanges)
+                            {
+                                var changeCheck = new CheckBox
+                                {
+                                    Checked = plan.SelectedChangeIds.Contains(change.Id),
+                                    Enabled = true,
+                                    Dock = DockStyle.Fill,
+                                    Margin = new Padding(Zoomed(20), 0, 0, 0),
+                                    BackColor = MainBackground,
+                                    ForeColor = PrimaryTextColor
+                                };
+                                changeCheck.CheckedChanged += (_, _) =>
+                                {
+                                    if (updatingSelectionUi)
+                                    {
+                                        return;
+                                    }
+
+                                    if (changeCheck.Checked)
+                                    {
+                                        plan.SelectedChangeIds.Add(change.Id);
+                                        plan.IsTargetSelected = true;
+                                    }
+                                    else
+                                    {
+                                        plan.SelectedChangeIds.Remove(change.Id);
+                                        if (plan.SelectedChangeCount == 0)
+                                        {
+                                            plan.IsTargetSelected = false;
+                                        }
+                                    }
+
+                                    UpdateSelectionUi(plan);
+                                };
+                                changeCheckBoxes[(plan, change.Id)] = changeCheck;
+                                detailPanel.Controls.Add(changeCheck, 0, detailRow);
+                                var label = new Label
+                                {
+                                    Text = change.Label,
+                                    Dock = DockStyle.Fill,
+                                    AutoEllipsis = true,
+                                    TextAlign = ContentAlignment.MiddleLeft,
+                                    BackColor = MainBackground,
+                                    ForeColor = PrimaryTextColor
+                                };
+                                detailPanel.Controls.Add(label, 1, detailRow);
+                                var summaryLabel = new Label
+                                {
+                                    Text = change.Summary,
+                                    Dock = DockStyle.Fill,
+                                    AutoEllipsis = true,
+                                    TextAlign = ContentAlignment.MiddleLeft,
+                                    BackColor = MainBackground,
+                                    ForeColor = HelpTextColor
+                                };
+                                detailPanel.Controls.Add(summaryLabel, 2, detailRow);
+                                var inspectButton = new Button
+                                {
+                                    Text = "?",
+                                    Dock = DockStyle.Fill,
+                                    Margin = new Padding(Zoomed(4), 0, 0, 0),
+                                    MinimumSize = new Size(Zoomed(28), DialogButtonHeight())
+                                };
+                                inspectButton.Click += (_, _) => ShowCopyChangeDetails(change);
+                                _toolTip.SetToolTip(inspectButton, "View this difference.");
+                                detailPanel.Controls.Add(inspectButton, 3, detailRow);
+
+                                var hoverControls = new Control[] { changeCheck, label, summaryLabel };
+                                void SetHover(bool hover)
+                                {
+                                    var color = hover ? HeaderBackground : MainBackground;
+                                    foreach (var control in hoverControls)
+                                    {
+                                        control.BackColor = color;
+                                    }
+                                }
+
+                                foreach (var control in hoverControls.Append(inspectButton))
+                                {
+                                    control.MouseEnter += (_, _) => SetHover(true);
+                                    control.MouseLeave += (_, _) => SetHover(false);
+                                }
+
+                                detailRow++;
+                            }
                         }
                     }
 
