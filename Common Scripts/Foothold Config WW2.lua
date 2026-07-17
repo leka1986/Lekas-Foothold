@@ -213,6 +213,7 @@ RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be furt
 -- players in the table below are counted as active players if they are not in the CapCountIgnoreTypes.
 -- @gui label="RED CAP Limit"
 -- @gui linkedSetting="CapDifficulty"
+-- @gui installPolicy="keepTable"
 CapLimitStages = {
 	easy = {
 		{ player = 0,   amount = 0 },
@@ -227,10 +228,10 @@ CapLimitStages = {
 	medium = {
 		{ player = 0,   amount = 1 },
 		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 3 },
-		{ player = 6,   amount = 4 },
+		{ player = 2, amount = 1 },
+		{ player = 3, amount = 2 },
+		{ player = 4, amount = 2 },
+		{ player = 5, amount = 3 },
 		{ player = 9,   amount = 5 },
 		{ player = 10,  amount = 6 },
 		{ player = 999, amount = 7 },
@@ -253,6 +254,7 @@ CapLimitStages = {
 -- The "amount" field in the table below is the amount of CAS flights that can be active at the same time.
 -- @gui label="RED CAS Limit"
 -- @gui linkedSetting="CasDifficulty"
+-- @gui installPolicy="keepTable"
 RedCasLimitStages = {
 	easy = {
 		{ player = 0,   amount = 0 },
@@ -266,7 +268,7 @@ RedCasLimitStages = {
 	medium = {
 		{ player = 0,   amount = 1 },
 		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 2 },
+		{ player = 2, amount = 1 },
 		{ player = 3,   amount = 2 },
 		{ player = 4,   amount = 3 },
 		{ player = 5,   amount = 3 },
@@ -290,6 +292,7 @@ RedCasLimitStages = {
 -- The "amount" field in the table below is the amount of Runway Strike flights that can be active at the same time.
 -- @gui label="RED Runway Strike Limit"
 -- @gui linkedSetting="RunwayStrikeDifficulty"
+-- @gui installPolicy="keepTable"
 RedRunwayStrikeLimitStages = {
 	easy = {
 		{ player = 0,   amount = 0 },
@@ -327,6 +330,7 @@ RedRunwayStrikeLimitStages = {
 -- The logic here, The less the players, the more AI will help you. The list in CapCountIgnoreTypes, is types that doesn't count as active players.
 -- @gui label="BLUE CAP Support"
 -- @gui linkedSetting="FriendlyCapSupport"
+-- @gui installPolicy="keepTable"
 BlueCapSupportStages = {
 	easy = {
 		{ player = 0,   amount = 2 },
@@ -347,6 +351,7 @@ BlueCapSupportStages = {
 -- The logic here, The less the players, the more AI will help you. The list in BlueCasCountIgnoreTypes, is types that doesn't count as active players.
 -- @gui label="BLUE CAS Support"
 -- @gui linkedSetting="FriendlyCasSupport"
+-- @gui installPolicy="keepTable"
 BlueCasSupportStages = {
 	easy = {
 		{ player = 0,   amount = 2 },

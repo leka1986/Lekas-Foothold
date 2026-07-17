@@ -527,6 +527,7 @@ RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be furt
 -- players in the table below are counted as active players if they are not in the CapCountIgnoreTypes.
 -- @gui label="RED CAP Limit"
 -- @gui linkedSetting="CapDifficulty"
+-- @gui installPolicy="keepTable"
 CapLimitStages = {
 	easy = {
 		{ player = 0,   amount = 0 },
@@ -541,23 +542,23 @@ CapLimitStages = {
 	medium = {
 		{ player = 0,   amount = 1 },
 		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 3 },
-		{ player = 6,   amount = 4 },
-		{ player = 9,   amount = 5 },
+		{ player = 2, amount = 1 },
+		{ player = 3, amount = 2 },
+		{ player = 4, amount = 2 },
+		{ player = 5, amount = 3 },
+		{ player = 9, amount = 4 },
 		{ player = 10,  amount = 6 },
 		{ player = 999, amount = 7 },
 	},
 	hard = {
 		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 2 },
-		{ player = 2,   amount = 3 },
-		{ player = 3,   amount = 4 },
-		{ player = 4,   amount = 5 },
-		{ player = 6,   amount = 5 },
-		{ player = 9,   amount = 6 },
-		{ player = 10,  amount = 7 },
+		{ player = 1, amount = 1 },
+		{ player = 2, amount = 2 },
+		{ player = 3, amount = 3 },
+		{ player = 4, amount = 3 },
+		{ player = 6, amount = 4 },
+		{ player = 9, amount = 5 },
+		{ player = 10, amount = 6 },
 		{ player = 999, amount = 8 },
 	},
 }
@@ -567,6 +568,7 @@ CapLimitStages = {
 -- The "amount" field in the table below is the amount of CAS flights that can be active at the same time.
 -- @gui label="RED CAS Limit"
 -- @gui linkedSetting="CasDifficulty"
+-- @gui installPolicy="keepTable"
 RedCasLimitStages = {
 	easy = {
 		{ player = 0,   amount = 0 },
@@ -580,16 +582,16 @@ RedCasLimitStages = {
 	medium = {
 		{ player = 0,   amount = 1 },
 		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 2 },
+		{ player = 2, amount = 1 },
 		{ player = 3,   amount = 2 },
-		{ player = 4,   amount = 3 },
+		{ player = 4, amount = 2 },
 		{ player = 5,   amount = 3 },
-		{ player = 9,   amount = 4 },
+		{ player = 9, amount = 3 },
 		{ player = 999, amount = 4 },
 	},
 	hard = {
 		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 2 },
+		{ player = 1, amount = 1 },
 		{ player = 2,   amount = 2 },
 		{ player = 3,   amount = 3 },
 		{ player = 4,   amount = 4 },
@@ -604,6 +606,7 @@ RedCasLimitStages = {
 -- The "amount" field in the table below is the amount of SEAD flights that can be active at the same time.
 -- @gui label="RED SEAD Limit"
 -- @gui linkedSetting="SeadDifficulty"
+-- @gui installPolicy="keepTable"
 RedSeadLimitStages = {
 	easy = {
 		{ player = 0,   amount = 0 },
@@ -618,19 +621,19 @@ RedSeadLimitStages = {
 		{ player = 0,   amount = 0 },
 		{ player = 1,   amount = 1 },
 		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 2 },
-		{ player = 4,   amount = 3 },
-		{ player = 5,   amount = 3 },
-		{ player = 9,   amount = 4 },
+		{ player = 3, amount = 1 },
+		{ player = 4, amount = 2 },
+		{ player = 5, amount = 2 },
+		{ player = 9, amount = 3 },
 		{ player = 999, amount = 4 },
 	},
 	hard = {
 		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 2 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 4 },
-		{ player = 5,   amount = 4 },
+		{ player = 1, amount = 1 },
+		{ player = 2, amount = 1 },
+		{ player = 3, amount = 2 },
+		{ player = 4, amount = 3 },
+		{ player = 5, amount = 3 },
 		{ player = 9,   amount = 6 },
 		{ player = 999, amount = 7 },
 	},
@@ -641,6 +644,7 @@ RedSeadLimitStages = {
 -- The "amount" field in the table below is the amount of Runway Strike flights that can be active at the same time.
 -- @gui label="RED Runway Strike Limit"
 -- @gui linkedSetting="RunwayStrikeDifficulty"
+-- @gui installPolicy="keepTable"
 RedRunwayStrikeLimitStages = {
 	easy = {
 		{ player = 0,   amount = 0 },
@@ -655,8 +659,8 @@ RedRunwayStrikeLimitStages = {
 		{ player = 0,   amount = 0 },
 		{ player = 1,   amount = 0 },
 		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 2 },
-		{ player = 4,   amount = 3 },
+		{ player = 3, amount = 1 },
+		{ player = 4, amount = 2 },
 		{ player = 5,   amount = 3 },
 		{ player = 9,   amount = 4 },
 		{ player = 999, amount = 4 },
@@ -678,6 +682,7 @@ RedRunwayStrikeLimitStages = {
 -- The logic here, The less the players, the more AI will help you. The list in CapCountIgnoreTypes, is types that doesn't count as active players.
 -- @gui label="BLUE CAP Support"
 -- @gui linkedSetting="FriendlyCapSupport"
+-- @gui installPolicy="keepTable"
 BlueCapSupportStages = {
 	easy = {
 		{ player = 0,   amount = 2 },
@@ -686,8 +691,8 @@ BlueCapSupportStages = {
 	},
 	medium = {
 		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
-		{ player = 999, amount = 0 },
+		{ player = 1, amount = 1 },
+		{ player = 1000, amount = 0 },
 	},
 	hard = {
 		{ player = 999, amount = 0 },
@@ -698,6 +703,7 @@ BlueCapSupportStages = {
 -- The logic here, The less the players, the more AI will help you. The list in BlueCasCountIgnoreTypes, is types that doesn't count as active players.
 -- @gui label="BLUE CAS Support"
 -- @gui linkedSetting="FriendlyCasSupport"
+-- @gui installPolicy="keepTable"
 BlueCasSupportStages = {
 	easy = {
 		{ player = 0,   amount = 2 },
@@ -718,6 +724,7 @@ BlueCasSupportStages = {
 -- Advance settings for FriendlySeadSupport.
 -- @gui label="BLUE SEAD Support"
 -- @gui linkedSetting="FriendlySeadSupport"
+-- @gui installPolicy="keepTable"
 BlueSeadSupportStages = {
 	easy = {
 		{ player = 0,   amount = 2 },
@@ -1421,7 +1428,7 @@ ArcoSpeed = 286 -- orbit speed for arco is hardcoded at 280, otherwise strange t
 -- ============================================================================
 
 -- @gui validValues="Style 1=1 | Style 2=2"
-ewrs_defaultReportStyle = 1 -- Default EWRS report format. Style 1 keeps the current format. Style 2 uses compact separator lines. Players can change this via the F10 EWRS menu.
+ewrs_defaultReportStyle = 2 -- Default EWRS report format. Style 1 keeps the current format. Style 2 uses compact separator lines. Players can change this via the F10 EWRS menu.
 
 -- Maximum detection range choices shown in the player F10 EWRS menu.
 -- Valid values: 10 | 20 | 40 | 60 | 80 | 100 | 150

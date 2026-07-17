@@ -13773,8 +13773,9 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		if cache.state ~= triggerState then return nil end
 		if cache.ignore ~= (ignore == true) then return nil end
 		local value = cache.value == true
+		local denialReason = cache.denialReason
 		gc._spawnEvalCache = nil
-		return value
+		return value, denialReason
 	end
 
 	function BattleCommander:_isSpawnableCached(gc, ttlSec)
@@ -13836,9 +13837,10 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 					self._spawnEvalQueued[entry.key] = nil
 					local st = gc.state
 					if st == entry.state and (st == 'inhangar' or st == 'preparing' or st == 'dead') then
-						local decision = gc:shouldSpawn(entry.ignore)
+						local decision, denialReason = gc:shouldSpawn(entry.ignore)
 						gc._spawnEvalCache = {
 							value = decision == true,
+							denialReason = denialReason,
 							state = entry.state,
 							ignore = entry.ignore == true,
 							at = timer.getAbsTime(),
@@ -24443,7 +24445,8 @@ function SetUpCAP(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side)
 		alt=altm, alt_type=AI.Task.AltitudeType.BARO,
 		task={ id='ComboTask', params={ tasks={
 			{ number=1, auto=false, id='EngageTargets', enabled=true, params=search.params },
-			{ number=2, auto=false, id='Orbit', enabled=true, params=orbit.params }
+			--{ number=2, auto=false, id='Orbit', enabled=true, params=orbit.params }
+			{ number=2, auto=false, id='ControlledTask', enabled=true, params={ task=orbit, stopCondition={ duration=math.random(15 * 60, 30 * 60) } } }
 		}}}
 	})
 
@@ -35080,6 +35083,161 @@ end
 end
 GroupCommander = {}
 do
+	local AIR_LIMIT_DENIAL_REASON = 'air-limit'
+	local CAP_LIMIT_DENIAL_REASON = 'cap-limit'
+	local AIR_LIMIT_RETRY_POLICY = {
+		CAP = { minimum = 5 * 60, step = 2 * 60, maximum = 15 * 60 },
+		CAS = { minimum = 4 * 60, step = 4 * 60, maximum = 20 * 60, randomWindow = 4 * 60 },
+		SEAD = { minimum = 4 * 60, step = 4 * 60, maximum = 20 * 60, randomWindow = 4 * 60 },
+		RUNWAYSTRIKE = { minimum = 15 * 60, step = 2 * 60, maximum = 25 * 60 },
+	}
+	local CAP_LIMIT_RANK_GAP_MIN = 2 * 60
+	local CAP_LIMIT_RANK_GAP_MAX = 5 * 60
+
+	-- A full CAP limit schedules one ranked snapshot so later candidates cannot overtake its leader.
+	function BattleCommander:_getCapLimitRetryCohort(side, mission)
+		self._capLimitRetryCohorts = self._capLimitRetryCohorts or {}
+		local sideCohorts = self._capLimitRetryCohorts[side]
+		if not sideCohorts then
+			sideCohorts = {}
+			self._capLimitRetryCohorts[side] = sideCohorts
+		end
+		return sideCohorts[mission], sideCohorts
+	end
+
+	function BattleCommander:_getOrderedCapLimitRetryCandidates(side, mission, requiredGroup)
+		local ordered = {}
+		local seenGroups = {}
+		local seenTargets = {}
+		local targetMap = CapTargets and CapTargets[side] and CapTargets[side][mission] or {}
+
+		local function addGroup(gc)
+			if not gc or seenGroups[gc.name] then return end
+			if gc.side ~= side or gc.MissionType ~= 'CAP' or gc.mission ~= mission then return end
+			if gc.state ~= 'inhangar' or gc.Spawned or gc._dynamicHybridRetired == true then return end
+			seenGroups[gc.name] = true
+			ordered[#ordered + 1] = gc
+		end
+
+		local function addTarget(targetZoneName)
+			if seenTargets[targetZoneName] then return end
+			seenTargets[targetZoneName] = true
+			local ctx = targetMap[targetZoneName]
+			for _, rec in ipairs((ctx and ctx.candidates) or {}) do
+				addGroup(CapRef and CapRef[rec.name])
+			end
+		end
+
+		local zoneDistances = getClosestCapZonesToPlayers(mission, side, nil)
+		for _, zoneRecord in ipairs(zoneDistances or {}) do
+			addTarget(zoneRecord.zone)
+		end
+
+		local remainingTargets = {}
+		for targetZoneName in pairs(targetMap) do
+			if not seenTargets[targetZoneName] then
+				remainingTargets[#remainingTargets + 1] = targetZoneName
+			end
+		end
+		table.sort(remainingTargets)
+		for _, targetZoneName in ipairs(remainingTargets) do
+			addTarget(targetZoneName)
+		end
+
+		addGroup(requiredGroup)
+		return ordered
+	end
+
+	function BattleCommander:_scheduleCapLimitRetryCohort(deniedGroup, now)
+		now = now or timer.getAbsTime()
+		deniedGroup:_enterHangar(false)
+
+		local cohort, sideCohorts = self:_getCapLimitRetryCohort(deniedGroup.side, deniedGroup.mission)
+		local leader = cohort and cohort.leaderName and CapRef and CapRef[cohort.leaderName]
+		local cohortActive = leader
+			and leader.state == 'inhangar'
+			and leader._capLimitRetryGeneration == cohort.generation
+			and leader._airLimitRetryAt ~= nil
+
+		local function assignRetry(gc, generation, denialCount, retryAt)
+			gc._spawnEvalCache = nil
+			gc._spawnEvalLast = nil
+			gc._airLimitDenialCount = denialCount
+			gc._airLimitRetryAt = retryAt
+			gc._capLimitRetryGeneration = generation
+			gc:_clearDormantFsmDelay()
+		end
+
+		if cohortActive then
+			local retryAt = cohort.retryAtByName[deniedGroup.name]
+			if not retryAt or retryAt <= now then
+				retryAt = math.max(cohort.lastRetryAt or now, now) + math.random(CAP_LIMIT_RANK_GAP_MIN, CAP_LIMIT_RANK_GAP_MAX)
+				cohort.lastRetryAt = retryAt
+				cohort.retryAtByName[deniedGroup.name] = retryAt
+				cohort.members[deniedGroup.name] = true
+			end
+			assignRetry(deniedGroup, cohort.generation, cohort.denialCount, retryAt)
+			return true
+		end
+
+		local policy = AIR_LIMIT_RETRY_POLICY.CAP
+		local denialCount = ((cohort and cohort.denialCount) or 0) + 1
+		local baseDelay = math.min(policy.minimum + ((denialCount - 1) * policy.step), policy.maximum)
+		local generation = ((cohort and cohort.generation) or 0) + 1
+		local ordered = self:_getOrderedCapLimitRetryCandidates(deniedGroup.side, deniedGroup.mission, deniedGroup)
+		local retryAt = now + baseDelay
+		local retryAtByName = {}
+		local members = {}
+
+		for rank, gc in ipairs(ordered) do
+			if rank > 1 then
+				retryAt = retryAt + math.random(CAP_LIMIT_RANK_GAP_MIN, CAP_LIMIT_RANK_GAP_MAX)
+			end
+			retryAtByName[gc.name] = retryAt
+			members[gc.name] = true
+			assignRetry(gc, generation, denialCount, retryAt)
+		end
+
+		sideCohorts[deniedGroup.mission] = {
+			generation = generation,
+			denialCount = denialCount,
+			leaderName = ordered[1].name,
+			winnerName = nil,
+			lastRetryAt = retryAt,
+			retryAtByName = retryAtByName,
+			members = members,
+		}
+		return true
+	end
+
+	function BattleCommander:_markCapLimitRetryWinner(groupCommander, generation)
+		local cohort = self:_getCapLimitRetryCohort(groupCommander.side, groupCommander.mission)
+		if not cohort or cohort.generation ~= generation then return end
+
+		cohort.denialCount = 0
+		cohort.leaderName = groupCommander.name
+		cohort.winnerName = groupCommander.name
+		for groupName in pairs(cohort.members) do
+			local gc = CapRef and CapRef[groupName]
+			if gc and gc ~= groupCommander then
+				gc._spawnEvalCache = nil
+				gc._spawnEvalLast = nil
+			end
+		end
+	end
+
+	function BattleCommander:_shouldHoldCapLimitRetryFollower(groupCommander)
+		local generation = groupCommander._capLimitRetryGeneration
+		if not generation then return false end
+		local cohort = self:_getCapLimitRetryCohort(groupCommander.side, groupCommander.mission)
+		if not cohort or cohort.generation ~= generation or not cohort.winnerName or cohort.winnerName == groupCommander.name then
+			return false
+		end
+
+		local winner = CapRef and CapRef[cohort.winnerName]
+		return winner and winner.state == 'preparing' and not winner.Spawned or false
+	end
+
 	--{ name='groupname', mission=['patrol', 'supply', 'attack'], targetzone='zonename', type=['air','carrier_air','surface'] }
 function GroupCommander:new(obj)
     obj = obj or {}
@@ -35126,6 +35284,45 @@ function GroupCommander:_applyHangarDelay(isInitial)
     end
 
     self.lastStateTime = now + delay
+end
+
+function GroupCommander:_clearAirLimitRetry()
+	local capLimitRetryGeneration = self._capLimitRetryGeneration
+	self._airLimitDenialCount = nil
+	self._airLimitRetryAt = nil
+	self._capLimitRetryGeneration = nil
+	if capLimitRetryGeneration and self.MissionType == 'CAP' then
+		self.zoneCommander.battleCommander:_markCapLimitRetryWinner(self, capLimitRetryGeneration)
+	end
+end
+
+function GroupCommander:_scheduleAirLimitRetry(now)
+	local policy = AIR_LIMIT_RETRY_POLICY[self.MissionType]
+	if not policy then return false end
+
+	local denialCount = (self._airLimitDenialCount or 0) + 1
+	local randomWindow = policy.randomWindow or 0
+	local baseMaximum = policy.maximum - randomWindow
+	local baseDelay = math.min(policy.minimum + ((denialCount - 1) * policy.step), baseMaximum)
+	local delay
+	if randomWindow > 0 then
+		delay = baseDelay + math.random(0, randomWindow)
+	else
+		local staggerKey = tostring(self.name) .. '|' .. tostring(self.MissionType) .. '|' .. tostring(denialCount)
+		local stagger = denialCount % 61
+		for i = 1, #staggerKey do stagger = (stagger + (staggerKey:byte(i) * i)) % 61 end
+		delay = math.min(baseDelay + stagger, policy.maximum)
+	end
+
+	self:_enterHangar(false)
+	self._airLimitDenialCount = denialCount
+	self._airLimitRetryAt = (now or timer.getAbsTime()) + delay
+	self._capLimitRetryGeneration = nil
+	return true
+end
+
+function GroupCommander:_scheduleCapLimitRetry(now)
+	return self.zoneCommander.battleCommander:_scheduleCapLimitRetryCohort(self, now)
 end
 
 function GroupCommander:_removeFromSuspendedLiveFsm()
@@ -35296,6 +35493,7 @@ end
 
 function GroupCommander:forceSpawnNow(targetZoneName)
 	local oldTarget = self.targetzone
+	self:_clearAirLimitRetry()
 
 	if targetZoneName then
 		self.targetzone = targetZoneName
@@ -39202,6 +39400,24 @@ function GroupCommander:_shouldSkipDormantFsmUpdate(now)
 	end
 
 	self:_clearDormantFsmDelay()
+	if self._airLimitRetryAt then
+		if now < self._airLimitRetryAt then
+			local maxSleep = GlobalSettings.dormantFsmMaxSleepSec or 30
+			if maxSleep < 1 then maxSleep = 1 end
+			self._nextDormantFsmCheckAt = math.min(self._airLimitRetryAt, now + maxSleep)
+			self._dormantFsmReason = AIR_LIMIT_DENIAL_REASON
+			return true
+		end
+		if self.MissionType == 'CAP' and self.zoneCommander.battleCommander:_shouldHoldCapLimitRetryFollower(self) then
+			local maxSleep = GlobalSettings.dormantFsmMaxSleepSec or 30
+			if maxSleep < 1 then maxSleep = 1 end
+			self._nextDormantFsmCheckAt = now + maxSleep
+			self._dormantFsmReason = CAP_LIMIT_DENIAL_REASON
+			return true
+		end
+		return false
+	end
+
 	local delay = self:_dormantFsmRespawnDelay()
 	if delay then
 		local bcObj = self.zoneCommander and self.zoneCommander.battleCommander
@@ -39228,11 +39444,11 @@ function GroupCommander:_consumeShouldSpawnDecision(triggerState, ignore)
 	if not bcObj or bcObj.spawnEvalEnabled == false then
 		return self:shouldSpawn(ignore)
 	end
-	local decision = bcObj:_consumeShouldSpawnEval(self, triggerState, ignore)
+	local decision, denialReason = bcObj:_consumeShouldSpawnEval(self, triggerState, ignore)
 	if decision == nil then
 		bcObj:_queueShouldSpawnEval(self, triggerState, ignore)
 	end
-	return decision
+	return decision, denialReason
 end
 
 function GroupCommander:shouldSpawn(ignore)
@@ -39379,6 +39595,9 @@ function GroupCommander:shouldSpawn(ignore)
 					end
 					local players = getRedCasPlayersCount() or 0
 					if self.MissionType ~='CAS' and players == 0 then
+						if AIR_LIMIT_RETRY_POLICY[self.MissionType] then
+							return false, AIR_LIMIT_DENIAL_REASON
+						end
 						return false
 					end
 					local planeLimit = 0
@@ -39398,15 +39617,16 @@ function GroupCommander:shouldSpawn(ignore)
 					local activePlanes = self.zoneCommander.battleCommander:getActiveStrikeCount(1,'attack',self.MissionType,plane)
 					local activeHelos = self.zoneCommander.battleCommander:getActiveStrikeCount(1,'attack',self.MissionType,heli)
 					local activeTotal = self.zoneCommander.battleCommander:getActiveStrikeCount(1,'attack',self.MissionType,nil)
+					local denialReason = AIR_LIMIT_RETRY_POLICY[self.MissionType] and AIR_LIMIT_DENIAL_REASON or nil
 
 					-- Hybrid cap: keep plane limit from config, but allow one extra helicopter slot.
 					if self.unitCategory == plane then
-						if planeLimit <= 0 then return false end
-						if activePlanes >= planeLimit then return false end
+						if planeLimit <= 0 then return false, denialReason end
+						if activePlanes >= planeLimit then return false, denialReason end
 						return true
 					elseif self.unitCategory == heli then
-						if activeHelos >= heloBonus then return false end
-						if activeTotal >= totalLimit then return false end
+						if activeHelos >= heloBonus then return false, denialReason end
+						if activeTotal >= totalLimit then return false, denialReason end
 						return true
 					end
 					return false
@@ -39489,6 +39709,7 @@ function GroupCommander:shouldSpawn(ignore)
                     if DebugIsOn then
                         env.info(string.format("[DEBUG] CAP patrol limit reached: currentCap=%d, limit=%d, mission=%s", currentCap, limit, self.name))
                     end
+                    if self.side == 1 then return false, CAP_LIMIT_DENIAL_REASON end
                     return false
                 end
                 local capLeft = limit - currentCap
@@ -39523,6 +39744,7 @@ function GroupCommander:shouldSpawn(ignore)
                             env.info(string.format("[CAP TOP] #%d %s dist=%.0f", i, zdi.zone, zdi.distance))
                         end
                     end
+                    if self.side == 1 then return false, AIR_LIMIT_DENIAL_REASON end
                     self:_enterHangar(false)
                     return false
                 end
@@ -39539,6 +39761,7 @@ function GroupCommander:shouldSpawn(ignore)
                             if st=='preparing' then activeAhead=activeAhead+1 end
                         end
                         if activeAhead>=capLeft then
+                            if self.side == 1 then return false, CAP_LIMIT_DENIAL_REASON end
                             self:_enterHangar(false)
                             return false
                         end
@@ -39567,6 +39790,7 @@ function GroupCommander:shouldSpawn(ignore)
                     if DebugIsOn then
                         env.info(string.format("[DEBUG] CAP attack limit reached: currentCap=%d, limit=%d, mission=%s", currentCap, limit, self.name))
                     end
+                    if self.side == 1 then return false, CAP_LIMIT_DENIAL_REASON end
                     return false
                 end
                 local capLeft = limit - currentCap
@@ -39597,6 +39821,7 @@ function GroupCommander:shouldSpawn(ignore)
                     if DebugIsOn then
                         env.info(string.format("[DEBUG] attack CAP is not within the top %d zones; skipping spawn: mission=%s", capWindow, self.name))
                     end
+                    if self.side == 1 then return false, AIR_LIMIT_DENIAL_REASON end
                     return false
                 end
                 local ctx = capMeta and capMeta.targets and capMeta.targets[tg.zone]
@@ -39612,6 +39837,7 @@ function GroupCommander:shouldSpawn(ignore)
                             if st=='preparing' then activeAhead=activeAhead+1 end
                         end
                         if activeAhead>=capLeft then
+                            if self.side == 1 then return false, CAP_LIMIT_DENIAL_REASON end
                             return false
                         end
                     end
@@ -40407,11 +40633,18 @@ end
 		end
 
     if self.state == 'inhangar' then
-        if now - self.lastStateTime > (respawnTimers.hangar * spawnDelayFactor) then
+        local airLimitRetryAt = self._airLimitRetryAt
+        local hangarReady = airLimitRetryAt and now >= airLimitRetryAt
+            or not airLimitRetryAt and now - self.lastStateTime > (respawnTimers.hangar * spawnDelayFactor)
+        if hangarReady then
             if self.diceChance and self.diceChance > 0 and not self.diceRolled then
                 self.diceRolled = true
                 local roll = math.random(1, 100)
                 if roll > self.diceChance then
+					if airLimitRetryAt then
+						self._airLimitRetryAt = nil
+						self._capLimitRetryGeneration = nil
+					end
                     self:_removeFromSuspendedLiveFsm()
                     self.state = 'dead'
                     self.lastStateTime = now
@@ -40420,12 +40653,21 @@ end
                 end
             end
 
-            local canSpawn = self:_consumeShouldSpawnDecision('inhangar', false)
+            local canSpawn, denialReason = self:_consumeShouldSpawnDecision('inhangar', false)
             if canSpawn == nil then return end
             if canSpawn then
+                self:_clearAirLimitRetry()
                 self.state = 'preparing'
                 self.lastStateTime = now
+			elseif denialReason == CAP_LIMIT_DENIAL_REASON then
+				self._airLimitRetryAt = nil
+				self._capLimitRetryGeneration = nil
+				self:_scheduleCapLimitRetry(now)
+			elseif denialReason == AIR_LIMIT_DENIAL_REASON then
+				self:_scheduleAirLimitRetry(now)
 			else
+				self._airLimitRetryAt = nil
+				self._capLimitRetryGeneration = nil
 				self:_enterHangar(false)
 			end
         end
@@ -40601,9 +40843,10 @@ end
 					return
 				end
 			else
-				local canSpawn = self:_consumeShouldSpawnDecision('preparing', false)
+				local canSpawn, denialReason = self:_consumeShouldSpawnDecision('preparing', false)
 				if canSpawn == nil then return end
 				if canSpawn then
+					self:_clearAirLimitRetry()
 					if self.MissionType == 'SEAD' then
 					if bcObj and not bcObj:HasSeadTargets(self.targetzone, true) then
 						self:_enterHangar(false)
@@ -40914,6 +41157,12 @@ end
 				else
 					self:_enterHangar(false)
 				end
+			elseif denialReason == CAP_LIMIT_DENIAL_REASON then
+				self:_scheduleCapLimitRetry(now)
+				return
+			elseif denialReason == AIR_LIMIT_DENIAL_REASON then
+				self:_scheduleAirLimitRetry(now)
+				return
 			elseif self._pendingShopPurchase then
 				self:_enterHangar(false)
 				return
@@ -41104,10 +41353,15 @@ end
 			end
 		elseif self.state == 'dead' then
 			if now - self.lastStateTime > (respawnTimers.dead * spawnDelayFactor) then
-				local canSpawn = self:_consumeShouldSpawnDecision('dead', false)
+				local canSpawn, denialReason = self:_consumeShouldSpawnDecision('dead', false)
 				if canSpawn == nil then return end
 				if canSpawn then
+					self:_clearAirLimitRetry()
 					self:_enterHangar(false)
+				elseif denialReason == CAP_LIMIT_DENIAL_REASON then
+					self:_scheduleCapLimitRetry(now)
+				elseif denialReason == AIR_LIMIT_DENIAL_REASON then
+					self:_scheduleAirLimitRetry(now)
 				else
 					self:_scheduleDormantFsmRetry(now, "spawn-denied")
 				end
