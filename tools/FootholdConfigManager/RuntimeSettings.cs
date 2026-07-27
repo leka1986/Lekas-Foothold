@@ -159,19 +159,60 @@ internal sealed class RuntimeSettings
 
     private static List<ServerProfileSettings> NormalizeServerProfiles(IEnumerable<ServerProfileSettings>? profiles)
     {
-        return profiles?
+        var normalized = profiles?
             .Where(profile => !string.IsNullOrWhiteSpace(profile.Name) &&
                               !string.IsNullOrWhiteSpace(profile.ConfigPath))
             .Select(profile => new ServerProfileSettings
             {
+                Id = string.IsNullOrWhiteSpace(profile.Id)
+                    ? CreateStableProfileId(profile.ConfigPath)
+                    : profile.Id.Trim(),
                 Name = profile.Name.Trim(),
                 ConfigPath = System.IO.Path.GetFullPath(profile.ConfigPath),
-                DeployTarget = profile.DeployTarget
+                DeployTarget = profile.DeployTarget,
+                ActivePresetIds = NormalizeActivePresetIds(profile.ActivePresetIds)
             })
             .GroupBy(profile => GetProfileConfigFamilyKey(profile.ConfigPath), StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase)
             .ToList() ?? new List<ServerProfileSettings>();
+
+        var usedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var profile in normalized)
+        {
+            if (!usedIds.Add(profile.Id))
+            {
+                profile.Id = Guid.NewGuid().ToString("N");
+                usedIds.Add(profile.Id);
+            }
+        }
+
+        return normalized;
+    }
+
+    private static Dictionary<string, string> NormalizeActivePresetIds(
+        IReadOnlyDictionary<string, string>? activePresetIds)
+    {
+        return activePresetIds?
+            .Where(item => SupportedConfigFileNames.Any(fileName =>
+                               fileName.Equals(item.Key, StringComparison.OrdinalIgnoreCase)) &&
+                           !string.IsNullOrWhiteSpace(item.Value))
+            .GroupBy(
+                item => SupportedConfigFileNames.First(fileName =>
+                    fileName.Equals(item.Key, StringComparison.OrdinalIgnoreCase)),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Last().Value.Trim(),
+                StringComparer.OrdinalIgnoreCase) ??
+               new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static string CreateStableProfileId(string configPath)
+    {
+        var familyKey = GetProfileConfigFamilyKey(System.IO.Path.GetFullPath(configPath)).ToUpperInvariant();
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(familyKey));
+        return Convert.ToHexString(hash)[..16].ToLowerInvariant();
     }
 
     private static string GetProfileConfigFamilyKey(string configPath)
@@ -203,7 +244,9 @@ internal sealed class RuntimeSettings
 
 internal sealed class ServerProfileSettings
 {
+    public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string ConfigPath { get; set; } = "";
     public bool DeployTarget { get; set; }
+    public Dictionary<string, string> ActivePresetIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

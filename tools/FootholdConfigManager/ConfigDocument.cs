@@ -143,7 +143,15 @@ internal sealed class ConfigEntry
     public string? ParentGuiConfirmSetRowsByEra { get; init; }
     public string? ParentGuiRowLabel { get; init; }
     public string? ParentGuiVisibleWhen { get; init; }
+    public string? GuiEditor { get; init; }
+    public string? GuiMinimum { get; init; }
+    public string? GuiMaximum { get; init; }
+    public string? GuiStep { get; init; }
+    public string? GuiTimePreview { get; init; }
+    public string? GuiTimePreviewRed { get; init; }
+    public string? GuiTimePreviewBlue { get; init; }
     public string? GuiVisibleWhen { get; init; }
+    public string? GuiDisabledWhen { get; init; }
     public string? CategoryOverride { get; private set; }
     public string? HelpOverride { get; private set; }
     public string? ControlTypeOverride { get; private set; }
@@ -201,9 +209,35 @@ internal sealed class ConfigEntry
         }
     }
 
-    public bool IsSideMultiplier =>
+    public bool HasGuiSideMultiplierEditor =>
+        GuiEditor?.Equals("sideMultiplier", StringComparison.OrdinalIgnoreCase) == true;
+
+    public bool UsesLegacySideMultiplierEditor =>
         DisplayKey.Equals("GlobalSettings.difficultyScaling", StringComparison.Ordinal) ||
         DisplayKey.Equals("GlobalSettings.supplyDifficultyScaling", StringComparison.Ordinal);
+
+    public bool IsSideMultiplier => HasGuiSideMultiplierEditor || UsesLegacySideMultiplierEditor;
+
+    public bool TryGetSideMultiplierBounds(out decimal minimum, out decimal maximum, out decimal step)
+    {
+        minimum = 0m;
+        maximum = 0m;
+        step = 0m;
+        if (HasGuiSideMultiplierEditor)
+        {
+            return decimal.TryParse(GuiMinimum, NumberStyles.Float, CultureInfo.InvariantCulture, out minimum) &&
+                   decimal.TryParse(GuiMaximum, NumberStyles.Float, CultureInfo.InvariantCulture, out maximum) &&
+                   decimal.TryParse(GuiStep, NumberStyles.Float, CultureInfo.InvariantCulture, out step) &&
+                   minimum >= 0m &&
+                   minimum < maximum &&
+                   step > 0m;
+        }
+
+        minimum = 0.1m;
+        maximum = 5m;
+        step = 0.05m;
+        return UsesLegacySideMultiplierEditor;
+    }
 
     public string FriendlyValueText
     {
@@ -1110,6 +1144,18 @@ internal sealed class ConfigDocument
         SaveTo(Path);
     }
 
+    public string SaveSnapshotTo(string targetPath)
+    {
+        var errors = Validate();
+        if (errors.Count > 0)
+        {
+            throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
+        }
+
+        File.WriteAllText(targetPath, RenderCurrentText(), new UTF8Encoding(false));
+        return targetPath;
+    }
+
     public string SaveTo(string targetPath)
     {
         var errors = Validate();
@@ -1206,6 +1252,13 @@ internal sealed class ConfigDocument
             ParentGuiConfirmSetRowsByEra = template.ParentGuiConfirmSetRowsByEra,
             ParentGuiRowLabel = template.ParentGuiRowLabel,
             ParentGuiVisibleWhen = template.ParentGuiVisibleWhen,
+            GuiEditor = template.GuiEditor,
+            GuiMinimum = template.GuiMinimum,
+            GuiMaximum = template.GuiMaximum,
+            GuiStep = template.GuiStep,
+            GuiTimePreview = template.GuiTimePreview,
+            GuiTimePreviewRed = template.GuiTimePreviewRed,
+            GuiTimePreviewBlue = template.GuiTimePreviewBlue,
             Prefix = prefix,
             Suffix = ",",
             RawValue = valueText,
@@ -1300,7 +1353,15 @@ internal sealed class ConfigDocument
             ParentGuiConfirmSetRowsByEra = entry.ParentGuiConfirmSetRowsByEra,
             ParentGuiRowLabel = entry.ParentGuiRowLabel,
             ParentGuiVisibleWhen = entry.ParentGuiVisibleWhen,
+            GuiEditor = entry.GuiEditor,
+            GuiMinimum = entry.GuiMinimum,
+            GuiMaximum = entry.GuiMaximum,
+            GuiStep = entry.GuiStep,
+            GuiTimePreview = entry.GuiTimePreview,
+            GuiTimePreviewRed = entry.GuiTimePreviewRed,
+            GuiTimePreviewBlue = entry.GuiTimePreviewBlue,
             GuiVisibleWhen = entry.GuiVisibleWhen,
+            GuiDisabledWhen = entry.GuiDisabledWhen,
             GuiValidValues = entry.GuiValidValues
         };
         renamed.InitializeValueText(entry.RawValue);
@@ -1665,6 +1726,7 @@ internal sealed class ConfigDocument
             .Select(item => $"{item.entry.DisplayKey}: {item.error}")
             .ToList();
 
+        errors.AddRange(ValidateSideMultiplierMetadata());
         errors.AddRange(ValidateStageTables());
         errors.AddRange(ValidateClosedTableBlocks());
         errors.AddRange(ValidateStringListSeparators());
@@ -1672,6 +1734,210 @@ internal sealed class ConfigDocument
         errors.AddRange(ValidateMisplacedTopLevelRows());
         errors.AddRange(LuaSyntaxValidator.Validate(RenderCurrentText(), Path));
         return errors;
+    }
+
+    public bool TryFormatSideMultiplierTimePreview(
+        ConfigEntry multiplierEntry,
+        decimal multiplier,
+        out string preview,
+        out string? error)
+    {
+        return TryFormatSideMultiplierTimePreview(
+            multiplierEntry.GuiTimePreview,
+            multiplier,
+            out preview,
+            out error);
+    }
+
+    public bool TryFormatSideMultiplierTimePreviewForSide(
+        ConfigEntry multiplierEntry,
+        decimal multiplier,
+        bool isRed,
+        out string preview,
+        out string? error)
+    {
+        var sidePreview = isRed
+            ? multiplierEntry.GuiTimePreviewRed
+            : multiplierEntry.GuiTimePreviewBlue;
+        return TryFormatSideMultiplierTimePreview(
+            string.IsNullOrWhiteSpace(sidePreview) ? multiplierEntry.GuiTimePreview : sidePreview,
+            multiplier,
+            out preview,
+            out error);
+    }
+
+    private bool TryFormatSideMultiplierTimePreview(
+        string? timePreview,
+        decimal multiplier,
+        out string preview,
+        out string? error)
+    {
+        preview = "";
+        error = null;
+        if (string.IsNullOrWhiteSpace(timePreview))
+        {
+            return false;
+        }
+
+        var parts = timePreview.Split('|');
+        var rendered = new List<string>();
+        foreach (var rawPart in parts)
+        {
+            var part = rawPart.Trim();
+            var separatorIndex = part.IndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == part.Length - 1)
+            {
+                error = "timePreview items must use Label:SettingKeyOrSeconds.";
+                return false;
+            }
+
+            var label = part[..separatorIndex].Trim();
+            var durationSource = part[(separatorIndex + 1)..].Trim();
+            if (label.Length == 0 || durationSource.Length == 0)
+            {
+                error = "timePreview items must include both a label and a setting key or numeric duration.";
+                return false;
+            }
+
+            decimal baseSeconds;
+            if (decimal.TryParse(
+                    durationSource,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var literalSeconds))
+            {
+                if (literalSeconds < 0m)
+                {
+                    error = "timePreview numeric durations must be non-negative: " + durationSource + ".";
+                    return false;
+                }
+
+                baseSeconds = literalSeconds;
+            }
+            else
+            {
+                var reference = Entries.FirstOrDefault(entry =>
+                    entry.DisplayKey.Equals(durationSource, StringComparison.Ordinal));
+                if (reference is null)
+                {
+                    error = "timePreview setting was not found: " + durationSource + ".";
+                    return false;
+                }
+
+                if (!decimal.TryParse(
+                        reference.ValueText,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out baseSeconds) ||
+                    baseSeconds < 0m)
+                {
+                    error = "timePreview setting must contain non-negative seconds: " + durationSource + ".";
+                    return false;
+                }
+            }
+
+            try
+            {
+                rendered.Add(label + " " + FormatDuration(baseSeconds * multiplier));
+            }
+            catch (OverflowException)
+            {
+                error = "timePreview duration is too large: " + durationSource + ".";
+                return false;
+            }
+        }
+
+        if (rendered.Count == 0)
+        {
+            error = "timePreview must contain at least one Label:SettingKeyOrSeconds item.";
+            return false;
+        }
+
+        preview = string.Join(" • ", rendered);
+        return true;
+    }
+
+    private List<string> ValidateSideMultiplierMetadata()
+    {
+        var errors = new List<string>();
+        foreach (var entry in Entries.Where(entry => entry.HasGuiSideMultiplierEditor))
+        {
+            if (!entry.TryGetSideMultiplierBounds(out var minimum, out var maximum, out _))
+            {
+                errors.Add(
+                    entry.DisplayKey +
+                    ": editor=\"sideMultiplier\" requires numeric min, max, and step attributes where min is non-negative and below max, and step is positive.");
+                continue;
+            }
+
+            if (!entry.TryGetSideMultipliers(out var red, out var blue))
+            {
+                errors.Add(entry.DisplayKey + ": sideMultiplier values must contain numeric [1] and [2] entries.");
+                continue;
+            }
+
+            if (red < minimum || red > maximum || blue < minimum || blue > maximum)
+            {
+                errors.Add(
+                    entry.DisplayKey +
+                    ": RED and BLUE multipliers must be between " +
+                    minimum.ToString(CultureInfo.InvariantCulture) +
+                    " and " +
+                    maximum.ToString(CultureInfo.InvariantCulture) +
+                    ".");
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.GuiTimePreview) &&
+                !TryFormatSideMultiplierTimePreview(entry, 1m, out _, out var previewError))
+            {
+                errors.Add(entry.DisplayKey + ": " + previewError);
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.GuiTimePreviewRed) &&
+                !TryFormatSideMultiplierTimePreview(entry.GuiTimePreviewRed, 1m, out _, out previewError))
+            {
+                errors.Add(entry.DisplayKey + ": timePreviewRed: " + previewError);
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.GuiTimePreviewBlue) &&
+                !TryFormatSideMultiplierTimePreview(entry.GuiTimePreviewBlue, 1m, out _, out previewError))
+            {
+                errors.Add(entry.DisplayKey + ": timePreviewBlue: " + previewError);
+            }
+        }
+
+        return errors;
+    }
+
+    private static string FormatDuration(decimal seconds)
+    {
+        var roundedSeconds = decimal.Round(seconds, 0, MidpointRounding.AwayFromZero);
+        if (roundedSeconds > long.MaxValue)
+        {
+            throw new OverflowException();
+        }
+
+        var totalSeconds = (long)roundedSeconds;
+        var hours = totalSeconds / 3600;
+        var minutes = totalSeconds % 3600 / 60;
+        var remainingSeconds = totalSeconds % 60;
+        var parts = new List<string>();
+        if (hours > 0)
+        {
+            parts.Add(hours.ToString(CultureInfo.InvariantCulture) + "h");
+        }
+
+        if (minutes > 0)
+        {
+            parts.Add(minutes.ToString(CultureInfo.InvariantCulture) + "m");
+        }
+
+        if (remainingSeconds > 0 || parts.Count == 0)
+        {
+            parts.Add(remainingSeconds.ToString(CultureInfo.InvariantCulture) + "s");
+        }
+
+        return string.Join(" ", parts);
     }
 
     private List<string> ValidateClosedTableBlocks()
@@ -3079,7 +3345,15 @@ internal sealed class ConfigDocument
                 ParentGuiConfirmSetRowsByEra = parent?.GuiConfirmSetRowsByEra,
                 ParentGuiRowLabel = parent?.GuiRowLabel,
                 ParentGuiVisibleWhen = parent?.GuiVisibleWhen,
+                GuiEditor = ReadGuiEditor(pendingComments),
+                GuiMinimum = ReadGuiMinimum(pendingComments),
+                GuiMaximum = ReadGuiMaximum(pendingComments),
+                GuiStep = ReadGuiStep(pendingComments),
+                GuiTimePreview = ReadGuiTimePreview(pendingComments),
+                GuiTimePreviewRed = ReadGuiTimePreviewRed(pendingComments),
+                GuiTimePreviewBlue = ReadGuiTimePreviewBlue(pendingComments),
                 GuiVisibleWhen = ReadGuiVisibleWhen(pendingComments),
+                GuiDisabledWhen = ReadGuiDisabledWhen(pendingComments),
                 GuiValidValues = ReadGuiValidValues(pendingComments),
                 Prefix = lhsWithEquals,
                 Suffix = split.suffix,
@@ -3601,7 +3875,15 @@ internal sealed class ConfigDocument
             ParentGuiConfirmSetRowsByEra = parent?.GuiConfirmSetRowsByEra,
             ParentGuiRowLabel = parent?.GuiRowLabel,
             ParentGuiVisibleWhen = parent?.GuiVisibleWhen,
+            GuiEditor = ReadGuiEditor(pendingComments),
+            GuiMinimum = ReadGuiMinimum(pendingComments),
+            GuiMaximum = ReadGuiMaximum(pendingComments),
+            GuiStep = ReadGuiStep(pendingComments),
+            GuiTimePreview = ReadGuiTimePreview(pendingComments),
+            GuiTimePreviewRed = ReadGuiTimePreviewRed(pendingComments),
+            GuiTimePreviewBlue = ReadGuiTimePreviewBlue(pendingComments),
             GuiVisibleWhen = ReadGuiVisibleWhen(pendingComments),
+            GuiDisabledWhen = ReadGuiDisabledWhen(pendingComments),
             Prefix = lhsWithEquals,
             Suffix = suffix,
             RawValue = string.Join(NewLine, textLines),
@@ -3822,6 +4104,36 @@ internal sealed class ConfigDocument
         return ReadGuiAttribute(comments, "editor");
     }
 
+    private static string? ReadGuiMinimum(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "min");
+    }
+
+    private static string? ReadGuiMaximum(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "max");
+    }
+
+    private static string? ReadGuiStep(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "step");
+    }
+
+    private static string? ReadGuiTimePreview(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "timePreview");
+    }
+
+    private static string? ReadGuiTimePreviewRed(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "timePreviewRed");
+    }
+
+    private static string? ReadGuiTimePreviewBlue(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "timePreviewBlue");
+    }
+
     private static string? ReadGuiFields(IEnumerable<string> comments)
     {
         return ReadGuiAttribute(comments, "fields");
@@ -3830,6 +4142,11 @@ internal sealed class ConfigDocument
     private static string? ReadGuiVisibleWhen(IEnumerable<string> comments)
     {
         return ReadGuiAttribute(comments, "visibleWhen");
+    }
+
+    private static string? ReadGuiDisabledWhen(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "disabledWhen");
     }
 
     private static string? ReadGuiUntickRowsWhen(IEnumerable<string> comments)
@@ -4253,7 +4570,7 @@ internal sealed class ConfigDocument
         }
 
         var comments = JoinDescriptions(entry.ParentDescription, entry.Description);
-        if (comments.Contains("escortType", StringComparison.OrdinalIgnoreCase) && values.Count == 2)
+        if (comments.Contains("escortType", StringComparison.OrdinalIgnoreCase) && (values.Count == 2 || values.Count == 3))
         {
             entry.TupleFields.Add(new ConfigTupleField("Escort available", ConfigTupleFieldKind.Boolean));
             var escortType = new ConfigTupleField("Escort type", ConfigTupleFieldKind.Choice);
@@ -4263,6 +4580,21 @@ internal sealed class ConfigDocument
             }
 
             entry.TupleFields.Add(escortType);
+            var altitudeAbove = new ConfigTupleField("Altitude above", ConfigTupleFieldKind.Choice);
+            altitudeAbove.Choices.Add(new ConfigChoice("Same altitude", "0"));
+            for (var feet = 1000; feet <= 10000; feet += 1000)
+            {
+                altitudeAbove.Choices.Add(new ConfigChoice(
+                    "+" + feet.ToString("N0", CultureInfo.InvariantCulture) + " ft",
+                    feet.ToString(CultureInfo.InvariantCulture)));
+            }
+
+            entry.TupleFields.Add(altitudeAbove);
+            if (values.Count == 2)
+            {
+                entry.SetTupleValues(new[] { values[0], values[1], "10000" });
+            }
+
             return;
         }
 

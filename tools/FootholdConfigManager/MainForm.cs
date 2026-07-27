@@ -19,6 +19,7 @@ internal sealed class MainForm : Form
     private const string AboutLinkTag = "AboutLink";
     private const string ImportedNewHighlightTag = "ImportedNewHighlight";
     private const string ImportedNewBadgeTag = "ImportedNewBadge";
+    private const string LockedPrefixTag = "LockedPrefix";
     private const int ConfigBackupRetention = 5;
     private static readonly JsonSerializerOptions StoredDefaultsJsonOptions = new() { WriteIndented = true };
     private static string StoredDefaultsDirectory => Path.Combine(RuntimeSettings.SettingsDirectory, "MizDefaults");
@@ -42,6 +43,7 @@ internal sealed class MainForm : Form
     private static Color SavePendingHoverBackground = Color.FromArgb(202, 226, 246);
     private static Color SavePendingBorder = Color.FromArgb(30, 115, 216);
     private static Color BrandColor = Color.FromArgb(30, 136, 183);
+    private static Color LockedTextColor = Color.Firebrick;
 
     private sealed record UndoStep(
         string Description,
@@ -53,6 +55,47 @@ internal sealed class MainForm : Form
         int CollapseGeneration = 0);
     private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly);
     private sealed record ImportedNewEntryMarker(string Category, string DisplayKey);
+    private sealed record SideMultiplierPreviewBinding(ConfigEntry Entry, NumericUpDown Input, bool IsRed);
+    private sealed class EntryEditorBinding
+    {
+        public EntryEditorBinding(ConfigEntry entry, Control editor, Label lockedPrefix, Label helpText, string description)
+        {
+            Entry = entry;
+            Editor = editor;
+            LockedPrefix = lockedPrefix;
+            HelpText = helpText;
+            Description = description;
+        }
+
+        public ConfigEntry Entry { get; }
+        public Control Editor { get; }
+        public Label LockedPrefix { get; }
+        public Label HelpText { get; }
+        public string Description { get; }
+    }
+
+    private sealed class TableEditorBinding
+    {
+        public TableEditorBinding(string key, string title, string helpText, FlowLayoutPanel header, DataGridView grid, Button addButton, Button removeButton)
+        {
+            Key = key;
+            Title = title;
+            HelpText = helpText;
+            Header = header;
+            Grid = grid;
+            AddButton = addButton;
+            RemoveButton = removeButton;
+        }
+
+        public string Key { get; }
+        public string Title { get; }
+        public string HelpText { get; }
+        public FlowLayoutPanel Header { get; }
+        public DataGridView Grid { get; }
+        public Button AddButton { get; }
+        public Button RemoveButton { get; }
+    }
+
     private sealed record ConfigVariantItem(string Label, string Path)
     {
         public override string ToString()
@@ -65,6 +108,7 @@ internal sealed class MainForm : Form
     {
         Cancel,
         SelectPath,
+        InstallFromMiz,
         Remove
     }
 
@@ -288,14 +332,12 @@ internal sealed class MainForm : Form
         }
     }
 
-    // Add future "lock this editor/table when that setting is true/false/value" rules here.
-    // Future category-panel cache work should dirty the TargetKey category when SourceKey changes.
+    // Legacy lock rules that have not yet moved into inline @gui disabledWhen metadata.
     private static readonly EditorLockRule[] EditorLockRules =
     {
         new("UseC130LoadAndUnload", "WarehouseLogistics", "Locked while Warehouse Logistics is enabled.", "true"),
         new("AllowedToCarrySupplies", "WarehouseLogistics", "Locked while Warehouse Logistics is enabled.", "true"),
-        new("AllowMods", "Era", "Locked while Era is Gulfwar or Coldwar.", "Gulfwar", "Coldwar"),
-        new("ChanceAiAttackHelo", "InvisibleA10", "Locked while Invisible A10 is enabled.", "true")
+        new("AllowMods", "Era", "Locked while Era is Gulfwar or Coldwar.", "Gulfwar", "Coldwar")
     };
 
     private sealed class SmoothDataGridView : DataGridView
@@ -564,6 +606,40 @@ internal sealed class MainForm : Form
         {
             return Profile.Name;
         }
+    }
+
+    private sealed class PresetListItem
+    {
+        public PresetListItem(StoredConfigPreset preset, bool isActive)
+        {
+            Preset = preset;
+            IsActive = isActive;
+        }
+
+        public StoredConfigPreset Preset { get; }
+        public bool IsActive { get; }
+
+        public override string ToString()
+        {
+            return (IsActive ? "✓  " : "    ") + Preset.Name;
+        }
+    }
+
+    private sealed class PresetUpdateTargetChoice
+    {
+        public PresetUpdateTargetChoice(StoredConfigPreset preset)
+        {
+            Preset = preset;
+        }
+
+        public StoredConfigPreset Preset { get; }
+        public bool Selected { get; set; }
+    }
+
+    private sealed class PresetBatchUpdateResult
+    {
+        public List<string> UpdatedNames { get; } = new();
+        public List<string> Errors { get; } = new();
     }
 
     private sealed class CopyTargetItem
@@ -974,6 +1050,7 @@ internal sealed class MainForm : Form
     private ThemeIconButton? _themeButton;
     private Button? _dcsDesanitizeButton;
     private Button? _themeModeButton;
+    private Button? _presetsButton;
     private ToolbarIconButton? _undoButton;
     private ToolbarIconButton? _saveButton;
     private readonly List<Control> _topToolbarButtons = new();
@@ -1092,6 +1169,7 @@ internal sealed class MainForm : Form
             SavePendingHoverBackground = Color.FromArgb(48, 70, 92);
             SavePendingBorder = Color.FromArgb(86, 156, 214);
             BrandColor = Color.FromArgb(86, 156, 214);
+            LockedTextColor = Color.FromArgb(255, 110, 110);
             return;
         }
 
@@ -1112,6 +1190,7 @@ internal sealed class MainForm : Form
         SavePendingHoverBackground = Color.FromArgb(202, 226, 246);
         SavePendingBorder = Color.FromArgb(30, 115, 216);
         BrandColor = Color.FromArgb(30, 136, 183);
+        LockedTextColor = Color.Firebrick;
     }
 
     private void ToggleTheme()
@@ -1220,6 +1299,16 @@ internal sealed class MainForm : Form
             case Label label when Equals(label.Tag, ImportedNewHighlightTag):
                 label.BackColor = GetNewHighlightBackColor();
                 label.ForeColor = PrimaryTextColor;
+                break;
+
+            case Label label when Equals(label.Tag, LockedPrefixTag):
+                label.BackColor = MainBackground;
+                label.ForeColor = LockedTextColor;
+                break;
+
+            case Label label when label.Tag is SideMultiplierPreviewBinding:
+                label.BackColor = MainBackground;
+                label.ForeColor = HelpTextColor;
                 break;
 
             case Label label:
@@ -1567,7 +1656,7 @@ internal sealed class MainForm : Form
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth("Config", 55)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Normal", 95)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Advanced", 105)));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Open File Location", 150)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Presets...", 110)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Manage ▼", 105)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Copy To...", 110)));
 
@@ -1589,7 +1678,11 @@ internal sealed class MainForm : Form
         _showAdvanced.Dock = DockStyle.Fill;
         BindAdvancedToggle();
         panel.Controls.Add(_showAdvanced, 4, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Open File Location", OpenCurrentConfigLocation, "Open Explorer with the current Foothold config selected."), 5, 0);
+        _presetsButton = MakeInstanceToolbarButton(
+            "Presets...",
+            OpenPresetsDialog,
+            "Store, switch, rename, update, or delete presets for the selected instance and config type.");
+        panel.Controls.Add(_presetsButton, 5, 0);
 
         _manageInstanceMenu?.Dispose();
         _manageInstanceMenu = new ContextMenuStrip
@@ -1600,11 +1693,14 @@ internal sealed class MainForm : Form
         _manageInstanceMenu.Items.Add("Add instance…", null, (_, _) => AddInstance());
         var renameInstanceItem = _manageInstanceMenu.Items.Add("Rename selected instance…", null, (_, _) => RenameInstance());
         var removeInstanceItem = _manageInstanceMenu.Items.Add("Remove selected instance", null, (_, _) => RemoveInstance());
+        _manageInstanceMenu.Items.Add(new ToolStripSeparator());
+        var openLocationItem = _manageInstanceMenu.Items.Add("Open file location", null, (_, _) => OpenCurrentConfigLocation());
         _manageInstanceMenu.Opening += (_, _) =>
         {
             var hasSelectedInstance = _instanceBox.SelectedItem is InstanceItem;
             renameInstanceItem.Enabled = hasSelectedInstance;
             removeInstanceItem.Enabled = hasSelectedInstance;
+            openLocationItem.Enabled = _document is not null && File.Exists(_document.Path);
         };
         StyleToolbarMenus();
 
@@ -1612,12 +1708,13 @@ internal sealed class MainForm : Form
         manageInstanceButton = MakeInstanceToolbarButton(
             "Manage ▼",
             () => _manageInstanceMenu.Show(manageInstanceButton, new Point(0, manageInstanceButton.Height)),
-            "Add, rename, or remove Foothold config instances.");
+            "Add, rename, remove, or open Foothold config instances.");
         manageInstanceButton.ContextMenuStrip = _manageInstanceMenu;
         panel.Controls.Add(manageInstanceButton, 6, 0);
         panel.Controls.Add(MakeInstanceToolbarButton("Copy To...", CopyCurrentConfigToInstances, "Replace selected instance configs with the currently open saved config. No backup is created."), 7, 0);
         RefreshInstanceList();
         RefreshConfigVariantList();
+        RefreshPresetButtonState();
         return panel;
     }
 
@@ -1876,7 +1973,7 @@ internal sealed class MainForm : Form
         {
             SetColumnWidth(_instanceLayout, 0, LabelColumnWidth("Instance", 70));
             SetColumnWidth(_instanceLayout, 4, ShouldShowAdvancedToggle() ? ToolbarButtonWidth("Advanced", 105) : 0);
-            SetColumnWidth(_instanceLayout, 5, ToolbarButtonWidth("Open File Location", 150));
+            SetColumnWidth(_instanceLayout, 5, ToolbarButtonWidth("Presets...", 110));
             SetColumnWidth(_instanceLayout, 6, ToolbarButtonWidth("Manage ▼", 105));
             SetColumnWidth(_instanceLayout, 7, ToolbarButtonWidth("Copy To...", 110));
             ApplyConfigVariantSelectorVisibility(_configVariantBox.Items.Count > 1);
@@ -1894,6 +1991,15 @@ internal sealed class MainForm : Form
         if (_zoomLayout is not null)
         {
             _zoomLayout.Height = Zoomed(32);
+        }
+
+        if (_multiplierPanel.ColumnStyles.Count >= 3 &&
+            _multiplierPanel.RowStyles.Count >= 2)
+        {
+            SetColumnWidth(_multiplierPanel, 0, Zoomed(55));
+            SetColumnWidth(_multiplierPanel, 1, Zoomed(90));
+            SetRowHeight(_multiplierPanel, 0, Zoomed(34));
+            SetRowHeight(_multiplierPanel, 1, Zoomed(34));
         }
 
         if (_leftToolsPanel is TableLayoutPanel toolsPanel)
@@ -3897,11 +4003,11 @@ internal sealed class MainForm : Form
         _multiplierPanel.Visible = false;
         _multiplierPanel.ColumnCount = 3;
         _multiplierPanel.RowCount = 2;
-        _multiplierPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 55));
-        _multiplierPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
+        _multiplierPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(55)));
+        _multiplierPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(90)));
         _multiplierPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        _multiplierPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-        _multiplierPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        _multiplierPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+        _multiplierPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
 
         ConfigureMultiplierInput(_redMultiplier, _redMultiplierText);
         ConfigureMultiplierInput(_blueMultiplier, _blueMultiplierText);
@@ -3919,10 +4025,6 @@ internal sealed class MainForm : Form
     private static void ConfigureMultiplierInput(NumericUpDown input, Label label)
     {
         input.Dock = DockStyle.Fill;
-        input.DecimalPlaces = 2;
-        input.Increment = 0.05m;
-        input.Minimum = 0.1m;
-        input.Maximum = 5m;
         label.Dock = DockStyle.Fill;
         label.TextAlign = ContentAlignment.MiddleLeft;
         label.ForeColor = HelpTextColor;
@@ -4643,13 +4745,13 @@ internal sealed class MainForm : Form
             var loadWarnings = _document.LoadWarnings.ToList();
             _pathBox.Text = path;
             LoadSections();
-            LoadPresets();
             ApplyAdvancedToggleVisibility();
             UpdateFooterLabels();
             LoadCategories();
             _settings.RememberConfig(path);
             RefreshInstanceList();
             RefreshConfigVariantList();
+            RefreshPresetButtonState();
             ClearUndo();
             if (loadWarnings.Count > 0)
             {
@@ -4821,6 +4923,16 @@ internal sealed class MainForm : Form
                 return;
             }
 
+            if (recovery.Kind == MissingInstanceRecoveryKind.InstallFromMiz && !string.IsNullOrWhiteSpace(recovery.Path))
+            {
+                if (!InstallMissingInstanceConfigFromMiz(item.Profile, targetPath, recovery.Path))
+                {
+                    RefreshInstanceList();
+                }
+
+                return;
+            }
+
             if (recovery.Kind == MissingInstanceRecoveryKind.Remove)
             {
                 _settings.ServerProfiles.Remove(item.Profile);
@@ -4880,7 +4992,7 @@ internal sealed class MainForm : Form
             MaximumSize = new Size(Zoomed(660), 0),
             Text = "That instance config was not found:" + Environment.NewLine +
                    missingPath + Environment.NewLine + Environment.NewLine +
-                   "Select a replacement config, remove the instance, or cancel.",
+                   "Select a replacement config, install one from a MIZ, remove the instance, or cancel.",
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
         };
@@ -4949,6 +5061,28 @@ internal sealed class MainForm : Form
         };
         buttons.Controls.Add(selectButton);
 
+        var installMizButton = new Button { Text = "Install from MIZ..." };
+        SizeDialogButton(installMizButton, 135);
+        installMizButton.Margin = new Padding(Zoomed(3));
+        StyleButton(installMizButton);
+        installMizButton.Click += (_, _) =>
+        {
+            using var fileDialog = new OpenFileDialog
+            {
+                Title = "Select Foothold mission MIZ for " + profile.Name,
+                Filter = "DCS mission (*.miz)|*.miz|All files (*.*)|*.*",
+                FileName = "*.miz",
+                InitialDirectory = GetExistingInitialDirectory(Path.GetDirectoryName(missingPath)) ?? RuntimeSettings.GetBestInitialDirectory()
+            };
+            if (fileDialog.ShowDialog(dialog) == DialogResult.OK)
+            {
+                result = new MissingInstanceRecovery(MissingInstanceRecoveryKind.InstallFromMiz, fileDialog.FileName);
+                dialog.DialogResult = DialogResult.OK;
+                dialog.Close();
+            }
+        };
+        buttons.Controls.Add(installMizButton);
+
         if (alternatives.Count > 0)
         {
             var switchButton = new Button { Text = "Switch to selected" };
@@ -4976,6 +5110,73 @@ internal sealed class MainForm : Form
         return dialog.ShowDialog(this) == DialogResult.OK
             ? result
             : new MissingInstanceRecovery(MissingInstanceRecoveryKind.Cancel, null);
+    }
+
+    private bool InstallMissingInstanceConfigFromMiz(ServerProfileSettings profile, string missingPath, string mizPath)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "FootholdConfigManager-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            var preferredConfigFileName = Path.GetFileName(missingPath);
+            var extractedConfig = ExtractFootholdConfigFromMiz(mizPath, tempDir, preferredConfigFileName);
+            var targetDirectory = Path.GetDirectoryName(missingPath);
+            if (string.IsNullOrWhiteSpace(targetDirectory))
+            {
+                throw new InvalidOperationException("The missing instance config path is invalid.");
+            }
+
+            var targetPath = Path.GetFullPath(Path.Combine(targetDirectory, extractedConfig.ConfigFileName));
+            if (File.Exists(targetPath))
+            {
+                profile.ConfigPath = targetPath;
+                _settings.Save();
+                LoadConfig(targetPath);
+                MessageBox.Show(
+                    this,
+                    "A " + extractedConfig.ConfigFileName + " already exists for this instance. It was opened and no file was overwritten.",
+                    "Install Missing Config",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return true;
+            }
+
+            var newDocument = ConfigDocument.Load(extractedConfig.Path);
+            newDocument.RepairStringListSeparators();
+            if (!ValidateMergeDocument(newDocument, "Install Missing Config validation failed", "The " + extractedConfig.ConfigFileName + " inside this MIZ"))
+            {
+                return false;
+            }
+
+            RefreshStringListCatalogFromDefaults(newDocument);
+            Directory.CreateDirectory(targetDirectory);
+            newDocument.SaveTo(targetPath);
+            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig);
+            profile.ConfigPath = targetPath;
+            _settings.Save();
+            LoadConfig(targetPath);
+            SetStatus("Installed " + extractedConfig.ConfigFileName + " from " + storedDefaults.MizName + " for " + profile.Name + ".");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Install Missing Config failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+            catch
+            {
+                // Temporary cleanup failure should not hide the install result.
+            }
+        }
     }
 
     private void AddInstance()
@@ -5092,6 +5293,7 @@ internal sealed class MainForm : Form
         {
             _settings.ServerProfiles.Add(new ServerProfileSettings
             {
+                Id = RuntimeSettings.CreateStableProfileId(path),
                 Name = name,
                 ConfigPath = path
             });
@@ -5376,6 +5578,7 @@ internal sealed class MainForm : Form
             existingNames.Add(name);
             _settings.ServerProfiles.Add(new ServerProfileSettings
             {
+                Id = RuntimeSettings.CreateStableProfileId(path),
                 Name = name,
                 ConfigPath = path
             });
@@ -5406,6 +5609,7 @@ internal sealed class MainForm : Form
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             _settings.ServerProfiles.Add(new ServerProfileSettings
             {
+                Id = RuntimeSettings.CreateStableProfileId(path),
                 Name = MakeUniqueInstanceName(name, existingNames),
                 ConfigPath = path
             });
@@ -5472,6 +5676,917 @@ internal sealed class MainForm : Form
         _settings.Save();
         RefreshInstanceList();
         SetStatus("Instance removed: " + item.Profile.Name);
+    }
+
+    private ServerProfileSettings? FindCurrentInstanceProfile()
+    {
+        if (_document is null)
+        {
+            return null;
+        }
+
+        return FindInstanceProfileForConfig(_document.Path);
+    }
+
+    private ServerProfileSettings? FindInstanceProfileForConfig(string configPath)
+    {
+        var currentFamily = GetConfigFamilyKey(configPath);
+        return _settings.ServerProfiles.FirstOrDefault(profile =>
+            PathsEqual(GetConfigFamilyKey(profile.ConfigPath), currentFamily));
+    }
+
+    private string EnsureInstanceId(ServerProfileSettings profile)
+    {
+        if (!string.IsNullOrWhiteSpace(profile.Id))
+        {
+            return profile.Id;
+        }
+
+        profile.Id = RuntimeSettings.CreateStableProfileId(profile.ConfigPath);
+        _settings.Save();
+        return profile.Id;
+    }
+
+    private StoredConfigPreset? GetActivePreset(
+        ServerProfileSettings profile,
+        string configFileName,
+        IReadOnlyList<StoredConfigPreset>? presets = null)
+    {
+        presets ??= PresetStore.List(EnsureInstanceId(profile), configFileName);
+        if (presets.Count == 0)
+        {
+            if (profile.ActivePresetIds.Remove(configFileName))
+            {
+                _settings.Save();
+            }
+
+            return null;
+        }
+
+        if (profile.ActivePresetIds.TryGetValue(configFileName, out var activeId))
+        {
+            var active = presets.FirstOrDefault(preset =>
+                preset.Id.Equals(activeId, StringComparison.OrdinalIgnoreCase));
+            if (active is not null)
+            {
+                return active;
+            }
+        }
+
+        var fallback = presets[0];
+        profile.ActivePresetIds[configFileName] = fallback.Id;
+        _settings.Save();
+        return fallback;
+    }
+
+    private void SetActivePreset(
+        ServerProfileSettings profile,
+        string configFileName,
+        StoredConfigPreset? preset)
+    {
+        if (preset is null)
+        {
+            profile.ActivePresetIds.Remove(configFileName);
+        }
+        else
+        {
+            profile.ActivePresetIds[configFileName] = preset.Id;
+        }
+
+        _settings.Save();
+        RefreshPresetButtonState();
+    }
+
+    private void RefreshPresetButtonState()
+    {
+        if (_presetsButton is null)
+        {
+            return;
+        }
+
+        var profile = FindCurrentInstanceProfile();
+        _presetsButton.Enabled = profile is not null && _document is not null;
+        _presetsButton.ForeColor = _presetsButton.Enabled ? PrimaryTextColor : HelpTextColor;
+        if (profile is null || _document is null)
+        {
+            SetToolbarHelp(_presetsButton, "Select a saved instance to manage its presets.");
+            return;
+        }
+
+        var configFileName = GetCurrentConfigFileName(_document);
+        var presets = PresetStore.List(EnsureInstanceId(profile), configFileName);
+        var active = GetActivePreset(profile, configFileName, presets);
+        SetToolbarHelp(
+            _presetsButton,
+            active is null
+                ? "Store the current " + GetConfigVariantLabel(configFileName) + " config as a preset."
+                : "Active " + GetConfigVariantLabel(configFileName) + " preset: " + active.Name);
+    }
+
+    private bool SwitchToPreset(ServerProfileSettings profile, StoredConfigPreset preset)
+    {
+        if (_document is null)
+        {
+            return false;
+        }
+
+        if (HasChanges())
+        {
+            MessageBox.Show(
+                this,
+                "Save or reload pending changes before switching presets.",
+                "Switch Preset",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            return false;
+        }
+
+        if (!preset.ConfigFileName.Equals(GetCurrentConfigFileName(_document), StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(
+                this,
+                "This preset belongs to the " + GetConfigVariantLabel(preset.ConfigFileName) + " config.",
+                "Switch Preset",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            return false;
+        }
+
+        try
+        {
+            var presetDocument = ConfigDocument.Load(preset.ConfigPath);
+            if (!ValidateMergeDocument(presetDocument, "Switch Preset validation failed", "The selected preset"))
+            {
+                return false;
+            }
+
+            var livePath = Path.GetFullPath(_document.Path);
+            StoreConfigBackup(
+                livePath,
+                preset.ConfigPath,
+                _settings.ServerProfiles,
+                ConfigBackupsDirectory,
+                ConfigBackupsIndexPath,
+                sourceKind: "preset-switch");
+            ReplaceFileFromSource(preset.ConfigPath, livePath);
+            SetActivePreset(profile, preset.ConfigFileName, preset);
+            LoadConfig(livePath);
+            SetStatus("Switched to preset: " + preset.Name + ".");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Switch Preset failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
+    }
+
+    private static void ReplaceFileFromSource(string sourcePath, string targetPath)
+    {
+        var fullTargetPath = Path.GetFullPath(targetPath);
+        var temporaryPath = fullTargetPath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            File.Copy(sourcePath, temporaryPath, overwrite: false);
+            File.Move(temporaryPath, fullTargetPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
+    }
+
+    private void WriteCurrentConfigSnapshot(string targetPath)
+    {
+        if (_document is null)
+        {
+            throw new InvalidOperationException("Open a config first.");
+        }
+
+        var errors = _document.Validate();
+        if (errors.Count > 0)
+        {
+            throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
+        }
+
+        if (_document.HasUnsavedChanges)
+        {
+            _document.SaveSnapshotTo(targetPath);
+            return;
+        }
+
+        File.Copy(_document.Path, targetPath, overwrite: false);
+    }
+
+    private bool TrySyncActivePresetFromLive(
+        string configPath,
+        out string? presetName,
+        out string? error)
+    {
+        presetName = null;
+        error = null;
+        var profile = FindInstanceProfileForConfig(configPath);
+        if (profile is null)
+        {
+            return true;
+        }
+
+        var configFileName = Path.GetFileName(configPath);
+        var presets = PresetStore.List(EnsureInstanceId(profile), configFileName);
+        var active = GetActivePreset(profile, configFileName, presets);
+        if (active is null)
+        {
+            return true;
+        }
+
+        try
+        {
+            PresetStore.ReplaceConfig(active, targetPath =>
+                File.Copy(configPath, targetPath, overwrite: false));
+            presetName = active.Name;
+            RefreshPresetButtonState();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            presetName = active.Name;
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private void ShowActivePresetSyncWarning(
+        string operation,
+        string? presetName,
+        string? error)
+    {
+        MessageBox.Show(
+            this,
+            "The live config completed its " +
+            operation +
+            ", but the active preset " +
+            presetName +
+            " could not be updated:" +
+            Environment.NewLine +
+            error,
+            "Active preset update failed",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Warning);
+    }
+
+    private StoredConfigPreset? GetActivePresetForConfigPath(string configPath)
+    {
+        var profile = FindInstanceProfileForConfig(configPath);
+        if (profile is null)
+        {
+            return null;
+        }
+
+        var configFileName = Path.GetFileName(configPath);
+        var presets = PresetStore.List(EnsureInstanceId(profile), configFileName);
+        return GetActivePreset(profile, configFileName, presets);
+    }
+
+    private List<PresetUpdateTargetChoice> GetOtherPresetUpdateTargets(string configPath)
+    {
+        var profile = FindInstanceProfileForConfig(configPath);
+        if (profile is null)
+        {
+            return new List<PresetUpdateTargetChoice>();
+        }
+
+        var configFileName = Path.GetFileName(configPath);
+        var presets = PresetStore.List(EnsureInstanceId(profile), configFileName);
+        var active = GetActivePreset(profile, configFileName, presets);
+        return presets
+            .Where(preset => active is null ||
+                             !preset.Id.Equals(active.Id, StringComparison.OrdinalIgnoreCase))
+            .Select(preset => new PresetUpdateTargetChoice(preset))
+            .ToList();
+    }
+
+    private string AppendActivePresetUpdateNotice(string message, string configPath)
+    {
+        var active = GetActivePresetForConfigPath(configPath);
+        return active is null
+            ? message
+            : message + Environment.NewLine +
+              "The active preset " + active.Name + " will be updated automatically.";
+    }
+
+    private PresetBatchUpdateResult UpdateOtherPresetsFromSource(
+        ServerProfileSettings profile,
+        string sourceConfigPath,
+        string sourceReferencePath,
+        string sourceKind,
+        IReadOnlyList<PresetUpdateTargetChoice> targets,
+        IReadOnlyDictionary<string, bool> decisions)
+    {
+        var result = new PresetBatchUpdateResult();
+        foreach (var target in targets.Where(target => target.Selected))
+        {
+            try
+            {
+                var currentPresetDocument = ConfigDocument.Load(target.Preset.ConfigPath);
+                var outputDocument = ConfigDocument.Load(sourceConfigPath);
+                outputDocument.RepairStringListSeparators();
+                var preview = MergeCurrentConfigIntoNewConfig(currentPresetDocument, outputDocument);
+
+                var tableChoices = BuildKeptTableChoices(
+                    preview,
+                    "preset table text",
+                    "new source table text");
+                foreach (var choice in tableChoices)
+                {
+                    if (decisions.TryGetValue(choice.Key, out var selected))
+                    {
+                        choice.Selected = selected;
+                    }
+                }
+
+                var valueChoices = preview.KeptValues
+                    .Select(item => new SelectableValueChoice(
+                        item.Key,
+                        item.CurrentValue,
+                        item.NewDefault,
+                        item.Entry.EffectiveDescription))
+                    .ToList();
+                foreach (var choice in valueChoices)
+                {
+                    if (decisions.TryGetValue(choice.Key, out var selected))
+                    {
+                        choice.Selected = selected;
+                    }
+                }
+
+                ApplyKeptTableChoices(outputDocument, preview, tableChoices);
+                ApplyKeptValueChoices(outputDocument, preview, valueChoices);
+                var validationErrors = outputDocument.Validate();
+                if (validationErrors.Count > 0)
+                {
+                    throw new InvalidOperationException(string.Join(Environment.NewLine, validationErrors.Take(8)));
+                }
+
+                StoreConfigBackup(
+                    target.Preset.ConfigPath,
+                    sourceReferencePath,
+                    _settings.ServerProfiles,
+                    ConfigBackupsDirectory,
+                    ConfigBackupsIndexPath,
+                    sourceKind,
+                    Path.Combine(
+                        MakeSafeFileName(profile.Name),
+                        "Presets",
+                        MakeSafeFileName(target.Preset.Name)),
+                    profile.Name);
+                PresetStore.ReplaceConfig(target.Preset, path => outputDocument.SaveTo(path));
+                result.UpdatedNames.Add(target.Preset.Name);
+            }
+            catch (Exception ex)
+            {
+                result.Errors.Add(target.Preset.Name + ": " + ex.Message);
+            }
+        }
+
+        return result;
+    }
+
+    private void ReportPresetBatchUpdate(PresetBatchUpdateResult result)
+    {
+        if (result.Errors.Count == 0)
+        {
+            return;
+        }
+
+        var message =
+            (result.UpdatedNames.Count > 0
+                ? "Updated presets: " + string.Join(", ", result.UpdatedNames) + Environment.NewLine + Environment.NewLine
+                : "") +
+            "The following presets were not changed:" + Environment.NewLine +
+            string.Join(Environment.NewLine, result.Errors);
+        MessageBox.Show(
+            this,
+            message,
+            "Preset update incomplete",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Warning);
+    }
+
+    private void OpenPresetsDialog()
+    {
+        if (_document is null)
+        {
+            MessageBox.Show(this, "Open a config first.", "Presets", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var profile = FindCurrentInstanceProfile();
+        if (profile is null)
+        {
+            MessageBox.Show(
+                this,
+                "Add or select an instance before storing presets.",
+                "Presets",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            return;
+        }
+
+        var instanceId = EnsureInstanceId(profile);
+        var configFileName = GetCurrentConfigFileName(_document);
+        using var dialog = new Form
+        {
+            Text = "Presets — " + profile.Name,
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.Sizable,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = FittedDialogClientSize(720, 410, 620, 350),
+            MinimumSize = FittedDialogMinimumSize(620, 350),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 3,
+            ColumnCount = 1,
+            Padding = new Padding(Zoomed(12)),
+            BackColor = MainBackground
+        };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(56)));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(56)));
+        dialog.Controls.Add(root);
+
+        var summaryLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+        root.Controls.Add(summaryLabel, 0, 0);
+
+        var content = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 1,
+            ColumnCount = 2,
+            Margin = new Padding(0),
+            BackColor = MainBackground
+        };
+        content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        content.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(230)));
+        root.Controls.Add(content, 0, 1);
+
+        var presetList = new ListBox
+        {
+            Dock = DockStyle.Fill,
+            IntegralHeight = false,
+            HorizontalScrollbar = true,
+            BackColor = EditorBackground,
+            ForeColor = PrimaryTextColor
+        };
+        content.Controls.Add(presetList, 0, 0);
+
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoScroll = true,
+            Padding = new Padding(Zoomed(10), 0, 0, 0),
+            BackColor = MainBackground
+        };
+        content.Controls.Add(actions, 1, 0);
+
+        Button AddActionButton(string text, EventHandler handler)
+        {
+            var button = new Button
+            {
+                Text = text,
+                Margin = new Padding(0, 0, 0, Zoomed(7))
+            };
+            SizeDialogButton(button, 205);
+            button.Click += handler;
+            actions.Controls.Add(button);
+            return button;
+        }
+
+        Button switchButton = null!;
+        Button storeButton = null!;
+        Button updateButton = null!;
+        Button renameButton = null!;
+        Button deleteButton = null!;
+        Button importLegacyButton = null!;
+
+        switchButton = AddActionButton("Switch to preset", (_, _) =>
+        {
+            if (presetList.SelectedItem is PresetListItem item &&
+                SwitchToPreset(profile, item.Preset))
+            {
+                RefreshList(item.Preset.Id);
+            }
+        });
+        storeButton = AddActionButton("Store current as preset...", (_, _) =>
+        {
+            var name = PromptForText("Store Preset", "Preset name", "", "Store")?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            try
+            {
+                if (IsRawCategorySelected())
+                {
+                    ApplyEntryValue();
+                }
+
+                var preset = PresetStore.Create(
+                    instanceId,
+                    configFileName,
+                    name,
+                    WriteCurrentConfigSnapshot);
+                SetActivePreset(profile, configFileName, preset);
+                RefreshList(preset.Id);
+                SetStatus("Stored and selected preset: " + preset.Name + ".");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(dialog, ex.Message, "Store Preset failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        });
+        updateButton = AddActionButton("Update selected preset...", (_, _) =>
+        {
+            if (presetList.SelectedItem is not PresetListItem item)
+            {
+                return;
+            }
+
+            if (MessageBox.Show(
+                    dialog,
+                    "Replace the stored " + item.Preset.Name + " preset with the current editor configuration?",
+                    "Update Preset",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                if (IsRawCategorySelected())
+                {
+                    ApplyEntryValue();
+                }
+
+                PresetStore.ReplaceConfig(item.Preset, WriteCurrentConfigSnapshot);
+                RefreshList(item.Preset.Id);
+                SetStatus("Updated preset: " + item.Preset.Name + ".");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(dialog, ex.Message, "Update Preset failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        });
+        renameButton = AddActionButton("Rename selected preset...", (_, _) =>
+        {
+            if (presetList.SelectedItem is not PresetListItem item)
+            {
+                return;
+            }
+
+            var name = PromptForText("Rename Preset", "Preset name", item.Preset.Name, "Rename")?.Trim();
+            if (string.IsNullOrWhiteSpace(name) ||
+                name.Equals(item.Preset.Name, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            try
+            {
+                PresetStore.Rename(instanceId, item.Preset, name);
+                RefreshList(item.Preset.Id);
+                SetStatus("Preset renamed: " + name + ".");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(dialog, ex.Message, "Rename Preset failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        });
+        deleteButton = AddActionButton("Delete selected preset", (_, _) =>
+        {
+            if (presetList.SelectedItem is not PresetListItem item)
+            {
+                return;
+            }
+
+            var presets = PresetStore.List(instanceId, configFileName);
+            if (item.IsActive && presets.Count > 1)
+            {
+                MessageBox.Show(
+                    dialog,
+                    "Switch to another preset before deleting the active preset.",
+                    "Delete Preset",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show(
+                    dialog,
+                    "Delete the stored " + item.Preset.Name + " preset? The live config will not be changed.",
+                    "Delete Preset",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                PresetStore.Delete(instanceId, item.Preset);
+                if (item.IsActive)
+                {
+                    SetActivePreset(profile, configFileName, null);
+                }
+
+                RefreshList();
+                SetStatus("Preset deleted: " + item.Preset.Name + ".");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(dialog, ex.Message, "Delete Preset failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        });
+        importLegacyButton = AddActionButton("Import legacy preset...", (_, _) =>
+        {
+            var imported = ImportLegacyPreset(profile, configFileName);
+            if (imported is not null)
+            {
+                RefreshList(imported.Id);
+            }
+        });
+
+        var footer = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, Zoomed(10), 0, 0),
+            BackColor = MainBackground
+        };
+        var closeButton = new Button
+        {
+            Text = "Close",
+            DialogResult = DialogResult.Cancel
+        };
+        SizeDialogButton(closeButton);
+        footer.Controls.Add(closeButton);
+        root.Controls.Add(footer, 0, 2);
+        dialog.CancelButton = closeButton;
+
+        void RefreshList(string? selectedPresetId = null)
+        {
+            var presets = PresetStore.List(instanceId, configFileName);
+            var active = GetActivePreset(profile, configFileName, presets);
+            selectedPresetId ??= (presetList.SelectedItem as PresetListItem)?.Preset.Id ?? active?.Id;
+            presetList.Items.Clear();
+            var selectedIndex = -1;
+            foreach (var preset in presets)
+            {
+                var item = new PresetListItem(
+                    preset,
+                    active is not null && preset.Id.Equals(active.Id, StringComparison.OrdinalIgnoreCase));
+                var index = presetList.Items.Add(item);
+                if (!string.IsNullOrWhiteSpace(selectedPresetId) &&
+                    preset.Id.Equals(selectedPresetId, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedIndex = index;
+                }
+            }
+
+            presetList.SelectedIndex = selectedIndex >= 0
+                ? selectedIndex
+                : presetList.Items.Count > 0 ? 0 : -1;
+            var variantLabel = GetConfigVariantLabel(configFileName);
+            summaryLabel.Text =
+                variantLabel + " presets for " + profile.Name + Environment.NewLine +
+                presets.Count.ToString(CultureInfo.InvariantCulture) + " of " +
+                PresetStore.MaximumPresetsPerConfig.ToString(CultureInfo.InvariantCulture) +
+                " stored" +
+                (active is null ? "." : ". Active: " + active.Name + ".");
+            storeButton.Enabled = presets.Count < PresetStore.MaximumPresetsPerConfig;
+            importLegacyButton.Visible = PresetStore.HasLegacyPresetFiles();
+            importLegacyButton.Enabled =
+                importLegacyButton.Visible && presets.Count < PresetStore.MaximumPresetsPerConfig;
+            RefreshActionStates();
+            RefreshPresetButtonState();
+        }
+
+        void RefreshActionStates()
+        {
+            var selected = presetList.SelectedItem as PresetListItem;
+            switchButton.Enabled = selected is not null && !selected.IsActive;
+            updateButton.Enabled = selected is not null;
+            renameButton.Enabled = selected is not null;
+            deleteButton.Enabled = selected is not null;
+        }
+
+        presetList.SelectedIndexChanged += (_, _) => RefreshActionStates();
+        presetList.DoubleClick += (_, _) =>
+        {
+            if (switchButton.Enabled)
+            {
+                switchButton.PerformClick();
+            }
+        };
+
+        ApplyDialogChrome(dialog);
+        RefreshList();
+        dialog.ShowDialog(this);
+    }
+
+    private StoredConfigPreset? ImportLegacyPreset(
+        ServerProfileSettings profile,
+        string configFileName)
+    {
+        if (_document is null)
+        {
+            return null;
+        }
+
+        var legacyNames = PresetStore.ListPresetNames();
+        if (legacyNames.Count == 0)
+        {
+            MessageBox.Show(this, "No legacy presets were found.", "Import Legacy Preset", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return null;
+        }
+
+        using var dialog = new Form
+        {
+            Text = "Import Legacy Preset",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = FittedDialogClientSize(540, 360, 440, 300),
+            MinimumSize = FittedDialogMinimumSize(440, 300),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 3,
+            ColumnCount = 1,
+            Padding = new Padding(Zoomed(12)),
+            BackColor = MainBackground
+        };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(58)));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(56)));
+        dialog.Controls.Add(root);
+        root.Controls.Add(new Label
+        {
+            Text = "Select one legacy value preset to convert into a full " +
+                   GetConfigVariantLabel(configFileName) +
+                   " config preset. The legacy JSON file will remain unchanged.",
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        }, 0, 0);
+        var list = new ListBox
+        {
+            Dock = DockStyle.Fill,
+            IntegralHeight = false,
+            BackColor = EditorBackground,
+            ForeColor = PrimaryTextColor
+        };
+        foreach (var legacyName in legacyNames)
+        {
+            list.Items.Add(legacyName);
+        }
+
+        if (list.Items.Count > 0)
+        {
+            list.SelectedIndex = 0;
+        }
+        root.Controls.Add(list, 0, 1);
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, Zoomed(10), 0, 0),
+            BackColor = MainBackground
+        };
+        var importButton = new Button
+        {
+            Text = "Import",
+            DialogResult = DialogResult.OK
+        };
+        var cancelButton = new Button
+        {
+            Text = "Cancel",
+            DialogResult = DialogResult.Cancel
+        };
+        SizeDialogButton(importButton);
+        SizeDialogButton(cancelButton);
+        buttons.Controls.Add(importButton);
+        buttons.Controls.Add(cancelButton);
+        root.Controls.Add(buttons, 0, 2);
+        dialog.AcceptButton = importButton;
+        dialog.CancelButton = cancelButton;
+        ApplyDialogChrome(dialog);
+        if (dialog.ShowDialog(this) != DialogResult.OK || list.SelectedItem is not string legacyPresetName)
+        {
+            return null;
+        }
+
+        var instanceId = EnsureInstanceId(profile);
+        var existingNames = PresetStore.List(instanceId, configFileName)
+            .Select(preset => preset.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var suggestedName = existingNames.Contains(legacyPresetName)
+            ? legacyPresetName + " imported"
+            : legacyPresetName;
+        var name = PromptForText("Import Legacy Preset", "Preset name", suggestedName, "Import")?.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "FootholdLegacyPreset-" + Guid.NewGuid().ToString("N"));
+        StoredConfigPreset? createdPreset = null;
+        try
+        {
+            Directory.CreateDirectory(tempDirectory);
+            var baseConfigPath = Path.Combine(tempDirectory, configFileName);
+            WriteCurrentConfigSnapshot(baseConfigPath);
+            var convertedDocument = ConfigDocument.Load(baseConfigPath);
+            var legacyValues = PresetStore.Load(legacyPresetName);
+            foreach (var entry in convertedDocument.Entries)
+            {
+                if (legacyValues.TryGetValue(entry.DisplayKey, out var value))
+                {
+                    entry.ValueText = value;
+                }
+            }
+
+            createdPreset = PresetStore.Create(
+                instanceId,
+                configFileName,
+                name,
+                path => convertedDocument.SaveTo(path));
+            var livePath = Path.GetFullPath(_document.Path);
+            StoreConfigBackup(
+                livePath,
+                createdPreset.ConfigPath,
+                _settings.ServerProfiles,
+                ConfigBackupsDirectory,
+                ConfigBackupsIndexPath,
+                sourceKind: "legacy-preset-import");
+            ReplaceFileFromSource(createdPreset.ConfigPath, livePath);
+            SetActivePreset(profile, configFileName, createdPreset);
+            LoadConfig(livePath);
+            SetStatus("Imported and selected legacy preset: " + createdPreset.Name + ".");
+            return createdPreset;
+        }
+        catch (Exception ex)
+        {
+            if (createdPreset is not null)
+            {
+                PresetStore.Delete(instanceId, createdPreset);
+            }
+
+            MessageBox.Show(this, ex.Message, "Import Legacy Preset failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return null;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+            catch
+            {
+                // Temporary cleanup failure should not hide the import result.
+            }
+        }
     }
 
     private void CopyCurrentConfigToInstances()
@@ -8569,30 +9684,97 @@ internal sealed class MainForm : Form
         group.Controls.Add(header);
 
         var editor = BuildFriendlyControl(entry);
-        SetHelp(editor, entry);
-        if (ShouldLockEntryEditor(entry, out var lockReason))
-        {
-            editor.Enabled = false;
-            SetToolbarHelp(editor, lockReason);
-        }
-
         group.Controls.Add(editor);
 
-        var help = new Label
+        if (!CanEntryEditorBeLocked(entry))
         {
-            Text = string.IsNullOrWhiteSpace(lockReason) ? FirstLine(description) : lockReason,
+            SetHelp(editor, entry);
+            var help = new Label
+            {
+                Text = FirstLine(description),
+                AutoSize = false,
+                Height = 36,
+                Dock = DockStyle.Top,
+                ForeColor = HelpTextColor,
+                BackColor = MainBackground,
+                Padding = new Padding(0, 4, 0, 0)
+            };
+            SetHelp(help, entry);
+            ConfigureEditableHelpControl(help, entry.DisplayKey, entry.DisplayName, description);
+            group.Controls.Add(help);
+            return group;
+        }
+
+        var helpRow = new TableLayoutPanel
+        {
             AutoSize = false,
             Height = 36,
             Dock = DockStyle.Top,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = MainBackground,
+            Margin = new Padding(0)
+        };
+        helpRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        helpRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+        var lockedPrefix = new Label
+        {
+            Text = "Locked",
+            AutoSize = true,
+            Visible = false,
+            Font = new Font(Font, FontStyle.Bold),
+            ForeColor = LockedTextColor,
+            BackColor = MainBackground,
+            Margin = new Padding(0, 4, 0, 0),
+            Tag = LockedPrefixTag
+        };
+        helpRow.Controls.Add(lockedPrefix, 0, 0);
+
+        var helpText = new Label
+        {
+            AutoSize = false,
+            Dock = DockStyle.Fill,
             ForeColor = HelpTextColor,
             BackColor = MainBackground,
             Padding = new Padding(0, 4, 0, 0),
-            Tag = null
+            Margin = new Padding(0)
         };
-        SetHelp(help, entry);
-        ConfigureEditableHelpControl(help, entry.DisplayKey, entry.DisplayName, description);
-        group.Controls.Add(help);
+        SetHelp(helpText, entry);
+        ConfigureEditableHelpControl(helpText, entry.DisplayKey, entry.DisplayName, description);
+        helpRow.Controls.Add(helpText, 1, 0);
+        group.Controls.Add(helpRow);
+
+        var binding = new EntryEditorBinding(entry, editor, lockedPrefix, helpText, description);
+        group.Tag = binding;
+        ApplyEntryEditorLockState(binding);
         return group;
+    }
+
+    private static bool CanEntryEditorBeLocked(ConfigEntry entry)
+    {
+        return !string.IsNullOrWhiteSpace(entry.GuiDisabledWhen) ||
+               EditorLockRules.Any(rule =>
+                   rule.TargetKey.Equals(entry.DisplayKey, StringComparison.Ordinal));
+    }
+
+    private void ApplyEntryEditorLockState(EntryEditorBinding binding)
+    {
+        var isLocked = ShouldLockEntryEditor(binding.Entry, out var lockReason);
+        binding.Editor.Enabled = !isLocked;
+        binding.LockedPrefix.Visible = isLocked;
+        binding.HelpText.Text = isLocked
+            ? LockReasonAfterPrefix(lockReason)
+            : FirstLine(binding.Description);
+        _toolTip.SetToolTip(binding.Editor, isLocked ? lockReason : binding.Description);
+    }
+
+    private static string LockReasonAfterPrefix(string reason)
+    {
+        const string prefix = "Locked";
+        return reason.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? reason[prefix.Length..]
+            : ": " + reason.Trim();
     }
 
     private bool ShouldLockEntryEditor(ConfigEntry entry, out string reason)
@@ -8616,20 +9798,78 @@ internal sealed class MainForm : Form
             }
         }
 
+        var disabledWhen = FindEntry(targetKey)?.GuiDisabledWhen;
+        if (!string.IsNullOrWhiteSpace(disabledWhen) &&
+            TryBuildDisabledWhenReason(disabledWhen, out reason))
+        {
+            return true;
+        }
+
         reason = "";
         return false;
     }
 
-    private static bool EntryAffectsEditorLocks(ConfigEntry entry)
+    private bool TryBuildDisabledWhenReason(string ruleText, out string reason)
     {
-        return EditorLockRules.Any(rule => rule.SourceKey.Equals(entry.DisplayKey, StringComparison.Ordinal));
+        var conditions = new List<string>();
+        var rules = ParseVisibleWhenRules(ruleText);
+        if (rules.Count == 0)
+        {
+            reason = "";
+            return false;
+        }
+
+        foreach (var rule in rules)
+        {
+            var sourceEntry = FindVisibleWhenSourceEntry(rule.SourceKey);
+            if (sourceEntry is null || !VisibleWhenValueMatches(sourceEntry.ValueText, rule.Values))
+            {
+                reason = "";
+                return false;
+            }
+
+            conditions.Add(FormatEditorLockCondition(sourceEntry, rule.Values));
+        }
+
+        reason = "Locked while " + string.Join(" and ", conditions) + ".";
+        return true;
+    }
+
+    private static string FormatEditorLockCondition(ConfigEntry sourceEntry, IReadOnlyList<string> values)
+    {
+        var normalizedValues = values
+            .Select(NormalizeVisibleWhenValue)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (normalizedValues.Count == 1)
+        {
+            if (normalizedValues[0].Equals("true", StringComparison.OrdinalIgnoreCase))
+            {
+                return sourceEntry.DisplayName + " is enabled";
+            }
+
+            if (normalizedValues[0].Equals("false", StringComparison.OrdinalIgnoreCase))
+            {
+                return sourceEntry.DisplayName + " is disabled";
+            }
+        }
+
+        return sourceEntry.DisplayName + " is " + string.Join(" or ", normalizedValues);
     }
 
     private void RefreshDependentEditors(ConfigEntry entry)
     {
+        var sourceKeys = new HashSet<string>(StringComparer.Ordinal)
+        {
+            entry.DisplayKey,
+            entry.Key
+        };
         var targetKeys = EditorLockRules
-            .Where(rule => rule.SourceKey.Equals(entry.DisplayKey, StringComparison.Ordinal))
+            .Where(rule => sourceKeys.Contains(rule.SourceKey))
             .Select(rule => rule.TargetKey)
+            .Concat(_document?.Entries
+                .Where(target => DisabledWhenDependsOn(target.GuiDisabledWhen, sourceKeys))
+                .Select(target => target.DisplayKey) ?? Enumerable.Empty<string>())
             .Distinct(StringComparer.Ordinal)
             .ToList();
         if (targetKeys.Count == 0)
@@ -8637,16 +9877,32 @@ internal sealed class MainForm : Form
             return;
         }
 
-        var affectedCategories = GetCategoriesContainingDesignerKeys(targetKeys);
-        foreach (var categoryName in affectedCategories)
+        var targetKeySet = targetKeys.ToHashSet(StringComparer.Ordinal);
+        var roots = _categoryPanelCache.Values.Distinct().ToList();
+        foreach (var binding in roots
+                     .SelectMany(EnumerateChildControls<TableLayoutPanel>)
+                     .Select(panel => panel.Tag)
+                     .OfType<EntryEditorBinding>()
+                     .Where(binding => targetKeySet.Contains(binding.Entry.DisplayKey))
+                     .Distinct())
         {
-            MarkCategoryPanelDirty(categoryName);
+            ApplyEntryEditorLockState(binding);
         }
 
-        if (affectedCategories.Contains(GetSelectedCategoryName(), StringComparer.OrdinalIgnoreCase))
+        foreach (var binding in roots
+                     .SelectMany(EnumerateChildControls<TableLayoutPanel>)
+                     .Select(panel => panel.Tag)
+                     .OfType<TableEditorBinding>()
+                     .Where(binding => targetKeySet.Contains(binding.Key))
+                     .Distinct())
         {
-            RenderSelectedCategory(force: true);
+            ApplyTableEditorLockState(binding);
         }
+    }
+
+    private static bool DisabledWhenDependsOn(string? ruleText, IReadOnlySet<string> sourceKeys)
+    {
+        return VisibleWhenDependsOn(ruleText, sourceKeys);
     }
 
     private void RefreshVisibleWhenTargets(ConfigEntry entry)
@@ -8757,24 +10013,6 @@ internal sealed class MainForm : Form
         }
     }
 
-    private List<string> GetCategoriesContainingDesignerKeys(IReadOnlyCollection<string> targetKeys)
-    {
-        return GetCategoryListNames()
-            .Where(ShouldCacheCategoryPanel)
-            .Where(categoryName => GetDesignerItems(categoryName, includeTableRows: false, includeAdvanced: true)
-                .Any(item => DesignerItemMatchesAnyKey(item, targetKeys)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static bool DesignerItemMatchesAnyKey(DesignerItem item, IReadOnlyCollection<string> targetKeys)
-    {
-        return targetKeys.Contains(item.Key, StringComparer.Ordinal) ||
-               item.Entries.Any(entry =>
-                   targetKeys.Contains(entry.DisplayKey, StringComparer.Ordinal) ||
-                   targetKeys.Contains(entry.ParentKey, StringComparer.Ordinal));
-    }
-
     private Control BuildFriendlyControl(ConfigEntry entry)
     {
         if (string.Equals(entry.ControlTypeOverride, "multiline", StringComparison.OrdinalIgnoreCase))
@@ -8819,7 +10057,9 @@ internal sealed class MainForm : Form
             return textBox;
         }
 
-        if (entry.IsSideMultiplier && entry.TryGetSideMultipliers(out var red, out var blue))
+        if (entry.IsSideMultiplier &&
+            entry.TryGetSideMultiplierBounds(out _, out _, out _) &&
+            entry.TryGetSideMultipliers(out var red, out var blue))
         {
             return BuildSideMultiplierControl(entry, red, blue);
         }
@@ -8870,12 +10110,7 @@ internal sealed class MainForm : Form
                     entry,
                     "edit " + entry.DisplayName,
                     () => entry.ValueText = ParseBooleanDisplay(comboBox.Text),
-                    () => RefreshControlValue(() =>
-                    {
-                        comboBox.Text = FormatBooleanDisplay(entry.ValueText);
-                        RefreshDependentEditors(entry);
-                    }));
-                RefreshDependentEditors(entry);
+                    () => RefreshControlValue(() => comboBox.Text = FormatBooleanDisplay(entry.ValueText)));
             };
             return comboBox;
         }
@@ -8933,6 +10168,8 @@ internal sealed class MainForm : Form
 
             followUpStatus = followUpStatuses.Count == 0 ? null : string.Join(" ", followUpStatuses);
             RefreshVisibleWhenTargets(entry);
+            RefreshDependentEditors(entry);
+            RefreshSideMultiplierPreviewLabels();
         }
 
         SetChangedStatus();
@@ -9322,44 +10559,46 @@ internal sealed class MainForm : Form
             AutoSize = true,
             ColumnCount = 3
         };
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(70)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(100)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        var redInput = CreateMultiplierInput(red);
-        var blueInput = CreateMultiplierInput(blue);
-        var redText = MakeValueHint(DescribeMultiplier(redInput.Value));
-        var blueText = MakeValueHint(DescribeMultiplier(blueInput.Value));
+        var redInput = CreateMultiplierInput(entry, red);
+        var blueInput = CreateMultiplierInput(entry, blue);
+        var redText = MakeValueHint(GetSideMultiplierHint(entry, redInput.Value, isRed: true));
+        var blueText = MakeValueHint(GetSideMultiplierHint(entry, blueInput.Value, isRed: false));
+        redText.Tag = new SideMultiplierPreviewBinding(entry, redInput, IsRed: true);
+        blueText.Tag = new SideMultiplierPreviewBinding(entry, blueInput, IsRed: false);
 
         redInput.ValueChanged += (_, _) =>
         {
-            redText.Text = DescribeMultiplier(redInput.Value);
+            redText.Text = GetSideMultiplierHint(entry, redInput.Value, isRed: true);
             ChangeEntryValue(entry, "edit " + entry.DisplayName, () =>
                 entry.SetSideMultipliers(redInput.Value, blueInput.Value),
                 () => RefreshControlValue(() =>
                 {
                     if (entry.TryGetSideMultipliers(out var restoredRed, out var restoredBlue))
                     {
-                        redInput.Value = ClampMultiplier(restoredRed);
-                        blueInput.Value = ClampMultiplier(restoredBlue);
-                        redText.Text = DescribeMultiplier(redInput.Value);
-                        blueText.Text = DescribeMultiplier(blueInput.Value);
+                        redInput.Value = ClampMultiplier(entry, restoredRed);
+                        blueInput.Value = ClampMultiplier(entry, restoredBlue);
+                        redText.Text = GetSideMultiplierHint(entry, redInput.Value, isRed: true);
+                        blueText.Text = GetSideMultiplierHint(entry, blueInput.Value, isRed: false);
                     }
                 }));
         };
         blueInput.ValueChanged += (_, _) =>
         {
-            blueText.Text = DescribeMultiplier(blueInput.Value);
+            blueText.Text = GetSideMultiplierHint(entry, blueInput.Value, isRed: false);
             ChangeEntryValue(entry, "edit " + entry.DisplayName, () =>
                 entry.SetSideMultipliers(redInput.Value, blueInput.Value),
                 () => RefreshControlValue(() =>
                 {
                     if (entry.TryGetSideMultipliers(out var restoredRed, out var restoredBlue))
                     {
-                        redInput.Value = ClampMultiplier(restoredRed);
-                        blueInput.Value = ClampMultiplier(restoredBlue);
-                        redText.Text = DescribeMultiplier(redInput.Value);
-                        blueText.Text = DescribeMultiplier(blueInput.Value);
+                        redInput.Value = ClampMultiplier(entry, restoredRed);
+                        blueInput.Value = ClampMultiplier(entry, restoredBlue);
+                        redText.Text = GetSideMultiplierHint(entry, redInput.Value, isRed: true);
+                        blueText.Text = GetSideMultiplierHint(entry, blueInput.Value, isRed: false);
                     }
                 }));
         };
@@ -9373,17 +10612,63 @@ internal sealed class MainForm : Form
         return panel;
     }
 
-    private static NumericUpDown CreateMultiplierInput(decimal value)
+    private static NumericUpDown CreateMultiplierInput(ConfigEntry entry, decimal value)
     {
-        return new WheelSafeNumericUpDown
+        var input = new WheelSafeNumericUpDown
         {
-            DecimalPlaces = 2,
-            Increment = 0.05m,
-            Minimum = 0.1m,
-            Maximum = 5m,
-            Value = ClampMultiplier(value),
             Dock = DockStyle.Fill
         };
+        ApplyMultiplierInputOptions(input, entry, value);
+        return input;
+    }
+
+    private static void ApplyMultiplierInputOptions(
+        NumericUpDown input,
+        ConfigEntry entry,
+        decimal value)
+    {
+        if (!entry.TryGetSideMultiplierBounds(out var minimum, out var maximum, out var step))
+        {
+            throw new InvalidOperationException(
+                entry.DisplayKey + " has invalid sideMultiplier min, max, or step metadata.");
+        }
+
+        var clampedValue = Math.Max(minimum, Math.Min(maximum, value));
+        input.Minimum = Math.Min(input.Minimum, minimum);
+        input.Maximum = Math.Max(input.Maximum, maximum);
+        input.DecimalPlaces = Math.Max(
+            2,
+            Math.Max(
+                GetDecimalPlaces(minimum),
+                Math.Max(GetDecimalPlaces(maximum), GetDecimalPlaces(step))));
+        input.Increment = step;
+        input.Value = clampedValue;
+        input.Minimum = minimum;
+        input.Maximum = maximum;
+    }
+
+    private string GetSideMultiplierHint(ConfigEntry entry, decimal value, bool isRed)
+    {
+        if (_document is not null &&
+            _document.TryFormatSideMultiplierTimePreviewForSide(entry, value, isRed, out var preview, out _))
+        {
+            return preview;
+        }
+
+        if (entry.HasGuiSideMultiplierEditor)
+        {
+            var decimalPlaces = entry.TryGetSideMultiplierBounds(out _, out _, out var step)
+                ? Math.Max(2, GetDecimalPlaces(step))
+                : 2;
+            return value.ToString("F" + decimalPlaces.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture) + "×";
+        }
+
+        return DescribeMultiplier(value);
+    }
+
+    private static int GetDecimalPlaces(decimal value)
+    {
+        return (decimal.GetBits(value)[3] >> 16) & 0xFF;
     }
 
     private Control BuildNumberControl(ConfigEntry entry)
@@ -10035,8 +11320,6 @@ internal sealed class MainForm : Form
             ? metadata.Help
             : entries.FirstOrDefault(entry => !string.IsNullOrWhiteSpace(entry.ParentDescription))?.ParentDescription ?? "";
         var useCheckboxValueColumn = IsCheckboxTableEditor(metadata, entries);
-        var isLocked = ShouldLockTableEditor(key, out var lockReason);
-        DataGridView? grid = null;
         var group = new TableLayoutPanel
         {
             Anchor = AnchorStyles.Top | AnchorStyles.Left,
@@ -10065,13 +11348,9 @@ internal sealed class MainForm : Form
             Margin = GetTableHeaderLabelMargin()
         };
         header.Controls.Add(label);
-        if (!string.IsNullOrWhiteSpace(lockReason) || !string.IsNullOrWhiteSpace(helpText))
-        {
-            header.Controls.Add(MakeHelpButton(title, string.IsNullOrWhiteSpace(lockReason) ? helpText : lockReason, key));
-        }
         group.Controls.Add(header, 0, 0);
 
-        grid = new SmoothDataGridView
+        var grid = new SmoothDataGridView
         {
             Tag = key,
             Dock = DockStyle.Fill,
@@ -10079,25 +11358,18 @@ internal sealed class MainForm : Form
             AllowUserToDeleteRows = false,
             RowHeadersVisible = false,
             MultiSelect = false,
-            ReadOnly = isLocked,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
         };
-        if (isLocked)
-        {
-            SetToolbarHelp(grid, lockReason);
-        }
         group.Controls.Add(grid, 0, 1);
         BuildTableColumns(grid, entries, useCheckboxValueColumn);
         ApplyCompactTableLayout(group, grid);
         var addButton = MakeDesignerButton("Add row", () => AddTableEntryRow(key, entries, grid), TableActionButtonWidth);
         var removeButton = MakeDesignerButton("Remove selected", () => RemoveTableEntryRow(entries, grid), TableActionButtonWidth);
-        if (isLocked)
-        {
-            addButton.Enabled = false;
-            removeButton.Enabled = false;
-        }
         group.Controls.Add(MakeTableActionPanel(addButton, removeButton), 1, 1);
+        var binding = new TableEditorBinding(key, title, helpText, header, grid, addButton, removeButton);
+        group.Tag = binding;
+        ApplyTableEditorLockState(binding);
 
         grid.SuspendLayout();
         try
@@ -10138,6 +11410,27 @@ internal sealed class MainForm : Form
         };
         grid.DataError += (_, _) => { };
         return group;
+    }
+
+    private void ApplyTableEditorLockState(TableEditorBinding binding)
+    {
+        var isLocked = ShouldLockTableEditor(binding.Key, out var lockReason);
+        binding.Grid.ReadOnly = isLocked;
+        binding.AddButton.Enabled = !isLocked;
+        binding.RemoveButton.Enabled = !isLocked;
+        _toolTip.SetToolTip(binding.Grid, isLocked ? lockReason : binding.HelpText);
+
+        foreach (var helpButton in binding.Header.Controls.OfType<Button>().ToList())
+        {
+            binding.Header.Controls.Remove(helpButton);
+            helpButton.Dispose();
+        }
+
+        var currentHelp = isLocked ? lockReason : binding.HelpText;
+        if (!string.IsNullOrWhiteSpace(currentHelp))
+        {
+            binding.Header.Controls.Add(MakeHelpButton(binding.Title, currentHelp, binding.Key));
+        }
     }
 
     private void AddTableEntryRow(string parentKey, List<ConfigEntry> entries, DataGridView? grid)
@@ -13903,6 +15196,8 @@ internal sealed class MainForm : Form
         {
             refreshAction?.Invoke();
             RefreshVisibleWhenTargets(entry);
+            RefreshDependentEditors(entry);
+            RefreshSideMultiplierPreviewLabels();
         };
         _undoStack.Push(new UndoStep(
             description,
@@ -14069,10 +15364,16 @@ internal sealed class MainForm : Form
 
         HideValueEditors();
 
-        if (entry.IsSideMultiplier && entry.TryGetSideMultipliers(out var red, out var blue))
+        if (entry.IsSideMultiplier &&
+            entry.TryGetSideMultiplierBounds(out _, out _, out _) &&
+            entry.TryGetSideMultipliers(out var red, out var blue))
         {
-            _redMultiplier.Value = ClampMultiplier(red);
-            _blueMultiplier.Value = ClampMultiplier(blue);
+            ApplyMultiplierInputOptions(_redMultiplier, entry, red);
+            ApplyMultiplierInputOptions(_blueMultiplier, entry, blue);
+            _redMultiplierText.Tag = new SideMultiplierPreviewBinding(entry, _redMultiplier, IsRed: true);
+            _blueMultiplierText.Tag = new SideMultiplierPreviewBinding(entry, _blueMultiplier, IsRed: false);
+            _redMultiplierText.ForeColor = HelpTextColor;
+            _blueMultiplierText.ForeColor = HelpTextColor;
             UpdateMultiplierText();
             _multiplierPanel.Visible = true;
             _loadingEntry = false;
@@ -14116,28 +15417,47 @@ internal sealed class MainForm : Form
         _choiceBox.Visible = false;
         _boolBox.Visible = false;
         _multiplierPanel.Visible = false;
+        _redMultiplierText.Tag = null;
+        _blueMultiplierText.Tag = null;
         _tuplePanel.Visible = false;
     }
 
-    private static decimal ClampMultiplier(decimal value)
+    private static decimal ClampMultiplier(ConfigEntry entry, decimal value)
     {
-        if (value < 0.1m)
+        if (!entry.TryGetSideMultiplierBounds(out var minimum, out var maximum, out _))
         {
-            return 0.1m;
+            return value;
         }
 
-        if (value > 5m)
-        {
-            return 5m;
-        }
-
-        return value;
+        return Math.Max(minimum, Math.Min(maximum, value));
     }
 
     private void UpdateMultiplierText()
     {
-        _redMultiplierText.Text = DescribeMultiplier(_redMultiplier.Value);
-        _blueMultiplierText.Text = DescribeMultiplier(_blueMultiplier.Value);
+        if (_activeEntry is null)
+        {
+            _redMultiplierText.Text = "";
+            _blueMultiplierText.Text = "";
+            return;
+        }
+
+        _redMultiplierText.Text = GetSideMultiplierHint(_activeEntry, _redMultiplier.Value, isRed: true);
+        _blueMultiplierText.Text = GetSideMultiplierHint(_activeEntry, _blueMultiplier.Value, isRed: false);
+    }
+
+    private void RefreshSideMultiplierPreviewLabels()
+    {
+        var roots = _categoryPanelCache.Values
+            .Append(_formHost)
+            .Append(_multiplierPanel)
+            .Distinct();
+        foreach (var label in roots.SelectMany(EnumerateChildControls<Label>))
+        {
+            if (label.Tag is SideMultiplierPreviewBinding binding)
+            {
+                label.Text = GetSideMultiplierHint(binding.Entry, binding.Input.Value, binding.IsRed);
+            }
+        }
     }
 
     private static string DescribeMultiplier(decimal value)
@@ -14299,9 +15619,13 @@ internal sealed class MainForm : Form
                 {
                     RefreshCurrentView();
                     RefreshVisibleWhenTargets(entry);
+                    RefreshDependentEditors(entry);
+                    RefreshSideMultiplierPreviewLabels();
                 });
             RefreshLinkedStageEditors(entry);
             RefreshVisibleWhenTargets(entry);
+            RefreshDependentEditors(entry);
+            RefreshSideMultiplierPreviewLabels();
         }
 
         RefreshGrid();
@@ -14529,9 +15853,17 @@ internal sealed class MainForm : Form
                 Directory.CreateDirectory(targetDirectory);
                 var installedDefaults = StoreMizDefaults(mizPath, extractedConfig);
                 newDocument.SaveTo(targetPath);
+                var installedPresetSynced = TrySyncActivePresetFromLive(
+                    targetPath,
+                    out var installedPresetName,
+                    out var installedPresetError);
                 UpdateSelectedInstanceConfigPath(targetPath);
                 LoadConfig(targetPath);
                 SetStatus("Installed " + extractedConfig.ConfigFileName + " from MIZ. Stored defaults from " + installedDefaults.MizName + ".");
+                if (!installedPresetSynced)
+                {
+                    ShowActivePresetSyncWarning("MIZ update", installedPresetName, installedPresetError);
+                }
                 return;
             }
 
@@ -14547,18 +15879,22 @@ internal sealed class MainForm : Form
                 .ToList();
             var tableChoices = BuildKeptTableChoices(preview, "current table text", "new MIZ table text");
             var choices = valueChoices.Concat(tableChoices).ToList();
+            var presetTargets = GetOtherPresetUpdateTargets(targetPath);
             if (!ConfirmSelectableValuePreview(
                     previewText,
                     "Import MIZ Config Preview",
-                    "Tick rows to keep your current values. Untick rows to use the new MIZ defaults." + Environment.NewLine +
-                    "Your current config will be backed up automatically before this update.",
+                    AppendActivePresetUpdateNotice(
+                        "Tick rows to keep your current values. Untick rows to use the new MIZ defaults." + Environment.NewLine +
+                        "Your current config will be backed up automatically before this update.",
+                        targetPath),
                     "Import",
                     "Your current value",
                     "New MIZ default",
                     "Keep your current values",
                     "Use new config value",
                     choices,
-                    BuildMizInstallInfoTabs(preview)))
+                    BuildMizInstallInfoTabs(preview),
+                    presetTargets))
             {
                 return;
             }
@@ -14575,10 +15911,38 @@ internal sealed class MainForm : Form
             var storedDefaults = StoreMizDefaults(mizPath, extractedConfig);
             BackupCurrentConfigBeforeMizUpdate(currentDocument.Path, mizPath);
             newDocument.SaveTo(targetPath);
+            var presetSynced = TrySyncActivePresetFromLive(
+                targetPath,
+                out var activePresetName,
+                out var activePresetError);
+            var decisions = choices.ToDictionary(
+                choice => choice.Key,
+                choice => choice.Selected,
+                StringComparer.Ordinal);
+            var presetProfile = FindInstanceProfileForConfig(targetPath);
+            var presetUpdateResult = presetProfile is null
+                ? new PresetBatchUpdateResult()
+                : UpdateOtherPresetsFromSource(
+                    presetProfile,
+                    extractedConfig.Path,
+                    mizPath,
+                    "miz-preset-update",
+                    presetTargets,
+                    decisions);
             UpdateSelectedInstanceConfigPath(targetPath);
             LoadConfig(targetPath);
             ApplyImportedNewMarkers(importedNewMarkers);
-            SetStatus("Imported merged config from MIZ. Stored defaults from " + storedDefaults.MizName + ".");
+            SetStatus(
+                "Imported merged config from MIZ. Stored defaults from " +
+                storedDefaults.MizName +
+                (presetUpdateResult.UpdatedNames.Count == 0
+                    ? "."
+                    : ". Updated presets: " + string.Join(", ", presetUpdateResult.UpdatedNames) + "."));
+            if (!presetSynced)
+            {
+                ShowActivePresetSyncWarning("MIZ update", activePresetName, activePresetError);
+            }
+            ReportPresetBatchUpdate(presetUpdateResult);
         }
         catch (Exception ex)
         {
@@ -15291,10 +16655,13 @@ internal sealed class MainForm : Form
 
     private static ConfigBackupInfo StoreConfigBackup(
         string configPath,
-        string sourceMizPath,
+        string sourcePath,
         IReadOnlyCollection<ServerProfileSettings> profiles,
         string backupsDirectory,
-        string indexPath)
+        string indexPath,
+        string sourceKind = "miz",
+        string? relativeDirectoryOverride = null,
+        string? instanceNameOverride = null)
     {
         var fullConfigPath = Path.GetFullPath(configPath);
         if (!File.Exists(fullConfigPath))
@@ -15305,9 +16672,10 @@ internal sealed class MainForm : Form
         var configFamilyKey = GetConfigFamilyKey(fullConfigPath);
         var profile = profiles.FirstOrDefault(candidate =>
             PathsEqual(GetConfigFamilyKey(candidate.ConfigPath), configFamilyKey));
-        var relativeDirectory = profile is null
-            ? Path.Combine("Standalone", GetStandaloneBackupFolderName(fullConfigPath))
-            : MakeSafeFileName(profile.Name);
+        var relativeDirectory = relativeDirectoryOverride ??
+                                (profile is null
+                                    ? Path.Combine("Standalone", GetStandaloneBackupFolderName(fullConfigPath))
+                                    : MakeSafeFileName(profile.Name));
         var backupDirectory = Path.Combine(backupsDirectory, relativeDirectory);
         Directory.CreateDirectory(backupDirectory);
 
@@ -15321,12 +16689,12 @@ internal sealed class MainForm : Form
             var info = new ConfigBackupInfo
             {
                 Id = Guid.NewGuid().ToString("N"),
-                InstanceName = profile?.Name,
+                InstanceName = instanceNameOverride ?? profile?.Name,
                 OriginalConfigPath = fullConfigPath,
                 ConfigFileName = configFileName,
                 BackupPath = backupPath,
-                SourceKind = "miz",
-                SourcePath = Path.GetFullPath(sourceMizPath),
+                SourceKind = sourceKind,
+                SourcePath = Path.GetFullPath(sourcePath),
                 CreatedAt = createdAt
             };
             var index = LoadConfigBackupIndex(indexPath);
@@ -15451,13 +16819,32 @@ internal sealed class MainForm : Form
         }
 
         outputDocument.SaveTo(currentDocument.Path);
+        var presetSynced = TrySyncActivePresetFromLive(
+            currentDocument.Path,
+            out var activePresetName,
+            out var presetSyncError);
         LoadConfig(currentDocument.Path);
         SetStatus(
             "Restored " +
             selection.SelectedItems.Count.ToString(CultureInfo.InvariantCulture) +
             " default item(s) from " +
             FormatRestoreDefaultsSourceName(selection.Defaults) +
-            ".");
+            (!presetSynced || string.IsNullOrWhiteSpace(activePresetName)
+                ? "."
+                : " and updated preset " + activePresetName + "."));
+        if (!presetSynced)
+        {
+            MessageBox.Show(
+                this,
+                "The live config was restored, but the active preset " +
+                activePresetName +
+                " could not be updated:" +
+                Environment.NewLine +
+                presetSyncError,
+                "Preset restore failed",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
     }
 
     private static void ApplyDefaultRestoreItem(ConfigDocument outputDocument, ConfigDocument defaultDocument, RestoreDefaultItem item)
@@ -16367,6 +17754,81 @@ internal sealed class MainForm : Form
             Require(!restoreCategory.Checked && restoreCategory.Text == "Difficulty advanced",
                 "An empty Restore Defaults category did not clear its selection count.");
 
+            var multiplierPath = Path.Combine(tempDirectory, "side-multiplier.lua");
+            File.WriteAllText(multiplierPath, """
+                -- @gui label="Literal Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreview="Normal zone:1200 | [WH]:600"
+                CampaignSettings.literalSideSpeed = { [1]=1.0, [2]=1.0 }
+                -- @gui label="Referenced Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreview="Normal zone:GlobalSettings.regularSupplyNormalBuildSec | [WH]:GlobalSettings.regularSupplyLogisticBuildSec"
+                CampaignSettings.referencedSideSpeed = { [1]=1.0, [2]=1.0 }
+                -- @gui label="Side-specific Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewRed="Normal zone:1200" timePreviewBlue="Normal zone:GlobalSettings.regularSupplyNormalBuildSec | [WH]:600"
+                CampaignSettings.sideSpecificSpeed = { [1]=1.0, [2]=1.0 }
+                GlobalSettings.regularSupplyNormalBuildSec = 1200
+                GlobalSettings.regularSupplyLogisticBuildSec = 600
+                CampaignSettings.lockSource = true
+                -- @gui disabledWhen="CampaignSettings.lockSource:true"
+                CampaignSettings.metadataLockTarget = 1
+                AllowMods = true
+                """, new System.Text.UTF8Encoding(false));
+            var multiplierDocument = ConfigDocument.Load(multiplierPath);
+            var multiplierEntry = multiplierDocument.Entries.Single(entry =>
+                entry.DisplayKey.Equals("CampaignSettings.literalSideSpeed", StringComparison.Ordinal));
+            var referencedMultiplierEntry = multiplierDocument.Entries.Single(entry =>
+                entry.DisplayKey.Equals("CampaignSettings.referencedSideSpeed", StringComparison.Ordinal));
+            var sideSpecificMultiplierEntry = multiplierDocument.Entries.Single(entry =>
+                entry.DisplayKey.Equals("CampaignSettings.sideSpecificSpeed", StringComparison.Ordinal));
+            var metadataLockTarget = multiplierDocument.Entries.Single(entry =>
+                entry.DisplayKey.Equals("CampaignSettings.metadataLockTarget", StringComparison.Ordinal));
+            var legacyLockTarget = multiplierDocument.Entries.Single(entry =>
+                entry.DisplayKey.Equals("AllowMods", StringComparison.Ordinal));
+            Require(multiplierEntry.IsSideMultiplier &&
+                    multiplierEntry.GuiEditor == "sideMultiplier" &&
+                    multiplierEntry.GuiMinimum == "0.10" &&
+                    multiplierEntry.GuiMaximum == "5.00" &&
+                    multiplierEntry.GuiStep == "0.05" &&
+                    multiplierEntry.GuiTimePreview is not null,
+                "One-line sideMultiplier metadata was not retained.");
+            Require(sideSpecificMultiplierEntry.GuiTimePreviewRed == "Normal zone:1200" &&
+                    sideSpecificMultiplierEntry.GuiTimePreviewBlue ==
+                    "Normal zone:GlobalSettings.regularSupplyNormalBuildSec | [WH]:600",
+                "Side-specific sideMultiplier time-preview metadata was not retained.");
+            Require(!CanEntryEditorBeLocked(multiplierEntry) &&
+                    CanEntryEditorBeLocked(metadataLockTarget) &&
+                    CanEntryEditorBeLocked(legacyLockTarget),
+                "Entry lock-capability classification did not preserve metadata and legacy targets.");
+            Require(multiplierDocument.Validate().Count == 0,
+                "Valid sideMultiplier metadata did not pass config validation.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreview(multiplierEntry, 1m, out var normalPreview, out _) &&
+                    normalPreview == "Normal zone 20m • [WH] 10m",
+                "The 1.00 sideMultiplier time preview was incorrect.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreview(multiplierEntry, 1.05m, out var slowerPreview, out _) &&
+                    slowerPreview == "Normal zone 21m • [WH] 10m 30s",
+                "The 1.05 sideMultiplier time preview was incorrect.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreview(multiplierEntry, 0.5m, out var fasterPreview, out _) &&
+                    fasterPreview == "Normal zone 10m • [WH] 5m",
+                "The 0.50 sideMultiplier time preview was incorrect.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreviewForSide(referencedMultiplierEntry, 1.05m, isRed: true, out var referencedPreview, out _) &&
+                    referencedPreview == "Normal zone 21m • [WH] 10m 30s",
+                "Lua-setting sideMultiplier time-preview references lost backward compatibility.");
+
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreviewForSide(sideSpecificMultiplierEntry, 1m, isRed: true, out var redNormalPreview, out _) &&
+                    redNormalPreview == "Normal zone 20m",
+                "The RED 1.00 side-specific time preview was incorrect.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreviewForSide(sideSpecificMultiplierEntry, 1.05m, isRed: true, out var redSlowerPreview, out _) &&
+                    redSlowerPreview == "Normal zone 21m",
+                "The RED 1.05 side-specific time preview was incorrect.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreviewForSide(sideSpecificMultiplierEntry, 0.5m, isRed: true, out var redFasterPreview, out _) &&
+                    redFasterPreview == "Normal zone 10m",
+                "The RED 0.50 side-specific time preview was incorrect.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreviewForSide(sideSpecificMultiplierEntry, 1m, isRed: false, out var blueNormalPreview, out _) &&
+                    blueNormalPreview == "Normal zone 20m • [WH] 10m",
+                "The BLUE 1.00 side-specific time preview was incorrect.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreviewForSide(sideSpecificMultiplierEntry, 1.05m, isRed: false, out var blueSlowerPreview, out _) &&
+                    blueSlowerPreview == "Normal zone 21m • [WH] 10m 30s",
+                "The BLUE 1.05 side-specific time preview was incorrect.");
+            Require(multiplierDocument.TryFormatSideMultiplierTimePreviewForSide(sideSpecificMultiplierEntry, 0.5m, isRed: false, out var blueFasterPreview, out _) &&
+                    blueFasterPreview == "Normal zone 10m • [WH] 5m",
+                "The BLUE 0.50 side-specific time preview was incorrect.");
+
             Console.WriteLine("Merge regression self-test passed.");
             return 0;
         }
@@ -16859,17 +18321,21 @@ internal sealed class MainForm : Form
                 .ToList();
             var tableChoices = BuildKeptTableChoices(preview, "current table text", "selected config table text");
             var choices = valueChoices.Concat(tableChoices).ToList();
+            var presetTargets = GetOtherPresetUpdateTargets(currentPath);
             if (!ConfirmSelectableValuePreview(
                     previewText,
                     "Import Config File Preview",
-                    "Tick rows to keep your current values. Untick rows to use the selected config defaults.",
+                    AppendActivePresetUpdateNotice(
+                        "Tick rows to keep your current values. Untick rows to use the selected config defaults.",
+                        currentPath),
                     "Import",
                     "Your current value",
                     "Selected config default",
                     "Keep your current values",
                     "Use selected config value",
                     choices,
-                    BuildMizInstallInfoTabs(preview)))
+                    BuildMizInstallInfoTabs(preview),
+                    presetTargets))
             {
                 return;
             }
@@ -16885,9 +18351,37 @@ internal sealed class MainForm : Form
             var importedNewMarkers = CaptureImportedNewMarkers(preview);
             var storedDefaults = StoreConfigDefaults(sourcePath);
             outputDocument.SaveTo(currentPath);
+            var presetSynced = TrySyncActivePresetFromLive(
+                currentPath,
+                out var activePresetName,
+                out var activePresetError);
+            var decisions = choices.ToDictionary(
+                choice => choice.Key,
+                choice => choice.Selected,
+                StringComparer.Ordinal);
+            var presetProfile = FindInstanceProfileForConfig(currentPath);
+            var presetUpdateResult = presetProfile is null
+                ? new PresetBatchUpdateResult()
+                : UpdateOtherPresetsFromSource(
+                    presetProfile,
+                    sourcePath,
+                    sourcePath,
+                    "config-preset-update",
+                    presetTargets,
+                    decisions);
             LoadConfig(currentPath);
             ApplyImportedNewMarkers(importedNewMarkers);
-            SetStatus("Imported merged config from " + FormatRestoreDefaultsSourceName(storedDefaults) + ".");
+            SetStatus(
+                "Imported merged config from " +
+                FormatRestoreDefaultsSourceName(storedDefaults) +
+                (presetUpdateResult.UpdatedNames.Count == 0
+                    ? "."
+                    : ". Updated presets: " + string.Join(", ", presetUpdateResult.UpdatedNames) + "."));
+            if (!presetSynced)
+            {
+                ShowActivePresetSyncWarning("config-file update", activePresetName, activePresetError);
+            }
+            ReportPresetBatchUpdate(presetUpdateResult);
         }
         catch (Exception ex)
         {
@@ -16979,7 +18473,8 @@ internal sealed class MainForm : Form
         string selectedActionLabel,
         string otherActionLabel,
         List<SelectableValueChoice> choices,
-        IReadOnlyList<(string Title, IReadOnlyList<string> Rows)>? infoTabs = null)
+        IReadOnlyList<(string Title, IReadOnlyList<string> Rows)>? infoTabs = null,
+        IReadOnlyList<PresetUpdateTargetChoice>? presetTargets = null)
     {
         using var dialog = new Form
         {
@@ -16988,8 +18483,8 @@ internal sealed class MainForm : Form
             FormBorderStyle = FormBorderStyle.Sizable,
             MinimizeBox = false,
             MaximizeBox = true,
-            ClientSize = new Size(Zoomed(980), Zoomed(700)),
-            MinimumSize = new Size(Zoomed(780), Zoomed(560)),
+            ClientSize = FittedDialogClientSize(980, 700, 780, 560),
+            MinimumSize = FittedDialogMinimumSize(780, 560),
             Font = Font,
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
@@ -16998,12 +18493,15 @@ internal sealed class MainForm : Form
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            RowCount = 4,
+            RowCount = 5,
             ColumnCount = 1,
             Padding = new Padding(Zoomed(10)),
             BackColor = MainBackground
         };
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(64)));
+        panel.RowStyles.Add(new RowStyle(
+            SizeType.Absolute,
+            presetTargets is { Count: > 0 } ? Zoomed(82) : 0));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var detailsRowStyle = new RowStyle(SizeType.Absolute, 0);
         panel.RowStyles.Add(detailsRowStyle);
@@ -17176,6 +18674,45 @@ internal sealed class MainForm : Form
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
         }, 0, 0);
+
+        CheckedListBox? presetTargetList = null;
+        if (presetTargets is { Count: > 0 })
+        {
+            var presetTargetPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                RowCount = 2,
+                ColumnCount = 1,
+                Margin = new Padding(0),
+                BackColor = MainBackground
+            };
+            presetTargetPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(24)));
+            presetTargetPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            presetTargetPanel.Controls.Add(new Label
+            {
+                Text = "Also update other presets (optional):",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = MainBackground,
+                ForeColor = PrimaryTextColor
+            }, 0, 0);
+            presetTargetList = new CheckedListBox
+            {
+                Dock = DockStyle.Fill,
+                CheckOnClick = true,
+                IntegralHeight = false,
+                HorizontalScrollbar = true,
+                BackColor = EditorBackground,
+                ForeColor = PrimaryTextColor
+            };
+            foreach (var target in presetTargets)
+            {
+                presetTargetList.Items.Add(target.Preset.Name, target.Selected);
+            }
+
+            presetTargetPanel.Controls.Add(presetTargetList, 0, 1);
+            panel.Controls.Add(presetTargetPanel, 0, 1);
+        }
 
         Control choiceControl;
         if (orderedChoices.Count == 0 && newRows.Count == 0)
@@ -17490,7 +19027,7 @@ internal sealed class MainForm : Form
             choiceControl = choicePanel;
         }
 
-        panel.Controls.Add(choiceControl, 0, 1);
+        panel.Controls.Add(choiceControl, 0, 2);
 
         var previewFrame = new Panel
         {
@@ -17591,7 +19128,7 @@ internal sealed class MainForm : Form
             }
         }
 
-        panel.Controls.Add(previewFrame, 0, 2);
+        panel.Controls.Add(previewFrame, 0, 3);
 
         var buttons = new FlowLayoutPanel
         {
@@ -17628,7 +19165,7 @@ internal sealed class MainForm : Form
         buttons.Controls.Add(confirmButton);
         buttons.Controls.Add(cancelButton);
         buttons.Controls.Add(detailsButton);
-        panel.Controls.Add(buttons, 0, 3);
+        panel.Controls.Add(buttons, 0, 4);
 
         ApplyDialogChrome(dialog);
         SelectPreviewTab(summaryButton);
@@ -17637,6 +19174,14 @@ internal sealed class MainForm : Form
         if (dialog.ShowDialog(this) != DialogResult.OK)
         {
             return false;
+        }
+
+        if (presetTargetList is not null && presetTargets is not null)
+        {
+            for (var i = 0; i < presetTargets.Count && i < presetTargetList.Items.Count; i++)
+            {
+                presetTargets[i].Selected = presetTargetList.GetItemChecked(i);
+            }
         }
 
         if (TryFindChoiceList(choiceControl, out var listView))
@@ -18053,10 +19598,33 @@ internal sealed class MainForm : Form
         try
         {
             _document.Save();
+            var presetSynced = TrySyncActivePresetFromLive(
+                _document.Path,
+                out var activePresetName,
+                out var presetSyncError);
             _undoCollapseGeneration++;
             RefreshCurrentView(invalidateCachedPanels: false);
             UpdateEditActionButtonStates();
-            SetStatus(_undoStack.Count > 0 ? "Saved config. Undo is still available." : "Saved config.");
+            if (!presetSynced)
+            {
+                SetStatus("Saved live config, but the active preset was not updated.");
+                MessageBox.Show(
+                    this,
+                    "The live config was saved, but the active preset " +
+                    activePresetName +
+                    " could not be updated:" +
+                    Environment.NewLine +
+                    presetSyncError,
+                    "Preset save failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            var savedTarget = string.IsNullOrWhiteSpace(activePresetName)
+                ? "Saved config."
+                : "Saved config and preset " + activePresetName + ".";
+            SetStatus(_undoStack.Count > 0 ? savedTarget + " Undo is still available." : savedTarget);
         }
         catch (Exception ex)
         {
