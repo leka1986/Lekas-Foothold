@@ -1026,6 +1026,7 @@ local killfeedTable = {}
 local killfeedByUnitId = {}
 local splashKillfeedTable = {}
 local splashKillfeedByUnitId = {}
+local splashKillfeedProcessorTimerId
 local splashKillfeedTemp = {}
 local splashKillfeedTempByUnitId = {}
 local HitEventTempTable = {}
@@ -1165,8 +1166,12 @@ local function addSplashKillEntry(entry)
         return existing
     end
 
+    local wasEmpty = #splashKillfeedTable == 0
     table.insert(splashKillfeedTable, entry)
     splashKillfeedByUnitId[entry.unitId] = entry
+    if wasEmpty and splashKillfeedProcessorTimerId then
+        timer.setFunctionTime(splashKillfeedProcessorTimerId, timer.getTime() + 0.1)
+    end
     return entry
 end
 
@@ -3505,6 +3510,8 @@ local function processSplashKillfeed()
             if isFootholdRewardPlayer(playerName) and statName and points then
                 bc:addTempStat(playerName, statName, 1)
                 bc:addContribution(playerName, 2, points)
+                bc:registerCasMissionKill(playerName, entry.unitName)
+                bc:registerSeadMissionKill(playerName, entry.unitName, statName)
                 processedCount = processedCount + 1
             end
             removeSplashKillEntryByUnitId(unitId)
@@ -4749,7 +4756,7 @@ if (script_enable == 1) then
 	
 	--Lekas integration
 	if splash_damage_options.killfeed_enable and splash_damage_options.killfeed_lekas_foothold_integration then
-		timer.scheduleFunction(processSplashKillfeed, {}, timer.getTime() + 60)
+		splashKillfeedProcessorTimerId = timer.scheduleFunction(processSplashKillfeed, {}, timer.getTime() + 60)
 	end	
 	
 	--Strobe

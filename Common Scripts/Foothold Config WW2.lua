@@ -42,25 +42,46 @@ FootholdConfigTrackedTableNames = {
     "ewrs_specialPlaneTypes",
     "AllowedWW2Planes",
 }
+-- Add new top-level scalar settings here so an omitted external setting triggers the warning.
+FootholdConfigTrackedScalarNames = {
+    "ZoneSelfRepairAndUpgradeTime",
+    "PlayerZoneSuppliesConsumeStock",
+}
 
 local function applyExternalConfigWithFallbackWarning()
     local internalTableDefaults = {}
     for _, tableName in ipairs(FootholdConfigTrackedTableNames) do
         internalTableDefaults[tableName] = _G[tableName]
     end
+    local trackedScalarNames = FootholdConfigTrackedScalarNames
 
+    local externalAssignments = {}
+    local externalEnvironment = setmetatable({}, {
+        __index = _G,
+        __newindex = function(_, key, value)
+            externalAssignments[key] = true
+            rawset(_G, key, value)
+        end,
+    })
+    setfenv(externalConfigChunk, externalEnvironment)
     externalConfigChunk()
+    setfenv(externalConfigChunk, _G)
 
-    local internalDefaultsApplied = false
+    local missingConfigNames = {}
     for tableName, internalDefault in pairs(internalTableDefaults) do
         if _G[tableName] == internalDefault then
-            internalDefaultsApplied = true
-            break
+            missingConfigNames[#missingConfigNames + 1] = tableName
         end
     end
-    if not internalDefaultsApplied then return end
+    for _, settingName in ipairs(trackedScalarNames) do
+        if not externalAssignments[settingName] then
+            missingConfigNames[#missingConfigNames + 1] = settingName
+        end
+    end
+    if #missingConfigNames == 0 then return end
+    table.sort(missingConfigNames)
 
-    env.warning("[FOOTHOLD_CONFIG_EXTERNAL_OUTDATED] External Foothold config is outdated. Internal defaults were applied where required.")
+    env.warning("[FOOTHOLD_CONFIG_EXTERNAL_OUTDATED] External Foothold config is outdated. Internal defaults were applied for: " .. table.concat(missingConfigNames, ", "))
 
     local warningCount = 0
     SCHEDULER:New(nil, function()
@@ -163,29 +184,16 @@ FriendlyFireRankPenalty = 500
 -- Difficulty
 -- ============================================================================
 GlobalSettings = GlobalSettings or {}
--- Foothold non-supply spawn/respawn speed scaling (multiplier).
--- This value multiplies AI respawn timers for attack/patrol missions.
--- 1.0 = default (no change)
--- < 1.0 = faster spawns (shorter timers)   | 0.5 = 2x faster
--- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
+-- Foothold non-supply spawn/respawn speed scaling.
+-- This multiplier affects AI attack and patrol mission timers.
+-- 1.0 = normal speed
+-- 0.5 = twice as fast
+-- 1.5 = 50% slower
 --
--- Side index:
 -- [1] = RED coalition
 -- [2] = BLUE coalition
---
--- Examples:
--- Blue spawns twice as fast:  GlobalSettings.difficultyScaling = { [1]=1.0, [2]=0.5 }
--- Red spawns 30% slower:      GlobalSettings.difficultyScaling = { [1]=1.3, [2]=1.0 }
--- This does not affect the supply missions.
--- < 1.0 = faster spawns (shorter timers)   | 0.5 = 2x faster
--- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
+-- @gui label="AI Spawn Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05"
 GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
-
--- Supply-only spawn/respawn speed scaling (multiplier).
--- This value multiplies AI respawn timers for supply missions only.
--- < 1.0 = faster spawns (shorter timers)   | 0.5 = 2x faster
--- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
-GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 
 -- @gui label="Red AI Plane Skill" validValues="Average=Average | Good=Good | High=High | Excellent=Excellent | Random=Random"
 AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
@@ -204,6 +212,7 @@ CasDifficulty           = "medium" -- RED CAS amount.  This can be further custo
 FriendlyCapSupport      = "medium" -- BLUE CAP support limit. This can be further custommized in the advance section.
 FriendlyCasSupport      = "medium" -- BLUE CAS support limit.  This can be further custommized in the advance section.
 RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
+RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 
 -- ============================================================================
 -- Difficulty advanced
@@ -412,70 +421,6 @@ BlueCasCountIgnoreTypes = {
 }
 
 -- ============================================================================
--- RED Reactive Counterpressure
--- ============================================================================
--- RED Reactive Counterpressure (simple explanation):
--- When BLUE players get close to RED frontline zones, RED starts reacting.
--- RED reaction has 2 parts:
--- 1) Soft reaction: RED speeds up some supply and Patrolling CAP groups for pressured RED zones.
--- 2) Hard reaction: RED can force-spawn attack groups to strike BLUE zones.
--- If you do NOT want red supplies groups to be boosted in speed to spawn faster, set softSupplyBoostPerZone to 0.
--- If you do NOT want red CAP groups to be boosted in speed to spawn faster, set softCapBoostPerZone to 0.
--- The coolDownSec is how often this stuff triggers, you can increase / decrease.
--- Valid values: "easy" | "medium" | "hard"
-RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
-
-RedReactiveConfig = {
-easy = {
-    enabled = true, -- Turn the reactive system on/off for this profile
-    minPressureSoft = 16, -- Minimum pressure needed for RED soft reaction (supply/CAP boost). With CapDifficulty="medium", this is usually 3+ counted CAP players.
-    minPressureHard = 15, -- Minimum pressure needed for RED hard reaction (attack push). With CapDifficulty="medium", this is usually 3+ counted CAP players.
-    captureHardWindowSec = 120, -- If BLUE captured a zone recently, Red side can be angry for this long in seconds, and dispatch attack.
-    hardZoneCooldownSec = 1800, -- After hard reaction is used for a pressured RED zone, wait this long before hard can happen there again
-    maxZonesPerTick = 1, -- Max number of pressured RED zones processed per check
-    softSupplyBoostPerZone = 0, -- Max number of RED supply groups to soft-boost per processed zone per check
-    softCapBoostPerZone = 1, -- Max number of RED CAP groups to soft-boost per processed zone per check
-    softSupplyCooldownSec = 1800, -- After a supply soft-boost in one RED zone, wait this long before supply soft-boost can happen there again
-    softCapCooldownSec = 1800, -- After a CAP soft-boost in one RED zone, wait this long before CAP soft-boost can happen there again
-    hardForcePerZone = 1, -- Max hard-forced attack groups for one processed pressured zone
-    hardForceTotalPerTick = 1, -- Total hard-forced attack groups allowed per check (all zones together)
-    groupReuseCooldownSec = 1600, -- After one attack group is hard-forced, wait this long before that same group can be hard-forced again
-},
-
-medium = {
-    enabled = true, -- Turn the reactive system on/off for this profile
-    minPressureSoft = 9, -- Minimum pressure needed for RED soft reaction (supply/CAP boost). With CapDifficulty="medium", this is usually 2-3 counted CAP players.
-    minPressureHard = 9, -- Minimum pressure needed for RED hard reaction (attack push). With CapDifficulty="medium", this is usually 2-3 counted CAP players.
-    captureHardWindowSec = 180, -- If BLUE captured a zone recently, Red side can be angry for this long in seconds, and dispatch attack.
-    hardZoneCooldownSec = 1800, -- After hard reaction is used for a pressured RED zone, wait this long before hard can happen there again
-    maxZonesPerTick = 1, -- Max number of pressured RED zones processed per check
-    softSupplyBoostPerZone = 0, -- Set to 0 to disable RED supply soft reaction. Applied only when minPressureSoft is met.
-    softCapBoostPerZone = 1, -- Set to 0 to disable RED CAP soft reaction. Applied only when minPressureSoft is met.
-    softSupplyCooldownSec = 1500, -- After a supply soft-boost in one RED zone, wait this long before supply soft-boost can happen there again
-    softCapCooldownSec = 900, -- After a CAP soft-boost in one RED zone, wait this long before CAP soft-boost can happen there again
-    hardForcePerZone = 2, -- Max hard-forced attack groups for one processed pressured zone
-    hardForceTotalPerTick = 2, -- Total hard-forced attack groups allowed per check (all zones together)
-    groupReuseCooldownSec = 1200, -- After one attack group is hard-forced, wait this long before that same group can be hard-forced again
-},
-
-hard = {
-    enabled = true, -- Turn the reactive system on/off for this profile
-    startDelaySec = 120, -- Wait this many seconds after mission start before first reactive check
-    minPressureSoft = 6, -- Minimum pressure needed for RED soft reaction (supply/CAP boost). In hard profile, this starts earlier than medium.
-    minPressureHard = 9, -- Minimum pressure needed for RED hard reaction (attack push). This is usually around 2-3 counted CAP players.
-    captureHardWindowSec = 240, -- If BLUE captured a zone recently, Red side can be angry for this long in seconds, and dispatch attack (Hard reaction)
-    hardZoneCooldownSec = 900, -- After hard reaction is used for a pressured RED zone, wait this long before hard can happen there again
-    maxZonesPerTick = 1, -- Max number of pressured RED zones processed per check
-    softSupplyBoostPerZone = 1, -- Set to 0 to disable RED supply soft reaction. Applied only when minPressureSoft is met.
-    softCapBoostPerZone = 2, -- Set to 0 to disable RED CAP soft reaction. Applied only when minPressureSoft is met.
-    softSupplyCooldownSec = 1200, -- After a supply soft-boost in one RED zone, wait this long before supply soft-boost can happen there again
-    softCapCooldownSec = 900, -- After a CAP soft-boost in one RED zone, wait this long before CAP soft-boost can happen there again
-    hardForcePerZone = 3, -- Max hard-forced attack groups for one processed pressured zone
-    hardForceTotalPerTick = 3, -- Total hard-forced attack groups allowed per check (all zones together)
-    groupReuseCooldownSec = 900, -- After one attack group is hard-forced, wait this long before that same group can be hard-forced again
-},
-}
--- ============================================================================
 -- Message Of The Day
 -- ============================================================================
 
@@ -540,6 +485,25 @@ CallsignOverrides = {
 -- Logistics / Warehouse
 -- ============================================================================
 
+-- Supply mission and ready-supply production speed scaling.
+-- This multiplier affects AI supply mission timers and ready-supply production times.
+-- 1.0 = normal speed
+-- 0.5 = twice as fast
+-- 1.5 = 50% slower
+--
+-- [1] = RED coalition
+-- [2] = BLUE coalition
+-- @gui label="Supply Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewRed="Normal zone:1200" timePreviewBlue="Normal zone:1200 | [WH]:600"
+GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
+
+-- Time in seconds for zones to repair or upgrade its own zone using one ready supply.
+ZoneSelfRepairAndUpgradeTime = 300
+
+-- If true, player-picked Zone supplies consume one ready supply package from the campaign zone.
+-- Returned or removed cargo restores that package; destroyed or delivered cargo does not.
+-- Carrier and dynamic FARP pickups remain unlimited because they do not hold campaign-zone stock.
+PlayerZoneSuppliesConsumeStock = true
+
 -- If true, Blue AI will NOT deliver supplies, it will ONLY be done by the player.
 NoAIBlueSupplies = false
 
@@ -583,6 +547,9 @@ ShopPrices = {
 	intel         = 150,  -- Operational Intelligence (60 min)
 	zinf          = 500,  -- Add infantry squad to zone
 	zsam          = 1000, -- Add AA guns to a zone
+	zewr          = 1000, -- Add Early Warning Radar to a zone
+	zlogc         = 2000, -- Make a zone logistic center
+	zsup3         = 750,  -- Add 3 supplies to a zone
 	zarm          = 1000, -- Add armor group to a zone
 	gslot         = 3000, -- Unlock extra upgrade slot
 }
@@ -604,6 +571,9 @@ ShopRankRequirements = {
 	supplies       = 6,  -- Fully Upgrade Friendly Zone
 	zinf           = 5,  -- Add infantry squad to zone
 	zsam           = 6,  -- Add AA guns to a zone
+	zewr           = 2,  -- Add Early Warning Radar to a zone
+	zlogc          = 1,  -- Make a zone logistic center
+	zsup3          = 2,  -- Add 3 supplies to a zone
 	zarm           = 7,  -- Add armor group to a zone
 	gslot          = 9,  -- Unlock extra upgrade slot
 }

@@ -56983,21 +56983,17 @@ end
 end
 return inzone
 end
-function MANTIS:_PreFilterHeight(height,SamCoordinate)
+function MANTIS:_PreFilterHeight(height,SamCoordinate,contactSnapshot)
 self:T(self.lid.."_PreFilterHeight")
 local set={}
-local dlink=self.Detection
-local detectedgroups=dlink:GetContactTable()
-for _,_contact in pairs(detectedgroups)do
-local contact=_contact
+for _,contact in pairs(contactSnapshot)do
 local grp=contact.group
-if grp:IsAlive()then
-local coord=grp:GetCoordinate()
+local coord=contact.coordinate
 local dist=0
 local include=true
-if grp:IsGround()then include=false end
-if grp:GetCoalition()==self.coalition then include=false end
-if coord and SamCoordinate and grp:IsHelicopter()then
+if contact.isGround then include=false end
+if contact.coalition==self.coalition then include=false end
+if coord and SamCoordinate and contact.isHelicopter then
 dist=coord:Get2DDistance(SamCoordinate)or 0
 if dist>self.ShoradActDistance then include=false end
 end
@@ -57006,20 +57002,19 @@ local text="Looking at Group: "..grp:GetName()or"N/A"
 text=text.." Include = "..tostring(include)
 MESSAGE:New(text,10,"MANTIS"):ToAllIf(self.verbose):ToLog()
 end
-local grpalt=grp:GetHeight(true)
+local grpalt=contact.height
 if grpalt<height and grpalt>10 and include==true then
 table.insert(set,coord)
 end
 end
-end
 return set
 end
-function MANTIS:_CheckObjectInZone(dectset,samcoordinate,radius,height,dlink)
+function MANTIS:_CheckObjectInZone(dectset,samcoordinate,radius,height,dlink,contactSnapshot)
 self:T(self.lid.."_CheckObjectInZone")
 local rad=radius or self.checkradius
 local set=dectset
 if dlink then
-set=self:_PreFilterHeight(height,samcoordinate)
+set=self:_PreFilterHeight(height,samcoordinate,contactSnapshot)
 end
 if self.checkforfriendlies==true and self.friendlyset==nil then
 self.friendlyset=SET_GROUP:New():FilterCoalitions(self.Coalition):FilterCategories({"plane","helicopter"}):FilterFunction(function(grp)if grp and grp:InAir()then return true else return false end end):FilterStart()
@@ -57308,7 +57303,8 @@ local group=_group
 group:OptionEngageRange(engagerange)
 if group:IsGround()and group:IsAlive()then
 local grpname=group:GetName()
-local grpcoord=group:GetCoordinate()
+local grpcoord=group:GetCoord()or group:GetCoordinate()
+if grpcoord then grpcoord.Heading=group:GetHeading()or 0 end
 local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname)
 if ARMCapacity and ARMCapacity>0 then _group:SetProperty("ARMCapacity",ARMCapacity)end
 local radaralive=true
@@ -57430,7 +57426,7 @@ end
 self:T(string.format("MANTIS:SeadAllowSuppression DECISION -> DENIED (inbound %d < cap %d) | target=%s",inbound,armcap,tostring(targetName)))
 return false
 end
-function MANTIS:_CheckLoop(samset,detset,dlink,limit)
+function MANTIS:_CheckLoop(samset,detset,dlink,limit,contactSnapshot)
 self:T(self.lid.."CheckLoop "..#detset.." Coordinates")
 local switchedon=0
 local instatusred=0
@@ -57448,7 +57444,7 @@ if not shortsam then
 shortsam=(_data[6]==MANTIS.SamType.POINT)and true or false
 end
 local samgroup=GROUP:FindByName(name)
-local IsInZone,Distance=self:_CheckObjectInZone(detset,samcoordinate,radius,height,dlink)
+local IsInZone,Distance=self:_CheckObjectInZone(detset,samcoordinate,radius,height,dlink,contactSnapshot)
 local suppressed=self.SuppressedGroups[name]or false
 local activeshorad=false
 if self.Shorad and self.Shorad.ActiveGroups and self.Shorad.ActiveGroups[name]then
@@ -57514,21 +57510,39 @@ if self.checkcounter%3==0 then
 self:_RefreshSAMTable()
 end
 self.checkcounter=self.checkcounter+1
+local contactSnapshot=nil
+if dlink then
+contactSnapshot={}
+for _,contact in pairs(detection:GetContactTable())do
+local grp=contact.group
+if grp:IsAlive()then
+local coord=grp:GetCoord()or grp:GetCoordinate()
+contactSnapshot[#contactSnapshot+1]={
+group=grp,
+coordinate=coord,
+height=grp:GetHeight(true),
+coalition=grp:GetCoalition(),
+isGround=grp:IsGround(),
+isHelicopter=grp:IsHelicopter(),
+}
+end
+end
+end
 local instatusred=0
 local instatusgreen=0
 local activeshorads=0
 if self.automode then
 local samset=self.SAM_Table_Long
-local instatusredl,instatusgreenl,activeshoradsl=self:_CheckLoop(samset,detset,dlink,self.maxlongrange)
+local instatusredl,instatusgreenl,activeshoradsl=self:_CheckLoop(samset,detset,dlink,self.maxlongrange,contactSnapshot)
 local samset=self.SAM_Table_Medium
-local instatusredm,instatusgreenm,activeshoradsm=self:_CheckLoop(samset,detset,dlink,self.maxmidrange)
+local instatusredm,instatusgreenm,activeshoradsm=self:_CheckLoop(samset,detset,dlink,self.maxmidrange,contactSnapshot)
 local samset=self.SAM_Table_Short
-local instatusreds,instatusgreens,activeshoradss=self:_CheckLoop(samset,detset,dlink,self.maxshortrange)
+local instatusreds,instatusgreens,activeshoradss=self:_CheckLoop(samset,detset,dlink,self.maxshortrange,contactSnapshot)
 local samset=self.SAM_Table_PointDef
-local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxpointdefrange)
+local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxpointdefrange,contactSnapshot)
 else
 local samset=self:_GetSAMTable()
-local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxclassic)
+local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxclassic,contactSnapshot)
 end
 local function GetReport()
 if self.debug or self.verbose or self.logsamstatus then
@@ -58205,8 +58219,8 @@ end
 if not MANTIS._onbeforeStatusOriginal then
 MANTIS._onbeforeStatusOriginal=MANTIS.onbeforeStatus
 end
-function MANTIS:_CheckLoop(samset,detset,dlink,limit)
-local r,g,s=self:_CheckLoopOriginal(samset,detset,dlink,limit)
+function MANTIS:_CheckLoop(samset,detset,dlink,limit,contactSnapshot)
+local r,g,s=self:_CheckLoopOriginal(samset,detset,dlink,limit,contactSnapshot)
 if self._jammerEnabled and self._jammedSAMs then
 for _,_data in pairs(samset)do
 local name=_data[1]
@@ -76277,9 +76291,8 @@ local Loaded={}
 for _,_item in pairs(loaded.Cargo or{})do
 self:T(self.lid.."UNLOAD checking: ".._item:GetName())
 self:T(self.lid.."UNLOAD state: "..tostring(_item:WasDropped()))
-if _item and _item:GetType()==CTLD_CARGO.Enum.GCLOADABLE and event.IniDynamicCargoName and event.IniDynamicCargoName~=_item:GetName()and not _item:WasDropped()then
-table.insert(Loaded,_item)
-else
+local unloadedItem=_item and _item:GetType()==CTLD_CARGO.Enum.GCLOADABLE and event.IniDynamicCargoName and event.IniDynamicCargoName==_item:GetName()
+if not unloadedItem then
 table.insert(Loaded,_item)
 end
 end
@@ -92139,7 +92152,13 @@ elseif self.type==AUFTRAG.Type.CAS then
 local DCStask=CONTROLLABLE.EnRouteTaskEngageTargetsInZone(nil,self.engageZone:GetVec2(),self.engageZone:GetRadius(),self.engageTargetTypes,Priority)
 table.insert(self.enrouteTasks,DCStask)
 elseif self.type==AUFTRAG.Type.ESCORT then
-local DCStask=CONTROLLABLE.TaskEscort(nil,self.engageTarget:GetObject(),self.escortVec3,nil,self.engageMaxDistance,self.engageTargetTypes)
+local FollowGroup=self.engageTarget:GetObject()
+local DCStask=nil
+if next(self.engageTargetTypes)==nil then
+DCStask=FollowGroup:TaskFollow(FollowGroup,self.escortVec3)
+else
+DCStask=CONTROLLABLE.TaskEscort(nil,FollowGroup,self.escortVec3,nil,self.engageMaxDistance,self.engageTargetTypes)
+end
 table.insert(DCStasks,DCStask)
 elseif self.type==AUFTRAG.Type.GROUNDESCORT then
 local DCSTask=CONTROLLABLE.TaskGroundEscort(nil,self.engageTarget:GetObject(),nil,self.orbitDistance,self.engageTargetTypes)

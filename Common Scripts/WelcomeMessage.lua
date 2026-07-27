@@ -191,22 +191,22 @@ if EscortTakeoffFromGround == nil then
 end
 
 EscortTypeByPlayerType = EscortTypeByPlayerType or {
-    ["C-130J-30"]      = { true, 1 },
-    ["AV8BNA"]         = { true, 1 },
-    ["A-10C_2"]        = { true, 1 },
-    ["A-10C"]          = { true, 1 },
-    ["A-10A"]          = { true, 1 },
-    ["Hercules"]       = { true, 1 },
-    ["F-15ESE"]        = { true, 2 },
-    ["AJS37"]          = { true, 1 },
-    ["MiG-29 Fulcrum"] = { false, 2 },
-    ["F-16C_50"]       = { false, 2 },
-    ["FA-18C_hornet"]  = { false, 2 },
-    ["MiG-21Bis"]      = { false, 3 },
-    ["Su-25T"]         = { false, 3 },
-    ["Su-25"]          = { false, 3 },
-    ["M-2000C"]        = { false, 2 },
-    ["Bronco-OV-10A"]  = { false, 1 },
+    ["C-130J-30"]      = { true, 1, 10000 },
+    ["AV8BNA"]         = { true, 1, 10000 },
+    ["A-10C_2"]        = { true, 1, 10000 },
+    ["A-10C"]          = { true, 1, 10000 },
+    ["A-10A"]          = { true, 1, 10000 },
+    ["Hercules"]       = { true, 1, 10000 },
+    ["F-15ESE"]        = { true, 2, 10000 },
+    ["AJS37"]          = { true, 1, 10000 },
+    ["MiG-29 Fulcrum"] = { false, 2, 10000 },
+    ["F-16C_50"]       = { false, 2, 10000 },
+    ["FA-18C_hornet"]  = { false, 2, 10000 },
+    ["MiG-21Bis"]      = { false, 3, 10000 },
+    ["Su-25T"]         = { false, 3, 10000 },
+    ["Su-25"]          = { false, 3, 10000 },
+    ["M-2000C"]        = { false, 2, 10000 },
+    ["Bronco-OV-10A"]  = { false, 1, 10000 },
 
 }
 
@@ -1127,7 +1127,8 @@ function getClosestFriendlyAirbaseInfo(client)
     end
     local clientType      = client:GetTypeName()
     local playerSide      = client:GetCoalition()
-    local considerCarrier = playerSide == coalition.side.BLUE and (clientType == "FA-18C_hornet" or clientType == "F-14B")
+    local considerCarrier = playerSide == coalition.side.BLUE 
+    and (clientType == "FA-18C_hornet" or clientType == "F-14B" or clientType == "F-14BU" or clientType == "F-14A-135-GR" or clientType == "F-14A-135-GR-Early" or clientType == "F-14A-95-GR")
     local lines           = {}
 
     if considerCarrier then
@@ -1383,6 +1384,7 @@ function static:processPlayerSpawn(player, zoneNameOverride)
                         carrierBriefingLine=getCarrierBriefingLine(carrierHull, T)
                     end
                     if isCarrierZoneName(zoneName) and carrierHull then
+                        bc:registerPlayerCarrierOrigin(playerName, carrierHull)
 
                     if assignedCallsign and assignedIFF then
                         greetingMessage = T:Format("WELCOME_GREETING_CARRIER_ASSIGNED", carrierName, rankDisplay, assignedCallsign, assignedIFF)
@@ -1517,6 +1519,7 @@ function static:processPlayerSpawn(player, zoneNameOverride)
                 local distanceToCar = playerPos:Get2DDistance(carrierPos)
 
                 if distanceToCar < 200 then
+                    bc:registerPlayerCarrierOrigin(playerName, carrierHull)
                     local prettyName,tacanCode      = hullPrettyAndTCN(carrierHull)
                     local assignedCallsign,assignedIFF = findOrAssignSlot(playerName,groupName,carrierHull)
                     local playerUnitID              = player:GetID()
@@ -1635,12 +1638,11 @@ function HandleEscortLandingForGroupName(groupName, orbitCenter)
         end
         if orbitCenter then
             local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(orbitCenter, 10000, 250)
-            orbitAuftrag.missionTask=ENUMS.MissionTask.CAP
             orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
             orbitAuftrag:SetEngageDetected(40, {"Air"})
             orbitAuftrag:SetMissionAltitude(10000)  
             orbitAuftrag:SetROE(2)
-            orbitAuftrag:SetROT(2)
+            orbitAuftrag:SetROT(3)
             escortGroup:AddMission(orbitAuftrag)
             if currentMission then
                 currentMission:__Cancel(5)
@@ -1668,6 +1670,8 @@ function FindEscortTemplateWithAlias(clientGroup, alias)
     local templateName
     local escortConfig = EscortTypeByPlayerType and EscortTypeByPlayerType[aircraftType]
     local escortType = (type(escortConfig) == "table" and escortConfig[2]) or 1
+    local altitudeAboveFeet = (type(escortConfig) == "table" and escortConfig[3]) or 10000
+    local altitudeAboveMeters = UTILS.FeetToMeters(altitudeAboveFeet)
     if escortType == 2 then
         templateName = isColdwar and "Escort2_Viper_Coldwar" or "Escort2_Viper"
     elseif escortType == 3 then
@@ -1675,7 +1679,7 @@ function FindEscortTemplateWithAlias(clientGroup, alias)
     else
         templateName = isColdwar and "Escort1_Hornet_Coldwar" or "Escort1_Hornet"
     end
-    return templateName
+    return templateName, altitudeAboveMeters
 end
 
 function GetClosestEscortAirdromeZone(clientGroup)
@@ -1823,7 +1827,7 @@ function EscortClientGroup(clientGroup)
     local spawnCount = spawnedGroups[groupName] and spawnedGroups[groupName].escortSpawnCount or 1
     local safePlayerName = playerName:gsub("%s+", "_"):gsub("[^%w_%-]", "_")
     local alias = groupName .. "_" .. safePlayerName .. "_Escort_" .. string.format("%03d", spawnCount)
-    local templateName = FindEscortTemplateWithAlias(clientGroup, alias)
+    local templateName, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(clientGroup, alias)
     local escortSpawnedFromGround = false
     local _, escortHomeBase = GetClosestEscortAirdromeZone(clientGroup)
     local escortHomeCoord = escortHomeBase and escortHomeBase:GetCoordinate()
@@ -1834,20 +1838,31 @@ function EscortClientGroup(clientGroup)
         escortGroup:GetGroup():CommandSetUnlimitedFuel(true):SetOptionRadarUsingForContinousSearch(true):SetOptionWaypointPassReport(false)
         escortGroups[groupName] = escortGroup
         if playerInAir then
-            local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, { x = -100, y = 3048, z = 100 }, 40, { "Air" })
+            local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, { x = -100, y = escortAltitudeAboveMeters, z = 100 }, 40, {})
+            escortAuftrag:SetMissionAltitude(25000)
+            escortAuftrag:SetEngageDetected(40, {"Air"})
+            escortAuftrag:SetMissionSpeed(600)
+            escortAuftrag:SetROE(2)
+            escortAuftrag:SetROT(3)
             escortGroup:AddMission(escortAuftrag)
         else
             local orbitCenter = escortHomeCoord or clientGroup:GetPointVec2()
             if orbitCenter then
                 local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(orbitCenter, 10000, 350)
-                orbitAuftrag.missionTask=ENUMS.MissionTask.CAP
                 orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
                 orbitAuftrag:SetEngageDetected(40, {"Air"})
+                orbitAuftrag:SetROE(2)
+                orbitAuftrag:SetROT(3)
                 orbitAuftrag:SetMissionAltitude(10000)
                 escortGroup:AddMission(orbitAuftrag)
                 escortPendingJoin[groupName] = true
             else
-                local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, { x = -100, y = 3048, z = 100 }, 40, { "Air" })
+                local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, { x = -100, y = escortAltitudeAboveMeters, z = 100 }, 40, {})
+                escortAuftrag:SetMissionAltitude(25000)
+                escortAuftrag:SetEngageDetected(40, {"Air"})
+                escortAuftrag:SetMissionSpeed(600)
+                escortAuftrag:SetROE(2)
+                escortAuftrag:SetROT(3)
                 escortGroup:AddMission(escortAuftrag)
             end
         end
@@ -1857,7 +1872,7 @@ function EscortClientGroup(clientGroup)
             function escortGroup:OnAfterTakeoff(From, Event, To)
                 if clientGroup and clientGroup:IsAlive() then
                     if IsPlayerGroupInAir(clientGroup) then
-                        local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, {x=-100, y=3048, z=300}, 40, {"Air"})
+                        local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, {x=-100, y=escortAltitudeAboveMeters, z=300}, 40, {})
                         escortAuftrag:SetMissionAltitude(25000)
                         escortAuftrag:SetEngageDetected(40, {"Air"})
                         escortAuftrag:SetMissionSpeed(600)
@@ -1877,7 +1892,6 @@ function EscortClientGroup(clientGroup)
                         end, {}, 30)
                     elseif escortHomeCoord then
                         local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(escortHomeCoord, 10000, 350)
-                        orbitAuftrag.missionTask=ENUMS.MissionTask.CAP
                         orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
                         orbitAuftrag:SetEngageDetected(40, {"Air"})
                         orbitAuftrag:SetMissionAltitude(10000)
@@ -1976,7 +1990,6 @@ function EscortOrbit(group)
         local clientCoord = group:GetPointVec2()
         local escortHeading = group:GetHeading()
         local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(clientCoord, 25000, 350)
-        orbitAuftrag.missionTask=ENUMS.MissionTask.CAP
         orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
         orbitAuftrag:SetEngageDetected(40, {"Air"})
         orbitAuftrag:SetMissionAltitude(25000)
@@ -2106,7 +2119,8 @@ function EscortRejoin(group)
         local currentMission = escortGroup:GetMissionCurrent()
 
         if IsPlayerGroupInAir(group) then
-            local escortAuftrag = AUFTRAG:NewESCORT(group, {x=-100, y=3048, z=300}, 40, {"Air"})
+            local _, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(group)
+            local escortAuftrag = AUFTRAG:NewESCORT(group, {x=-100, y=escortAltitudeAboveMeters, z=300}, 40, {})
             escortAuftrag:SetMissionAltitude(25000)
             escortAuftrag:SetEngageDetected(40, {"Air"})
             escortAuftrag:SetMissionSpeed(600)
@@ -2121,7 +2135,6 @@ function EscortRejoin(group)
         else
             local clientCoord = group:GetPointVec2()
             local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(clientCoord, 10000, 350)
-            orbitAuftrag.missionTask=ENUMS.MissionTask.CAP
             orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
             orbitAuftrag:SetEngageDetected(40, {"Air"})
             orbitAuftrag:SetMissionAltitude(10000)
@@ -2254,10 +2267,11 @@ function static:OnEventTakeoff(EventData)
         end
 
         if escortPendingJoin[PGName] and escortGroup and IsPlayerGroupInAir(playerGroup) then
-            local escortAuftrag = AUFTRAG:NewESCORT(playerGroup, {x=-100, y=3048, z=300}, 40, {"Air"})
-            -- escortAuftrag:SetMissionAltitude(25000)
-            -- escortAuftrag:SetEngageDetected(40, {"Air"})
-            -- escortAuftrag:SetMissionSpeed(600)
+            local _, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(playerGroup)
+            local escortAuftrag = AUFTRAG:NewESCORT(playerGroup, {x=-100, y=escortAltitudeAboveMeters, z=300}, 40, {})
+            escortAuftrag:SetMissionAltitude(25000)
+            escortAuftrag:SetEngageDetected(40, {"Air"})
+            escortAuftrag:SetMissionSpeed(600)
             escortAuftrag:SetROE(2)
             escortAuftrag:SetROT(3)
             local currentMission = escortGroup:GetMissionCurrent()
@@ -2310,6 +2324,8 @@ function static:OnEventPlayerLeaveUnit(EventData)
         if EventData.IniUnit and EventData.IniPlayerName then
             local playerName = EventData.IniPlayerName
             local playerUnit = EventData.IniUnit
+            bc:markCasMissionPlayerUnavailable(playerName)
+            bc:markSeadMissionPlayerUnavailable(playerName)
         if EventData.id == EVENTS.PlayerLeaveUnit then
             local side = playerUnit:GetCoalition()
             bc.lossPenaltyArmByPlayer[playerName] = nil
@@ -2389,6 +2405,8 @@ function static:OnEventPlayerLeaveUnit(EventData)
                     local zoneName=callsignInfo.zoneName
                     local gname=callsignInfo.groupName
                     local groupId = bc.groupByPlayer and bc.groupByPlayer[playerName]
+                    bc:markCasMissionPlayerUnavailable(playerName)
+                    bc:markSeadMissionPlayerUnavailable(playerName)
                     cleanupEscortForGroupName(gname)
                     if groupId then
                         lc:pruneGroupMenus(groupId, gname)

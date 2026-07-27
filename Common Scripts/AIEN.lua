@@ -13122,7 +13122,7 @@ local reactionsDb = {
 }
 
 -- the functions that handles the reactions, using priorities
-local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventCat, eventCls)
+local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventCat, eventCls, airSupportAttackerType, airSupportPlayerName)
     if gr and gr:isExist() and ownPos and tgtPos and actTbl and skill then
         if actTbl and #actTbl>0 then
             for _, aData in ipairs(actTbl) do
@@ -13134,6 +13134,15 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
                     end
                      if success and success == true then
                         if aData.resume == true then trigger.action.groupContinueMoving(gr) end
+                        local reactionZone = nil
+                        if AIEN.config.message_feed == true or airSupportAttackerType then
+                            reactionZone = bc:getZoneOfPoint(ownPos)
+                        end
+                        if airSupportAttackerType and reactionZone and reactionZone.zone
+                            and gr:getCoalition() == coalition.side.RED
+                        then
+                            bc:reportAIENAirSupportAttack(reactionZone, eventCat, airSupportAttackerType, airSupportPlayerName)
+                        end
                         if AIEN.config.message_feed == true then
                             local threatTxt = nil
                             local groundThreatTxt = aienText("AIEN_THREAT_GROUND_UNITS", "enemy ground units!")
@@ -13167,10 +13176,13 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
                                 end
                                 if cls and AIEN_THREAT_LABEL_KEYS[cls] then threatTxt = aienThreatLabel(cls) end
                             end
-                            local z = bc:getZoneOfPoint(ownPos)
+                            local z = reactionZone
                             local actionMessage = aienReactionMessage(aData)
                             if z and z.zone then
                                 local zoneName = z.zone
+                                if gr:getCoalition() == coalition.side.BLUE then
+                                    bc:startZoneAttackFlash(z, 60)
+                                end
                                 local txt = ""
                                 if threatTxt then
                                     txt = txt .. aienFormat("AIEN_ZONE_UNDER_ATTACK_BY", "C2, %s is under attack by %s %s", tostring(zoneName), tostring(threatTxt), tostring(actionMessage))
@@ -13363,7 +13375,7 @@ local function populate_Db() -- this one is launched once at mission start and c
 	groundgroupsDb = {}
 	for i = 0, 2 do
 		for _, gp in pairs(coalition.getGroups(i,2)) do -- ground only
-			if gp:isExist() then
+			if gp:isExist() and IsGroupActive(gp:getName()) then
                 local c = getGroupClass(gp)
                 local gpcoa = gp:getCoalition()
                 -- classes reminder from getGroupClass:
@@ -14927,7 +14939,16 @@ end
                                     underAttack[groupId] = timer.getTime()
 
                                     if not delegationOnly or allowMobileAaaReaction then
-                                        choosenAct = executeReactions(group, o_pos, a_pos, bc_ac, db_group.sa, db_group.skill, s_cat, s_cls)
+                                        local airSupportAttackerType = nil
+                                        local airSupportPlayerName = nil
+                                        if groupCoalition == coalition.side.RED and shooterKnown and s_cat == 0 then
+                                            airSupportPlayerName = shooter:getPlayerName()
+                                            if airSupportPlayerName then airSupportAttackerType = shooter:getTypeName() end
+                                        end
+                                        choosenAct = executeReactions(
+                                            group, o_pos, a_pos, bc_ac, db_group.sa, db_group.skill, s_cat, s_cls,
+                                            airSupportAttackerType, airSupportPlayerName
+                                        )
                                     end
 
                                     local counterBatteryDone = false

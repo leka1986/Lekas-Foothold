@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 -- ## Red CTLD ##
 ---------------------------------------------------------------------------
+
 if Allow_Red_CTLD == true then
     
 BASE:I("Red CTLD : is loading.")
@@ -148,6 +149,48 @@ local function redCtldRequestedSets(Cargo, number)
     return requestedSets
 end
 
+Foothold_redCtld.ZoneSupplyPickupDebits = Foothold_redCtld.ZoneSupplyPickupDebits or {}
+
+local function redCtldZoneSupplyPickupDebitKey(Group, Unit)
+    if Unit and Unit.GetName then return Unit:GetName() end
+    if Group and Group.GetName then return Group:GetName() end
+    return nil
+end
+
+local function redCtldQueueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, quantity)
+    local key = redCtldZoneSupplyPickupDebitKey(Group, Unit)
+    if not key then return end
+    local queue = Foothold_redCtld.ZoneSupplyPickupDebits[key]
+    if not queue then
+        queue = {}
+        Foothold_redCtld.ZoneSupplyPickupDebits[key] = queue
+    end
+    queue[#queue + 1] = {
+        cargoName = cargoName,
+        sourceZone = sourceZoneName,
+        remaining = quantity,
+    }
+end
+
+local function redCtldClaimZoneSupplyPickupDebit(unitName, groupName, cargoName)
+    local key = unitName or groupName
+    local queue = key and Foothold_redCtld.ZoneSupplyPickupDebits[key] or nil
+    if not queue then return nil end
+
+    for index, debit in ipairs(queue) do
+        if debit.cargoName == cargoName and (debit.remaining or 0) > 0 then
+            debit.remaining = debit.remaining - 1
+            local sourceZone = debit.sourceZone
+            if debit.remaining <= 0 then table.remove(queue, index) end
+            if #queue == 0 then Foothold_redCtld.ZoneSupplyPickupDebits[key] = nil end
+            return sourceZone
+        end
+    end
+    return nil
+end
+
+local redCtldRefundPlayerZoneSupplyStock
+
 function Foothold_redCtld:CanGetUnits(Group, Unit, Config, quantity, quiet)
     if CTLDCost ~= true then return true end
     local name = Config and Config.Name or "none"
@@ -173,19 +216,59 @@ function Foothold_redCtld:CanGetTroops(Group, Unit, Cargo, quantity, Inject)
 end
 
 function Foothold_redCtld:CanGetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+    if drop or pack then return true end
+    if not (Cargo and Cargo.GetName) or Cargo.Subcategory ~= "Zone supplies" then return true end
+    if PlayerZoneSuppliesConsumeStock ~= true then return true end
+
+    local cargoName = Cargo:GetName()
+    local requestedSets = redCtldRequestedSets(Cargo, number)
+    local _, pickupZone = self:IsUnitInZone(Unit, CTLD.CargoZoneType.LOAD)
+    local sourceZone = pickupZone and bc:getZoneByName(pickupZone) or nil
+
+    -- Non-campaign load zones do not own regular campaign supply stock.
+    if not sourceZone then return true end
+
+    local now = timer.getAbsTime()
+    sourceZone:_updateRegularSupplyStock(now)
+    local ready = math.max(0, math.floor(tonumber(sourceZone._regularSupplyReady) or 0))
+    local reserved = math.max(0, math.floor(tonumber(sourceZone._regularSupplyPendingStock) or 0))
+    local available = math.max(0, ready - reserved)
+    if not sourceZone.active or sourceZone.side ~= coalition.side.RED
+        or sourceZone._regularSupplyStockSide ~= coalition.side.RED or available < requestedSets
+    then
+        local T = Group and Group.IsAlive and Group:IsAlive() and L10N:ForMooseGroup(Group) or L10N
+        local label = ctldLocalizedCargoLabel(T, "Zone supplies")
+        local reason = T:Format("CTLD_REASON_INSUFFICIENT_STOCK", label)
+        local text = T:Format("CTLD_WAREHOUSE_NOT_AVAILABLE", label, tostring(pickupZone), reason)
+        if Group and Group.IsAlive and Group:IsAlive() then
+            MESSAGE:New(text, 12):ToGroup(Group)
+        else
+            trigger.action.outTextForCoalition(coalition.side.RED, text, 12)
+        end
+        return false
+    end
+
+    sourceZone._regularSupplyReady = ready - requestedSets
+    sourceZone._regularSupplyLastUpdateAt = now
+    sourceZone:updateLabel(coalition.side.RED)
+    redCtldQueueZoneSupplyPickupDebit(Group, Unit, cargoName, pickupZone, requestedSets)
     return true
 end
 
 function Foothold_redCtld:OnAfterRemoveCratesNearby(From, Event, To, Group, Unit, Cargotable)
-    local inzone = self:IsUnitInZone(Unit, CTLD.CargoZoneType.LOAD)
+    local inzone, zoneName = self:IsUnitInZone(Unit, CTLD.CargoZoneType.LOAD)
     if not inzone then return end
-    if CTLDCost ~= true then return end
 
     local byName = {}
     for _, cargo in pairs(Cargotable or {}) do
-        local name = cargo:GetName() or "none"
+        if cargo._zoneSupplySourceZone == zoneName then
+            redCtldRefundPlayerZoneSupplyStock(cargo)
+        end
+        local name = cargo.GetName and cargo:GetName() or cargo.name or "none"
         byName[name] = (byName[name] or 0) + 1
     end
+
+    if CTLDCost ~= true then return end
 
     for name, count in pairs(byName) do
         local object = self:_FindCratesCargoObject(name)
@@ -504,6 +587,7 @@ local RED_ZONE_SUPPLY_TYPES = {
 
 local RED_ZONE_SUPPLY_AGL_THRESHOLD = 0.5
 local RED_ZONE_SUPPLY_NOZONE_TTL = 600
+local RED_ZONE_SUPPLY_NOZONE_RECHECK = 60
 local RED_ZONE_SUPPLY_MOVE_EPS2 = 0.25
 local RED_ZONE_SUPPLY_NONEED_TTL = 60
 local ZONE_SUPPLY_CAPTURE_REWARD = bc.rewards["Zone capture"] or 200
@@ -522,6 +606,33 @@ local RED_ZONE_SUPPLY_AIRCRAFT_DIMENSIONS = {
 local redZoneSupplyCrates = {}
 local redZoneSupplyLandingOnce = { pending = nil, scheduled = false, delay = 5 }
 Foothold_redCtld.ZoneSupplyOnboardByGroup = Foothold_redCtld.ZoneSupplyOnboardByGroup or {}
+
+redCtldRefundPlayerZoneSupplyStock = function(entryOrCargo)
+    if not entryOrCargo or entryOrCargo._zoneSupplySourceConsumed ~= true then return false end
+    local sourceZoneName = entryOrCargo._zoneSupplySourceZone
+    local sourceZone = sourceZoneName and bc:getZoneByName(sourceZoneName) or nil
+    if not sourceZone or not sourceZone.active or sourceZone.side ~= coalition.side.RED
+        or sourceZone._regularSupplyStockSide ~= coalition.side.RED
+        or not sourceZone:_regularSupplyHasRouteForSide(coalition.side.RED)
+    then
+        return false
+    end
+
+    sourceZone:_addImportedRegularSupplyStock(1, timer.getAbsTime())
+    entryOrCargo._zoneSupplySourceConsumed = false
+    entryOrCargo._zoneSupplySourceRefunded = true
+    if entryOrCargo.cargo then
+        entryOrCargo.cargo._zoneSupplySourceConsumed = false
+        entryOrCargo.cargo._zoneSupplySourceRefunded = true
+    end
+    for _, trackedEntry in pairs(redZoneSupplyCrates) do
+        if trackedEntry == entryOrCargo or trackedEntry.cargo == entryOrCargo then
+            trackedEntry._zoneSupplySourceConsumed = false
+            trackedEntry._zoneSupplySourceRefunded = true
+        end
+    end
+    return true
+end
 
 local function redCtldCargoName(cargoItem)
     if not cargoItem then return nil end
@@ -811,6 +922,17 @@ function Foothold_redCtld:RefreshZoneSupplyOnboardForGroup(groupId)
     return hasOnboard
 end
 
+local function redCtldRebuildZoneSupplyOnboardCache()
+    local onboardByGroup = {}
+    for _, entry in pairs(redZoneSupplyCrates) do
+        local groupId = redCtldResolveGroupId(entry)
+        if groupId and redCtldTrackedSupplyOnboard(entry) then
+            onboardByGroup[groupId] = true
+        end
+    end
+    Foothold_redCtld.ZoneSupplyOnboardByGroup = onboardByGroup
+end
+
 function Foothold_redCtld:ClearZoneSupplyOnboardForGroup(groupId)
     self.ZoneSupplyOnboardByGroup = self.ZoneSupplyOnboardByGroup or {}
     if groupId then
@@ -876,8 +998,7 @@ local function redCtldResolveZoneNameFromVec3(vec3)
 end
 
 local function redCtldResolveZoneNameFromMooseObject(obj)
-    local coord = obj and obj.GetCoordinate and obj:GetCoordinate() or nil
-    local vec3 = coord and coord.GetVec3 and coord:GetVec3() or nil
+    local vec3 = obj and obj.GetVec3 and obj:GetVec3() or nil
     return redCtldResolveZoneNameFromVec3(vec3)
 end
 
@@ -889,7 +1010,9 @@ local function redCtldTrackMoved(entry, vec3)
     local dx = vec3.x - entry._lastVec3.x
     local dy = vec3.y - entry._lastVec3.y
     local dz = vec3.z - entry._lastVec3.z
-    entry._lastVec3 = { x = vec3.x, y = vec3.y, z = vec3.z }
+    entry._lastVec3.x = vec3.x
+    entry._lastVec3.y = vec3.y
+    entry._lastVec3.z = vec3.z
     return (dx * dx + dy * dy + dz * dz) > RED_ZONE_SUPPLY_MOVE_EPS2
 end
 
@@ -934,7 +1057,7 @@ local function redCtldCargoInsideCarrier(entry, vec3)
         and math.abs(dz) <= dim.width
 end
 
-local function redCtldMarkSupplyLoaded(key, entry, staticObj)
+local function redCtldMarkSupplyLoaded(key, entry, staticObj, deferCacheRefresh)
     if not entry then return end
 
     entry.wasLoaded = true
@@ -943,6 +1066,7 @@ local function redCtldMarkSupplyLoaded(key, entry, staticObj)
     entry.attached = true
     entry.detached = false
     entry.noZoneAt = nil
+    entry.noZoneNextCheckAt = nil
     entry.noNeedAt = nil
 
     if not entry._gcLoadedMsg then
@@ -951,7 +1075,9 @@ local function redCtldMarkSupplyLoaded(key, entry, staticObj)
         entry._gcLoadedMsg = true
     end
 
-    Foothold_redCtld:RefreshZoneSupplyOnboardForGroup(redCtldResolveGroupId(entry))
+    if deferCacheRefresh ~= true then
+        Foothold_redCtld:RefreshZoneSupplyOnboardForGroup(redCtldResolveGroupId(entry))
+    end
 end
 
 local function redCtldRewardPlayer(entry, statLabel, reward)
@@ -999,8 +1125,10 @@ local function redCtldSimulateLandingForEntryIfOnGround(entry, zoneName)
     end, {}, redZoneSupplyLandingOnce.delay, 0)
 end
 
-local function redCtldFinalizeDelivery(key, entry, zoneObj, actionKey, statLabel, reward)
-    local actionText = redCtldFormatForEntry(entry, actionKey)
+local function redCtldFinalizeDelivery(key, entry, zoneObj, actionKey, statLabel, reward, actionArgs)
+    local actionText = actionArgs
+        and redCtldFormatForEntry(entry, actionKey, unpack(actionArgs))
+        or redCtldFormatForEntry(entry, actionKey)
     local text = redCtldFormatForEntry(entry, "CTLD_ZONE_SUPPLIES_DELIVERED", actionText, zoneObj.zone)
     redCtldSendToEntry(entry, text, 15)
     redCtldRewardPlayer(entry, statLabel, reward)
@@ -1022,11 +1150,18 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
     local key = redCtldCargoKey(cargoItem)
     if not key then return nil, nil end
 
+    if cargoItem._zoneSupplySourceConsumed ~= true then
+        local sourceZoneName = redCtldClaimZoneSupplyPickupDebit(unitName, groupName, redCtldCargoName(cargoItem))
+        if sourceZoneName then
+            cargoItem._zoneSupplySourceConsumed = true
+            cargoItem._zoneSupplySourceZone = sourceZoneName
+        end
+    end
+
     local staticObj = redCtldCargoStatic(cargoItem)
     local initialVec3 = nil
     if staticObj then
-        local coord = staticObj:GetCoordinate()
-        initialVec3 = coord and coord:GetVec3() or nil
+        initialVec3 = staticObj:GetVec3()
     end
 
     local entry = redZoneSupplyCrates[key]
@@ -1048,6 +1183,8 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
             detached = false,
             warnedNoNeed = false,
             warnedSameZone = false,
+            _zoneSupplySourceConsumed = cargoItem._zoneSupplySourceConsumed == true,
+            _zoneSupplySourceZone = cargoItem._zoneSupplySourceZone,
             _lastVec3 = initialVec3 and { x = initialVec3.x, y = initialVec3.y, z = initialVec3.z } or nil,
         }
         redZoneSupplyCrates[key] = entry
@@ -1060,6 +1197,10 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
         entry.playerName = playerName or entry.playerName
         entry.unitName = unitName or entry.unitName
         entry.cargoName = redCtldCargoName(cargoItem) or entry.cargoName
+        if cargoItem._zoneSupplySourceConsumed == true then
+            entry._zoneSupplySourceConsumed = true
+            entry._zoneSupplySourceZone = cargoItem._zoneSupplySourceZone
+        end
     end
 
     if carrierUnitObject and carrierUnitObject.isExist and carrierUnitObject:isExist() then
@@ -1117,8 +1258,7 @@ function Foothold_redCtld:OnAfterGetCrates(From, Event, To, GroupObj, Unit, Carg
         local key, entry = redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, groupId, playerName, unitName, carrierUnitObject)
         if entry then
             local staticObj = redCtldCargoStatic(cargoItem, entry)
-            local coord = staticObj and staticObj:GetCoordinate() or nil
-            local vec3 = coord and coord:GetVec3() or nil
+            local vec3 = staticObj and staticObj:GetVec3() or nil
             if vec3 and redCtldCargoInsideCarrier(entry, vec3) then
                 redCtldMarkSupplyLoaded(key, entry, staticObj)
             end
@@ -1146,6 +1286,20 @@ function Foothold_redCtld:OnAfterCratesPickedUp(From, Event, To, GroupObj, Unit,
     end
 end
 
+local FootholdRedOriginalGetCrates = Foothold_redCtld._GetCrates
+function Foothold_redCtld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+    local beforeCount = #(self.Spawned_Cargo or {})
+    local result = FootholdRedOriginalGetCrates(self, Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+    if suppressGetEvent == true and #(self.Spawned_Cargo or {}) > beforeCount then
+        local obtainedCargo = {}
+        for index = beforeCount + 1, #self.Spawned_Cargo do
+            obtainedCargo[#obtainedCargo + 1] = self.Spawned_Cargo[index]
+        end
+        self:OnAfterGetCrates(nil, nil, nil, Group, Unit, obtainedCargo)
+    end
+    return result
+end
+
 function Foothold_redCtld:OnAfterCratesDropped(From, Event, To, GroupObj, Unit, Cargo)
     local cargoItems = redCtldExtractCargoItems(Cargo)
     if #cargoItems == 0 then return end
@@ -1162,6 +1316,12 @@ function Foothold_redCtld:OnAfterCratesDropped(From, Event, To, GroupObj, Unit, 
             local cargoName = redCtldCargoName(cargoItem)
             local oldKey, oldEntry = redCtldFindTrackedSupplyForDrop(groupId, groupName, cargoName)
             local pickupZone = oldEntry and oldEntry.pickupZone or fallbackZone
+            if oldEntry and oldEntry._zoneSupplySourceConsumed == true
+                and cargoItem._zoneSupplySourceConsumed ~= true
+            then
+                cargoItem._zoneSupplySourceConsumed = true
+                cargoItem._zoneSupplySourceZone = oldEntry._zoneSupplySourceZone
+            end
             if oldKey then
                 redZoneSupplyCrates[oldKey] = nil
             end
@@ -1177,19 +1337,24 @@ end
 local function redCtldProcessZoneSupply(key, entry, now)
     local cargo = entry.cargo
     if redCtldCargoOnboard(cargo) then
-        redCtldMarkSupplyLoaded(key, entry, redCtldCargoStatic(cargo, entry))
+        redCtldMarkSupplyLoaded(key, entry, redCtldCargoStatic(cargo, entry), true)
         return
     end
 
     local staticObj = redCtldCargoStatic(cargo, entry)
     if not redCtldStaticAlive(staticObj) then
-        redCtldRemoveTrackedSupply(key)
+        local carrierUnit = redCtldTrackedSupplyOnboard(entry) and redCtldResolveCarrierUnit(entry, false) or nil
+        if carrierUnit and carrierUnit.isExist and carrierUnit:isExist() then
+            entry.attached = true
+            entry.wasAirborne = true
+        else
+            redCtldRemoveTrackedSupply(key)
+        end
         return
     end
 
     entry.static = staticObj
-    local coord = staticObj:GetCoordinate()
-    local vec3 = coord and coord:GetVec3() or nil
+    local vec3 = staticObj:GetVec3()
     if not vec3 then return end
 
     local moved = redCtldTrackMoved(entry, vec3)
@@ -1197,10 +1362,12 @@ local function redCtldProcessZoneSupply(key, entry, now)
     local agl = vec3.y - ground
 
     if redCtldCargoInsideCarrier(entry, vec3) then
-        redCtldMarkSupplyLoaded(key, entry, staticObj)
+        redCtldMarkSupplyLoaded(key, entry, staticObj, true)
     end
     if moved then
         entry.noNeedAt = nil
+        entry.noZoneAt = nil
+        entry.noZoneNextCheckAt = nil
     end
 
     if moved then
@@ -1260,15 +1427,37 @@ local function redCtldProcessZoneSupply(key, entry, now)
     if entry.attached and not entry.detached and not entry._wasUnloaded then onGround = false end
     if not onGround then return end
 
+    if entry.noZoneNextCheckAt and now < entry.noZoneNextCheckAt then return end
     local zoneName = redCtldResolveZoneNameFromVec3(vec3)
     if not zoneName then
         entry.noZoneAt = entry.noZoneAt or now
+        entry.noZoneNextCheckAt = now + RED_ZONE_SUPPLY_NOZONE_RECHECK
         if (now - entry.noZoneAt) > RED_ZONE_SUPPLY_NOZONE_TTL then
             redCtldRemoveTrackedSupply(key)
         end
         return
     end
     entry.noZoneAt = nil
+    entry.noZoneNextCheckAt = nil
+
+    if entry.pickupZone and zoneName == entry.pickupZone
+        and entry._zoneSupplySourceConsumed == true
+        and entry._zoneSupplySourceZone == zoneName
+    then
+        if redCtldRefundPlayerZoneSupplyStock(entry) then
+            local grp = redCtldResolveGroup(entry)
+            local T = grp and L10N:ForMooseGroup(grp) or L10N
+            local label = ctldLocalizedCargoLabel(T, "Zone supplies")
+            redCtldSendToEntry(entry, T:Format("CTLD_SUPPLIES_RETURNED_TO_ZONE", label, zoneName), 15)
+            redCtldDestroyStatic(staticObj)
+            redCtldRemoveTrackedSupply(key)
+        else
+            local sourceZone = bc:getZoneByName(zoneName)
+            local reason = sourceZone.side == coalition.side.NEUTRAL and "neutral zone timeout" or "enemy zone"
+            redCtldDestroySupplyInZone(key, entry, sourceZone, reason)
+        end
+        return
+    end
 
     if entry.pickupZone and zoneName == entry.pickupZone then
         return
@@ -1288,19 +1477,19 @@ local function redCtldProcessZoneSupply(key, entry, now)
         return
     end
 
-    if zoneObj.side == 1 and zoneObj:canRecieveSupply() then
-        zoneObj:upgrade()
-        redCtldFinalizeDelivery(key, entry, zoneObj, "CTLD_ZONE_SUPPLY_ACTION_UPGRADED", "Zone upgrade", ZONE_SUPPLY_UPGRADE_REWARD)
-    elseif zoneObj.side == 1 then
-        if not entry.warnedNoNeed then
-            redCtldSendToEntry(entry, string.format("[Red CTLD] %s does not currently need zone supplies.", zoneObj.zone), 15)
-            entry.warnedNoNeed = true
-        end
-        entry.noNeedAt = entry.noNeedAt or now
-        if (now - entry.noNeedAt) > RED_ZONE_SUPPLY_NONEED_TTL then
-            redCtldDestroyStatic(staticObj)
-            redCtldRemoveTrackedSupply(key)
-        end
+    if zoneObj.side == coalition.side.RED then
+        zoneObj:_addImportedRegularSupplyStock(1, timer.getAbsTime())
+        local ready = math.max(0, math.floor(tonumber(zoneObj._regularSupplyReady) or 0))
+        local maximum = zoneObj:_regularSupplyMaxStock()
+        redCtldFinalizeDelivery(
+            key,
+            entry,
+            zoneObj,
+            "CTLD_ZONE_SUPPLY_ACTION_STOCKED",
+            "Zone supply delivery",
+            150,
+            { ready, maximum }
+        )
     end
 end
 
@@ -1310,6 +1499,7 @@ local function tickRedZoneSupply()
     for key, entry in pairs(redZoneSupplyCrates) do
         redCtldProcessZoneSupply(key, entry, now)
     end
+    redCtldRebuildZoneSupplyOnboardCache()
 end
 
 TIMER:New(tickRedZoneSupply):Start(15, 5)

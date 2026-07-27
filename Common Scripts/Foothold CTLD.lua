@@ -1688,6 +1688,11 @@ local function isTrackedZoneSupplyOnboard(Entry)
   if CargoItem then
     if CargoItem.IsLoaded and CargoItem:IsLoaded() then return true end
     if CargoItem.IsAttached and CargoItem:IsAttached() then return true end
+    if CargoItem.HasMoved and CargoItem:HasMoved()
+      and CargoItem.WasDropped and not CargoItem:WasDropped()
+    then
+      return true
+    end
   end
 
   return Entry.attached == true or Entry.wasAirborne == true
@@ -1714,6 +1719,17 @@ function Foothold_ctld:RefreshZoneSupplyOnboardForGroup(groupId)
   return HasOnboard
 end
 
+local function rebuildZoneSupplyOnboardCache()
+  local OnboardByGroup = {}
+  for _, Entry in pairs(zoneSupplyCrates) do
+    local GroupId = resolveTrackedZoneSupplyGroupId(Entry)
+    if GroupId and isTrackedZoneSupplyOnboard(Entry) then
+      OnboardByGroup[GroupId] = true
+    end
+  end
+  Foothold_ctld.ZoneSupplyOnboardByGroup = OnboardByGroup
+end
+
 function Foothold_ctld:ClearZoneSupplyOnboardForGroup(groupId)
   self.ZoneSupplyOnboardByGroup = self.ZoneSupplyOnboardByGroup or {}
   if groupId then
@@ -1735,6 +1751,75 @@ local function removeTrackedZoneSupply(Key)
   if GroupId then
     Foothold_ctld:RefreshZoneSupplyOnboardForGroup(GroupId)
   end
+end
+
+Foothold_ctld.ZoneSupplyPickupDebits = Foothold_ctld.ZoneSupplyPickupDebits or {}
+
+local function zoneSupplyPickupDebitKey(Group, Unit)
+  if Unit and Unit.GetName then return Unit:GetName() end
+  if Group and Group.GetName then return Group:GetName() end
+  return nil
+end
+
+local function queueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, quantity)
+  local key = zoneSupplyPickupDebitKey(Group, Unit)
+  if not key then return end
+  local queue = Foothold_ctld.ZoneSupplyPickupDebits[key]
+  if not queue then
+    queue = {}
+    Foothold_ctld.ZoneSupplyPickupDebits[key] = queue
+  end
+  queue[#queue + 1] = {
+    cargoName = cargoName,
+    sourceZone = sourceZoneName,
+    remaining = quantity,
+  }
+end
+
+local function claimZoneSupplyPickupDebit(unitName, groupName, cargoName)
+  local key = unitName or groupName
+  local queue = key and Foothold_ctld.ZoneSupplyPickupDebits[key] or nil
+  if not queue then return nil end
+
+  for index, debit in ipairs(queue) do
+    if debit.cargoName == cargoName and (debit.remaining or 0) > 0 then
+      debit.remaining = debit.remaining - 1
+      local sourceZone = debit.sourceZone
+      if debit.remaining <= 0 then table.remove(queue, index) end
+      if #queue == 0 then Foothold_ctld.ZoneSupplyPickupDebits[key] = nil end
+      return sourceZone
+    end
+  end
+  return nil
+end
+
+local function refundPlayerZoneSupplyStock(EntryOrCargo)
+  if not EntryOrCargo or EntryOrCargo._zoneSupplySourceConsumed ~= true then return false end
+  local sourceZoneName = EntryOrCargo._zoneSupplySourceZone
+  local sourceZone = sourceZoneName and bc:getZoneByName(sourceZoneName) or nil
+  if not sourceZone or not sourceZone.active or sourceZone.side ~= coalition.side.BLUE
+    or sourceZone._regularSupplyStockSide ~= coalition.side.BLUE
+    or not sourceZone:_regularSupplyHasRouteForSide(coalition.side.BLUE)
+  then
+    return false
+  end
+
+  if not sourceZone:_restorePlayerRegularSupplyStock(1, coalition.side.BLUE, timer.getAbsTime()) then
+    return false
+  end
+  EntryOrCargo._zoneSupplySourceConsumed = false
+  EntryOrCargo._zoneSupplySourceRefunded = true
+  if EntryOrCargo.cargo then
+    EntryOrCargo.cargo._zoneSupplySourceConsumed = false
+    EntryOrCargo.cargo._zoneSupplySourceRefunded = true
+  end
+  for _, trackedEntry in pairs(zoneSupplyCrates) do
+    if trackedEntry == EntryOrCargo or trackedEntry.cargo == EntryOrCargo then
+      trackedEntry._zoneSupplySourceConsumed = false
+      trackedEntry._zoneSupplySourceRefunded = true
+    end
+  end
+  return true
 end
 
 local function BuildTrackedZoneSupplyEntry(CargoItem, StaticObject, PickupZoneName, GroupName, GroupId, PlayerName, UnitName, CargoName, DeliveryType, WarehouseMeta, CarrierUnitObject)
@@ -1772,6 +1857,8 @@ local function BuildTrackedZoneSupplyEntry(CargoItem, StaticObject, PickupZoneNa
     deliveryType = DeliveryType,
     warehouseMeta = WarehouseMeta,
     cargoName = CargoName,
+    _zoneSupplySourceConsumed = CargoItem._zoneSupplySourceConsumed == true,
+    _zoneSupplySourceZone = CargoItem._zoneSupplySourceZone,
     createdAt = timer.getTime(),
     wasAirborne = false,
     _wasUnloaded = false,
@@ -1785,17 +1872,29 @@ local function BuildTrackedZoneSupplyEntry(CargoItem, StaticObject, PickupZoneNa
   return EntryData
 end
 
+local function getZoneSupplyCargoTrackingKey(CargoItem)
+  local cargoIdentifier = (CargoItem.GetID and CargoItem:GetID()) or CargoItem.ID
+  if cargoIdentifier then return cargoIdentifier end
+  local staticObject = (CargoItem.GetPositionable and CargoItem:GetPositionable()) or nil
+  return staticObject and getZoneSupplyStaticKey(staticObject) or nil
+end
+
 local function RegisterTrackedSupplyCargo(CargoItem, PickupZoneName, GroupName, GroupId, PlayerName, UnitName, CargoName, DeliveryType, WarehouseMeta, CarrierUnitObject)
   CargoItem._zoneSupplyPickupZone = PickupZoneName
   CargoItem._zoneSupplyGroupName = GroupName
   CargoItem._zoneSupplyPlayer = PlayerName
 
+  if DeliveryType == "zone" and CargoItem._zoneSupplySourceConsumed ~= true then
+    local sourceZoneName = claimZoneSupplyPickupDebit(UnitName, GroupName, CargoName)
+    if sourceZoneName then
+      CargoItem._zoneSupplySourceConsumed = true
+      CargoItem._zoneSupplySourceZone = sourceZoneName
+    end
+  end
+
   local CargoIdentifier = (CargoItem.GetID and CargoItem:GetID()) or CargoItem.ID
   local StaticObject = (CargoItem.GetPositionable and CargoItem:GetPositionable()) or nil
-  local TrackingKey = CargoIdentifier
-  if not TrackingKey and StaticObject then
-    TrackingKey = getZoneSupplyStaticKey(StaticObject)
-  end
+  local TrackingKey = getZoneSupplyCargoTrackingKey(CargoItem)
 
   if TrackingKey then
     if not zoneSupplyCrates[TrackingKey] then
@@ -1813,15 +1912,17 @@ local function RegisterTrackedSupplyCargo(CargoItem, PickupZoneName, GroupName, 
         CarrierUnitObject
       )
 
-      local StaticName = StaticObject and StaticObject.GetName and StaticObject:GetName() or "nil"
-      if DeliveryType == "warehouse" then
-        zoneSupplyDebug(string.format(
-          "Tracking warehouse cargo key=%s cargoId=%s static=%s pickup=%s group=%s player=%s type=%s",
-          tostring(TrackingKey), tostring(CargoIdentifier), tostring(StaticName), tostring(PickupZoneName), tostring(GroupName), tostring(PlayerName), tostring(CargoName)))
-      else
-        zoneSupplyDebug(string.format(
-          "Tracking zone-supply key=%s cargoId=%s static=%s pickup=%s group=%s player=%s",
-          tostring(TrackingKey), tostring(CargoIdentifier), tostring(StaticName), tostring(PickupZoneName), tostring(GroupName), tostring(PlayerName)))
+      if CTLD_Logging_DEEP then
+        local StaticName = StaticObject and StaticObject.GetName and StaticObject:GetName() or "nil"
+        if DeliveryType == "warehouse" then
+          zoneSupplyDebug(string.format(
+            "Tracking warehouse cargo key=%s cargoId=%s static=%s pickup=%s group=%s player=%s type=%s",
+            tostring(TrackingKey), tostring(CargoIdentifier), tostring(StaticName), tostring(PickupZoneName), tostring(GroupName), tostring(PlayerName), tostring(CargoName)))
+        else
+          zoneSupplyDebug(string.format(
+            "Tracking zone-supply key=%s cargoId=%s static=%s pickup=%s group=%s player=%s",
+            tostring(TrackingKey), tostring(CargoIdentifier), tostring(StaticName), tostring(PickupZoneName), tostring(GroupName), tostring(PlayerName)))
+        end
       end
     elseif GroupId and not zoneSupplyCrates[TrackingKey].groupId then
       zoneSupplyCrates[TrackingKey].groupId = GroupId
@@ -1889,8 +1990,7 @@ for key, entry in pairs(c130AutoBuildCrates) do
       end
     end
   else
-      local coord = staticObj:GetCoordinate()
-      local vec3 = coord and coord:GetVec3() or nil
+      local vec3 = staticObj:GetVec3()
       if vec3 then
         local set = c130AutoBuildSets[entry.setId]
         if set and not set.ownerResolved then
@@ -2536,7 +2636,7 @@ local function zoneSupplyC130OneShotConfirm(arg, time)
     entry._loggedC130Unloaded = true
   end
 
-  zoneSupplyApplyOne(key)
+  -- Leave delivery to the shared ready queue so simultaneous drops are staggered.
 end
 
 local function tickZoneSupply()
@@ -2591,6 +2691,7 @@ local CTLD_REASON_KEYS = {
 local CTLD_ZONE_SUPPLY_ACTION_KEYS = {
   captured = "CTLD_ZONE_SUPPLY_ACTION_CAPTURED",
   upgraded = "CTLD_ZONE_SUPPLY_ACTION_UPGRADED",
+  stocked = "CTLD_ZONE_SUPPLY_ACTION_STOCKED",
 }
 
 local CTLD_TROOP_ZONE_ACTION_KEYS = {
@@ -2629,9 +2730,12 @@ local function ctldReasonListText(T, reasons)
   return table.concat(parts, ", ")
 end
 
-local function ctldZoneSupplyActionText(T, action)
+local function ctldZoneSupplyActionText(T, action, actionArgs)
   local actionKey = CTLD_ZONE_SUPPLY_ACTION_KEYS[tostring(action)]
   if actionKey then
+    if actionArgs then
+      return T:Format(actionKey, unpack(actionArgs))
+    end
     return T:Get(actionKey)
   end
   return tostring(action)
@@ -2802,11 +2906,11 @@ end
 
 
 
-local function finalizeZoneSupplyDelivery(key, entry, zoneName, verb, statLabel, reward)
+local function finalizeZoneSupplyDelivery(key, entry, zoneName, verb, statLabel, reward, actionArgs)
   c130SupplyLogOnce(entry, key, "_fhLogDeliver", "DELIVER", string.format("zone=%s verb=%s", tostring(zoneName), tostring(verb)))
   local grp = resolveZoneSupplyGroup(entry.groupName)
   local T = grp and getCtldGroupTranslator(grp) or getFootholdLocalization():ForLocale()
-  local verbText = ctldZoneSupplyActionText(T, verb)
+  local verbText = ctldZoneSupplyActionText(T, verb, actionArgs)
   local text = T:Format("CTLD_ZONE_SUPPLIES_DELIVERED", verbText, zoneName)
   sendZoneSupplyMessage(entry, text)
   local pname = resolveZoneSupplyPlayer(entry)
@@ -2836,18 +2940,27 @@ processZoneSupplyDeliveries = function()
     local cargo = entry.cargo
     local staticObj = (cargo and cargo.GetPositionable and cargo:GetPositionable()) or entry.static
     if not cargo and not staticObj then
-      zoneSupplyDebug(string.format("Drop tracking for %s cleared: no cargo ref", tostring(key)))
+      if CTLD_Logging_DEEP then
+        zoneSupplyDebug(string.format("Drop tracking for %s cleared: no cargo ref", tostring(key)))
+      end
       c130SupplyLogOnce(entry, key, "_fhLogClear", "CLEAR", "reason=no cargo ref")
       removeTrackedZoneSupply(key)
     elseif not staticObj or not staticObj:IsAlive() then
-      zoneSupplyDebug(string.format("Drop tracking for %s cleared: static dead/missing", tostring(key)))
-      c130SupplyLogOnce(entry, key, "_fhLogClear", "CLEAR", "reason=static dead/missing")
-      removeTrackedZoneSupply(key)
+      local carrierUnit = isTrackedZoneSupplyOnboard(entry) and ResolveTrackedCarrierUnit(entry, false) or nil
+      if carrierUnit and carrierUnit.isExist and carrierUnit:isExist() then
+        entry.attached = true
+        entry.wasAirborne = true
+        refreshZoneSupplyOnboardForEntry(entry)
+      else
+        if CTLD_Logging_DEEP then
+          zoneSupplyDebug(string.format("Drop tracking for %s cleared: static dead/missing", tostring(key)))
+        end
+        c130SupplyLogOnce(entry, key, "_fhLogClear", "CLEAR", "reason=static dead/missing")
+        removeTrackedZoneSupply(key)
+      end
     else
-      local coord = staticObj:GetCoordinate()
-      if coord then
-        local vec3 = coord:GetVec3()
-        if vec3 then
+      local vec3 = staticObj:GetVec3()
+      if vec3 then
           local moved = UpdateTrackedEntryMovement(entry, vec3)
 
           if moved then
@@ -3024,11 +3137,11 @@ processZoneSupplyDeliveries = function()
             end
           end
 
-          refreshZoneSupplyOnboardForEntry(entry)
-
           local ground = land.getHeight({ x = vec3.x, y = vec3.z })
           local agl = vec3.y - ground
-          zoneSupplyDebug(string.format("Check crate %s agl=%.2f pickup=%s", tostring(key), agl, tostring(entry.pickupZone)))
+          if CTLD_Logging_DEEP then
+            zoneSupplyDebug(string.format("Check crate %s agl=%.2f pickup=%s", tostring(key), agl, tostring(entry.pickupZone)))
+          end
           local onGround = (agl <= ZONE_SUPPLY_AGL_THRESHOLD) or (entry._wasUnloaded and not moved)
           if entry._isC130 and not entry._wasUnloaded then onGround = false end
           if onGround then
@@ -3036,7 +3149,9 @@ processZoneSupplyDeliveries = function()
             if not entry.wasAirborne then
               if not entry._loggedAwaitingAirborne then
                 entry._loggedAwaitingAirborne = true
-                zoneSupplyDebug(string.format("Crate %s on ground (awaiting pickup/airborne)", tostring(key)))
+                if CTLD_Logging_DEEP then
+                  zoneSupplyDebug(string.format("Crate %s on ground (awaiting pickup/airborne)", tostring(key)))
+                end
               end
             else
               if entry._wasUnloaded then
@@ -3051,7 +3166,7 @@ processZoneSupplyDeliveries = function()
                   for i = 1, #supplyZones do
                     local zName = supplyZones[i]
                     local mooseZone = getSupplyZoneWrapper(zName)
-                    if mooseZone and mooseZone:IsCoordinateInZone(coord) then
+                    if mooseZone and mooseZone:IsVec3InZone(vec3) then
                       zoneContainer = { zone = zName }
                       break
                     end
@@ -3066,17 +3181,30 @@ processZoneSupplyDeliveries = function()
               if zoneName then
                 local bcZone = bc:getZoneByName(zoneName)
                 local zoneObj = bcZone or zoneContainer
-                local zoneSide = zoneObj and zoneObj.side or "?"
-                local zoneActive = zoneObj and zoneObj.active or false
-                zoneSupplyDebug(string.format("Crate %s landed in %s side=%s active=%s", tostring(key), tostring(zoneName), tostring(zoneSide), tostring(zoneActive)))
+                if CTLD_Logging_DEEP then
+                  local zoneSide = zoneObj and zoneObj.side or "?"
+                  local zoneActive = zoneObj and zoneObj.active or false
+                  zoneSupplyDebug(string.format("Crate %s landed in %s side=%s active=%s", tostring(key), tostring(zoneName), tostring(zoneSide), tostring(zoneActive)))
+                end
                 if entry.pickupZone and zoneName == entry.pickupZone then
-                  if entry.deliveryType == "warehouse" and entry.warehouseMeta and WarehouseLogistics == true then
+                  if entry.deliveryType == "zone" and entry._zoneSupplySourceConsumed == true
+                    and entry._zoneSupplySourceZone == zoneName
+                  then
                     ClearZoneSupplyLandingState(entry, staticObj)
                     entry._ready = true
                     entry._zoneName = zoneName
                     entry._deleteName = entry._deleteName or getZoneSupplyStaticName(staticObj)
                     entry._deleteKey = entry._deleteKey or getZoneSupplyStaticKey(staticObj) or entry._deleteName
-                    zoneSupplyDebug(string.format("[ZoneSupply] Ready key=%s zone=%s type=%s pickup=%s", tostring(key), tostring(zoneName), tostring(entry.deliveryType), tostring(entry.pickupZone)))
+                    readyCount = readyCount + 1
+                  elseif entry.deliveryType == "warehouse" and entry.warehouseMeta and WarehouseLogistics == true then
+                    ClearZoneSupplyLandingState(entry, staticObj)
+                    entry._ready = true
+                    entry._zoneName = zoneName
+                    entry._deleteName = entry._deleteName or getZoneSupplyStaticName(staticObj)
+                    entry._deleteKey = entry._deleteKey or getZoneSupplyStaticKey(staticObj) or entry._deleteName
+                    if CTLD_Logging_DEEP then
+                      zoneSupplyDebug(string.format("[ZoneSupply] Ready key=%s zone=%s type=%s pickup=%s", tostring(key), tostring(zoneName), tostring(entry.deliveryType), tostring(entry.pickupZone)))
+                    end
                     readyCount = readyCount + 1
                   else
                     if not entry.warnedSameZone then
@@ -3091,7 +3219,9 @@ processZoneSupplyDeliveries = function()
                     entry._zoneName = zoneName
                     entry._deleteName = entry._deleteName or getZoneSupplyStaticName(staticObj)
                     entry._deleteKey = entry._deleteKey or getZoneSupplyStaticKey(staticObj) or entry._deleteName
-                    zoneSupplyDebug(string.format("[ZoneSupply] Ready key=%s zone=%s type=%s pickup=%s", tostring(key), tostring(zoneName), tostring(entry.deliveryType), tostring(entry.pickupZone))) -- custom
+                    if CTLD_Logging_DEEP then
+                      zoneSupplyDebug(string.format("[ZoneSupply] Ready key=%s zone=%s type=%s pickup=%s", tostring(key), tostring(zoneName), tostring(entry.deliveryType), tostring(entry.pickupZone))) -- custom
+                    end
                     readyCount = readyCount + 1
                   else
                     if (not bcZone) and entry.deliveryType == "warehouse" and entry.warehouseMeta and WarehouseLogistics == true and isCtldSupplyZoneName(zoneName) then
@@ -3102,10 +3232,14 @@ processZoneSupplyDeliveries = function()
                         entry._zoneName = zoneName
                         entry._deleteName = entry._deleteName or getZoneSupplyStaticName(staticObj)
                         entry._deleteKey = entry._deleteKey or getZoneSupplyStaticKey(staticObj) or entry._deleteName
-                        zoneSupplyDebug(string.format("[ZoneSupply] Ready key=%s zone=%s type=%s pickup=%s", tostring(key), tostring(zoneName), tostring(entry.deliveryType), tostring(entry.pickupZone)))
+                        if CTLD_Logging_DEEP then
+                          zoneSupplyDebug(string.format("[ZoneSupply] Ready key=%s zone=%s type=%s pickup=%s", tostring(key), tostring(zoneName), tostring(entry.deliveryType), tostring(entry.pickupZone)))
+                        end
                         readyCount = readyCount + 1
                       else
-                        zoneSupplyDebug(string.format("Crate %s in zone %s but zone inactive; clearing", tostring(key), tostring(zoneName)))
+                        if CTLD_Logging_DEEP then
+                          zoneSupplyDebug(string.format("Crate %s in zone %s but zone inactive; clearing", tostring(key), tostring(zoneName)))
+                        end
                         entry.landedAt = entry.landedAt or now
                         if not entry._inactiveRemovalScheduled then
                           zoneSupplyEnqueueRemoval(staticObj, ZONE_SUPPLY_INACTIVE_TTL)
@@ -3115,16 +3249,22 @@ processZoneSupplyDeliveries = function()
                         if age <= ZONE_SUPPLY_INACTIVE_TTL then
                           local last = entry._lastInactiveLog or 0
                           if (now - last) >= 30 then
-                            zoneSupplyDebug(string.format("Crate %s in zone %s but inactive; keep tracking (%.0fs left)", tostring(key), tostring(zoneName), ZONE_SUPPLY_INACTIVE_TTL - age))
+                            if CTLD_Logging_DEEP then
+                              zoneSupplyDebug(string.format("Crate %s in zone %s but inactive; keep tracking (%.0fs left)", tostring(key), tostring(zoneName), ZONE_SUPPLY_INACTIVE_TTL - age))
+                            end
                             entry._lastInactiveLog = now
                           end
                         else
-                          zoneSupplyDebug(string.format("Crate %s in zone %s inactive for %.0fs; clearing", tostring(key), tostring(zoneName), age))
+                          if CTLD_Logging_DEEP then
+                            zoneSupplyDebug(string.format("Crate %s in zone %s inactive for %.0fs; clearing", tostring(key), tostring(zoneName), age))
+                          end
                           removeTrackedZoneSupply(key)
                         end
                       end
                     else
-                      zoneSupplyDebug(string.format("Crate %s in zone %s but zone inactive; clearing", tostring(key), tostring(zoneName)))
+                      if CTLD_Logging_DEEP then
+                        zoneSupplyDebug(string.format("Crate %s in zone %s but zone inactive; clearing", tostring(key), tostring(zoneName)))
+                      end
                       entry.landedAt = entry.landedAt or now
                       if not entry._inactiveRemovalScheduled then
                         zoneSupplyEnqueueRemoval(staticObj, ZONE_SUPPLY_INACTIVE_TTL)
@@ -3134,11 +3274,15 @@ processZoneSupplyDeliveries = function()
                       if age <= ZONE_SUPPLY_INACTIVE_TTL then
                         local last = entry._lastInactiveLog or 0
                         if (now - last) >= 30 then
-                          zoneSupplyDebug(string.format("Crate %s in zone %s but inactive; keep tracking (%.0fs left)", tostring(key), tostring(zoneName), ZONE_SUPPLY_INACTIVE_TTL - age))
+                          if CTLD_Logging_DEEP then
+                            zoneSupplyDebug(string.format("Crate %s in zone %s but inactive; keep tracking (%.0fs left)", tostring(key), tostring(zoneName), ZONE_SUPPLY_INACTIVE_TTL - age))
+                          end
                           entry._lastInactiveLog = now
                         end
                       else
-                        zoneSupplyDebug(string.format("Crate %s in zone %s inactive for %.0fs; clearing", tostring(key), tostring(zoneName), age))
+                        if CTLD_Logging_DEEP then
+                          zoneSupplyDebug(string.format("Crate %s in zone %s inactive for %.0fs; clearing", tostring(key), tostring(zoneName), age))
+                        end
                         removeTrackedZoneSupply(key)
                       end
                     end
@@ -3157,26 +3301,30 @@ processZoneSupplyDeliveries = function()
                 if age <= ZONE_SUPPLY_NOZONE_TTL then
                   local last = entry._lastNoZoneLog or 0
                   if (now - last) >= 30 then
-                    zoneSupplyDebug(string.format("Crate %s landed but no zone found; keep tracking (%.0fs left)", tostring(key), ZONE_SUPPLY_NOZONE_TTL - age))
+                    if CTLD_Logging_DEEP then
+                      zoneSupplyDebug(string.format("Crate %s landed but no zone found; keep tracking (%.0fs left)", tostring(key), ZONE_SUPPLY_NOZONE_TTL - age))
+                    end
                     entry._lastNoZoneLog = now
                   end
                 else
-                  zoneSupplyDebug(string.format("Crate %s landed but no zone for %.0fs; clearing", tostring(key), age))
+                  if CTLD_Logging_DEEP then
+                    zoneSupplyDebug(string.format("Crate %s landed but no zone for %.0fs; clearing", tostring(key), age))
+                  end
                   removeTrackedZoneSupply(key)
                 end
               end
             end
               end
           else
-            local dtype = entry.deliveryType or (entry.warehouseMeta and "warehouse") or "zone"
-            if entry.wasAirborne then
+            if entry.wasAirborne and CTLD_Logging_DEEP then
+              local dtype = entry.deliveryType or (entry.warehouseMeta and "warehouse") or "zone"
               zoneSupplyDebug(string.format("Crate %s still airborne agl=%.2f type=%s", tostring(key), agl, tostring(dtype)))
             end
           end
         end
       end
     end
-  end
+  rebuildZoneSupplyOnboardCache()
   return readyCount
 end
 
@@ -3225,7 +3373,24 @@ zoneSupplyApplyOne = function(key)
     return
   end
   if entry.pickupZone and zoneName == entry.pickupZone then
-    if entry.deliveryType == "warehouse" and entry.warehouseMeta and WarehouseLogistics == true then
+    if entry.deliveryType == "zone" and entry._zoneSupplySourceConsumed == true
+      and entry._zoneSupplySourceZone == zoneName
+    then
+      if refundPlayerZoneSupplyStock(entry) then
+        local sObj = (entry.cargo and entry.cargo.GetPositionable and entry.cargo:GetPositionable()) or entry.static
+        if sObj and sObj.IsAlive and sObj:IsAlive() then
+          zoneSupplyEnqueueRemoval(sObj, 0)
+        end
+        local grp = resolveZoneSupplyGroup(entry.groupName)
+        local T = grp and getCtldGroupTranslator(grp) or getFootholdLocalization():ForLocale()
+        sendZoneSupplyMessage(entry, T:Format("CTLD_SUPPLIES_RETURNED_TO_ZONE", ctldLocalizedCargoLabel(T, entry.cargoName or "Zone supplies"), zoneName))
+        removeTrackedZoneSupply(key)
+      else
+        local sourceZone = bc:getZoneByName(zoneName)
+        local reason = sourceZone and sourceZone.side == 0 and "neutral zone timeout" or "enemy zone"
+        zoneSupplyDestroyNow(key, entry, zoneName, reason)
+      end
+    elseif entry.deliveryType == "warehouse" and entry.warehouseMeta and WarehouseLogistics == true then
       local meta = entry.warehouseMeta
       local baseAmount = meta.amount
       if type(baseAmount) == "number" and baseAmount > 0 then
@@ -3351,36 +3516,12 @@ zoneSupplyApplyOne = function(key)
     return
   end
 
-  local needSupply = zoneObj.canRecieveSupply and zoneObj:canRecieveSupply() or false
-  if needSupply then
-    zoneObj:upgrade()
-    grantZoneBundle(zoneName)
-    finalizeZoneSupplyDelivery(key, entry, zoneName, "upgraded", "Zone upgrade", ZONE_SUPPLY_UPGRADE_REWARD)
-  else
-    grantZoneBundle(zoneName)
-
-    local pname = resolveZoneSupplyPlayer(entry)
-    local meta = entry.warehouseMeta or (entry.cargoName and WAREHOUSE_SUPPLY_TYPES[entry.cargoName]) or nil
-    local reward = (meta and meta.reward) or 150
-    local label = (meta and meta.label) or "10 of everything"
-
-    if pname and bc.playerContributions[2][pname] ~= nil then
-      bc:addContribution(pname, 2, reward)
-      bc:addTempStat(pname, "Warehouse delivery", 1)
-      trigger.action.outTextForCoalition(2, L10N:Format("CTLD_SUPPLIES_DELIVERED_BY", ctldLocalizedCargoLabel(L10N, label), zoneName, tostring(pname)), 15)
-    end
-
-    if not entry.warnedNoNeed then
-      sendZoneSupplyLocalizedMessage(entry, "CTLD_ZONE_SUPPLY_NOT_NEEDED_WAREHOUSE_APPLIED", nil, zoneName)
-      entry.warnedNoNeed = true
-    end
-
-    local sObj = (entry.cargo and entry.cargo.GetPositionable and entry.cargo:GetPositionable()) or entry.static
-    if sObj and sObj.IsAlive and sObj:IsAlive() then
-      zoneSupplyEnqueueRemoval(sObj,0) -- destroyed after ZONE_SUPPLY_DESTROY_DELAY
-    end
-    removeTrackedZoneSupply(key)
-  end
+  local now = timer.getAbsTime()
+  zoneObj:_addImportedRegularSupplyStock(1, now)
+  local maximum = zoneObj:_regularSupplyMaxStock()
+  local ready = math.max(0, math.floor(tonumber(zoneObj._regularSupplyReady) or 0))
+  grantZoneBundle(zoneName)
+  finalizeZoneSupplyDelivery(key, entry, zoneName, "stocked", "Zone supply delivery", 150, { ready, maximum })
 end
 
 
@@ -4092,10 +4233,46 @@ end
 
 function Foothold_ctld:CanGetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
   if drop or pack then return true end
-  if WarehouseLogistics ~= true then return true end
   if not (Cargo and Cargo.GetName) then return true end
 
   local cname = Cargo:GetName()
+  if isZoneSupplyCargoName(cname) then
+    if PlayerZoneSuppliesConsumeStock ~= true then return true end
+
+    local perSet = Cargo:GetCratesNeeded() or 1
+    if perSet < 1 then perSet = 1 end
+    local requestNumber = math.floor(tonumber(number) or perSet)
+    if requestNumber < 1 then requestNumber = perSet end
+    local requestedSets = math.max(1, math.floor((requestNumber + perSet - 1) / perSet))
+    local pickupZone = updateLastPickupZone(Group, Unit)
+    local sourceZone = pickupZone and bc:getZoneByName(pickupZone) or nil
+
+    -- Carriers and dynamic FARPs do not own campaign-zone supply stock.
+    if not sourceZone then return true end
+
+    local now = timer.getAbsTime()
+    sourceZone:_updateRegularSupplyStock(now)
+    local ready = math.max(0, math.floor(tonumber(sourceZone._regularSupplyReady) or 0))
+    local reserved = math.max(0, math.floor(tonumber(sourceZone._regularSupplyPendingStock) or 0))
+    local available = math.max(0, ready - reserved)
+    if not sourceZone.active or sourceZone.side ~= coalition.side.BLUE
+      or sourceZone._regularSupplyStockSide ~= coalition.side.BLUE or available < requestedSets
+    then
+      local T = (Group and Group.IsAlive and Group:IsAlive()) and getCtldGroupTranslator(Group) or getFootholdLocalization():ForLocale()
+      local label = ctldLocalizedCargoLabel(T, "Zone supplies")
+      local reasonText = ctldReasonText(T, ctldReasonToken("CTLD_REASON_INSUFFICIENT_STOCK", label))
+      sendCtldToGroupOrCoalition(Group, "CTLD_WAREHOUSE_NOT_AVAILABLE", 12, label, tostring(pickupZone), reasonText)
+      return false
+    end
+
+    sourceZone._regularSupplyReady = ready - requestedSets
+    sourceZone._regularSupplyLastUpdateAt = now
+    sourceZone:updateLabel(coalition.side.BLUE)
+    queueZoneSupplyPickupDebit(Group, Unit, cname, pickupZone, requestedSets)
+    return true
+  end
+
+  if WarehouseLogistics ~= true then return true end
   local meta = WAREHOUSE_SUPPLY_TYPES[cname]
   if not meta then return true end
 
@@ -4207,7 +4384,8 @@ function Foothold_ctld:OnAfterRemoveCratesNearby(From, Event, To, Group, Unit, C
   local byName = {}
   for _,_cargo in pairs(Cargotable or {}) do
     local cargo = _cargo
-    local name = cargo:GetName() or "none"
+    refundPlayerZoneSupplyStock(cargo)
+    local name = cargo.GetName and cargo:GetName() or cargo.name or "none"
     byName[name] = (byName[name] or 0) + 1
   end
 
@@ -4352,6 +4530,52 @@ function Foothold_ctld:OnAfterGetCrates(From, Event, To, Group, Unit, Cargo)
       registerC130AutoBuildSet(groupName, playerName, unitName, pickupZone, c130Items)
     end
   end
+end
+
+function Foothold_ctld:OnAfterCratesPickedUp(From, Event, To, Group, Unit, Cargo)
+  local cargoItems = extractCargoItems(Cargo)
+  if #cargoItems == 0 then return end
+
+  local untracked = {}
+  for _, cargoItem in ipairs(cargoItems) do
+    local cargoName = cargoItem.GetName and cargoItem:GetName() or nil
+    if isZoneSupplyCargoItem(cargoItem) or (cargoName and WAREHOUSE_SUPPLY_TYPES[cargoName]) then
+      local trackingKey = getZoneSupplyCargoTrackingKey(cargoItem)
+      if trackingKey and not zoneSupplyCrates[trackingKey] then
+        untracked[#untracked + 1] = cargoItem
+      end
+    end
+  end
+
+  if #untracked > 0 then
+    self:OnAfterGetCrates(From, Event, To, Group, Unit, untracked)
+  end
+
+  for _, cargoItem in ipairs(cargoItems) do
+    local trackingKey = getZoneSupplyCargoTrackingKey(cargoItem)
+    local entry = trackingKey and zoneSupplyCrates[trackingKey] or nil
+    if entry then
+      entry.attached = true
+      entry.detached = false
+      entry.wasAirborne = true
+      entry._wasUnloaded = false
+      refreshZoneSupplyOnboardForEntry(entry)
+    end
+  end
+end
+
+local FootholdOriginalGetCrates = Foothold_ctld._GetCrates
+function Foothold_ctld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+  local beforeCount = #(self.Spawned_Cargo or {})
+  local result = FootholdOriginalGetCrates(self, Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+  if suppressGetEvent == true and #(self.Spawned_Cargo or {}) > beforeCount then
+    local obtainedCargo = {}
+    for index = beforeCount + 1, #self.Spawned_Cargo do
+      obtainedCargo[#obtainedCargo + 1] = self.Spawned_Cargo[index]
+    end
+    self:OnAfterGetCrates(nil, nil, nil, Group, Unit, obtainedCargo)
+  end
+  return result
 end
 
 function Foothold_ctld:OnBeforeCratesPacked(From, Event, To, Group, Unit, Cargo, PackedGroup)
@@ -5572,7 +5796,7 @@ end
 TIMER:New(RefillMissingWithCountTable):Start(60, 60)
 
 
-TIMER:New(tickZoneSupply):Start(15, 5)
+TIMER:New(tickZoneSupply):Start(15, 3)
 
 
 BASE:I("CTLD script initialized")

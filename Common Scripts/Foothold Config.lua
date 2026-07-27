@@ -48,7 +48,6 @@ FootholdConfigTrackedTableNames = {
     "CapCountIgnoreTypes",
     "RedCasCountIgnoreTypes",
     "BlueCasCountIgnoreTypes",
-    "RedReactiveConfig",
     "MessageOfTheDay",
     "CallsignOverrides",
     "EscortTypeByPlayerType",
@@ -73,25 +72,47 @@ FootholdConfigTrackedTableNames = {
     "restrictedWeaponsVietnam",
     "ForbiddWeaponsInAllEra",
 }
+-- Add new top-level scalar settings here so an omitted external setting triggers the warning.
+FootholdConfigTrackedScalarNames = {
+    "ZoneSelfRepairAndUpgradeTime",
+    "PlayerZoneSuppliesConsumeStock",
+    "RadioMenuStopSupplies",
+}
 
 local function applyExternalConfigWithFallbackWarning()
     local internalTableDefaults = {}
     for _, tableName in ipairs(FootholdConfigTrackedTableNames) do
         internalTableDefaults[tableName] = _G[tableName]
     end
+    local trackedScalarNames = FootholdConfigTrackedScalarNames
 
+    local externalAssignments = {}
+    local externalEnvironment = setmetatable({}, {
+        __index = _G,
+        __newindex = function(_, key, value)
+            externalAssignments[key] = true
+            rawset(_G, key, value)
+        end,
+    })
+    setfenv(externalConfigChunk, externalEnvironment)
     externalConfigChunk()
+    setfenv(externalConfigChunk, _G)
 
-    local internalDefaultsApplied = false
+    local missingConfigNames = {}
     for tableName, internalDefault in pairs(internalTableDefaults) do
         if _G[tableName] == internalDefault then
-            internalDefaultsApplied = true
-            break
+            missingConfigNames[#missingConfigNames + 1] = tableName
         end
     end
-    if not internalDefaultsApplied then return end
+    for _, settingName in ipairs(trackedScalarNames) do
+        if not externalAssignments[settingName] then
+            missingConfigNames[#missingConfigNames + 1] = settingName
+        end
+    end
+    if #missingConfigNames == 0 then return end
+    table.sort(missingConfigNames)
 
-    env.warning("[FOOTHOLD_CONFIG_EXTERNAL_OUTDATED] External Foothold config is outdated. Internal defaults were applied where required.")
+    env.warning("[FOOTHOLD_CONFIG_EXTERNAL_OUTDATED] External Foothold config is outdated. Internal defaults were applied for: " .. table.concat(missingConfigNames, ", "))
 
     local warningCount = 0
     SCHEDULER:New(nil, function()
@@ -448,7 +469,7 @@ AllowTarawaToMoveFreely = false
 -- Controls how supply connections are drawn on the F10 map.
 -- "arrow" keeps the current arrow display. "line" draws dashed lines instead.
 -- @gui label="Connection Display" validValues="Arrows=arrow | Lines=line"
-ConnectionMapStyle = "arrow"
+ConnectionMapStyle = "line"
 
 -- Controls the connection display color on the F10 map.
 -- "dynamic" uses BLUE, RED, and neutral colors based on zone ownership.
@@ -460,29 +481,16 @@ ConnectionMapColor = "dynamic"
 -- Difficulty
 -- ============================================================================
 GlobalSettings = GlobalSettings or {}
--- Foothold non-supply spawn/respawn speed scaling (multiplier).
--- This value multiplies AI respawn timers for attack/patrol missions.
--- 1.0 = default (no change)
--- < 1.0 = faster spawns (shorter timers)   | 0.5 = 2x faster
--- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
+-- Foothold non-supply spawn/respawn speed scaling.
+-- This multiplier affects AI attack and patrol mission timers.
+-- 1.0 = normal speed
+-- 0.5 = twice as fast
+-- 1.5 = 50% slower
 --
--- Side index:
 -- [1] = RED coalition
 -- [2] = BLUE coalition
---
--- Examples:
--- Blue spawns twice as fast:  GlobalSettings.difficultyScaling = { [1]=1.0, [2]=0.5 }
--- Red spawns 30% slower:      GlobalSettings.difficultyScaling = { [1]=1.3, [2]=1.0 }
--- This does not affect the supply missions.
--- < 1.0 = faster spawns (shorter timers)   | 0.5 = 2x faster
--- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
+-- @gui label="AI Spawn Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05"
 GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
-
--- Supply-only spawn/respawn speed scaling (multiplier).
--- This value multiplies AI respawn timers for supply missions only.
--- < 1.0 = faster spawns (shorter timers)   | 0.5 = 2x faster
--- > 1.0 = slower spawns (longer timers)    | 1.5 = 50% slower
-GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 
 -- @gui label="Red AI Plane Skill" validValues="Average=Average | Good=Good | High=High | Excellent=Excellent | Random=Random"
 AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
@@ -503,6 +511,7 @@ HideSAMOnMFD = true -- if random, use "random" (string)
 -- Chance in percent that RED AI air missions may also engage helicopters.
 -- 0 disables helicopter targeting, 100 always allows it.
 -- If InvisibleA10 is true, this setting is ignored.
+-- @gui disabledWhen="InvisibleA10:true"
 ChanceAiAttackHelo = 0
 
 -- Hunter is when you do a lot of damage to enemy units (both planes and ground), RED dispatches a 2-ship to hunt you down.
@@ -518,6 +527,7 @@ FriendlyCapSupport      = "medium" -- BLUE CAP support limit. This can be furthe
 FriendlyCasSupport      = "medium" -- BLUE CAS support limit.  This can be further custommized in the advance section.
 FriendlySeadSupport     = "medium" -- BLUE SEAD support limit.  This can be further custommized in the advance section.
 RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
+RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 
 -- ============================================================================
 -- Difficulty advanced
@@ -618,7 +628,7 @@ RedSeadLimitStages = {
 		{ player = 999, amount = 3 },
 	},
 	medium = {
-		{ player = 0,   amount = 0 },
+		{ player = 0, amount = 1 },
 		{ player = 1,   amount = 1 },
 		{ player = 2,   amount = 1 },
 		{ player = 3, amount = 1 },
@@ -690,8 +700,8 @@ BlueCapSupportStages = {
 		{ player = 999, amount = 1 },
 	},
 	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1, amount = 1 },
+		{ player = 0,    amount = 1 },
+		{ player = 1,    amount = 1 },
 		{ player = 1000, amount = 0 },
 	},
 	hard = {
@@ -775,70 +785,6 @@ BlueCasCountIgnoreTypes = {
 	["CH-47Fbl1"] = true,
 }
 
--- ============================================================================
--- RED Reactive Counterpressure
--- ============================================================================
--- RED Reactive Counterpressure (simple explanation):
--- When BLUE players get close to RED frontline zones, RED starts reacting.
--- RED reaction has 2 parts:
--- 1) Soft reaction: RED speeds up some supply and Patrolling CAP groups for pressured RED zones.
--- 2) Hard reaction: RED can force-spawn attack groups to strike BLUE zones.
--- If you do NOT want red supplies groups to be boosted in speed to spawn faster, set softSupplyBoostPerZone to 0.
--- If you do NOT want red CAP groups to be boosted in speed to spawn faster, set softCapBoostPerZone to 0.
--- The coolDownSec is how often this stuff triggers, you can increase / decrease.
--- Valid values: "easy" | "medium" | "hard"
-RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
-
-RedReactiveConfig = {
-easy = {
-    enabled = true, -- Turn the reactive system on/off for this profile
-    minPressureSoft = 16, -- Minimum pressure needed for RED soft reaction (supply/CAP boost). With CapDifficulty="medium", this is usually 3+ counted CAP players.
-    minPressureHard = 15, -- Minimum pressure needed for RED hard reaction (attack push). With CapDifficulty="medium", this is usually 3+ counted CAP players.
-    captureHardWindowSec = 120, -- If BLUE captured a zone recently, Red side can be angry for this long in seconds, and dispatch attack.
-    hardZoneCooldownSec = 1800, -- After hard reaction is used for a pressured RED zone, wait this long before hard can happen there again
-    maxZonesPerTick = 1, -- Max number of pressured RED zones processed per check
-    softSupplyBoostPerZone = 0, -- Max number of RED supply groups to soft-boost per processed zone per check
-    softCapBoostPerZone = 1, -- Max number of RED CAP groups to soft-boost per processed zone per check
-    softSupplyCooldownSec = 1800, -- After a supply soft-boost in one RED zone, wait this long before supply soft-boost can happen there again
-    softCapCooldownSec = 1800, -- After a CAP soft-boost in one RED zone, wait this long before CAP soft-boost can happen there again
-    hardForcePerZone = 1, -- Max hard-forced attack groups for one processed pressured zone
-    hardForceTotalPerTick = 1, -- Total hard-forced attack groups allowed per check (all zones together)
-    groupReuseCooldownSec = 1600, -- After one attack group is hard-forced, wait this long before that same group can be hard-forced again
-},
-
-medium = {
-    enabled = true, -- Turn the reactive system on/off for this profile
-    minPressureSoft = 9, -- Minimum pressure needed for RED soft reaction (supply/CAP boost). With CapDifficulty="medium", this is usually 2-3 counted CAP players.
-    minPressureHard = 9, -- Minimum pressure needed for RED hard reaction (attack push). With CapDifficulty="medium", this is usually 2-3 counted CAP players.
-    captureHardWindowSec = 180, -- If BLUE captured a zone recently, Red side can be angry for this long in seconds, and dispatch attack.
-    hardZoneCooldownSec = 1800, -- After hard reaction is used for a pressured RED zone, wait this long before hard can happen there again
-    maxZonesPerTick = 1, -- Max number of pressured RED zones processed per check
-    softSupplyBoostPerZone = 0, -- Set to 0 to disable RED supply soft reaction. Applied only when minPressureSoft is met.
-    softCapBoostPerZone = 1, -- Set to 0 to disable RED CAP soft reaction. Applied only when minPressureSoft is met.
-    softSupplyCooldownSec = 1500, -- After a supply soft-boost in one RED zone, wait this long before supply soft-boost can happen there again
-    softCapCooldownSec = 900, -- After a CAP soft-boost in one RED zone, wait this long before CAP soft-boost can happen there again
-    hardForcePerZone = 2, -- Max hard-forced attack groups for one processed pressured zone
-    hardForceTotalPerTick = 2, -- Total hard-forced attack groups allowed per check (all zones together)
-    groupReuseCooldownSec = 1200, -- After one attack group is hard-forced, wait this long before that same group can be hard-forced again
-},
-
-hard = {
-    enabled = true, -- Turn the reactive system on/off for this profile
-    startDelaySec = 120, -- Wait this many seconds after mission start before first reactive check
-    minPressureSoft = 6, -- Minimum pressure needed for RED soft reaction (supply/CAP boost). In hard profile, this starts earlier than medium.
-    minPressureHard = 9, -- Minimum pressure needed for RED hard reaction (attack push). This is usually around 2-3 counted CAP players.
-    captureHardWindowSec = 240, -- If BLUE captured a zone recently, Red side can be angry for this long in seconds, and dispatch attack (Hard reaction)
-    hardZoneCooldownSec = 900, -- After hard reaction is used for a pressured RED zone, wait this long before hard can happen there again
-    maxZonesPerTick = 1, -- Max number of pressured RED zones processed per check
-    softSupplyBoostPerZone = 1, -- Set to 0 to disable RED supply soft reaction. Applied only when minPressureSoft is met.
-    softCapBoostPerZone = 2, -- Set to 0 to disable RED CAP soft reaction. Applied only when minPressureSoft is met.
-    softSupplyCooldownSec = 1200, -- After a supply soft-boost in one RED zone, wait this long before supply soft-boost can happen there again
-    softCapCooldownSec = 900, -- After a CAP soft-boost in one RED zone, wait this long before CAP soft-boost can happen there again
-    hardForcePerZone = 3, -- Max hard-forced attack groups for one processed pressured zone
-    hardForceTotalPerTick = 3, -- Total hard-forced attack groups allowed per check (all zones together)
-    groupReuseCooldownSec = 900, -- After one attack group is hard-forced, wait this long before that same group can be hard-forced again
-},
-}
 -- ============================================================================
 -- Message Of The Day
 -- ============================================================================
@@ -938,24 +884,26 @@ CallsignOverrides = {
 -- escortType: 1 = Hornet (F-18C in Coldwar with AIM-7),
 --             2 = Viper (F-15C in Coldwar with AIM-7)
 --             3 = MIG29S with R-77 (MiG-29A in Coldwar with R-27ET)
+-- The third value is how many feet above the player the escort follows.
+-- Use 0 for the same altitude, or 1000 through 10000 in 1000-foot steps.
 -- @gui installPolicy="mergeRows"
 EscortTypeByPlayerType = {
-    ["C-130J-30"]      = { true, 1 },
-    ["AV8BNA"]         = { true, 1 },
-    ["A-10C_2"]        = { true, 1 },
-    ["A-10C"]          = { true, 1 },
-    ["A-10A"]          = { true, 1 },
-    ["Hercules"]       = { true, 1 },
-    ["F-15ESE"]        = { true, 2 },
-    ["AJS37"]          = { true, 1 },
-    ["MiG-29 Fulcrum"] = { false, 2 },
-    ["F-16C_50"]       = { false, 2 },
-    ["FA-18C_hornet"]  = { false, 2 },
-    ["MiG-21Bis"]      = { false, 3 },
-    ["Su-25T"]         = { false, 3 },
-    ["Su-25"]          = { false, 3 },
-    ["M-2000C"]        = { false, 2 },
-    ["Bronco-OV-10A"]  = { false, 1 },
+    ["C-130J-30"]      = { true, 1, 10000 },
+    ["AV8BNA"]         = { true, 1, 5000 },
+    ["A-10C_2"]        = { true, 1, 10000 },
+    ["A-10C"]          = { true, 1, 10000 },
+    ["A-10A"]          = { true, 1, 10000 },
+    ["Hercules"]       = { true, 1, 10000 },
+    ["F-15ESE"]        = { true, 2, 2000 },
+    ["AJS37"]          = { true, 1, 10000 },
+    ["MiG-29 Fulcrum"] = { false, 2, 2000 },
+    ["F-16C_50"]       = { false, 2, 2000 },
+    ["FA-18C_hornet"]  = { false, 2, 2000 },
+    ["MiG-21Bis"]      = { false, 3, 2000 },
+    ["Su-25T"]         = { false, 3, 5000 },
+    ["Su-25"]          = { false, 3, 5000 },
+    ["M-2000C"]        = { false, 2, 5000 },
+    ["Bronco-OV-10A"]  = { false, 1, 5000 },
 }
 
 -- Plane escort option for takeoff from the ground.
@@ -970,29 +918,45 @@ EscortTakeoffFromGround = true -- If true, the escort will takeoff from the grou
 -- Neutral zones start without weapons; you must bring them or wait for AI delivery.
 WarehouseLogistics = true
 
+-- Supply mission and ready-supply production speed scaling.
+-- This multiplier affects AI supply mission timers and ready-supply production times.
+-- 1.0 = normal speed
+-- 0.5 = twice as fast
+-- 1.5 = 50% slower
+--
+-- [1] = RED coalition
+-- [2] = BLUE coalition
+-- @gui label="Supply Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewRed="Normal zone:1200" timePreviewBlue="Normal zone:1200 | [WH]:600"
+GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
+
+-- Time in seconds for zones to repair or upgrade its own zone using one ready supply.
+ZoneSelfRepairAndUpgradeTime = 300
+
+-- If true, player-picked Zone supplies consume one ready supply package from the campaign zone.
+-- Returned or removed cargo restores that package; destroyed or delivered cargo does not.
+-- Carrier and dynamic FARP pickups remain unlimited because they do not hold campaign-zone stock.
+PlayerZoneSuppliesConsumeStock = true
+
 -- If true, C-130J-30 AND Chinook! Use the internal (Ground crew for the Chinook and C-130 loading system only (not CTLD menu load).
 UseC130LoadAndUnload = true -- need to be true if using Logisticsystem as the cargo need to be tracked.
 
--- How much AI delivery brings per supply run.
-AIDeliveryamount = 20
 
 -- If true, AI supply helicopters use cargo transport for warehouse deliveries.
 SuppliesCargoTransport = true
 
--- If true, smart weapons found in the WarehouseWeaponCaps table at the bottom, will be HALF what we add to the warehouse.
--- This is to make the smart weapons harder to get.
-StrictSmartWeaponsInventory = false
-
--- This table will be used if StrictSmartWeaponsInventory is set to true.
--- Smart weapons in this table will be HALF what we add to the warehouse.
-WarehouseWeaponCaps = {
-}
+-- How much AI delivery brings per supply run.
+AIDeliveryamount = 20
 
 -- Every 15 minutes, BLUE zones gain this many resources (covers AI usage).
 AutoFillResources = 5
 
--- If true, Blue AI will NOT deliver supplies, it will ONLY be done by the player.
+-- Permanently disable regular BLUE AI supply deliveries. Player and shop logistics remain available.
+-- @gui disabledWhen="RadioMenuStopSupplies:true"
 NoAIBlueSupplies = false
+
+-- Allow BLUE players to enable or disable regular BLUE AI supply deliveries from the F10 radio menu.
+-- @gui disabledWhen="NoAIBlueSupplies:true"
+RadioMenuStopSupplies = false
 
 -- This option is the legacy option. this won't be used if WarehouseLogistics = true
 -- @gui installPolicy="mergeRows" editor="checkboxTable"
@@ -1049,6 +1013,15 @@ ZoneSupplyTakeoffWarningTypes = {
     ["Hercules"]      = false,  -- should not be set to true if using WarehouseLogistics. can not detect that generic cargo
 }
 
+-- If true, smart weapons found in the WarehouseWeaponCaps table at the bottom, will be HALF what we add to the warehouse.
+-- This is to make the smart weapons harder to get.
+StrictSmartWeaponsInventory = false
+
+-- This table will be used if StrictSmartWeaponsInventory is set to true.
+-- Smart weapons in this table will be HALF what we add to the warehouse.
+WarehouseWeaponCaps = {
+}
+
 -- ============================================================================
 -- Shop / Rewards
 -- ============================================================================
@@ -1092,9 +1065,11 @@ ShopPrices = {
 	zinf          = 500,  -- Add infantry squad to zone
 	zsam          = 2000, -- Add Hawk/Nasams system to a zone
 	zlogc         = 2000, -- Make a zone logistic center
+	zsup3         = 750,  -- Add 3 supplies to a zone
 	zwh50         = 500,  -- Resupply warehouse with 50
 	zarm          = 1000, -- Add armor group to a zone
 	zpat          = 5000, -- Add Patriot system to zone
+	zgci          = 500,  -- Add GCI station to zone
 	gslot         = 3000, -- Unlock extra upgrade slot
 	farphere      = 1000, -- Deploy FARP
     zhimars       = 2500, -- Add HIMARS to a zone
@@ -1127,9 +1102,11 @@ ShopRankRequirements = {
 	zarm           = 7,  -- Add armor group to a zone
 	zsam           = 6,  -- Add Hawk/Nasams system to a zone
 	zlogc          = 1,  -- Make a zone logistic center
+	zsup3          = 2,  -- Add 3 supplies to a zone
 	zwh50          = 2,  -- Resupply warehouse with 50
 	gslot          = 9,  -- Unlock extra upgrade slot
 	zpat           = 8,  -- Add Patriot system to zone
+	zgci           = 3,  -- Add GCI station to zone
 	armor          = 3,  -- Deploy armor
 	artillery      = 3,  -- Deploy artillery
 	recon          = 3,  -- Deploy recon group
@@ -1409,6 +1386,7 @@ AllowedFlightTimeReward  = {
     ['FA-18C_hornet'] = false,
 	['F-16C_50'] = false,
 	['F-14B'] = false,
+	['F-14BU'] = false,
 	['MiG-29 Fulcrum'] = false,
 	['C-130J-30'] = true,
 	['CH-47Fbl1'] = true,
@@ -1496,7 +1474,7 @@ phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if
 -- ============================================================================
 
 -- In this list, you can either remove or add what is allowed in the coldwar era.
--- @gui label="Allowed Aircraft" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar"
+-- @gui label="Allowed Aircraft" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Coldwar"
 allowedPlanes = {
     "A-10A",
     "A-10C",
@@ -1520,6 +1498,7 @@ allowedPlanes = {
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
     "F-14B",
+    --"F-14BU",
     "F-15C",
     "F-15E",
     "F-15ESE",
@@ -1590,7 +1569,7 @@ allowedPlanes = {
 }
 
 -- In this list, you can either remove or add what is allowed for the (RED SIDE) in the coldwar era.
--- @gui label="Allowed RED Aircraft" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar"
+-- @gui label="Allowed RED Aircraft" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Coldwar"
 allowedPlanesRed = {
     "A-10A",
     "A-10C",
@@ -1607,13 +1586,13 @@ allowedPlanesRed = {
     "C-130J-30",
     "CH-47Fbl1",
     "E-2C",
-    "F/A-18A",
     "F-100D",
     "F-14A",
     "F-14A-135-GR",
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
-    "F-14B",
+    --"F-14B",
+    --"F-14BU",
     "F-15C",
     "F-15E",
     "F-15ESE",
@@ -1684,18 +1663,24 @@ allowedPlanesRed = {
 }
 
 -- In this list, you can either remove or add what is allowed for BLUE warehouses in the Vietnam era.
--- @gui label="Vietnam Allowed Aircraft" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam"
+-- @gui label="Vietnam Allowed Aircraft" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Vietnam"
 allowedPlanesVietnam = {
     "A-4E-C",
     "Bronco-OV-10A",
     "CH-47Fbl1",
     "F-100D",
+    "F-14A",
+    "F-14A-135-GR",
+    "F-14A-135-GR-Early",
+    "F-14A-95-GR",
     "F-4E-45MC",
     "F-5E-3",
     "F-86F Sabre",
     "OH-6A",
     "UH-1H",
     "Su-17M4",
+    --"F-14B",
+    --"F-14BU",
     -- "AH-1W",
     -- "C-130J-30",
     -- "F-5E-3_FC",
@@ -1708,7 +1693,7 @@ allowedPlanesVietnam = {
 }
 
 -- In this list, you can either remove or add what is allowed for RED warehouses in the Vietnam era.
--- @gui label="Vietnam Allowed RED Aircraft" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam"
+-- @gui label="Vietnam Allowed RED Aircraft" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Vietnam"
 allowedPlanesRedVietnam = {
     "Mi-8MT",
     "MiG-15bis",
@@ -1716,10 +1701,24 @@ allowedPlanesRedVietnam = {
     "MiG-19P",
     "MiG-21Bis",
     -- "SU22",
+    -- "A-4E-C",
+    -- "Bronco-OV-10A",
+    -- "CH-47Fbl1",
+    -- "F-100D",
+    -- "F-14A",
+    -- "F-14A-135-GR",
+    -- "F-14A-135-GR-Early",
+    -- "F-14A-95-GR",
+    -- "F-4E-45MC",
+    -- "F-5E-3",
+    -- "F-86F Sabre",
+    -- "OH-6A",
+    -- "UH-1H",
+    -- "Su-17M4",
 }
 -- The list is applied if AllowMods are true and on Modern era.
 -- Make sure you have the mods installed on the server and the client.
--- @gui label="Mods aircraft list" installPolicy="keepTable" editor="bucket" visibleWhen="AllowMods:true"
+-- @gui label="Mods aircraft list" installPolicy="mergeRows" editor="bucket" visibleWhen="AllowMods:true"
 restockAircraft = {
     "A-29B",
     "A-4E-C",
@@ -1761,7 +1760,7 @@ restockAircraft = {
 
 -- In the coldwar era, you can add or remove what to restrict
 -- Add "--" if you want to ALLOW a weapon, otherwise the weapon in the list below are removed from the warehouse.
--- @gui label="Cold War Restricted Weapons" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar"
+-- @gui label="Cold War Restricted Weapons" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Coldwar"
 restrictedWeapons = {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
@@ -1855,7 +1854,7 @@ restrictedWeapons = {
 
 -- In the Vietnam era, you can add or remove what to restrict.
 -- Add "--" if you want to ALLOW a weapon, otherwise weapons in the list below are removed from the warehouse.
--- @gui label="Vietnam Restricted Weapons" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam"
+-- @gui label="Vietnam Restricted Weapons" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Vietnam"
 restrictedWeaponsVietnam = {
     -- Guided weapon pods
     --"weapons.containers.HB_ORD_Pave_Spike",
