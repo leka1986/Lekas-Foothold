@@ -5629,7 +5629,11 @@ function RegisterDirectorSeadMission(slotIndex)
                     local playerName = participantNames[1]
                     trigger.action.outTextForCoalition(2,L10N:Format("MISSION_REWARD_COMPLETED_SOLO", "SEAD", playerName, rewards[playerName]),20)
                 elseif #participantNames > 1 then
-                    trigger.action.outTextForCoalition(2,L10N:Format("MISSION_REWARD_COMPLETED_GROUP", "SEAD", table.concat(participantNames, ', '), BattleCommander.SEAD_MISSION_REWARD),20)
+                    local rewardLines = {}
+                    for _, playerName in ipairs(participantNames) do
+                        rewardLines[#rewardLines + 1] = L10N:Format("MISSION_CAS_REWARD_LINE", playerName, rewards[playerName])
+                    end
+                    trigger.action.outTextForCoalition(2,L10N:Format("MISSION_REWARD_COMPLETED_GROUP_VARIABLE", "SEAD", table.concat(rewardLines, '\n')),20)
                 end
             end
             seadTargets[slotIndex] = nil

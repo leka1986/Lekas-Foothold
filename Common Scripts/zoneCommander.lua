@@ -42979,8 +42979,12 @@ BattleCommander.CAS_MISSION_MAX_SLOTS = 4
 BattleCommander.CAS_MISSION_END_GRACE_SEC = 65
 BattleCommander.CAS_MISSION_EXTRA_MIN_HOPS = 2
 BattleCommander.CAS_MISSION_MIN_TARGETS = 5
+BattleCommander.CAS_MISSION_COMPLETION_MIN_PERCENT = 80
+BattleCommander.CAS_MISSION_COMPLETION_MAX_PERCENT = 100
+BattleCommander.CAS_MISSION_REWARD_PER_KILL = 30
 BattleCommander.SEAD_MISSION_MAX_SLOTS = 2
-BattleCommander.SEAD_MISSION_REWARD = 30
+BattleCommander.SEAD_MISSION_REWARD_PER_KILL = 50
+BattleCommander.SEAD_MISSION_REWARD = BattleCommander.SEAD_MISSION_REWARD_PER_KILL
 
 function BattleCommander:initCasMissions()
 	self.casMissionMaxSlots = BattleCommander.CAS_MISSION_MAX_SLOTS
@@ -43033,8 +43037,12 @@ function BattleCommander:initSeadMissions()
 		self.seadMissions.slots[slotIndex] = {
 			index = slotIndex,
 			targetZone = nil,
+			totalKills = 0,
+			killsByPlayer = {},
 			rewardEligible = {},
+			rewardWeights = {},
 			eligibleUnitNames = {},
+			countedUnitNames = {},
 			completed = false,
 			active = false,
 			started = false,
@@ -43046,8 +43054,12 @@ function BattleCommander:resetSeadMissionSlot(slotIndex)
 	self.seadMissions.slots[slotIndex] = {
 		index = slotIndex,
 		targetZone = nil,
+		totalKills = 0,
+		killsByPlayer = {},
 		rewardEligible = {},
+		rewardWeights = {},
 		eligibleUnitNames = {},
+		countedUnitNames = {},
 		completed = false,
 		active = false,
 		started = false,
@@ -43111,8 +43123,12 @@ function BattleCommander:startSeadMissionSlot(slotIndex, targetZone)
 
 	local slot = self.seadMissions.slots[slotIndex]
 	slot.targetZone = targetZone
+	slot.totalKills = 0
+	slot.killsByPlayer = {}
 	slot.rewardEligible = {}
+	slot.rewardWeights = {}
 	slot.eligibleUnitNames = eligibleUnitNames
+	slot.countedUnitNames = {}
 	slot.completed = false
 	slot.active = true
 	slot.started = false
@@ -43252,7 +43268,11 @@ function BattleCommander:_startCasMissionSlot(slotIndex, targetZone, targetCount
 	local slot = self.casMissions.slots[slotIndex]
 	local availableTargets, eligibleUnitNames = self:_casMissionZoneTargetCount(targetZone, targetCounts)
 	if availableTargets < BattleCommander.CAS_MISSION_MIN_TARGETS then return false end
-	local targetKills = math.ceil(availableTargets * 0.50)
+	local completionPercent = math.random(
+		BattleCommander.CAS_MISSION_COMPLETION_MIN_PERCENT,
+		BattleCommander.CAS_MISSION_COMPLETION_MAX_PERCENT
+	)
+	local targetKills = math.ceil(availableTargets * completionPercent / 100)
 	targetKills = math.max(BattleCommander.CAS_MISSION_MIN_TARGETS, targetKills)
 	targetKills = math.min(availableTargets, targetKills)
 
@@ -43310,17 +43330,14 @@ function BattleCommander:buildCasMissionRewards(slotIndex)
 	end
 	table.sort(participantNames)
 
-	local rewardPool = slot.targetKills * 30
+	local rewardPool = slot.totalKills * BattleCommander.CAS_MISSION_REWARD_PER_KILL
 	local rewards = {}
 	if #participantNames == 0 then return participantNames, rewards, rewardPool end
 
-	local equalPool = math.floor(rewardPool * 0.5)
-	local contributionPool = rewardPool - equalPool
 	local fractions = {}
 	local assignedReward = 0
 	for _, playerName in ipairs(participantNames) do
-		local exactReward = (equalPool / #participantNames)
-			+ (contributionPool * slot.rewardWeights[playerName] / totalWeight)
+		local exactReward = rewardPool * slot.rewardWeights[playerName] / totalWeight
 		local reward = math.floor(exactReward)
 		rewards[playerName] = reward
 		fractions[playerName] = exactReward - reward
@@ -43387,28 +43404,60 @@ function BattleCommander:_addSeadMissionRewardParticipants(slot, playerName)
 	end
 	for participantName, _ in pairs(participants) do
 		slot.rewardEligible[participantName] = true
+		slot.rewardWeights[participantName] = (slot.rewardWeights[participantName] or 0) + 1
 	end
 end
 
 function BattleCommander:markSeadMissionPlayerUnavailable(playerName)
 	if not self.seadMissions then return end
 	for slotIndex = 1, self.seadMissionMaxSlots do
-		self.seadMissions.slots[slotIndex].rewardEligible[playerName] = nil
+		local slot = self.seadMissions.slots[slotIndex]
+		slot.rewardEligible[playerName] = nil
+		slot.rewardWeights[playerName] = nil
 	end
 end
 
 function BattleCommander:buildSeadMissionRewards(slotIndex)
 	local slot = self.seadMissions.slots[slotIndex]
 	local participantNames = {}
-	local rewards = {}
+	local totalWeight = 0
 	for playerName, eligible in pairs(slot.rewardEligible) do
-		if eligible and self:_jointPartnerAlive(playerName) then
+		local weight = slot.rewardWeights[playerName] or 0
+		if eligible and weight > 0 and self:_jointPartnerAlive(playerName) then
 			participantNames[#participantNames + 1] = playerName
-			rewards[playerName] = BattleCommander.SEAD_MISSION_REWARD
+			totalWeight = totalWeight + weight
 		end
 	end
 	table.sort(participantNames)
-	return participantNames, rewards
+
+	local rewardPool = slot.totalKills * BattleCommander.SEAD_MISSION_REWARD_PER_KILL
+	local rewards = {}
+	if #participantNames == 0 then return participantNames, rewards, rewardPool end
+
+	local fractions = {}
+	local assignedReward = 0
+	for _, playerName in ipairs(participantNames) do
+		local exactReward = rewardPool * slot.rewardWeights[playerName] / totalWeight
+		local reward = math.floor(exactReward)
+		rewards[playerName] = reward
+		fractions[playerName] = exactReward - reward
+		assignedReward = assignedReward + reward
+	end
+
+	local remainderOrder = {}
+	for _, playerName in ipairs(participantNames) do
+		remainderOrder[#remainderOrder + 1] = playerName
+	end
+	table.sort(remainderOrder, function(a, b)
+		if fractions[a] ~= fractions[b] then return fractions[a] > fractions[b] end
+		if slot.rewardWeights[a] ~= slot.rewardWeights[b] then return slot.rewardWeights[a] > slot.rewardWeights[b] end
+		return a < b
+	end)
+	for remainderIndex = 1, rewardPool - assignedReward do
+		local playerName = remainderOrder[remainderIndex]
+		rewards[playerName] = rewards[playerName] + 1
+	end
+	return participantNames, rewards, rewardPool
 end
 
 function BattleCommander:isSeadMissionSlotContinuing(slotIndex)
@@ -43434,9 +43483,12 @@ function BattleCommander:registerSeadMissionKill(playerName, unitName, statName)
 	if statName ~= 'SAM' or not self.seadMissions then return false end
 	for slotIndex = 1, self.seadMissionMaxSlots do
 		local slot = self.seadMissions.slots[slotIndex]
-		if slot.active and slot.eligibleUnitNames[unitName] then
+		if slot.active and slot.eligibleUnitNames[unitName] and not slot.countedUnitNames[unitName] then
 			local targetZone = self:getZoneByName(slot.targetZone)
 			if targetZone and targetZone.side == coalition.side.RED and targetZone.active and not targetZone.suspended then
+				slot.countedUnitNames[unitName] = true
+				slot.totalKills = slot.totalKills + 1
+				slot.killsByPlayer[playerName] = (slot.killsByPlayer[playerName] or 0) + 1
 				self:_addSeadMissionRewardParticipants(slot, playerName)
 				return true
 			end
