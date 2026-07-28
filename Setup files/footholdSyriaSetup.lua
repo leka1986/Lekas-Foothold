@@ -3750,9 +3750,10 @@ bc.shopItems['zsup3'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
+	candidateBucket = 'zone_supply_targets',
 	extraPredicate = function(zoneObj) return bc:canAddZoneSupplyStock(zoneObj) end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_SUPPLY_ZONES"),
-	refreshTags = { 'friendly_targets', 'zsup3' },
+	refreshTags = { 'friendly_targets', 'warehouse_targets', 'zsup3' },
 }
 
 bc:registerShopItem('zwh50',LTGet("SYRIA_SHOP_ITEM_WAREHOUSE_50"),ShopPrices.zwh50,function(sender)
@@ -4135,9 +4136,10 @@ bc:addShopItem(2, 'supplies2', -1, 3, ShopRankRequirements.supplies2, ShopCats.L
 if AllowScriptedSupplies then
     bc:addShopItem(2, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
 end
+bc:addShopItem(2, 'zsup3', -1, 6, ShopRankRequirements.zsup3, ShopCats.LogisticsStrategic) -- add 3 supplies to a zone
 if WarehouseLogistics then
 bc:addShopItem(2, 'zlogc', -1, 5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
-bc:addShopItem(2, 'zwh50', -1, 6, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
+bc:addShopItem(2, 'zwh50', -1, 7, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
 end
 -- Other Support
 bc:addShopItem(2, 'dynamicarco', 1, 1, ShopRankRequirements.dynamicarco, ShopCats.OtherSupport) -- Navy tanker
@@ -4174,17 +4176,12 @@ supplyZones = {
     'Gecitkale',
     'Bravo',
     'Charlie',
-    'Delta',
     'Red Carrier',
     'Foxtrot',
     'Golf',
     'Hotel',
     'Juliett',
     'Kilo',
-    'November',
-    'Oscar',
-    'Papa',
-    'Romeo',
     'Sierra',
     'Tango',
     'Uniform',
@@ -4192,7 +4189,6 @@ supplyZones = {
     'Durayhim',
     'Dam',
     'TV Tower',
-    'SA-5',
     'Rene Mouawad',
     'Beirut',
     'Rayak',

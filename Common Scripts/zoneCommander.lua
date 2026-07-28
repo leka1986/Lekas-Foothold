@@ -17953,11 +17953,13 @@ end
 function BattleCommander:canAddZoneSupplyStock(zoneObj)
 	if not zoneObj or not zoneObj.active or zoneObj.suspended or zoneObj.isHidden
 		or zoneObj.side ~= coalition.side.BLUE
-		or not zoneObj:_regularSupplyHasRouteForSide(coalition.side.BLUE)
 	then
 		return false
 	end
-	return true
+	if Foothold_ctld:GetFarpSupplyStock(zoneObj.zone) ~= nil then
+		return true
+	end
+	return zoneObj:_regularSupplyHasRouteForSide(coalition.side.BLUE)
 end
 
 function BattleCommander:applyZoneSupplyStockAdd(zoneObj, amount)
@@ -17966,6 +17968,17 @@ function BattleCommander:applyZoneSupplyStockAdd(zoneObj, amount)
 		or zoneObj.side ~= coalition.side.BLUE
 	then
 		return L10N:Get("LOGISTICS_ZONE_NOT_FRIENDLY")
+	end
+	local farpStock = Foothold_ctld:GetFarpSupplyStock(zoneObj.zone)
+	if farpStock ~= nil then
+		local stored = Foothold_ctld:AddFarpSupplyStock(zoneObj.zone, amount)
+		self:requestShopSelectorRefreshForCoalition(coalition.side.BLUE, { 'zsup3' })
+		trigger.action.outTextForCoalition(
+			coalition.side.BLUE,
+			L10N:Format("SYRIA_SHOP_FARP_SUPPLY_STOCK_ADDED", amount, zoneObj.zone, stored),
+			15
+		)
+		return true
 	end
 	if not zoneObj:_regularSupplyHasRouteForSide(coalition.side.BLUE) then
 		return L10N:Get("LOGISTICS_NO_AVAILABLE_SUPPLY")
@@ -25174,6 +25187,8 @@ function BattleCommander:_zoneMatchesShopSelectorBucket(zoneState, bucketName)
 		return zoneState.side == 2
 	elseif bucketName == "blue_unsuspended" then
 		return zoneState.side == 2 and not zoneState.suspended
+	elseif bucketName == "zone_supply_targets" then
+		return zoneState.side == 2 and not zoneState.suspended
 	elseif bucketName == "blue_airbase_unsuspended" then
 		return zoneState.side == 2
 			and not zoneState.suspended
@@ -25248,6 +25263,7 @@ function BattleCommander:_applyZoneShopSelectorDelta(zoneObj, previousState)
 	local patchedBuckets = {
 		"blue_visible",
 		"blue_unsuspended",
+		"zone_supply_targets",
 		"blue_airbase_unsuspended",
 		"enemy_unsuspended",
 		"advance_capture_targets",
@@ -25334,6 +25350,7 @@ function BattleCommander:updateBlueZoneCount()
 	local selectorBuckets = {
 		blue_unsuspended = {},
 		blue_visible = {},
+		zone_supply_targets = {},
 		blue_airbase_unsuspended = {},
 		enemy_unsuspended = {},
 		advance_capture_targets = {},
@@ -25358,6 +25375,7 @@ function BattleCommander:updateBlueZoneCount()
 					n = n + 1
 					blueActiveZones[#blueActiveZones + 1] = z
 					addSelectorCandidate("blue_unsuspended", z)
+					addSelectorCandidate("zone_supply_targets", z)
 
 					local abName = z.airbaseName
 					if abName and abName ~= '' then
@@ -25402,8 +25420,27 @@ function BattleCommander:updateBlueZoneCount()
 		end
 	end
 
+	for farpName, farpEntry in pairs(self.dynamicFarpsByName or {}) do
+		if farpName and farpEntry.side == 2 then
+			selectorBuckets.zone_supply_targets[#selectorBuckets.zone_supply_targets + 1] = {
+				z = {
+					zone = farpName,
+					airbaseName = farpName,
+					baseName = farpName,
+					side = 2,
+					active = true,
+					suspended = false,
+					isHidden = false,
+					LogisticCenter = false,
+					_waypointNumber = nil,
+				},
+				wp = nil,
+			}
+		end
+	end
+
 	for extraName in pairs(WarehouseExtraAirbases or {}) do
-		if extraName and not warehouseSeen[extraName] then
+		if extraName and not extraName:find("^CTLD FARP ZELL ") and not warehouseSeen[extraName] then
 			warehouseSeen[extraName] = true
 			selectorBuckets.warehouse_targets[#selectorBuckets.warehouse_targets + 1] = {
 				z = {
@@ -36509,9 +36546,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 	function ZoneCommander:_consumePlayerRegularSupplyStock(amount, side, now)
 		amount = math.max(0, math.floor(tonumber(amount) or 0))
 		if amount < 1 then return false, 0 end
-		if not self.active or self.side ~= side
-			or not self:_regularSupplyHasRouteForSide(side)
-		then
+		if not self.active or self.side ~= side then
 			return false, 0
 		end
 
@@ -36541,7 +36576,6 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		amount = math.max(0, math.floor(tonumber(amount) or 0))
 		if amount < 1 or not self.active or self.side ~= side
 			or self._regularSupplyStockSide ~= side
-			or not self:_regularSupplyHasRouteForSide(side)
 		then
 			return false
 		end
@@ -36573,15 +36607,25 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 	end
 
 	function ZoneCommander:_regularSupplyDisplaySignature()
-		if not self.active or self.isHidden or not self:_regularSupplyHasRouteForSide(self.side)
-			or (self.LogisticCenter ~= true and not self.battleCommander:isRegularAiSupplyEnabled(self.side)
+		local ready = math.max(0, math.floor(tonumber(self._regularSupplyReady) or 0))
+		local canBuild = self:_regularSupplyHasRouteForSide(self.side)
+		local hasStoredStock = self._regularSupplyStockSide == self.side and ready > 0
+		if not self.active or self.isHidden or (not canBuild and not hasStoredStock)
+			or (canBuild and self.LogisticCenter ~= true and not self.battleCommander:isRegularAiSupplyEnabled(self.side)
 				and not (self.side == coalition.side.BLUE and NoAIBlueSupplies ~= true and PlayerZoneSuppliesConsumeStock == true))
 		then
 			return "off"
 		end
+		if not canBuild then
+			return table.concat({
+				tostring(self._regularSupplyStockSide or 0),
+				tostring(ready),
+				"stored",
+			}, "|")
+		end
 		return table.concat({
 			tostring(self._regularSupplyStockSide or 0),
-			tostring(math.floor(tonumber(self._regularSupplyReady) or 0)),
+			tostring(ready),
 			tostring(self:_regularSupplyMaxStock()),
 			tostring(self:_regularSupplyProgressStep()),
 			self.LogisticCenter == true and "warehouse" or "zone",
@@ -36590,12 +36634,17 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 	end
 
 	function ZoneCommander:_regularSupplyLabelText()
-		if not self.active or self.isHidden or not self:_regularSupplyHasRouteForSide(self.side)
-			or (self.LogisticCenter ~= true and not self.battleCommander:isRegularAiSupplyEnabled(self.side)
+		local ready = math.max(0, math.floor(tonumber(self._regularSupplyReady) or 0))
+		local canBuild = self:_regularSupplyHasRouteForSide(self.side)
+		local hasStoredStock = self._regularSupplyStockSide == self.side and ready > 0
+		if not self.active or self.isHidden or (not canBuild and not hasStoredStock)
+			or (canBuild and self.LogisticCenter ~= true and not self.battleCommander:isRegularAiSupplyEnabled(self.side)
 				and not (self.side == coalition.side.BLUE and NoAIBlueSupplies ~= true and PlayerZoneSuppliesConsumeStock == true))
 		then return nil end
+		if not canBuild then
+			return string.format("[Supplies] %d", ready)
+		end
 		local maxStock = self:_regularSupplyMaxStock()
-		local ready = math.max(0, math.floor(tonumber(self._regularSupplyReady) or 0))
 		local step = self:_regularSupplyProgressStep()
 		local productionEnabled = self.LogisticCenter == true or self.battleCommander:isRegularAiSupplyEnabled(self.side)
 		local stockText
@@ -36717,8 +36766,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		if job.side ~= coalition.side.BLUE or not zoneCommander.active or zoneCommander.side ~= job.side then
 			return self:_cancelRegularSupplyLocalRecovery(zoneCommander, false)
 		end
-		if zoneCommander.suspended or not zoneCommander:_regularSupplyHasRouteForSide(job.side)
-		then
+		if zoneCommander.suspended then
 			return self:_cancelRegularSupplyLocalRecovery(zoneCommander, true)
 		end
 		if self:_regularSupplyTargetDemand(zoneCommander, {}) < 1 then
@@ -36755,8 +36803,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			if job then
 				if job.side ~= coalition.side.BLUE or not zoneCommander.active or zoneCommander.side ~= job.side then
 					self:_cancelRegularSupplyLocalRecovery(zoneCommander, false)
-				elseif zoneCommander.suspended or not zoneCommander:_regularSupplyHasRouteForSide(job.side)
-				then
+				elseif zoneCommander.suspended then
 					self:_cancelRegularSupplyLocalRecovery(zoneCommander, true)
 				else
 					local demand = self:_regularSupplyTargetDemand(zoneCommander, demandCache)
@@ -36773,7 +36820,6 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			elseif zoneCommander.side == coalition.side.BLUE
 				and zoneCommander.active and not zoneCommander.suspended
 				and not zoneCommander.isHidden and next(zoneCommander.built or {}) ~= nil
-				and zoneCommander:_regularSupplyHasRouteForSide(zoneCommander.side)
 				and zoneCommander._regularSupplyStockSide == zoneCommander.side
 			then
 				local ready = math.floor(tonumber(zoneCommander._regularSupplyReady) or 0)
@@ -36795,11 +36841,18 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		now = now or timer.getAbsTime()
 		local previousSignature = self:_regularSupplyDisplaySignature()
 		local side = self.side
-		local canBuild = self.active and not self.isHidden and self:_regularSupplyHasRouteForSide(side)
+		local canStore = self.active and not self.isHidden
+			and (side == coalition.side.RED or side == coalition.side.BLUE)
+		local canBuild = canStore and self:_regularSupplyHasRouteForSide(side)
 
-		if self._regularSupplyStockSide ~= side or not canBuild then
+		if self._regularSupplyStockSide ~= side or not canStore then
 			self._regularSupplyStockSide = side
 			self._regularSupplyReady = 0
+			self._regularSupplyProgress = 0
+			self._regularSupplyLastUpdateAt = now
+			return previousSignature ~= self:_regularSupplyDisplaySignature()
+		end
+		if not canBuild then
 			self._regularSupplyProgress = 0
 			self._regularSupplyLastUpdateAt = now
 			return previousSignature ~= self:_regularSupplyDisplaySignature()
@@ -61472,7 +61525,24 @@ end
 						local stockConsumed = type(existingCargo) == "table"
 							and math.max(0, math.floor(tonumber(existingCargo.stockConsumed) or 0)) or 0
 						local sourceZone = source and self.battleCommander:getZoneByName(source) or nil
-						if PlayerZoneSuppliesConsumeStock == true and sourceZone then
+						local sourceFarpStock = source and Foothold_ctld:GetFarpSupplyStock(source) or nil
+						if sourceFarpStock ~= nil then
+							local group = GROUP:FindByName(groupName)
+							local sourceFarpZone = getMooseZone(source)
+							if not sourceFarpZone or not group:IsInZone(sourceFarpZone) then
+								trigger.action.outTextForGroup(gid, T:Get("LOGISTICS_LOAD_ONLY_FRIENDLY"), 10)
+								return
+							end
+							local consumed, available = Foothold_ctld:ConsumeFarpSupplyStock(source, addCount)
+							if not consumed then
+								trigger.action.outTextForGroup(
+									gid,
+									T:Format("LOGISTICS_SUPPLY_STOCK_INSUFFICIENT", source, available, addCount),
+									10
+								)
+								return
+							end
+						elseif PlayerZoneSuppliesConsumeStock == true and sourceZone then
 							local currentZone = self.battleCommander:getZoneOfUnit(un:getName())
 							if not currentZone or currentZone.zone ~= sourceZone.zone then
 								trigger.action.outTextForGroup(gid, T:Get("LOGISTICS_LOAD_ONLY_FRIENDLY"), 10)
@@ -61544,6 +61614,15 @@ end
 								if string.find(zName, "CTLD FARP") or string.find(zName, "Escort Mission FARP") then
 									local zObj = ZONE:FindByName(zName)
 									if zObj and group:IsInZone(zObj) then
+										local consumed, available = Foothold_ctld:ConsumeFarpSupplyStock(zName, loadCount)
+										if not consumed then
+											trigger.action.outTextForGroup(
+												gid,
+												T:Format("LOGISTICS_SUPPLY_STOCK_INSUFFICIENT", zName, available, loadCount),
+												10
+											)
+											return
+										end
 										self.carriedCargo[gr:getID()] = { source = zName, count = loadCount, stockConsumed = 0 }
 										trigger.action.setUnitInternalCargo(un:getName(), 100 * loadCount)
 										local msg
@@ -61566,36 +61645,45 @@ end
 					trigger.action.outTextForGroup(gid, T:Get("LOGISTICS_LOAD_ONLY_FRIENDLY"), 10)
 					return
 				end
-				for i, v in ipairs(self.supplyZones) do
-					if v == zn.zone then
-						local stockConsumed = 0
-						if PlayerZoneSuppliesConsumeStock == true then
-							local consumed, available = zn:_consumePlayerRegularSupplyStock(loadCount, un:getCoalition())
-							if not consumed then
-								trigger.action.outTextForGroup(
-									gid,
-									T:Format("LOGISTICS_SUPPLY_STOCK_INSUFFICIENT", zn.zone, available, loadCount),
-									10
-								)
-								return
-							end
-							stockConsumed = loadCount
+				local canLoadSupplies = PlayerZoneSuppliesConsumeStock == true
+					and zn._regularSupplyStockSide == un:getCoalition()
+					and math.max(0, math.floor(tonumber(zn._regularSupplyReady) or 0)) > 0
+				if not canLoadSupplies then
+					for _, v in ipairs(self.supplyZones) do
+						if v == zn.zone then
+							canLoadSupplies = true
+							break
 						end
-						self.carriedCargo[gr:getID()] = {
-							source = zn.zone,
-							count = loadCount,
-							stockConsumed = stockConsumed,
-						}
-						trigger.action.setUnitInternalCargo(un:getName(), 100 * loadCount)
-						local msg
-						if loadCount > 1 then
-							msg = T:Format("LOGISTICS_SUPPLIES_LOADED_COUNT", loadCount)
-						else
-							msg = T:Get("LOGISTICS_SUPPLIES_LOADED")
-						end
-						trigger.action.outTextForGroup(gid, msg, 20)
-						return
 					end
+				end
+				if canLoadSupplies then
+					local stockConsumed = 0
+					if PlayerZoneSuppliesConsumeStock == true then
+						local consumed, available = zn:_consumePlayerRegularSupplyStock(loadCount, un:getCoalition())
+						if not consumed then
+							trigger.action.outTextForGroup(
+								gid,
+								T:Format("LOGISTICS_SUPPLY_STOCK_INSUFFICIENT", zn.zone, available, loadCount),
+								10
+							)
+							return
+						end
+						stockConsumed = loadCount
+					end
+					self.carriedCargo[gr:getID()] = {
+						source = zn.zone,
+						count = loadCount,
+						stockConsumed = stockConsumed,
+					}
+					trigger.action.setUnitInternalCargo(un:getName(), 100 * loadCount)
+					local msg
+					if loadCount > 1 then
+						msg = T:Format("LOGISTICS_SUPPLIES_LOADED_COUNT", loadCount)
+					else
+						msg = T:Get("LOGISTICS_SUPPLIES_LOADED")
+					end
+					trigger.action.outTextForGroup(gid, msg, 20)
+					return
 				end
 				trigger.action.outTextForGroup(gid, T:Get("LOGISTICS_LOAD_ONLY_FRIENDLY"), 10)
 				return
@@ -61663,6 +61751,7 @@ end
 						zone:capture(un:getCoalition())
 						return true
 					elseif zone.side == un:getCoalition() then
+						local storeDeliveredSupply = not zone:_regularSupplyHasRouteForSide(un:getCoalition())
 						if self.battleCommander.playerRewardsOn then
 							local reward = self.battleCommander.rewards['Zone upgrade'] or 100
 							if zone:canRecieveSupply() then
@@ -61685,7 +61774,11 @@ end
 								end
 							end
 						end
-						zone:upgrade()
+						if storeDeliveredSupply then
+							zone:_addImportedRegularSupplyStock(1, timer.getAbsTime())
+						else
+							zone:upgrade()
+						end
 						return true
 					end
 					return false
@@ -61753,6 +61846,7 @@ end
 							if string.find(zName, "CTLD FARP") or string.find(zName, "Escort Mission FARP") then
 								local zObj = ZONE:FindByName(zName)
 								if zObj and group:IsInZone(zObj) then
+									Foothold_ctld:AddFarpSupplyStock(zName, totalDrops)
 									completeUnload()
 									return
 								end
@@ -61789,10 +61883,24 @@ end
 			local gid = gr:getID()
 			local T = L10N:ForGroup(gid)
 			local msg = T:Get("LOGISTICS_FRIENDLY_SUPPLY_ZONES")
+			local listedSupplyZones = {}
 			for i,v in ipairs(self.supplyZones) do
+				listedSupplyZones[v] = true
 				local z = self.battleCommander:getZoneByName(v)
 				if z and z.side == gr:getCoalition() then
 					msg = msg..'\n'..v
+				end
+			end
+			if PlayerZoneSuppliesConsumeStock == true then
+				for _, z in ipairs(self.battleCommander.zones) do
+					local ready = math.max(0, math.floor(tonumber(z._regularSupplyReady) or 0))
+					local pending = math.max(0, math.floor(tonumber(z._regularSupplyPendingStock) or 0))
+					if not listedSupplyZones[z.zone] and z.active and not z.isHidden
+						and z.side == gr:getCoalition() and z._regularSupplyStockSide == z.side
+						and ready - pending > 0
+					then
+						msg = msg..'\n'..z.zone
+					end
 				end
 			end
 			
@@ -66563,8 +66671,9 @@ bc:registerDynamicFarp(FName, Coordinate, 2)
   trigger.action.setMarkupColor(markId,{0,1,0,1})
   local textId=NextMarkupId; NextMarkupId=NextMarkupId+1
   local textPoint={x=Coordinate.x,y=Coordinate.y,z=Coordinate.z+120}
-  trigger.action.textToAll(coalition.side.BLUE,textId,textPoint,{0,0,0.7,0.8},{0.7,0.7,0.7,0.8},17,true,FName)
-  trigger.action.setMarkupText(textId,FName)
+  local farpLabel=Foothold_ctld:RegisterFarpSupplyStorage(FName,textId,1)
+  trigger.action.textToAll(coalition.side.BLUE,textId,textPoint,{0,0,0.7,0.8},{0.7,0.7,0.7,0.8},17,true,farpLabel)
+  trigger.action.setMarkupText(textId,farpLabel)
 end
 
 
@@ -66595,8 +66704,9 @@ function CustomBuildAFARP(Coordinate,startZone)
 
   local textId = 96500 + EscortFARPCount
   local textPoint = {x = Coordinate.x, y = Coordinate.y, z = Coordinate.z + 120}
-  trigger.action.textToAll(coalition.side.BLUE, textId, textPoint,{0,0,0.7,0.8},{0.7,0.7,0.7,0.8},17,true,FName)
-  trigger.action.setMarkupText(textId, FName)
+  local farpLabel = Foothold_ctld:RegisterFarpSupplyStorage(FName, textId, 1)
+  trigger.action.textToAll(coalition.side.BLUE, textId, textPoint,{0,0,0.7,0.8},{0.7,0.7,0.7,0.8},17,true,farpLabel)
+  trigger.action.setMarkupText(textId, farpLabel)
     bc:registerDynamicFarp(FName, Coordinate, 2)
   
 end
@@ -72610,6 +72720,7 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.missiles.YJ-62",
 		"weapons.missiles.YJ-82",
 		"weapons.missiles.YJ-83",
+		"weapons.missiles.AGM-154A",
 
 		"weapons.bombs.AAA GEPARD [34720lb]",
 		"weapons.bombs.AAA Vulcan M163 Air [21666lb]",
@@ -72744,6 +72855,7 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.nurs.SMERCH_9M55K",
 		"weapons.nurs.URAGAN_9M27F",
 
+		"weapons.adapters.jf39_bru_61",
 		"weapons.adapters.14-3-M2",
 		"weapons.adapters.30-6-M2",
 		"weapons.adapters.9K114_Shturm",
@@ -73102,6 +73214,7 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.{SPRAYER_P}",
 		"weapons.droptanks.A-29B TANK",
 		"weapons.droptanks.AA42R",
+		"weapons.droptanks.CFT",
 		"weapons.droptanks.dragonfly_fuel_tanks",
 		"weapons.droptanks.Drop Tank 1000 Litre",
 		"weapons.droptanks.Drop tank 1100 litre",
@@ -73152,6 +73265,18 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.gunmounts.{22_SPPU_reversed}",
 		"weapons.gunmounts.{22_SPPU}",
 		"weapons.gunmounts.{DroneBomb}",
+		{4, 4, 8, 472},
+		{4, 15, 44, 3201},
+		{4, 15, 45, 3088},
+		{4, 15, 46, 3061},
+		{4, 15, 46, 3109},
+		{4, 15, 46, 3205},
+		{4, 15, 46, 3222},
+		{4, 15, 47, 3095},
+		{4, 4, 8, 474},
+		{4, 5, 32, 3003},
+		{4, 5, 32, 3005},
+		{4, 5, 32, 3189},
 	}
 
 if AllowMods and Era == "Modern" then

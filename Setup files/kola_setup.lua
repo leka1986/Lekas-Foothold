@@ -3215,9 +3215,10 @@ bc.shopItems['zsup3'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
+	candidateBucket = 'zone_supply_targets',
 	extraPredicate = function(zoneObj) return bc:canAddZoneSupplyStock(zoneObj) end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_SUPPLY_ZONES"),
-	refreshTags = { 'friendly_targets', 'zsup3' },
+	refreshTags = { 'friendly_targets', 'warehouse_targets', 'zsup3' },
 }
 
 bc:registerShopItem('zwh50',LTGet("SYRIA_SHOP_ITEM_WAREHOUSE_50"),ShopPrices.zwh50,function(sender)

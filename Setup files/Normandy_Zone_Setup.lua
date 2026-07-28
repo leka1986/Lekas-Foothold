@@ -2060,9 +2060,10 @@ bc.shopItems['zsup3'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
+	candidateBucket = 'zone_supply_targets',
 	extraPredicate = function(zoneObj) return bc:canAddZoneSupplyStock(zoneObj) end,
 	emptyLabel = L10N:Get("SYRIA_SHOP_NO_ELIGIBLE_SUPPLY_ZONES"),
-	refreshTags = { 'friendly_targets', 'zsup3' },
+	refreshTags = { 'friendly_targets', 'warehouse_targets', 'zsup3' },
 }
 
 bc.shopItems['smoke'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'

@@ -1028,7 +1028,7 @@ zones.sharana:addGroups({
     GroupCommander:new({name='sharana-supply-GhazniHeliport-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Ghazni Heliport'}),
     GroupCommander:new({name='sharana-supply-Gardez-helo',            mission='supply', template='HeloSupplyTemplate', targetzone='Gardez'}),
     GroupCommander:new({name='sharana-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
-
+--[[ 
     GroupCommander:new({name='sharana-attack-GhazniHeliport-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Ghazni Heliport', Altitude = CapAltitude()}),
     GroupCommander:new({name='sharana-attack-GhazniHeliport-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Ghazni Heliport', Altitude = CasAltitude()}),
     GroupCommander:new({name='sharana-patrol-GhazniHeliport-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Ghazni Heliport', Altitude = CapAltitude()}),
@@ -1040,7 +1040,7 @@ zones.sharana:addGroups({
     GroupCommander:new({name='sharana-attack-CheckpointCharlie-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
     GroupCommander:new({name='sharana-attack-CheckpointCharlie-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Charlie', Altitude = CasAltitude()}),
     GroupCommander:new({name='sharana-patrol-CheckpointCharlie-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
-
+ ]]
     -- Surface attack routes
     GroupCommander:new({name='Sharana-attack-FOB-Bostick',     mission='attack', targetzone='FOB-Bostick',     type='surface'}),
     GroupCommander:new({name='Sharana-attack-Ghazni Heliport', mission='attack',template='AttackConvoy', targetzone='Ghazni Heliport', type='surface'}),
@@ -3315,9 +3315,10 @@ bc.shopItems['zsup3'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
+	candidateBucket = 'zone_supply_targets',
 	extraPredicate = function(zoneObj) return bc:canAddZoneSupplyStock(zoneObj) end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_SUPPLY_ZONES"),
-	refreshTags = { 'friendly_targets', 'zsup3' },
+	refreshTags = { 'friendly_targets', 'warehouse_targets', 'zsup3' },
 }
 
 bc:registerShopItem('zwh50',LTGet("SYRIA_SHOP_ITEM_WAREHOUSE_50"),ShopPrices.zwh50,function(sender)

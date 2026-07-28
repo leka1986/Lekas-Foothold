@@ -1301,7 +1301,10 @@ local zoneSupplyCleanupScheduled = false
 local warehouseSupplyItemCache = {}
 local zoneStorageHandleCache = {}
 local supplyZoneWrapperCache = {}
-supplyZonesSet = {}
+local BuiltFARPCoordinates = {}
+local builtFarpSupplyRecordsByName = {}
+local externalFarpSupplyRecordsByName = {} -- Runtime-only FarpHere/escort FARPs; never written by SaveFARPS.
+supplyZonesSet = supplyZonesSet or {}
 
 local WAREHOUSE_CATEGORY_MULTIPLIER = {
   ["AG_ROCKETS"] = 3,
@@ -1311,6 +1314,78 @@ local adjustWarehouseStockAtZone
 local zoneSupplyDebug
 local c130SupplyLogOnce
 local getZoneSupplyStaticKey
+
+local function getBuiltFarpSupplyRecord(zoneName)
+  if not zoneName then return nil end
+  local externalFarp = externalFarpSupplyRecordsByName[zoneName]
+  if externalFarp then return externalFarp end
+  return builtFarpSupplyRecordsByName[zoneName]
+end
+
+local function registerFarpSupplyRecord(farp)
+  externalFarpSupplyRecordsByName[farp.name] = farp
+  return farp
+end
+
+local function builtFarpSupplyLabel(farp)
+  local stock = math.max(0, math.floor(tonumber(farp.supplyStock) or 0))
+  return string.format("%s [SUP] %d", tostring(farp.name), stock)
+end
+
+function Foothold_ctld:RegisterFarpSupplyStorage(farpName, supplyTextId, initialStock)
+  local farp = getBuiltFarpSupplyRecord(farpName)
+  if not farp then
+    farp = registerFarpSupplyRecord({
+      name = farpName,
+      supplyStock = math.max(0, math.floor(tonumber(initialStock) or 1)),
+    })
+  end
+  farp.supplyTextId = supplyTextId
+  return builtFarpSupplyLabel(farp)
+end
+
+local function updateBuiltFarpSupplyLabel(farp)
+  if farp.supplyTextId then
+    trigger.action.setMarkupText(farp.supplyTextId, builtFarpSupplyLabel(farp))
+  end
+end
+
+local function addBuiltFarpSupplyStock(farp, amount)
+  local current = math.max(0, math.floor(tonumber(farp.supplyStock) or 0))
+  local added = math.max(0, math.floor(tonumber(amount) or 0))
+  farp.supplyStock = current + added
+  updateBuiltFarpSupplyLabel(farp)
+  return farp.supplyStock
+end
+
+local function consumeBuiltFarpSupplyStock(farp, amount)
+  local current = math.max(0, math.floor(tonumber(farp.supplyStock) or 0))
+  local requested = math.max(0, math.floor(tonumber(amount) or 0))
+  if requested < 1 or current < requested then
+    return false, current
+  end
+  farp.supplyStock = current - requested
+  updateBuiltFarpSupplyLabel(farp)
+  return true, farp.supplyStock
+end
+
+function Foothold_ctld:GetFarpSupplyStock(farpName)
+  local farp = getBuiltFarpSupplyRecord(farpName)
+  if not farp then return nil end
+  return math.max(0, math.floor(tonumber(farp.supplyStock) or 0))
+end
+
+function Foothold_ctld:AddFarpSupplyStock(farpName, amount)
+  local farp = getBuiltFarpSupplyRecord(farpName)
+  if not farp then return nil end
+  return addBuiltFarpSupplyStock(farp, amount)
+end
+
+function Foothold_ctld:ConsumeFarpSupplyStock(farpName, amount)
+  local farp = getBuiltFarpSupplyRecord(farpName)
+  if not farp then return false, 0 end
+  return consumeBuiltFarpSupplyStock(farp, amount)
+end
 
 local function isCtldSupplyZoneName(zoneName)
   if not zoneName then return false end
@@ -1796,16 +1871,21 @@ end
 local function refundPlayerZoneSupplyStock(EntryOrCargo)
   if not EntryOrCargo or EntryOrCargo._zoneSupplySourceConsumed ~= true then return false end
   local sourceZoneName = EntryOrCargo._zoneSupplySourceZone
-  local sourceZone = sourceZoneName and bc:getZoneByName(sourceZoneName) or nil
-  if not sourceZone or not sourceZone.active or sourceZone.side ~= coalition.side.BLUE
-    or sourceZone._regularSupplyStockSide ~= coalition.side.BLUE
-    or not sourceZone:_regularSupplyHasRouteForSide(coalition.side.BLUE)
-  then
-    return false
-  end
+  local sourceFarp = getBuiltFarpSupplyRecord(sourceZoneName)
+  if sourceFarp then
+    addBuiltFarpSupplyStock(sourceFarp, 1)
+  else
+    local sourceZone = sourceZoneName and bc:getZoneByName(sourceZoneName) or nil
+    if not sourceZone or not sourceZone.active or sourceZone.side ~= coalition.side.BLUE
+      or sourceZone._regularSupplyStockSide ~= coalition.side.BLUE
+      or not sourceZone:_regularSupplyHasRouteForSide(coalition.side.BLUE)
+    then
+      return false
+    end
 
-  if not sourceZone:_restorePlayerRegularSupplyStock(1, coalition.side.BLUE, timer.getAbsTime()) then
-    return false
+    if not sourceZone:_restorePlayerRegularSupplyStock(1, coalition.side.BLUE, timer.getAbsTime()) then
+      return false
+    end
   end
   EntryOrCargo._zoneSupplySourceConsumed = false
   EntryOrCargo._zoneSupplySourceRefunded = true
@@ -3224,7 +3304,17 @@ processZoneSupplyDeliveries = function()
                     end
                     readyCount = readyCount + 1
                   else
-                    if (not bcZone) and entry.deliveryType == "warehouse" and entry.warehouseMeta and WarehouseLogistics == true and isCtldSupplyZoneName(zoneName) then
+                    if (not bcZone) and entry.deliveryType == "zone" and getBuiltFarpSupplyRecord(zoneName) then
+                      ClearZoneSupplyLandingState(entry, staticObj)
+                      entry._ready = true
+                      entry._zoneName = zoneName
+                      entry._deleteName = entry._deleteName or getZoneSupplyStaticName(staticObj)
+                      entry._deleteKey = entry._deleteKey or getZoneSupplyStaticKey(staticObj) or entry._deleteName
+                      if CTLD_Logging_DEEP then
+                        zoneSupplyDebug(string.format("[ZoneSupply] Ready key=%s zone=%s type=%s pickup=%s", tostring(key), tostring(zoneName), tostring(entry.deliveryType), tostring(entry.pickupZone)))
+                      end
+                      readyCount = readyCount + 1
+                    elseif (not bcZone) and entry.deliveryType == "warehouse" and entry.warehouseMeta and WarehouseLogistics == true and isCtldSupplyZoneName(zoneName) then
                       local storage = getZoneStorageHandle(zoneName)
                       if storage then
                         ClearZoneSupplyLandingState(entry, staticObj)
@@ -3414,32 +3504,60 @@ zoneSupplyApplyOne = function(key)
 
   local isCtldZone = false
   local zoneObj = bc and bc:getZoneByName(zoneName) or nil
+  local farpSupplyRecord = nil
   if zoneObj then
     if not zoneObj.active then
       return
     end
   else
-    if not (entry.deliveryType == "warehouse" and entry.warehouseMeta) then
-      return
+    if entry.deliveryType == "zone" then
+      farpSupplyRecord = getBuiltFarpSupplyRecord(zoneName)
+      if not farpSupplyRecord then
+        return
+      end
+    else
+      if not (entry.deliveryType == "warehouse" and entry.warehouseMeta) then
+        return
+      end
+      if not isCtldSupplyZoneName(zoneName) then
+        return
+      end
+      if WarehouseLogistics ~= true then
+        return
+      end
+      local storage = getZoneStorageHandle(zoneName)
+      if not storage then
+        return
+      end
+      isCtldZone = true
     end
-    if not isCtldSupplyZoneName(zoneName) then
-      return
-    end
-    if WarehouseLogistics ~= true then
-      return
-    end
-    local storage = getZoneStorageHandle(zoneName)
-    if not storage then
-      return
-    end
-    isCtldZone = true
   end
 
-  if not isCtldZone then
+  if not isCtldZone and not farpSupplyRecord then
     if zoneObj.side == 1 then
       zoneSupplyDestroyNow(key, entry, zoneName, "enemy zone")
       return
     end
+  end
+
+  if farpSupplyRecord then
+    addBuiltFarpSupplyStock(farpSupplyRecord, 1)
+    local staticObj = (entry.cargo and entry.cargo.GetPositionable and entry.cargo:GetPositionable()) or entry.static
+    if staticObj and staticObj.IsAlive and staticObj:IsAlive() then
+      zoneSupplyEnqueueRemoval(staticObj, 0)
+    end
+    c130SupplyLogOnce(entry, key, "_fhLogDeliver", "DELIVER", string.format("zone=%s verb=stocked", tostring(zoneName)))
+    local pname = resolveZoneSupplyPlayer(entry)
+    if pname then
+      trigger.action.outTextForCoalition(2, L10N:Format("CTLD_SUPPLIES_DELIVERED_BY", ctldLocalizedCargoLabel(L10N, entry.cargoName or "Zone supplies"), zoneName, tostring(pname)), 15)
+      if bc.playerContributions[2][pname] ~= nil then
+        bc:addContribution(pname, 2, 150)
+        bc:addTempStat(pname, "Zone supply delivery", 1)
+      end
+    end
+    simulateLandingForEntryIfOnGround(entry, zoneName)
+    removeTrackedZoneSupply(key)
+    return
   end
 
   if entry.deliveryType == "warehouse" and entry.warehouseMeta then
@@ -3695,7 +3813,6 @@ end
        [10]="Perth",
        [11]="Stockholm",
        }
-local BuiltFARPCoordinates = {}
 local SpawnedFARPsFromSave = 0
 local NextFarpSaveSeq = 0
 local FARP_ZELL_AIRCRAFT = "F-100D"
@@ -3808,10 +3925,14 @@ function BuildAFARP(Coordinate, stamp)
   local saveName = nil
   local saveSeq = nil
   local withZell = false
+  local supplyStock = 1
   if type(stamp) == "table" then
     saveName = stamp.name
     saveSeq = stamp.seq or stamp.timestamp
     withZell = stamp.zell == true
+    if stamp.supplyStock ~= nil then
+      supplyStock = math.max(0, math.floor(tonumber(stamp.supplyStock) or 0))
+    end
   else
     saveSeq = stamp
   end
@@ -3890,13 +4011,16 @@ function BuildAFARP(Coordinate, stamp)
   MESSAGE:New(L10N:Format("DYNAMIC_FARP_IN_OPERATION", FName), 15):ToBlue()
   Foothold_ctld:RemoveStockCrates("CTLD_TROOP_FOB", 1)
 
-  table.insert(BuiltFARPCoordinates, {
+  local farpRecord = {
     name = FName,
     coord = Coordinate,
     seq = saveSeq,
     timestamp = saveSeq, -- kept for backward compatibility with older code
     zell = withZell,
-  })
+    supplyStock = supplyStock,
+  }
+  table.insert(BuiltFARPCoordinates, farpRecord)
+  builtFarpSupplyRecordsByName[FName] = farpRecord
 
   bc:registerDynamicFarp(FName, coord, Foothold_ctld.coalition)
 
@@ -3914,8 +4038,9 @@ end
 
   local textId = NextMarkupId; NextMarkupId = NextMarkupId + 1
   local textPoint = {x = coord.x, y = coord.y, z = coord.z + 150}
-  trigger.action.textToAll(coalition.side.BLUE, textId, textPoint,{0,0,0.7,0.8},{0.7,0.7,0.7,0.8},18,true,FName)
-  trigger.action.setMarkupText(textId, FName)
+  local farpLabel = Foothold_ctld:RegisterFarpSupplyStorage(FName, textId, supplyStock)
+  trigger.action.textToAll(coalition.side.BLUE, textId, textPoint,{0,0,0.7,0.8},{0.7,0.7,0.7,0.8},18,true,farpLabel)
+  trigger.action.setMarkupText(textId, farpLabel)
 
 end
 
@@ -4237,8 +4362,6 @@ function Foothold_ctld:CanGetCrates(Group, Unit, Cargo, number, drop, pack, quie
 
   local cname = Cargo:GetName()
   if isZoneSupplyCargoName(cname) then
-    if PlayerZoneSuppliesConsumeStock ~= true then return true end
-
     local perSet = Cargo:GetCratesNeeded() or 1
     if perSet < 1 then perSet = 1 end
     local requestNumber = math.floor(tonumber(number) or perSet)
@@ -4246,8 +4369,23 @@ function Foothold_ctld:CanGetCrates(Group, Unit, Cargo, number, drop, pack, quie
     local requestedSets = math.max(1, math.floor((requestNumber + perSet - 1) / perSet))
     local pickupZone = updateLastPickupZone(Group, Unit)
     local sourceZone = pickupZone and bc:getZoneByName(pickupZone) or nil
+    local sourceFarp = (not sourceZone) and getBuiltFarpSupplyRecord(pickupZone) or nil
 
-    -- Carriers and dynamic FARPs do not own campaign-zone supply stock.
+    if sourceFarp then
+      local consumed = consumeBuiltFarpSupplyStock(sourceFarp, requestedSets)
+      if not consumed then
+        local T = (Group and Group.IsAlive and Group:IsAlive()) and getCtldGroupTranslator(Group) or getFootholdLocalization():ForLocale()
+        local label = ctldLocalizedCargoLabel(T, "Zone supplies")
+        local reasonText = ctldReasonText(T, ctldReasonToken("CTLD_REASON_INSUFFICIENT_STOCK", label))
+        sendCtldToGroupOrCoalition(Group, "CTLD_WAREHOUSE_NOT_AVAILABLE", 12, label, tostring(pickupZone), reasonText)
+        return false
+      end
+
+      queueZoneSupplyPickupDebit(Group, Unit, cname, pickupZone, requestedSets)
+      return true
+    end
+
+    if PlayerZoneSuppliesConsumeStock ~= true then return true end
     if not sourceZone then return true end
 
     local now = timer.getAbsTime()
@@ -4731,12 +4869,18 @@ function SaveFARPS()
     if FName and coord and coord.GetVec2 then
       local vec2 = coord:GetVec2()
       local lat, lon = coord:GetLLDDM()
-      data = data .. string.format("%d;%s;%f;%f;%s;%f;%f;\n", tonumber(e.seq) or 0, tostring(FName), vec2.x, vec2.y, e.zell == true and "zell" or "", lat, lon)
+      local supplyStock = math.max(0, math.floor(tonumber(e.supplyStock) or 0))
+      data = data .. string.format("%d;%s;%f;%f;%s;%f;%f;%d;\n", tonumber(e.seq) or 0, tostring(FName), vec2.x, vec2.y, e.zell == true and "zell" or "", lat, lon, supplyStock)
     end
   end
 
   -- Keep the in-memory list aligned with what we persist.
   BuiltFARPCoordinates = rebased
+  builtFarpSupplyRecordsByName = {}
+  for i = 1, #BuiltFARPCoordinates do
+    local farp = BuiltFARPCoordinates[i]
+    builtFarpSupplyRecordsByName[farp.name] = farp
+  end
   
   if UTILS.SaveToFile(path,filename,data) then
     --BASE:I("***** FARP Positions saved successfully!")
@@ -4764,25 +4908,37 @@ function LoadFARPS()
         local c = dataset[3]
         local d = dataset[4]
         local e = dataset[5]
+        local hasZell = tostring(e or ""):lower() == "zell" or tostring(e or ""):lower() == "true" or tostring(e or "") == "1"
+        local supplyField = nil
+        if hasZell then
+          supplyField = dataset[8]
+        else
+          supplyField = dataset[7]
+        end
+        local supplyStock = tonumber(supplyField)
+        if supplyStock == nil then
+          supplyStock = 1
+        else
+          supplyStock = math.max(0, math.floor(supplyStock))
+        end
 
         local bx = tonumber(b)
         local cy = tonumber(c)
         local cx = tonumber(c)
         local dy = tonumber(d)
-        local hasZell = tostring(e or ""):lower() == "zell" or tostring(e or ""):lower() == "true" or tostring(e or "") == "1"
-
         if a and b and cx and dy then
-          -- New format: seq;name;x;y;zell;
-          entries[#entries + 1] = { seq = a, name = tostring(b), x = cx, y = dy, zell = hasZell }
+          -- Current format: seq;name;x;y;zell;lat;lon;supplyStock;
+          -- Rows saved before supplyStock was added start with 1 supply.
+          entries[#entries + 1] = { seq = a, name = tostring(b), x = cx, y = dy, zell = hasZell, supplyStock = supplyStock }
         elseif a and bx and cy then
           -- Previous format: seq;x;y;
-          entries[#entries + 1] = { seq = a, name = nil, x = bx, y = cy }
+          entries[#entries + 1] = { seq = a, name = nil, x = bx, y = cy, supplyStock = supplyStock }
         else
           local x = tonumber(dataset[1])
           local y = tonumber(dataset[2])
           if x and y then
             -- Old format: x;y;
-            entries[#entries + 1] = { seq = nil, name = nil, x = x, y = y }
+            entries[#entries + 1] = { seq = nil, name = nil, x = x, y = y, supplyStock = supplyStock }
           end
         end
       end
@@ -4819,7 +4975,7 @@ function LoadFARPS()
     for i = 1, math.min(#entries, maxToSpawn) do
       local e = entries[i]
       local coord = COORDINATE:NewFromVec2({ x = e.x, y = e.y })
-      BuildAFARP(coord, { seq = e.seq, name = e.name, zell = e.zell == true })
+      BuildAFARP(coord, { seq = e.seq, name = e.name, zell = e.zell == true, supplyStock = e.supplyStock })
     end
   else
     BASE:E("***** ERROR Loading FARP Positions!")
@@ -5106,6 +5262,8 @@ function resetSaveFileAndFarp()
   clearSaveFileIfExists(redCtldPath, redCtldFile)
 
   BuiltFARPCoordinates = {}
+  builtFarpSupplyRecordsByName = {}
+  externalFarpSupplyRecordsByName = {}
 end
 
 else
