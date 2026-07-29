@@ -13129,6 +13129,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		obj.spawnEvalBudgetHigh = 18
 		obj.spawnEvalHighWater = 70
 		obj.spawnEvalCacheTtlSec = 60
+		obj.playerSnapshotTtlSec = 1
 		obj.activeFsmThrottleBuckets = 3
 		obj.nonSupplyInAirThrottleBuckets = obj.activeFsmThrottleBuckets
 		obj._fsmFilterGeneration = 1
@@ -13194,7 +13195,6 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		obj._fsmCrashCurrentGroup = '<none>'
 		obj._fsmCrashReported = false
 		obj._fsmCrashVersion = FootholdSaveBaseName
-
 		obj.rankThresholds = obj.rankThresholds or {0,3000,5000,8000,12000,16000,22000,30000,45000,65000,90000}
 		obj.rankNames      = obj.rankNames      or {"Recruit","Aviator","Airman","Senior Airman","Staff Sergeant","Technical Sergeant","Master Sergeant","Senior Master Sergeant","Chief Master Sergeant","Second Lieutenant","First Lieutenant"}
 		obj.jointMenuOwnersByGroup = obj.jointMenuOwnersByGroup or {}
@@ -13786,7 +13786,12 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		if timer.getAbsTime() - (cache.at or 0) > ttl then
 			return false
 		end
-		return cache.value == true
+		if cache.value ~= true then return false end
+		local director = Director:getForSide(gc.side)
+		if director and not gc:_shouldSpawnImmediate() and not director:allowsGroupSpawn(gc) then
+			return false
+		end
+		return true
 	end
 
 	function BattleCommander:_runShouldSpawnEvalTick()
@@ -17509,7 +17514,17 @@ local function _pickRedUpgradeForZone(zoneObj)
 	return nil
 end
 
-function BattleCommander:redZoneUpgradeAction()
+function BattleCommander:getRedZoneUpgradeDirectorInputs(zoneObj)
+	return _countZoneRedCategories(zoneObj), _buildRedPoolsForZone(zoneObj)
+end
+
+function BattleCommander:redZoneUpgradeAction(params)
+	params = type(params) == "table" and params or {}
+	local director = Director:getForSide(coalition.side.RED)
+	local now = timer.getAbsTime()
+	if not director:zoneUpgradePurchaseAllowed(now) then
+		return "Red strategic reinforcement is on cooldown"
+	end
 	local allow = {}
 	for _, z in pairs(self:getZones()) do
 		local max = 1 + (self.globalExtraUnlock and 1 or 0)
@@ -17537,7 +17552,10 @@ function BattleCommander:redZoneUpgradeAction()
 		return "No valid upgrades"
 	end
 
-	local pick = zoneChoices[math.random(1, #zoneChoices)]
+	local pick = director:selectZoneUpgradeTarget(zoneChoices, params, now)
+	if not pick then
+		return "No strategically suitable red zones"
+	end
 	local zoneObj = pick.zone
 	local slot = pick.slot
 	local ok = zoneObj:addExtraSlot(slot)
@@ -17548,6 +17566,8 @@ function BattleCommander:redZoneUpgradeAction()
 		zoneObj:updateLabel()
 	end
 	zoneObj:upgrade(true)
+	director:recordZoneUpgradePurchase(zoneObj, params, now)
+	params.purchasedZone = zoneObj.zone
 	trigger.action.outTextForCoalition(1, L10N:Format("WAREHOUSE_RED_REINFORCED", zoneObj.zone), 10)
 	return true
 end
@@ -18426,6 +18446,7 @@ end
 			zoneName = zc and zc.zone or nil,
 			originZone = zc and zc.zone or nil,
 			targetZone = gc.targetzone,
+			directorRetaskOriginalTargetZone = gc._directorRetaskOriginalTargetZone,
 			side = gc._sortieSide or gc.side,
 			mission = gc.mission,
 			missionType = gc.MissionType,
@@ -18766,6 +18787,10 @@ end
 	local redMassAttackMission = self:_exportRedMassAttackMissionPersistence()
 	if redMassAttackMission then
 		states.redMassAttackMission = redMassAttackMission
+	end
+	local director = Director:getForSide(coalition.side.RED)
+	if director and director.battleCommander == self then
+		states.director = director:exportPersistence()
 	end
     return states
 end
@@ -20635,6 +20660,8 @@ end
 		local function _isCompatibleAirGroup(gc)
 			if not _isAirGroup(gc) then return false end
 			if saved.dynamicHybrid == true and gc.dynamicHybrid ~= true then return false end
+			if saved.dynamicHybrid == true and saved.dynamicRole
+				and gc.dynamicHybridRole ~= saved.dynamicRole then return false end
 			return true
 		end
 
@@ -20888,10 +20915,12 @@ end
 						gc._advanceCaptureReleased = saved.advanceCaptureReleased == true and true or nil
 						gc._advanceCaptureHold = saved.advanceCaptureHold
 						gc._advanceCaptureExternalCargo = saved.advanceCaptureExternalCargo == true and true or nil
-						local savedTargetZone = saved.dynamicTargetZone or saved.targetZone
+						gc._directorRetaskOriginalTargetZone = saved.directorRetaskOriginalTargetZone
+						local savedTargetZone = saved.targetZone or saved.dynamicTargetZone
 						if savedTargetZone then
 							gc.targetzone = savedTargetZone
 						end
+						gc._retasked = gc.targetzone ~= gc._baseTargetzone
 						gc.state = 'preparing'
 						gc.lastStateTime = now - 999999
 						gc:update()
@@ -20949,10 +20978,12 @@ end
 					gc._advanceCaptureReleased = saved.advanceCaptureReleased == true and true or nil
 					gc._advanceCaptureHold = saved.advanceCaptureHold
 					gc._advanceCaptureExternalCargo = saved.advanceCaptureExternalCargo == true and true or nil
-					local savedTargetZone = saved.dynamicTargetZone or saved.targetZone
+					gc._directorRetaskOriginalTargetZone = saved.directorRetaskOriginalTargetZone
+					local savedTargetZone = saved.targetZone or saved.dynamicTargetZone
 					if savedTargetZone then
 						gc.targetzone = savedTargetZone
 					end
+					gc._retasked = gc.targetzone ~= gc._baseTargetzone
 					if originZone and originZone.suspended and not isShopSupply then
 						originZone._suspendedLiveFsm = originZone._suspendedLiveFsm or {}
 						originZone._suspendedLiveFsm[gc.name] = gc
@@ -21743,11 +21774,13 @@ function BattleCommander:_getBlueMirroredCapRankingCacheEntry(blueMissionType)
 	if not sourceMissionType then return nil end
 
 	local now = timer.getAbsTime()
-	local cacheTtlSec = self.spawnEvalCacheTtlSec or 90
+	local cacheTtlSec = math.max(self.spawnEvalCacheTtlSec or 90, 300)
 	local currentBucketVersion = self._capSpawnBucketsVersion or 0
+	local currentTargetStateGeneration = self._capTargetStateGeneration or 0
 	local existingEntry = self._blueMirroredCapRankingCache[blueMissionType]
 	if existingEntry
 	and existingEntry.bucketVersion == currentBucketVersion
+	and existingEntry.targetStateGeneration == currentTargetStateGeneration
 	and (now - (existingEntry.builtAt or 0)) <= cacheTtlSec then
 		return existingEntry
 	end
@@ -21774,6 +21807,7 @@ function BattleCommander:_getBlueMirroredCapRankingCacheEntry(blueMissionType)
 		zoneDistances = mirroredZoneDistances,
 		enemyAdjacencyByZone = mirroredEnemyAdjacencyByZone,
 		bucketVersion = currentBucketVersion,
+		targetStateGeneration = currentTargetStateGeneration,
 		builtAt = now,
 		sourceMissionType = sourceMissionType,
 	}
@@ -21788,7 +21822,8 @@ function BattleCommander:getCapSpawnRankingForSide(missionType, side, preMeta)
 
 	local mirroredEntry = self:_getBlueMirroredCapRankingCacheEntry(missionType)
 	if not mirroredEntry or not mirroredEntry.zoneDistances or #mirroredEntry.zoneDistances == 0 then
-		return getClosestCapZonesToPlayers(missionType, side, preMeta)
+		local zoneDistances, capMeta = getClosestCapZonesToPlayers(missionType, side, preMeta)
+		return Director:getForSide(coalition.side.BLUE):rankCapZones(missionType, zoneDistances), capMeta
 	end
 
 	local capMeta = preMeta
@@ -21814,7 +21849,7 @@ function BattleCommander:getCapSpawnRankingForSide(missionType, side, preMeta)
 		capMeta.enemyAdj = mirroredEntry.enemyAdjacencyByZone or {}
 	end
 
-	return mirroredEntry.zoneDistances, capMeta
+	return Director:getForSide(coalition.side.BLUE):rankCapZones(missionType, mirroredEntry.zoneDistances), capMeta
 end
 
 function BattleCommander:spawnNowBySide(side)
@@ -21975,17 +22010,22 @@ do
 		enabled = true,
 		startDelaySec = 120,
 		tickSec = 120,
-		minPressureSoft = 10,
-		minPressureHard = 12,
+		minPressureSoft = 6,
+		minPressureHard = 9,
+		maxPlayerDistanceNm = 90,
 		captureHardWindowSec = 180,
 		hardZoneCooldownSec = 1800,
 		maxZonesPerTick = 1,
-		softSupplyBoostPerZone = 1,
+		softSupplyBoostPerZone = 0,
 		softCapBoostPerZone = 1,
 		softSupplyCooldownSec = 1500,
 		softCapCooldownSec = 1500,
-		hardForcePerZone = 1,
-		hardForceTotalPerTick = 1,
+		hardForcePerZone = 2,
+		hardForceTotalPerTick = 2,
+		reactionCapExtra = 1,
+		zoneUpgradeEnabled = true,
+		zoneUpgradeCooldownSec = 1800,
+		allowCombinedReaction = false,
 		groupReuseCooldownSec = 1200,
 		hardSourceMode = "attack_plus_cap_attack",
 		log = false,
@@ -21994,8 +22034,9 @@ do
 		enabled = true,
 		startDelaySec = 120,
 		tickSec = 60,
-		minPressureSoft = 6,
-		minPressureHard = 12,
+		minPressureSoft = 3,
+		minPressureHard = 6,
+		maxPlayerDistanceNm = 120,
 		captureHardWindowSec = 240,
 		hardZoneCooldownSec = 900,
 		maxZonesPerTick = 2,
@@ -22003,8 +22044,12 @@ do
 		softCapBoostPerZone = 1,
 		softSupplyCooldownSec = 900,
 		softCapCooldownSec = 900,
-		hardForcePerZone = 2,
-		hardForceTotalPerTick = 2,
+		hardForcePerZone = 3,
+		hardForceTotalPerTick = 3,
+		reactionCapExtra = 2,
+		zoneUpgradeEnabled = true,
+		zoneUpgradeCooldownSec = 900,
+		allowCombinedReaction = true,
 		groupReuseCooldownSec = 900,
 		hardSourceMode = "attack_plus_cap_attack",
 		log = false,
@@ -22021,6 +22066,7 @@ end
 function BattleCommander:_redReactiveNormalizeConfig(cfg)
 	cfg = cfg or {}
 	cfg.enabled = cfg.enabled ~= false
+	local rrDiff = string.lower(tostring(RedReactiveDifficulty or "medium"))
 
 	-- medium-style defaults for values still configurable
 	cfg.minPressureSoft = cfg.minPressureSoft or 10
@@ -22035,13 +22081,28 @@ function BattleCommander:_redReactiveNormalizeConfig(cfg)
 	cfg.softCapCooldownSec = cfg.softCapCooldownSec or 1500
 	cfg.hardForcePerZone = cfg.hardForcePerZone or 1
 	cfg.hardForceTotalPerTick = cfg.hardForceTotalPerTick or 1
+	if rrDiff == "hard" then
+		cfg.maxPlayerDistanceNm = cfg.maxPlayerDistanceNm or 120
+		cfg.reactionCapExtra = cfg.reactionCapExtra or 2
+		if cfg.allowCombinedReaction == nil then cfg.allowCombinedReaction = true end
+	elseif rrDiff == "easy" then
+		cfg.maxPlayerDistanceNm = cfg.maxPlayerDistanceNm or 75
+		cfg.reactionCapExtra = cfg.reactionCapExtra or 0
+		if cfg.allowCombinedReaction == nil then cfg.allowCombinedReaction = false end
+	else
+		cfg.maxPlayerDistanceNm = cfg.maxPlayerDistanceNm or 90
+		cfg.reactionCapExtra = cfg.reactionCapExtra or 1
+		if cfg.allowCombinedReaction == nil then cfg.allowCombinedReaction = false end
+	end
+	if cfg.zoneUpgradeEnabled == nil then cfg.zoneUpgradeEnabled = rrDiff ~= "easy" end
+	cfg.zoneUpgradeCooldownSec = cfg.zoneUpgradeCooldownSec or (rrDiff == "hard" and 900 or 1800)
 
 	-- forced values (config can omit these)
 	cfg.startDelaySec = 120
 	cfg.hardSourceMode = "attack_plus_cap_attack"
+	cfg.zoneUpgradeShopItemId = "redzoneupgrade"
 	cfg.log = false
 
-	local rrDiff = string.lower(tostring(RedReactiveDifficulty or "medium"))
 	if rrDiff == "hard" then
 		cfg.tickSec = 60
 	else
@@ -22071,24 +22132,77 @@ end
 
 function BattleCommander:_redReactiveBuildPressureByPlayers()
 	local pressureByZone = {}
-	local bluePlayers = getBluePlayersCount()
-	if bluePlayers == 0 then
-		return pressureByZone
+	local activityByZone = {}
+	local blueOccupiedZones = {}
+	local playerCounts = { combat = 0, cap = 0, strike = 0 }
+	local maxDistanceMeters = math.max(0, tonumber(self.redReactive.config.maxPlayerDistanceNm) or 90) * 1852
+
+	local bluePlayers = self:getPlayerSnapshot(coalition.side.BLUE).rows
+	for _, player in ipairs(bluePlayers) do
+		local point = player.point
+		local occupiedZone = self:getZoneOfPoint(point)
+		if occupiedZone and occupiedZone.side == coalition.side.RED then
+			blueOccupiedZones[occupiedZone.zone] = true
+		end
+
+		local unitType = player.unitType
+		local isAirplane = player.isAirplane
+		local isHelicopter = player.isHelicopter
+		local isCombat = (isAirplane or isHelicopter) and not RedCasCountIgnoreTypes[unitType]
+		if isCombat then
+			local isCapPlayer = isAirplane and not CapCountIgnoreTypes[unitType]
+			playerCounts.combat = playerCounts.combat + 1
+			if isCapPlayer then
+				playerCounts.cap = playerCounts.cap + 1
+			else
+				playerCounts.strike = playerCounts.strike + 1
+			end
+
+			local nearest = {}
+			for _, zoneObj in ipairs(self.zones) do
+				if zoneObj.side == coalition.side.RED and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden then
+					local customZone = zoneObj._cz or CustomZone:getByName(zoneObj.zone)
+					local distance = UTILS.VecDist2D(
+						{ x = point.x, y = point.z },
+						{ x = customZone.point.x, y = customZone.point.z }
+					) - (customZone.radius or 0)
+					if distance <= maxDistanceMeters then
+						nearest[#nearest + 1] = { zone = zoneObj.zone, distance = math.max(0, distance) }
+					end
+				end
+			end
+			table.sort(nearest, function(a, b)
+				if a.distance == b.distance then return a.zone < b.zone end
+				return a.distance < b.distance
+			end)
+
+			for rank = 1, math.min(3, #nearest) do
+				local zoneName = nearest[rank].zone
+				local contribution = 4 - rank
+				local activity = activityByZone[zoneName]
+				if not activity then
+					activity = { pressure = 0, capPressure = 0, strikePressure = 0, blueOccupied = false }
+					activityByZone[zoneName] = activity
+				end
+				activity.pressure = activity.pressure + contribution
+				if isCapPlayer then
+					activity.capPressure = activity.capPressure + contribution
+				else
+					activity.strikePressure = activity.strikePressure + contribution
+				end
+				pressureByZone[zoneName] = activity.pressure
+			end
+		end
 	end
-	local capLimit = getCapLimit(bluePlayers)
-	if capLimit <= 0 then
-		return pressureByZone
+
+	for zoneName, _ in pairs(blueOccupiedZones) do
+		if activityByZone[zoneName] then
+			activityByZone[zoneName].blueOccupied = true
+		end
 	end
-	local zoneDistances = getClosestCapZonesToPlayers('patrol', 1, nil)
-	local r = self.redReactive
-	local maxRanked = capLimit * 3
-	if maxRanked < r.config.maxZonesPerTick then maxRanked = r.config.maxZonesPerTick end
-	if maxRanked < 6 then maxRanked = 6 end
-	if maxRanked > #zoneDistances then maxRanked = #zoneDistances end
-	for i = 1, maxRanked do
-		local entry = zoneDistances[i]
-		pressureByZone[entry.zone] = maxRanked - i + 1
-	end
+	self._redReactiveActivityByZone = activityByZone
+	self._redReactiveBlueOccupiedZones = blueOccupiedZones
+	self._redReactivePlayerCounts = playerCounts
 	return pressureByZone
 end
 
@@ -22197,14 +22311,14 @@ function BattleCommander:_redReactiveFastForwardSupplyGroup(gc, now)
 	return true
 end
 
-function BattleCommander:_redReactiveApplySoftBoostForZone(redZoneName, now)
+function BattleCommander:_redReactiveApplySoftBoostForZone(redZoneName, now, allowCapReaction)
 	local r = self.redReactive
 	local boostedSupply = 0
 	local boostedCap = 0
 	local supplyCooldownAt = r.softSupplyCooldownByZone[redZoneName] or 0
 	local capCooldownAt = r.softCapCooldownByZone[redZoneName] or 0
 	local supplyAllowed = now >= supplyCooldownAt
-	local capAllowed = now >= capCooldownAt
+	local capAllowed = allowCapReaction == true and now >= capCooldownAt
 	local supplyTarget = supplyAllowed and r.config.softSupplyBoostPerZone or 0
 	local capTarget = capAllowed and r.config.softCapBoostPerZone or 0
 	for _, zc in ipairs(self.zones) do
@@ -22353,6 +22467,9 @@ function BattleCommander:_redReactiveCanUseHardSource(gc, now)
 	if gc.side ~= 1 then
 		return false
 	end
+	if gc._directorOperationId ~= nil then
+		return false
+	end
 	if not (gc.type == 'air' or gc.type == 'carrier_air') then
 		return false
 	end
@@ -22401,12 +22518,27 @@ function BattleCommander:_redReactiveCollectHardSources(targetZoneName, now)
 	return candidates
 end
 
-function BattleCommander:_redReactiveApplyHardReaction(redZone, hardTarget, now, remainingBudget)
+function BattleCommander:_redReactiveApplyHardReaction(redZone, hardTarget, now, remainingBudget, reason, capAllowance)
 	local r = self.redReactive
 	local forced = 0
 	local perZoneLimit = r.config.hardForcePerZone
 	if perZoneLimit > remainingBudget then
 		perZoneLimit = remainingBudget
+	end
+	local director = Director:getForSide(coalition.side.RED)
+	if director and director.config.enabled then
+		forced = director:requestReaction({
+			targetZone = hardTarget.zone,
+			sourceZone = redZone.zone,
+			reason = reason,
+			allowance = perZoneLimit,
+			capAllowance = math.min(perZoneLimit, math.max(0, tonumber(capAllowance) or 0)),
+			groupReuseCooldownSec = r.config.groupReuseCooldownSec,
+		})
+		if forced > 0 then
+			r.hardCooldownByZone[redZone.zone] = now + r.config.hardZoneCooldownSec
+		end
+		return forced
 	end
 	local sources = self:_redReactiveCollectHardSources(hardTarget.zone, now)
 	for i = 1, #sources do
@@ -22442,6 +22574,7 @@ function BattleCommander:_redReactiveTick(_, time)
 	local softSupplyTotal = 0
 	local softCapTotal = 0
 	local hardTotal = 0
+	local upgradeTotal = 0
 
 	for i = 1, #pressuredZones do
 		if processed >= r.config.maxZonesPerTick then
@@ -22450,10 +22583,11 @@ function BattleCommander:_redReactiveTick(_, time)
 		local row = pressuredZones[i]
 		local redZone = self:getZoneByName(row.zone)
 		if redZone and redZone.side == 1 and redZone.active and not redZone.suspended and not redZone.isHidden then
+			local activity = self._redReactiveActivityByZone[redZone.zone] or { capPressure = 0, strikePressure = 0 }
 			processed = processed + 1
 
 			if row.pressure >= r.config.minPressureSoft then
-				local boostedSupply, boostedCap = self:_redReactiveApplySoftBoostForZone(redZone.zone, now)
+				local boostedSupply, boostedCap = self:_redReactiveApplySoftBoostForZone(redZone.zone, now, activity.capPressure > 0)
 				softSupplyTotal = softSupplyTotal + boostedSupply
 				softCapTotal = softCapTotal + boostedCap
 				if boostedSupply > 0 or boostedCap > 0 then
@@ -22467,13 +22601,26 @@ function BattleCommander:_redReactiveTick(_, time)
 				local canHardByPressure = row.pressure >= r.config.minPressureHard
 				local canHardByCapture = captureTarget ~= nil
 				if canHardByPressure or canHardByCapture then
+					local reason = canHardByCapture and "capture" or "pressure"
+					local director = Director:getForSide(coalition.side.RED)
+					local shouldUpgrade = r.config.zoneUpgradeEnabled == true and activity.strikePressure > 0
+						and (activity.capPressure <= 0 or r.config.allowCombinedReaction == true)
+					if shouldUpgrade and director:requestZoneUpgrade({
+						pressureZone = redZone.zone,
+						blueOccupiedZones = self._redReactiveBlueOccupiedZones,
+						reason = reason,
+						cooldownSec = r.config.zoneUpgradeCooldownSec,
+						shopItemId = r.config.zoneUpgradeShopItemId,
+					}) then
+						upgradeTotal = upgradeTotal + 1
+					end
 					local hardTarget = captureTarget or self:_redReactivePickConnectedBlueTarget(redZone)
 					if hardTarget then
 						local remainingBudget = r.config.hardForceTotalPerTick - hardTotal
-						local forced = self:_redReactiveApplyHardReaction(redZone, hardTarget, now, remainingBudget)
+						local capAllowance = activity.capPressure > 0 and r.config.reactionCapExtra or 0
+						local forced = self:_redReactiveApplyHardReaction(redZone, hardTarget, now, remainingBudget, reason, capAllowance)
 						hardTotal = hardTotal + forced
 						if forced > 0 then
-							local reason = canHardByCapture and "capture" or "pressure"
 							self:_redReactiveLog("hard zone=" .. redZone.zone .. " pressure=" .. row.pressure .. " target=" .. hardTarget.zone .. " forced=" .. forced .. " reason=" .. reason)
 						end
 					end
@@ -22482,7 +22629,7 @@ function BattleCommander:_redReactiveTick(_, time)
 		end
 	end
 
-	self:_redReactiveLog("tick pressured=" .. #pressuredZones .. " processed=" .. processed .. " softSupply=" .. softSupplyTotal .. " softCAP=" .. softCapTotal .. " hardForced=" .. hardTotal)
+	self:_redReactiveLog("tick pressured=" .. #pressuredZones .. " processed=" .. processed .. " softSupply=" .. softSupplyTotal .. " softCAP=" .. softCapTotal .. " upgrades=" .. upgradeTotal .. " hardForced=" .. hardTotal)
 	return time + r.config.tickSec
 end
 
@@ -22648,6 +22795,996 @@ end
 
 function BattleCommander:_dynamicHybridIsRetiredGroup(gc)
 	return gc and gc.dynamicHybrid == true and gc._dynamicHybridRetired == true
+end
+
+function BattleCommander:buildZoneCapabilityCatalog()
+	local catalog = {
+		schemaVersion = 1,
+		builtAt = timer.getAbsTime(),
+		dynamicBootstrapDone = self.dynamicHybrid and self.dynamicHybrid.bootstrapDone == true or false,
+		zones = {},
+		zoneOrder = {},
+		commandersByName = {},
+		anomalies = {},
+		totals = {
+			commanders = 0,
+			dynamic = 0,
+			dynamicActive = 0,
+			dynamicRetired = 0,
+			authored = 0,
+			hardcoded = 0,
+			special = 0,
+			templateBacked = 0,
+			noTemplate = 0,
+			migrationCandidates = 0,
+		},
+	}
+
+	for _, zoneObj in ipairs(self.zones) do
+		local zoneEntry = {
+			zone = zoneObj.zone,
+			ownerSide = zoneObj.side,
+			active = zoneObj.active,
+			suspended = zoneObj.suspended,
+			isHidden = zoneObj.isHidden,
+			airbaseName = zoneObj.airbaseName,
+			commanders = {
+				dynamic = {},
+				authored = {},
+				hardcoded = {},
+				special = {},
+			},
+			roles = {},
+			totals = {
+				commanders = 0,
+				dynamic = 0,
+				dynamicActive = 0,
+				dynamicRetired = 0,
+				authored = 0,
+				hardcoded = 0,
+				special = 0,
+				templateBacked = 0,
+				noTemplate = 0,
+				migrationCandidates = 0,
+			},
+		}
+		catalog.zones[zoneObj.zone] = zoneEntry
+		catalog.zoneOrder[#catalog.zoneOrder + 1] = zoneObj.zone
+
+		for _, groupCommander in ipairs(zoneObj.groups or {}) do
+			local hasTemplate = type(groupCommander.template) == 'string' and groupCommander.template ~= ''
+			local specialReasons = {}
+			if groupCommander.playerGroundAttack == true then specialReasons[#specialReasons + 1] = 'playerGroundAttack' end
+			if groupCommander.ShopLaunchOnly == true then specialReasons[#specialReasons + 1] = 'ShopLaunchOnly' end
+			if groupCommander.forceSpawn == true then specialReasons[#specialReasons + 1] = 'forceSpawn' end
+			if groupCommander.condition ~= nil then specialReasons[#specialReasons + 1] = 'condition' end
+			if groupCommander.Bluecondition ~= nil then specialReasons[#specialReasons + 1] = 'Bluecondition' end
+			if groupCommander.Redcondition ~= nil then specialReasons[#specialReasons + 1] = 'Redcondition' end
+			if groupCommander.urgent ~= nil and groupCommander.urgent ~= false then specialReasons[#specialReasons + 1] = 'urgent' end
+			if groupCommander.spawnDelayFactor ~= nil then specialReasons[#specialReasons + 1] = 'spawnDelayFactor' end
+			if tonumber(groupCommander.diceChance or 0) ~= 0 then specialReasons[#specialReasons + 1] = 'diceChance' end
+			if groupCommander.SpawnHot == true then specialReasons[#specialReasons + 1] = 'SpawnHot' end
+
+			local classification
+			if groupCommander.dynamicHybrid == true then
+				classification = 'dynamic'
+			elseif #specialReasons > 0 then
+				classification = 'special'
+			elseif not hasTemplate then
+				classification = 'hardcoded'
+			else
+				classification = 'authored'
+			end
+
+			local role = groupCommander.MissionType
+			if not role or role == '' then
+				if groupCommander.mission == 'supply' then
+					role = 'SUPPLY'
+				elseif groupCommander.mission == 'patrol' then
+					role = 'PATROL'
+				elseif groupCommander.mission == 'attack' and groupCommander.type == 'surface' then
+					role = 'SURFACE'
+				else
+					role = string.upper(tostring(groupCommander.mission or 'UNKNOWN'))
+				end
+			end
+			role = tostring(role)
+
+			local templateSideSupport = { [1] = false, [2] = false }
+			if hasTemplate then
+				templateSideSupport[1] = groupCommander:_templateSupportsSide(coalition.side.RED)
+				templateSideSupport[2] = groupCommander:_templateSupportsSide(coalition.side.BLUE)
+			end
+
+			local currentDynamicMigrationCandidate = classification == 'authored' and hasTemplate
+				and (templateSideSupport[1] or templateSideSupport[2])
+				and (
+					(groupCommander.mission == 'attack'
+						and ((groupCommander.type == 'air' and (role == 'CAP' or role == 'CAS' or role == 'SEAD'))
+							or (groupCommander.type == 'surface' and role ~= 'ARTY')))
+					or (groupCommander.mission == 'patrol' and groupCommander.type == 'air' and role == 'CAP')
+				)
+
+			local row = {
+				name = groupCommander.name,
+				classification = classification,
+				hasTemplate = hasTemplate,
+				template = hasTemplate and groupCommander.template or nil,
+				templateSideSupport = templateSideSupport,
+				specialReasons = specialReasons,
+				mission = groupCommander.mission,
+				missionType = groupCommander.MissionType,
+				role = role,
+				type = groupCommander.type,
+				unitCategory = groupCommander.unitCategory,
+				side = groupCommander.side,
+				targetZone = groupCommander.targetzone,
+				altitude = type(groupCommander.Altitude) == 'number' and groupCommander.Altitude or nil,
+				altitudeValueType = type(groupCommander.Altitude),
+				state = groupCommander.state,
+				spawned = groupCommander.Spawned == true,
+				dynamicHybridRetired = groupCommander._dynamicHybridRetired == true,
+				dynamicBaseName = groupCommander._dynamicHybridBaseName,
+				dynamicOriginZone = groupCommander.dynamicHybridOriginZone,
+				dynamicTargetZone = groupCommander.dynamicHybridTargetZone,
+				dynamicRole = groupCommander.dynamicHybridRole,
+				currentDynamicMigrationCandidate = currentDynamicMigrationCandidate,
+			}
+
+			zoneEntry.commanders[classification][#zoneEntry.commanders[classification] + 1] = row
+			zoneEntry.totals.commanders = zoneEntry.totals.commanders + 1
+			zoneEntry.totals[classification] = zoneEntry.totals[classification] + 1
+			catalog.totals.commanders = catalog.totals.commanders + 1
+			catalog.totals[classification] = catalog.totals[classification] + 1
+			if classification == 'dynamic' then
+				local dynamicStateKey = groupCommander._dynamicHybridRetired == true and 'dynamicRetired' or 'dynamicActive'
+				zoneEntry.totals[dynamicStateKey] = zoneEntry.totals[dynamicStateKey] + 1
+				catalog.totals[dynamicStateKey] = catalog.totals[dynamicStateKey] + 1
+			end
+			if hasTemplate then
+				zoneEntry.totals.templateBacked = zoneEntry.totals.templateBacked + 1
+				catalog.totals.templateBacked = catalog.totals.templateBacked + 1
+			else
+				zoneEntry.totals.noTemplate = zoneEntry.totals.noTemplate + 1
+				catalog.totals.noTemplate = catalog.totals.noTemplate + 1
+			end
+			if currentDynamicMigrationCandidate then
+				zoneEntry.totals.migrationCandidates = zoneEntry.totals.migrationCandidates + 1
+				catalog.totals.migrationCandidates = catalog.totals.migrationCandidates + 1
+			end
+
+			local roleEntry = zoneEntry.roles[role]
+			if not roleEntry then
+				roleEntry = {
+					role = role,
+					total = 0,
+					dynamic = 0,
+					dynamicActive = 0,
+					dynamicRetired = 0,
+					authored = 0,
+					hardcoded = 0,
+					special = 0,
+					templateBacked = 0,
+					migrationCandidates = 0,
+					templates = {},
+					targetZones = {},
+					templateSideSupport = { [1] = false, [2] = false },
+				}
+				zoneEntry.roles[role] = roleEntry
+			end
+			roleEntry.total = roleEntry.total + 1
+			roleEntry[classification] = roleEntry[classification] + 1
+			if classification == 'dynamic' then
+				local dynamicStateKey = groupCommander._dynamicHybridRetired == true and 'dynamicRetired' or 'dynamicActive'
+				roleEntry[dynamicStateKey] = roleEntry[dynamicStateKey] + 1
+			end
+			if hasTemplate then
+				roleEntry.templateBacked = roleEntry.templateBacked + 1
+				roleEntry.templates[groupCommander.template] = true
+				if templateSideSupport[1] then roleEntry.templateSideSupport[1] = true end
+				if templateSideSupport[2] then roleEntry.templateSideSupport[2] = true end
+			end
+			if groupCommander.targetzone then roleEntry.targetZones[groupCommander.targetzone] = true end
+			if currentDynamicMigrationCandidate then
+				roleEntry.migrationCandidates = roleEntry.migrationCandidates + 1
+			end
+
+			if catalog.commandersByName[groupCommander.name] then
+				catalog.anomalies[#catalog.anomalies + 1] = {
+					reason = 'duplicate_commander_name',
+					name = groupCommander.name,
+					zone = zoneObj.zone,
+					previousZone = catalog.commandersByName[groupCommander.name].zone,
+				}
+			else
+				catalog.commandersByName[groupCommander.name] = { zone = zoneObj.zone, row = row }
+			end
+			if hasTemplate and not templateSideSupport[1] and not templateSideSupport[2] then
+				catalog.anomalies[#catalog.anomalies + 1] = {
+					reason = 'template_no_supported_side',
+					name = groupCommander.name,
+					zone = zoneObj.zone,
+					template = groupCommander.template,
+				}
+			end
+			if classification == 'dynamic' and not groupCommander._dynamicHybridBaseName then
+				catalog.anomalies[#catalog.anomalies + 1] = {
+					reason = 'dynamic_missing_base_identity',
+					name = groupCommander.name,
+					zone = zoneObj.zone,
+				}
+			end
+			if classification == 'dynamic' and groupCommander.dynamicHybridOriginZone
+				and groupCommander.dynamicHybridOriginZone ~= zoneObj.zone then
+				catalog.anomalies[#catalog.anomalies + 1] = {
+					reason = 'dynamic_origin_mismatch',
+					name = groupCommander.name,
+					zone = zoneObj.zone,
+					dynamicOriginZone = groupCommander.dynamicHybridOriginZone,
+				}
+			end
+		end
+	end
+
+	self.zoneCapabilityCatalog = catalog
+	env.info(string.format(
+		'[ZoneCapabilityCatalog] built commanders=%d dynamic=%d activeDynamic=%d retiredDynamic=%d authored=%d hardcoded=%d special=%d templateBacked=%d noTemplate=%d migrationCandidates=%d anomalies=%d bootstrapDone=%s',
+		catalog.totals.commanders,
+		catalog.totals.dynamic,
+		catalog.totals.dynamicActive,
+		catalog.totals.dynamicRetired,
+		catalog.totals.authored,
+		catalog.totals.hardcoded,
+		catalog.totals.special,
+		catalog.totals.templateBacked,
+		catalog.totals.noTemplate,
+		catalog.totals.migrationCandidates,
+		#catalog.anomalies,
+		tostring(catalog.dynamicBootstrapDone)
+	))
+	return catalog
+end
+
+function BattleCommander:getZoneCapabilityCatalogSummary(zoneName)
+	local catalog = self.zoneCapabilityCatalog
+	if not catalog then return '[ZoneCapabilityCatalog] not built' end
+	local lines = {
+		string.format(
+			'[ZoneCapabilityCatalog] commanders=%d dynamic=%d activeDynamic=%d retiredDynamic=%d authored=%d hardcoded=%d special=%d templateBacked=%d noTemplate=%d migrationCandidates=%d anomalies=%d bootstrapDone=%s',
+			catalog.totals.commanders,
+			catalog.totals.dynamic,
+			catalog.totals.dynamicActive,
+			catalog.totals.dynamicRetired,
+			catalog.totals.authored,
+			catalog.totals.hardcoded,
+			catalog.totals.special,
+			catalog.totals.templateBacked,
+			catalog.totals.noTemplate,
+			catalog.totals.migrationCandidates,
+			#catalog.anomalies,
+			tostring(catalog.dynamicBootstrapDone)
+		),
+	}
+	local function sortedKeys(values)
+		local keys = {}
+		for key, _ in pairs(values or {}) do keys[#keys + 1] = key end
+		table.sort(keys)
+		return keys
+	end
+	local function commanderNames(rows, predicate)
+		local names = {}
+		for _, row in ipairs(rows or {}) do
+			if not predicate or predicate(row) then names[#names + 1] = row.name end
+		end
+		table.sort(names)
+		return names
+	end
+
+	for _, currentZoneName in ipairs(catalog.zoneOrder) do
+		if not zoneName or currentZoneName == zoneName then
+			local zoneEntry = catalog.zones[currentZoneName]
+			local roleParts = {}
+			for _, role in ipairs(sortedKeys(zoneEntry.roles)) do
+				local roleEntry = zoneEntry.roles[role]
+				local templateCount = #sortedKeys(roleEntry.templates)
+				local sideText = (roleEntry.templateSideSupport[1] and 'R' or '-')
+					.. (roleEntry.templateSideSupport[2] and 'B' or '-')
+				roleParts[#roleParts + 1] = string.format(
+					'%s=%d(D%d:%dactive:%dretired/A%d/H%d/S%d/T%d/M%d/%s)',
+					role,
+					roleEntry.total,
+					roleEntry.dynamic,
+					roleEntry.dynamicActive,
+					roleEntry.dynamicRetired,
+					roleEntry.authored,
+					roleEntry.hardcoded,
+					roleEntry.special,
+					templateCount,
+					roleEntry.migrationCandidates,
+					sideText
+				)
+			end
+			lines[#lines + 1] = string.format(
+				'zone=%s owner=%s total=%d D%d:%dactive:%dretired/A%d/H%d/S%d templates=%d noTemplate=%d migration=%d roles=[%s]',
+				currentZoneName,
+				tostring(zoneEntry.ownerSide),
+				zoneEntry.totals.commanders,
+				zoneEntry.totals.dynamic,
+				zoneEntry.totals.dynamicActive,
+				zoneEntry.totals.dynamicRetired,
+				zoneEntry.totals.authored,
+				zoneEntry.totals.hardcoded,
+				zoneEntry.totals.special,
+				zoneEntry.totals.templateBacked,
+				zoneEntry.totals.noTemplate,
+				zoneEntry.totals.migrationCandidates,
+				table.concat(roleParts, ', ')
+			)
+
+			local noTemplateNames = {}
+			for _, classification in ipairs({ 'dynamic', 'authored', 'hardcoded', 'special' }) do
+				local names = commanderNames(zoneEntry.commanders[classification], function(row)
+					return row.hasTemplate ~= true
+				end)
+				for _, name in ipairs(names) do noTemplateNames[#noTemplateNames + 1] = name end
+			end
+			table.sort(noTemplateNames)
+			if #noTemplateNames > 0 then
+				lines[#lines + 1] = '  noTemplate=[' .. table.concat(noTemplateNames, ', ') .. ']'
+			end
+
+			local specialParts = {}
+			for _, row in ipairs(zoneEntry.commanders.special) do
+				specialParts[#specialParts + 1] = row.name .. '(' .. table.concat(row.specialReasons, '+') .. ')'
+			end
+			table.sort(specialParts)
+			if #specialParts > 0 then
+				lines[#lines + 1] = '  special=[' .. table.concat(specialParts, ', ') .. ']'
+			end
+		end
+	end
+
+	if zoneName and not catalog.zones[zoneName] then
+		lines[#lines + 1] = 'zone=' .. tostring(zoneName) .. ' not found'
+	end
+	for _, anomaly in ipairs(catalog.anomalies) do
+		if not zoneName or anomaly.zone == zoneName or anomaly.previousZone == zoneName then
+			lines[#lines + 1] = string.format(
+				'anomaly=%s name=%s zone=%s previousZone=%s template=%s dynamicOrigin=%s',
+				tostring(anomaly.reason),
+				tostring(anomaly.name),
+				tostring(anomaly.zone),
+				tostring(anomaly.previousZone),
+				tostring(anomaly.template),
+				tostring(anomaly.dynamicOriginZone)
+			)
+		end
+	end
+	return table.concat(lines, '\n')
+end
+
+function BattleCommander:logZoneCapabilityCatalog(zoneName)
+	env.info(self:getZoneCapabilityCatalogSummary(zoneName))
+end
+
+function BattleCommander:_zoneCapabilityPlatform(unitCategory, commanderType)
+	if commanderType == 'surface' then return 'surface' end
+	if unitCategory == Unit.Category.HELICOPTER then return 'helicopter' end
+	if unitCategory == Unit.Category.AIRPLANE then return 'airplane' end
+	return 'unknown'
+end
+
+function BattleCommander:_zoneCapabilityRecipeKey(mission, role, platform, commanderType, template)
+	return table.concat({
+		tostring(mission or 'UNKNOWN'),
+		tostring(role or 'UNKNOWN'),
+		tostring(platform or 'unknown'),
+		tostring(commanderType or 'unknown'),
+		tostring(template or 'none'),
+	}, '|')
+end
+
+function BattleCommander:buildZoneCapabilityRecipes()
+	local catalog = self.zoneCapabilityCatalog
+	local recipeCatalog = {
+		schemaVersion = 1,
+		builtAt = timer.getAbsTime(),
+		catalogBuiltAt = catalog.builtAt,
+		zones = {},
+		zoneOrder = {},
+		totals = {
+			recipes = 0,
+			reusableOnDemand = 0,
+			supplyRecipes = 0,
+			helicopterRecipes = 0,
+			airplaneRecipes = 0,
+			surfaceRecipes = 0,
+			unknownPlatformRecipes = 0,
+			authoredEvidence = 0,
+			dynamicOnly = 0,
+			specialOnly = 0,
+			forcedOnly = 0,
+		},
+		byRole = {},
+		byPlatform = {},
+	}
+
+	for _, zoneName in ipairs(catalog.zoneOrder) do
+		local catalogZone = catalog.zones[zoneName]
+		local recipeZone = {
+			zone = zoneName,
+			ownerSide = catalogZone.ownerSide,
+			active = catalogZone.active,
+			isHidden = catalogZone.isHidden,
+			airbaseName = catalogZone.airbaseName,
+			byKey = {},
+			recipeOrder = {},
+			totals = {
+				recipes = 0,
+				reusableOnDemand = 0,
+				supplyRecipes = 0,
+				helicopterRecipes = 0,
+				airplaneRecipes = 0,
+				surfaceRecipes = 0,
+				unknownPlatformRecipes = 0,
+			},
+		}
+		recipeCatalog.zones[zoneName] = recipeZone
+		recipeCatalog.zoneOrder[#recipeCatalog.zoneOrder + 1] = zoneName
+
+		local function addRecipe(row, sourceClassification, sourceName, forced)
+			if not row.template or row.template == '' then return end
+			local platform = row.platform or self:_zoneCapabilityPlatform(row.unitCategory, row.type)
+			local key = self:_zoneCapabilityRecipeKey(row.mission, row.role, platform, row.type, row.template)
+			local recipe = recipeZone.byKey[key]
+			if not recipe then
+				recipe = {
+					key = key,
+					zone = zoneName,
+					mission = row.mission,
+					role = row.role,
+					platform = platform,
+					commanderType = row.type,
+					template = row.template,
+					templateSideSupport = { [1] = false, [2] = false },
+					sourceCounts = {
+						authored = 0,
+						special = 0,
+						dynamicActive = 0,
+						dynamicRetired = 0,
+						forced = 0,
+					},
+					sourceNames = {
+						authored = {},
+						special = {},
+						dynamicActive = {},
+						dynamicRetired = {},
+						forced = {},
+					},
+					specialReasons = {},
+					targetZones = {},
+					altitudes = {},
+					migrationCandidateSources = 0,
+				}
+				recipeZone.byKey[key] = recipe
+				recipeZone.recipeOrder[#recipeZone.recipeOrder + 1] = key
+			end
+
+			if row.templateSideSupport then
+				if row.templateSideSupport[1] then recipe.templateSideSupport[1] = true end
+				if row.templateSideSupport[2] then recipe.templateSideSupport[2] = true end
+			end
+			local sourceKey = sourceClassification
+			if sourceClassification == 'dynamic' then
+				sourceKey = row.dynamicHybridRetired == true and 'dynamicRetired' or 'dynamicActive'
+			elseif forced == true then
+				sourceKey = 'forced'
+			end
+			recipe.sourceCounts[sourceKey] = recipe.sourceCounts[sourceKey] + 1
+			recipe.sourceNames[sourceKey][#recipe.sourceNames[sourceKey] + 1] = sourceName or row.name
+			for _, reason in ipairs(row.specialReasons or {}) do recipe.specialReasons[reason] = true end
+			if row.targetZone then
+				local route = recipe.targetZones[row.targetZone]
+				if not route then
+					route = { authored = 0, special = 0, dynamicActive = 0, dynamicRetired = 0 }
+					recipe.targetZones[row.targetZone] = route
+				end
+				if sourceKey ~= 'forced' then route[sourceKey] = route[sourceKey] + 1 end
+			end
+			if row.altitude then recipe.altitudes[row.altitude] = true end
+			if row.currentDynamicMigrationCandidate then
+				recipe.migrationCandidateSources = recipe.migrationCandidateSources + 1
+			end
+		end
+
+		for _, classification in ipairs({ 'authored', 'special', 'dynamic' }) do
+			for _, row in ipairs(catalogZone.commanders[classification]) do
+				addRecipe(row, classification, row.name, false)
+			end
+		end
+
+		local forcedCapabilities = self.dynamicHybrid and self.dynamicHybrid.config
+			and self.dynamicHybrid.config.forcedZoneCapabilities
+		local forced = forcedCapabilities and forcedCapabilities[zoneName]
+		if forced then
+			if forced.groundAttack == true or forced.groundattack == true then
+				local template = forced.groundAttackTemplate or forced.groundattackTemplate or 'AttackConvoy'
+				addRecipe({
+					mission = 'attack',
+					role = 'SURFACE',
+					platform = 'surface',
+					type = 'surface',
+					template = template,
+					templateSideSupport = {
+						[1] = self:_templateSetSupportsSide(template, coalition.side.RED),
+						[2] = self:_templateSetSupportsSide(template, coalition.side.BLUE),
+					},
+				}, 'forced', 'forced:groundAttack', true)
+			end
+			if (forced.heloCas == true or forced.HeloCas == true) and catalogZone.airbaseName then
+				local template = forced.heloCasTemplate or forced.HeloCasTemplate or 'CasHeloTemplate'
+				addRecipe({
+					mission = 'attack',
+					role = 'CAS',
+					platform = 'helicopter',
+					type = 'air',
+					template = template,
+					templateSideSupport = {
+						[1] = self:_templateSetSupportsSide(template, coalition.side.RED),
+						[2] = self:_templateSetSupportsSide(template, coalition.side.BLUE),
+					},
+				}, 'forced', 'forced:heloCas', true)
+			end
+		end
+
+		table.sort(recipeZone.recipeOrder)
+		for _, key in ipairs(recipeZone.recipeOrder) do
+			local recipe = recipeZone.byKey[key]
+			for _, names in pairs(recipe.sourceNames) do table.sort(names) end
+			recipe.reusableOnDemand = recipe.migrationCandidateSources > 0
+			recipe.hasAuthoredEvidence = recipe.sourceCounts.authored > 0
+			recipe.hasActiveDynamicEvidence = recipe.sourceCounts.dynamicActive > 0
+			recipe.hasSpecialEvidence = recipe.sourceCounts.special > 0
+			recipe.hasForcedEvidence = recipe.sourceCounts.forced > 0
+			recipe.supplyLifecycleProtected = recipe.role == 'SUPPLY'
+			recipeZone.totals.recipes = recipeZone.totals.recipes + 1
+			recipeCatalog.totals.recipes = recipeCatalog.totals.recipes + 1
+			recipeCatalog.byRole[recipe.role] = (recipeCatalog.byRole[recipe.role] or 0) + 1
+			recipeCatalog.byPlatform[recipe.platform] = (recipeCatalog.byPlatform[recipe.platform] or 0) + 1
+			local platformKey = recipe.platform == 'helicopter' and 'helicopterRecipes'
+				or (recipe.platform == 'airplane' and 'airplaneRecipes'
+					or (recipe.platform == 'surface' and 'surfaceRecipes' or 'unknownPlatformRecipes'))
+			recipeZone.totals[platformKey] = recipeZone.totals[platformKey] + 1
+			recipeCatalog.totals[platformKey] = recipeCatalog.totals[platformKey] + 1
+			if recipe.role == 'SUPPLY' then
+				recipeZone.totals.supplyRecipes = recipeZone.totals.supplyRecipes + 1
+				recipeCatalog.totals.supplyRecipes = recipeCatalog.totals.supplyRecipes + 1
+			end
+			if recipe.reusableOnDemand then
+				recipeZone.totals.reusableOnDemand = recipeZone.totals.reusableOnDemand + 1
+				recipeCatalog.totals.reusableOnDemand = recipeCatalog.totals.reusableOnDemand + 1
+			end
+			if recipe.hasAuthoredEvidence then recipeCatalog.totals.authoredEvidence = recipeCatalog.totals.authoredEvidence + 1 end
+			if not recipe.hasAuthoredEvidence and not recipe.hasSpecialEvidence and not recipe.hasForcedEvidence
+				and recipe.hasActiveDynamicEvidence then
+				recipeCatalog.totals.dynamicOnly = recipeCatalog.totals.dynamicOnly + 1
+			elseif not recipe.hasAuthoredEvidence and recipe.hasSpecialEvidence and not recipe.hasForcedEvidence
+				and not recipe.hasActiveDynamicEvidence then
+				recipeCatalog.totals.specialOnly = recipeCatalog.totals.specialOnly + 1
+			elseif not recipe.hasAuthoredEvidence and not recipe.hasSpecialEvidence and recipe.hasForcedEvidence
+				and not recipe.hasActiveDynamicEvidence then
+				recipeCatalog.totals.forcedOnly = recipeCatalog.totals.forcedOnly + 1
+			end
+		end
+	end
+
+	self.zoneCapabilityRecipes = recipeCatalog
+	env.info(string.format(
+		'[ZoneCapabilityRecipes] built recipes=%d reusableOnDemand=%d supply=%d helicopter=%d airplane=%d surface=%d unknown=%d authoredEvidence=%d dynamicOnly=%d specialOnly=%d forcedOnly=%d',
+		recipeCatalog.totals.recipes,
+		recipeCatalog.totals.reusableOnDemand,
+		recipeCatalog.totals.supplyRecipes,
+		recipeCatalog.totals.helicopterRecipes,
+		recipeCatalog.totals.airplaneRecipes,
+		recipeCatalog.totals.surfaceRecipes,
+		recipeCatalog.totals.unknownPlatformRecipes,
+		recipeCatalog.totals.authoredEvidence,
+		recipeCatalog.totals.dynamicOnly,
+		recipeCatalog.totals.specialOnly,
+		recipeCatalog.totals.forcedOnly
+	))
+	return recipeCatalog
+end
+
+function BattleCommander:getZoneCapabilityRecipeSummary(zoneName)
+	local recipeCatalog = self.zoneCapabilityRecipes
+	if not recipeCatalog then return '[ZoneCapabilityRecipes] not built' end
+	local lines = {
+		string.format(
+			'[ZoneCapabilityRecipes] recipes=%d reusableOnDemand=%d supply=%d helicopter=%d airplane=%d surface=%d unknown=%d authoredEvidence=%d dynamicOnly=%d specialOnly=%d forcedOnly=%d',
+			recipeCatalog.totals.recipes,
+			recipeCatalog.totals.reusableOnDemand,
+			recipeCatalog.totals.supplyRecipes,
+			recipeCatalog.totals.helicopterRecipes,
+			recipeCatalog.totals.airplaneRecipes,
+			recipeCatalog.totals.surfaceRecipes,
+			recipeCatalog.totals.unknownPlatformRecipes,
+			recipeCatalog.totals.authoredEvidence,
+			recipeCatalog.totals.dynamicOnly,
+			recipeCatalog.totals.specialOnly,
+			recipeCatalog.totals.forcedOnly
+		),
+	}
+	for _, currentZoneName in ipairs(recipeCatalog.zoneOrder) do
+		if not zoneName or currentZoneName == zoneName then
+			local recipeZone = recipeCatalog.zones[currentZoneName]
+			lines[#lines + 1] = string.format(
+				'zone=%s owner=%s recipes=%d reusable=%d supply=%d helicopter=%d airplane=%d surface=%d unknown=%d',
+				currentZoneName,
+				tostring(recipeZone.ownerSide),
+				recipeZone.totals.recipes,
+				recipeZone.totals.reusableOnDemand,
+				recipeZone.totals.supplyRecipes,
+				recipeZone.totals.helicopterRecipes,
+				recipeZone.totals.airplaneRecipes,
+				recipeZone.totals.surfaceRecipes,
+				recipeZone.totals.unknownPlatformRecipes
+			)
+			if zoneName then
+				for _, key in ipairs(recipeZone.recipeOrder) do
+					local recipe = recipeZone.byKey[key]
+					local sideText = (recipe.templateSideSupport[1] and 'R' or '-')
+						.. (recipe.templateSideSupport[2] and 'B' or '-')
+					lines[#lines + 1] = string.format(
+						'  mission=%s role=%s platform=%s type=%s template=%s sides=%s sources=A%d/S%d/D%d+%dretired/F%d routes=%d reusable=%s supplyProtected=%s',
+						tostring(recipe.mission),
+						tostring(recipe.role),
+						tostring(recipe.platform),
+						tostring(recipe.commanderType),
+						tostring(recipe.template),
+						sideText,
+						recipe.sourceCounts.authored,
+						recipe.sourceCounts.special,
+						recipe.sourceCounts.dynamicActive,
+						recipe.sourceCounts.dynamicRetired,
+						recipe.sourceCounts.forced,
+						(function()
+							local count = 0
+							for _ in pairs(recipe.targetZones) do count = count + 1 end
+							return count
+						end)(),
+						tostring(recipe.reusableOnDemand),
+						tostring(recipe.supplyLifecycleProtected)
+					)
+				end
+			end
+		end
+	end
+	if zoneName and not recipeCatalog.zones[zoneName] then
+		lines[#lines + 1] = 'zone=' .. tostring(zoneName) .. ' not found'
+	end
+	return table.concat(lines, '\n')
+end
+
+function BattleCommander:logZoneCapabilityRecipes(zoneName)
+	env.info(self:getZoneCapabilityRecipeSummary(zoneName))
+end
+
+function BattleCommander:compareZoneCapabilityRecipes()
+	local catalog = self.zoneCapabilityCatalog
+	local recipes = self.zoneCapabilityRecipes
+	local legacyCoverage, legacyCapabilities = self:_dynamicHybridCollectCoverageAndCapabilities()
+	local shadow = {
+		builtAt = timer.getAbsTime(),
+		inventoryCapabilities = {},
+		seedCapabilities = {},
+		inventoryCapabilityMismatches = {},
+		seedCapabilityDifferences = {},
+		coverageMismatches = {},
+		preferredTemplateMismatches = {},
+		integrityIssues = {},
+	}
+	local capabilityFlags = {
+		'hasCap',
+		'hasPatrolAny',
+		'hasCas',
+		'hasCasPlane',
+		'hasCasHelo',
+		'hasSead',
+		'hasRunway',
+		'hasConvoy',
+	}
+	local coverageFlags = {
+		'cap_attack',
+		'cap_patrol',
+		'cap_any',
+		'cas_attack',
+		'cas_helo_attack',
+		'cas_any',
+		'sead_attack',
+		'sead_any',
+		'runway_attack',
+		'runway_any',
+		'convoy_attack',
+	}
+	local function emptyCapabilities()
+		return {
+			hasCap = false,
+			hasPatrolAny = false,
+			hasCas = false,
+			hasCasPlane = false,
+			hasCasHelo = false,
+			hasSead = false,
+			hasRunway = false,
+			hasConvoy = false,
+		}
+	end
+	local function applyRecipeCapability(capabilities, recipe)
+		if recipe.role == 'CAP' and (recipe.commanderType == 'air' or recipe.commanderType == 'carrier_air') then
+			capabilities.hasCap = true
+			if recipe.mission == 'patrol' then capabilities.hasPatrolAny = true end
+		elseif recipe.role == 'CAS' and (recipe.commanderType == 'air' or recipe.commanderType == 'carrier_air') then
+			capabilities.hasCas = true
+			if recipe.platform == 'helicopter' then
+				capabilities.hasCasHelo = true
+			elseif recipe.platform == 'airplane' then
+				capabilities.hasCasPlane = true
+			end
+		elseif recipe.role == 'SEAD' and (recipe.commanderType == 'air' or recipe.commanderType == 'carrier_air') then
+			capabilities.hasSead = true
+		elseif recipe.role == 'RUNWAYSTRIKE' and (recipe.commanderType == 'air' or recipe.commanderType == 'carrier_air') then
+			capabilities.hasRunway = true
+		elseif recipe.role == 'SURFACE' and recipe.mission == 'attack' and recipe.commanderType == 'surface' then
+			capabilities.hasConvoy = true
+		end
+	end
+	local function recipeHasActiveEvidence(recipe)
+		return recipe.sourceCounts.authored > 0 or recipe.sourceCounts.special > 0
+			or recipe.sourceCounts.forced > 0 or recipe.sourceCounts.dynamicActive > 0
+	end
+	local function recipeHasSeedEvidence(recipe)
+		return recipe.sourceCounts.authored > 0 or recipe.sourceCounts.special > 0 or recipe.sourceCounts.forced > 0
+	end
+
+	for zoneName, recipeZone in pairs(recipes.zones) do
+		for _, key in ipairs(recipeZone.recipeOrder) do
+			local recipe = recipeZone.byKey[key]
+			if recipe.platform == 'unknown' then
+				shadow.integrityIssues[#shadow.integrityIssues + 1] = {
+					reason = 'unknown_platform', zone = zoneName, recipeKey = key,
+				}
+			end
+			if not recipe.templateSideSupport[1] and not recipe.templateSideSupport[2] then
+				shadow.integrityIssues[#shadow.integrityIssues + 1] = {
+					reason = 'template_no_supported_side', zone = zoneName, recipeKey = key,
+				}
+			end
+			if recipe.role == 'SUPPLY' and recipe.reusableOnDemand then
+				shadow.integrityIssues[#shadow.integrityIssues + 1] = {
+					reason = 'supply_marked_reusable', zone = zoneName, recipeKey = key,
+				}
+			end
+		end
+	end
+
+	for zoneName, legacy in pairs(legacyCapabilities) do
+		local recipeZone = recipes.zones[zoneName]
+		local inventory = emptyCapabilities()
+		local seed = emptyCapabilities()
+		if recipeZone then
+			for _, key in ipairs(recipeZone.recipeOrder) do
+				local recipe = recipeZone.byKey[key]
+				if recipeHasActiveEvidence(recipe) then applyRecipeCapability(inventory, recipe) end
+				if recipeHasSeedEvidence(recipe) then applyRecipeCapability(seed, recipe) end
+			end
+		end
+		shadow.inventoryCapabilities[zoneName] = inventory
+		shadow.seedCapabilities[zoneName] = seed
+		for _, flag in ipairs(capabilityFlags) do
+			local legacyValue = legacy[flag] == true
+			local inventoryValue = inventory[flag] == true
+			local seedValue = seed[flag] == true
+			if legacyValue ~= inventoryValue then
+				shadow.inventoryCapabilityMismatches[#shadow.inventoryCapabilityMismatches + 1] = {
+					zone = zoneName, capability = flag, legacy = legacyValue, recipe = inventoryValue,
+				}
+			end
+			if legacyValue ~= seedValue then
+				shadow.seedCapabilityDifferences[#shadow.seedCapabilityDifferences + 1] = {
+					zone = zoneName, capability = flag, legacy = legacyValue, seed = seedValue,
+				}
+			end
+		end
+	end
+
+	local recipeCoverage = {}
+	for originZoneName, _ in pairs(legacyCoverage) do
+		recipeCoverage[originZoneName] = {}
+		local catalogZone = catalog.zones[originZoneName]
+		if catalogZone then
+			for _, classification in ipairs({ 'authored', 'special', 'hardcoded', 'dynamic' }) do
+				for _, row in ipairs(catalogZone.commanders[classification]) do
+					if row.dynamicHybridRetired ~= true and row.targetZone then
+						local targetCoverage = recipeCoverage[originZoneName][row.targetZone]
+						if not targetCoverage then
+							targetCoverage = {}
+							recipeCoverage[originZoneName][row.targetZone] = targetCoverage
+						end
+						if row.mission == 'attack' then
+							if row.role == 'CAP' then
+								targetCoverage.cap_attack = true
+								targetCoverage.cap_any = true
+							elseif row.role == 'CAS' then
+								local platform = self:_zoneCapabilityPlatform(row.unitCategory, row.type)
+								if platform == 'helicopter' then
+									targetCoverage.cas_helo_attack = true
+								else
+									targetCoverage.cas_attack = true
+								end
+								targetCoverage.cas_any = true
+							elseif row.role == 'SEAD' then
+								targetCoverage.sead_attack = true
+								targetCoverage.sead_any = true
+							elseif row.role == 'RUNWAYSTRIKE' then
+								targetCoverage.runway_attack = true
+								targetCoverage.runway_any = true
+							elseif row.type == 'surface' then
+								targetCoverage.convoy_attack = true
+							end
+						elseif row.mission == 'patrol' and row.role == 'CAP' then
+							targetCoverage.cap_patrol = true
+							targetCoverage.cap_any = true
+						end
+					end
+				end
+			end
+		end
+	end
+
+	local originNames = {}
+	for originName in pairs(legacyCoverage) do originNames[originName] = true end
+	for originName in pairs(recipeCoverage) do originNames[originName] = true end
+	for originName in pairs(originNames) do
+		local targetNames = {}
+		for targetName in pairs(legacyCoverage[originName] or {}) do targetNames[targetName] = true end
+		for targetName in pairs(recipeCoverage[originName] or {}) do targetNames[targetName] = true end
+		for targetName in pairs(targetNames) do
+			local legacyTarget = legacyCoverage[originName] and legacyCoverage[originName][targetName] or {}
+			local recipeTarget = recipeCoverage[originName] and recipeCoverage[originName][targetName] or {}
+			for _, flag in ipairs(coverageFlags) do
+				local legacyValue = legacyTarget[flag] == true
+				local recipeValue = recipeTarget[flag] == true
+				if legacyValue ~= recipeValue then
+					shadow.coverageMismatches[#shadow.coverageMismatches + 1] = {
+						originZone = originName,
+						targetZone = targetName,
+						coverage = flag,
+						legacy = legacyValue,
+						recipe = recipeValue,
+					}
+				end
+			end
+		end
+	end
+
+	local templateRequirements = {
+		{ flag = 'hasCap', field = 'capTemplate', role = 'CAP' },
+		{ flag = 'hasPatrolAny', field = 'capPatrolTemplate', role = 'CAP', mission = 'patrol' },
+		{ flag = 'hasCap', field = 'capAttackTemplate', role = 'CAP', mission = 'attack' },
+		{ flag = 'hasCasPlane', field = 'casPlaneTemplate', role = 'CAS', platform = 'airplane' },
+		{ flag = 'hasCasHelo', field = 'casHeloTemplate', role = 'CAS', platform = 'helicopter' },
+		{ flag = 'hasSead', field = 'seadTemplate', role = 'SEAD' },
+		{ flag = 'hasRunway', field = 'runwayTemplate', role = 'RUNWAYSTRIKE' },
+		{ flag = 'hasConvoy', field = 'convoyTemplate', role = 'SURFACE', platform = 'surface' },
+	}
+	for zoneName, legacy in pairs(legacyCapabilities) do
+		local recipeZone = recipes.zones[zoneName]
+		for _, requirement in ipairs(templateRequirements) do
+			if legacy[requirement.flag] == true and legacy[requirement.field] then
+				local found = false
+				if recipeZone then
+					for _, key in ipairs(recipeZone.recipeOrder) do
+						local recipe = recipeZone.byKey[key]
+						if recipeHasActiveEvidence(recipe) and recipe.template == legacy[requirement.field]
+							and recipe.role == requirement.role
+							and (not requirement.mission or recipe.mission == requirement.mission)
+							and (not requirement.platform or recipe.platform == requirement.platform)
+						then
+							found = true
+							break
+						end
+					end
+				end
+				if not found then
+					shadow.preferredTemplateMismatches[#shadow.preferredTemplateMismatches + 1] = {
+						zone = zoneName,
+						capability = requirement.flag,
+						field = requirement.field,
+						template = legacy[requirement.field],
+					}
+				end
+			end
+		end
+	end
+
+	self.zoneCapabilityRecipeShadow = shadow
+	env.info(string.format(
+		'[ZoneCapabilityShadow] inventoryCapabilityMismatches=%d seedCapabilityDifferences=%d coverageMismatches=%d preferredTemplateMismatches=%d integrityIssues=%d',
+		#shadow.inventoryCapabilityMismatches,
+		#shadow.seedCapabilityDifferences,
+		#shadow.coverageMismatches,
+		#shadow.preferredTemplateMismatches,
+		#shadow.integrityIssues
+	))
+	return shadow
+end
+
+function BattleCommander:getZoneCapabilityShadowSummary(zoneName)
+	local shadow = self.zoneCapabilityRecipeShadow
+	if not shadow then return '[ZoneCapabilityShadow] not built' end
+	local lines = {
+		string.format(
+			'[ZoneCapabilityShadow] inventoryCapabilityMismatches=%d seedCapabilityDifferences=%d coverageMismatches=%d preferredTemplateMismatches=%d integrityIssues=%d',
+			#shadow.inventoryCapabilityMismatches,
+			#shadow.seedCapabilityDifferences,
+			#shadow.coverageMismatches,
+			#shadow.preferredTemplateMismatches,
+			#shadow.integrityIssues
+		),
+	}
+	for _, row in ipairs(shadow.inventoryCapabilityMismatches) do
+		if not zoneName or row.zone == zoneName then
+			lines[#lines + 1] = string.format(
+				'inventoryDifference zone=%s capability=%s legacy=%s recipe=%s',
+				tostring(row.zone), tostring(row.capability), tostring(row.legacy), tostring(row.recipe)
+			)
+		end
+	end
+	for _, row in ipairs(shadow.seedCapabilityDifferences) do
+		if not zoneName or row.zone == zoneName then
+			lines[#lines + 1] = string.format(
+				'seedDifference zone=%s capability=%s legacy=%s seed=%s',
+				tostring(row.zone), tostring(row.capability), tostring(row.legacy), tostring(row.seed)
+			)
+		end
+	end
+	for _, row in ipairs(shadow.coverageMismatches) do
+		if not zoneName or row.originZone == zoneName or row.targetZone == zoneName then
+			lines[#lines + 1] = string.format(
+				'coverageDifference origin=%s target=%s coverage=%s legacy=%s recipe=%s',
+				tostring(row.originZone), tostring(row.targetZone), tostring(row.coverage),
+				tostring(row.legacy), tostring(row.recipe)
+			)
+		end
+	end
+	for _, row in ipairs(shadow.preferredTemplateMismatches) do
+		if not zoneName or row.zone == zoneName then
+			lines[#lines + 1] = string.format(
+				'templateDifference zone=%s capability=%s field=%s template=%s',
+				tostring(row.zone), tostring(row.capability), tostring(row.field), tostring(row.template)
+			)
+		end
+	end
+	for _, row in ipairs(shadow.integrityIssues) do
+		if not zoneName or row.zone == zoneName then
+			lines[#lines + 1] = string.format(
+				'integrityIssue zone=%s reason=%s recipe=%s',
+				tostring(row.zone), tostring(row.reason), tostring(row.recipeKey)
+			)
+		end
+	end
+	return table.concat(lines, '\n')
+end
+
+function BattleCommander:logZoneCapabilityShadow(zoneName)
+	env.info(self:getZoneCapabilityShadowSummary(zoneName))
+end
+
+function BattleCommander:refreshZoneCapabilityAudit()
+	self:buildZoneCapabilityCatalog()
+	self:buildZoneCapabilityRecipes()
+	self:compareZoneCapabilityRecipes()
+	return self.zoneCapabilityCatalog, self.zoneCapabilityRecipes, self.zoneCapabilityRecipeShadow
 end
 
 function BattleCommander:_dynamicHybridSetIndex(originZone, targetZone, role, groupName)
@@ -22837,6 +23974,145 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 	return coverage, capsByOrigin
 end
 
+function BattleCommander:_dynamicHybridCollectSeedCapabilities()
+	local recipes = self.zoneCapabilityRecipes
+	if not recipes then error('[DynamicHybrid] seed capability collection requires zone capability recipes') end
+	local capsByAnchor = {}
+	local stats = {
+		anchors = 0,
+		capabilities = 0,
+		localCapabilities = 0,
+		regionalCapabilities = 0,
+		byCapability = {},
+	}
+	local capabilityOrder = { 'capAttack', 'capPatrol', 'casPlane', 'casHelo', 'sead', 'runway', 'convoy' }
+
+	local function recipeCapability(recipe)
+		if recipe.role == 'CAP' and recipe.platform == 'airplane' then
+			if recipe.mission == 'attack' then return 'capAttack' end
+			if recipe.mission == 'patrol' then return 'capPatrol' end
+		elseif recipe.role == 'CAS' and recipe.mission == 'attack' then
+			if recipe.platform == 'airplane' then return 'casPlane' end
+			if recipe.platform == 'helicopter' then return 'casHelo' end
+		elseif recipe.role == 'SEAD' and recipe.mission == 'attack' and recipe.platform == 'airplane' then
+			return 'sead'
+		elseif recipe.role == 'RUNWAYSTRIKE' and recipe.mission == 'attack' and recipe.platform == 'airplane' then
+			return 'runway'
+		elseif recipe.role == 'SURFACE' and recipe.mission == 'attack' and recipe.platform == 'surface' then
+			return 'convoy'
+		end
+		return nil
+	end
+
+	local function hasAuthoredCapabilityEvidence(recipe)
+		return recipe.hasAuthoredEvidence == true or recipe.hasSpecialEvidence == true
+			or recipe.hasForcedEvidence == true
+	end
+
+	local function airAccessMode(anchorMember, sourceMember)
+		if sourceMember.name == anchorMember.name then return 'local' end
+		return 'shared_air'
+	end
+
+	local function consider(caps, anchorMember, sourceMember, capability, template, mode)
+		if not capability or not template then return end
+		if not self:_templateSetSupportsSide(template, anchorMember.zone.side) then return end
+		local priority = mode == 'local' and 30 or (sourceMember.role == 'core' and 20 or 10)
+		local sortKey = sourceMember.name .. '|' .. template
+		local current = caps[capability]
+		if current and (current.priority > priority or (current.priority == priority and current.sortKey <= sortKey)) then return end
+		caps[capability] = {
+			capability = capability,
+			template = template,
+			source = sourceMember.zone,
+			anchor = anchorMember.zone,
+			mode = mode,
+			priority = priority,
+			sortKey = sortKey,
+		}
+	end
+
+	for _, anchor in ipairs(self.zones) do
+		if anchor.active and not anchor.isHidden and not self:_dynamicHybridIsCarrierZoneName(anchor.zone)
+			and (anchor.side == coalition.side.RED or anchor.side == coalition.side.BLUE) then
+			local caps = {}
+			capsByAnchor[anchor.zone] = caps
+			stats.anchors = stats.anchors + 1
+			local director = Director:getForSide(anchor.side)
+			local region = director and director.regionByZone[anchor.zone] or nil
+			local anchorMember = region and region.zoneByName[anchor.zone] or { name = anchor.zone, role = 'local', zone = anchor }
+			local sourceMembers = region and region.zones or { anchorMember }
+
+			for _, sourceMember in ipairs(sourceMembers) do
+				local source = sourceMember.zone
+				if source.side == anchor.side and source.active and not source.isHidden
+					and not self:_dynamicHybridIsCarrierZoneName(source.zone) then
+					local recipeZone = recipes.zones[sourceMember.name]
+					if not recipeZone then error('[DynamicHybrid] seed capability collection missing recipe zone=' .. sourceMember.name) end
+					local sourceCapabilities = {}
+					for _, recipeKey in ipairs(recipeZone.recipeOrder) do
+						local recipe = recipeZone.byKey[recipeKey]
+						local capability = recipeCapability(recipe)
+						local capabilitySeedEligible = capability ~= 'convoy'
+							or recipe.reusableOnDemand == true or recipe.hasForcedEvidence == true
+						if capability and hasAuthoredCapabilityEvidence(recipe)
+							and capabilitySeedEligible and recipe.templateSideSupport[anchor.side]
+							and not sourceCapabilities[capability] then
+							sourceCapabilities[capability] = recipe.template
+						end
+					end
+
+					local runwayTemplate = sourceCapabilities.capAttack or sourceCapabilities.capPatrol
+					if runwayTemplate then
+						local mode = airAccessMode(anchorMember, sourceMember)
+						consider(caps, anchorMember, sourceMember, 'capAttack', sourceCapabilities.capAttack or runwayTemplate, mode)
+						consider(caps, anchorMember, sourceMember, 'capPatrol', sourceCapabilities.capPatrol or runwayTemplate, mode)
+						consider(caps, anchorMember, sourceMember, 'casPlane', sourceCapabilities.casPlane or 'CasPlaneTemplate', mode)
+						consider(caps, anchorMember, sourceMember, 'casHelo', sourceCapabilities.casHelo or 'CasHeloTemplate', mode)
+						consider(caps, anchorMember, sourceMember, 'sead', sourceCapabilities.sead or 'SeadPlaneTemplate', mode)
+					elseif sourceCapabilities.casHelo then
+						consider(caps, anchorMember, sourceMember, 'casHelo', sourceCapabilities.casHelo, airAccessMode(anchorMember, sourceMember))
+					end
+
+					if sourceCapabilities.convoy then
+						local convoyRecipe
+						for _, recipeKey in ipairs(recipeZone.recipeOrder) do
+							local recipe = recipeZone.byKey[recipeKey]
+							if recipeCapability(recipe) == 'convoy' and recipe.template == sourceCapabilities.convoy
+								and (recipe.reusableOnDemand == true or recipe.hasForcedEvidence == true) then
+								convoyRecipe = recipe
+								break
+							end
+						end
+						if convoyRecipe then
+							local mode = sourceMember.name == anchorMember.name and 'local'
+								or director:_regionalRecipeAccessMode(sourceMember, anchorMember, convoyRecipe, true)
+							if mode == 'local' or mode == 'shared_surface' then
+								consider(caps, anchorMember, sourceMember, 'convoy', convoyRecipe.template, mode)
+							end
+						end
+					end
+				end
+			end
+
+			for _, capability in ipairs(capabilityOrder) do
+				local seed = caps[capability]
+				if seed then
+					stats.capabilities = stats.capabilities + 1
+					stats.byCapability[capability] = (stats.byCapability[capability] or 0) + 1
+					if seed.mode == 'local' then
+						stats.localCapabilities = stats.localCapabilities + 1
+					else
+						stats.regionalCapabilities = stats.regionalCapabilities + 1
+					end
+				end
+			end
+		end
+	end
+
+	return capsByAnchor, stats
+end
+
 function BattleCommander:_dynamicHybridAddCandidate(candidates, dedupe, origin, target, role, template, mission, missionType, gcType, altitude, weight)
 	if self:_dynamicHybridIsBlockedTargetZone(target.zone) then return end
 	if not self:_templateSetSupportsSide(template, origin.side) then return end
@@ -22861,7 +24137,22 @@ function BattleCommander:_dynamicHybridBuildMissingCandidates()
 	local candidates = {}
 	local dedupe = {}
 	local pressureByZone = self:_dynamicHybridBuildPressureByPlayers()
-	local coverage, capsByOrigin = self:_dynamicHybridCollectCoverageAndCapabilities()
+	local coverage = self:_dynamicHybridCollectCoverageAndCapabilities()
+	local capsByOrigin, seedStats = self:_dynamicHybridCollectSeedCapabilities()
+	self:_dynamicHybridLog(string.format(
+		'seed capabilities anchors=%d total=%d local=%d regional=%d capAttack=%d capPatrol=%d casPlane=%d casHelo=%d sead=%d runway=%d convoy=%d',
+		seedStats.anchors,
+		seedStats.capabilities,
+		seedStats.localCapabilities,
+		seedStats.regionalCapabilities,
+		seedStats.byCapability.capAttack or 0,
+		seedStats.byCapability.capPatrol or 0,
+		seedStats.byCapability.casPlane or 0,
+		seedStats.byCapability.casHelo or 0,
+		seedStats.byCapability.sead or 0,
+		seedStats.byCapability.runway or 0,
+		seedStats.byCapability.convoy or 0
+	))
 	local capEligibleZone = {}
 	for _, z in ipairs(self.zones) do
 		capEligibleZone[z.zone] = (z.groups and #z.groups > 0) and true or false
@@ -22888,6 +24179,22 @@ function BattleCommander:_dynamicHybridBuildMissingCandidates()
 	local pairChecks = 0
 	local directConnections = self:_dynamicHybridGetConnections()
 	local adjacency = {}
+	local function targetCoverage(seed, targetZoneName)
+		if not seed then return {} end
+		return coverage[seed.source.zone] and coverage[seed.source.zone][targetZoneName] or {}
+	end
+	local function targetDistance(seed, targetZoneName)
+		if not seed then return math.huge end
+		local row = ZONE_DISTANCES[seed.source.zone] or {}
+		return row[targetZoneName] or math.huge
+	end
+	local function sourceHasCoverage(seed, coverageName)
+		if not seed then return false end
+		for _, targetFlags in pairs(coverage[seed.source.zone] or {}) do
+			if targetFlags[coverageName] == true then return true end
+		end
+		return false
+	end
 
 	local function processPair(origin, target, secondHop)
 			pairChecks = pairChecks + 1
@@ -22899,11 +24206,8 @@ function BattleCommander:_dynamicHybridBuildMissingCandidates()
 			local caps = capsByOrigin[origin.zone]
 			if not caps then return end
 
-			frontlineOrigins[origin.zone] = origin
-			local row = ZONE_DISTANCES[origin.zone] or {}
-			local dist = row[target.zone] or math.huge
+			frontlineOrigins[origin.zone] = { anchor = origin, caps = caps }
 			local pressure = pressureByZone[origin.zone] or 0
-			local byTarget = coverage[origin.zone] and coverage[origin.zone][target.zone] or {}
 			local baseWeight = 8 + pressure * 2
 			local fixedWingAttackWeight = baseWeight
 			if origin.side == 1 then
@@ -22917,27 +24221,41 @@ function BattleCommander:_dynamicHybridBuildMissingCandidates()
 				fixedWingAttackWeight = 1
 			end
 
-			local capCovered = byTarget.cap_any
-			local casCovered = byTarget.cas_any
-			local seadCovered = byTarget.sead_any
-			local runwayCovered = byTarget.runway_any
-			local convoyCovered = byTarget.convoy_attack
+			local capSeed = caps.capAttack
+			local casHeloSeed = caps.casHelo
+			local casPlaneSeed = caps.casPlane
+			local seadSeed = caps.sead
+			local convoySeed = caps.convoy
+			local capCovered = targetCoverage(capSeed, target.zone).cap_any == true
+			local casCovered = targetCoverage(casHeloSeed, target.zone).cas_any == true
+				or targetCoverage(casPlaneSeed, target.zone).cas_any == true
+			local seadCovered = targetCoverage(seadSeed, target.zone).sead_any == true
+			local convoyCovered = targetCoverage(convoySeed, target.zone).convoy_attack == true
 			local capTargetEligible = capEligibleZone[target.zone] == true
-			if caps.hasCap and capTargetEligible and not capCovered and dist <= airLimitMeters and dist >= capMinMeters then
-				self:_dynamicHybridAddCandidate(candidates, dedupe, origin, target, "cap_attack", caps.capAttackTemplate, "attack", "CAP", "air", CapAltitude and CapAltitude() or nil, fixedWingAttackWeight + 6)
+			local capDistance = targetDistance(capSeed, target.zone)
+			if capSeed and capTargetEligible and not capCovered and capDistance <= airLimitMeters and capDistance >= capMinMeters then
+				self:_dynamicHybridAddCandidate(candidates, dedupe, capSeed.source, target, "cap_attack", capSeed.template, "attack", "CAP", "air", CapAltitude and CapAltitude() or nil, fixedWingAttackWeight + 6)
 			end
 			if not casCovered then
-				if not secondHop and dist <= heloLimitMeters and dist >= heloMinMeters and (caps.hasCap or caps.hasCasHelo) then
-					self:_dynamicHybridAddCandidate(candidates, dedupe, origin, target, "cas_helo_attack", caps.casHeloTemplate, "attack", "CAS", "air", CasAltitude and CasAltitude() or nil, baseWeight + 5)
-				elseif dist <= airLimitMeters and dist >= planeMinMeters and caps.hasCap then
-					self:_dynamicHybridAddCandidate(candidates, dedupe, origin, target, "cas_attack", caps.casPlaneTemplate, "attack", "CAS", "air", CasAltitude and CasAltitude() or nil, fixedWingAttackWeight + 5)
+				local heloDistance = targetDistance(casHeloSeed, target.zone)
+				local planeDistance = targetDistance(casPlaneSeed, target.zone)
+				if casHeloSeed and not secondHop and heloDistance <= heloLimitMeters and heloDistance >= heloMinMeters then
+					self:_dynamicHybridAddCandidate(candidates, dedupe, casHeloSeed.source, target, "cas_helo_attack", casHeloSeed.template, "attack", "CAS", "air", CasAltitude and CasAltitude() or nil, baseWeight + 5)
+				elseif casPlaneSeed and planeDistance <= airLimitMeters and planeDistance >= planeMinMeters then
+					self:_dynamicHybridAddCandidate(candidates, dedupe, casPlaneSeed.source, target, "cas_attack", casPlaneSeed.template, "attack", "CAS", "air", CasAltitude and CasAltitude() or nil, fixedWingAttackWeight + 5)
 				end
 			end
-			if caps.hasCap and not seadCovered and dist <= airLimitMeters and dist >= seadMinMeters then
-				self:_dynamicHybridAddCandidate(candidates, dedupe, origin, target, "sead_attack", caps.seadTemplate, "attack", "SEAD", "air", SeadAltitude and SeadAltitude() or nil, fixedWingAttackWeight + 4)
+			local seadDistance = targetDistance(seadSeed, target.zone)
+			if seadSeed and not seadCovered and seadDistance <= airLimitMeters and seadDistance >= seadMinMeters then
+				self:_dynamicHybridAddCandidate(candidates, dedupe, seadSeed.source, target, "sead_attack", seadSeed.template, "attack", "SEAD", "air", SeadAltitude and SeadAltitude() or nil, fixedWingAttackWeight + 4)
 			end
-			if not secondHop and caps.hasConvoy and not convoyCovered and not self:IsGroundConvoyBlocked(origin.zone, target.zone) and dist <= surfaceLimitMeters and dist >= groundMinMeters then
-				self:_dynamicHybridAddCandidate(candidates, dedupe, origin, target, "convoy_attack", caps.convoyTemplate, "attack", nil, "surface", nil, baseWeight + 3)
+			local convoyDistance = targetDistance(convoySeed, target.zone)
+			local convoyConnected = convoySeed and self.connectionMap[convoySeed.source.zone]
+				and self.connectionMap[convoySeed.source.zone][target.zone]
+			if convoySeed and not secondHop and convoyConnected and not convoyCovered
+				and not self:IsGroundConvoyBlocked(convoySeed.source.zone, target.zone)
+				and convoyDistance <= surfaceLimitMeters and convoyDistance >= groundMinMeters then
+				self:_dynamicHybridAddCandidate(candidates, dedupe, convoySeed.source, target, "convoy_attack", convoySeed.template, "attack", nil, "surface", nil, baseWeight + 3)
 			end
 	end
 
@@ -22966,11 +24284,11 @@ function BattleCommander:_dynamicHybridBuildMissingCandidates()
 		end
 	end
 
-	for originName, origin in pairs(frontlineOrigins) do
-		local caps = capsByOrigin[originName]
-		if caps and caps.hasCap and (capEligibleZone[originName] == true) and not caps.hasPatrolAny then
+	for originName, entry in pairs(frontlineOrigins) do
+		local patrolSeed = entry.caps and entry.caps.capPatrol
+		if patrolSeed and capEligibleZone[patrolSeed.source.zone] == true and not sourceHasCoverage(patrolSeed, 'cap_patrol') then
 			local pressure = pressureByZone[originName] or 0
-			self:_dynamicHybridAddCandidate(candidates, dedupe, origin, origin, "cap_patrol", caps.capPatrolTemplate, "patrol", "CAP", "air", CapAltitude and CapAltitude() or nil, 12 + pressure * 2)
+			self:_dynamicHybridAddCandidate(candidates, dedupe, patrolSeed.source, patrolSeed.source, "cap_patrol", patrolSeed.template, "patrol", "CAP", "air", CapAltitude and CapAltitude() or nil, 12 + pressure * 2)
 		end
 	end
 
@@ -23033,6 +24351,9 @@ function BattleCommander:_dynamicHybridAddGroup(candidate, now)
 	})
 	candidate.origin:addGroup(gc)
 	gc:init()
+	if candidate.origin.side == coalition.side.RED or candidate.origin.side == coalition.side.BLUE then
+		gc.side = candidate.origin.side
+	end
 	if candidate.role == "convoy_attack" then
 		dc.GetAttackConvoyRoute(candidate.origin.zone, candidate.target.zone, dc.DEFAULT_SPEED)
 	end
@@ -23107,11 +24428,16 @@ function BattleCommander:_dynamicHybridTick(time)
 	local cfg = d.config
 	self:_dynamicHybridLog("tick begin runOnce=" .. tostring(cfg.runOnce))
 	if not cfg.enabled then
+		if not self.zoneCapabilityRecipeShadow then self:refreshZoneCapabilityAudit() end
 		return time + cfg.tickSec
 	end
 
 	local now = timer.getTime()
 	local removed = self:_dynamicHybridPrune(now)
+	if removed > 0 or not self.zoneCapabilityRecipes then
+		self:buildZoneCapabilityCatalog()
+		self:buildZoneCapabilityRecipes()
+	end
 	local added = 0
 	local addedByRole = {}
 	local addedByZoneRole = {}
@@ -23203,8 +24529,11 @@ function BattleCommander:_dynamicHybridTick(time)
 	if cfg.runOnce then
 		d.bootstrapDone = true
 		self:_dynamicHybridLog("runOnce=true completed bootstrap tick.")
-		return nil
 	end
+	if added > 0 or removed > 0 or not self.zoneCapabilityRecipeShadow then
+		self:refreshZoneCapabilityAudit()
+	end
+	if cfg.runOnce then return nil end
 	return time + cfg.tickSec
 end
 
@@ -23574,6 +24903,7 @@ function BattleCommander:_buildRedMassAttackPlan(targetZone, now)
 				local missionType = gc and gc.MissionType or nil
 				local pools = missionType and plan.pools[missionType] or nil
 				if pools and gc.side == coalition.side.RED and gc.mission == 'attack'
+					and gc._directorOperationId == nil
 					and (gc.type == 'air' or gc.type == 'carrier_air')
 					and (missionType ~= 'SEAD' or hasSeadTargets)
 				then
@@ -23624,11 +24954,12 @@ function BattleCommander:_buildRedMassAttackPlan(targetZone, now)
 	return plan
 end
 
-function BattleCommander:_chooseRedMassAttackPlan()
+function BattleCommander:_chooseRedMassAttackPlan(preferredTargetNames)
 	self:updateBlueZoneCount()
 	local now = timer.getAbsTime()
 	local bestScore = -1
 	local bestPlans = {}
+	local eligiblePlansByTarget = {}
 	for _, targetZone in ipairs(self._blueAirbaseZones or {}) do
 		if targetZone.side == coalition.side.BLUE and targetZone.active and not targetZone.suspended and not targetZone.isHidden
 			and targetZone.airbaseName and targetZone.airbaseName ~= "" and not isCarrierZoneName(targetZone.zone)
@@ -23638,6 +24969,7 @@ function BattleCommander:_chooseRedMassAttackPlan()
 				#plan.pools.CAP.live + #plan.pools.CAP.assigned + #plan.pools.CAP.retask)
 			local strikeAvailable = plan.filled - capAvailable
 			if plan.filled >= BattleCommander.redMassAttackSettings.minimumGroups and capAvailable > 0 and strikeAvailable > 0 and plan.forceSlots > 0 then
+				eligiblePlansByTarget[plan.targetZone] = plan
 				if plan.score > bestScore then
 					bestScore = plan.score
 					bestPlans = { plan }
@@ -23646,6 +24978,10 @@ function BattleCommander:_chooseRedMassAttackPlan()
 				end
 			end
 		end
+	end
+	if type(preferredTargetNames) == 'string' then preferredTargetNames = { preferredTargetNames } end
+	for _, targetZoneName in ipairs(preferredTargetNames or {}) do
+		if eligiblePlansByTarget[targetZoneName] then return eligiblePlansByTarget[targetZoneName] end
 	end
 	if #bestPlans == 0 then return nil end
 	return bestPlans[math.random(1, #bestPlans)]
@@ -23955,7 +25291,7 @@ function BattleCommander:scheduleRedMassAttackMissionRestore()
 	end, { commander = self, attempts = 0 }, timer.getTime() + 8)
 end
 
-function BattleCommander:triggerRedMassAttack()
+function BattleCommander:triggerRedMassAttack(preferredTargetNames)
 	if ActiveMission[BattleCommander.redMassAttackSettings.missionId]
 		or (self.redMassAttackMission and self.redMassAttackMission.active)
 	then
@@ -23966,7 +25302,8 @@ function BattleCommander:triggerRedMassAttack()
 		return L10N:Get("SHOP_NOT_AVAILABLE_NOW")
 	end
 
-	local plan = self:_chooseRedMassAttackPlan()
+	preferredTargetNames = preferredTargetNames or self._directorRedMassAttackPreferredTargets
+	local plan = self:_chooseRedMassAttackPlan(preferredTargetNames)
 	if not plan then return L10N:Get("SHOP_NOT_AVAILABLE_NOW") end
 	local state = self:_launchRedMassAttackPlan(plan)
 	if not state then return L10N:Get("SHOP_NOT_AVAILABLE_NOW") end
@@ -24030,6 +25367,8 @@ function BattleCommander:reindexCombatZones(includeSources)
 						-- Spawnability is cached by the dispatcher to avoid expensive live checks in reindex.
 						local shouldSpawn = self:_isSpawnableCached(gc)
 						local live = (gc.state ~= 'dead' and gc.state ~= 'inhangar')
+						local director = Director:getForSide(gc.side)
+						local directorReserved = director and director:holdsGroupForOperation(gc) or false
 						local tz = self:getZoneByName(targetName)
 						local include = live
 						if tz then
@@ -24049,6 +25388,8 @@ function BattleCommander:reindexCombatZones(includeSources)
 								reason = "spawnable"
 							elseif live then
 								reason = "live"
+							elseif directorReserved then
+								reason = "director-reserved"
 							end
 							if mission == 'attack' then
 								if reason then
@@ -28561,6 +29902,7 @@ function BattleCommander:_cleanupPlayerRespawnHuntAndJoint(pname, groupid, side)
 end
 
 function BattleCommander:cleanupPlayerRespawnState(pname, side, groupid)
+	self:markCasMissionPlayerUnavailable(pname)
 	self:_cleanupPlayerRespawnRewardState(pname, side)
 	self:_cleanupPlayerRespawnHuntAndJoint(pname, groupid, side)
 end
@@ -28581,6 +29923,7 @@ function BattleCommander:_applyEjectionFlightTimeReward(pname, side)
 end
 
 function BattleCommander:_handleEjectedCrewMember(n, side, groupid, aircraftID, carriedRescuedPilots, carriedAttached)
+	self:markCasMissionPlayerUnavailable(n)
 	if self.flightTimeTakeoffByPlayer then self.flightTimeTakeoffByPlayer[n] = nil end
 	if self.playerContributions[side][n]~=nil and self.playerContributions[side][n]>0 then
 		local tenp=math.floor(self.playerContributions[side][n]*0.25)
@@ -28608,9 +29951,6 @@ function BattleCommander:_handleEjectedCrewMember(n, side, groupid, aircraftID, 
 		end
 		if capMissionTarget~=nil and capKillsByPlayer[n]then
 			capKillsByPlayer[n]=0
-		end
-		if casMissionTarget ~= nil and casKillsByPlayer[n] then
-			casKillsByPlayer[n] = 0
 		end
 		if Hunt then
 			bc.huntDone[n] = nil
@@ -28764,6 +30104,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
                     local crew=bc:getMulticrewPlayersNow(pname)
                     for i=1,#crew do
                         local n=crew[i]
+						self.context:markCasMissionPlayerUnavailable(n)
 						 local _, _, subslot = self.context:_multicrewGetSubSlotByName(n)
 						 if subslot == 0 then
 							self.context:addStat(n,'Deaths',1)
@@ -28771,9 +30112,6 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 							self.context:clearRefuelRewardState(n, unit:getName())
 							if capMissionTarget~=nil and capKillsByPlayer[n] then
 								capKillsByPlayer[n]=0
-							end
-							if casMissionTarget ~= nil and casKillsByPlayer[n] then 
-								casKillsByPlayer[n] = 0 
 							end
 							for _,g in pairs(MissionGroups) do g.killers[n]=nil end
 							if self.context.flightTimeTakeoffByPlayer then self.context.flightTimeTakeoffByPlayer[n] = nil end
@@ -28997,15 +30335,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 											end
 										end
 									end
-									if casMissionTarget ~= nil then
-										if event.target:hasAttribute('Ground Units') or event.target:hasAttribute('SAM') or event.target:hasAttribute('Infantry') or event.target:hasAttribute('Fortifications') then
-											casKillsByPlayer[pname] = (casKillsByPlayer[pname] or 0) + 1
-											if casKillsByPlayer[pname] >= casTargetKills then
-												casWinner = pname
-												casMissionTarget = nil
-											end
-										end
-									end
+									self.context:registerCasMissionObjectKill(pname, event.target)
 								return
 							end
 							local tgtCoal = event.target:getCoalition()
@@ -29039,15 +30369,13 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 										end
 									end
 								end
-								if casMissionTarget ~= nil then
-									if event.target:hasAttribute('Ground Units') or event.target:hasAttribute('SAM') or event.target:hasAttribute('Infantry') or event.target:hasAttribute('Fortifications') then
-										casKillsByPlayer[pname] = (casKillsByPlayer[pname] or 0) + 1
-										if casKillsByPlayer[pname] >= casTargetKills then
-											casWinner = pname
-											casMissionTarget = nil
-										end
-									end
-								end
+								self.context:registerCasMissionKill(
+									pname,
+									event.target:getID(),
+									stat,
+									event.target:getPoint(),
+									tgtCoal
+								)
 							end
 						end
 					end
@@ -29649,6 +30977,7 @@ function BattleCommander:loadFromDisk()
 		self._pendingAirAiPersistence = nil
 		self._pendingRedMassAttackMission = nil
 		self._pendingCsarPilotPersistence = nil
+		self._pendingDirectorPersistence = nil
 
 		local function _parseAirAiPersistence(raw)
 			if type(raw) ~= "table" then return nil end
@@ -29671,6 +31000,7 @@ function BattleCommander:loadFromDisk()
 					zoneName = entry.zoneName or entry.originZone,
 					originZone = entry.originZone or entry.zoneName,
 					targetZone = entry.targetZone or entry.dynamicTargetZone,
+					directorRetaskOriginalTargetZone = entry.directorRetaskOriginalTargetZone,
 					side = tonumber(entry.side),
 					mission = entry.mission,
 					missionType = entry.missionType,
@@ -30402,6 +31732,9 @@ function BattleCommander:loadFromDisk()
 			if type(zonePersistance.redMassAttackMission) == "table" then
 				self._pendingRedMassAttackMission = zonePersistance.redMassAttackMission
 			end
+			if type(zonePersistance.director) == "table" then
+				self._pendingDirectorPersistence = zonePersistance.director
+			end
 
 			if zonePersistance.ewrsSettings then
 				if ewrs and ewrs.importPlayerSettings then
@@ -30593,6 +31926,50 @@ do
 		setmetatable(obj, self)
 		self.__index = self
 		return obj
+	end
+
+	function ZoneCommander:_syncDormantCommanderOwnership(reason)
+		local ownerSide = self.side
+		local changed = 0
+		local released = 0
+		for _, groupCommander in ipairs(self.groups) do
+			local unlaunched = groupCommander.Spawned ~= true
+				and (groupCommander.state == 'inhangar' or groupCommander.state == 'dead' or groupCommander.state == 'preparing')
+			local ownershipChanged = ownerSide == coalition.side.NEUTRAL or groupCommander.side ~= ownerSide
+			if unlaunched and ownershipChanged and groupCommander._sortieSide == nil then
+				local previousDirector = Director:getForSide(groupCommander.side)
+				local assignment = previousDirector and previousDirector:_assignmentFor(groupCommander) or nil
+				if assignment and previousDirector.operation then
+					previousDirector:_cancelUnlaunchedAssignment(previousDirector.operation, assignment, 'source-ownership-changed')
+					released = released + 1
+				end
+				if groupCommander.state == 'preparing' then
+					groupCommander:_enterHangar(false)
+				end
+				if (ownerSide == coalition.side.RED or ownerSide == coalition.side.BLUE)
+					and groupCommander.side ~= ownerSide and groupCommander.template
+					and groupCommander:_templateSupportsSide(ownerSide) then
+					groupCommander.side = ownerSide
+					groupCommander._airLimitDenialCount = nil
+					groupCommander._airLimitRetryAt = nil
+					groupCommander._capLimitRetryGeneration = nil
+					groupCommander._spawnEvalCache = nil
+					groupCommander._spawnEvalLast = nil
+					groupCommander:_clearDormantFsmDelay()
+					self.battleCommander:_syncNonCapSpawnBucketsForGroup(groupCommander)
+					self.battleCommander:_syncCapSpawnBucketsForGroup(groupCommander)
+					changed = changed + 1
+				end
+			end
+		end
+		if changed > 0 or released > 0 then
+			self.battleCommander:markFsmGroupFilterDirty()
+			self.battleCommander:markReindexCombatFilterDirty()
+			env.info('[CommanderOwnership] zone=' .. tostring(self.zone)
+				.. ' owner=' .. tostring(ownerSide) .. ' changed=' .. tostring(changed)
+				.. ' released=' .. tostring(released) .. ' reason=' .. tostring(reason))
+		end
+		return changed, released
 	end
 
 --[[
@@ -33671,6 +35048,7 @@ function ZoneCommander:init()
 	for i, v in ipairs(self.groups) do
 		v:init()
 	end
+	self:_syncDormantCommanderOwnership('init')
 
 	self:_refreshSupplyMenuCache()
 	self._advanceCaptureEligibleForMenu = self:canAdvanceCapture()
@@ -33858,6 +35236,9 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		end
 		if self:_gcIsLiveForFsm(gc) then
 			return nil
+		end
+		if self.side == coalition.side.NEUTRAL then
+			return "source_neutral"
 		end
 		if gc.template and self.side ~= 0 and not gc:_templateSupportsSide(self.side) then
 			return "template_side_unavailable"
@@ -34109,11 +35490,10 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 
 			for i,v in pairs(self.built) do
 				local gr = Group.getByName(v)
-				local st = StaticObject.getByName(v)
-
 				if gr and not gr:isExist() then
 					gr = nil
 				end
+				local st = (not gr) and StaticObject.getByName(v) or nil
 
 				if st and st:isExist() == false then
 					st = nil
@@ -34271,6 +35651,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			self.spawnSubZones = {}
 			self.LogisticCenter = false
 			self.side = 0
+			self:_syncDormantCommanderOwnership('neutralized')
 			bc:markCapTargetStateDirty()
 			if #_zoneIntelGetActiveSidesForZone(self.zone) > 0 then
 				stopZoneIntel(self.zone, true)
@@ -34667,9 +36048,10 @@ function ZoneCommander:capture(newside,silent)
 			LogisticCenter = self.LogisticCenter,
 			advanceCaptureEligible = self._advanceCaptureEligibleForMenu,
 		}
-        local previousSide = self.side
-        self.side = newside
-        bc:markCapTargetStateDirty()
+		local previousSide = self.side
+		self.side = newside
+		self:_syncDormantCommanderOwnership('captured')
+		bc:markCapTargetStateDirty()
         bc:markFsmGroupFilterDirty()
         bc:markReindexCombatFilterDirty()
         bc:markSupplyCacheDirty()
@@ -37484,6 +38866,35 @@ RedCasCountIgnoreTypes = RedCasCountIgnoreTypes or {
 	["CH-47Fbl1"] = true,
 }
 
+function BattleCommander:getPlayerSnapshot(side, now)
+	now = now or timer.getAbsTime()
+	self._playerSnapshotsBySide = self._playerSnapshotsBySide or {}
+	local cached = self._playerSnapshotsBySide[side]
+	local ttl = self.playerSnapshotTtlSec or 1
+	if cached and now - cached.builtAt <= ttl then
+		return cached
+	end
+
+	local units = coalition.getPlayers(side) or {}
+	local rows = {}
+	for _, unit in ipairs(units) do
+		local desc = unit:getDesc()
+		local category = desc and desc.category
+		rows[#rows + 1] = {
+			unit = unit,
+			playerName = unit:getPlayerName(),
+			unitType = unit:getTypeName(),
+			category = category,
+			isAirplane = category == Unit.Category.AIRPLANE,
+			isHelicopter = category == Unit.Category.HELICOPTER,
+			point = unit:getPoint(),
+		}
+	end
+	local snapshot = { side = side, builtAt = now, rows = rows }
+	self._playerSnapshotsBySide[side] = snapshot
+	return snapshot
+end
+
 
 function getBlueCasPlayersCount()
     local cnt = 0
@@ -37513,25 +38924,24 @@ function getBluePlayersCount()
 end
 
 function refreshPlayers()
-    local oldBlue = getBluePlayersCount()
+	local oldBlue = getBluePlayersCount()
     local oldBlueCas = getBlueCasPlayersCount()
     local oldAny = getAnyPlayersCount()
 
-    local b = coalition.getPlayers(coalition.side.BLUE)
+	local b = bc:getPlayerSnapshot(coalition.side.BLUE).rows
     local currentBlue = {}
     local currentBlueAll = {}
     local currentBlueCas = {}
     local currentRedCas = {}
     local currentAll = {}
-    for _, unit in ipairs(b) do
-        local nm = unit:getPlayerName()
-        if nm then
-            currentAll[nm] = true
-            currentBlueAll[nm] = true
-            local unitType = unit:getTypeName()
-            local desc = unit:getDesc()
-            local isAirplane = desc and desc.category == Unit.Category.AIRPLANE
-			local isHelicopter = desc and desc.category == Unit.Category.HELICOPTER
+	for _, player in ipairs(b) do
+		local nm = player.playerName
+		if nm then
+			currentAll[nm] = true
+			currentBlueAll[nm] = true
+			local unitType = player.unitType
+			local isAirplane = player.isAirplane
+			local isHelicopter = player.isHelicopter
             if isAirplane and not CapCountIgnoreTypes[unitType] then
                 currentBlue[nm] = true
             end
@@ -37576,15 +38986,14 @@ function refreshPlayers()
         playerListRedCas[newName] = true
     end
 
-    local r = coalition.getPlayers(coalition.side.RED)
-    local currentRed = {}
-    for _, unit in ipairs(r) do
-        local nm = unit:getPlayerName()
-        if nm then
-            currentAll[nm] = true
-            local unitType = unit:getTypeName()
-            local desc = unit:getDesc()
-            if desc and desc.category == Unit.Category.AIRPLANE then
+	local r = bc:getPlayerSnapshot(coalition.side.RED).rows
+	local currentRed = {}
+	for _, player in ipairs(r) do
+		local nm = player.playerName
+		if nm then
+			currentAll[nm] = true
+			local unitType = player.unitType
+			if player.isAirplane then
                 if not BlueCasCountIgnoreTypes[unitType] then
                     currentRed[nm] = true
                 end
@@ -37608,11 +39017,16 @@ function refreshPlayers()
     for name in pairs(currentAll) do
         AnyPlayers[name] = true
     end
-    for name in pairs(playerZoneSpawn or {}) do
-        if not currentAll[name] then
-            playerZoneSpawn[name] = nil
-        end
-    end
+	local removedPlayerSpawnZone = false
+	for name in pairs(playerZoneSpawn or {}) do
+		if not currentAll[name] then
+			playerZoneSpawn[name] = nil
+			removedPlayerSpawnZone = true
+		end
+	end
+	if removedPlayerSpawnZone then
+		bc._blueMirroredCapRankingCache = {}
+	end
 
     local newBlue = getBluePlayersCount()
     local newBlueCas = getBlueCasPlayersCount()
@@ -37627,13 +39041,17 @@ function refreshPlayers()
 			end
 		end
 		if not redPreparing then
-			local bestMission, bestTarget, bestDist, bestMeta
+			local bestMission, bestTarget, bestPriority, bestMeta
 			local zoneDistances, capMeta = getClosestCapZonesToPlayers('patrol', 1, nil)
+			zoneDistances = Director:getForSide(coalition.side.RED):rankCapZones('patrol', zoneDistances)
 			local first = zoneDistances[1]
-			if first then bestMission = 'patrol'; bestTarget = first.zone; bestDist = first.distance; bestMeta = capMeta end
+			if first then bestMission = 'patrol'; bestTarget = first.zone; bestPriority = first.directorPriority or 0; bestMeta = capMeta end
 			local zoneDistances2, capMeta2 = getClosestCapZonesToPlayers('attack', 1, nil)
+			zoneDistances2 = Director:getForSide(coalition.side.RED):rankCapZones('attack', zoneDistances2)
 			local first2 = zoneDistances2[1]
-			if first2 and (not bestDist or first2.distance < bestDist) then bestMission = 'attack'; bestTarget = first2.zone; bestDist = first2.distance; bestMeta = capMeta2 end
+			if first2 and (not bestPriority or (first2.directorPriority or 0) > bestPriority) then
+				bestMission = 'attack'; bestTarget = first2.zone; bestPriority = first2.directorPriority or 0; bestMeta = capMeta2
+			end
 			if bestTarget then
 				local ctx = bestMeta and bestMeta.targets and bestMeta.targets[bestTarget]
 				if ctx and ctx.candidates and ctx.candidates[1] then
@@ -38886,6 +40304,15 @@ local cand, capCand = {}, {}
 	end
 	table.sort(cand,function(a,b) return a.score>b.score end)
 	end
+	if #cand > 0 then
+		local selected = Director:getForSide(coalition.side.BLUE):selectMissionTarget('RUNWAYSTRIKE', cand, nil)
+		for index, entry in ipairs(cand) do
+			if entry == selected then
+				cand[1], cand[index] = cand[index], cand[1]
+				break
+			end
+		end
+	end
     for i=1,math.min(3,#cand) do
       local e=cand[i]
       --env.info(string.format("RUNWAY-DBG: option %d  %s  dist=%.0f  score=%d",i,e.zone.zone,e.dist,e.score))
@@ -38982,13 +40409,313 @@ local cand, capCand = {}, {}
   return true
 end
 
-function checkAndGenerateCASMission()
-	if casMissionTarget ~= nil or timer.getTime() < casMissionCooldownUntil then
+BattleCommander.CAS_MISSION_MAX_SLOTS = 4
+BattleCommander.CAS_MISSION_END_GRACE_SEC = 65
+BattleCommander.CAS_MISSION_EXTRA_MIN_HOPS = 2
+
+function BattleCommander:initCasMissions()
+	self.casMissionMaxSlots = BattleCommander.CAS_MISSION_MAX_SLOTS
+	self.casMissions = { slots = {} }
+	for slotIndex = 1, self.casMissionMaxSlots do
+		self.casMissions.slots[slotIndex] = {
+			index = slotIndex,
+			targetZone = nil,
+			targetKills = 0,
+			totalKills = 0,
+			killsByPlayer = {},
+			rewardEligible = {},
+			rewardWeights = {},
+			countedUnitIds = {},
+			completed = false,
+			active = false,
+			started = false,
+			invalidSince = nil,
+			cooldownUntil = 0,
+		}
+	end
+end
+
+function BattleCommander:resetCasMissionSlot(slotIndex)
+	local slot = self.casMissions.slots[slotIndex]
+	local cooldownUntil = slot.cooldownUntil or 0
+	self.casMissions.slots[slotIndex] = {
+		index = slotIndex,
+		targetZone = nil,
+		targetKills = 0,
+		totalKills = 0,
+		killsByPlayer = {},
+		rewardEligible = {},
+		rewardWeights = {},
+		countedUnitIds = {},
+		completed = false,
+		active = false,
+		started = false,
+		invalidSince = nil,
+		cooldownUntil = cooldownUntil,
+	}
+end
+
+function BattleCommander:_casMissionStatEligible(statName)
+	return statName == 'Ground Units' or statName == 'SAM' or statName == 'Infantry'
+end
+
+function BattleCommander:_casMissionZoneTargetCount(zoneName, targetCounts)
+	local cachedCount = targetCounts and targetCounts[zoneName]
+	if cachedCount ~= nil then return cachedCount end
+	local zoneObj = self:getZoneByName(zoneName)
+	local count = 0
+	for _, builtName in pairs(zoneObj.built or {}) do
+		local group = Group.getByName(builtName)
+		if group and group:isExist() then
+			for _, unit in ipairs(group:getUnits() or {}) do
+				if unit:isExist() and unit:getLife() >= 1 and unit:getCoalition() == coalition.side.RED
+					and (unit:hasAttribute('Ground Units') or unit:hasAttribute('SAM') or unit:hasAttribute('Infantry')) then
+					count = count + 1
+				end
+			end
+		end
+	end
+	if targetCounts then targetCounts[zoneName] = count end
+	return count
+end
+
+function BattleCommander:_casMissionZoneEligible(zoneName, targetCounts)
+	local zoneObj = zoneName and self:getZoneByName(zoneName) or nil
+	if not zoneObj or zoneObj.side ~= coalition.side.RED or not zoneObj.active or zoneObj.suspended or zoneObj.isHidden then
+		return false
+	end
+	local lowerName = zoneObj.zone:lower()
+	if lowerName:find('hidden', 1, true) or lowerName:find('sam', 1, true) or lowerName:find('defence', 1, true) then
+		return false
+	end
+	local connectedToBlue = false
+	for neighborName, _ in pairs(self.connectionMap[zoneObj.zone] or {}) do
+		local neighbor = self:getZoneByName(neighborName)
+		if neighbor and neighbor.side == coalition.side.BLUE and neighbor.active and not neighbor.suspended and not neighbor.isHidden then
+			connectedToBlue = true
+			break
+		end
+	end
+	return connectedToBlue and self:_casMissionZoneTargetCount(zoneObj.zone, targetCounts) > 0
+end
+
+function BattleCommander:getDesiredCasMissionSlots()
+	local casPlayers = getBlueCasPlayersCount() or 0
+	if casPlayers >= 6 then return 4 end
+	if casPlayers >= 3 then return 3 end
+	return 2
+end
+
+function BattleCommander:_casMissionSeparateFromTargets(zoneName, selectedTargets)
+	local blueDirector = Director:getForSide(coalition.side.BLUE)
+	local minHops = BattleCommander.CAS_MISSION_EXTRA_MIN_HOPS
+	for selectedName, _ in pairs(selectedTargets or {}) do
+		if selectedName ~= zoneName then
+			local hops = blueDirector:_graphHops(selectedName, zoneName, minHops - 1)
+			if hops and hops < minHops then return false end
+		end
+	end
+	return true
+end
+
+function BattleCommander:_casMissionCandidateZones(excludedTargets, requireSeparateFront, targetCounts)
+	local candidates = {}
+	for _, zoneObj in ipairs(self.zones) do
+		if not excludedTargets[zoneObj.zone] and self:_casMissionZoneEligible(zoneObj.zone, targetCounts)
+			and (not requireSeparateFront or self:_casMissionSeparateFromTargets(zoneObj.zone, excludedTargets)) then
+			candidates[#candidates + 1] = zoneObj.zone
+		end
+	end
+	return candidates
+end
+
+function BattleCommander:_startCasMissionSlot(slotIndex, targetZone, targetCounts)
+	local slot = self.casMissions.slots[slotIndex]
+	local availableTargets = self:_casMissionZoneTargetCount(targetZone, targetCounts)
+	local targetKills = math.ceil(availableTargets * 0.35)
+	targetKills = math.min(12, math.max(4, targetKills))
+	targetKills = math.min(availableTargets, targetKills)
+	if targetKills < 1 then return false end
+
+	slot.targetZone = targetZone
+	slot.targetKills = targetKills
+	slot.totalKills = 0
+	slot.killsByPlayer = {}
+	slot.rewardEligible = {}
+	slot.rewardWeights = {}
+	slot.countedUnitIds = {}
+	slot.completed = false
+	slot.active = true
+	slot.started = false
+	slot.invalidSince = nil
+	return true
+end
+
+function BattleCommander:_addCasMissionRewardParticipants(slot, playerName)
+	local participants = {}
+	for _, crewName in ipairs(self:getMulticrewPlayersNow(playerName)) do
+		participants[crewName] = true
+	end
+	local jointPartner = self.jointPairs and self.jointPairs[playerName]
+	if jointPartner and self:_jointPartnerAlive(jointPartner) then
+		for _, crewName in ipairs(self:getMulticrewPlayersNow(jointPartner)) do
+			participants[crewName] = true
+		end
+	end
+	for participantName, _ in pairs(participants) do
+		slot.rewardEligible[participantName] = true
+		slot.rewardWeights[participantName] = (slot.rewardWeights[participantName] or 0) + 1
+	end
+end
+
+function BattleCommander:markCasMissionPlayerUnavailable(playerName)
+	if not self.casMissions then return end
+	for slotIndex = 1, self.casMissionMaxSlots do
+		local slot = self.casMissions.slots[slotIndex]
+		slot.rewardEligible[playerName] = nil
+		slot.rewardWeights[playerName] = nil
+	end
+end
+
+function BattleCommander:buildCasMissionRewards(slotIndex)
+	local slot = self.casMissions.slots[slotIndex]
+	local participantNames = {}
+	local totalWeight = 0
+	for playerName, eligible in pairs(slot.rewardEligible) do
+		local weight = slot.rewardWeights[playerName] or 0
+		if eligible and weight > 0 and self:_jointPartnerAlive(playerName) then
+			participantNames[#participantNames + 1] = playerName
+			totalWeight = totalWeight + weight
+		end
+	end
+	table.sort(participantNames)
+
+	local rewardPool = slot.targetKills * 30
+	local rewards = {}
+	if #participantNames == 0 then return participantNames, rewards, rewardPool end
+
+	local equalPool = math.floor(rewardPool * 0.5)
+	local contributionPool = rewardPool - equalPool
+	local fractions = {}
+	local assignedReward = 0
+	for _, playerName in ipairs(participantNames) do
+		local exactReward = (equalPool / #participantNames)
+			+ (contributionPool * slot.rewardWeights[playerName] / totalWeight)
+		local reward = math.floor(exactReward)
+		rewards[playerName] = reward
+		fractions[playerName] = exactReward - reward
+		assignedReward = assignedReward + reward
+	end
+
+	local remainderOrder = {}
+	for _, playerName in ipairs(participantNames) do
+		remainderOrder[#remainderOrder + 1] = playerName
+	end
+	table.sort(remainderOrder, function(a, b)
+		if fractions[a] ~= fractions[b] then return fractions[a] > fractions[b] end
+		if slot.rewardWeights[a] ~= slot.rewardWeights[b] then return slot.rewardWeights[a] > slot.rewardWeights[b] end
+		return a < b
+	end)
+	for remainderIndex = 1, rewardPool - assignedReward do
+		local playerName = remainderOrder[remainderIndex]
+		rewards[playerName] = rewards[playerName] + 1
+	end
+	return participantNames, rewards, rewardPool
+end
+
+function BattleCommander:isCasMissionSlotContinuing(slotIndex)
+	local slot = self.casMissions.slots[slotIndex]
+	local targetZone = self:getZoneByName(slot.targetZone)
+	if targetZone and targetZone.side == coalition.side.RED and targetZone.active and not targetZone.suspended then
+		slot.invalidSince = nil
 		return true
 	end
-	casTargetKills = math.random(10,16)
-	casMissionTarget = 'Active'
-	return true
+	slot.invalidSince = slot.invalidSince or timer.getTime()
+	return timer.getTime() < slot.invalidSince + BattleCommander.CAS_MISSION_END_GRACE_SEC
+end
+
+function BattleCommander:registerCasMissionKill(playerName, unitId, statName, position, targetCoalition)
+	if not self.casMissions then return false end
+	if targetCoalition ~= coalition.side.RED or not self:_casMissionStatEligible(statName) then return false end
+	for slotIndex = 1, self.casMissionMaxSlots do
+		local slot = self.casMissions.slots[slotIndex]
+		if slot.active and not slot.countedUnitIds[unitId] and self:isCasMissionSlotContinuing(slotIndex) then
+			local targetZone = self:getZoneByName(slot.targetZone)
+			local customZone = targetZone and (targetZone._cz or CustomZone:getByName(targetZone.zone)) or nil
+			if targetZone and customZone and customZone:isInside(position) then
+				slot.countedUnitIds[unitId] = true
+				slot.totalKills = slot.totalKills + 1
+				slot.killsByPlayer[playerName] = (slot.killsByPlayer[playerName] or 0) + 1
+				self:_addCasMissionRewardParticipants(slot, playerName)
+				if slot.totalKills >= slot.targetKills then
+					slot.completed = true
+					slot.active = false
+				end
+				return true
+			end
+		end
+	end
+	return false
+end
+
+function BattleCommander:registerCasMissionObjectKill(playerName, target)
+	local _, _, statName = self:objectToRewardPoints2(target)
+	return self:registerCasMissionKill(playerName, target:getID(), statName, target:getPoint(), target:getCoalition())
+end
+
+function checkAndGenerateCASMission()
+	local now = timer.getTime()
+	local targetCounts = {}
+	local desiredSlots = bc:getDesiredCasMissionSlots()
+	local excludedTargets = {}
+	local availableSlots = {}
+	for slotIndex = 1, bc.casMissionMaxSlots do
+		local slot = bc.casMissions.slots[slotIndex]
+		if slot.active or slot.completed then
+			excludedTargets[slot.targetZone] = true
+		elseif slotIndex <= desiredSlots and now >= (slot.cooldownUntil or 0) then
+			availableSlots[#availableSlots + 1] = slotIndex
+		end
+	end
+
+	for _, slotIndex in ipairs(availableSlots) do
+		local preferredTarget = nil
+		if slotIndex == 1 then
+			preferredTarget = attackTarget1
+		elseif slotIndex == 2 then
+			preferredTarget = attackTarget2
+		end
+		if preferredTarget and not excludedTargets[preferredTarget] and bc:_casMissionZoneEligible(preferredTarget, targetCounts) then
+			if bc:_startCasMissionSlot(slotIndex, preferredTarget, targetCounts) then
+				excludedTargets[preferredTarget] = true
+			end
+		end
+	end
+
+	for _, slotIndex in ipairs(availableSlots) do
+		local slot = bc.casMissions.slots[slotIndex]
+		if not slot.active and not slot.completed then
+			local candidates = bc:_casMissionCandidateZones(excludedTargets, slotIndex >= 3, targetCounts)
+			local primaryZone = nil
+			if slotIndex == 1 then
+				primaryZone = attackTarget1 or attackTarget2
+			elseif slotIndex == 2 then
+				primaryZone = attackTarget2 or attackTarget1
+			end
+			local target = Director:getForSide(coalition.side.BLUE):selectMissionTarget('CAS', candidates, {
+				primaryZone = primaryZone,
+			})
+			if target and bc:_startCasMissionSlot(slotIndex, target, targetCounts) then
+				excludedTargets[target] = true
+			end
+		end
+	end
+
+	for slotIndex = 1, bc.casMissionMaxSlots do
+		local slot = bc.casMissions.slots[slotIndex]
+		if slot.active or slot.completed then return true end
+	end
+	return false
 end
 
 local function _buildReconMissionClientSet()
@@ -39201,6 +40928,42 @@ function getClosestCapZonesToPlayers(missionType, side, preMeta)
 	if #anchors == 0 then return {}, preMeta end
 
 	local anchorCount = #anchors
+	local anchorSignatureParts = {}
+	for index = 1, anchorCount do
+		anchorSignatureParts[index] = anchors[index].zoneName
+	end
+	t_sort(anchorSignatureParts)
+	local baseCacheKey = table.concat({
+		tostring(side),
+		tostring(missionType),
+		tostring(bc._capSpawnBucketsVersion or 0),
+		tostring(bc._capTargetStateGeneration or 0),
+		table.concat(anchorSignatureParts, '|'),
+	}, '#')
+	bc._capBaseRankingCache = bc._capBaseRankingCache or { [1] = {}, [2] = {} }
+	local baseCacheByMission = bc._capBaseRankingCache[side]
+	local now = timer.getAbsTime()
+	local cachedBase = baseCacheByMission and baseCacheByMission[missionType]
+	local cacheTtlSec = math.max(bc.spawnEvalCacheTtlSec or 90, 300)
+	if not DebugIsOnCAP and cachedBase and cachedBase.key == baseCacheKey and now - cachedBase.builtAt <= cacheTtlSec then
+		local cachedMeta = preMeta
+		if missionType == 'patrol' or missionType == 'attack' then
+			local targets = (CapTargets and CapTargets[side] and CapTargets[side][missionType]) or {}
+			if not cachedMeta then
+				local bluePlayers = getBluePlayersCount() or 0
+				local limit = (side == 2) and getBlueCapLimit(bluePlayers) or getCapLimit(bluePlayers)
+				local currentCap = bc:getActiveCAPCount(side, missionType)
+				local capLeft = limit - currentCap
+				if capLeft < 1 then capLeft = 1 end
+				cachedMeta = { side=side, mission=missionType, bluePlayers=bluePlayers, limit=limit, currentCap=currentCap, capLeft=capLeft, targets=targets, enemyAdj=cachedBase.enemyAdj }
+			else
+				cachedMeta.targets = targets
+				cachedMeta.enemyAdj = cachedBase.enemyAdj
+			end
+		end
+		return cachedBase.zoneDistances, cachedMeta
+	end
+
 	local anchorRows = {}
 	for i=1,anchorCount do
 		anchorRows[i] = CapAnchorRowByZoneName[anchors[i].zoneName]
@@ -39247,6 +41010,15 @@ function getClosestCapZonesToPlayers(missionType, side, preMeta)
 		zoneDistances[#zoneDistances+1] = { zone = znB, distance = avg }
 	end
 	t_sort(zoneDistances, function(a,b) return a.distance < b.distance end)
+	zoneDistances._capCacheKey = baseCacheKey
+	if not DebugIsOnCAP and baseCacheByMission then
+		baseCacheByMission[missionType] = {
+			key = baseCacheKey,
+			builtAt = now,
+			zoneDistances = zoneDistances,
+			enemyAdj = enemyAdjMap,
+		}
+	end
 
 	local capMeta = preMeta
 	if missionType=='patrol' or missionType=='attack' then
@@ -39302,7 +41074,7 @@ function GroupCommander:_clearDormantFsmDelay()
 	self._dormantFsmReason = nil
 end
 
-function GroupCommander:_hasDormantFsmBypass()
+function GroupCommander:_hasDormantFsmBypass(ignoreSpawnEvalCache)
 	if self:_shouldSpawnImmediate() then return true end
 	if self._shopLaunchRequested == true then return true end
 	if self._pendingShopPurchase then return true end
@@ -39312,7 +41084,7 @@ function GroupCommander:_hasDormantFsmBypass()
 	if self._supplyCtldFarpTakeoff or self._supplyCtldFarpTakeoffCheckAt or self._supplyCtldFarpExistenceCheckAt then return true end
 	if self._supplyRetryNoCargo == true or self._supplyRetrySkipBlockedHelo == true then return true end
 	if self._pendingRestoreHeloRoutePlan or self._pendingRestorePlaneRoutePlan then return true end
-	if self._spawnEvalCache then return true end
+	if self._spawnEvalCache and ignoreSpawnEvalCache ~= true then return true end
 	if self.Spawned == true then return true end
 	if self.spawnedName and self.spawnedName ~= "" then return true end
 	if self._dcsGroup then return true end
@@ -39389,6 +41161,15 @@ function GroupCommander:_shouldSkipDormantFsmUpdate(now)
 		self:_clearDormantFsmDelay()
 		return false
 	end
+	if self._dormantFsmReason == Director.HOLD_REASON then return true end
+
+	local director = Director:getForSide(self.side)
+	if director and not director:allowsGroupSpawn(self)
+		and not self:_hasDormantFsmBypass(true) then
+		self._nextDormantFsmCheckAt = nil
+		self._dormantFsmReason = Director.HOLD_REASON
+		return true
+	end
 
 	if self:_hasDormantFsmBypass() then
 		self:_clearDormantFsmDelay()
@@ -39442,12 +41223,24 @@ function GroupCommander:_consumeShouldSpawnDecision(triggerState, ignore)
 		return self:shouldSpawn(ignore)
 	end
 	local bcObj = self.zoneCommander and self.zoneCommander.battleCommander
+	local director = Director:getForSide(self.side)
+	if director and not director:allowsGroupSpawn(self) then
+		return false, Director.HOLD_REASON
+	end
 	if not bcObj or bcObj.spawnEvalEnabled == false then
-		return self:shouldSpawn(ignore)
+		local decision, denialReason = self:shouldSpawn(ignore)
+		if decision == false and director and self.MissionType == 'CAP'
+			and director:onManagedCapSpawnDenied(self, denialReason) then
+			denialReason = Director.HOLD_REASON
+		end
+		return decision, denialReason
 	end
 	local decision, denialReason = bcObj:_consumeShouldSpawnEval(self, triggerState, ignore)
 	if decision == nil then
 		bcObj:_queueShouldSpawnEval(self, triggerState, ignore)
+	elseif decision == false and director and self.MissionType == 'CAP'
+		and director:onManagedCapSpawnDenied(self, denialReason) then
+		denialReason = Director.HOLD_REASON
 	end
 	return decision, denialReason
 end
@@ -39595,12 +41388,6 @@ function GroupCommander:shouldSpawn(ignore)
 						return false
 					end
 					local players = getRedCasPlayersCount() or 0
-					if self.MissionType ~='CAS' and players == 0 then
-						if AIR_LIMIT_RETRY_POLICY[self.MissionType] then
-							return false, AIR_LIMIT_DENIAL_REASON
-						end
-						return false
-					end
 					local planeLimit = 0
 					if self.MissionType=='CAS' then
 						planeLimit = getRedCasLimit(players) or 0
@@ -39703,6 +41490,8 @@ function GroupCommander:shouldSpawn(ignore)
             if tg.side == self.side then
                 local bluePlayers = getBluePlayersCount() or 0
                 local limit = (self.side==2) and getBlueCapLimit(bluePlayers) or getCapLimit(bluePlayers)
+				local director = Director:getForSide(self.side)
+				if director then limit = director:capMechanicalLimitFor(self, limit) end
                 local currentCap = bc:getActiveCAPCount(self.side, 'patrol')
 
                 if self.side==2 and limit==0 then return false end
@@ -39716,8 +41505,7 @@ function GroupCommander:shouldSpawn(ignore)
                 local capLeft = limit - currentCap
                 if capLeft < 1 then capLeft = 1 end
                 local zoneDistances, capMeta
-				if self.side == 2 and bc.getCapSpawnRankingForSide then
-					local capMetaSeed = {
+				local capMetaSeed = {
 						side = self.side,
 						mission = 'patrol',
 						bluePlayers = bluePlayers,
@@ -39725,9 +41513,11 @@ function GroupCommander:shouldSpawn(ignore)
 						currentCap = currentCap,
 						capLeft = capLeft
 					}
+				if self.side == 2 and bc.getCapSpawnRankingForSide then
 					zoneDistances, capMeta = bc:getCapSpawnRankingForSide('patrol', self.side, capMetaSeed)
 				else
-					zoneDistances, capMeta = getClosestCapZonesToPlayers('patrol', self.side, nil)
+					zoneDistances, capMeta = getClosestCapZonesToPlayers('patrol', self.side, capMetaSeed)
+					zoneDistances = Director:getForSide(self.side):rankCapZones('patrol', zoneDistances)
 				end
 				if #zoneDistances==0 then return true end
                 local capWindow = math.min(#zoneDistances, capLeft)
@@ -39785,6 +41575,8 @@ function GroupCommander:shouldSpawn(ignore)
             if tg.side ~= self.side and tg.side ~= 0 then
                 local bluePlayers = getBluePlayersCount() or 0
                 local limit = (self.side==2) and getBlueCapLimit(bluePlayers) or getCapLimit(bluePlayers)
+				local director = Director:getForSide(self.side)
+				if director then limit = director:capMechanicalLimitFor(self, limit) end
                 local currentCap = bc:getActiveCAPCount(self.side, 'attack')
                 if self.side==2 and limit==0 then return false end
                 if currentCap >= limit then
@@ -39797,8 +41589,7 @@ function GroupCommander:shouldSpawn(ignore)
                 local capLeft = limit - currentCap
                 if capLeft < 1 then capLeft = 1 end
                 local zoneDistances, capMeta
-				if self.side == 2 and bc.getCapSpawnRankingForSide then
-					local capMetaSeed = {
+				local capMetaSeed = {
 						side = self.side,
 						mission = 'attack',
 						bluePlayers = bluePlayers,
@@ -39806,9 +41597,11 @@ function GroupCommander:shouldSpawn(ignore)
 						currentCap = currentCap,
 						capLeft = capLeft
 					}
+				if self.side == 2 and bc.getCapSpawnRankingForSide then
 					zoneDistances, capMeta = bc:getCapSpawnRankingForSide('attack', self.side, capMetaSeed)
 				else
-					zoneDistances, capMeta = getClosestCapZonesToPlayers('attack', self.side, nil)
+					zoneDistances, capMeta = getClosestCapZonesToPlayers('attack', self.side, capMetaSeed)
+					zoneDistances = Director:getForSide(self.side):rankCapZones('attack', zoneDistances)
 				end
 				if #zoneDistances==0 then return true end
                 local capWindow = math.min(#zoneDistances, capLeft)
@@ -41164,6 +42957,9 @@ end
 			elseif denialReason == AIR_LIMIT_DENIAL_REASON then
 				self:_scheduleAirLimitRetry(now)
 				return
+			elseif denialReason == Director.HOLD_REASON then
+				self:_enterHangar(false)
+				return
 			elseif self._pendingShopPurchase then
 				self:_enterHangar(false)
 				return
@@ -42414,7 +44210,7 @@ end
 				end
 			end
 
-            local canSpawn = self:_consumeShouldSpawnDecision('preparing', false)
+			local canSpawn, denialReason = self:_consumeShouldSpawnDecision('preparing', false)
             if canSpawn == nil then return end
             if canSpawn then
 				self:clearWreckage()
@@ -42569,7 +44365,10 @@ end
 				if self.SetActiveMission then
 					ActiveMission[self.name] = true
 				end
-            elseif self._pendingShopPurchase then
+			elseif denialReason == Director.HOLD_REASON then
+				self:_enterHangar(false)
+				return
+			elseif self._pendingShopPurchase then
                 self:_enterHangar(false)
                 return
             end
@@ -42811,11 +44610,11 @@ end
 		if self._dynamicHybridRetired == true then
 			return
 		end
+		local bcRef = self.zoneCommander.battleCommander
 		local now = timer.getAbsTime()
 		if self:_shouldSkipDormantFsmUpdate(now) then
 			return
 		end
-		local bcRef = self.zoneCommander.battleCommander
 		bcRef._fsmCrashCurrentGroup = self.name
 		if self.type == 'air' or self.type == 'carrier_air' then
 			bcRef._fsmCrashPhase = 'processAir'
@@ -42833,10 +44632,5878 @@ end
 			if prevState~=self.state or prevSpawned~=spawnedNow or prevSide~=self.side or prevMission~=self.mission or prevMissionType~=self.MissionType or prevUnitCategory~=self.unitCategory or prevTargetzone~=self.targetzone then
 				bcRef:_syncNonCapSpawnBucketsForGroup(self)
 				bcRef:_syncCapSpawnBucketsForGroup(self)
+				local director = Director:getForSide(self.side)
+				if director then
+					director:onGroupStateChanged(self, prevState, self.state, prevSpawned, spawnedNow)
+				end
 			end
 		elseif self.type == 'surface' then
 			bcRef._fsmCrashPhase = 'processSurface'
+			local prevState = self.state
+			local prevSpawned = self.Spawned and true or false
 			self:processSurface()
+			local spawnedNow = self.Spawned and true or false
+			if prevState ~= self.state or prevSpawned ~= spawnedNow then
+				local director = Director:getForSide(self.side)
+				if director then
+					director:onGroupStateChanged(self, prevState, self.state, prevSpawned, spawnedNow)
+				end
+			end
+		end
+	end
+
+end
+
+Director = {}
+do
+	Director.instancesBySide = Director.instancesBySide or {}
+	Director.HOLD_REASON = "director-hold"
+	Director.LIVE_STATES = {
+		takeoff = true,
+		inair = true,
+		landed = true,
+		enroute = true,
+		atdestination = true,
+	}
+
+	function Director:new(obj)
+		obj = obj or {}
+		setmetatable(obj, self)
+		self.__index = self
+		obj.config = obj:_normalizeConfig(obj.config)
+		obj.state = obj.state or 'waiting'
+		obj.operationCounter = obj.operationCounter or 0
+		obj.history = obj.history or {}
+		obj.doctrineOutcomes = obj.doctrineOutcomes or {}
+		obj.targetOutcomes = obj.targetOutcomes or {}
+		obj.roleOutcomes = obj.roleOutcomes or {}
+		obj.zoneUpgradeHistory = obj.zoneUpgradeHistory or {}
+		obj.zoneUpgradeCooldownUntil = obj.zoneUpgradeCooldownUntil or 0
+		obj.routineCapPermits = obj.routineCapPermits or {}
+		obj.routineCapCooldownByName = obj.routineCapCooldownByName or {}
+		obj.routineCapRevectorCooldownByTarget = obj.routineCapRevectorCooldownByTarget or {}
+		obj.routineCapRevectorNextAt = obj.routineCapRevectorNextAt or 0
+		obj.started = false
+		obj.ready = false
+		return obj
+	end
+
+	function Director:_normalizeConfig(config)
+		config = config or {}
+		if config.enabled == nil then config.enabled = true end
+		if config.log == nil then config.log = true end
+		config.startDelaySec = config.startDelaySec or 30
+		config.tickSec = config.tickSec or 15
+		config.planningRetrySec = config.planningRetrySec or 90
+		config.recoveryMinSec = config.recoveryMinSec or 600
+		config.recoveryMaxSec = config.recoveryMaxSec or 1200
+		config.shapingMaxSec = config.shapingMaxSec or 720
+		config.assaultMaxSec = config.assaultMaxSec or 1800
+		config.exploitMaxSec = config.exploitMaxSec or 900
+		config.operationMaxSec = config.operationMaxSec or 3600
+		config.captureReactionWindowSec = config.captureReactionWindowSec or 1200
+		config.historySize = config.historySize or 3
+		config.feintChance = config.feintChance or 25
+		config.feintDelayMinSec = config.feintDelayMinSec or 240
+		config.feintDelayMaxSec = config.feintDelayMaxSec or 420
+		config.maxPackageBase = config.maxPackageBase or 2
+		config.maxPackagePerPlayers = config.maxPackagePerPlayers or 2
+		config.maxPackageCap = config.maxPackageCap or 6
+		config.surgeChance = config.surgeChance or 20
+		config.surgeMinPlayers = config.surgeMinPlayers or 3
+		config.surgeShopItemId = config.surgeShopItemId or 'redmassattack'
+		config.surgeInitialDelaySec = config.surgeInitialDelaySec or 900
+		config.surgeCooldownMinSec = config.surgeCooldownMinSec or 2700
+		config.surgeCooldownMaxSec = config.surgeCooldownMaxSec or 5400
+		config.blueAssignmentRetrySec = config.blueAssignmentRetrySec or 120
+		config.capPermitRetrySec = config.capPermitRetrySec or 120
+		return config
+	end
+
+	function Director:getForSide(side)
+		return self.instancesBySide[side]
+	end
+
+	function Director:_log(message)
+		if self.config.log then
+			env.info('[Director] side=' .. tostring(self.side) .. ' state=' .. tostring(self.state) .. ' ' .. tostring(message))
+		end
+	end
+
+	function Director:_randomSeconds(minimum, maximum)
+		minimum = math.floor(minimum or 0)
+		maximum = math.floor(maximum or minimum)
+		if maximum <= minimum then return minimum end
+		return math.random(minimum, maximum)
+	end
+
+	function Director:_zoneUsable(zone, side)
+		return zone and zone.side == side and zone.active and not zone.suspended and not zone.isHidden and not isCarrierZoneName(zone.zone)
+	end
+
+	function Director:_sourceZoneUsable(zone, allowSuspended)
+		return zone and zone.side == self.side and zone.active and (allowSuspended or not zone.suspended)
+			and not zone.isHidden and not isCarrierZoneName(zone.zone)
+	end
+
+	function Director:_buildRegionCatalog(definitions, infrastructureDefinitions)
+		self.regions = {}
+		self.regionById = {}
+		self.regionByZone = {}
+		self.infrastructure = {}
+		self.infrastructureById = {}
+		definitions = definitions or {}
+		if type(definitions) ~= 'table' then
+			error('[Director] TheaterRegions must be a table')
+		end
+
+		for definitionIndex, definition in ipairs(definitions) do
+			if type(definition) ~= 'table' then
+				error('[Director] TheaterRegions entry ' .. tostring(definitionIndex) .. ' must be a table')
+			end
+			local regionId = definition.id
+			if type(regionId) ~= 'string' or regionId == '' then
+				error('[Director] TheaterRegions entry ' .. tostring(definitionIndex) .. ' has no id')
+			end
+			if self.regionById[regionId] then
+				error('[Director] duplicate TheaterRegions id=' .. regionId)
+			end
+			local regionKind = definition.kind or 'region'
+			if type(regionKind) ~= 'string' or regionKind == '' then
+				error('[Director] region=' .. regionId .. ' has invalid kind')
+			end
+
+			local region = {
+				id = regionId,
+				kind = regionKind,
+				name = definition.name or regionId,
+				zones = {},
+				zoneByName = {},
+				coreZoneName = nil,
+				infrastructure = {},
+			}
+			for zoneIndex, zoneDefinition in ipairs(definition.zones or {}) do
+				if type(zoneDefinition) ~= 'table' or type(zoneDefinition.name) ~= 'string' then
+					error('[Director] region=' .. regionId .. ' zone entry ' .. tostring(zoneIndex) .. ' is invalid')
+				end
+				local zoneName = zoneDefinition.name
+				local zoneObj = self.battleCommander:getZoneByName(zoneName)
+				if not zoneObj then
+					error('[Director] region=' .. regionId .. ' missing zone=' .. zoneName)
+				end
+				if self.regionByZone[zoneName] then
+					error('[Director] zone=' .. zoneName .. ' belongs to regions=' .. self.regionByZone[zoneName].id .. ',' .. regionId)
+				end
+				local role = zoneDefinition.role or 'member'
+				if role == 'core' then
+					if region.coreZoneName then
+						error('[Director] region=' .. regionId .. ' has multiple core zones')
+					end
+					region.coreZoneName = zoneName
+				end
+				local member = { name = zoneName, role = role, zone = zoneObj }
+				region.zones[#region.zones + 1] = member
+				region.zoneByName[zoneName] = member
+				self.regionByZone[zoneName] = region
+			end
+			if #region.zones == 0 then
+				error('[Director] region=' .. regionId .. ' has no zones')
+			end
+			if not region.coreZoneName then
+				error('[Director] region=' .. regionId .. ' has no core zone')
+			end
+
+			for infrastructureIndex, infrastructure in ipairs(definition.infrastructure or {}) do
+				if type(infrastructure) ~= 'table' or type(infrastructure.flag) ~= 'string' then
+					error('[Director] region=' .. regionId .. ' infrastructure entry ' .. tostring(infrastructureIndex) .. ' is invalid')
+				end
+				if infrastructure.side ~= nil and infrastructure.side ~= coalition.side.RED and infrastructure.side ~= coalition.side.BLUE then
+					error('[Director] region=' .. regionId .. ' infrastructure flag=' .. infrastructure.flag .. ' has invalid side')
+				end
+				if infrastructure.sourceZone and not self.battleCommander:getZoneByName(infrastructure.sourceZone) then
+					error('[Director] region=' .. regionId .. ' infrastructure flag=' .. infrastructure.flag .. ' missing sourceZone=' .. tostring(infrastructure.sourceZone))
+				end
+				for _, affectedZoneName in ipairs(infrastructure.affects or {}) do
+					if not region.zoneByName[affectedZoneName] then
+						error('[Director] region=' .. regionId .. ' infrastructure flag=' .. infrastructure.flag .. ' affects non-member zone=' .. tostring(affectedZoneName))
+					end
+				end
+				region.infrastructure[#region.infrastructure + 1] = infrastructure
+			end
+
+			self.regions[#self.regions + 1] = region
+			self.regionById[regionId] = region
+		end
+
+		infrastructureDefinitions = infrastructureDefinitions or {}
+		if type(infrastructureDefinitions) ~= 'table' then
+			error('[Director] TheaterInfrastructure must be a table')
+		end
+		for infrastructureIndex, infrastructure in ipairs(infrastructureDefinitions) do
+			if type(infrastructure) ~= 'table' then
+				error('[Director] TheaterInfrastructure entry ' .. tostring(infrastructureIndex) .. ' must be a table')
+			end
+			local infrastructureId = infrastructure.id
+			if type(infrastructureId) ~= 'string' or infrastructureId == '' then
+				error('[Director] TheaterInfrastructure entry ' .. tostring(infrastructureIndex) .. ' has no id')
+			end
+			if self.infrastructureById[infrastructureId] then
+				error('[Director] duplicate TheaterInfrastructure id=' .. infrastructureId)
+			end
+			if type(infrastructure.flag) ~= 'string' or infrastructure.flag == '' then
+				error('[Director] infrastructure=' .. infrastructureId .. ' has no flag')
+			end
+			if infrastructure.side ~= nil and infrastructure.side ~= coalition.side.RED and infrastructure.side ~= coalition.side.BLUE then
+				error('[Director] infrastructure=' .. infrastructureId .. ' has invalid side')
+			end
+			local scope = infrastructure.scope or 'routes'
+			if scope ~= 'routes' and scope ~= 'source' then
+				error('[Director] infrastructure=' .. infrastructureId .. ' has invalid scope=' .. tostring(scope))
+			end
+			local sourceZone = self.battleCommander:getZoneByName(infrastructure.sourceZone)
+			if not sourceZone then
+				error('[Director] infrastructure=' .. infrastructureId .. ' missing sourceZone=' .. tostring(infrastructure.sourceZone))
+			end
+
+			local targetZones = {}
+			local targetSeen = {}
+			if scope == 'source' then
+				for _, groupCommander in ipairs(sourceZone:_getSupplyCache()) do
+					local targetZoneName = groupCommander.targetzone
+					if targetZoneName and not targetSeen[targetZoneName] then
+						targetSeen[targetZoneName] = true
+						targetZones[#targetZones + 1] = targetZoneName
+					end
+				end
+			else
+				for targetIndex, targetZoneName in ipairs(infrastructure.targetZones or {}) do
+					if type(targetZoneName) ~= 'string' or targetZoneName == '' then
+						error('[Director] infrastructure=' .. infrastructureId .. ' target entry ' .. tostring(targetIndex) .. ' is invalid')
+					end
+					if not targetSeen[targetZoneName] then
+						targetSeen[targetZoneName] = true
+						targetZones[#targetZones + 1] = targetZoneName
+					end
+				end
+				if #targetZones == 0 then
+					error('[Director] infrastructure=' .. infrastructureId .. ' route scope has no targetZones')
+				end
+			end
+
+			local compiled = {}
+			for key, value in pairs(infrastructure) do compiled[key] = value end
+			compiled.scope = scope
+			compiled.targetZones = targetZones
+			compiled.affectedRegions = {}
+			self.infrastructure[#self.infrastructure + 1] = compiled
+			self.infrastructureById[infrastructureId] = compiled
+
+			local regionSeen = {}
+			for _, targetZoneName in ipairs(targetZones) do
+				if not self.battleCommander:getZoneByName(targetZoneName) then
+					error('[Director] infrastructure=' .. infrastructureId .. ' missing targetZone=' .. targetZoneName)
+				end
+				local routeFound = false
+				for _, groupCommander in ipairs(sourceZone:_getSupplyCache()) do
+					if groupCommander.targetzone == targetZoneName then
+						routeFound = true
+						break
+					end
+				end
+				if not routeFound then
+					error('[Director] infrastructure=' .. infrastructureId .. ' missing supply route=' .. sourceZone.zone .. '->' .. targetZoneName)
+				end
+				local region = self.regionByZone[targetZoneName]
+				if region and not regionSeen[region.id] then
+					regionSeen[region.id] = true
+					compiled.affectedRegions[#compiled.affectedRegions + 1] = region.id
+					region.infrastructure[#region.infrastructure + 1] = compiled
+				end
+			end
+			table.sort(compiled.targetZones)
+			table.sort(compiled.affectedRegions)
+		end
+
+		self:_log('regions validated count=' .. tostring(#self.regions)
+			.. ' zones=' .. tostring(Utils.getTableSize(self.regionByZone))
+			.. ' infrastructure=' .. tostring(#self.infrastructure))
+	end
+
+	function Director:_buildAreaCatalog(definitions)
+		self.areas = {}
+		self.areaById = {}
+		self.areaByZone = {}
+		self.areaByRegion = {}
+		definitions = definitions or {}
+		if type(definitions) ~= 'table' then
+			error('[Director] TheaterAreas must be a table')
+		end
+
+		for definitionIndex, definition in ipairs(definitions) do
+			if type(definition) ~= 'table' then
+				error('[Director] TheaterAreas entry ' .. tostring(definitionIndex) .. ' must be a table')
+			end
+			local areaId = definition.id
+			if type(areaId) ~= 'string' or areaId == '' then
+				error('[Director] TheaterAreas entry ' .. tostring(definitionIndex) .. ' has no id')
+			end
+			if self.areaById[areaId] then
+				error('[Director] duplicate TheaterAreas id=' .. areaId)
+			end
+			local areaKind = definition.kind or 'strategic_area'
+			if type(areaKind) ~= 'string' or areaKind == '' then
+				error('[Director] area=' .. areaId .. ' has invalid kind')
+			end
+
+			local area = {
+				id = areaId,
+				kind = areaKind,
+				name = definition.name or areaId,
+				zones = {},
+				zoneByName = {},
+				membersByRole = {},
+				regions = {},
+				regionById = {},
+				neighborById = {},
+				neighbors = {},
+				gatewayLinks = {},
+				supplyLinks = {},
+				sourceInfrastructure = {},
+				affectedInfrastructure = {},
+			}
+
+			local function addAreaZone(zoneName, role, regionId, regionRole)
+				local existing = area.zoneByName[zoneName]
+				if existing then
+					if regionId then
+						existing.regionId = regionId
+						existing.regionRole = regionRole
+					end
+					return
+				end
+				local zoneObj = self.battleCommander:getZoneByName(zoneName)
+				if not zoneObj then
+					error('[Director] area=' .. areaId .. ' missing zone=' .. tostring(zoneName))
+				end
+				local previousArea = self.areaByZone[zoneName]
+				if previousArea then
+					error('[Director] zone=' .. zoneName .. ' belongs to areas=' .. previousArea.id .. ',' .. areaId)
+				end
+				local member = {
+					name = zoneName,
+					role = role,
+					zone = zoneObj,
+					regionId = regionId,
+					regionRole = regionRole,
+				}
+				area.zones[#area.zones + 1] = member
+				area.zoneByName[zoneName] = member
+				area.membersByRole[role] = area.membersByRole[role] or {}
+				area.membersByRole[role][#area.membersByRole[role] + 1] = member
+				self.areaByZone[zoneName] = area
+			end
+
+			for zoneIndex, zoneDefinition in ipairs(definition.zones or {}) do
+				if type(zoneDefinition) ~= 'table' or type(zoneDefinition.name) ~= 'string' then
+					error('[Director] area=' .. areaId .. ' zone entry ' .. tostring(zoneIndex) .. ' is invalid')
+				end
+				local role = zoneDefinition.role or 'member'
+				if type(role) ~= 'string' or role == '' then
+					error('[Director] area=' .. areaId .. ' zone=' .. zoneDefinition.name .. ' has invalid role')
+				end
+				addAreaZone(zoneDefinition.name, role)
+			end
+
+			for regionIndex, regionId in ipairs(definition.regions or {}) do
+				if type(regionId) ~= 'string' or regionId == '' then
+					error('[Director] area=' .. areaId .. ' region entry ' .. tostring(regionIndex) .. ' is invalid')
+				end
+				local region = self.regionById[regionId]
+				if not region then
+					error('[Director] area=' .. areaId .. ' missing region=' .. regionId)
+				end
+				if self.areaByRegion[regionId] then
+					error('[Director] region=' .. regionId .. ' belongs to areas=' .. self.areaByRegion[regionId].id .. ',' .. areaId)
+				end
+				area.regions[#area.regions + 1] = region
+				area.regionById[regionId] = region
+				self.areaByRegion[regionId] = area
+				for _, regionMember in ipairs(region.zones) do
+					addAreaZone(regionMember.name, 'region', regionId, regionMember.role)
+				end
+			end
+
+			if #area.zones == 0 then
+				error('[Director] area=' .. areaId .. ' has no zones')
+			end
+			self.areas[#self.areas + 1] = area
+			self.areaById[areaId] = area
+		end
+
+		for _, area in ipairs(self.areas) do
+			local linkSeen = {}
+			for _, member in ipairs(area.zones) do
+				for neighborName in pairs(self.battleCommander.connectionMapHybridSuspend[member.name] or {}) do
+					local neighborArea = self.areaByZone[neighborName]
+					if neighborArea and neighborArea ~= area then
+						area.neighborById[neighborArea.id] = neighborArea
+						local linkKey = member.name .. '|' .. neighborArea.id .. '|' .. neighborName
+						if not linkSeen[linkKey] then
+							linkSeen[linkKey] = true
+							area.gatewayLinks[#area.gatewayLinks + 1] = {
+								fromZone = member.name,
+								toArea = neighborArea.id,
+								toZone = neighborName,
+							}
+						end
+					end
+				end
+			end
+			table.sort(area.gatewayLinks, function(a, b)
+				if a.toArea ~= b.toArea then return a.toArea < b.toArea end
+				if a.fromZone ~= b.fromZone then return a.fromZone < b.fromZone end
+				return a.toZone < b.toZone
+			end)
+		end
+
+		for _, area in ipairs(self.areas) do
+			local supplySeen = {}
+			for _, member in ipairs(area.zones) do
+				for _, groupCommander in ipairs(member.zone:_getSupplyCache()) do
+					local targetArea = self.areaByZone[groupCommander.targetzone]
+					if targetArea and targetArea ~= area then
+						area.neighborById[targetArea.id] = targetArea
+						local supplyKey = member.name .. '|' .. targetArea.id .. '|' .. groupCommander.targetzone
+						if not supplySeen[supplyKey] then
+							supplySeen[supplyKey] = true
+							area.supplyLinks[#area.supplyLinks + 1] = {
+								fromZone = member.name,
+								toArea = targetArea.id,
+								toZone = groupCommander.targetzone,
+							}
+						end
+					end
+				end
+			end
+			for _, neighborArea in pairs(area.neighborById) do
+				area.neighbors[#area.neighbors + 1] = neighborArea
+			end
+			table.sort(area.neighbors, function(a, b) return a.id < b.id end)
+			table.sort(area.supplyLinks, function(a, b)
+				if a.toArea ~= b.toArea then return a.toArea < b.toArea end
+				if a.fromZone ~= b.fromZone then return a.fromZone < b.fromZone end
+				return a.toZone < b.toZone
+			end)
+		end
+
+		for _, infrastructure in ipairs(self.infrastructure) do
+			infrastructure.sourceAreaId = nil
+			infrastructure.affectedAreas = {}
+			local sourceArea = self.areaByZone[infrastructure.sourceZone]
+			if sourceArea then
+				infrastructure.sourceAreaId = sourceArea.id
+				sourceArea.sourceInfrastructure[#sourceArea.sourceInfrastructure + 1] = infrastructure
+			end
+			local affectedSeen = {}
+			for _, targetZoneName in ipairs(infrastructure.targetZones) do
+				local affectedArea = self.areaByZone[targetZoneName]
+				if affectedArea and not affectedSeen[affectedArea.id] then
+					affectedSeen[affectedArea.id] = true
+					infrastructure.affectedAreas[#infrastructure.affectedAreas + 1] = affectedArea.id
+					affectedArea.affectedInfrastructure[#affectedArea.affectedInfrastructure + 1] = infrastructure
+				end
+			end
+			table.sort(infrastructure.affectedAreas)
+		end
+
+		for _, area in ipairs(self.areas) do
+			area.membersByOperationalRole = {}
+			local gatewayZones = {}
+			for _, link in ipairs(area.gatewayLinks) do gatewayZones[link.fromZone] = true end
+			for _, link in ipairs(area.supplyLinks) do gatewayZones[link.fromZone] = true end
+			local infrastructureSourceZones = {}
+			local infrastructureTargetZones = {}
+			for _, infrastructure in ipairs(area.sourceInfrastructure) do
+				infrastructureSourceZones[infrastructure.sourceZone] = true
+			end
+			for _, infrastructure in ipairs(area.affectedInfrastructure) do
+				for _, targetZoneName in ipairs(infrastructure.targetZones) do
+					if area.zoneByName[targetZoneName] then infrastructureTargetZones[targetZoneName] = true end
+				end
+			end
+			for _, member in ipairs(area.zones) do
+				local roles = {}
+				if member.role ~= 'member' and member.role ~= 'region' then roles[member.role] = true end
+				if member.regionRole == 'core' then roles.hub = true end
+				if member.regionRole == 'defence' then roles.defence = true end
+				if member.regionRole == 'foothold' then roles.approach = true end
+				if self:_zoneHasAuthoredRunwayCapability(member.zone) then roles.hub = true end
+				if gatewayZones[member.name] then roles.gateway = true end
+				if math.max(0, tonumber(member.zone.income) or 0) > 0 then roles.resource = true end
+				if infrastructureSourceZones[member.name] then roles.infrastructure = true end
+				if infrastructureTargetZones[member.name] then roles.defence = true end
+				if not next(roles) then roles.member = true end
+				member.operationalRoles = roles
+				for role in pairs(roles) do
+					area.membersByOperationalRole[role] = area.membersByOperationalRole[role] or {}
+					area.membersByOperationalRole[role][#area.membersByOperationalRole[role] + 1] = member
+				end
+			end
+			if not area.membersByOperationalRole.hub then
+				error('[Director] area=' .. area.id .. ' has no authored or inferred hub zone')
+			end
+		end
+
+		self:_log('areas validated count=' .. tostring(#self.areas)
+			.. ' zones=' .. tostring(Utils.getTableSize(self.areaByZone))
+			.. ' regions=' .. tostring(Utils.getTableSize(self.areaByRegion)))
+	end
+
+	function Director:_regionalRecipeHasInventory(recipe)
+		return recipe.sourceCounts.authored > 0 or recipe.sourceCounts.special > 0
+			or recipe.sourceCounts.forced > 0 or recipe.sourceCounts.dynamicActive > 0
+	end
+
+	function Director:_regionalRecipeSeedEligible(recipe)
+		return recipe.reusableOnDemand == true or recipe.hasForcedEvidence == true
+	end
+
+	function Director:_regionalRecipeAccessMode(sourceMember, targetMember, recipe, seedEligible)
+		if sourceMember.name == targetMember.name then return 'local' end
+		if recipe.role == 'SUPPLY' then
+			local route = recipe.targetZones[targetMember.name]
+			if route and (route.authored > 0 or route.special > 0 or route.dynamicActive > 0) then
+				return 'explicit_supply'
+			end
+			return nil
+		end
+		if not seedEligible then return nil end
+		if (recipe.platform == 'airplane' or recipe.platform == 'helicopter')
+			and (recipe.role == 'CAP' or recipe.role == 'CAS' or recipe.role == 'SEAD' or recipe.role == 'RUNWAYSTRIKE') then
+			if sourceMember.zone.airbaseName then return 'shared_air' end
+			return nil
+		end
+		if recipe.platform == 'surface' and recipe.role == 'SURFACE' and recipe.mission == 'attack' then
+			local connected = self.battleCommander.connectionMap[sourceMember.name]
+				and self.battleCommander.connectionMap[sourceMember.name][targetMember.name]
+			if connected and not self.battleCommander:IsGroundConvoyBlocked(sourceMember.name, targetMember.name) then
+				return 'shared_surface'
+			end
+		end
+		return nil
+	end
+
+	function Director:buildRegionalCapabilityAudit(now)
+		now = now or timer.getAbsTime()
+		local recipes = self.battleCommander.zoneCapabilityRecipes
+		if not recipes then error('[Director] regional capability audit requires zone capability recipes') end
+		local audit = {
+			schemaVersion = 1,
+			builtAt = now,
+			recipeCatalogBuiltAt = recipes.builtAt,
+			side = self.side,
+			regions = {},
+			regionOrder = {},
+			byRole = {},
+			integrityIssues = {},
+			totals = {
+				regions = 0,
+				members = 0,
+				access = 0,
+				localAccess = 0,
+				sharedAirAccess = 0,
+				sharedSurfaceAccess = 0,
+				explicitSupplyAccess = 0,
+				seedAccess = 0,
+				nonSeedAccess = 0,
+				externalInfrastructureSources = 0,
+			},
+		}
+
+		for _, region in ipairs(self.regions) do
+			local regionAudit = {
+				id = region.id,
+				name = region.name,
+				coreZoneName = region.coreZoneName,
+				members = {},
+				memberByName = {},
+				byRole = {},
+				externalInfrastructureSources = {},
+				totals = {
+					members = 0,
+					access = 0,
+					localAccess = 0,
+					sharedAirAccess = 0,
+					sharedSurfaceAccess = 0,
+					explicitSupplyAccess = 0,
+					seedAccess = 0,
+					nonSeedAccess = 0,
+				},
+			}
+			audit.regions[region.id] = regionAudit
+			audit.regionOrder[#audit.regionOrder + 1] = region.id
+			audit.totals.regions = audit.totals.regions + 1
+
+			for _, member in ipairs(region.zones) do
+				local memberAudit = {
+					name = member.name,
+					role = member.role,
+					side = member.zone.side,
+					active = member.zone.active and not member.zone.isHidden,
+					suspended = member.zone.suspended == true,
+					accessByKey = {},
+					accessOrder = {},
+					byRole = {},
+					totals = {
+						access = 0,
+						localAccess = 0,
+						sharedAirAccess = 0,
+						sharedSurfaceAccess = 0,
+						explicitSupplyAccess = 0,
+						seedAccess = 0,
+						nonSeedAccess = 0,
+					},
+				}
+				regionAudit.members[#regionAudit.members + 1] = memberAudit
+				regionAudit.memberByName[member.name] = memberAudit
+				regionAudit.totals.members = regionAudit.totals.members + 1
+				audit.totals.members = audit.totals.members + 1
+			end
+
+			local externalSeen = {}
+			for _, infrastructure in ipairs(region.infrastructure) do
+				if infrastructure.sourceZone and not region.zoneByName[infrastructure.sourceZone] then
+					local externalKey = infrastructure.sourceZone .. '|' .. tostring(infrastructure.flag)
+					if not externalSeen[externalKey] then
+						externalSeen[externalKey] = true
+						regionAudit.externalInfrastructureSources[#regionAudit.externalInfrastructureSources + 1] = {
+							zone = infrastructure.sourceZone,
+							flag = infrastructure.flag,
+							effect = infrastructure.effect,
+							destroyed = CustomFlags[infrastructure.flag] == true,
+						}
+						audit.totals.externalInfrastructureSources = audit.totals.externalInfrastructureSources + 1
+					end
+				end
+			end
+
+			for _, sourceMember in ipairs(region.zones) do
+				if self:_sourceZoneUsable(sourceMember.zone, false) then
+					local recipeZone = recipes.zones[sourceMember.name]
+					if not recipeZone then
+						error('[Director] regional capability audit missing recipe zone=' .. sourceMember.name)
+					end
+					for _, recipeKey in ipairs(recipeZone.recipeOrder) do
+						local recipe = recipeZone.byKey[recipeKey]
+						if self:_regionalRecipeHasInventory(recipe) and recipe.templateSideSupport[self.side] then
+							local seedEligible = self:_regionalRecipeSeedEligible(recipe)
+							for _, targetMember in ipairs(region.zones) do
+								local targetZone = targetMember.zone
+								if targetZone.active and not targetZone.suspended and not targetZone.isHidden
+									and not isCarrierZoneName(targetZone.zone) then
+									local mode = self:_regionalRecipeAccessMode(sourceMember, targetMember, recipe, seedEligible)
+									if mode then
+										local memberAudit = regionAudit.memberByName[targetMember.name]
+										local accessKey = sourceMember.name .. '|' .. recipe.key
+										local access = {
+											key = accessKey,
+											mode = mode,
+											sourceZone = sourceMember.name,
+											targetZone = targetMember.name,
+											mission = recipe.mission,
+											role = recipe.role,
+											platform = recipe.platform,
+											commanderType = recipe.commanderType,
+											template = recipe.template,
+											seedEligible = seedEligible,
+											supplyLifecycleProtected = recipe.supplyLifecycleProtected,
+										}
+										memberAudit.accessByKey[accessKey] = access
+										memberAudit.accessOrder[#memberAudit.accessOrder + 1] = accessKey
+										memberAudit.totals.access = memberAudit.totals.access + 1
+										regionAudit.totals.access = regionAudit.totals.access + 1
+										audit.totals.access = audit.totals.access + 1
+										memberAudit.byRole[recipe.role] = (memberAudit.byRole[recipe.role] or 0) + 1
+										regionAudit.byRole[recipe.role] = (regionAudit.byRole[recipe.role] or 0) + 1
+										audit.byRole[recipe.role] = (audit.byRole[recipe.role] or 0) + 1
+										local modeTotal = mode == 'local' and 'localAccess'
+											or (mode == 'shared_air' and 'sharedAirAccess'
+												or (mode == 'shared_surface' and 'sharedSurfaceAccess' or 'explicitSupplyAccess'))
+										memberAudit.totals[modeTotal] = memberAudit.totals[modeTotal] + 1
+										regionAudit.totals[modeTotal] = regionAudit.totals[modeTotal] + 1
+										audit.totals[modeTotal] = audit.totals[modeTotal] + 1
+										local seedTotal = seedEligible and 'seedAccess' or 'nonSeedAccess'
+										memberAudit.totals[seedTotal] = memberAudit.totals[seedTotal] + 1
+										regionAudit.totals[seedTotal] = regionAudit.totals[seedTotal] + 1
+										audit.totals[seedTotal] = audit.totals[seedTotal] + 1
+										if mode == 'explicit_supply' and recipe.role ~= 'SUPPLY' then
+											audit.integrityIssues[#audit.integrityIssues + 1] = {
+												reason = 'non_supply_explicit_supply', region = region.id, accessKey = accessKey,
+											}
+										end
+										if mode == 'shared_surface'
+											and self.battleCommander:IsGroundConvoyBlocked(sourceMember.name, targetMember.name) then
+											audit.integrityIssues[#audit.integrityIssues + 1] = {
+												reason = 'shared_surface_blocked', region = region.id, accessKey = accessKey,
+											}
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+
+			for _, memberAudit in ipairs(regionAudit.members) do table.sort(memberAudit.accessOrder) end
+			table.sort(regionAudit.externalInfrastructureSources, function(a, b)
+				if a.zone == b.zone then return a.flag < b.flag end
+				return a.zone < b.zone
+			end)
+		end
+
+		self.regionalCapabilityAudit = audit
+		self:_log(string.format(
+			'regional capability audit regions=%d members=%d access=%d local=%d sharedAir=%d sharedSurface=%d explicitSupply=%d seed=%d nonSeed=%d externalSources=%d integrity=%d',
+			audit.totals.regions,
+			audit.totals.members,
+			audit.totals.access,
+			audit.totals.localAccess,
+			audit.totals.sharedAirAccess,
+			audit.totals.sharedSurfaceAccess,
+			audit.totals.explicitSupplyAccess,
+			audit.totals.seedAccess,
+			audit.totals.nonSeedAccess,
+			audit.totals.externalInfrastructureSources,
+			#audit.integrityIssues
+		))
+		return audit
+	end
+
+	function Director:getRegionalCapabilityAuditSummary(regionId)
+		local audit = self.regionalCapabilityAudit
+		if not audit then return '[RegionalCapabilityAudit] not built' end
+		local lines = {
+			string.format(
+				'[RegionalCapabilityAudit] side=%s regions=%d members=%d access=%d local=%d sharedAir=%d sharedSurface=%d explicitSupply=%d seed=%d nonSeed=%d externalSources=%d integrity=%d',
+				tostring(audit.side),
+				audit.totals.regions,
+				audit.totals.members,
+				audit.totals.access,
+				audit.totals.localAccess,
+				audit.totals.sharedAirAccess,
+				audit.totals.sharedSurfaceAccess,
+				audit.totals.explicitSupplyAccess,
+				audit.totals.seedAccess,
+				audit.totals.nonSeedAccess,
+				audit.totals.externalInfrastructureSources,
+				#audit.integrityIssues
+			),
+		}
+		for _, currentRegionId in ipairs(audit.regionOrder) do
+			if not regionId or currentRegionId == regionId then
+				local regionAudit = audit.regions[currentRegionId]
+				lines[#lines + 1] = string.format(
+					'region=%s name=%s core=%s members=%d access=%d local=%d sharedAir=%d sharedSurface=%d explicitSupply=%d seed=%d nonSeed=%d externalSources=%d',
+					regionAudit.id,
+					regionAudit.name,
+					regionAudit.coreZoneName,
+					regionAudit.totals.members,
+					regionAudit.totals.access,
+					regionAudit.totals.localAccess,
+					regionAudit.totals.sharedAirAccess,
+					regionAudit.totals.sharedSurfaceAccess,
+					regionAudit.totals.explicitSupplyAccess,
+					regionAudit.totals.seedAccess,
+					regionAudit.totals.nonSeedAccess,
+					#regionAudit.externalInfrastructureSources
+				)
+				if regionId then
+					for _, memberAudit in ipairs(regionAudit.members) do
+						lines[#lines + 1] = string.format(
+							'  member=%s role=%s side=%s active=%s suspended=%s access=%d local=%d sharedAir=%d sharedSurface=%d explicitSupply=%d seed=%d nonSeed=%d',
+							memberAudit.name,
+							memberAudit.role,
+							tostring(memberAudit.side),
+							tostring(memberAudit.active),
+							tostring(memberAudit.suspended),
+							memberAudit.totals.access,
+							memberAudit.totals.localAccess,
+							memberAudit.totals.sharedAirAccess,
+							memberAudit.totals.sharedSurfaceAccess,
+							memberAudit.totals.explicitSupplyAccess,
+							memberAudit.totals.seedAccess,
+							memberAudit.totals.nonSeedAccess
+						)
+						for _, accessKey in ipairs(memberAudit.accessOrder) do
+							local access = memberAudit.accessByKey[accessKey]
+							lines[#lines + 1] = string.format(
+								'    mode=%s source=%s mission=%s role=%s platform=%s template=%s seed=%s supplyProtected=%s',
+								access.mode,
+								access.sourceZone,
+								tostring(access.mission),
+								access.role,
+								access.platform,
+								access.template,
+								tostring(access.seedEligible),
+								tostring(access.supplyLifecycleProtected)
+							)
+						end
+					end
+					for _, external in ipairs(regionAudit.externalInfrastructureSources) do
+						lines[#lines + 1] = string.format(
+							'  externalSource=%s flag=%s effect=%s destroyed=%s',
+							external.zone,
+							external.flag,
+							tostring(external.effect),
+							tostring(external.destroyed)
+						)
+					end
+				end
+			end
+		end
+		if regionId and not audit.regions[regionId] then
+			lines[#lines + 1] = 'region=' .. tostring(regionId) .. ' not found'
+		end
+		for _, issue in ipairs(audit.integrityIssues) do
+			if not regionId or issue.region == regionId then
+				lines[#lines + 1] = string.format(
+					'integrityIssue region=%s reason=%s access=%s',
+					tostring(issue.region), tostring(issue.reason), tostring(issue.accessKey)
+				)
+			end
+		end
+		return table.concat(lines, '\n')
+	end
+
+	function Director:logRegionalCapabilityAudit(regionId)
+		self:_refreshRegionalCapabilityAudit(timer.getAbsTime())
+		env.info(self:getRegionalCapabilityAuditSummary(regionId))
+	end
+
+	function Director:_regionalCapabilityAuditSignature()
+		local recipes = self.battleCommander.zoneCapabilityRecipes
+		if not recipes then return nil end
+		local parts = { tostring(self.side), tostring(recipes.builtAt) }
+		for _, region in ipairs(self.regions) do
+			parts[#parts + 1] = region.id
+			for _, member in ipairs(region.zones) do
+				parts[#parts + 1] = table.concat({
+					member.name,
+					tostring(member.zone.side),
+					tostring(member.zone.active),
+					tostring(member.zone.suspended),
+					tostring(member.zone.airbaseName),
+				}, ':')
+			end
+			for _, infrastructure in ipairs(region.infrastructure) do
+				parts[#parts + 1] = tostring(infrastructure.flag) .. ':'
+					.. tostring(CustomFlags[infrastructure.flag] == true)
+			end
+		end
+		return table.concat(parts, '|')
+	end
+
+	function Director:_refreshRegionalCapabilityAudit(now)
+		local signature = self:_regionalCapabilityAuditSignature()
+		if not signature or signature == self.regionalCapabilityAuditSignature then return end
+		self:buildRegionalCapabilityAudit(now)
+		self.regionalCapabilityAuditSignature = signature
+	end
+
+	function Director:_playerFrontlineActivityScores(now, capOnly)
+		now = now or timer.getAbsTime()
+		self.playerFrontlineActivityCache = self.playerFrontlineActivityCache or {}
+		local cacheKey = capOnly and 'cap' or 'combat'
+		local cached = self.playerFrontlineActivityCache[cacheKey]
+		if cached and now - cached.builtAt <= 15 then
+			return cached.scores
+		end
+
+		local scores = {}
+		local function addScore(zoneName, amount)
+			scores[zoneName] = (scores[zoneName] or 0) + amount
+		end
+		local function nearestCampaignZone(player)
+			if player.campaignZoneResolved then return player.campaignZone end
+			local point = player.point
+			local occupied = self.battleCommander:getZoneOfPoint(point)
+			if occupied and occupied.active and not occupied.suspended and not occupied.isHidden then
+				player.campaignZone = occupied
+				player.campaignZoneResolved = true
+				return player.campaignZone
+			end
+			local best = nil
+			local bestDistance = nil
+			for _, zoneObj in ipairs(self.battleCommander.zones) do
+				if zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden and not isCarrierZoneName(zoneObj.zone) then
+					local customZone = zoneObj._cz or CustomZone:getByName(zoneObj.zone)
+					if customZone then
+						local distance = UTILS.VecDist2D(
+							{ x = point.x, y = point.z },
+							{ x = customZone.point.x, y = customZone.point.z }
+						)
+						if not bestDistance or distance < bestDistance then
+							best = zoneObj
+							bestDistance = distance
+						end
+					end
+				end
+			end
+			player.campaignZone = best
+			player.campaignZoneResolved = true
+			return player.campaignZone
+		end
+		local function addFrontlineSector(anchor)
+			if anchor.side == coalition.side.RED then
+				addScore(anchor.zone, 140)
+				for neighborName, _ in pairs(self.battleCommander.connectionMap[anchor.zone] or {}) do
+					local neighbor = self.battleCommander:getZoneByName(neighborName)
+					if neighbor and neighbor.side == coalition.side.BLUE and neighbor.active and not neighbor.suspended and not neighbor.isHidden then
+						addScore(neighbor.zone, 100)
+						for nextName, _ in pairs(self.battleCommander.connectionMap[neighbor.zone] or {}) do
+							local nextZone = self.battleCommander:getZoneByName(nextName)
+							if nextZone and nextZone.side == coalition.side.RED and nextZone.active and not nextZone.suspended and not nextZone.isHidden then
+								addScore(nextZone.zone, nextZone.zone == anchor.zone and 40 or 70)
+							end
+						end
+					end
+				end
+				return
+			end
+
+			local queue = {}
+			local visited = {}
+			if anchor.side == coalition.side.BLUE then
+				queue[1] = { zone = anchor, hops = 0 }
+				visited[anchor.zone] = true
+			else
+				for neighborName, _ in pairs(self.battleCommander.connectionMap[anchor.zone] or {}) do
+					local neighbor = self.battleCommander:getZoneByName(neighborName)
+					if neighbor and neighbor.side == coalition.side.BLUE and neighbor.active and not neighbor.suspended and not neighbor.isHidden then
+						visited[neighbor.zone] = true
+						queue[#queue + 1] = { zone = neighbor, hops = 0 }
+					end
+				end
+			end
+
+			local index = 1
+			local firstFrontHop = nil
+			while index <= #queue do
+				local row = queue[index]
+				index = index + 1
+				local redNeighbors = {}
+				for neighborName, _ in pairs(self.battleCommander.connectionMap[row.zone.zone] or {}) do
+					local neighbor = self.battleCommander:getZoneByName(neighborName)
+					if neighbor and neighbor.active and not neighbor.suspended and not neighbor.isHidden then
+						if neighbor.side == coalition.side.RED then
+							redNeighbors[#redNeighbors + 1] = neighbor
+						elseif neighbor.side == coalition.side.BLUE and not visited[neighbor.zone] and row.hops < 6 then
+							visited[neighbor.zone] = true
+							queue[#queue + 1] = { zone = neighbor, hops = row.hops + 1 }
+						end
+					end
+				end
+				if #redNeighbors > 0 then
+					firstFrontHop = firstFrontHop or row.hops
+					if firstFrontHop <= 3 and row.hops <= firstFrontHop + 1 then
+						local sectorScore = math.max(35, 110 - row.hops * 20)
+						addScore(row.zone.zone, sectorScore)
+						for _, redZone in ipairs(redNeighbors) do
+							addScore(redZone.zone, sectorScore + 20)
+						end
+					end
+				end
+				if firstFrontHop and row.hops >= firstFrontHop + 1 then
+					for trimIndex = #queue, index, -1 do
+						if queue[trimIndex].hops > firstFrontHop + 1 then
+							table.remove(queue, trimIndex)
+						end
+					end
+				end
+			end
+		end
+
+		local bluePlayerUnits = self.battleCommander:getPlayerSnapshot(coalition.side.BLUE, now).rows
+		for _, player in ipairs(bluePlayerUnits) do
+			local unitType = player.unitType
+			local isAirplane = player.isAirplane
+			local isHelicopter = player.isHelicopter
+			local eligible
+			if capOnly then
+				eligible = isAirplane and not CapCountIgnoreTypes[unitType]
+			else
+				eligible = (isAirplane or isHelicopter) and not BlueCasCountIgnoreTypes[unitType]
+			end
+			if eligible then
+				local anchor = nearestCampaignZone(player)
+				if anchor then addFrontlineSector(anchor) end
+			end
+		end
+
+		local scoreSignatureParts = {}
+		for zoneName, score in pairs(scores) do
+			scoreSignatureParts[#scoreSignatureParts + 1] = tostring(zoneName) .. ':' .. tostring(score)
+		end
+		table.sort(scoreSignatureParts)
+		self.playerFrontlineActivityCache[cacheKey] = {
+			builtAt = now,
+			scores = scores,
+			signature = table.concat(scoreSignatureParts, ','),
+		}
+		return scores
+	end
+
+	function Director:_regionSideName(side)
+		if side == coalition.side.RED then return 'red' end
+		if side == coalition.side.BLUE then return 'blue' end
+		return 'neutral'
+	end
+
+	function Director:_buildRegionFacts(region, now, playerScores)
+		local facts = {
+			id = region.id,
+			kind = region.kind,
+			name = region.name,
+			totalMembers = #region.zones,
+			activeMembers = 0,
+			inactiveMembers = 0,
+			suspendedMembers = 0,
+			sideCounts = { [coalition.side.NEUTRAL] = 0, [coalition.side.RED] = 0, [coalition.side.BLUE] = 0 },
+			zones = {},
+			coreZoneName = region.coreZoneName,
+			coreSide = coalition.side.NEUTRAL,
+			coreActive = false,
+			playerPressure = 0,
+			recentBlueCaptures = 0,
+			infrastructure = {},
+			infrastructureState = 'intact',
+			degradedForSide = { [coalition.side.RED] = false, [coalition.side.BLUE] = false },
+			internalConnections = 0,
+			internalGroundOpen = 0,
+			internalGroundBlocked = 0,
+			boundaryZonesBySide = { [coalition.side.NEUTRAL] = {}, [coalition.side.RED] = {}, [coalition.side.BLUE] = {} },
+			groundBoundaryZonesBySide = { [coalition.side.NEUTRAL] = {}, [coalition.side.RED] = {}, [coalition.side.BLUE] = {} },
+		}
+		local internalSeen = {}
+		local boundarySeen = {}
+		local groundBoundarySeen = {}
+		local captureNow = timer.getTime()
+
+		for _, member in ipairs(region.zones) do
+			local zoneObj = member.zone
+			local active = zoneObj.active and not zoneObj.isHidden
+			local zoneFacts = {
+				name = member.name,
+				role = member.role,
+				side = zoneObj.side,
+				active = active,
+				suspended = zoneObj.suspended == true,
+			}
+			facts.zones[#facts.zones + 1] = zoneFacts
+			if active then
+				facts.activeMembers = facts.activeMembers + 1
+				facts.sideCounts[zoneObj.side] = facts.sideCounts[zoneObj.side] + 1
+				if zoneObj.suspended then facts.suspendedMembers = facts.suspendedMembers + 1 end
+				facts.playerPressure = facts.playerPressure + (playerScores[member.name] or 0)
+				local capturedAt = self.battleCommander._redReactiveBlueCaptureAt
+					and self.battleCommander._redReactiveBlueCaptureAt[member.name]
+				if capturedAt and captureNow - capturedAt <= self.config.captureReactionWindowSec then
+					facts.recentBlueCaptures = facts.recentBlueCaptures + 1
+				end
+			else
+				facts.inactiveMembers = facts.inactiveMembers + 1
+			end
+			if member.role == 'core' then
+				facts.coreSide = zoneObj.side
+				facts.coreActive = active
+			end
+
+			for neighborName, _ in pairs(self.battleCommander.connectionMap[member.name] or {}) do
+				local neighbor = self.battleCommander:getZoneByName(neighborName)
+				if neighbor and neighbor.active and not neighbor.isHidden then
+					if region.zoneByName[neighborName] then
+						local firstName = member.name < neighborName and member.name or neighborName
+						local secondName = member.name < neighborName and neighborName or member.name
+						local pairKey = firstName .. '|' .. secondName
+						if not internalSeen[pairKey] then
+							internalSeen[pairKey] = true
+							facts.internalConnections = facts.internalConnections + 1
+							if self.battleCommander:IsGroundConvoyBlocked(member.name, neighborName) then
+								facts.internalGroundBlocked = facts.internalGroundBlocked + 1
+							else
+								facts.internalGroundOpen = facts.internalGroundOpen + 1
+							end
+						end
+					else
+						if not boundarySeen[neighborName] then
+							boundarySeen[neighborName] = true
+							facts.boundaryZonesBySide[neighbor.side][#facts.boundaryZonesBySide[neighbor.side] + 1] = neighborName
+						end
+						if not self.battleCommander:IsGroundConvoyBlocked(member.name, neighborName)
+							and not groundBoundarySeen[neighborName] then
+							groundBoundarySeen[neighborName] = true
+							facts.groundBoundaryZonesBySide[neighbor.side][#facts.groundBoundaryZonesBySide[neighbor.side] + 1] = neighborName
+						end
+					end
+				end
+			end
+		end
+
+		for _, infrastructure in ipairs(region.infrastructure) do
+			local destroyed = CustomFlags[infrastructure.flag] == true
+			facts.infrastructure[#facts.infrastructure + 1] = {
+				flag = infrastructure.flag,
+				effect = infrastructure.effect,
+				side = infrastructure.side,
+				destroyed = destroyed,
+			}
+			if destroyed then
+				facts.infrastructureState = 'degraded'
+				if infrastructure.side then
+					facts.degradedForSide[infrastructure.side] = true
+				else
+					facts.degradedForSide[coalition.side.RED] = true
+					facts.degradedForSide[coalition.side.BLUE] = true
+				end
+			end
+		end
+
+		for side = coalition.side.NEUTRAL, coalition.side.BLUE do
+			table.sort(facts.boundaryZonesBySide[side])
+			table.sort(facts.groundBoundaryZonesBySide[side])
+		end
+		if facts.activeMembers == 0 then
+			facts.control = 'inactive'
+		elseif facts.sideCounts[coalition.side.RED] == facts.activeMembers then
+			facts.control = 'red'
+		elseif facts.sideCounts[coalition.side.BLUE] == facts.activeMembers then
+			facts.control = 'blue'
+		elseif facts.sideCounts[coalition.side.NEUTRAL] == facts.activeMembers then
+			facts.control = 'neutral'
+		elseif facts.sideCounts[coalition.side.RED] > 0 and facts.sideCounts[coalition.side.BLUE] > 0 then
+			facts.control = 'contested'
+		else
+			facts.control = 'mixed'
+		end
+		return facts
+	end
+
+	function Director:_regionIntent(facts)
+		local side = self.side
+		local enemySide = side == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+		local owned = facts.sideCounts[side]
+		local enemy = facts.sideCounts[enemySide]
+		local neutral = facts.sideCounts[coalition.side.NEUTRAL]
+		local friendlyBoundary = #facts.boundaryZonesBySide[side]
+		local enemyBoundary = #facts.boundaryZonesBySide[enemySide]
+		local ownsFoothold = false
+		local enemyOwnsFoothold = false
+
+		for _, zoneFacts in ipairs(facts.zones) do
+			if zoneFacts.active and zoneFacts.role == 'foothold' then
+				if zoneFacts.side == side then ownsFoothold = true end
+				if zoneFacts.side == enemySide then enemyOwnsFoothold = true end
+			end
+		end
+
+		if facts.activeMembers == 0 then return 'inactive' end
+		if owned == facts.activeMembers then
+			local threatened = enemyBoundary > 0
+				or (side == coalition.side.RED and facts.playerPressure > 0)
+				or (side == coalition.side.RED and facts.recentBlueCaptures > 0)
+			if facts.degradedForSide[side] then
+				return threatened and 'defend_degraded' or 'hold_degraded'
+			end
+			return threatened and 'defend_region' or 'consolidate'
+		end
+		if enemy == facts.activeMembers then
+			return friendlyBoundary > 0 and 'prepare_assault' or 'contain'
+		end
+		if facts.coreActive and facts.coreSide == side then
+			if enemyOwnsFoothold then return 'counterattack_foothold' end
+			if enemy > 0 then return 'reduce_remnant' end
+			if neutral > 0 then return 'expand_control' end
+			return 'defend_region'
+		end
+		if facts.coreActive and facts.coreSide == enemySide then
+			if ownsFoothold then return 'expand_foothold' end
+			if owned > 0 then return 'seize_core' end
+			return friendlyBoundary > 0 and 'prepare_assault' or 'contain'
+		end
+		if owned > 0 and neutral > 0 then return 'expand_control' end
+		if enemy > 0 and friendlyBoundary > 0 then return 'prepare_assault' end
+		return 'observe'
+	end
+
+	function Director:_regionFactsSignature(facts)
+		local parts = {
+			facts.id,
+			facts.control,
+			facts.intent,
+			tostring(facts.activeMembers),
+			tostring(facts.inactiveMembers),
+			tostring(facts.suspendedMembers),
+			tostring(facts.coreSide),
+			tostring(facts.coreActive),
+			tostring(facts.sideCounts[coalition.side.NEUTRAL]),
+			tostring(facts.sideCounts[coalition.side.RED]),
+			tostring(facts.sideCounts[coalition.side.BLUE]),
+			facts.infrastructureState,
+			facts.playerPressure > 0 and 'pressure' or 'quiet',
+			tostring(facts.recentBlueCaptures),
+			tostring(facts.internalGroundOpen),
+			tostring(facts.internalGroundBlocked),
+			tostring(#facts.boundaryZonesBySide[coalition.side.NEUTRAL]),
+			tostring(#facts.boundaryZonesBySide[coalition.side.RED]),
+			tostring(#facts.boundaryZonesBySide[coalition.side.BLUE]),
+		}
+		for _, zoneFacts in ipairs(facts.zones) do
+			parts[#parts + 1] = table.concat({
+				zoneFacts.name,
+				tostring(zoneFacts.side),
+				tostring(zoneFacts.active),
+				tostring(zoneFacts.suspended),
+			}, ':')
+		end
+		for _, infrastructure in ipairs(facts.infrastructure) do
+			parts[#parts + 1] = infrastructure.flag .. ':' .. tostring(infrastructure.destroyed)
+		end
+		return table.concat(parts, '|')
+	end
+
+	function Director:_regionObservationInputSignature(now, playerScores)
+		local parts = {
+			tostring(self.side),
+			tostring(self.battleCommander._capTargetStateGeneration or 0),
+		}
+		local captureNow = timer.getTime()
+		for _, region in ipairs(self.regions) do
+			parts[#parts + 1] = region.id
+			for _, member in ipairs(region.zones) do
+				local zoneObj = member.zone
+				local capturedAt = self.battleCommander._redReactiveBlueCaptureAt
+					and self.battleCommander._redReactiveBlueCaptureAt[member.name]
+				parts[#parts + 1] = table.concat({
+					member.name,
+					tostring(zoneObj.side),
+					tostring(zoneObj.active),
+					tostring(zoneObj.suspended),
+					tostring(zoneObj.isHidden),
+					tostring(playerScores[member.name] or 0),
+					(capturedAt and captureNow - capturedAt <= self.config.captureReactionWindowSec) and 'recent' or 'old',
+				}, ':')
+			end
+			for _, infrastructure in ipairs(region.infrastructure) do
+				parts[#parts + 1] = tostring(infrastructure.flag) .. ':'
+					.. tostring(CustomFlags[infrastructure.flag] == true)
+			end
+		end
+		local blockedPairs = {}
+		for pairKey, blocked in pairs(self.battleCommander.blockedGroundConvoyPairs or {}) do
+			if blocked then blockedPairs[#blockedPairs + 1] = pairKey end
+		end
+		table.sort(blockedPairs)
+		parts[#parts + 1] = table.concat(blockedPairs, ',')
+		return table.concat(parts, '|')
+	end
+
+	function Director:_observeRegions(now)
+		if not self.regions or #self.regions == 0 then return end
+		local pressureDirector = Director:getForSide(coalition.side.RED) or self
+		local playerScores = pressureDirector:_playerFrontlineActivityScores(now, false)
+		local inputSignature = self:_regionObservationInputSignature(now, playerScores)
+		if inputSignature == self.regionObservationInputSignature then
+			if not self.regionalCapabilityAudit then self:_refreshRegionalCapabilityAudit(now) end
+			return false
+		end
+		local factsById = {}
+		self.regionObservationSignatures = self.regionObservationSignatures or {}
+		for _, region in ipairs(self.regions) do
+			local facts = self:_buildRegionFacts(region, now, playerScores)
+			facts.intent = self:_regionIntent(facts)
+			facts.signature = self:_regionFactsSignature(facts)
+			factsById[region.id] = facts
+			if self.regionObservationSignatures[region.id] ~= facts.signature then
+				self.regionObservationSignatures[region.id] = facts.signature
+				self:_log(table.concat({
+					'region=' .. region.name,
+					'control=' .. facts.control,
+					'intent=' .. facts.intent,
+					'core=' .. self:_regionSideName(facts.coreSide),
+					'members=R' .. tostring(facts.sideCounts[coalition.side.RED])
+						.. '/B' .. tostring(facts.sideCounts[coalition.side.BLUE])
+						.. '/N' .. tostring(facts.sideCounts[coalition.side.NEUTRAL])
+						.. '/I' .. tostring(facts.inactiveMembers),
+					'infrastructure=' .. facts.infrastructureState,
+					'pressure=' .. tostring(facts.playerPressure),
+					'boundary=R' .. tostring(#facts.boundaryZonesBySide[coalition.side.RED])
+						.. '/B' .. tostring(#facts.boundaryZonesBySide[coalition.side.BLUE])
+						.. '/N' .. tostring(#facts.boundaryZonesBySide[coalition.side.NEUTRAL]),
+					'groundInternal=' .. tostring(facts.internalGroundOpen) .. 'open/'
+						.. tostring(facts.internalGroundBlocked) .. 'blocked',
+				}, ' '))
+			end
+		end
+		self.regionFactsById = factsById
+		self.regionFactsBuiltAt = now
+		self.regionObservationInputSignature = inputSignature
+		if not self.regionalCapabilityAudit then self:_refreshRegionalCapabilityAudit(now) end
+		return true
+	end
+
+	function Director:getRegionFacts(regionId)
+		if regionId then
+			return self.regionFactsById and self.regionFactsById[regionId] or nil
+		end
+		return self.regionFactsById
+	end
+
+	function Director:getAreaFacts(areaId)
+		if areaId then
+			return self.areaFactsById and self.areaFactsById[areaId] or nil
+		end
+		return self.areaFactsById
+	end
+
+	function Director:_regionTargetPreference(targetZone, role)
+		local region = self.regionByZone[targetZone.zone]
+		if not region then return 0, nil, nil end
+		local facts = self.regionFactsById and self.regionFactsById[region.id]
+		if not facts then return 0, region.id, nil end
+		local member = region.zoneByName[targetZone.zone]
+		local enemySide = self.side == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+		local intent = facts.intent
+		if targetZone.side ~= enemySide then return 0, region.id, intent end
+
+		local score = 0
+		if intent == 'counterattack_foothold' then
+			score = member.role == 'foothold' and 90 or 35
+		elseif intent == 'reduce_remnant' then
+			score = 75
+			if member.role == 'defence' then score = score + 15 end
+		elseif intent == 'expand_foothold' then
+			if member.role == 'core' then
+				score = 85
+			elseif member.role == 'defence' then
+				score = 50
+			else
+				score = 35
+			end
+		elseif intent == 'seize_core' then
+			if member.role == 'core' then
+				score = 90
+			elseif member.role == 'defence' then
+				score = 45
+			else
+				score = 30
+			end
+		elseif intent == 'prepare_assault' then
+			if member.role == 'core' then
+				score = 45
+			elseif member.role == 'foothold' then
+				score = 30
+			elseif member.role == 'defence' then
+				score = 25
+			else
+				score = 20
+			end
+		elseif intent == 'contain' and member.role == 'core' then
+			score = 15
+		end
+
+		if score > 0 and facts.degradedForSide[enemySide] then
+			score = score + 12
+		end
+		if score > 0 and facts.playerPressure > 0 then
+			score = score + math.min(25, facts.playerPressure * 0.1)
+		end
+
+		local multiplier = 1
+		if role == 'ATTACK_SUPPORT' then
+			multiplier = 0.8
+		elseif role and role ~= 'ATTACK' then
+			multiplier = 0.65
+		end
+		return score * multiplier, region.id, intent
+	end
+
+	function Director:_zoneHasAuthoredRunwayCapability(zoneObj)
+		if not zoneObj then return false end
+		for _, groupCommander in ipairs(zoneObj.groups or {}) do
+			if groupCommander.dynamicHybrid ~= true
+				and groupCommander._dynamicHybridRetired ~= true
+				and groupCommander.unitCategory == Unit.Category.AIRPLANE
+				and (groupCommander.type == 'air' or groupCommander.type == 'carrier_air')
+				and groupCommander.MissionType == 'CAP'
+				and (groupCommander.mission == 'patrol' or groupCommander.mission == 'attack')
+			then
+				return true
+			end
+		end
+		return false
+	end
+
+	function Director:_isCampaignStrategyName(strategyName)
+		return strategyName == 'air_supremacy'
+			or strategyName == 'economic_pressure'
+			or strategyName == 'island_campaign'
+			or strategyName == 'breakthrough'
+			or strategyName == 'counterpunch'
+	end
+
+	function Director:_selectCampaignStrategy(now)
+		if self.side ~= coalition.side.RED then return nil end
+		local candidates = self:_collectStrategicShadowCandidates(now)
+		local facts = {
+			runwayTargets = 0,
+			seadTargets = 0,
+			incomeTargets = 0,
+			incomeValue = 0,
+			regionTargets = 0,
+			regionCoreTargets = 0,
+			groundTargets = 0,
+			maxHub = 0,
+			maxPlayer = 0,
+			maxUrgency = 0,
+			airGoalZone = nil,
+			airGoalScore = -1,
+			economicGoalZone = nil,
+			economicGoalScore = -1,
+			islandGoalZone = nil,
+			islandGoalRegion = nil,
+			islandGoalScore = -1,
+			breakthroughGoalZone = nil,
+			breakthroughGoalScore = -1,
+			counterpunchGoalZone = nil,
+			counterpunchGoalScore = -1,
+		}
+		local reachable = {}
+		local queue = {}
+		for _, sourceZone in ipairs(self.battleCommander.zones) do
+			if self:_zoneUsable(sourceZone, coalition.side.RED) then
+				reachable[sourceZone.zone] = true
+				queue[#queue + 1] = sourceZone.zone
+			end
+		end
+		local queueIndex = 1
+		while queueIndex <= #queue do
+			local zoneName = queue[queueIndex]
+			queueIndex = queueIndex + 1
+			for neighborName, _ in pairs(self.battleCommander.connectionMap[zoneName] or {}) do
+				local neighbor = self.battleCommander:getZoneByName(neighborName)
+				if neighbor and neighbor.active and not neighbor.isHidden and not isCarrierZoneName(neighbor.zone)
+					and not reachable[neighbor.zone] then
+					reachable[neighbor.zone] = true
+					queue[#queue + 1] = neighbor.zone
+				end
+			end
+		end
+		for _, targetZone in ipairs(self.battleCommander.zones) do
+			if targetZone.side ~= coalition.side.RED and targetZone.active and not targetZone.suspended
+				and not targetZone.isHidden and not isCarrierZoneName(targetZone.zone)
+				and reachable[targetZone.zone] then
+				local connections = Utils.getTableSize(self.battleCommander.connectionMap[targetZone.zone] or {})
+				local runway = self:_zoneHasCachedRunwayCapability(targetZone)
+				local sead = self.battleCommander:HasSeadTargets(targetZone.zone)
+				local income = math.max(0, tonumber(targetZone.income) or 0)
+				if runway then facts.runwayTargets = facts.runwayTargets + 1 end
+				if sead then facts.seadTargets = facts.seadTargets + 1 end
+				if runway or sead then
+					local airScore = (runway and 100 or 0) + (sead and 50 or 0) + connections * 5 + income * 10
+					if airScore > facts.airGoalScore then
+						facts.airGoalZone = targetZone.zone
+						facts.airGoalScore = airScore
+					end
+				end
+				if income > 0 then
+					facts.incomeTargets = facts.incomeTargets + 1
+					facts.incomeValue = facts.incomeValue + income
+					local economicScore = income * 100 + connections * 10 + (runway and 20 or 0)
+					if economicScore > facts.economicGoalScore then
+						facts.economicGoalZone = targetZone.zone
+						facts.economicGoalScore = economicScore
+					end
+				end
+				local region = self.regionByZone[targetZone.zone]
+				local member = region and region.zoneByName[targetZone.zone]
+				if region and member and region.kind == 'island' then
+					facts.regionTargets = facts.regionTargets + 1
+					if member.role == 'core' then facts.regionCoreTargets = facts.regionCoreTargets + 1 end
+					local regionFacts = self.regionFactsById and self.regionFactsById[region.id]
+					local roleScore = member.role == 'core' and 100
+						or (member.role == 'foothold' and 80 or (member.role == 'defence' and 60 or 40))
+					local islandScore = roleScore
+						+ (regionFacts and regionFacts.sideCounts[coalition.side.RED] > 0 and 70 or 0)
+						+ (regionFacts and regionFacts.control == 'contested' and 40 or 0)
+					if islandScore > facts.islandGoalScore then
+						facts.islandGoalZone = targetZone.zone
+						facts.islandGoalRegion = region.id
+						facts.islandGoalScore = islandScore
+					end
+				end
+			end
+		end
+		for _, candidate in ipairs(candidates) do
+			local groundOpen = false
+			for _, effect in ipairs(candidate.effects) do
+				if effect == 'GROUND_ASSAULT' then
+					facts.groundTargets = facts.groundTargets + 1
+					groundOpen = true
+					break
+				end
+			end
+			facts.maxHub = math.max(facts.maxHub, candidate.components.hub)
+			facts.maxPlayer = math.max(facts.maxPlayer, candidate.components.player)
+			facts.maxUrgency = math.max(facts.maxUrgency, candidate.components.urgency)
+			local breakthroughScore = candidate.components.hub + (groundOpen and 30 or 0)
+			if breakthroughScore > facts.breakthroughGoalScore then
+				facts.breakthroughGoalZone = candidate.zone.zone
+				facts.breakthroughGoalScore = breakthroughScore
+			end
+			local counterpunchScore = candidate.components.player + candidate.components.urgency
+			if counterpunchScore > facts.counterpunchGoalScore then
+				facts.counterpunchGoalZone = candidate.zone.zone
+				facts.counterpunchGoalScore = counterpunchScore
+			end
+		end
+
+		local choices = {}
+		local totalWeight = 0
+		local function addChoice(name, weight, reason, goalZone, goalRegion)
+			if weight <= 0 then return end
+			choices[#choices + 1] = {
+				name = name,
+				weight = weight,
+				reason = reason,
+				goalZone = goalZone,
+				goalRegion = goalRegion,
+			}
+			totalWeight = totalWeight + weight
+		end
+		if facts.airGoalZone then
+			addChoice(
+				'air_supremacy',
+				1 + facts.runwayTargets * 2 + facts.seadTargets * 0.75,
+				'goal=' .. facts.airGoalZone .. ',runways=' .. tostring(facts.runwayTargets) .. ',sead=' .. tostring(facts.seadTargets),
+				facts.airGoalZone
+			)
+		end
+		if facts.economicGoalZone then
+			addChoice(
+				'economic_pressure',
+				1 + facts.incomeTargets * 2 + math.min(4, facts.incomeValue),
+				'goal=' .. facts.economicGoalZone .. ',incomeTargets=' .. tostring(facts.incomeTargets)
+					.. ',income=' .. string.format('%.1f', facts.incomeValue),
+				facts.economicGoalZone
+			)
+		end
+		if facts.islandGoalZone then
+			addChoice(
+				'island_campaign',
+				2 + facts.regionTargets * 0.8 + facts.regionCoreTargets * 1.5,
+				'goal=' .. facts.islandGoalZone .. ',region=' .. facts.islandGoalRegion
+					.. ',regionTargets=' .. tostring(facts.regionTargets) .. ',cores=' .. tostring(facts.regionCoreTargets),
+				facts.islandGoalZone,
+				facts.islandGoalRegion
+			)
+		end
+		addChoice(
+			'breakthrough',
+			2 + facts.maxHub / 24 + math.min(3, facts.groundTargets * 0.3),
+			'goal=' .. tostring(facts.breakthroughGoalZone or 'none')
+				.. ',hub=' .. string.format('%.1f', facts.maxHub) .. ',groundRoutes=' .. tostring(facts.groundTargets),
+			facts.breakthroughGoalZone
+		)
+		if facts.maxPlayer > 0 or facts.maxUrgency > 0 then
+			addChoice(
+				'counterpunch',
+				1 + facts.maxPlayer / 60 + facts.maxUrgency / 30,
+				'goal=' .. tostring(facts.counterpunchGoalZone or 'none')
+					.. ',player=' .. string.format('%.1f', facts.maxPlayer) .. ',urgency=' .. string.format('%.1f', facts.maxUrgency),
+				facts.counterpunchGoalZone
+			)
+		end
+
+		local roll = math.random() * totalWeight
+		local selected = choices[#choices]
+		for _, choice in ipairs(choices) do
+			roll = roll - choice.weight
+			if roll <= 0 then
+				selected = choice
+				break
+			end
+		end
+		local generation = math.max(1, math.floor(tonumber(self.campaignStrategyGeneration) or 1))
+		self.campaignStrategy = {
+			name = selected.name,
+			generation = generation,
+			reason = selected.reason,
+			goalZone = selected.goalZone,
+			goalRegion = selected.goalRegion,
+			selectedAt = now,
+			weight = selected.weight,
+		}
+		self.campaignStrategyGeneration = generation
+		local weights = {}
+		for _, choice in ipairs(choices) do
+			weights[#weights + 1] = choice.name .. ':' .. string.format('%.2f', choice.weight)
+		end
+		self:_log('campaign strategy=' .. selected.name
+			.. ' generation=' .. tostring(generation)
+			.. ' goal=' .. tostring(selected.goalZone or 'none')
+			.. ' reason=' .. selected.reason
+			.. ' weights=' .. table.concat(weights, ','))
+		return self.campaignStrategy
+	end
+
+	function Director:_ensureCampaignStrategy(now)
+		if self.side ~= coalition.side.RED then return nil end
+		if self.campaignStrategy and self:_isCampaignStrategyName(self.campaignStrategy.name) then
+			local goalZoneName = self.campaignStrategy.goalZone
+			if not goalZoneName then return self.campaignStrategy end
+			local goalZone = self.battleCommander:getZoneByName(goalZoneName)
+			if goalZone and goalZone.side ~= coalition.side.RED and goalZone.active
+				and not goalZone.suspended and not goalZone.isHidden then
+				return self.campaignStrategy
+			end
+			self.campaignStrategyGeneration = math.max(
+				1,
+				math.floor(tonumber(self.campaignStrategy.generation) or 1) + 1
+			)
+			self:_log('campaign strategy=' .. self.campaignStrategy.name
+				.. ' invalidated goal=' .. tostring(goalZoneName)
+				.. ' nextGeneration=' .. tostring(self.campaignStrategyGeneration))
+		end
+		self.campaignStrategy = nil
+		return self:_selectCampaignStrategy(now)
+	end
+
+	function Director:_campaignStrategyShadowBias(targetZone, runway, income, regionId, components, groundOpen)
+		local strategy = self.campaignStrategy and self.campaignStrategy.name
+		if self.side ~= coalition.side.RED or not self:_isCampaignStrategyName(strategy) then return 0 end
+		local routeBias = 0
+		local directGoal = false
+		local goalZoneName = self.campaignStrategy.goalZone
+		if goalZoneName then
+			if targetZone.zone == goalZoneName then
+				routeBias = 120
+				directGoal = true
+			else
+				local hops = self:_graphHops(targetZone.zone, goalZoneName, 12)
+				if hops then routeBias = math.max(0, 100 - hops * 12) end
+			end
+		end
+		if strategy == 'air_supremacy' then
+			local score = runway and 45 or 0
+			if self.battleCommander:HasSeadTargets(targetZone.zone) then score = score + 25 end
+			return score + routeBias
+		elseif strategy == 'economic_pressure' then
+			return math.min(75, math.max(0, income) * 40) + routeBias + (directGoal and 40 or 0)
+		elseif strategy == 'island_campaign' then
+			if regionId and regionId == self.campaignStrategy.goalRegion then
+				local region = self.regionById[regionId]
+				local member = region and region.zoneByName[targetZone.zone]
+				if member then
+					local goalBonus = directGoal and 60 or 0
+					if member.role == 'core' then return 85 + routeBias + goalBonus end
+					if member.role == 'foothold' then return 70 + routeBias + goalBonus end
+					if member.role == 'defence' then return 45 + routeBias + goalBonus end
+					return 35 + routeBias + goalBonus
+				end
+			end
+			return routeBias
+		elseif strategy == 'breakthrough' then
+			return components.hub * 0.4 + (groundOpen and 20 or 0) + routeBias + (directGoal and 60 or 0)
+		elseif strategy == 'counterpunch' then
+			return math.min(100, components.player * 0.35) + math.min(100, components.urgency)
+				+ routeBias + (directGoal and 40 or 0)
+		end
+		return 0
+	end
+
+	function Director:_targetOutcomeBias(targetZoneName)
+		local outcomes = self.targetOutcomes[targetZoneName]
+		if not outcomes then return 0 end
+		return math.min(30, (outcomes.success or 0) * 10)
+			+ math.min(15, (outcomes.partial or 0) * 5)
+			- math.min(60, (outcomes.failure or 0) * 15)
+	end
+
+	function Director:_strategicShadowCandidateScore(targetZone, friendlyNeighbors, playerScores, now)
+		local enemySide = self.side == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+		local components = {
+			base = targetZone.side == enemySide and 100 or 60,
+			player = math.min(300, math.max(0, playerScores[targetZone.zone] or 0)),
+			runway = 0,
+			income = 0,
+			region = 0,
+			hub = 0,
+			urgency = 0,
+			strategy = 0,
+			history = 0,
+			learning = 0,
+			commitment = 0,
+		}
+		local runway = self:_zoneHasCachedRunwayCapability(targetZone)
+		if runway then components.runway = 110 end
+		local income = math.max(0, tonumber(targetZone.income) or 0)
+		components.income = math.min(90, income * 45)
+
+		local regionScore, regionId, regionIntent = self:_regionTargetPreference(targetZone, 'ATTACK')
+		if targetZone.side == coalition.side.NEUTRAL and regionId then
+			local region = self.regionById[regionId]
+			local facts = self.regionFactsById and self.regionFactsById[regionId]
+			local member = region and region.zoneByName[targetZone.zone]
+			if facts and member and (regionIntent == 'expand_control' or regionIntent == 'expand_foothold') then
+				if member.role == 'core' then
+					regionScore = 75
+				elseif member.role == 'foothold' then
+					regionScore = 60
+				elseif member.role == 'defence' then
+					regionScore = 45
+				else
+					regionScore = 35
+				end
+			elseif facts and facts.sideCounts[self.side] > 0 then
+				regionScore = 20
+			end
+		end
+		components.region = regionScore or 0
+
+		local totalConnections = 0
+		local forwardConnections = 0
+		for neighborName, _ in pairs(self.battleCommander.connectionMap[targetZone.zone] or {}) do
+			local neighbor = self.battleCommander:getZoneByName(neighborName)
+			if neighbor and neighbor.active and not neighbor.isHidden and not isCarrierZoneName(neighbor.zone) then
+				totalConnections = totalConnections + 1
+				if neighbor.side ~= self.side then forwardConnections = forwardConnections + 1 end
+			end
+		end
+		components.hub = math.min(48, totalConnections * 8) + math.min(36, forwardConnections * 9)
+
+		if self.side == coalition.side.RED and targetZone.side == coalition.side.BLUE then
+			local capturedAt = self.battleCommander._redReactiveBlueCaptureAt
+				and self.battleCommander._redReactiveBlueCaptureAt[targetZone.zone]
+			if capturedAt and timer.getTime() - capturedAt <= self.config.captureReactionWindowSec then
+				components.urgency = components.urgency + 150
+			end
+			local pressure = 0
+			for _, friendlyZone in ipairs(friendlyNeighbors) do
+				pressure = pressure + (self.battleCommander._redReactivePressureByZone
+					and self.battleCommander._redReactivePressureByZone[friendlyZone.zone] or 0)
+			end
+			components.urgency = components.urgency + math.min(45, pressure * 5)
+		end
+
+		for index, previous in ipairs(self.history) do
+			local ageWeight = self.config.historySize - index + 1
+			if previous.targetZone == targetZone.zone then
+				components.history = components.history - (80 * ageWeight)
+			else
+				local hops = self:_graphHops(targetZone.zone, previous.targetZone, 2)
+				if hops and hops <= 2 then components.history = components.history - (20 * ageWeight) end
+			end
+		end
+		components.learning = self:_targetOutcomeBias(targetZone.zone)
+		if self.operation and self.operation.targetZone == targetZone.zone then
+			components.commitment = components.commitment + 100
+		end
+		if self.strategicShadowObjective and self.strategicShadowObjective.main
+			and self.strategicShadowObjective.main.zone == targetZone.zone then
+			components.commitment = components.commitment + 35
+		end
+
+		local effects = {}
+		effects[#effects + 1] = targetZone.side == coalition.side.NEUTRAL and 'SECURE' or 'CAPTURE'
+		if runway then effects[#effects + 1] = 'AIRFIELD_CONTROL' end
+		if self.battleCommander:HasSeadTargets(targetZone.zone) then effects[#effects + 1] = 'SEAD' end
+		local groundOpen = false
+		for _, friendlyZone in ipairs(friendlyNeighbors) do
+			if not self.battleCommander:IsGroundConvoyBlocked(friendlyZone.zone, targetZone.zone) then
+				groundOpen = true
+				break
+			end
+		end
+		components.strategy = self:_campaignStrategyShadowBias(
+			targetZone,
+			runway,
+			income,
+			regionId,
+			components,
+			groundOpen
+		)
+		effects[#effects + 1] = groundOpen and 'GROUND_ASSAULT' or 'AIR_ASSAULT'
+		if components.player > 0 then effects[#effects + 1] = 'PLAYER_SUPPORT' end
+
+		local score = 0
+		for _, value in pairs(components) do score = score + value end
+		return {
+			zone = targetZone,
+			score = math.max(1, score),
+			components = components,
+			friendlyNeighbors = friendlyNeighbors,
+			regionId = regionId,
+			regionIntent = regionIntent or 'frontline',
+			runway = runway,
+			income = income,
+			effects = effects,
+		}
+	end
+
+	function Director:_collectStrategicShadowCandidates(now, includeAreaFacts)
+		local enemySide = self.side == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+		local playerScores = self:_playerFrontlineActivityScores(now, false)
+		local candidates = {}
+		local areaFactsById = nil
+		local inventorySnapshot = includeAreaFacts and self.areaPlanningInventorySnapshot or nil
+		if includeAreaFacts then
+			areaFactsById = {}
+			local inventoryKnown = inventorySnapshot and now - inventorySnapshot.builtAt <= 300 or false
+			for _, area in ipairs(self.areas) do
+				local roleFacts = {}
+				for role, members in pairs(area.membersByOperationalRole or {}) do
+					roleFacts[role] = {
+						total = #members,
+						friendly = 0,
+						enemy = 0,
+						neutral = 0,
+						inactive = 0,
+					}
+				end
+				areaFactsById[area.id] = {
+					id = area.id,
+					kind = area.kind,
+					name = area.name,
+					totalZones = #area.zones,
+					activeZones = 0,
+					inactiveZones = 0,
+					suspendedZones = 0,
+					sideCounts = {
+						[coalition.side.NEUTRAL] = 0,
+						[coalition.side.RED] = 0,
+						[coalition.side.BLUE] = 0,
+					},
+					playerPressure = 0,
+					incomeValue = 0,
+					roles = roleFacts,
+					candidates = {},
+					infrastructure = { intact = 0, destroyed = 0 },
+					inventory = {
+						known = inventoryKnown,
+						localByRole = {},
+						nearbyByRole = {},
+						combat = 0,
+						supply = 0,
+					},
+				}
+			end
+		end
+		for _, targetZone in ipairs(self.battleCommander.zones) do
+			local area = includeAreaFacts and self.areaByZone[targetZone.zone] or nil
+			local areaFacts = area and areaFactsById[area.id] or nil
+			if areaFacts then
+				local member = area.zoneByName[targetZone.zone]
+				local active = targetZone.active and not targetZone.isHidden
+				if active then
+					areaFacts.activeZones = areaFacts.activeZones + 1
+					areaFacts.sideCounts[targetZone.side] = (areaFacts.sideCounts[targetZone.side] or 0) + 1
+					if targetZone.suspended then areaFacts.suspendedZones = areaFacts.suspendedZones + 1 end
+					areaFacts.playerPressure = areaFacts.playerPressure + (playerScores[targetZone.zone] or 0)
+					areaFacts.incomeValue = areaFacts.incomeValue + math.max(0, tonumber(targetZone.income) or 0)
+				else
+					areaFacts.inactiveZones = areaFacts.inactiveZones + 1
+				end
+				for role in pairs(member.operationalRoles or {}) do
+					local roleState = areaFacts.roles[role]
+					if not active then
+						roleState.inactive = roleState.inactive + 1
+					elseif targetZone.side == self.side then
+						roleState.friendly = roleState.friendly + 1
+					elseif targetZone.side == enemySide then
+						roleState.enemy = roleState.enemy + 1
+					else
+						roleState.neutral = roleState.neutral + 1
+					end
+				end
+			end
+			local targetSideEligible = targetZone.side == enemySide or targetZone.side == coalition.side.NEUTRAL
+			if targetSideEligible and targetZone.active and not targetZone.suspended and not targetZone.isHidden
+				and not isCarrierZoneName(targetZone.zone) then
+				local friendlyNeighbors = {}
+				for neighborName, _ in pairs(self.battleCommander.connectionMap[targetZone.zone] or {}) do
+					local neighbor = self.battleCommander:getZoneByName(neighborName)
+					if self:_zoneUsable(neighbor, self.side) then
+						friendlyNeighbors[#friendlyNeighbors + 1] = neighbor
+					end
+				end
+				if #friendlyNeighbors > 0 then
+					table.sort(friendlyNeighbors, function(a, b) return a.zone < b.zone end)
+					local candidate = self:_strategicShadowCandidateScore(
+						targetZone,
+						friendlyNeighbors,
+						playerScores,
+						now
+					)
+					candidate.areaId = area and area.id or nil
+					candidate.areaRoles = area and area.zoneByName[targetZone.zone].operationalRoles or nil
+					candidates[#candidates + 1] = candidate
+					if areaFacts then areaFacts.candidates[#areaFacts.candidates + 1] = candidate end
+				end
+			end
+		end
+		table.sort(candidates, function(a, b)
+			if a.score == b.score then return a.zone.zone < b.zone.zone end
+			return a.score > b.score
+		end)
+		if not includeAreaFacts then return candidates end
+
+		local areaRanking = {}
+		local roleWeights = {
+			hub = 70,
+			gateway = 55,
+			resource = 35,
+			infrastructure = 25,
+			defence = 20,
+			approach = 10,
+			support = 5,
+		}
+		for _, area in ipairs(self.areas) do
+			local facts = areaFactsById[area.id]
+			if facts.activeZones == 0 then
+				facts.control = 'inactive'
+			elseif facts.sideCounts[self.side] == facts.activeZones then
+				facts.control = 'friendly'
+			elseif facts.sideCounts[enemySide] == facts.activeZones then
+				facts.control = 'enemy'
+			elseif facts.sideCounts[coalition.side.NEUTRAL] == facts.activeZones then
+				facts.control = 'neutral'
+			elseif facts.sideCounts[self.side] > 0 and facts.sideCounts[enemySide] > 0 then
+				facts.control = 'contested'
+			else
+				facts.control = 'mixed'
+			end
+
+			local infrastructureSeen = {}
+			for _, infrastructureList in ipairs({ area.sourceInfrastructure, area.affectedInfrastructure }) do
+				for _, infrastructure in ipairs(infrastructureList) do
+					if not infrastructureSeen[infrastructure.id] then
+						infrastructureSeen[infrastructure.id] = true
+						if CustomFlags[infrastructure.flag] == true then
+							facts.infrastructure.destroyed = facts.infrastructure.destroyed + 1
+						else
+							facts.infrastructure.intact = facts.infrastructure.intact + 1
+						end
+					end
+				end
+			end
+
+			if facts.inventory.known then
+				local sourceAreas = { area }
+				for _, neighborArea in ipairs(area.neighbors) do sourceAreas[#sourceAreas + 1] = neighborArea end
+				for _, sourceArea in ipairs(sourceAreas) do
+					local counts = inventorySnapshot.countsByAreaRole[sourceArea.id] or {}
+					for role, count in pairs(counts) do
+						facts.inventory.nearbyByRole[role] = (facts.inventory.nearbyByRole[role] or 0) + count
+						if sourceArea == area then facts.inventory.localByRole[role] = count end
+						if role == 'SUPPLY' then
+							facts.inventory.supply = facts.inventory.supply + count
+						elseif role ~= '__unknown' then
+							facts.inventory.combat = facts.inventory.combat + count
+						end
+					end
+				end
+			end
+
+			table.sort(facts.candidates, function(a, b)
+				if a.score == b.score then return a.zone.zone < b.zone.zone end
+				return a.score > b.score
+			end)
+			facts.bestCandidate = facts.candidates[1]
+			facts.components = {
+				target = facts.bestCandidate and facts.bestCandidate.score or 0,
+				depth = 0,
+				player = math.min(90, facts.playerPressure * 0.2),
+				role = 0,
+				frontline = math.min(45, #facts.candidates * 9),
+				readiness = 0,
+				infrastructure = facts.infrastructure.destroyed * 15,
+				history = 0,
+			}
+			for candidateIndex = 2, math.min(4, #facts.candidates) do
+				facts.components.depth = facts.components.depth + facts.candidates[candidateIndex].score * 0.12
+			end
+			facts.components.depth = math.min(140, facts.components.depth)
+			if facts.bestCandidate then
+				for role in pairs(facts.bestCandidate.areaRoles or {}) do
+					facts.components.role = facts.components.role + (roleWeights[role] or 0)
+				end
+				facts.components.role = math.min(100, facts.components.role)
+			end
+			if facts.inventory.known then
+				facts.components.readiness = facts.inventory.combat > 0
+					and math.min(70, facts.inventory.combat * 6) or -40
+			end
+			for historyIndex, previous in ipairs(self.history) do
+				local previousArea = self.areaByZone[previous.targetZone]
+				if previousArea == area then
+					facts.components.history = facts.components.history
+						- 25 * (self.config.historySize - historyIndex + 1)
+				end
+			end
+			facts.score = 0
+			for _, value in pairs(facts.components) do facts.score = facts.score + value end
+			facts.score = math.max(1, facts.score)
+			if facts.bestCandidate then areaRanking[#areaRanking + 1] = facts end
+		end
+		table.sort(areaRanking, function(a, b)
+			if a.score == b.score then return a.id < b.id end
+			return a.score > b.score
+		end)
+		return candidates, areaFactsById, areaRanking
+	end
+
+	function Director:_strategicShadowInputSignature(now, liveTarget)
+		local strategy = self.campaignStrategy
+		local currentMain = self.strategicShadowObjective and self.strategicShadowObjective.main
+		local parts = {
+			tostring(self.side),
+			tostring(self.battleCommander._capTargetStateGeneration or 0),
+			liveTarget or 'none',
+			strategy and strategy.name or 'none',
+			strategy and strategy.goalZone or 'none',
+			strategy and strategy.goalRegion or 'none',
+			self.regionObservationInputSignature or 'no-region-facts',
+			currentMain and currentMain.zone or 'none',
+			tostring(self.areaPlanningInventorySnapshot and self.areaPlanningInventorySnapshot.builtAt or 0),
+		}
+
+		for _, previous in ipairs(self.history) do
+			parts[#parts + 1] = table.concat({
+				previous.targetZone or 'none',
+				previous.feintTargetZone or 'none',
+				previous.sourceZone or 'none',
+				previous.doctrine or 'none',
+				previous.result or 'none',
+			}, ':')
+		end
+		for _, infrastructure in ipairs(self.infrastructure) do
+			parts[#parts + 1] = tostring(infrastructure.id) .. ':'
+				.. tostring(CustomFlags[infrastructure.flag] == true)
+		end
+
+		local pressureDirector = Director:getForSide(coalition.side.RED) or self
+		local playerScores = pressureDirector:_playerFrontlineActivityScores(now, false)
+		local playerParts = {}
+		for zoneName, score in pairs(playerScores) do
+			playerParts[#playerParts + 1] = tostring(zoneName) .. ':' .. tostring(score)
+		end
+		table.sort(playerParts)
+		parts[#parts + 1] = table.concat(playerParts, ',')
+
+		local pressureParts = {}
+		for zoneName, pressure in pairs(self.battleCommander._redReactivePressureByZone or {}) do
+			pressureParts[#pressureParts + 1] = tostring(zoneName) .. ':' .. tostring(pressure)
+		end
+		table.sort(pressureParts)
+		parts[#parts + 1] = table.concat(pressureParts, ',')
+
+		local captureNow = timer.getTime()
+		local enemySide = self.side == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+		for _, zoneObj in ipairs(self.battleCommander.zones) do
+			local capturedAt = self.battleCommander._redReactiveBlueCaptureAt
+				and self.battleCommander._redReactiveBlueCaptureAt[zoneObj.zone]
+			local recentCapture = capturedAt and captureNow - capturedAt <= self.config.captureReactionWindowSec
+			local targetEligible = zoneObj.side == enemySide or zoneObj.side == coalition.side.NEUTRAL
+			local shadowEligible = targetEligible and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden
+				and not isCarrierZoneName(zoneObj.zone)
+			if shadowEligible then
+				shadowEligible = false
+				for neighborName in pairs(self.battleCommander.connectionMap[zoneObj.zone] or {}) do
+					if self:_zoneUsable(self.battleCommander:getZoneByName(neighborName), self.side) then
+						shadowEligible = true
+						break
+					end
+				end
+			end
+			parts[#parts + 1] = table.concat({
+				zoneObj.zone,
+				tostring(zoneObj.side),
+				tostring(zoneObj.active),
+				tostring(zoneObj.suspended),
+				tostring(zoneObj.isHidden),
+				tostring(zoneObj.income or 0),
+				tostring(zoneObj.airbaseName or ''),
+				recentCapture and 'recent' or 'old',
+				shadowEligible and tostring(self.battleCommander:HasSeadTargets(zoneObj.zone)) or 'irrelevant',
+			}, ':')
+		end
+		return table.concat(parts, '|')
+	end
+
+	function Director:_updateStrategicShadow(now)
+		local liveTarget = self.operation and self.operation.targetZone or nil
+		local pressureDirector = Director:getForSide(coalition.side.RED) or self
+		local activityCache = pressureDirector.playerFrontlineActivityCache
+			and pressureDirector.playerFrontlineActivityCache.combat
+		local activitySignature = activityCache and activityCache.signature or ''
+		local pressureParts = {}
+		for zoneName, pressure in pairs(self.battleCommander._redReactivePressureByZone or {}) do
+			pressureParts[#pressureParts + 1] = tostring(zoneName) .. ':' .. tostring(pressure)
+		end
+		table.sort(pressureParts)
+		local pressureSignature = table.concat(pressureParts, ',')
+		local targetStateGeneration = self.battleCommander._capTargetStateGeneration or 0
+		local strategyName = self.campaignStrategy and self.campaignStrategy.name or nil
+		local strategyGoal = self.campaignStrategy and self.campaignStrategy.goalZone or nil
+		if self.strategicShadowNextAt and now < self.strategicShadowNextAt
+			and self.strategicShadowLastLiveTarget == liveTarget
+			and self.strategicShadowLastTargetStateGeneration == targetStateGeneration
+			and self.strategicShadowLastRegionSignature == self.regionObservationInputSignature
+			and self.strategicShadowLastActivitySignature == activitySignature
+			and self.strategicShadowLastPressureSignature == pressureSignature
+			and self.strategicShadowLastStrategyName == strategyName
+			and self.strategicShadowLastStrategyGoal == strategyGoal then
+			return
+		end
+		self.strategicShadowNextAt = now + 300
+		self.strategicShadowLastLiveTarget = liveTarget
+		self.strategicShadowLastTargetStateGeneration = targetStateGeneration
+		self.strategicShadowLastRegionSignature = self.regionObservationInputSignature
+		self.strategicShadowLastActivitySignature = activitySignature
+		self.strategicShadowLastPressureSignature = pressureSignature
+		self.strategicShadowLastStrategyName = strategyName
+		self.strategicShadowLastStrategyGoal = strategyGoal
+		local inputSignature = self:_strategicShadowInputSignature(now, liveTarget)
+		if inputSignature == self.strategicShadowInputSignature then return false end
+
+		local candidates, areaFactsById, areaRanking = self:_collectStrategicShadowCandidates(now, true)
+		local main = candidates[1]
+		local secondary = nil
+		if main then
+			for index = 2, #candidates do
+				local candidate = candidates[index]
+				local separateFront = main.regionId and candidate.regionId and main.regionId ~= candidate.regionId
+				if not separateFront then
+					separateFront = self:_graphHops(main.zone.zone, candidate.zone.zone, 2) == nil
+				end
+				if separateFront then
+					secondary = candidate
+					break
+				end
+			end
+		end
+		self.areaFactsById = areaFactsById
+		local recommendedArea = areaRanking[1]
+		local liveArea = liveTarget and self.areaByZone[liveTarget] or nil
+		local rankedAreas = {}
+		for rank, areaFacts in ipairs(areaRanking) do
+			rankedAreas[rank] = {
+				areaId = areaFacts.id,
+				targetZone = areaFacts.bestCandidate.zone.zone,
+				score = areaFacts.score,
+				components = areaFacts.components,
+				control = areaFacts.control,
+				inventoryKnown = areaFacts.inventory.known,
+				availableCombat = areaFacts.inventory.combat,
+				availableSupply = areaFacts.inventory.supply,
+			}
+		end
+		self.areaShadowRecommendation = {
+			builtAt = now,
+			areaId = recommendedArea and recommendedArea.id or nil,
+			targetZone = recommendedArea and recommendedArea.bestCandidate.zone.zone or nil,
+			score = recommendedArea and recommendedArea.score or nil,
+			liveAreaId = liveArea and liveArea.id or nil,
+			zoneShadowAreaId = main and main.areaId or nil,
+			matchesZoneShadowArea = recommendedArea ~= nil and main ~= nil and recommendedArea.id == main.areaId,
+			matchesZoneShadowTarget = recommendedArea ~= nil and main ~= nil
+				and recommendedArea.bestCandidate.zone.zone == main.zone.zone,
+			ranked = rankedAreas,
+		}
+
+		local function objectiveEntry(candidate)
+			if not candidate then return nil end
+			return {
+				zone = candidate.zone.zone,
+				score = candidate.score,
+				regionId = candidate.regionId,
+				intent = candidate.regionIntent,
+				runway = candidate.runway,
+				income = candidate.income,
+				effects = candidate.effects,
+				components = candidate.components,
+				areaId = candidate.areaId,
+				areaRoles = candidate.areaRoles,
+			}
+		end
+
+		local objective = {
+			builtAt = now,
+			liveTarget = liveTarget,
+			campaignStrategy = self.campaignStrategy and self.campaignStrategy.name or nil,
+			campaignGoal = self.campaignStrategy and self.campaignStrategy.goalZone or nil,
+			main = objectiveEntry(main),
+			secondary = objectiveEntry(secondary),
+			candidates = candidates,
+			areaShadow = self.areaShadowRecommendation,
+		}
+		self.strategicShadowObjective = objective
+		self.strategicShadowInputSignature = inputSignature
+
+		local signature = table.concat({
+			main and main.zone.zone or 'none',
+			secondary and secondary.zone.zone or 'none',
+			liveTarget or 'none',
+			self.campaignStrategy and self.campaignStrategy.name or 'none',
+			self.campaignStrategy and self.campaignStrategy.goalZone or 'none',
+			main and main.regionIntent or 'none',
+			main and tostring(math.floor(main.score / 25)) or '0',
+			main and table.concat(main.effects, ',') or 'none',
+			recommendedArea and recommendedArea.id or 'none',
+			recommendedArea and recommendedArea.bestCandidate.zone.zone or 'none',
+			recommendedArea and tostring(math.floor(recommendedArea.score / 25)) or '0',
+		}, '|')
+		if signature == self.strategicShadowSignature then return true end
+		self.strategicShadowSignature = signature
+
+		if not main then
+			self:_log('shadow main=none live=' .. tostring(liveTarget or 'none'))
+			return
+		end
+		self:_log(table.concat({
+			'shadow main=' .. main.zone.zone,
+			'score=' .. string.format('%.1f', main.score),
+			'region=' .. tostring(main.regionId or 'none'),
+			'intent=' .. tostring(main.regionIntent),
+			'effects=' .. table.concat(main.effects, ','),
+			'secondary=' .. tostring(secondary and secondary.zone.zone or 'none'),
+			'live=' .. tostring(liveTarget or 'none'),
+			'strategy=' .. tostring(self.campaignStrategy and self.campaignStrategy.name or 'none'),
+			'goal=' .. tostring(self.campaignStrategy and self.campaignStrategy.goalZone or 'none'),
+			'area=' .. tostring(main.areaId or 'none'),
+		}, ' '))
+		if recommendedArea then
+			self:_log(table.concat({
+				'area shadow=' .. recommendedArea.id,
+				'target=' .. recommendedArea.bestCandidate.zone.zone,
+				'score=' .. string.format('%.1f', recommendedArea.score),
+				'control=' .. recommendedArea.control,
+				'player=' .. string.format('%.1f', recommendedArea.components.player),
+				'role=' .. string.format('%.1f', recommendedArea.components.role),
+				'frontline=' .. string.format('%.1f', recommendedArea.components.frontline),
+				'readiness=' .. string.format('%.1f', recommendedArea.components.readiness),
+				'history=' .. string.format('%.1f', recommendedArea.components.history),
+				'zoneMatch=' .. tostring(self.areaShadowRecommendation.matchesZoneShadowTarget),
+			}, ' '))
+		end
+		for rank = 1, math.min(3, #candidates) do
+			local candidate = candidates[rank]
+			local components = candidate.components
+			self:_log(table.concat({
+				'shadow rank=' .. tostring(rank),
+				'zone=' .. candidate.zone.zone,
+				'total=' .. string.format('%.1f', candidate.score),
+				'base=' .. string.format('%.1f', components.base),
+				'player=' .. string.format('%.1f', components.player),
+				'runway=' .. string.format('%.1f', components.runway),
+				'income=' .. string.format('%.1f', components.income),
+				'region=' .. string.format('%.1f', components.region),
+				'hub=' .. string.format('%.1f', components.hub),
+				'urgency=' .. string.format('%.1f', components.urgency),
+				'strategy=' .. string.format('%.1f', components.strategy),
+				'history=' .. string.format('%.1f', components.history),
+				'learning=' .. string.format('%.1f', components.learning),
+				'commitment=' .. string.format('%.1f', components.commitment),
+			}, ' '))
+		end
+		return true
+	end
+
+	function Director:_blueSupportCoverage(now)
+		now = now or timer.getAbsTime()
+		local cached = self.blueSupportCoverageCache
+		if cached and now - cached.builtAt <= 30 then
+			return cached.targets
+		end
+
+		local targets = {}
+		for _, sourceZone in ipairs(self.battleCommander.zones) do
+			if sourceZone.side == coalition.side.BLUE and sourceZone.active and not sourceZone.isHidden then
+				for _, groupCommander in ipairs(sourceZone.groups or {}) do
+					local targetZone = self.battleCommander:getZoneByName(groupCommander.targetzone)
+					if groupCommander.side == coalition.side.BLUE and groupCommander._dynamicHybridRetired ~= true
+						and targetZone and targetZone.side == coalition.side.RED and targetZone.active and not targetZone.suspended
+					then
+						local role = self:_groupRole(groupCommander)
+						if role == 'CAP' or role == 'CAS' or role == 'SEAD' or role == 'RUNWAYSTRIKE' then
+							targets[targetZone.zone] = targets[targetZone.zone] or {}
+							targets[targetZone.zone][role] = true
+						end
+					end
+				end
+			end
+		end
+
+		self.blueSupportCoverageCache = { builtAt = now, targets = targets }
+		return targets
+	end
+
+	function Director:_blueCandidateZone(candidate)
+		if type(candidate) == 'string' then
+			return self.battleCommander:getZoneByName(candidate)
+		end
+		if type(candidate) ~= 'table' then return nil end
+		if type(candidate.zone) == 'string' then
+			return self.battleCommander:getZoneByName(candidate.zone)
+		end
+		if type(candidate.zone) == 'table' and candidate.zone.zone then
+			return candidate.zone
+		end
+		if candidate.zoneName then
+			return self.battleCommander:getZoneByName(candidate.zoneName)
+		end
+		return nil
+	end
+
+	function Director:_graphHops(fromZoneName, toZoneName, maximumHops)
+		if not fromZoneName or not toZoneName then return nil end
+		if fromZoneName == toZoneName then return 0 end
+		maximumHops = maximumHops or 6
+		local queue = { { zone = fromZoneName, hops = 0 } }
+		local visited = { [fromZoneName] = true }
+		local index = 1
+		while index <= #queue do
+			local row = queue[index]
+			index = index + 1
+			if row.hops < maximumHops then
+				for neighborName, _ in pairs(self.battleCommander.connectionMap[row.zone] or {}) do
+					if neighborName == toZoneName then return row.hops + 1 end
+					if not visited[neighborName] then
+						local neighbor = self.battleCommander:getZoneByName(neighborName)
+						if neighbor and neighbor.active and not neighbor.isHidden then
+							visited[neighborName] = true
+							queue[#queue + 1] = { zone = neighborName, hops = row.hops + 1 }
+						end
+					end
+				end
+			end
+		end
+		return nil
+	end
+
+	function Director:_blueMissionCandidateScore(candidate, role, context, now)
+		local zoneObj = self:_blueCandidateZone(candidate)
+		if not zoneObj then return nil end
+		context = context or {}
+		now = now or timer.getAbsTime()
+		local score = 100
+		local blueNeighbors = 0
+		local redNeighbors = 0
+		local neutralNeighbors = 0
+		local connections = 0
+		for neighborName, _ in pairs(self.battleCommander.connectionMap[zoneObj.zone] or {}) do
+			local neighbor = self.battleCommander:getZoneByName(neighborName)
+			if neighbor and neighbor.active and not neighbor.isHidden then
+				connections = connections + 1
+				if neighbor.side == coalition.side.BLUE then
+					blueNeighbors = blueNeighbors + 1
+				elseif neighbor.side == coalition.side.RED then
+					redNeighbors = redNeighbors + 1
+				elseif neighbor.side == coalition.side.NEUTRAL then
+					neutralNeighbors = neutralNeighbors + 1
+				end
+			end
+		end
+
+		score = score + blueNeighbors * 45
+		score = score + redNeighbors * 12
+		score = score + neutralNeighbors * 8
+		score = score + math.min(56, connections * 8)
+		score = score + math.min(50, math.max(0, zoneObj.income or 0) * 2)
+		if zoneObj.airbaseName then score = score + 35 end
+		if self.battleCommander:HasSeadTargets(zoneObj.zone) then score = score + 12 end
+		score = score + self:_regionTargetPreference(zoneObj, role)
+
+		local playerScores = self:_playerFrontlineActivityScores(now, self.side == coalition.side.RED)
+		score = score + (playerScores[zoneObj.zone] or 0)
+
+		local anchorZone = context.primaryZone or context.anchorZone or (self.operation and self.operation.targetZone)
+		if anchorZone then
+			local hops = self:_graphHops(anchorZone, zoneObj.zone, 5)
+			if hops == 0 then
+				score = score + 220
+			elseif hops == 1 then
+				score = score + 150
+			elseif hops == 2 then
+				score = score + 95
+			elseif hops == 3 then
+				score = score + 45
+			end
+		end
+
+		local coverage = self:_blueSupportCoverage(now)[zoneObj.zone] or {}
+		if self:_configuredRoleLimit('CAP') > 0 and coverage.CAP then score = score + 14 end
+		if self:_configuredRoleLimit('CAS') > 0 and coverage.CAS then score = score + 14 end
+		if self:_configuredRoleLimit('SEAD') > 0 and coverage.SEAD then score = score + 14 end
+		if role == 'SEAD' and coverage.SEAD then score = score + 20 end
+		if role == 'ATTACK' then
+			for historyIndex, previous in ipairs(self.history) do
+				local historyWeight = self.config.historySize - historyIndex + 1
+				if previous.targetZone == zoneObj.zone then
+					score = score - 90 * historyWeight
+				else
+					local hops = self:_graphHops(previous.targetZone, zoneObj.zone, 2)
+					if hops and hops <= 2 then score = score - 25 * historyWeight end
+				end
+			end
+		end
+
+		return math.max(1, score)
+	end
+
+	function Director:_blueStartObjective(targetZoneName, now)
+		now = now or timer.getAbsTime()
+		if self.operation and self.operation.targetZone == targetZoneName then
+			return self.operation
+		end
+		if self.operation then
+			self:_finishOperation('redirected', now)
+		end
+		self.operationCounter = self.operationCounter + 1
+		self.operation = {
+			id = self.operationCounter,
+			doctrine = 'support',
+			targetZone = targetZoneName,
+			startedAt = now,
+			phaseStartedAt = now,
+			phaseDeadline = now + self.config.operationMaxSec,
+			mainAuthorizeAt = now,
+			assignments = {},
+			assignmentsByName = {},
+		}
+		self.state = 'support'
+		self.blueSupportCoverageCache = nil
+		self.blueCandidateRetryAt = 0
+		self:_log('operation=' .. self.operation.id .. ' doctrine=support target=' .. targetZoneName)
+		return self.operation
+	end
+
+	function Director:selectMissionTarget(role, candidates, context)
+		context = context or {}
+		local now = timer.getAbsTime()
+		if role == 'ATTACK' and self.operation then
+			for _, candidate in ipairs(candidates or {}) do
+				local zoneObj = self:_blueCandidateZone(candidate)
+				if zoneObj and zoneObj.zone == self.operation.targetZone then
+					return candidate
+				end
+			end
+		end
+
+		local ranked = {}
+		for _, candidate in ipairs(candidates or {}) do
+			local zoneObj = self:_blueCandidateZone(candidate)
+			if zoneObj and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden then
+				local score = self:_blueMissionCandidateScore(candidate, role, context, now)
+				if score then
+					ranked[#ranked + 1] = { zone = zoneObj, raw = candidate, score = score }
+				end
+			end
+		end
+		table.sort(ranked, function(a, b)
+			if a.score == b.score then return a.zone.zone < b.zone.zone end
+			return a.score > b.score
+		end)
+		local selected = self:_pickWeightedCandidate(ranked, nil)
+		if not selected then return nil end
+		if role == 'ATTACK' then
+			self:_blueStartObjective(selected.zone.zone, now)
+		end
+		self:_log('mission role=' .. tostring(role) .. ' target=' .. selected.zone.zone .. ' score=' .. string.format('%.1f', selected.score))
+		return selected.raw
+	end
+
+	function Director:rankCapZones(missionType, zoneDistances, objectiveOverride)
+		local now = timer.getAbsTime()
+		local playerScores = self:_playerFrontlineActivityScores(now, self.side == coalition.side.RED)
+		local objective = objectiveOverride or (self.operation and self.operation.targetZone) or nil
+		local activityCacheKey = self.side == coalition.side.RED and 'cap' or 'combat'
+		local activityCache = self.playerFrontlineActivityCache and self.playerFrontlineActivityCache[activityCacheKey]
+		local baseRankingSignature = zoneDistances and zoneDistances._capCacheKey
+		if not baseRankingSignature then
+			local signatureParts = {}
+			for index, entry in ipairs(zoneDistances or {}) do
+				signatureParts[index] = tostring(entry.zone) .. ':' .. tostring(entry.distance)
+			end
+			baseRankingSignature = table.concat(signatureParts, '|')
+		end
+		local cacheKey = table.concat({
+			tostring(self.side),
+			tostring(missionType),
+			tostring(objective),
+			tostring(self.battleCommander._capSpawnBucketsVersion or 0),
+			tostring(self.battleCommander._capTargetStateGeneration or 0),
+			tostring(activityCache and activityCache.signature or ''),
+			baseRankingSignature,
+		}, '#')
+		self.capRankingCache = self.capRankingCache or {}
+		local cached = self.capRankingCache[missionType]
+		local cacheTtlSec = math.max(self.battleCommander.spawnEvalCacheTtlSec or 90, 300)
+		if cached and cached.key == cacheKey and now - cached.builtAt <= cacheTtlSec then
+			return cached.ranked
+		end
+
+		local ranked = {}
+		for _, entry in ipairs(zoneDistances or {}) do
+			local priority = playerScores[entry.zone] or 0
+			local zoneObj = self.battleCommander:getZoneByName(entry.zone)
+			local connections = 0
+			local frontline = false
+			for neighborName, _ in pairs(self.battleCommander.connectionMap[entry.zone] or {}) do
+				local neighbor = self.battleCommander:getZoneByName(neighborName)
+				if neighbor and neighbor.active and not neighbor.isHidden then
+					connections = connections + 1
+					if zoneObj and neighbor.side ~= coalition.side.NEUTRAL and neighbor.side ~= zoneObj.side then
+						frontline = true
+					end
+				end
+			end
+			priority = priority + math.min(48, connections * 8)
+			if frontline then priority = priority + 150 end
+			if objective then
+				local hops = self:_graphHops(objective, entry.zone, 5)
+				if missionType == 'attack' and hops == 0 then
+					priority = priority + 260
+				elseif hops == 1 then
+					priority = priority + 180
+				elseif hops == 2 then
+					priority = priority + 100
+				elseif hops == 3 then
+					priority = priority + 45
+				end
+			end
+			ranked[#ranked + 1] = { zone = entry.zone, distance = entry.distance, directorPriority = priority }
+		end
+		table.sort(ranked, function(a, b)
+			if a.directorPriority == b.directorPriority then
+				return a.zone < b.zone
+			end
+			return a.directorPriority > b.directorPriority
+		end)
+		self.capRankingCache[missionType] = { key = cacheKey, builtAt = now, ranked = ranked }
+		return ranked
+	end
+
+	function Director:_groupIsLive(groupCommander)
+		return groupCommander.Spawned == true or self.LIVE_STATES[groupCommander.state] == true
+	end
+
+	function Director:_groupIsDormant(groupCommander)
+		return not self:_groupIsLive(groupCommander)
+			and (groupCommander.state == 'inhangar' or groupCommander.state == 'dead')
+	end
+
+	function Director:_canManageRoutineCap(groupCommander)
+		if not self.config.enabled or not self.started then return false end
+		if groupCommander.side ~= self.side or groupCommander.MissionType ~= 'CAP' then return false end
+		if groupCommander.mission ~= 'patrol' then return false end
+		if groupCommander.type ~= 'air' and groupCommander.type ~= 'carrier_air' then return false end
+		if groupCommander.forceSpawn == true or groupCommander._pendingShopPurchase then return false end
+		if groupCommander.playerGroundAttack == true or groupCommander.ShopLaunchOnly == true then return false end
+		return true
+	end
+
+	function Director:_capCandidateUsable(groupCommander, mission, targetZoneName, now)
+		if groupCommander.side ~= self.side or groupCommander.MissionType ~= 'CAP' or groupCommander.mission ~= mission then return false end
+		if groupCommander.type ~= 'air' and groupCommander.type ~= 'carrier_air' then return false end
+		if groupCommander.forceSpawn == true or groupCommander._pendingShopPurchase then return false end
+		if groupCommander.playerGroundAttack == true or groupCommander.ShopLaunchOnly == true then return false end
+		if self:_groupIsLive(groupCommander) then return false end
+		if groupCommander.state ~= 'inhangar' and groupCommander.state ~= 'dead' and groupCommander.state ~= 'preparing' then return false end
+		if groupCommander.targetzone ~= targetZoneName or groupCommander._dynamicHybridRetired == true then return false end
+		if groupCommander._directorOperationId ~= nil or self:_assignmentFor(groupCommander) ~= nil then return false end
+		if groupCommander.zoneCommander.side ~= self.side or groupCommander.zoneCommander.active ~= true then return false end
+		if self.battleCommander:isRunwayPlaneSpawnBlockedForGroup(groupCommander, now) then return false end
+		if groupCommander._airLimitRetryAt and now < groupCommander._airLimitRetryAt then return false end
+		if (self.routineCapCooldownByName[groupCommander.name] or 0) > now then return false end
+		local targetZone = self.battleCommander:getZoneByName(targetZoneName)
+		if not targetZone or not targetZone.active or targetZone.suspended then return false end
+		if mission == 'patrol' then return targetZone.side == self.side end
+		return targetZone.side ~= self.side and targetZone.side ~= coalition.side.NEUTRAL
+	end
+
+	function Director:_rankCapTargets(mission, pendingNeeded)
+		local bluePlayers = getBluePlayersCount() or 0
+		local limit = self:_configuredRoleLimit('CAP') or 0
+		local currentCap = self.battleCommander:getActiveCAPCount(self.side, mission)
+		local capMetaSeed = {
+			side = self.side,
+			mission = mission,
+			bluePlayers = bluePlayers,
+			limit = limit,
+			currentCap = currentCap,
+			capLeft = math.max(1, pendingNeeded),
+		}
+		local ranked, capMeta
+		if self.side == coalition.side.BLUE then
+			ranked, capMeta = self.battleCommander:getCapSpawnRankingForSide(mission, self.side, capMetaSeed)
+		else
+			ranked, capMeta = getClosestCapZonesToPlayers(mission, self.side, capMetaSeed)
+			ranked = self:rankCapZones(mission, ranked)
+		end
+		return ranked, capMeta
+	end
+
+	function Director:_reconcileRoutineCap(now)
+		now = now or timer.getAbsTime()
+		for groupName, cooldownUntil in pairs(self.routineCapCooldownByName) do
+			if cooldownUntil <= now then self.routineCapCooldownByName[groupName] = nil end
+		end
+
+		local mission = 'patrol'
+		local limit = self:_configuredRoleLimit('CAP') or 0
+		local active = self.battleCommander:getActiveCAPCount(self.side, mission)
+		local pendingNeeded = math.max(0, limit - active)
+		local selected = {}
+		if pendingNeeded > 0 then
+			local ranked, capMeta = self:_rankCapTargets(mission, pendingNeeded)
+			local targetMap = capMeta and capMeta.targets or (CapTargets[self.side] and CapTargets[self.side][mission]) or {}
+			local allowedTargets = {}
+			local orderedTargets = {}
+			local capWindow = math.min(#ranked, pendingNeeded)
+			local bonusTop = math.max(3, capWindow)
+			for rank, row in ipairs(ranked) do
+				if rank <= capWindow or (rank <= bonusTop and capMeta and capMeta.enemyAdj and capMeta.enemyAdj[row.zone]) then
+					allowedTargets[row.zone] = true
+					orderedTargets[#orderedTargets + 1] = row.zone
+				end
+			end
+			if #ranked == 0 then
+				for targetZoneName in pairs(targetMap) do orderedTargets[#orderedTargets + 1] = targetZoneName end
+				table.sort(orderedTargets)
+				for _, targetZoneName in ipairs(orderedTargets) do allowedTargets[targetZoneName] = true end
+			end
+
+			local selectedCount = 0
+			local function selectCandidates(existingOnly)
+				for _, targetZoneName in ipairs(orderedTargets) do
+					if selectedCount >= pendingNeeded then return end
+					if allowedTargets[targetZoneName] then
+						local context = targetMap[targetZoneName]
+						for _, record in ipairs((context and context.candidates) or {}) do
+							if selectedCount >= pendingNeeded then return end
+							local groupCommander = CapRef[record.name]
+							local existingPermit = self.routineCapPermits[record.name]
+							if not selected[record.name] and (not existingOnly or existingPermit)
+								and self:_capCandidateUsable(groupCommander, mission, targetZoneName, now) then
+								selected[record.name] = existingPermit or {
+									name = record.name,
+									groupRef = groupCommander,
+									mission = mission,
+									targetZone = targetZoneName,
+									grantedAt = now,
+								}
+								selectedCount = selectedCount + 1
+							end
+						end
+					end
+				end
+			end
+			selectCandidates(true)
+			selectCandidates(false)
+		end
+
+		for groupName, permit in pairs(self.routineCapPermits) do
+			if not selected[groupName] then
+				local groupCommander = permit.groupRef
+				if groupCommander then
+					groupCommander._spawnEvalCache = nil
+					groupCommander._spawnEvalLast = nil
+					groupCommander:_clearDormantFsmDelay()
+				end
+			end
+		end
+		for groupName, permit in pairs(selected) do
+			if not self.routineCapPermits[groupName] then
+				local groupCommander = permit.groupRef
+				groupCommander._spawnEvalCache = nil
+				groupCommander._spawnEvalLast = nil
+				groupCommander:_clearDormantFsmDelay()
+			end
+		end
+		self.routineCapPermits = selected
+		self.routineCapState = { mission = mission, limit = limit, active = active, pending = Utils.getTableSize(selected), updatedAt = now }
+	end
+
+	function Director:_routineCapRevectorTarget(now)
+		if self.side ~= coalition.side.RED then return nil end
+		local playerScores = self:_playerFrontlineActivityScores(now, true)
+		if not next(playerScores) then return nil end
+		local ranked = self:_rankCapTargets('patrol', 1)
+		for _, row in ipairs(ranked) do
+			local pressure = playerScores[row.zone] or 0
+			local targetZone = self.battleCommander:getZoneByName(row.zone)
+			if pressure > 0 and self:_zoneUsable(targetZone, self.side) then
+				return row.zone, pressure
+			end
+		end
+		return nil
+	end
+
+	function Director:_routineCapRevectorStation(targetZoneName)
+		local safeDistanceNm = 35
+		local station = Frontline.PickStationNearZone(
+			targetZoneName,
+			self.side,
+			30,
+			0,
+			0,
+			0,
+			safeDistanceNm
+		)
+		if not station then return nil end
+		return station, { x = station.x, z = station.y }, safeDistanceNm
+	end
+
+	function Director:_routineCapRevectorCoverageAndCandidate(stationPoint, coverageDistanceNm)
+		local covered = false
+		local nearestCommander = nil
+		local nearestDistanceNm = nil
+		for _, groupCommander in pairs(CapRef) do
+			if groupCommander.side == self.side
+				and groupCommander.MissionType == 'CAP'
+				and groupCommander.state == 'inair'
+				and groupCommander._capReturnHome ~= true
+			then
+				local distanceNm = self.battleCommander:_capAssistDistanceNm(
+					groupCommander._currentCapHoldingPoint,
+					stationPoint
+				)
+				if distanceNm then
+					if distanceNm <= coverageDistanceNm then covered = true end
+					if groupCommander.mission == 'patrol'
+						and groupCommander._capAssistRetaskedThisSortie ~= true
+						and (not nearestDistanceNm or distanceNm < nearestDistanceNm)
+					then
+						nearestCommander = groupCommander
+						nearestDistanceNm = distanceNm
+					end
+				end
+			end
+		end
+		return covered, nearestCommander, nearestDistanceNm
+	end
+
+	function Director:_reconcileRoutineCapRevectorReturns()
+		local targetStateGeneration = self.battleCommander._capTargetStateGeneration or 0
+		if self.routineCapRevectorTargetStateGeneration == targetStateGeneration then return end
+		self.routineCapRevectorTargetStateGeneration = targetStateGeneration
+		for _, groupCommander in pairs(CapRef) do
+			if groupCommander.side == self.side
+				and groupCommander.MissionType == 'CAP'
+				and groupCommander.state == 'inair'
+				and groupCommander._capReturnHome ~= true
+				and groupCommander._capAssistRetaskedTargetzone
+			then
+				local targetZone = self.battleCommander:getZoneByName(groupCommander._capAssistRetaskedTargetzone)
+				if not self:_zoneUsable(targetZone, self.side) then
+					groupCommander:_startCapReturnHome('director_revector_target_invalid')
+				end
+			end
+		end
+	end
+
+	function Director:_reconcileRoutineCapRevector(now)
+		if self.side ~= coalition.side.RED then return false end
+		now = now or timer.getAbsTime()
+		self:_reconcileRoutineCapRevectorReturns()
+		local targetZoneName, pressure = self:_routineCapRevectorTarget(now)
+		if not targetZoneName then
+			self.routineCapRevectorPending = nil
+			return false
+		end
+
+		local station, stationPoint, safeDistanceNm = self:_routineCapRevectorStation(targetZoneName)
+		if not station then
+			self.routineCapRevectorPending = nil
+			self.routineCapRevectorCooldownByTarget[targetZoneName] = now + 60
+			return false
+		end
+
+		local coverageDistanceNm = GlobalSettings.capAssistCoverageNm or 30
+		local covered, candidateCommander, candidateDistanceNm = self:_routineCapRevectorCoverageAndCandidate(
+			stationPoint,
+			coverageDistanceNm
+		)
+		if covered then
+			self.routineCapRevectorPending = nil
+			self.routineCapRevectorCooldownByTarget[targetZoneName] = now + (GlobalSettings.capAssistTargetZoneCooldownSec or 300)
+			return false
+		end
+		if not candidateCommander then
+			self.routineCapRevectorPending = nil
+			self.routineCapRevectorCooldownByTarget[targetZoneName] = now + 60
+			return false
+		end
+		if now < (self.routineCapRevectorNextAt or 0)
+			or now < (self.routineCapRevectorCooldownByTarget[targetZoneName] or 0)
+		then
+			return false
+		end
+
+		local pending = self.routineCapRevectorPending
+		if not pending or pending.targetZone ~= targetZoneName then
+			local minimumDelaySec = math.max(1, math.floor(GlobalSettings.capAssistDelayMinSec or 120))
+			local maximumDelaySec = math.max(minimumDelaySec, math.floor(GlobalSettings.capAssistDelayMaxSec or 300))
+			local delaySec = math.random(minimumDelaySec, maximumDelaySec)
+			self.routineCapRevectorPending = {
+				targetZone = targetZoneName,
+				executeAt = now + delaySec,
+				pressure = pressure,
+			}
+			self:_log('cap-revector pending target=' .. targetZoneName
+				.. ' candidate=' .. candidateCommander.name
+				.. ' pressure=' .. tostring(pressure)
+				.. ' delay=' .. tostring(delaySec))
+			return false
+		end
+		if now < pending.executeAt then return false end
+
+		local candidateGroup = candidateCommander:_getDcsGroupCached()
+		if not candidateGroup or not candidateGroup:isExist() or candidateGroup:getSize() == 0
+			or not candidateGroup:getController()
+		then
+			self.routineCapRevectorPending = nil
+			self.routineCapRevectorCooldownByTarget[targetZoneName] = now + 60
+			return false
+		end
+
+		local orbitDistanceNm = math.random(30, 40)
+		SetUpCAP(
+			candidateGroup,
+			{ x = station.x, z = station.y },
+			candidateCommander.Altitude,
+			orbitDistanceNm,
+			candidateCommander._landUnitID,
+			safeDistanceNm,
+			self.side
+		)
+		candidateCommander._currentCapHoldingPoint = { x = station.x, z = station.y }
+		candidateCommander._currentCapOrbitDistanceNm = orbitDistanceNm
+		candidateCommander._currentCapBufferNm = safeDistanceNm
+		candidateCommander._capAssistRetaskedThisSortie = true
+		candidateCommander._capAssistRetaskedTargetzone = targetZoneName
+		self.routineCapRevectorPending = nil
+		local cooldownSec = GlobalSettings.capAssistTargetZoneCooldownSec or 300
+		self.routineCapRevectorCooldownByTarget[targetZoneName] = now + cooldownSec
+		self.routineCapRevectorNextAt = now + cooldownSec
+		self:_log('cap-revector group=' .. candidateCommander.name
+			.. ' target=' .. targetZoneName
+			.. ' pressure=' .. tostring(pressure)
+			.. ' distance=' .. string.format('%.1f', candidateDistanceNm or 0) .. 'nm')
+		return true
+	end
+
+	function Director:onManagedCapSpawnDenied(groupCommander, denialReason, now)
+		now = now or timer.getAbsTime()
+		if self.routineCapPermits[groupCommander.name] then
+			self.routineCapPermits[groupCommander.name] = nil
+			self.routineCapCooldownByName[groupCommander.name] = now + self.config.capPermitRetrySec
+			groupCommander._spawnEvalCache = nil
+			groupCommander._spawnEvalLast = nil
+			return true
+		end
+
+		local assignment = self:_assignmentFor(groupCommander)
+		if not assignment or assignment.launched or assignment.completed
+			or (assignment.capacityRole or assignment.role) ~= 'CAP' then return false end
+		self.routineCapCooldownByName[groupCommander.name] = now + self.config.capPermitRetrySec
+		if self.side == coalition.side.BLUE then
+			for index, candidate in ipairs(self.operation.assignments) do
+				if candidate == assignment then
+					self:_blueRemoveAssignment(index, 'mechanical-' .. tostring(denialReason or 'denied'), now)
+					return true
+				end
+			end
+		else
+			self:_cancelUnlaunchedAssignment(self.operation, assignment, 'cap-mechanical-' .. tostring(denialReason or 'denied'))
+			return true
+		end
+		return false
+	end
+
+	function Director:_canRetaskAirRole(role)
+		return role == 'CAP' or role == 'CAS' or role == 'SEAD' or role == 'RUNWAYSTRIKE'
+	end
+
+	function Director:_syncRetaskedGroup(groupCommander)
+		groupCommander._spawnEvalCache = nil
+		groupCommander._spawnEvalLast = nil
+		self.battleCommander:_syncNonCapSpawnBucketsForGroup(groupCommander)
+		self.battleCommander:_syncCapSpawnBucketsForGroup(groupCommander)
+		self.battleCommander:markFsmGroupFilterDirty()
+		self.battleCommander:markReindexCombatFilterDirty()
+	end
+
+	function Director:_retaskGroupForAssignment(groupCommander, targetZoneName)
+		local originalTargetZone = groupCommander.targetzone
+		groupCommander._directorRetaskOriginalTargetZone = originalTargetZone
+		groupCommander.targetzone = targetZoneName
+		groupCommander._retasked = groupCommander.targetzone ~= groupCommander._baseTargetzone
+		self:_syncRetaskedGroup(groupCommander)
+		return originalTargetZone
+	end
+
+	function Director:_restoreRetaskedGroup(groupCommander, originalTargetZone)
+		local restoreTargetZone = originalTargetZone or groupCommander._directorRetaskOriginalTargetZone
+		if not restoreTargetZone then return false end
+		groupCommander.targetzone = restoreTargetZone
+		groupCommander._directorRetaskOriginalTargetZone = nil
+		groupCommander._retasked = groupCommander.targetzone ~= groupCommander._baseTargetzone
+		self:_syncRetaskedGroup(groupCommander)
+		return true
+	end
+
+	function Director:_assignmentFor(groupCommander)
+		local operation = self.operation
+		if not operation or not operation.assignmentsByName then return nil end
+		return operation.assignmentsByName[groupCommander.name]
+	end
+
+	function Director:holdsGroupForOperation(groupCommander)
+		local operation = self.operation
+		local assignment = self:_assignmentFor(groupCommander)
+		return operation ~= nil and assignment ~= nil and groupCommander.mission == 'attack'
+			and groupCommander._directorOperationId == operation.id
+			and assignment.launched ~= true and assignment.completed ~= true
+	end
+
+	function Director:_reserveGroup(operation, groupCommander, role, phase, targetZone)
+		local assignment = {
+			name = groupCommander.name,
+			groupRef = groupCommander,
+			role = role,
+			capacityRole = self:_groupRole(groupCommander),
+			unitCategory = groupCommander.unitCategory,
+			sourceZone = groupCommander.zoneCommander.zone,
+			phase = phase,
+			targetZone = targetZone,
+			authorized = false,
+			launched = false,
+			completed = false,
+			mission = groupCommander.mission,
+			missionType = groupCommander.MissionType,
+			templateName = groupCommander.template,
+			dynamicHybrid = groupCommander.dynamicHybrid == true,
+			dynamicBaseName = groupCommander._dynamicHybridBaseName,
+			dynamicOriginZone = groupCommander.dynamicHybridOriginZone,
+			dynamicTargetZone = groupCommander.dynamicHybridTargetZone,
+			dynamicRole = groupCommander.dynamicHybridRole,
+		}
+		operation.assignments[#operation.assignments + 1] = assignment
+		operation.assignmentsByName[assignment.name] = assignment
+		if not operation.sourceZone and targetZone == operation.targetZone and role ~= 'SUPPLY' then
+			operation.sourceZone = assignment.sourceZone
+		end
+		groupCommander._directorOperationId = operation.id
+		if groupCommander.mission == 'attack' and groupCommander.zoneCommander.suspended then
+			groupCommander.zoneCommander._suspendAllowSpawn = true
+		end
+		return assignment
+	end
+
+	function Director:_releaseAssignment(operation, assignment)
+		local groupCommander = assignment.groupRef
+		if groupCommander and groupCommander._directorOperationId == operation.id then
+			if assignment.retasked == true then
+				self:_restoreRetaskedGroup(groupCommander, assignment.originalTargetZone)
+			end
+			groupCommander._directorOperationId = nil
+			groupCommander._spawnEvalCache = nil
+			groupCommander._spawnEvalLast = nil
+		end
+	end
+
+	function Director:_releaseOperationGroups(operation)
+		if not operation then return end
+		for _, assignment in ipairs(operation.assignments or {}) do
+			self:_releaseAssignment(operation, assignment)
+		end
+	end
+
+	function Director:_markReactionAssignments(operation, firstIndex, request, maximum)
+		local marked = 0
+		local reactive = self.battleCommander.redReactive
+		local cooldownSec = math.max(0, tonumber(request.groupReuseCooldownSec) or 0)
+		local cooldownUntil = timer.getTime() + cooldownSec
+		for index = firstIndex, #operation.assignments do
+			if marked >= maximum then break end
+			local assignment = operation.assignments[index]
+			if self:_roleUsesAirPackage(assignment.capacityRole or assignment.role) and assignment.cancelled ~= true then
+				assignment.reaction = true
+				assignment.reactionReason = request.reason
+				marked = marked + 1
+				if reactive and reactive.groupCooldownByName then
+					reactive.groupCooldownByName[assignment.name] = cooldownUntil
+				end
+			end
+		end
+		if marked > 0 then
+			operation.reactionReason = request.reason
+			operation.reactionSourceZone = request.sourceZone
+			operation.reactionGroupReuseCooldownSec = cooldownSec
+		end
+		return marked
+	end
+
+	function Director:_isStrategicBomberActive()
+		if self.side ~= coalition.side.RED then return false end
+		return StrategicBomber.IsMissionActive(1)
+	end
+
+	function Director:_beginStrategicPause(now)
+		if self.strategicPauseStartedAt then return end
+		self.strategicPauseStartedAt = now
+		for _, assignment in ipairs(self.operation and self.operation.assignments or {}) do
+			if not assignment.launched and not assignment.completed then
+				assignment.authorized = false
+				local groupCommander = assignment.groupRef
+				if groupCommander then
+					groupCommander._spawnEvalCache = nil
+					groupCommander._spawnEvalLast = nil
+				end
+			end
+		end
+		self:_log('strategic-bomber pause')
+	end
+
+	function Director:_endStrategicPause(now)
+		local pauseStartedAt = self.strategicPauseStartedAt
+		if not pauseStartedAt then return end
+		local pausedSec = math.max(0, now - pauseStartedAt)
+		local operation = self.operation
+		if operation then
+			operation.startedAt = operation.startedAt + pausedSec
+			operation.phaseStartedAt = operation.phaseStartedAt + pausedSec
+			operation.phaseDeadline = operation.phaseDeadline + pausedSec
+			operation.mainAuthorizeAt = operation.mainAuthorizeAt + pausedSec
+		end
+		if self.recoveryUntil then self.recoveryUntil = self.recoveryUntil + pausedSec end
+		if self.nextPlanningAt then self.nextPlanningAt = self.nextPlanningAt + pausedSec end
+		if self.nextSurgeAt then self.nextSurgeAt = self.nextSurgeAt + pausedSec end
+		self.strategicPauseStartedAt = nil
+		self:_log('strategic-bomber resume paused=' .. tostring(math.floor(pausedSec)) .. 's')
+	end
+
+	function Director:_canManageGroup(groupCommander)
+		if not self.config.enabled or not self.started then return false end
+		if self.side ~= coalition.side.RED or groupCommander.side ~= self.side then return false end
+		if groupCommander.mission ~= 'attack' then return false end
+		if groupCommander.playerGroundAttack == true or groupCommander.ShopLaunchOnly == true then return false end
+		if groupCommander.forceSpawn == true or groupCommander._pendingShopPurchase then return false end
+		return true
+	end
+
+	function Director:zoneUpgradePurchaseAllowed(now)
+		return (now or timer.getAbsTime()) >= (self.zoneUpgradeCooldownUntil or 0)
+	end
+
+	function Director:_blueOccupiedRedZones()
+		local occupied = {}
+		for _, player in ipairs(self.battleCommander:getPlayerSnapshot(coalition.side.BLUE).rows) do
+			local point = player.point
+			local zoneObj = self.battleCommander:getZoneOfPoint(point)
+			if zoneObj and zoneObj.side == coalition.side.RED then
+				occupied[zoneObj.zone] = true
+			end
+		end
+		return occupied
+	end
+
+	function Director:_zoneHasCapOrigin(zoneObj)
+		if not zoneObj.airbaseName then return false end
+		for _, groupCommander in ipairs(zoneObj.groups or {}) do
+			if groupCommander.side == self.side
+				and groupCommander.unitCategory == Unit.Category.AIRPLANE
+				and (groupCommander.type == 'air' or groupCommander.type == 'carrier_air')
+				and groupCommander.MissionType == 'CAP'
+				and (groupCommander.mission == 'patrol' or groupCommander.mission == 'attack')
+			then
+				return true
+			end
+		end
+		return false
+	end
+
+	function Director:_zoneInUpgradeCorridor(zoneName, pressureZoneName)
+		if not pressureZoneName then return true end
+		if zoneName == pressureZoneName then return true end
+		local neighbors = self.battleCommander.connectionMap[pressureZoneName] or {}
+		return neighbors[zoneName] == true
+	end
+
+	function Director:_zoneHasCachedRunwayCapability(zoneObj)
+		local capRole = self.battleCommander.zoneCapabilityCatalog.zones[zoneObj.zone].roles.CAP
+		return capRole ~= nil and ((capRole.authored or 0) + (capRole.hardcoded or 0) + (capRole.special or 0)) > 0
+	end
+
+	function Director:_zoneDefenseProfile(zoneObj)
+		local categories = { 'sam', 'shorad', 'aaa', 'ground', 'armor', 'arty' }
+		local assigned, pools = self.battleCommander:getRedZoneUpgradeDirectorInputs(zoneObj)
+		local operational = { sam = 0, shorad = 0, aaa = 0, ground = 0, armor = 0, arty = 0 }
+		local upgrades = zoneObj.upgrades and zoneObj.upgrades.red or {}
+		for builtIndex, builtName in pairs(zoneObj.built or {}) do
+			local group = Group.getByName(builtName)
+			if group and group:isExist() and group:getSize() > 0 then
+				local upgradeName = getUpgradeEntryName(upgrades[builtIndex]) or builtName
+				if not isStaticUpgrade(upgradeName) then
+					local category = classifyUpgradeName(upgradeName)
+					if operational[category] ~= nil then
+						operational[category] = operational[category] + 1
+					end
+				end
+			end
+		end
+
+		local unavailable = {}
+		for _, category in ipairs(categories) do
+			unavailable[category] = math.max(0, (assigned[category] or 0) - (operational[category] or 0))
+		end
+
+		local connections = 0
+		local friendlyConnections = 0
+		for neighborName in pairs(self.battleCommander.connectionMap[zoneObj.zone] or {}) do
+			local neighbor = self.battleCommander:getZoneByName(neighborName)
+			if neighbor and neighbor.active and not neighbor.isHidden then
+				connections = connections + 1
+				if neighbor.side == self.side then
+					friendlyConnections = friendlyConnections + 1
+				end
+			end
+		end
+
+		local region = self.regionByZone[zoneObj.zone]
+		local member = region and region.zoneByName[zoneObj.zone] or nil
+		local runwayCapability = self:_zoneHasCachedRunwayCapability(zoneObj)
+		return {
+			assigned = assigned,
+			pools = pools,
+			operational = operational,
+			unavailable = unavailable,
+			connections = connections,
+			friendlyConnections = friendlyConnections,
+			capOrigin = runwayCapability,
+			runwayCapability = runwayCapability,
+			blueGraphEdges = ZONE_CONNECTED_BLUE_COUNT[zoneObj.zone] or 0,
+			airbase = zoneObj.airbaseName ~= nil,
+			income = math.max(0, tonumber(zoneObj.income) or 0),
+			regionId = region and region.id or nil,
+			regionRole = member and member.role or nil,
+		}
+	end
+
+	function Director:_zoneUpgradeCapabilityScore(zoneObj, category, profile, context)
+		local components = { gap = 0, role = 0, pressure = 0, frontline = 0, strategy = 0 }
+		local assignedCount = profile.assigned[category] or 0
+		components.gap = assignedCount == 0
+			and ({ sam = 90, shorad = 110, aaa = 100, ground = 120, armor = 115, arty = 90 })[category]
+			or math.max(0, 45 - assignedCount * 15)
+
+		if profile.capOrigin then
+			components.role = components.role + ({ sam = 80, shorad = 55, aaa = 25, ground = 15, armor = 10, arty = 0 })[category]
+		elseif profile.airbase then
+			components.role = components.role + ({ sam = 10, shorad = 35, aaa = 25, ground = 30, armor = 25, arty = 5 })[category]
+		end
+		if profile.connections >= 4 then
+			components.role = components.role + ({ sam = 25, shorad = 25, aaa = 10, ground = 45, armor = 35, arty = 15 })[category]
+		end
+		if profile.income > 0 then
+			components.role = components.role + ({ sam = 30, shorad = 25, aaa = 10, ground = 30, armor = 20, arty = 0 })[category]
+		end
+		if profile.regionRole == 'core' then
+			components.role = components.role + ({ sam = 25, shorad = 25, aaa = 10, ground = 30, armor = 25, arty = 10 })[category]
+		elseif profile.regionRole == 'defence' then
+			components.role = components.role + ({ sam = 20, shorad = 30, aaa = 15, ground = 35, armor = 30, arty = 10 })[category]
+		end
+
+		local pressureZone = context.pressureZone or zoneObj.zone
+		local activity = self.battleCommander._redReactiveActivityByZone
+			and self.battleCommander._redReactiveActivityByZone[pressureZone] or nil
+		if activity then
+			if (activity.strikePressure or 0) > 0 then
+				components.pressure = components.pressure + ({ sam = 20, shorad = 40, aaa = 25, ground = 15, armor = 10, arty = 0 })[category]
+			end
+			if (activity.capPressure or 0) > 0 then
+				components.pressure = components.pressure + ({ sam = 30, shorad = 20, aaa = 10, ground = 0, armor = 0, arty = 0 })[category]
+			end
+		end
+
+		if ZONE_CONNECTED_TO_BLUE and ZONE_CONNECTED_TO_BLUE[zoneObj.zone] then
+			components.frontline = components.frontline + ({ sam = 15, shorad = 30, aaa = 20, ground = 50, armor = 45, arty = 25 })[category]
+		elseif ZONE_NEAR_BLUE and ZONE_NEAR_BLUE[zoneObj.zone] then
+			components.frontline = components.frontline + ({ sam = 10, shorad = 20, aaa = 10, ground = 30, armor = 25, arty = 15 })[category]
+		end
+
+		local strategy = self.campaignStrategy and self.campaignStrategy.name or nil
+		local goalZoneName = self.campaignStrategy and self.campaignStrategy.goalZone or nil
+		local goalHops = goalZoneName and self:_graphHops(zoneObj.zone, goalZoneName, 12) or nil
+		local nearGoal = goalHops and goalHops <= 3
+		if strategy == 'air_supremacy' and (profile.capOrigin or profile.connections >= 4
+			or profile.income >= 1 or profile.regionRole == 'core') then
+			components.strategy = components.strategy + ({ sam = 55, shorad = 35, aaa = 20, ground = 0, armor = 0, arty = 0 })[category]
+		elseif strategy == 'economic_pressure' and (profile.income > 0 or profile.connections >= 4) then
+			components.strategy = components.strategy + ({ sam = 30, shorad = 25, aaa = 10, ground = 30, armor = 20, arty = 0 })[category]
+		elseif strategy == 'island_campaign' and profile.regionId == self.campaignStrategy.goalRegion then
+			components.strategy = components.strategy + ({ sam = 30, shorad = 35, aaa = 15, ground = 35, armor = 25, arty = 10 })[category]
+		elseif strategy == 'breakthrough' and nearGoal then
+			components.strategy = components.strategy + ({ sam = 0, shorad = 10, aaa = 5, ground = 40, armor = 50, arty = 35 })[category]
+		elseif strategy == 'counterpunch' and (context.pressureZone or (ZONE_CONNECTED_TO_BLUE and ZONE_CONNECTED_TO_BLUE[zoneObj.zone])) then
+			components.strategy = components.strategy + ({ sam = 15, shorad = 30, aaa = 20, ground = 45, armor = 40, arty = 15 })[category]
+		end
+
+		local score = 0
+		for _, value in pairs(components) do score = score + value end
+		return score, components
+	end
+
+	function Director:_zoneUpgradeResponsePosture(zoneObj, profile, context, occupied, playerScores, pressureProfile, blueObjective)
+		local pressureZoneName = context.pressureZone
+		if not pressureZoneName then
+			return 0, 'strategic', { position = 0, activity = 0, exposure = 0, objective = 0, region = 0, viability = 1 }
+		end
+
+		local assignedTotal = 0
+		local operationalTotal = 0
+		for _, category in ipairs({ 'sam', 'shorad', 'aaa', 'ground', 'armor', 'arty' }) do
+			assignedTotal = assignedTotal + (pressureProfile.assigned[category] or 0)
+			operationalTotal = operationalTotal + (pressureProfile.operational[category] or 0)
+		end
+		local viability = assignedTotal > 0 and (operationalTotal / assignedTotal) or 1
+		local details = {
+			position = 0,
+			activity = math.min(75, math.max(0, playerScores[zoneObj.zone] or 0) * 0.45),
+			exposure = 0,
+			objective = 0,
+			region = 0,
+			viability = viability,
+		}
+		local posture
+		if zoneObj.zone == pressureZoneName then
+			posture = 'hold'
+			details.position = 65
+			if viability >= 0.7 then
+				details.position = details.position + 25
+			elseif viability < 0.4 then
+				details.position = details.position - 20
+			end
+		else
+			local exposedFlank = profile.blueGraphEdges > 0
+			posture = exposedFlank and 'flank' or 'block'
+			details.position = 45 + (exposedFlank and 15 or 30)
+			details.exposure = exposedFlank and math.min(30, profile.blueGraphEdges * 10) or 0
+			if occupied[pressureZoneName] then
+				details.position = details.position + 70
+			elseif viability < 0.5 then
+				details.position = details.position + 45
+			elseif viability < 0.75 then
+				details.position = details.position + 20
+			end
+
+			local mainObjective = blueObjective and blueObjective.main and blueObjective.main.zone or nil
+			local secondaryObjective = blueObjective and blueObjective.secondary and blueObjective.secondary.zone or nil
+			if zoneObj.zone == mainObjective then
+				details.objective = 45
+				posture = 'anticipate'
+			elseif zoneObj.zone == secondaryObjective then
+				details.objective = 20
+			end
+			if pressureProfile.regionId and profile.regionId == pressureProfile.regionId then
+				details.region = profile.regionRole == 'core' and 30
+					or (profile.regionRole == 'defence' and 20 or 10)
+			end
+		end
+
+		local score = details.position + details.activity + details.exposure + details.objective + details.region
+		return score, posture, details
+	end
+
+	function Director:_zoneUpgradeScore(zoneObj, context, now)
+		local score = 0
+		local pressureZoneName = context.pressureZone
+		if pressureZoneName then
+			if zoneObj.zone == pressureZoneName then
+				score = score + 45
+			else
+				score = score + 35
+			end
+		end
+
+		local capOrigin = self:_zoneHasCachedRunwayCapability(zoneObj)
+		if capOrigin then score = score + 160 end
+		if zoneObj.airbaseName then score = score + 45 end
+		if capOrigin and self.battleCommander:isRunwayPlaneSpawnBlocked(zoneObj.zone, timer.getTime()) then
+			score = score - 35
+		end
+
+		local connections = 0
+		local friendlyConnections = 0
+		for neighborName, _ in pairs(self.battleCommander.connectionMap[zoneObj.zone] or {}) do
+			local neighbor = self.battleCommander:getZoneByName(neighborName)
+			if neighbor and neighbor.active and not neighbor.isHidden then
+				connections = connections + 1
+				if neighbor.side == self.side then
+					friendlyConnections = friendlyConnections + 1
+				end
+			end
+		end
+		score = score + (connections * 12) + (friendlyConnections * 5)
+
+		local usefulRoutes = 0
+		for _, groupCommander in ipairs(zoneObj.groups or {}) do
+			if groupCommander.side == self.side and groupCommander._dynamicHybridRetired ~= true
+				and (groupCommander.mission == 'attack' or groupCommander.mission == 'supply') then
+				usefulRoutes = usefulRoutes + 1
+			end
+		end
+		score = score + math.min(30, usefulRoutes * 2)
+		score = score + math.min(20, (zoneObj.income or 0) * 5)
+
+		if ZONE_CONNECTED_TO_BLUE and ZONE_CONNECTED_TO_BLUE[zoneObj.zone] then
+			score = score + 15
+		elseif ZONE_NEAR_BLUE and ZONE_NEAR_BLUE[zoneObj.zone] then
+			score = score + 8
+		end
+		for index, previous in ipairs(self.zoneUpgradeHistory or {}) do
+			if previous.zone == zoneObj.zone then
+				score = score - (180 / index)
+			else
+				local hops = self:_graphHops(zoneObj.zone, previous.zone, 2)
+				if hops and hops <= 2 then
+					score = score - (35 / index)
+				end
+			end
+		end
+		return score
+	end
+
+	function Director:_selectZoneUpgradeShadowRecommendation(zoneChoices, context, occupied, now, liveScores)
+		local categoryOrder = { 'sam', 'shorad', 'aaa', 'ground', 'armor', 'arty' }
+		local pressureZone = context.pressureZone and self.battleCommander:getZoneByName(context.pressureZone) or nil
+		local pressureProfile = pressureZone and self:_zoneDefenseProfile(pressureZone) or nil
+		local playerScores = context.pressureZone and self:_playerFrontlineActivityScores(now, false) or {}
+		local blueObjective = Director:getForSide(coalition.side.BLUE).strategicShadowObjective
+		local best = nil
+		for _, choice in ipairs(zoneChoices or {}) do
+			local zoneObj = choice.zone
+			if zoneObj and not occupied[zoneObj.zone]
+				and self:_zoneInUpgradeCorridor(zoneObj.zone, context.pressureZone) then
+				local profile = self:_zoneDefenseProfile(zoneObj)
+				-- Strategic reinforcements may exceed the initial random-garrison mix;
+				-- the existing template pool and zone-size exclusions remain the hard safety boundary.
+				local pools = profile.pools
+				local zoneScore = liveScores and liveScores[zoneObj.zone] or self:_zoneUpgradeScore(zoneObj, context, now)
+				local responseScore, responsePosture, responseDetails = self:_zoneUpgradeResponsePosture(
+					zoneObj, profile, context, occupied, playerScores, pressureProfile, blueObjective
+				)
+				for categoryRank, category in ipairs(categoryOrder) do
+					if pools[category] and #pools[category] > 0 then
+						local capabilityScore, components = self:_zoneUpgradeCapabilityScore(zoneObj, category, profile, context)
+						local totalScore = zoneScore + capabilityScore + responseScore
+						local assignedCount = profile.assigned[category] or 0
+						local strategicNeed = components.role + components.pressure + components.frontline + components.strategy
+						local candidate = {
+							zone = zoneObj,
+							category = category,
+							categoryRank = categoryRank,
+							score = totalScore,
+							zoneScore = zoneScore,
+							capabilityScore = capabilityScore,
+							responseScore = responseScore,
+							responsePosture = responsePosture,
+							responseDetails = responseDetails,
+							components = components,
+							profile = profile,
+							action = (assignedCount == 0 or (assignedCount < 2 and strategicNeed >= 100))
+								and 'upgrade' or 'defer',
+						}
+						if not best
+							or (candidate.action == 'upgrade' and best.action ~= 'upgrade')
+							or (candidate.action == best.action and candidate.score > best.score)
+							or (candidate.action == best.action and candidate.score == best.score
+								and candidate.zone.zone < best.zone.zone)
+							or (candidate.action == best.action and candidate.score == best.score
+								and candidate.zone.zone == best.zone.zone and candidate.categoryRank < best.categoryRank) then
+							best = candidate
+						end
+					end
+				end
+			end
+		end
+		return best
+	end
+
+	function Director:selectZoneUpgradeTarget(zoneChoices, context, now)
+		context = type(context) == 'table' and context or {}
+		now = now or timer.getAbsTime()
+		local occupied = context.blueOccupiedZones or self:_blueOccupiedRedZones()
+		local best = nil
+		local bestScore = nil
+		local liveScores = {}
+		for _, choice in ipairs(zoneChoices or {}) do
+			local zoneObj = choice.zone
+			if zoneObj and not occupied[zoneObj.zone]
+				and self:_zoneInUpgradeCorridor(zoneObj.zone, context.pressureZone) then
+				local score = self:_zoneUpgradeScore(zoneObj, context, now)
+				liveScores[zoneObj.zone] = score
+				if not best or score > bestScore or (score == bestScore and zoneObj.zone < best.zone.zone) then
+					best = choice
+					bestScore = score
+				end
+			end
+		end
+		local shadow = self:_selectZoneUpgradeShadowRecommendation(zoneChoices, context, occupied, now, liveScores)
+		local selected = best
+		if shadow then
+			if shadow.action == 'upgrade' then
+				local pool = shadow.profile.pools[shadow.category]
+				selected = { zone = shadow.zone, slot = pool[math.random(1, #pool)] }
+			else
+				selected = nil
+			end
+			local liveCategory = selected and classifyUpgradeName(selected.slot) or 'none'
+			local assignedCount = shadow.profile.assigned[shadow.category] or 0
+			local operationalCount = shadow.profile.operational[shadow.category] or 0
+			local unavailableCount = shadow.profile.unavailable[shadow.category] or 0
+			self.zoneUpgradeShadowRecommendation = {
+				builtAt = now,
+				action = shadow.action,
+				zone = shadow.zone.zone,
+				category = shadow.category,
+				score = shadow.score,
+				zoneScore = shadow.zoneScore,
+				capabilityScore = shadow.capabilityScore,
+				responseScore = shadow.responseScore,
+				responsePosture = shadow.responsePosture,
+				responseDetails = shadow.responseDetails,
+				components = shadow.components,
+				assigned = assignedCount,
+				operational = operationalCount,
+				unavailable = unavailableCount,
+				liveZone = selected and selected.zone.zone or nil,
+				liveCategory = liveCategory,
+				matchesLive = selected ~= nil and selected.zone.zone == shadow.zone.zone and liveCategory == shadow.category,
+				campaignStrategy = self.campaignStrategy and self.campaignStrategy.name or nil,
+			}
+			self:_log(table.concat({
+				'upgrade shadow action=' .. shadow.action,
+				'recommended=' .. shadow.zone.zone .. '/' .. shadow.category,
+				'total=' .. string.format('%.1f', shadow.score),
+				'zone=' .. string.format('%.1f', shadow.zoneScore),
+				'capability=' .. string.format('%.1f', shadow.capabilityScore),
+				'response=' .. string.format('%.1f', shadow.responseScore),
+				'posture=' .. shadow.responsePosture,
+				'viability=' .. string.format('%.2f', shadow.responseDetails.viability),
+				'gap=' .. string.format('%.1f', shadow.components.gap),
+				'role=' .. string.format('%.1f', shadow.components.role),
+				'pressure=' .. string.format('%.1f', shadow.components.pressure),
+				'frontline=' .. string.format('%.1f', shadow.components.frontline),
+				'strategy=' .. string.format('%.1f', shadow.components.strategy),
+				'assigned=' .. tostring(assignedCount),
+				'operational=' .. tostring(operationalCount),
+				'unavailable=' .. tostring(unavailableCount),
+				'live=' .. tostring(selected and selected.zone.zone or 'none') .. '/' .. liveCategory,
+				'match=' .. tostring(self.zoneUpgradeShadowRecommendation.matchesLive),
+			}, ' '))
+		else
+			self.zoneUpgradeShadowRecommendation = nil
+		end
+		if selected then
+			local selectedScore = shadow and shadow.score or bestScore
+			self:_log('upgrade selected zone=' .. selected.zone.zone .. ' score=' .. string.format('%.1f', selectedScore) .. ' pressure=' .. tostring(context.pressureZone))
+		end
+		return selected
+	end
+
+	function Director:recordZoneUpgradePurchase(zoneObj, context, now)
+		context = type(context) == 'table' and context or {}
+		now = now or timer.getAbsTime()
+		local reactiveConfig = self.battleCommander.redReactive and self.battleCommander.redReactive.config or nil
+		local cooldownSec = tonumber(context.cooldownSec)
+			or (reactiveConfig and tonumber(reactiveConfig.zoneUpgradeCooldownSec))
+			or 1800
+		self.zoneUpgradeCooldownUntil = now + math.max(0, cooldownSec)
+		table.insert(self.zoneUpgradeHistory, 1, { zone = zoneObj.zone })
+		while #self.zoneUpgradeHistory > 4 do
+			table.remove(self.zoneUpgradeHistory)
+		end
+		self:_log('upgrade purchased zone=' .. zoneObj.zone .. ' cooldown=' .. tostring(math.floor(cooldownSec)) .. ' reason=' .. tostring(context.reason or 'budget'))
+	end
+
+	function Director:requestZoneUpgrade(context)
+		context = type(context) == 'table' and context or {}
+		local now = timer.getAbsTime()
+		if not self:zoneUpgradePurchaseAllowed(now) then return false end
+		local itemId = context.shopItemId or 'redzoneupgrade'
+		local shopItem = self.battleCommander.shops[self.side][itemId]
+		if not shopItem or (shopItem.stock ~= -1 and shopItem.stock <= 0) then return false end
+		local availableCredits = (self.battleCommander.accounts[self.side] or 0)
+			- self.battleCommander:_getPendingShopReservedCredits(self.side)
+		if availableCredits < shopItem.cost then return false end
+		context.purchasedZone = nil
+		self.battleCommander:buyShopItem(self.side, itemId, context)
+		return context.purchasedZone ~= nil
+	end
+
+	function Director:_targetScore(targetZone, redNeighbors, now)
+		local score = 100
+		local captureNow = timer.getTime()
+		score = score + math.min(40, (targetZone.income or 0) * 2)
+		if targetZone.airbaseName then score = score + 18 end
+		if self.battleCommander:HasSeadTargets(targetZone.zone) then score = score + 18 end
+		score = score + self:_regionTargetPreference(targetZone, 'ATTACK')
+		local capturedAt = self.battleCommander._redReactiveBlueCaptureAt and self.battleCommander._redReactiveBlueCaptureAt[targetZone.zone]
+		local freshCapture = capturedAt and captureNow - capturedAt <= self.config.captureReactionWindowSec
+		if freshCapture then
+			score = score + 160
+		end
+		score = score + #redNeighbors * 35
+		local forwardConnections = 0
+		local totalConnections = 0
+		for neighborName, _ in pairs(self.battleCommander.connectionMap[targetZone.zone] or {}) do
+			local neighbor = self.battleCommander:getZoneByName(neighborName)
+			if neighbor and neighbor.active and not neighbor.isHidden then
+				totalConnections = totalConnections + 1
+				if neighbor.side == coalition.side.BLUE then forwardConnections = forwardConnections + 1 end
+			end
+		end
+		score = score + math.min(48, totalConnections * 8) + forwardConnections * 12
+		score = score + (self:_playerFrontlineActivityScores(now)[targetZone.zone] or 0)
+		for _, redZone in ipairs(redNeighbors) do
+			local pressure = self.battleCommander._redReactivePressureByZone and self.battleCommander._redReactivePressureByZone[redZone.zone] or 0
+			score = score + math.min(20, pressure * 3)
+		end
+		for index, previous in ipairs(self.history) do
+			local ageWeight = self.config.historySize - index + 1
+			if previous.targetZone == targetZone.zone then
+				score = score - ((freshCapture and 25 or 90) * ageWeight)
+			else
+				local hops = self:_graphHops(targetZone.zone, previous.targetZone, 2)
+				if hops and hops <= 2 then
+					score = score - ((freshCapture and 10 or 35) * ageWeight)
+				end
+			end
+		end
+		score = score + self:_targetOutcomeBias(targetZone.zone)
+		return math.max(1, score)
+	end
+
+	function Director:_collectTargetCandidates(now)
+		local strategicCandidates = {}
+		for _, strategicCandidate in ipairs(self.strategicShadowObjective and self.strategicShadowObjective.candidates or {}) do
+			if strategicCandidate.zone and strategicCandidate.zone.zone then
+				strategicCandidates[strategicCandidate.zone.zone] = strategicCandidate
+			end
+		end
+		local candidates = {}
+		for _, targetZone in ipairs(self.battleCommander.zones) do
+			if self:_zoneUsable(targetZone, coalition.side.BLUE) then
+				local redNeighbors = {}
+				for neighborName, _ in pairs(self.battleCommander.connectionMap[targetZone.zone] or {}) do
+					local neighbor = self.battleCommander:getZoneByName(neighborName)
+					if self:_zoneUsable(neighbor, self.side) then
+						redNeighbors[#redNeighbors + 1] = neighbor
+					end
+				end
+				if #redNeighbors > 0 then
+					local strategicCandidate = strategicCandidates[targetZone.zone]
+					candidates[#candidates + 1] = {
+						zone = targetZone,
+						redNeighbors = redNeighbors,
+						strategic = strategicCandidate,
+						score = strategicCandidate and strategicCandidate.score or self:_targetScore(targetZone, redNeighbors, now),
+					}
+				end
+			end
+		end
+		table.sort(candidates, function(a, b)
+			if a.score == b.score then return a.zone.zone < b.zone.zone end
+			return a.score > b.score
+		end)
+		return candidates
+	end
+
+	function Director:_pickWeightedCandidate(candidates, excludedTarget)
+		local choices = {}
+		local totalWeight = 0
+		for _, candidate in ipairs(candidates) do
+			if candidate.zone.zone ~= excludedTarget then
+				choices[#choices + 1] = candidate
+				totalWeight = totalWeight + candidate.score
+				if #choices >= 3 then break end
+			end
+		end
+		if #choices == 0 then return nil end
+		local roll = math.random() * totalWeight
+		for _, candidate in ipairs(choices) do
+			roll = roll - candidate.score
+			if roll <= 0 then return candidate end
+		end
+		return choices[#choices]
+	end
+
+	function Director:_groupRole(groupCommander)
+		if groupCommander.mission == 'supply' then return 'SUPPLY' end
+		if groupCommander.type == 'surface' then
+			if groupCommander.MissionType == 'ARTY' then return 'ARTY' end
+			return 'SURFACE'
+		end
+		return groupCommander.MissionType
+	end
+
+	function Director:_roleUsesAirPackage(role)
+		return role ~= 'SUPPLY' and role ~= 'ARTY' and role ~= 'SURFACE'
+	end
+
+	function Director:_configuredRoleLimit(role)
+		if self.side == coalition.side.BLUE then
+			if role == 'CAP' then
+				return math.max(0, getBlueCapLimit(getBluePlayersCount() or 0) or 0)
+			elseif role == 'CAS' then
+				return math.max(0, getBlueCasLimit(getBlueCasPlayersCount() or 0) or 0)
+			elseif role == 'SEAD' then
+				return math.max(0, getBlueSeadLimit(getBluePlayersCount() or 0) or 0)
+			elseif role == 'RUNWAYSTRIKE' then
+				return math.max(0, getBlueCasLimit(getBlueCasPlayersCount() or 0) or 0)
+			end
+			return nil
+		end
+		if role == 'CAP' then
+			return math.max(0, getCapLimit(getBluePlayersCount() or 0) or 0)
+		elseif role == 'CAS' then
+			return math.max(0, getRedCasLimit(getRedCasPlayersCount() or 0) or 0)
+		elseif role == 'SEAD' then
+			return math.max(0, getRedSeadLimit(getRedCasPlayersCount() or 0) or 0)
+		elseif role == 'RUNWAYSTRIKE' then
+			return math.max(0, getRedRunwayStrikeLimit(getRedCasPlayersCount() or 0) or 0)
+		elseif role == 'ANTISHIP' then
+			return math.max(0, getRedAntiShipLimit(getRedCasPlayersCount() or 0) or 0)
+		end
+		return nil
+	end
+
+	function Director:capMechanicalLimitFor(groupCommander, baseLimit)
+		local assignment = self:_assignmentFor(groupCommander)
+		if not assignment or assignment.completed or (assignment.capacityRole or assignment.role) ~= 'CAP' then
+			return baseLimit
+		end
+		return baseLimit + math.max(0, tonumber(self.operation and self.operation.reactionCapAllowance) or 0)
+	end
+
+	function Director:_configuredAirCapacity()
+		return self:_configuredRoleLimit('CAP')
+			+ self:_configuredRoleLimit('CAS')
+			+ self:_configuredRoleLimit('SEAD')
+			+ self:_configuredRoleLimit('RUNWAYSTRIKE')
+			+ self:_configuredRoleLimit('ANTISHIP')
+	end
+
+	function Director:_capacitySignature(playerCount)
+		return table.concat({
+			tostring(playerCount or 0),
+			tostring(getRedCasPlayersCount() or 0),
+			tostring(self:_configuredRoleLimit('CAP')),
+			tostring(self:_configuredRoleLimit('CAS')),
+			tostring(self:_configuredRoleLimit('SEAD')),
+			tostring(self:_configuredRoleLimit('RUNWAYSTRIKE')),
+			tostring(self:_configuredRoleLimit('ANTISHIP')),
+		}, ':')
+	end
+
+	function Director:_currentPackageMaximum(playerCount)
+		if self:_configuredAirCapacity() <= 0 then return 0 end
+		local maximumGroups = self.config.maxPackageBase + math.floor((playerCount or 0) / self.config.maxPackagePerPlayers)
+		return math.min(self.config.maxPackageCap, math.max(1, maximumGroups))
+	end
+
+	function Director:_operationPackageMaximum(operation, playerCount)
+		local reactionAllowance = math.max(0, tonumber(operation and operation.reactionAllowance) or 0)
+		return self:_currentPackageMaximum(playerCount) + reactionAllowance
+	end
+
+	function Director:_capAttackTargetRelevant(targetZoneName, reactionContext)
+		if reactionContext and (tonumber(reactionContext.capAllowance or reactionContext.reactionCapAllowance) or 0) > 0 then
+			return true
+		end
+		local bluePlayers = getBluePlayersCount() or 0
+		local limit = getCapLimit(bluePlayers) or 0
+		if limit <= 0 then return false end
+		local currentCap = self.battleCommander:getActiveCAPCount(self.side, 'attack')
+		local capLeft = limit - currentCap
+		if capLeft < 1 then capLeft = 1 end
+		local zoneDistances, capMeta = getClosestCapZonesToPlayers('attack', self.side, nil)
+		zoneDistances = self:rankCapZones('attack', zoneDistances, targetZoneName)
+		if #zoneDistances == 0 then return true end
+		local capWindow = math.min(#zoneDistances, capLeft)
+		local targetRank = nil
+		for index, zoneDistance in ipairs(zoneDistances) do
+			if zoneDistance.zone == targetZoneName then
+				targetRank = index
+				break
+			end
+		end
+		if not targetRank then return false end
+		local enemyAdjacent = capMeta and capMeta.enemyAdj and capMeta.enemyAdj[targetZoneName] or false
+		return targetRank <= capWindow or (enemyAdjacent and targetRank <= math.max(3, capWindow))
+	end
+
+	function Director:_effectiveRoleLimit(role, operation)
+		local limit = self:_configuredRoleLimit(role)
+		if role == 'CAP' then
+			limit = (limit or 0) + math.max(0, tonumber(operation and operation.reactionCapAllowance) or 0)
+		end
+		return limit
+	end
+
+	function Director:_groupSlotAvailable(groupCommander, operation, excludedAssignment)
+		local role = self:_groupRole(groupCommander)
+		if role == 'ARTY' then
+			for _, assignment in ipairs(operation.assignments or {}) do
+				if assignment ~= excludedAssignment and assignment.cancelled ~= true
+					and (assignment.capacityRole or assignment.role) == 'ARTY'
+					and assignment.targetZone == groupCommander.targetzone then
+					return false
+				end
+			end
+			for _, zoneCommander in ipairs(self.battleCommander.zones) do
+				for _, otherGroup in ipairs(zoneCommander.groups or {}) do
+					if otherGroup ~= groupCommander and otherGroup.side == self.side
+						and otherGroup.MissionType == 'ARTY' and otherGroup.targetzone == groupCommander.targetzone
+						and self:_groupIsLive(otherGroup) then
+						return false
+					end
+				end
+			end
+		end
+		local limit = self:_effectiveRoleLimit(role, operation)
+		if limit == nil then return true end
+		if limit <= 0 then return false end
+
+		local plane = Unit.Category.AIRPLANE
+		local heli = Unit.Category.HELICOPTER
+		local reservedTotal = 0
+		local reservedPlanes = 0
+		local reservedHelos = 0
+		for _, assignment in ipairs(operation.assignments or {}) do
+			if assignment ~= excludedAssignment and not assignment.launched and not assignment.completed
+				and (assignment.capacityRole or assignment.role) == role then
+				reservedTotal = reservedTotal + 1
+				if assignment.unitCategory == plane then
+					reservedPlanes = reservedPlanes + 1
+				elseif assignment.unitCategory == heli then
+					reservedHelos = reservedHelos + 1
+				end
+			end
+		end
+
+		if role == 'CAP' then
+			local active = self.battleCommander:getActiveCAPCount(self.side, 'attack')
+			return active + reservedTotal < limit
+		end
+
+		local activePlanes = self.battleCommander:getActiveStrikeCount(self.side, 'attack', role, plane)
+		local activeHelos = self.battleCommander:getActiveStrikeCount(self.side, 'attack', role, heli)
+		local activeTotal = self.battleCommander:getActiveStrikeCount(self.side, 'attack', role, nil)
+		if groupCommander.unitCategory == plane then
+			return activePlanes + reservedPlanes < limit
+		elseif groupCommander.unitCategory == heli then
+			return activeHelos + reservedHelos < 1 and activeTotal + reservedTotal < limit + 1
+		end
+		return activeTotal + reservedTotal < limit
+	end
+
+	function Director:_planningGraphHops(planningInventory, fromZoneName, toZoneName, maximumHops)
+		if not planningInventory then return self:_graphHops(fromZoneName, toZoneName, maximumHops) end
+		local cacheKey = table.concat({ tostring(fromZoneName), tostring(toZoneName), tostring(maximumHops or 6) }, '|')
+		local cached = planningInventory.graphHops[cacheKey]
+		if cached ~= nil then return cached ~= false and cached or nil end
+		local hops = self:_graphHops(fromZoneName, toZoneName, maximumHops)
+		planningInventory.graphHops[cacheKey] = hops or false
+		return hops
+	end
+
+	function Director:_buildPlanningGroupInventory(reactionNow, reactionContext)
+		local buildAreaPartition = reactionNow == nil and reactionContext == nil
+		local inventory = {
+			rows = {},
+			rowsByAreaRole = {},
+			countsByAreaRole = {},
+			now = timer.getAbsTime(),
+			reactionNow = reactionNow,
+			reactionContext = reactionContext,
+			graphHops = {},
+			corridorReuseBySource = {},
+			hasSeadTargetsByZone = {},
+			capTargetRelevantByZone = {},
+			retaskAllowedByGroup = {},
+			groundBlockedByPair = {},
+		}
+		for _, sourceZone in ipairs(self.battleCommander.zones) do
+			if self:_sourceZoneUsable(sourceZone, true) then
+				for _, groupCommander in ipairs(sourceZone.groups or {}) do
+					if groupCommander.side == self.side
+						and groupCommander._dynamicHybridRetired ~= true
+						and groupCommander._directorOperationId == nil
+						and self:_assignmentFor(groupCommander) == nil
+						and groupCommander.playerGroundAttack ~= true
+						and groupCommander.ShopLaunchOnly ~= true
+						and (groupCommander.MissionType ~= 'CAP'
+							or (self.routineCapCooldownByName[groupCommander.name] or 0) <= inventory.now)
+						and self:_groupIsDormant(groupCommander)
+						and (not reactionNow or (self.battleCommander.redReactive and self.battleCommander:_redReactiveCanUseHardSource(groupCommander, reactionNow)))
+						and (groupCommander.mission == 'attack' or groupCommander.mission == 'supply') then
+						local role = self:_groupRole(groupCommander)
+						local row = {
+							groupCommander = groupCommander,
+							sourceZone = sourceZone,
+							role = role,
+						}
+						inventory.rows[#inventory.rows + 1] = row
+						if buildAreaPartition then
+							local area = self.areaByZone[sourceZone.zone]
+							local areaId = area and area.id or '__unassigned'
+							local areaRole = role or '__unknown'
+							inventory.rowsByAreaRole[areaId] = inventory.rowsByAreaRole[areaId] or {}
+							inventory.rowsByAreaRole[areaId][areaRole] = inventory.rowsByAreaRole[areaId][areaRole] or {}
+							inventory.rowsByAreaRole[areaId][areaRole][#inventory.rowsByAreaRole[areaId][areaRole] + 1] = row
+							inventory.countsByAreaRole[areaId] = inventory.countsByAreaRole[areaId] or {}
+							inventory.countsByAreaRole[areaId][areaRole] = (inventory.countsByAreaRole[areaId][areaRole] or 0) + 1
+						end
+					end
+				end
+			end
+		end
+		if buildAreaPartition then
+			self.areaPlanningInventorySnapshot = {
+				builtAt = inventory.now,
+				countsByAreaRole = inventory.countsByAreaRole,
+			}
+		end
+		return inventory
+	end
+
+	function Director:_sourceCorridorReuse(sourceZoneName, planningInventory)
+		if planningInventory and planningInventory.corridorReuseBySource[sourceZoneName] ~= nil then
+			return planningInventory.corridorReuseBySource[sourceZoneName]
+		end
+		local reuse = 0
+		for index, previous in ipairs(self.history) do
+			if previous.sourceZone then
+				local hops = self:_planningGraphHops(planningInventory, sourceZoneName, previous.sourceZone, 2)
+				if hops and hops <= 2 then
+					reuse = reuse + (self.config.historySize - index + 1)
+				end
+			end
+		end
+		if planningInventory then planningInventory.corridorReuseBySource[sourceZoneName] = reuse end
+		return reuse
+	end
+
+	function Director:_collectExactRouteGroups(targetZoneName, reactionNow, reactionContext, planningInventory)
+		planningInventory = planningInventory or self:_buildPlanningGroupInventory(reactionNow, reactionContext)
+		if reactionNow == nil then reactionNow = planningInventory.reactionNow end
+		if reactionContext == nil then reactionContext = planningInventory.reactionContext end
+		local pools = { CAP = {}, CAS = {}, SEAD = {}, RUNWAYSTRIKE = {}, ANTISHIP = {}, ARTY = {}, SURFACE = {}, SUPPLY = {} }
+		local hasSeadTargets = planningInventory.hasSeadTargetsByZone[targetZoneName]
+		if hasSeadTargets == nil then
+			hasSeadTargets = self.battleCommander:HasSeadTargets(targetZoneName)
+			planningInventory.hasSeadTargetsByZone[targetZoneName] = hasSeadTargets
+		end
+		local reactionCapAllowance = reactionContext
+			and (tonumber(reactionContext.capAllowance or reactionContext.reactionCapAllowance) or 0) or nil
+		local capTargetRelevant = reactionCapAllowance and reactionCapAllowance > 0 or false
+		if reactionCapAllowance == nil then
+			capTargetRelevant = planningInventory.capTargetRelevantByZone[targetZoneName]
+			if capTargetRelevant == nil then
+				capTargetRelevant = self:_capAttackTargetRelevant(targetZoneName, nil)
+				planningInventory.capTargetRelevantByZone[targetZoneName] = capTargetRelevant
+			end
+		end
+		local targetZone = self.battleCommander:getZoneByName(targetZoneName)
+		for _, inventoryRow in ipairs(planningInventory.rows) do
+			local sourceZone = inventoryRow.sourceZone
+			local groupCommander = inventoryRow.groupCommander
+			if self:_sourceZoneUsable(sourceZone, true)
+				and groupCommander.side == self.side
+						and groupCommander._dynamicHybridRetired ~= true
+						and groupCommander._directorOperationId == nil
+						and self:_assignmentFor(groupCommander) == nil
+						and groupCommander.playerGroundAttack ~= true
+						and groupCommander.ShopLaunchOnly ~= true
+						and (groupCommander.MissionType ~= 'CAP'
+							or (self.routineCapCooldownByName[groupCommander.name] or 0) <= planningInventory.now)
+						and self:_groupIsDormant(groupCommander)
+						and (not reactionNow or (self.battleCommander.redReactive and self.battleCommander:_redReactiveCanUseHardSource(groupCommander, reactionNow)))
+						and (groupCommander.mission == 'attack' or groupCommander.mission == 'supply') then
+						local role = inventoryRow.role
+						local exactRoute = groupCommander.targetzone == targetZoneName
+						local retaskRoute = false
+						if self.side == coalition.side.RED and not exactRoute
+							and self:_canRetaskAirRole(role)
+							and groupCommander.mission == 'attack'
+							and (groupCommander.type == 'air' or groupCommander.type == 'carrier_air')
+							and groupCommander._retasked ~= true
+							and groupCommander._directorRetaskOriginalTargetZone == nil then
+							local retaskByTarget = planningInventory.retaskAllowedByGroup[groupCommander]
+							if not retaskByTarget then
+								retaskByTarget = {}
+								planningInventory.retaskAllowedByGroup[groupCommander] = retaskByTarget
+							end
+							retaskRoute = retaskByTarget[targetZoneName]
+							if retaskRoute == nil then
+								retaskRoute = self.battleCommander:_retaskDistanceAllowed(groupCommander, targetZoneName)
+								retaskByTarget[targetZoneName] = retaskRoute
+							end
+						end
+						if exactRoute or retaskRoute then
+							local roleAllowed = pools[role] ~= nil
+							if role == 'SUPPLY' and sourceZone.suspended then roleAllowed = false end
+							if role == 'CAP' and reactionContext
+								and (tonumber(reactionContext.capAllowance or reactionContext.reactionCapAllowance) or 0) <= 0 then roleAllowed = false end
+							if role == 'CAP' and not capTargetRelevant then roleAllowed = false end
+							if role == 'SEAD' and not hasSeadTargets then roleAllowed = false end
+							if role == 'RUNWAYSTRIKE' and not (targetZone and targetZone.airbaseName) then roleAllowed = false end
+							if role == 'ARTY' or role == 'SURFACE' then
+								local pairKey = sourceZone.zone .. '|' .. targetZoneName
+								local blocked = planningInventory.groundBlockedByPair[pairKey]
+								if blocked == nil then
+									blocked = self.battleCommander:IsGroundConvoyBlocked(sourceZone.zone, targetZoneName)
+									planningInventory.groundBlockedByPair[pairKey] = blocked
+								end
+								if blocked then roleAllowed = false end
+							end
+							if roleAllowed then
+								pools[role][#pools[role] + 1] = {
+									groupCommander = groupCommander,
+									sourceZone = sourceZone.zone,
+									graphHops = self:_planningGraphHops(planningInventory, sourceZone.zone, targetZoneName, 8) or math.huge,
+									corridorReuse = self:_sourceCorridorReuse(sourceZone.zone, planningInventory),
+									retasked = retaskRoute,
+								}
+							end
+						end
+				end
+			end
+		for _, pool in pairs(pools) do
+			table.sort(pool, function(a, b)
+				if a.retasked ~= b.retasked then return a.retasked ~= true end
+				if a.corridorReuse ~= b.corridorReuse then return a.corridorReuse < b.corridorReuse end
+				if a.graphHops == b.graphHops then return a.groupCommander.name < b.groupCommander.name end
+				return a.graphHops < b.graphHops
+			end)
+		end
+		pools._planningInventory = planningInventory
+		return pools
+	end
+
+	function Director:_takeRole(operation, pools, role, phase, targetZone)
+		local selectedIndex = nil
+		local selectedHops = nil
+		for index, candidate in ipairs(pools[role]) do
+			if candidate.retasked == true and selectedIndex and pools[role][selectedIndex].retasked ~= true then break end
+			if self:_groupSlotAvailable(candidate.groupCommander, operation) then
+				if not operation.sourceZone or targetZone ~= operation.targetZone then
+					selectedIndex = index
+					break
+				end
+				local sourceHops = self:_planningGraphHops(pools._planningInventory, operation.sourceZone, candidate.sourceZone, 8) or math.huge
+				if not selectedIndex or sourceHops < selectedHops then
+					selectedIndex = index
+					selectedHops = sourceHops
+				end
+			end
+		end
+		if not selectedIndex then return nil end
+		local candidate = table.remove(pools[role], selectedIndex)
+		local originalTargetZone = nil
+		if candidate.retasked == true then
+			originalTargetZone = self:_retaskGroupForAssignment(candidate.groupCommander, targetZone)
+		end
+		local assignment = self:_reserveGroup(operation, candidate.groupCommander, role, phase, targetZone)
+		if candidate.retasked == true then
+			assignment.retasked = true
+			assignment.originalTargetZone = originalTargetZone
+			self:_log('operation=' .. operation.id .. ' assignment=' .. assignment.name .. ' retask=' .. originalTargetZone .. '->' .. targetZone .. ' role=' .. role)
+		end
+		return assignment
+	end
+
+	function Director:_doctrineSelectionWeight(doctrine)
+		local weight = doctrine == 'probe' and 1 or 3
+		local outcomes = self.doctrineOutcomes[doctrine]
+		if outcomes then
+			local performance = ((outcomes.success or 0) + (outcomes.partial or 0) * 0.5 + 1)
+				/ ((outcomes.failure or 0) + 1)
+			weight = weight * math.max(0.75, math.min(1.35, performance))
+		end
+		for index, previous in ipairs(self.history) do
+			if previous.doctrine == doctrine then
+				weight = weight / (1 + self.config.historySize - index + 1)
+			end
+		end
+		return weight
+	end
+
+	function Director:_roleOutcomeSelectionWeight(doctrine, role)
+		local doctrineRoles = self.roleOutcomes[doctrine]
+		local outcomes = doctrineRoles and doctrineRoles[role]
+		if not outcomes then return 1 end
+		local success = math.max(0, tonumber(outcomes.success) or 0)
+		local partial = math.max(0, tonumber(outcomes.partial) or 0)
+		local failure = math.max(0, tonumber(outcomes.failure) or 0)
+		local total = success + partial + failure
+		if total <= 0 then return 1 end
+		local quality = (success + partial * 0.5 + 1) / (total + 2)
+		return math.max(0.8, math.min(1.2, 0.8 + quality * 0.4))
+	end
+
+	function Director:_recordRoleOutcomes(operation, outcomeField)
+		local doctrineRoles = self.roleOutcomes[operation.doctrine] or {}
+		local recorded = {}
+		local roleNames = {}
+		for _, assignment in ipairs(operation.assignments or {}) do
+			local role = assignment.capacityRole or assignment.role
+			if assignment.launched == true and assignment.cancelled ~= true and role ~= 'SUPPLY'
+				and not recorded[role] then
+				recorded[role] = true
+				roleNames[#roleNames + 1] = role
+				local outcomes = doctrineRoles[role] or {}
+				outcomes[outcomeField] = math.min(99, (outcomes[outcomeField] or 0) + 1)
+				doctrineRoles[role] = outcomes
+			end
+		end
+		self.roleOutcomes[operation.doctrine] = doctrineRoles
+		if #roleNames > 0 then
+			table.sort(roleNames)
+			self:_log('learning roles=' .. table.concat(roleNames, ',')
+				.. ' doctrine=' .. operation.doctrine
+				.. ' outcome=' .. outcomeField)
+		end
+	end
+
+	function Director:_pickDoctrine(pools, targetZoneName, capturedAt, targetCandidate)
+		if capturedAt and timer.getTime() - capturedAt <= self.config.captureReactionWindowSec then
+			return 'counterattack'
+		end
+
+		local strategic = targetCandidate and targetCandidate.strategic or nil
+		local effects = {}
+		for _, effect in ipairs(strategic and strategic.effects or {}) do effects[effect] = true end
+		local targetZone = targetCandidate and targetCandidate.zone or self.battleCommander:getZoneByName(targetZoneName)
+		local hasSeadTargets = self.battleCommander:HasSeadTargets(targetZoneName)
+		local runway = strategic and strategic.runway == true or self:_zoneHasCachedRunwayCapability(targetZone)
+		local groundOpen = effects.GROUND_ASSAULT == true
+		local playerPressure = strategic and strategic.components and strategic.components.player or 0
+		local regionIntent = strategic and strategic.regionIntent or nil
+		local strategy = self.campaignStrategy and self.campaignStrategy.name or nil
+		local strategyRegion = self.campaignStrategy and self.campaignStrategy.goalRegion or nil
+		local inStrategyRegion = strategic and strategic.regionId and strategic.regionId == strategyRegion
+
+		local suppressionBias = hasSeadTargets and 1.75 or 1
+		local isolationBias = runway and 1.75 or 1
+		local groundBias = groundOpen and 1.5 or 1
+		local airAssaultBias = groundOpen and 1 or 1.75
+		local counterattackBias = playerPressure > 0 and 1.75 or 1
+		if strategy == 'air_supremacy' then
+			suppressionBias = suppressionBias + 1.25
+			isolationBias = isolationBias + 1
+		elseif strategy == 'economic_pressure' then
+			isolationBias = isolationBias + ((strategic and strategic.income or 0) > 0 and 1 or 0.4)
+			groundBias = groundBias + 0.4
+			airAssaultBias = airAssaultBias + 0.4
+		elseif strategy == 'island_campaign' and inStrategyRegion then
+			suppressionBias = suppressionBias + 0.5
+			isolationBias = isolationBias + (runway and 1 or 0.25)
+			airAssaultBias = airAssaultBias + 1.5
+		elseif strategy == 'breakthrough' then
+			groundBias = groundBias + 1.5
+			airAssaultBias = airAssaultBias + 0.5
+		elseif strategy == 'counterpunch' then
+			counterattackBias = counterattackBias + 1.5
+			airAssaultBias = airAssaultBias + 0.5
+		end
+
+		local choices = {}
+		local totalWeight = 0
+		local function add(doctrine, bias)
+			local weight = self:_doctrineSelectionWeight(doctrine) * math.max(0.1, bias or 1)
+			choices[#choices + 1] = { doctrine = doctrine, weight = weight }
+			totalWeight = totalWeight + weight
+		end
+		if hasSeadTargets and self:_configuredRoleLimit('SEAD') > 0 and #pools.SEAD > 0 then
+			add('suppression', suppressionBias)
+		end
+		if runway and self:_configuredRoleLimit('RUNWAYSTRIKE') > 0 and #pools.RUNWAYSTRIKE > 0 then
+			add('isolation', isolationBias)
+		end
+		if (#pools.ARTY > 0 or #pools.SURFACE > 0) and #pools.SUPPLY > 0 then
+			add('ground_push', groundBias)
+		end
+		if (strategy == 'counterpunch' and playerPressure > 0)
+			or regionIntent == 'counterattack_foothold' or regionIntent == 'reduce_remnant' then
+			add('counterattack', counterattackBias)
+		end
+		if #pools.CAS > 0 or #pools.CAP > 0 or #pools.ANTISHIP > 0 then
+			add('air_assault', airAssaultBias)
+		end
+		add('probe', 1)
+
+		local roll = math.random() * totalWeight
+		for _, choice in ipairs(choices) do
+			roll = roll - choice.weight
+			if roll <= 0 then return choice.doctrine end
+		end
+		return choices[#choices].doctrine
+	end
+
+	function Director:_pickFeintCandidate(targetZoneName, allCandidates, planningInventory)
+		local choices = {}
+		local totalWeight = 0
+		for _, candidate in ipairs(allCandidates) do
+			if candidate.zone.zone ~= targetZoneName then
+				local hops = self:_planningGraphHops(planningInventory, targetZoneName, candidate.zone.zone, 3)
+				if not hops or hops >= 3 then
+					local weight = candidate.score
+					for index, previous in ipairs(self.history) do
+						if previous.feintTargetZone == candidate.zone.zone then
+							weight = weight / (1 + self.config.historySize - index + 1)
+						end
+					end
+					choices[#choices + 1] = { candidate = candidate, weight = weight }
+					totalWeight = totalWeight + weight
+				end
+			end
+		end
+		if #choices == 0 then return nil end
+		local roll = math.random() * totalWeight
+		for _, choice in ipairs(choices) do
+			roll = roll - choice.weight
+			if roll <= 0 then return choice.candidate end
+		end
+		return choices[#choices].candidate
+	end
+
+	function Director:_combatAssignmentCount(operation)
+		local count = 0
+		for _, assignment in ipairs(operation.assignments or {}) do
+			if self:_roleUsesAirPackage(assignment.capacityRole or assignment.role)
+				and assignment.capacitySkipped ~= true and assignment.cancelled ~= true then
+				count = count + 1
+			end
+		end
+		return count
+	end
+
+	function Director:_fillOperationAssignments(operation, pools, maximumGroups, allowShape, allowAssault, includeGround)
+		local remaining = maximumGroups - self:_combatAssignmentCount(operation)
+		local function take(role, phase)
+			local usesAirPackage = self:_roleUsesAirPackage(role)
+			if usesAirPackage and remaining <= 0 then return nil end
+			if not usesAirPackage and includeGround ~= true then return nil end
+			if phase == 'shape' and not allowShape then return nil end
+			if phase == 'assault' and not allowAssault then return nil end
+			local assignment = self:_takeRole(operation, pools, role, phase, operation.targetZone)
+			if assignment and usesAirPackage then remaining = remaining - 1 end
+			return assignment
+		end
+
+		if operation.doctrine == 'suppression' then
+			if self.battleCommander:HasSeadTargets(operation.targetZone) then
+				take('SEAD', 'shape')
+				take('CAP', 'shape')
+				take('CAS', 'assault')
+				take('RUNWAYSTRIKE', 'shape')
+			else
+				take('RUNWAYSTRIKE', 'shape')
+				take('CAP', 'shape')
+				take('CAS', 'assault')
+			end
+			take('ANTISHIP', 'assault')
+			take('ARTY', 'assault')
+			take('SURFACE', 'assault')
+		elseif operation.doctrine == 'isolation' then
+			if self.battleCommander:HasSeadTargets(operation.targetZone) then take('SEAD', 'shape') end
+			take('RUNWAYSTRIKE', 'shape')
+			take('CAP', 'shape')
+			take('CAS', 'assault')
+			take('ANTISHIP', 'assault')
+		elseif operation.doctrine == 'air_assault' then
+			if self.battleCommander:HasSeadTargets(operation.targetZone) then take('SEAD', 'shape') end
+			take('CAS', 'assault')
+			take('CAP', 'shape')
+			take('ANTISHIP', 'assault')
+			take('ARTY', 'assault')
+		elseif operation.doctrine == 'counterattack' then
+			if self.battleCommander:HasSeadTargets(operation.targetZone) then take('SEAD', 'shape') end
+			take('CAS', 'assault')
+			take('SURFACE', 'assault')
+			take('ARTY', 'assault')
+			take('CAP', 'shape')
+			take('SURFACE', 'assault')
+		elseif operation.doctrine == 'ground_push' then
+			if self.battleCommander:HasSeadTargets(operation.targetZone) then take('SEAD', 'shape') end
+			take('SURFACE', 'assault')
+			take('CAS', 'assault')
+			take('ARTY', 'assault')
+			take('CAP', 'shape')
+			take('SURFACE', 'assault')
+		else
+			if self.battleCommander:HasSeadTargets(operation.targetZone) then take('SEAD', 'shape') end
+			if not take('CAS', 'assault') then
+				if not take('ANTISHIP', 'assault') then
+					if not take('ARTY', 'assault') then
+						take('SURFACE', 'assault')
+					end
+				end
+			end
+			take('CAP', 'shape')
+		end
+
+		if remaining > 0 and operation.doctrine ~= 'probe' then
+			local refillRoles = {
+				suppression = { 'SEAD', 'RUNWAYSTRIKE', 'CAP', 'CAS', 'ANTISHIP' },
+				isolation = { 'SEAD', 'RUNWAYSTRIKE', 'CAP', 'CAS', 'ANTISHIP' },
+				air_assault = { 'SEAD', 'CAS', 'CAP', 'ANTISHIP' },
+				counterattack = { 'SEAD', 'CAS', 'CAP' },
+				ground_push = { 'SEAD', 'CAS', 'CAP' },
+			}
+			local refillPhase = {
+				CAP = 'shape',
+				SEAD = 'shape',
+				RUNWAYSTRIKE = 'shape',
+				CAS = 'assault',
+				ANTISHIP = 'assault',
+			}
+			local roles = refillRoles[operation.doctrine] or {}
+			local unavailable = {}
+			while remaining > 0 do
+				local choices = {}
+				local totalWeight = 0
+				for _, role in ipairs(roles) do
+					local phase = refillPhase[role]
+					local phaseAllowed = (phase ~= 'shape' or allowShape) and (phase ~= 'assault' or allowAssault)
+					local limit = self:_effectiveRoleLimit(role, operation)
+					local weight = (limit == nil and 1 or limit)
+						* self:_roleOutcomeSelectionWeight(operation.doctrine, role)
+					if phaseAllowed and not unavailable[role] and pools[role] and #pools[role] > 0 and weight > 0 then
+						choices[#choices + 1] = { role = role, phase = phase, weight = weight }
+						totalWeight = totalWeight + weight
+					end
+				end
+				if totalWeight <= 0 then break end
+				local roll = math.random() * totalWeight
+				local selected = choices[#choices]
+				for _, choice in ipairs(choices) do
+					roll = roll - choice.weight
+					if roll <= 0 then
+						selected = choice
+						break
+					end
+				end
+				if not take(selected.role, selected.phase) then
+					unavailable[selected.role] = true
+				end
+			end
+		end
+
+		return remaining
+	end
+
+	function Director:_conditionalReserveAssignment(operation)
+		for _, assignment in ipairs(operation.assignments or {}) do
+			if assignment.reserveHeld == true and assignment.completed ~= true and assignment.cancelled ~= true then
+				return assignment
+			end
+		end
+		return nil
+	end
+
+	function Director:_configureConditionalReserve(operation, reactionRequest)
+		if reactionRequest or operation.doctrine == 'probe' then return false end
+		local packageCount = 0
+		local candidates = {}
+		for _, assignment in ipairs(operation.assignments) do
+			if assignment.phase ~= 'feint'
+				and self:_roleUsesAirPackage(assignment.capacityRole or assignment.role)
+				and assignment.cancelled ~= true
+			then
+				packageCount = packageCount + 1
+				if assignment.phase == 'assault'
+					and (assignment.capacityRole == 'CAS' or assignment.capacityRole == 'ANTISHIP')
+				then
+					candidates[#candidates + 1] = assignment
+				end
+			end
+		end
+		if packageCount < 3 or #candidates == 0 or math.random(1, 100) > 35 then return false end
+
+		local assignment = candidates[math.random(1, #candidates)]
+		local earliestDelaySec = math.random(120, 240)
+		local fallbackDelaySec = math.max(earliestDelaySec + 120, math.random(360, 720))
+		assignment.reserveHeld = true
+		assignment.reserveOriginalPhase = assignment.phase
+		assignment.phase = 'reserve'
+		operation.reserve = {
+			earliestDelaySec = earliestDelaySec,
+			fallbackDelaySec = fallbackDelaySec,
+		}
+		self:_log('operation=' .. operation.id
+			.. ' reserve=' .. assignment.name
+			.. ' role=' .. tostring(assignment.capacityRole or assignment.role)
+			.. ' earliest=' .. tostring(earliestDelaySec)
+			.. ' fallback=' .. tostring(fallbackDelaySec))
+		return true
+	end
+
+	function Director:_armConditionalReserve(operation, now)
+		local reserve = operation.reserve
+		if not reserve or reserve.earliestAt then return end
+		reserve.earliestAt = now + math.max(0, tonumber(reserve.earliestDelaySec) or 0)
+		reserve.fallbackAt = now + math.max(0, tonumber(reserve.fallbackDelaySec) or 0)
+	end
+
+	function Director:_updateConditionalReserve(now, targetZone)
+		local operation = self.operation
+		local reserve = operation and operation.reserve
+		if not reserve then return false end
+		local assignment = self:_conditionalReserveAssignment(operation)
+		if not assignment then
+			operation.reserve = nil
+			return false
+		end
+		if targetZone.side == coalition.side.NEUTRAL then
+			operation.reserve = nil
+			operation.reserveTrigger = 'conserved-neutral'
+			self:_cancelUnlaunchedAssignment(operation, assignment, 'reserve-conserved-neutral')
+			return false
+		end
+
+		self:_armConditionalReserve(operation, now)
+		if now < reserve.earliestAt then return false end
+		local triggerReason = nil
+		for _, candidate in ipairs(operation.assignments) do
+			if candidate ~= assignment and candidate.role ~= 'SUPPLY'
+				and candidate.launched == true and candidate.completed == true then
+				triggerReason = 'first-wave-loss'
+				break
+			end
+		end
+		if not triggerReason then
+			local playerScores = self:_playerFrontlineActivityScores(now, false)
+			if (playerScores[operation.targetZone] or 0) >= 100 then
+				triggerReason = 'player-pressure'
+			end
+		end
+		if not triggerReason and now >= reserve.fallbackAt then
+			triggerReason = 'delayed-wave'
+		end
+		if not triggerReason then return false end
+
+		assignment.phase = assignment.reserveOriginalPhase or 'assault'
+		assignment.reserveOriginalPhase = nil
+		assignment.reserveHeld = nil
+		assignment.reserveReleased = true
+		assignment.reserveTrigger = triggerReason
+		operation.reserve = nil
+		operation.reserveTrigger = triggerReason
+		self:_log('operation=' .. operation.id
+			.. ' reserve-release=' .. assignment.name
+			.. ' trigger=' .. triggerReason)
+		return true
+	end
+
+	function Director:_buildOperation(targetCandidate, allCandidates, playerCount, now, reactionRequest, planningInventory)
+		local normalMaximum = self:_currentPackageMaximum(playerCount)
+		local requestedAllowance = math.max(0, math.floor(tonumber(reactionRequest and reactionRequest.allowance) or 0))
+		if normalMaximum <= 0 and requestedAllowance <= 0 then return nil end
+		local requestedCapAllowance = math.min(requestedAllowance,
+			math.max(0, math.floor(tonumber(reactionRequest and reactionRequest.capAllowance) or 0)))
+		local maximumGroups = normalMaximum + requestedAllowance
+		local targetZoneName = targetCandidate.zone.zone
+		planningInventory = planningInventory or self:_buildPlanningGroupInventory(reactionRequest and timer.getTime() or nil, reactionRequest)
+		local pools = self:_collectExactRouteGroups(targetZoneName, nil, nil, planningInventory)
+		local capturedAt = self.battleCommander._redReactiveBlueCaptureAt and self.battleCommander._redReactiveBlueCaptureAt[targetZoneName]
+		local doctrine = self:_pickDoctrine(pools, targetZoneName, capturedAt, targetCandidate)
+
+		self.operationCounter = self.operationCounter + 1
+		local operation = {
+			id = self.operationCounter,
+			doctrine = doctrine,
+			targetZone = targetZoneName,
+			startedAt = now,
+			phaseStartedAt = now,
+			phaseDeadline = now + self.config.shapingMaxSec,
+			assignments = {},
+			assignmentsByName = {},
+			reactionAllowance = requestedAllowance,
+			reactionCapAllowance = requestedCapAllowance,
+		}
+		local remaining = self:_fillOperationAssignments(operation, pools, maximumGroups, true, true, true)
+
+		if (doctrine == 'counterattack' or doctrine == 'ground_push') and #pools.SUPPLY > 0 then
+			self:_takeRole(operation, pools, 'SUPPLY', 'exploit', targetZoneName)
+		end
+
+		local attackCount = 0
+		for _, assignment in ipairs(operation.assignments) do
+			if assignment.role ~= 'SUPPLY' then attackCount = attackCount + 1 end
+		end
+		if attackCount == 0 then
+			self:_releaseOperationGroups(operation)
+			return nil
+		end
+
+		if remaining > 0 and math.random(1, 100) <= self.config.feintChance then
+			local feintCandidate = self:_pickFeintCandidate(targetZoneName, allCandidates, planningInventory)
+			if feintCandidate then
+				local feintPools = self:_collectExactRouteGroups(feintCandidate.zone.zone, nil, nil, planningInventory)
+				local feintAssignment = self:_takeRole(operation, feintPools, 'CAS', 'feint', feintCandidate.zone.zone)
+					or self:_takeRole(operation, feintPools, 'CAP', 'feint', feintCandidate.zone.zone)
+				if feintAssignment then
+					feintAssignment.role = 'FEINT'
+					operation.feintTargetZone = feintCandidate.zone.zone
+					operation.mainAuthorizeAt = now + self:_randomSeconds(self.config.feintDelayMinSec, self.config.feintDelayMaxSec)
+				end
+			end
+		end
+
+		operation.mainAuthorizeAt = operation.mainAuthorizeAt or now
+		local reactionAccepted = 0
+		if reactionRequest then
+			reactionAccepted = self:_markReactionAssignments(operation, 1, reactionRequest, requestedAllowance)
+			operation.reactionAllowance = reactionAccepted
+			operation.reactionCapAllowance = math.min(requestedCapAllowance, reactionAccepted)
+		end
+		self:_configureConditionalReserve(operation, reactionRequest)
+		operation.capacitySignature = self:_capacitySignature(playerCount)
+		return operation, reactionAccepted
+	end
+
+	function Director:_skipAssignmentForCapacity(operation, assignment)
+		self:_cancelUnlaunchedAssignment(operation, assignment)
+		assignment.capacitySkipped = true
+	end
+
+	function Director:_cancelUnlaunchedAssignment(operation, assignment, reason)
+		assignment.authorized = false
+		assignment.completed = true
+		assignment.cancelled = true
+		self:_releaseAssignment(operation, assignment)
+		if operation.assignmentsByName[assignment.name] == assignment then
+			operation.assignmentsByName[assignment.name] = nil
+		end
+		if operation.sourceZone == assignment.sourceZone then
+			operation.sourceZone = nil
+			for _, remaining in ipairs(operation.assignments) do
+				if remaining ~= assignment and remaining.cancelled ~= true and remaining.role ~= 'SUPPLY'
+					and remaining.targetZone == operation.targetZone then
+					operation.sourceZone = remaining.sourceZone
+					break
+				end
+			end
+		end
+		if reason then
+			self:_log('operation=' .. operation.id .. ' assignment=' .. assignment.name .. ' cancelled=' .. reason)
+		end
+		operation.capacitySignature = nil
+	end
+
+	function Director:_reconcileOperationCapacity(now, playerCount)
+		local operation = self.operation
+		if not operation or self.state == 'surge' then return end
+		local capacitySignature = self:_capacitySignature(playerCount)
+		local capacityChanged = operation.capacitySignature ~= capacitySignature
+
+		local configuredAirCapacity = self:_configuredAirCapacity()
+			+ math.max(0, tonumber(operation.reactionCapAllowance) or 0)
+		for _, assignment in ipairs(operation.assignments) do
+			local capacityRole = assignment.capacityRole or assignment.role
+			if self:_roleUsesAirPackage(capacityRole) and not assignment.launched and not assignment.completed then
+				local roleLimit = self:_effectiveRoleLimit(capacityRole, operation)
+				if configuredAirCapacity <= 0 or (roleLimit ~= nil and roleLimit <= 0) then
+					self:_skipAssignmentForCapacity(operation, assignment)
+				end
+			end
+		end
+
+		local maximumGroups = self:_operationPackageMaximum(operation, playerCount)
+		local currentGroups = self:_combatAssignmentCount(operation)
+		if currentGroups > maximumGroups then
+			for index = #operation.assignments, 1, -1 do
+				if currentGroups <= maximumGroups then break end
+				local assignment = operation.assignments[index]
+				if self:_roleUsesAirPackage(assignment.capacityRole or assignment.role)
+					and not assignment.launched and not assignment.completed
+					and assignment.capacitySkipped ~= true then
+					self:_skipAssignmentForCapacity(operation, assignment)
+					currentGroups = currentGroups - 1
+				end
+			end
+		end
+
+		local beforeCount = self:_combatAssignmentCount(operation)
+		if capacityChanged and maximumGroups > beforeCount and (self.state == 'shaping' or self.state == 'assault') then
+			local reactionAllowance = math.max(0, tonumber(operation.reactionAllowance) or 0)
+			local reactionCount = 0
+			for _, assignment in ipairs(operation.assignments) do
+				if assignment.reaction == true and self:_roleUsesAirPackage(assignment.capacityRole or assignment.role)
+					and assignment.capacitySkipped ~= true and assignment.cancelled ~= true then
+					reactionCount = reactionCount + 1
+				end
+			end
+			local firstNewIndex = #operation.assignments + 1
+			local pools = self:_collectExactRouteGroups(operation.targetZone, reactionAllowance > 0 and timer.getTime() or nil, operation)
+			self:_fillOperationAssignments(operation, pools, maximumGroups, self.state == 'shaping', true)
+			local afterCount = self:_combatAssignmentCount(operation)
+			local reactionNeeded = math.max(0, reactionAllowance - reactionCount)
+			if reactionNeeded > 0 and afterCount > beforeCount then
+				self:_markReactionAssignments(operation, firstNewIndex, {
+					reason = operation.reactionReason or 'pressure',
+					sourceZone = operation.reactionSourceZone,
+					groupReuseCooldownSec = operation.reactionGroupReuseCooldownSec,
+				}, math.min(reactionNeeded, afterCount - beforeCount))
+			end
+			if afterCount > beforeCount then
+				self:_log('operation=' .. operation.id .. ' capacity=' .. afterCount .. '/' .. maximumGroups .. ' players=' .. tostring(playerCount))
+			end
+		end
+
+		operation.capacitySignature = capacitySignature
+	end
+
+	function Director:_authorizePhase(phase, now)
+		local accelerationTime = timer.getTime()
+		for _, assignment in ipairs(self.operation.assignments) do
+			if assignment.phase == phase and not assignment.launched and not assignment.completed then
+				local groupCommander = assignment.groupRef
+				local assignmentTarget = self.battleCommander:getZoneByName(assignment.targetZone)
+				if assignment.phase == 'feint' and not self:_zoneUsable(assignmentTarget, coalition.side.BLUE) then
+					self:_cancelUnlaunchedAssignment(self.operation, assignment, 'invalid-feint-target')
+				elseif not groupCommander or groupCommander._dynamicHybridRetired == true or groupCommander.side ~= self.side or groupCommander.targetzone ~= assignment.targetZone
+					or not self:_sourceZoneUsable(groupCommander.zoneCommander, assignment.role ~= 'SUPPLY') then
+					assignment.completed = true
+					assignment.authorized = false
+				elseif self:_groupIsLive(groupCommander) then
+					assignment.launched = true
+					assignment.authorized = false
+				elseif (assignment.capacityRole or assignment.role) == 'CAP' and not self:_capAttackTargetRelevant(assignment.targetZone, self.operation) then
+					self:_cancelUnlaunchedAssignment(self.operation, assignment, 'cap-target-not-player-relevant')
+				elseif assignment.role ~= 'SUPPLY' and not self:_groupSlotAvailable(groupCommander, self.operation, assignment) then
+					assignment.authorized = false
+					groupCommander._spawnEvalCache = nil
+					groupCommander._spawnEvalLast = nil
+				elseif self:_groupIsDormant(groupCommander) then
+					assignment.authorized = true
+					groupCommander._spawnEvalCache = nil
+					groupCommander._spawnEvalLast = nil
+					groupCommander:_clearDormantFsmDelay()
+					if assignment.role == 'SUPPLY' then
+						self.battleCommander:_redReactiveFastForwardSupplyGroup(groupCommander, accelerationTime)
+					else
+						self.battleCommander:_redReactiveFastForwardGroup(groupCommander, accelerationTime)
+					end
+				end
+			end
+		end
+	end
+
+	function Director:_phaseSettled(phase)
+		for _, assignment in ipairs(self.operation.assignments) do
+			if assignment.phase == phase and not assignment.launched and not assignment.completed then
+				return false
+			end
+		end
+		return true
+	end
+
+	function Director:_closePhase(phase)
+		for _, assignment in ipairs(self.operation.assignments) do
+			if assignment.phase == phase and not assignment.launched then
+				assignment.authorized = false
+				assignment.completed = true
+			end
+		end
+	end
+
+	function Director:_allCombatGroupsComplete()
+		local found = false
+		for _, assignment in ipairs(self.operation.assignments) do
+			if assignment.role ~= 'SUPPLY' then
+				found = true
+				if not assignment.completed then return false end
+			end
+		end
+		return found
+	end
+
+	function Director:_beginAssault(now)
+		self:_closePhase('feint')
+		self:_closePhase('shape')
+		self.state = 'assault'
+		self.operation.phaseStartedAt = now
+		self.operation.phaseDeadline = now + self.config.assaultMaxSec
+		self:_armConditionalReserve(self.operation, now)
+		self:_log('operation=' .. self.operation.id .. ' phase=assault target=' .. self.operation.targetZone)
+	end
+
+	function Director:_beginExploit(now)
+		self.state = 'exploit'
+		self.operation.phaseStartedAt = now
+		self.operation.phaseDeadline = now + self.config.exploitMaxSec
+		self.operation.exploitStarted = true
+		self:_log('operation=' .. self.operation.id .. ' phase=exploit target=' .. self.operation.targetZone)
+	end
+
+	function Director:_finishOperation(result, now)
+		local operation = self.operation
+		if not operation then return end
+		if self.side == coalition.side.RED then
+			local outcomeField = result == 'captured' and 'success'
+				or (result == 'neutralized' and 'partial' or (result == 'failed' and 'failure' or nil))
+			if outcomeField then
+				local doctrineOutcomes = self.doctrineOutcomes[operation.doctrine] or {}
+				doctrineOutcomes[outcomeField] = math.min(99, (doctrineOutcomes[outcomeField] or 0) + 1)
+				self.doctrineOutcomes[operation.doctrine] = doctrineOutcomes
+				local targetOutcomes = self.targetOutcomes[operation.targetZone] or {}
+				targetOutcomes[outcomeField] = math.min(99, (targetOutcomes[outcomeField] or 0) + 1)
+				self.targetOutcomes[operation.targetZone] = targetOutcomes
+				self:_recordRoleOutcomes(operation, outcomeField)
+				self:_log('learning doctrine=' .. operation.doctrine
+					.. ' target=' .. operation.targetZone .. ' outcome=' .. outcomeField)
+			end
+		end
+		table.insert(self.history, 1, {
+			targetZone = operation.targetZone,
+			feintTargetZone = operation.feintTargetZone,
+			sourceZone = operation.sourceZone,
+			doctrine = operation.doctrine,
+			result = result,
+		})
+		while #self.history > self.config.historySize do table.remove(self.history) end
+		self:_releaseOperationGroups(operation)
+		self:_log('operation=' .. operation.id .. ' result=' .. result .. ' target=' .. operation.targetZone)
+		self.operation = nil
+		self.state = 'recovery'
+		self.recoveryUntil = now + self:_randomSeconds(self.config.recoveryMinSec, self.config.recoveryMaxSec)
+	end
+
+	function Director:_adoptMassAttack(now, launchedByDirector)
+		local massAttack = self.battleCommander.redMassAttackMission
+		if not massAttack or not massAttack.active or not massAttack.targetZone then return false end
+		self.operationCounter = self.operationCounter + 1
+		self.operation = {
+			id = self.operationCounter,
+			doctrine = 'surge',
+			targetZone = massAttack.targetZone,
+			startedAt = now,
+			phaseStartedAt = now,
+			phaseDeadline = now + self.config.operationMaxSec,
+			mainAuthorizeAt = now,
+			assignments = {},
+			assignmentsByName = {},
+			launchedByDirector = launchedByDirector == true,
+		}
+		self.state = 'surge'
+		self.nextSurgeAt = now + self:_randomSeconds(self.config.surgeCooldownMinSec, self.config.surgeCooldownMaxSec)
+		self:_log('operation=' .. self.operation.id .. ' doctrine=surge target=' .. self.operation.targetZone .. ' source=' .. (launchedByDirector and 'director' or 'external'))
+		return true
+	end
+
+	function Director:_massAttackTargetPreferences()
+		local preferences = {}
+		local seen = {}
+		local function addTarget(targetZoneName)
+			if seen[targetZoneName] then return end
+			local targetZone = self.battleCommander:getZoneByName(targetZoneName)
+			if not self:_zoneUsable(targetZone, coalition.side.BLUE)
+				or not self:_zoneHasCachedRunwayCapability(targetZone)
+			then
+				return
+			end
+			seen[targetZoneName] = true
+			preferences[#preferences + 1] = targetZoneName
+		end
+
+		local objective = self.strategicShadowObjective
+		local runwayCandidates = {}
+		for _, candidate in ipairs(objective and objective.candidates or {}) do
+			local targetZone = candidate.zone
+			if self:_zoneUsable(targetZone, coalition.side.BLUE)
+				and self:_zoneHasCachedRunwayCapability(targetZone)
+			then
+				runwayCandidates[#runwayCandidates + 1] = candidate
+			end
+		end
+		local selected = self:_pickWeightedCandidate(runwayCandidates)
+		if selected then addTarget(selected.zone.zone) end
+		if objective and objective.main then addTarget(objective.main.zone) end
+		for _, candidate in ipairs(objective and objective.candidates or {}) do
+			addTarget(candidate.zone and candidate.zone.zone)
+		end
+		if self.campaignStrategy then addTarget(self.campaignStrategy.goalZone) end
+		return preferences
+	end
+
+	function Director:_tryStartSurge(now, playerCount)
+		if self.side ~= coalition.side.RED or playerCount < self.config.surgeMinPlayers then return false end
+		if now < (self.nextSurgeAt or 0) then return false end
+		if math.random(1, 100) > self.config.surgeChance then return false end
+		local shopItem = self.battleCommander.shops[self.side][self.config.surgeShopItemId]
+		if not shopItem or (shopItem.stock ~= -1 and shopItem.stock <= 0) then return false end
+		local availableCredits = (self.battleCommander.accounts[self.side] or 0) - self.battleCommander:_getPendingShopReservedCredits(self.side)
+		if availableCredits < shopItem.cost then return false end
+		self.battleCommander._directorRedMassAttackPreferredTargets = self:_massAttackTargetPreferences()
+		self.battleCommander:buyShopItem(self.side, self.config.surgeShopItemId)
+		self.battleCommander._directorRedMassAttackPreferredTargets = nil
+		if not self.battleCommander:isRedMassAttackMissionActive() then return false end
+		return self:_adoptMassAttack(now, true)
+	end
+
+	function Director:exportPersistence()
+		if not self.ready and type(self.pendingPersistence) == 'table' then
+			return self.pendingPersistence
+		end
+		local now = timer.getAbsTime()
+		local clockNow = self.strategicPauseStartedAt or now
+		local saved = {
+			version = 1,
+			side = self.side,
+			state = self.state,
+			campaignStrategy = self.campaignStrategy and {
+				name = self.campaignStrategy.name,
+				generation = self.campaignStrategy.generation,
+				reason = self.campaignStrategy.reason,
+				goalZone = self.campaignStrategy.goalZone,
+				goalRegion = self.campaignStrategy.goalRegion,
+				weight = self.campaignStrategy.weight,
+			} or nil,
+			operationCounter = self.operationCounter,
+			recoveryRemainingSec = math.max(0, (self.recoveryUntil or clockNow) - clockNow),
+			planningRemainingSec = math.max(0, (self.nextPlanningAt or clockNow) - clockNow),
+			surgeRemainingSec = math.max(0, (self.nextSurgeAt or clockNow) - clockNow),
+			zoneUpgradeCooldownRemainingSec = math.max(0, (self.zoneUpgradeCooldownUntil or now) - now),
+			history = {},
+			doctrineOutcomes = {},
+			targetOutcomes = {},
+			roleOutcomes = {},
+			zoneUpgradeHistory = {},
+		}
+		for _, previous in ipairs(self.history) do
+			saved.history[#saved.history + 1] = {
+				targetZone = previous.targetZone,
+				feintTargetZone = previous.feintTargetZone,
+				sourceZone = previous.sourceZone,
+				doctrine = previous.doctrine,
+				result = previous.result,
+			}
+		end
+		for doctrine, outcomes in pairs(self.doctrineOutcomes or {}) do
+			saved.doctrineOutcomes[doctrine] = {
+				success = math.min(99, math.max(0, math.floor(tonumber(outcomes.success) or 0))),
+				partial = math.min(99, math.max(0, math.floor(tonumber(outcomes.partial) or 0))),
+				failure = math.min(99, math.max(0, math.floor(tonumber(outcomes.failure) or 0))),
+			}
+		end
+		for targetZoneName, outcomes in pairs(self.targetOutcomes or {}) do
+			saved.targetOutcomes[targetZoneName] = {
+				success = math.min(99, math.max(0, math.floor(tonumber(outcomes.success) or 0))),
+				partial = math.min(99, math.max(0, math.floor(tonumber(outcomes.partial) or 0))),
+				failure = math.min(99, math.max(0, math.floor(tonumber(outcomes.failure) or 0))),
+			}
+		end
+		for doctrine, roles in pairs(self.roleOutcomes or {}) do
+			saved.roleOutcomes[doctrine] = {}
+			for role, outcomes in pairs(roles) do
+				saved.roleOutcomes[doctrine][role] = {
+					success = math.min(99, math.max(0, math.floor(tonumber(outcomes.success) or 0))),
+					partial = math.min(99, math.max(0, math.floor(tonumber(outcomes.partial) or 0))),
+					failure = math.min(99, math.max(0, math.floor(tonumber(outcomes.failure) or 0))),
+				}
+			end
+		end
+		for _, previous in ipairs(self.zoneUpgradeHistory or {}) do
+			saved.zoneUpgradeHistory[#saved.zoneUpgradeHistory + 1] = { zone = previous.zone }
+		end
+		if self.pendingReaction then
+			local pending = self.pendingReaction
+			saved.pendingReaction = {
+				targetZone = pending.targetZone,
+				sourceZone = pending.sourceZone,
+				reason = pending.reason,
+				priority = pending.priority,
+				allowance = pending.allowance,
+				capAllowance = pending.capAllowance,
+				groupReuseCooldownSec = pending.groupReuseCooldownSec,
+				nextAttemptRemainingSec = math.max(0, (pending.nextAttemptAt or clockNow) - clockNow),
+			}
+		end
+		if self.operation then
+			local operation = self.operation
+			saved.operation = {
+				id = operation.id,
+				doctrine = operation.doctrine,
+				targetZone = operation.targetZone,
+				feintTargetZone = operation.feintTargetZone,
+				sourceZone = operation.sourceZone,
+				reactionAllowance = operation.reactionAllowance,
+				reactionCapAllowance = operation.reactionCapAllowance,
+				reactionReason = operation.reactionReason,
+				reactionSourceZone = operation.reactionSourceZone,
+				reactionGroupReuseCooldownSec = operation.reactionGroupReuseCooldownSec,
+				operationElapsedSec = math.max(0, clockNow - operation.startedAt),
+				phaseRemainingSec = math.max(0, operation.phaseDeadline - clockNow),
+				mainAuthorizeRemainingSec = math.max(0, operation.mainAuthorizeAt - clockNow),
+				reserveTrigger = operation.reserveTrigger,
+				assignments = {},
+			}
+			if operation.reserve then
+				local reserve = operation.reserve
+				saved.operation.reserve = {
+					armed = reserve.earliestAt ~= nil,
+					earliestRemainingSec = reserve.earliestAt
+						and math.max(0, reserve.earliestAt - clockNow)
+						or math.max(0, tonumber(reserve.earliestDelaySec) or 0),
+					fallbackRemainingSec = reserve.fallbackAt
+						and math.max(0, reserve.fallbackAt - clockNow)
+						or math.max(0, tonumber(reserve.fallbackDelaySec) or 0),
+				}
+			end
+			for _, assignment in ipairs(operation.assignments) do
+				if assignment.capacitySkipped ~= true and assignment.cancelled ~= true then
+					saved.operation.assignments[#saved.operation.assignments + 1] = {
+						name = assignment.name,
+						role = assignment.role,
+						capacityRole = assignment.capacityRole,
+						unitCategory = assignment.unitCategory,
+						sourceZone = assignment.sourceZone,
+						phase = assignment.phase,
+						targetZone = assignment.targetZone,
+						authorized = assignment.authorized == true,
+						launched = assignment.launched == true,
+						completed = assignment.completed == true,
+						mission = assignment.mission,
+						missionType = assignment.missionType,
+						templateName = assignment.templateName,
+						dynamicHybrid = assignment.dynamicHybrid == true,
+						dynamicBaseName = assignment.dynamicBaseName,
+						dynamicOriginZone = assignment.dynamicOriginZone,
+						dynamicTargetZone = assignment.dynamicTargetZone,
+						dynamicRole = assignment.dynamicRole,
+						retasked = assignment.retasked == true,
+						originalTargetZone = assignment.originalTargetZone,
+						reaction = assignment.reaction == true,
+						reactionReason = assignment.reactionReason,
+						reserveHeld = assignment.reserveHeld == true,
+						reserveOriginalPhase = assignment.reserveOriginalPhase,
+						reserveReleased = assignment.reserveReleased == true,
+						reserveTrigger = assignment.reserveTrigger,
+					}
+				end
+			end
+		end
+		return saved
+	end
+
+	function Director:_restorePersistence(saved, now)
+		if type(saved) ~= 'table' or saved.version ~= 1 or saved.side ~= self.side then return false end
+		self.campaignStrategy = nil
+		local savedStrategy = saved.campaignStrategy
+		if type(savedStrategy) == 'table' and self:_isCampaignStrategyName(savedStrategy.name) then
+			local savedGoalZone = type(savedStrategy.goalZone) == 'string'
+				and self.battleCommander:getZoneByName(savedStrategy.goalZone) and savedStrategy.goalZone or nil
+			local savedGoalRegion = type(savedStrategy.goalRegion) == 'string'
+				and self.regionById[savedStrategy.goalRegion] and savedStrategy.goalRegion or nil
+			self.campaignStrategy = {
+				name = savedStrategy.name,
+				generation = math.max(1, math.floor(tonumber(savedStrategy.generation) or 1)),
+				reason = type(savedStrategy.reason) == 'string' and savedStrategy.reason or 'restored',
+				goalZone = savedGoalZone,
+				goalRegion = savedGoalRegion,
+				selectedAt = now,
+				weight = math.max(0, tonumber(savedStrategy.weight) or 0),
+			}
+			self.campaignStrategyGeneration = self.campaignStrategy.generation
+			self:_log('restored campaign strategy=' .. self.campaignStrategy.name
+				.. ' generation=' .. tostring(self.campaignStrategy.generation)
+				.. ' goal=' .. tostring(self.campaignStrategy.goalZone or 'none')
+				.. ' reason=' .. self.campaignStrategy.reason)
+		end
+		self.operationCounter = math.max(self.operationCounter, tonumber(saved.operationCounter) or 0)
+		self.doctrineOutcomes = {}
+		for doctrine, outcomes in pairs(saved.doctrineOutcomes or {}) do
+			if type(doctrine) == 'string' and type(outcomes) == 'table' then
+				self.doctrineOutcomes[doctrine] = {
+					success = math.min(99, math.max(0, math.floor(tonumber(outcomes.success) or 0))),
+					partial = math.min(99, math.max(0, math.floor(tonumber(outcomes.partial) or 0))),
+					failure = math.min(99, math.max(0, math.floor(tonumber(outcomes.failure) or 0))),
+				}
+			end
+		end
+		self.targetOutcomes = {}
+		for targetZoneName, outcomes in pairs(saved.targetOutcomes or {}) do
+			if type(targetZoneName) == 'string' and type(outcomes) == 'table'
+				and self.battleCommander:getZoneByName(targetZoneName) then
+				self.targetOutcomes[targetZoneName] = {
+					success = math.min(99, math.max(0, math.floor(tonumber(outcomes.success) or 0))),
+					partial = math.min(99, math.max(0, math.floor(tonumber(outcomes.partial) or 0))),
+					failure = math.min(99, math.max(0, math.floor(tonumber(outcomes.failure) or 0))),
+				}
+			end
+		end
+		self.roleOutcomes = {}
+		for doctrine, roles in pairs(saved.roleOutcomes or {}) do
+			if type(doctrine) == 'string' and type(roles) == 'table' then
+				local restoredRoles = {}
+				for role, outcomes in pairs(roles) do
+					if type(role) == 'string' and type(outcomes) == 'table' then
+						restoredRoles[role] = {
+							success = math.min(99, math.max(0, math.floor(tonumber(outcomes.success) or 0))),
+							partial = math.min(99, math.max(0, math.floor(tonumber(outcomes.partial) or 0))),
+							failure = math.min(99, math.max(0, math.floor(tonumber(outcomes.failure) or 0))),
+						}
+					end
+				end
+				self.roleOutcomes[doctrine] = restoredRoles
+			end
+		end
+		self.history = {}
+		for _, previous in ipairs(saved.history or {}) do
+			if type(previous) == 'table' and self.battleCommander:getZoneByName(previous.targetZone) then
+				self.history[#self.history + 1] = {
+					targetZone = previous.targetZone,
+					feintTargetZone = previous.feintTargetZone,
+					sourceZone = previous.sourceZone,
+					doctrine = previous.doctrine,
+					result = previous.result,
+				}
+				if #self.history >= self.config.historySize then break end
+			end
+		end
+		self.zoneUpgradeHistory = {}
+		for _, previous in ipairs(saved.zoneUpgradeHistory or {}) do
+			if type(previous) == 'table' and self.battleCommander:getZoneByName(previous.zone) then
+				self.zoneUpgradeHistory[#self.zoneUpgradeHistory + 1] = { zone = previous.zone }
+				if #self.zoneUpgradeHistory >= 4 then break end
+			end
+		end
+		self.zoneUpgradeCooldownUntil = now + math.max(0, tonumber(saved.zoneUpgradeCooldownRemainingSec) or 0)
+		self.recoveryUntil = now + math.max(0, tonumber(saved.recoveryRemainingSec) or 0)
+		self.nextPlanningAt = now + math.max(0, tonumber(saved.planningRemainingSec) or 0)
+		self.nextSurgeAt = now + math.max(0, tonumber(saved.surgeRemainingSec) or 0)
+		local savedReaction = saved.pendingReaction
+		if type(savedReaction) == 'table' and type(savedReaction.targetZone) == 'string' then
+			local allowance = math.max(0, math.floor(tonumber(savedReaction.allowance) or 0))
+			if allowance > 0 then
+				local reason = savedReaction.reason == 'capture' and 'capture' or 'pressure'
+				self:_queueReaction({
+					targetZone = savedReaction.targetZone,
+					sourceZone = savedReaction.sourceZone,
+					reason = reason,
+					priority = reason == 'capture' and 2 or 1,
+					allowance = allowance,
+					capAllowance = math.min(allowance, math.max(0, math.floor(tonumber(savedReaction.capAllowance) or 0))),
+					groupReuseCooldownSec = math.max(0, tonumber(savedReaction.groupReuseCooldownSec) or 0),
+					nextAttemptAt = now + math.max(0, tonumber(savedReaction.nextAttemptRemainingSec) or 0),
+				}, true)
+			end
+		end
+
+		local source = saved.operation
+		local validStates = { shaping = true, assault = true, exploit = true, surge = true }
+		if type(source) ~= 'table' or not validStates[saved.state] then
+			self.state = 'recovery'
+			return true
+		end
+		local targetZone = self.battleCommander:getZoneByName(source.targetZone)
+		if not targetZone or not targetZone.active or targetZone.suspended or targetZone.isHidden then
+			self.state = 'recovery'
+			return true
+		end
+
+		local operation = {
+			id = tonumber(source.id) or (self.operationCounter + 1),
+			doctrine = source.doctrine or 'probe',
+			targetZone = source.targetZone,
+			feintTargetZone = source.feintTargetZone,
+			sourceZone = source.sourceZone,
+			startedAt = now - math.max(0, tonumber(source.operationElapsedSec) or 0),
+			phaseStartedAt = now,
+			phaseDeadline = now + math.max(0, tonumber(source.phaseRemainingSec) or 0),
+			mainAuthorizeAt = now + math.max(0, tonumber(source.mainAuthorizeRemainingSec) or 0),
+			assignments = {},
+			assignmentsByName = {},
+			reactionAllowance = math.max(0, math.floor(tonumber(source.reactionAllowance) or 0)),
+			reactionCapAllowance = math.max(0, math.floor(tonumber(source.reactionCapAllowance) or 0)),
+			reactionReason = source.reactionReason,
+			reactionSourceZone = source.reactionSourceZone,
+			reactionGroupReuseCooldownSec = math.max(0, tonumber(source.reactionGroupReuseCooldownSec) or 0),
+			reserveTrigger = source.reserveTrigger,
+		}
+		local savedReserve = source.reserve
+		if type(savedReserve) == 'table' then
+			operation.reserve = {}
+			if savedReserve.armed == true then
+				operation.reserve.earliestAt = now + math.max(0, tonumber(savedReserve.earliestRemainingSec) or 0)
+				operation.reserve.fallbackAt = now + math.max(0, tonumber(savedReserve.fallbackRemainingSec) or 0)
+			else
+				operation.reserve.earliestDelaySec = math.max(0, tonumber(savedReserve.earliestRemainingSec) or 0)
+				operation.reserve.fallbackDelaySec = math.max(0, tonumber(savedReserve.fallbackRemainingSec) or 0)
+			end
+		end
+		operation.reactionCapAllowance = math.min(operation.reactionCapAllowance, operation.reactionAllowance)
+		local commanderIndex = self.battleCommander:_buildGroupCommanderIndex()
+		local usedCommanders = {}
+		local combatCount = 0
+		for _, sourceAssignment in ipairs(source.assignments or {}) do
+			if type(sourceAssignment) == 'table' and type(sourceAssignment.name) == 'string' then
+				local groupCommander = commanderIndex[sourceAssignment.name]
+				if groupCommander and sourceAssignment.dynamicBaseName then
+					local currentBaseName = groupCommander._dynamicHybridBaseName
+						or self.battleCommander:_airPersistenceDynamicBaseName(groupCommander.name)
+					if currentBaseName ~= sourceAssignment.dynamicBaseName then groupCommander = nil end
+				end
+				if groupCommander and usedCommanders[groupCommander.name] then groupCommander = nil end
+				if not groupCommander and sourceAssignment.dynamicBaseName then
+					groupCommander = select(1, self.battleCommander:_resolveAirPersistenceCommander({
+						groupName = sourceAssignment.name,
+						dynamicHybrid = sourceAssignment.dynamicHybrid == true,
+						dynamicBaseName = sourceAssignment.dynamicBaseName,
+						dynamicOriginZone = sourceAssignment.dynamicOriginZone or sourceAssignment.sourceZone,
+						dynamicTargetZone = sourceAssignment.dynamicTargetZone or sourceAssignment.originalTargetZone,
+						dynamicRole = sourceAssignment.dynamicRole,
+						originZone = sourceAssignment.sourceZone,
+						targetZone = sourceAssignment.originalTargetZone or sourceAssignment.targetZone,
+						side = self.side,
+						mission = sourceAssignment.mission,
+						missionType = sourceAssignment.missionType or sourceAssignment.capacityRole,
+						unitCategory = sourceAssignment.unitCategory,
+						templateName = sourceAssignment.templateName,
+					}, commanderIndex, usedCommanders))
+				end
+				if groupCommander and (usedCommanders[groupCommander.name]
+					or groupCommander._dynamicHybridRetired == true or groupCommander.side ~= self.side) then
+					groupCommander = nil
+				end
+
+				local routeValid = groupCommander and groupCommander.targetzone == sourceAssignment.targetZone
+				local originalTargetZone = sourceAssignment.originalTargetZone
+				if groupCommander and sourceAssignment.retasked == true then
+					local capacityRole = sourceAssignment.capacityRole or self:_groupRole(groupCommander)
+					routeValid = originalTargetZone ~= nil
+						and self.battleCommander:getZoneByName(originalTargetZone) ~= nil
+						and self:_canRetaskAirRole(capacityRole)
+						and groupCommander.mission == 'attack'
+						and (groupCommander.type == 'air' or groupCommander.type == 'carrier_air')
+						and (groupCommander.targetzone == sourceAssignment.targetZone or groupCommander.targetzone == originalTargetZone)
+					if routeValid then
+						if groupCommander.targetzone == originalTargetZone then
+							self:_retaskGroupForAssignment(groupCommander, sourceAssignment.targetZone)
+						else
+							groupCommander._directorRetaskOriginalTargetZone = originalTargetZone
+							groupCommander._retasked = groupCommander.targetzone ~= groupCommander._baseTargetzone
+							self:_syncRetaskedGroup(groupCommander)
+						end
+					end
+				end
+
+				if groupCommander and routeValid then
+					local assignment = {
+						name = groupCommander.name,
+						groupRef = groupCommander,
+						role = sourceAssignment.role,
+						capacityRole = sourceAssignment.capacityRole or self:_groupRole(groupCommander),
+						unitCategory = sourceAssignment.unitCategory or groupCommander.unitCategory,
+						sourceZone = sourceAssignment.sourceZone or groupCommander.zoneCommander.zone,
+						phase = sourceAssignment.phase,
+						targetZone = sourceAssignment.targetZone,
+						authorized = sourceAssignment.authorized == true,
+						launched = sourceAssignment.launched == true,
+						completed = sourceAssignment.completed == true,
+						mission = sourceAssignment.mission or groupCommander.mission,
+						missionType = sourceAssignment.missionType or groupCommander.MissionType,
+						templateName = sourceAssignment.templateName or groupCommander.template,
+						dynamicHybrid = sourceAssignment.dynamicHybrid == true or groupCommander.dynamicHybrid == true,
+						dynamicBaseName = sourceAssignment.dynamicBaseName or groupCommander._dynamicHybridBaseName,
+						dynamicOriginZone = sourceAssignment.dynamicOriginZone or groupCommander.dynamicHybridOriginZone,
+						dynamicTargetZone = sourceAssignment.dynamicTargetZone or groupCommander.dynamicHybridTargetZone,
+						dynamicRole = sourceAssignment.dynamicRole or groupCommander.dynamicHybridRole,
+						retasked = sourceAssignment.retasked == true,
+						originalTargetZone = originalTargetZone,
+						reaction = sourceAssignment.reaction == true,
+						reactionReason = sourceAssignment.reactionReason,
+						reserveHeld = sourceAssignment.reserveHeld == true,
+						reserveOriginalPhase = sourceAssignment.reserveOriginalPhase,
+						reserveReleased = sourceAssignment.reserveReleased == true,
+						reserveTrigger = sourceAssignment.reserveTrigger,
+					}
+					if self:_groupIsLive(groupCommander) then
+						assignment.launched = true
+						assignment.completed = false
+						assignment.authorized = false
+					elseif assignment.launched then
+						assignment.completed = true
+						assignment.authorized = false
+					end
+					operation.assignments[#operation.assignments + 1] = assignment
+					operation.assignmentsByName[assignment.name] = assignment
+					usedCommanders[groupCommander.name] = true
+					if assignment.name ~= sourceAssignment.name then
+						self:_log('restored assignment=' .. sourceAssignment.name .. '->' .. assignment.name .. ' identity=dynamic-base')
+					end
+					if not operation.sourceZone and assignment.targetZone == operation.targetZone and assignment.role ~= 'SUPPLY' then
+						operation.sourceZone = assignment.sourceZone
+					end
+					groupCommander._directorOperationId = operation.id
+					if assignment.authorized == true and assignment.launched ~= true and assignment.completed ~= true then
+						groupCommander:_clearDormantFsmDelay()
+					end
+					if groupCommander.mission == 'attack' and groupCommander.zoneCommander.suspended
+						and assignment.launched ~= true and assignment.completed ~= true then
+						groupCommander.zoneCommander._suspendAllowSpawn = true
+					end
+					if assignment.role ~= 'SUPPLY' then combatCount = combatCount + 1 end
+				end
+			end
+		end
+		if combatCount == 0 and saved.state ~= 'surge' then
+			self:_releaseOperationGroups(operation)
+			self.state = 'recovery'
+			return true
+		end
+		if operation.reserve and not self:_conditionalReserveAssignment(operation) then
+			operation.reserve = nil
+		end
+		self.operationCounter = math.max(self.operationCounter, operation.id)
+		self.operation = operation
+		self.state = saved.state
+		self:_log('restored operation=' .. operation.id .. ' phase=' .. self.state .. ' target=' .. operation.targetZone)
+		return true
+	end
+
+	function Director:_runtimeReady()
+		local dynamicHybrid = self.battleCommander.dynamicHybrid
+		if dynamicHybrid and dynamicHybrid.started and dynamicHybrid.config and dynamicHybrid.config.enabled
+			and dynamicHybrid.config.runOnce and not dynamicHybrid.bootstrapDone then
+			return false
+		end
+		if self.battleCommander._pendingAirAiPersistence or self.battleCommander._pendingSurfaceAiPersistence
+			or self.battleCommander._pendingRedMassAttackMission then
+			return false
+		end
+		return true
+	end
+
+	function Director:_reactionTargetCandidate(targetZoneName, now)
+		local candidates = self:_collectTargetCandidates(now)
+		for _, candidate in ipairs(candidates) do
+			if candidate.zone.zone == targetZoneName then
+				return candidate, candidates
+			end
+		end
+		return nil, candidates
+	end
+
+	function Director:_activateReactionOperation(operation, request, accepted)
+		self.operation = operation
+		self.state = 'shaping'
+		self.recoveryUntil = nil
+		self.nextPlanningAt = nil
+		self:_log('operation=' .. operation.id .. ' reaction=' .. request.reason .. ' target=' .. operation.targetZone .. ' allowance=' .. accepted)
+	end
+
+	function Director:_reactionAvailableCount(targetZoneName, maximum, now, request, planningInventory)
+		maximum = math.max(0, math.floor(tonumber(maximum) or 0))
+		if maximum <= 0 then return 0 end
+		local pools = self:_collectExactRouteGroups(targetZoneName, now, request, planningInventory)
+		local probeOperation = {
+			assignments = {},
+			reactionCapAllowance = math.max(0, math.floor(tonumber(request and request.capAllowance) or 0)),
+		}
+		local available = 0
+		local roleOrder = { 'CAP', 'CAS', 'SEAD', 'RUNWAYSTRIKE', 'ANTISHIP' }
+		for _, role in ipairs(roleOrder) do
+			for _, candidate in ipairs(pools[role]) do
+				local groupCommander = candidate.groupCommander
+				if self:_groupSlotAvailable(groupCommander, probeOperation) then
+					probeOperation.assignments[#probeOperation.assignments + 1] = {
+						role = role,
+						capacityRole = role,
+						unitCategory = groupCommander.unitCategory,
+					}
+					available = available + 1
+					if available >= maximum then return available end
+				end
+			end
+		end
+		return available
+	end
+
+	function Director:_queueReaction(request, restoring, planningInventory)
+		if not restoring then
+			local available = self:_reactionAvailableCount(request.targetZone, request.allowance, timer.getTime(), request, planningInventory)
+			if available <= 0 then return 0 end
+			if available < request.allowance then
+				self:_log('reaction queue capped target=' .. request.targetZone .. ' requested=' .. request.allowance .. ' available=' .. available)
+				request.allowance = available
+				request.capAllowance = math.min(request.capAllowance or 0, available)
+			end
+		end
+		local pending = self.pendingReaction
+		if not pending then
+			self.pendingReaction = request
+			self:_log('reaction queued reason=' .. request.reason .. ' target=' .. request.targetZone .. ' allowance=' .. request.allowance)
+			return request.allowance
+		end
+
+		if pending.targetZone == request.targetZone then
+			local previousAllowance = pending.allowance
+			pending.allowance = math.max(pending.allowance, request.allowance)
+			pending.capAllowance = math.max(pending.capAllowance or 0, request.capAllowance or 0)
+			if request.priority > pending.priority then
+				pending.priority = request.priority
+				pending.reason = request.reason
+				pending.sourceZone = request.sourceZone
+				pending.groupReuseCooldownSec = request.groupReuseCooldownSec
+			end
+			local accepted = pending.allowance - previousAllowance
+			if accepted > 0 then
+				pending.nextAttemptAt = nil
+				self:_log('reaction queue increased target=' .. request.targetZone .. ' allowance=' .. pending.allowance)
+			end
+			return accepted
+		end
+
+		if request.priority > pending.priority then
+			self.pendingReaction = request
+			self:_log('reaction queue replaced reason=' .. request.reason .. ' target=' .. request.targetZone .. ' allowance=' .. request.allowance)
+			return request.allowance
+		end
+		return 0
+	end
+
+	function Director:_augmentReactionOperation(request, now, playerCount, planningInventory)
+		local operation = self.operation
+		local firstNewIndex = #operation.assignments + 1
+		local beforeCount = self:_combatAssignmentCount(operation)
+		local previousAllowance = math.max(0, tonumber(operation.reactionAllowance) or 0)
+		local previousCapAllowance = math.max(0, tonumber(operation.reactionCapAllowance) or 0)
+		operation.reactionAllowance = previousAllowance + request.allowance
+		operation.reactionCapAllowance = math.max(previousCapAllowance, request.capAllowance or 0)
+		local pools = self:_collectExactRouteGroups(operation.targetZone, timer.getTime(), operation, planningInventory)
+		local maximumGroups = self:_operationPackageMaximum(operation, playerCount)
+		self:_fillOperationAssignments(operation, pools, maximumGroups, self.state == 'shaping', true)
+		local added = math.max(0, self:_combatAssignmentCount(operation) - beforeCount)
+		local accepted = self:_markReactionAssignments(operation, firstNewIndex, request, math.min(request.allowance, added))
+		operation.reactionAllowance = previousAllowance + accepted
+		if accepted <= 0 then
+			operation.reactionCapAllowance = previousCapAllowance
+		else
+			operation.reactionCapAllowance = math.min(operation.reactionCapAllowance, operation.reactionAllowance)
+		end
+		operation.capacitySignature = self:_capacitySignature(playerCount)
+		if accepted > 0 then
+			self:_log('operation=' .. operation.id .. ' reaction=' .. request.reason .. ' reinforced=' .. accepted .. ' allowance=' .. operation.reactionAllowance)
+		end
+		return accepted
+	end
+
+	function Director:_processPendingReaction(now, playerCount)
+		local request = self.pendingReaction
+		if not request then return false end
+		if self.operation or self:_isStrategicBomberActive() or self.battleCommander:isRedMassAttackMissionActive() then
+			return true
+		end
+		if request.nextAttemptAt and now < request.nextAttemptAt then
+			return true
+		end
+		local targetCandidate, candidates = self:_reactionTargetCandidate(request.targetZone, now)
+		if not targetCandidate then
+			self:_log('reaction queue dropped invalid target=' .. request.targetZone)
+			self.pendingReaction = nil
+			return false
+		end
+		local operation, accepted = self:_buildOperation(targetCandidate, candidates, playerCount, now, request)
+		if not operation or accepted <= 0 then
+			request.nextAttemptAt = now + self.config.planningRetrySec
+			return true
+		end
+		self.pendingReaction = nil
+		self:_activateReactionOperation(operation, request, accepted)
+		return true
+	end
+
+	function Director:requestReaction(request)
+		if not self.config.enabled or type(request) ~= 'table' then return 0 end
+		local allowance = math.max(0, math.floor(tonumber(request.allowance) or 0))
+		if allowance <= 0 then return 0 end
+		local targetZone = self.battleCommander:getZoneByName(request.targetZone)
+		if not self:_zoneUsable(targetZone, coalition.side.BLUE) then return 0 end
+
+		local normalized = {
+			targetZone = request.targetZone,
+			sourceZone = request.sourceZone,
+			reason = request.reason == 'capture' and 'capture' or 'pressure',
+			priority = request.reason == 'capture' and 2 or 1,
+			allowance = allowance,
+			capAllowance = math.min(allowance, math.max(0, math.floor(tonumber(request.capAllowance) or 0))),
+			groupReuseCooldownSec = math.max(0, tonumber(request.groupReuseCooldownSec) or 0),
+		}
+		local now = timer.getAbsTime()
+		local targetCandidate, candidates = self:_reactionTargetCandidate(normalized.targetZone, now)
+		if not targetCandidate then return 0 end
+		if not self.ready or self.state == 'surge' or self:_isStrategicBomberActive()
+			or self.battleCommander:isRedMassAttackMissionActive() then
+			return self:_queueReaction(normalized)
+		end
+
+		local playerCount = getRedCasPlayersCount() or 0
+		local planningInventory = self:_buildPlanningGroupInventory(timer.getTime(), normalized)
+		if self.operation then
+			if self.operation.targetZone == normalized.targetZone and (self.state == 'shaping' or self.state == 'assault') then
+				local accepted = self:_augmentReactionOperation(normalized, now, playerCount, planningInventory)
+				if accepted > 0 then return accepted end
+				return self:_queueReaction(normalized, nil, planningInventory)
+			end
+			if normalized.reason == 'capture' then
+				local replacement, accepted = self:_buildOperation(targetCandidate, candidates, playerCount, now, normalized, planningInventory)
+				if replacement and accepted > 0 then
+					self:_finishOperation('redirected-by-reaction', now)
+					if self.pendingReaction and normalized.priority > self.pendingReaction.priority then
+						self.pendingReaction = nil
+					end
+					self:_activateReactionOperation(replacement, normalized, accepted)
+					return accepted
+				end
+			end
+			return self:_queueReaction(normalized, nil, planningInventory)
+		end
+
+		if self.pendingReaction then
+			return self:_queueReaction(normalized, nil, planningInventory)
+		end
+		local operation, accepted = self:_buildOperation(targetCandidate, candidates, playerCount, now, normalized, planningInventory)
+		if operation and accepted > 0 then
+			self:_activateReactionOperation(operation, normalized, accepted)
+			return accepted
+		end
+		return self:_queueReaction(normalized, nil, planningInventory)
+	end
+
+	function Director:_startOperation(now, playerCount)
+		if self:_tryStartSurge(now, playerCount) then return true end
+		local candidates = self:_collectTargetCandidates(now)
+		local preferred = self:_pickWeightedCandidate(candidates)
+		local planningInventory = nil
+		if preferred and self:_currentPackageMaximum(playerCount) > 0 then
+			planningInventory = self:_buildPlanningGroupInventory(nil, nil)
+		end
+		if preferred then
+			local operation = self:_buildOperation(preferred, candidates, playerCount, now, nil, planningInventory)
+			if operation then
+				self.operation = operation
+				self.state = 'shaping'
+				self:_log('operation=' .. operation.id .. ' doctrine=' .. operation.doctrine .. ' target=' .. operation.targetZone .. (operation.feintTargetZone and (' feint=' .. operation.feintTargetZone) or ''))
+				return true
+			end
+		end
+		for _, candidate in ipairs(candidates) do
+			if not preferred or candidate.zone.zone ~= preferred.zone.zone then
+				local operation = self:_buildOperation(candidate, candidates, playerCount, now, nil, planningInventory)
+				if operation then
+					self.operation = operation
+					self.state = 'shaping'
+					self:_log('operation=' .. operation.id .. ' doctrine=' .. operation.doctrine .. ' target=' .. operation.targetZone .. (operation.feintTargetZone and (' feint=' .. operation.feintTargetZone) or ''))
+					return true
+				end
+			end
+		end
+		self.state = 'waiting'
+		self.nextPlanningAt = now + self.config.planningRetrySec
+		return false
+	end
+
+	function Director:_updateOperation(now)
+		local operation = self.operation
+		local targetZone = self.battleCommander:getZoneByName(operation.targetZone)
+		if self.state == 'surge' then
+			if self.battleCommander:isRedMassAttackMissionActive() then return end
+			if not targetZone or not targetZone.active or targetZone.suspended or targetZone.isHidden then
+				self:_finishOperation('aborted', now)
+			elseif targetZone.side == self.side then
+				self:_finishOperation('captured', now)
+			elseif targetZone.side == 0 then
+				self:_finishOperation('neutralized', now)
+			else
+				self:_finishOperation('failed', now)
+			end
+			return
+		end
+		if not targetZone or not targetZone.active or targetZone.suspended or targetZone.isHidden then
+			self:_finishOperation('aborted', now)
+			return
+		end
+		if targetZone.side == self.side then
+			self:_finishOperation('captured', now)
+			return
+		end
+		if now - operation.startedAt >= self.config.operationMaxSec then
+			self:_finishOperation(targetZone.side == 0 and 'neutralized' or 'failed', now)
+			return
+		end
+
+		if self.state == 'shaping' then
+			self:_authorizePhase('feint', now)
+			if now >= operation.mainAuthorizeAt then
+				self:_authorizePhase('shape', now)
+			end
+			local feintSettled = self:_phaseSettled('feint')
+			local shapeSettled = now >= operation.mainAuthorizeAt and self:_phaseSettled('shape')
+			if (feintSettled and shapeSettled) or now >= operation.phaseDeadline then
+				self:_beginAssault(now)
+			end
+		elseif self.state == 'assault' then
+			self:_updateConditionalReserve(now, targetZone)
+			self:_authorizePhase('assault', now)
+			if targetZone.side == 0 then
+				self:_beginExploit(now)
+			elseif self:_allCombatGroupsComplete() or now >= operation.phaseDeadline then
+				self:_finishOperation('failed', now)
+			end
+		elseif self.state == 'exploit' then
+			self:_authorizePhase('exploit', now)
+			if targetZone.side == self.side then
+				self:_finishOperation('captured', now)
+			elseif now >= operation.phaseDeadline then
+				self:_finishOperation(targetZone.side == 0 and 'neutralized' or 'failed', now)
+			end
+		end
+	end
+
+	function Director:_blueCanManageGroup(groupCommander)
+		if not self.config.enabled or not self.started or self.side ~= coalition.side.BLUE then return false end
+		if groupCommander.side ~= coalition.side.BLUE then return false end
+		if groupCommander.mission ~= 'attack' then return false end
+		if groupCommander.playerGroundAttack == true or groupCommander.ShopLaunchOnly == true then return false end
+		if groupCommander.forceSpawn == true or groupCommander._pendingShopPurchase then return false end
+		local role = self:_groupRole(groupCommander)
+		return role == 'CAP' or role == 'CAS' or role == 'SEAD' or role == 'RUNWAYSTRIKE'
+	end
+
+	function Director:_blueGroupCandidateScore(groupCommander, targetZoneName, now)
+		local targetZone = self.battleCommander:getZoneByName(targetZoneName)
+		if not targetZone then return nil end
+		local hops = self:_graphHops(self.operation.targetZone, targetZone.zone, 3)
+		if not hops or hops > 2 then return nil end
+		local score = hops == 0 and 320 or (hops == 1 and 190 or 100)
+		score = score + (self:_playerFrontlineActivityScores(now)[targetZone.zone] or 0)
+		local sourceZoneName = groupCommander.zoneCommander.zone
+		local sourceHops = self:_graphHops(sourceZoneName, targetZone.zone, 8)
+		if sourceHops then score = score + math.max(0, 40 - sourceHops * 6) end
+		if targetZone.airbaseName and groupCommander.MissionType == 'RUNWAYSTRIKE' then score = score + 30 end
+		return score
+	end
+
+	function Director:_blueCollectCapCandidates(now)
+		local limit = self:_configuredRoleLimit('CAP') or 0
+		local active = self.battleCommander:getActiveCAPCount(self.side, 'attack')
+		local ranked, capMeta = self:_rankCapTargets('attack', math.max(1, limit - active))
+		local targetMap = capMeta and capMeta.targets or (CapTargets[self.side] and CapTargets[self.side].attack) or {}
+		if #ranked == 0 then
+			for targetZoneName in pairs(targetMap) do ranked[#ranked + 1] = { zone = targetZoneName, directorPriority = 0 } end
+			table.sort(ranked, function(a, b) return a.zone < b.zone end)
+		end
+
+		local candidates = {}
+		for targetRank, targetRow in ipairs(ranked) do
+			local targetHops = self:_graphHops(self.operation.targetZone, targetRow.zone, 3)
+			if targetHops and targetHops <= 2 then
+				local context = targetMap[targetRow.zone]
+				for candidateRank, record in ipairs((context and context.candidates) or {}) do
+					local groupCommander = CapRef[record.name]
+					if self:_capCandidateUsable(groupCommander, 'attack', targetRow.zone, now)
+						and self:_blueCanManageGroup(groupCommander)
+						and (groupCommander._blueDirectorRetryAt or 0) <= now then
+						local targetScore = targetRow.directorPriority or math.max(0, (#ranked - targetRank) * 10)
+						candidates[#candidates + 1] = {
+							groupCommander = groupCommander,
+							targetZone = targetRow.zone,
+							retasked = false,
+							score = targetScore + (3 - targetHops) * 100 - candidateRank,
+						}
+					end
+				end
+			end
+		end
+		table.sort(candidates, function(a, b)
+			if a.score == b.score then return a.groupCommander.name < b.groupCommander.name end
+			return a.score > b.score
+		end)
+		return candidates
+	end
+
+	function Director:_blueCollectGroupCandidates(roles, now)
+		local candidatesByRole = {}
+		for _, role in ipairs(roles) do
+			candidatesByRole[role] = {}
+		end
+		local operationTarget = self.battleCommander:getZoneByName(self.operation.targetZone)
+		local fallbackTargetValidByRole = {}
+		for _, role in ipairs(roles) do
+			local fallbackTargetValid = operationTarget and operationTarget.side == coalition.side.RED
+				and operationTarget.active and not operationTarget.suspended and not operationTarget.isHidden
+			if role == 'SEAD' and fallbackTargetValid then
+				fallbackTargetValid = self.battleCommander:HasSeadTargets(operationTarget.zone)
+			elseif role == 'RUNWAYSTRIKE' and fallbackTargetValid then
+				fallbackTargetValid = operationTarget.airbaseName ~= nil
+			end
+			fallbackTargetValidByRole[role] = fallbackTargetValid
+		end
+		for _, sourceZone in ipairs(self.battleCommander.zones) do
+			if self:_sourceZoneUsable(sourceZone, true) then
+				for _, groupCommander in ipairs(sourceZone.groups or {}) do
+					local role = self:_groupRole(groupCommander)
+					local candidates = candidatesByRole[role]
+					local selectable = self:_groupIsDormant(groupCommander)
+						or (groupCommander.state == 'preparing' and groupCommander.Spawned ~= true)
+					if candidates and selectable and self:_blueCanManageGroup(groupCommander)
+						and groupCommander._dynamicHybridRetired ~= true
+						and groupCommander._directorOperationId == nil
+						and (groupCommander._blueDirectorRetryAt or 0) <= now
+						and self:_assignmentFor(groupCommander) == nil
+					then
+						local added = false
+						local targetZone = self.battleCommander:getZoneByName(groupCommander.targetzone)
+						local roleValid = targetZone and targetZone.side == coalition.side.RED
+							and targetZone.active and not targetZone.suspended and not targetZone.isHidden
+						if role == 'SEAD' and roleValid then
+							roleValid = self.battleCommander:HasSeadTargets(targetZone.zone)
+						elseif role == 'RUNWAYSTRIKE' and roleValid then
+							roleValid = targetZone.airbaseName ~= nil
+						end
+						if roleValid then
+							local score = self:_blueGroupCandidateScore(groupCommander, targetZone.zone, now)
+							if score then
+								candidates[#candidates + 1] = {
+									groupCommander = groupCommander,
+									score = score,
+									targetZone = targetZone.zone,
+									retasked = false,
+								}
+								added = true
+							end
+						end
+						if not added and fallbackTargetValidByRole[role] and self:_groupIsDormant(groupCommander)
+							and groupCommander.targetzone ~= operationTarget.zone
+							and (groupCommander.type == 'air' or groupCommander.type == 'carrier_air')
+							and groupCommander._retasked ~= true
+							and groupCommander._directorRetaskOriginalTargetZone == nil
+							and self.battleCommander:_retaskDistanceAllowed(groupCommander, operationTarget.zone)
+						then
+							local score = self:_blueGroupCandidateScore(groupCommander, operationTarget.zone, now)
+							if score then
+								candidates[#candidates + 1] = {
+									groupCommander = groupCommander,
+									score = score,
+									targetZone = operationTarget.zone,
+									retasked = true,
+								}
+							end
+						end
+					end
+				end
+			end
+		end
+		for _, candidates in pairs(candidatesByRole) do
+			table.sort(candidates, function(a, b)
+				if a.retasked ~= b.retasked then return a.retasked ~= true end
+				if a.score == b.score then return a.groupCommander.name < b.groupCommander.name end
+				return a.score > b.score
+			end)
+		end
+		return candidatesByRole
+	end
+
+	function Director:_blueActiveRoleCount(role)
+		if role == 'CAP' then return self.battleCommander:getActiveCAPCount(coalition.side.BLUE, 'attack') end
+		return self.battleCommander:getActiveStrikeCount(coalition.side.BLUE, 'attack', role, nil)
+	end
+
+	function Director:_blueRemoveAssignment(index, reason, now)
+		local operation = self.operation
+		local assignment = operation and operation.assignments[index]
+		if not assignment then return end
+		local groupCommander = assignment.groupRef
+		if groupCommander and reason == 'launch-timeout' then
+			groupCommander._blueDirectorRetryAt = (now or timer.getAbsTime()) + self.config.blueAssignmentRetrySec
+		end
+		self:_releaseAssignment(operation, assignment)
+		operation.assignmentsByName[assignment.name] = nil
+		table.remove(operation.assignments, index)
+		self:_log('operation=' .. operation.id .. ' assignment=' .. assignment.name .. ' cancelled=' .. tostring(reason))
+	end
+
+	function Director:_blueReconcileAssignments(now)
+		local operation = self.operation
+		if not operation then return end
+		for index = #operation.assignments, 1, -1 do
+			local assignment = operation.assignments[index]
+			local groupCommander = assignment.groupRef
+			local targetZone = groupCommander and self.battleCommander:getZoneByName(groupCommander.targetzone) or nil
+			local invalidTarget = not targetZone or targetZone.side ~= coalition.side.RED
+				or not targetZone.active or targetZone.suspended or targetZone.isHidden
+			if assignment.completed or not groupCommander or invalidTarget then
+				self:_blueRemoveAssignment(index, assignment.completed and 'completed' or 'invalid', now)
+			elseif not assignment.launched and now - (assignment.assignedAt or now) >= self.config.blueAssignmentRetrySec then
+				self:_blueRemoveAssignment(index, 'launch-timeout', now)
+			end
+		end
+
+		local roleOrder = { 'CAP', 'CAS', 'SEAD', 'RUNWAYSTRIKE' }
+		local vacanciesByRole = {}
+		local rolesWithVacancies = {}
+		for _, role in ipairs(roleOrder) do
+			local limit = self:_configuredRoleLimit(role) or 0
+			local active = self:_blueActiveRoleCount(role)
+			local allowedPending = math.max(0, limit - active)
+			local pending = 0
+			for _, assignment in ipairs(operation.assignments) do
+				if assignment.role == role and not assignment.launched and not assignment.completed then
+					pending = pending + 1
+				end
+			end
+			if pending > allowedPending then
+				for index = #operation.assignments, 1, -1 do
+					if pending <= allowedPending then break end
+					local assignment = operation.assignments[index]
+					if assignment.role == role and not assignment.launched and not assignment.completed then
+						self:_blueRemoveAssignment(index, 'limit-reduced', now)
+						pending = pending - 1
+					end
+				end
+			end
+
+			local vacancy = math.max(0, allowedPending - pending)
+			vacanciesByRole[role] = vacancy
+			if vacancy > 0 then rolesWithVacancies[#rolesWithVacancies + 1] = role end
+		end
+
+		if #rolesWithVacancies > 0 and now >= (self.blueCandidateRetryAt or 0) then
+			self.blueCandidateRetryAt = now + self.config.blueAssignmentRetrySec
+			local candidatesByRole = {}
+			local structuralRoles = {}
+			for _, role in ipairs(rolesWithVacancies) do
+				if role == 'CAP' then
+					candidatesByRole.CAP = self:_blueCollectCapCandidates(now)
+				else
+					structuralRoles[#structuralRoles + 1] = role
+				end
+			end
+			if #structuralRoles > 0 then
+				local structuralCandidates = self:_blueCollectGroupCandidates(structuralRoles, now)
+				for role, candidates in pairs(structuralCandidates) do candidatesByRole[role] = candidates end
+			end
+			for _, role in ipairs(roleOrder) do
+				local vacancy = vacanciesByRole[role]
+				local candidates = candidatesByRole[role]
+				if vacancy > 0 and candidates then
+					local assigned = 0
+					for _, candidate in ipairs(candidates) do
+						if assigned >= vacancy then break end
+						local groupCommander = candidate.groupCommander
+						local originalTargetZone = nil
+						if candidate.retasked == true then
+							originalTargetZone = self:_retaskGroupForAssignment(groupCommander, candidate.targetZone)
+						end
+						local assignment = self:_reserveGroup(operation, groupCommander, role, 'support', candidate.targetZone)
+						if candidate.retasked == true then
+							assignment.retasked = true
+							assignment.originalTargetZone = originalTargetZone
+							self:_log('operation=' .. operation.id .. ' assignment=' .. assignment.name .. ' retask=' .. originalTargetZone .. '->' .. candidate.targetZone .. ' role=' .. role)
+						end
+						assignment.assignedAt = now
+						assignment.authorized = true
+						groupCommander._spawnEvalCache = nil
+						groupCommander._spawnEvalLast = nil
+						groupCommander:_clearDormantFsmDelay()
+						self:_log('operation=' .. operation.id .. ' assignment=' .. assignment.name .. ' role=' .. role .. ' target=' .. assignment.targetZone)
+						assigned = assigned + 1
+					end
+				end
+			end
+		end
+	end
+
+	function Director:_updateBlue(scheduleTime)
+		local now = timer.getAbsTime()
+		if not self.config.enabled then
+			return scheduleTime + self.config.tickSec
+		end
+		if not self.ready then
+			if not self:_runtimeReady() then
+				return scheduleTime + self.config.tickSec
+			end
+			self.ready = true
+			self.state = self.operation and 'support' or 'waiting'
+			self:_log('ready')
+		end
+		local candidateCapacitySignature = table.concat({
+			tostring(getBluePlayersCount() or 0),
+			tostring(getBlueCasPlayersCount() or 0),
+			tostring(self.battleCommander._capTargetStateGeneration or 0),
+		}, '|')
+		if self.blueCandidateCapacitySignature ~= candidateCapacitySignature then
+			self.blueCandidateCapacitySignature = candidateCapacitySignature
+			self.blueCandidateRetryAt = 0
+		end
+		self:_reconcileRoutineCap(now)
+		self:_observeRegions(now)
+		self:_updateStrategicShadow(now)
+		if self.operation then
+			local targetZone = self.battleCommander:getZoneByName(self.operation.targetZone)
+			if not targetZone or not targetZone.active or targetZone.suspended or targetZone.isHidden then
+				self:_finishOperation('aborted', now)
+			elseif targetZone.side == coalition.side.BLUE then
+				self:_finishOperation('captured', now)
+			elseif targetZone.side == coalition.side.NEUTRAL then
+				self:_finishOperation('neutralized', now)
+			end
+		end
+		if self.operation then
+			self:_blueReconcileAssignments(now)
+		end
+		return scheduleTime + self.config.tickSec
+	end
+
+	function Director:update(scheduleTime)
+		if self.side == coalition.side.BLUE then
+			return self:_updateBlue(scheduleTime)
+		end
+		local now = timer.getAbsTime()
+		if not self.config.enabled then
+			return scheduleTime + self.config.tickSec
+		end
+		if not self.ready then
+			if not self:_runtimeReady() then
+				return scheduleTime + self.config.tickSec
+			end
+			self.ready = true
+			if self.pendingPersistence then
+				self:_restorePersistence(self.pendingPersistence, now)
+				self.pendingPersistence = nil
+			else
+				self.state = self.state == 'waiting' and 'recovery' or self.state
+				self.recoveryUntil = self.recoveryUntil or now
+				self.nextSurgeAt = self.nextSurgeAt or (now + self.config.surgeInitialDelaySec)
+			end
+			self:_log('ready')
+		end
+		self:_reconcileRoutineCap(now)
+		self:_observeRegions(now)
+		self:_ensureCampaignStrategy(now)
+		self:_updateStrategicShadow(now)
+		self:_reconcileRoutineCapRevector(now)
+		if self.battleCommander:isRedMassAttackMissionActive() and (not self.operation or self.state ~= 'surge') then
+			if self.operation then
+				self:_finishOperation('preempted-by-surge', now)
+			end
+			self:_adoptMassAttack(now, false)
+		end
+		if self:_isStrategicBomberActive() then
+			self:_beginStrategicPause(now)
+			return scheduleTime + self.config.tickSec
+		end
+		self:_endStrategicPause(now)
+		local playerCount = getRedCasPlayersCount() or 0
+		local capacitySignature = self:_capacitySignature(playerCount)
+		local capacityChanged = self.capacitySignature ~= capacitySignature
+		self.capacitySignature = capacitySignature
+		if self.operation then
+			self:_reconcileOperationCapacity(now, playerCount)
+			self:_updateOperation(now)
+			return scheduleTime + self.config.tickSec
+		end
+		if self:_processPendingReaction(now, playerCount) then
+			return scheduleTime + self.config.tickSec
+		end
+		if self.state == 'waiting' and capacityChanged then
+			self.nextPlanningAt = now
+		end
+		if self.state == 'recovery' and now < (self.recoveryUntil or 0) then
+			return scheduleTime + self.config.tickSec
+		end
+		if now < (self.nextPlanningAt or 0) then
+			return scheduleTime + self.config.tickSec
+		end
+		self:_startOperation(now, playerCount)
+		return scheduleTime + self.config.tickSec
+	end
+
+	function Director:init()
+		self:_buildRegionCatalog(TheaterRegions, TheaterInfrastructure)
+		self:_buildAreaCatalog(TheaterAreas)
+		self.started = true
+		self.instancesBySide[self.side] = self
+		if self.side == coalition.side.RED then
+			self.pendingPersistence = self.battleCommander._pendingDirectorPersistence
+			self.battleCommander._pendingDirectorPersistence = nil
+		end
+		local startOffsetSec = self.side == coalition.side.BLUE and self.config.tickSec or 0
+		self:_log('scheduler start delay=' .. (self.config.startDelaySec + startOffsetSec) .. ' sideTick=' .. (self.config.tickSec * 2))
+		timer.scheduleFunction(function(director, scheduleTime)
+			local nextScheduleTime = director:update(scheduleTime)
+			return nextScheduleTime + director.config.tickSec
+		end, self, timer.getTime() + self.config.startDelaySec + startOffsetSec)
+	end
+
+	function Director:allowsGroupSpawn(groupCommander)
+		if self:_canManageRoutineCap(groupCommander) then
+			if self:_groupIsLive(groupCommander) then return true end
+			return self.routineCapPermits[groupCommander.name] ~= nil
+		end
+		if self.side == coalition.side.BLUE then
+			if not self:_blueCanManageGroup(groupCommander) then return true end
+			if self:_groupIsLive(groupCommander) then return true end
+			local blueAssignment = self:_assignmentFor(groupCommander)
+			return blueAssignment ~= nil and blueAssignment.authorized == true and blueAssignment.completed ~= true
+		end
+		if not self:_canManageGroup(groupCommander) then return true end
+		if self:_groupIsLive(groupCommander) then return true end
+		local assignment = self:_assignmentFor(groupCommander)
+		return assignment ~= nil and assignment.authorized == true and assignment.completed ~= true
+	end
+
+	function Director:onGroupStateChanged(groupCommander, previousState, currentState, wasSpawned, isSpawned)
+		if self.side == coalition.side.BLUE and (currentState == 'inhangar' or currentState == 'dead') then
+			self.blueCandidateRetryAt = 0
+		end
+		if self.routineCapPermits[groupCommander.name] and self:_groupIsLive(groupCommander) then
+			self.routineCapPermits[groupCommander.name] = nil
+		end
+		local assignment = self:_assignmentFor(groupCommander)
+		if not assignment then
+			if (currentState == 'dead' or currentState == 'inhangar')
+				and groupCommander._directorRetaskOriginalTargetZone then
+				self:_restoreRetaskedGroup(groupCommander)
+			end
+			return
+		end
+		if (wasSpawned ~= true and isSpawned == true) or self:_groupIsLive(groupCommander) then
+			assignment.launched = true
+			assignment.authorized = false
+		end
+		if assignment.launched and (currentState == 'dead' or currentState == 'inhangar') then
+			assignment.completed = true
+			assignment.authorized = false
 		end
 	end
 
@@ -42851,7 +50518,7 @@ do
 		self.__index = self
 		return obj
 	end
-	
+
 	function BudgetCommander:update()
 		local budget = self.battleCommander.accounts[self.side]
 		local options = self.battleCommander.shops[self.side] or {}
@@ -42864,7 +50531,7 @@ do
 		if #canAfford == 0 then
 			return
 		end
-		
+
 		local dice = math.random(1,100)
 		if dice > self.skipChance then
 			local maxAttempts = math.min(10, #canAfford)
@@ -42883,12 +50550,12 @@ do
 			end
 		end
 	end
-	
+
 	function BudgetCommander:scheduleDecission()
 		local variance = math.random(1, self.decissionVariance)
 		SCHEDULER:New(nil,self.update,{self},variance,0)
 	end
-	
+
 	function BudgetCommander:init()
 		SCHEDULER:New(nil,self.scheduleDecission,{self},self.decissionFrequency,self.decissionFrequency)
 	end
@@ -42904,11 +50571,11 @@ do
 		self.__index = self
 		return obj
 	end
-	
+
 	function EventCommander:addEvent(event)--{id=string, action=function, canExecute=function}
 		table.insert(self.events, event)
 	end
-	
+
 	function EventCommander:triggerEvent(id)
 		for _,v in ipairs(self.events) do
 			if v.id == id and v:canExecute() then
@@ -42917,7 +50584,7 @@ do
 			end
 		end
 	end
-	
+
 	function EventCommander:chooseAndStart(time)
 		local canRun = {}
 		for i,v in ipairs(self.events) do
@@ -42925,9 +50592,9 @@ do
 				table.insert(canRun, v)
 			end
 		end
-		
+
 		if #canRun == 0 then return end
-		
+
 		local dice = math.random(1,100)
 		if dice > self.skipChance then
 			local choice = math.random(1, #canRun)
@@ -42948,7 +50615,7 @@ do
 		local choice = math.random(1, #canRun)
 		local err = canRun[choice]:action()
 	end
-	
+
 	function EventCommander:scheduleDecission(time)
 		local variance = math.random(1, self.decissionVariance)
 		timer.scheduleFunction(self.chooseAndStart, self, time + variance)
@@ -42959,7 +50626,7 @@ do
 		self:chooseAndStartStrike(time)
 		return time + self.strikeFrequency
 	end
-	
+
 	function EventCommander:init()
 		timer.scheduleFunction(self.scheduleDecission, self, timer.getTime() + self.decissionFrequency)
 		if self.strikeFrequency then
@@ -43067,7 +50734,7 @@ do
 		end
 	end
 
-    	--{name = 'groupname'}
+	--{name = 'groupname'}
 	function SelfJtac:new(obj)
 		obj = obj or {}
 		obj.lasers = {tgt=nil, ir=nil}
@@ -46468,10 +54135,12 @@ function LogisticCommander:_handleAllowedAircraftZoneSpawn(player, un, gr, unitC
 		end
 		if un:getTypeName() ~= "A-10C_2" and un:getTypeName() ~= "Hercules" and un:getTypeName() ~= "A-10A" and un:getTypeName() ~= "AV8BNA"
 		and un:getTypeName() ~= "C-130J-30" then
-			playerZoneSpawn[player] = zn.zone
+			if playerZoneSpawn[player] ~= zn.zone then
+				playerZoneSpawn[player] = zn.zone
+				self.battleCommander._blueMirroredCapRankingCache = {}
+			end
 		end
 	end
-	if casMissionTarget ~= nil and casKillsByPlayer[player] then casKillsByPlayer[player] = 0 end
 end
 
 function LogisticCommander:_syncRankSavePlayerIdentity(player, plist)
