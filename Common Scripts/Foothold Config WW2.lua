@@ -46,6 +46,8 @@ FootholdConfigTrackedTableNames = {
 FootholdConfigTrackedScalarNames = {
     "ZoneSelfRepairAndUpgradeTime",
     "PlayerZoneSuppliesConsumeStock",
+    "NormalSupplyCapacity",
+    "WarehouseSupplyCapacity",
 }
 
 local function applyExternalConfigWithFallbackWarning()
@@ -485,6 +487,16 @@ CallsignOverrides = {
 -- Logistics / Warehouse
 -- ============================================================================
 
+-- How many ready supplies a normal zone produces before automatic production pauses.
+-- Player-delivered supplies can still be stored above this amount.
+-- @gui label="Normal Zone Supply Capacity" validValues="1=1 | 2=2 | 3=3"
+NormalSupplyCapacity = 1
+
+-- How many ready supplies a [WH] zone produces before automatic production pauses.
+-- Player-delivered supplies can still be stored above this amount.
+-- @gui label="Warehouse Supply Capacity" validValues="3=3 | 4=4 | 5=5 | 6=6 | 7=7 | 8=8 | 9=9 | 10=10 | 11=11 | 12=12"
+WarehouseSupplyCapacity = 12
+
 -- Supply mission and ready-supply production speed scaling.
 -- This multiplier affects AI supply mission timers and ready-supply production times.
 -- 1.0 = normal speed
@@ -548,7 +560,7 @@ ShopPrices = {
 	zinf          = 500,  -- Add infantry squad to zone
 	zsam          = 1000, -- Add AA guns to a zone
 	zewr          = 1000, -- Add Early Warning Radar to a zone
-	zlogc         = 2000, -- Make a zone logistic center
+	zlogc         = 5000, -- Make a zone logistic center
 	zsup3         = 750,  -- Add 3 supplies to a zone
 	zarm          = 1000, -- Add armor group to a zone
 	gslot         = 3000, -- Unlock extra upgrade slot

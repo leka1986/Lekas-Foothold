@@ -1337,7 +1337,7 @@ function Foothold_ctld:RegisterFarpSupplyStorage(farpName, supplyTextId, initial
   if not farp then
     farp = registerFarpSupplyRecord({
       name = farpName,
-      supplyStock = math.max(0, math.floor(tonumber(initialStock) or 1)),
+      supplyStock = math.max(0, math.floor(tonumber(initialStock) or CTLDSupplyCapacity)),
     })
   end
   farp.supplyTextId = supplyTextId
@@ -3925,7 +3925,7 @@ function BuildAFARP(Coordinate, stamp)
   local saveName = nil
   local saveSeq = nil
   local withZell = false
-  local supplyStock = 1
+  local supplyStock = math.max(0, math.floor(tonumber(CTLDSupplyCapacity) or 1))
   if type(stamp) == "table" then
     saveName = stamp.name
     saveSeq = stamp.seq or stamp.timestamp
@@ -4917,7 +4917,7 @@ function LoadFARPS()
         end
         local supplyStock = tonumber(supplyField)
         if supplyStock == nil then
-          supplyStock = 1
+          supplyStock = math.max(0, math.floor(tonumber(CTLDSupplyCapacity) or 1))
         else
           supplyStock = math.max(0, math.floor(supplyStock))
         end
@@ -4928,7 +4928,7 @@ function LoadFARPS()
         local dy = tonumber(d)
         if a and b and cx and dy then
           -- Current format: seq;name;x;y;zell;lat;lon;supplyStock;
-          -- Rows saved before supplyStock was added start with 1 supply.
+          -- Rows saved before supplyStock was added use the configured CTLD starting supply amount.
           entries[#entries + 1] = { seq = a, name = tostring(b), x = cx, y = dy, zell = hasZell, supplyStock = supplyStock }
         elseif a and bx and cy then
           -- Previous format: seq;x;y;
@@ -5371,6 +5371,53 @@ for _, zoneObj in ipairs(bc:getZones()) do
   zoneSet:AddZone(mooseZone)
 end
 
+zoneSet.deployedTroopTriggerInitialized = false
+
+function zoneSet:PruneDeadDeployedTroops()
+  local deadGroupNames = {}
+  for groupName, troopGroup in pairs(deployedTroopsSet:GetSet()) do
+    if not troopGroup or not troopGroup:IsAlive() then
+      deadGroupNames[#deadGroupNames + 1] = groupName
+    end
+  end
+
+  for _, groupName in ipairs(deadGroupNames) do
+    deployedTroops[groupName] = nil
+    deployedTroopsSet:RemoveGroupsByName(groupName)
+    zoneCaptureInfo[groupName] = nil
+  end
+
+  return next(deployedTroopsSet:GetSet()) ~= nil
+end
+
+function zoneSet:StartDeployedTroopTrigger()
+  if not self.deployedTroopTriggerInitialized then
+    self:Trigger(deployedTroopsSet)
+    self.deployedTroopTriggerInitialized = true
+  elseif self:GetState() == "TriggerStopped" then
+    self:TriggerStart()
+    self:_TriggerCheck(true)
+    self:__TriggerRunCheck(self.Checktime)
+  else
+    self:_TriggerCheck(true)
+  end
+end
+
+function zoneSet:onafterTriggerRunCheck(From, Event, To)
+  if self:GetState() == "TriggerStopped" then
+    return self
+  end
+
+  if not self:PruneDeadDeployedTroops() then
+    self:TriggerStop()
+    return self
+  end
+
+  self:_TriggerCheck()
+  self:__TriggerRunCheck(self.Checktime)
+  return self
+end
+
 function playRandomSound(Group, soundCategory)
     local sounds = {
         unload = {
@@ -5487,7 +5534,7 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
         
         deployedTroops[troopGroupName] = troopGroup
         deployedTroopsSet:AddGroup(troopGroup)
-        zoneSet:Trigger(deployedTroopsSet)
+        zoneSet:StartDeployedTroopTrigger()
 
         if Group and Group:IsAlive() then
             playRandomSound(Group, "unload")

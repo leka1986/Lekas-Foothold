@@ -7103,8 +7103,8 @@ do
 	GlobalSettings.maxPaidSupplyPerZoneBlue = 2  	-- max bought supply launches to the same target zone at once
 	GlobalSettings.regularSupplyNormalBuildSec = math.max(1, tonumber(GlobalSettings.regularSupplyNormalBuildSec) or (20 * 60))
 	GlobalSettings.regularSupplyLogisticBuildSec = math.max(1, tonumber(GlobalSettings.regularSupplyLogisticBuildSec) or (10 * 60))
-	GlobalSettings.regularSupplyNormalMax = 1
-	GlobalSettings.regularSupplyLogisticMax = 3
+	GlobalSettings.regularSupplyNormalMax = NormalSupplyCapacity
+	GlobalSettings.regularSupplyLogisticMax = WarehouseSupplyCapacity
 	GlobalSettings.regularSupplyLocalRecoverySec = math.max(1, tonumber(ZoneSelfRepairAndUpgradeTime) or 300)
 	GlobalSettings.regularSupplyRetrySec = 60
 	GlobalSettings.regularSupplyDispatchBudgetPerTick = 2
@@ -36523,9 +36523,9 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 
 	function ZoneCommander:_regularSupplyMaxStock()
 		if self.LogisticCenter == true then
-			return GlobalSettings.regularSupplyLogisticMax or 3
+			return GlobalSettings.regularSupplyLogisticMax or WarehouseSupplyCapacity
 		end
-		return GlobalSettings.regularSupplyNormalMax or 1
+		return GlobalSettings.regularSupplyNormalMax or NormalSupplyCapacity
 	end
 
 	function ZoneCommander:_addImportedRegularSupplyStock(amount, now)
@@ -66671,7 +66671,7 @@ bc:registerDynamicFarp(FName, Coordinate, 2)
   trigger.action.setMarkupColor(markId,{0,1,0,1})
   local textId=NextMarkupId; NextMarkupId=NextMarkupId+1
   local textPoint={x=Coordinate.x,y=Coordinate.y,z=Coordinate.z+120}
-  local farpLabel=Foothold_ctld:RegisterFarpSupplyStorage(FName,textId,1)
+  local farpLabel=Foothold_ctld:RegisterFarpSupplyStorage(FName,textId,CTLDSupplyCapacity)
   trigger.action.textToAll(coalition.side.BLUE,textId,textPoint,{0,0,0.7,0.8},{0.7,0.7,0.7,0.8},17,true,farpLabel)
   trigger.action.setMarkupText(textId,farpLabel)
 end
@@ -66704,7 +66704,7 @@ function CustomBuildAFARP(Coordinate,startZone)
 
   local textId = 96500 + EscortFARPCount
   local textPoint = {x = Coordinate.x, y = Coordinate.y, z = Coordinate.z + 120}
-  local farpLabel = Foothold_ctld:RegisterFarpSupplyStorage(FName, textId, 1)
+  local farpLabel = Foothold_ctld:RegisterFarpSupplyStorage(FName, textId, CTLDSupplyCapacity)
   trigger.action.textToAll(coalition.side.BLUE, textId, textPoint,{0,0,0.7,0.8},{0.7,0.7,0.7,0.8},17,true,farpLabel)
   trigger.action.setMarkupText(textId, farpLabel)
     bc:registerDynamicFarp(FName, Coordinate, 2)
