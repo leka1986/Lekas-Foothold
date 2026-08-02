@@ -1835,6 +1835,9 @@ function EscortClientGroup(clientGroup)
     local function OnEscortSpawn(g)
         local escortGroup = FLIGHTGROUP:New(g)
         local playerInAir = IsPlayerGroupInAir(clientGroup)
+        if escortHomeBase then
+            escortGroup:SetHomebase(escortHomeBase)
+        end
         escortGroup:GetGroup():CommandSetUnlimitedFuel(true):SetOptionRadarUsingForContinousSearch(true):SetOptionWaypointPassReport(false)
         escortGroups[groupName] = escortGroup
         if playerInAir then
@@ -2156,7 +2159,12 @@ function EscortAbort(group)
     local escortGroup = escortGroups[group:GetName()]
     if escortGroup then
         escortPendingJoin[group:GetName()] = nil
-        escortGroup:CancelAllMissions()
+        RemoveEscortMenu(group)
+        if escortGroup.homebase then
+            escortGroup:RTB(escortGroup.homebase)
+        else
+            escortGroup:CancelAllMissions()
+        end
         MESSAGE:New(T:Get("WELCOME_ESCORT_RTB"), 20):ToGroup(group)
     else
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 10):ToGroup(group)

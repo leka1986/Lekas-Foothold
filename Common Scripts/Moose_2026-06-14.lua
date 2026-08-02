@@ -78610,6 +78610,22 @@ end
 end
 notified=true
 end
+local totalBuilds=0
+for _,candidate in pairs(buildables)do
+if candidate.CanBuild then
+local required=candidate.Required or 1
+if required<1 then required=1 end
+local full=math.floor((candidate.Found or 0)/required)
+if full<1 then full=1 end
+totalBuilds=totalBuilds+full
+end
+end
+local sep=self.buildPairSeparation or 25
+local hdg=(Unit:GetHeading()+180)%360
+local lat=(hdg+90)%360
+local base=Unit:GetCoord():Translate(20,hdg)
+local start=-((totalBuilds-1)*sep)/2
+local buildIndex=0
 for _,_build in pairs(buildables)do
 local build=_build
 if build.CanBuild then
@@ -78617,11 +78633,7 @@ local required=build.Required or 1
 if required<1 then required=1 end
 local full=math.floor((build.Found or 0)/required)
 if full<1 then full=1 end
-local sep=self.buildPairSeparation or 25
-local hdg=(Unit:GetHeading()+180)%360
-local lat=(hdg+90)%360
-local base=Unit:GetCoord():Translate(20,hdg)
-if full==1 then
+if totalBuilds==1 then
 local cratesNow,numberNow=self:_FindCratesNearby(Group,Unit,finddist,true,true,not Engineering)
 if activeSetId then
 cratesNow,numberNow=self:_C130DcAutoFilterCrates(cratesNow,activeSetId)
@@ -78641,7 +78653,6 @@ end
 self:_BuildObjectFromCrates(Group,Unit,build,false,nil,MultiDrop)
 end
 else
-local start=-((full-1)*sep)/2
 for n=1,full do
 local cratesNow,numberNow=self:_FindCratesNearby(Group,Unit,finddist,true,true,not Engineering)
 if activeSetId then
@@ -78650,7 +78661,8 @@ end
 self:_CleanUpCrates(cratesNow,build,numberNow)
 self:_RefreshLoadCratesMenu(Group,Unit)
 self:_RefreshPackMenus(Group,Unit)
-local off=start+(n-1)*sep
+buildIndex=buildIndex+1
+local off=start+(buildIndex-1)*sep
 local coord=base:Translate(off,lat):GetVec2()
 local b={Name=build.Name,Required=build.Required,Template=build.Template,CanBuild=true,Type=build.Type,Coord=coord}
 if self.buildtime and self.buildtime>0 then
@@ -80704,7 +80716,7 @@ end
 end
 return outcome
 end
-function CTLD:AddTroopsCargo(Name,Templates,Type,NoTroops,PerTroopMass,Stock,SubCategory)
+function CTLD:AddTroopsCargo(Name,Templates,Type,NoTroops,PerTroopMass,Stock,SubCategory,NoMoveToZone)
 self:T(self.lid.." AddTroopsCargo")
 self:T({Name,Templates,Type,NoTroops,PerTroopMass,Stock})
 if not self:_CheckTemplates(Templates)then
@@ -80713,6 +80725,7 @@ return self
 end
 self.CargoCounter=self.CargoCounter+1
 local cargo=CTLD_CARGO:New(self.CargoCounter,Name,Templates,Type,false,true,NoTroops,nil,nil,PerTroopMass,Stock,SubCategory)
+cargo.NoMoveToZone=NoMoveToZone==true
 table.insert(self.Cargo_Troops,cargo)
 self._troopsByName=self._troopsByName or{}
 self._troopsByName[cargo.Name]=cargo
@@ -82175,7 +82188,10 @@ self.DroppedTroops[self.TroopCounter]=SPAWN:NewWithAlias(_template,alias)
 :OnSpawnGroup(function(grp,TimeStamp)grp.spawntime=TimeStamp or timer.getTime()end,TimeStamp)
 :SpawnFromVec2(randomcoord)
 if self.movetroopstowpzone and type~=CTLD_CARGO.Enum.ENGINEERS then
+local cg=self:GetGenericCargoObjectFromGroupName(self.DroppedTroops[self.TroopCounter]:GetName())
+if not(cg and cg.NoMoveToZone)then
 self:_MoveGroupToZone(self.DroppedTroops[self.TroopCounter])
+end
 end
 end
 cargo:SetWasDropped(true)
@@ -82510,7 +82526,10 @@ end
 function CTLD:onafterTroopsDeployed(From,Event,To,Group,Unit,Troops,Type)
 self:T({From,Event,To})
 if self.movetroopstowpzone and Type~=CTLD_CARGO.Enum.ENGINEERS then
+local cg=self:GetGenericCargoObjectFromGroupName(Troops:GetName())
+if not(cg and cg.NoMoveToZone)then
 self:_MoveGroupToZone(Troops)
+end
 if not Group or not Unit then self:_RefreshQuantityMenusForGroup()end
 end
 return self

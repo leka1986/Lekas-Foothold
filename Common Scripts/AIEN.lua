@@ -119,6 +119,7 @@ local AIEN_lfs 					    	= _G.lfs		    -- check if lfs is available in mission e
 local PHASE                             = "Initialization"  -- used by FSM, don't change, it won't affect anything
 local phase_index                   	= nil
 local phase_keys                        = {}
+local scoutCleanupPending               = true
 local phaseCycleTimerMin                = phaseCycleTimerMin or 0.2                 -- seconds, used by FSM during initialization and while work is pending.
 local phaseCycleTimerActive             = phaseCycleTimerActive or 0.05             -- seconds, default cadence once databases are populated alongside ZoneCommander.
 local phaseCycleTimerIdle               = phaseCycleTimerIdle or 0.5                -- seconds, relaxed cadence when queues are idle to limit scheduler churn.
@@ -3040,7 +3041,7 @@ if not tblThreatsRange then
                 [16] = "LightArmoredUnits",
                 [17] = "Artillery",
             }, -- end of ["attr"]
-            ["threat"] = 70000,
+            ["threat"] = 65000,
             ["irsignature"] = 0.075,
             ["detection"] = 0,
             ["threatmin"] = 15000,
@@ -6911,7 +6912,7 @@ if not tblThreatsRange then
                 [16] = "LightArmoredUnits",
                 [17] = "Artillery",
             }, -- end of ["attr"]
-            ["threat"] = 70000,
+            ["threat"] = 65000,
             ["irsignature"] = 0.075,
             ["detection"] = 0,
             ["threatmin"] = 15000,
@@ -9606,6 +9607,7 @@ local function getRanges(group)
 		local units = group:getUnits()
         local maxDec = 0
         local maxThr = 0
+        local minThr = nil
         for _, uData in pairs(units) do
             local t = uData:getTypeName()
             if t then
@@ -9616,6 +9618,9 @@ local function getRanges(group)
                     end
                     if tData.threat and tData.threat > maxThr then
                         maxThr = tData.threat
+                    end
+                    if tData.threatmin and (not minThr or tData.threatmin < minThr) then
+                        minThr = tData.threatmin
                     end
                 end
             end
@@ -9628,7 +9633,7 @@ local function getRanges(group)
             maxThr = nil
         end
 
-        return maxDec, maxThr
+        return maxDec, maxThr, minThr
 		
 	else
 		if AIEN.config.AIEN_debugProcessDetail then
@@ -13373,11 +13378,13 @@ local function populate_Db() -- this one is launched once at mission start and c
 
 	-- only ground groups
 	groundgroupsDb = {}
+	local groupsWithMissionRoutes = nil
 	for i = 0, 2 do
 		for _, gp in pairs(coalition.getGroups(i,2)) do -- ground only
 			if gp:isExist() and IsGroupActive(gp:getName()) then
                 local c = getGroupClass(gp)
                 local gpcoa = gp:getCoalition()
+                local groupName = gp:getName()
                 -- classes reminder from getGroupClass:
                 -- MBT
                 -- ATGM
@@ -13398,18 +13405,18 @@ local function populate_Db() -- this one is launched once at mission start and c
                 local s = getGroupSkillNum(gp)
                 --env.info((tostring(ModuleName) .. ", populate_Db: s " .. tostring(s)))
                 local det, thr, thrmin = getRanges(gp)
-                local hasRoute = false
-                for coa_name, coa_data in pairs(env.mission.coalition) do
-                    if type(coa_data) == 'table' then
-                        if coa_data.country then --there is a country table
-                            for cntry_id, cntry_data in pairs(coa_data.country) do
-                                for obj_type_name, obj_type_data in pairs(cntry_data) do
-                                    if obj_type_name == "vehicle" then	-- only these types have points
-                                        if ((type(obj_type_data) == 'table') and obj_type_data.group and (type(obj_type_data.group) == 'table') and (#obj_type_data.group > 0)) then	--there's a group!
-                                            for group_num, group_data in pairs(obj_type_data.group) do
-                                                if group_data and group_data.name == gp:getName() then -- this is the group we are looking for
-                                                    if group_data.route and group_data.route.points and #group_data.route.points > 1 then
-                                                        hasRoute = true
+                if not groupsWithMissionRoutes then
+                    groupsWithMissionRoutes = {}
+                    for coa_name, coa_data in pairs(env.mission.coalition) do
+                        if type(coa_data) == 'table' then
+                            if coa_data.country then --there is a country table
+                                for cntry_id, cntry_data in pairs(coa_data.country) do
+                                    for obj_type_name, obj_type_data in pairs(cntry_data) do
+                                        if obj_type_name == "vehicle" then	-- only these types have points
+                                            if ((type(obj_type_data) == 'table') and obj_type_data.group and (type(obj_type_data.group) == 'table') and (#obj_type_data.group > 0)) then	--there's a group!
+                                                for group_num, group_data in pairs(obj_type_data.group) do
+                                                    if group_data and group_data.name and group_data.route and group_data.route.points and #group_data.route.points > 1 then
+                                                        groupsWithMissionRoutes[group_data.name] = true
                                                     end
                                                 end
                                             end
@@ -13420,8 +13427,8 @@ local function populate_Db() -- this one is launched once at mission start and c
                         end
                     end
                 end
-                
-                local det, thr = getRanges(gp)
+                local hasRoute = groupsWithMissionRoutes[groupName] == true
+
                 if c then
                     local foundGuidance = 0
                     if c == "MLRS" then                        
@@ -13442,7 +13449,6 @@ local function populate_Db() -- this one is launched once at mission start and c
 
                         --env.info((tostring(ModuleName) .. ", populate_Db: MLRS guidance " .. tostring(gp:getName() .. ", class " .. tostring(foundGuidance) )))
                     end
-                    local groupName = gp:getName()
                     local excluded = false
                     local delegationOnly = false
                     for _, tag in ipairs(AIEN.config.AIEN_xcl_tag) do
@@ -13636,11 +13642,12 @@ end
 local function update_GROUND()
     if PHASE == "A" then -- confirm correct PHASE of performPhaseCycle
         if groundgroupsDb and next(groundgroupsDb) ~= nil then -- check that table exist and that it's not void
-            if AIEN.scoutGroups then
+            if scoutCleanupPending and AIEN.scoutGroups then
                 for name,_ in pairs(AIEN.scoutGroups) do
                     if not IsGroupActive(name) then AIEN.scoutGroups[name] = nil end
                 end
             end
+            scoutCleanupPending = false
             if not phase_index then -- escape condition from the 2nd loop!
                 AIEN.changePhase()
                 scheduleNextPhaseCycle()
@@ -13984,42 +13991,51 @@ end
                                         }
 
                                         local curPri = 0
+                                        local scoutCache = {}
                                         local jtac9Cache = {}
+                                        local jtacQueueCache = {}
                                         local _search = function(_obj)
-                                            if _obj ~= nil and Object.getCategory(_obj) == 1 and _obj:isExist() and _obj:getCoalition() ~= gData.coa then
+                                            if _obj ~= nil and Object.getCategory(_obj) == 1 and _obj:isExist() then
+                                                local objCoalition = _obj:getCoalition()
+                                                if objCoalition == gData.coa then return end
                                                 if _obj.isActive and _obj:isActive() == false then
-                                                    local staleId = _obj:getID()
-                                                    if staleId and intelDb[staleId] then
-                                                        intelDb[staleId] = nil
+                                                    local objId = _obj:getID()
+                                                    if objId and intelDb[objId] then
+                                                        intelDb[objId] = nil
                                                     end
                                                     return
                                                 end
                                                 local life = _obj:getLife()
                                                 if not life or life <= 0 then
-                                                    local staleId = _obj:getID()
-                                                    if intelDb[staleId] then
-                                                        intelDb[staleId] = nil
+                                                    local objId = _obj:getID()
+                                                    if intelDb[objId] then
+                                                        intelDb[objId] = nil
                                                     end
                                                     return
                                                 end
-                                                if getDist(gData.sa.pos, _obj:getPoint()) > gData.threat * 0.85 then 
-                                                    return
-                                                end
-                                                if gData.threatmin then
-                                                    if getDist(gData.sa.pos, _obj:getPoint()) < gData.threatmin * 1.05 then 
-                                                        return
-                                                    end
-                                                end 
                                                 local p = _obj:getPoint()
+                                                local distance = getDist(gData.sa.pos, p)
+                                                if distance > gData.threat * 0.85 then
+                                                    return
+                                                end
+                                                if gData.threatmin and distance < gData.threatmin * 1.05 then
+                                                    return
+                                                end 
 
-                                                local _obj_id = _obj:getID()
-                                                local report = intelDb[_obj_id]
+                                                local objId = _obj:getID()
+                                                local report = intelDb[objId]
                                                 local zTgt   = bc:getZoneOfPoint(p)
                                                 local jtacOK = false
                                                 local jtacSrc = nil
-                                                local scoutActive = zTgt and AIEN.isScoutActiveForZone(zTgt.zone, gData.coa) or false
+                                                local scoutActive = false
                                                 local jtac9Active = false
                                                 if zTgt then
+                                                    local scoutCached = scoutCache[zTgt.zone]
+                                                    if scoutCached == nil then
+                                                        scoutCached = AIEN.isScoutActiveForZone(zTgt.zone, gData.coa)
+                                                        scoutCache[zTgt.zone] = scoutCached
+                                                    end
+                                                    scoutActive = scoutCached
                                                     local cached = jtac9Cache[zTgt.zone]
                                                     if cached == nil then
                                                         cached = AIEN.JTAC9line_isActive(zTgt.zone, gData.coa)
@@ -14031,13 +14047,23 @@ end
                                                     --jtacOK = true
                                                     --jtacSrc = "cls"
                                                -- else
-                                                    if zTgt and jtacQueue then
-                                                        for _,d in ipairs(jtacQueue) do
-                                                            if d.tgtzone and d.tgtzone.zone == zTgt.zone then
-                                                                jtacOK = true
-                                                                jtacSrc = "queue"
-                                                                break
+                                                    if zTgt then
+                                                        local queueCached = jtacQueueCache[zTgt.zone]
+                                                        if queueCached == nil then
+                                                            queueCached = false
+                                                            if jtacQueue then
+                                                                for _,d in ipairs(jtacQueue) do
+                                                                    if d.tgtzone and d.tgtzone.zone == zTgt.zone then
+                                                                        queueCached = true
+                                                                        break
+                                                                    end
+                                                                end
                                                             end
+                                                            jtacQueueCache[zTgt.zone] = queueCached
+                                                        end
+                                                        if queueCached then
+                                                            jtacOK = true
+                                                            jtacSrc = "queue"
                                                         end
                                                     end
                                                     if not jtacOK and jtac9Active then jtacOK = true jtacSrc = "9line" end
@@ -14047,7 +14073,7 @@ end
                                                     report = buildJTACFallbackReport(_obj, zTgt, gData, now)
                                                     if report then
                                                         report.speed = 0
-                                                        intelDb[_obj_id] = report
+                                                        intelDb[objId] = report
                                                         if AIEN.config.AIEN_debugProcessDetail then
                                                             env.info("ARTY_JTAC "..gData.n.." seeded ".._obj:getName())
                                                         end
@@ -14057,19 +14083,19 @@ end
                                                     if report then
                                                         report.pos = p
                                                         report.record = now
-                                                        report.life = _obj:getLife() or report.life
+                                                        report.life = life
                                                         report.speed = 0
                                                         report.obj = _obj
-                                                        report.coa = _obj:getCoalition()
-                                                        report.id = _obj_id
+                                                        report.coa = objCoalition
+                                                        report.id = objId
                                                         report.jtacFallback = false
                                                     else
                                                         local grp = _obj:getGroup()
                                                         local cls = (grp and getGroupClass(grp)) or getUnitClass(_obj) or "UNKN"
                                                         if cls == "none" then cls = "UNKN" end
-                                                        report = { pos = p, cls = cls, record = now, speed = 0, life = _obj:getLife() or 0, jtacFallback = false, obj = _obj, coa = _obj:getCoalition(), id = _obj_id }
+                                                        report = { pos = p, cls = cls, record = now, speed = 0, life = life, jtacFallback = false, obj = _obj, coa = objCoalition, id = objId }
                                                     end
-                                                    intelDb[_obj_id] = report
+                                                    intelDb[objId] = report
                                                     if AIEN.config.AIEN_debugProcessDetail then
                                                         env.info("ARTY_JTAC "..gData.n.." seeded/refresh ".._obj:getName().." via scout")
                                                     end
@@ -14078,19 +14104,19 @@ end
                                                     if report then
                                                         report.pos = p
                                                         report.record = now
-                                                        report.life = _obj:getLife() or report.life
+                                                        report.life = life
                                                         report.speed = 0
                                                         report.obj = _obj
-                                                        report.coa = _obj:getCoalition()
-                                                        report.id = _obj_id
+                                                        report.coa = objCoalition
+                                                        report.id = objId
                                                         report.jtacFallback = false
                                                     else
                                                         local grp = _obj:getGroup()
                                                         local cls = (grp and getGroupClass(grp)) or getUnitClass(_obj) or "UNKN"
                                                         if cls == "none" then cls = "UNKN" end
-                                                        report = { pos = p, cls = cls, record = now, speed = 0, life = _obj:getLife() or 0, jtacFallback = false, obj = _obj, coa = _obj:getCoalition(), id = _obj_id }
+                                                        report = { pos = p, cls = cls, record = now, speed = 0, life = life, jtacFallback = false, obj = _obj, coa = objCoalition, id = objId }
                                                     end
-                                                    intelDb[_obj_id] = report
+                                                    intelDb[objId] = report
                                                     if AIEN.config.AIEN_debugProcessDetail then
                                                         env.info("ARTY_JTAC "..gData.n.." seeded/refresh ".._obj:getName().." via 9line")
                                                     end
@@ -14099,8 +14125,8 @@ end
                                                     local grp = _obj:getGroup()
                                                     local cls = (grp and getGroupClass(grp)) or getUnitClass(_obj) or "UNKN"
                                                     if cls == "none" then cls = "UNKN" end
-                                                    report = { pos = p, cls = cls, record = now, speed = 0, life = _obj:getLife() or 0, jtacFallback = false, obj = _obj, coa = _obj:getCoalition(), id = _obj_id }
-                                                    intelDb[_obj_id] = report
+                                                    report = { pos = p, cls = cls, record = now, speed = 0, life = life, jtacFallback = false, obj = _obj, coa = objCoalition, id = objId }
+                                                    intelDb[objId] = report
                                                     if AIEN.config.AIEN_debugProcessDetail then
                                                         env.info("ARTY_JTAC "..gData.n.." seeded ".._obj:getName().." via scout")
                                                     end
@@ -14118,7 +14144,7 @@ end
                                                         end
                                                     end
                                                     if not inBuilt then
-                                                        intelDb[_obj_id] = nil
+                                                        intelDb[objId] = nil
                                                         return
                                                     end
                                                     local cls = (grp and getGroupClass(grp)) or getUnitClass(_obj) or "UNKN"
@@ -14128,12 +14154,12 @@ end
                                                     report.cls = cls
                                                     report.record = now
                                                     report.speed = 0
-                                                    report.life = _obj:getLife() or 0
+                                                    report.life = life
                                                     report.jtacFallback = true
                                                     report.obj = _obj
-                                                    report.coa = _obj:getCoalition()
-                                                    report.id = _obj_id
-                                                    intelDb[_obj_id] = report
+                                                    report.coa = objCoalition
+                                                    report.id = objId
+                                                    intelDb[objId] = report
                                                 end
                                                 if report and report.targeted == nil then
                                                     local lastContact = now - (report.record or now)
@@ -14163,6 +14189,7 @@ end
                                         world.searchObjects(Object.Category.UNIT, _volume, _search)
                                         local movingSkip = false
                                         local movingReport = nil
+                                        local candidatesSorted = false
                                         local maxSpeed = AIEN.config.artyTargetMaxSpeed or 0
                                         if firePoint and bestReport and bestReport.obj and bestReport.obj:isExist() and maxSpeed > 0 then
                                             local v = vecmag(bestReport.obj:getVelocity()) or 0
@@ -14177,6 +14204,7 @@ end
                                         end
                                         if movingSkip and candidates and #candidates > 0 then
                                             table.sort(candidates, function(a,b) return a.pri > b.pri end)
+                                            candidatesSorted = true
                                             for _, c in ipairs(candidates) do
                                                 local rep = c.report
                                                 if rep and rep ~= movingReport then
@@ -14215,7 +14243,17 @@ end
                                             local qty    = guided and 1 or (isSAM and 10 or roundsToFire)
                                             local radius = isSAM and 10 or nil
                                             if guided and #candidates > 0 then
-                                                table.sort(candidates, function(a,b) return a.pri > b.pri end)
+                                                if candidatesSorted then
+                                                    for i = 2, #candidates do
+                                                        if candidates[i - 1].pri == candidates[i].pri then
+                                                            candidatesSorted = false
+                                                            break
+                                                        end
+                                                    end
+                                                end
+                                                if not candidatesSorted then
+                                                    table.sort(candidates, function(a,b) return a.pri > b.pri end)
+                                                end
                                                 local k = math.min(6, math.max(1, roundsToFire), #candidates)
                                                 local ctrl = gData.group and gData.group:getController(); if ctrl then for j=1,8 do ctrl:popTask() end end
                                                 for i = 1, k do groupfireAtPoint({gData.group, candidates[i].pos, 1, description, radius}) end
@@ -14314,12 +14352,11 @@ local function update_INITIATIVE()
                                                                 local e = groundgroupsDb[g_id]
 
                                                                 if e and e.sa and e.sa.pos then
-                                                                    local d = getDist(gData.sa.pos, e.sa.pos, true)
+                                                                    local d = getDist(gData.sa.pos, e.sa.pos)
                                                                     if AIEN.config.AIEN_debugProcessDetail then
-                                                                        env.info((tostring(ModuleName) .. ", update_INITIATIVE: tgt distance " .. tostring(d) .. " meters"))
+                                                                        env.info((tostring(ModuleName) .. ", update_INITIATIVE: tgt distance " .. tostring(math.floor(d)) .. " meters"))
                                                                     end                                                                      
 
-                                                                    local d = getDist(gData.sa.pos, e.sa.pos)
                                                                     if d < nearestDist then
                                                                         nearest         = e
                                                                         nearestDist     = d
@@ -14442,6 +14479,7 @@ end
 function AIEN.changePhase()
     if PHASE == "Initialization" then -- udpate terrain data
         PHASE = "A"
+        scoutCleanupPending = true
         if AIEN.config.AIEN_debugProcessDetail then
             env.info((tostring(ModuleName) .. ", AIEN.changePhase, new PHASE: " .. tostring(PHASE)))
         end    
@@ -14476,8 +14514,7 @@ function AIEN.changePhase()
     elseif PHASE == "D" then
         PHASE = "E"
         phase_keys = nil
-        phase_keys = createIterator(groundgroupsDb) -- focus phase_keys on groundgroupsDb -- QUESTO?!?!?!?!
-        phase_index = phase_keys[1]
+        phase_index = 0 -- phase E has no iterator; keep the active scheduler cadence until phase F
         if AIEN.config.AIEN_debugProcessDetail then
             env.info((tostring(ModuleName) .. ", AIEN.changePhase, new PHASE: " .. tostring(PHASE)))
         end          
@@ -14503,6 +14540,7 @@ function AIEN.changePhase()
         movingGroups = 0 -- reset movingGroups counter        
 
         PHASE = "A"
+        scoutCleanupPending = true
         phase_keys = nil
         phase_keys = createIterator(groundgroupsDb) -- focus phase_keys on groundgroupsDb
         phase_index = phase_keys[1]
@@ -15232,8 +15270,8 @@ local function event_birth(initiator)
     if objCat == 1 and subCat == 2 then -- unit, ground unit
         local gp = initiator:getGroup()
         local gpName  = gp:getName()
-        local det, thr, thrmin = getRanges(gp)
-            if gp and gpName and string.find(gpName, "^CTLD_CARGO_Scout") then
+        if gp and gpName and string.find(gpName, "^CTLD_CARGO_Scout") then
+            local det, thr, thrmin = getRanges(gp)
                 droneunitDb[gp:getID()] = {group = gp, class = "UAV", n = gpName, coa = coalition,detection = det, threat = thr, threatmin = thrmin, tasked = false, sa = {}}
             env.info('AIEN.event_birth: adding scout drone ' .. gpName)
                 AIEN.scoutGroups = AIEN.scoutGroups or {}
@@ -15278,10 +15316,8 @@ local function event_birth(initiator)
                     groundgroupsDb[gp:getID()] = {group = gp, class = c, n = gpName, coa = coalition, detection = det, threat = thr, threatmin = thrmin, tasked = false, skill = s, sa = {}, artyWpnGuidance = foundGuidance, excluded = excluded, delegationOnly = delegationOnly, mobileAaaAttackAllowed = mobileAaaAttackAllowed}
                     if c == "ARTY" or c == "MLRS" then
                         if coalition == 2 then
-                            AIEN.seedArtillerySA()
                             AIEN.primeBlueArtySA()
                         end
-                        phase_keys = createIterator(groundgroupsDb)
                     end                      
                 end
             end
@@ -15311,7 +15347,6 @@ local function event_birth(initiator)
                 local sa0 = getSA(gp) or {}
                 AIEN.primeBlueArtySA()
                 droneunitDb[gp:getID()].sa = sa0
-                AIEN.seedArtillerySA()
             end
         end
     end

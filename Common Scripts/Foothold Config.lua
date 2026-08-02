@@ -74,7 +74,6 @@ FootholdConfigTrackedTableNames = {
 }
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
-    "ZoneSelfRepairAndUpgradeTime",
     "PlayerZoneSuppliesConsumeStock",
     "RadioMenuStopSupplies",
     "NormalSupplyCapacity",
@@ -928,8 +927,8 @@ NormalSupplyCapacity = 1
 
 -- How many ready supplies a [WH] zone produces before automatic production pauses.
 -- Player-delivered supplies can still be stored above this amount.
--- @gui label="Warehouse Supply Capacity" validValues="3=3 | 4=4 | 5=5 | 6=6 | 7=7 | 8=8 | 9=9 | 10=10 | 11=11 | 12=12"
-WarehouseSupplyCapacity = 12
+-- @gui label="Warehouse Supply Capacity" validValues="3=3 | 4=4 | 5=5 | 6=6"
+WarehouseSupplyCapacity = 6
 
 -- How many supplies a newly created CTLD FARP starts with.
 -- Player-delivered supplies can still be stored above this amount.
@@ -947,8 +946,19 @@ CTLDSupplyCapacity = 1
 -- @gui label="Supply Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewRed="Normal zone:1200" timePreviewBlue="Normal zone:1200 | [WH]:600"
 GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 
--- Time in seconds for zones to repair or upgrade its own zone using one ready supply.
-ZoneSelfRepairAndUpgradeTime = 300
+-- Scales repair, rebuild, and installation time after supplies are available.
+-- 0.5 = twice as fast
+-- 1.0 = normal speed
+-- 1.5 = 50% slower
+--
+-- Red normal speed: 1 minute per unit, 3 minutes per SR/TR/STR, maximum 20 minutes.
+-- Blue normal speed: 15 minute normal-zone base or 5 minute [WH] base + 2 minutes per unit or 3 minutes per SR/TR/STR, maximum 20 minutes.
+-- Blue has a base time because Blue zones consume supplies directly from their own storage.
+-- Red has no base time here because Red must first wait for supplies delivered from another zone.
+-- Player, CTLD, airdropped, zsup3, and supplies2 supplies skip the Blue base time.
+-- Supply production, dispatch, and travel times are not changed by this setting.
+-- @gui label="Repair Time Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewRed="Unit:60 | SR/TR/STR:180 | Maximum:1200" timePreviewBlue="Normal base:900 | [WH] base:300 | Expedited base:0 | Unit:120 | SR/TR/STR:180 | Maximum:1200"
+GlobalSettings.repairDifficultyScaling = { [1]=1, [2]=1 }
 
 -- If true, player-picked Zone supplies consume one ready supply package from the campaign zone.
 -- Returned or removed cargo restores that package; destroyed or delivered cargo does not.

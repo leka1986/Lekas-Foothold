@@ -413,12 +413,6 @@ local function ewrs_fetchPlayerProfile(playerName, category)
     end
   end
 
-  if (not saved) and bucket == "default" then
-    for _,profile in pairs(profiles) do
-      saved = profile
-      break
-    end
-  end
   return saved
 end
 
@@ -1028,17 +1022,17 @@ end
 
 function ewrs.getGroupCategory(unit)
   if not unit then return nil end
-  local unit = UNIT:Find(unit)
+  local unitCategory = Unit.getCategoryEx(unit)
   local category = "none"
 
-  if unit and unit:IsAirPlane() then
+  if unitCategory == Unit.Category.AIRPLANE then
     if ewrs_isSpecialPlaneUnit(unit) then
       category = "plane_special"
     else
       category = "plane"
     end
   end
-  if unit and unit:IsHelicopter() then category = "helicopter" end
+  if unitCategory == Unit.Category.HELICOPTER then category = "helicopter" end
   return category
 end
 

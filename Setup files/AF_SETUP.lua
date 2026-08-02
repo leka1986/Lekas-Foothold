@@ -2030,7 +2030,13 @@ function(sender, params)
         end
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY")
     elseif params.zone and params.zone.side == 2 and not params.zone.suspended then
-        if not params.zone:upgrade() then
+        local supplied
+        if carrierSupplyTarget then
+            supplied = params.zone:upgrade()
+        else
+            supplied = params.zone:_addExpeditedRegularSupplyStock(1, timer.getAbsTime())
+        end
+        if not supplied then
             return LTGet("SYRIA_SHOP_ZONE_NO_RESUPPLY")
         end
     else
@@ -3973,27 +3979,10 @@ mc:trackMission({
         if capWinner then
             local reward = capTargetPlanes * 100
             local pname  = capWinner
-            bc:addContribution(pname, 2, reward)
-            local jp = bc.jointPairs and bc.jointPairs[pname]
-            if jp and bc:_jointPartnerAlive(pname) and bc:_jointPartnerAlive(jp) and bc.playerContributions[2][jp] ~= nil then
-                bc:addContribution(jp, 2, reward)
-                bc:addTempStat(jp,'CAP mission (Joint mission)',1)
-                bc:addTempStat(pname,'CAP mission (Joint mission)',1)
+            local jp = bc:awardJointMissionReward(pname, 2, reward, 'CAP mission')
+            if jp then
                 trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAP_COMPLETED_JOINT", pname, jp, reward),20)
-                local jgn = bc.groupNameByPlayer[jp]
-                local jgr = Group.getByName(jgn)
-                if jgr then
-                    local ju = jgr:getUnit(1)
-                    if ju and not Utils.isInAir(ju) then
-                        SCHEDULER:New(nil,function()
-                            if ju and ju:isExist() then
-                                world.onEvent({id=world.event.S_EVENT_LAND,time=timer.getAbsTime(),initiator=ju,initiatorPilotName=jp,initiator_unit_type=ju:getTypeName(),initiator_coalition=ju:getCoalition(),skipRewardMsg=true})
-                            end
-                        end,{},5,0)
-                    end
-                end
             else
-                bc:addTempStat(pname,'CAP mission',1)
                 trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAP_COMPLETED_SOLO", pname, reward),20)
             end
             capMissionCooldownUntil = timer.getTime() + 900
@@ -4019,20 +4008,6 @@ mc:trackMission({
 
 ---------------------------------------------------------------------
 --                          CAS MISSION                            --
-function ScheduleCasRewardClaimIfLanded(playerName)
-	local groupName = bc.groupNameByPlayer[playerName]
-	local group = groupName and Group.getByName(groupName) or nil
-	if not group then return end
-	local unit = group:getUnit(1)
-	if unit and not Utils.isInAir(unit) then
-		SCHEDULER:New(nil,function()
-			if unit and unit:isExist() then
-				world.onEvent({id=world.event.S_EVENT_LAND,time=timer.getAbsTime(),initiator=unit,initiatorPilotName=playerName,initiator_unit_type=unit:getTypeName(),initiator_coalition=unit:getCoalition(),skipRewardMsg=true})
-			end
-		end,{},5,0)
-	end
-end
-
 function RegisterDirectorCasMission(slotIndex)
 	mc:trackMission({
 		title = function(T)
@@ -4070,7 +4045,7 @@ function RegisterDirectorCasMission(slotIndex)
 					local reward = rewards[playerName]
 					bc:addContribution(playerName, 2, reward, {playerName})
 					bc:addTempStat(playerName,'CAS mission',1)
-					ScheduleCasRewardClaimIfLanded(playerName)
+					bc:scheduleRewardClaimIfLanded(playerName)
 				end
 				if #participantNames == 0 then
 					trigger.action.outTextForCoalition(2,L10N:Get("MISSION_CAS_COMPLETED_NO_REWARD"),20)
@@ -4460,7 +4435,8 @@ mc:trackMission({
 	isActive = function()
 		if not resupplyTarget1 then return false end
 		local targetzn = bc:getZoneByName(resupplyTarget1)
-		return targetzn and targetzn.side == 2 and targetzn:canRecieveSupply()
+		return targetzn and targetzn.side == 2
+			and bc:_regularSupplyTargetNeedsExternalSupply(2, targetzn.zone, {})
 	end
 })
 
@@ -4504,7 +4480,8 @@ mc:trackMission({
 	isActive = function()
 		if not resupplyTarget2 then return false end
 		local targetzn = bc:getZoneByName(resupplyTarget2)
-		return targetzn and targetzn.side == 2 and targetzn:canRecieveSupply()
+		return targetzn and targetzn.side == 2
+			and bc:_regularSupplyTargetNeedsExternalSupply(2, targetzn.zone, {})
 	end
 })
 
@@ -4816,7 +4793,7 @@ function RegisterDirectorSeadMission(slotIndex)
                 for _, playerName in ipairs(participantNames) do
                     bc:addContribution(playerName, coalition.side.BLUE, rewards[playerName], {playerName})
                     bc:addTempStat(playerName, 'SEAD mission', 1)
-                    ScheduleCasRewardClaimIfLanded(playerName)
+                    bc:scheduleRewardClaimIfLanded(playerName)
                 end
                 if #participantNames == 1 then
                     local playerName = participantNames[1]
@@ -4982,27 +4959,10 @@ mc:trackMission({
 
 		if reconMissionCompleted and target and reconMissionWinner then
 			local reward = 100
-			bc:addContribution(reconMissionWinner, 2, reward)
-			local jp = bc.jointPairs and bc.jointPairs[reconMissionWinner]
-			if jp and bc:_jointPartnerAlive(reconMissionWinner) and bc:_jointPartnerAlive(jp) and bc.playerContributions[2][jp] ~= nil then
-				bc.playerContributions[2][jp] = (bc.playerContributions[2][jp] or 0) + reward
-				bc:addTempStat(jp, "Recon mission (Joint mission)", 1)
-				bc:addTempStat(reconMissionWinner, "Recon mission (Joint mission)", 1)
+			local jp = bc:awardJointMissionReward(reconMissionWinner, 2, reward, "Recon mission")
+			if jp then
 				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_JOINT", reconMissionWinner, jp, target, reward), 20)
-				local jgn = bc.groupNameByPlayer[jp]
-				local jgr = Group.getByName(jgn)
-				if jgr then
-					local ju = jgr:getUnit(1)
-					if ju and not Utils.isInAir(ju) then
-						SCHEDULER:New(nil, function()
-							if ju and ju:isExist() then
-								world.onEvent({id=world.event.S_EVENT_LAND,time=timer.getAbsTime(),initiator=ju,initiatorPilotName=jp,initiator_unit_type=ju:getTypeName(),initiator_coalition=ju:getCoalition(),skipRewardMsg=true})
-							end
-						end, {}, 5, 0)
-					end
-				end
 			else
-				bc:addTempStat(reconMissionWinner, "Recon mission", 1)
 				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
 			end
 			startZoneIntel(target, 10 * 60, 2)
@@ -5515,6 +5475,7 @@ mc:trackMission({
     endAction = function()
         bc:cancelGroupTargetMission('Bodyguards')
         RespawnGroup('BinLadenEscape')
+		RegisterGroupTarget('BinLadenEscape',500,L10N:Get("AF_MISSION_BIN_LADEN_ESCAPE_TARGET"),'BinLadenEscape',true)
         trigger.action.outTextForCoalition(2,L10N:Get("AF_MISSION_BIN_LADEN_FLEEING"),30)
 	end,
 	isActive = function()
@@ -5532,7 +5493,6 @@ evc:addEvent({
 	id='BinLadenEscape',
 	StrikeMission = true,
 	action = function()
-    RegisterGroupTarget('BinLadenEscape',500,L10N:Get("AF_MISSION_BIN_LADEN_ESCAPE_TARGET"),'BinLadenEscape',true)
 	end,
 	canExecute = function()
 		--if math.random(1,100) < 70 then return false end
@@ -5858,46 +5818,90 @@ mc:trackMission({
 
 -------------------------------------------- CAS 1 --------------------------------------------
 local airstrike_COOLDOWN = 1800
-local lastairstrike_COOLDOWN  = -airstrike_COOLDOWN
 local casGrp = ColdWarTechEra and 'evt-CAScw' or 'evt-CAS'
+local airstrikeAltitudeFt = 20000
+local airstrikePickOptions = {
+	minTargetSpawnNm = 80,
+	preferredTargetSpawnNm = 100,
+	minPlayerSpawnNm = 80,
+	avoidPlayerCoalition = 'blue',
+	allowSuspendedSpawn = true,
+	preferNonSuspendedSpawn = true,
+	randomCandidateLimit = 3,
+	attackAltitudeFt = airstrikeAltitudeFt,
+}
+
 Group.getByName('evt-CAS'):destroy()
 Group.getByName('evt-CAScw'):destroy()
 evc:addEvent({
 	id='cas',
+	StrikeMission = true,
 	action=function()
-		RespawnGroup(casGrp)
+		local director = Director:getForSide(coalition.side.RED)
+		local selection = director:consumeTacticalAirstrikePlan(airstrikePickOptions)
+		if not selection then return end
+		local spawned = Respawn.SpawnAtPoint(
+			casGrp,
+			selection.spawnCoord,
+			selection.heading,
+			5,
+			airstrikeAltitudeFt,
+			nil,
+			true
+		)
+		if not spawned then return end
+		director:commitTacticalAirstrikeLaunch(selection, airstrike_COOLDOWN)
         RegisterGroupTarget(casGrp,500,L10N:Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"),'cas')
-		timer.scheduleFunction(function()
-			local tgts={'Tarinkot','Checkpoint Bravo','Tarinkot','FOB-Bostick','Sharana','Ghazni Heliport','FOB-Javid Basharat','Chaghcharan','FOB-Delaram','Gardez','Jalalabad','Bagram','Kabul',
-						'Bamyan'}
-			local valid={}
-			for _,v in ipairs(tgts) do
-				if bc:getZoneByName(v).side==2 and not bc:getZoneByName(v).suspended then valid[#valid+1]=v end
+		timer.scheduleFunction(function(param)
+			if Group.getByName(casGrp) then
+				bc:engageZone(param.targetZone, casGrp)
 			end
-			if #valid~=0 then
-				local choice=valid[math.random(1,#valid)]
-				if Group.getByName(casGrp) then bc:engageZone(choice,casGrp) end
-			end
-		end,{},timer.getTime()+3)
+		end, { targetZone = selection.targetZone.zone }, timer.getTime()+3)
 	end,
 	canExecute=function()
 		if Era == 'Vietnam' then return false end
         if ActiveMission['cas'] then return false end
-		if timer.getTime()-lastairstrike_COOLDOWN<airstrike_COOLDOWN then return false end
 		if Group.getByName(casGrp) then return false end
-		local triggers={'Tarinkot','Chaghcharan','Checkpoint Delta','Sharana'}
-		if math.random(1,100)<70 then return false end
-		for _,v in ipairs(triggers) do
-			if bc:getZoneByName(v).side==2 and not bc:getZoneByName(v).suspended then return true end
-		end
-		return false
+		return Director:getForSide(coalition.side.RED)
+			:getTacticalAirstrikePlan(airstrikePickOptions) ~= nil
 	end
 })
 mc:trackMission({
 	title = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"),
-	description = LTGet("AF_MISSION_INTERCEPT_AIRSTRIKE_DESC_NE"),
-	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START"),
-	messageEnd =function(T) lastairstrike_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END") end,
+	description = function(T)
+		local desc = LT(T):Get("PG_MISSION_INTERCEPT_AIRSTRIKE_WEST_SE_DESC")
+		local director = Director:getForSide(coalition.side.RED)
+		if Group.getByName(casGrp)
+			and director.tacticalAirstrikeLastSpawnZone
+			and director.tacticalAirstrikeLastTarget
+		then
+			desc = desc .. "\n\n" .. LT(T):Format(
+				"PG_MISSION_INTERCEPT_AIRSTRIKE_DETAIL",
+				director.tacticalAirstrikeLastSpawnZone,
+				director.tacticalAirstrikeLastTarget
+			)
+		end
+		return desc
+	end,
+	messageStart = function(T)
+		local msg = LT(T):Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START")
+		local director = Director:getForSide(coalition.side.RED)
+		if Group.getByName(casGrp)
+			and director.tacticalAirstrikeLastSpawnZone
+			and director.tacticalAirstrikeLastTarget
+		then
+			msg = msg .. "\n\n" .. LT(T):Format(
+				"PG_MISSION_INTERCEPT_AIRSTRIKE_DETAIL",
+				director.tacticalAirstrikeLastSpawnZone,
+				director.tacticalAirstrikeLastTarget
+			)
+		end
+		return msg
+	end,
+	messageEnd = function(T)
+		Director:getForSide(coalition.side.RED):onTacticalAirstrikeEnded(airstrike_COOLDOWN)
+		return LT(T):Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END")
+	end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -5910,11 +5914,11 @@ mc:trackMission({
         bc:cancelGroupTargetMission('cas')
     end,
 	isActive = function()
-        if not ActiveMission['cas'] then return false end
-        if Group.getByName('evt-CAS') then return true end
-        if Group.getByName('evt-CAScw') then return true end
-        ActiveMission['cas'] = nil
-        return false
+		if not ActiveMission['cas'] then return false end
+		local gr = Group.getByName(casGrp)
+		if gr then return true end
+		ActiveMission['cas'] = nil
+		return false
 	end
 })
 -------------------------------------------- End of CAS 2 -----------------------------------------
@@ -6108,6 +6112,7 @@ function generateAttackMission()
 end
 function generateSupplyMission()
 	if bc._blueZoneCountRaw <= 1 then return false end
+	local resupplyDemandCache = {}
 	local preferred = {}
 	local validzones = {}
 	local attackFrontSet = {}
@@ -6120,14 +6125,16 @@ function generateSupplyMission()
 		local from, to = bc:getConnectionZones(connection)
 		if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 and
 			((not to.suspended) or from.suspended) then
-			if from and to and attackFrontSet[from.zone] and to.side == 2 and to:canRecieveSupply() then
+			if from and to and attackFrontSet[from.zone] and to.side == 2
+				and bc:_regularSupplyTargetNeedsExternalSupply(2, to.zone, resupplyDemandCache) then
 				local found = false
 				for _, zoneName in ipairs(preferred) do
 					if zoneName == to.zone then found = true break end
 				end
 				if not found then table.insert(preferred, to.zone) end
 			end
-			if from and to and attackFrontSet[to.zone] and from.side == 2 and from:canRecieveSupply() then
+			if from and to and attackFrontSet[to.zone] and from.side == 2
+				and bc:_regularSupplyTargetNeedsExternalSupply(2, from.zone, resupplyDemandCache) then
 				local found = false
 				for _, zoneName in ipairs(preferred) do
 					if zoneName == from.zone then found = true break end
@@ -6138,7 +6145,8 @@ function generateSupplyMission()
 	end
 
 	for _, v in ipairs(bc.zones) do
-		if v.side == 2 and v:canRecieveSupply() then
+		if v.side == 2
+			and bc:_regularSupplyTargetNeedsExternalSupply(2, v.zone, resupplyDemandCache) then
 			local found = false
 			for _, zoneName in ipairs(validzones) do
 				if zoneName == v.zone then found = true break end

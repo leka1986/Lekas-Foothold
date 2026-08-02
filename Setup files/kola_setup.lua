@@ -2819,7 +2819,13 @@ function(sender, params)
         end
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY")
     elseif params.zone and params.zone.side == 2 and not params.zone.suspended then
-        if not params.zone:upgrade() then
+        local supplied
+        if carrierSupplyTarget then
+            supplied = params.zone:upgrade()
+        else
+            supplied = params.zone:_addExpeditedRegularSupplyStock(1, timer.getAbsTime())
+        end
+        if not supplied then
             return LTGet("SYRIA_SHOP_ZONE_NO_RESUPPLY")
         end
     else
@@ -3695,6 +3701,17 @@ zones.laplandiya:addCriticalObject('LaplandiyaTank2')
 zones.laplandiya:addCriticalObject('LaplandiyaRailwayStation')
 
 
+zones.afrikandastorage:addCriticalObject('Afrikanda ammo depot 2')
+zones.afrikandastorage:addCriticalObject('Afrikanda ammo depot 1')
+
+zones.koashvastorage:addCriticalObject('KoashvaAmmo1')
+zones.koashvastorage:addCriticalObject('KoashvaAmmo2')
+zones.koashvastorage:addCriticalObject('KoashvaTank1')
+zones.koashvastorage:addCriticalObject('KoashvaTank2')
+zones.koashvastorage:addCriticalObject('KoashvaRailwayStation')
+
+zones.kilpyavrstorage:addCriticalObject('Kilp yavr ammo depot 1')
+
 zones.zelenoborskij:addCriticalObject('ZelenoborskijAmmo1')
 zones.zelenoborskij:addCriticalObject('ZelenoborskijAmmo2')
 zones.zelenoborskij:addCriticalObject('ZelenoborskijTank1')
@@ -3751,8 +3768,19 @@ mc:trackMission({
 -------------------------------------------- End of Bomber event ------------------------------------------
 
 local airstrike_COOLDOWN = 1800
-local lastairstrike_COOLDOWN  = -airstrike_COOLDOWN
 local attackGrp = ColdWarTechEra and 'evt-attackcw' or 'evt-attack'
+local airstrikeAltitudeFt = 20000
+local airstrikePickOptions = {
+	minTargetSpawnNm = 80,
+	preferredTargetSpawnNm = 100,
+	minPlayerSpawnNm = 80,
+	avoidPlayerCoalition = 'blue',
+	allowSuspendedSpawn = true,
+	preferNonSuspendedSpawn = true,
+	randomCandidateLimit = 3,
+	attackAltitudeFt = airstrikeAltitudeFt,
+}
+
 Group.getByName('evt-attack'):destroy()
 Group.getByName('evt-attackcw'):destroy()
 Group.getByName(attackGrp):destroy()
@@ -3760,65 +3788,73 @@ evc:addEvent({
 	id='cas',
 	StrikeMission = true,
 	action = function()
-        Respawn.Group(attackGrp)
+		local director = Director:getForSide(coalition.side.RED)
+		local selection = director:consumeTacticalAirstrikePlan(airstrikePickOptions)
+		if not selection then return end
+		local spawned = Respawn.SpawnAtPoint(
+			attackGrp,
+			selection.spawnCoord,
+			selection.heading,
+			5,
+			airstrikeAltitudeFt,
+			nil,
+			true
+		)
+		if not spawned then return end
+		director:commitTacticalAirstrikeLaunch(selection, airstrike_COOLDOWN)
 		RegisterGroupTarget(attackGrp,250,L10N:Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"),'cas')
-		timer.scheduleFunction(function(param, time)
-			local tgts = {
-			'Kiruna',
-			'Bardufoss',
-			'Banak',
-			'Alta',
-			'Kallax',
-			'Ivalo',
-			'KemiTornio',
-			'Rovaniemi',
-			'Kirkenes',
-			'Ivalo',
-			'Kittila',
-			'Vuojarvi',
-			'Monchegorsk',
-			'Olenya'
-			}		
-			local validtgts = {}
-			for _,v in ipairs(tgts) do
-				if bc:getZoneByName(v).side == 2 and not bc:getZoneByName(v).suspended then
-					table.insert(validtgts, v)
-				end
+		timer.scheduleFunction(function(param)
+			if Group.getByName(attackGrp) then
+				bc:engageZone(param.targetZone, attackGrp)
 			end
-			
-			if #validtgts ~= 0 then
-				local die = math.random(1,#validtgts)
-				local choice = validtgts[die]
-				
-				if Group.getByName(attackGrp) then
-					bc:engageZone(choice, attackGrp)
-				end
-			end
-		end, {}, timer.getTime()+3)
+		end, { targetZone = selection.targetZone.zone }, timer.getTime()+3)
 	end,
 	canExecute = function()
         if Era == 'Vietnam' then return false end
         if ActiveMission['cas'] then return false end
-        if timer.getTime()-lastairstrike_COOLDOWN<airstrike_COOLDOWN then return false end
 		local gr = Group.getByName(attackGrp)
 		if gr then return false end
-		if math.random(1,100) < 50 then return false end
 		if CustomFlags['DynCampaign'] then return false end
-		local triggers = {'Kiruna', 'Kallax', 'Banak', 'Ivalo', 'KemiTornio'}
-		for _,v in ipairs(triggers) do
-			if bc:getZoneByName(v).side == 2 and not bc:getZoneByName(v).suspended then
-				return true
-			end
-		end
-		
-		return false
+		return Director:getForSide(coalition.side.RED)
+			:getTacticalAirstrikePlan(airstrikePickOptions) ~= nil
 	end
 })
 mc:trackMission({
 	title = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_TITLE"),
-	description = LTGet("CA_MISSION_INTERCEPT_AIRSTRIKE_WEST_EAST_DESC"),
-	messageStart = LTGet("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START"),
-    messageEnd =function(T) lastairstrike_COOLDOWN=timer.getTime() return LT(T):Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END") end,
+	description = function(T)
+		local desc = LT(T):Get("PG_MISSION_INTERCEPT_AIRSTRIKE_WEST_SE_DESC")
+		local director = Director:getForSide(coalition.side.RED)
+		if Group.getByName(attackGrp)
+			and director.tacticalAirstrikeLastSpawnZone
+			and director.tacticalAirstrikeLastTarget
+		then
+			desc = desc .. "\n\n" .. LT(T):Format(
+				"PG_MISSION_INTERCEPT_AIRSTRIKE_DETAIL",
+				director.tacticalAirstrikeLastSpawnZone,
+				director.tacticalAirstrikeLastTarget
+			)
+		end
+		return desc
+	end,
+	messageStart = function(T)
+		local msg = LT(T):Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_START")
+		local director = Director:getForSide(coalition.side.RED)
+		if Group.getByName(attackGrp)
+			and director.tacticalAirstrikeLastSpawnZone
+			and director.tacticalAirstrikeLastTarget
+		then
+			msg = msg .. "\n\n" .. LT(T):Format(
+				"PG_MISSION_INTERCEPT_AIRSTRIKE_DETAIL",
+				director.tacticalAirstrikeLastSpawnZone,
+				director.tacticalAirstrikeLastTarget
+			)
+		end
+		return msg
+	end,
+	messageEnd = function(T)
+		Director:getForSide(coalition.side.RED):onTacticalAirstrikeEnded(airstrike_COOLDOWN)
+		return LT(T):Get("SYRIA_MISSION_INTERCEPT_AIRSTRIKE_END")
+	end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "ding.ogg")
@@ -3831,11 +3867,11 @@ mc:trackMission({
 		bc:cancelGroupTargetMission('cas')
     end,
     isActive = function()
-        if not ActiveMission['cas'] then return false end
-        if Group.getByName('evt-attack') then return true end
-        if Group.getByName('evt-attackcw') then return true end
-        ActiveMission['cas'] = nil
-        return false
+		if not ActiveMission['cas'] then return false end
+		local gr = Group.getByName(attackGrp)
+		if gr then return true end
+		ActiveMission['cas'] = nil
+		return false
     end
 })
 local CargoIntercept_COOLDOWN = 3600
@@ -4152,7 +4188,8 @@ mc:trackMission({
 	isActive = function()
 		if not resupplyTarget1 then return false end
 		local targetzn = bc:getZoneByName(resupplyTarget1)
-		return targetzn and targetzn.side == 2 and targetzn:canRecieveSupply()
+		return targetzn and targetzn.side == 2
+			and bc:_regularSupplyTargetNeedsExternalSupply(2, targetzn.zone, {})
 	end
 })
 
@@ -4196,7 +4233,8 @@ mc:trackMission({
 	isActive = function()
 		if not resupplyTarget2 then return false end
 		local targetzn = bc:getZoneByName(resupplyTarget2)
-		return targetzn and targetzn.side == 2 and targetzn:canRecieveSupply()
+		return targetzn and targetzn.side == 2
+			and bc:_regularSupplyTargetNeedsExternalSupply(2, targetzn.zone, {})
 	end
 })
 
@@ -4334,10 +4372,10 @@ local sceneryList = {
   ["KandalakshaAluminium"] = {SCENERY:FindByZoneName("KandalakshaAluminium")},
   ["RussiansHideOut"] = {SCENERY:FindByZoneName("RussiansHideOut")},
   ["GeneralsHouse"] = {SCENERY:FindByZoneName("GeneralsHouse")},
+  ["Loukhi_Storage"] = {SCENERY:FindByZoneName("Loukhi_Storage")},
   ["Kandalaksha_car_bridge1"] = {SCENERY:FindByZoneName("Kandalaksha_car_bridge1")}, -- not used
   ["Kandalaksha_car_bridge2"] = {SCENERY:FindByZoneName("Kandalaksha_car_bridge2")}, -- not used
   ["Kandalaksha_rw_bridge_2line"] = {SCENERY:FindByZoneName("Kandalaksha_rw_bridge_2line")}, -- not used
-  ["BeloyeMorePumpingStation"] = {SCENERY:FindByZoneName("BeloyeMorePumpingStation")}, -- not used
  
 }
 
@@ -4452,6 +4490,205 @@ mc:trackMission({
 	end,
 })
 ---------------------------------- END GeneralsHouse -----------------------------------------------
+
+---------------------------------- Loukhi Storage -----------------------------------------------
+evc:addEvent({
+	id = 'Loukhi_Storage',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['Loukhi_Storage'][1] or SCENERY:FindByZoneName('Loukhi_Storage')
+		if not tgt then
+			trigger.action.outText(L10N:Format("KOLA_SETUP_OBJECT_MISSING", "Loukhi_Storage"), 30)
+			return
+		end
+		RegisterScoreTarget('Loukhi_Storage', tgt, 500, L10N:Get("KOLA_TARGET_LOUKHI_STORAGE"), true)
+		local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId, L10N:Get("KOLA_MARK_LOUKHI_STORAGE"), p, 2, false, false)
+			MissionMarks['Loukhi_Storage'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+		if ActiveMission['Loukhi_Storage'] then return false end
+		if CustomFlags['Loukhi_Storage'] then return false end
+		local z = bc:getZoneByName('HiddenLoukhi')
+		if z.side ~= 1 or z.suspended then return false end
+		return (bc:_minEnemyDistanceNm(z) or math.huge) <= 120
+	end
+})
+
+mc:trackMission({
+	title = LTGet("KOLA_MISSION_LOUKHI_STORAGE_TITLE"),
+	description = LTGet("KOLA_MISSION_LOUKHI_STORAGE_DESC"),
+	messageStart = LTGet("KOLA_MISSION_LOUKHI_STORAGE_START"),
+	messageEnd = LTGet("KOLA_MISSION_LOUKHI_STORAGE_END"),
+	startAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+		bc:cancelScoreTargetMission('Loukhi_Storage')
+	end,
+	isActive = function()
+		if CustomFlags['Loukhi_Storage'] then return false end
+		if ActiveMission['Loukhi_Storage'] then return true end
+		return false
+	end
+})
+---------------------------------- END Loukhi Storage -----------------------------------------------
+
+---------------------------------- Kandalaksha Aluminium -----------------------------------------------
+evc:addEvent({
+	id = 'KandalakshaAluminium',
+	StrikeMission = true,
+	action = function()
+		local tgt = sceneryList['KandalakshaAluminium'][1] or SCENERY:FindByZoneName('KandalakshaAluminium')
+		if not tgt then
+			trigger.action.outText(L10N:Format("KOLA_SETUP_OBJECT_MISSING", "KandalakshaAluminium"), 30)
+			return
+		end
+		RegisterScoreTarget('KandalakshaAluminium', tgt, 500, L10N:Get("KOLA_TARGET_KANDALAKSHA_ALUMINIUM"), true)
+		local p = tgt:GetDCSObject() and tgt:GetDCSObject():getPoint()
+		if p then
+			missionMarkId = missionMarkId + 1
+			trigger.action.markToCoalition(missionMarkId, L10N:Get("KOLA_MARK_KANDALAKSHA_ALUMINIUM"), p, 2, false, false)
+			MissionMarks['KandalakshaAluminium'] = missionMarkId
+		end
+	end,
+	canExecute = function()
+		if ActiveMission['KandalakshaAluminium'] then return false end
+		if CustomFlags['KandalakshaAluminium'] then return false end
+		local triggerZones = {'Alakourtti', 'Kuusamo', 'Kittila'}
+		for _, zoneName in ipairs(triggerZones) do
+			if bc:getZoneByName(zoneName).side == 2 then return true end
+		end
+		return false
+	end
+})
+
+mc:trackMission({
+	title = LTGet("KOLA_MISSION_KANDALAKSHA_ALUMINIUM_TITLE"),
+	description = LTGet("KOLA_MISSION_KANDALAKSHA_ALUMINIUM_DESC"),
+	messageStart = LTGet("KOLA_MISSION_KANDALAKSHA_ALUMINIUM_START"),
+	messageEnd = LTGet("KOLA_MISSION_KANDALAKSHA_ALUMINIUM_END"),
+	startAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+		bc:cancelScoreTargetMission('KandalakshaAluminium')
+	end,
+	isActive = function()
+		if CustomFlags['KandalakshaAluminium'] then return false end
+		if ActiveMission['KandalakshaAluminium'] then return true end
+		return false
+	end
+})
+---------------------------------- END Kandalaksha Aluminium -----------------------------------------------
+
+---------------------------------- Beloye More Pumping Station -----------------------------------------------
+Group.getByName('BeloyeMorePumpingStationBoy'):destroy()
+evc:addEvent({
+	id = 'BeloyeMorePumpingStation',
+	StrikeMission = true,
+	action = function()
+		RespawnGroup('BeloyeMorePumpingStationBoy')
+		RegisterGroupTarget('BeloyeMorePumpingStationBoy', 500, L10N:Get("KOLA_TARGET_BELOYE_MORE_PUMPING_STATION"), 'BeloyeMorePumpingStation', true)
+	end,
+	canExecute = function()
+		if ActiveMission['BeloyeMorePumpingStation'] then return false end
+		if CustomFlags['BeloyeMorePumpingStation'] then return false end
+		if Group.getByName('BeloyeMorePumpingStationBoy') then return false end
+		local triggerZones = {'Alakourtti', 'Kuusamo', 'Kittila'}
+		for _, zoneName in ipairs(triggerZones) do
+			if bc:getZoneByName(zoneName).side == 2 then return true end
+		end
+		return false
+	end
+})
+
+mc:trackMission({
+	title = LTGet("KOLA_MISSION_BELOYE_MORE_PUMPING_STATION_TITLE"),
+	description = LTGet("KOLA_MISSION_BELOYE_MORE_PUMPING_STATION_DESC"),
+	messageStart = LTGet("KOLA_MISSION_BELOYE_MORE_PUMPING_STATION_START"),
+	messageEnd = LTGet("KOLA_MISSION_BELOYE_MORE_PUMPING_STATION_END"),
+	startAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+		bc:cancelGroupTargetMission('BeloyeMorePumpingStation')
+	end,
+	isActive = function()
+		if CustomFlags['BeloyeMorePumpingStation'] then return false end
+		if not ActiveMission['BeloyeMorePumpingStation'] then return false end
+		if Group.getByName('BeloyeMorePumpingStationBoy') then return true end
+		ActiveMission['BeloyeMorePumpingStation'] = nil
+		return false
+	end
+})
+---------------------------------- END Beloye More Pumping Station -----------------------------------------------
+
+---------------------------------- Beloye More Bridge -----------------------------------------------
+Group.getByName('Bridgeboy'):destroy()
+evc:addEvent({
+	id = 'Bridgeboy',
+	StrikeMission = true,
+	action = function()
+		RespawnGroup('Bridgeboy')
+		RegisterGroupTarget('Bridgeboy', 500, L10N:Get("KOLA_TARGET_BELOYE_MORE_BRIDGE"), 'Bridgeboy', true)
+	end,
+	canExecute = function()
+		if ActiveMission['Bridgeboy'] then return false end
+		if CustomFlags['Bridgeboy'] then return false end
+		if Group.getByName('Bridgeboy') then return false end
+		local triggerZones = {'Alakourtti', 'Kuusamo', 'Kittila'}
+		for _, zoneName in ipairs(triggerZones) do
+			if bc:getZoneByName(zoneName).side == 2 then return true end
+		end
+		return false
+	end
+})
+
+mc:trackMission({
+	title = LTGet("KOLA_MISSION_BELOYE_MORE_BRIDGE_TITLE"),
+	description = LTGet("KOLA_MISSION_BELOYE_MORE_BRIDGE_DESC"),
+	messageStart = LTGet("KOLA_MISSION_BELOYE_MORE_BRIDGE_START"),
+	messageEnd = LTGet("KOLA_MISSION_BELOYE_MORE_BRIDGE_END"),
+	startAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+		bc:cancelGroupTargetMission('Bridgeboy')
+	end,
+	isActive = function()
+		if CustomFlags['Bridgeboy'] then return false end
+		if not ActiveMission['Bridgeboy'] then return false end
+		if Group.getByName('Bridgeboy') then return true end
+		ActiveMission['Bridgeboy'] = nil
+		return false
+	end
+})
+---------------------------------- END Beloye More Bridge -----------------------------------------------
+
 -- klar
 -- PapasSon Strike Target 0
 Group.getByName('PapasSon'):destroy()
@@ -4631,6 +4868,130 @@ mc:trackMission({
 })
 ------------------------ end of PyaozerskyStorage mission ------------------------
 
+------------------------ Koashva statics mission ------------------------
+evc:addEvent({
+	id = 'KoashvaStorage',
+	StrikeMission = true,
+	action = function()
+		local z = zones.koashvastorage
+		if not z then return end
+		RegisterStaticGroup('KoashvaStorage', z, 1250, L10N:Get("KOLA_TARGET_KOASHVA_STORAGE"), 'KoashvaStorage', true)
+		ActiveMission['KoashvaStorage'] = true
+	end,
+	canExecute = function()
+		if ActiveMission['KoashvaStorage'] then return false end
+		if CustomFlags['KoashvaStorage'] then return false end
+		if zones.koashvastorage.suspended then return false end
+		return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("KOLA_MISSION_KOASHVA_STORAGE_TITLE"),
+	description = LTGet("KOLA_MISSION_KOASHVA_STORAGE_DESC"),
+	messageStart = LTGet("KOLA_MISSION_KOASHVA_STORAGE_START"),
+	messageEnd = LTGet("KOLA_MISSION_KOASHVA_STORAGE_END"),
+	startAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+	end,
+	isActive = function()
+		if CustomFlags['KoashvaStorage'] then return false end
+		if ActiveMission['KoashvaStorage'] then return true end
+		return false
+	end
+})
+------------------------ end of KoashvaStorage mission ------------------------
+
+------------------------ Kilp Yavr statics mission ------------------------
+evc:addEvent({
+	id = 'KilpYavrStorage',
+	StrikeMission = true,
+	action = function()
+		local z = zones.kilpyavrstorage
+		if not z then return end
+		RegisterStaticGroup('KilpYavrStorage', z, 500, L10N:Get("KOLA_TARGET_KILP_YAVR_STORAGE"), 'KilpYavrStorage', true)
+		ActiveMission['KilpYavrStorage'] = true
+	end,
+	canExecute = function()
+		if ActiveMission['KilpYavrStorage'] then return false end
+		if CustomFlags['KilpYavrStorage'] then return false end
+		if zones.kilpyavrstorage.suspended then return false end
+		return true
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("KOLA_MISSION_KILP_YAVR_STORAGE_TITLE"),
+	description = LTGet("KOLA_MISSION_KILP_YAVR_STORAGE_DESC"),
+	messageStart = LTGet("KOLA_MISSION_KILP_YAVR_STORAGE_START"),
+	messageEnd = LTGet("KOLA_MISSION_KILP_YAVR_STORAGE_END"),
+	startAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+	end,
+	isActive = function()
+		if CustomFlags['KilpYavrStorage'] then return false end
+		if ActiveMission['KilpYavrStorage'] then return true end
+		return false
+	end
+})
+------------------------ end of KilpYavrStorage mission ------------------------
+
+------------------------ Afrikanda statics mission ------------------------
+evc:addEvent({
+	id = 'AfrikandaStorage',
+	StrikeMission = true,
+	action = function()
+		local z = zones.afrikandastorage
+		if not z then return end
+		RegisterStaticGroup('AfrikandaStorage', z, 1000, L10N:Get("KOLA_TARGET_AFRIKANDA_STORAGE"), 'AfrikandaStorage', true)
+	end,
+	canExecute = function()
+		if ActiveMission['AfrikandaStorage'] then return false end
+		if CustomFlags['AfrikandaStorage'] then return false end
+		local z = bc:getZoneByName('AfrikandaStorage')
+		if z.side ~= 1 or z.suspended then return false end
+		return (bc:_minEnemyDistanceNm(z) or math.huge) <= 120
+	end,
+})
+
+mc:trackMission({
+	title = LTGet("KOLA_MISSION_AFRIKANDA_STORAGE_TITLE"),
+	description = LTGet("KOLA_MISSION_AFRIKANDA_STORAGE_DESC"),
+	messageStart = LTGet("KOLA_MISSION_AFRIKANDA_STORAGE_START"),
+	messageEnd = LTGet("KOLA_MISSION_AFRIKANDA_STORAGE_END"),
+	startAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "ding.ogg")
+		end
+	end,
+	endAction = function()
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+		bc:cancelGroupTargetMission('AfrikandaStorage')
+	end,
+	isActive = function()
+		if CustomFlags['AfrikandaStorage'] then return false end
+		if ActiveMission['AfrikandaStorage'] then return true end
+		return false
+	end
+})
+------------------------ end of Afrikanda statics mission ------------------------
+
 ------------------------ lovozeroCCC statics mission ------------------------
 
 evc:addEvent({
@@ -4802,6 +5163,7 @@ function generateAttackMission()
 end
 function generateSupplyMission()
 	if bc._blueZoneCountRaw <= 1 then return false end
+	local resupplyDemandCache = {}
 	local preferred = {}
 	local validzones = {}
 	local attackFrontSet = {}
@@ -4814,14 +5176,16 @@ function generateSupplyMission()
 		local from, to = bc:getConnectionZones(connection)
 		if from and to and from.side ~= to.side and from.side ~= 0 and to.side ~= 0 and
 			((not to.suspended) or from.suspended) then
-			if from and to and attackFrontSet[from.zone] and to.side == 2 and to:canRecieveSupply() then
+			if from and to and attackFrontSet[from.zone] and to.side == 2
+				and bc:_regularSupplyTargetNeedsExternalSupply(2, to.zone, resupplyDemandCache) then
 				local found = false
 				for _, zoneName in ipairs(preferred) do
 					if zoneName == to.zone then found = true break end
 				end
 				if not found then table.insert(preferred, to.zone) end
 			end
-			if from and to and attackFrontSet[to.zone] and from.side == 2 and from:canRecieveSupply() then
+			if from and to and attackFrontSet[to.zone] and from.side == 2
+				and bc:_regularSupplyTargetNeedsExternalSupply(2, from.zone, resupplyDemandCache) then
 				local found = false
 				for _, zoneName in ipairs(preferred) do
 					if zoneName == from.zone then found = true break end
@@ -4832,7 +5196,8 @@ function generateSupplyMission()
 	end
 
 	for _, v in ipairs(bc.zones) do
-		if v.side == 2 and v:canRecieveSupply() then
+		if v.side == 2
+			and bc:_regularSupplyTargetNeedsExternalSupply(2, v.zone, resupplyDemandCache) then
 			local found = false
 			for _, zoneName in ipairs(validzones) do
 				if zoneName == v.zone then found = true break end
@@ -4926,27 +5291,10 @@ mc:trackMission({
         if capWinner then
             local reward = capTargetPlanes * 100
             local pname  = capWinner
-            bc:addContribution(pname, 2, reward)
-            local jp = bc.jointPairs and bc.jointPairs[pname]
-            if jp and bc:_jointPartnerAlive(pname) and bc:_jointPartnerAlive(jp) and bc.playerContributions[2][jp] ~= nil then
-                bc:addContribution(jp, 2, reward)
-                bc:addTempStat(jp,'CAP mission (Joint mission)',1)
-                bc:addTempStat(pname,'CAP mission (Joint mission)',1)
+            local jp = bc:awardJointMissionReward(pname, 2, reward, 'CAP mission')
+            if jp then
                 trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAP_COMPLETED_JOINT", pname, jp, reward),20)
-                local jgn = bc.groupNameByPlayer[jp]
-                local jgr = Group.getByName(jgn)
-                if jgr then
-                    local ju = jgr:getUnit(1)
-                    if ju and not Utils.isInAir(ju) then
-                        SCHEDULER:New(nil,function()
-                            if ju and ju:isExist() then
-                                world.onEvent({id=world.event.S_EVENT_LAND,time=timer.getAbsTime(),initiator=ju,initiatorPilotName=jp,initiator_unit_type=ju:getTypeName(),initiator_coalition=ju:getCoalition(),skipRewardMsg=true})
-                            end
-                        end,{},5,0)
-                    end
-                end
             else
-                bc:addTempStat(pname,'CAP mission',1)
                 trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAP_COMPLETED_SOLO", pname, reward),20)
             end
             capMissionCooldownUntil = timer.getTime() + 900
@@ -4972,20 +5320,6 @@ mc:trackMission({
 
 ---------------------------------------------------------------------
 --                          CAS MISSION                            --
-function ScheduleCasRewardClaimIfLanded(playerName)
-	local groupName = bc.groupNameByPlayer[playerName]
-	local group = groupName and Group.getByName(groupName) or nil
-	if not group then return end
-	local unit = group:getUnit(1)
-	if unit and not Utils.isInAir(unit) then
-		SCHEDULER:New(nil,function()
-			if unit and unit:isExist() then
-				world.onEvent({id=world.event.S_EVENT_LAND,time=timer.getAbsTime(),initiator=unit,initiatorPilotName=playerName,initiator_unit_type=unit:getTypeName(),initiator_coalition=unit:getCoalition(),skipRewardMsg=true})
-			end
-		end,{},5,0)
-	end
-end
-
 function RegisterDirectorCasMission(slotIndex)
 	mc:trackMission({
 		title = function(T)
@@ -5023,7 +5357,7 @@ function RegisterDirectorCasMission(slotIndex)
 					local reward = rewards[playerName]
 					bc:addContribution(playerName, 2, reward, {playerName})
 					bc:addTempStat(playerName,'CAS mission',1)
-					ScheduleCasRewardClaimIfLanded(playerName)
+					bc:scheduleRewardClaimIfLanded(playerName)
 				end
 				if #participantNames == 0 then
 					trigger.action.outTextForCoalition(2,L10N:Get("MISSION_CAS_COMPLETED_NO_REWARD"),20)
@@ -5504,7 +5838,7 @@ function RegisterDirectorSeadMission(slotIndex)
                 for _, playerName in ipairs(participantNames) do
                     bc:addContribution(playerName, coalition.side.BLUE, rewards[playerName], {playerName})
                     bc:addTempStat(playerName, 'SEAD mission', 1)
-                    ScheduleCasRewardClaimIfLanded(playerName)
+                    bc:scheduleRewardClaimIfLanded(playerName)
                 end
                 if #participantNames == 1 then
                     local playerName = participantNames[1]
@@ -5673,27 +6007,10 @@ mc:trackMission({
 
 		if reconMissionCompleted and target and reconMissionWinner then
 			local reward = 100
-			bc:addContribution(reconMissionWinner, 2, reward)
-			local jp = bc.jointPairs and bc.jointPairs[reconMissionWinner]
-			if jp and bc:_jointPartnerAlive(reconMissionWinner) and bc:_jointPartnerAlive(jp) and bc.playerContributions[2][jp] ~= nil then
-				bc:addContribution(jp, 2, reward)
-				bc:addTempStat(jp, "Recon mission (Joint mission)", 1)
-				bc:addTempStat(reconMissionWinner, "Recon mission (Joint mission)", 1)
+			local jp = bc:awardJointMissionReward(reconMissionWinner, 2, reward, "Recon mission")
+			if jp then
 				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_JOINT", reconMissionWinner, jp, target, reward), 20)
-				local jgn = bc.groupNameByPlayer[jp]
-				local jgr = Group.getByName(jgn)
-				if jgr then
-					local ju = jgr:getUnit(1)
-					if ju and not Utils.isInAir(ju) then
-						SCHEDULER:New(nil, function()
-							if ju and ju:isExist() then
-								world.onEvent({id=world.event.S_EVENT_LAND,time=timer.getAbsTime(),initiator=ju,initiatorPilotName=jp,initiator_unit_type=ju:getTypeName(),initiator_coalition=ju:getCoalition(),skipRewardMsg=true})
-							end
-						end, {}, 5, 0)
-					end
-				end
 			else
-				bc:addTempStat(reconMissionWinner, "Recon mission", 1)
 				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
 			end
 			startZoneIntel(target, 10 * 60, 2)
@@ -5791,9 +6108,6 @@ function checkZoneFlags()
     if trigger.misc.getUserFlag('120') == 1 and not CustomFlags[20] then
         CustomFlags[20] = true
     end
-    if trigger.misc.getUserFlag('121') == 1 and not CustomFlags[21] then
-        CustomFlags[21] = true
-    end
     --Olenya supply point
     if trigger.misc.getUserFlag('141') == 1 and not CustomFlags[41] then
         CustomFlags[41] = true
@@ -5807,12 +6121,6 @@ function checkZoneFlags()
     if trigger.misc.getUserFlag('144') == 1 and not CustomFlags[44] then
         CustomFlags[44] = true
     end
-    if trigger.misc.getUserFlag('145') == 1 and not CustomFlags[45] then
-        CustomFlags[45] = true
-    end
-    if trigger.misc.getUserFlag('146') == 1 and not CustomFlags[46] then
-        CustomFlags[46] = true
-    end
     if (trigger.misc.getUserFlag('147') == 1) and not CustomFlags[47] then
         CustomFlags[47] = true
     end
@@ -5825,10 +6133,10 @@ function checkZoneFlags()
       if CustomFlags[20] == true then --road bridge
         supplypenalty = supplypenalty + 0.1
       end
-      if CustomFlags[21] == true then --railroad bridge
+      if CustomFlags['Bridgeboy'] then --railroad bridge
         supplypenalty = supplypenalty + 0.1
       end
-      if (CustomFlags[20] == true) and (CustomFlags[21] == true) then --both bridges will get an additional penalty as there is no other connection
+      if (CustomFlags[20] == true) and CustomFlags['Bridgeboy'] then --both bridges will get an additional penalty as there is no other connection
         supplypenalty = supplypenalty + 0.2
       end
     else --supply axis is dead because kovdor and apatity got captured
@@ -5839,11 +6147,11 @@ function checkZoneFlags()
       supplypenalty = supplypenalty + 0.05
     end
     --Loukhi
-    if CustomFlags[45] == true then
+    if CustomFlags['Loukhi_Storage'] then
       supplypenalty = supplypenalty + 0.1
     end
     --Beloye More Pumping Station
-    if CustomFlags[46] == true then
+    if CustomFlags['BeloyeMorePumpingStation'] then
       supplypenalty = supplypenalty + 0.1
     end
     --Reserve
@@ -5984,7 +6292,6 @@ airbaseStatics = {
 	["Gallivare"] = {"Gallivareammo", "Gallivarefuel", "Gallivaretent1", "Gallivaretent2", "Gallivaretent3", "Gallivaretent4", "Gallivarecenter", "GallivareWind"},
 	["Kandalaksha"] = {"Kandalakshaammo", "Kandalakshafuel", "Kandalakshatent1", "Kandalakshatent2", "Kandalakshatent3", "Kandalakshatent4", "Kandalakshacenter", "Kandalakshawind"},
 	["Apatity"] = {"Apatityammo", "Apatityfuel", "Apatitytent1", "Apatitytent2", "Apatitytent3", "Apatitytent4", "Apatitycenter", "Apatitywind"},
-	["Loukhi"] = {"Loukhiammo", "Loukhifuel", "Loukhitent1", "Loukhitent2", "Loukhitent3", "Loukhitent4", "Loukhicenter", "Loukhiwind"},
 	["Kovdor"] = {"Kovdorammo", "Kovdorfuel", "Kovdortent1", "Kovdortent2", "Kovdortent3", "Kovdortent4", "Kovdorcenter", "Kovdorcwind"},
 	["Zapolyarnyy"] = {"Zapolyarnyyammo", "Zapolyarnyyfuel", "Zapolyarnyytent1", "Zapolyarnyytent2", "Zapolyarnyytent3", "Zapolyarnyytent4", "Zapolyarnyycenter", "Zapolyarnyywind"},
 	["Karasjok"] = {"Karasjokammo", "Karasjokfuel", "Karasjoktent1", "Karasjoktent2", "Karasjoktent3", "Karasjoktent4", "Karasjokwind", "Karasjokcenter"},

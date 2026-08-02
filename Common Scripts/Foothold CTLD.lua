@@ -232,7 +232,7 @@ Foothold_ctld:AddTroopsCargo("Mortar Squad",{"CTLD_TROOPS_MRS"},CTLD_CARGO.Enum.
 Foothold_ctld:AddTroopsCargo("Engineer soldier",{"CTLD_TROOPS_Engineers"},CTLD_CARGO.Enum.ENGINEERS,1,80,10)
 
 if Era ~= "Vietnam" then
-Foothold_ctld:AddTroopsCargo("Anti-Air Soldiers",{"CTLD_TROOPS_AA"},CTLD_CARGO.Enum.TROOPS,5,80,10)
+Foothold_ctld:AddTroopsCargo("Anti-Air Soldiers",{"CTLD_TROOPS_AA"},CTLD_CARGO.Enum.TROOPS,5,80,10,nil,true)
 end
 -- vehicles and fobs
 if Era ~= "Vietnam" then
@@ -1836,7 +1836,7 @@ local function zoneSupplyPickupDebitKey(Group, Unit)
   return nil
 end
 
-local function queueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, quantity)
+local function queueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, quantity, expeditedQuantity)
   local key = zoneSupplyPickupDebitKey(Group, Unit)
   if not key then return end
   local queue = Foothold_ctld.ZoneSupplyPickupDebits[key]
@@ -1848,6 +1848,7 @@ local function queueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName
     cargoName = cargoName,
     sourceZone = sourceZoneName,
     remaining = quantity,
+    expeditedRemaining = math.max(0, math.min(quantity, expeditedQuantity or 0)),
   }
 end
 
@@ -1858,11 +1859,15 @@ local function claimZoneSupplyPickupDebit(unitName, groupName, cargoName)
 
   for index, debit in ipairs(queue) do
     if debit.cargoName == cargoName and (debit.remaining or 0) > 0 then
+      local expeditedRemaining = math.max(0, debit.expeditedRemaining or 0)
+      local ordinaryRemaining = math.max(0, debit.remaining - expeditedRemaining)
+      local expedited = ordinaryRemaining < 1 and expeditedRemaining > 0
       debit.remaining = debit.remaining - 1
+      if expedited then debit.expeditedRemaining = expeditedRemaining - 1 end
       local sourceZone = debit.sourceZone
       if debit.remaining <= 0 then table.remove(queue, index) end
       if #queue == 0 then Foothold_ctld.ZoneSupplyPickupDebits[key] = nil end
-      return sourceZone
+      return sourceZone, expedited
     end
   end
   return nil
@@ -1878,12 +1883,13 @@ local function refundPlayerZoneSupplyStock(EntryOrCargo)
     local sourceZone = sourceZoneName and bc:getZoneByName(sourceZoneName) or nil
     if not sourceZone or not sourceZone.active or sourceZone.side ~= coalition.side.BLUE
       or sourceZone._regularSupplyStockSide ~= coalition.side.BLUE
-      or not sourceZone:_regularSupplyHasRouteForSide(coalition.side.BLUE)
     then
       return false
     end
 
-    if not sourceZone:_restorePlayerRegularSupplyStock(1, coalition.side.BLUE, timer.getAbsTime()) then
+    if not sourceZone:_restorePlayerRegularSupplyStock(
+      1, coalition.side.BLUE, timer.getAbsTime(), EntryOrCargo._zoneSupplySourceExpedited == true and 1 or 0)
+    then
       return false
     end
   end
@@ -1939,6 +1945,7 @@ local function BuildTrackedZoneSupplyEntry(CargoItem, StaticObject, PickupZoneNa
     cargoName = CargoName,
     _zoneSupplySourceConsumed = CargoItem._zoneSupplySourceConsumed == true,
     _zoneSupplySourceZone = CargoItem._zoneSupplySourceZone,
+    _zoneSupplySourceExpedited = CargoItem._zoneSupplySourceExpedited == true,
     createdAt = timer.getTime(),
     wasAirborne = false,
     _wasUnloaded = false,
@@ -1965,10 +1972,11 @@ local function RegisterTrackedSupplyCargo(CargoItem, PickupZoneName, GroupName, 
   CargoItem._zoneSupplyPlayer = PlayerName
 
   if DeliveryType == "zone" and CargoItem._zoneSupplySourceConsumed ~= true then
-    local sourceZoneName = claimZoneSupplyPickupDebit(UnitName, GroupName, CargoName)
+    local sourceZoneName, sourceExpedited = claimZoneSupplyPickupDebit(UnitName, GroupName, CargoName)
     if sourceZoneName then
       CargoItem._zoneSupplySourceConsumed = true
       CargoItem._zoneSupplySourceZone = sourceZoneName
+      CargoItem._zoneSupplySourceExpedited = sourceExpedited == true
     end
   end
 
@@ -3635,7 +3643,7 @@ zoneSupplyApplyOne = function(key)
   end
 
   local now = timer.getAbsTime()
-  zoneObj:_addImportedRegularSupplyStock(1, now)
+  zoneObj:_addExpeditedRegularSupplyStock(1, now)
   local maximum = zoneObj:_regularSupplyMaxStock()
   local ready = math.max(0, math.floor(tonumber(zoneObj._regularSupplyReady) or 0))
   grantZoneBundle(zoneName)
@@ -4381,21 +4389,16 @@ function Foothold_ctld:CanGetCrates(Group, Unit, Cargo, number, drop, pack, quie
         return false
       end
 
-      queueZoneSupplyPickupDebit(Group, Unit, cname, pickupZone, requestedSets)
+      queueZoneSupplyPickupDebit(Group, Unit, cname, pickupZone, requestedSets, 0)
       return true
     end
 
     if PlayerZoneSuppliesConsumeStock ~= true then return true end
     if not sourceZone then return true end
 
-    local now = timer.getAbsTime()
-    sourceZone:_updateRegularSupplyStock(now)
-    local ready = math.max(0, math.floor(tonumber(sourceZone._regularSupplyReady) or 0))
-    local reserved = math.max(0, math.floor(tonumber(sourceZone._regularSupplyPendingStock) or 0))
-    local available = math.max(0, ready - reserved)
-    if not sourceZone.active or sourceZone.side ~= coalition.side.BLUE
-      or sourceZone._regularSupplyStockSide ~= coalition.side.BLUE or available < requestedSets
-    then
+    local consumed, available, expeditedConsumed = sourceZone:_consumePlayerRegularSupplyStock(
+      requestedSets, coalition.side.BLUE, timer.getAbsTime())
+    if not consumed then
       local T = (Group and Group.IsAlive and Group:IsAlive()) and getCtldGroupTranslator(Group) or getFootholdLocalization():ForLocale()
       local label = ctldLocalizedCargoLabel(T, "Zone supplies")
       local reasonText = ctldReasonText(T, ctldReasonToken("CTLD_REASON_INSUFFICIENT_STOCK", label))
@@ -4403,10 +4406,7 @@ function Foothold_ctld:CanGetCrates(Group, Unit, Cargo, number, drop, pack, quie
       return false
     end
 
-    sourceZone._regularSupplyReady = ready - requestedSets
-    sourceZone._regularSupplyLastUpdateAt = now
-    sourceZone:updateLabel(coalition.side.BLUE)
-    queueZoneSupplyPickupDebit(Group, Unit, cname, pickupZone, requestedSets)
+    queueZoneSupplyPickupDebit(Group, Unit, cname, pickupZone, requestedSets, expeditedConsumed)
     return true
   end
 
