@@ -1495,6 +1495,7 @@ local function resolveC130AutoBuildOwner(setId, vec3)
   set.playerName = playerName
   set.groupName = groupName
   set.unitName = unitName
+  set.aircraftId = bc:getCareerAircraftId(bestClient:GetTypeName())
   for _, key in ipairs(set.crates) do
     local entry = c130AutoBuildCrates[key]
     if entry then
@@ -1524,11 +1525,13 @@ end
 
 local function registerC130AutoBuildSet(groupName, playerName, unitName, pickupZone, cargoItems)
   local setId = string.format("C130AUTO-%s-%d", groupName or "GROUP", math.random(1, 1e9))
+  local carrierUnit = unitName and Unit.getByName(unitName) or nil
   local setData = {
     id = setId,
     groupName = groupName,
     playerName = playerName,
     unitName = unitName,
+    aircraftId = carrierUnit and bc:getCareerAircraftId(carrierUnit:getTypeName()) or nil,
     pickupZone = pickupZone,
     crates = {},
     required = 0,
@@ -1699,6 +1702,7 @@ local function UpdateC130AttachDetachState(Entry, Key, CoordinatesVec3, UnitObje
 
   if Entry.detached and (not InAir) and Delta3D <= AttachDistance then
     Entry.detached = false
+    Entry._careerAirdropped = nil
     Entry._loggedC130Detached = false
     Entry._loggedC130Unloaded = false
     Entry._c130Stable = 0
@@ -1929,6 +1933,8 @@ local function BuildTrackedZoneSupplyEntry(CargoItem, StaticObject, PickupZoneNa
     groupId = GroupId,
     playerName = PlayerName,
     unitName = UnitName,
+    aircraftId = CarrierUnitObject and CarrierUnitObject.isExist and CarrierUnitObject:isExist()
+      and bc:getCareerAircraftId(CarrierUnitObject:getTypeName()) or nil,
     _unitObj = CarrierUnitObject,
     _unitDim = UnitDimensions,
     _isC130 = IsC130,
@@ -2239,6 +2245,7 @@ for key, entry in pairs(c130AutoBuildCrates) do
             playerName = set.playerName,
             groupName = set.groupName,
             unitName = set.unitName,
+            aircraftId = set.aircraftId,
           }
 
           timer.scheduleFunction(function()
@@ -2713,6 +2720,7 @@ local function zoneSupplyC130OneShotConfirm(arg, time)
   end
 
   entry._wasUnloaded = true
+  entry._careerAirdropped = true
   entry._c130AglConfirm = nil
   refreshZoneSupplyOnboardForEntry(entry)
   c130SupplyLogOnce(entry, key, "_fhLogUnloaded", "UNLOADED", string.format("agl=%.2f", agl))
@@ -2764,6 +2772,49 @@ local function resolveZoneSupplyPlayer(entry)
     end
   end
   return nil
+end
+
+function Foothold_ctld:_resolveCareerAircraftId(unitObject)
+  if not unitObject then return nil end
+  local typeName = nil
+  if unitObject.GetTypeName then
+    typeName = unitObject:GetTypeName()
+  elseif unitObject.getTypeName then
+    typeName = unitObject:getTypeName()
+  end
+  return typeName and bc:getCareerAircraftId(typeName) or nil
+end
+
+function Foothold_ctld:_recordCareerAction(playerName, unitObject, statId, aircraftMetricId, amount, aircraftId)
+  if not playerName or playerName == "" then return end
+  bc:recordCareerStat(playerName, statId, amount)
+  local resolvedAircraftId = aircraftId or self:_resolveCareerAircraftId(unitObject)
+  if resolvedAircraftId and aircraftMetricId then
+    bc:recordCareerAircraftStat(playerName, resolvedAircraftId, aircraftMetricId, amount)
+  end
+end
+
+function Foothold_ctld:_recordCareerSupply(entry, destinationStatId, warehouse)
+  local playerName = resolveZoneSupplyPlayer(entry)
+  if not playerName then return end
+  local unitObject = ResolveTrackedCarrierUnit(entry, false)
+  if unitObject and not unitObject:isExist() then unitObject = nil end
+  local aircraftId = entry.aircraftId or self:_resolveCareerAircraftId(unitObject)
+  local airdropped = entry._careerAirdropped
+  if airdropped == nil then
+    airdropped = unitObject and Utils.isInAir(unitObject) or false
+  end
+
+  self:_recordCareerAction(playerName, unitObject, bc.CAREER_STAT.SupplyUnitsDelivered, bc.CAREER_AIRCRAFT_METRIC.SupplyUnitsDelivered, 1, aircraftId)
+  if destinationStatId then
+    bc:recordCareerStat(playerName, destinationStatId, 1)
+  end
+  if airdropped then
+    self:_recordCareerAction(playerName, unitObject, bc.CAREER_STAT.AirdroppedSupplyUnits, bc.CAREER_AIRCRAFT_METRIC.AirdroppedSupplyUnits, 1, aircraftId)
+  end
+  if warehouse then
+    self:_recordCareerAction(playerName, unitObject, bc.CAREER_STAT.WarehouseDeliveries, bc.CAREER_AIRCRAFT_METRIC.WarehouseDeliveries, 1, aircraftId)
+  end
 end
 
 local CTLD_REASON_KEYS = {
@@ -3002,6 +3053,7 @@ local function finalizeZoneSupplyDelivery(key, entry, zoneName, verb, statLabel,
   local text = T:Format("CTLD_ZONE_SUPPLIES_DELIVERED", verbText, zoneName)
   sendZoneSupplyMessage(entry, text)
   local pname = resolveZoneSupplyPlayer(entry)
+  Foothold_ctld:_recordCareerSupply(entry, bc.CAREER_STAT.ZoneSupplyUnits, false)
   if pname and bc.playerContributions[2][pname] ~= nil then
     bc:addContribution(pname, 2, reward)
     bc:addTempStat(pname, statLabel, 1)
@@ -3111,6 +3163,9 @@ processZoneSupplyDeliveries = function()
                   local inAir = unitObj and unitObj.isExist and unitObj:isExist() and unitObj:inAir()
                   local ground = land.getHeight({ x = vec3.x, y = vec3.z })
                   local agl = vec3.y - ground
+                  if inAir ~= nil and entry._careerAirdropped == nil then
+                    entry._careerAirdropped = inAir == true
+                  end
 
                   if not inAir then
                     if agl <= ZONE_SUPPLY_C130_LANDED_AGL then
@@ -3127,6 +3182,7 @@ processZoneSupplyDeliveries = function()
                     end
                   else
                     if agl <= ZONE_SUPPLY_C130_LANDED_AGL and not entry._c130OneShotScheduled then
+                      entry._careerAirdropped = true
                       entry._c130OneShotScheduled = true
                       timer.scheduleFunction(zoneSupplyC130OneShotConfirm, { key = key, prev = { x = vec3.x, y = vec3.y, z = vec3.z } }, timer.getTime() + ZONE_SUPPLY_C130_ONESHOT_DELAY)
                     end
@@ -3194,6 +3250,9 @@ processZoneSupplyDeliveries = function()
                   end
                 end
                 if ok then
+                  if inAir ~= nil and entry._careerAirdropped == nil then
+                    entry._careerAirdropped = inAir == true
+                  end
                   local settleOk = true
                   if dim and dim.ropelength == 0 and inAir and speed2 and speed2 > 9 then
                     local ground = land.getHeight({ x = vec3.x, y = vec3.z })
@@ -3550,6 +3609,7 @@ zoneSupplyApplyOne = function(key)
 
   if farpSupplyRecord then
     addBuiltFarpSupplyStock(farpSupplyRecord, 1)
+    Foothold_ctld:_recordCareerSupply(entry, bc.CAREER_STAT.FarpSupplyUnits, false)
     local staticObj = (entry.cargo and entry.cargo.GetPositionable and entry.cargo:GetPositionable()) or entry.static
     if staticObj and staticObj.IsAlive and staticObj:IsAlive() then
       zoneSupplyEnqueueRemoval(staticObj, 0)
@@ -3616,6 +3676,7 @@ zoneSupplyApplyOne = function(key)
     end
     c130SupplyLogOnce(entry, key, "_fhLogDeliver", "DELIVER", string.format("zone=%s verb=warehouse", tostring(zoneName)))
     if not (entry.pickupZone and zoneName == entry.pickupZone) then
+      Foothold_ctld:_recordCareerSupply(entry, nil, true)
       local pname = resolveZoneSupplyPlayer(entry)
       local reward = meta.reward or ((meta.categories and #meta.categories > 1) and 100 or 50)
       if pname then
@@ -4086,6 +4147,28 @@ local function resolveCtldBuildRewardPlayer(Group, Unit)
   return nil
 end
 
+function Foothold_ctld:_recordBuildCareer(Group, Unit, statId, aircraftMetricId)
+  local playerName = resolveCtldBuildRewardPlayer(Group, Unit)
+  if not playerName then return end
+  local aircraftId = self:_resolveCareerAircraftId(Unit)
+  local groupName = Group and Group.GetName and Group:GetName() or nil
+  local owner = groupName and ctldBuildRewardHelperOwners[groupName] or nil
+  if owner and owner.aircraftId then
+    aircraftId = owner.aircraftId
+  end
+  self:_recordCareerAction(playerName, Unit, statId, aircraftMetricId, 1, aircraftId)
+end
+
+function Foothold_ctld:_recordAirdroppedBuildCareer(Group, Unit, airDefense)
+  local groupName = Group and Group.GetName and Group:GetName() or nil
+  local owner = groupName and ctldBuildRewardHelperOwners[groupName] or nil
+  if not owner then return end
+  self:_recordCareerAction(owner.playerName, Unit, bc.CAREER_STAT.AirdroppedBuilds, bc.CAREER_AIRCRAFT_METRIC.AirdroppedBuilds, 1, owner.aircraftId)
+  if airDefense then
+    self:_recordCareerAction(owner.playerName, Unit, bc.CAREER_STAT.AirdroppedAirDefenseBuilds, bc.CAREER_AIRCRAFT_METRIC.AirdroppedAirDefenseBuilds, 1, owner.aircraftId)
+  end
+end
+
 local function awardCtldBuildReward(Group, Unit, rewardDef)
   if not rewardDef then return end
   local playerName = resolveCtldBuildRewardPlayer(Group, Unit)
@@ -4140,6 +4223,9 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
         Vehicle:Destroy(false)
         BuildAFARP(Coord, { zell = true })
         if Group then
+          self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
+          self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.FarpsBuilt, nil)
+          self:_recordAirdroppedBuildCareer(Group, Unit, false)
           awardCtldBuildReward(Group, Unit, CTLD_BUILD_REWARD_BY_CARGO["FARP"])
         end
         return
@@ -4150,6 +4236,9 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
         Vehicle:Destroy(false)
         BuildAFARP(Coord)
         if Group then
+          self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
+          self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.FarpsBuilt, nil)
+          self:_recordAirdroppedBuildCareer(Group, Unit, false)
           awardCtldBuildReward(Group, Unit, CTLD_BUILD_REWARD_BY_CARGO["FARP"])
         end
         return
@@ -4198,11 +4287,18 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
       end
       local merged = samMergeTryMergeComponentIntoNearbySystem(self, Group, Vehicle, cargoName, mergeRole, mergeProfile, mergeDistanceOverride)
       if merged then
+        self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldUpgrades, nil)
+        self:_recordAirdroppedBuildCareer(Group, Unit, true)
         awardCtldBuildReward(Group, Unit, CTLD_MERGE_REWARD_BY_PROFILE[mergeProfile.key])
         return
       end
     end
 
+    self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
+    self:_recordAirdroppedBuildCareer(Group, Unit, CTLD_BUILD_REWARD_BY_CARGO[cargoName] ~= nil)
+    if CTLD_BUILD_REWARD_BY_CARGO[cargoName] then
+      self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.AirDefenseBuilt, nil)
+    end
     awardCtldBuildReward(Group, Unit, CTLD_BUILD_REWARD_BY_CARGO[cargoName])
 
     local maxTimestamp = 0
@@ -4697,6 +4793,7 @@ function Foothold_ctld:OnAfterCratesPickedUp(From, Event, To, Group, Unit, Cargo
       entry.detached = false
       entry.wasAirborne = true
       entry._wasUnloaded = false
+      entry._careerAirdropped = nil
       refreshZoneSupplyOnboardForEntry(entry)
     end
   end
@@ -5531,6 +5628,14 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
     if troopGroup and troopGroup:IsAlive() then
         local troopGroupName = troopGroup:GetName()
         local currentTime = timer.getTime()
+        local careerPlayerName = Unit and Unit.GetPlayerName and Unit:GetPlayerName() or nil
+        local careerAircraftId = self:_resolveCareerAircraftId(Unit)
+        local careerDropRecorded = false
+        local function recordAcceptedCareerDrop()
+            if careerDropRecorded or not careerPlayerName then return end
+            careerDropRecorded = true
+            self:_recordCareerAction(careerPlayerName, Unit, bc.CAREER_STAT.TroopDrops, bc.CAREER_AIRCRAFT_METRIC.TroopDrops, 1, careerAircraftId)
+        end
         
         deployedTroops[troopGroupName] = troopGroup
         deployedTroopsSet:AddGroup(troopGroup)
@@ -5635,7 +5740,8 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
                 local zoneName    = zoneData.zoneName
 
                 if not currentZone then
-                    zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = Group and Group._lastPickupZone or nil }
+                    zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = Group and Group._lastPickupZone or nil, careerPlayerName = careerPlayerName, careerAircraftId = careerAircraftId }
+                    recordAcceptedCareerDrop()
                     return
                 end
                 if currentZone.side == 2 then
@@ -5650,21 +5756,25 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
                         zoneCaptureInfo[troopGroupName] = nil
                         return
                     end
-                    zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = pickupZoneName }
+                    zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = pickupZoneName, careerPlayerName = careerPlayerName, careerAircraftId = careerAircraftId }
+                    recordAcceptedCareerDrop()
                     CaptureZoneIfNeutral()
                     return
                 end
                 if currentZone.side == 1 then
-                    zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = Group and Group._lastPickupZone or nil }
+                    zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = Group and Group._lastPickupZone or nil, careerPlayerName = careerPlayerName, careerAircraftId = careerAircraftId }
+                    recordAcceptedCareerDrop()
                     return
                 end
                 if currentZone.side == 0 then
-                    zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = Group and Group._lastPickupZone or nil }
+                    zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = Group and Group._lastPickupZone or nil, careerPlayerName = careerPlayerName, careerAircraftId = careerAircraftId }
+                    recordAcceptedCareerDrop()
                     CaptureZoneIfNeutral()
                 end
             end
         else
-            zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = nil, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = Group and Group._lastPickupZone or nil }
+            zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = nil, deployer = Group, cargoName = cargoName, cargoType = cargoType, canCaptureZone = canCaptureZone, pickupZoneName = Group and Group._lastPickupZone or nil, careerPlayerName = careerPlayerName, careerAircraftId = careerAircraftId }
+            recordAcceptedCareerDrop()
         end
     end
 end
@@ -5889,14 +5999,19 @@ function CaptureZoneIfNeutral()
             return
         end
 
-        local pname
+        local careerPname = data.careerPlayerName
+        local pname = nil
+        local pilot = nil
         if data.deployer and data.deployer:IsAlive() then
-            local pilot = data.deployer:GetUnits()[1]
+            pilot = data.deployer:GetUnits()[1]
             if pilot and pilot:GetPlayerName() then pname = pilot:GetPlayerName() end
         end
+        local careerOwner = pname or careerPname
+        local careerAircraftId = Foothold_ctld:_resolveCareerAircraftId(pilot) or data.careerAircraftId
 
         if currentZone.side == 0 and currentZone.active then
             currentZone:capture(2)
+            Foothold_ctld:_recordCareerAction(careerOwner, pilot, bc.CAREER_STAT.TroopCaptures, nil, 1, careerAircraftId)
             troopGroup:Destroy()
             if pname and bc.playerContributions[2][pname] ~= nil then
               local reward = (bc.rewards['Zone capture'] or 200) * 0.5
@@ -5911,6 +6026,7 @@ function CaptureZoneIfNeutral()
             local need = currentZone:canRecieveSupply() or false
             if need then
                 currentZone:upgrade()
+                Foothold_ctld:_recordCareerAction(careerOwner, pilot, bc.CAREER_STAT.TroopZoneUpgrades, nil, 1, careerAircraftId)
                 troopGroup:Destroy()
                 if pname and bc.playerContributions[2][pname] ~= nil then
                   local reward = (bc.rewards['Zone upgrade'] or 100) * 0.5

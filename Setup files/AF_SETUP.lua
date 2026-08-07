@@ -5607,8 +5607,7 @@ evc:addEvent({
         if CustomFlags["Red EWR Herat Fixed"] then return false end
         if ActiveMission['Red EWR Herat Fixed'] then return false end
 		--if math.random(1,100) < 70 then return false end
-		if not Group.getByName('Red EWR Nimroz Fixed') then return false end
-		if CustomFlags["Red EWR Nimroz Fixed"] then return false end
+		if not Group.getByName('Red EWR Herat Fixed') then return false end
 		 if bc:getZoneByName('Shindand').side ~= 2 then return false end
 	return true
 end
@@ -5840,6 +5839,7 @@ evc:addEvent({
 		local director = Director:getForSide(coalition.side.RED)
 		local selection = director:consumeTacticalAirstrikePlan(airstrikePickOptions)
 		if not selection then return end
+		casGrp = ColdWarTechEra and 'evt-CAScw' or (math.random(1, 2) == 1 and 'evt-CAS' or 'evt-CAScw')
 		local spawned = Respawn.SpawnAtPoint(
 			casGrp,
 			selection.spawnCoord,

@@ -1502,7 +1502,7 @@ phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if
 -- ============================================================================
 
 -- In this list, you can either remove or add what is allowed in the coldwar era.
--- @gui label="Allowed Aircraft" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Coldwar"
+-- @gui label="Allowed Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar"
 allowedPlanes = {
     "A-10A",
     "A-10C",
@@ -1597,7 +1597,7 @@ allowedPlanes = {
 }
 
 -- In this list, you can either remove or add what is allowed for the (RED SIDE) in the coldwar era.
--- @gui label="Allowed RED Aircraft" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Coldwar"
+-- @gui label="Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar"
 allowedPlanesRed = {
     "A-10A",
     "A-10C",
@@ -1691,7 +1691,7 @@ allowedPlanesRed = {
 }
 
 -- In this list, you can either remove or add what is allowed for BLUE warehouses in the Vietnam era.
--- @gui label="Vietnam Allowed Aircraft" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Vietnam"
+-- @gui label="Vietnam Allowed Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam"
 allowedPlanesVietnam = {
     "A-4E-C",
     "Bronco-OV-10A",
@@ -1721,7 +1721,7 @@ allowedPlanesVietnam = {
 }
 
 -- In this list, you can either remove or add what is allowed for RED warehouses in the Vietnam era.
--- @gui label="Vietnam Allowed RED Aircraft" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Vietnam"
+-- @gui label="Vietnam Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam"
 allowedPlanesRedVietnam = {
     "Mi-8MT",
     "MiG-15bis",
@@ -1788,7 +1788,7 @@ restockAircraft = {
 
 -- In the coldwar era, you can add or remove what to restrict
 -- Add "--" if you want to ALLOW a weapon, otherwise the weapon in the list below are removed from the warehouse.
--- @gui label="Cold War Restricted Weapons" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Coldwar"
+-- @gui label="Cold War Restricted Weapons" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar"
 restrictedWeapons = {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
@@ -1882,7 +1882,7 @@ restrictedWeapons = {
 
 -- In the Vietnam era, you can add or remove what to restrict.
 -- Add "--" if you want to ALLOW a weapon, otherwise weapons in the list below are removed from the warehouse.
--- @gui label="Vietnam Restricted Weapons" installPolicy="mergeRows" editor="bucket" visibleWhen="Era:Vietnam"
+-- @gui label="Vietnam Restricted Weapons" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam"
 restrictedWeaponsVietnam = {
     -- Guided weapon pods
     --"weapons.containers.HB_ORD_Pave_Spike",

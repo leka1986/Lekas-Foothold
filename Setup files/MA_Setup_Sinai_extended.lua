@@ -4010,6 +4010,7 @@ evc:addEvent({
 		local director = Director:getForSide(coalition.side.RED)
 		local selection = director:consumeTacticalAirstrikePlan(airstrikePickOptions)
 		if not selection then return end
+		attackGrp = ColdWarTechEra and 'evt-attackcw' or (math.random(1, 2) == 1 and 'evt-attack' or 'evt-attackcw')
 		local spawned = Respawn.SpawnAtPoint(
 			attackGrp,
 			selection.spawnCoord,

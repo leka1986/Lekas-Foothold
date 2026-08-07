@@ -226,7 +226,7 @@ upgrades = {
 	},
 	Hidden1Group = {
 		blue = {},
-		red = {'Red EWR Fixed 1', 'Red EWR Fixed 3', 'Red EWR Fixed 2', 'Red EWR 4 Fixed'}
+		red = {'Red EWR Fixed 1', 'Red EWR Fixed 3', 'Red EWR Fixed 2', 'Red EWR 4 Fixed','Red EWR 5 Fixed'}
 	},
 	Hidden2Group = {
 		blue = {},
@@ -4769,6 +4769,7 @@ evc:addEvent({
 		local director = Director:getForSide(coalition.side.RED)
 		local selection = director:consumeTacticalAirstrikePlan(airstrikePickOptions)
 		if not selection then return end
+		attackGrp = ColdWarTechEra and 'evt-attackcw' or (math.random(1, 2) == 1 and 'evt-attack' or 'evt-attackcw')
 		local spawned = Respawn.SpawnAtPoint(
 			attackGrp,
 			selection.spawnCoord,

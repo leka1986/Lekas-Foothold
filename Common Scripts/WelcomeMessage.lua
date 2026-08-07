@@ -2187,6 +2187,7 @@ function static:OnEventRefueling(EventData)
             side = EventData.IniCoalition,
             fuel = EventData.IniUnit:GetFuel(),
             fuelMassMax = EventData.IniUnit:GetDesc().fuelMassMax,
+            aircraftId = bc:getCareerAircraftId(EventData.IniUnit:GetTypeName()),
         }
         return
     end
@@ -2206,6 +2207,7 @@ function static:OnEventRefueling(EventData)
                         side = playerUnit:getCoalition(),
                         fuel = playerUnit:getFuel(),
                         fuelMassMax = playerUnit:getDesc().fuelMassMax,
+                        aircraftId = bc:getCareerAircraftId(playerUnit:getTypeName()),
                     }
                 end
             end
@@ -2230,6 +2232,19 @@ function static:OnEventRefuelingStop(EventData)
         return
     end
 
+    local gainedWholeLbs = math.floor(gainedLbs)
+    local careerCrew = bc:getMulticrewPlayersNow(refuelStart.playerName)
+    local careerSeen = {}
+    for _, crewName in ipairs(careerCrew) do
+        if not careerSeen[crewName] then
+            careerSeen[crewName] = true
+            bc:recordCareerStat(crewName, bc.CAREER_STAT.FuelReceivedLbs, gainedWholeLbs)
+            if refuelStart.aircraftId then
+                bc:recordCareerAircraftStat(crewName, refuelStart.aircraftId, bc.CAREER_AIRCRAFT_METRIC.FuelReceivedLbs, gainedWholeLbs)
+            end
+        end
+    end
+
     local reward = math.floor(gainedLbs / 100) * RefuelReward
     if reward <= 0 then
         return
@@ -2239,12 +2254,11 @@ function static:OnEventRefuelingStop(EventData)
         return
     end
 
-    bc:addContribution(refuelStart.playerName, refuelStart.side, reward)
+    bc:addContribution(refuelStart.playerName, refuelStart.side, reward, careerCrew)
 
     if not refuelStatAwardedByPlayer[refuelStart.playerName] then
-        local crew = bc:getMulticrewPlayersNow(refuelStart.playerName)
-        for i=1,#crew do
-            local n = crew[i]
+        for i=1,#careerCrew do
+            local n = careerCrew[i]
             bc:addTempStat(n, "Refueling", 1)
             refuelStatAwardedByPlayer[n] = true
         end
@@ -2336,6 +2350,7 @@ function static:OnEventPlayerLeaveUnit(EventData)
             bc:markSeadMissionPlayerUnavailable(playerName)
         if EventData.id == EVENTS.PlayerLeaveUnit then
             local side = playerUnit:GetCoalition()
+            bc:finishCareerFlightForPlayer(playerName, playerUnit:GetName())
             bc.lossPenaltyArmByPlayer[playerName] = nil
             if bc.playerContributions and bc.playerContributions[side] then
                 bc.playerContributions[side][playerName] = 0

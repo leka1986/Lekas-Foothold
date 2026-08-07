@@ -1028,7 +1028,7 @@ zones.larnaca:addGroups({
 zones.incirlik:addGroups({
 	GroupCommander:new({name='Incirlik-supply-Hatay', mission='supply', template='PlaneSupplyTemplate', targetzone='Hatay'}),
 	GroupCommander:new({name='Incirlik-supply-Bassel Al-Assad', mission='supply', template='PlaneSupplyTemplate', targetzone='Bassel Al-Assad'}),
-	GroupCommander:new({name='Incirlik-supply-Aleppo', mission='supply', template='PlaneSupplyTemplate', targetzone='Aleppo'}),
+	--GroupCommander:new({name='Incirlik-supply-Aleppo', mission='supply', template='PlaneSupplyTemplate', targetzone='Aleppo'}),
 	GroupCommander:new({name='Incirlik-supply-FOB Alpha', mission='supply', template='HeloSupplyTemplate', targetzone='FOB Alpha'}),
 	GroupCommander:new({name='Incirlik-supply-Incirlik-Defence', mission='supply', template='SupplyConvoy', targetzone='Incirlik Defence', type='surface', Redcondition = function() return not CustomFlags["IncirlikWarehouse"] end}),
 	--GroupCommander:new({name='Incirlik-supply-Carrier', mission='supply', template='HeloSupplyTemplate', targetzone='Red Carrier', Bluecondition = function() return true end}),
@@ -4112,12 +4112,13 @@ bc:addShopItem(2, 'gslot', 1, 5, ShopRankRequirements.gslot, ShopCats.ZoneUpgrad
 if Era == 'Modern' then
 	bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
 	bc:addShopItem(2, 'zpat', -1, 6, ShopRankRequirements.zpat, ShopCats.ZoneUpgrades) -- Patriot system.
-	bc:addShopItem(2, 'zgci', -1, 7, ShopRankRequirements.zgci, ShopCats.ZoneUpgrades) -- GCI station.
 end
 
 -- JTAC & Intel
 
 if Era ~= 'Vietnam' then
+bc:addShopItem(2, 'zgci', -1, 7, ShopRankRequirements.zgci, ShopCats.ZoneUpgrades) -- GCI station.
+
 bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac, ShopCats.JTACIntel) -- MQ-9 Reaper JTAC mission
 end
 bc:addShopItem(2, 'smoke', -1, 2, ShopRankRequirements.smoke, ShopCats.JTACIntel) -- smoke on target
@@ -4297,7 +4298,7 @@ buildTemplateCache()
 bc:buildZoneDistanceCache()
 buildSubZoneRoadCache()
 bc:buildConnectionMap()
-DynamicConvoy.InitTargetTails(15)
+DynamicConvoy.InitTargetTails(16)
 DynamicConvoy.InitRoadPathCacheFromCommanders(GroupCommanders)
 PrecomputeLandingSpots()
 BuildAirbaseParkingClusterCache()
@@ -4483,6 +4484,7 @@ evc:addEvent({
 		local director = Director:getForSide(coalition.side.RED)
 		local selection = director:consumeTacticalAirstrikePlan(airstrikePickOptions)
 		if not selection then return end
+		airstrikeGroup = ColdWarTechEra and 'evt-CAScw' or (math.random(1, 2) == 1 and 'evt-CAS' or 'evt-CAScw')
 		activeAirstrikeGroup = airstrikeGroup
 		local spawned = Respawn.SpawnAtPoint(
 			activeAirstrikeGroup,
