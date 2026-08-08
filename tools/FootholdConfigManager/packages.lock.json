@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0-windows7.0": {
+      "Loretta.CodeAnalysis.Lua": {
+        "type": "Direct",
+        "requested": "[0.2.13, )",
+        "resolved": "0.2.13",
+        "contentHash": "lTidKc2iJApe3g1FvYlSacdsBCi3xkhqNRHxPgeuY9L4rc6jsEt1ELUuCaWWfxIiMVAAHsgORUzX2sWRYcxrCg==",
+        "dependencies": {
+          "Loretta.CodeAnalysis.Common": "0.2.13",
+          "Tsu": "2.2.2"
+        }
+      },
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[8.0.28, )",
+        "resolved": "8.0.28",
+        "contentHash": "XMqgVjlLxLqWmEh3c49haXLQwsMNtvo6YscUaqfvEGfg1iA8hnYgkUVq3i9Zu9gKeNKMWiiZKVwZExc/qyEAsQ=="
+      },
+      "Loretta.CodeAnalysis.Common": {
+        "type": "Transitive",
+        "resolved": "0.2.13",
+        "contentHash": "fXlVjbh29oC/0nDHSRaQzmKMI48Yg9hecMMTap7zNUo7wLTVvBcLFLJhxvsf3+Nj2yG8nSK+KrYxsrp1uosVzQ=="
+      },
+      "Tsu": {
+        "type": "Transitive",
+        "resolved": "2.2.2",
+        "contentHash": "l6svA84RD5MYyZgLFOI0Tj1ssEkcNUi0Q13wfH7VBJxd17o+YL1sgdLEyu3kkBBjvJIgOgszZUPR0vCrZOgBKg=="
+      }
+    },
+    "net8.0-windows7.0/win-x64": {}
+  }
+}

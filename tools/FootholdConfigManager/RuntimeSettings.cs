@@ -76,8 +76,12 @@ internal sealed class RuntimeSettings
 
     public void Save()
     {
-        Directory.CreateDirectory(SettingsDirectory);
-        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this, JsonOptions));
+        SaveTo(SettingsPath);
+    }
+
+    internal void SaveTo(string path)
+    {
+        AtomicFile.WriteUtf8Text(path, JsonSerializer.Serialize(this, JsonOptions));
     }
 
     public void RememberConfig(string configPath)
@@ -96,12 +100,34 @@ internal sealed class RuntimeSettings
 
     public string? FindRememberedConfig()
     {
-        if (!string.IsNullOrWhiteSpace(LastConfigPath) && File.Exists(LastConfigPath))
+        return GetRememberedConfigCandidates().FirstOrDefault(File.Exists);
+    }
+
+    public IReadOnlyList<string> GetRememberedConfigCandidates()
+    {
+        var candidates = new List<string>();
+        foreach (var path in new[] { LastConfigPath }.Concat(RecentConfigPaths))
         {
-            return LastConfigPath;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            try
+            {
+                var fullPath = System.IO.Path.GetFullPath(path);
+                if (!candidates.Contains(fullPath, StringComparer.OrdinalIgnoreCase))
+                {
+                    candidates.Add(fullPath);
+                }
+            }
+            catch
+            {
+                // Invalid remembered paths are ignored; the config picker remains available.
+            }
         }
 
-        return RecentConfigPaths.FirstOrDefault(File.Exists);
+        return candidates;
     }
 
     public static List<string> FindSavedGamesConfigs()

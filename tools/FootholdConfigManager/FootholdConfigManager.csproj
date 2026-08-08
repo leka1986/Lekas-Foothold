@@ -6,12 +6,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>FootholdConfigManager</AssemblyName>
+    <Version>1.9.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>FootholdConfigManager.ico</ApplicationIcon>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Remove="backups\**\*.cs" />
+    <EmbeddedResource Remove="backups\**\*.resx" />
     <EmbeddedResource Include="Foothold Config.gui.json" LogicalName="FootholdConfigManager.DefaultGuiMetadata.json" Condition="Exists('Foothold Config.gui.json')" />
     <EmbeddedResource Include="EmbeddedGuiMetadata.json" LogicalName="FootholdConfigManager.EmbeddedGuiMetadata.json" Condition="Exists('EmbeddedGuiMetadata.json')" />
     <EmbeddedResource Include="EmbeddedBuildMode.txt" LogicalName="FootholdConfigManager.EmbeddedBuildMode.txt" Condition="Exists('EmbeddedBuildMode.txt')" />
+    <EmbeddedResource Include="ThirdPartyNotices.txt" LogicalName="FootholdConfigManager.ThirdPartyNotices.txt" />
   </ItemGroup>
 </Project>

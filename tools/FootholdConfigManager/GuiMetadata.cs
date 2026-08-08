@@ -61,8 +61,12 @@ internal sealed class GuiMetadataStore
 
     public void Save()
     {
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path) ?? ".");
-        File.WriteAllText(Path, ToJson());
+        SaveTo(Path);
+    }
+
+    internal void SaveTo(string path)
+    {
+        AtomicFile.WriteUtf8Text(path, ToJson());
     }
 
     public string ToJson()

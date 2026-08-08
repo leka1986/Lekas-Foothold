@@ -107,6 +107,7 @@ internal sealed class StringListCatalogStore
             Configs.Remove(scope);
         }
 
+        NeedsSave = changed;
         return changed;
     }
 
@@ -148,6 +149,7 @@ internal sealed class StringListCatalogStore
         }
 
         values.Add(value);
+        NeedsSave = true;
         return true;
     }
 
@@ -191,13 +193,22 @@ internal sealed class StringListCatalogStore
             Configs.Remove(scope);
         }
 
+        if (removed)
+        {
+            NeedsSave = true;
+        }
+
         return removed;
     }
 
     public void Save()
     {
-        Directory.CreateDirectory(RuntimeSettings.SettingsDirectory);
-        File.WriteAllText(CatalogPath, JsonSerializer.Serialize(this, JsonOptions));
+        SaveTo(CatalogPath);
+    }
+
+    internal void SaveTo(string path)
+    {
+        AtomicFile.WriteUtf8Text(path, JsonSerializer.Serialize(this, JsonOptions));
         NeedsSave = false;
     }
 

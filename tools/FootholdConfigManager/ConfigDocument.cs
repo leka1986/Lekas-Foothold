@@ -65,6 +65,7 @@ internal sealed class ConfigStringListTable
     public string? GuiEditor { get; init; }
     public string? GuiVisibleWhen { get; init; }
     public string? InstallPolicy { get; init; }
+    public string? NewItemPolicy { get; init; }
     public required int StartLineIndex { get; set; }
     public required int EndLineIndex { get; set; }
     public List<ConfigStringListItem> Items { get; } = new();
@@ -945,6 +946,26 @@ internal sealed class ConfigDocument
         return true;
     }
 
+    internal bool AppendTableBlockFrom(ConfigDocument sourceDocument, string key)
+    {
+        if (TryFindTableBlock(key, out _, out _) ||
+            !sourceDocument.TryFindTableBlock(key, out var sourceStart, out var sourceEnd))
+        {
+            return false;
+        }
+
+        if (_lines.Count > 0 && !string.IsNullOrWhiteSpace(_lines[^1]))
+        {
+            _lines.Add("");
+        }
+
+        _lines.AddRange(sourceDocument._lines.Skip(sourceStart).Take(sourceEnd - sourceStart + 1));
+        Parse();
+        ApplyMetadata();
+        _hasStructuralChanges = true;
+        return true;
+    }
+
     public bool RewriteBucketStringListBodyFrom(ConfigDocument currentDocument, string key)
     {
         var targetTable = StringListTables.FirstOrDefault(table => table.Key.Equals(key, StringComparison.Ordinal));
@@ -1152,8 +1173,18 @@ internal sealed class ConfigDocument
             throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
         }
 
-        File.WriteAllText(targetPath, RenderCurrentText(), new UTF8Encoding(false));
+        AtomicFile.WriteUtf8Text(targetPath, RenderCurrentText());
         return targetPath;
+    }
+
+    internal void MaterializePendingEdits()
+    {
+        var renderedText = RenderCurrentText();
+        _lines.Clear();
+        _lines.AddRange(Regex.Split(renderedText, "\r\n|\n|\r"));
+        Parse();
+        ApplyMetadata();
+        _hasStructuralChanges = true;
     }
 
     public string SaveTo(string targetPath)
@@ -1164,6 +1195,9 @@ internal sealed class ConfigDocument
             throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
         }
 
+        var savedText = RenderCurrentText();
+        AtomicFile.WriteUtf8Text(targetPath, savedText);
+
         var edits = new List<(int LineIndex, Action Apply)>();
         edits.AddRange(Entries.Where(entry => entry.IsChanged)
             .Select(entry => (entry.LineIndex, (Action)(() =>
@@ -1171,8 +1205,17 @@ internal sealed class ConfigDocument
                 if (entry.IsLongText)
                 {
                     var count = entry.EndLineIndex - entry.LineIndex + 1;
+                    var oldEndLineIndex = entry.EndLineIndex;
+                    var renderedLines = entry.RenderLines();
                     _lines.RemoveRange(entry.LineIndex, count);
-                    _lines.InsertRange(entry.LineIndex, entry.RenderLines());
+                    _lines.InsertRange(entry.LineIndex, renderedLines);
+                    var lineDelta = renderedLines.Count - count;
+                    if (lineDelta != 0)
+                    {
+                        ShiftLineIndexes(oldEndLineIndex + 1, lineDelta);
+                    }
+
+                    entry.EndLineIndex = entry.LineIndex + renderedLines.Count - 1;
                 }
                 else
                 {
@@ -1194,8 +1237,7 @@ internal sealed class ConfigDocument
             edit.Apply();
         }
 
-        File.WriteAllText(targetPath, string.Join(NewLine, _lines), new UTF8Encoding(false));
-        _savedSnapshot = RenderCurrentText();
+        _savedSnapshot = savedText;
         _hasStructuralChanges = false;
         return targetPath;
     }
@@ -1728,11 +1770,44 @@ internal sealed class ConfigDocument
 
         errors.AddRange(ValidateSideMultiplierMetadata());
         errors.AddRange(ValidateStageTables());
+        errors.AddRange(ValidateStringListNewItemPolicies());
         errors.AddRange(ValidateClosedTableBlocks());
         errors.AddRange(ValidateStringListSeparators());
         errors.AddRange(ValidateSafeConfigTableFormat());
         errors.AddRange(ValidateMisplacedTopLevelRows());
         errors.AddRange(LuaSyntaxValidator.Validate(RenderCurrentText(), Path));
+        return errors;
+    }
+
+    private List<string> ValidateStringListNewItemPolicies()
+    {
+        const string supportedPolicy = "commentWhenVisible";
+        var errors = new List<string>();
+        foreach (var table in StringListTables.Where(table => !string.IsNullOrWhiteSpace(table.NewItemPolicy)))
+        {
+            var policy = table.NewItemPolicy!.Trim();
+            if (!policy.Equals(supportedPolicy, StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add(table.Key + ": unsupported newItemPolicy '" + policy + "'.");
+                continue;
+            }
+
+            if (!string.Equals(table.GuiEditor?.Trim(), "bucket", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add(table.Key + ": newItemPolicy '" + supportedPolicy + "' requires editor=\"bucket\".");
+            }
+
+            if (!string.Equals(table.InstallPolicy?.Trim(), "mergeRows", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add(table.Key + ": newItemPolicy '" + supportedPolicy + "' requires installPolicy=\"mergeRows\".");
+            }
+
+            if (string.IsNullOrWhiteSpace(table.GuiVisibleWhen))
+            {
+                errors.Add(table.Key + ": newItemPolicy '" + supportedPolicy + "' requires visibleWhen.");
+            }
+        }
+
         return errors;
     }
 
@@ -2609,6 +2684,14 @@ internal sealed class ConfigDocument
                     item.LineIndex += delta;
                 }
             }
+
+            foreach (var item in table.CommentedItems)
+            {
+                if (item.LineIndex >= startLine)
+                {
+                    item.LineIndex += delta;
+                }
+            }
         }
 
         foreach (var table in StageTables)
@@ -3255,6 +3338,7 @@ internal sealed class ConfigDocument
                 var guiRowLabel = ReadGuiRowLabel(pendingComments);
                 var linkedSettingKey = ReadGuiLinkedSetting(pendingComments);
                 var installPolicy = ReadGuiInstallPolicy(pendingComments);
+                var newItemPolicy = ReadGuiNewItemPolicy(pendingComments);
                 if (!string.IsNullOrWhiteSpace(guiLabel))
                 {
                     _guiLabels[displayKey] = guiLabel;
@@ -3272,7 +3356,7 @@ internal sealed class ConfigDocument
 
                 var tableParent = tablePath.LastOrDefault();
                 var description = BuildDescription(pendingComments, split.inlineComment, CollectFollowingComments(i + 1));
-                if (TryReadStringListTable(i, key, section, description, guiLabel, guiEditor, guiVisibleWhen, installPolicy, out var stringListTable))
+                if (TryReadStringListTable(i, key, section, description, guiLabel, guiEditor, guiVisibleWhen, installPolicy, newItemPolicy, out var stringListTable))
                 {
                     StringListTables.Add(stringListTable);
                     pendingComments.Clear();
@@ -3365,6 +3449,16 @@ internal sealed class ConfigDocument
             };
 
             entry.InitializeValueText(ToDisplayValue(value, kind));
+            var scalarInstallPolicy = ReadGuiInstallPolicy(pendingComments);
+            if (!string.IsNullOrWhiteSpace(scalarInstallPolicy))
+            {
+                _guiInstallPolicies[entry.DisplayKey] = scalarInstallPolicy;
+                if (string.IsNullOrWhiteSpace(entry.ParentKey))
+                {
+                    _guiInstallPolicies[entry.Key] = scalarInstallPolicy;
+                }
+            }
+
             AddChoices(entry);
             entry.UseChoiceDisplayForCurrentValue();
             AddTupleFields(entry);
@@ -3430,6 +3524,7 @@ internal sealed class ConfigDocument
         string? guiEditor,
         string? guiVisibleWhen,
         string? installPolicy,
+        string? newItemPolicy,
         out ConfigStringListTable table)
     {
         table = null!;
@@ -3454,6 +3549,7 @@ internal sealed class ConfigDocument
             GuiEditor = guiEditor,
             GuiVisibleWhen = guiVisibleWhen,
             InstallPolicy = installPolicy,
+            NewItemPolicy = newItemPolicy,
             StartLineIndex = lineIndex,
             EndLineIndex = endLine
         };
@@ -3975,10 +4071,16 @@ internal sealed class ConfigDocument
             return ConfigValueKind.Number;
         }
 
-        if (trimmed.Length >= 2 && ((trimmed[0] == '"' && trimmed[^1] == '"') || (trimmed[0] == '\'' && trimmed[^1] == '\'')))
+        if (trimmed.Length >= 2 && trimmed[0] is '"' or '\'')
         {
-            quoteChar = trimmed[0];
-            return ConfigValueKind.String;
+            var quotedTokens = ReadQuotedStringTokens(trimmed, 0, trimmed.Length);
+            if (quotedTokens.Count == 1 &&
+                quotedTokens[0].StartIndex == 0 &&
+                quotedTokens[0].Length == trimmed.Length)
+            {
+                quoteChar = trimmed[0];
+                return ConfigValueKind.String;
+            }
         }
 
         return ConfigValueKind.Raw;
@@ -4178,6 +4280,11 @@ internal sealed class ConfigDocument
     private static string? ReadGuiInstallPolicy(IEnumerable<string> comments)
     {
         return ReadGuiAttribute(comments, "installPolicy");
+    }
+
+    private static string? ReadGuiNewItemPolicy(IEnumerable<string> comments)
+    {
+        return ReadGuiAttribute(comments, "newItemPolicy");
     }
 
     private static string? ReadGuiValidValues(IEnumerable<string> comments)

@@ -5,9 +5,20 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length > 0 && args[0].Equals("--self-test-stability", StringComparison.OrdinalIgnoreCase))
+        {
+            return StabilityRegressionSelfTest.Run();
+        }
+
         if (args.Length > 0 && args[0].Equals("--self-test-merge", StringComparison.OrdinalIgnoreCase))
         {
             return MainForm.RunMergeRegressionSelfTest();
+        }
+
+        if (args.Length > 0 && args[0].Equals("--performance-probe", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplicationConfiguration.Initialize();
+            return MainForm.RunPerformanceProbe(args.Skip(1).ToList());
         }
 
         if (args.Length > 0 && args[0].Equals("--check", StringComparison.OrdinalIgnoreCase))

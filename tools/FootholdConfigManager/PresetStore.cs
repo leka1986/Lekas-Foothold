@@ -63,7 +63,12 @@ internal static class PresetStore
         EnsureDirectory();
         var values = entries.ToDictionary(entry => entry.DisplayKey, entry => entry.ValueText, StringComparer.Ordinal);
         var path = Path.Combine(DirectoryPath, SafeName(name) + ".json");
-        File.WriteAllText(path, JsonSerializer.Serialize(values, JsonOptions));
+        SaveLegacyValuesTo(path, values);
+    }
+
+    internal static void SaveLegacyValuesTo(string path, IReadOnlyDictionary<string, string> values)
+    {
+        AtomicFile.WriteUtf8Text(path, JsonSerializer.Serialize(values, JsonOptions));
     }
 
     public static Dictionary<string, string> Load(string name)
@@ -201,7 +206,7 @@ internal static class PresetStore
             var targetPath = Path.Combine(DirectoryPath, Path.GetFileName(legacyPath));
             if (!File.Exists(targetPath))
             {
-                File.Copy(legacyPath, targetPath);
+                AtomicFile.Copy(legacyPath, targetPath);
             }
         }
     }
@@ -235,52 +240,23 @@ internal static class PresetStore
         return preset;
     }
 
-    private static void WriteConfig(
+    internal static void WriteConfig(
         StoredConfigPreset preset,
         Action<string> writeConfig,
         bool updateTimestamp)
     {
         Directory.CreateDirectory(preset.DirectoryPath);
-        var temporaryPath = preset.ConfigPath + ".tmp-" + Guid.NewGuid().ToString("N");
-        try
+        AtomicFile.WriteStaged(preset.ConfigPath, writeConfig);
+        if (updateTimestamp)
         {
-            writeConfig(temporaryPath);
-            if (!File.Exists(temporaryPath))
-            {
-                throw new InvalidOperationException("The preset config was not written.");
-            }
-
-            File.Move(temporaryPath, preset.ConfigPath, overwrite: true);
-            if (updateTimestamp)
-            {
-                preset.UpdatedAt = DateTime.Now;
-            }
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath))
-            {
-                File.Delete(temporaryPath);
-            }
+            preset.UpdatedAt = DateTime.Now;
         }
     }
 
-    private static void SaveMetadata(StoredConfigPreset preset)
+    internal static void SaveMetadata(StoredConfigPreset preset)
     {
         Directory.CreateDirectory(preset.DirectoryPath);
-        var temporaryPath = preset.MetadataPath + ".tmp-" + Guid.NewGuid().ToString("N");
-        try
-        {
-            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(preset, JsonOptions));
-            File.Move(temporaryPath, preset.MetadataPath, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath))
-            {
-                File.Delete(temporaryPath);
-            }
-        }
+        AtomicFile.WriteUtf8Text(preset.MetadataPath, JsonSerializer.Serialize(preset, JsonOptions));
     }
 
     private static string GetPresetsDirectory(string instanceId)

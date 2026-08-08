@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace FootholdConfigManager;
 
-internal sealed class MainForm : Form
+internal sealed partial class MainForm : Form
 {
     private const string AdminPassword = "configfoothold";
     private const string DiscordInviteUrl = "https://discord.gg/cshgmgXuxE";
@@ -20,10 +20,11 @@ internal sealed class MainForm : Form
     private const string ImportedNewHighlightTag = "ImportedNewHighlight";
     private const string ImportedNewBadgeTag = "ImportedNewBadge";
     private const string LockedPrefixTag = "LockedPrefix";
+    private const string ConfigSearchTargetNamePrefix = "ConfigSearchTarget:";
     private const int ConfigBackupRetention = 5;
+    private const int CategoryPanelCacheCapacity = 18;
     private static readonly JsonSerializerOptions StoredDefaultsJsonOptions = new() { WriteIndented = true };
     private static string StoredDefaultsDirectory => Path.Combine(RuntimeSettings.SettingsDirectory, "MizDefaults");
-    private static string StoredDefaultsIndexPath => Path.Combine(StoredDefaultsDirectory, "index.json");
     private static string ConfigBackupsDirectory => Path.Combine(RuntimeSettings.SettingsDirectory, "Backups");
     private static string ConfigBackupsIndexPath => Path.Combine(ConfigBackupsDirectory, "index.json");
     private static Color MainBackground = Color.FromArgb(221, 229, 234);
@@ -53,7 +54,7 @@ internal sealed class MainForm : Form
         string? BeforeValue = null,
         string? AfterValue = null,
         int CollapseGeneration = 0);
-    private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly);
+    private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly, bool IsNew);
     private sealed record ImportedNewEntryMarker(string Category, string DisplayKey);
     private sealed record SideMultiplierPreviewBinding(ConfigEntry Entry, NumericUpDown Input, bool IsRed);
     private sealed class EntryEditorBinding
@@ -114,7 +115,7 @@ internal sealed class MainForm : Form
 
     private sealed record MissingInstanceRecovery(MissingInstanceRecoveryKind Kind, string? Path);
 
-    private sealed record ExtractedMizConfig(string Path, string ConfigFileName);
+    internal sealed record ExtractedMizConfig(string Path, string ConfigFileName);
 
     private sealed record FirstRunMizCandidate(string Path, DateTime Modified)
     {
@@ -357,6 +358,253 @@ internal sealed class MainForm : Form
         }
     }
 
+    private sealed class ConfigSearchSurface : Panel
+    {
+        private readonly TextBox _input;
+        private bool _hover;
+        private bool _clearHover;
+        private bool _clearPressed;
+        private int _horizontalPadding = 8;
+        private int _iconSize = 14;
+        private int _iconGap = 7;
+        private int _clearWidth = 28;
+        private int _cornerRadius = 6;
+        private Color _surfaceColor;
+        private Color _borderColor;
+        private Color _focusColor;
+        private Color _iconColor;
+        private Color _hoverColor;
+
+        public ConfigSearchSurface(TextBox input)
+        {
+            _input = input;
+            TabStop = false;
+            SetStyle(
+                ControlStyles.UserPaint |
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw,
+                true);
+
+            _input.BorderStyle = BorderStyle.None;
+            _input.Margin = new Padding(0);
+            Controls.Add(_input);
+            _input.TextChanged += (_, _) =>
+            {
+                PerformLayout();
+                Invalidate();
+            };
+            _input.GotFocus += (_, _) => Invalidate();
+            _input.LostFocus += (_, _) => Invalidate();
+        }
+
+        public void ApplyMetrics(int horizontalPadding, int iconSize, int iconGap, int clearWidth, int cornerRadius)
+        {
+            _horizontalPadding = horizontalPadding;
+            _iconSize = iconSize;
+            _iconGap = iconGap;
+            _clearWidth = clearWidth;
+            _cornerRadius = cornerRadius;
+            PerformLayout();
+            Invalidate();
+        }
+
+        public void ApplyPalette(Color surfaceColor, Color borderColor, Color focusColor, Color iconColor, Color hoverColor)
+        {
+            _surfaceColor = surfaceColor;
+            _borderColor = borderColor;
+            _focusColor = focusColor;
+            _iconColor = iconColor;
+            _hoverColor = hoverColor;
+            BackColor = surfaceColor;
+            _input.BackColor = surfaceColor;
+            _input.ForeColor = PrimaryTextColor;
+            Invalidate();
+        }
+
+        protected override void OnLayout(LayoutEventArgs levent)
+        {
+            base.OnLayout(levent);
+            var textLeft = _horizontalPadding + _iconSize + _iconGap;
+            var textRight = _input.TextLength > 0
+                ? Width - _clearWidth - _horizontalPadding
+                : Width - _horizontalPadding;
+            var textHeight = _input.PreferredHeight;
+            var textTop = Math.Max(0, (Height - textHeight) / 2);
+            _input.SetBounds(
+                textLeft,
+                textTop,
+                Math.Max(0, textRight - textLeft),
+                textHeight);
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            _hover = true;
+            Invalidate();
+            base.OnMouseEnter(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _hover = false;
+            _clearHover = false;
+            _clearPressed = false;
+            Cursor = Cursors.IBeam;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            var clearHover = _input.TextLength > 0 && ClearBounds().Contains(e.Location);
+            if (_clearHover != clearHover)
+            {
+                _clearHover = clearHover;
+                Invalidate();
+            }
+
+            Cursor = clearHover ? Cursors.Hand : Cursors.IBeam;
+            base.OnMouseMove(e);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _clearPressed = _input.TextLength > 0 && ClearBounds().Contains(e.Location);
+                if (!_clearPressed)
+                {
+                    _input.Focus();
+                }
+
+                Invalidate();
+            }
+
+            base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left &&
+                _clearPressed &&
+                _input.TextLength > 0 &&
+                ClearBounds().Contains(e.Location))
+            {
+                _input.Clear();
+                _input.Focus();
+            }
+
+            _clearPressed = false;
+            Invalidate();
+            base.OnMouseUp(e);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var bounds = new RectangleF(0.5F, 0.5F, Math.Max(0, Width - 1F), Math.Max(0, Height - 1F));
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var path = RoundedRectangle(bounds, _cornerRadius);
+            using var surface = new SolidBrush(_surfaceColor);
+            e.Graphics.FillPath(surface, path);
+
+            var focused = _input.Focused;
+            var borderColor = focused ? _focusColor : _hover ? ColorBlend(_borderColor, _focusColor, 0.35F) : _borderColor;
+            using var border = new Pen(borderColor, focused ? 1.8F : 1F);
+            e.Graphics.DrawPath(border, path);
+
+            DrawSearchIcon(e.Graphics, focused ? _focusColor : _iconColor);
+            if (_input.TextLength > 0)
+            {
+                DrawClearIcon(e.Graphics);
+            }
+        }
+
+        private Rectangle ClearBounds()
+        {
+            return new Rectangle(Math.Max(0, Width - _clearWidth), 0, _clearWidth, Height);
+        }
+
+        private void DrawSearchIcon(Graphics graphics, Color color)
+        {
+            var size = Math.Max(8, _iconSize);
+            var left = _horizontalPadding;
+            var top = Math.Max(0, (Height - size) / 2);
+            var lensSize = Math.Max(6, (int)Math.Round(size * 0.68));
+            using var pen = new Pen(color, Math.Max(1.4F, size / 10F))
+            {
+                StartCap = System.Drawing.Drawing2D.LineCap.Round,
+                EndCap = System.Drawing.Drawing2D.LineCap.Round
+            };
+            graphics.DrawEllipse(pen, left, top, lensSize, lensSize);
+            var handleStart = new PointF(left + lensSize * 0.75F, top + lensSize * 0.75F);
+            var handleEnd = new PointF(left + size - 1F, top + size - 1F);
+            graphics.DrawLine(pen, handleStart, handleEnd);
+        }
+
+        private void DrawClearIcon(Graphics graphics)
+        {
+            var bounds = ClearBounds();
+            var size = Math.Max(8, Math.Min(_iconSize, Math.Min(bounds.Width, bounds.Height) - 6));
+            var cx = bounds.Left + bounds.Width / 2F;
+            var cy = bounds.Top + bounds.Height / 2F;
+            if (_clearHover || _clearPressed)
+            {
+                var hoverColor = _clearPressed
+                    ? ColorBlend(_hoverColor, _focusColor, 0.25F)
+                    : _hoverColor;
+                using var hoverBrush = new SolidBrush(hoverColor);
+                graphics.FillEllipse(hoverBrush, cx - size * 0.75F, cy - size * 0.75F, size * 1.5F, size * 1.5F);
+            }
+
+            var half = size * 0.30F;
+            using var pen = new Pen(_clearHover ? PrimaryTextColor : _iconColor, Math.Max(1.3F, size / 10F))
+            {
+                StartCap = System.Drawing.Drawing2D.LineCap.Round,
+                EndCap = System.Drawing.Drawing2D.LineCap.Round
+            };
+            graphics.DrawLine(pen, cx - half, cy - half, cx + half, cy + half);
+            graphics.DrawLine(pen, cx + half, cy - half, cx - half, cy + half);
+        }
+
+        private static System.Drawing.Drawing2D.GraphicsPath RoundedRectangle(RectangleF bounds, float radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            var diameter = Math.Min(Math.Min(bounds.Width, bounds.Height), Math.Max(0, radius * 2F));
+            if (diameter <= 1F)
+            {
+                path.AddRectangle(bounds);
+                return path;
+            }
+
+            var arc = new RectangleF(bounds.X, bounds.Y, diameter, diameter);
+            path.AddArc(arc, 180, 90);
+            arc.X = bounds.Right - diameter;
+            path.AddArc(arc, 270, 90);
+            arc.Y = bounds.Bottom - diameter;
+            path.AddArc(arc, 0, 90);
+            arc.X = bounds.X;
+            path.AddArc(arc, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        private static Color ColorBlend(Color from, Color to, float amount)
+        {
+            amount = Math.Clamp(amount, 0F, 1F);
+            return Color.FromArgb(
+                (int)Math.Round(from.A + (to.A - from.A) * amount),
+                (int)Math.Round(from.R + (to.R - from.R) * amount),
+                (int)Math.Round(from.G + (to.G - from.G) * amount),
+                (int)Math.Round(from.B + (to.B - from.B) * amount));
+        }
+    }
+
     private sealed class ThemeIconButton : Control
     {
         private readonly System.Windows.Forms.Timer _animationTimer = new() { Interval = 15 };
@@ -575,6 +823,44 @@ internal sealed class MainForm : Form
         }
     }
 
+    private sealed class ConfigSearchResult
+    {
+        public ConfigSearchResult(
+            string targetKey,
+            string? rowKey,
+            string displayName,
+            string categoryName,
+            string categoryLabel,
+            string excerpt,
+            int score,
+            int order)
+        {
+            TargetKey = targetKey;
+            RowKey = rowKey;
+            DisplayName = displayName;
+            CategoryName = categoryName;
+            CategoryLabel = categoryLabel;
+            Excerpt = excerpt;
+            Score = score;
+            Order = order;
+        }
+
+        public string TargetKey { get; }
+        public string? RowKey { get; }
+        public string DisplayName { get; }
+        public string CategoryName { get; }
+        public string CategoryLabel { get; }
+        public string Excerpt { get; }
+        public int Score { get; }
+        public int Order { get; }
+        public bool CanNavigate => !string.IsNullOrWhiteSpace(TargetKey);
+
+        public override string ToString()
+        {
+            return DisplayName;
+        }
+    }
+
     private sealed class StageTableItem
     {
         public StageTableItem(ConfigStageTable table)
@@ -640,6 +926,7 @@ internal sealed class MainForm : Form
     {
         public List<string> UpdatedNames { get; } = new();
         public List<string> Errors { get; } = new();
+        public List<string> Warnings { get; } = new();
     }
 
     private sealed class CopyTargetItem
@@ -777,15 +1064,22 @@ internal sealed class MainForm : Form
         public List<(string Key, string Value)> PreservedTableRows { get; } = new();
         public List<(string Table, string Value)> PreservedListItems { get; } = new();
         public List<(string Key, string Value)> SkippedOldValues { get; } = new();
+        public HashSet<string> HandledDuplicateTables { get; } = new(StringComparer.Ordinal);
+        public List<string> PreservedWholeDuplicateTables { get; } = new();
+        public List<DefaultedPlayerValue> DefaultedPlayerValues { get; } = new();
+        public List<ImportedBucketNewItem> ImportedBucketNewItems { get; } = new();
+        public HashSet<string> HandledNewItemPolicyTables { get; } = new(StringComparer.Ordinal);
         public int UnchangedCount { get; set; }
     }
 
-    private sealed class StoredMizDefaultsIndex
+    private sealed record ImportedBucketNewItem(string Category, string TableKey, string Value);
+
+    internal sealed class StoredMizDefaultsIndex
     {
         public List<StoredMizDefaultsInfo> Items { get; set; } = new();
     }
 
-    private sealed class StoredMizDefaultsInfo
+    internal sealed class StoredMizDefaultsInfo
     {
         public string Id { get; set; } = "";
         public string SourceKind { get; set; } = "miz";
@@ -793,6 +1087,7 @@ internal sealed class MainForm : Form
         public string MizPath { get; set; } = "";
         public string ConfigFileName { get; set; } = RuntimeSettings.DefaultConfigFileName;
         public string ConfigPath { get; set; } = "";
+        public List<string> TargetConfigPaths { get; set; } = new();
         public DateTime StoredAt { get; set; }
     }
 
@@ -1031,6 +1326,8 @@ internal sealed class MainForm : Form
     private readonly Label _blueMultiplierText = new();
     private readonly TableLayoutPanel _tuplePanel = new();
     private readonly ListBox _categoryList = new();
+    private readonly ListBox _searchResultsList = new();
+    private ConfigSearchSurface? _configSearchSurface;
     private readonly Panel _formHost = new BackgroundFocusPanel();
     private readonly ToolTip _toolTip = new()
     {
@@ -1060,6 +1357,7 @@ internal sealed class MainForm : Form
     private TableLayoutPanel? _toolbarLayout;
     private TableLayoutPanel? _instanceLayout;
     private TableLayoutPanel? _zoomLayout;
+    private TableLayoutPanel? _leftRailLayout;
     private DcsDesanitizeStatus _dcsDesanitizeStatus = DcsDesanitizeStatus.FileNotSelected;
     private SplitContainer? _mainSplit;
     private Panel? _statusPanel;
@@ -1068,6 +1366,9 @@ internal sealed class MainForm : Form
     private ConfigEntry? _activeEntry;
     private readonly RuntimeSettings _settings = RuntimeSettings.Load();
     private readonly StringListCatalogStore _stringListCatalog = StringListCatalogStore.Load();
+    private readonly PendingNewItemStore _pendingNewItemStore = PendingNewItemStore.Load();
+    private PendingNewItemSession? _pendingNewItemSession;
+    private bool _pendingNewItemLoadWarningShown;
     private readonly bool _requestAdminOnLoad;
     private bool _adminUnlocked;
     private bool _loadingEntry;
@@ -1077,11 +1378,14 @@ internal sealed class MainForm : Form
     private bool _loadingCategories;
     private bool _gridConfigured;
     private bool _rawSearchBound;
+    private bool _configSearchBound;
     private bool _advancedToggleBound;
     private string? _renderedCategoryName;
     private string? _activeImportedNewCategoryName;
     private Control? _rawEditorRoot;
     private readonly Dictionary<string, Control> _categoryPanelCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly BoundedLruSet<string> _categoryPanelRecency = new(CategoryPanelCacheCapacity, StringComparer.OrdinalIgnoreCase);
+    private readonly UiViewGeneration _uiViewGeneration = new();
     private readonly HashSet<string> _dirtyCategoryPanels = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Point> _categoryScrollPositions = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, HashSet<string>> _unseenImportedNewEntryKeysByCategory = new(StringComparer.OrdinalIgnoreCase);
@@ -1095,6 +1399,12 @@ internal sealed class MainForm : Form
     private int _brandClickCount;
     private DateTime _lastBrandClickUtc = DateTime.MinValue;
     private readonly Stack<UndoStep> _undoStack = new();
+    private readonly Dictionary<Control, Color> _configSearchHighlightColors = new();
+    private System.Windows.Forms.Timer? _configSearchHighlightTimer;
+    private System.Windows.Forms.Timer? _configSearchRefreshTimer;
+    private readonly DebouncedSearchQuery _pendingConfigSearchQuery = new();
+    private IReadOnlyList<ConfigSearchIndexItem>? _configSearchIndex;
+    private string? _renderedConfigSearchQuery;
     private int _undoCollapseGeneration;
     private bool _restoringUndo;
     private int _uiZoomPercent;
@@ -1121,6 +1431,12 @@ internal sealed class MainForm : Form
         RefreshDcsDesanitizeStatus(updateStatusLine: false);
         EnableMizDragDrop();
         FormClosing += (_, _) => SaveWindowSize();
+        FormClosed += (_, _) =>
+        {
+            DisposeConfigSearchRefreshTimer();
+            RestoreConfigSearchHighlight();
+            ClearCategoryPanelCache();
+        };
         Load += (_, _) =>
         {
             RefreshDcsDesanitizeStatus(updateStatusLine: false);
@@ -1195,6 +1511,7 @@ internal sealed class MainForm : Form
 
     private void ToggleTheme()
     {
+        RestoreConfigSearchHighlight();
         _darkMode = !_darkMode;
         _settings.DarkMode = _darkMode;
         _settings.Save();
@@ -1254,6 +1571,10 @@ internal sealed class MainForm : Form
     {
         switch (control)
         {
+            case ConfigSearchSurface searchSurface:
+                searchSurface.ApplyPalette(InputBackground, BorderColor, BrandColor, HelpTextColor, HeaderBackground);
+                break;
+
             case TextBoxBase:
             case ComboBox:
             case NumericUpDown:
@@ -1968,6 +2289,8 @@ internal sealed class MainForm : Form
         }
 
         ApplyCategoryListSizing();
+        ApplyConfigSearchResultListSizing();
+        ApplyConfigSearchBarSizing();
 
         if (_instanceLayout is not null)
         {
@@ -2677,10 +3000,13 @@ internal sealed class MainForm : Form
         };
         var discordLink = MakeAboutLink("Discord", OpenDiscordInvite, "Open Foothold Discord.");
         var gitHubLink = MakeAboutLink("GitHub", OpenGitHubRepository, "Open the Foothold GitHub repository.");
-        discordLink.Margin = new Padding(0, 0, Zoomed(16), 0);
-        gitHubLink.Margin = new Padding(0);
+        var licencesLink = MakeAboutLink("Licences", ShowThirdPartyNoticesDialog, "Show third-party licences.");
+        discordLink.Margin = new Padding(0, 0, Zoomed(12), 0);
+        gitHubLink.Margin = new Padding(0, 0, Zoomed(12), 0);
+        licencesLink.Margin = new Padding(0);
         linkPanel.Controls.Add(discordLink);
         linkPanel.Controls.Add(gitHubLink);
+        linkPanel.Controls.Add(licencesLink);
         panel.Controls.Add(linkPanel, 0, 3);
 
         var buttonPanel = new TableLayoutPanel
@@ -2709,6 +3035,89 @@ internal sealed class MainForm : Form
         panel.Controls.Add(buttonPanel, 0, 4);
 
         dialog.AcceptButton = closeButton;
+        ApplyDialogChrome(dialog);
+        dialog.ShowDialog(this);
+    }
+
+    private void ShowThirdPartyNoticesDialog()
+    {
+        using var stream = typeof(MainForm).Assembly.GetManifestResourceStream(
+            "FootholdConfigManager.ThirdPartyNotices.txt");
+        if (stream is null)
+        {
+            MessageBox.Show(this, "Third-party notices are unavailable.", "Licences",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        using var reader = new StreamReader(stream, new System.Text.UTF8Encoding(false));
+        var notices = reader.ReadToEnd();
+        using var dialog = new Form
+        {
+            Text = "Third-Party Licences",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.Sizable,
+            MinimizeBox = false,
+            MaximizeBox = true,
+            ClientSize = FittedDialogClientSize(760, 620, 520, 380),
+            MinimumSize = FittedDialogMinimumSize(520, 380),
+            Font = Font,
+            BackColor = MainBackground,
+            ForeColor = PrimaryTextColor
+        };
+
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = new Padding(Zoomed(12)),
+            BackColor = MainBackground
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(8)));
+        dialog.Controls.Add(panel);
+
+        var noticesBox = new RichTextBox
+        {
+            Dock = DockStyle.Fill,
+            ReadOnly = true,
+            Text = notices,
+            ScrollBars = RichTextBoxScrollBars.Vertical,
+            BorderStyle = BorderStyle.FixedSingle,
+            BackColor = InputBackground,
+            ForeColor = PrimaryTextColor,
+            Font = Font
+        };
+        panel.Controls.Add(noticesBox, 0, 0);
+
+        var buttonPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 1,
+            Padding = new Padding(0, Zoomed(8), 0, 0),
+            Margin = new Padding(0),
+            BackColor = MainBackground
+        };
+        buttonPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var closeButton = new Button
+        {
+            Text = "Close",
+            DialogResult = DialogResult.OK
+        };
+        SizeDialogButton(closeButton, 110);
+        closeButton.Anchor = AnchorStyles.Right;
+        closeButton.Margin = new Padding(0);
+        StyleButton(closeButton);
+        EnableButtonInteractiveChrome(closeButton);
+        buttonPanel.Controls.Add(closeButton, 0, 0);
+        panel.Controls.Add(buttonPanel, 0, 1);
+
+        dialog.AcceptButton = closeButton;
+        dialog.CancelButton = closeButton;
         ApplyDialogChrome(dialog);
         dialog.ShowDialog(this);
     }
@@ -3641,12 +4050,24 @@ internal sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 2,
+            RowCount = 3,
             BackColor = MainBackground,
             Padding = new Padding(0)
         };
+        _leftRailLayout = leftRail;
+        leftRail.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(28)));
         leftRail.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         leftRail.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        leftRail.Controls.Add(BuildConfigSearchBar(), 0, 0);
+        ApplyConfigSearchBarSizing();
+
+        var navigationHost = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = MainBackground,
+            Margin = new Padding(0)
+        };
 
         _categoryList.Dock = DockStyle.Fill;
         _categoryList.BorderStyle = BorderStyle.FixedSingle;
@@ -3667,9 +4088,23 @@ internal sealed class MainForm : Form
                 RenderSelectedCategory();
             }
         };
+        navigationHost.Controls.Add(_categoryList);
+
+        _searchResultsList.Dock = DockStyle.Fill;
+        _searchResultsList.BorderStyle = BorderStyle.FixedSingle;
+        _searchResultsList.DrawMode = DrawMode.OwnerDrawFixed;
+        _searchResultsList.IntegralHeight = false;
+        _searchResultsList.Visible = false;
+        ApplyConfigSearchResultListSizing();
+        StyleInput(_searchResultsList);
+        _searchResultsList.DrawItem += DrawConfigSearchResultItem;
+        _searchResultsList.MouseClick += HandleConfigSearchResultClick;
+        _searchResultsList.KeyDown += HandleConfigSearchResultKeyDown;
+        navigationHost.Controls.Add(_searchResultsList);
+
         split.Panel1.BackColor = MainBackground;
-        leftRail.Controls.Add(_categoryList, 0, 0);
-        leftRail.Controls.Add(BuildLeftToolsPanel(), 0, 1);
+        leftRail.Controls.Add(navigationHost, 0, 1);
+        leftRail.Controls.Add(BuildLeftToolsPanel(), 0, 2);
         split.Panel1.Controls.Add(leftRail);
 
         _formHost.Dock = DockStyle.Fill;
@@ -3679,6 +4114,30 @@ internal sealed class MainForm : Form
         split.Panel2.BackColor = MainBackground;
         split.Panel2.Controls.Add(_formHost);
         return split;
+    }
+
+    private Control BuildConfigSearchBar()
+    {
+        _searchBox.PlaceholderText = "Search settings and comments";
+        _searchBox.Margin = new Padding(0);
+        _configSearchSurface = new ConfigSearchSurface(_searchBox)
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, Zoomed(6))
+        };
+        _configSearchSurface.ApplyPalette(InputBackground, BorderColor, BrandColor, HelpTextColor, HeaderBackground);
+        SetToolbarHelp(_configSearchSurface, "Search visible config names, keys, and help comments.");
+        SetToolbarHelp(_searchBox, "Search visible config names, keys, and help comments.");
+
+        if (!_configSearchBound)
+        {
+            _searchBox.TextChanged += (_, _) => ScheduleConfigSearchResultsRefresh();
+            _searchBox.Enter += (_, _) => RefreshConfigSearchResults();
+            _searchBox.KeyDown += HandleConfigSearchBoxKeyDown;
+            _configSearchBound = true;
+        }
+
+        return _configSearchSurface;
     }
 
     private Control BuildLeftToolsPanel()
@@ -3769,7 +4228,7 @@ internal sealed class MainForm : Form
             Margin = new Padding(0)
         };
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        row.Controls.Add(MakeLeftToolButton("About", ShowAboutDialog, "Show app version, author, Discord, and GitHub."), 0, 0);
+        row.Controls.Add(MakeLeftToolButton("About", ShowAboutDialog, "Show app version, author, Discord, GitHub, and licences."), 0, 0);
         return row;
     }
 
@@ -3793,6 +4252,43 @@ internal sealed class MainForm : Form
         }
 
         _categoryList.ItemHeight = Math.Max(Zoomed(28), _categoryList.Font.Height + Zoomed(10));
+    }
+
+    private void ApplyConfigSearchResultListSizing()
+    {
+        var targetSize = (BaseFontSize + 0.5F) * _uiZoomPercent / 100F;
+        if (Math.Abs(_searchResultsList.Font.Size - targetSize) > 0.05F)
+        {
+            _searchResultsList.Font = new Font("Segoe UI", targetSize);
+        }
+
+        _searchResultsList.ItemHeight = Math.Max(Zoomed(52), (_searchResultsList.Font.Height * 2) + Zoomed(14));
+    }
+
+    private int ConfigSearchRowHeight()
+    {
+        return _searchBox.PreferredHeight + Zoomed(10) + Zoomed(6);
+    }
+
+    private void ApplyConfigSearchBarSizing()
+    {
+        if (_configSearchSurface is null)
+        {
+            return;
+        }
+
+        _configSearchSurface.Margin = new Padding(0, 0, 0, Zoomed(6));
+        _configSearchSurface.ApplyMetrics(
+            Zoomed(9),
+            Zoomed(15),
+            Zoomed(7),
+            Zoomed(30),
+            Zoomed(6));
+
+        if (_leftRailLayout is not null)
+        {
+            SetRowHeight(_leftRailLayout, 0, ConfigSearchRowHeight());
+        }
     }
 
     private void DrawCategoryListItem(object? sender, DrawItemEventArgs args)
@@ -3873,6 +4369,567 @@ internal sealed class MainForm : Form
             focusBounds.Height -= 1;
             args.Graphics.DrawRectangle(focusPen, focusBounds);
         }
+    }
+
+    private void DrawConfigSearchResultItem(object? sender, DrawItemEventArgs args)
+    {
+        if (sender is not ListBox list ||
+            args.Index < 0 ||
+            args.Index >= list.Items.Count ||
+            list.Items[args.Index] is not ConfigSearchResult result)
+        {
+            return;
+        }
+
+        var selected = result.CanNavigate &&
+                       (args.State & DrawItemState.Selected) == DrawItemState.Selected;
+        var backColor = selected
+            ? (IsDarkPalette() ? Color.FromArgb(28, 49, 56) : SelectionBackground)
+            : EditorBackground;
+        var primaryColor = selected ? SelectionText : PrimaryTextColor;
+        var secondaryColor = selected ? SelectionText : HelpTextColor;
+
+        using var backBrush = new SolidBrush(backColor);
+        args.Graphics.FillRectangle(backBrush, args.Bounds);
+
+        if (selected)
+        {
+            using var accentBrush = new SolidBrush(SelectionBackground);
+            args.Graphics.FillRectangle(
+                accentBrush,
+                args.Bounds.X,
+                args.Bounds.Y,
+                Math.Max(Zoomed(3), 2),
+                args.Bounds.Height);
+        }
+
+        var left = args.Bounds.X + Zoomed(9);
+        var width = Math.Max(0, args.Bounds.Width - Zoomed(16));
+        var itemFont = args.Font ?? list.Font;
+        var lineHeight = Math.Max(itemFont.Height + Zoomed(2), args.Bounds.Height / 2);
+        var titleBounds = new Rectangle(left, args.Bounds.Y + Zoomed(3), width, lineHeight);
+        var detailBounds = new Rectangle(left, args.Bounds.Y + lineHeight, width, Math.Max(0, args.Bounds.Height - lineHeight));
+        var detail = string.IsNullOrWhiteSpace(result.Excerpt)
+            ? result.CategoryLabel
+            : result.CategoryLabel + " | " + result.Excerpt;
+
+        using var titleFont = new Font(itemFont, result.CanNavigate ? FontStyle.Bold : FontStyle.Regular);
+        TextRenderer.DrawText(
+            args.Graphics,
+            result.DisplayName,
+            titleFont,
+            titleBounds,
+            primaryColor,
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+        TextRenderer.DrawText(
+            args.Graphics,
+            detail,
+            itemFont,
+            detailBounds,
+            secondaryColor,
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+
+        if ((args.State & DrawItemState.Focus) == DrawItemState.Focus)
+        {
+            var focusBounds = args.Bounds;
+            focusBounds.Width -= 1;
+            focusBounds.Height -= 1;
+            using var focusPen = new Pen(BorderColor);
+            args.Graphics.DrawRectangle(focusPen, focusBounds);
+        }
+    }
+
+    private void HandleConfigSearchBoxKeyDown(object? sender, KeyEventArgs args)
+    {
+        if (args.KeyCode == Keys.Escape)
+        {
+            ClearConfigSearch();
+            args.SuppressKeyPress = true;
+            return;
+        }
+
+        if (args.KeyCode is not (Keys.Down or Keys.Enter))
+        {
+            return;
+        }
+
+        RefreshConfigSearchResults();
+        var firstResult = _searchResultsList.Items
+            .OfType<ConfigSearchResult>()
+            .FirstOrDefault(result => result.CanNavigate);
+        if (firstResult is null)
+        {
+            return;
+        }
+
+        _searchResultsList.SelectedItem = firstResult;
+        if (args.KeyCode == Keys.Enter)
+        {
+            JumpToConfigSearchResult(firstResult);
+        }
+        else
+        {
+            _searchResultsList.Focus();
+        }
+
+        args.SuppressKeyPress = true;
+    }
+
+    private void HandleConfigSearchResultClick(object? sender, MouseEventArgs args)
+    {
+        FlushPendingConfigSearchRefresh();
+        var index = _searchResultsList.IndexFromPoint(args.Location);
+        if (index < 0 ||
+            index >= _searchResultsList.Items.Count ||
+            _searchResultsList.Items[index] is not ConfigSearchResult result ||
+            !result.CanNavigate)
+        {
+            return;
+        }
+
+        _searchResultsList.SelectedIndex = index;
+        JumpToConfigSearchResult(result);
+    }
+
+    private void HandleConfigSearchResultKeyDown(object? sender, KeyEventArgs args)
+    {
+        if (args.KeyCode == Keys.Escape)
+        {
+            ClearConfigSearch();
+            args.SuppressKeyPress = true;
+            return;
+        }
+
+        if (args.KeyCode == Keys.Up && _searchResultsList.SelectedIndex <= 0)
+        {
+            _searchBox.Focus();
+            _searchBox.SelectionStart = _searchBox.TextLength;
+            args.SuppressKeyPress = true;
+            return;
+        }
+
+        if (args.KeyCode == Keys.Enter)
+        {
+            FlushPendingConfigSearchRefresh();
+            if (_searchResultsList.SelectedItem is ConfigSearchResult result && result.CanNavigate)
+            {
+                JumpToConfigSearchResult(result);
+                args.SuppressKeyPress = true;
+            }
+        }
+    }
+
+    private void ClearConfigSearch()
+    {
+        _uiViewGeneration.Next();
+        CancelPendingConfigSearchRefresh();
+        _searchBox.Clear();
+        HideConfigSearchResults();
+        _categoryList.Focus();
+    }
+
+    private void HideConfigSearchResults()
+    {
+        _searchResultsList.Visible = false;
+        _categoryList.Visible = true;
+        _categoryList.BringToFront();
+    }
+
+    private void RefreshConfigSearchResults()
+    {
+        CancelPendingConfigSearchRefresh();
+        RefreshConfigSearchResults(_searchBox.Text.Trim());
+    }
+
+    private void ScheduleConfigSearchResultsRefresh()
+    {
+        var query = _searchBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            CancelPendingConfigSearchRefresh();
+            RefreshConfigSearchResults(query);
+            return;
+        }
+
+        _pendingConfigSearchQuery.Schedule(query);
+        _configSearchRefreshTimer ??= CreateConfigSearchRefreshTimer();
+        _configSearchRefreshTimer.Stop();
+        _configSearchRefreshTimer.Start();
+    }
+
+    private System.Windows.Forms.Timer CreateConfigSearchRefreshTimer()
+    {
+        var timer = new System.Windows.Forms.Timer { Interval = 125 };
+        timer.Tick += (_, _) => RunPendingConfigSearchRefresh();
+        return timer;
+    }
+
+    private void RunPendingConfigSearchRefresh()
+    {
+        _configSearchRefreshTimer?.Stop();
+        if (_pendingConfigSearchQuery.TryTake(out var query) &&
+            query.Equals(_searchBox.Text.Trim(), StringComparison.Ordinal))
+        {
+            RefreshConfigSearchResults(query);
+        }
+    }
+
+    private void FlushPendingConfigSearchRefresh()
+    {
+        _configSearchRefreshTimer?.Stop();
+        var hadPendingQuery = _pendingConfigSearchQuery.TryTake(out _);
+        var query = _searchBox.Text.Trim();
+        if (hadPendingQuery || !string.Equals(_renderedConfigSearchQuery, query, StringComparison.Ordinal))
+        {
+            RefreshConfigSearchResults(query);
+        }
+    }
+
+    private void CancelPendingConfigSearchRefresh()
+    {
+        _configSearchRefreshTimer?.Stop();
+        _pendingConfigSearchQuery.Clear();
+    }
+
+    private void DisposeConfigSearchRefreshTimer()
+    {
+        CancelPendingConfigSearchRefresh();
+        _configSearchRefreshTimer?.Dispose();
+        _configSearchRefreshTimer = null;
+    }
+
+    private void RefreshConfigSearchResults(string query)
+    {
+        _renderedConfigSearchQuery = query;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            HideConfigSearchResults();
+            return;
+        }
+
+        var results = BuildConfigSearchResults(query);
+        _searchResultsList.BeginUpdate();
+        try
+        {
+            _searchResultsList.Items.Clear();
+            if (results.Count == 0)
+            {
+                _searchResultsList.Items.Add(new ConfigSearchResult(
+                    "",
+                    null,
+                    "No matching settings",
+                    "",
+                    "Try a config name or wording from its help comment.",
+                    "",
+                    int.MaxValue,
+                    int.MaxValue));
+            }
+            else
+            {
+                foreach (var result in results)
+                {
+                    _searchResultsList.Items.Add(result);
+                }
+
+                _searchResultsList.SelectedIndex = 0;
+            }
+        }
+        finally
+        {
+            _searchResultsList.EndUpdate();
+        }
+
+        _categoryList.Visible = false;
+        _searchResultsList.Visible = true;
+        _searchResultsList.BringToFront();
+        _searchResultsList.Invalidate();
+    }
+
+    private List<ConfigSearchResult> BuildConfigSearchResults(string query)
+    {
+        return ConfigSearchIndex.Search(GetConfigSearchIndex(), query)
+            .Select(match => new ConfigSearchResult(
+                match.Item.TargetKey,
+                match.Item.RowKey,
+                match.Item.DisplayName.Trim(),
+                match.Item.CategoryName,
+                match.Item.CategoryLabel,
+                match.Excerpt,
+                match.Score,
+                match.Item.Order))
+            .ToList();
+    }
+
+    private IReadOnlyList<ConfigSearchIndexItem> GetConfigSearchIndex()
+    {
+        if (_configSearchIndex is not null)
+        {
+            return _configSearchIndex;
+        }
+
+        var items = new List<ConfigSearchIndexItem>();
+        if (_document is null)
+        {
+            _configSearchIndex = items;
+            return items;
+        }
+
+        var order = 0;
+        foreach (var categoryName in GetVisibleCategoryNames())
+        {
+            if (IsReservedCategory(categoryName))
+            {
+                continue;
+            }
+
+            var categoryLabel = GetCategoryDisplayName(categoryName);
+            foreach (var item in GetDesignerItems(categoryName, includeTableRows: false))
+            {
+                var description = GetConfigSearchItemDescription(item);
+                items.Add(new ConfigSearchIndexItem(
+                        item.Key,
+                        null,
+                        item.Label,
+                        categoryName,
+                        categoryLabel,
+                        description,
+                        order++));
+
+                if (!item.IsGroup || item.Entries.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (var entry in item.Entries)
+                {
+                    items.Add(new ConfigSearchIndexItem(
+                            item.Key,
+                            entry.DisplayKey,
+                            entry.DisplayName,
+                            categoryName,
+                            categoryLabel,
+                            GetConfigSearchEntryDescription(entry),
+                            order++));
+                }
+            }
+        }
+
+        _configSearchIndex = items;
+        return items;
+    }
+
+    private void InvalidateConfigSearchIndex()
+    {
+        _configSearchIndex = null;
+        _renderedConfigSearchQuery = null;
+    }
+
+    private string GetConfigSearchItemDescription(DesignerItem item)
+    {
+        if (_document?.Metadata.Entries.TryGetValue(item.Key, out var metadata) == true &&
+            !string.IsNullOrWhiteSpace(metadata.Help))
+        {
+            return metadata.Help;
+        }
+
+        if (item.StringListTable is not null)
+        {
+            return item.StringListTable.Description;
+        }
+
+        if (item.StageTable is not null)
+        {
+            return item.StageTable.Description;
+        }
+
+        if (item.IsGroup)
+        {
+            return item.Entries
+                .Select(entry => entry.ParentDescription)
+                .FirstOrDefault(description => !string.IsNullOrWhiteSpace(description)) ?? "";
+        }
+
+        return item.Entries.FirstOrDefault()?.EffectiveDescription ?? "";
+    }
+
+    private static string GetConfigSearchEntryDescription(ConfigEntry entry)
+    {
+        var description = entry.EffectiveDescription;
+        if (string.IsNullOrWhiteSpace(entry.ParentDescription))
+        {
+            return description;
+        }
+
+        if (description.Equals(entry.ParentDescription, StringComparison.Ordinal))
+        {
+            return "";
+        }
+
+        var parentPrefix = entry.ParentDescription + Environment.NewLine;
+        return description.StartsWith(parentPrefix, StringComparison.Ordinal)
+            ? description[parentPrefix.Length..]
+            : description;
+    }
+
+    private void JumpToConfigSearchResult(ConfigSearchResult result)
+    {
+        if (!result.CanNavigate)
+        {
+            return;
+        }
+
+        _uiViewGeneration.Next();
+        HideConfigSearchResults();
+        if (!SelectCategory(result.CategoryName))
+        {
+            SetStatus("Could not open search result category: " + result.CategoryLabel);
+            return;
+        }
+
+        RenderSelectedCategory();
+        var viewGeneration = _uiViewGeneration.Current;
+        BeginInvoke(() => LocateConfigSearchResult(result, allowStageTableSwitch: true, viewGeneration));
+    }
+
+    private void LocateConfigSearchResult(
+        ConfigSearchResult result,
+        bool allowStageTableSwitch,
+        long viewGeneration)
+    {
+        if (IsDisposed || Disposing ||
+            !_uiViewGeneration.IsCurrent(viewGeneration) ||
+            !string.Equals(_renderedCategoryName, result.CategoryName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var target = _formHost.Controls
+            .Find(ConfigSearchTargetNamePrefix + result.TargetKey, searchAllChildren: true)
+            .FirstOrDefault();
+        if (target is null &&
+            allowStageTableSwitch &&
+            SelectConfigSearchStageTable(result.TargetKey))
+        {
+            BeginInvoke(() => LocateConfigSearchResult(
+                result,
+                allowStageTableSwitch: false,
+                viewGeneration));
+            return;
+        }
+
+        if (target is null)
+        {
+            SetStatus("Opened " + result.CategoryLabel + ", but could not locate " + result.DisplayName + ".");
+            return;
+        }
+
+        if (target.IsDisposed || !_formHost.Contains(target))
+        {
+            return;
+        }
+
+        SelectConfigSearchTableRow(target, result.RowKey);
+        _formHost.PerformLayout();
+        var targetLocation = _formHost.PointToClient(target.PointToScreen(Point.Empty));
+        var currentScroll = new Point(-_formHost.AutoScrollPosition.X, -_formHost.AutoScrollPosition.Y);
+        var targetScrollY = Math.Max(0, currentScroll.Y + targetLocation.Y - Zoomed(12));
+        _formHost.AutoScrollPosition = new Point(currentScroll.X, targetScrollY);
+        HighlightConfigSearchTarget(target);
+        SetStatus("Located " + result.DisplayName + " in " + result.CategoryLabel + ".");
+    }
+
+    private bool SelectConfigSearchStageTable(string tableKey)
+    {
+        foreach (var selector in EnumerateChildControls<ComboBox>(_formHost))
+        {
+            var targetItem = selector.Items
+                .OfType<StageTableItem>()
+                .FirstOrDefault(item => item.Table.Key.Equals(tableKey, StringComparison.Ordinal));
+            if (targetItem is null)
+            {
+                continue;
+            }
+
+            selector.SelectedItem = targetItem;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void SelectConfigSearchTableRow(Control target, string? rowKey)
+    {
+        if (string.IsNullOrWhiteSpace(rowKey))
+        {
+            return;
+        }
+
+        foreach (var grid in EnumerateChildControls<DataGridView>(target))
+        {
+            foreach (DataGridViewRow row in grid.Rows)
+            {
+                if (row.Tag is not ConfigEntry entry ||
+                    !entry.DisplayKey.Equals(rowKey, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                grid.ClearSelection();
+                row.Selected = true;
+                var firstVisibleColumn = grid.Columns
+                    .Cast<DataGridViewColumn>()
+                    .FirstOrDefault(column => column.Visible);
+                if (firstVisibleColumn is not null)
+                {
+                    grid.CurrentCell = row.Cells[firstVisibleColumn.Index];
+                }
+
+                grid.FirstDisplayedScrollingRowIndex = row.Index;
+                grid.Focus();
+                SetGridSelectionHighlight(grid, focused: true);
+                return;
+            }
+        }
+    }
+
+    private void HighlightConfigSearchTarget(Control target)
+    {
+        RestoreConfigSearchHighlight();
+
+        var header = target.Controls.OfType<FlowLayoutPanel>().FirstOrDefault() ??
+                     EnumerateChildControls<FlowLayoutPanel>(target).FirstOrDefault();
+        var title = header?.Controls.OfType<Label>().FirstOrDefault();
+        var highlightControl = (Control?)title ?? header ?? target;
+
+        var highlightColor = GetNewBadgeBackColor();
+        _configSearchHighlightColors[highlightControl] = highlightControl.BackColor;
+        highlightControl.BackColor = highlightColor;
+        highlightControl.Invalidate();
+
+        _configSearchHighlightTimer = new System.Windows.Forms.Timer { Interval = 1800 };
+        _configSearchHighlightTimer.Tick += (_, _) => RestoreConfigSearchHighlight();
+        _configSearchHighlightTimer.Start();
+    }
+
+    private void RestoreConfigSearchHighlight()
+    {
+        if (_configSearchHighlightTimer is not null)
+        {
+            _configSearchHighlightTimer.Stop();
+            _configSearchHighlightTimer.Dispose();
+            _configSearchHighlightTimer = null;
+        }
+
+        foreach (var pair in _configSearchHighlightColors)
+        {
+            if (!pair.Key.IsDisposed)
+            {
+                pair.Key.BackColor = pair.Value;
+                pair.Key.Invalidate();
+            }
+        }
+
+        _configSearchHighlightColors.Clear();
     }
 
     private static Color GetNewHighlightBackColor()
@@ -4069,38 +5126,61 @@ internal sealed class MainForm : Form
 
     private void LoadDefaultConfig()
     {
-        var path = _settings.FindRememberedConfig();
-        if (path is not null)
+        var rememberedSelection = ConfigLoadCandidateSelector.Select(
+            _settings.GetRememberedConfigCandidates().Where(File.Exists));
+        var rejectedCandidates = rememberedSelection.Failures.ToList();
+        if (rememberedSelection.Document is not null && rememberedSelection.Path is not null)
         {
-            LoadConfig(path);
+            if (ActivateLoadedConfig(rememberedSelection.Path, rememberedSelection.Document))
+            {
+                ShowRejectedConfigCandidates(rejectedCandidates);
+            }
+
             return;
         }
 
-        var savedGamesConfigs = RuntimeSettings.FindSavedGamesConfigs();
+        var rejectedPaths = rejectedCandidates
+            .Select(failure => failure.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var savedGamesConfigs = RuntimeSettings.FindSavedGamesConfigs()
+            .Where(path => !rejectedPaths.Contains(Path.GetFullPath(path)))
+            .ToList();
         if (savedGamesConfigs.Count == 1)
         {
-            LoadConfig(savedGamesConfigs[0]);
+            if (LoadConfig(savedGamesConfigs[0]))
+            {
+                ShowRejectedConfigCandidates(rejectedCandidates);
+            }
+
             return;
         }
 
         if (savedGamesConfigs.Count > 1)
         {
             var result = PromptForConfigPath(savedGamesConfigs);
-            path = result.Path;
+            var selectedPath = result.Path;
             if (result.AddAll)
             {
-                var added = AddDetectedInstances(savedGamesConfigs, path);
-                if (path is not null)
+                var added = AddDetectedInstances(savedGamesConfigs, selectedPath);
+                if (selectedPath is not null)
                 {
-                    LoadConfig(path);
-                    SetStatus("Added " + added.ToString(CultureInfo.InvariantCulture) + " detected instance(s).");
+                    if (LoadConfig(selectedPath))
+                    {
+                        SetStatus("Added " + added.ToString(CultureInfo.InvariantCulture) + " detected instance(s).");
+                        ShowRejectedConfigCandidates(rejectedCandidates);
+                    }
+
                     return;
                 }
             }
 
-            if (path is not null)
+            if (selectedPath is not null)
             {
-                LoadConfig(path);
+                if (LoadConfig(selectedPath))
+                {
+                    ShowRejectedConfigCandidates(rejectedCandidates);
+                }
+
                 return;
             }
 
@@ -4108,7 +5188,12 @@ internal sealed class MainForm : Form
             return;
         }
 
-        path = AppMode.IsExportedUserBuild ? null : ConfigDocument.FindDefaultConfig();
+        var path = AppMode.IsExportedUserBuild ? null : ConfigDocument.FindDefaultConfig();
+        if (path is not null && rejectedPaths.Contains(Path.GetFullPath(path)))
+        {
+            path = null;
+        }
+
         if (path is null)
         {
             var install = PromptForFirstRunInstall();
@@ -4123,6 +5208,7 @@ internal sealed class MainForm : Form
                     install.Value.Instance,
                     install.Value.ConfigFileName))
             {
+                ShowRejectedConfigCandidates(rejectedCandidates);
                 return;
             }
 
@@ -4130,7 +5216,34 @@ internal sealed class MainForm : Form
             return;
         }
 
-        LoadConfig(path);
+        if (LoadConfig(path))
+        {
+            ShowRejectedConfigCandidates(rejectedCandidates);
+        }
+    }
+
+    private void ShowRejectedConfigCandidates(IReadOnlyList<ConfigLoadFailure> failures)
+    {
+        if (failures.Count == 0)
+        {
+            return;
+        }
+
+        var details = failures.Take(6)
+            .Select(failure => failure.Path + Environment.NewLine + "  " + failure.Error)
+            .ToList();
+        if (failures.Count > details.Count)
+        {
+            details.Add("...and " + (failures.Count - details.Count).ToString(CultureInfo.InvariantCulture) + " more.");
+        }
+
+        MessageBox.Show(
+            this,
+            "The Config Manager skipped config file(s) that could not be loaded:" +
+            Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine + Environment.NewLine, details),
+            "Skipped invalid config",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Warning);
     }
 
     private (string SourcePath, FirstRunInstanceCandidate Instance, string ConfigFileName)? PromptForFirstRunInstall()
@@ -4734,21 +5847,49 @@ internal sealed class MainForm : Form
         return modified + "  " + path;
     }
 
-    private void LoadConfig(string path)
+    private bool LoadConfig(string path, bool showLoadError = true)
     {
+        var selection = ConfigLoadCandidateSelector.Select(new[] { path });
+        if (selection.Document is null || selection.Path is null)
+        {
+            if (showLoadError)
+            {
+                var error = selection.Failures.FirstOrDefault()?.Error ?? "The config could not be loaded.";
+                MessageBox.Show(this, error, "Load failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            return false;
+        }
+
+        return ActivateLoadedConfig(selection.Path, selection.Document, showLoadError);
+    }
+
+    private bool ActivateLoadedConfig(string path, ConfigDocument candidate, bool showLoadError = true)
+    {
+        Exception? settingsSaveError = null;
         try
         {
+            CancelPendingConfigSearchRefresh();
             ClearImportedNewMarkers();
             ClearCategoryPanelCache();
             _viewedStageDifficulties.Clear();
-            _document = ConfigDocument.Load(path);
+            _document = candidate;
+            var pendingNewItemWarning = ActivatePendingNewItemSession(path, candidate);
             var loadWarnings = _document.LoadWarnings.ToList();
             _pathBox.Text = path;
             LoadSections();
             ApplyAdvancedToggleVisibility();
             UpdateFooterLabels();
             LoadCategories();
-            _settings.RememberConfig(path);
+            try
+            {
+                _settings.RememberConfig(path);
+            }
+            catch (Exception ex)
+            {
+                settingsSaveError = ex;
+            }
+
             RefreshInstanceList();
             RefreshConfigVariantList();
             RefreshPresetButtonState();
@@ -4769,10 +5910,40 @@ internal sealed class MainForm : Form
             {
                 SetStatus($"Loaded {_document.Entries.Count.ToString(CultureInfo.InvariantCulture)} editable values.");
             }
+
+            if (settingsSaveError is not null)
+            {
+                SetStatus("Config loaded, but recent-config settings could not be saved.");
+                MessageBox.Show(
+                    this,
+                    "The config loaded successfully, but the recent-config settings could not be saved:" +
+                    Environment.NewLine + settingsSaveError.Message,
+                    "Settings save failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+
+            if (pendingNewItemWarning is not null && showLoadError)
+            {
+                SetStatus("Config loaded, but NEW review markers need attention.");
+                MessageBox.Show(
+                    this,
+                    pendingNewItemWarning,
+                    "NEW marker storage warning",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+
+            return true;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Load failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (showLoadError)
+            {
+                MessageBox.Show(this, ex.Message, "Config display failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            return false;
         }
     }
 
@@ -5151,7 +6322,7 @@ internal sealed class MainForm : Form
             RefreshStringListCatalogFromDefaults(newDocument);
             Directory.CreateDirectory(targetDirectory);
             newDocument.SaveTo(targetPath);
-            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig);
+            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
             profile.ConfigPath = targetPath;
             _settings.Save();
             LoadConfig(targetPath);
@@ -5906,6 +7077,10 @@ internal sealed class MainForm : Form
         {
             PresetStore.ReplaceConfig(active, targetPath =>
                 File.Copy(configPath, targetPath, overwrite: false));
+            if (_pendingNewItemStore.Replace(active.ConfigPath, _pendingNewItemStore.Get(configPath)))
+            {
+                _pendingNewItemStore.Save();
+            }
             presetName = active.Name;
             RefreshPresetButtonState();
             return true;
@@ -5927,9 +7102,9 @@ internal sealed class MainForm : Form
             this,
             "The live config completed its " +
             operation +
-            ", but the active preset " +
+            ", but the active preset update for " +
             presetName +
-            " could not be updated:" +
+            " was incomplete:" +
             Environment.NewLine +
             error,
             "Active preset update failed",
@@ -5983,7 +7158,8 @@ internal sealed class MainForm : Form
         string sourceReferencePath,
         string sourceKind,
         IReadOnlyList<PresetUpdateTargetChoice> targets,
-        IReadOnlyDictionary<string, bool> decisions)
+        IReadOnlyDictionary<string, bool> decisions,
+        ConfigDocument? previousCleanDocument)
     {
         var result = new PresetBatchUpdateResult();
         foreach (var target in targets.Where(target => target.Selected))
@@ -5993,7 +7169,10 @@ internal sealed class MainForm : Form
                 var currentPresetDocument = ConfigDocument.Load(target.Preset.ConfigPath);
                 var outputDocument = ConfigDocument.Load(sourceConfigPath);
                 outputDocument.RepairStringListSeparators();
-                var preview = MergeCurrentConfigIntoNewConfig(currentPresetDocument, outputDocument);
+                var preview = MergeCurrentConfigIntoNewConfig(
+                    currentPresetDocument,
+                    outputDocument,
+                    previousCleanDocument);
 
                 var tableChoices = BuildKeptTableChoices(
                     preview,
@@ -6044,6 +7223,11 @@ internal sealed class MainForm : Form
                     profile.Name);
                 PresetStore.ReplaceConfig(target.Preset, path => outputDocument.SaveTo(path));
                 result.UpdatedNames.Add(target.Preset.Name);
+                var markerWarning = PersistImportedBucketNewItems(target.Preset.ConfigPath, preview);
+                if (markerWarning is not null)
+                {
+                    result.Warnings.Add(target.Preset.Name + ": " + markerWarning);
+                }
             }
             catch (Exception ex)
             {
@@ -6056,7 +7240,7 @@ internal sealed class MainForm : Form
 
     private void ReportPresetBatchUpdate(PresetBatchUpdateResult result)
     {
-        if (result.Errors.Count == 0)
+        if (result.Errors.Count == 0 && result.Warnings.Count == 0)
         {
             return;
         }
@@ -6065,8 +7249,15 @@ internal sealed class MainForm : Form
             (result.UpdatedNames.Count > 0
                 ? "Updated presets: " + string.Join(", ", result.UpdatedNames) + Environment.NewLine + Environment.NewLine
                 : "") +
-            "The following presets were not changed:" + Environment.NewLine +
-            string.Join(Environment.NewLine, result.Errors);
+            (result.Errors.Count > 0
+                ? "The following presets were not changed:" + Environment.NewLine +
+                  string.Join(Environment.NewLine, result.Errors)
+                : "") +
+            (result.Warnings.Count > 0
+                ? (result.Errors.Count > 0 ? Environment.NewLine + Environment.NewLine : "") +
+                  "NEW review marker warnings:" + Environment.NewLine +
+                  string.Join(Environment.NewLine, result.Warnings)
+                : "");
         MessageBox.Show(
             this,
             message,
@@ -7985,6 +9176,8 @@ internal sealed class MainForm : Form
         {
             RenderSelectedCategory(force: true);
         }
+
+        RefreshConfigSearchResultsIfOpen();
     }
 
     private List<string> GetCategoryListNames()
@@ -8092,6 +9285,7 @@ internal sealed class MainForm : Form
             }
 
             WriteAdminUiMapLog("reload-categories");
+            RefreshConfigSearchResultsIfOpen();
             return;
         }
 
@@ -8099,11 +9293,22 @@ internal sealed class MainForm : Form
         if (SetCategoryListItems(names, selected) && !refreshSelectedCategory)
         {
             WriteAdminUiMapLog("reload-categories");
+            RefreshConfigSearchResultsIfOpen();
             return;
         }
 
         WriteAdminUiMapLog("reload-categories");
         RenderSelectedCategory(force: refreshSelectedCategory);
+        RefreshConfigSearchResultsIfOpen();
+    }
+
+    private void RefreshConfigSearchResultsIfOpen()
+    {
+        InvalidateConfigSearchIndex();
+        if (_searchResultsList.Visible && !string.IsNullOrWhiteSpace(_searchBox.Text))
+        {
+            RefreshConfigSearchResults();
+        }
     }
 
     private void WriteAdminUiMapLog(string reason)
@@ -8443,6 +9648,82 @@ internal sealed class MainForm : Form
         };
     }
 
+    private string? ActivatePendingNewItemSession(string configPath, ConfigDocument document)
+    {
+        var warnings = new List<string>();
+        if (!_pendingNewItemLoadWarningShown && !string.IsNullOrWhiteSpace(_pendingNewItemStore.LoadWarning))
+        {
+            warnings.Add(_pendingNewItemStore.LoadWarning);
+            _pendingNewItemLoadWarningShown = true;
+        }
+
+        try
+        {
+            if (_pendingNewItemStore.Reconcile(configPath, document) > 0)
+            {
+                _pendingNewItemStore.Save();
+            }
+        }
+        catch (Exception ex)
+        {
+            warnings.Add("Stale NEW review markers could not be saved: " + ex.Message);
+        }
+
+        _pendingNewItemSession = new PendingNewItemSession(_pendingNewItemStore, configPath);
+        return warnings.Count == 0 ? null : string.Join(Environment.NewLine, warnings);
+    }
+
+    private bool IsPendingBucketNewItem(ConfigStringListTable table, string value)
+    {
+        return _document is not null &&
+               _pendingNewItemSession?.IsPending(table.Key, value) == true &&
+               IsCommentWhenVisiblePolicy(table) &&
+               VisibleWhenMatches(_document, table.GuiVisibleWhen!);
+    }
+
+    private bool IsStoredBucketNewItem(ConfigStringListTable table, string value)
+    {
+        return _document is not null &&
+               _pendingNewItemStore.Contains(_document.Path, table.Key, value);
+    }
+
+    private bool HasPendingBucketNewItems(string categoryName)
+    {
+        if (_document is null || _pendingNewItemSession is null)
+        {
+            return false;
+        }
+
+        var pending = _pendingNewItemSession.GetPending().ToHashSet();
+        return _document.StringListTables.Any(table =>
+            table.Section.Equals(categoryName, StringComparison.OrdinalIgnoreCase) &&
+            IsCommentWhenVisiblePolicy(table) &&
+            VisibleWhenMatches(_document, table.GuiVisibleWhen!) &&
+            pending.Any(item => item.TableKey.Equals(table.Key, StringComparison.Ordinal)));
+    }
+
+    private bool ResolvePendingBucketNewItem(ConfigStringListTable table, string value)
+    {
+        var changed = _pendingNewItemSession?.Resolve(table.Key, value) == true;
+        if (changed)
+        {
+            _categoryList.Invalidate();
+        }
+
+        return changed;
+    }
+
+    private bool RestorePendingBucketNewItem(ConfigStringListTable table, string value)
+    {
+        var changed = _pendingNewItemSession?.Restore(table.Key, value) == true;
+        if (changed)
+        {
+            _categoryList.Invalidate();
+        }
+
+        return changed;
+    }
+
     private void ClearImportedNewMarkers()
     {
         _unseenImportedNewEntryKeysByCategory.Clear();
@@ -8527,7 +9808,8 @@ internal sealed class MainForm : Form
 
     private bool HasUnseenImportedNewEntries(string categoryName)
     {
-        return _unseenImportedNewEntryKeysByCategory.TryGetValue(categoryName, out var keys) && keys.Count > 0;
+        return (_unseenImportedNewEntryKeysByCategory.TryGetValue(categoryName, out var keys) && keys.Count > 0) ||
+               HasPendingBucketNewItems(categoryName);
     }
 
     private bool IsImportedNewEntryHighlighted(ConfigEntry entry)
@@ -8543,6 +9825,42 @@ internal sealed class MainForm : Form
             .Select(entry => new ImportedNewEntryMarker(entry.EffectiveCategory, entry.DisplayKey))
             .Distinct()
             .ToList();
+    }
+
+    private string? PersistImportedBucketNewItems(string configPath, MizMergePreview preview)
+    {
+        if (preview.ImportedBucketNewItems.Count == 0)
+        {
+            return null;
+        }
+
+        _pendingNewItemStore.Add(
+            configPath,
+            preview.ImportedBucketNewItems.Select(item => new PendingNewItemKey(item.TableKey, item.Value)));
+        try
+        {
+            _pendingNewItemStore.Save();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return "The config was updated, but NEW review markers could not be saved: " + ex.Message;
+        }
+    }
+
+    private void ShowPendingNewItemWarning(string? warning)
+    {
+        if (string.IsNullOrWhiteSpace(warning))
+        {
+            return;
+        }
+
+        MessageBox.Show(
+            this,
+            warning,
+            "NEW marker storage warning",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Warning);
     }
 
     private static bool IsReservedCategory(string categoryName)
@@ -8648,6 +9966,7 @@ internal sealed class MainForm : Form
         }
 
         SaveRenderedCategoryScroll();
+        var viewGeneration = _uiViewGeneration.Next();
         _loadingForm = true;
         try
         {
@@ -8657,6 +9976,7 @@ internal sealed class MainForm : Form
                 DetachFormHostControlsForRender();
                 _formHost.Controls.Add(panel);
                 _renderedCategoryName = categoryName;
+                _categoryPanelRecency.Touch(categoryName);
             }
             finally
             {
@@ -8668,7 +9988,7 @@ internal sealed class MainForm : Form
             _loadingForm = false;
         }
 
-        RestoreCategoryScroll(categoryName);
+        RestoreCategoryScroll(categoryName, viewGeneration);
         return true;
     }
 
@@ -8732,6 +10052,11 @@ internal sealed class MainForm : Form
 
         _categoryPanelCache[categoryName] = panel;
         _dirtyCategoryPanels.Remove(categoryName);
+        var evictedCategoryName = _categoryPanelRecency.Touch(categoryName);
+        if (evictedCategoryName is not null)
+        {
+            RemoveCachedCategoryPanel(evictedCategoryName, removeFromRecency: false);
+        }
     }
 
     private void MarkRenderedCategoryPanelDirty()
@@ -8758,42 +10083,42 @@ internal sealed class MainForm : Form
         }
     }
 
-    private void RemoveCachedCategoryPanel(string categoryName)
+    private void RemoveCachedCategoryPanel(string categoryName, bool removeFromRecency = true)
     {
         if (!_categoryPanelCache.TryGetValue(categoryName, out var panel))
         {
             _dirtyCategoryPanels.Remove(categoryName);
-            _categoryScrollPositions.Remove(categoryName);
+            if (removeFromRecency)
+            {
+                _categoryPanelRecency.Remove(categoryName);
+            }
+
             return;
         }
 
-        if (panel.Parent is not null)
-        {
-            panel.Parent = null;
-        }
-
-        panel.Dispose();
         _categoryPanelCache.Remove(categoryName);
         _dirtyCategoryPanels.Remove(categoryName);
-        _categoryScrollPositions.Remove(categoryName);
+        if (removeFromRecency)
+        {
+            _categoryPanelRecency.Remove(categoryName);
+        }
+
+        ControlTreeDisposer.Dispose(panel, _toolTip);
     }
 
     private void ClearCategoryPanelCache()
     {
-        foreach (var panel in _categoryPanelCache.Values.Distinct().ToList())
-        {
-            if (panel.Parent is not null)
-            {
-                panel.Parent.Controls.Remove(panel);
-            }
-
-            panel.Dispose();
-        }
-
+        var panels = _categoryPanelCache.Values.Distinct().ToList();
         _categoryPanelCache.Clear();
+        _categoryPanelRecency.Clear();
         _dirtyCategoryPanels.Clear();
         _categoryScrollPositions.Clear();
         _renderedCategoryName = null;
+        _uiViewGeneration.Next();
+        foreach (var panel in panels)
+        {
+            ControlTreeDisposer.Dispose(panel, _toolTip);
+        }
     }
 
     private void SaveRenderedCategoryScroll()
@@ -8809,14 +10134,24 @@ internal sealed class MainForm : Form
         _categoryScrollPositions[_renderedCategoryName] = new Point(-position.X, -position.Y);
     }
 
-    private void RestoreCategoryScroll(string categoryName)
+    private void RestoreCategoryScroll(string categoryName, long viewGeneration)
     {
         if (!_categoryScrollPositions.TryGetValue(categoryName, out var position))
         {
             return;
         }
 
-        BeginInvoke(() => _formHost.AutoScrollPosition = position);
+        BeginInvoke(() =>
+        {
+            if (IsDisposed || Disposing ||
+                !_uiViewGeneration.IsCurrent(viewGeneration) ||
+                !string.Equals(_renderedCategoryName, categoryName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _formHost.AutoScrollPosition = position;
+        });
     }
 
     private void RenderSelectedCategory(bool force = false)
@@ -8839,6 +10174,7 @@ internal sealed class MainForm : Form
             return;
         }
 
+        var viewGeneration = _uiViewGeneration.Next();
         SaveRenderedCategoryScroll();
         if (ShouldCacheCategoryPanel(categoryName) && (force || _dirtyCategoryPanels.Contains(categoryName)))
         {
@@ -8881,67 +10217,97 @@ internal sealed class MainForm : Form
             Padding = new Padding(16)
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        _formHost.Controls.Add(panel);
-        CacheCategoryPanel(categoryName, panel);
-
-        var title = new Label
+        panel.SuspendLayout();
+        try
         {
-            Text = GetCategoryDisplayName(categoryName),
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            Font = new Font(Font, FontStyle.Bold),
-            Padding = new Padding(0, 0, 0, 10)
-        };
-        panel.Controls.Add(title);
-
-        if (categoryName.Equals("Difficulty Stages", StringComparison.OrdinalIgnoreCase))
-        {
-            var tables = GetDesignerItems(categoryName, includeTableRows: false)
-                .Select(item => item.StageTable)
-                .Where(table => table is not null)
-                .Cast<ConfigStageTable>()
-                .ToList();
-            if (tables.Count > 0)
+            var title = new Label
             {
-                panel.Controls.Add(BuildStageTablesEditor(tables));
-            }
+                Text = GetCategoryDisplayName(categoryName),
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                Font = new Font(Font, FontStyle.Bold),
+                Padding = new Padding(0, 0, 0, 10)
+            };
+            panel.Controls.Add(title);
 
-            FinishRender();
-            RestoreCategoryScroll(categoryName);
-            return;
+            if (categoryName.Equals("Difficulty Stages", StringComparison.OrdinalIgnoreCase))
+            {
+                var tables = GetDesignerItems(categoryName, includeTableRows: false)
+                    .Select(item => item.StageTable)
+                    .Where(table => table is not null)
+                    .Cast<ConfigStageTable>()
+                    .ToList();
+                if (tables.Count > 0)
+                {
+                    panel.Controls.Add(BuildStageTablesEditor(tables));
+                }
+            }
+            else
+            {
+                foreach (var item in GetDesignerItems(categoryName, includeTableRows: false))
+                {
+                    if (item.StringListTable is not null)
+                    {
+                        panel.Controls.Add(MarkConfigSearchTarget(BuildStringListEditor(item.StringListTable), item.Key));
+                        continue;
+                    }
+
+                    if (item.StageTable is not null)
+                    {
+                        panel.Controls.Add(MarkConfigSearchTarget(BuildStageTableEditor(item.StageTable), item.Key));
+                        continue;
+                    }
+
+                    if (item.IsGroup)
+                    {
+                        panel.Controls.Add(MarkConfigSearchTarget(item.Key.Equals("CallsignOverrides", StringComparison.Ordinal)
+                            ? BuildCallsignOverridesEditor(item.Key, item.Entries)
+                            : BuildTableEditor(item.Key, item.Entries), item.Key));
+                        continue;
+                    }
+
+                    var entry = item.Entries.FirstOrDefault();
+                    if (entry is not null)
+                    {
+                        panel.Controls.Add(MarkConfigSearchTarget(BuildEntryEditor(entry), item.Key));
+                    }
+                }
+            }
+        }
+        catch
+        {
+            ControlTreeDisposer.Dispose(panel, _toolTip);
+            _renderedCategoryName = null;
+            _loadingForm = false;
+            throw;
+        }
+        finally
+        {
+            if (!panel.IsDisposed)
+            {
+                panel.ResumeLayout(performLayout: false);
+            }
         }
 
-        foreach (var item in GetDesignerItems(categoryName, includeTableRows: false))
+        _formHost.SuspendLayout();
+        try
         {
-            if (item.StringListTable is not null)
-            {
-                panel.Controls.Add(BuildStringListEditor(item.StringListTable));
-                continue;
-            }
-
-            if (item.StageTable is not null)
-            {
-                panel.Controls.Add(BuildStageTableEditor(item.StageTable));
-                continue;
-            }
-
-            if (item.IsGroup)
-            {
-                panel.Controls.Add(item.Key.Equals("CallsignOverrides", StringComparison.Ordinal)
-                    ? BuildCallsignOverridesEditor(item.Key, item.Entries)
-                    : BuildTableEditor(item.Key, item.Entries));
-                continue;
-            }
-
-            var entry = item.Entries.FirstOrDefault();
-            if (entry is not null)
-            {
-                panel.Controls.Add(BuildEntryEditor(entry));
-            }
+            _formHost.Controls.Add(panel);
+            CacheCategoryPanel(categoryName, panel);
+        }
+        finally
+        {
+            _formHost.ResumeLayout(performLayout: true);
         }
 
         FinishRender();
-        RestoreCategoryScroll(categoryName);
+        RestoreCategoryScroll(categoryName, viewGeneration);
+    }
+
+    private static Control MarkConfigSearchTarget(Control control, string key)
+    {
+        control.Name = ConfigSearchTargetNamePrefix + key;
+        return control;
     }
 
     private ConfigEntry? FindEntry(string key)
@@ -9143,7 +10509,7 @@ internal sealed class MainForm : Form
         group.Controls.Add(editorHost);
         RenderDifficulty(selectedDifficulty);
         group.Controls.Add(MakeValueHint("Rows are read from top to bottom. The first row where active players is less than or equal to Up to players controls the amount."));
-        return group;
+        return MarkConfigSearchTarget(group, table.Key);
     }
 
     private string? GetStageActiveDifficulty(ConfigStageTable table)
@@ -10863,8 +12229,8 @@ internal sealed class MainForm : Form
 
         group.Controls.Add(MakeStringListBucketHeader("Available / commented"), 2, 0);
 
-        activeGrid = MakeStringListBucketGrid(table.Key, "Active");
-        inactiveGrid = MakeStringListBucketGrid(table.Key + ":inactive", "Inactive");
+        activeGrid = MakeStringListBucketGrid(table.Key, "Active", showNewStatus: false);
+        inactiveGrid = MakeStringListBucketGrid(table.Key + ":inactive", "Inactive", showNewStatus: true);
         DataGridView? selectedBucketGrid = activeGrid;
         activeGrid.Enter += (_, _) => selectedBucketGrid = activeGrid;
         inactiveGrid.Enter += (_, _) => selectedBucketGrid = inactiveGrid;
@@ -10964,7 +12330,7 @@ internal sealed class MainForm : Form
         };
     }
 
-    private static DataGridView MakeStringListBucketGrid(string tag, string headerText)
+    private DataGridView MakeStringListBucketGrid(string tag, string headerText, bool showNewStatus)
     {
         var grid = new SmoothDataGridView
         {
@@ -10980,6 +12346,16 @@ internal sealed class MainForm : Form
         };
         grid.Columns.Add("value", headerText);
         ConfigureFillColumn(grid.Columns["value"], 300);
+        if (showNewStatus)
+        {
+            grid.Columns.Add("status", "Status");
+            grid.Columns["status"].Width = Zoomed(58);
+            grid.Columns["status"].MinimumWidth = Zoomed(48);
+            grid.Columns["status"].DisplayIndex = 0;
+            grid.Columns["status"].Frozen = true;
+            grid.Columns["status"].SortMode = DataGridViewColumnSortMode.NotSortable;
+            grid.Columns["status"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+        }
         return grid;
     }
 
@@ -11125,7 +12501,13 @@ internal sealed class MainForm : Form
         try
         {
             var itemValue = value.Trim();
+            var wasCommented = table.CommentedItems.Any(item => item.Value.Equals(itemValue, StringComparison.Ordinal));
+            var markerWasPending = IsPendingBucketNewItem(table, itemValue);
             _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(_document, table.Key));
+            if (markerWasPending)
+            {
+                ResolvePendingBucketNewItem(table, itemValue);
+            }
             if (_stringListCatalog.Add(_document, table.Key, itemValue))
             {
                 _stringListCatalog.Save();
@@ -11137,7 +12519,19 @@ internal sealed class MainForm : Form
             {
                 if (FindActiveStringListItem(table, itemValue) is { } active)
                 {
-                    _document.RemoveStringListItem(table, active);
+                    if (wasCommented)
+                    {
+                        _document.DeactivateStringListItem(table, active);
+                    }
+                    else
+                    {
+                        _document.RemoveStringListItem(table, active);
+                    }
+                }
+
+                if (markerWasPending)
+                {
+                    RestorePendingBucketNewItem(table, itemValue);
                 }
 
                 RefreshStringListGrids(activeGrid, inactiveGrid, table);
@@ -11164,7 +12558,12 @@ internal sealed class MainForm : Form
         try
         {
             var itemValue = bucket.Value;
+            var markerWasPending = IsPendingBucketNewItem(table, itemValue);
             _document.DeactivateStringListItem(table, bucket.Item);
+            if (IsStoredBucketNewItem(table, itemValue))
+            {
+                RestorePendingBucketNewItem(table, itemValue);
+            }
             if (_stringListCatalog.Add(_document, table.Key, itemValue))
             {
                 _stringListCatalog.Save();
@@ -11174,7 +12573,11 @@ internal sealed class MainForm : Form
             SelectBucketRowByValue(inactiveGrid, itemValue);
             SetUndoAction("comment " + itemValue, () =>
             {
-                    _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(_document, table.Key));
+                _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(_document, table.Key));
+                if (!markerWasPending && IsStoredBucketNewItem(table, itemValue))
+                {
+                    ResolvePendingBucketNewItem(table, itemValue);
+                }
                 RefreshStringListGrids(activeGrid, inactiveGrid, table);
                 SelectBucketRowByValue(activeGrid, itemValue);
             });
@@ -11199,7 +12602,12 @@ internal sealed class MainForm : Form
         try
         {
             var itemValue = bucket.Value;
+            var markerWasPending = IsPendingBucketNewItem(table, itemValue);
             _document.ActivateStringListValue(table, itemValue, _stringListCatalog.GetValues(_document, table.Key));
+            if (markerWasPending)
+            {
+                ResolvePendingBucketNewItem(table, itemValue);
+            }
             if (_stringListCatalog.Add(_document, table.Key, itemValue))
             {
                 _stringListCatalog.Save();
@@ -11221,6 +12629,11 @@ internal sealed class MainForm : Form
                 else
                 {
                     _document.DeactivateStringListItem(table, active);
+                }
+
+                if (markerWasPending)
+                {
+                    RestorePendingBucketNewItem(table, itemValue);
                 }
 
                 RefreshStringListGrids(activeGrid, inactiveGrid, table);
@@ -11258,6 +12671,7 @@ internal sealed class MainForm : Form
         try
         {
             var removedValue = bucket.Value;
+            var markerWasPending = IsPendingBucketNewItem(table, removedValue);
             var changedConfig = false;
             if (bucket.IsActive && bucket.Item is not null)
             {
@@ -11268,6 +12682,11 @@ internal sealed class MainForm : Form
             {
                 _document.RemoveCommentedStringListItem(table, bucket.Item);
                 changedConfig = true;
+            }
+
+            if (markerWasPending)
+            {
+                ResolvePendingBucketNewItem(table, removedValue);
             }
 
             var catalogChanged = _stringListCatalog.Remove(_document, table.Key, removedValue);
@@ -11291,6 +12710,11 @@ internal sealed class MainForm : Form
                 if (_stringListCatalog.Add(_document, table.Key, removedValue))
                 {
                     _stringListCatalog.Save();
+                }
+
+                if (markerWasPending)
+                {
+                    RestorePendingBucketNewItem(table, removedValue);
                 }
 
                 RefreshStringListGrids(activeGrid, inactiveGrid, table);
@@ -11465,7 +12889,9 @@ internal sealed class MainForm : Form
                 _document.RemoveEntry(entry);
                 entries.Remove(entry);
                 RefreshTableGrid(grid, entries);
+                RefreshConfigSearchResultsIfOpen();
             });
+            RefreshConfigSearchResultsIfOpen();
             SetChangedStatus();
         }
         catch (Exception ex)
@@ -11503,7 +12929,9 @@ internal sealed class MainForm : Form
                 entries.Add(restored);
                 RefreshTableGrid(grid, entries);
                 SelectGridRowByTag(grid, restored);
+                RefreshConfigSearchResultsIfOpen();
             });
+            RefreshConfigSearchResultsIfOpen();
             SetChangedStatus();
         }
         catch (Exception ex)
@@ -11515,7 +12943,7 @@ internal sealed class MainForm : Form
     private void RefreshStringListGrids(DataGridView activeGrid, DataGridView inactiveGrid, ConfigStringListTable table)
     {
         var activeItems = GetStringListItemsInSourceOrder(table)
-            .Select(item => new StringListBucketItem(item.Value, item, IsActive: true, CatalogOnly: false))
+            .Select(item => new StringListBucketItem(item.Value, item, IsActive: true, CatalogOnly: false, IsNew: false))
             .ToList();
         var inactiveItems = GetInactiveStringListBucketItems(table);
 
@@ -11571,8 +12999,13 @@ internal sealed class MainForm : Form
         return values
             .Where(value => !activeValues.Contains(value))
             .Select(value => commentedByValue.TryGetValue(value, out var item)
-                ? new StringListBucketItem(value, item, IsActive: false, CatalogOnly: false)
-                : new StringListBucketItem(value, null, IsActive: false, CatalogOnly: true))
+                ? new StringListBucketItem(
+                    value,
+                    item,
+                    IsActive: false,
+                    CatalogOnly: false,
+                    IsNew: IsPendingBucketNewItem(table, value))
+                : new StringListBucketItem(value, null, IsActive: false, CatalogOnly: true, IsNew: false))
             .ToList();
     }
 
@@ -11611,14 +13044,32 @@ internal sealed class MainForm : Form
 
     private static void AddStringListBucketGridRow(DataGridView grid, StringListBucketItem item)
     {
-        var rowIndex = grid.Rows.Add(item.Value);
+        var rowIndex = grid.Columns.Contains("status")
+            ? grid.Rows.Add(item.Value, item.IsNew ? "NEW" : "")
+            : grid.Rows.Add(item.Value);
         grid.Rows[rowIndex].Tag = item;
+        ApplyStringListBucketNewStatus(grid.Rows[rowIndex], item);
     }
 
     private static void UpdateStringListBucketGridRow(DataGridViewRow row, StringListBucketItem item)
     {
         row.Cells["value"].Value = item.Value;
+        if (row.DataGridView?.Columns.Contains("status") == true)
+        {
+            row.Cells["status"].Value = item.IsNew ? "NEW" : "";
+        }
         row.Tag = item;
+        ApplyStringListBucketNewStatus(row, item);
+    }
+
+    private static void ApplyStringListBucketNewStatus(DataGridViewRow row, StringListBucketItem item)
+    {
+        if (row.DataGridView?.Columns.Contains("status") != true)
+        {
+            return;
+        }
+
+        row.Cells["status"].Style.ForeColor = item.IsNew ? GetNewBadgeTextColor() : PrimaryTextColor;
     }
 
     private static void SelectBucketRowByValue(DataGridView grid, string value)
@@ -12243,7 +13694,9 @@ internal sealed class MainForm : Form
                 _document.RemoveEntry(entry);
                 entries.Remove(entry);
                 RefreshCallsignGrid(grid, entries);
+                RefreshConfigSearchResultsIfOpen();
             });
+            RefreshConfigSearchResultsIfOpen();
             SetChangedStatus();
         }
         catch (Exception ex)
@@ -12281,7 +13734,9 @@ internal sealed class MainForm : Form
                 entries.Add(restored);
                 RefreshCallsignGrid(grid, entries);
                 SelectGridRowByTag(grid, restored);
+                RefreshConfigSearchResultsIfOpen();
             });
+            RefreshConfigSearchResultsIfOpen();
             SetChangedStatus();
         }
         catch (Exception ex)
@@ -14155,9 +15610,19 @@ internal sealed class MainForm : Form
 
     private bool VisibleWhenMatches(string ruleText)
     {
+        if (_document is null)
+        {
+            return true;
+        }
+
+        return VisibleWhenMatches(_document, ruleText);
+    }
+
+    private static bool VisibleWhenMatches(ConfigDocument document, string ruleText)
+    {
         foreach (var rule in ParseVisibleWhenRules(ruleText))
         {
-            var sourceEntry = FindVisibleWhenSourceEntry(rule.SourceKey);
+            var sourceEntry = FindVisibleWhenSourceEntry(document, rule.SourceKey);
             if (sourceEntry is null)
             {
                 continue;
@@ -14174,13 +15639,13 @@ internal sealed class MainForm : Form
 
     private ConfigEntry? FindVisibleWhenSourceEntry(string key)
     {
-        if (_document is null)
-        {
-            return null;
-        }
+        return _document is null ? null : FindVisibleWhenSourceEntry(_document, key);
+    }
 
-        return _document.Entries.FirstOrDefault(entry => entry.DisplayKey.Equals(key, StringComparison.Ordinal)) ??
-               _document.Entries.FirstOrDefault(entry => entry.Key.Equals(key, StringComparison.Ordinal));
+    private static ConfigEntry? FindVisibleWhenSourceEntry(ConfigDocument document, string key)
+    {
+        return document.Entries.FirstOrDefault(entry => entry.DisplayKey.Equals(key, StringComparison.Ordinal)) ??
+               document.Entries.FirstOrDefault(entry => entry.Key.Equals(key, StringComparison.Ordinal));
     }
 
     private static bool VisibleWhenValueMatches(string sourceValue, IReadOnlyList<string> expectedValues)
@@ -15851,7 +17316,7 @@ internal sealed class MainForm : Form
                 }
 
                 Directory.CreateDirectory(targetDirectory);
-                var installedDefaults = StoreMizDefaults(mizPath, extractedConfig);
+                var installedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
                 newDocument.SaveTo(targetPath);
                 var installedPresetSynced = TrySyncActivePresetFromLive(
                     targetPath,
@@ -15867,7 +17332,8 @@ internal sealed class MainForm : Form
                 return;
             }
 
-            var preview = MergeCurrentConfigIntoNewConfig(currentDocument, newDocument);
+            var previousCleanDocument = TryLoadStoredMizDefaultsForConfig(currentDocument.Path);
+            var preview = MergeCurrentConfigIntoNewConfig(currentDocument, newDocument, previousCleanDocument);
             if (!ValidateInstallMizDocument(newDocument, "The merged MIZ config"))
             {
                 return;
@@ -15908,9 +17374,10 @@ internal sealed class MainForm : Form
             }
 
             var importedNewMarkers = CaptureImportedNewMarkers(preview);
-            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig);
+            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
             BackupCurrentConfigBeforeMizUpdate(currentDocument.Path, mizPath);
             newDocument.SaveTo(targetPath);
+            var pendingNewItemWarning = PersistImportedBucketNewItems(targetPath, preview);
             var presetSynced = TrySyncActivePresetFromLive(
                 targetPath,
                 out var activePresetName,
@@ -15928,7 +17395,8 @@ internal sealed class MainForm : Form
                     mizPath,
                     "miz-preset-update",
                     presetTargets,
-                    decisions);
+                    decisions,
+                    previousCleanDocument);
             UpdateSelectedInstanceConfigPath(targetPath);
             LoadConfig(targetPath);
             ApplyImportedNewMarkers(importedNewMarkers);
@@ -15938,10 +17406,12 @@ internal sealed class MainForm : Form
                 (presetUpdateResult.UpdatedNames.Count == 0
                     ? "."
                     : ". Updated presets: " + string.Join(", ", presetUpdateResult.UpdatedNames) + "."));
+            ShowDefaultedPlayerValuesWarning(preview.DefaultedPlayerValues);
             if (!presetSynced)
             {
                 ShowActivePresetSyncWarning("MIZ update", activePresetName, activePresetError);
             }
+            ShowPendingNewItemWarning(pendingNewItemWarning);
             ReportPresetBatchUpdate(presetUpdateResult);
         }
         catch (Exception ex)
@@ -16009,7 +17479,7 @@ internal sealed class MainForm : Form
 
             Directory.CreateDirectory(targetDirectory);
             newDocument.SaveTo(targetPath);
-            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig);
+            var storedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
             AddOrUpdateInstanceProfile(instance.Name, targetPath);
             LoadConfig(targetPath);
             SetStatus("Installed Foothold config from " + storedDefaults.MizName + " to " + instance.Name + ".");
@@ -16256,22 +17726,36 @@ internal sealed class MainForm : Form
             : null;
     }
 
-    private static StoredMizDefaultsInfo StoreMizDefaults(string mizPath, ExtractedMizConfig extractedConfig)
+    internal static StoredMizDefaultsInfo StoreMizDefaults(
+        string mizPath,
+        ExtractedMizConfig extractedConfig,
+        string? targetConfigPath = null,
+        string? storedDefaultsDirectory = null,
+        DateTime? storedAtOverride = null)
     {
-        Directory.CreateDirectory(StoredDefaultsDirectory);
-        var index = LoadStoredMizDefaultsIndex();
-        var storedAt = DateTime.Now;
+        storedDefaultsDirectory ??= StoredDefaultsDirectory;
+        Directory.CreateDirectory(storedDefaultsDirectory);
+        var index = LoadStoredMizDefaultsIndex(storedDefaultsDirectory);
+        var storedAt = storedAtOverride ?? DateTime.Now;
         var mizName = Path.GetFileName(mizPath);
         var fullMizPath = Path.GetFullPath(mizPath);
         var configFileName = IsSupportedConfigFileName(extractedConfig.ConfigFileName)
             ? extractedConfig.ConfigFileName
             : RuntimeSettings.DefaultConfigFileName;
-        var id = storedAt.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) +
-                 "-" + MakeSafeFileName(Path.GetFileNameWithoutExtension(mizName)) +
-                 "-" + MakeSafeFileName(Path.GetFileNameWithoutExtension(configFileName));
-        var configPath = Path.Combine(StoredDefaultsDirectory, id + ".lua");
+        var idRoot = storedAt.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) +
+                     "-" + MakeSafeFileName(Path.GetFileNameWithoutExtension(mizName)) +
+                     "-" + MakeSafeFileName(Path.GetFileNameWithoutExtension(configFileName));
+        var id = idRoot;
+        var collision = 2;
+        while (File.Exists(Path.Combine(storedDefaultsDirectory, id + ".lua")))
+        {
+            id = idRoot + "-" + collision.ToString(CultureInfo.InvariantCulture);
+            collision++;
+        }
 
-        File.Copy(extractedConfig.Path, configPath, overwrite: true);
+        var configPath = Path.Combine(storedDefaultsDirectory, id + ".lua");
+
+        AtomicFile.Copy(extractedConfig.Path, configPath);
         var info = new StoredMizDefaultsInfo
         {
             Id = id,
@@ -16287,18 +17771,27 @@ internal sealed class MainForm : Form
         var replacedItems = index.Items
             .Where(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase))
             .ToList();
-        foreach (var item in replacedItems)
-        {
-            if (!PathsEqual(item.ConfigPath, configPath))
-            {
-                TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
-            }
-        }
-
+        info.TargetConfigPaths = MergeStoredTargetConfigPaths(replacedItems, targetConfigPath);
         index.Items.RemoveAll(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
         index.Items.Insert(0, info);
-        NormalizeStoredMizDefaultsIndex(index, deleteRemovedFiles: true);
-        SaveStoredMizDefaultsIndex(index);
+        NormalizeStoredMizDefaultsIndex(index, out var removedByNormalize);
+        try
+        {
+            SaveStoredMizDefaultsIndex(index, storedDefaultsDirectory);
+        }
+        catch
+        {
+            TryDeleteOwnedStoredDefaultsConfig(configPath, storedDefaultsDirectory);
+            throw;
+        }
+
+        foreach (var item in replacedItems.Concat(removedByNormalize)
+                     .Where(item => !PathsEqual(item.ConfigPath, configPath))
+                     .DistinctBy(item => item.ConfigPath, StringComparer.OrdinalIgnoreCase))
+        {
+            TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath, storedDefaultsDirectory);
+        }
+
         return info;
     }
 
@@ -16321,27 +17814,110 @@ internal sealed class MainForm : Form
         var sourceKey = GetStoredDefaultsSourceKey(info);
         index.Items.RemoveAll(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
         index.Items.Insert(0, info);
-        NormalizeStoredMizDefaultsIndex(index, deleteRemovedFiles: true);
+        NormalizeStoredMizDefaultsIndex(index, out var removedItems);
         SaveStoredMizDefaultsIndex(index);
+        foreach (var item in removedItems)
+        {
+            TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
+        }
+
         return info;
     }
 
     private static List<StoredMizDefaultsInfo> LoadStoredRestoreDefaultsSources()
     {
         var index = LoadStoredMizDefaultsIndex();
-        if (NormalizeStoredMizDefaultsIndex(index, deleteRemovedFiles: true))
+        if (NormalizeStoredMizDefaultsIndex(index, out var removedItems))
         {
             SaveStoredMizDefaultsIndex(index);
+            foreach (var item in removedItems)
+            {
+                TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
+            }
         }
 
         return index.Items.ToList();
     }
 
-    private static bool NormalizeStoredMizDefaultsIndex(StoredMizDefaultsIndex index, bool deleteRemovedFiles)
+    private static StoredMizDefaultsInfo? FindStoredMizDefaultsForConfig(string configPath)
+    {
+        return SelectStoredMizDefaultsForConfig(LoadStoredRestoreDefaultsSources(), configPath);
+    }
+
+    private static ConfigDocument? TryLoadStoredMizDefaultsForConfig(string configPath)
+    {
+        var source = FindStoredMizDefaultsForConfig(configPath);
+        if (source is null || !File.Exists(source.ConfigPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var document = ConfigDocument.Load(source.ConfigPath);
+            document.RepairStringListSeparators();
+            return document.Validate().Count == 0 ? document : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static StoredMizDefaultsInfo? SelectStoredMizDefaultsForConfig(
+        IEnumerable<StoredMizDefaultsInfo> sources,
+        string configPath)
+    {
+        var fullConfigPath = Path.GetFullPath(configPath);
+        var configFileName = Path.GetFileName(fullConfigPath);
+        return sources
+            .Where(item => item.ConfigFileName.Equals(configFileName, StringComparison.OrdinalIgnoreCase) &&
+                           item.TargetConfigPaths.Any(targetPath => PathsEqual(targetPath, fullConfigPath)))
+            .OrderByDescending(item => item.StoredAt)
+            .FirstOrDefault();
+    }
+
+    private static List<string> NormalizeStoredTargetConfigPaths(IEnumerable<string>? paths)
+    {
+        var normalized = new List<string>();
+        foreach (var path in paths ?? Enumerable.Empty<string>())
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            try
+            {
+                normalized.Add(Path.GetFullPath(path));
+            }
+            catch
+            {
+                // Invalid legacy links are ignored; clean defaults are never guessed.
+            }
+        }
+
+        return normalized.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static List<string> MergeStoredTargetConfigPaths(
+        IEnumerable<StoredMizDefaultsInfo> replacedItems,
+        string? targetConfigPath)
+    {
+        return NormalizeStoredTargetConfigPaths(
+            replacedItems.SelectMany(item => item.TargetConfigPaths)
+                .Concat(string.IsNullOrWhiteSpace(targetConfigPath)
+                    ? Array.Empty<string>()
+                    : new[] { targetConfigPath }));
+    }
+
+    internal static bool NormalizeStoredMizDefaultsIndex(
+        StoredMizDefaultsIndex index,
+        out List<StoredMizDefaultsInfo> removedItems)
     {
         var originalItems = index.Items.ToList();
         var keptItems = new List<StoredMizDefaultsInfo>();
-        var removedItems = new List<StoredMizDefaultsInfo>();
+        var removed = new List<StoredMizDefaultsInfo>();
         var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var item in index.Items
@@ -16351,7 +17927,7 @@ internal sealed class MainForm : Form
             var key = GetStoredDefaultsSourceKey(item);
             if (string.IsNullOrWhiteSpace(key) || !seenKeys.Add(key))
             {
-                removedItems.Add(item);
+                removed.Add(item);
                 continue;
             }
 
@@ -16361,19 +17937,12 @@ internal sealed class MainForm : Form
             }
             else
             {
-                removedItems.Add(item);
+                removed.Add(item);
             }
         }
 
-        removedItems.AddRange(originalItems.Where(item => !keptItems.Contains(item) && !removedItems.Contains(item)));
-        if (deleteRemovedFiles)
-        {
-            foreach (var item in removedItems)
-            {
-                TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
-            }
-        }
-
+        removed.AddRange(originalItems.Where(item => !keptItems.Contains(item) && !removed.Contains(item)));
+        removedItems = removed;
         index.Items = keptItems;
         return originalItems.Count != keptItems.Count ||
                originalItems.Where((item, itemIndex) => itemIndex >= keptItems.Count || !ReferenceEquals(item, keptItems[itemIndex])).Any();
@@ -16420,9 +17989,12 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static void RemoveStoredMizDefaultsSource(StoredMizDefaultsInfo source)
+    internal static void RemoveStoredMizDefaultsSource(
+        StoredMizDefaultsInfo source,
+        string? storedDefaultsDirectory = null)
     {
-        var index = LoadStoredMizDefaultsIndex();
+        storedDefaultsDirectory ??= StoredDefaultsDirectory;
+        var index = LoadStoredMizDefaultsIndex(storedDefaultsDirectory);
         var sourceKey = GetStoredDefaultsSourceKey(source);
         var removedItems = index.Items
             .Where(item =>
@@ -16430,18 +18002,17 @@ internal sealed class MainForm : Form
                 GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        foreach (var item in removedItems)
-        {
-            TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
-        }
-
         index.Items.RemoveAll(item =>
             item.Id.Equals(source.Id, StringComparison.OrdinalIgnoreCase) ||
             GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
-        SaveStoredMizDefaultsIndex(index);
+        SaveStoredMizDefaultsIndex(index, storedDefaultsDirectory);
+        foreach (var item in removedItems)
+        {
+            TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath, storedDefaultsDirectory);
+        }
     }
 
-    private static void TryDeleteOwnedStoredDefaultsConfig(string path)
+    private static void TryDeleteOwnedStoredDefaultsConfig(string path, string? storedDefaultsDirectory = null)
     {
         try
         {
@@ -16450,7 +18021,7 @@ internal sealed class MainForm : Form
                 return;
             }
 
-            var storedRoot = Path.GetFullPath(StoredDefaultsDirectory)
+            var storedRoot = Path.GetFullPath(storedDefaultsDirectory ?? StoredDefaultsDirectory)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
             var fullPath = Path.GetFullPath(path);
             if (fullPath.StartsWith(storedRoot, StringComparison.OrdinalIgnoreCase))
@@ -16464,16 +18035,17 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static StoredMizDefaultsIndex LoadStoredMizDefaultsIndex()
+    private static StoredMizDefaultsIndex LoadStoredMizDefaultsIndex(string? storedDefaultsDirectory = null)
     {
-        if (!File.Exists(StoredDefaultsIndexPath))
+        var indexPath = Path.Combine(storedDefaultsDirectory ?? StoredDefaultsDirectory, "index.json");
+        if (!File.Exists(indexPath))
         {
             return new StoredMizDefaultsIndex();
         }
 
         try
         {
-            var index = JsonSerializer.Deserialize<StoredMizDefaultsIndex>(File.ReadAllText(StoredDefaultsIndexPath), StoredDefaultsJsonOptions)
+            var index = JsonSerializer.Deserialize<StoredMizDefaultsIndex>(File.ReadAllText(indexPath), StoredDefaultsJsonOptions)
                         ?? new StoredMizDefaultsIndex();
             index.Items ??= new List<StoredMizDefaultsInfo>();
             foreach (var item in index.Items.Where(item => string.IsNullOrWhiteSpace(item.SourceKind)))
@@ -16486,6 +18058,10 @@ internal sealed class MainForm : Form
                     ? Path.GetFileName(item.ConfigPath)
                     : RuntimeSettings.DefaultConfigFileName;
             }
+            foreach (var item in index.Items)
+            {
+                item.TargetConfigPaths = NormalizeStoredTargetConfigPaths(item.TargetConfigPaths);
+            }
 
             return index;
         }
@@ -16495,10 +18071,15 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static void SaveStoredMizDefaultsIndex(StoredMizDefaultsIndex index)
+    private static void SaveStoredMizDefaultsIndex(
+        StoredMizDefaultsIndex index,
+        string? storedDefaultsDirectory = null)
     {
-        Directory.CreateDirectory(StoredDefaultsDirectory);
-        File.WriteAllText(StoredDefaultsIndexPath, JsonSerializer.Serialize(index, StoredDefaultsJsonOptions));
+        storedDefaultsDirectory ??= StoredDefaultsDirectory;
+        Directory.CreateDirectory(storedDefaultsDirectory);
+        AtomicFile.WriteUtf8Text(
+            Path.Combine(storedDefaultsDirectory, "index.json"),
+            JsonSerializer.Serialize(index, StoredDefaultsJsonOptions));
     }
 
     private static string MakeSafeFileName(string text)
@@ -17575,6 +19156,8 @@ internal sealed class MainForm : Form
     private const string InstallPolicyKeepTable = "keepTable";
     private const string InstallPolicyMergeRows = "mergeRows";
     private const string InstallPolicyReplaceTable = "replaceTable";
+    private const string InstallPolicyForceValue = "forceValue";
+    private const string NewItemPolicyCommentWhenVisible = "commentWhenVisible";
 
     internal static int RunMergeRegressionSelfTest()
     {
@@ -17586,6 +19169,10 @@ internal sealed class MainForm : Form
             var currentPath = Path.Combine(tempDirectory, "current.lua");
             var incomingPath = Path.Combine(tempDirectory, "incoming.lua");
             var mergedPath = Path.Combine(tempDirectory, "merged.lua");
+            var duplicateCurrentPath = Path.Combine(tempDirectory, "duplicate-current.lua");
+            var duplicatePreviousPath = Path.Combine(tempDirectory, "duplicate-previous.lua");
+            var duplicateIncomingPath = Path.Combine(tempDirectory, "duplicate-incoming.lua");
+            var duplicateMissingIncomingPath = Path.Combine(tempDirectory, "duplicate-missing-incoming.lua");
             File.WriteAllText(currentPath, """
                 NestedOverrides = {
                     ["F.A.18"] = {
@@ -17603,6 +19190,7 @@ internal sealed class MainForm : Form
 
                 KeepCurrentOption = false
                 UseIncomingOption = false
+                ForceIncomingOption = false
                 """, new System.Text.UTF8Encoding(false));
             File.WriteAllText(incomingPath, """
                 -- Incoming nested-table header — keep this.
@@ -17624,7 +19212,49 @@ internal sealed class MainForm : Form
 
                 KeepCurrentOption = true
                 UseIncomingOption = true
+                -- @gui installPolicy="forceValue"
+                ForceIncomingOption = true
                 NewOption = 42
+                """, new System.Text.UTF8Encoding(false));
+            File.WriteAllText(duplicateCurrentPath, """
+                MAX_AT_SPAWN = {
+                    ["Engineer soldier"] = 0,
+                    ["Mephisto"] = 2,
+                    ["Engineer soldier"] = 2,
+                    ["PlayerOnly"] = 7,
+                }
+
+                CTLDUnitCapabilities = {
+                    ["OH58D"] = { false, true, 0, 2, 14, 400 },
+                    ["UH-1H"] = { true, true, 1, 8, 15, 800 },
+                    ["OH58D"] = { false, false, 0, 0, 14, 400 },
+                }
+                """, new System.Text.UTF8Encoding(false));
+            File.WriteAllText(duplicateMissingIncomingPath, """
+                Unrelated = true
+                """, new System.Text.UTF8Encoding(false));
+            File.WriteAllText(duplicatePreviousPath, """
+                MAX_AT_SPAWN = {
+                    ["Engineer soldier"] = 0,
+                    ["Mephisto"] = 2,
+                }
+
+                CTLDUnitCapabilities = {
+                    ["OH58D"] = { false, true, 0, 2, 14, 400 },
+                    ["UH-1H"] = { true, true, 1, 8, 15, 800 },
+                }
+                """, new System.Text.UTF8Encoding(false));
+            File.WriteAllText(duplicateIncomingPath, """
+                -- Clean incoming table comments must survive reconstruction.
+                MAX_AT_SPAWN = {
+                    ["Engineer soldier"] = 0,
+                    ["Mephisto"] = 3,
+                }
+
+                CTLDUnitCapabilities = {
+                    ["OH58D"] = { false, true, 0, 2, 14, 400 },
+                    ["UH-1H"] = { true, true, 1, 8, 15, 800 },
+                }
                 """, new System.Text.UTF8Encoding(false));
 
             var currentDocument = ConfigDocument.Load(currentPath);
@@ -17639,10 +19269,468 @@ internal sealed class MainForm : Form
                 }
             }
 
+            ConfigDocument LoadMetadataDocument(string fileName, string metadata)
+            {
+                var path = Path.Combine(tempDirectory, fileName);
+                File.WriteAllText(path, metadata, new System.Text.UTF8Encoding(false));
+                return ConfigDocument.Load(path);
+            }
+
+            var validNewItemPolicyDocument = LoadMetadataDocument("valid-new-item-policy.lua", """
+                Era = "Coldwar"
+                -- @gui label="Allowed Aircraft" editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Coldwar" newItemPolicy="commentWhenVisible"
+                allowedPlanes = {
+                    "F-14B",
+                }
+                """);
+            var newItemPolicyProperty = typeof(ConfigStringListTable).GetProperty("NewItemPolicy");
+            Require(newItemPolicyProperty is not null &&
+                    string.Equals(
+                        newItemPolicyProperty.GetValue(validNewItemPolicyDocument.StringListTables.Single()) as string,
+                        "commentWhenVisible",
+                        StringComparison.Ordinal),
+                "Valid bucket newItemPolicy metadata was not parsed.");
+            Require(validNewItemPolicyDocument.Validate().Count == 0,
+                "Valid bucket newItemPolicy metadata did not pass validation.");
+
+            var invalidNewItemPolicyCases = new[]
+            {
+                ("unknown-new-item-policy.lua",
+                    "-- @gui editor=\"bucket\" installPolicy=\"mergeRows\" visibleWhen=\"Era:Coldwar\" newItemPolicy=\"surprise\"\nallowedPlanes = {\n    \"F-14B\",\n}",
+                    "surprise"),
+                ("missing-bucket-editor.lua",
+                    "-- @gui installPolicy=\"mergeRows\" visibleWhen=\"Era:Coldwar\" newItemPolicy=\"commentWhenVisible\"\nallowedPlanes = {\n    \"F-14B\",\n}",
+                    "allowedPlanes"),
+                ("missing-merge-policy.lua",
+                    "-- @gui editor=\"bucket\" visibleWhen=\"Era:Coldwar\" newItemPolicy=\"commentWhenVisible\"\nallowedPlanes = {\n    \"F-14B\",\n}",
+                    "allowedPlanes"),
+                ("missing-visible-when.lua",
+                    "-- @gui editor=\"bucket\" installPolicy=\"mergeRows\" newItemPolicy=\"commentWhenVisible\"\nallowedPlanes = {\n    \"F-14B\",\n}",
+                    "allowedPlanes")
+            };
+            foreach (var (fileName, text, expectedErrorPart) in invalidNewItemPolicyCases)
+            {
+                var errors = LoadMetadataDocument(fileName, text).Validate();
+                Require(errors.Any(error => error.Contains(expectedErrorPart, StringComparison.OrdinalIgnoreCase)),
+                    fileName + " did not report the invalid newItemPolicy metadata.");
+            }
+
+            var eraCurrentDocument = LoadMetadataDocument("era-current.lua", """
+                Era = "Coldwar"
+                -- @gui editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Coldwar" newItemPolicy="commentWhenVisible"
+                allowedPlanes = {
+                    "CurrentActive",
+                    "PlayerOnly",
+                    --"CurrentCommented",
+                }
+                -- @gui editor="bucket" installPolicy="mergeRows"
+                restockAircraft = {
+                    "PlayerRestock",
+                }
+                """);
+            var eraPreviousDocument = LoadMetadataDocument("era-previous.lua", """
+                Era = "Coldwar"
+                -- @gui editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Coldwar" newItemPolicy="commentWhenVisible"
+                allowedPlanes = {
+                    "CurrentActive",
+                    "RemovedByPlayer",
+                }
+                """);
+            var eraIncomingDocument = LoadMetadataDocument("era-incoming.lua", """
+                Era = "Coldwar"
+                -- @gui editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Coldwar" newItemPolicy="commentWhenVisible"
+                allowedPlanes = {
+                    "CurrentActive",
+                    "RemovedByPlayer",
+                    "NewActive",
+                    --"NewCommented",
+                }
+                -- @gui editor="bucket" installPolicy="mergeRows"
+                restockAircraft = {
+                    "IncomingRestock",
+                }
+                """);
+            var eraPreview = MergeCurrentConfigIntoNewConfig(
+                eraCurrentDocument,
+                eraIncomingDocument,
+                eraPreviousDocument);
+            var mergedEraTable = eraIncomingDocument.StringListTables.Single(table =>
+                table.Key.Equals("allowedPlanes", StringComparison.Ordinal));
+            Require(mergedEraTable.Items.Select(item => item.Value).SequenceEqual(
+                    new[] { "CurrentActive", "PlayerOnly" }, StringComparer.Ordinal),
+                "The visible era table did not preserve the player's active rows and order.");
+            Require(mergedEraTable.CommentedItems.OrderBy(item => item.LineIndex).Select(item => item.Value).SequenceEqual(
+                    new[] { "CurrentCommented", "NewActive", "NewCommented" }, StringComparer.Ordinal),
+                "The visible era table did not preserve comments and append only genuinely new values.");
+            Require(!mergedEraTable.Items.Concat(mergedEraTable.CommentedItems)
+                    .Any(item => item.Value.Equals("RemovedByPlayer", StringComparison.Ordinal)),
+                "A value deliberately removed since the previous clean config was reintroduced.");
+            var mergedRestockTable = eraIncomingDocument.StringListTables.Single(table =>
+                table.Key.Equals("restockAircraft", StringComparison.Ordinal));
+            Require(mergedRestockTable.Items.Select(item => item.Value).ToHashSet(StringComparer.Ordinal)
+                    .SetEquals(new[] { "IncomingRestock", "PlayerRestock" }),
+                "A normal mergeRows table changed behavior under the new policy.");
+            var importedBucketItemsProperty = eraPreview.GetType().GetProperty("ImportedBucketNewItems");
+            Require(importedBucketItemsProperty?.GetValue(eraPreview) is System.Collections.ICollection importedBucketItems &&
+                    importedBucketItems.Count == 2,
+                "The merge preview did not record both genuinely new visible-era values.");
+
+            var vietnamCurrentDocument = LoadMetadataDocument("vietnam-current.lua", """
+                Era = "Vietnam"
+                -- @gui editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Coldwar" newItemPolicy="commentWhenVisible"
+                allowedPlanes = {
+                    "ColdPlayerOnly",
+                }
+                -- @gui editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Vietnam" newItemPolicy="commentWhenVisible"
+                allowedPlanesVietnam = {
+                    "VietnamCurrent",
+                }
+                """);
+            var vietnamIncomingDocument = LoadMetadataDocument("vietnam-incoming.lua", """
+                Era = "Vietnam"
+                -- @gui editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Coldwar" newItemPolicy="commentWhenVisible"
+                allowedPlanes = {
+                    "ColdIncoming",
+                }
+                -- @gui editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Vietnam" newItemPolicy="commentWhenVisible"
+                allowedPlanesVietnam = {
+                    "VietnamCurrent",
+                    "VietnamNew",
+                }
+                """);
+            var vietnamPreview = MergeCurrentConfigIntoNewConfig(vietnamCurrentDocument, vietnamIncomingDocument);
+            var inactiveColdTable = vietnamIncomingDocument.StringListTables.Single(table =>
+                table.Key.Equals("allowedPlanes", StringComparison.Ordinal));
+            Require(inactiveColdTable.Items.Select(item => item.Value).ToHashSet(StringComparer.Ordinal)
+                    .SetEquals(new[] { "ColdIncoming", "ColdPlayerOnly" }),
+                "An inactive-era opted-in table did not retain ordinary mergeRows behavior.");
+            var activeVietnamTable = vietnamIncomingDocument.StringListTables.Single(table =>
+                table.Key.Equals("allowedPlanesVietnam", StringComparison.Ordinal));
+            Require(activeVietnamTable.Items.Select(item => item.Value).SequenceEqual(
+                    new[] { "VietnamCurrent" }, StringComparer.Ordinal) &&
+                    activeVietnamTable.CommentedItems.Select(item => item.Value).SequenceEqual(
+                    new[] { "VietnamNew" }, StringComparer.Ordinal),
+                "The target config's own Era was not used for the visible table merge.");
+            importedBucketItemsProperty = vietnamPreview.GetType().GetProperty("ImportedBucketNewItems");
+            Require(importedBucketItemsProperty?.GetValue(vietnamPreview) is System.Collections.ICollection vietnamImportedItems &&
+                    vietnamImportedItems.Count == 1,
+                "The inactive-era table created a NEW review marker.");
+
+            var pendingStoreType = typeof(MainForm).Assembly.GetType("FootholdConfigManager.PendingNewItemStore");
+            Require(pendingStoreType is not null, "The persistent bucket NEW marker store is missing.");
+            var resolvedPendingStoreType = pendingStoreType!;
+            object NewPendingStore()
+            {
+                return Activator.CreateInstance(resolvedPendingStoreType, nonPublic: true)
+                       ?? throw new InvalidOperationException("Could not create the pending marker store.");
+            }
+
+            object? InvokePendingStore(object store, string methodName, params object?[] arguments)
+            {
+                var method = resolvedPendingStoreType.GetMethods(
+                        System.Reflection.BindingFlags.Instance |
+                        System.Reflection.BindingFlags.Public |
+                        System.Reflection.BindingFlags.NonPublic)
+                    .SingleOrDefault(candidate =>
+                        candidate.Name.Equals(methodName, StringComparison.Ordinal) &&
+                        candidate.GetParameters().Length == arguments.Length);
+                Require(method is not null, "The pending marker store is missing " + methodName + ".");
+                return method!.Invoke(store, arguments);
+            }
+
+            var pendingStore = NewPendingStore();
+            var firstSameNamePath = Path.Combine(tempDirectory, "First", "Foothold Config.lua");
+            var secondSameNamePath = Path.Combine(tempDirectory, "Second", "Foothold Config.lua");
+            InvokePendingStore(pendingStore, "Add", firstSameNamePath, "allowedPlanes", "F-14BU");
+            InvokePendingStore(pendingStore, "Add", secondSameNamePath, "allowedPlanes", "OtherPlane");
+            Require((bool)InvokePendingStore(
+                        pendingStore,
+                        "Contains",
+                        firstSameNamePath.ToUpperInvariant(),
+                        "allowedPlanes",
+                        "F-14BU")!,
+                "Pending markers were not keyed by normalized case-insensitive full config path.");
+            Require(!(bool)InvokePendingStore(
+                        pendingStore,
+                        "Contains",
+                        firstSameNamePath,
+                        "allowedPlanes",
+                        "OtherPlane")!,
+                "Pending markers leaked between configs with the same filename.");
+            Require(!(bool)InvokePendingStore(
+                        pendingStore,
+                        "Contains",
+                        firstSameNamePath,
+                        "allowedPlanes",
+                        "f-14bu")!,
+                "Pending marker values were not matched exactly.");
+            var firstConfigMarkers = InvokePendingStore(pendingStore, "Get", firstSameNamePath)
+                                     ?? throw new InvalidOperationException("Could not read pending markers for synchronization.");
+            InvokePendingStore(pendingStore, "Replace", secondSameNamePath, firstConfigMarkers);
+            Require((bool)InvokePendingStore(
+                        pendingStore,
+                        "Contains",
+                        secondSameNamePath,
+                        "allowedPlanes",
+                        "F-14BU")! &&
+                    !(bool)InvokePendingStore(
+                        pendingStore,
+                        "Contains",
+                        secondSameNamePath,
+                        "allowedPlanes",
+                        "OtherPlane")!,
+                "Active-preset marker synchronization did not replace the target marker set.");
+
+            var pendingStorePath = Path.Combine(tempDirectory, "pending-new-items.json");
+            InvokePendingStore(pendingStore, "SaveTo", pendingStorePath);
+            var loadFromMethod = resolvedPendingStoreType.GetMethod(
+                "LoadFrom",
+                System.Reflection.BindingFlags.Static |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic);
+            Require(loadFromMethod is not null, "The pending marker store is missing LoadFrom.");
+            var reloadedPendingStore = loadFromMethod!.Invoke(null, new object?[] { pendingStorePath })
+                                       ?? throw new InvalidOperationException("Could not reload the pending marker store.");
+            Require((bool)InvokePendingStore(
+                        reloadedPendingStore,
+                        "Contains",
+                        firstSameNamePath,
+                        "allowedPlanes",
+                        "F-14BU")!,
+                "Pending markers did not survive a save/load cycle.");
+
+            InvokePendingStore(reloadedPendingStore, "Add", firstSameNamePath, "allowedPlanes", "StalePlane");
+            var reconcileDocument = LoadMetadataDocument("pending-reconcile.lua", """
+                -- @gui editor="bucket" installPolicy="mergeRows" visibleWhen="Era:Coldwar" newItemPolicy="commentWhenVisible"
+                allowedPlanes = {
+                    --"F-14BU",
+                }
+                """);
+            var removedMarkerCount = (int)InvokePendingStore(
+                reloadedPendingStore,
+                "Reconcile",
+                firstSameNamePath,
+                reconcileDocument)!;
+            Require(removedMarkerCount == 1 &&
+                    !(bool)InvokePendingStore(
+                        reloadedPendingStore,
+                        "Contains",
+                        firstSameNamePath,
+                        "allowedPlanes",
+                        "StalePlane")!,
+                "Reconciliation did not remove a stale pending marker.");
+
+            var malformedPendingStorePath = Path.Combine(tempDirectory, "malformed-pending-new-items.json");
+            File.WriteAllText(malformedPendingStorePath, "{", new System.Text.UTF8Encoding(false));
+            var malformedPendingStore = loadFromMethod.Invoke(null, new object?[] { malformedPendingStorePath })
+                                        ?? throw new InvalidOperationException("Malformed pending marker storage crashed loading.");
+            var loadWarningProperty = resolvedPendingStoreType.GetProperty(
+                "LoadWarning",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic);
+            Require(loadWarningProperty?.GetValue(malformedPendingStore) is string loadWarning &&
+                    loadWarning.Contains("pending", StringComparison.OrdinalIgnoreCase),
+                "Malformed pending marker storage did not provide a controlled warning.");
+
+            var pendingSessionType = typeof(MainForm).Assembly.GetType("FootholdConfigManager.PendingNewItemSession");
+            Require(pendingSessionType is not null, "The pending bucket review edit session is missing.");
+            var sessionStore = NewPendingStore();
+            InvokePendingStore(sessionStore, "Add", firstSameNamePath, "allowedPlanes", "F-14BU");
+            var pendingSession = Activator.CreateInstance(
+                                     pendingSessionType!,
+                                     System.Reflection.BindingFlags.Instance |
+                                     System.Reflection.BindingFlags.Public |
+                                     System.Reflection.BindingFlags.NonPublic,
+                                     binder: null,
+                                     args: new[] { sessionStore, firstSameNamePath },
+                                     culture: null)
+                                 ?? throw new InvalidOperationException("Could not create the pending bucket review session.");
+
+            object? InvokePendingSession(string methodName, params object?[] arguments)
+            {
+                var method = pendingSessionType!.GetMethods(
+                        System.Reflection.BindingFlags.Instance |
+                        System.Reflection.BindingFlags.Public |
+                        System.Reflection.BindingFlags.NonPublic)
+                    .SingleOrDefault(candidate =>
+                        candidate.Name.Equals(methodName, StringComparison.Ordinal) &&
+                        candidate.GetParameters().Length == arguments.Length);
+                Require(method is not null, "The pending review session is missing " + methodName + ".");
+                return method!.Invoke(pendingSession, arguments);
+            }
+
+            Require((bool)InvokePendingSession("IsPending", "allowedPlanes", "F-14BU")!,
+                "A stored marker was not pending at the start of an edit session.");
+            InvokePendingSession("Resolve", "allowedPlanes", "F-14BU");
+            Require(!(bool)InvokePendingSession("IsPending", "allowedPlanes", "F-14BU")! &&
+                    (bool)InvokePendingStore(sessionStore, "Contains", firstSameNamePath, "allowedPlanes", "F-14BU")!,
+                "Resolving a row did not hide it while retaining its persistent marker.");
+            InvokePendingSession("Restore", "allowedPlanes", "F-14BU");
+            Require((bool)InvokePendingSession("IsPending", "allowedPlanes", "F-14BU")!,
+                "Undo did not restore a pending marker.");
+            InvokePendingSession("Resolve", "allowedPlanes", "F-14BU");
+            InvokePendingSession("ResetResolved");
+            Require((bool)InvokePendingSession("IsPending", "allowedPlanes", "F-14BU")!,
+                "Reload or failed Save did not restore a pending marker.");
+            InvokePendingSession("Resolve", "allowedPlanes", "F-14BU");
+            var committedMarkerStorePath = Path.Combine(tempDirectory, "committed-pending-new-items.json");
+            InvokePendingSession("CommitResolved", committedMarkerStorePath);
+            Require(!(bool)InvokePendingStore(sessionStore, "Contains", firstSameNamePath, "allowedPlanes", "F-14BU")!,
+                "A successful Save did not remove the resolved persistent marker.");
+            var committedMarkerStore = loadFromMethod.Invoke(null, new object?[] { committedMarkerStorePath })
+                                       ?? throw new InvalidOperationException("Could not reload committed marker storage.");
+            Require(!(bool)InvokePendingStore(
+                        committedMarkerStore,
+                        "Contains",
+                        firstSameNamePath,
+                        "allowedPlanes",
+                        "F-14BU")!,
+                "A resolved marker remained after persisted Save completion.");
+
+            var duplicateCurrentDocument = ConfigDocument.Load(duplicateCurrentPath);
+            var duplicatePreviousDocument = ConfigDocument.Load(duplicatePreviousPath);
+            var duplicateIncomingDocument = ConfigDocument.Load(duplicateIncomingPath);
+            var duplicatePreview = MergeCurrentConfigIntoNewConfig(
+                duplicateCurrentDocument,
+                duplicateIncomingDocument,
+                duplicatePreviousDocument);
+
+            Require(duplicateIncomingDocument.Entries.Count(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.Engineer soldier", StringComparison.Ordinal)) == 1,
+                "MAX_AT_SPAWN retained duplicate Engineer soldier rows.");
+            Require(duplicateIncomingDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.Engineer soldier", StringComparison.Ordinal)).ValueText == "2",
+                "The Lua-effective last Engineer soldier value was not preserved.");
+            Require(duplicateIncomingDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.Mephisto", StringComparison.Ordinal)).ValueText == "3",
+                "An unchanged old default did not advance to the incoming default.");
+            Require(duplicateIncomingDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("CTLDUnitCapabilities.OH58D", StringComparison.Ordinal)).ValueText ==
+                    "{ false, false, 0, 0, 14, 400 }",
+                "The Lua-effective last OH58D tuple was not preserved.");
+            Require(duplicateIncomingDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.PlayerOnly", StringComparison.Ordinal)).ValueText == "7",
+                "A parsed player-only row was not preserved.");
+            Require(duplicatePreview.DefaultedPlayerValues.Count == 0,
+                "Successfully preserved values were reported as defaulted.");
+
+            var duplicateMissingIncomingDocument = ConfigDocument.Load(duplicateMissingIncomingPath);
+            var missingTableRepair = DuplicateTableRepair.ApplyToIncoming(
+                duplicateCurrentDocument,
+                duplicatePreviousDocument,
+                duplicateMissingIncomingDocument);
+            Require(duplicateMissingIncomingDocument.TryGetTableBlockText("MAX_AT_SPAWN", out var preservedMissingTable) &&
+                    preservedMissingTable.Contains("[\"Engineer soldier\"] = 2", StringComparison.Ordinal) &&
+                    preservedMissingTable.Contains("[\"PlayerOnly\"] = 7", StringComparison.Ordinal),
+                "A missing incoming table did not receive the complete player table.");
+            Require(missingTableRepair.PreservedWholeTables.Contains("MAX_AT_SPAWN", StringComparer.Ordinal) &&
+                    missingTableRepair.DefaultedPlayerValues.Count == 0,
+                "A complete missing-table fallback was reported as defaulted.");
+
+            var duplicateSavePlayerDocument = ConfigDocument.Load(duplicateCurrentPath);
+            var duplicateSaveOutputDocument = ConfigDocument.Load(duplicateCurrentPath);
+            var duplicateSaveRepair = DuplicateTableRepair.RepairForSave(
+                duplicateSavePlayerDocument,
+                duplicateSaveOutputDocument,
+                duplicatePreviousDocument);
+            Require(duplicateSaveOutputDocument.Entries.Count(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.Engineer soldier", StringComparison.Ordinal)) == 1,
+                "Ordinary Save retained duplicate Engineer soldier rows.");
+            Require(duplicateSaveOutputDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.Engineer soldier", StringComparison.Ordinal)).ValueText == "2",
+                "Ordinary Save did not preserve the effective Engineer soldier value.");
+            Require(duplicateSaveOutputDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("CTLDUnitCapabilities.OH58D", StringComparison.Ordinal)).ValueText ==
+                    "{ false, false, 0, 0, 14, 400 }",
+                "Ordinary Save did not preserve the effective OH58D tuple.");
+            Require(duplicateSaveOutputDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.PlayerOnly", StringComparison.Ordinal)).ValueText == "7",
+                "Ordinary Save did not preserve a parsed player-only row.");
+            Require(duplicateSaveRepair.DefaultedPlayerValues.Count == 0,
+                "Ordinary Save reported preserved values as defaulted.");
+
+            var duplicateNoCleanOutputDocument = ConfigDocument.Load(duplicateCurrentPath);
+            var duplicateNoCleanRepair = DuplicateTableRepair.RepairForSave(
+                duplicateSavePlayerDocument,
+                duplicateNoCleanOutputDocument,
+                cleanDocument: null);
+            Require(duplicateNoCleanOutputDocument.Entries.Count(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.Engineer soldier", StringComparison.Ordinal)) == 1 &&
+                    duplicateNoCleanOutputDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("MAX_AT_SPAWN.Engineer soldier", StringComparison.Ordinal)).ValueText == "2",
+                "A legacy Save without linked defaults did not keep the last Engineer soldier row.");
+            Require(duplicateNoCleanOutputDocument.Entries.Count(entry =>
+                        entry.DisplayKey.Equals("CTLDUnitCapabilities.OH58D", StringComparison.Ordinal)) == 1 &&
+                    duplicateNoCleanOutputDocument.Entries.Single(entry =>
+                        entry.DisplayKey.Equals("CTLDUnitCapabilities.OH58D", StringComparison.Ordinal)).ValueText ==
+                    "{ false, false, 0, 0, 14, 400 }",
+                "A legacy Save without linked defaults did not keep the last OH58D row.");
+            Require(duplicateNoCleanRepair.DefaultedPlayerValues.Count == 0,
+                "A legacy last-row cleanup reported player values as defaulted.");
+            var duplicateNoCleanSavedPath = Path.Combine(tempDirectory, "duplicate-no-clean-saved.lua");
+            duplicateNoCleanOutputDocument.SaveTo(duplicateNoCleanSavedPath);
+            Require(ConfigDocument.Load(duplicateNoCleanSavedPath).Validate().Count == 0,
+                "The legacy duplicate cleanup did not produce valid Lua.");
+
+            var cleanBefore = File.ReadAllText(duplicatePreviousPath, new System.Text.UTF8Encoding(false, true));
+            var cleanPlayerDocument = ConfigDocument.Load(duplicatePreviousPath);
+            var cleanOutputDocument = ConfigDocument.Load(duplicatePreviousPath);
+            var cleanRepair = DuplicateTableRepair.RepairForSave(
+                cleanPlayerDocument,
+                cleanOutputDocument,
+                duplicatePreviousDocument);
+            var cleanAfterPath = Path.Combine(tempDirectory, "clean-after.lua");
+            cleanOutputDocument.SaveSnapshotTo(cleanAfterPath);
+            Require(cleanRepair.HandledTables.Count == 0 &&
+                    File.ReadAllText(cleanAfterPath, new System.Text.UTF8Encoding(false, true)).Equals(cleanBefore, StringComparison.Ordinal),
+                "An already-clean config was rewritten by duplicate repair.");
+
+            var linkedTargetPath = Path.Combine(tempDirectory, "Linked", RuntimeSettings.DefaultConfigFileName);
+            var unrelatedTargetPath = Path.Combine(tempDirectory, "Unrelated", RuntimeSettings.DefaultConfigFileName);
+            var linkedDefaults = new StoredMizDefaultsInfo
+            {
+                Id = "linked",
+                ConfigFileName = RuntimeSettings.DefaultConfigFileName,
+                ConfigPath = duplicatePreviousPath,
+                StoredAt = new DateTime(2026, 8, 3, 4, 0, 0),
+                TargetConfigPaths = new List<string> { linkedTargetPath }
+            };
+            var unrelatedDefaults = new StoredMizDefaultsInfo
+            {
+                Id = "unrelated",
+                ConfigFileName = RuntimeSettings.DefaultConfigFileName,
+                ConfigPath = duplicateIncomingPath,
+                StoredAt = new DateTime(2026, 8, 3, 5, 0, 0),
+                TargetConfigPaths = new List<string> { unrelatedTargetPath }
+            };
+            Require(SelectStoredMizDefaultsForConfig(new[] { unrelatedDefaults, linkedDefaults }, linkedTargetPath)?.Id == "linked",
+                "The exact linked clean defaults were not selected.");
+            Require(SelectStoredMizDefaultsForConfig(new[] { unrelatedDefaults, linkedDefaults },
+                        Path.Combine(tempDirectory, "Legacy", RuntimeSettings.DefaultConfigFileName)) is null,
+                "Clean defaults were guessed from a matching filename without an exact target link.");
+            var secondLinkedTargetPath = Path.Combine(tempDirectory, "LinkedTwo", RuntimeSettings.DefaultConfigFileName);
+            Require(MergeStoredTargetConfigPaths(new[] { linkedDefaults }, secondLinkedTargetPath)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    .SetEquals(new[] { Path.GetFullPath(linkedTargetPath), Path.GetFullPath(secondLinkedTargetPath) }),
+                "Refreshing stored defaults did not retain every exact target link.");
+            Require(BuildDefaultedPlayerValuesWarning(Array.Empty<DefaultedPlayerValue>()) is null,
+                "A successful preservation result produced a warning.");
+            var defaultedWarning = BuildDefaultedPlayerValuesWarning(new[]
+            {
+                new DefaultedPlayerValue("MAX_AT_SPAWN", "Engineer soldier", "2")
+            });
+            Require(defaultedWarning is not null &&
+                    defaultedWarning.Contains("MAX_AT_SPAWN", StringComparison.Ordinal) &&
+                    defaultedWarning.Contains("Engineer soldier", StringComparison.Ordinal),
+                "A defaulted player value warning did not identify its table and key.");
+
             Require(incomingDocument.GetInstallPolicy(keptTableKey)?.Equals(InstallPolicyKeepTable, StringComparison.OrdinalIgnoreCase) == true,
                 "The nested-table keep policy was not retained.");
             Require(incomingDocument.GetInstallPolicy("CustomNested")?.Equals(InstallPolicyKeepTable, StringComparison.OrdinalIgnoreCase) == true,
                 "The generic nested-table keep policy was not retained.");
+            Require(incomingDocument.GetInstallPolicy("ForceIncomingOption")?.Equals(InstallPolicyForceValue, StringComparison.OrdinalIgnoreCase) == true,
+                "The forced scalar policy was not retained.");
             Require(incomingDocument.TryGetTableBlockText(keptTableKey, out var keptTableBlock),
                 "The merged nested table was not found.");
             Require(keptTableBlock.Contains("[\"Custom1\"]", StringComparison.Ordinal),
@@ -17662,6 +19750,11 @@ internal sealed class MainForm : Form
             Require(incomingDocument.Entries.Any(entry => entry.DisplayKey.Equals("NewOption", StringComparison.Ordinal) &&
                                                           entry.ValueText.Equals("42", StringComparison.Ordinal)),
                 "An unrelated incoming option was not retained.");
+            Require(incomingDocument.Entries.Any(entry => entry.DisplayKey.Equals("ForceIncomingOption", StringComparison.Ordinal) &&
+                                                          entry.ValueText.Equals("true", StringComparison.Ordinal)),
+                "A forced scalar did not retain the incoming value.");
+            Require(!preview.KeptValues.Any(entry => entry.Key.Equals("ForceIncomingOption", StringComparison.Ordinal)),
+                "A forced scalar was offered as a keep-current choice.");
             Require(preview.KeptTableBlocks.Select(table => table.Key).ToHashSet(StringComparer.Ordinal)
                     .SetEquals(new[] { keptTableKey, "CustomNested" }),
                 "The full-table preview choices did not match the kept tables.");
@@ -17853,15 +19946,29 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static MizMergePreview MergeCurrentConfigIntoNewConfig(ConfigDocument currentDocument, ConfigDocument newDocument)
+    private static MizMergePreview MergeCurrentConfigIntoNewConfig(
+        ConfigDocument currentDocument,
+        ConfigDocument newDocument,
+        ConfigDocument? previousCleanDocument = null)
     {
         var preview = new MizMergePreview();
-        ApplyStringListInstallPolicies(currentDocument, newDocument, preview);
+        ApplyStringListInstallPolicies(currentDocument, newDocument, previousCleanDocument, preview);
         ApplyNonStringKeepTableInstallPolicies(currentDocument, newDocument, preview);
 
-        var currentByKey = currentDocument.Entries
+        var duplicateRepair = DuplicateTableRepair.ApplyToIncoming(
+            currentDocument,
+            previousCleanDocument,
+            newDocument);
+        preview.HandledDuplicateTables.UnionWith(duplicateRepair.HandledTables);
+        preview.PreservedWholeDuplicateTables.AddRange(duplicateRepair.PreservedWholeTables);
+        preview.DefaultedPlayerValues.AddRange(duplicateRepair.DefaultedPlayerValues);
+
+        var effectiveCurrentEntries = currentDocument.Entries
             .GroupBy(entry => entry.DisplayKey, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            .Select(group => group.OrderBy(entry => entry.LineIndex).Last())
+            .ToList();
+        var currentByKey = effectiveCurrentEntries
+            .ToDictionary(entry => entry.DisplayKey, entry => entry, StringComparer.Ordinal);
         var newKeys = newDocument.Entries
             .Select(entry => entry.DisplayKey)
             .ToHashSet(StringComparer.Ordinal);
@@ -17872,6 +19979,11 @@ internal sealed class MainForm : Form
 
         foreach (var newEntry in newDocument.Entries)
         {
+            if (preview.HandledDuplicateTables.Contains(newEntry.ParentKey))
+            {
+                continue;
+            }
+
             if (!currentByKey.TryGetValue(newEntry.DisplayKey, out var currentEntry))
             {
                 preview.NewEntries.Add(newEntry);
@@ -17884,14 +19996,24 @@ internal sealed class MainForm : Form
                 continue;
             }
 
+            if (newDocument.GetInstallPolicy(newEntry.DisplayKey)?.Equals(InstallPolicyForceValue, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                continue;
+            }
+
             preview.KeptValues.Add(new MizKeptValue(newEntry, currentEntry.ValueText, newEntry.ValueText));
             newEntry.ValueText = currentEntry.ValueText;
         }
 
         ApplyLegacySamTemplateMigration(currentByKey, newDocument, preview);
 
-        foreach (var currentEntry in currentDocument.Entries.Where(entry => !newKeys.Contains(entry.DisplayKey)))
+        foreach (var currentEntry in effectiveCurrentEntries.Where(entry => !newKeys.Contains(entry.DisplayKey)))
         {
+            if (preview.HandledDuplicateTables.Contains(currentEntry.ParentKey))
+            {
+                continue;
+            }
+
             if (IsLegacySamTemplateSetting(currentEntry.DisplayKey))
             {
                 continue;
@@ -17968,11 +20090,25 @@ internal sealed class MainForm : Form
     private static void ApplyStringListInstallPolicies(
         ConfigDocument currentDocument,
         ConfigDocument newDocument,
+        ConfigDocument? previousCleanDocument,
         MizMergePreview preview)
     {
         foreach (var newTable in newDocument.StringListTables.ToList())
         {
             var currentTable = currentDocument.StringListTables.FirstOrDefault(table => table.Key.Equals(newTable.Key, StringComparison.Ordinal));
+            if (IsCommentWhenVisiblePolicy(newTable) &&
+                VisibleWhenMatches(currentDocument, newTable.GuiVisibleWhen!))
+            {
+                ApplyVisibleNewItemPolicy(
+                    currentDocument,
+                    currentTable,
+                    newDocument,
+                    newTable,
+                    previousCleanDocument,
+                    preview);
+                continue;
+            }
+
             if (currentTable is null)
             {
                 continue;
@@ -18004,6 +20140,86 @@ internal sealed class MainForm : Form
                 preview.KeptStringListTables.Add((newTable.Key, currentTable.Items.Count));
             }
         }
+    }
+
+    private static bool IsCommentWhenVisiblePolicy(ConfigStringListTable table)
+    {
+        return string.Equals(
+            table.NewItemPolicy?.Trim(),
+            NewItemPolicyCommentWhenVisible,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ApplyVisibleNewItemPolicy(
+        ConfigDocument currentDocument,
+        ConfigStringListTable? currentTable,
+        ConfigDocument newDocument,
+        ConfigStringListTable incomingTable,
+        ConfigDocument? previousCleanDocument,
+        MizMergePreview preview)
+    {
+        var incomingValues = GetStringListValuesInSourceOrder(incomingTable);
+        var knownValues = new HashSet<string>(StringComparer.Ordinal);
+        if (currentTable is not null)
+        {
+            knownValues.UnionWith(GetStringListValuesInSourceOrder(currentTable));
+        }
+
+        var previousCleanTable = previousCleanDocument?.StringListTables.FirstOrDefault(table =>
+            table.Key.Equals(incomingTable.Key, StringComparison.Ordinal));
+        if (previousCleanTable is not null)
+        {
+            knownValues.UnionWith(GetStringListValuesInSourceOrder(previousCleanTable));
+        }
+
+        var genuinelyNewValues = new List<string>();
+        foreach (var value in incomingValues)
+        {
+            if (knownValues.Add(value))
+            {
+                genuinelyNewValues.Add(value);
+            }
+        }
+
+        if (currentTable is not null)
+        {
+            if (!newDocument.ReplaceTableBodyFrom(currentDocument, incomingTable.Key))
+            {
+                throw new InvalidOperationException(
+                    "Could not preserve the current table body for " + incomingTable.Key + ".");
+            }
+        }
+        else
+        {
+            foreach (var activeItem in incomingTable.Items.ToList())
+            {
+                newDocument.DeactivateStringListItem(incomingTable, activeItem);
+            }
+        }
+
+        var mergedTable = newDocument.StringListTables.First(table =>
+            table.Key.Equals(incomingTable.Key, StringComparison.Ordinal));
+        foreach (var value in genuinelyNewValues)
+        {
+            newDocument.AddCommentedStringListItem(mergedTable, value);
+            preview.ImportedBucketNewItems.Add(new ImportedBucketNewItem(
+                incomingTable.Section,
+                incomingTable.Key,
+                value));
+        }
+
+        preview.HandledNewItemPolicyTables.Add(incomingTable.Key);
+    }
+
+    private static List<string> GetStringListValuesInSourceOrder(ConfigStringListTable table)
+    {
+        return table.Items
+            .Concat(table.CommentedItems)
+            .OrderBy(item => item.LineIndex)
+            .ThenBy(item => item.StartIndex)
+            .Select(item => item.Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
     private static void ApplyNonStringKeepTableInstallPolicies(
@@ -18129,6 +20345,11 @@ internal sealed class MainForm : Form
     {
         foreach (var newTable in newDocument.StringListTables)
         {
+            if (preview.HandledNewItemPolicyTables.Contains(newTable.Key))
+            {
+                continue;
+            }
+
             var currentTable = currentDocument.StringListTables.FirstOrDefault(table => table.Key.Equals(newTable.Key, StringComparison.Ordinal));
             if (currentTable is null)
             {
@@ -18303,7 +20524,11 @@ internal sealed class MainForm : Form
 
             var outputDocument = ConfigDocument.Load(sourcePath);
             outputDocument.RepairStringListSeparators();
-            var preview = MergeCurrentConfigIntoNewConfig(currentDocument, outputDocument);
+            var previousCleanDocument = TryLoadStoredMizDefaultsForConfig(currentPath);
+            var preview = MergeCurrentConfigIntoNewConfig(
+                currentDocument,
+                outputDocument,
+                previousCleanDocument);
             if (!ValidateMergeDocument(outputDocument, "Import Config File validation failed", "The merged Import Config File config"))
             {
                 return;
@@ -18351,6 +20576,7 @@ internal sealed class MainForm : Form
             var importedNewMarkers = CaptureImportedNewMarkers(preview);
             var storedDefaults = StoreConfigDefaults(sourcePath);
             outputDocument.SaveTo(currentPath);
+            var pendingNewItemWarning = PersistImportedBucketNewItems(currentPath, preview);
             var presetSynced = TrySyncActivePresetFromLive(
                 currentPath,
                 out var activePresetName,
@@ -18368,7 +20594,8 @@ internal sealed class MainForm : Form
                     sourcePath,
                     "config-preset-update",
                     presetTargets,
-                    decisions);
+                    decisions,
+                    previousCleanDocument);
             LoadConfig(currentPath);
             ApplyImportedNewMarkers(importedNewMarkers);
             SetStatus(
@@ -18381,6 +20608,7 @@ internal sealed class MainForm : Form
             {
                 ShowActivePresetSyncWarning("config-file update", activePresetName, activePresetError);
             }
+            ShowPendingNewItemWarning(pendingNewItemWarning);
             ReportPresetBatchUpdate(presetUpdateResult);
         }
         catch (Exception ex)
@@ -19570,6 +21798,91 @@ internal sealed class MainForm : Form
         return text.Length <= 180 ? text : text[..177] + "...";
     }
 
+    private static string? BuildDefaultedPlayerValuesWarning(IEnumerable<DefaultedPlayerValue> values)
+    {
+        var defaultedValues = values
+            .GroupBy(value => (value.Table, value.Key))
+            .Select(group => group.First())
+            .OrderBy(value => value.Table, StringComparer.Ordinal)
+            .ThenBy(value => value.Key, StringComparer.Ordinal)
+            .ToList();
+        if (defaultedValues.Count == 0)
+        {
+            return null;
+        }
+
+        return "These player-modified values could not be preserved, so the clean defaults were used:" +
+               Environment.NewLine + Environment.NewLine +
+               string.Join(Environment.NewLine, defaultedValues.Select(value =>
+                   "  " + value.Table + "." + value.Key + "  (player value: " + PreviewValue(value.PlayerValue) + ")"));
+    }
+
+    private void ShowDefaultedPlayerValuesWarning(IEnumerable<DefaultedPlayerValue> values)
+    {
+        var message = BuildDefaultedPlayerValuesWarning(values);
+        if (message is null)
+        {
+            return;
+        }
+
+        MessageBox.Show(
+            this,
+            message,
+            "Some config values used defaults",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Warning);
+    }
+
+    private DuplicateTableRepairResult SaveConfigWithDuplicateRepair(ConfigDocument document)
+    {
+        var tempDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "FootholdConfigManager-DuplicateSave-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(tempDirectory);
+            var playerSnapshotPath = Path.Combine(tempDirectory, Path.GetFileName(document.Path));
+            document.SaveSnapshotTo(playerSnapshotPath);
+
+            var playerDocument = ConfigDocument.Load(playerSnapshotPath);
+            var outputDocument = ConfigDocument.Load(playerSnapshotPath);
+            var cleanDocument = TryLoadStoredMizDefaultsForConfig(document.Path);
+            var repair = DuplicateTableRepair.RepairForSave(
+                playerDocument,
+                outputDocument,
+                cleanDocument);
+            var errors = outputDocument.Validate();
+            if (errors.Count > 0)
+            {
+                throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
+            }
+
+            StoreConfigBackup(
+                document.Path,
+                document.Path,
+                _settings.ServerProfiles,
+                ConfigBackupsDirectory,
+                ConfigBackupsIndexPath,
+                sourceKind: "duplicate-repair");
+            outputDocument.SaveTo(document.Path);
+            return repair;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+            catch
+            {
+                // Best-effort temporary cleanup only.
+            }
+        }
+    }
+
     private void SaveConfig()
     {
         if (_document is null)
@@ -19588,7 +21901,8 @@ internal sealed class MainForm : Form
             ApplyEntryValue();
         }
 
-        if (!HasChanges())
+        var duplicateTables = DuplicateTableRepair.FindDirectDuplicateTableKeys(_document);
+        if (!HasChanges() && duplicateTables.Count == 0)
         {
             UpdateEditActionButtonStates();
             SetStatus(_undoStack.Count > 0 ? "No changes to save. Undo is still available." : "No changes to save.");
@@ -19597,17 +21911,52 @@ internal sealed class MainForm : Form
 
         try
         {
-            _document.Save();
+            var savedPath = _document.Path;
+            DuplicateTableRepairResult? duplicateRepair = null;
+            if (duplicateTables.Count > 0)
+            {
+                duplicateRepair = SaveConfigWithDuplicateRepair(_document);
+            }
+            else
+            {
+                _document.Save();
+            }
+
+            string? pendingNewItemWarning = null;
+            try
+            {
+                _pendingNewItemSession?.CommitResolved();
+            }
+            catch (Exception ex)
+            {
+                pendingNewItemWarning =
+                    "The config was saved, but resolved NEW review markers could not be saved: " + ex.Message;
+            }
+
             var presetSynced = TrySyncActivePresetFromLive(
-                _document.Path,
+                savedPath,
                 out var activePresetName,
                 out var presetSyncError);
             _undoCollapseGeneration++;
-            RefreshCurrentView(invalidateCachedPanels: false);
+            if (duplicateRepair is null)
+            {
+                RefreshCurrentView(invalidateCachedPanels: false);
+            }
+            else
+            {
+                LoadConfig(savedPath);
+            }
+
             UpdateEditActionButtonStates();
+            if (duplicateRepair is not null)
+            {
+                ShowDefaultedPlayerValuesWarning(duplicateRepair.DefaultedPlayerValues);
+            }
+
             if (!presetSynced)
             {
                 SetStatus("Saved live config, but the active preset was not updated.");
+                ShowPendingNewItemWarning(pendingNewItemWarning);
                 MessageBox.Show(
                     this,
                     "The live config was saved, but the active preset " +
@@ -19625,9 +21974,12 @@ internal sealed class MainForm : Form
                 ? "Saved config."
                 : "Saved config and preset " + activePresetName + ".";
             SetStatus(_undoStack.Count > 0 ? savedTarget + " Undo is still available." : savedTarget);
+            ShowPendingNewItemWarning(pendingNewItemWarning);
         }
         catch (Exception ex)
         {
+            _pendingNewItemSession?.ResetResolved();
+            _categoryList.Invalidate();
             MessageBox.Show(this, ex.Message, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
