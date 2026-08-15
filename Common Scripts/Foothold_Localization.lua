@@ -710,6 +710,54 @@ Lat long Decimal Minutes: N 36°12.050' E 37°09.695'
 Elevation 1287 feet]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "New strike mission: Strike on enemy hideout",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Strike mission ended: Strike on enemy hideout",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "Strike enemy communication tower",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[We have intercepted enemy communications transmitting from this location.
+Take out the communication tower.
+
+Reward: 1000
+
+MGRS: 36 S WF 81960 24650
+Lat long: N 36°21'48" E 33°54'48"
+Lat long Precise: N 36°21'48.47" E 33°54'48.89"
+Lat long Decimal Minutes: N 36°21.807' E 33°54.814'
+Elevation 361 feet]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "New strike mission: Strike enemy communication tower",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "Strike mission ended: Strike enemy communication tower",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "Strike enemy communications relay",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[Enemy communications have been traced to a second relay tower.
+Destroy it to disrupt their network.
+
+Reward: 1000
+
+MGRS: 37 S CB 09839 49242
+Lat long: N 37°28'13" E 36°50'58"
+Lat long Precise: N 37°28'13.88" E 36°50'58.56"
+Lat long Decimal Minutes: N 37°28.231' E 36°50.976'
+Elevation 2887 feet]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "Warning: The tower is guarded by an SA-2 surface-to-air missile site.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "New strike mission: Strike enemy communications relay",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "Strike mission ended: Strike enemy communications relay",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "Deep strike at Konya",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[Conduct a deep strike at Konya and destroy both strategic targets.
+The target area is heavily guarded by an %s surface-to-air missile site.
+
+Reward: 2000
+
+Target 1
+MGRS: 36 S VG 52091 90581
+Lat long: N 37°51'41" E 32°27'19"
+Lat long Precise: N 37°51'41.17" E 32°27'19.27"
+Lat long Decimal Minutes: N 37°51.686' E 32°27.321'
+Elevation 3406 feet
+
+Target 2
+MGRS: 36 S VG 52142 90600
+Lat long: N 37°51'41" E 32°27'21"
+Lat long Precise: N 37°51'41.82" E 32°27'21.35"
+Lat long Decimal Minutes: N 37°51.697' E 32°27.355'
+Elevation 3406 feet]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "New strike mission: Deep strike at Konya",
+	SYRIA_MISSION_STRIKE_KONYA_END = "Strike mission ended: Deep strike at Konya",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "Strike on Taftanaz supply warehouse",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[Taftanaz supply warehouse has been found,
 Take it out to halt the supplies going from there.
@@ -1088,6 +1136,7 @@ Reward: 1000]],
 	MISSION_CAS_DESCRIPTION_EMPTY      = "Support ground operations at %s.\nCoalition progress: %d/%d ground targets destroyed.",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "Support ground operations at %s.\nCoalition progress: %d/%d ground targets destroyed.\n\n%s",
 	MISSION_CAS_START                  = "New CAS mission at %s: Destroy %d enemy ground targets.",
+	MISSION_CAS_END                    = "Mission ended: CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] completed the CAS mission!\nReward pending: %d credits (land to redeem).",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] and [%s] completed the CAS mission!\nReward pending: %d credits each (land to redeem).",
 	MISSION_CAS_COMPLETED_GROUP        = "CAS mission completed!\nPending rewards:\n%s\nLand to redeem.",
@@ -1293,6 +1342,9 @@ Elevation %d feet]],
 	-- Zone Admin / Labels
 	-- ============================================================
 	ZONE_LABEL_MISSION                 = "Mission!",
+	ZONE_CAPTURE_PROGRESS              = "Capturing: %d%%",
+	ZONE_CAPTURE_STARTED_FRIENDLY      = "Capturing %s...",
+	ZONE_CAPTURE_STARTED_ENEMY         = "Enemy is capturing %s",
 	ZONE_LABEL_REPAIRING_PERCENT       = "Repairing %d%%",
 	ZONE_LABEL_UPGRADING_PERCENT       = "Upgrading %d%%",
 	ZONE_MISSION_TAG_ATTACK            = "Attack",
@@ -1319,6 +1371,7 @@ Elevation %d feet]],
 	ZONE_FAILED_SPAWN_REPLACEMENT_GROUP = "Failed to spawn replacement group: %s",
 	ZONE_FAILED_SPAWN_GROUP_FOR_UPGRADE = "Failed to spawn group for upgrade: %s",
 	ZONE_LOST_GROUP                    = "%s lost group %s",
+	ZONE_ENEMY_FORCES_SURRENDERED      = "Enemy forces at %s have given up and fled.",
 	ZONE_NOW_NEUTRAL                   = "%s is now neutral",
 	ZONE_LOST_BY_BLUE                  = "We have lost %s!",
 	ZONE_WARNING_UNKNOWN_TARGETZONE    = "WARNING: unknown targetzone=%s in group=%s zone=%s",
@@ -1614,6 +1667,8 @@ Elevation %d feet]],
 	CTLD_SAM_MERGE_COMPLETE            = "%s merge complete: added %s to nearby system.",
 	CTLD_ZONE_SUPPLIES_DESTROYED       = "[CTLD] Zone supplies destroyed in %s (%s).",
 	CTLD_ZONE_SUPPLIES_DELIVERED       = "Zone supplies %s %s.",
+	CTLD_ZONE_SUPPLY_ACTION_CAPTURING  = "capture started at",
+	CTLD_ZONE_SUPPLY_ACTION_QUEUED     = "queued until capture completes at",
 	CTLD_ZONE_SUPPLY_ACTION_CAPTURED   = "captured",
 	CTLD_ZONE_SUPPLY_ACTION_UPGRADED   = "upgraded",
 	CTLD_ZONE_SUPPLY_ACTION_STOCKED    = "stocked (%d/%d ready) at",
@@ -1671,6 +1726,7 @@ Elevation %d feet]],
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Troop group entered zone: %s",
 	CTLD_TROOP_ZONE_CAPTURED           = "captured",
 	CTLD_TROOP_ZONE_UPGRADED           = "upgraded",
+	CTLD_TROOP_ZONE_STOCKED            = "stocked",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "captured and upgraded",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d credits.",
@@ -2725,6 +2781,54 @@ Lat long Decimal Minutes: N 36°12.050' E 37°09.695'
 Höhe 1287 Fuß]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "Neue Angriffsmission: Angriff auf feindliches Versteck",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Angriffsmission beendet: Angriff auf feindliches Versteck",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "Feindlichen Kommunikationsturm angreifen",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[Wir haben feindliche Funkübertragungen von diesem Standort abgefangen.
+Zerstöre den Kommunikationsturm.
+
+Belohnung: 1000
+
+MGRS: 36 S WF 81960 24650
+Breitengrad/Längengrad: N 36°21'48" E 33°54'48"
+Präzise: N 36°21'48.47" E 33°54'48.89"
+Dezimalminuten: N 36°21.807' E 33°54.814'
+Höhe 361 Fuß]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "Neue Angriffsmission: Feindlichen Kommunikationsturm angreifen",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "Angriffsmission beendet: Feindlichen Kommunikationsturm angreifen",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "Feindliches Kommunikationsrelais angreifen",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[Feindliche Kommunikation wurde zu einem zweiten Relaisturm zurückverfolgt.
+Zerstöre ihn, um ihr Netzwerk zu stören.
+
+Belohnung: 1000
+
+MGRS: 37 S CB 09839 49242
+Breitengrad/Längengrad: N 37°28'13" E 36°50'58"
+Präzise: N 37°28'13.88" E 36°50'58.56"
+Dezimalminuten: N 37°28.231' E 36°50.976'
+Höhe 2887 Fuß]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "Warnung: Der Turm wird von einer SA-2-Flugabwehrraketenstellung geschützt.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "Neue Angriffsmission: Feindliches Kommunikationsrelais angreifen",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "Angriffsmission beendet: Feindliches Kommunikationsrelais angreifen",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "Tiefenangriff auf Konya",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[Führen Sie einen Tiefenangriff auf Konya durch und zerstören Sie beide strategischen Ziele.
+Das Zielgebiet wird stark von einer %s-Flugabwehrraketenstellung geschützt.
+
+Belohnung: 2000
+
+Ziel 1
+MGRS: 36 S VG 52091 90581
+Breitengrad/Längengrad: N 37°51'41" E 32°27'19"
+Präzise: N 37°51'41.17" E 32°27'19.27"
+Dezimalminuten: N 37°51.686' E 32°27.321'
+Höhe 3406 Fuß
+
+Ziel 2
+MGRS: 36 S VG 52142 90600
+Breitengrad/Längengrad: N 37°51'41" E 32°27'21"
+Präzise: N 37°51'41.82" E 32°27'21.35"
+Dezimalminuten: N 37°51.697' E 32°27.355'
+Höhe 3406 Fuß]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "Neue Angriffsmission: Tiefenangriff auf Konya",
+	SYRIA_MISSION_STRIKE_KONYA_END = "Angriffsmission beendet: Tiefenangriff auf Konya",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "Angriff auf Versorgungslager Taftanaz",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[Versorgungslager Taftanaz wurde gefunden.
 Schalte es aus, um die Versorgung von dort zu stoppen.
@@ -3021,6 +3125,7 @@ Belohnung: 1000]],
 	MISSION_CAS_DESCRIPTION_EMPTY      = "Unterstütze die Bodenoperationen bei %s.\nKoalitionsfortschritt: %d/%d Bodenziele zerstört.",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "Unterstütze die Bodenoperationen bei %s.\nKoalitionsfortschritt: %d/%d Bodenziele zerstört.\n\n%s",
 	MISSION_CAS_START                  = "Neue CAS-Mission bei %s: Zerstöre %d feindliche Bodenziele.",
+	MISSION_CAS_END                    = "Mission beendet: CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] hat die CAS-Mission abgeschlossen!\nBelohnung ausstehend: %d Kredits (landen, um einzulösen).",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] und [%s] haben die CAS-Mission abgeschlossen!\nBelohnung ausstehend: jeweils %d Kredits (landen, um einzulösen).",
 	MISSION_CAS_COMPLETED_GROUP        = "CAS-Mission abgeschlossen!\nAusstehende Belohnungen:\n%s\nLanden, um sie einzulösen.",
@@ -3604,6 +3709,7 @@ Höhe %d Fuß]],
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Truppengruppe hat Zone betreten: %s",
 	CTLD_TROOP_ZONE_CAPTURED           = "erobert",
 	CTLD_TROOP_ZONE_UPGRADED           = "verbessert",
+	CTLD_TROOP_ZONE_STOCKED            = "versorgt",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "erobert und verbessert",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s]: %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d Kredits.",
@@ -4658,6 +4764,54 @@ Lat long Decimal Minutes: N 36°12.050' E 37°09.695'
 Altitude 1287 pieds]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "Nouvelle mission de frappe : Frappe sur cache ennemie",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Mission de frappe terminée : Frappe sur cache ennemie",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "Frappe sur la tour de communication ennemie",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[Nous avons intercepté des communications ennemies émises depuis cette position.
+Détruisez la tour de communication.
+
+Récompense : 1000
+
+MGRS : 36 S WF 81960 24650
+Lat./long. : N 36°21'48" E 33°54'48"
+Lat./long. précise : N 36°21'48.47" E 33°54'48.89"
+Minutes décimales : N 36°21.807' E 33°54.814'
+Altitude : 361 pieds]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "Nouvelle mission de frappe : Tour de communication ennemie",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "Mission de frappe terminée : Tour de communication ennemie",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "Frappe sur le relais de communication ennemi",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[Des communications ennemies ont été localisées vers une deuxième tour relais.
+Détruisez-la pour perturber leur réseau.
+
+Récompense : 1000
+
+MGRS : 37 S CB 09839 49242
+Lat./long. : N 37°28'13" E 36°50'58"
+Lat./long. précise : N 37°28'13.88" E 36°50'58.56"
+Minutes décimales : N 37°28.231' E 36°50.976'
+Altitude : 2887 pieds]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "Attention : la tour est protégée par un site de missiles sol-air SA-2.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "Nouvelle mission de frappe : Relais de communication ennemi",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "Mission de frappe terminée : Relais de communication ennemi",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "Frappe en profondeur à Konya",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[Effectuez une frappe en profondeur à Konya et détruisez les deux objectifs stratégiques.
+La zone cible est fortement protégée par un site de missiles sol-air %s.
+
+Récompense : 2000
+
+Objectif 1
+MGRS : 36 S VG 52091 90581
+Lat./long. : N 37°51'41" E 32°27'19"
+Lat./long. précise : N 37°51'41.17" E 32°27'19.27"
+Minutes décimales : N 37°51.686' E 32°27.321'
+Altitude : 3406 pieds
+
+Objectif 2
+MGRS : 36 S VG 52142 90600
+Lat./long. : N 37°51'41" E 32°27'21"
+Lat./long. précise : N 37°51'41.82" E 32°27'21.35"
+Minutes décimales : N 37°51.697' E 32°27.355'
+Altitude : 3406 pieds]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "Nouvelle mission de frappe : Frappe en profondeur à Konya",
+	SYRIA_MISSION_STRIKE_KONYA_END = "Mission de frappe terminée : Frappe en profondeur à Konya",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "Frappe sur entrepôt de ravitaillement de Taftanaz",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[L'entrepôt de ravitaillement de Taftanaz a été trouvé,
 détruisez-le pour stopper les ravitaillements venant de là.
@@ -4954,6 +5108,7 @@ Récompense : 1000]],
 	MISSION_CAS_DESCRIPTION_EMPTY      = "Soutenez les opérations au sol à %s.\nProgression de la coalition : %d/%d cibles au sol détruites.",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "Soutenez les opérations au sol à %s.\nProgression de la coalition : %d/%d cibles au sol détruites.\n\n%s",
 	MISSION_CAS_START                  = "Nouvelle mission CAS à %s : détruisez %d cibles terrestres ennemies.",
+	MISSION_CAS_END                    = "Mission terminée : CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] a terminé la mission CAS!\nRécompense en attente : %d crédits (atterrissez pour la récupérer).",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] et [%s] ont terminé la mission CAS!\nRécompense en attente : %d crédits chacun (atterrissez pour la récupérer).",
 	MISSION_CAS_COMPLETED_GROUP        = "Mission CAS terminée !\nRécompenses en attente :\n%s\nAtterrissez pour les récupérer.",
@@ -5537,6 +5692,7 @@ Altitude %d pieds]],
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Groupe de troupes entré dans la zone : %s",
 	CTLD_TROOP_ZONE_CAPTURED           = "capturé",
 	CTLD_TROOP_ZONE_UPGRADED           = "amélioré",
+	CTLD_TROOP_ZONE_STOCKED            = "ravitaillé",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "capturé et amélioré",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d crédits.",
@@ -6591,6 +6747,54 @@ Lat long Decimal Minutes: N 36°12.050' E 37°09.695'
 Elevación 1287 pies]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "Nueva misión de ataque: Ataque al escondite enemigo",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Misión de ataque terminada: Ataque al escondite enemigo",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "Ataque a la torre de comunicaciones enemiga",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[Hemos interceptado comunicaciones enemigas emitidas desde esta posición.
+Destruye la torre de comunicaciones.
+
+Recompensa: 1000
+
+MGRS: 36 S WF 81960 24650
+Lat./long.: N 36°21'48" E 33°54'48"
+Lat./long. precisa: N 36°21'48.47" E 33°54'48.89"
+Minutos decimales: N 36°21.807' E 33°54.814'
+Elevación: 361 pies]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "Nueva misión de ataque: Torre de comunicaciones enemiga",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "Misión de ataque terminada: Torre de comunicaciones enemiga",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "Ataque al repetidor de comunicaciones enemigo",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[Las comunicaciones enemigas han sido rastreadas hasta una segunda torre repetidora.
+Destrúyela para interrumpir su red.
+
+Recompensa: 1000
+
+MGRS: 37 S CB 09839 49242
+Lat./long.: N 37°28'13" E 36°50'58"
+Lat./long. precisa: N 37°28'13.88" E 36°50'58.56"
+Minutos decimales: N 37°28.231' E 36°50.976'
+Elevación: 2887 pies]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "Advertencia: la torre está protegida por un emplazamiento de misiles tierra-aire SA-2.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "Nueva misión de ataque: Repetidor de comunicaciones enemigo",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "Misión de ataque terminada: Repetidor de comunicaciones enemigo",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "Ataque en profundidad en Konya",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[Realiza un ataque en profundidad en Konya y destruye ambos objetivos estratégicos.
+La zona objetivo está fuertemente protegida por un emplazamiento de misiles tierra-aire %s.
+
+Recompensa: 2000
+
+Objetivo 1
+MGRS: 36 S VG 52091 90581
+Lat./long.: N 37°51'41" E 32°27'19"
+Lat./long. precisa: N 37°51'41.17" E 32°27'19.27"
+Minutos decimales: N 37°51.686' E 32°27.321'
+Elevación: 3406 pies
+
+Objetivo 2
+MGRS: 36 S VG 52142 90600
+Lat./long.: N 37°51'41" E 32°27'21"
+Lat./long. precisa: N 37°51'41.82" E 32°27'21.35"
+Minutos decimales: N 37°51.697' E 32°27.355'
+Elevación: 3406 pies]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "Nueva misión de ataque: Ataque en profundidad en Konya",
+	SYRIA_MISSION_STRIKE_KONYA_END = "Misión de ataque terminada: Ataque en profundidad en Konya",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "Ataque al almacén de suministros de Taftanaz",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[Se ha encontrado el almacén de suministros de Taftanaz,
 destrúyelo para detener los suministros que salen de allí.
@@ -6887,6 +7091,7 @@ Recompensa: 1000]],
 	MISSION_CAS_DESCRIPTION_EMPTY      = "Apoya las operaciones terrestres en %s.\nProgreso de la coalición: %d/%d objetivos terrestres destruidos.",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "Apoya las operaciones terrestres en %s.\nProgreso de la coalición: %d/%d objetivos terrestres destruidos.\n\n%s",
 	MISSION_CAS_START                  = "Nueva misión CAS en %s: destruye %d objetivos terrestres enemigos.",
+	MISSION_CAS_END                    = "Misión terminada: CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] completó la misión CAS!\nRecompensa pendiente: %d créditos (aterriza para reclamarla).",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] y [%s] completaron la misión CAS!\nRecompensa pendiente: %d créditos cada uno (aterricen para reclamarla).",
 	MISSION_CAS_COMPLETED_GROUP        = "¡Misión CAS completada!\nRecompensas pendientes:\n%s\nAterricen para reclamarlas.",
@@ -7473,6 +7678,7 @@ Elevación %d pies]],
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Grupo de tropas entró en la zona: %s",
 	CTLD_TROOP_ZONE_CAPTURED           = "capturado",
 	CTLD_TROOP_ZONE_UPGRADED           = "mejorado",
+	CTLD_TROOP_ZONE_STOCKED            = "abasteció",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "capturado y mejorado",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d créditos.",
@@ -8527,6 +8733,54 @@ Lat long Decimal Minutes: N 36°12.050' E 37°09.695'
 Высота 1287 футов]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "Новая ударная миссия: Удар по вражескому укрытию",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Ударная миссия завершена: Удар по вражескому укрытию",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "Удар по вражеской вышке связи",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[Мы перехватили вражеские радиопередачи, исходящие из этой точки.
+Уничтожьте вышку связи.
+
+Награда: 1000
+
+MGRS: 36 S WF 81960 24650
+Широта/долгота: N 36°21'48" E 33°54'48"
+Точные координаты: N 36°21'48.47" E 33°54'48.89"
+Десятичные минуты: N 36°21.807' E 33°54.814'
+Высота: 361 фут]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "Новая ударная миссия: Вражеская вышка связи",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "Ударная миссия завершена: Вражеская вышка связи",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "Удар по вражеской ретрансляционной вышке",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[Вражеские передачи были отслежены до второй ретрансляционной вышки.
+Уничтожьте её, чтобы нарушить работу их сети.
+
+Награда: 1000
+
+MGRS: 37 S CB 09839 49242
+Широта/долгота: N 37°28'13" E 36°50'58"
+Точные координаты: N 37°28'13.88" E 36°50'58.56"
+Десятичные минуты: N 37°28.231' E 36°50.976'
+Высота: 2887 футов]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "Внимание: вышка прикрыта позицией зенитно-ракетного комплекса SA-2.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "Новая ударная миссия: Вражеская ретрансляционная вышка",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "Ударная миссия завершена: Вражеская ретрансляционная вышка",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "Глубокий удар по Конье",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[Нанесите глубокий удар по Конье и уничтожьте обе стратегические цели.
+Целевой район хорошо защищён зенитным ракетным комплексом %s.
+
+Награда: 2000
+
+Цель 1
+MGRS: 36 S VG 52091 90581
+Широта/долгота: N 37°51'41" E 32°27'19"
+Точные координаты: N 37°51'41.17" E 32°27'19.27"
+Десятичные минуты: N 37°51.686' E 32°27.321'
+Высота: 3406 футов
+
+Цель 2
+MGRS: 36 S VG 52142 90600
+Широта/долгота: N 37°51'41" E 32°27'21"
+Точные координаты: N 37°51'41.82" E 32°27'21.35"
+Десятичные минуты: N 37°51.697' E 32°27.355'
+Высота: 3406 футов]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "Новая ударная миссия: Глубокий удар по Конье",
+	SYRIA_MISSION_STRIKE_KONYA_END = "Ударная миссия завершена: Глубокий удар по Конье",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "Удар по складу снабжения Taftanaz",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[Обнаружен склад снабжения Taftanaz.
 Уничтожьте его, чтобы остановить снабжение оттуда.
@@ -8823,6 +9077,7 @@ Lat long Decimal Minutes: N 34°32.513' E 39°20.328'
 	MISSION_CAS_DESCRIPTION_EMPTY      = "Поддержите наземную операцию в районе %s.\nПрогресс коалиции: уничтожено %d/%d наземных целей.",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "Поддержите наземную операцию в районе %s.\nПрогресс коалиции: уничтожено %d/%d наземных целей.\n\n%s",
 	MISSION_CAS_START                  = "Новая миссия CAS в районе %s: уничтожьте %d наземных целей противника.",
+	MISSION_CAS_END                    = "Миссия завершена: CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] завершил миссию CAS!\nНаграда ожидает: %d кредитов (приземлитесь, чтобы получить).",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] и [%s] завершили миссию CAS!\nНаграда ожидает: по %d кредитов каждому (приземлитесь, чтобы получить).",
 	MISSION_CAS_COMPLETED_GROUP        = "Миссия CAS завершена!\nОжидающие награды:\n%s\nПриземлитесь, чтобы получить их.",
@@ -9409,6 +9664,7 @@ MGRS: %s
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Группа войск вошла в зону: %s",
 	CTLD_TROOP_ZONE_CAPTURED           = "захватил",
 	CTLD_TROOP_ZONE_UPGRADED           = "улучшил",
+	CTLD_TROOP_ZONE_STOCKED            = "пополнил запасы",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "захватил и улучшил",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d кредитов.",
@@ -10463,6 +10719,54 @@ Latitude/longitude em minutos decimais: N 36°12.050' E 37°09.695'
 Elevação 1287 pés]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "Nova missão de ataque: ataque ao esconderijo inimigo",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Missão de ataque encerrada: ataque ao esconderijo inimigo",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "Ataque à torre de comunicação inimiga",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[Interceptamos comunicações inimigas transmitidas desta posição.
+Destrua a torre de comunicação.
+
+Recompensa: 1000
+
+MGRS: 36 S WF 81960 24650
+Latitude/longitude: N 36°21'48" E 33°54'48"
+Coordenadas precisas: N 36°21'48.47" E 33°54'48.89"
+Minutos decimais: N 36°21.807' E 33°54.814'
+Elevação: 361 pés]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "Nova missão de ataque: Torre de comunicação inimiga",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "Missão de ataque encerrada: Torre de comunicação inimiga",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "Ataque ao retransmissor de comunicações inimigo",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[Comunicações inimigas foram rastreadas até uma segunda torre retransmissora.
+Destrua-a para interromper a rede inimiga.
+
+Recompensa: 1000
+
+MGRS: 37 S CB 09839 49242
+Latitude/longitude: N 37°28'13" E 36°50'58"
+Coordenadas precisas: N 37°28'13.88" E 36°50'58.56"
+Minutos decimais: N 37°28.231' E 36°50.976'
+Elevação: 2887 pés]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "Aviso: a torre é protegida por uma posição de mísseis superfície-ar SA-2.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "Nova missão de ataque: Retransmissor de comunicações inimigo",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "Missão de ataque encerrada: Retransmissor de comunicações inimigo",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "Ataque em profundidade a Konya",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[Realize um ataque em profundidade a Konya e destrua os dois alvos estratégicos.
+A área-alvo é fortemente protegida por um sistema de mísseis superfície-ar %s.
+
+Recompensa: 2000
+
+Alvo 1
+MGRS: 36 S VG 52091 90581
+Latitude/longitude: N 37°51'41" E 32°27'19"
+Coordenadas precisas: N 37°51'41.17" E 32°27'19.27"
+Minutos decimais: N 37°51.686' E 32°27.321'
+Elevação: 3406 pés
+
+Alvo 2
+MGRS: 36 S VG 52142 90600
+Latitude/longitude: N 37°51'41" E 32°27'21"
+Coordenadas precisas: N 37°51'41.82" E 32°27'21.35"
+Minutos decimais: N 37°51.697' E 32°27.355'
+Elevação: 3406 pés]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "Nova missão de ataque: Ataque em profundidade a Konya",
+	SYRIA_MISSION_STRIKE_KONYA_END = "Missão de ataque encerrada: Ataque em profundidade a Konya",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "Ataque ao armazém de suprimentos de Taftanaz",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[Armazém de suprimentos de Taftanaz encontrado,
 destrua-o para interromper os suprimentos que saem dali.
@@ -10759,6 +11063,7 @@ Recompensa: 1000]],
 	MISSION_CAS_DESCRIPTION_EMPTY      = "Apoie as operações terrestres em %s.\nProgresso da coalizão: %d/%d alvos terrestres destruídos.",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "Apoie as operações terrestres em %s.\nProgresso da coalizão: %d/%d alvos terrestres destruídos.\n\n%s",
 	MISSION_CAS_START                  = "Nova missão CAS em %s: destrua %d alvos terrestres inimigos.",
+	MISSION_CAS_END                    = "Missão encerrada: CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] concluiu a missão CAS!\nRecompensa pendente: %d créditos (pouse para resgatar).",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] e [%s] concluíram a missão CAS!\nRecompensa pendente: %d créditos para cada (pouse para resgatar).",
 	MISSION_CAS_COMPLETED_GROUP        = "Missão CAS concluída!\nRecompensas pendentes:\n%s\nPousem para resgatar.",
@@ -11342,6 +11647,7 @@ Elevação %d pés]],
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Grupo de tropas entrou na zona: %s",
 	CTLD_TROOP_ZONE_CAPTURED           = "capturada",
 	CTLD_TROOP_ZONE_UPGRADED           = "melhorada",
+	CTLD_TROOP_ZONE_STOCKED            = "abasteceu",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "capturada e melhorada",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d créditos.",
@@ -12396,6 +12702,54 @@ Enlem/boylam ondalık dakika: N 36°12.050' E 37°09.695'
 Rakım 1287 fit]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "Yeni saldırı görevi: düşman sığınağına saldırı",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Saldırı görevi sona erdi: düşman sığınağına saldırı",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "Düşman iletişim kulesine saldırı",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[Bu konumdan yayınlanan düşman iletişimini tespit ettik.
+İletişim kulesini yok edin.
+
+Ödül: 1000
+
+MGRS: 36 S WF 81960 24650
+Enlem/boylam: N 36°21'48" E 33°54'48"
+Hassas koordinatlar: N 36°21'48.47" E 33°54'48.89"
+Ondalık dakika: N 36°21.807' E 33°54.814'
+Rakım: 361 fit]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "Yeni saldırı görevi: Düşman iletişim kulesi",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "Saldırı görevi sona erdi: Düşman iletişim kulesi",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "Düşman iletişim aktarma kulesine saldırı",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[Düşman iletişimi ikinci bir aktarma kulesine kadar izlendi.
+Ağlarını bozmak için kuleyi yok edin.
+
+Ödül: 1000
+
+MGRS: 37 S CB 09839 49242
+Enlem/boylam: N 37°28'13" E 36°50'58"
+Hassas koordinatlar: N 37°28'13.88" E 36°50'58.56"
+Ondalık dakika: N 37°28.231' E 36°50.976'
+Rakım: 2887 fit]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "Uyarı: Kule bir SA-2 karadan havaya füze mevzisi tarafından korunuyor.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "Yeni saldırı görevi: Düşman iletişim aktarma kulesi",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "Saldırı görevi sona erdi: Düşman iletişim aktarma kulesi",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "Konya'ya derin taarruz",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[Konya'ya derin bir taarruz düzenleyin ve iki stratejik hedefi de yok edin.
+Hedef bölge, %s hava savunma füze sistemi tarafından yoğun şekilde korunuyor.
+
+Ödül: 2000
+
+Hedef 1
+MGRS: 36 S VG 52091 90581
+Enlem/boylam: N 37°51'41" E 32°27'19"
+Hassas koordinatlar: N 37°51'41.17" E 32°27'19.27"
+Ondalık dakika: N 37°51.686' E 32°27.321'
+Rakım: 3406 fit
+
+Hedef 2
+MGRS: 36 S VG 52142 90600
+Enlem/boylam: N 37°51'41" E 32°27'21"
+Hassas koordinatlar: N 37°51'41.82" E 32°27'21.35"
+Ondalık dakika: N 37°51.697' E 32°27.355'
+Rakım: 3406 fit]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "Yeni saldırı görevi: Konya'ya derin taarruz",
+	SYRIA_MISSION_STRIKE_KONYA_END = "Saldırı görevi sona erdi: Konya'ya derin taarruz",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "Taftanaz ikmal deposuna saldırı",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[Taftanaz ikmal deposu bulundu,
 oradan çıkan ikmali durdurmak için yok et.
@@ -12691,6 +13045,7 @@ Rakım: 1251 fit
 	MISSION_CAS_DESCRIPTION_EMPTY      = "%s bölgesindeki kara harekâtını destekle.\nKoalisyon ilerlemesi: %d/%d kara hedefi imha edildi.",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "%s bölgesindeki kara harekâtını destekle.\nKoalisyon ilerlemesi: %d/%d kara hedefi imha edildi.\n\n%s",
 	MISSION_CAS_START                  = "%s bölgesinde yeni CAS görevi: %d düşman kara hedefini imha et.",
+	MISSION_CAS_END                    = "Görev sona erdi: CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] CAS görevini tamamladı!\nBekleyen ödül: %d kredi (almak için iniş yap).",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] ve [%s] CAS görevini tamamladı!\nBekleyen ödül: kişi başı %d kredi (almak için iniş yap).",
 	MISSION_CAS_COMPLETED_GROUP        = "CAS görevi tamamlandı!\nBekleyen ödüller:\n%s\nAlmak için iniş yapın.",
@@ -13274,6 +13629,7 @@ Rakım %d fit]],
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Birlik grubu bölgeye girdi: %s",
 	CTLD_TROOP_ZONE_CAPTURED           = "ele geçirildi",
 	CTLD_TROOP_ZONE_UPGRADED           = "yükseltildi",
+	CTLD_TROOP_ZONE_STOCKED            = "depoladı",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "ele geçirildi ve yükseltildi",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d kredi.",
@@ -14326,6 +14682,54 @@ Lat long Decimal Minutes: N 36°12.050' E 37°09.695'
 Altitude 1287 PIEDI]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "Nuova missione d'assalto: Assalto al deposito nemico",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "Missione d'attacco completata: attacco al deposito nemico.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "Attacco alla torre di comunicazione nemica",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[Abbiamo intercettato comunicazioni nemiche trasmesse da questa posizione.
+Distruggi la torre di comunicazione.
+
+Ricompensa: 1000
+
+MGRS: 36 S WF 81960 24650
+Latitudine/longitudine: N 36°21'48" E 33°54'48"
+Coordinate precise: N 36°21'48.47" E 33°54'48.89"
+Minuti decimali: N 36°21.807' E 33°54.814'
+Altitudine: 361 piedi]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "Nuova missione d'attacco: Torre di comunicazione nemica",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "Missione d'attacco completata: Torre di comunicazione nemica",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "Attacco al ripetitore di comunicazioni nemico",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[Le comunicazioni nemiche sono state tracciate fino a una seconda torre ripetitrice.
+Distruggila per interrompere la loro rete.
+
+Ricompensa: 1000
+
+MGRS: 37 S CB 09839 49242
+Latitudine/longitudine: N 37°28'13" E 36°50'58"
+Coordinate precise: N 37°28'13.88" E 36°50'58.56"
+Minuti decimali: N 37°28.231' E 36°50.976'
+Altitudine: 2887 piedi]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "Attenzione: la torre è protetta da una postazione missilistica terra-aria SA-2.",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "Nuova missione d'attacco: Ripetitore di comunicazioni nemico",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "Missione d'attacco completata: Ripetitore di comunicazioni nemico",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "Attacco in profondità a Konya",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[Effettua un attacco in profondità a Konya e distruggi entrambi gli obiettivi strategici.
+L'area bersaglio è pesantemente difesa da un sistema missilistico terra-aria %s.
+
+Ricompensa: 2000
+
+Obiettivo 1
+MGRS: 36 S VG 52091 90581
+Latitudine/longitudine: N 37°51'41" E 32°27'19"
+Coordinate precise: N 37°51'41.17" E 32°27'19.27"
+Minuti decimali: N 37°51.686' E 32°27.321'
+Altitudine: 3406 piedi
+
+Obiettivo 2
+MGRS: 36 S VG 52142 90600
+Latitudine/longitudine: N 37°51'41" E 32°27'21"
+Coordinate precise: N 37°51'41.82" E 32°27'21.35"
+Minuti decimali: N 37°51.697' E 32°27.355'
+Altitudine: 3406 piedi]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "Nuova missione d'attacco: Attacco in profondità a Konya",
+	SYRIA_MISSION_STRIKE_KONYA_END = "Missione d'attacco completata: Attacco in profondità a Konya",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "aTTACCO  al magazzino di approvvigionamento di Taftanaz",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[Il deposito di rifornimenti di Taftanaz è stato trovato,
 Distruggilo per interrompere i rifornimenti provenienti da lì.
@@ -14622,6 +15026,7 @@ Ricompensa : 1000]],
 	MISSION_CAS_DESCRIPTION_EMPTY      = "Supporta le operazioni di terra a %s.\nProgresso della coalizione: %d/%d bersagli terrestri distrutti.",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "Supporta le operazioni di terra a %s.\nProgresso della coalizione: %d/%d bersagli terrestri distrutti.\n\n%s",
 	MISSION_CAS_START                  = "Nuova missione CAS a %s: distruggi %d bersagli terrestri nemici.",
+	MISSION_CAS_END                    = "Missione compiuta : CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] missione CAS completata!\nRicompensa in sospeso: %d crediti (terreno da riscuotere).",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] e [%s] hanno completato la missione CAS!\nRicompensa in sospeso: %d crediti ciascuno (terreno da collezionare).",
 	MISSION_CAS_COMPLETED_GROUP        = "Missione CAS completata!\nRicompense in sospeso:\n%s\nAtterrate per riscuoterle.",
@@ -15205,6 +15610,7 @@ Quota %d piedi]],
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "Un gruppo di truppe è entrato nella zona : %s",
 	CTLD_TROOP_ZONE_CAPTURED           = "catturare",
 	CTLD_TROOP_ZONE_UPGRADED           = "migliorato",
+	CTLD_TROOP_ZONE_STOCKED            = "rifornito",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "catturato e migliorato",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d crediti.",
@@ -16257,6 +16663,54 @@ MGRS: 37 S CA 34720 07791
 海拔 1287 英尺]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "新打擊任務：打擊敵方藏匿據點",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "打擊任務結束：打擊敵方藏匿據點",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "打擊敵方通訊塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[我們攔截到從此位置發出的敵方通訊。
+摧毀該通訊塔。
+
+獎勵：1000
+
+MGRS：36 S WF 81960 24650
+經緯度：N 36°21'48" E 33°54'48"
+精確經緯度：N 36°21'48.47" E 33°54'48.89"
+十進位分：N 36°21.807' E 33°54.814'
+海拔 361 英尺]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "新打擊任務：打擊敵方通訊塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "打擊任務結束：打擊敵方通訊塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "打擊敵方通訊中繼塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[敵方通訊已追蹤至第二座中繼塔。
+摧毀它以干擾敵方網路。
+
+獎勵：1000
+
+MGRS：37 S CB 09839 49242
+經緯度：N 37°28'13" E 36°50'58"
+精確經緯度：N 37°28'13.88" E 36°50'58.56"
+十進位分：N 37°28.231' E 36°50.976'
+海拔 2887 英尺]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "警告：該塔由一處 SA-2 地對空飛彈陣地防守。",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "新打擊任務：打擊敵方通訊中繼塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "打擊任務結束：打擊敵方通訊中繼塔",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "深入打擊 Konya",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[對 Konya 發動深入打擊，摧毀兩個戰略目標。
+目標區域由 %s 地對空飛彈系統嚴密防守。
+
+獎勵：2000
+
+目標 1
+MGRS：36 S VG 52091 90581
+經緯度：N 37°51'41" E 32°27'19"
+精確經緯度：N 37°51'41.17" E 32°27'19.27"
+十進位分：N 37°51.686' E 32°27.321'
+海拔 3406 英尺
+
+目標 2
+MGRS：36 S VG 52142 90600
+經緯度：N 37°51'41" E 32°27'21"
+精確經緯度：N 37°51'41.82" E 32°27'21.35"
+十進位分：N 37°51.697' E 32°27.355'
+海拔 3406 英尺]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "新打擊任務：深入打擊 Konya",
+	SYRIA_MISSION_STRIKE_KONYA_END = "打擊任務結束：深入打擊 Konya",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "打擊 Taftanaz 補給倉庫",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[已發現 Taftanaz 補給倉庫，
 摧毀它以切斷該區域的補給來源。
@@ -16553,6 +17007,7 @@ MGRS: 37 S EU 31088 22294
 	MISSION_CAS_DESCRIPTION_EMPTY      = "支援 %s 的地面作戰。\n聯軍進度：已摧毀 %d/%d 個地面目標。",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "支援 %s 的地面作戰。\n聯軍進度：已摧毀 %d/%d 個地面目標。\n\n%s",
 	MISSION_CAS_START                  = "於 %s 展開新的 CAS 任務：摧毀 %d 個敵方地面目標。",
+	MISSION_CAS_END                    = "任務結束：CAS",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] 已完成 CAS 任務！\n獎勵待領：%d 點數（降落後領取）。",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] 與 [%s] 已完成 CAS 任務！\n獎勵待領：各 %d 點數（降落後領取）。",
 	MISSION_CAS_COMPLETED_GROUP        = "CAS 任務完成！\n待領獎勵：\n%s\n請降落領取。",
@@ -17136,6 +17591,7 @@ JOINT_NO_PLAYER_FOR_GROUP          = "此群組沒有玩家",
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "部隊進入區域：%s",
 	CTLD_TROOP_ZONE_CAPTURED           = "已佔領",
 	CTLD_TROOP_ZONE_UPGRADED           = "已升級",
+	CTLD_TROOP_ZONE_STOCKED            = "已補給",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "已佔領並升級",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d 點數。",
@@ -18183,6 +18639,54 @@ MGRS: 37 S CA 34720 07791
 海拔 1287 英尺]],
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_START = "新打击任务：打击敌军藏身处",
 	SYRIA_MISSION_STRIKE_ENEMY_HIDEOUT_END = "打击任务结束：打击敌军藏身处",
+	SYRIA_MISSION_STRIKE_COM_TOWER_TITLE = "打击敌方通信塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_DESC = [[我们截获了从该位置发出的敌方通信。
+摧毁该通信塔。
+
+奖励：1000
+
+MGRS：36 S WF 81960 24650
+经纬度：N 36°21'48" E 33°54'48"
+精确经纬度：N 36°21'48.47" E 33°54'48.89"
+十进制分：N 36°21.807' E 33°54.814'
+海拔 361 英尺]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_START = "新打击任务：打击敌方通信塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_END = "打击任务结束：打击敌方通信塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_TITLE = "打击敌方通信中继塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_DESC = [[敌方通信已追踪至第二座中继塔。
+摧毁它以干扰敌方网络。
+
+奖励：1000
+
+MGRS：37 S CB 09839 49242
+经纬度：N 37°28'13" E 36°50'58"
+精确经纬度：N 37°28'13.88" E 36°50'58.56"
+十进制分：N 37°28.231' E 36°50.976'
+海拔 2887 英尺]],
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_SAM_WARNING = "警告：该塔由一处 SA-2 地对空导弹阵地防守。",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_START = "新打击任务：打击敌方通信中继塔",
+	SYRIA_MISSION_STRIKE_COM_TOWER_2_END = "打击任务结束：打击敌方通信中继塔",
+	SYRIA_MISSION_STRIKE_KONYA_TITLE = "深入打击 Konya",
+	SYRIA_MISSION_STRIKE_KONYA_DESC = [[对 Konya 发动深入打击，摧毁两个战略目标。
+目标区域由 %s 地对空导弹系统严密防守。
+
+奖励：2000
+
+目标 1
+MGRS：36 S VG 52091 90581
+经纬度：N 37°51'41" E 32°27'19"
+精确经纬度：N 37°51'41.17" E 32°27'19.27"
+十进制分：N 37°51.686' E 32°27.321'
+海拔 3406 英尺
+
+目标 2
+MGRS：36 S VG 52142 90600
+经纬度：N 37°51'41" E 32°27'21"
+精确经纬度：N 37°51'41.82" E 32°27'21.35"
+十进制分：N 37°51.697' E 32°27.355'
+海拔 3406 英尺]],
+	SYRIA_MISSION_STRIKE_KONYA_START = "新打击任务：深入打击 Konya",
+	SYRIA_MISSION_STRIKE_KONYA_END = "打击任务结束：深入打击 Konya",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_TITLE = "打击 Taftanaz 补给仓库",
 	SYRIA_MISSION_STRIKE_TAFTANAZ_WAREHOUSE_DESC = [[已发现 Taftanaz 补给仓库，
 摧毁它以切断该区域的补给来源。
@@ -18477,6 +18981,7 @@ MGRS: 37 S EU 31088 22294
 	MISSION_CAS_DESCRIPTION_EMPTY      = "支援 %s 的地面作战。\n联军进度：已摧毁 %d/%d 个地面目标。",
 	MISSION_CAS_DESCRIPTION_WITH_SCORE = "支援 %s 的地面作战。\n联军进度：已摧毁 %d/%d 个地面目标。\n\n%s",
 	MISSION_CAS_START                  = "在 %s 开始新的近距离空中支援任务：摧毁 %d 个敌方地面目标。",
+	MISSION_CAS_END                    = "任务结束：近距离空中支援",
 	MISSION_CAS_COMPLETED_SOLO         = "[%s] 已完成近距离空中支援任务！\n奖励待领取：%d 积分（着陆后领取）。",
 	MISSION_CAS_COMPLETED_JOINT        = "[%s] 与 [%s] 已完成近距离空中支援任务！\n奖励待领取：每人 %d 积分（着陆后领取）。",
 	MISSION_CAS_COMPLETED_GROUP        = "近距离空中支援任务完成！\n待领取奖励：\n%s\n请着陆领取。",
@@ -19050,6 +19555,7 @@ JOINT_NO_PLAYER_FOR_GROUP          = "未找到该编队对应的玩家",
 	CTLD_TROOP_GROUP_ENTERED_ZONE      = "部队已进入区域：%s",
 	CTLD_TROOP_ZONE_CAPTURED           = "已占领",
 	CTLD_TROOP_ZONE_UPGRADED           = "已升级",
+	CTLD_TROOP_ZONE_STOCKED            = "已补给",
 	CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED = "已占领并升级",
 	CTLD_TROOP_ZONE_EVENT_LINE         = "[%s] %s %s",
 	CTLD_TROOP_ZONE_EVENT_TOTAL        = "%d 积分。",

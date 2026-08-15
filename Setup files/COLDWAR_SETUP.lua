@@ -549,11 +549,6 @@ if Era == 'Vietnam' then
 	deepSwap(RandomBluePool, vnSwap)
 end
 
-RandomRedPickKeepChance = {
-	["Red SAM SHORAD Pantsir S1"] = 50,
-	["Red SAM SHORAD Tor M2"] = 50,
-}
-
 CustomSamSpawnSlots = {
 	["SAM-Alpha"] = true,
 	["SAM-Bravo"] = true,
@@ -579,19 +574,19 @@ ZoneSizeExclusions = {
 }
 
 RandomUpgradeTemplates = {
-	small = { sam = 0, shorad = {0,2}, aaa = {0,2}, ground = {0,3}, armor = {0,2}, arty = {0,2}, total = {4,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
+	small = { sam = 0, shorad = {0,2}, aaa = {0,2}, ground = {0,3}, armor = {0,2}, arty = {0,2}, total = {4,6}, flakChance = 10, flakSecondChance = 0, flakMax = 1, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 20, ["Red SAM SHORAD Tor M2"] = 20 } },
 	redarmycamp = { sam = 0, shorad = 0, aaa = 0, ground = {3,5}, armor = 0, arty = {0,5}, total = {6,8} },
-	medium = { sam = {0,1}, shorad = {0,3}, aaa = {0,3}, ground = {0,3}, armor = {0,3}, arty = {0,3}, total = {4,9}, flakChance = 20, flakSecondChance = 0, flakMax = 1 },
-	big = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 40, flakSecondChance = 20, flakMax = 2 },
-	extrabig = { sam = {0,2}, shorad = {0,4}, aaa = {0,2}, ground = {0,1}, armor = {0,2}, arty = {0,1}, total = {9,12}, flakChance = 50, flakSecondChance = 30, flakMax = 2 },
+	medium = { sam = {0,1}, shorad = {0,3}, aaa = {0,3}, ground = {0,3}, armor = {0,3}, arty = {0,3}, total = {4,9}, flakChance = 20, flakSecondChance = 0, flakMax = 1, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 40, ["Red SAM SHORAD Tor M2"] = 40 } },
+	big = { sam = {0,1}, shorad = {0,4}, aaa = {0,3}, ground = {0,3}, armor = {0,4}, arty = {0,3}, total = {5,10}, flakChance = 50, flakSecondChance = 20, flakMax = 2, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 70, ["Red SAM SHORAD Tor M2"] = 70 } },
+	extrabig = { sam = {0,2}, shorad = {0,4}, aaa = {0,2}, ground = {0,1}, armor = {0,2}, arty = {0,1}, total = {9,12}, flakChance = 60, flakSecondChance = 30, flakMax = 2, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 100, ["Red SAM SHORAD Tor M2"] = 100 } },
 	sam = { sam = {0,1}, shorad = {0,2}, aaa = {0,2}, ground = 0, armor = 0, arty = 0, total = {5,5}, flakChance = 10, flakSecondChance = 0, flakMax = 1 },
 	SAM = { sam = 1, shorad = {0,1}, aaa = {0,1}, ground = 0, armor = 0, arty = 0, total = {1,3}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
-	SAMEasy = { sam = 1, shorad = {0,1}, aaa = {0,1}, ground = 0, armor = 0, arty = 0, total = {1,3}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
-	SAMShorad = { sam = 1, shorad = {1,2}, aaa = {0,1}, ground = 0, armor = 0, arty = 0, total = {3,3}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
-	hiddenshorad = { sam = {2,5}, shorad = {5,7}, aaa = 0, ground = 0, armor = 0, arty = 0, total = {7,12}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
-	SAMShoradEasy = { sam = 1, shorad = {1,2}, aaa = {0,1}, ground = 0, armor = 0, arty = 0, total = {2,4}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
-	SAMSweden = { sam = 2, shorad = {2,4}, aaa = 0, ground = 0, armor = 0, arty = 0, total = {4,6}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
-hiddenshorad2 = { sam = 0, shorad = {1,2}, aaa = 0, ground = 0, armor = 0, arty = 0, total = {1,2}, flakChance = 0, flakSecondChance = 0, flakMax = 0 },
+	SAMEasy = { sam = 1, shorad = {0,1}, aaa = {0,1}, ground = 0, armor = 0, arty = 0, total = {1,3}, flakChance = 0, flakSecondChance = 0, flakMax = 0, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 10, ["Red SAM SHORAD Tor M2"] = 10 } },
+	SAMShorad = { sam = 1, shorad = {1,2}, aaa = {0,1}, ground = 0, armor = 0, arty = 0, total = {3,3}, flakChance = 0, flakSecondChance = 0, flakMax = 0, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 70, ["Red SAM SHORAD Tor M2"] = 70 } },
+	hiddenshorad = { sam = {2,5}, shorad = {5,7}, aaa = 0, ground = 0, armor = 0, arty = 0, total = {7,12}, flakChance = 0, flakSecondChance = 0, flakMax = 0, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 0, ["Red SAM SHORAD Tor M2"] = 0 } },
+	SAMShoradEasy = { sam = 1, shorad = {1,2}, aaa = {0,1}, ground = 0, armor = 0, arty = 0, total = {2,4}, flakChance = 0, flakSecondChance = 0, flakMax = 0, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 20, ["Red SAM SHORAD Tor M2"] = 20 } },
+	SAMSweden = { sam = 2, shorad = {2,4}, aaa = 0, ground = 0, armor = 0, arty = 0, total = {4,6}, flakChance = 0, flakSecondChance = 0, flakMax = 0, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 60, ["Red SAM SHORAD Tor M2"] = 60 } },
+hiddenshorad2 = { sam = 0, shorad = {1,2}, aaa = 0, ground = 0, armor = 0, arty = 0, total = {1,2}, flakChance = 0, flakSecondChance = 0, flakMax = 0, RandomRedPickKeepChance = { ["Red SAM SHORAD Pantsir S1"] = 0, ["Red SAM SHORAD Tor M2"] = 0 } },
 }
 
 RandomUpgradeTemplatesBlue = {
@@ -5813,7 +5808,7 @@ function RegisterDirectorCasMission(slotIndex)
 			local slot = bc.casMissions.slots[slotIndex]
 			return LT(T):Format("MISSION_CAS_START", slot.targetZone, slot.targetKills)
 		end,
-		messageEnd = '',
+		messageEnd = function(T) return LT(T):Get("MISSION_CAS_END") end,
 		startAction = function()
 			local slot = bc.casMissions.slots[slotIndex]
 			slot.started = true
@@ -6373,6 +6368,10 @@ mc:trackMission({
         return LT(T):Format("SYRIA_DYNAMIC_CAPTURE_START", captureTarget, wp)
     end,
     messageEnd = function(T)
+        local targetzn = captureTarget and bc:getZoneByName(captureTarget) or nil
+        if targetzn and (targetzn.pendingCapture or targetzn._pendingCaptureRestore) then
+            return nil
+        end
         return LT(T):Format("SYRIA_DYNAMIC_CAPTURE_END", captureTarget) end,
     startAction = function()
         local MissionType = "Capture"
@@ -6384,10 +6383,12 @@ mc:trackMission({
     end,
     endAction = function()
         local MissionType = "Capture"
+        local targetzn = captureTarget and bc:getZoneByName(captureTarget) or nil
+        local capturePending = targetzn and (targetzn.pendingCapture ~= nil or targetzn._pendingCaptureRestore ~= nil)
         bc:removeMissionTag(captureTarget, MissionType)
         bc:refreshZoneLabel(captureTarget)
         captureTarget = nil
-        if not missionCompleted then
+        if not missionCompleted and not capturePending then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
     end,
@@ -6395,6 +6396,7 @@ mc:trackMission({
         if not captureTarget then return false end
         local targetzn = bc:getZoneByName(captureTarget)
         return targetzn.side == 0 and targetzn.active
+            and not targetzn.pendingCapture and not targetzn._pendingCaptureRestore
     end
 })
 
@@ -6799,7 +6801,8 @@ function generateCaptureMission()
     
     local validzones = {}
     for _, v in ipairs(bc.zones) do
-        if v.active and v.side == 0 and (not v.NeutralAtStart or v.firstCaptureByRed) and
+        if v.active and v.side == 0 and not v.pendingCapture and not v._pendingCaptureRestore
+            and (not v.NeutralAtStart or v.firstCaptureByRed) and
            not v.zone:lower():find("hidden", 1, true) and not v.zone:lower():find("carrier", 1, true) then
             table.insert(validzones, v.zone)
         end

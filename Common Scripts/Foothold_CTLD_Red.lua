@@ -1138,6 +1138,29 @@ local function redCtldFinalizeDelivery(key, entry, zoneObj, actionKey, statLabel
     addCTLDZonesForRedControlled(zoneObj.zone)
 end
 
+function completePendingRedCtldSupply(zoneObj, payload, succeeded)
+    if not succeeded then return end
+    local entry = {
+        groupName = payload.groupName,
+        groupId = payload.groupId,
+        playerName = payload.playerName,
+        unitName = payload.unitName,
+    }
+    local joinedCapture = payload.joinedCapture == true
+    local actionKey = joinedCapture and "CTLD_ZONE_SUPPLY_ACTION_STOCKED" or "CTLD_ZONE_SUPPLY_ACTION_CAPTURED"
+    local actionText = joinedCapture
+        and redCtldFormatForEntry(entry, actionKey,
+            math.max(0, math.floor(tonumber(zoneObj._regularSupplyReady) or 0)),
+            zoneObj:_regularSupplyMaxStock())
+        or redCtldFormatForEntry(entry, actionKey)
+    local text = redCtldFormatForEntry(entry, "CTLD_ZONE_SUPPLIES_DELIVERED", actionText, zoneObj.zone)
+    redCtldSendToEntry(entry, text, 15)
+    redCtldRewardPlayer(entry, joinedCapture and "Zone supply delivery" or "Zone capture", joinedCapture and 150 or ZONE_SUPPLY_CAPTURE_REWARD)
+    addCTLDZonesForRedControlled(zoneObj.zone)
+end
+
+bc:registerPendingCaptureHandler("red_ctld_capture_delivery", completePendingRedCtldSupply)
+
 local function redCtldDestroySupplyInZone(key, entry, zoneObj, reason)
     local text = redCtldFormatForEntry(entry, "CTLD_ZONE_SUPPLIES_DESTROYED", zoneObj.zone, reason)
     redCtldSendToEntry(entry, text, 15)
@@ -1471,9 +1494,45 @@ local function redCtldProcessZoneSupply(key, entry, now)
         return
     end
 
+    if zoneObj._pendingCaptureRestore then return end
     if zoneObj.side == 0 then
-        zoneObj:capture(1)
-        redCtldFinalizeDelivery(key, entry, zoneObj, "CTLD_ZONE_SUPPLY_ACTION_CAPTURED", "Zone capture", ZONE_SUPPLY_CAPTURE_REWARD)
+        local staticName = redCtldStaticName(staticObj)
+        local dcsStatic = staticName and StaticObject.getByName(staticName) or nil
+        if not dcsStatic or not dcsStatic:isExist() then
+            redCtldDestroySupplyInZone(key, entry, zoneObj, "not available")
+            return
+        end
+        local joinedCapture = zoneObj.pendingCapture ~= nil
+        local accepted, captureStatus = zoneObj:startPendingCapture(coalition.side.RED, {
+            kind = "static",
+            name = staticName,
+            position = dcsStatic:getPoint(),
+            staticType = dcsStatic:getTypeName(),
+            country = dcsStatic:getCountry(),
+            destroyOnFinish = true,
+            tombstone = true,
+            delivery = {
+                handler = "red_ctld_capture_delivery",
+                payload = {
+                    groupName = entry.groupName,
+                    groupId = entry.groupId,
+                    playerName = redCtldResolvePlayer(entry),
+                    unitName = entry.unitName,
+                    joinedCapture = joinedCapture,
+                },
+            },
+        })
+        if accepted then
+            if captureStatus ~= "completed" then
+                local actionKey = captureStatus == "started" and "CTLD_ZONE_SUPPLY_ACTION_CAPTURING" or "CTLD_ZONE_SUPPLY_ACTION_QUEUED"
+                local actionText = redCtldFormatForEntry(entry, actionKey)
+                redCtldSendToEntry(entry, redCtldFormatForEntry(entry, "CTLD_ZONE_SUPPLIES_DELIVERED", actionText, zoneObj.zone), 15)
+            end
+            redCtldSimulateLandingForEntryIfOnGround(entry, zoneObj.zone)
+            redCtldRemoveTrackedSupply(key)
+        else
+            redCtldDestroySupplyInZone(key, entry, zoneObj, "not available")
+        end
         return
     end
 

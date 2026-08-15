@@ -295,7 +295,7 @@ addStaticFromType("Zone supplies Mi-24P", "ammo_cargo", 500, "Zone supplies", {"
 
 addStaticFromType("10 of everything CH-47", "cds_crate", 3500, "Warehouse", {"CH-47Fbl1"}, "10 of everything")
 addStaticFromType("10 of everything MI-8", "cds_crate", 3500, "Warehouse", {"Mi-8MT"}, "10 of everything")
-addStaticFromType("10 of everything Blackhawk", "cds_crate", 2000, "Warehouse", {"UH-60L_DAP","UH-60L"}, "10 of everything")
+addStaticFromType("10 of everything Blackhawk", "ammo_cargo", 2000, "Warehouse", {"UH-60L_DAP","UH-60L"}, "10 of everything")
 
 addStaticFromType("10 A/A Missiles", "ammo_cargo", 1000, "Warehouse", {"CH-47Fbl1","UH-1H","Mi-8MT","Mi-24P","UH-60L_DAP","UH-60L"}, "10 A/A Missiles")
 addStaticFromType("10 A/G Missiles", "ammo_cargo", 1000, "Warehouse", {"CH-47Fbl1","UH-1H","Mi-8MT","Mi-24P","UH-60L_DAP","UH-60L"}, "10 A/G Missiles")
@@ -2836,6 +2836,7 @@ local CTLD_ZONE_SUPPLY_ACTION_KEYS = {
 local CTLD_TROOP_ZONE_ACTION_KEYS = {
   captured = "CTLD_TROOP_ZONE_CAPTURED",
   upgraded = "CTLD_TROOP_ZONE_UPGRADED",
+  stocked = "CTLD_TROOP_ZONE_STOCKED",
   ["captured and upgraded"] = "CTLD_TROOP_ZONE_CAPTURED_AND_UPGRADED",
 }
 
@@ -3070,6 +3071,41 @@ local function finalizeZoneSupplyDelivery(key, entry, zoneName, verb, statLabel,
   end
   removeTrackedZoneSupply(key)
 end
+
+function completePendingBlueCtldSupply(zoneObj, payload, succeeded)
+  if not succeeded then return end
+  grantZoneBundle(zoneObj.zone)
+  local grp = resolveZoneSupplyGroup(payload.groupName)
+  local T = grp and getCtldGroupTranslator(grp) or getFootholdLocalization():ForLocale()
+  local joinedCapture = payload.joinedCapture == true
+  local action = joinedCapture and "stocked" or "captured"
+  local actionArgs = joinedCapture and {
+    math.max(0, math.floor(tonumber(zoneObj._regularSupplyReady) or 0)),
+    zoneObj:_regularSupplyMaxStock(),
+  } or nil
+  local text = T:Format("CTLD_ZONE_SUPPLIES_DELIVERED", ctldZoneSupplyActionText(T, action, actionArgs), zoneObj.zone)
+  if grp then
+    MESSAGE:New(text, 15):ToGroup(grp)
+  else
+    MESSAGE:New(text, 15):ToBlue()
+  end
+  local pname = payload.playerName
+  if pname then
+    Foothold_ctld:_recordCareerAction(pname, nil, bc.CAREER_STAT.SupplyUnitsDelivered,
+      bc.CAREER_AIRCRAFT_METRIC.SupplyUnitsDelivered, 1, payload.careerAircraftId)
+    bc:recordCareerStat(pname, bc.CAREER_STAT.ZoneSupplyUnits, 1)
+    if payload.careerAirdropped == true then
+      Foothold_ctld:_recordCareerAction(pname, nil, bc.CAREER_STAT.AirdroppedSupplyUnits,
+        bc.CAREER_AIRCRAFT_METRIC.AirdroppedSupplyUnits, 1, payload.careerAircraftId)
+    end
+  end
+  if pname and bc.playerContributions[coalition.side.BLUE][pname] ~= nil then
+    bc:addContribution(pname, coalition.side.BLUE, joinedCapture and 150 or ZONE_SUPPLY_CAPTURE_REWARD)
+    bc:addTempStat(pname, joinedCapture and "Zone supply delivery" or "Zone capture", 1)
+  end
+end
+
+bc:registerPendingCaptureHandler("blue_ctld_capture_delivery", completePendingBlueCtldSupply)
 
 processZoneSupplyDeliveries = function()
   if not next(zoneSupplyCrates) then return 0 end
@@ -3696,10 +3732,54 @@ zoneSupplyApplyOne = function(key)
   end
 
   -- IMPORTANT: re-evaluate side NOW (may have changed after a previous crate captured).
+  if zoneObj._pendingCaptureRestore then return end
   if zoneObj.side == 0 then
-    zoneObj:capture(2)
-    grantZoneBundle(zoneName)
-    finalizeZoneSupplyDelivery(key, entry, zoneName, "captured", "Zone capture", ZONE_SUPPLY_CAPTURE_REWARD)
+    local staticName = getZoneSupplyStaticName(staticObj)
+    local dcsStatic = staticName and StaticObject.getByName(staticName) or nil
+    if not dcsStatic or not dcsStatic:isExist() then
+      zoneSupplyDestroyNow(key, entry, zoneName, "not available")
+      return
+    end
+    local joinedCapture = zoneObj.pendingCapture ~= nil
+    local pname = resolveZoneSupplyPlayer(entry)
+    local carrierUnit = ResolveTrackedCarrierUnit(entry, false)
+    local careerAircraftId = entry.aircraftId or Foothold_ctld:_resolveCareerAircraftId(carrierUnit)
+    local careerAirdropped = entry._careerAirdropped
+    if careerAirdropped == nil then
+      careerAirdropped = carrierUnit and carrierUnit:isExist() and Utils.isInAir(carrierUnit) or false
+    end
+    local accepted, captureStatus = zoneObj:startPendingCapture(coalition.side.BLUE, {
+      kind = "static",
+      name = staticName,
+      position = dcsStatic:getPoint(),
+      staticType = dcsStatic:getTypeName(),
+      country = dcsStatic:getCountry(),
+      destroyOnFinish = true,
+      tombstone = true,
+      delivery = {
+        handler = "blue_ctld_capture_delivery",
+        payload = {
+          groupName = entry.groupName,
+          playerName = pname,
+          joinedCapture = joinedCapture,
+          careerAircraftId = careerAircraftId,
+          careerAirdropped = careerAirdropped == true,
+        },
+      },
+    })
+    if accepted then
+      c130SupplyLogOnce(entry, key, "_fhLogDeliver", "DELIVER", string.format("zone=%s verb=capturing", tostring(zoneName)))
+      simulateLandingForEntryIfOnGround(entry, zoneName)
+      if captureStatus ~= "completed" then
+        local grp = resolveZoneSupplyGroup(entry.groupName)
+        local T = grp and getCtldGroupTranslator(grp) or getFootholdLocalization():ForLocale()
+        local actionKey = captureStatus == "started" and "CTLD_ZONE_SUPPLY_ACTION_CAPTURING" or "CTLD_ZONE_SUPPLY_ACTION_QUEUED"
+        sendZoneSupplyMessage(entry, T:Format("CTLD_ZONE_SUPPLIES_DELIVERED", T:Get(actionKey), zoneName))
+      end
+      removeTrackedZoneSupply(key)
+    else
+      zoneSupplyDestroyNow(key, entry, zoneName, "not available")
+    end
     return
   end
 
@@ -5399,7 +5479,13 @@ for i,_t in ipairs(LoadedGroups) do
   local skipRestore, nearestEnemyName, nearestEnemyNm = bc:_restorePointTooFarFromEnemy(groupPoint, 80)
   local cr=self:_FindCratesCargoObject(cName)
   local tr=self:_FindTroopsCargoObject(cName)
-  if skipRestore then
+  local captureObjectState = bc:isPendingCaptureObject(gName)
+  if captureObjectState == "active" then
+    self:I(string.format("[RESTORE] pending capture group retained=%s cargo=%s", gName, cName))
+  elseif captureObjectState == "consumed" then
+    self:I(string.format("[RESTORE] consumed capture group removed=%s cargo=%s", gName, cName))
+    if _t.Group:IsAlive() then _t.Group:Destroy() end
+  elseif skipRestore then
     self:I(string.format("[RESTORE] skip loaded group=%s cargo=%s nearestEnemy=%s dist=%.1fNm limit=80.0Nm", gName, cName, tostring(nearestEnemyName), nearestEnemyNm or -1))
     if cr then
       self:AddStockCrates(cName, 1)
@@ -5821,6 +5907,38 @@ end
 local captureRunning = false
 local captureQueued  = false
 
+function completePendingBlueCtldTroop(zoneObj, payload, succeeded)
+    local troopGroupName = payload.groupName
+    if succeeded then
+        local pname = payload.playerName
+        local joinedCapture = payload.joinedCapture == true
+        if joinedCapture then
+            Foothold_ctld:_recordCareerAction(pname, nil, bc.CAREER_STAT.SupplyUnitsDelivered,
+                bc.CAREER_AIRCRAFT_METRIC.SupplyUnitsDelivered, 1, payload.careerAircraftId)
+            if pname then bc:recordCareerStat(pname, bc.CAREER_STAT.ZoneSupplyUnits, 1) end
+        else
+            Foothold_ctld:_recordCareerAction(pname, nil, bc.CAREER_STAT.TroopCaptures, nil, 1, payload.careerAircraftId)
+        end
+        if pname and bc.playerContributions[coalition.side.BLUE][pname] ~= nil then
+            local rewardKey = joinedCapture and "Zone supply delivery" or "Zone capture"
+            local reward = (bc.rewards[rewardKey] or (joinedCapture and 150 or 200)) * 0.5
+            bc:addContribution(pname, coalition.side.BLUE, reward)
+            bc:addTempStat(pname, joinedCapture and "Zone supply delivery (troops)" or "Zone capture (troops)", 1)
+            local T = getFootholdLocalization():ForLocale()
+            local action = joinedCapture and "stocked" or "captured"
+            trigger.action.outTextForCoalition(coalition.side.BLUE,
+                T:Format("CTLD_TROOP_ZONE_EVENT_LINE", pname, ctldTroopZoneActionText(T, action), zoneObj.zone), 20)
+        end
+    end
+    if troopGroupName then
+        deployedTroops[troopGroupName] = nil
+        deployedTroopsSet:RemoveGroupsByName(troopGroupName)
+        zoneCaptureInfo[troopGroupName] = nil
+    end
+end
+
+bc:registerPendingCaptureHandler("blue_ctld_troop_capture", completePendingBlueCtldTroop)
+
 
 function CaptureZoneIfNeutral()
     if captureRunning then
@@ -5867,6 +5985,8 @@ function CaptureZoneIfNeutral()
                         verb = 'captured and upgraded'
                     elseif ev.captured then
                         verb = 'captured'
+                    elseif ev.stocked then
+                        verb = 'stocked'
                     else
                         verb = 'upgraded'
                     end
@@ -5938,8 +6058,8 @@ function CaptureZoneIfNeutral()
             local wait = delay
             if wait == nil then
                 wait = 5
-            elseif wait < 0 then
-                wait = 0
+            elseif wait <= 0 then
+                wait = 0.1
             end
             timer.scheduleFunction(function() processNextGroup(index + 1) end, {}, timer.getTime() + wait)
         end
@@ -5953,6 +6073,18 @@ function CaptureZoneIfNeutral()
         if not troopGroup or not troopGroup:IsAlive() then
             cleanupDeployment(troopGroupName)
             scheduleNext(5)
+            return
+        end
+
+        local captureObjectState = bc:isPendingCaptureObject(troopGroupName)
+        if captureObjectState == "active" then
+            zoneCaptureInfo[troopGroupName] = nil
+            scheduleNext(0)
+            return
+        elseif captureObjectState == "consumed" then
+            troopGroup:Destroy()
+            cleanupDeployment(troopGroupName)
+            scheduleNext(0)
             return
         end
 
@@ -6010,37 +6142,49 @@ function CaptureZoneIfNeutral()
         local careerAircraftId = Foothold_ctld:_resolveCareerAircraftId(pilot) or data.careerAircraftId
 
         if currentZone.side == 0 and currentZone.active then
-            currentZone:capture(2)
-            Foothold_ctld:_recordCareerAction(careerOwner, pilot, bc.CAREER_STAT.TroopCaptures, nil, 1, careerAircraftId)
-            troopGroup:Destroy()
-            if pname and bc.playerContributions[2][pname] ~= nil then
-              local reward = (bc.rewards['Zone capture'] or 200) * 0.5
-                bc:addContribution(pname, 2, reward)
-                bc:addTempStat(pname, 'Zone capture (troops)', 1)
-                noteEvent(zoneName, pname, 'captured', reward)
+            local joinedCapture = currentZone.pendingCapture ~= nil
+            local cargoObj = data.cargoName and Foothold_ctld:_FindTroopsCargoObject(data.cargoName) or nil
+            local templates = cargoObj and cargoObj:GetTemplates() or nil
+            local accepted = currentZone:startPendingCapture(coalition.side.BLUE, {
+                kind = "group",
+                name = troopGroupName,
+                template = templates and templates[1] or nil,
+                position = troopGroup:GetCoordinate():GetVec3(),
+                heading = troopGroup:GetHeading() or 0,
+                destroyOnFinish = true,
+                tombstone = true,
+                stopGroup = true,
+                delivery = {
+                    handler = "blue_ctld_troop_capture",
+                    payload = {
+                        groupName = troopGroupName,
+                        playerName = careerOwner,
+                        careerAircraftId = careerAircraftId,
+                        joinedCapture = joinedCapture,
+                    },
+                },
+            })
+            if accepted then
+                zoneCaptureInfo[troopGroupName] = nil
+                scheduleNext(0)
+                return
             end
-            cleanupDeployment(troopGroupName)
             scheduleNext(5)
             return
         elseif currentZone.side == 2 then
-            local need = currentZone:canRecieveSupply() or false
-            if need then
-                currentZone:upgrade()
-                Foothold_ctld:_recordCareerAction(careerOwner, pilot, bc.CAREER_STAT.TroopZoneUpgrades, nil, 1, careerAircraftId)
-                troopGroup:Destroy()
-                if pname and bc.playerContributions[2][pname] ~= nil then
-                  local reward = (bc.rewards['Zone upgrade'] or 100) * 0.5
-                    bc:addContribution(pname, 2, reward)
-                    bc:addTempStat(pname, 'Zone upgrade (troops)', 1)
-                    noteEvent(zoneName, pname, 'upgraded', reward)
-                end
-                cleanupDeployment(troopGroupName)
-                scheduleNext(5)
-                return
-            end
+            bc:_applyRegularSupplyDelivery(currentZone, coalition.side.BLUE, timer.getAbsTime(), true)
+            Foothold_ctld:_recordCareerAction(careerOwner, pilot, bc.CAREER_STAT.SupplyUnitsDelivered,
+                bc.CAREER_AIRCRAFT_METRIC.SupplyUnitsDelivered, 1, careerAircraftId)
+            if careerOwner then bc:recordCareerStat(careerOwner, bc.CAREER_STAT.ZoneSupplyUnits, 1) end
             troopGroup:Destroy()
+            if pname and bc.playerContributions[2][pname] ~= nil then
+                local reward = (bc.rewards['Zone supply delivery'] or 150) * 0.5
+                bc:addContribution(pname, 2, reward)
+                bc:addTempStat(pname, 'Zone supply delivery (troops)', 1)
+                noteEvent(zoneName, pname, 'stocked', reward)
+            end
             cleanupDeployment(troopGroupName)
-            scheduleNext(1)
+            scheduleNext(5)
             return
         elseif not currentZone.active then
             troopGroup:Destroy()

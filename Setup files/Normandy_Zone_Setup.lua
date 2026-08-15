@@ -2009,7 +2009,7 @@ function(sender,params)
 			end
 			return L10N:Get("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
 		end
-		params.zone:addExtraSlot('BluePD')
+		params.zone:addExtraSlot('bluePD')
 		bc:refreshZoneLabel(params.zone.zone)
 		if bc.globalExtraUnlock then
 			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED", L10N:Get("SYRIA_SHOP_ITEM_EARLY_WARNING_RADAR"), params.zone.zone, tostring(ShopPrices.zewr)),10)
@@ -3440,7 +3440,7 @@ function RegisterDirectorCasMission(slotIndex)
 			local slot = bc.casMissions.slots[slotIndex]
 			return LT(T):Format("MISSION_CAS_START", slot.targetZone, slot.targetKills)
 		end,
-		messageEnd = '',
+		messageEnd = function() return L10N:Get("MISSION_CAS_END") end,
 		startAction = function()
 			local slot = bc.casMissions.slots[slotIndex]
 			slot.started = true
@@ -4095,6 +4095,10 @@ mc:trackMission({
         return L10N:Format("NORMANDY_MISSION_CAPTURE_START", captureTarget, wp)
     end,
     messageEnd = function()
+        local targetzn = captureTarget and bc:getZoneByName(captureTarget) or nil
+        if targetzn and (targetzn.pendingCapture or targetzn._pendingCaptureRestore) then
+            return nil
+        end
         return L10N:Format("NORMANDY_MISSION_CAPTURE_END", captureTarget) end,
     startAction = function()
         local MissionType = L10N:Get("ZONE_MISSION_TAG_CAPTURE")
@@ -4106,10 +4110,12 @@ mc:trackMission({
     end,
     endAction = function()
         local MissionType = L10N:Get("ZONE_MISSION_TAG_CAPTURE")
+        local targetzn = captureTarget and bc:getZoneByName(captureTarget) or nil
+        local capturePending = targetzn and (targetzn.pendingCapture ~= nil or targetzn._pendingCaptureRestore ~= nil)
         bc:removeMissionTag(captureTarget, MissionType)
         bc:refreshZoneLabel(captureTarget)
         captureTarget = nil
-        if not missionCompleted then
+        if not missionCompleted and not capturePending then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
     end,
@@ -4117,6 +4123,7 @@ mc:trackMission({
         if not captureTarget then return false end
         local targetzn = bc:getZoneByName(captureTarget)
         return targetzn.side == 0 and targetzn.active
+            and not targetzn.pendingCapture and not targetzn._pendingCaptureRestore
     end
 })
 
@@ -4301,7 +4308,8 @@ function generateCaptureMission()
     
     local validzones = {}
     for _, v in ipairs(bc.zones) do
-        if v.active and v.side == 0 and (not v.NeutralAtStart or v.firstCaptureByRed) and 
+        if v.active and v.side == 0 and not v.pendingCapture and not v._pendingCaptureRestore
+            and (not v.NeutralAtStart or v.firstCaptureByRed) and
            not string.find(v.zone, "Hidden") then
             table.insert(validzones, v.zone)
         end

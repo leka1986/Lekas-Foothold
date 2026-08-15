@@ -45,6 +45,7 @@ FootholdConfigTrackedTableNames = {
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
     "PlayerZoneSuppliesConsumeStock",
+    "ZoneCaptureBuildSeconds",
     "NormalSupplyCapacity",
     "WarehouseSupplyCapacity",
 }
@@ -485,6 +486,11 @@ CallsignOverrides = {
 -- ============================================================================
 -- Logistics / Warehouse
 -- ============================================================================
+
+-- How many seconds a neutral-zone capture takes after a valid delivery arrives.
+-- Set to 0 to capture immediately.
+-- @gui label="Neutral Zone Capture Time" editor="seconds"
+ZoneCaptureBuildSeconds = 120
 
 -- How many ready supplies a normal zone produces before automatic production pauses.
 -- Player-delivered supplies can still be stored above this amount.

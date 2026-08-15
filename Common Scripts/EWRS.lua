@@ -328,6 +328,23 @@ ewrs.resetRuntimeCache()
 
 ewrs.savedPlayerSettings = {}
 
+local ewrs_compactCategoryIds = {
+  default = 1,
+  plane = 2,
+  plane_special = 3,
+  helicopter = 4,
+}
+local ewrs_compactCategoryNames = {
+  [1] = "default",
+  [2] = "plane",
+  [3] = "plane_special",
+  [4] = "helicopter",
+}
+local ewrs_compactReferenceIds = { self = 1, bulls = 2 }
+local ewrs_compactReferenceNames = { [1] = "self", [2] = "bulls" }
+local ewrs_compactMeasurementIds = { imperial = 1, metric = 2 }
+local ewrs_compactMeasurementNames = { [1] = "imperial", [2] = "metric" }
+
 local function ewrs_clonePersistentSettings(src)
   if not src then return {} end
   return {
@@ -387,6 +404,41 @@ local function ewrs_storePlayerProfile(playerName, category, settings)
   local profiles = ewrs_getProfileTable(playerName)
   if not profiles then return end
   profiles[category or "default"] = ewrs_clonePersistentSettings(settings)
+end
+
+local function ewrs_encodeCompactProfile(settings)
+  if type(settings) ~= "table" then return nil end
+  local profile = {
+    [1] = ewrs_compactReferenceIds[settings.reference],
+    [2] = ewrs_compactMeasurementIds[settings.measurements],
+    [3] = settings.rangeLimit,
+    [4] = settings.maxThreats,
+    [5] = settings.showFriendlies,
+    [6] = settings.showTankers,
+    [7] = settings.maxFriendlies,
+    [8] = settings.messages,
+    [9] = settings.reportStyle,
+    [10] = settings.customized,
+  }
+  return next(profile) and profile or nil
+end
+
+local function ewrs_decodeCompactProfile(profile)
+  if type(profile) ~= "table" then return nil end
+  local settings = {}
+  local reference = ewrs_compactReferenceNames[tonumber(profile[1])]
+  local measurements = ewrs_compactMeasurementNames[tonumber(profile[2])]
+  if reference then settings.reference = reference end
+  if measurements then settings.measurements = measurements end
+  if tonumber(profile[3]) then settings.rangeLimit = tonumber(profile[3]) end
+  if tonumber(profile[4]) then settings.maxThreats = tonumber(profile[4]) end
+  if type(profile[5]) == "boolean" then settings.showFriendlies = profile[5] end
+  if type(profile[6]) == "boolean" then settings.showTankers = profile[6] end
+  if tonumber(profile[7]) then settings.maxFriendlies = tonumber(profile[7]) end
+  if type(profile[8]) == "boolean" then settings.messages = profile[8] end
+  if tonumber(profile[9]) then settings.reportStyle = tonumber(profile[9]) end
+  if type(profile[10]) == "boolean" then settings.customized = profile[10] end
+  return next(settings) and settings or nil
 end
 
 local function ewrs_fetchPlayerProfile(playerName, category)
@@ -465,26 +517,107 @@ function ewrs.exportPlayerSettings()
   return list
 end
 
-function ewrs.importPlayerSettings(entries)
-  ewrs.savedPlayerSettings = {}
-  if type(entries) ~= "table" then return end
-  for _,entry in ipairs(entries) do
-    if entry and entry.name then
-      if entry.profiles and type(entry.profiles)=="table" then
-        for cat,settings in pairs(entry.profiles) do
-          ewrs_storePlayerProfile(entry.name, cat, settings)
+function ewrs.exportCompactPlayerSettings()
+  local compact = {}
+  for name,_ in pairs(ewrs.savedPlayerSettings or {}) do
+    local payload = {}
+    local profiles = ewrs_getProfileTable(name)
+    for category,settings in pairs(profiles or {}) do
+      local categoryId = ewrs_compactCategoryIds[category]
+      local encoded = categoryId and ewrs_encodeCompactProfile(settings) or nil
+      if encoded then payload[categoryId] = encoded end
+    end
+    if next(payload) then compact[name] = payload end
+  end
+  return compact
+end
+
+function ewrs.importCompactPlayerSettings(compact, mergeExisting)
+  if not mergeExisting then ewrs.savedPlayerSettings = {} end
+  if type(compact) ~= "table" then return end
+  for name,payload in pairs(compact) do
+    if type(name) == "string" and type(payload) == "table" then
+      local decoded = {}
+      for categoryId,profile in pairs(payload) do
+        local category = ewrs_compactCategoryNames[tonumber(categoryId)]
+        local settings = category and ewrs_decodeCompactProfile(profile) or nil
+        if settings then decoded[category] = settings end
+      end
+      if next(decoded) then
+        local profiles = ewrs_getProfileTable(name)
+        for category,settings in pairs(decoded) do
+          if not mergeExisting or profiles[category] == nil then
+            profiles[category] = ewrs_clonePersistentSettings(settings)
+          end
         end
-        ewrs_pruneLegacyProfiles(ewrs_getProfileTable(entry.name))
-      elseif entry.settings then
-        ewrs_storePlayerProfile(entry.name, "default", entry.settings)
+        ewrs_pruneLegacyProfiles(profiles)
       end
     end
   end
 end
 
+function ewrs.renamePlayerSettings(oldName, newName)
+  if not oldName or not newName or oldName == newName then return end
+  if not ewrs.savedPlayerSettings[oldName] then return end
+  local oldProfiles = ewrs_getProfileTable(oldName)
+  local newProfiles = ewrs_getProfileTable(newName)
+  for category,settings in pairs(oldProfiles or {}) do
+    if newProfiles[category] == nil then
+      newProfiles[category] = settings
+    end
+  end
+  ewrs.savedPlayerSettings[oldName] = nil
+end
+
+function ewrs.renameCompactPlayerSettings(compact, oldName, newName)
+  if type(compact) ~= "table" or not oldName or not newName or oldName == newName then return end
+  local oldProfiles = compact[oldName]
+  if type(oldProfiles) ~= "table" then return end
+  local newProfiles = compact[newName]
+  if type(newProfiles) ~= "table" then
+    newProfiles = {}
+    compact[newName] = newProfiles
+  end
+  for categoryId,settings in pairs(oldProfiles) do
+    if newProfiles[categoryId] == nil then
+      newProfiles[categoryId] = settings
+    end
+  end
+  compact[oldName] = nil
+end
+
+function ewrs.importPlayerSettings(entries, mergeExisting)
+  if not mergeExisting then ewrs.savedPlayerSettings = {} end
+  if type(entries) ~= "table" then return end
+  for _,entry in ipairs(entries) do
+    if entry and entry.name then
+      if entry.profiles and type(entry.profiles)=="table" then
+        local profiles = ewrs_getProfileTable(entry.name)
+        for cat,settings in pairs(entry.profiles) do
+          if not mergeExisting or profiles[cat] == nil then
+            ewrs_storePlayerProfile(entry.name, cat, settings)
+          end
+        end
+        ewrs_pruneLegacyProfiles(ewrs_getProfileTable(entry.name))
+      elseif entry.settings then
+        local profiles = ewrs_getProfileTable(entry.name)
+        if not mergeExisting or profiles.default == nil then
+          ewrs_storePlayerProfile(entry.name, "default", entry.settings)
+        end
+      end
+    end
+  end
+end
+
+if EWRS_PENDING_COMPACT_PLAYER_SETTINGS then
+  ewrs.importCompactPlayerSettings(EWRS_PENDING_COMPACT_PLAYER_SETTINGS, false)
+  EWRS_PENDING_COMPACT_PLAYER_SETTINGS = nil
+end
+
 if EWRS_PENDING_PLAYER_SETTINGS then
-  ewrs.importPlayerSettings(EWRS_PENDING_PLAYER_SETTINGS)
+  ewrs.importPlayerSettings(EWRS_PENDING_PLAYER_SETTINGS, EWRS_PENDING_PLAYER_SETTINGS_MERGE)
   EWRS_PENDING_PLAYER_SETTINGS = nil
+  EWRS_PENDING_PLAYER_SETTINGS_MERGE = nil
 end
 
 ----END OF SCRIPT OPTIONS----
