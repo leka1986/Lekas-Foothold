@@ -2296,6 +2296,7 @@ supplyZones = {
 
 lc = LogisticCommander:new({battleCommander = bc, supplyZones = supplyZones})
 bc:initCasMissions()
+bc:initReconMissions()
 lc:init()
 
 bc:loadFromDisk()
@@ -4217,88 +4218,93 @@ mc:trackMission({
 
 ---------------------------------------------------------------------
 --                         RECON MISSION                           --
-reconMissionTarget = nil
-reconMissionWinner = nil
-reconMissionCooldownUntil = 0
-reconMissionCompleted = false
-reconMissionCompletedTarget = nil
-
-mc:trackMission({
-	title = function()
-		local target = reconMissionCompletedTarget or reconMissionTarget
-		if not target then return LTGet("SYRIA_DYNAMIC_RECON_TITLE_EMPTY") end
-		local wp = WaypointList[target] or ""
-		return L10N:Format("SYRIA_DYNAMIC_RECON_TITLE", target, wp)
-	end,
-	description = function()
-		local target = reconMissionCompletedTarget or reconMissionTarget
-		if not target then return LTGet("SYRIA_DYNAMIC_RECON_DESC_EMPTY") end
-		return L10N:Format("SYRIA_DYNAMIC_RECON_DESC", target)
-	end,
-	messageStart = function()
-		local target = reconMissionCompletedTarget or reconMissionTarget
-		if not target then return LTGet("SYRIA_DYNAMIC_RECON_START_EMPTY") end
-		local wp = WaypointList[target] or ""
-		return L10N:Format("SYRIA_DYNAMIC_RECON_START", target, wp)
-	end,
-	messageEnd = function()
-		if reconMissionCompleted and reconMissionCompletedTarget and reconMissionWinner then
-			return L10N:Format("SYRIA_DYNAMIC_RECON_END_BY", reconMissionCompletedTarget, reconMissionWinner)
-		end
-		if reconMissionCompletedTarget then
-			return L10N:Format("SYRIA_DYNAMIC_RECON_END_TARGET", reconMissionCompletedTarget)
-		end
-		return LTGet("SYRIA_DYNAMIC_RECON_END")
-	end,
-	startAction = function()
-		reconMissionCompleted = false
-		reconMissionWinner = nil
-		reconMissionCompletedTarget = nil
-
-		bc:addMissionTag(reconMissionTarget, L10N:Get("ZONE_MISSION_TAG_RECON"))
-		bc:refreshZoneLabel(reconMissionTarget)
-
-		startReconMissionZoneTracker(reconMissionTarget)
-		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-			trigger.action.outSoundForCoalition(2, "ding.ogg")
-		end
-	end,
-	endAction = function()
-		local target = reconMissionCompletedTarget or reconMissionTarget
-		if target then
-			stopReconMissionZoneTracker(target)
-			bc:removeMissionTag(target, L10N:Get("ZONE_MISSION_TAG_RECON"))
-			bc:refreshZoneLabel(target)
-		end
-
-		if reconMissionCompleted and target and reconMissionWinner then
-			local reward = 100
-			local jp = bc:awardJointMissionReward(reconMissionWinner, 2, reward, "Recon mission")
-			if jp then
-				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_JOINT", reconMissionWinner, jp, target, reward), 20)
-			else
-				trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", reconMissionWinner, target, reward), 20)
+function RegisterDirectorReconMission(slotIndex)
+	mc:trackMission({
+		title = function()
+			local target = bc.reconMissions.slots[slotIndex].targetZone
+			if not target then return LTGet("SYRIA_DYNAMIC_RECON_TITLE_EMPTY") end
+			local wp = WaypointList[target] or ""
+			return L10N:Format("SYRIA_DYNAMIC_RECON_TITLE", target, wp)
+		end,
+		description = function()
+			local target = bc.reconMissions.slots[slotIndex].targetZone
+			if not target then return LTGet("SYRIA_DYNAMIC_RECON_DESC_EMPTY") end
+			return L10N:Format("SYRIA_DYNAMIC_RECON_DESC", target)
+		end,
+		messageStart = function()
+			local target = bc.reconMissions.slots[slotIndex].targetZone
+			if not target then return LTGet("SYRIA_DYNAMIC_RECON_START_EMPTY") end
+			local wp = WaypointList[target] or ""
+			return L10N:Format("SYRIA_DYNAMIC_RECON_START", target, wp)
+		end,
+		messageEnd = function()
+			local slot = bc.reconMissions.slots[slotIndex]
+			if slot.completed and slot.targetZone and slot.winner then
+				return L10N:Format("SYRIA_DYNAMIC_RECON_END_BY", slot.targetZone, slot.winner)
 			end
-			startZoneIntel(target, 10 * 60)
-			reconMissionCooldownUntil = timer.getTime() + 900
-		end
+			if slot.targetZone then
+				return L10N:Format("SYRIA_DYNAMIC_RECON_END_TARGET", slot.targetZone)
+			end
+			return LTGet("SYRIA_DYNAMIC_RECON_END")
+		end,
+		startAction = function()
+			local slot = bc.reconMissions.slots[slotIndex]
+			slot.completed = false
+			slot.winner = nil
+			slot.started = true
 
-		reconMissionTarget = nil
-		reconMissionWinner = nil
-		reconMissionCompleted = false
-		reconMissionCompletedTarget = nil
+			bc:addMissionTag(slot.targetZone, L10N:Get("ZONE_MISSION_TAG_RECON"))
+			bc:refreshZoneLabel(slot.targetZone)
 
-		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+			startReconMissionZoneTracker(slot.targetZone)
+			if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+				trigger.action.outSoundForCoalition(2, "ding.ogg")
+			end
+		end,
+		endAction = function()
+			local slot = bc.reconMissions.slots[slotIndex]
+			local target = slot.targetZone
+			local winner = slot.winner
+			local completed = slot.completed
+			if target then
+				stopReconMissionZoneTracker(target)
+				bc:removeMissionTag(target, L10N:Get("ZONE_MISSION_TAG_RECON"))
+				bc:refreshZoneLabel(target)
+			end
+
+			if completed and target and winner then
+				local reward = 100
+				local jp = bc:awardJointMissionReward(winner, 2, reward, "Recon mission")
+				if jp then
+					trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_JOINT", winner, jp, target, reward), 20)
+				else
+					trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_DYNAMIC_RECON_COMPLETED_SOLO", winner, target, reward), 20)
+				end
+				startZoneIntel(target, 10 * 60)
+				bc.reconMissions.cooldownByTarget[target] = timer.getTime() + 900
+			end
+
+			bc:resetReconMissionSlot(slotIndex)
+			if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+				trigger.action.outSoundForCoalition(2, "cancel.ogg")
+			end
+		end,
+		isActive = function()
+			local slot = bc.reconMissions.slots[slotIndex]
+			if slot.completed or not slot.active or not slot.targetZone then return false end
+			local targetzn = bc:getZoneByName(slot.targetZone)
+			if not targetzn or targetzn.side ~= 1 or not targetzn.active or targetzn.suspended then
+				if not slot.started then bc:resetReconMissionSlot(slotIndex) end
+				return false
+			end
+			return true
 		end
-	end,
-	isActive = function()
-		if reconMissionCompleted then return false end
-		if not reconMissionTarget then return false end
-		local targetzn = bc:getZoneByName(reconMissionTarget)
-		return targetzn and targetzn.side == 1 and targetzn.active and not targetzn.suspended
-	end
-})
+	})
+end
+
+for slotIndex = 1, bc.reconMissionMaxSlots do
+	RegisterDirectorReconMission(slotIndex)
+end
 --                    End of RECON MISSION                         --
 ---------------------------------------------------------------------
 

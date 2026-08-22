@@ -1813,6 +1813,7 @@ function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn)
     local parkingIds = PickCachedParkingIdsForAirbase(homebase, terminalType, freeSpots, need)
     local spawned = nil
     if parkingIds then
+        bc:_prepareBlueAiWarehouseSpawn(templateName, homebase)
         spawned = sp:SpawnAtParkingSpot(homebase, parkingIds, SPAWN.Takeoff.Hot)
     end
 
@@ -2351,6 +2352,7 @@ function static:OnEventPlayerLeaveUnit(EventData)
         if EventData.id == EVENTS.PlayerLeaveUnit then
             local side = playerUnit:GetCoalition()
             bc:finishCareerFlightForPlayer(playerName, playerUnit:GetName())
+            bc:_resetCareerAirKillStreaks(playerName)
             bc.lossPenaltyArmByPlayer[playerName] = nil
             if bc.playerContributions and bc.playerContributions[side] then
                 bc.playerContributions[side][playerName] = 0
@@ -2430,6 +2432,11 @@ function static:OnEventPlayerLeaveUnit(EventData)
                     local groupId = bc.groupByPlayer and bc.groupByPlayer[playerName]
                     bc:markCasMissionPlayerUnavailable(playerName)
                     bc:markSeadMissionPlayerUnavailable(playerName)
+                    bc:_resetCareerAirKillStreaks(playerName)
+                    if bc.playerContributions and bc.playerContributions[coalition.side.BLUE] then
+                        bc.playerContributions[coalition.side.BLUE][playerName] = 0
+                    end
+                    bc:resetTempStats(playerName, true)
                     cleanupEscortForGroupName(gname)
                     if groupId then
                         lc:pruneGroupMenus(groupId, gname)

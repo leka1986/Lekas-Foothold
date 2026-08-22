@@ -77961,7 +77961,7 @@ end
 if not self.placeCratesAhead or drop==true then
 local step=(IsHerc or IsHelo)and(FW_STEP_BY_TYPE[basetype]or 2.6)or 1.5
 if(IsHerc or IsHelo)and not drop then
-local safeDistance=capabilities.length*0.9
+local safeDistance=capabilities.length*(IsHook and 0.75 or 0.9)
 local maxDist=self.CrateDistance or 35
 if safeDistance>maxDist then safeDistance=maxDist end
 local angleIndex=(fwBatchIndex%#FW_BATCH_ANGLE_PATTERN)+1

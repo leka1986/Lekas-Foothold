@@ -1277,13 +1277,16 @@ DynamicBomber = DynamicBomber or {}
 
 DynamicBomber.IngressAltitude = 30000 -- feet
 
-function DynamicBomber.BuildBombingTaskForZone(zoneName, weaponExpend, attackAltitudeM, attackQty)
+function DynamicBomber.BuildBombingTaskForZone(zoneName, weaponExpend, attackAltitudeM, attackQty, staticsLast)
 	local zn = zoneName and bc.indexedZones[zoneName] or nil
 	local attack = { id = 'ComboTask', params = { tasks = {} } }
 	local firstpos = nil
+	local firstStaticPos = nil
+	local deferredStaticTasks = {}
 	if zn and zn.built then
 		for _, v in pairs(zn.built) do
 			local targetPositions = {}
+			local targetIsStatic = false
 			local targetGroup = Group.getByName(v)
 			if targetGroup and targetGroup:getSize() > 0 then
 				for _, unit in ipairs(targetGroup:getUnits()) do
@@ -1293,7 +1296,10 @@ function DynamicBomber.BuildBombingTaskForZone(zoneName, weaponExpend, attackAlt
 					end
 				end
 			else
+				local targetStatic = StaticObject.getByName(v)
+				if targetStatic and targetStatic:isExist() == false then targetStatic = nil end
 				local targetPos = bc:getTargetPos(v)
+				targetIsStatic = targetStatic ~= nil
 				if targetPos then targetPositions[#targetPositions + 1] = targetPos end
 			end
 
@@ -1315,11 +1321,20 @@ function DynamicBomber.BuildBombingTaskForZone(zoneName, weaponExpend, attackAlt
 						weaponType = ENUMS.WeaponFlag.AnyBomb
 					}
 				}
-				table.insert(attack.params.tasks, task)
-				if not firstpos then firstpos = targetPos end
+				if staticsLast == true and targetIsStatic then
+					deferredStaticTasks[#deferredStaticTasks + 1] = task
+					if not firstStaticPos then firstStaticPos = targetPos end
+				else
+					table.insert(attack.params.tasks, task)
+					if not firstpos then firstpos = targetPos end
+				end
 			end
 		end
 	end
+	for _, task in ipairs(deferredStaticTasks) do
+		table.insert(attack.params.tasks, task)
+	end
+	firstpos = firstpos or firstStaticPos
 
 	return attack, firstpos
 end
@@ -1418,7 +1433,7 @@ function DynamicBomber.AppendBomberRtbRoute(wp, firstpos, routeAltitudeM, speedK
 	end
 end
 
-function DynamicBomber.AssignIngressBombingTask(grpName, targetZoneName, escortGroup, routeSpeedKmh, routeAltitudeFt, attackAltitudeFt, weaponExpend, attackQty, homeAirbaseName, rtbApproachDistanceNm, rtbMessageSide, recoveryZoneName)
+function DynamicBomber.AssignIngressBombingTask(grpName, targetZoneName, escortGroup, routeSpeedKmh, routeAltitudeFt, attackAltitudeFt, weaponExpend, attackQty, homeAirbaseName, rtbApproachDistanceNm, rtbMessageSide, recoveryZoneName, staticsLast)
 	local bomber = Group.getByName(grpName)
 	if not bomber or not bomber:isExist() or bomber:getSize() == 0 then return false end
 	local lead = bomber:getUnit(1)
@@ -1426,7 +1441,7 @@ function DynamicBomber.AssignIngressBombingTask(grpName, targetZoneName, escortG
 	local startPos = lead:getPoint()
 	local routeAltitudeM = UTILS.FeetToMeters(routeAltitudeFt or 25000)
 	local attackAltitudeM = UTILS.FeetToMeters(attackAltitudeFt or routeAltitudeFt or 25000)
-	local attack, firstpos = DynamicBomber.BuildBombingTaskForZone(targetZoneName, weaponExpend or AI.Task.WeaponExpend.HALF, attackAltitudeM, attackQty)
+	local attack, firstpos = DynamicBomber.BuildBombingTaskForZone(targetZoneName, weaponExpend or AI.Task.WeaponExpend.HALF, attackAltitudeM, attackQty, staticsLast)
 	env.info("[DynamicBomber] ingress push "..tostring(grpName).." target="..tostring(targetZoneName).." tasks="..tostring(#attack.params.tasks))
 	if #attack.params.tasks == 0 then return false end
 	if not firstpos then
@@ -1492,7 +1507,7 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 		if not choice and #valid > 0 then choice = valid[math.random(1,#valid)] end
 	end
 	local zn = choice and bc.indexedZones[choice] or nil
-	local attack, firstpos = DynamicBomber.BuildBombingTaskForZone(choice, weaponExpend, attackAltitudeM, attackQty)
+	local attack, firstpos = DynamicBomber.BuildBombingTaskForZone(choice, weaponExpend, attackAltitudeM, attackQty, opts.staticsLast == true)
 
 	if not firstpos and zn then
 		local c = getZoneCenter(zn.zone or choice)
@@ -1574,7 +1589,7 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 		local rtbMessageSideArg = recovery and tostring(opts.recoverySide) or "nil"
 		local recoveryZoneArg = recovery and string.format("%q", recovery.zone.zone) or "nil"
 		local ingressCommand = string.format(
-			"DynamicBomber.AssignIngressBombingTask(%q, %q, %q, %s, %s, %s, %q, %s, %q, %s, %s, %s)",
+			"DynamicBomber.AssignIngressBombingTask(%q, %q, %q, %s, %s, %s, %q, %s, %q, %s, %s, %s, %s)",
 			grpName,
 			choice,
 			escortGroup or "",
@@ -1586,7 +1601,8 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 			homeAirbaseName or "",
 			tostring(opts.rtbApproachDistanceNm or 30),
 			rtbMessageSideArg,
-			recoveryZoneArg
+			recoveryZoneArg,
+			tostring(opts.staticsLast == true)
 		)
 		ingressTasks = {{
 			id = 'WrappedAction',
@@ -2049,9 +2065,10 @@ end
 
 function StrategicBomber.GetBadSamsForZone(targetZoneName, T)
 	local zone = bc:getZoneByName(targetZoneName)
-	if not zone or not zone.built then return false, nil end
+	if not zone or not zone.built then return false, nil, {} end
 	local found = {}
 	local seen = {}
+	local detectedTypes = {}
 	for _, groupName in pairs(zone.built) do
 		local group = GROUP:FindByName(groupName)
 		if group and group:IsAlive() then
@@ -2059,6 +2076,7 @@ function StrategicBomber.GetBadSamsForZone(targetZoneName, T)
 				if unit and unit:IsAlive() then
 					local displayName = renameType(unit:GetTypeName())
 					local samName = StrategicBomber.BadSamDisplayByName[displayName]
+					if samName then detectedTypes[displayName] = true end
 					if samName and not seen[samName] then
 						seen[samName] = true
 						found[#found + 1] = samName
@@ -2068,8 +2086,8 @@ function StrategicBomber.GetBadSamsForZone(targetZoneName, T)
 		end
 	end
 	table.sort(found)
-	if #found == 0 then return false, nil end
-	return true, StrategicBomber.JoinNames(found, T)
+	if #found == 0 then return false, nil, detectedTypes end
+	return true, StrategicBomber.JoinNames(found, T), detectedTypes
 end
 
 function StrategicBomber.GetAirbaseMaxRunwayLength(airbase)
@@ -2779,9 +2797,9 @@ end
 function StrategicBomber.BlueOriginAllowed(originZone, targetZone)
 	local cfg = StrategicBomber.GetConfig(2)
 	if not cfg or not originZone or not targetZone then return false end
-	if originZone.side ~= 2 or not originZone.active or originZone.suspended or originZone.isHidden then return false end
+	if originZone.side ~= 2 or not originZone.active or originZone.isHidden then return false end
 	if isCarrierZoneName(originZone.zone) then return false end
-	local airbase = DynamicBomber.ResolveSpawnAirbase(originZone, 2, false)
+	local airbase = DynamicBomber.ResolveSpawnAirbase(originZone, 2, true)
 	if not airbase then return false end
 	local dist = DynamicBomber.ZoneDistanceMeters(originZone.zone, targetZone.zone)
 	return dist >= UTILS.NMToMeters(cfg.minTargetSpawnNm or 60)
@@ -2862,7 +2880,7 @@ function StrategicBomber.ValidateBlueLaunch(params)
 	if withAiEscort and (not cfg.escortTemplates or #cfg.escortTemplates == 0) then
 		return nil, StrategicBomber.Message("STRATEGIC_BOMBER_NO_ESCORT_TEMPLATE")
 	end
-	local airbase = DynamicBomber.ResolveSpawnAirbase(originZone, 2, false)
+	local airbase = DynamicBomber.ResolveSpawnAirbase(originZone, 2, true)
 	local spawnCoord = airbase:GetCoordinate()
 	local targetCoord = DynamicBomber.ZoneCoordinate(targetZone.zone)
 	local heading = spawnCoord:GetAngleDegrees(spawnCoord:GetDirectionVec3(targetCoord))
@@ -3033,6 +3051,7 @@ function StrategicBomber.PushBlue(groupId)
 		toIngressSpeedKt = StrategicBomber.GetToIngressSpeedKt(cfg),
 		ingressSpeedKt = cfg.ingressSpeedKt,
 		afterIngressSpeedKt = StrategicBomber.GetAfterIngressSpeedKt(cfg),
+		staticsLast = true,
 		deferBombingTaskToIngress = true,
 		escortAlreadyAssigned = st.escortTaskAssigned == true,
         landAndRefuelAtOrigin = true,
@@ -3686,6 +3705,9 @@ function SpawnCustom(grname, zoneName, side, requestedAlias)
 		end
 		return shoradZones, shoradUnused
 	end
+
+	CustomZone.getSamSubZones = getSamSubZones
+	CustomZone.getShoradSubZones = getShoradSubZones
 
 	local function filterOutSamZones(zoneName, zones)
 		local filtered = {}
@@ -5810,29 +5832,7 @@ do
 		mc:refreshAllIntelMissionMenus(true)
 
 		if side == coalition.side.BLUE then
-			local hasReconOnZone = false
-			if reconMissionTarget == zoneName then
-				hasReconOnZone = true
-			end
-			local missionState = ActiveCurrentMission[zoneName]
-			if missionState and missionState["Recon"] then
-				hasReconOnZone = true
-			end
-			if hasReconOnZone then
-				stopReconMissionZoneTracker(zoneName)
-				if missionState then
-					missionState["Recon"] = nil
-					if not next(missionState) then
-						ActiveCurrentMission[zoneName] = nil
-					end
-				end
-				if reconMissionTarget == zoneName then
-					reconMissionTarget = nil
-					reconMissionWinner = nil
-					reconMissionCompleted = false
-					reconMissionCompletedTarget = zoneName
-				end
-			end
+			bc:cancelReconMissionForZone(zoneName)
 		end
 
 		z:updateLabel(side)
@@ -6162,6 +6162,52 @@ do
 		end
 
 		world.addEventHandler(ev)
+	end
+
+	function JTAC:_scanZoneTargets()
+		local viableTargets = {}
+		for _, builtName in pairs(self.tgtzone.built or {}) do
+			local targetGroup = Group.getByName(builtName)
+			if targetGroup and targetGroup:getSize() > 0 then
+				for _, targetUnit in ipairs(targetGroup:getUnits() or {}) do
+					if targetUnit:getLife() >= 1 then
+						viableTargets[#viableTargets + 1] = targetUnit
+					end
+				end
+			else
+				local targetStatic = StaticObject.getByName(builtName)
+				if targetStatic and targetStatic:isExist() then
+					local isCritical = false
+					for _, criticalName in ipairs(self.tgtzone.criticalObjects or {}) do
+						if criticalName == builtName then
+							isCritical = true
+							break
+						end
+					end
+					if not isCritical then
+						viableTargets[#viableTargets + 1] = targetStatic
+					end
+				end
+			end
+		end
+		self.tgtzone._jtacTargetSnapshot = viableTargets
+		return viableTargets
+	end
+
+	function JTAC:_getZoneTargets()
+		local snapshot = self.tgtzone and self.tgtzone._jtacTargetSnapshot or nil
+		if not snapshot then return self:_scanZoneTargets() end
+
+		local viableTargets = {}
+		for _, targetObject in ipairs(snapshot) do
+			local alive = targetObject and targetObject:isExist()
+			if alive and Object.getCategory(targetObject) ~= Object.Category.STATIC then
+				alive = targetObject:getLife() >= 1
+			end
+			if not alive then return self:_scanZoneTargets() end
+			viableTargets[#viableTargets + 1] = targetObject
+		end
+		return viableTargets
 	end
 	
 	function JTAC:sortByThreat(targets)
@@ -6529,6 +6575,7 @@ end
 	function JTAC:clearTarget()
 		self.target = nil
 		jtacIntelActive[self.tgtzone.zone] = false
+		self.tgtzone._jtacTargetSnapshot = nil
 		if self.lasers.tgt then
 			self.lasers.tgt:destroy()
 			self.lasers.tgt = nil
@@ -6560,26 +6607,10 @@ end
 		local gr = Group.getByName(self.name)
 		if gr then
 			if self.tgtzone and self.tgtzone.side~=0 and self.tgtzone.side~=gr:getCoalition() then
-				local viabletgts = {}
+				local viabletgts = self:_getZoneTargets()
 				if not self.sortByThreat then
                     self.sortByThreat = JTAC.sortByThreat
                 end
-				for i,v in pairs(self.tgtzone.built) do
-					local tgtgr = Group.getByName(v)
-					if tgtgr and tgtgr:getSize()>0 then
-						for i2,v2 in ipairs(tgtgr:getUnits()) do
-							if v2:getLife()>=1 then
-								table.insert(viabletgts, v2)
-							end
-						end
-					else
-						tgtgr = StaticObject.getByName(v)
-						if tgtgr and tgtgr:isExist() then
-							local isCritical=false for _,co in ipairs(self.tgtzone.criticalObjects) do if co==v then isCritical=true break end end
-							if not isCritical then table.insert(viabletgts, tgtgr) end
-						end
-					end
-				end
 				
 				if self.priority then
 					local priorityTargets = {}
@@ -6654,34 +6685,11 @@ end
 			end
 			if self.tgtzone and self.tgtzone.built then
 				local oldCount = self._lastViableCount or 0
-				local newCount = 0
-				for _, v in pairs(self.tgtzone.built) do
-					local tgtgr = Group.getByName(v)
-					if tgtgr and tgtgr:getSize() > 0 then
-						for _,unitObj in ipairs(tgtgr:getUnits()) do
-							if unitObj:getLife() >= 1 then
-								newCount = newCount + 1
-							end
-						end
-					else
-						local st = StaticObject.getByName(v)
-						if st and st:isExist() then
-							local isCritical = false
-							for _,co in ipairs(self.tgtzone.criticalObjects) do
-								if co == v then
-									isCritical = true
-									break
-								end
-							end
-							if not isCritical then
-								newCount = newCount + 1
-							end
-						end
-					end
-				end
+				local viableTargets = self:_getZoneTargets()
+				local newCount = #viableTargets
 	
 				if newCount < oldCount then
-					self:buildSelectTargetMenu()
+					self:buildSelectTargetMenu(viableTargets)
 				end
 				self._lastViableCount = newCount
 			end
@@ -6695,24 +6703,13 @@ end
 
 
 	function JTAC:deployAtZone(zoneCom)
-		self.tgtzone=zoneCom
-		if reconMissionTarget == zoneCom.zone then
-			local target = reconMissionCompletedTarget or reconMissionTarget
-			if target then
-				stopReconMissionZoneTracker(target)
-				local t = (type(ActiveCurrentMission) == "table") and ActiveCurrentMission[target] or nil
-				if type(t) == "table" then
-					t["Recon"] = nil
-					if not next(t) then ActiveCurrentMission[target] = nil end
-				end
-				local z = bc:getZoneByName(target)
-				if z then z:updateLabel() end
-			end
-			reconMissionTarget = nil
-			reconMissionWinner = nil
-			reconMissionCompleted = false
-			reconMissionCompletedTarget = nil
+		if self.tgtzone then
+			self.tgtzone._jtacTargetSnapshot = nil
 		end
+		self.tgtzone=zoneCom
+		zoneCom._jtacTargetSnapshot = nil
+		zoneCom._nextBuiltMaintenanceAt = 0
+		bc:cancelReconMissionForZone(zoneCom.zone)
 
 												   
 		jtacIntelActive[zoneCom.zone]=true
@@ -6795,27 +6792,7 @@ end
 			return
 		end
 
-		local viabletgts = knownTargets or {}
-		if not knownTargets then
-			for i,v in pairs(self.tgtzone.built) do
-				local tgtgr = Group.getByName(v)
-				if tgtgr and tgtgr:getSize() > 0 then
-					for i2,v2 in ipairs(tgtgr:getUnits()) do
-						if v2:getLife() >= 1 then
-							table.insert(viabletgts, v2)
-						end
-					end
-				else
-					local st = StaticObject.getByName(v)
-					if st and st:isExist() then
-						local isCritical=false for _,co in ipairs(self.tgtzone.criticalObjects) do if co==v then isCritical=true break end end
-						if not isCritical and Object.getCategory(st) == Object.Category.STATIC and st:getName() then
-							table.insert(viabletgts, st)
-						end
-					end
-				end
-			end
-		end
+		local viabletgts = knownTargets or self:_getZoneTargets()
 		if self.priority and not knownTargets then
 			local priorityTargets = {}
 			for i,v in ipairs(viabletgts) do
@@ -8720,11 +8697,44 @@ DynamicConvoy = DynamicConvoy or {}
 dc = DynamicConvoy
 dc.ROUTE_CACHE = { attack = {}, supply = {}, artillery = {} }
 dc.TARGET_SUBZONES = {}
+dc.ATTACK_TARGET_SUBZONE_NAMES = {}
+dc.ATTACK_TARGET_SUBZONES = {}
 dc.RSTATE = (1 + math.floor((((timer and timer.getTime) and timer.getTime()) or 0) * 1000))
 dc.TARGET_TAIL_CACHE = {}
 dc.ARTY_ANCHOR_CACHE = {}
 dc.ARTY_ANCHOR_NEXT_INDEX = {}
 dc.DEFAULT_SPEED = 20
+-- DYNAMIC_CONVOY_SIDE_SPEED_BEGIN
+dc.RED_ROUTE_SPEED_KMH = 60
+dc.RED_ROUTE_SPEED = dc.RED_ROUTE_SPEED_KMH / 3.6
+dc.RED_ROUTE_TASK_CACHE = setmetatable({}, { __mode = "k" })
+
+function dc.RouteTaskForSide(task, side)
+	if side ~= coalition.side.RED then return task end
+	local cached = dc.RED_ROUTE_TASK_CACHE[task]
+	if cached then return cached end
+	local points = task and task.params and task.params.route and task.params.route.points
+	if type(points) ~= "table" then return task end
+	local hasDefaultSpeed = false
+	for _, point in ipairs(points) do
+		local speed = point and tonumber(point.speed)
+		if speed and point.action ~= "Turning Point" and math.abs(speed - dc.DEFAULT_SPEED) < 0.001 then
+			hasDefaultSpeed = true
+			break
+		end
+	end
+	if not hasDefaultSpeed then return task end
+	local adjusted = UTILS.DeepCopy(task)
+	for _, point in ipairs(adjusted.params.route.points) do
+		local speed = point and tonumber(point.speed)
+		if speed and point.action ~= "Turning Point" and math.abs(speed - dc.DEFAULT_SPEED) < 0.001 then
+			point.speed = dc.RED_ROUTE_SPEED
+		end
+	end
+	dc.RED_ROUTE_TASK_CACHE[task] = adjusted
+	return adjusted
+end
+-- DYNAMIC_CONVOY_SIDE_SPEED_END
 dc.DEFAULT_WAYPOINTS_IN_TARGET = 15
 dc.PATH_CACHE = {}
 dc.OFFROAD_PENALTY = 1.25
@@ -8880,11 +8890,36 @@ function dc.InitTargetTails(insideCount)
         local zn = zoneObj.zone
         local subnames = ZONE_VALID_SUBZONES[zn] or {}
         local v2list = {}
+        local attackSubnames = {}
+        local attackV2list = {}
         for _, subName in ipairs(subnames) do
             local v2 = vec2FromSubzoneName(subName)
-            if v2 then v2list[#v2list + 1] = v2 end
+            if v2 then
+                v2list[#v2list + 1] = v2
+                attackSubnames[#attackSubnames + 1] = subName
+                attackV2list[#attackV2list + 1] = v2
+            end
+        end
+        local samSubnames = CustomZone.getSamSubZones(zn)
+        for _, subName in ipairs(samSubnames) do
+            local v2 = vec2FromSubzoneName(subName)
+            if v2 then
+                attackSubnames[#attackSubnames + 1] = subName
+                attackV2list[#attackV2list + 1] = v2
+            end
+        end
+        local shoradSubnames = CustomZone.getShoradSubZones(zn)
+        for _, subName in ipairs(shoradSubnames) do
+            local v2 = vec2FromSubzoneName(subName)
+            if v2 then
+                attackSubnames[#attackSubnames + 1] = subName
+                attackV2list[#attackV2list + 1] = v2
+            end
         end
         dc.TARGET_SUBZONES[zn] = v2list
+        dc.ATTACK_TARGET_SUBZONE_NAMES[zn] = attackSubnames
+        dc.ATTACK_TARGET_SUBZONES[zn] = attackV2list
+        dc.TARGET_TAIL_CACHE[zn] = nil
     end
 end
 
@@ -8892,7 +8927,7 @@ function dc.GetOrderedTail(targetZoneName, entry)
     local cached = dc.TARGET_TAIL_CACHE[targetZoneName]
     if cached and cached.entry and cached.entry.x == entry.x and cached.entry.y == entry.y then return cached.list end
     local list = {}
-    for _,v in ipairs(dc.TARGET_SUBZONES[targetZoneName] or {}) do
+    for _,v in ipairs(dc.ATTACK_TARGET_SUBZONES[targetZoneName] or {}) do
         list[#list+1] = { x = v.x, y = v.y }
     end
     table.sort(list, function(a,b)
@@ -9312,7 +9347,9 @@ function dc.ExecuteAntiShipCounterMission(missionName, originAirfield, enemySide
 		local spawner = SPAWN:New(antiShipTemplate)
 
 		if spawner then
-			local spawnedGroup = spawner:SpawnAtAirbase(AIRBASE:FindByName(originZone.airbaseName or originAirfield), SPAWN.Takeoff.Hot)
+			local originAirbase = AIRBASE:FindByName(originZone.airbaseName or originAirfield)
+			if enemySide == coalition.side.BLUE then bc:_prepareBlueAiWarehouseSpawn(antiShipTemplate, originAirbase) end
+			local spawnedGroup = spawner:SpawnAtAirbase(originAirbase, SPAWN.Takeoff.Hot)
 
 			if spawnedGroup then
 				env.info(string.format("[BATTLESHIP_COUNTER] Spawned anti-ship group %s from %s",
@@ -9408,7 +9445,7 @@ end
 function dc.BuildAttackConvoyRoute(originZoneName, targetZoneName, speed, useZoneRoadHooks, useMultiRoadHooks, useTargetMultiRoadHooks, useOriginRoadHooks, useTargetRoadHooks, allowNearestRoadStart)
 	local formations = {"Cone","Diamond","Vee"}
     local aSubs = ZONE_VALID_SUBZONES[originZoneName] or {}
-    local tSubs = dc.TARGET_SUBZONES and dc.TARGET_SUBZONES[targetZoneName] or {}
+    local tSubs = dc.ATTACK_TARGET_SUBZONES and dc.ATTACK_TARGET_SUBZONES[targetZoneName] or {}
 	local useOriginNumberedHooks = useMultiRoadHooks == true
 	local useTargetNumberedHooks = useTargetMultiRoadHooks == true or useOriginNumberedHooks
 	local enableOriginRoadHook = (useOriginRoadHooks == nil) and (useZoneRoadHooks == true) or (useOriginRoadHooks == true)
@@ -9439,8 +9476,8 @@ function dc.BuildAttackConvoyRoute(originZoneName, targetZoneName, speed, useZon
     end
     if not startV2 then env.info("DC.BAIL startV2_nil") return nil end
     if #tSubs == 0 then
-    tSubs = scanTargetSubzones(targetZoneName)
-    dc.TARGET_SUBZONES[targetZoneName] = tSubs
+    dc.InitTargetTails()
+    tSubs = dc.ATTACK_TARGET_SUBZONES[targetZoneName] or {}
     --env.info("DC.FIX rebuilt_target_subzones zone="..tostring(targetZoneName).." count="..tostring(#tSubs))
     if #tSubs == 0 then env.info("DC.BAIL target_subzones_empty_scan_failed") return nil end
 	end
@@ -9513,14 +9550,13 @@ function dc.BuildAttackConvoyRoute(originZoneName, targetZoneName, speed, useZon
 			pts[#pts].formation = frm
 
 			local order = dc.GetOrderedTail(targetZoneName, endRoad)
-			local need  = (dc.DEFAULT_WAYPOINTS_IN_TARGET or 5)
 			local rem, seq = {}, {}
 			for i = 1, #order do
 				local v = order[i]
 				if not (v.x == anchorSub.x and v.y == anchorSub.y) then rem[#rem+1] = i end
 			end
 			local cur = anchorSub
-			while #rem > 0 and #seq < need do
+			while #rem > 0 do
 				local bestk, bestd = 1, 1e18
 				for k = 1, #rem do
 					local v = order[ rem[k] ]
@@ -9549,8 +9585,7 @@ function dc.BuildAttackConvoyRoute(originZoneName, targetZoneName, speed, useZon
 	end)
 	pts[#pts+1] = ground_buildWP(startV2, "Off Road", s_kmh)
 	pts[#pts].formation = frm
-	local need2 = 1 + (dc.DEFAULT_WAYPOINTS_IN_TARGET or 5)
-	for i = 1, math.min(need2, #sorted) do pts[#pts+1] = ground_buildWP(sorted[i], "Off Road", target_s_kmh); pts[#pts].formation = frm end
+	for i = 1, #sorted do pts[#pts+1] = ground_buildWP(sorted[i], "Off Road", target_s_kmh); pts[#pts].formation = frm end
 	return { id = "Mission", params = { route = { points = pts } } }, startV2
 end
 
@@ -9968,6 +10003,235 @@ function dc.GetAttackConvoyRoute(originZoneName, targetZoneName, speed, useZoneR
     return task, startV2
 end
 
+function dc.BuildCachedAttackConvoyRetaskRoute(cachedTask, currentPoint, targetZoneName)
+	local task = UTILS.DeepCopy(cachedTask)
+	local points = task.params.route.points
+	local currentX, currentY = currentPoint.x, currentPoint.y
+
+	local function distance(ax, ay, bx, by)
+		local dx, dy = ax - bx, ay - by
+		return math.sqrt(dx * dx + dy * dy)
+	end
+
+	local firstRoadIndex = nil
+	local lastRoadIndex = nil
+	for i = 1, #points do
+		local action = points[i].action
+		if action == "On Road" or action == "on_road" then
+			firstRoadIndex = firstRoadIndex or i
+			lastRoadIndex = i
+		end
+	end
+
+	local directStartIndex = (#points >= 2) and 2 or 1
+	local bestDirectDistSq = math.huge
+	for i = 2, #points do
+		local point = points[i]
+		local dx, dy = point.x - currentX, point.y - currentY
+		local distSq = dx * dx + dy * dy
+		if distSq < bestDirectDistSq then
+			bestDirectDistSq = distSq
+			directStartIndex = i
+		end
+	end
+	if lastRoadIndex and directStartIndex == (lastRoadIndex + 1) then
+		directStartIndex = lastRoadIndex
+	end
+
+	local directPoint = points[directStartIndex] or points[1]
+	local directDistance = distance(currentX, currentY, directPoint.x, directPoint.y)
+	local ratioLimit = directDistance < (30 * 1852) and 1.70 or 1.50
+	local roadStartX, roadStartY = nil, nil
+	local firstPoint = UTILS.DeepCopy(directPoint)
+	firstPoint.x = currentX
+	firstPoint.y = currentY
+	firstPoint.action = "Off Road"
+	firstPoint.task = nil
+
+	local function appendMissingAttackTargets(newPoints)
+		local lastPoint = newPoints[#newPoints] or firstPoint
+		local orderedTail = dc.GetOrderedTail(targetZoneName, { x = lastPoint.x, y = lastPoint.y })
+		local targetTemplate = points[(lastRoadIndex and (lastRoadIndex + 1)) or directStartIndex] or directPoint
+		for _, targetPoint in ipairs(orderedTail) do
+			local found = false
+			for _, existingPoint in ipairs(newPoints) do
+				if existingPoint.x == targetPoint.x and existingPoint.y == targetPoint.y then
+					found = true
+					break
+				end
+			end
+			if not found then
+				local missingPoint = UTILS.DeepCopy(targetTemplate)
+				missingPoint.x = targetPoint.x
+				missingPoint.y = targetPoint.y
+				missingPoint.action = "Off Road"
+				missingPoint.task = nil
+				newPoints[#newPoints + 1] = missingPoint
+			end
+		end
+	end
+
+	local function buildDirectTask(reason, roadDistance, pathCacheHit)
+		local newPoints
+		if lastRoadIndex and directStartIndex <= lastRoadIndex and roadStartX and roadStartY then
+			local joinIndex = math.max(firstRoadIndex or 1, directStartIndex)
+			local appendIndex = joinIndex
+			local firstAction = points[1] and points[1].action or nil
+			if joinIndex == firstRoadIndex and (firstAction == "Off Road" or firstAction == "off_road") then
+				appendIndex = joinIndex + 1
+			end
+			local roadFirstPoint = UTILS.DeepCopy(points[1] or points[joinIndex])
+			roadFirstPoint.x = currentX
+			roadFirstPoint.y = currentY
+			roadFirstPoint.action = "Off Road"
+			roadFirstPoint.task = nil
+			local joinPoint = UTILS.DeepCopy(points[joinIndex] or points[1])
+			joinPoint.x = roadStartX
+			joinPoint.y = roadStartY
+			joinPoint.action = "On Road"
+			joinPoint.task = nil
+			newPoints = { roadFirstPoint, joinPoint }
+			for i = appendIndex, #points do
+				newPoints[#newPoints + 1] = UTILS.DeepCopy(points[i])
+			end
+		else
+			newPoints = { firstPoint }
+			for i = directStartIndex, #points do
+				newPoints[#newPoints + 1] = UTILS.DeepCopy(points[i])
+			end
+		end
+		appendMissingAttackTargets(newPoints)
+		task.params.route.points = newPoints
+		return task, {
+			useRoad = false,
+			reason = reason,
+			directDistance = directDistance,
+			roadDistance = roadDistance,
+			ratioLimit = ratioLimit,
+			directStartIndex = directStartIndex,
+			pathCacheHit = pathCacheHit == true,
+		}
+	end
+
+	if not lastRoadIndex then
+		return buildDirectTask("cached-route-no-road-phase", nil, false)
+	end
+
+	roadStartX, roadStartY = land.getClosestPointOnRoads("roads", currentX, currentY)
+	if not roadStartX or not roadStartY then
+		return buildDirectTask("no-closest-road", nil, false)
+	end
+
+	local joinDistance = distance(currentX, currentY, roadStartX, roadStartY)
+	local bestRoad = nil
+	for _, subzoneName in ipairs(dc.ATTACK_TARGET_SUBZONE_NAMES[targetZoneName] or {}) do
+		local roadInfo = SUBZONE_ROAD_CACHE and SUBZONE_ROAD_CACHE[subzoneName]
+		local subzonePoint = roadInfo and getZoneCenter(subzoneName) or nil
+		local roadExitX = roadInfo and roadInfo.x or nil
+		local roadExitY = roadInfo and (roadInfo.z or roadInfo.y) or nil
+		if subzonePoint and roadExitX and roadExitY then
+			local pathKey = string.format(
+				"attack-retask:%d:%d:%d:%d",
+				math.floor(roadStartX / 100),
+				math.floor(roadStartY / 100),
+				math.floor(roadExitX / 100),
+				math.floor(roadExitY / 100)
+			)
+			local pathEntry = dc.PATH_CACHE[pathKey]
+			local pathCacheHit = pathEntry ~= nil
+			if pathEntry == nil then
+				local path = land.findPathOnRoads("roads", roadStartX, roadStartY, roadExitX, roadExitY)
+				if path and #path > 0 then
+					local pathDistance = 0
+					local previousX, previousY = roadStartX, roadStartY
+					for _, point in ipairs(path) do
+						local pointY = point.z or point.y
+						pathDistance = pathDistance + distance(previousX, previousY, point.x, pointY)
+						previousX, previousY = point.x, pointY
+					end
+					pathDistance = pathDistance + distance(previousX, previousY, roadExitX, roadExitY)
+					pathEntry = { path = path, distance = pathDistance }
+				else
+					pathEntry = false
+				end
+				dc.PATH_CACHE[pathKey] = pathEntry
+			end
+			if pathEntry then
+				local exitDistance = tonumber(roadInfo.distance) or distance(roadExitX, roadExitY, subzonePoint.x, subzonePoint.y)
+				local totalDistance = joinDistance + pathEntry.distance + exitDistance
+				if not bestRoad
+					or totalDistance < bestRoad.distance
+					or (totalDistance == bestRoad.distance and subzoneName < bestRoad.subzoneName)
+				then
+					bestRoad = {
+						distance = totalDistance,
+						exitX = roadExitX,
+						exitY = roadExitY,
+						pathCacheHit = pathCacheHit,
+						subzoneName = subzoneName,
+						subzonePoint = subzonePoint,
+					}
+				end
+			end
+		end
+	end
+
+	if not bestRoad then
+		return buildDirectTask("no-road-path", nil, false)
+	end
+	local roadDistance = bestRoad.distance
+	local useRoad = roadDistance <= directDistance * ratioLimit
+	if not useRoad then
+		return buildDirectTask("road-detour", roadDistance, bestRoad.pathCacheHit)
+	end
+	local newPoints = { firstPoint }
+	local joinPoint = UTILS.DeepCopy(points[firstRoadIndex])
+	joinPoint.x = roadStartX
+	joinPoint.y = roadStartY
+	joinPoint.action = "On Road"
+	joinPoint.task = nil
+	newPoints[#newPoints + 1] = joinPoint
+
+	local exitPoint = UTILS.DeepCopy(points[lastRoadIndex])
+	exitPoint.x = bestRoad.exitX
+	exitPoint.y = bestRoad.exitY
+	exitPoint.action = "On Road"
+	exitPoint.task = nil
+	newPoints[#newPoints + 1] = exitPoint
+
+	local targetTemplate = points[lastRoadIndex + 1] or directPoint
+	local targetPoint = UTILS.DeepCopy(targetTemplate)
+	targetPoint.x = bestRoad.subzonePoint.x
+	targetPoint.y = bestRoad.subzonePoint.y
+	targetPoint.action = "Off Road"
+	targetPoint.task = nil
+	newPoints[#newPoints + 1] = targetPoint
+
+	local orderedTail = dc.GetOrderedTail(targetZoneName, { x = bestRoad.exitX, y = bestRoad.exitY })
+	for _, point in ipairs(orderedTail) do
+		if point.x ~= bestRoad.subzonePoint.x or point.y ~= bestRoad.subzonePoint.y then
+			local tailPoint = UTILS.DeepCopy(targetTemplate)
+			tailPoint.x = point.x
+			tailPoint.y = point.y
+			tailPoint.action = "Off Road"
+			tailPoint.task = nil
+			newPoints[#newPoints + 1] = tailPoint
+		end
+	end
+	task.params.route.points = newPoints
+
+	return task, {
+		useRoad = true,
+		reason = "road-within-limit",
+		directDistance = directDistance,
+		roadDistance = roadDistance,
+		ratioLimit = ratioLimit,
+		directStartIndex = directStartIndex,
+		roadSubzone = bestRoad.subzoneName,
+		pathCacheHit = bestRoad.pathCacheHit,
+	}
+end
+
 function dc.GetSupplyConvoyRoute(originZoneName, targetZoneName, speed, useZoneRoadHooks, useMultiRoadHooks, useTargetMultiRoadHooks)
     local key = keyPairWithRouteMode(originZoneName, targetZoneName, useZoneRoadHooks == true, useMultiRoadHooks == true, useTargetMultiRoadHooks == true)
     local cached = dc.ROUTE_CACHE.supply[key]
@@ -10069,6 +10333,7 @@ do
 		AirdroppedAirDefenseBuilds = 59,
 		LifetimeSpent = 60,
 		Purchases = 61,
+		DemolitionKills = 62,
 	}
 	BattleCommander.CAREER_AIRCRAFT_METRIC = {
 		FlightSeconds = 1,
@@ -10332,6 +10597,14 @@ do
 			{ threshold = 50, title = "Demolisher" },
 			{ threshold = 100, title = "There Goes the Neighborhood" },
 			{ threshold = 250, title = "No Planning Permission" },
+		},
+		[BattleCommander.CAREER_STAT.DemolitionKills] = {
+			{ threshold = 1, title = "First Charge" },
+			{ threshold = 10, title = "Knows Where to Place It" },
+			{ threshold = 25, title = "Saboteur" },
+			{ threshold = 50, title = "Controlled Demolition" },
+			{ threshold = 100, title = "Structural Reassessment" },
+			{ threshold = 250, title = "Nothing Left Standing" },
 		},
 		[BattleCommander.CAREER_STAT.InfantryKills] = {
 			{ threshold = 25, title = "Boots Off the Ground" },
@@ -10956,6 +11229,7 @@ do
 		{ id = BattleCommander.CAREER_STAT.SamKills, labelKey = "CAREER_STAT_SAM_KILLS", section = "combat" },
 		{ id = BattleCommander.CAREER_STAT.ShipKills, labelKey = "CAREER_STAT_SHIP_KILLS", section = "combat" },
 		{ id = BattleCommander.CAREER_STAT.StructureKills, labelKey = "CAREER_STAT_STRUCTURE_KILLS", section = "combat" },
+		{ id = BattleCommander.CAREER_STAT.DemolitionKills, labelKey = "CAREER_STAT_DEMOLITION_KILLS", section = "combat" },
 		{ id = BattleCommander.CAREER_STAT.InfantryKills, labelKey = "CAREER_STAT_INFANTRY_KILLS", section = "combat" },
 		{ id = BattleCommander.CAREER_STAT.FriendlyKills, labelKey = "CAREER_STAT_FRIENDLY_KILLS", section = "combat" },
 		{ id = BattleCommander.CAREER_STAT.SupplyUnitsDelivered, labelKey = "CAREER_STAT_SUPPLY_DELIVERED", section = "logistics" },
@@ -11507,7 +11781,7 @@ do
 		if self.carrierNavigationRequiresRedCarrierCleared == false then return true end
 
 		local redCarrier = zones and zones.redcarrier
-		return redCarrier and (redCarrier.wasBlue == true or redCarrier.active == false)
+		return redCarrier and (redCarrier.side == 2 or redCarrier.active == false)
 	end
 
 	function BattleCommander:setCarrierNavigationRequiresRedCarrierCleared(required)
@@ -12457,10 +12731,13 @@ do
 		end
 		local viaNames = type(viaName) == "table" and viaName or { viaName }
 		local stations = {}
+		local viaPoint = startPoint and { x = startPoint.x, y = 0, z = startPoint.z } or nil
 		for _, name in ipairs(viaNames) do
 			local viaArea = self:_findCarrierNavigationAreaByName(name)
 			if not viaArea or not self:_isCarrierNavigationAreaAllowed(viaArea) then return nil end
-			if viaArea[lane] then
+			if viaPoint and viaArea.zone:isInside(viaPoint) then
+				stations = {}
+			elseif viaArea[lane] then
 				stations[#stations + 1] = viaArea[lane]
 			end
 		end
@@ -14580,6 +14857,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		obj._fsmCrashVersion = FootholdSaveBaseName
 		obj._careerAchievementAnnouncements = {}
 		obj._careerUnknownAircraftTypes = {}
+		obj.careerAirKillStreakByPlayer = {}
 		obj.careerFlightByPlayer = {}
 		obj.careerLandingCarrierByUnit = {}
 		obj.rankThresholds = obj.rankThresholds or {0,3000,5000,8000,12000,16000,22000,30000,45000,65000,90000,120000,155000,195000,240000,290000,345000,405000,470000,540000}
@@ -16471,6 +16749,183 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 		return { tonumber(a), tonumber(b), tonumber(c), tonumber(d) }
 	end
 
+	-- Unit:getAmmo() exposes consumable weapons; these pylon resources must be stocked separately.
+	BattleCommander.BlueAiWarehouseEquipmentByClsid = {
+		["ALQ_184_Long"] = { 4, 15, 45, 968 },
+		["{8A0BE8AE-58D4-4572-9263-3144C0D06364}"] = { 1, 3, 43, 12 },
+		["{AN_AAQ_33}"] = { 4, 15, 44, 2723 },
+		["{AN_APG_78}"] = { 4, 15, 44, 2114 },
+		["{AN_ASQ_228}"] = { 4, 15, 44, 426 },
+		["{DAC53A2F-79CA-42FF-A77A-F5649B601308}"] = { 4, 15, 47, 4 },
+		["{E1F29B21-F291-4589-9FD8-3272EEC69506}"] = { 1, 3, 43, 10 },
+		["{Eclair}"] = { 4, 15, 48, 608 },
+		["{F-15E_AAQ-13_LANTIRN}"] = { 4, 15, 44, 1717 },
+		["{F-15E_AAQ-14_LANTIRN}"] = { 4, 15, 44, 1718 },
+		["{F14-300gal}"] = { 1, 3, 43, 485 },
+		["{F376DBEE-4CAE-41BA-ADD9-B2910AC95DEC}"] = { 1, 3, 43, 11 },
+		["{F4_SARGENT_TANK_600_GAL}"] = { 1, 3, 43, 2146 },
+		["{FPU_8A_FUEL_TANK}"] = { 1, 3, 43, 587 },
+		["{HB_ALE_40_30_60}"] = { 4, 15, 44, 2140 },
+		["{HB_PAVE_SPIKE_FAST_ON_ADAPTER_IN_AERO7}"] = { 4, 15, 44, 2149 },
+		["{IR_Deflector}"] = { 4, 15, 47, 680 },
+		["{M2KC_RPL_522}"] = { 1, 3, 43, 605 },
+	}
+
+	function BattleCommander:_blueAiWarehouseKeyId(key)
+		if type(key) == "table" then
+			return string.format("w:%d,%d,%d,%d", tonumber(key[1]) or 0, tonumber(key[2]) or 0, tonumber(key[3]) or 0, tonumber(key[4]) or 0)
+		end
+		return "s:" .. tostring(key)
+	end
+
+	function BattleCommander:_blueAiWarehouseAddManifestItem(manifest, key, count)
+		count = math.max(0, math.floor(tonumber(count) or 0))
+		if not key or count <= 0 then return end
+		local id = self:_blueAiWarehouseKeyId(key)
+		local item = manifest.itemsById[id]
+		if item then
+			item.count = item.count + count
+		else
+			manifest.itemsById[id] = { id = id, key = key, count = count }
+		end
+	end
+
+	function BattleCommander:_blueAiWarehouseBuildAmmoAliasIndex()
+		local aliases = {}
+		for _, itemName in ipairs(WEAPONSLIST.GetAllItems() or {}) do
+			if type(itemName) == "string" and itemName:find("weapons.", 1, true) == 1 then
+				local shortName = itemName:match("^weapons%.[^.]+%.(.+)$")
+				if shortName then
+					if aliases[shortName] == nil then
+						aliases[shortName] = itemName
+					elseif aliases[shortName] ~= itemName then
+						aliases[shortName] = false
+					end
+				end
+			end
+		end
+		return aliases
+	end
+
+	function BattleCommander:_buildBlueAiWarehouseLoadout(templateName)
+		local templateGroup = Group.getByName(templateName)
+		if not templateGroup then return nil end
+
+		self._blueAiWarehouseAmmoAliases = self._blueAiWarehouseAmmoAliases or self:_blueAiWarehouseBuildAmmoAliasIndex()
+		local manifest = {
+			template = templateName,
+			unitCount = 0,
+			airframes = {},
+			items = {},
+			itemsById = {},
+		}
+		for _, unit in ipairs(templateGroup:getUnits() or {}) do
+			manifest.unitCount = manifest.unitCount + 1
+			local unitType = unit:getTypeName()
+			manifest.airframes[unitType] = (manifest.airframes[unitType] or 0) + 1
+			for _, ammo in ipairs(unit:getAmmo() or {}) do
+				local desc = ammo.desc
+				if desc and desc.category ~= 0 and (tonumber(ammo.count) or 0) > 0 then
+					local typeName = desc.typeName
+					local key = typeName
+					if type(typeName) == "string" and typeName:find("weapons.", 1, true) ~= 1 then
+						key = self._blueAiWarehouseAmmoAliases[typeName] or typeName
+					end
+					self:_blueAiWarehouseAddManifestItem(manifest, key, ammo.count)
+				end
+			end
+		end
+
+		local storedTemplate = _DATABASE.Templates.Groups[templateName]
+		local groupTemplate = storedTemplate and storedTemplate.Template or nil
+		local firstWaypoint = groupTemplate and groupTemplate.route and groupTemplate.route.points and groupTemplate.route.points[1]
+		manifest.startAirbaseId = firstWaypoint and (firstWaypoint.airdromeId or firstWaypoint.helipadId) or nil
+		for _, unitTemplate in ipairs((groupTemplate and groupTemplate.units) or {}) do
+			for _, pylon in pairs((unitTemplate.payload and unitTemplate.payload.pylons) or {}) do
+				local equipmentKey = self.BlueAiWarehouseEquipmentByClsid[pylon.CLSID]
+				if equipmentKey then
+					self:_blueAiWarehouseAddManifestItem(manifest, equipmentKey, 1)
+				end
+			end
+		end
+
+		for _, item in pairs(manifest.itemsById) do
+			manifest.items[#manifest.items + 1] = item
+		end
+		table.sort(manifest.items, function(a, b) return a.id < b.id end)
+		manifest.itemsById = nil
+		return manifest
+	end
+
+	function BattleCommander:_getBlueAiWarehouseLoadout(templateName)
+		self._blueAiWarehouseLoadouts = self._blueAiWarehouseLoadouts or {}
+		local cached = self._blueAiWarehouseLoadouts[templateName]
+		if cached ~= nil then return cached or nil end
+		local manifest = self:_buildBlueAiWarehouseLoadout(templateName)
+		self._blueAiWarehouseLoadouts[templateName] = manifest or false
+		return manifest
+	end
+
+	function BattleCommander:_prepareFixedBlueAiWarehouseSpawn(templateName)
+		if WarehouseLogistics ~= true or AutoFillResources >= 5 then return true, 0 end
+		local manifest = self:_getBlueAiWarehouseLoadout(templateName)
+		if not manifest or not manifest.startAirbaseId then return true, 0 end
+		local airbase = AIRBASE:FindByID(manifest.startAirbaseId)
+		if not airbase then return false, 0, "airbase" end
+		return self:_prepareBlueAiWarehouseSpawn(templateName, airbase)
+	end
+
+	function BattleCommander:_cacheBlueAiWarehouseLoadouts()
+		self._blueAiWarehouseLoadouts = {}
+		if WarehouseLogistics ~= true or AutoFillResources >= 5 then return self._blueAiWarehouseLoadouts end
+		local templateNames = {}
+		for _, zoneObj in ipairs(self.zones or {}) do
+			for _, groupCommander in ipairs(zoneObj.groups or {}) do
+				if groupCommander.type == "air" or groupCommander.type == "carrier_air"
+					or groupCommander.unitCategory == Unit.Category.AIRPLANE
+					or groupCommander.unitCategory == Unit.Category.HELICOPTER
+				then
+					groupCommander:_ensureTemplateCache()
+					for _, templateName in ipairs((groupCommander._tplBySide and groupCommander._tplBySide[coalition.side.BLUE]) or {}) do
+						templateNames[templateName] = true
+					end
+					if not groupCommander.template and groupCommander.side == coalition.side.BLUE then
+						templateNames[groupCommander.name] = true
+					end
+				end
+			end
+		end
+		for _, templateName in ipairs({ capTemplate, casTemplate, decoyTemplate, seadTemplate, bombTemplate, StructureTemplate }) do
+			if type(templateName) == "string" and templateName ~= "" then templateNames[templateName] = true end
+		end
+		local escortTemplates = Era == "Coldwar"
+			and { "Escort1_Hornet_Coldwar", "Escort2_Viper_Coldwar", "Escort3_Mig29A_Coldwar", "EscortF15_Coldwar", "EscortA10_Coldwar" }
+			or { "Escort1_Hornet", "Escort2_Viper", "Escort3_Mig29S", "EscortF15", "EscortA10" }
+		for _, templateName in ipairs(escortTemplates) do
+			templateNames[templateName] = true
+		end
+		for templateName in pairs(templateNames) do
+			self:_getBlueAiWarehouseLoadout(templateName)
+		end
+		return self._blueAiWarehouseLoadouts
+	end
+
+	function BattleCommander:_prepareBlueAiWarehouseSpawn(templateName, airbase)
+		if WarehouseLogistics ~= true or AutoFillResources >= 5 then return true, 0 end
+		local manifest = self:_getBlueAiWarehouseLoadout(templateName)
+		if not manifest then return false, 0, "loadout" end
+		local airbaseName = type(airbase) == "string" and airbase or airbase:GetName()
+		local storage = STORAGE:FindByName(airbaseName)
+		if not storage then return false, 0, "storage" end
+
+		local added = 0
+		for _, item in ipairs(manifest.items) do
+			storage:AddItem(item.key, item.count)
+			added = added + item.count
+		end
+		return true, added
+	end
+
 	function BattleCommander:CopyWarehouse(FName, fromSave)
 		if not FName then return end
 		self._copiedWarehouseZones = self._copiedWarehouseZones or {}
@@ -16562,8 +17017,8 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 	end
 
 
-	function BattleCommander:_minEnemyDistanceNmWithFarps(z)
-		local dist = self:_minEnemyDistanceNm(z)
+	function BattleCommander:_minEnemyDistanceNmWithFarps(z, useAutoSuspendEnemyReferences)
+		local dist = self:_minEnemyDistanceNm(z, useAutoSuspendEnemyReferences)
 		local farps = self.dynamicFarpsBySide
 		if not farps then return dist end
 		local enemySide = (z.side == 2) and 1 or 2
@@ -16579,6 +17034,45 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 		local dnm = bestFarpDistance / 1852
 		if (not dist) or dnm < dist then return dnm end
 		return dist
+	end
+
+	function BattleCommander:_dynamicFarpSuspendHolds(farpSide, targetSide, maxDistanceNm)
+		local holds = {}
+		local farps = self.dynamicFarpsBySide
+		local list = farps and farps[farpSide] or nil
+		if not list or #list == 0 then return holds, false end
+
+		local maxDistanceMeters = (tonumber(maxDistanceNm) or 20) * 1852
+		for i = 1, #list do
+			local farp = list[i]
+			local closestZone = nil
+			local closestDistance = nil
+			local foundWithinDistance = false
+			for j = 1, #self.zones do
+				local zoneObj = self.zones[j]
+				if zoneObj.active and zoneObj.side == targetSide and not zoneObj.isHidden
+					and not isCarrierZoneName(zoneObj.zone)
+				then
+					local distance = self:_getDynamicFarpZoneDistance(farp, zoneObj)
+					if distance then
+						if not closestDistance or distance < closestDistance
+							or (distance == closestDistance and zoneObj.zone < closestZone.zone)
+						then
+							closestZone = zoneObj
+							closestDistance = distance
+						end
+						if distance <= maxDistanceMeters then
+							holds[zoneObj] = true
+							foundWithinDistance = true
+						end
+					end
+				end
+			end
+			if not foundWithinDistance and closestZone then
+				holds[closestZone] = true
+			end
+		end
+		return holds, true
 	end
 
 	dc.PLAYER_GROUND_ATTACK_MAX_METERS = 40 * NM
@@ -16599,10 +17093,10 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 		local useMultiRoadHooks = opts and opts.useMultiRoadHooks == true
 		local useOriginMultiRoadHooks = (opts and opts.useOriginMultiRoadHooks == true) or useMultiRoadHooks
 		local useTargetMultiRoadHooks = (opts and opts.useTargetMultiRoadHooks == true) or useMultiRoadHooks
-		local tSubs = dc.TARGET_SUBZONES and dc.TARGET_SUBZONES[targetZoneName] or {}
+		local tSubs = dc.ATTACK_TARGET_SUBZONES and dc.ATTACK_TARGET_SUBZONES[targetZoneName] or {}
 		if #tSubs == 0 then
-			tSubs = scanTargetSubzones(targetZoneName)
-			dc.TARGET_SUBZONES[targetZoneName] = tSubs
+			dc.InitTargetTails()
+			tSubs = dc.ATTACK_TARGET_SUBZONES[targetZoneName] or {}
 			if #tSubs == 0 then
 				env.info("DC.BAIL player_ground_attack_target_subzones_empty target=" .. tostring(targetZoneName))
 				return nil
@@ -16692,14 +17186,13 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 				pts[#pts].formation = frm
 
 				local order = dc.GetOrderedTail(targetZoneName, endRoad)
-				local need = (dc.DEFAULT_WAYPOINTS_IN_TARGET or 5)
 				local rem, seq = {}, {}
 				for i = 1, #order do
 					local v = order[i]
 					if not (v.x == anchorSub.x and v.y == anchorSub.y) then rem[#rem+1] = i end
 				end
 				local cur = anchorSub
-				while #rem > 0 and #seq < need do
+				while #rem > 0 do
 					local bestk, bestd = 1, 1e18
 					for k = 1, #rem do
 						local v = order[ rem[k] ]
@@ -16727,14 +17220,13 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 			pts[#pts].formation = frm
 
 			local order = dc.GetOrderedTail(targetZoneName, targetRoadHook)
-			local need = (dc.DEFAULT_WAYPOINTS_IN_TARGET or 5)
 			local rem, seq = {}, {}
 			for i = 1, #order do
 				local v = order[i]
 				if not (v.x == anchorSub.x and v.y == anchorSub.y) then rem[#rem+1] = i end
 			end
 			local cur = anchorSub
-			while #rem > 0 and #seq < need do
+			while #rem > 0 do
 				local bestk, bestd = 1, 1e18
 				for k = 1, #rem do
 					local v = order[ rem[k] ]
@@ -16763,8 +17255,7 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 		end)
 		pts[#pts+1] = ground_buildWP(startV2, "Off Road", s_kmh)
 		pts[#pts].formation = frm
-		local need2 = 1 + (dc.DEFAULT_WAYPOINTS_IN_TARGET or 5)
-		for i = 1, math.min(need2, #sorted) do
+		for i = 1, #sorted do
 			pts[#pts+1] = ground_buildWP(sorted[i], "Off Road", target_s_kmh)
 			pts[#pts].formation = frm
 		end
@@ -17151,6 +17642,7 @@ end
 			gname = g:GetName()
 			assignRoute()
 		end)
+		self:_prepareBlueAiWarehouseSpawn(template, abObj or startAb)
 		local spawned = spawn:SpawnAtAirbase(abObj or startAb, SPAWN.Takeoff.Hot)
 		if not spawned then return L10N:Get("DYNAMIC_CHINOOK_LAUNCH_FAILED") end
 		spawned:OptionPreferVerticalLanding()
@@ -18804,6 +19296,7 @@ function BattleCommander:requestCaptureMission(chosenZone, options)
 	bestCommander._activeSupplyFarpLaunch = nil
 	bestCommander._pendingSupplyLaunchMessage = nil
 	bestCommander._supplyNoCargoDebitApplied = nil
+	bestCommander._paidSupplyStockpileDelivery = true
 	bestCommander._shopLaunchRequested = true
 	self:_attachPendingShopPurchase(bestCommander, pendingShopPurchase)
 	if bestCommander._pendingSurfaceRestore and bestCommander._pendingSurfaceRestore.captureFarpLaunch == true then
@@ -19955,6 +20448,7 @@ end
 			env.info("[SurfaceArtilleryReturnHome] failed to build route group="..tostring(gc.name).." home="..tostring(homeZoneName).." reason="..tostring(reason))
 			return false
 		end
+		task = dc.RouteTaskForSide(task, gc.side)
 
 		gc._artilleryReturnHome = true
 		gc._artilleryOnStation = nil
@@ -20323,7 +20817,6 @@ end
 				v.spawnSubZones[builtIndex] = nil
 			end
 		end
-		if v.wasBlue then v.firstCaptureByRed = true end
 		if v.side == 1 or v.side == 2 or not v.active then v.firstCaptureByRed = true end
 		local localRecoveryJobs = {}
 		local function addLocalRecoveryJob(slot, job, restoring)
@@ -20370,7 +20863,6 @@ end
             active            = v.active,
             isAwaken          = v.isAwaken == true,
             triggers          = {},
-            wasBlue           = v.wasBlue or false,
             firstCaptureByRed = v.firstCaptureByRed or false,
             upgradesUsed      = v.upgradesUsed,
             upgradesUsedRed   = v.upgradesUsedRed,
@@ -21292,7 +21784,22 @@ end
 					end
 					j = j + 1
 				end
+			local attackSubnames = CustomZone.getSamSubZones(zn)
+			local shoradSubnames = CustomZone.getShoradSubZones(zn)
+			for _, subName in ipairs(shoradSubnames) do
+				attackSubnames[#attackSubnames + 1] = subName
 			end
+			for _, subName in ipairs(attackSubnames) do
+				local center = getZoneCenter(subName)
+				if center then
+					local roadInfo = getRoadInfo({ x = center.x, z = center.y })
+					SUBZONE_NEAR_ROAD[subName] = roadInfo ~= nil and roadInfo.distance <= 1000
+					if roadInfo then
+						SUBZONE_ROAD_CACHE[subName] = roadInfo
+					end
+				end
+			end
+		end
         end
 
 	ZONE_CONNECTED_TO_BLUE = {}
@@ -21445,9 +21952,9 @@ end
 			return
 		end
 
-		local wasBlue = (previousSide == 2)
-		local cachedWasBlue = self._connectionBlueByZone[zoneName] == true
-		if cachedWasBlue ~= wasBlue then
+		local previouslyBlue = (previousSide == 2)
+		local cachedPreviouslyBlue = self._connectionBlueByZone[zoneName] == true
+		if cachedPreviouslyBlue ~= previouslyBlue then
 			self:_rebuildConnectionTopology()
 			self:_rebuildConnectionBlueState()
 			if self:shouldUseSupplyConnectionMap() then
@@ -21458,7 +21965,7 @@ end
 		end
 
 		local isBlue = (zone.side == 2)
-		if wasBlue ~= isBlue then
+		if previouslyBlue ~= isBlue then
 			local delta = isBlue and 1 or -1
 			local neighbors = self.connectionMap[zoneName]
 			if neighbors then
@@ -23597,6 +24104,7 @@ end
 		for _, v in ipairs(self.zones) do
 			v:_cacheUpgradeTemplateUnitCounts()
 		end
+		self:_cacheBlueAiWarehouseLoadouts()
 		self:RefreshTerritoryOverlays()
 		if self:shouldUseSupplyConnectionMap() then
 			self:drawSupplyArrowsDebounced(true)
@@ -27627,7 +28135,14 @@ SCHEDULER:New(nil, function()
 end, {}, 0.1)
 
 
-function BattleCommander:reindexCombatZones(includeSources)
+function BattleCommander:_isAutoSuspendEnemyReference(zoneObj, otherZone)
+	return not (zoneObj.side == coalition.side.BLUE
+		and otherZone.side == coalition.side.RED
+		and otherZone.Popup == true)
+end
+
+
+function BattleCommander:reindexCombatZones(includeSources, useAutoSuspendEnemyReferences)
 	self._activeAttackOrPatrol = {}
 	self._activeOrigin = {}
 	self._activeAttackOrPatrolSources = includeSources and {} or nil
@@ -27652,7 +28167,7 @@ function BattleCommander:reindexCombatZones(includeSources)
 		if not zoneObj or not zoneObj.zone then return nil end
 		local zoneName = zoneObj.zone
 		if enemyDistanceByZone[zoneName] == nil then
-			enemyDistanceByZone[zoneName] = self:_minEnemyDistanceNm(zoneObj) or false
+			enemyDistanceByZone[zoneName] = self:_minEnemyDistanceNm(zoneObj, useAutoSuspendEnemyReferences) or false
 		end
 		local cached = enemyDistanceByZone[zoneName]
 		if cached == false then return nil end
@@ -28561,6 +29076,7 @@ end
 		local hasLongRangeTargets = false
 		local maxThreatRangeNm = 0
 		local threatFamilies = {}
+		local trackingThreatFamilies = {}
 		local redDirectorHasTargets = false
 		local redDirectorHasLongRangeTargets = false
 		local redDirectorMaxThreatRangeNm = 0
@@ -28572,7 +29088,9 @@ end
 					local g = GROUP:FindByName(v)
 					if g and g:IsAlive() then
 						for _, unit in ipairs(g:GetUnits() or {}) do
-							if unit:HasAttribute('SAM TR') or unit:HasAttribute('SAM SR') then
+							local hasTrackingRadar = unit:HasAttribute('SAM TR')
+							local hasSearchRadar = unit:HasAttribute('SAM SR')
+							if hasTrackingRadar or hasSearchRadar then
 								hasTargets = true
 								local family = self:_classifySeadThreatFamily(v, unit)
 								local threatRangeNm = family and self.SAM_THREAT_RANGE_NM[family] or nil
@@ -28588,6 +29106,12 @@ end
 										or (unit:HasAttribute('MR SAM') and 'MR SAM' or 'SR SAM')
 								end
 								threatFamilies[family] = math.max(threatFamilies[family] or 0, threatRangeNm)
+								if hasTrackingRadar then
+									trackingThreatFamilies[family] = math.max(
+										trackingThreatFamilies[family] or 0,
+										threatRangeNm
+									)
+								end
 								maxThreatRangeNm = math.max(maxThreatRangeNm, threatRangeNm)
 								if unit:HasAttribute('LR SAM') then
 									hasLongRangeTargets = true
@@ -28618,6 +29142,7 @@ end
 			hasLongRangeTargets = hasLongRangeTargets,
 			maxThreatRangeNm = maxThreatRangeNm,
 			threatFamilies = threatFamilies,
+			trackingThreatFamilies = trackingThreatFamilies,
 			redDirectorHasTargets = redDirectorHasTargets,
 			redDirectorHasLongRangeTargets = redDirectorHasLongRangeTargets,
 			redDirectorMaxThreatRangeNm = redDirectorMaxThreatRangeNm,
@@ -28691,6 +29216,7 @@ end
 						zone = zoneObj.zone,
 						rangeNm = facts.maxThreatRangeNm,
 						families = facts.threatFamilies,
+						trackingFamilies = facts.trackingThreatFamilies or {},
 					}
 				end
 			end
@@ -28890,18 +29416,26 @@ end
 
 
 
-function BattleCommander:_minEnemyDistanceNm(z)
+function BattleCommander:_minEnemyDistanceNm(z, useAutoSuspendEnemyReferences)
 	local best = math.huge
+	local ignoredEnemy = false
 	local row = ZONE_DISTANCES and ZONE_DISTANCES[z.zone]
 	if row then
 		for _, other in ipairs(self.zones) do
-			if other.side ~= 0 and other.side ~= z.side and other.active and not other.suspended and not other.isHidden then
-				local d = row[other.zone]
-				if d and d < best then best = d end
+			if other.side ~= 0 and other.side ~= z.side and other.active and not other.isHidden then
+				if useAutoSuspendEnemyReferences and not self:_isAutoSuspendEnemyReference(z, other) then
+					ignoredEnemy = true
+				elseif not other.suspended then
+					local d = row[other.zone]
+					if d and d < best then best = d end
+				end
 			end
 		end
 	end
-	if best == math.huge then return nil end
+	if best == math.huge then
+		if useAutoSuspendEnemyReferences and ignoredEnemy then return math.huge end
+		return nil
+	end
 	return best / 1852
 end
 
@@ -28937,16 +29471,27 @@ function BattleCommander:explainSuspendDecision(zoneName, groupId)
 			or (type(zz.customSuspendNm) == "number" and zz.customSuspendNm)
 			or ((zz.side == 2) and (GlobalSettings.autoSuspendNmBlue or 70) or (GlobalSettings.autoSuspendNmRed or 150))
 	end
-	self:reindexCombatZones(true)
+	self:reindexCombatZones(true, true)
 	local connectionMap = self.connectionMap or {}
-	local dist = (self._minEnemyDistanceNmWithFarps and self:_minEnemyDistanceNmWithFarps(z)) or self:_minEnemyDistanceNm(z)
+	local dynamicFarpHold, hasBlueDynamicFarps = self:_dynamicFarpSuspendHolds(
+		coalition.side.BLUE,
+		coalition.side.RED,
+		20
+	)
+	local farpHold = dynamicFarpHold[z] == true
+	local dist = self:_minEnemyDistanceNm(z, true)
+	if dist == nil and hasBlueDynamicFarps and z.side == coalition.side.RED then
+		dist = math.huge
+	end
 	local carrierConnection, carrierConnectionArea, carrierConnectionDetail = self:_describeCarrierNavigationSuspendConnection(z.zone)
 	local nearestEnemyName, nearestEnemyDist = nil, nil
 	do
 		local row = ZONE_DISTANCES and ZONE_DISTANCES[z.zone]
 		if row then
 			for _, other in ipairs(self.zones) do
-				if other.side ~= 0 and other.side ~= z.side and other.active and not other.suspended and not other.isHidden then
+				if other.side ~= 0 and other.side ~= z.side and other.active and not other.suspended
+					and not other.isHidden and self:_isAutoSuspendEnemyReference(z, other)
+				then
 					local d = row[other.zone]
 					if d then
 						local dnm = d / NM
@@ -28970,7 +29515,7 @@ function BattleCommander:explainSuspendDecision(zoneName, groupId)
 	if nbrs then
 		for n,_ in pairs(nbrs) do
 			local nz = self:getZoneByName(n)
-			if nz and nz.active and not nz.isHidden then
+			if nz and nz.active and not nz.isHidden and self:_isAutoSuspendEnemyReference(z, nz) then
 				if nz.side ~= 0 and nz.side ~= z.side then hasOppositeNeighbor = true end
 				if nz.side == 0 and (not nz.NeutralAtStart or z.side ~= 1) then hasNeutralNeighbor = true end
 			end
@@ -28988,7 +29533,7 @@ function BattleCommander:explainSuspendDecision(zoneName, groupId)
 			else
 				local tz = self:getZoneByName(gc.targetzone)
 				if tz and tz.active and not tz.suspended and tz.side~=0 then
-					local dnm = self:_minEnemyDistanceNm(tz)
+					local dnm = self:_minEnemyDistanceNm(tz, true)
 					if dnm then
 						local lim = suspendLimit(tz)
 						qualifies = (spawnable or live) and (dnm <= lim)
@@ -29089,7 +29634,7 @@ function BattleCommander:explainSuspendDecision(zoneName, groupId)
 	local jtacHold = self:_hasActiveJtacOnZone(z.zone)
 	local now = timer.getTime()
 	local proximityHold = z._proximityWakeUntil and z._proximityWakeUntil > now
-	local shouldSuspend = (not proximityHold) and (not jtacHold) and (not carrierConnection) and (not hasOppositeNeighbor) and (not hasNeutralNeighbor) and (not neutralHalfWake) and (not combat) and (not incoming) and (dist and dist > limit) and (not canReceive) and (not supplierHold)
+	local shouldSuspend = (not farpHold) and (not proximityHold) and (not jtacHold) and (not carrierConnection) and (not hasOppositeNeighbor) and (not hasNeutralNeighbor) and (not neutralHalfWake) and (not combat) and (not incoming) and (dist and dist > limit) and (not canReceive) and (not supplierHold)
 
 	local enemyLine = ""
 	if nearestEnemyName and dist and dist < limit then
@@ -29111,7 +29656,7 @@ function BattleCommander:explainSuspendDecision(zoneName, groupId)
 			and ("\nsupplierHold=true supporters="..tostring(supportersOut).."\n - "..table.concat(supportersDetail, "\n - "))
 			or "\nsupplierHold=true supporters=0")
 		or "\nsupplierHold=false supporters=0"
-	local combatLine = "\ncombat="..b(combat)..", originActive="..b(originActive)..", proximityHold="..b(proximityHold)..", jtacHold="..b(jtacHold)
+	local combatLine = "\ncombat="..b(combat)..", originActive="..b(originActive)..", proximityHold="..b(proximityHold)..", jtacHold="..b(jtacHold)..", dynamicFarpHold="..b(farpHold)
 	local srcTarget = (self._activeAttackOrPatrolSources and self._activeAttackOrPatrolSources[z.zone]) or nil
 	local srcOrigin = (self._activeOriginSources and self._activeOriginSources[z.zone]) or nil
 	local srcLine = ""
@@ -29143,7 +29688,7 @@ end
 
 
 	function BattleCommander:_autoZoneSuspend()
-		local reindexEnemyDistanceByZone = self:reindexCombatZones(false) or {}
+		local reindexEnemyDistanceByZone = self:reindexCombatZones(false, true) or {}
 		local now = timer.getTime()
 		local connectionMap = self.connectionMap or {}
 		local neutralWakeFactor = GlobalSettings.neutralWakeFactor or 0.5
@@ -29162,6 +29707,11 @@ end
 		local hasSupplyToTarget = {}
 		local activeSideZones = { [1] = {}, [2] = {} }
 		local activeNeutralZones = {}
+		local dynamicFarpHold, hasBlueDynamicFarps = self:_dynamicFarpSuspendHolds(
+			coalition.side.BLUE,
+			coalition.side.RED,
+			20
+		)
 		for _, zoneObj in ipairs(self.zones) do
 			if zoneObj.active and not zoneObj.isHidden then
 				if zoneObj:_hasDamagedBlueGci() then
@@ -29218,8 +29768,7 @@ end
 		end
 		local function activeListEnemyDistance(zoneObj)
 			local indexedDistance = reindexEnemyDistanceByZone[zoneObj.zone]
-			if indexedDistance ~= nil then
-				if indexedDistance == false then return nil end
+			if indexedDistance ~= nil and indexedDistance ~= false then
 				return indexedDistance
 			end
 			local best = math.huge
@@ -29229,30 +29778,14 @@ end
 				local list = activeSideZones[enemySide]
 				for i=1,#list do
 					local other = list[i]
-					local d = row[other.zone]
-					if d and d < best then best = d end
+					if self:_isAutoSuspendEnemyReference(zoneObj, other) then
+						local d = row[other.zone]
+						if d and d < best then best = d end
+					end
 				end
 			end
-			if best == math.huge then return nil end
+			if best == math.huge then return self:_minEnemyDistanceNm(zoneObj, true) end
 			return best / 1852
-		end
-		local function activeListEnemyDistanceWithFarps(zoneObj)
-			local dist = activeListEnemyDistance(zoneObj)
-			local farps = self.dynamicFarpsBySide
-			if not farps then return dist end
-			local enemySide = (zoneObj.side == 2) and 1 or 2
-			local list = farps[enemySide]
-			if not list or #list == 0 then return dist end
-			local bestFarpDistance = nil
-			for i=1,#list do
-				local f = list[i]
-				local farpDistance = self:_getDynamicFarpZoneDistance(f, zoneObj)
-				if farpDistance and ((not bestFarpDistance) or farpDistance < bestFarpDistance) then bestFarpDistance = farpDistance end
-			end
-			if not bestFarpDistance then return dist end
-			local dnm = bestFarpDistance / 1852
-			if (not dist) or dnm < dist then return dnm end
-			return dist
 		end
 		local function activeListNeutralDistance(zoneObj)
 			if zoneObj.side == 0 then return nil end
@@ -29273,7 +29806,11 @@ end
 			if not zoneObj or not zoneObj.zone then return nil end
 			local zoneName = zoneObj.zone
 			if enemyDistanceCache[zoneName] == nil then
-				enemyDistanceCache[zoneName] = activeListEnemyDistanceWithFarps(zoneObj) or false
+				local dist = activeListEnemyDistance(zoneObj)
+				if dist == nil and hasBlueDynamicFarps and zoneObj.side == coalition.side.RED then
+					dist = math.huge
+				end
+				enemyDistanceCache[zoneName] = dist or false
 			end
 			local cached = enemyDistanceCache[zoneName]
 			if cached == false then return nil end
@@ -29338,7 +29875,7 @@ end
 				if nbrs then
 					for n,_ in pairs(nbrs) do
 						local nz = self:getZoneByName(n)
-						if nz and nz.active and not nz.isHidden then
+						if nz and nz.active and not nz.isHidden and self:_isAutoSuspendEnemyReference(zoneObj, nz) then
 							if nz.side ~= 0 and nz.side ~= zoneObj.side then hasOppositeNeighbor = true break end
 							if nz.side == 0 and (not nz.NeutralAtStart or zoneObj.side ~= 1) then hasNeutralNeighbor = true end
 						end
@@ -29464,7 +30001,8 @@ end
 			if not z.isHidden and not isCarrierZoneName(z.zone) then
 				if z.side ~= 0 and z.active then
 					local dist = enemyDistance(z)
-					if dist then
+					local farpHold = dynamicFarpHold[z] == true
+					if dist or farpHold then
 						local hasOppositeNeighbor, hasNeutralNeighbor = neighborState(z)
 						local carrierConnection = activeCarrierConnection(z)
 
@@ -29499,7 +30037,7 @@ end
 						local stableBuilt = builtCount >= totalUpgrades and not canReceive
 						local builtPressure = combat or originActive or hasOppositeNeighbor or hasNeutralNeighbor or neutralHalfWake
 							or incoming or canReceive or supplierHold[z] or jtacHold or proximityHold or carrierConnection
-							or criticalObjectHold or redReactivePressure
+							or criticalObjectHold or redReactivePressure or farpHold
 						local maintenanceInterval = builtMaintenanceNormalSec
 						if builtPressure or not stableBuilt then
 							maintenanceInterval = builtMaintenanceFastSec
@@ -29510,7 +30048,7 @@ end
 							end
 						end
 						setBuiltMaintenanceBucket(z, maintenanceInterval, now)
-						local shouldSuspend = (not proximityHold) and (not jtacHold) and (not carrierConnection) and (not hasOppositeNeighbor) and (not hasNeutralNeighbor) and (not neutralHalfWake) and (not combat) and (not incoming) and (dist > limit) and (not canReceive) and (not supplierHold[z])
+						local shouldSuspend = (not farpHold) and (not proximityHold) and (not jtacHold) and (not carrierConnection) and (not hasOppositeNeighbor) and (not hasNeutralNeighbor) and (not neutralHalfWake) and (not combat) and (not incoming) and dist and (dist > limit) and (not canReceive) and (not supplierHold[z])
 
 						if shouldSuspend then
 							toSuspendSet[z] = true
@@ -31001,6 +31539,10 @@ function BattleCommander:_getTerritoryOverlayOwnerName(zoneName)
 	return (self._territoryOverlaySiteOwners and self._territoryOverlaySiteOwners[zoneName]) or zoneName
 end
 
+function BattleCommander:_getTerritoryOverlayOuterDrawPush(zoneName)
+	return 0
+end
+
 function BattleCommander:_getTerritoryOverlayZone(zoneName)
 	if self._territoryOverlayVirtualZones and self._territoryOverlayVirtualZones[zoneName] then
 		return self._territoryOverlayVirtualZones[zoneName]
@@ -31173,7 +31715,7 @@ function BattleCommander:_buildTerritoryBoundsInfo(siteMap, marginMeters)
 		end
 	end
 
-	local margin = marginMeters
+	local margin = marginMeters + math.max(0, TerritoryOverlayOuterDrawPushMeters or 0)
 	if margin < 1000 then margin = 1000 end
 	return {
 		minX = minX,
@@ -31293,7 +31835,7 @@ function BattleCommander:_drawTerritoryOverlayZone(zoneName, poly, side, sideCou
 	if TerritoryOverlayFrontierOnlyBorders then
 		borderAlpha = 0
 	end
-	local drawPoly = _territoryExpandOuterDrawPoly(poly, boundsInfo, TerritoryOverlayOuterDrawPushMeters or 0)
+	local drawPoly = _territoryExpandOuterDrawPoly(poly, boundsInfo, self:_getTerritoryOverlayOuterDrawPush(zoneName))
 
 	self._territoryOverlayDrawSeq = self._territoryOverlayDrawSeq + 1
 	local z = ZONE_ELASTIC:New(prefix .. "-" .. tostring(self._territoryOverlayDrawSeq) .. "-" .. zoneName, drawPoly)
@@ -31432,7 +31974,7 @@ function BattleCommander:_storeTerritoryOverlayZone(zoneName, poly, impacted, si
 	self:_detachTerritoryOverlayImpacts(zoneName, entry.impacts)
 	entry.side = zone.side
 	entry.poly = poly
-	entry.drawPoly = _territoryExpandOuterDrawPoly(poly, boundsInfo, TerritoryOverlayOuterDrawPushMeters or 0)
+	entry.drawPoly = _territoryExpandOuterDrawPoly(poly, boundsInfo, self:_getTerritoryOverlayOuterDrawPush(zoneName))
 	entry.impacts = _territoryCloneSet(impacted)
 	self:_attachTerritoryOverlayImpacts(zoneName, entry.impacts)
 	entry.drawZone = self:_drawTerritoryOverlayZone(zoneName, poly, zone.side, sideCounts, boundsInfo)
@@ -31445,7 +31987,7 @@ function BattleCommander:_redrawTerritoryOverlayZone(zoneName, sideCounts, bound
 	local zone = self:_getTerritoryOverlayZone(zoneName)
 	self:_clearTerritoryOverlayZone(zoneName)
 	entry.side = zone.side
-	entry.drawPoly = _territoryExpandOuterDrawPoly(entry.poly, boundsInfo, TerritoryOverlayOuterDrawPushMeters or 0)
+	entry.drawPoly = _territoryExpandOuterDrawPoly(entry.poly, boundsInfo, self:_getTerritoryOverlayOuterDrawPush(zoneName))
 	entry.drawZone = self:_drawTerritoryOverlayZone(zoneName, entry.poly, zone.side, sideCounts, boundsInfo)
 end
 
@@ -31955,6 +32497,7 @@ local FootholdStatLabelKeys = {
 	['Ship'] = "STATS_LABEL_SHIP",
 	['SAM'] = "STATS_LABEL_SAM",
 	['Structure'] = "STATS_LABEL_STRUCTURE",
+	['Demolition kill'] = "STATS_LABEL_DEMOLITION_KILL",
 	['Deaths'] = "STATS_LABEL_DEATHS",
 	['Captured by enemy'] = "STATS_LABEL_CAPTURED_BY_ENEMY",
 	['Zone capture'] = "STATS_LABEL_ZONE_CAPTURE",
@@ -32147,9 +32690,8 @@ function BattleCommander:printMyStats(unitid, player)
 
 	function BattleCommander:printCareerOverview(unitid, player)
 		local T = L10N:ForLocale(L10N:GetPlayerLocale(player))
-		local career = (self:_careerPlayerRecord(player, false) or {}).career or {}
 		local S = self.CAREER_STAT
-		local function value(id) return math.max(0, math.floor(tonumber(career[id]) or 0)) end
+		local function value(id) return self:getPlayerCareerStat(player, id) end
 		local unlocked, total = self:_careerAchievementCounts(player, "career")
 		local lines = {
 			T:Format("CAREER_OVERVIEW_HEADER", player),
@@ -32765,6 +33307,7 @@ function BattleCommander:_cleanupPlayerRespawnHuntAndJoint(pname, groupid, side)
 end
 
 function BattleCommander:cleanupPlayerRespawnState(pname, side, groupid)
+	self:_resetCareerAirKillStreaks(pname)
 	self:markCasMissionPlayerUnavailable(pname)
 	self:markSeadMissionPlayerUnavailable(pname)
 	self:_cleanupPlayerRespawnRewardState(pname, side)
@@ -32787,6 +33330,7 @@ function BattleCommander:_applyEjectionFlightTimeReward(pname, side)
 end
 
 function BattleCommander:_handleEjectedCrewMember(n, side, groupid, aircraftID, carriedRescuedPilots, carriedAttached)
+	self:_resetCareerAirKillStreaks(n)
 	self:markCasMissionPlayerUnavailable(n)
 	self:markSeadMissionPlayerUnavailable(n)
 	if self.flightTimeTakeoffByPlayer then self.flightTimeTakeoffByPlayer[n] = nil end
@@ -33097,6 +33641,19 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 						end
 						if event.target.getCoalition and side ~= event.target:getCoalition() then
 							local tgtName = event.target:getName()
+							if side == coalition.side.BLUE and (
+								event.target:hasAttribute('Ground Units')
+								or event.target:hasAttribute('SAM SR')
+								or event.target:hasAttribute('SAM TR')
+								or event.target:hasAttribute('IR Guided SAM')
+								or event.target:hasAttribute('Infantry'))
+							then
+								local engagementZone = self.context:getZoneOfPoint(event.target:getPoint())
+								if engagementZone then
+									Director:getForSide(coalition.side.BLUE):recordBluePlayerEngagement(
+										engagementZone.zone, timer.getAbsTime())
+								end
+							end
 							self.context:registerCasMissionKill(pname, tgtName)
 							local mt = MissionTargets[tgtName]
 							if mt then
@@ -33365,13 +33922,9 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 										end
 									end
 
-									if (insideZone or zone.wasBlue) and Utils.isLanded(un, true)  then
+									if insideZone and Utils.isLanded(un, true) then
 										if un:getLife() > 0 then
-											local coalitionSide = zone.side
-											if zone.wasBlue then
-												coalitionSide = 2
-											end
-											context:_claimLandingRewards(player, coalitionSide, un, true)
+											context:_claimLandingRewards(player, zone.side, un, true)
 										end
 									end
 								end
@@ -33381,7 +33934,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 							local foundZone = false
 
 							for i, v in ipairs(self.context:getZones()) do
-								if ((side == v.side) or (v.wasBlue and side == 2)) and Utils.isInZone(unit, v.zone) then
+								if side == v.side and Utils.isInZone(unit, v.zone) then
 									foundZone = true
 									lc:_unloadCarriedPilotsForUnit(unit)
 									scheduleCreditClaim(v, v.zone, 5)
@@ -33400,7 +33953,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 											if zoneWrapper and groupWrapper:IsInZone(zoneWrapper) then
 												local zoneInfo = self.context:getZoneByName(zName)
 												if zoneInfo then
-													if (zoneInfo.side == side) or (zoneInfo.wasBlue and side == 2) then
+													if zoneInfo.side == side then
 														foundZone = true
 														lc:_unloadCarriedPilotsForUnit(unit)
 														scheduleCreditClaim(zoneInfo, zoneInfo.zone, 5, zoneWrapper)
@@ -33409,7 +33962,7 @@ function BattleCommander:startRewardPlayerContribution(defaultReward, rewards)
 												else
 													foundZone = true
 													lc:_unloadCarriedPilotsForUnit(unit)
-													scheduleCreditClaim({ zone = zName, side = side, wasBlue = false, mooseZone = zoneWrapper }, zName, 5, zoneWrapper)
+													scheduleCreditClaim({ zone = zName, side = side, mooseZone = zoneWrapper }, zName, 5, zoneWrapper)
 													break
 												end
 											end
@@ -33833,16 +34386,19 @@ end
 			rankSave.lastSeenEpochStartedAt = now
 		end
 		local plist = net.get_player_list() or {}
+		local serverId = net.get_server_id()
 		local touched = 0
 		for i = 1, #plist do
 			local pid = plist[i]
-			local player = net.get_name(pid)
-			if player and player ~= "" then
-				self:_syncRankSavePlayerIdentity(player, plist, false, pid)
-				local record = rankSave.players[player]
-				if record then
-					self:_touchRankRecord(record, now)
-					touched = touched + 1
+			if pid ~= serverId then
+				local player = net.get_name(pid)
+				if player and player ~= "" then
+					self:_syncRankSavePlayerIdentity(player, plist, false, pid)
+					local record = rankSave.players[player]
+					if record then
+						self:_touchRankRecord(record, now)
+						touched = touched + 1
+					end
 				end
 			end
 		end
@@ -33911,6 +34467,11 @@ end
 	end
 
 	function BattleCommander:getPlayerCareerStat(pname, statId)
+		if statId == self.CAREER_STAT.FixedWingAirStreakCurrent
+		or statId == self.CAREER_STAT.HelicopterAirStreakCurrent then
+			local streaks = self.careerAirKillStreakByPlayer and self.careerAirKillStreakByPlayer[pname]
+			return math.max(0, math.floor(tonumber(streaks and streaks[statId]) or 0))
+		end
 		local record = self:_careerPlayerRecord(pname, false)
 		return math.max(0, math.floor(tonumber(record and record.career and record.career[statId]) or 0))
 	end
@@ -34186,7 +34747,9 @@ end
 					self:recordCareerAircraftStat(crewName, aircraftId, killStats[2], 1)
 				end
 				if streakCurrentStat then
-					local current = self:recordCareerStat(crewName, streakCurrentStat, 1)
+					local streaks = self.careerAirKillStreakByPlayer[crewName] or {}
+					self.careerAirKillStreakByPlayer[crewName] = streaks
+					local _, current = incrementCareerInteger(streaks, streakCurrentStat, 1)
 					if current then
 						local best = self:getPlayerCareerStat(crewName, streakBestStat)
 						if current > best then
@@ -34201,10 +34764,7 @@ end
 	end
 
 	function BattleCommander:_resetCareerAirKillStreaks(pname)
-		local record = self:_careerPlayerRecord(pname, false)
-		if not (record and record.career) then return end
-		record.career[self.CAREER_STAT.FixedWingAirStreakCurrent] = nil
-		record.career[self.CAREER_STAT.HelicopterAirStreakCurrent] = nil
+		self.careerAirKillStreakByPlayer[pname] = nil
 	end
 
 	function BattleCommander:recordCareerFriendlyKill(pname, unit)
@@ -34338,6 +34898,12 @@ end
 		end
 		Utils.loadTable(self.rankFile)
 		local rankSave = self:_ensureRankSave()
+		for _, record in pairs(rankSave.players) do
+			if record.career then
+				record.career[self.CAREER_STAT.FixedWingAirStreakCurrent] = nil
+				record.career[self.CAREER_STAT.HelicopterAirStreakCurrent] = nil
+			end
+		end
 		self:_loadRankEwrsSettings(rankSave)
 		self:_loadRankSelfJtacSettings(rankSave)
 	end
@@ -35210,7 +35776,6 @@ function BattleCommander:loadFromDisk()
 							self.globalExtraUnlock = true
 						end
 												
-						zn.wasBlue = v.wasBlue or false
 						zn.firstCaptureByRed = v.firstCaptureByRed or false
 
 						local savedLogistic = v.logisticCenter
@@ -35537,9 +36102,9 @@ do
 	}
 	local ZONE_SURRENDER_TIER_CHANCE = {
 		[4] = 10,
-		[3] = 20,
-		[2] = 30,
-		[1] = 50,
+		[3] = 25,
+		[2] = 50,
+		[1] = 80,
 	}
 	local ZoneCombatUnitTypeCache = {}
 
@@ -35656,6 +36221,32 @@ do
 		if matches(self._regularSupplyLocalRecoveryRestore) then
 			self._regularSupplyLocalRecoveryRestore = nil
 		end
+	end
+
+	function ZoneCommander:_beginJtacTargetMaintenance()
+		for _, drone in ipairs(jtacQueue or {}) do
+			if drone.tgtzone and drone.tgtzone.zone == self.zone then
+				return {}
+			end
+		end
+		self._jtacTargetSnapshot = nil
+		return nil
+	end
+
+	function ZoneCommander:_publishJtacTargetSnapshot(targetsByBuilt)
+		if not targetsByBuilt then
+			self._jtacTargetSnapshot = nil
+			return nil
+		end
+
+		local snapshot = {}
+		for builtIndex in pairs(self.built or {}) do
+			for _, targetObject in ipairs(targetsByBuilt[builtIndex] or {}) do
+				snapshot[#snapshot + 1] = targetObject
+			end
+		end
+		self._jtacTargetSnapshot = snapshot
+		return snapshot
 	end
 
 	--{ zone='zonename', side=[0=neutral, 1=red, 2=blue], level=int, upgrades={red={}, blue={}}, crates={}, flavourtext=string, income=number }
@@ -38431,7 +39022,7 @@ end
 	-------------------------------------------------------- DISABLE FRIENDLY ZONE ---------------------------------------------------------------------------
 
 	function ZoneCommander:DestroyHiddenZone()
-	if not self.active or not self.side == 1 then return false end
+	if not self.active then return false end
 	if self.pendingCapture then self:cancelPendingCapture("zone-destroyed") end
 		print("Destroying Hidden zone" .. self.zone)
 
@@ -38500,7 +39091,7 @@ end
 			CheckJtacStatus()
 		end
         self.active = false
-		self.wasBlue = false
+		SCHEDULER:New(bc, bc.abortSupplyToOpposite, {self.zone, self.side}, 10, 0)
 		if addCTLDZonesForBlueControlled then
 			addCTLDZonesForBlueControlled(self.zone)
 		end
@@ -38554,9 +39145,6 @@ function ZoneCommander:displayStatus(grouptoshow, messagetimeout, overrideIntel,
     end
     if not self.active then
         sidename=L10N:Get("ZONE_SIDE_NONE")
-    end
-    if not self.active and self.wasBlue then
-        sidename=L10N:Get("ZONE_SIDE_BLUE")
     end
     local count = 0
     if self.built then
@@ -38690,14 +39278,8 @@ function ZoneCommander:displayStatus(grouptoshow, messagetimeout, overrideIntel,
     if self.flavorText and self.active then
         status=status.."\n\n"..self.flavorText
     end
-    if not self.active and not self.wasBlue then
+    if not self.active then
         status=status.."\n\n "..L10N:Get("ZONE_IRREPARABLY_DAMAGED")
-    end
-    if not self.active and self.wasBlue then
-        status=status.."\n\n"..L10N:Get("ZONE_FRIENDLY_REPOSITIONED")
-        if self.isHeloSpawn then
-            status=status.."\n\n"..L10N:Get("ZONE_FARP_AIRFIELD_OPERATIONAL")
-        end
     end
     local zn=CustomZone:getByName(self.zone)
 	if zn then
@@ -38741,9 +39323,9 @@ end
 ---------------------- Capture a zone on command BLUE ---------------------------------
 
 function ZoneCommander:MakeZoneBlue()
-	if not self.active or self.wasBlue then return
+	if not self.active or self.side == 2 then return
 	end
-    if self.active and not self.wasBlue then
+    if self.active and self.side ~= 2 then
         BASE:I("Making this zone Blue: " .. self.zone)
         local unitsInZone = coalition.getGroups(1)
         for _, group in ipairs(unitsInZone) do
@@ -38757,7 +39339,6 @@ function ZoneCommander:MakeZoneBlue()
         timer.scheduleFunction(function()
             self:capture(2,true)
             BASE:I("Zone captured by Blue: " .. self.zone)
-			self.wasBlue = true
         end, nil, timer.getTime() + 12)
     else
         BASE:I("Zone is either inactive or not controlled by the blue side, no action taken.")
@@ -38859,9 +39440,6 @@ function ZoneCommander:AwakenZone()
 	elseif self.side == 2 then
 		color = {0, 0, 1, 0.3}
 		textColor = {0, 0, 0.7, 0.8}
-	elseif self.side == 0 and self.wasBlue then
-		color = {0, 0, 1, 0.3}
-		textColor = {0, 0, 0.7, 1}
 	end
 
 	local zone, point = GetZoneMarkupPoint(self)
@@ -39446,20 +40024,11 @@ function ZoneCommander:init()
 	elseif self.side == 2 then
 		color = {0, 0, 1, 0.3}
 		textColor = {0, 0, 0.7, 0.8}
-		self.wasBlue = true
-	elseif self.side == 0 and self.wasBlue then
-		color = {0, 0, 1, 0.3}
-		textColor = {0, 0, 0.7, 1}
 	end
 
 	if not self.active then
-		if self.wasBlue then
-			color = {0, 0, 1, 0.3}
-			textColor = {0, 0, 0.7, 0.8}
-		else
-			color = {0.1, 0.1, 0.1, 0.3}
-			textColor = {0.1, 0.1, 0.1, 1}
-		end
+		color = {0.1, 0.1, 0.1, 0.3}
+		textColor = {0.1, 0.1, 0.1, 1}
 	end
 
 	if self.side ~= 0 and self.NeutralAtStart == true then
@@ -39499,7 +40068,7 @@ function ZoneCommander:init()
 					_prefillLogisticCenterFromResourceMap(self.airbaseName, 1000)
 				end
 
-				if self.side == 0 or (not self.active and not self.wasBlue) then
+				if self.side == 0 or not self.active then
 				  timer.scheduleFunction(function()
 					if RespawnStaticsForAirbase then
 						RespawnStaticsForAirbase(self.airbaseName, 0)						
@@ -39745,10 +40314,6 @@ function ZoneCommander:init()
 
 
 	if self.side == 2 and self.isHeloSpawn then
-		trigger.action.setMarkupTypeLine(self.index, 2)
-		trigger.action.setMarkupColor(self.index, {0,1,0,1})
-	end
-	if self.wasBlue and not self.active and self.isHeloSpawn then
 		trigger.action.setMarkupTypeLine(self.index, 2)
 		trigger.action.setMarkupColor(self.index, {0,1,0,1})
 	end
@@ -40208,6 +40773,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		self._regularSupplyRepairFactsSnapshot = nil
 		self._regularSupplyRepairFactsSnapshotSide = nil
 		self._regularSupplyDemandSnapshot = nil
+		self._jtacTargetSnapshot = nil
 		self._nextBuiltMaintenanceAt = 0
 	end
 
@@ -42334,7 +42900,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		self:_updatePendingCapture(timer.getAbsTime())
 		self.battleCommander._fsmCrashCurrentZone = self.zone
 		self.battleCommander._fsmCrashCurrentGroup = '<none>'
-		if self.income and self.side ~= 0 then
+		if self.income and self.side ~= 0 and not (self.side == 2 and self.suspended) then
 			if self.redIncomeOnly then
 				if self.side == 1 then
 					self.battleCommander:addFunds(self.side, self.income)
@@ -42371,6 +42937,14 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			if runBuiltMaintenance then
 			if self.criticalObjects and #self.criticalObjects > 0 then
 				self:checkCriticalObjects()
+			end
+			local jtacTargetsByBuilt = self:_beginJtacTargetMaintenance()
+			local jtacCriticalObjects = nil
+			if jtacTargetsByBuilt then
+				jtacCriticalObjects = {}
+				for _, criticalName in ipairs(self.criticalObjects or {}) do
+					jtacCriticalObjects[criticalName] = true
+				end
 			end
 
 			local toRemove = {}
@@ -42413,6 +42987,11 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 				if st and st:isExist() == false then
 					st = nil
 				end
+				local jtacBuiltTargets = nil
+				if jtacTargetsByBuilt then
+					jtacBuiltTargets = {}
+					jtacTargetsByBuilt[i] = jtacBuiltTargets
+				end
 				local dismounted = string.find(v, "dismounted") ~= nil
 				local templateName = not dismounted and self:_resolveBuiltTemplateName(i, v) or nil
 				local templateUnits = not dismounted
@@ -42451,6 +43030,16 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 						and repairFacts.liveCount > 0 or false
 					local unitCount = demandGroupSize
 					local surrenderTarget = nil
+					if jtacBuiltTargets and not combatEffectivenessEligible then
+						anyAlive = false
+						for _, u in ipairs(gr:getUnits() or {}) do
+							local life = (u and u:isExist() and u.getLife and u:getLife()) or 0
+							if life >= 1 then
+								anyAlive = true
+								jtacBuiltTargets[#jtacBuiltTargets + 1] = u
+							end
+						end
+					end
 					if combatEffectivenessEligible then
 						anyAlive = false
 						local groupWeak = gr:getCategory() ~= Group.Category.SHIP
@@ -42459,6 +43048,9 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 							local life = (u and u:isExist() and u.getLife and u:getLife()) or 0
 							if life >= 1 then
 								anyAlive = true
+								if jtacBuiltTargets then
+									jtacBuiltTargets[#jtacBuiltTargets + 1] = u
+								end
 								combatHasMobile = true
 								combatMobileCount = combatMobileCount + 1
 								if life < u:getLife0() then combatDegraded = true end
@@ -42477,7 +43069,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 						elseif anyAlive then
 							combatAllMobileWeak = false
 						end
-					elseif not repairUnitsScanned then
+					elseif not repairUnitsScanned and not jtacBuiltTargets then
 						for uidx=1,unitCount do
 							local u = gr:getUnit(uidx)
 							local life = (u and u:isExist() and u.getLife and u:getLife()) or 0
@@ -42517,6 +43109,9 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 				end
 				
 				if not gr and not toRemove[i] then
+					if jtacBuiltTargets and st and not jtacCriticalObjects[v] then
+						jtacBuiltTargets[#jtacBuiltTargets + 1] = st
+					end
 					if combatEffectivenessEligible and st and demandStaticLife >= 1 then
 						combatHasStatic = true
 						local staticDesc = st:getDesc()
@@ -42632,6 +43227,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 						if GlobalSettings.messages.grouplost then trigger.action.outText(L10N:Format("ZONE_LOST_GROUP", self.zone, removeName), 5) end
 					end
 				end
+				self:_publishJtacTargetSnapshot(jtacTargetsByBuilt)
 				local retiredStaticsChanged = false
 				if retiredStaticNames then
 					local retiredSet = _copyRetiredStaticSet(self.retiredStaticUpgrades)
@@ -42785,7 +43381,6 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			if self:_refreshSupplyMenuCache(false) then
 				bc:requestDelayedSupplyMenuRefresh()
 			end
-			self.wasBlue = false
 			self:runTriggers('lost')
 			bc:buildConnectionMap(self.zone, previousSide)
 			buildCapControlMenu()
@@ -43061,14 +43656,12 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			local localRecoveryLabel = self:_regularSupplyLocalRecoveryLabelText()
 			if localRecoveryLabel then msg = msg .. "\n " .. localRecoveryLabel end
 		end
-		if labelSide == coalition.side.BLUE and self.side == 2 and WarehouseLowSupplies and WarehouseLowSupplies[self.zone] and not self.LogisticCenter then
+		if labelSide == coalition.side.BLUE and self.side == 2 and not self.suspended and WarehouseLowSupplies and WarehouseLowSupplies[self.zone] and not self.LogisticCenter then
 			local supply = WarehouseLowSupplies[self.zone]
-			local avg = supply.avg
-			local entries = supply.entries
-			if (type(entries) == "number" and entries < 500) or (type(avg) == "number" and avg < 10) then
+			if supply.state == "EMPTY" then
 				msg = msg .. "\n " .. L10N:Get("ZONE_LABEL_EMPTY_WAREHOUSE")
-			elseif type(avg) == "number" and avg < 50 then
-				msg = msg .. "\n " .. L10N:Get("ZONE_LABEL_LOW_WAREHOUSE")
+			elseif supply.state == "LOW" then
+				msg = msg .. "\n " .. (supply.lowLabel or L10N:Get("ZONE_LABEL_LOW_WAREHOUSE"))
 			end
 		end
 		local neutralMissionLabels = nil
@@ -43259,7 +43852,6 @@ function ZoneCommander:capture(newside,silent)
         local sidename = ''
         local color = {0.7,0.7,0.7,0.3}
         local textcolor = {0.7,0.7,0.7,0.3}
-        self.wasBlue = false
 		self.NeutralAtStart = false
 		
         trigger.action.setMarkupColor(2000 + self.index, textcolor)
@@ -43269,7 +43861,6 @@ function ZoneCommander:capture(newside,silent)
             sidename = 'RED'
             color = {1,0,0,0.3}
             textcolor = {0.7,0,0,0.8}
-            self.wasBlue = false
 			
             if self.NeutralAtStart and not self.firstCaptureByRed then
                 self.firstCaptureByRed = true														 
@@ -43279,7 +43870,6 @@ function ZoneCommander:capture(newside,silent)
             sidename = 'BLUE'
             color = {0,0,1,0.3}
             textcolor = {0,0,0.7,0.8}
-            self.wasBlue = true
 	end
 		
 		if SpawnFriendlyAssets then
@@ -43331,8 +43921,6 @@ function ZoneCommander:capture(newside,silent)
 		if not silent then
 			if GlobalSettings.messages.captured and self.active then 
                 trigger.action.outText(L10N:Format("ZONE_CAPTURED_BY", self.zone, sidename), 20)
-        	elseif GlobalSettings.messages.captured and not self.active and self.wasBlue then 
-                trigger.action.outTextForCoalition(coalition.side.BLUE, L10N:Format("ZONE_CAPTURED_BLUE_PROGRESS_DISABLED", self.zone), 20)
 			end
 		end
 		
@@ -43381,16 +43969,13 @@ function ZoneCommander:capture(newside,silent)
 			end, {self}, 1, 0)
 		end
 		
-        if self.wasBlue and self.isHeloSpawn then
+        if self.side == 2 and self.isHeloSpawn then
             trigger.action.setMarkupTypeLine(self.index, 2)
             trigger.action.setMarkupColor(self.index, {0, 1, 0, 1})
         end  
 			if self.airbaseName and self.airbaseName ~= 'CVN-72' and self.airbaseName ~= 'CVN-73' and self.airbaseName ~= 'CVN-74' and self.airbaseName ~= 'CVN-75' then
 				local ab = Airbase.getByName(self.airbaseName)
 				if ab then
-					if self.wasBlue then
-						self.side = 2
-					end
 					ab:setCoalition(self.side)
 					if RespawnStaticsForAirbase then
 					RespawnStaticsForAirbase(self.airbaseName, self.side)
@@ -43428,7 +44013,7 @@ function ZoneCommander:capture(newside,silent)
         end
     end
 	if not silent then		
-		if not self.active and not self.wasBlue then
+		if not self.active then
 			if GlobalSettings.messages.disabled then
 				trigger.action.outText(L10N:Format("ZONE_DESTROYED_NO_CAPTURE", self.zone), 5)
 				SCHEDULER:New(nil,function()
@@ -45792,6 +46377,7 @@ function BattleCommander:_releaseAdvanceCaptureHeldSupply(zoneName)
 						}
 						local task = select(1, dc.BuildSupplyConvoyRouteFromPoint({ x = pos.x, y = pos.z }, zoneName, dc.DEFAULT_SPEED, false, routeOptions))
 						if task then
+							task = dc.RouteTaskForSide(task, gc.side)
 							local groupName = liveGroup:getName()
 							gc._advanceCaptureWaitingForNeutral = nil
 							gc._advanceCaptureReleased = true
@@ -45878,6 +46464,7 @@ function BattleCommander:_abortAdvanceCaptureHeldSupply(zoneName, remainingRatio
 					if pos and ctrl then
 						local task = select(1, dc.BuildSupplyConvoyRouteFromPoint({ x = pos.x, y = pos.z }, gc.zoneCommander.zone, dc.DEFAULT_SPEED))
 						if task then
+							task = dc.RouteTaskForSide(task, gc.side)
 							local groupName = liveGroup:getName()
 							gc._supplyReturnHome = true
 							clearAdvanceCaptureState(gc)
@@ -45932,6 +46519,7 @@ function BattleCommander:abortSupplyToOpposite(zoneName, newSide)
 					if pos and ctrl then
 						local task = select(1, dc.BuildSupplyConvoyRouteFromPoint({ x = pos.x, y = pos.z }, gc.zoneCommander.zone, dc.DEFAULT_SPEED))
 						if task then
+							task = dc.RouteTaskForSide(task, gc.side)
 							gc._supplyReturnHome = true
 							ctrl:popTask()
 							SCHEDULER:New(nil, function()
@@ -47498,9 +48086,17 @@ function generateRunwayStrikeMission()
 local now = timer.getTime()
 local blueDirector = Director:getForSide(coalition.side.BLUE)
 local packageRecommendation = blueDirector:getBluePackageRecommendation()
-local packageRunwayZone = packageRecommendation and packageRecommendation.runwayZone or nil
+local thirdAttackZone = attackTarget3 and bc:getZoneByName(attackTarget3) or nil
+local thirdAttackRunwayZone = thirdAttackZone
+	and thirdAttackZone.side == coalition.side.RED and thirdAttackZone.active
+	and not thirdAttackZone.suspended and not thirdAttackZone.isHidden
+	and (RUNWAY_ZONE_COOLDOWN[thirdAttackZone.zone] or 0) < now
+	and blueDirector:_zoneHasCachedBombableRunway(thirdAttackZone)
+	and thirdAttackZone.zone or nil
+local packageRunwayZone = thirdAttackRunwayZone
+	or (packageRecommendation and packageRecommendation.runwayZone or nil)
   if packageRecommendation and not packageRunwayZone then return false end
-  if not packageRecommendation and now < runwayCooldown then return true end
+  if not packageRecommendation and not thirdAttackRunwayZone and now < runwayCooldown then return true end
 local cand, capCand = {}, {}
 	for _, z in ipairs(bc.zones) do
 		if z.side == 1 and z.active and not z.suspended and z.airbaseName
@@ -47705,6 +48301,78 @@ BattleCommander.CAS_MISSION_REWARD_PER_KILL = 30
 BattleCommander.SEAD_MISSION_MAX_SLOTS = 2
 BattleCommander.SEAD_MISSION_REWARD_PER_KILL = 50
 BattleCommander.SEAD_MISSION_REWARD = BattleCommander.SEAD_MISSION_REWARD_PER_KILL
+BattleCommander.RECON_MISSION_MAX_SLOTS = 3
+BattleCommander.RECON_MISSION_CHECK_PERIOD_SEC = 5
+
+function BattleCommander:initReconMissions()
+	self.reconMissionMaxSlots = BattleCommander.RECON_MISSION_MAX_SLOTS
+	self.reconMissions = {
+		slots = {},
+		cooldownByTarget = {},
+		trackerNextSlotIndex = 1,
+		trackerScheduled = false,
+	}
+	for slotIndex = 1, self.reconMissionMaxSlots do
+		self.reconMissions.slots[slotIndex] = {
+			index = slotIndex,
+			targetZone = nil,
+			winner = nil,
+			completed = false,
+			active = false,
+			started = false,
+			trackerActive = false,
+			enteredBy = {},
+		}
+	end
+end
+
+function BattleCommander:resetReconMissionSlot(slotIndex)
+	self.reconMissions.slots[slotIndex] = {
+		index = slotIndex,
+		targetZone = nil,
+		winner = nil,
+		completed = false,
+		active = false,
+		started = false,
+		trackerActive = false,
+		enteredBy = {},
+	}
+end
+
+function BattleCommander:startReconMissionSlot(slotIndex, targetZone)
+	local slot = self.reconMissions.slots[slotIndex]
+	slot.targetZone = targetZone
+	slot.winner = nil
+	slot.completed = false
+	slot.active = true
+	slot.started = false
+	slot.trackerActive = false
+	slot.enteredBy = {}
+	return true
+end
+
+function BattleCommander:getReconMissionSlotForZone(zoneName)
+	for slotIndex = 1, self.reconMissionMaxSlots do
+		local slot = self.reconMissions.slots[slotIndex]
+		if slot.targetZone == zoneName then
+			return slotIndex, slot
+		end
+	end
+end
+
+function BattleCommander:cancelReconMissionForZone(zoneName)
+	local slotIndex, slot = self:getReconMissionSlotForZone(zoneName)
+	if not slot or not slot.active then return false end
+	stopReconMissionZoneTracker(zoneName)
+	self:removeMissionTag(zoneName, "Recon")
+	self:refreshZoneLabel(zoneName)
+	slot.active = false
+	slot.completed = false
+	if not slot.started then
+		self:resetReconMissionSlot(slotIndex)
+	end
+	return true
+end
 
 function BattleCommander:initCasMissions()
 	self.casMissionMaxSlots = BattleCommander.CAS_MISSION_MAX_SLOTS
@@ -48224,7 +48892,8 @@ function checkAndGenerateCASMission()
 		local slot = bc.casMissions.slots[slotIndex]
 		if slot.active or slot.completed then
 			excludedTargets[slot.targetZone] = true
-		elseif slotIndex <= desiredSlots and now >= (slot.cooldownUntil or 0) then
+		elseif (slotIndex <= desiredSlots or (slotIndex == 3 and attackTarget3))
+			and now >= (slot.cooldownUntil or 0) then
 			availableSlots[#availableSlots + 1] = slotIndex
 		end
 	end
@@ -48235,6 +48904,8 @@ function checkAndGenerateCASMission()
 			preferredTarget = attackTarget1
 		elseif slotIndex == 2 then
 			preferredTarget = attackTarget2
+		elseif slotIndex == 3 then
+			preferredTarget = attackTarget3
 		end
 		if preferredTarget and not excludedTargets[preferredTarget] and bc:_casMissionZoneEligible(preferredTarget, targetCounts) then
 			if bc:_startCasMissionSlot(slotIndex, preferredTarget, targetCounts) then
@@ -48245,10 +48916,10 @@ function checkAndGenerateCASMission()
 
 	for _, slotIndex in ipairs(availableSlots) do
 		local slot = bc.casMissions.slots[slotIndex]
-		if slotIndex >= 3 and not slot.active and not slot.completed then
+		if slotIndex >= 3 and slotIndex <= desiredSlots and not slot.active and not slot.completed then
 			local candidates = bc:_casMissionCandidateZones(excludedTargets, slotIndex >= 3, targetCounts)
 			local target = Director:getForSide(coalition.side.BLUE):selectMissionTarget('CAS', candidates, {
-				primaryZone = attackTarget1 or attackTarget2,
+				primaryZone = attackTarget3 or attackTarget1 or attackTarget2,
 			})
 			if target and bc:_startCasMissionSlot(slotIndex, target, targetCounts) then
 				excludedTargets[target] = true
@@ -48283,8 +48954,55 @@ local function _reconMissionPlayerName(controllable)
 	return tostring(name)
 end
 
+local function _runReconMissionTracker(_, time)
+	local state = bc.reconMissions
+	local activeCount = 0
+	local selectedSlot = nil
+	local selectedSlotIndex = nil
+	local startIndex = state.trackerNextSlotIndex or 1
+	for offset = 0, bc.reconMissionMaxSlots - 1 do
+		local slotIndex = ((startIndex + offset - 1) % bc.reconMissionMaxSlots) + 1
+		local slot = state.slots[slotIndex]
+		if slot.trackerActive then
+			activeCount = activeCount + 1
+			if not selectedSlot then
+				selectedSlot = slot
+				selectedSlotIndex = slotIndex
+			end
+		end
+	end
+
+	if not selectedSlot then
+		state.trackerScheduled = false
+		return nil
+	end
+
+	state.trackerNextSlotIndex = (selectedSlotIndex % bc.reconMissionMaxSlots) + 1
+	local targetZone = bc:getZoneByName(selectedSlot.targetZone)
+	if targetZone and targetZone.side == coalition.side.RED and targetZone.active and not targetZone.suspended then
+		local tracker = ReconMissionTrackers[selectedSlot.targetZone]
+		ReconMissionClientSet:ForEachClient(function(controllable)
+			if not selectedSlot.trackerActive or not controllable:IsAlive() then return end
+			local playerName = _reconMissionPlayerName(controllable)
+			if tracker.zone:IsVec3InZone(controllable:GetPointVec3()) then
+				selectedSlot.enteredBy[playerName] = true
+			elseif selectedSlot.enteredBy[playerName] then
+				selectedSlot.winner = playerName
+				selectedSlot.completed = true
+				selectedSlot.active = false
+				selectedSlot.trackerActive = false
+				selectedSlot.enteredBy = {}
+			end
+		end)
+	end
+
+	return time + BattleCommander.RECON_MISSION_CHECK_PERIOD_SEC / activeCount
+end
+
 function startReconMissionZoneTracker(targetName)
 	if not targetName then return false end
+	local _, slot = bc:getReconMissionSlotForZone(targetName)
+	if not slot or not slot.active then return false end
 
 	if not ReconMissionClientSet then
 		ReconMissionClientSet = _buildReconMissionClientSet()
@@ -48292,82 +49010,100 @@ function startReconMissionZoneTracker(targetName)
 
 	local tracker = ReconMissionTrackers[targetName]
 	if not tracker then
-		local zone = ZONE:New(targetName)
 		tracker = {
-			zone = zone,
+			zone = ZONE:New(targetName),
 			targetName = targetName,
-			active = false,
-			enteredBy = {},
 		}
 		ReconMissionTrackers[targetName] = tracker
-
-		zone:Trigger(ReconMissionClientSet)
-		function zone:OnAfterEnteredZone(From, Event, To, Controllable)
-			if not tracker.active then return end
-			if not reconMissionTarget or reconMissionTarget ~= tracker.targetName then return end
-			if not Controllable:IsAlive() then return end
-
-			local targetZone = bc:getZoneByName(tracker.targetName)
-			if not targetZone or targetZone.side ~= 1 or targetZone.suspended or not targetZone.active then return end
-
-			local playerName = _reconMissionPlayerName(Controllable)
-			tracker.enteredBy[playerName] = true
-		end
-
-		function zone:OnAfterLeftZone(From, Event, To, Controllable)
-			if not tracker.active then return end
-			if not reconMissionTarget or reconMissionTarget ~= tracker.targetName then return end
-			if not Controllable:IsAlive() then return end
-
-			local targetZone = bc:getZoneByName(tracker.targetName)
-			if not targetZone or targetZone.side ~= 1 or targetZone.suspended or not targetZone.active then return end
-
-			local playerName = _reconMissionPlayerName(Controllable)
-			if not tracker.enteredBy[playerName] then return end
-
-			tracker.enteredBy[playerName] = nil
-			reconMissionWinner = playerName
-			reconMissionCompleted = true
-			reconMissionCompletedTarget = tracker.targetName
-			tracker.active = false
-			tracker.enteredBy = {}
-		end
 	end
 
-	tracker.active = true
-	tracker.enteredBy = {}
+	slot.trackerActive = true
+	slot.enteredBy = {}
+	if not bc.reconMissions.trackerScheduled then
+		bc.reconMissions.trackerScheduled = true
+		timer.scheduleFunction(_runReconMissionTracker, nil, timer.getTime() + 0.1)
+	end
 	return true
 end
 
 function stopReconMissionZoneTracker(targetName)
 	if not targetName then return end
-	local tracker = ReconMissionTrackers[targetName]
-	if not tracker then return end
-	tracker.active = false
-	tracker.enteredBy = {}
+	local _, slot = bc:getReconMissionSlotForZone(targetName)
+	if not slot then return end
+	slot.trackerActive = false
+	slot.enteredBy = {}
 end
+
+-- RECON_NEIGHBOR_SAM_BEGIN
+ReconNeighborSamRadiusMeters = {
+	["SA-10 TR"] = UTILS.NMToMeters(30),
+	["SA-5 TR"] = UTILS.NMToMeters(40),
+}
+ReconNeighborSamMaximumRadiusMeters = UTILS.NMToMeters(40)
+
+function ReconHasNeighboringBlockingSam(targetZone, samTypesByZone)
+	local distanceRow = ZONE_DISTANCES[targetZone.zone]
+	for zoneName, distance in pairs(distanceRow) do
+		if zoneName ~= targetZone.zone and distance <= ReconNeighborSamMaximumRadiusMeters then
+			local zoneObj = bc:getZoneByName(zoneName)
+			if zoneObj and zoneObj.side == targetZone.side and zoneObj.active and not zoneObj.suspended then
+				local detectedTypes = samTypesByZone[zoneName]
+				if not detectedTypes then
+					local _, _, scannedTypes = StrategicBomber.GetBadSamsForZone(zoneName)
+					detectedTypes = scannedTypes
+					samTypesByZone[zoneName] = detectedTypes
+				end
+				if detectedTypes["SA-10 TR"] and distance <= ReconNeighborSamRadiusMeters["SA-10 TR"] then
+					return true
+				end
+				if detectedTypes["SA-5 TR"] and distance <= ReconNeighborSamRadiusMeters["SA-5 TR"] then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+-- RECON_NEIGHBOR_SAM_END
 
 function checkAndGenerateReconMissionV2()
 	local now = timer.getTime()
-	if reconMissionTarget ~= nil or now < reconMissionCooldownUntil then
-		return true
-	end
-
 	local validzones = {}
 	local seen = {}
 	local blueDirector = Director:getForSide(coalition.side.BLUE)
+	local reconSamTypesByZone = {}
+	local selectedTargets = {}
+	local availableSlots = {}
+	local hasMissionOrCooldown = false
+	for slotIndex = 1, bc.reconMissionMaxSlots do
+		local slot = bc.reconMissions.slots[slotIndex]
+		if slot.active or slot.completed or slot.started or slot.targetZone then
+			if slot.targetZone then selectedTargets[slot.targetZone] = true end
+			hasMissionOrCooldown = true
+		else
+			availableSlots[#availableSlots + 1] = slotIndex
+		end
+	end
+
 	local function checkValid(zone)
 		local lname = zone.zone:lower()
 		local intelStillActive = _zoneIntelIsActive(zone.zone, coalition.side.BLUE, now)
 		local authoredArea = blueDirector.areaByZone[zone.zone]
-		local hasBadSam = StrategicBomber.GetBadSamsForZone(zone.zone)
+		local detectedTypes = reconSamTypesByZone[zone.zone]
+		local hasBadSam = detectedTypes and next(detectedTypes) ~= nil or false
+		if not detectedTypes then
+			local _, _, scannedTypes = StrategicBomber.GetBadSamsForZone(zone.zone)
+			detectedTypes = scannedTypes
+			reconSamTypesByZone[zone.zone] = detectedTypes
+			hasBadSam = next(detectedTypes) ~= nil
+		end
 		local legacySideMissionName = lname:find('papa') or lname:find('juliett')
 			or lname:find('india') or lname:find('delta') or lname:find('bravo') or lname:find('hotel')
 		return zone.side == 1 and zone.active and not zone.suspended and not zone.isHidden and
 			not intelStillActive and
 			not isZoneUnderSEADMission(zone.zone) and
 			not hasBadSam and
-			#blueDirector:_longRangeSeadThreatsNearTarget(zone, false) == 0 and
+			not ReconHasNeighboringBlockingSam(zone, reconSamTypesByZone) and
 			not lname:find('hidden') and not lname:find('sam') and not lname:find('defence') and
 			(authoredArea ~= nil or not legacySideMissionName)
 	end
@@ -48375,15 +49111,19 @@ function checkAndGenerateReconMissionV2()
 	local objectives = {}
 	if attackTarget1 then objectives[#objectives + 1] = attackTarget1 end
 	if attackTarget2 and attackTarget2 ~= attackTarget1 then objectives[#objectives + 1] = attackTarget2 end
+	if attackTarget3 and attackTarget3 ~= attackTarget1 and attackTarget3 ~= attackTarget2 then
+		objectives[#objectives + 1] = attackTarget3
+	end
 	for _, zoneName in ipairs(objectives) do
 		local zone = bc:getZoneByName(zoneName)
-		if zone and checkValid(zone) and not seen[zone.zone] then
+		local cooldownUntil = bc.reconMissions.cooldownByTarget[zoneName] or 0
+		if now < cooldownUntil then
+			hasMissionOrCooldown = true
+		elseif zone and not selectedTargets[zoneName] and checkValid(zone) and not seen[zone.zone] then
 			seen[zone.zone] = true
 			validzones[#validzones + 1] = zone.zone
 		end
 	end
-
-	if #validzones == 0 then return false end
 
 	local availablezones = {}
 	for _, zoneName in ipairs(validzones) do
@@ -48392,16 +49132,24 @@ function checkAndGenerateReconMissionV2()
 		end
 	end
 
-	if #availablezones == 0 then return false end
+	while #availableSlots > 0 and #availablezones > 0 do
+		local target = blueDirector:selectMissionTarget('RECON', availablezones, {
+			primaryZone = attackTarget3 or attackTarget1 or attackTarget2,
+		})
+		if not target then break end
+		local slotIndex = table.remove(availableSlots, 1)
+		bc:startReconMissionSlot(slotIndex, target)
+		selectedTargets[target] = true
+		hasMissionOrCooldown = true
+		for candidateIndex, zoneName in ipairs(availablezones) do
+			if zoneName == target then
+				table.remove(availablezones, candidateIndex)
+				break
+			end
+		end
+	end
 
-	reconMissionTarget = blueDirector:selectMissionTarget('RECON', availablezones, {
-		primaryZone = attackTarget1 or attackTarget2,
-	})
-	if not reconMissionTarget then return false end
-	reconMissionWinner = nil
-	reconMissionCompleted = false
-	reconMissionCompletedTarget = nil
-	return true
+	return hasMissionOrCooldown
 end
 
 
@@ -50461,6 +51209,7 @@ end
 											self._activeSupplyLaunchSourceZone = farpLaunch.name
 											self._activeSupplyFarpLaunch = farpLaunch
 											-- spawned = self:_spawnFromGroundAtCtldFarp(sp, farpAb, farpLaunch, true)
+											if self.side == coalition.side.BLUE then bcObj:_prepareBlueAiWarehouseSpawn(resolved, farpAb) end
 											spawned = sp:SpawnAtAirbase(farpAb, SPAWN.Takeoff.Hot, nil, nil, false)
 											if not spawned then
 												self._activeSupplyLaunchSourceZone = nil
@@ -50485,8 +51234,11 @@ end
 										else
 											if not self.Airbase then
 												bcObj._lastSpawnAttempt = "group="..tostring(self.name).." template="..tostring(resolved).." origin="..tostring(originZone).." target="..tostring(self.targetzone).." airbase="..tostring(SpawnType and SpawnType.airbase and SpawnType.airbase.GetName and SpawnType.airbase:GetName() or SpawnType and SpawnType.airbase).." spots="..tostring(SpawnType and SpawnType.spots and table.concat(SpawnType.spots,",") or nil)
+												if self.side == coalition.side.BLUE then bcObj:_prepareBlueAiWarehouseSpawn(resolved, SpawnType.airbase) end
 												spawned = sp:SpawnAtParkingSpot(SpawnType.airbase, SpawnType.spots, tk)
-												if not spawned then spawned = sp:SpawnAtAirbase(SpawnType.airbase, tk, nil, nil, false) end
+												if not spawned then
+													spawned = sp:SpawnAtAirbase(SpawnType.airbase, tk, nil, nil, false)
+												end
 												if spawned and self.unitCategory == heli then spawned:OptionPreferVerticalLanding() end
 											else
 												local ab = AIRBASE:FindByName(self.Airbase)
@@ -50494,8 +51246,10 @@ end
 													self._landUnitID = ab:GetID()
 													if ab:IsShip() then if IsGroupActive(ab:GetName()) then
 														self.landsatcarrier = true
+														if self.side == coalition.side.BLUE then bcObj:_prepareBlueAiWarehouseSpawn(resolved, ab) end
 														spawned = sp:SpawnAtAirbase(ab, tk, nil, nil, false) end
 													else
+														if self.side == coalition.side.BLUE then bcObj:_prepareBlueAiWarehouseSpawn(resolved, ab) end
 														spawned = sp:SpawnAtAirbase(ab, tk, nil, nil, false)
 													end
 												end
@@ -50532,6 +51286,9 @@ end
 					end
 				else
 					if self.side == zside then
+						if self.side == coalition.side.BLUE and (self.unitCategory == Unit.Category.AIRPLANE or self.unitCategory == Unit.Category.HELICOPTER) then
+							bcObj:_prepareFixedBlueAiWarehouseSpawn(self.name)
+						end
 						Respawn.Group(self.name)
 						self.spawnedName = self.name
 						self._lastSpawnTemplate = self.name
@@ -51402,7 +52159,7 @@ end
 		local bc = self.zoneCommander.battleCommander
 		local previousTarget = self.targetzone
 		local bestZone = nil
-		local bestTask = nil
+		local bestCachedTask = nil
 		local bestDistMeters = nil
 
 		for _, zoneObj in ipairs(bc.zones or {}) do
@@ -51422,15 +52179,10 @@ end
 							or (distMeters == bestDistMeters and bestZone and zoneObj.zone < bestZone.zone)
 							or (distMeters == bestDistMeters and not bestZone)
 						then
-							self.targetzone = zoneObj.zone
-							local previousPassedRoadExit = self._passedRoadExit
-							self._passedRoadExit = false
-							local candidateTask = self:_buildSurfaceRestoreTask(px, pz)
-							self._passedRoadExit = previousPassedRoadExit
-							self.targetzone = previousTarget
-							if candidateTask then
+							local cachedTask = select(1, dc.GetAttackConvoyRoute(self.zoneCommander.zone, zoneObj.zone, dc.DEFAULT_SPEED))
+							if cachedTask then
 								bestZone = zoneObj
-								bestTask = candidateTask
+								bestCachedTask = cachedTask
 								bestDistMeters = distMeters
 							end
 						end
@@ -51439,10 +52191,10 @@ end
 			end
 		end
 
-		self.targetzone = previousTarget
-		if not bestZone or not bestTask then
+		if not bestZone or not bestCachedTask then
 			return false
 		end
+		local bestTask, retaskRouteInfo = dc.BuildCachedAttackConvoyRetaskRoute(bestCachedTask, { x = px, y = pz }, bestZone.zone)
 
 		self.targetzone = bestZone.zone
 		self.dynamicHybridTargetZone = bestZone.zone
@@ -51473,7 +52225,20 @@ end
 		self.state = 'enroute'
 		self.lastStateTime = timer.getAbsTime()
 		trigger.action.outTextForCoalition(2, L10N:Format("GROUND_ATTACK_DISPATCHED", bestZone.zone), 15)
-		env.info(string.format("[PlayerGroundAttack] retasked name=%s from=%s to=%s", tostring(self.name), tostring(previousTarget), tostring(bestZone.zone)))
+		env.info(string.format(
+			"[PlayerGroundAttack] retasked name=%s from=%s to=%s useRoad=%s reason=%s directMeters=%.1f roadMeters=%s ratioLimit=%.2f directStartIndex=%s roadSubzone=%s pathCacheHit=%s",
+			tostring(self.name),
+			tostring(previousTarget),
+			tostring(bestZone.zone),
+			tostring(retaskRouteInfo.useRoad == true),
+			tostring(retaskRouteInfo.reason),
+			tonumber(retaskRouteInfo.directDistance) or 0,
+			retaskRouteInfo.roadDistance and string.format("%.1f", retaskRouteInfo.roadDistance) or "nil",
+			tonumber(retaskRouteInfo.ratioLimit) or 0,
+			tostring(retaskRouteInfo.directStartIndex),
+			tostring(retaskRouteInfo.roadSubzone),
+			tostring(retaskRouteInfo.pathCacheHit == true)
+		))
 		return true
 	end
 
@@ -51752,6 +52517,7 @@ end
 					selectedTask = dc.BuildPlayerGroundAttackRouteFromPoint({ x = px, y = pz }, self.targetzone, dc.DEFAULT_SPEED, 100, false, { useTargetRoadHook = true, useTargetMultiRoadHooks = true })
 				end
 				if selectedTask then
+					selectedTask = dc.RouteTaskForSide(selectedTask, self.side)
 					self:_rememberSurfaceRoadPhase(selectedTask, self._passedRoadExit == true and artilleryReturnHome ~= true)
 					if isFreshFarpSpawn then
 						freshSpawnGroupHeadingDeg = _surfaceTaskSpawnHeadingDeg(selectedTask)
@@ -51885,6 +52651,7 @@ end
 						bcObj:_releaseRegularSupplyPermit(self, true)
 						return
 					end
+					selectedTask = dc.RouteTaskForSide(selectedTask, self.side)
 					self:_rememberSurfaceRoadPhase(selectedTask, false)
 					if startVec2 and selectedTask then
                         local chosenTemplate = self:_resolveTemplateName()
@@ -51977,6 +52744,9 @@ end
                         end
 					end
                 else
+                    if self.side == coalition.side.BLUE and (self.unitCategory == Unit.Category.AIRPLANE or self.unitCategory == Unit.Category.HELICOPTER) then
+                        bcObj:_prepareFixedBlueAiWarehouseSpawn(self.name)
+                    end
                     Respawn.Group(self.name)
 					self._surfaceIsArtillery = self.MissionType == 'ARTY' or bcObj:_groupHasArtilleryAttribute(Group.getByName(self.name))
 					self:_scheduleSurfaceIntelRouteReports(nil, self.name)
@@ -52416,6 +53186,7 @@ do
 	Director.BLUE_AREA_PLAYER_SHIFT_MIN = 100
 	Director.BLUE_AREA_PLAYER_SHIFT_MARGIN = 80
 	Director.BLUE_AREA_MULTI_FRONT_PLAYERS = 3
+	Director.BLUE_ATTACK3_ENGAGEMENT_MEMORY_SEC = 5 * 60
 	Director.DEFENSIVE_PLAN_MIN_HOLD_SEC = 5 * 60
 	Director.DEFENSIVE_PLAN_SWITCH_CONFIRMATIONS = 2
 	Director.DEFENSIVE_PLAN_DAMAGE_PER_EVENT = 30
@@ -52533,6 +53304,7 @@ do
 		obj.strategicBudgetHistory = obj.strategicBudgetHistory or {}
 		obj.strategicBudgetFailureUntil = obj.strategicBudgetFailureUntil or {}
 		obj.blueAreaCommitment = obj.blueAreaCommitment or nil
+		obj.bluePlayerEngagementByZone = obj.bluePlayerEngagementByZone or {}
 		obj.defensivePlan = obj.defensivePlan or nil
 		obj.defensivePlanPendingSignature = obj.defensivePlanPendingSignature or nil
 		obj.defensivePlanPendingCount = obj.defensivePlanPendingCount or 0
@@ -53619,6 +54391,8 @@ do
 		self.areaById = {}
 		self.areaByZone = {}
 		self.areaByRegion = {}
+		self.defenceParentByZone = {}
+		self.defenceZonesByParent = {}
 		definitions = definitions or {}
 		if type(definitions) ~= 'table' then
 			error('[Director] TheaterAreas must be a table')
@@ -53801,8 +54575,32 @@ do
 					infrastructure.affectedAreas[#infrastructure.affectedAreas + 1] = affectedArea.id
 					affectedArea.affectedInfrastructure[#affectedArea.affectedInfrastructure + 1] = infrastructure
 				end
+				local affectedMember = affectedArea and affectedArea.zoneByName[targetZoneName] or nil
+				local authoredDefence = affectedMember and (
+					affectedMember.role == 'defence' or affectedMember.regionRole == 'defence')
+				if authoredDefence then
+					if not sourceArea or infrastructure.sourceZone == targetZoneName then
+						error('[Director] infrastructure=' .. infrastructure.id
+							.. ' has invalid defence parent sourceZone=' .. infrastructure.sourceZone
+							.. ' targetZone=' .. targetZoneName)
+					end
+					local existingParent = self.defenceParentByZone[targetZoneName]
+					if existingParent and existingParent ~= infrastructure.sourceZone then
+						error('[Director] defence=' .. targetZoneName .. ' has conflicting parents='
+							.. existingParent .. ',' .. infrastructure.sourceZone)
+					elseif not existingParent then
+						self.defenceParentByZone[targetZoneName] = infrastructure.sourceZone
+						self.defenceZonesByParent[infrastructure.sourceZone] =
+							self.defenceZonesByParent[infrastructure.sourceZone] or {}
+						self.defenceZonesByParent[infrastructure.sourceZone][
+							#self.defenceZonesByParent[infrastructure.sourceZone] + 1] = targetZoneName
+					end
+				end
 			end
 			table.sort(infrastructure.affectedAreas)
+		end
+		for _, defenceZones in pairs(self.defenceZonesByParent) do
+			table.sort(defenceZones)
 		end
 
 		for _, area in ipairs(self.areas) do
@@ -54404,6 +55202,84 @@ do
 		return scores
 	end
 
+	function Director:recordBluePlayerEngagement(zoneName, now)
+		if self.side ~= coalition.side.BLUE then return false end
+		local evidenceZone = zoneName and self.battleCommander:getZoneByName(zoneName) or nil
+		if not evidenceZone or evidenceZone.side ~= coalition.side.RED or not evidenceZone.active
+			or evidenceZone.suspended or evidenceZone.isHidden then
+			return false
+		end
+		local targetZoneName = self.defenceParentByZone[zoneName] or zoneName
+		local targetZone = self.battleCommander:getZoneByName(targetZoneName)
+		if not targetZone or targetZone.side ~= coalition.side.RED or not targetZone.active
+			or targetZone.suspended or targetZone.isHidden then
+			return false
+		end
+		self.bluePlayerEngagementByZone[targetZoneName] = {
+			evidenceZone = zoneName,
+			observedAt = now or timer.getAbsTime(),
+		}
+		return true
+	end
+
+	function Director:_blueThirdAttackPressureEvidence(now)
+		now = now or timer.getAbsTime()
+		local recent = self.bluePlayerEngagementByZone
+		if not next(recent) then return {} end
+		local playerScores = self:_playerFrontlineActivityScores(now, false)
+		local pressured = {}
+		for targetZoneName, evidence in pairs(recent) do
+			local targetZone = self.battleCommander:getZoneByName(targetZoneName)
+			local expired = now - (evidence.observedAt or 0) > self.BLUE_ATTACK3_ENGAGEMENT_MEMORY_SEC
+			local invalid = not targetZone or targetZone.side ~= coalition.side.RED
+				or not targetZone.active or targetZone.suspended or targetZone.isHidden
+			if expired or invalid then
+				recent[targetZoneName] = nil
+			else
+				local evidenceZoneName = evidence.evidenceZone or targetZoneName
+				local evidenceZone = self.battleCommander:getZoneByName(evidenceZoneName)
+				local pressure = math.max(
+					playerScores[targetZoneName] or 0,
+					playerScores[evidenceZoneName] or 0
+				)
+				if targetZone.BlueIsNear == true or targetZone.BluePlaneIsNear == true
+					or (evidenceZone and (evidenceZone.BlueIsNear == true
+						or evidenceZone.BluePlaneIsNear == true))
+				then
+					pressure = math.max(pressure, 1)
+				end
+				if pressure > 0 then
+					pressured[targetZoneName] = {
+						evidenceZone = evidenceZoneName,
+						observedAt = evidence.observedAt,
+						pressure = pressure,
+					}
+				end
+			end
+		end
+		return pressured
+	end
+
+	function Director:_blueThirdAttackEngagementRows(ranked, now)
+		local pressureEvidence = self:_blueThirdAttackPressureEvidence(now)
+		local rows = {}
+		for _, row in ipairs(ranked or {}) do
+			if pressureEvidence[row.zone.zone] then rows[#rows + 1] = row end
+		end
+		return rows
+	end
+
+	function Director:hasBlueThirdAttackDemand(now)
+		if self.side ~= coalition.side.BLUE then return false, nil end
+		if (getBlueCasPlayersCount() or 0) >= self.BLUE_AREA_MULTI_FRONT_PLAYERS then
+			return true, 'players'
+		end
+		if next(self:_blueThirdAttackPressureEvidence(now)) then
+			return true, 'player-engagement'
+		end
+		return false, nil
+	end
+
 	function Director:_regionSideName(side)
 		if side == coalition.side.RED then return 'red' end
 		if side == coalition.side.BLUE then return 'blue' end
@@ -54768,12 +55644,6 @@ do
 				evidence.anchors[anchorZoneName] = (evidence.anchors[anchorZoneName] or 0) + 1
 			end
 		end
-		local function targetMatches(infrastructure, targetZoneName)
-			for _, configuredTarget in ipairs(infrastructure.targetZones) do
-				if configuredTarget == targetZoneName then return true end
-			end
-			return false
-		end
 		local function fallbackAreaAnchor(area, defenceZoneName)
 			local best = nil
 			local bestHops = nil
@@ -54825,17 +55695,12 @@ do
 					end
 				end
 				if lost then
-					local mapped = false
-					for _, infrastructure in ipairs(area.affectedInfrastructure) do
-						if infrastructure.effect == 'defence_supply'
-							and infrastructure.side == coalition.side.RED
-							and targetMatches(infrastructure, member.name)
-						then
-							mapped = true
-							local sourceArea, sourceZone = usableSource(infrastructure.sourceZone)
-							if sourceArea then
-								addEvidence(sourceArea, 'lost:' .. member.name, sourceZone.zone)
-							end
+					local parentZoneName = self.defenceParentByZone[member.name]
+					local mapped = parentZoneName ~= nil
+					if parentZoneName then
+						local sourceArea, sourceZone = usableSource(parentZoneName)
+						if sourceArea then
+							addEvidence(sourceArea, 'lost:' .. member.name, sourceZone.zone)
 						end
 					end
 					if not mapped then
@@ -56732,8 +57597,11 @@ do
 				local distance = distanceAnchor and ZONE_DISTANCES[distanceAnchor]
 					and ZONE_DISTANCES[distanceAnchor][zoneObj.zone] or math.huge
 				if distance < math.huge then score = score + math.max(0, 160 - distance / 1852 * 4) end
-				if score > runwayGoalScore
-					or (score == runwayGoalScore and runwayGoal and zoneObj.zone < runwayGoal.zone) then
+				local isImmediateTarget = zoneObj.zone == immediateTarget
+				local currentIsImmediateTarget = runwayGoal ~= nil and runwayGoal.zone == immediateTarget
+				if (isImmediateTarget and not currentIsImmediateTarget)
+					or (isImmediateTarget == currentIsImmediateTarget and (score > runwayGoalScore
+						or (score == runwayGoalScore and runwayGoal and zoneObj.zone < runwayGoal.zone))) then
 					runwayGoal = zoneObj
 					runwayGoalScore = score
 				end
@@ -57176,6 +58044,26 @@ do
 		local focusArea = primaryArea or operationArea or committedArea or captureArea or anchorArea
 
 		if role == 'ATTACK_SUPPORT' then
+			if context.thirdAttack then
+				local engagementRows = self:_blueThirdAttackEngagementRows(ranked, now)
+				if #engagementRows > 0 then
+					return self:_pickWeightedCandidate(engagementRows, nil)
+				end
+				if (getBlueCasPlayersCount() or 0) < self.BLUE_AREA_MULTI_FRONT_PLAYERS then
+					return nil
+				end
+				local occupiedAreaIds = {}
+				if primaryArea then occupiedAreaIds[primaryArea.id] = true end
+				if anchorArea then occupiedAreaIds[anchorArea.id] = true end
+				local externalRows = {}
+				for _, row in ipairs(ranked) do
+					local area = self.areaByZone[row.zone.zone]
+					if not area or not occupiedAreaIds[area.id] then
+						externalRows[#externalRows + 1] = row
+					end
+				end
+				return self:_pickWeightedCandidate(#externalRows > 0 and externalRows or ranked, nil)
+			end
 			if not focusArea then return self:_pickWeightedCandidate(ranked, nil) end
 			local focusedRows = packageCorridorRows(focusArea.id, rowsByArea[focusArea.id] or {})
 			if #focusedRows > 0 then return self:_pickWeightedCandidate(focusedRows, nil) end
@@ -68002,7 +68890,7 @@ end
 					trigger.action.outTextForGroup(gid, T:Get("LOGISTICS_LOAD_ONLY_FRIENDLY_OR_CARRIER"), 10)
 					return
 				end
-				if zn.side ~= unitCoalition and not zn.wasBlue then
+				if zn.side ~= unitCoalition then
 					trigger.action.outTextForGroup(gid, T:Get("LOGISTICS_LOAD_ONLY_FRIENDLY"), 10)
 					return
 				end
@@ -68191,7 +69079,7 @@ end
 							didLandingEvent = true
 							local landingZone = zone
 							SCHEDULER:New(nil,function()
-								if landingZone and landingZone.wasBlue and un:isExist() then
+								if landingZone and landingZone.side == 2 and un:isExist() then
 									local landingEvent = {
 										id = world.event.S_EVENT_LAND,
 										time = timer.getAbsTime(),
@@ -70403,7 +71291,7 @@ function LogisticCommander:_warnIfSupplyCarrierTakesOffEmpty(groupid, unitType, 
 
 		local zn = self.battleCommander:getZoneOfUnit(un:getName())
 
-		if zn and (zn.side == un:getCoalition() or (un:getCoalition() == 2 and zn.wasBlue)) then
+		if zn and zn.side == un:getCoalition() then
 			for _, v in ipairs(self.supplyZones) do
 				if v == zn.zone then
 					warnIfNotLoaded(zoneSupplyCarrier)
@@ -70471,7 +71359,7 @@ function LogisticCommander:init()
 					if zn then
 						local isDifferentSide = zn.side ~= un:getCoalition()
 						
-						if isDifferentSide and not zn.wasBlue and not zn.isHidden then
+						if isDifferentSide and not zn.isHidden then
 							self.context:_rejectPlayerSpawn(event, player, plist, L10N:Format("PVP_CANNOT_SPAWN_IN_ZONE", gr:getName()), gr, L10N:FormatForLocale(playerLocale, "PVP_CANNOT_SPAWN_IN_ZONE", gr:getName()))
 							return
 						else
@@ -74650,6 +75538,7 @@ local function _spawnDynamicSupportFromGround(templateName, spawnName, originCoo
         local homebase, spots = _pickFriendlySupportAirbase(originCoord, 2, templateName, termType, excludedAirbases)
         if not homebase or not spots then return nil end
         local homebaseName = homebase.GetName and homebase:GetName() or tostring(homebase)
+		bc:_prepareBlueAiWarehouseSpawn(templateName, homebase)
 
         local function spawnWith(method)
 	        local callbackGroupLike = nil
@@ -77169,6 +78058,19 @@ SCHEDULER:New(nil, function()
 
 FootholdMantis = MANTIS:New("Foothold MANTIS","Red SAM","Red EWR",nil,"red",true,nil)
 
+local son9Profile = FootholdMantis.SamData["SON-9"]
+FootholdMantis.SamData["Red SAM AAA 3"] = son9Profile
+FootholdMantis.SamData["Red SAM AAA 4"] = son9Profile
+
+local function includeMantisGroup(group)
+	local aaaVariant = group:GetName():match("^Red SAM AAA%s*(%d*)")
+	if aaaVariant == nil then return true end
+	return aaaVariant == "3" or aaaVariant == "4"
+end
+
+FootholdMantis.SAM_Group:FilterFunction(includeMantisGroup):FilterOnce()
+FootholdMantis.EWR_Group:FilterFunction(includeMantisGroup):FilterOnce()
+
 --FootholdMantis:SetSAMRange(100)
 FootholdMantis:SetDetectInterval(15)
 FootholdMantis:SetAccousticDetectionOn(3000)
@@ -77184,7 +78086,10 @@ end
 
 WarehouseExtraAirbases = {}
 WarehousePersistence = {}
+WarehousePersistence._suspendedWarehouseHandled = {}
 do
+	local SUSPENDED_WAREHOUSE_REPAIR_THRESHOLD = 500
+	local SUSPENDED_WAREHOUSE_REFILL_AMOUNT = 500
 
 	local function _shouldSkip(name)
 		if not name or name == "" then return true end
@@ -77210,7 +78115,7 @@ do
 		return true
 	end
 
-    local function _airbases(zonesTbl)
+    local function _airbases(zonesTbl, includeSuspended)
         local zs = zonesTbl
         if zs and zs.zones then zs = zs.zones end
         zs = zs or zones or {}
@@ -77220,7 +78125,7 @@ do
             if z and z.airbaseName and z.LogisticCenter then
 				logistic[z.airbaseName] = true
 			end
-            if z and z.side == 2 and z.active and not z.isHidden and not z.LogisticCenter then
+            if z and z.side == 2 and z.active and (includeSuspended or not z.suspended) and not z.isHidden and not z.LogisticCenter then
                 local n = z.airbaseName
                 if n and not logistic[n] and not _shouldSkip(n) and not seen[n] then
                     seen[n] = true
@@ -77237,6 +78142,245 @@ do
         table.sort(names)
         return names
     end
+
+	local WAREHOUSE_HEALTH_EMPTY_LEVEL = 5
+	local WAREHOUSE_HEALTH_LOW_LEVEL = 50
+	local WAREHOUSE_HEALTH_EMPTY_RATIO = 0.90
+	local WAREHOUSE_HEALTH_LOW_RATIO = 0.10
+	local WAREHOUSE_HEALTH_UNLIMITED = 1073741823
+	local WAREHOUSE_HEALTH_CATEGORIES = {
+		{ key = "AA_MISSILES", full = "A/A MISSILES", short = "A/A" },
+		{ key = "AG_MISSILES", full = "A/G MISSILES", short = "A/G" },
+		{ key = "AG_ROCKETS", full = "ROCKETS", short = "RKT" },
+		{ key = "FUEL_TANKS", full = "FUEL TANKS", short = "TNK" },
+		{ key = "AG_GUIDED_BOMBS", full = "G-BOMBS", short = "G-B" },
+		{ key = "AG_BOMBS", full = "U-BOMBS", short = "U-B" },
+	}
+	local WAREHOUSE_HEALTH_CATEGORY_BY_KEY = {}
+	for _, category in ipairs(WAREHOUSE_HEALTH_CATEGORIES) do
+		WAREHOUSE_HEALTH_CATEGORY_BY_KEY[category.key] = category
+	end
+
+	function WarehousePersistence.FormatHealthLabel(categoryKeys)
+		local count = #(categoryKeys or {})
+		if count == 1 then
+			return "LOW: " .. WAREHOUSE_HEALTH_CATEGORY_BY_KEY[categoryKeys[1]].full
+		end
+		if count >= 2 and count <= 3 then
+			local labels = {}
+			for i = 1, count do
+				labels[i] = WAREHOUSE_HEALTH_CATEGORY_BY_KEY[categoryKeys[i]].short
+			end
+			return "LOW: " .. table.concat(labels, " ")
+		end
+		return L10N:Get("ZONE_LABEL_LOW_WAREHOUSE")
+	end
+
+	function WarehousePersistence.ClassifyHealthCounts(allStats, operationalStats)
+		local allCount = allStats.count or 0
+		local operationalCount = operationalStats.count or 0
+		local allEmptyRatio = allCount > 0 and (allStats.under5 or 0) / allCount or 0
+		local operationalEmptyRatio = operationalCount > 0 and (operationalStats.under5 or 0) / operationalCount or 0
+		if allEmptyRatio >= WAREHOUSE_HEALTH_EMPTY_RATIO
+			or operationalEmptyRatio >= WAREHOUSE_HEALTH_EMPTY_RATIO
+		then
+			return "EMPTY"
+		end
+		local allLowRatio = allCount > 0 and (allStats.under50 or 0) / allCount or 0
+		if (operationalStats.under50 or 0) > 0 or allLowRatio >= WAREHOUSE_HEALTH_LOW_RATIO then
+			return "LOW"
+		end
+		return "NORMAL"
+	end
+
+	local function _warehouseHealthResourceKey(item, resourceMap)
+		if type(item) == "string" then
+			local mapped = resourceMap and resourceMap[item]
+			if type(mapped) == "table"
+				and ((tonumber(mapped[1]) or 0) ~= 0 or (tonumber(mapped[2]) or 0) ~= 0
+					or (tonumber(mapped[3]) or 0) ~= 0 or (tonumber(mapped[4]) or 0) ~= 0)
+			then
+				return { tonumber(mapped[1]) or 0, tonumber(mapped[2]) or 0, tonumber(mapped[3]) or 0, tonumber(mapped[4]) or 0 }
+			end
+		end
+		return _getWarehouseItemKey(item)
+	end
+
+	function WarehousePersistence.BuildHealthCatalog()
+		if WarehousePersistence._healthCatalog then return WarehousePersistence._healthCatalog end
+		local resourceMap = Warehouse.getResourceMap()
+		local forbidden = {}
+		for _, item in ipairs(ForbiddWeaponsInAllEra or {}) do forbidden[item] = true end
+		local rockets = {}
+		for _, item in ipairs(WEAPONSLIST.GetItems("AG_ROCKETS") or {}) do rockets[item] = true end
+		local operationalNames, categoriesByName = {}, {}
+		for _, category in ipairs(WAREHOUSE_HEALTH_CATEGORIES) do
+			for _, item in ipairs(WEAPONSLIST.GetItems(category.key) or {}) do
+				operationalNames[item] = true
+				categoriesByName[item] = categoriesByName[item] or {}
+				categoriesByName[item][category.key] = true
+			end
+		end
+		if Era == "Modern" and AllowMods == true then
+			for _, item in ipairs(WEAPONSLIST.GetItems("MODS") or {}) do operationalNames[item] = true end
+		end
+		for _, item in ipairs(WarehouseWeaponCaps or {}) do operationalNames[item] = true end
+		local operationalIds = {}
+		for _, key in pairs(BattleCommander.BlueAiWarehouseEquipmentByClsid or {}) do
+			operationalIds[bc:_blueAiWarehouseKeyId(key)] = true
+		end
+
+		local byId, sourceNames = {}, {}
+		for _, item in ipairs(WEAPONSLIST.GetAllItems() or {}) do
+			if not forbidden[item] then
+				sourceNames[item] = true
+				local key = _warehouseHealthResourceKey(item, resourceMap)
+				local id = bc:_blueAiWarehouseKeyId(key)
+				local entry = byId[id]
+				if not entry then
+					entry = { id = id, key = key, scale = 0, operational = false, categories = {} }
+					byId[id] = entry
+				end
+				local scale = rockets[item] and 3 or 1
+				if StrictSmartWeaponsInventory == true and _isStrictSmartWeapon(item) then scale = scale / 2 end
+				entry.scale = entry.scale + scale
+				if operationalNames[item] or operationalIds[id] then entry.operational = true end
+				for categoryKey in pairs(categoriesByName[item] or {}) do
+					entry.categories[categoryKey] = true
+				end
+			end
+		end
+		local items = {}
+		for _, entry in pairs(byId) do items[#items + 1] = entry end
+		table.sort(items, function(a, b) return a.id < b.id end)
+		WarehousePersistence._healthCatalog = { items = items, sourceNames = sourceNames, resourceMap = resourceMap }
+		return WarehousePersistence._healthCatalog
+	end
+
+	function WarehousePersistence.CaptureRemainingWeaponsAfterClear(storage, clearSet)
+		local catalog = WarehousePersistence.BuildHealthCatalog()
+		local unmanaged = WarehousePersistence._healthUnmanagedAfterClear or {}
+		WarehousePersistence._healthUnmanagedAfterClear = unmanaged
+		local _, _, weapons = storage:GetInventory()
+		local added = 0
+		for name, rawQty in pairs(weapons or {}) do
+			local qty = tonumber(rawQty) or 0
+			if type(name) == "string" and name:find("weapons.", 1, true) == 1 and qty > 0 then
+				if clearSet and clearSet[name] then
+					storage:SetItem(_getWarehouseItemKey(name), 0)
+				elseif qty ~= WAREHOUSE_HEALTH_UNLIMITED and not catalog.sourceNames[name] and unmanaged[name] == nil then
+					unmanaged[name] = qty
+					added = added + 1
+				end
+			end
+		end
+		if added > 0 then
+			env.info(string.format("[WarehouseHealth] Recorded %d unmanaged resource(s) remaining after clear", added))
+		end
+		return added
+	end
+
+	local function _warehouseHealthStats()
+		return { count = 0, under5 = 0, under50 = 0, min = nil }
+	end
+
+	local function _warehouseHealthAdd(stats, qty)
+		stats.count = stats.count + 1
+		if qty < WAREHOUSE_HEALTH_EMPTY_LEVEL then stats.under5 = stats.under5 + 1 end
+		if qty < WAREHOUSE_HEALTH_LOW_LEVEL then stats.under50 = stats.under50 + 1 end
+		if stats.min == nil or qty < stats.min then stats.min = qty end
+	end
+
+	function WarehousePersistence.EvaluateHealth(zoneName)
+		local zoneObj = bc:getZoneByName(zoneName)
+		if not zoneObj then return { zone = zoneName, state = "IGNORED", reason = "missing-zone" } end
+		if zoneObj.side ~= coalition.side.BLUE then return { zone = zoneName, state = "IGNORED", reason = "not-blue" } end
+		if not zoneObj.active then return { zone = zoneName, state = "IGNORED", reason = "inactive" } end
+		if zoneObj.isHidden then return { zone = zoneName, state = "IGNORED", reason = "hidden" } end
+		if zoneObj.LogisticCenter then return { zone = zoneName, state = "IGNORED", reason = "logistic" } end
+		if zoneObj.suspended then return { zone = zoneName, state = "IGNORED", reason = "suspended" } end
+		if not zoneObj.airbaseName then return { zone = zoneName, state = "IGNORED", reason = "missing-airbase" } end
+		local storage = STORAGE:FindByName(zoneObj.airbaseName)
+		if not storage then return { zone = zoneName, state = "IGNORED", reason = "missing-storage" } end
+
+		local allStats = _warehouseHealthStats()
+		local operationalStats = _warehouseHealthStats()
+		local lowCategoryFlags = {}
+		local skippedUnlimited = 0
+		for _, entry in ipairs(WarehousePersistence.BuildHealthCatalog().items) do
+			local rawQty = tonumber(storage:GetItemAmount(entry.key)) or 0
+			if rawQty < 0 or rawQty == WAREHOUSE_HEALTH_UNLIMITED then
+				skippedUnlimited = skippedUnlimited + 1
+			else
+				local qty = rawQty / entry.scale
+				_warehouseHealthAdd(allStats, qty)
+				if entry.operational then
+					_warehouseHealthAdd(operationalStats, qty)
+					if qty < WAREHOUSE_HEALTH_LOW_LEVEL then
+						for categoryKey in pairs(entry.categories) do lowCategoryFlags[categoryKey] = true end
+					end
+				end
+			end
+		end
+		local state = WarehousePersistence.ClassifyHealthCounts(allStats, operationalStats)
+		local lowCategories = {}
+		if state == "LOW" then
+			for _, category in ipairs(WAREHOUSE_HEALTH_CATEGORIES) do
+				if lowCategoryFlags[category.key] then lowCategories[#lowCategories + 1] = category.key end
+			end
+		end
+		return {
+			zone = zoneName,
+			state = state,
+			all = allStats,
+			operational = operationalStats,
+			skippedUnlimited = skippedUnlimited,
+			lowCategories = lowCategories,
+			categorySignature = table.concat(lowCategories, "|"),
+			lowLabel = state == "LOW" and WarehousePersistence.FormatHealthLabel(lowCategories) or nil,
+		}
+	end
+
+	function WarehousePersistence.ScanHealth(zoneName)
+		local result = WarehousePersistence.EvaluateHealth(zoneName)
+		WarehouseLowSupplies = WarehouseLowSupplies or {}
+		local previous = WarehouseLowSupplies[zoneName]
+		result.changed = previous == nil or previous.state ~= result.state or previous.reason ~= result.reason
+			or previous.categorySignature ~= result.categorySignature
+		result.previousState = previous and previous.state or nil
+		WarehouseLowSupplies[zoneName] = result
+		if result.changed then
+			local zoneObj = bc:getZoneByName(zoneName)
+			if zoneObj then zoneObj:updateLabel() end
+		end
+		return result
+	end
+
+	function WarehousePersistence.StartHealthScanner(zonesTbl, opts)
+		if WarehousePersistence._healthScannerStarted then return false end
+		local zs = zonesTbl
+		if zs and zs.zones then zs = zs.zones end
+		zs = zs or zones or {}
+		local queue = {}
+		for _, zoneObj in pairs(zs) do
+			if zoneObj and zoneObj.zone then queue[#queue + 1] = zoneObj.zone end
+		end
+		table.sort(queue)
+		if #queue == 0 then return false end
+		WarehousePersistence._healthScannerStarted = true
+		WarehousePersistence._healthQueue = queue
+		WarehousePersistence._healthQueueIndex = 1
+		local stepDelay = tonumber(opts and opts.healthStepDelay) or 1
+		local startDelay = tonumber(opts and opts.healthDelay) or 12
+		local function _scanNext(_, scheduledTime)
+			local index = WarehousePersistence._healthQueueIndex
+			WarehousePersistence.ScanHealth(queue[index])
+			WarehousePersistence._healthQueueIndex = index < #queue and index + 1 or 1
+			return scheduledTime + stepDelay
+		end
+		WarehousePersistence._healthScheduleId = timer.scheduleFunction(_scanNext, nil, timer.getTime() + startDelay)
+		return true
+	end
 
 	local function _pathFile(opts)
 		local path = (opts and opts.path) or (lfs and lfs.writedir and (lfs.writedir() .. "Missions\\Saves")) or nil
@@ -77299,17 +78443,6 @@ do
 			end
 		end
 
-		local zs = zonesTbl
-		if zs and zs.zones then zs = zs.zones end
-		zs = zs or zones or {}
-		local zoneByAirbase = {}
-		for _, z in pairs(zs) do
-			if z and z.airbaseName and z.side == 2 and z.active and not z.isHidden and not z.LogisticCenter then
-				zoneByAirbase[z.airbaseName] = z.zone
-			end
-		end
-		local lowAvg = {}
-
 		local airbaseIndex = 1
 		local function _saveNextAirbase()
 			local ab = airbases[airbaseIndex]
@@ -77317,22 +78450,12 @@ do
 			if ab then
 				local st = STORAGE:FindByName(ab)
 				if st and st.GetInventory then
-					local sumQty, countQty, nonZeroEntries, hasUnlimited = 0, 0, 0, false
 					local _, _, wp = st:GetInventory()
 					for item, qty in pairs(wp) do
 						local isWeaponItem = (type(item) == "string" and string.find(item, "weapons.", 1, true) == 1)
 						if isWeaponItem then
 							qty = tonumber(qty) or 0
-							if qty < 0 or qty == 1073741823 then
-								hasUnlimited = true
-							else
-								if qty > 0 then
-									sumQty = sumQty + qty
-									countQty = countQty + 1
-								end
-							end
 							if qty ~= 0 and qty ~= 1073741823 then
-								nonZeroEntries = nonZeroEntries + 1
 								out[#out + 1] = string.format('%s;W;%s;%d', ab, tostring(item), qty)
 							end
 						end
@@ -77341,25 +78464,9 @@ do
 						for i = 1, #wsItems do
 							local w = wsItems[i]
 							local qty = tonumber(st:GetItemAmount(w)) or 0
-							if qty < 0 or qty == 1073741823 then
-								hasUnlimited = true
-							else
-								if qty > 0 then
-									sumQty = sumQty + qty
-									countQty = countQty + 1
-								end
-							end
 							if qty ~= 0 and qty ~= 1073741823 then
-								nonZeroEntries = nonZeroEntries + 1
 								out[#out + 1] = string.format('%s;W;{%d,%d,%d,%d};%d', ab, tonumber(w[1]) or 0, tonumber(w[2]) or 0, tonumber(w[3]) or 0, tonumber(w[4]) or 0, qty)
 							end
-						end
-					end
-					local zoneName = zoneByAirbase[ab]
-					if zoneName and not hasUnlimited then
-						local avg = (countQty > 0) and (sumQty / countQty) or 0
-						if nonZeroEntries < 500 or avg < 50 then
-							lowAvg[zoneName] = { avg = avg, entries = nonZeroEntries }
 						end
 					end
 					saved = saved + 1
@@ -77378,26 +78485,6 @@ do
 			WarehousePersistence._saveRunning = nil
 			local ok = UTILS.SaveToFile(path, filename, table.concat(out, '\n') .. '\n')
 			if ok then env.info(string.format('[WarehousePersistence] Saved %d storages to %s\\%s', saved, tostring(path), tostring(filename))) end
-
-			local zonesToUpdate = {}
-			WarehouseLowSupplies = WarehouseLowSupplies or {}
-			for zn in pairs(WarehouseLowSupplies) do
-				zonesToUpdate[zn] = true
-				if not lowAvg[zn] then
-					WarehouseLowSupplies[zn] = nil
-				end
-			end
-			for zn in pairs(lowAvg) do
-				WarehouseLowSupplies[zn] = lowAvg[zn]
-				zonesToUpdate[zn] = true
-			end
-			for _, zn in pairs(zoneByAirbase) do
-				zonesToUpdate[zn] = true
-			end
-			for zn in pairs(zonesToUpdate) do
-				local z = bc:getZoneByName(zn) ; if z then z:updateLabel() end
-			end
-			if not next(WarehouseLowSupplies) then WarehouseLowSupplies = nil end
 			return ok
 		end
 		return _saveNextAirbase()
@@ -77424,13 +78511,13 @@ do
 			end
 		end
 		local allowed = {}
-		for _, ab in ipairs(opts.airbases or _airbases(zonesTbl)) do
+		for _, ab in ipairs(opts.airbases or _airbases(zonesTbl, true)) do
 			if not logistic[ab] then
 				allowed[ab] = true
 			end
 		end
 		local ok, lines = UTILS.LoadFromFile(path, filename)
-		if not ok or type(lines) ~= 'table' then return false end
+		if not ok or type(lines) ~= 'table' then lines = {} end
 		local byBase = {}
 		for i = 2, #lines do
 			local row = lines[i]
@@ -77467,7 +78554,7 @@ do
 				repairItems[#repairItems + 1] = item
 			end
 			for ab, z in pairs(suspendedBlueZoneByAirbase) do
-				if allowed[ab] and not _shouldSkip(ab) then
+				if not WarehousePersistence._suspendedWarehouseHandled[ab] and not _shouldSkip(ab) then
 					local st = STORAGE:FindByName(ab)
 					if st and st.GetItemAmount and st.AddItem then
 						local sumQty, countQty, hasUnlimited = 0, 0, false
@@ -77481,14 +78568,15 @@ do
 							end
 						end
 						local avg = (countQty > 0) and (sumQty / countQty) or 0
-						if not hasUnlimited and avg < 100 then
+						if not hasUnlimited and avg < SUSPENDED_WAREHOUSE_REPAIR_THRESHOLD then
 							for _, item in ipairs(repairItems) do
-								st:AddItem(_getWarehouseItemKey(item), 100)
+								st:AddItem(_getWarehouseItemKey(item), SUSPENDED_WAREHOUSE_REFILL_AMOUNT)
 							end
 							repaired = repaired + 1
-							env.info(string.format('[WarehousePersistence] Repaired suspended storage %s avg=%.1f items=%d', tostring(ab), avg, countQty))
+							env.info(string.format('[WarehousePersistence] Repaired suspended storage %s avg=%.1f added=%d items=%d', tostring(ab), avg, SUSPENDED_WAREHOUSE_REFILL_AMOUNT, countQty))
 							if WarehouseLowSupplies then WarehouseLowSupplies[z.zone] = nil end
 						end
+						WarehousePersistence._suspendedWarehouseHandled[ab] = true
 					end
 				end
 			end
@@ -77526,6 +78614,8 @@ return loaded > 0 or repaired > 0
 				SCHEDULER:New(nil, _save, {}, saveDelay, interval)
 			end
 		end
+		if opts.healthDelay == nil then opts.healthDelay = loadDelay >= 0 and loadDelay + 2 or 2 end
+		WarehousePersistence.StartHealthScanner(zonesTbl or zones, opts)
 		return true
 	end
 end
@@ -77781,8 +78871,9 @@ WEAPONSLIST.Items = {
 		'weapons.missiles.AGM_114N',
 		'weapons.missiles.AM39',
 		'weapons.missiles.CHAP_AIM92',
-		'{4,4,8,477}',
-		'{4,4,8,522}',
+		{4,4,8,477},
+		{4,4,8,522},
+		{4,4,8,474},
     },
 
 
@@ -77871,6 +78962,7 @@ WEAPONSLIST.Items = {
     -- AG BOMBS (UNGUIDED / CLUSTER / GENERAL)
         
 		'weapons.bombs.Generic Crate [20000lb]',
+		'weapons.bombs.GBU_24E',
         'weapons.bombs.250-2',
         'weapons.bombs.250-3',
         'weapons.bombs.AB_250_2_SD_10A',
@@ -78002,7 +79094,6 @@ WEAPONSLIST.Items = {
 		'weapons.bombs.PTAB_2_5KO',
 		'weapons.bombs.APC BTR-80 Skid [23826lb]',
 		'weapons.bombs.ART GVOZDIKA [34720lb]',
-		'weapons.bombs.ART GVOZDIKA [34720lb]',
 		'weapons.bombs.BLU-18/B_GROUP',
 		'weapons.bombs.BLU-3B_R_GROUP_R',
 		'weapons.bombs.BLU-3_R_GROUP_R',
@@ -78012,6 +79103,9 @@ WEAPONSLIST.Items = {
 		'weapons.bombs.HEMTT TFFT [34400lb]',
 		'weapons.bombs.IFV BMD-1 Skid [17930lb]',
 		'weapons.bombs.SAM CHAPARRAL Skid [21516lb]',
+		{4,5,32,3003},
+		{4,5,32,3005},
+		{4,5,32,3189},
     },
 
 [WEAPONSLIST.ItemCategory.AG_GUIDED_BOMBS] = {
@@ -78056,6 +79150,7 @@ WEAPONSLIST.Items = {
 		'weapons.bombs.OH6_SMOKE_YELLOW',
 		'weapons.bombs.SONOBUOY',
 		'weapons.bombs.AO_25SL',
+		{4,4,8,472},
 
     },
 
@@ -78172,6 +79267,63 @@ WEAPONSLIST.Items = {
 
 [WEAPONSLIST.ItemCategory.MISC] = {
     -- MISC (ADAPTERS / PODS / GUNMOUNTS / OTHER)
+		{4,15,45,3088},
+		{4,15,46,3061},
+		{4,15,46,3109},
+		{4,15,47,3095},
+        -- Hercules baseline equipment and cargo
+		"weapons.containers.Hercules_Battle_Station_TGP",
+		"weapons.containers.{Herc_GAU_23A_Chain_Gun}",
+		"weapons.containers.{Herc_M61_Vulcan_Rotary_Cannon}",
+		"weapons.bombs.Squad 30 x Soldier [7950lb]",
+		"weapons.bombs.APC M1043 HMMWV Armament Air [7023lb]",
+		"weapons.bombs.APC M1043 HMMWV Armament Skid [6912lb]",
+		"weapons.bombs.ATGM M1045 HMMWV TOW Air [7183lb]",
+		"weapons.bombs.ATGM M1045 HMMWV TOW Skid [7073lb]",
+		"weapons.bombs.AAA Vulcan M163 Air [21666lb]",
+		"weapons.bombs.AAA Vulcan M163 Skid [21577lb]",
+		"weapons.bombs.SPG M1128 Stryker MGS [33036lb]",
+		"weapons.bombs.ATGM M1134 Stryker [30337lb]",
+		"weapons.bombs.APC LAV-25 Air [22520lb]",
+		"weapons.bombs.M1025 HMMWV Air [6160lb]",
+		"weapons.bombs.M1025 HMMWV Skid [6050lb]",
+		"weapons.bombs.SAM Avenger M1097 Air [7200lb]",
+		"weapons.bombs.SAM Avenger M1097 Skid [7090lb]",
+		"weapons.bombs.APC Cobra Air [10912lb]",
+		"weapons.bombs.APC M113 Air [21624lb]",
+		"weapons.bombs.Tanker M978 HEMTT [34000lb]",
+		"weapons.bombs.IFV M2A2 Bradley [34720lb]",
+		"weapons.bombs.IFV MCV-80 [34720lb]",
+		"weapons.bombs.IFV BMP-1 [23232lb]",
+		"weapons.bombs.IFV BMP-2 [25168lb]",
+		"weapons.bombs.ARV BRDM-2 Air [12320lb]",
+		"weapons.bombs.ARV BRDM-2 Skid [12210lb]",
+		"weapons.bombs.APC BTR-80 Air [23936lb]",
+		"weapons.bombs.SAM ROLAND ADS [34720lb]",
+		"weapons.bombs.SAM ROLAND LN [34720b]",
+		"weapons.bombs.SAM SA-13 STRELA [21624lb]",
+		"weapons.bombs.AAA ZSU-23-4 Shilka [32912lb]",
+		"weapons.bombs.SAM SA-19 Tunguska 2S6 [34720lb]",
+		"weapons.bombs.Transport UAZ-469 Air [3747lb]",
+		"weapons.bombs.Transport URAL-375 [14815lb]",
+		"weapons.bombs.Transport M818 [16000lb]",
+		"weapons.bombs.Transport Tigr Air [15900lb]",
+		"weapons.bombs.Transport Tigr Skid [15730lb]",
+		"weapons.bombs.SAM CHAPARRAL Air [21624lb]",
+		"weapons.bombs.SAM LINEBACKER [34720lb]",
+		"weapons.bombs.IFV MARDER [34720lb]",
+		"weapons.bombs.IFV TPZ FUCH [33440lb]",
+		"weapons.bombs.IFV BMD-1 Air [18040lb]",
+		"weapons.bombs.IFV BTR-D Air [18040lb]",
+		"weapons.bombs.IFV BTR-D Skid [17930lb]",
+		"weapons.bombs.ART 2S9 NONA Air [19140lb]",
+		"weapons.bombs.ART 2S9 NONA Skid [19030lb]",
+		"weapons.bombs.APC MTLB Air [26400lb]",
+		"weapons.bombs.APC MTLB Skid [26290lb]",
+		"weapons.bombs.EWR SBORKA Air [21624lb]",
+		"weapons.bombs.EWR SBORKA Skid [21624lb]",
+		"weapons.bombs.APC BTR-82A Air [24998lb]",
+		"weapons.bombs.APC BTR-82A Skid [24888lb]",
         -- new
 		-- A-4E-C / OH-6A / Bronco warehouse support
 		'weapons.adapters.',
@@ -78226,7 +79378,6 @@ WEAPONSLIST.Items = {
         'weapons.adapters.B-8V20A',
         'weapons.adapters.KMGU-2',
         'weapons.adapters.MBD-3-LAU-61',
-        'weapons.adapters.MBD-3-LAU-68',
         'weapons.adapters.OH-58D_Gorgona',
         'weapons.adapters.kmgu-2',
         'weapons.adapters.lau-88',
@@ -78324,7 +79475,6 @@ WEAPONSLIST.Items = {
         'weapons.containers.SORBCIJA_L',
         'weapons.containers.SORBCIJA_R',
         'weapons.containers.SPRD-99',
-        'weapons.containers.SPRD_99Twin',
         'weapons.containers.SPS-141',
         'weapons.containers.SPS-141-100',
         'weapons.containers.Spear',
@@ -78334,8 +79484,6 @@ WEAPONSLIST.Items = {
         'weapons.containers.aaq-28LEFT litening',
         'weapons.containers.ah-64d_radar',
         'weapons.containers.ais-pod-t50',
-        'weapons.containers.ais-pod-t50_l',
-        'weapons.containers.ais-pod-t50_r',
         'weapons.containers.alq-184long',
         'weapons.containers.dlpod_akg',
         'weapons.containers.fullCargoSeats',
@@ -78344,7 +79492,6 @@ WEAPONSLIST.Items = {
         'weapons.containers.lau-105',
         'weapons.containers.leftSeat',
         'weapons.containers.oh-58-brauning',
-        'weapons.containers.pl5eii',
         'weapons.containers.rearCargoSeats',
         'weapons.containers.rightSeat',
         'weapons.containers.sa342_dipole_antenna',
@@ -78397,7 +79544,6 @@ WEAPONSLIST.Items = {
         'weapons.containers.{INV-SMOKE-BLUE}',
         'weapons.containers.{INV-SMOKE-GREEN}',
         'weapons.containers.{INV-SMOKE-ORANGE}',
-        'weapons.containers.{INV-SMOKE-RED}',
         'weapons.containers.{INV-SMOKE-WHITE}',
         'weapons.containers.{INV-SMOKE-YELLOW}',
         'weapons.containers.{M2KC_AAF}',
@@ -78434,14 +79580,12 @@ WEAPONSLIST.Items = {
         'weapons.containers.{SUU_23_POD}',
         'weapons.containers.{UH60L_M134_GUNNER}',
         'weapons.containers.{UH60L_M2_GUNNER}',
-        'weapons.containers.{UH60L_M60_GUNNER}',
         'weapons.containers.{UH60_GAU19_LEFT}',
         'weapons.containers.{UH60_GAU19_RIGHT}',
         'weapons.containers.{UH60_M134_LEFT}',
         'weapons.containers.{UH60_M134_RIGHT}',
         'weapons.containers.{UH60_M230_LEFT}',
         'weapons.containers.{UH60_M230_RIGHT}',
-        'weapons.containers.{UPK-23-250 MiG-21}',
         'weapons.containers.{US_M10_SMOKE_TANK_BLUE}',
         'weapons.containers.{US_M10_SMOKE_TANK_GREEN}',
         'weapons.containers.{US_M10_SMOKE_TANK_ORANGE}',
@@ -78894,7 +80038,7 @@ WEAPONSLIST.Items = {
 		 {4,4,8,11212},
 		 {4,4,8,11210},
 		 {4,4,8,11211},
-		 {4,4,8,11209},
+		 {4,4,8,11209}
 	
     },
 }
@@ -79125,38 +80269,11 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.missiles.YJ-83",
 		"weapons.missiles.AGM-154A",
 
-		"weapons.bombs.AAA GEPARD [34720lb]",
-		"weapons.bombs.AAA Vulcan M163 Air [21666lb]",
-		"weapons.bombs.AAA Vulcan M163 Skid [21577lb]",
-		"weapons.bombs.AH6_SMOKE_BLUE",
-		"weapons.bombs.AH6_SMOKE_GREEN",
-		"weapons.bombs.AH6_SMOKE_RED",
-		"weapons.bombs.AH6_SMOKE_YELLOW",
 		"weapons.bombs.AO_2_5RT",
-		"weapons.bombs.APC BTR-80 Air [23936lb]",
-		"weapons.bombs.APC BTR-82A Air [24998lb]",
-		"weapons.bombs.APC BTR-82A Skid [24888lb]",
-		"weapons.bombs.APC Cobra Air [10912lb]",
-		"weapons.bombs.APC Cobra Skid [10802lb]",
-		"weapons.bombs.APC LAV-25 Air [22520lb]",
-		"weapons.bombs.APC LAV-25 Skid [22514lb]",
-		"weapons.bombs.APC M1043 HMMWV Armament Air [7023lb]",
-		"weapons.bombs.APC M1126 Stryker ICV [29542lb]",
-		"weapons.bombs.APC M113 Air [21624lb]",
-		"weapons.bombs.APC M113 Skid [21494lb]",
-		"weapons.bombs.APC MTLB Air [26400lb]",
-		"weapons.bombs.APC MTLB Skid [26290lb]",
-		"weapons.bombs.ART 2S9 NONA Air [19140lb]",
-		"weapons.bombs.ARV BRDM-2 Air [12320lb]",
-		"weapons.bombs.ARV BRDM-2 Skid [12210lb]",
-		"weapons.bombs.ATGM M1045 HMMWV TOW Air [7183lb]",
-		"weapons.bombs.ATGM M1134 Stryker [30337lb]",
 		"weapons.bombs.BLU-3B_OLD",
 		"weapons.bombs.BLU-4B_OLD",
 		"weapons.bombs.BLU_3B_GROUP",
 		"weapons.bombs.BLU_4B_GROUP",
-		"weapons.bombs.EWR SBORKA Air [21624lb]",
-		"weapons.bombs.EWR SBORKA Skid [21624lb]",
 		"weapons.bombs.f111_gbu_10",
 		"weapons.bombs.f111_gbu_12",
 		"weapons.bombs.f111_gbu_16",
@@ -79168,15 +80285,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.bombs.GBU_17",
 		"weapons.bombs.GBU_29",
 		"weapons.bombs.GBU_30",
-		"weapons.bombs.GBU_24E",
-		"weapons.bombs.IFV BMD-1 Air [18040lb]",
-		"weapons.bombs.IFV BMP-2 [25168lb]",
-		"weapons.bombs.IFV BMP-3 [32912lb]",
-		"weapons.bombs.IFV BTR-D Air [18040lb]",
-		"weapons.bombs.IFV BTR-D Skid [17930lb]",
-		"weapons.bombs.IFV M2A2 Bradley [34720lb]",
-		"weapons.bombs.IFV MCV-80 [34720lb]",
-		"weapons.bombs.IFV TPZ FUCH [33440lb]",
 		"weapons.bombs.jas39_gbu-10",
 		"weapons.bombs.jas39_gbu-12",
 		"weapons.bombs.jas39_gbu-16",
@@ -79192,7 +80300,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.bombs.LUU_2AB",
 		"weapons.bombs.LUU_2BB",
 		"weapons.bombs.LYSBOMB_CANDLE",
-		"weapons.bombs.M1025 HMMWV Air [6160lb]",
 		"weapons.bombs.m2000d_gbu-10",
 		"weapons.bombs.m2000d_gbu-12",
 		"weapons.bombs.m2000d_gbu-16",
@@ -79213,13 +80320,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.bombs.S_8OM_FLARE_RED",
 		"weapons.bombs.SAB_100_FLARE",
 		"weapons.bombs.SAB_250_FLARE",
-		"weapons.bombs.SAM Avenger M1097 Air [7200lb]",
-		"weapons.bombs.SAM CHAPARRAL Air [21624lb]",
-		"weapons.bombs.SAM ROLAND ADS [34720lb]",
-		"weapons.bombs.SAM ROLAND LN [34720b]",
-		"weapons.bombs.SAM SA-13 STRELA [21624lb]",
-		"weapons.bombs.SPG M1128 Stryker MGS [33036lb]",
-		"weapons.bombs.Squad 30 x Soldier [7950lb]",
 		"weapons.bombs.SU30-KAB-1500T",
 		"weapons.bombs.SU30_244N",
 		"weapons.bombs.Su30_FAB250M62",
@@ -79229,13 +80329,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.bombs.Su30_OFAB100",
 		"weapons.bombs.Su30_OFAB250",
 		"weapons.bombs.toilet_bomb",
-		"weapons.bombs.Transport M818 [16000lb]",
-		"weapons.bombs.Transport Tigr Air [15900lb]",
-		"weapons.bombs.Transport Tigr Skid [15730lb]",
-		"weapons.bombs.Transport UAZ-469 Air [3747lb]",
-		"weapons.bombs.Transport UAZ-469 Skid [3630lb]",
-		"weapons.bombs.Transport URAL-375 [14815lb]",
-
 		"weapons.nurs.AGR_20_M151_unguided",
 		"weapons.nurs.AGR_20_M282_unguided",
 		"weapons.nurs.ANDR0ID_SONO_IL",
@@ -79494,11 +80587,7 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.adapters.vap_ammo_box_wood_small",
 		"weapons.adapters.WingLauncher",
 
-		"weapons.containers.2-c9",
 		"weapons.containers.22_RBF.edm",
-		"weapons.containers.2c1",
-		"weapons.containers.2c6m",
-		"weapons.containers.A29B_SMOKE-POD",
 		"weapons.containers.A29B_SMOKE-POD",
 		"weapons.containers.ab-212_cable",
 		"weapons.containers.agrarspray",
@@ -79522,9 +80611,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.Bell47-Floats",
 		"weapons.containers.BLACK",
 		"weapons.containers.BLUE",
-		"weapons.containers.bmd-1",
-		"weapons.containers.bmp-1",
-		"weapons.containers.BTR-80",
 		"weapons.containers.Damocles Targeting Pod",
 		"weapons.containers.ECLAIR-M Pod",
 		"weapons.containers.Elta EL/L 8222",
@@ -79533,23 +80619,13 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.FLIR-STAR-SAFIRE",
 		"weapons.containers.GRAY",
 		"weapons.containers.GREEN",
-		"weapons.containers.HEMTT",
-		"weapons.containers.hemtt_fire",
 		"weapons.containers.Hercules_Battle_Station",
-		"weapons.containers.Hercules_Battle_Station_TGP",
 		"weapons.containers.Hercules_JATO",
-		"weapons.containers.HMMWV_M1025",
-		"weapons.containers.HMMWV_M1043",
-		"weapons.containers.HMMWV_M1045",
-		"weapons.containers.HMMWV_M973",
 		"weapons.containers.HookBell47",
 		"weapons.containers.L-370_Left.edm",
 		"weapons.containers.L-370_Right.edm",
 		"weapons.containers.Legion Pod",
 		"weapons.containers.Litening III Targeting Pod",
-		"weapons.containers.M48",
-		"weapons.containers.M6",
-		"weapons.containers.marder",
 		"weapons.containers.null",
 		"weapons.containers.ORANGE",
 		"weapons.containers.RED",
@@ -79566,7 +80642,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.TLAU_127",
 		"weapons.containers.WHITE",
 		"weapons.containers.YELLOW",
-		"weapons.containers.zsu-23-4",
 		"weapons.containers.{ANDR0ID_M134}",
 		"weapons.containers.{ANDR0ID_M240_TWIN_AFT}",
 		"weapons.containers.{ANDR0ID_M2HB_AFT}",
@@ -79592,8 +80667,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.containers.{GIAT_NC621_SAPHEI_A29B}",
 		"weapons.containers.{GSh_30_1}",
 		"weapons.containers.{Herc_105mm_Howitzer}",
-		"weapons.containers.{Herc_GAU_23A_Chain_Gun}",
-		"weapons.containers.{Herc_M61_Vulcan_Rotary_Cannon}",
 		"weapons.containers.{JAS39_EWS39}",
 		"weapons.containers.{M134 SittingMinigun}",
 		"weapons.containers.{OH-58_M134P_3000}",
@@ -79651,7 +80724,6 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.shells.EB_US_5_56",
 		"weapons.shells.M39_20_TP_T",
 		"weapons.shells.Mauser7.92x57_S.m.K._L",
-		"weapons.shells.Mauser7.92x57_S.m.K._L",
 		"weapons.shells.MG_20x64_APT",
 		"weapons.shells.MG_20x64_HEI",
 
@@ -79667,19 +80739,14 @@ local WEAPONSLIST_MODS_ITEMS = {
 		"weapons.gunmounts.{22_SPPU_reversed}",
 		"weapons.gunmounts.{22_SPPU}",
 		"weapons.gunmounts.{DroneBomb}",
-		{4, 4, 8, 472},
-		{4, 15, 44, 3201},
-		{4, 15, 45, 3088},
-		{4, 15, 46, 3061},
-		{4, 15, 46, 3109},
-		{4, 15, 46, 3205},
-		{4, 15, 46, 3222},
-		{4, 15, 47, 3095},
-		{4, 4, 8, 474},
-		{4, 5, 32, 3003},
-		{4, 5, 32, 3005},
-		{4, 5, 32, 3189},
+		{4,15,44,3201},
+		{4,15,46,3205},
+		{4,15,46,3222},
 	}
+local WEAPONSLIST_MODS_CLEAR_SET = {}
+for _, itemName in ipairs(WEAPONSLIST_MODS_ITEMS) do
+  WEAPONSLIST_MODS_CLEAR_SET[itemName] = true
+end
 
 if AllowMods and Era == "Modern" then
   WEAPONSLIST.Items[WEAPONSLIST.ItemCategory.MODS] = WEAPONSLIST_MODS_ITEMS
@@ -79821,6 +80888,60 @@ local function _wsCategoryForWeapon(name)
   return WEAPONSLIST.ItemCategory.MISC
 end
 
+local function _wsNormalizeRawType(wsType)
+  if type(wsType) ~= "table" then return nil end
+  local normalized = {
+    tonumber(wsType[1]),
+    tonumber(wsType[2]),
+    tonumber(wsType[3]),
+    tonumber(wsType[4]),
+  }
+  if not (normalized[1] and normalized[2] and normalized[3] and normalized[4]) then return nil end
+  if normalized[4] <= 0 then return nil end
+  if normalized[1] == 0 and normalized[2] == 0 and normalized[3] == 0 and normalized[4] == 0 then return nil end
+  return normalized
+end
+
+local function _wsRawTypeId(wsType)
+  local normalized = _wsNormalizeRawType(wsType)
+  if not normalized then return nil end
+  return bc:_blueAiWarehouseKeyId(normalized), normalized
+end
+
+local function _wsCategoryForRawType(wsType)
+  local category, subcategory, family = wsType[1], wsType[2], wsType[3]
+  if category == 1 and subcategory == 3 and family == 43 then
+    return WEAPONSLIST.ItemCategory.FUEL_TANKS
+  end
+  if category == 4 and subcategory == 4 then
+    if family == 7 or family == 34 or family == 100 then
+      return WEAPONSLIST.ItemCategory.AA_MISSILES
+    end
+    if family == 8 or family == 11 or family == 101 then
+      return WEAPONSLIST.ItemCategory.AG_MISSILES
+    end
+  end
+  if category == 4 and subcategory == 5 then
+    if family == 36 then
+      return WEAPONSLIST.ItemCategory.AG_GUIDED_BOMBS
+    end
+    if family ~= 32 then
+      return WEAPONSLIST.ItemCategory.AG_BOMBS
+    end
+  end
+  if category == 4 and subcategory == 7 and family == 33 then
+    return WEAPONSLIST.ItemCategory.AG_ROCKETS
+  end
+  return WEAPONSLIST.ItemCategory.MISC
+end
+
+local function _wsItemLabel(item)
+  if type(item) == "table" then
+    return string.format("{%d,%d,%d,%d}", tonumber(item[1]) or 0, tonumber(item[2]) or 0, tonumber(item[3]) or 0, tonumber(item[4]) or 0)
+  end
+  return tostring(item)
+end
+
 local function _wsAddItem(category, name)
   if not (category and name) then return end
   WEAPONSLIST.Items[category] = WEAPONSLIST.Items[category] or {}
@@ -79849,16 +80970,47 @@ function WEAPONSLIST.SyncFromWarehouseLogistics(opts)
   local logMissing = (opts.logMissing ~= false)
   local logAdded = (opts.logAdded ~= false)
 
-  local known = {}
-  for _, list in pairs(WEAPONSLIST.Items or {}) do
-    for _, name in ipairs(list) do
-      known[name] = true
+  local resourceMap = Warehouse.getResourceMap() or {}
+  local registeredWsTypes = {}
+  for _, wsType in pairs(resourceMap) do
+    local wsTypeId = _wsRawTypeId(wsType)
+    if wsTypeId then
+      registeredWsTypes[wsTypeId] = true
     end
   end
 
-  local mods = {}
-  for _, name in ipairs(WEAPONSLIST_MODS_ITEMS or {}) do
-    mods[name] = true
+  local knownNames, knownWsTypes = {}, {}
+  for _, list in pairs(WEAPONSLIST.Items or {}) do
+    for _, item in ipairs(list) do
+      if type(item) == "table" then
+        local wsTypeId = _wsRawTypeId(item)
+        if wsTypeId then
+          knownWsTypes[wsTypeId] = true
+        end
+      else
+        knownNames[item] = true
+        local wsTypeId = _wsRawTypeId(resourceMap[item])
+        if wsTypeId then
+          knownWsTypes[wsTypeId] = true
+        end
+      end
+    end
+  end
+
+  local modNames, modWsTypes = {}, {}
+  for _, item in ipairs(WEAPONSLIST_MODS_ITEMS or {}) do
+    if type(item) == "table" then
+      local wsTypeId = _wsRawTypeId(item)
+      if wsTypeId then
+        modWsTypes[wsTypeId] = true
+      end
+    else
+      modNames[item] = true
+      local wsTypeId = _wsRawTypeId(resourceMap[item])
+      if wsTypeId then
+        modWsTypes[wsTypeId] = true
+      end
+    end
   end
   local allowModWeapons = (Era == "Modern" and AllowMods == true)
 
@@ -79875,11 +81027,15 @@ function WEAPONSLIST.SyncFromWarehouseLogistics(opts)
       for weaponName, qty in pairs(wp or {}) do
         if type(qty) == "number" and qty >= 0 and _wsIsAllowedWeaponKey(weaponName) then
           scanned = scanned + 1
-          if (not allowModWeapons) and mods[weaponName] then
+          local wsTypeId = _wsRawTypeId(resourceMap[weaponName])
+          if (not allowModWeapons) and (modNames[weaponName] or (wsTypeId and modWsTypes[wsTypeId])) then
             -- Mods not allowed: ignore mod-only items so they don't get added/logged.
           else
-            if not known[weaponName] then
-              known[weaponName] = true
+            if not knownNames[weaponName] and not (wsTypeId and knownWsTypes[wsTypeId]) then
+              knownNames[weaponName] = true
+              if wsTypeId then
+                knownWsTypes[wsTypeId] = true
+              end
               local cat = _wsCategoryForWeapon(weaponName)
               addedByCat[cat] = addedByCat[cat] or {}
               table.insert(addedByCat[cat], weaponName)
@@ -79891,12 +81047,50 @@ function WEAPONSLIST.SyncFromWarehouseLogistics(opts)
         end
       end
     end
+
+    local dcsAirbase = getDcsAirbaseByName(airbaseName)
+    local warehouse = dcsAirbase and env.warehouses and env.warehouses.airports and env.warehouses.airports[dcsAirbase:getID()]
+    for _, entry in pairs((warehouse and warehouse.weapons) or {}) do
+      local wsTypeId, wsType = _wsRawTypeId(entry.wsType)
+      if type(entry.initialAmount) == "number" and entry.initialAmount >= 0 and wsTypeId then
+        scanned = scanned + 1
+        if not registeredWsTypes[wsTypeId] and not knownWsTypes[wsTypeId] and (allowModWeapons or not modWsTypes[wsTypeId]) then
+          knownWsTypes[wsTypeId] = true
+          local cat = _wsCategoryForRawType(wsType)
+          addedByCat[cat] = addedByCat[cat] or {}
+          table.insert(addedByCat[cat], wsType)
+          if addToList then
+            _wsAddItem(cat, wsType)
+          end
+        end
+      end
+    end
   end
 
   local addedCount = 0
   for _, list in pairs(addedByCat) do
-    table.sort(list)
+    table.sort(list, function(a, b) return _wsItemLabel(a) < _wsItemLabel(b) end)
     addedCount = addedCount + #list
+  end
+
+  if addToList and addedCount > 0 then
+    WarehousePersistence._healthCatalog = nil
+    local clearedAirbases = {}
+    for _, zref in ipairs(bc:getZones()) do
+      local zoneObj = bc.indexedZones[zref.zone]
+      local airbaseName = zoneObj and zoneObj.airbaseName
+      if airbaseName and zoneObj.side == 2 and not zoneObj.LogisticCenter and not clearedAirbases[airbaseName] then
+        clearedAirbases[airbaseName] = true
+        local storage = STORAGE:FindByName(airbaseName)
+        if storage then
+          for _, list in pairs(addedByCat) do
+            for _, item in ipairs(list) do
+              storage:SetItem(_getWarehouseItemKey(item), 0)
+            end
+          end
+        end
+      end
+    end
   end
 
   if logMissing then
@@ -79906,7 +81100,7 @@ function WEAPONSLIST.SyncFromWarehouseLogistics(opts)
       env.info(string.format("[WEAPONSLIST] Warehouse scan: %d airbases, %d items scanned, %d missing", #airbases, scanned, addedCount))
       for cat, list in pairs(addedByCat) do
         for _, item in ipairs(list) do
-          env.info(string.format("[WEAPONSLIST] Missing (%s): %s", tostring(cat), tostring(item)))
+          env.info(string.format("[WEAPONSLIST] Missing (%s): %s", tostring(cat), _wsItemLabel(item)))
         end
       end
     end
@@ -79926,9 +81120,13 @@ function WEAPONSLIST.ClearWeaponsInStorage(storage)
 	for _, itemName in ipairs(WEAPONSLIST.GetAllItems() or {}) do
 		pcall(function() storage:SetItem(_getWarehouseItemKey(itemName), 0) end)
 	end
+	for _, itemName in ipairs(WEAPONSLIST_MODS_ITEMS or {}) do
+		storage:SetItem(_getWarehouseItemKey(itemName), 0)
+	end
 	for _, forbiddenWeapon in ipairs(ForbiddWeaponsInAllEra or {}) do
 		storage:SetItem(forbiddenWeapon, 0)
 	end
+	WarehousePersistence.CaptureRemainingWeaponsAfterClear(storage, WEAPONSLIST_MODS_CLEAR_SET)
 	return true
 end
 
