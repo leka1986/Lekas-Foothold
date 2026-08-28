@@ -1213,6 +1213,10 @@ CTLDCost = true
  -- If true, Red side can use CTLD on a basic level.
 Allow_Red_CTLD = false
 
+-- Maximum distance in meters that unloaded CTLD troops can run toward a zone.
+-- Use a value between 2000 and 15000.
+MaxTroopsRunDistanceTowardZone = 5000
+
 -- This is the prices for each CTLD unit and their required rank. Rank 1 is the lowest.
 -- @gui installPolicy="mergeRows"
 CTLDPrices = {
