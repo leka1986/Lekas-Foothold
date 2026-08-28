@@ -520,66 +520,66 @@ end
 Hunt = true
 -----------------------------begin zone definitions(this is where a side is chosen and what flavor and upgrades each zone will have etc etc)-------------------------
 zones = {
-    kandahar            = ZoneCommander:new({zone='Kandahar',                    side=StartNormal and 2 or 1, size='big', level=25, upgrades=upgrades.airfieldStart,    	crates={},flavorText=flavor.kandahar,income = 0.75, redIncomeOnly=true}),
-    alpha               = ZoneCommander:new({zone='Checkpoint Alpha',            side=StartNormal and 2 or 1, size='small', level=25, upgrades=upgrades.farp,             	crates={},flavorText=flavor.alpha}),
-    bost                = ZoneCommander:new({zone='Bost',                        side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,          crates={},flavorText=flavor.bost}),
-    campbastion         = ZoneCommander:new({zone='Camp Bastion',                side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.campbastion,income = 0.75, redIncomeOnly=true}),
-    dwyer               = ZoneCommander:new({zone='Dwyer',                       side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.dwyer}),
-    bravo               = ZoneCommander:new({zone='Checkpoint Bravo',            side=1, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.bravo}),
-    tarinkot            = ZoneCommander:new({zone='Tarinkot',                    side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.tarinkot,income = 0.2}),
-    insurgentqalat      = ZoneCommander:new({zone='Insurgent Base Qalat',        side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints6, 	    crates={},flavorText=flavor.insurgentqalat}),
-    insurgentdelaram    = ZoneCommander:new({zone='Insurgent Base Delaram',      side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints1,     	crates={},flavorText=flavor.insurgentdelaram}),
-    farah               = ZoneCommander:new({zone='Farah',                       side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.farah}),
-    insurgentchimozay   = ZoneCommander:new({zone='Insurgent Base Chimozay',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints5,     	crates={},flavorText=flavor.insurgentchimozay}),
-    insurgentnili       = ZoneCommander:new({zone='Insurgent Base Nili',         side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,     	crates={},flavorText=flavor.insurgentnili}),
-    insurgentalpha      = ZoneCommander:new({zone='Insurgent Base Alpha',        side=1, size='insurgent', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.insurgentalpha}),
-    jamsheed            = ZoneCommander:new({zone='FOB-Jamsheed',                side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.jamsheed,NeutralAtStart=true}),
-    faridbasharat       = ZoneCommander:new({zone='FOB-Farid Basharat',          side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.faridbasharat,NeutralAtStart=true}),      
-    ahmadshahmassoud    = ZoneCommander:new({zone='FOB-Ahmad Shah Massoud',      side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.ahmadshahmassoud,NeutralAtStart=true}),
-    ismailkhan          = ZoneCommander:new({zone='FOB-Ismail Khan',             side=0, size='bignosam', level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.ismailkhan,NeutralAtStart=true}),	
-    hamidkarzai         = ZoneCommander:new({zone='FOB-Hamid Karzai',            side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.hamidkarzai,NeutralAtStart=true}),	
-    javidbasharat       = ZoneCommander:new({zone='FOB-Javid Basharat',          side=0, size='bignosam', level=25, upgrades=upgrades.farp3,             crates={},flavorText=flavor.javidbasharat,NeutralAtStart=true}),
-    shank               = ZoneCommander:new({zone='FOB-Shank',                   side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.shank,NeutralAtStart=true}),
-    lagman              = ZoneCommander:new({zone='FOB-Lagman',                  side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.lagman,NeutralAtStart=true}),
-    bostick             = ZoneCommander:new({zone='FOB-Bostick',                 side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.bostick,NeutralAtStart=true}),
-    delaram             = ZoneCommander:new({zone='FOB-Delaram',                 side=0, size='bignosam', level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.delaram,NeutralAtStart=true}),	
-    fenty               = ZoneCommander:new({zone='FOB-Fenty',                   side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.fenty,NeutralAtStart=true}),		
-	khost               = ZoneCommander:new({zone='Khost',                       side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.khost,NeutralAtStart=true, income = 0.2}),	
-	urgoon              = ZoneCommander:new({zone='Urgoon Heliport',             side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.urgoon,NeutralAtStart=true}),		
-    charlie             = ZoneCommander:new({zone='Checkpoint Charlie',          side=1, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.charlie}),
-    insurgentqarabagh   = ZoneCommander:new({zone='Insurgent Qarabagh',          side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,     	crates={},flavorText=flavor.insurgentqarabagh}),
-    ghazniheliport      = ZoneCommander:new({zone='Ghazni Heliport',             side=1, size='big', level=25, upgrades=upgrades.airfield,          crates={},flavorText=flavor.ghazniheliport}),
-    sharana             = ZoneCommander:new({zone='Sharana',                     side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.sharana}),
-    gardez              = ZoneCommander:new({zone='Gardez',                      side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.gardez}),
-    delta               = ZoneCommander:new({zone='Checkpoint Delta',            side=1, size='small', level=25, upgrades=upgrades.checkpoints4,      crates={},flavorText=flavor.delta}),
-    kabulsouth          = ZoneCommander:new({zone='Checkpoint Kabul S',          side=1, size='small', level=25, upgrades=upgrades.checkpoints3,      crates={},flavorText=flavor.kabulsouth}),
-    insurgentasadabad   = ZoneCommander:new({zone='Insurgent Base Asadabad',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints5,      crates={},flavorText=flavor.insurgentasadabad}),
-    insurgentkunar      = ZoneCommander:new({zone='Insurgent Base Kunar',        side=1, size='insurgent', level=25, upgrades=upgrades.farp,        		crates={},flavorText=flavor.insurgentkunar}),
-    fobkunar            = ZoneCommander:new({zone='FOB Kunar',                   side=1, size='bignosam', level=25, upgrades=upgrades.farp2,        		crates={},flavorText=flavor.fobkunar}),
-    jalalabad           = ZoneCommander:new({zone='Jalalabad',                   side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.jalalabad, income = 0.75, redIncomeOnly=true}),
-    insurgentsarobi     = ZoneCommander:new({zone='Insurgent Base Sarobi',       side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints6,     	crates={},flavorText=flavor.insurgentsarobi}),
-    insurgentmountain   = ZoneCommander:new({zone='Insurgent Base Mountain',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,      crates={},flavorText=flavor.insurgentmountain}),
-    checkpointkabule    = ZoneCommander:new({zone='Checkpoint Kabul E',          side=1, size='small', level=25, upgrades=upgrades.checkpoints2,      crates={},flavorText=flavor.checkpointkabule}),
-    kabul               = ZoneCommander:new({zone='Kabul',                       side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.kabul}),
-    checkpointkabulw    = ZoneCommander:new({zone='Checkpoint Kabul W',          side=1, size='small', level=25, upgrades=upgrades.checkpoints1,      crates={},flavorText=flavor.checkpointkabulw}),
-	nimroz              = ZoneCommander:new({zone='Nimroz',                      side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,         crates={},flavorText=flavor.nimroz}),
-    shindand            = ZoneCommander:new({zone='Shindand',                    side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.shindand}),
-    herat               = ZoneCommander:new({zone='Herat',                       side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.herat}),
-    bamyan              = ZoneCommander:new({zone='Bamyan',                      side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.bamyan}),
-    chaghcharan         = ZoneCommander:new({zone='Chaghcharan',                 side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.chaghcharan}),
-    qalainaw            = ZoneCommander:new({zone='Qala i Naw',                  side=1, size='mediumbig', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.qalainaw}),
-    maymanazahiraddin   = ZoneCommander:new({zone='Maymana Zahiraddin Faryabi',  side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.maymanazahiraddin}),
-	bagram				= ZoneCommander:new({zone='Bagram',  					 side=StartNormal and 1 or 2, size='mediumbig', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.bagram}),
- 	hidden1				= ZoneCommander:new({zone='Hidden',        			     side=1, level=25, upgrades=upgrades.HiddenSam1,        crates={},flavorText=flavor.hidden}),
-	hidden2				= ZoneCommander:new({zone='Hidden2',        			 side=1, level=25, upgrades=upgrades.HiddenSam2,        crates={},flavorText=flavor.hidden}),
-	hidden3				= ZoneCommander:new({zone='Hidden3',        			 side=1, level=25, upgrades=upgrades.HiddenSam3,        crates={},flavorText=flavor.hidden}),
-	hidden4				= ZoneCommander:new({zone='Hidden4',        			 side=1, level=25, upgrades=upgrades.HiddenSam4,        crates={},flavorText=flavor.hidden}),
-	hiddenewr			= ZoneCommander:new({zone='HiddenEWR',        			 side=1, level=25, upgrades=upgrades.EWRMantisNet,      crates={},flavorText=flavor.hidden}),
-	samalpha			= ZoneCommander:new({zone='SAM Site Alpha',        		 side=1, size='sam2', level=25, upgrades=upgrades.samfixedalpha,     crates={},flavorText=flavor.samalpha}),
-	sambravo			= ZoneCommander:new({zone='SAM Site Bravo',        		 side=1, size='sam2', level=25, upgrades=upgrades.samfixedbravo,     crates={},flavorText=flavor.sambravo}),
-	samcharlie			= ZoneCommander:new({zone='SAM Site Charlie',        	 side=1, size='sam2', level=25, upgrades=upgrades.samfixedcharlie,   crates={},flavorText=flavor.samcharlie}),
+    kandahar            = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kandahar',                    side=StartNormal and 2 or 1, size='big', level=25, upgrades=upgrades.airfieldStart,    	crates={},flavorText=flavor.kandahar,income = 0.75, redIncomeOnly=true}),
+    alpha               = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Checkpoint Alpha',            side=StartNormal and 2 or 1, size='small', level=25, upgrades=upgrades.farp,             	crates={},flavorText=flavor.alpha}),
+    bost                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Bost',                        side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,          crates={},flavorText=flavor.bost}),
+    campbastion         = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Camp Bastion',                side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.campbastion,income = 0.75, redIncomeOnly=true}),
+    dwyer               = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Dwyer',                       side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.dwyer}),
+    bravo               = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Checkpoint Bravo',            side=1, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.bravo}),
+    tarinkot            = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Tarinkot',                    side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.tarinkot,income = 0.2}),
+    insurgentqalat      = ZoneCommander:new({facility='none', zone='Insurgent Base Qalat',        side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints6, 	    crates={},flavorText=flavor.insurgentqalat}),
+    insurgentdelaram    = ZoneCommander:new({facility='none', zone='Insurgent Base Delaram',      side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints1,     	crates={},flavorText=flavor.insurgentdelaram}),
+    farah               = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Farah',                       side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.farah}),
+    insurgentchimozay   = ZoneCommander:new({facility='none', zone='Insurgent Base Chimozay',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints5,     	crates={},flavorText=flavor.insurgentchimozay}),
+    insurgentnili       = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Insurgent Base Nili',         side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,     	crates={},flavorText=flavor.insurgentnili}),
+    insurgentalpha      = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Insurgent Base Alpha',        side=1, size='insurgent', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.insurgentalpha}),
+    jamsheed            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Jamsheed',                side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.jamsheed,NeutralAtStart=true}),
+    faridbasharat       = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Farid Basharat',          side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.faridbasharat,NeutralAtStart=true}),
+    ahmadshahmassoud    = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Ahmad Shah Massoud',      side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.ahmadshahmassoud,NeutralAtStart=true}),
+    ismailkhan          = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Ismail Khan',             side=0, size='bignosam', level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.ismailkhan,NeutralAtStart=true}),
+    hamidkarzai         = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Hamid Karzai',            side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.hamidkarzai,NeutralAtStart=true}),
+    javidbasharat       = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Javid Basharat',          side=0, size='bignosam', level=25, upgrades=upgrades.farp3,             crates={},flavorText=flavor.javidbasharat,NeutralAtStart=true}),
+    shank               = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Shank',                   side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.shank,NeutralAtStart=true}),
+    lagman              = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Lagman',                  side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.lagman,NeutralAtStart=true}),
+    bostick             = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Bostick',                 side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.bostick,NeutralAtStart=true}),
+    delaram             = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Delaram',                 side=0, size='bignosam', level=25, upgrades=upgrades.farp3,            	crates={},flavorText=flavor.delaram,NeutralAtStart=true}),
+    fenty               = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB-Fenty',                   side=0, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.fenty,NeutralAtStart=true}),
+	khost               = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Khost',                       side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.khost,NeutralAtStart=true, income = 0.2}),
+	urgoon              = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Urgoon Heliport',             side=0, size='small', level=25, upgrades=upgrades.farp,            	crates={},flavorText=flavor.urgoon,NeutralAtStart=true}),
+    charlie             = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Checkpoint Charlie',          side=1, size='bignosam', level=25, upgrades=upgrades.farp2,            	crates={},flavorText=flavor.charlie}),
+    insurgentqarabagh   = ZoneCommander:new({facility='none', zone='Insurgent Qarabagh',          side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,     	crates={},flavorText=flavor.insurgentqarabagh}),
+    ghazniheliport      = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Ghazni Heliport',             side=1, size='big', level=25, upgrades=upgrades.airfield,          crates={},flavorText=flavor.ghazniheliport}),
+    sharana             = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Sharana',                     side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.sharana}),
+    gardez              = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Gardez',                      side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.gardez}),
+    delta               = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Checkpoint Delta',            side=1, size='small', level=25, upgrades=upgrades.checkpoints4,      crates={},flavorText=flavor.delta}),
+    kabulsouth          = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Checkpoint Kabul S',          side=1, size='small', level=25, upgrades=upgrades.checkpoints3,      crates={},flavorText=flavor.kabulsouth}),
+    insurgentasadabad   = ZoneCommander:new({facility='none', zone='Insurgent Base Asadabad',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints5,      crates={},flavorText=flavor.insurgentasadabad}),
+    insurgentkunar      = ZoneCommander:new({facility='none', zone='Insurgent Base Kunar',        side=1, size='insurgent', level=25, upgrades=upgrades.farp,        		crates={},flavorText=flavor.insurgentkunar}),
+    fobkunar            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FOB Kunar',                   side=1, size='bignosam', level=25, upgrades=upgrades.farp2,        		crates={},flavorText=flavor.fobkunar}),
+    jalalabad           = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Jalalabad',                   side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.jalalabad, income = 0.75, redIncomeOnly=true}),
+    insurgentsarobi     = ZoneCommander:new({facility='none', zone='Insurgent Base Sarobi',       side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints6,     	crates={},flavorText=flavor.insurgentsarobi}),
+    insurgentmountain   = ZoneCommander:new({facility='none', zone='Insurgent Base Mountain',     side=1, size='insurgent', level=25, upgrades=upgrades.checkpoints2,      crates={},flavorText=flavor.insurgentmountain}),
+    checkpointkabule    = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Checkpoint Kabul E',          side=1, size='small', level=25, upgrades=upgrades.checkpoints2,      crates={},flavorText=flavor.checkpointkabule}),
+    kabul               = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kabul',                       side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.kabul}),
+    checkpointkabulw    = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Checkpoint Kabul W',          side=1, size='small', level=25, upgrades=upgrades.checkpoints1,      crates={},flavorText=flavor.checkpointkabulw}),
+	nimroz              = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Nimroz',                      side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,         crates={},flavorText=flavor.nimroz}),
+    shindand            = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Shindand',                    side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.shindand}),
+    herat               = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Herat',                       side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.herat}),
+    bamyan              = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Bamyan',                      side=1, size='big', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.bamyan}),
+    chaghcharan         = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Chaghcharan',                 side=1, size='big', level=25, upgrades=upgrades.airfield3,        	crates={},flavorText=flavor.chaghcharan}),
+    qalainaw            = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Qala i Naw',                  side=1, size='mediumbig', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.qalainaw}),
+    maymanazahiraddin   = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Maymana Zahiraddin Faryabi',  side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2,        	crates={},flavorText=flavor.maymanazahiraddin}),
+	bagram				= ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Bagram',  					 side=StartNormal and 1 or 2, size='mediumbig', level=25, upgrades=upgrades.airfield,        	crates={},flavorText=flavor.bagram}),
+	hidden1				= ZoneCommander:new({facility='none', zone='Hidden',        			     side=1, level=25, upgrades=upgrades.HiddenSam1,        crates={},flavorText=flavor.hidden}),
+	hidden2				= ZoneCommander:new({facility='none', zone='Hidden2',        			 side=1, level=25, upgrades=upgrades.HiddenSam2,        crates={},flavorText=flavor.hidden}),
+	hidden3				= ZoneCommander:new({facility='none', zone='Hidden3',        			 side=1, level=25, upgrades=upgrades.HiddenSam3,        crates={},flavorText=flavor.hidden}),
+	hidden4				= ZoneCommander:new({facility='none', zone='Hidden4',        			 side=1, level=25, upgrades=upgrades.HiddenSam4,        crates={},flavorText=flavor.hidden}),
+	hiddenewr			= ZoneCommander:new({facility='none', zone='HiddenEWR',        			 side=1, level=25, upgrades=upgrades.EWRMantisNet,      crates={},flavorText=flavor.hidden}),
+	samalpha			= ZoneCommander:new({facility='none', zone='SAM Site Alpha',        		 side=1, size='sam2', level=25, upgrades=upgrades.samfixedalpha,     crates={},flavorText=flavor.samalpha}),
+	sambravo			= ZoneCommander:new({facility='none', zone='SAM Site Bravo',        		 side=1, size='sam2', level=25, upgrades=upgrades.samfixedbravo,     crates={},flavorText=flavor.sambravo}),
+	samcharlie			= ZoneCommander:new({facility='none', zone='SAM Site Charlie',        	 side=1, size='sam2', level=25, upgrades=upgrades.samfixedcharlie,   crates={},flavorText=flavor.samcharlie}),
 	--samdelta			= ZoneCommander:new({zone='SAM Site Delta',        		 side=1, level=25, upgrades=upgrades.samfixeddelta,     crates={},flavorText=flavor.samdelta}),
-	samjamsheed			= ZoneCommander:new({zone='Jamsheed SAM Site',        	 side=1, size='samspecial', level=25, upgrades=upgrades.samjamsheed,     	crates={},flavorText=flavor.samjamsheed}),
+	samjamsheed			= ZoneCommander:new({facility='none', zone='Jamsheed SAM Site',        	 side=1, size='samspecial', level=25, upgrades=upgrades.samjamsheed,     	crates={},flavorText=flavor.samjamsheed}),
 }
 ----------------------end zone definitions-----------------------------
 ---------------------------------begin template definitions (this defines templates for coldwar and modern)-----------------------
@@ -805,33 +805,33 @@ function RunwayStrikeAltitude() return math.random(23,28)*1000 end
 ---------------Zones + GroupCommander routes --------------------
 
 zones.insurgentkunar:addGroups({
-    GroupCommander:new({name='insurgentkunar-attack-FOBKunar', mission='attack', template='InsurgentConvoy', targetzone='FOB Kunar',type='surface'}),
+    DirectorCapability:new({name='insurgentkunar-attack-FOBKunar', mission='attack', template='InsurgentConvoy', targetzone='FOB Kunar',type='surface'}),
 })
 
 zones.insurgentchimozay:addGroups({
-    GroupCommander:new({name='insurgentchimozay-attack-Farah', mission='attack', template='InsurgentConvoy', targetzone='Farah',type='surface'}),
+    DirectorCapability:new({name='insurgentchimozay-attack-Farah', mission='attack', template='InsurgentConvoy', targetzone='Farah',type='surface'}),
 })
 
 -- Insurgent Base Nili (insurgent) -> connects to: Tarinkot
 zones.insurgentnili:addGroups({
-    GroupCommander:new({name='insurgentnili-attack-Tarinkot', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='insurgentnili-attack-Tarinkot', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tarinkot'}),
 })
 
 -- Insurgent Base Alpha (insurgent) -> connects to: Tarinkot
 zones.insurgentalpha:addGroups({
-    GroupCommander:new({name='insurgentalpha-attack-Tarinkot', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='insurgentalpha-attack-Tarinkot', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tarinkot'}),
 })
 
 -- FOB Kunar (FOB) -> connects to: Jalalabad
 zones.fobkunar:addGroups({
-    GroupCommander:new({name='fobkunar-attack-Jalalabad', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Jalalabad'}),
-    GroupCommander:new({name='fobkunar-supply-Jalalabad-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Jalalabad'}),
+    DirectorCapability:new({name='fobkunar-attack-Jalalabad', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Jalalabad'}),
+    DirectorCapability:new({name='fobkunar-supply-Jalalabad-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Jalalabad'}),
 })
 
 -- Checkpoint Kabul E (Checkpoint) -> connects to: Kabul, Checkpoint Kabul S
 zones.checkpointkabule:addGroups({
-    GroupCommander:new({name='checkpointkabule-attack-Kabul-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kabul'}),
-    GroupCommander:new({name='checkpointkabule-supply-CheckpointKabulSouth-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul S'}),
+    DirectorCapability:new({name='checkpointkabule-attack-Kabul-Cas', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kabul'}),
+    DirectorCapability:new({name='checkpointkabule-supply-CheckpointKabulSouth-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul S'}),
 
     -- Surface attack routes
     GroupCommander:new({name='CheckpointKabulE-attack-Kabul', mission='attack', targetzone='Kabul', type='surface', SetActiveMission = true}),
@@ -839,39 +839,39 @@ zones.checkpointkabule:addGroups({
 
 -- Checkpoint Kabul W (Checkpoint) -> connects to: Kabul, Checkpoint Delta
 zones.checkpointkabulw:addGroups({
-    GroupCommander:new({name='checkpointkabulw-attack-CheckpointDelta', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Delta'}),
-    GroupCommander:new({name='checkpointkabulw-supply-Kabul-helo',      mission='supply', template='HeloSupplyTemplate', targetzone='Kabul'}),
-    GroupCommander:new({name='checkpointkabulw-supply-CheckpointDelta-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Delta'}),
+    DirectorCapability:new({name='checkpointkabulw-attack-CheckpointDelta', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Delta'}),
+    DirectorCapability:new({name='checkpointkabulw-supply-Kabul-helo',      mission='supply', template='HeloSupplyTemplate', targetzone='Kabul'}),
+    DirectorCapability:new({name='checkpointkabulw-supply-CheckpointDelta-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Delta'}),
 
     -- Surface attack routes
-    GroupCommander:new({name='CheckpointKabulW-attack-Kabul', mission='attack',template='AttackConvoy', targetzone='Kabul', type='surface'}),
+    DirectorCapability:new({name='CheckpointKabulW-attack-Kabul', mission='attack',template='AttackConvoy', targetzone='Kabul', type='surface'}),
 })
 
 -- Checkpoint Kabul S (Checkpoint) -> connects to: Kabul, Checkpoint Kabul E, Checkpoint Delta
 zones.kabulsouth:addGroups({
-    GroupCommander:new({name='kabulsouth-attack-Kabul',            mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kabul'}),
-    GroupCommander:new({name='kabulsouth-attack-CheckpointKabulE', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Kabul E'}),
-    GroupCommander:new({name='kabulsouth-attack-CheckpointDelta',  mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Delta'}),
+    DirectorCapability:new({name='kabulsouth-attack-Kabul',            mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kabul'}),
+    DirectorCapability:new({name='kabulsouth-attack-CheckpointKabulE', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Kabul E'}),
+    DirectorCapability:new({name='kabulsouth-attack-CheckpointDelta',  mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Delta'}),
 
-    GroupCommander:new({name='kabulsouth-supply-Kabul-helo',            mission='supply', template='HeloSupplyTemplate', targetzone='Kabul'}),
-    GroupCommander:new({name='kabulsouth-supply-CheckpointKabulE-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul E'}),
-    GroupCommander:new({name='kabulsouth-supply-CheckpointDelta-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Delta'}),
+    DirectorCapability:new({name='kabulsouth-supply-Kabul-helo',            mission='supply', template='HeloSupplyTemplate', targetzone='Kabul'}),
+    DirectorCapability:new({name='kabulsouth-supply-CheckpointKabulE-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul E'}),
+    DirectorCapability:new({name='kabulsouth-supply-CheckpointDelta-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Delta'}),
 
     -- Surface attack routes
-    GroupCommander:new({name='CheckpointKabulS-attack-Kabul',  mission='attack',template='AttackConvoy', targetzone='Kabul',  type='surface'}),
+    DirectorCapability:new({name='CheckpointKabulS-attack-Kabul',  mission='attack',template='AttackConvoy', targetzone='Kabul',  type='surface'}),
 })
 
 -- Checkpoint Delta (Checkpoint) -> connects to: Ghazni Heliport, Checkpoint Kabul S, Checkpoint Kabul W, Kabul
 zones.delta:addGroups({
-    GroupCommander:new({name='delta-attack-Ghazni Heliport',       mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Ghazni Heliport'}),
-    GroupCommander:new({name='delta-attack-CheckpointKabulSouth',  mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Kabul S'}),
-    GroupCommander:new({name='delta-attack-CheckpointKabulW',      mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Kabul W'}),
-    GroupCommander:new({name='delta-attack-Kabul',                 mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kabul'}),
+    DirectorCapability:new({name='delta-attack-Ghazni Heliport',       mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Ghazni Heliport'}),
+    DirectorCapability:new({name='delta-attack-CheckpointKabulSouth',  mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Kabul S'}),
+    DirectorCapability:new({name='delta-attack-CheckpointKabulW',      mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Kabul W'}),
+    DirectorCapability:new({name='delta-attack-Kabul',                 mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kabul'}),
 
-    GroupCommander:new({name='delta-supply-GhazniHeliport-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='Ghazni Heliport'}),
-    GroupCommander:new({name='delta-supply-CheckpointKabulSouth-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul S'}),
-    GroupCommander:new({name='delta-supply-CheckpointKabulW-helo',       mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul W'}),
-    GroupCommander:new({name='delta-supply-Kabul-helo',                  mission='supply', template='HeloSupplyTemplate', targetzone='Kabul'}),
+    DirectorCapability:new({name='delta-supply-GhazniHeliport-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='Ghazni Heliport'}),
+    DirectorCapability:new({name='delta-supply-CheckpointKabulSouth-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul S'}),
+    DirectorCapability:new({name='delta-supply-CheckpointKabulW-helo',       mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul W'}),
+    DirectorCapability:new({name='delta-supply-Kabul-helo',                  mission='supply', template='HeloSupplyTemplate', targetzone='Kabul'}),
 
     -- Surface attack routes
     GroupCommander:new({name='CheckpointDelta-attack-GhazniHeliport', mission='attack', targetzone='Ghazni Heliport', type='surface', SetActiveMission = true}),
@@ -880,10 +880,10 @@ zones.delta:addGroups({
 -- Checkpoint Charlie (Checkpoint) -> connects to: Tarinkot, Checkpoint Bravo, Sharana, Ghazni Heliport
 zones.charlie:addGroups({
 
-    GroupCommander:new({name='charlie-supply-Tarinkot-helo',        mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot'}),
-    GroupCommander:new({name='charlie-supply-CheckpointBravo-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo'}),
-    GroupCommander:new({name='charlie-supply-Sharana-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='Sharana'}),
-    GroupCommander:new({name='charlie-supply-GhazniHeliport-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Ghazni Heliport'}),
+    DirectorCapability:new({name='charlie-supply-Tarinkot-helo',        mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='charlie-supply-CheckpointBravo-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo'}),
+    DirectorCapability:new({name='charlie-supply-Sharana-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='Sharana'}),
+    DirectorCapability:new({name='charlie-supply-GhazniHeliport-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Ghazni Heliport'}),
 
     -- Surface attack routes
     GroupCommander:new({name='CheckpointCharlie-attack-FOB-Bostick', mission='attack', targetzone='FOB-Bostick', type='surface', SetActiveMission = true}),
@@ -891,15 +891,15 @@ zones.charlie:addGroups({
 
 -- Checkpoint Bravo (Checkpoint) -> connects to: Tarinkot, Kandahar, Checkpoint Charlie, Insurgent Base Qalat
 zones.bravo:addGroups({
-    GroupCommander:new({name='bravo-attack-Tarinkot',           mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tarinkot'}),
-    GroupCommander:new({name='bravo-attack-Kandahar',           mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kandahar'}),
-    GroupCommander:new({name='bravo-attack-CheckpointCharlie',  mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Charlie'}),
-    GroupCommander:new({name='bravo-attack-InsurgentBaseQalat', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Insurgent Base Qalat'}),
+    DirectorCapability:new({name='bravo-attack-Tarinkot',           mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='bravo-attack-Kandahar',           mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kandahar'}),
+    DirectorCapability:new({name='bravo-attack-CheckpointCharlie',  mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Checkpoint Charlie'}),
+    DirectorCapability:new({name='bravo-attack-InsurgentBaseQalat', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Insurgent Base Qalat'}),
 
-    GroupCommander:new({name='bravo-supply-Tarinkot-helo',          mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot'}),
-    GroupCommander:new({name='bravo-supply-Kandahar-helo',          mission='supply', template='HeloSupplyTemplate', targetzone='Kandahar'}),
-    GroupCommander:new({name='bravo-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
-    GroupCommander:new({name='bravo-supply-InsurgentBaseQalat-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Insurgent Base Qalat'}),
+    DirectorCapability:new({name='bravo-supply-Tarinkot-helo',          mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='bravo-supply-Kandahar-helo',          mission='supply', template='HeloSupplyTemplate', targetzone='Kandahar'}),
+    DirectorCapability:new({name='bravo-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
+    DirectorCapability:new({name='bravo-supply-InsurgentBaseQalat-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Insurgent Base Qalat'}),
 
     -- Surface attack routes
     GroupCommander:new({name='CheckpointBravo-attack-Tarinkot', mission='attack', targetzone='Tarinkot', type='surface', SetActiveMission = true}),
@@ -907,86 +907,86 @@ zones.bravo:addGroups({
 
 -- Checkpoint Alpha (Checkpoint) -> connects to: Camp Bastion, Bost, Tarinkot, Kandahar
 zones.alpha:addGroups({
-    GroupCommander:new({name='alpha-attack-CampBastion', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Camp Bastion'}),
-    GroupCommander:new({name='alpha-attack-Bost',        mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Bost'}),
-    GroupCommander:new({name='alpha-attack-Tarinkot',    mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tarinkot'}),
-    GroupCommander:new({name='alpha-attack-Kandahar',    mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kandahar'}),
+    DirectorCapability:new({name='alpha-attack-CampBastion', mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Camp Bastion'}),
+    DirectorCapability:new({name='alpha-attack-Bost',        mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Bost'}),
+    DirectorCapability:new({name='alpha-attack-Tarinkot',    mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='alpha-attack-Kandahar',    mission='attack', template='CasHeloTemplate', MissionType='CAS', targetzone='Kandahar'}),
 
-    GroupCommander:new({name='alpha-supply-CampBastion-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Camp Bastion'}),
-    GroupCommander:new({name='alpha-supply-Bost-helo',        mission='supply', template='HeloSupplyTemplate', targetzone='Bost'}),
-    GroupCommander:new({name='alpha-supply-Tarinkot-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot'}),
-    GroupCommander:new({name='alpha-supply-Kandahar-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Kandahar'}),
+    DirectorCapability:new({name='alpha-supply-CampBastion-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Camp Bastion'}),
+    DirectorCapability:new({name='alpha-supply-Bost-helo',        mission='supply', template='HeloSupplyTemplate', targetzone='Bost'}),
+    DirectorCapability:new({name='alpha-supply-Tarinkot-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='alpha-supply-Kandahar-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Kandahar'}),
 })
 
 -- JALALABAD (airport) -> connects to: Checkpoint Kabul E, FOB Kunar, Gardez
 zones.jalalabad:addGroups({
-    GroupCommander:new({name='jalalabad-supply-CheckpointKabulE-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul E'}),
-    GroupCommander:new({name='jalalabad-supply-FOBKunar-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='FOB Kunar'}),
-    GroupCommander:new({name='jalalabad-supply-Gardez-helo',           mission='supply', template='HeloSupplyTemplate', targetzone='Gardez'}),
+    DirectorCapability:new({name='jalalabad-supply-CheckpointKabulE-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul E'}),
+    DirectorCapability:new({name='jalalabad-supply-FOBKunar-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='FOB Kunar'}),
+    DirectorCapability:new({name='jalalabad-supply-Gardez-helo',           mission='supply', template='HeloSupplyTemplate', targetzone='Gardez'}),
 
-    GroupCommander:new({name='jalalabad-supply-Bagram-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Bagram'}),
-    GroupCommander:new({name='jalalabad-supply-Kabul-plane',mission='supply', template='PlaneSupplyTemplate', targetzone='Kabul'}),
-    GroupCommander:new({name='jalalabad-supply-Tarinkot-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Tarinkot'}),
-    GroupCommander:new({name='jalalabad-supply-Maymana Zahiraddin Faryabi-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi'}),
+    DirectorCapability:new({name='jalalabad-supply-Bagram-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Bagram'}),
+    DirectorCapability:new({name='jalalabad-supply-Kabul-plane',mission='supply', template='PlaneSupplyTemplate', targetzone='Kabul'}),
+    DirectorCapability:new({name='jalalabad-supply-Tarinkot-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='jalalabad-supply-Maymana Zahiraddin Faryabi-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi'}),
 
-    GroupCommander:new({name='jalalabad-attack-CheckpointKabulE-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul E', Altitude = CapAltitude()}),
-    GroupCommander:new({name='jalalabad-attack-CheckpointKabulE-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Kabul E', Altitude = CasAltitude()}),
-    GroupCommander:new({name='jalalabad-patrol-CheckpointKabulE-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul E', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='jalalabad-attack-CheckpointKabulE-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul E', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='jalalabad-attack-CheckpointKabulE-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Kabul E', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='jalalabad-patrol-CheckpointKabulE-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul E', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='jalalabad-attack-FOBKunar-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='FOB Kunar', Altitude = CapAltitude()}),
-    GroupCommander:new({name='jalalabad-attack-FOBKunar-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='FOB Kunar', Altitude = CasAltitude()}),
-    GroupCommander:new({name='jalalabad-patrol-FOBKunar-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='FOB Kunar', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='jalalabad-attack-FOBKunar-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='FOB Kunar', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='jalalabad-attack-FOBKunar-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='FOB Kunar', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='jalalabad-patrol-FOBKunar-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='FOB Kunar', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='jalalabad-attack-Gardez-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Gardez', Altitude = CapAltitude()}),
-    GroupCommander:new({name='jalalabad-attack-Gardez-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Gardez', Altitude = CasAltitude()}),
-    GroupCommander:new({name='jalalabad-patrol-Gardez-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Gardez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='jalalabad-attack-Gardez-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Gardez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='jalalabad-attack-Gardez-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Gardez', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='jalalabad-patrol-Gardez-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Gardez', Altitude = CapAltitude()}),
 })
 
 -- KABUL (airport) -> connects to: Checkpoint Kabul E, Checkpoint Kabul S, Checkpoint Kabul W, Checkpoint Delta, Bamyan, Bagram
 zones.kabul:addGroups({
-    GroupCommander:new({name='kabul-supply-CheckpointKabulE-helo',     mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul E'}),
-    GroupCommander:new({name='kabul-supply-CheckpointKabulSouth-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul S'}),
-    GroupCommander:new({name='kabul-supply-CheckpointKabulW-helo',     mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul W'}),
-    GroupCommander:new({name='kabul-supply-CheckpointDelta-helo',      mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Delta'}),
+    DirectorCapability:new({name='kabul-supply-CheckpointKabulE-helo',     mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul E'}),
+    DirectorCapability:new({name='kabul-supply-CheckpointKabulSouth-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul S'}),
+    DirectorCapability:new({name='kabul-supply-CheckpointKabulW-helo',     mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul W'}),
+    DirectorCapability:new({name='kabul-supply-CheckpointDelta-helo',      mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Delta'}),
 
-    GroupCommander:new({name='kabul-supply-Jalalabad-plane',                mission='supply', template='PlaneSupplyTemplate', targetzone='Jalalabad'}),
-    GroupCommander:new({name='kabul-supply-Bamyan',                   mission='supply', template='HeloSupplyTemplate', targetzone='Bamyan'}),
-    GroupCommander:new({name='kabul-supply-Gardez-plane',                   mission='supply', template='PlaneSupplyTemplate', targetzone='Gardez'}),
-    GroupCommander:new({name='kabul-supply-Dwyer-plane',                    mission='supply', template='PlaneSupplyTemplate', targetzone='Dwyer'}),
+    DirectorCapability:new({name='kabul-supply-Jalalabad-plane',                mission='supply', template='PlaneSupplyTemplate', targetzone='Jalalabad'}),
+    DirectorCapability:new({name='kabul-supply-Bamyan',                   mission='supply', template='HeloSupplyTemplate', targetzone='Bamyan'}),
+    DirectorCapability:new({name='kabul-supply-Gardez-plane',                   mission='supply', template='PlaneSupplyTemplate', targetzone='Gardez'}),
+    DirectorCapability:new({name='kabul-supply-Dwyer-plane',                    mission='supply', template='PlaneSupplyTemplate', targetzone='Dwyer'}),
 
-    GroupCommander:new({name='kabul-attack-CheckpointKabulE-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul E', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kabul-attack-CheckpointKabulE-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Kabul E', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kabul-patrol-CheckpointKabulE-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul E', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-CheckpointKabulE-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul E', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-CheckpointKabulE-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Kabul E', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kabul-patrol-CheckpointKabulE-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul E', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='kabul-attack-CheckpointKabulSouth-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul S', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kabul-attack-CheckpointKabulSouth-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Kabul S', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kabul-patrol-CheckpointKabulSouth-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul S', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-CheckpointKabulSouth-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul S', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-CheckpointKabulSouth-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Kabul S', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kabul-patrol-CheckpointKabulSouth-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul S', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='kabul-attack-CheckpointKabulW-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul W', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kabul-attack-CheckpointKabulW-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Kabul W', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kabul-patrol-CheckpointKabulW-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul W', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-CheckpointKabulW-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul W', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-CheckpointKabulW-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Kabul W', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kabul-patrol-CheckpointKabulW-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Kabul W', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='kabul-attack-CheckpointDelta-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Delta', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kabul-attack-CheckpointDelta-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Delta', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kabul-patrol-CheckpointDelta-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Delta', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-CheckpointDelta-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Delta', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-CheckpointDelta-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Delta', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kabul-patrol-CheckpointDelta-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Delta', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='kabul-attack-Bamyan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kabul-attack-Bamyan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bamyan', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kabul-patrol-Bamyan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-Bamyan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-Bamyan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bamyan', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kabul-patrol-Bamyan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='kabul-attack-Bagram-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bagram', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kabul-attack-Bagram-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bagram', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kabul-patrol-Bagram-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bagram', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-Bagram-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bagram', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kabul-attack-Bagram-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bagram', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kabul-patrol-Bagram-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bagram', Altitude = CapAltitude()}),
 
     -- Surface attack routes
-    GroupCommander:new({name='Kabul-attack-CheckpointKabulW', mission='attack',template='AttackConvoy', targetzone='Checkpoint Kabul W', type='surface'}),
-    GroupCommander:new({name='Kabul-attack-CheckpointKabulS', mission='attack',template='AttackConvoy', targetzone='Checkpoint Kabul S', type='surface'}),
-    GroupCommander:new({name='Kabul-attack-CheckpointKabulE', mission='attack',template='AttackConvoy', targetzone='Checkpoint Kabul E', type='surface'}),
+    DirectorCapability:new({name='Kabul-attack-CheckpointKabulW', mission='attack',template='AttackConvoy', targetzone='Checkpoint Kabul W', type='surface'}),
+    DirectorCapability:new({name='Kabul-attack-CheckpointKabulS', mission='attack',template='AttackConvoy', targetzone='Checkpoint Kabul S', type='surface'}),
+    DirectorCapability:new({name='Kabul-attack-CheckpointKabulE', mission='attack',template='AttackConvoy', targetzone='Checkpoint Kabul E', type='surface'}),
 })
 
 -- GARDEZ (airport) -> connects to: Jalalabad, Checkpoint Kabul S, Sharana, Ghazni Heliport
 zones.gardez:addGroups({
-    GroupCommander:new({name='gardez-supply-CheckpointKabulSouth-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul S'}),
+    DirectorCapability:new({name='gardez-supply-CheckpointKabulSouth-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Kabul S'}),
 
    -- Surface attack routes
     GroupCommander:new({name='Gardez-Trapsetup-CheckPointDelta', mission='attack', targetzone='Checkpoint Delta', type='surface'}),
@@ -994,10 +994,10 @@ zones.gardez:addGroups({
 
 -- GHAZNI HELIPORT (airport) -> connects to: Checkpoint Charlie, Gardez, Checkpoint Delta, Sharana
 zones.ghazniheliport:addGroups({
-    GroupCommander:new({name='ghazniheliport-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
-    GroupCommander:new({name='ghazniheliport-supply-Gardez-helo',            mission='supply', template='HeloSupplyTemplate', targetzone='Gardez'}),
-    GroupCommander:new({name='ghazniheliport-supply-CheckpointDelta-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Delta'}),
-    GroupCommander:new({name='ghazniheliport-supply-Sharana-helo',           mission='supply', template='HeloSupplyTemplate', targetzone='Sharana'}),
+    DirectorCapability:new({name='ghazniheliport-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
+    DirectorCapability:new({name='ghazniheliport-supply-Gardez-helo',            mission='supply', template='HeloSupplyTemplate', targetzone='Gardez'}),
+    DirectorCapability:new({name='ghazniheliport-supply-CheckpointDelta-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Delta'}),
+    DirectorCapability:new({name='ghazniheliport-supply-Sharana-helo',           mission='supply', template='HeloSupplyTemplate', targetzone='Sharana'}),
 
     -- GroupCommander:new({name='ghazniheliport-attack-CheckpointCharlie-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
     -- GroupCommander:new({name='ghazniheliport-attack-CheckpointCharlie-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Charlie', Altitude = CasAltitude()}),
@@ -1020,155 +1020,155 @@ zones.ghazniheliport:addGroups({
 
 -- SHARANA (airport) -> connects to: Ghazni Heliport, Gardez, Checkpoint Charlie
 zones.sharana:addGroups({
-    GroupCommander:new({name='sharana-supply-GhazniHeliport-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Ghazni Heliport'}),
-    GroupCommander:new({name='sharana-supply-Gardez-helo',            mission='supply', template='HeloSupplyTemplate', targetzone='Gardez'}),
-    GroupCommander:new({name='sharana-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
+    DirectorCapability:new({name='sharana-supply-GhazniHeliport-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Ghazni Heliport'}),
+    DirectorCapability:new({name='sharana-supply-Gardez-helo',            mission='supply', template='HeloSupplyTemplate', targetzone='Gardez'}),
+    DirectorCapability:new({name='sharana-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
 --[[ 
-    GroupCommander:new({name='sharana-attack-GhazniHeliport-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Ghazni Heliport', Altitude = CapAltitude()}),
-    GroupCommander:new({name='sharana-attack-GhazniHeliport-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Ghazni Heliport', Altitude = CasAltitude()}),
-    GroupCommander:new({name='sharana-patrol-GhazniHeliport-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Ghazni Heliport', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='sharana-attack-GhazniHeliport-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Ghazni Heliport', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='sharana-attack-GhazniHeliport-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Ghazni Heliport', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='sharana-patrol-GhazniHeliport-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Ghazni Heliport', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='sharana-attack-Gardez-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Gardez', Altitude = CapAltitude()}),
-    GroupCommander:new({name='sharana-attack-Gardez-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Gardez', Altitude = CasAltitude()}),
-    GroupCommander:new({name='sharana-patrol-Gardez-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Gardez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='sharana-attack-Gardez-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Gardez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='sharana-attack-Gardez-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Gardez', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='sharana-patrol-Gardez-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Gardez', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='sharana-attack-CheckpointCharlie-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
-    GroupCommander:new({name='sharana-attack-CheckpointCharlie-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Charlie', Altitude = CasAltitude()}),
-    GroupCommander:new({name='sharana-patrol-CheckpointCharlie-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='sharana-attack-CheckpointCharlie-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='sharana-attack-CheckpointCharlie-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Charlie', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='sharana-patrol-CheckpointCharlie-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
  ]]
     -- Surface attack routes
     GroupCommander:new({name='Sharana-attack-FOB-Bostick',     mission='attack', targetzone='FOB-Bostick',     type='surface'}),
-    GroupCommander:new({name='Sharana-attack-Ghazni Heliport', mission='attack',template='AttackConvoy', targetzone='Ghazni Heliport', type='surface'}),
+    DirectorCapability:new({name='Sharana-attack-Ghazni Heliport', mission='attack',template='AttackConvoy', targetzone='Ghazni Heliport', type='surface'}),
 })
 
 -- TARINKOT (airport) -> connects to: Checkpoint Charlie, Checkpoint Bravo, Kandahar, Checkpoint Alpha
 zones.tarinkot:addGroups({
-    GroupCommander:new({name='tarinkot-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
-    GroupCommander:new({name='tarinkot-supply-CheckpointBravo-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo'}),
-    GroupCommander:new({name='tarinkot-supply-CheckpointAlpha-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Alpha'}),
+    DirectorCapability:new({name='tarinkot-supply-CheckpointCharlie-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie'}),
+    DirectorCapability:new({name='tarinkot-supply-CheckpointBravo-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo'}),
+    DirectorCapability:new({name='tarinkot-supply-CheckpointAlpha-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Alpha'}),
 
     -- Plane supply routes (allowed plane-source)
-    GroupCommander:new({name='tarinkot-supply-Kandahar-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Kandahar'}),
-    GroupCommander:new({name='tarinkot-supply-Camp Bastion-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Camp Bastion'}),
+    DirectorCapability:new({name='tarinkot-supply-Kandahar-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Kandahar'}),
+    DirectorCapability:new({name='tarinkot-supply-Camp Bastion-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Camp Bastion'}),
 
-    GroupCommander:new({name='tarinkot-attack-CheckpointCharlie-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
-    GroupCommander:new({name='tarinkot-attack-CheckpointCharlie-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Charlie', Altitude = CasAltitude()}),
-    GroupCommander:new({name='tarinkot-patrol-CheckpointCharlie-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='tarinkot-attack-CheckpointCharlie-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='tarinkot-attack-CheckpointCharlie-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Charlie', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='tarinkot-patrol-CheckpointCharlie-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Charlie', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='tarinkot-attack-CheckpointBravo-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Bravo', Altitude = CapAltitude()}),
-    GroupCommander:new({name='tarinkot-attack-CheckpointBravo-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Bravo', Altitude = CasAltitude()}),
-    GroupCommander:new({name='tarinkot-patrol-CheckpointBravo-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Bravo', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='tarinkot-attack-CheckpointBravo-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Bravo', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='tarinkot-attack-CheckpointBravo-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Bravo', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='tarinkot-patrol-CheckpointBravo-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Bravo', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='tarinkot-attack-Kandahar-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kandahar', Altitude = CapAltitude()}),
-    GroupCommander:new({name='tarinkot-attack-Kandahar-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Kandahar', Altitude = CasAltitude()}),
-    GroupCommander:new({name='tarinkot-patrol-Kandahar-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kandahar', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='tarinkot-attack-Kandahar-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kandahar', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='tarinkot-attack-Kandahar-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Kandahar', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='tarinkot-patrol-Kandahar-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kandahar', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='tarinkot-attack-CheckpointAlpha-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
-    GroupCommander:new({name='tarinkot-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='tarinkot-attack-CheckpointAlpha-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='tarinkot-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
 })
 
 -- BOST (airport) -> connects to: Dwyer, Camp Bastion, Checkpoint Alpha
 zones.bost:addGroups({
-    GroupCommander:new({name='bost-supply-Dwyer-helo',           mission='supply', template='HeloSupplyTemplate', targetzone='Dwyer'}),
-    GroupCommander:new({name='bost-supply-Camp Bastion-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Camp Bastion'}),
-    GroupCommander:new({name='bost-supply-CheckpointAlpha-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Alpha'}),
+    DirectorCapability:new({name='bost-supply-Dwyer-helo',           mission='supply', template='HeloSupplyTemplate', targetzone='Dwyer'}),
+    DirectorCapability:new({name='bost-supply-Camp Bastion-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Camp Bastion'}),
+    DirectorCapability:new({name='bost-supply-CheckpointAlpha-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Alpha'}),
 
-    GroupCommander:new({name='bost-attack-Dwyer-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bost-attack-Dwyer-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Dwyer', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bost-patrol-Dwyer-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bost-attack-Dwyer-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bost-attack-Dwyer-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Dwyer', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bost-patrol-Dwyer-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='bost-attack-CampBastion-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bost-attack-CampBastion-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Camp Bastion', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bost-patrol-CampBastion-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bost-attack-CampBastion-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bost-attack-CampBastion-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Camp Bastion', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bost-patrol-CampBastion-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='bost-attack-CheckpointAlpha-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bost-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bost-patrol-CheckpointAlpha-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bost-attack-CheckpointAlpha-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bost-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bost-patrol-CheckpointAlpha-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
 
     -- Surface attack routes
-    GroupCommander:new({name='Bost-attack-CampBastion',     mission='attack',template='AttackConvoy', targetzone='Camp Bastion', type='surface'}),
-    GroupCommander:new({name='Bost-attack-CheckpointAlpha', mission='attack', targetzone='Checkpoint Alpha',template='AttackConvoy', type='surface'}),
-    GroupCommander:new({name='Bost-attack-Dwyer',           mission='attack',template='AttackConvoy', targetzone='Dwyer', type='surface'}),
+    DirectorCapability:new({name='Bost-attack-CampBastion',     mission='attack',template='AttackConvoy', targetzone='Camp Bastion', type='surface'}),
+    DirectorCapability:new({name='Bost-attack-CheckpointAlpha', mission='attack', targetzone='Checkpoint Alpha',template='AttackConvoy', type='surface'}),
+    DirectorCapability:new({name='Bost-attack-Dwyer',           mission='attack',template='AttackConvoy', targetzone='Dwyer', type='surface'}),
 })
 
 -- CAMP BASTION (airport) -> connects to: Checkpoint Alpha, Bost, Nimroz, Dwyer
 zones.campbastion:addGroups({
-    GroupCommander:new({name='campbastion-supply-Checkpoint Alpha-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Alpha'}),
-    GroupCommander:new({name='campbastion-supply-Bost-helo',             mission='supply', template='HeloSupplyTemplate', targetzone='Bost'}),
+    DirectorCapability:new({name='campbastion-supply-Checkpoint Alpha-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Alpha'}),
+    DirectorCapability:new({name='campbastion-supply-Bost-helo',             mission='supply', template='HeloSupplyTemplate', targetzone='Bost'}),
 
     -- Plane supply routes (allowed plane-source)
-    GroupCommander:new({name='campbastion-supply-Dwyer-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Dwyer'}),
+    DirectorCapability:new({name='campbastion-supply-Dwyer-plane', mission='supply', template='PlaneSupplyTemplate', targetzone='Dwyer'}),
 
-    GroupCommander:new({name='campbastion-attack-CheckpointAlpha-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
-    GroupCommander:new({name='campbastion-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
-    GroupCommander:new({name='campbastion-patrol-CheckpointAlpha-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='campbastion-attack-CheckpointAlpha-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='campbastion-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='campbastion-patrol-CheckpointAlpha-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='campbastion-attack-Bost-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
-    GroupCommander:new({name='campbastion-attack-Bost-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bost', Altitude = CasAltitude()}),
-    GroupCommander:new({name='campbastion-patrol-Bost-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='campbastion-attack-Bost-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='campbastion-attack-Bost-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bost', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='campbastion-patrol-Bost-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='campbastion-attack-Nimroz-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
-    GroupCommander:new({name='campbastion-attack-Nimroz-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Nimroz', Altitude = CasAltitude()}),
-    GroupCommander:new({name='campbastion-patrol-Nimroz-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='campbastion-attack-Nimroz-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='campbastion-attack-Nimroz-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Nimroz', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='campbastion-patrol-Nimroz-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='campbastion-attack-Dwyer-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
-    GroupCommander:new({name='campbastion-attack-Dwyer-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Dwyer', Altitude = CasAltitude()}),
-    GroupCommander:new({name='campbastion-patrol-Dwyer-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='campbastion-attack-Dwyer-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='campbastion-attack-Dwyer-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Dwyer', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='campbastion-patrol-Dwyer-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
 
     -- Surface attack routes
-    GroupCommander:new({name='CampBastion-attack-Bost',  mission='attack',template='AttackConvoy', targetzone='Bost', type='surface'}),
+    DirectorCapability:new({name='CampBastion-attack-Bost',  mission='attack',template='AttackConvoy', targetzone='Bost', type='surface'}),
 })
 
 -- DWYER (airport) -> connects to: Bost, Camp Bastion, Nimroz
 zones.dwyer:addGroups({
-    GroupCommander:new({name='dwyer-supply-Bost-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='Bost'}),
+    DirectorCapability:new({name='dwyer-supply-Bost-helo',         mission='supply', template='HeloSupplyTemplate', targetzone='Bost'}),
 
-    GroupCommander:new({name='dwyer-supply-Nimroz-helo',      mission='supply', template='HeloSupplyTemplate', targetzone='Nimroz'}),
+    DirectorCapability:new({name='dwyer-supply-Nimroz-helo',      mission='supply', template='HeloSupplyTemplate', targetzone='Nimroz'}),
 
-    GroupCommander:new({name='dwyer-attack-Bost-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
-    GroupCommander:new({name='dwyer-attack-Bost-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bost', Altitude = CasAltitude()}),
-    GroupCommander:new({name='dwyer-patrol-Bost-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='dwyer-attack-Bost-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='dwyer-attack-Bost-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bost', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='dwyer-patrol-Bost-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bost', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='dwyer-attack-CampBastion-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
-    GroupCommander:new({name='dwyer-attack-CampBastion-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Camp Bastion', Altitude = CasAltitude()}),
-    GroupCommander:new({name='dwyer-patrol-CampBastion-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='dwyer-attack-CampBastion-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='dwyer-attack-CampBastion-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Camp Bastion', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='dwyer-patrol-CampBastion-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='dwyer-attack-Nimroz-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
-    GroupCommander:new({name='dwyer-attack-Nimroz-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Nimroz', Altitude = CasAltitude()}),
-    GroupCommander:new({name='dwyer-patrol-Nimroz-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='dwyer-attack-Nimroz-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='dwyer-attack-Nimroz-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Nimroz', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='dwyer-patrol-Nimroz-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
 })
 
 -- NIMROZ (airport) -> connects to: Dwyer, Farah, Camp Bastion
 zones.nimroz:addGroups({
-    GroupCommander:new({name='nimroz-supply-Farah-helo',        mission='supply', template='HeloSupplyTemplate', targetzone='Farah'}),
+    DirectorCapability:new({name='nimroz-supply-Farah-helo',        mission='supply', template='HeloSupplyTemplate', targetzone='Farah'}),
 
-    GroupCommander:new({name='nimroz-attack-Dwyer-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
-    GroupCommander:new({name='nimroz-attack-Dwyer-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Dwyer', Altitude = CasAltitude()}),
-    GroupCommander:new({name='nimroz-patrol-Dwyer-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='nimroz-attack-Dwyer-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='nimroz-attack-Dwyer-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Dwyer', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='nimroz-patrol-Dwyer-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Dwyer', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='nimroz-attack-Farah-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Farah', Altitude = CapAltitude()}),
-    GroupCommander:new({name='nimroz-attack-Farah-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Farah', Altitude = CasAltitude()}),
-    GroupCommander:new({name='nimroz-patrol-Farah-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Farah', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='nimroz-attack-Farah-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Farah', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='nimroz-attack-Farah-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Farah', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='nimroz-patrol-Farah-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Farah', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='nimroz-attack-CampBastion-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
-    GroupCommander:new({name='nimroz-attack-CampBastion-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Camp Bastion', Altitude = CasAltitude()}),
-    GroupCommander:new({name='nimroz-patrol-CampBastion-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='nimroz-attack-CampBastion-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='nimroz-attack-CampBastion-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Camp Bastion', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='nimroz-patrol-CampBastion-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Camp Bastion', Altitude = CapAltitude()}),
 
     -- Surface attack routes
 })
 
 -- FARAH (airport) -> connects to: Nimroz, Shindand
 zones.farah:addGroups({
-    GroupCommander:new({name='farah-supply-Nimroz-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Nimroz'}),
-    GroupCommander:new({name='farah-supply-Shindand-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Shindand'}),
+    DirectorCapability:new({name='farah-supply-Nimroz-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Nimroz'}),
+    DirectorCapability:new({name='farah-supply-Shindand-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Shindand'}),
 
-    GroupCommander:new({name='farah-attack-Nimroz-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
-    GroupCommander:new({name='farah-attack-Nimroz-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Nimroz', Altitude = CasAltitude()}),
-    GroupCommander:new({name='farah-patrol-Nimroz-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='farah-attack-Nimroz-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='farah-attack-Nimroz-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Nimroz', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='farah-patrol-Nimroz-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Nimroz', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='farah-attack-Shindand-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Shindand', Altitude = CapAltitude()}),
-    GroupCommander:new({name='farah-attack-Shindand-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Shindand', Altitude = CasAltitude()}),
-    GroupCommander:new({name='farah-patrol-Shindand-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Shindand', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='farah-attack-Shindand-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Shindand', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='farah-attack-Shindand-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Shindand', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='farah-patrol-Shindand-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Shindand', Altitude = CapAltitude()}),
 
     -- Surface attack routes
 })
@@ -1176,16 +1176,16 @@ zones.farah:addGroups({
 -- SHINDAND (airport) -> connects to: Farah, Herat
 local shindandAttackFOBAhmadShahMassoudArty = Era == 'Vietnam' and 'Shindand-attack-FOB-AhmadShahMassoud VT' or 'Shindand-attack-FOB-AhmadShahMassoud'
 zones.shindand:addGroups({
-    GroupCommander:new({name='shindand-supply-Farah-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Farah'}),
-    GroupCommander:new({name='shindand-supply-Herat-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Herat'}),
+    DirectorCapability:new({name='shindand-supply-Farah-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Farah'}),
+    DirectorCapability:new({name='shindand-supply-Herat-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Herat'}),
 
-    GroupCommander:new({name='shindand-attack-Farah-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Farah', Altitude = CapAltitude()}),
-    GroupCommander:new({name='shindand-attack-Farah-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Farah', Altitude = CasAltitude()}),
-    GroupCommander:new({name='shindand-patrol-Farah-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Farah', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='shindand-attack-Farah-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Farah', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='shindand-attack-Farah-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Farah', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='shindand-patrol-Farah-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Farah', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='shindand-attack-Herat-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
-    GroupCommander:new({name='shindand-attack-Herat-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Herat', Altitude = CasAltitude()}),
-    GroupCommander:new({name='shindand-patrol-Herat-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='shindand-attack-Herat-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='shindand-attack-Herat-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Herat', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='shindand-patrol-Herat-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
 
     -- Surface attack routes
     GroupCommander:new({name='Shindand-attack-Herat', mission='attack', targetzone='Herat', type='surface', SetActiveMission = true}),
@@ -1194,15 +1194,15 @@ zones.shindand:addGroups({
 
 -- HERAT (airport) -> connects to: Shindand, Qala i Naw
 zones.herat:addGroups({
-    GroupCommander:new({name='herat-supply-QalaiNaw-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Qala i Naw'}),
+    DirectorCapability:new({name='herat-supply-QalaiNaw-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Qala i Naw'}),
 
-    GroupCommander:new({name='herat-attack-Shindand-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Shindand', Altitude = CapAltitude()}),
-    GroupCommander:new({name='herat-attack-Shindand-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Shindand', Altitude = CasAltitude()}),
-    GroupCommander:new({name='herat-patrol-Shindand-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Shindand', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='herat-attack-Shindand-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Shindand', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='herat-attack-Shindand-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Shindand', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='herat-patrol-Shindand-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Shindand', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='herat-attack-QalaiNaw-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Qala i Naw', Altitude = CapAltitude()}),
-    GroupCommander:new({name='herat-attack-QalaiNaw-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Qala i Naw', Altitude = CasAltitude()}),
-    GroupCommander:new({name='herat-patrol-QalaiNaw-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Qala i Naw', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='herat-attack-QalaiNaw-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Qala i Naw', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='herat-attack-QalaiNaw-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Qala i Naw', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='herat-patrol-QalaiNaw-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Qala i Naw', Altitude = CapAltitude()}),
 
     -- Surface attack routes
     GroupCommander:new({name='Herat-attack-Shindand', mission='attack', targetzone='Shindand', type='surface', SetActiveMission = true}),
@@ -1210,117 +1210,117 @@ zones.herat:addGroups({
 
 -- QALA I NAW (airport) -> connects to: Herat, Maymana Zahiraddin Faryabi
 zones.qalainaw:addGroups({
-    GroupCommander:new({name='qalainaw-supply-Herat-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Herat',ForceFromGround = true}),
-    GroupCommander:new({name='qalainaw-supply-Maymana-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi',ForceFromGround = true}),
+    DirectorCapability:new({name='qalainaw-supply-Herat-helo',   mission='supply', template='HeloSupplyTemplate', targetzone='Herat',ForceFromGround = true}),
+    DirectorCapability:new({name='qalainaw-supply-Maymana-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi',ForceFromGround = true}),
 
-    GroupCommander:new({name='qalainaw-attack-Herat-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
-    GroupCommander:new({name='qalainaw-attack-Herat-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Herat', Altitude = CasAltitude()}),
-    GroupCommander:new({name='qalainaw-patrol-Herat-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='qalainaw-attack-Herat-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='qalainaw-attack-Herat-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Herat', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='qalainaw-patrol-Herat-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Herat', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='qalainaw-attack-Maymana-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CapAltitude()}),
-    GroupCommander:new({name='qalainaw-attack-Maymana-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CasAltitude()}),
-    GroupCommander:new({name='qalainaw-patrol-Maymana-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='qalainaw-attack-Maymana-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='qalainaw-attack-Maymana-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='qalainaw-patrol-Maymana-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CapAltitude()}),
 })
 
 -- MAYMANA ZAHIRADDIN FARYABI (airport) -> connects to: QalaiNaw, Chaghcharan
 zones.maymanazahiraddin:addGroups({
-    GroupCommander:new({name='maymana-supply-QalaiNaw-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Qala i Naw'}),
-    GroupCommander:new({name='maymana-supply-Chaghcharan-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Chaghcharan'}),
+    DirectorCapability:new({name='maymana-supply-QalaiNaw-helo',    mission='supply', template='HeloSupplyTemplate', targetzone='Qala i Naw'}),
+    DirectorCapability:new({name='maymana-supply-Chaghcharan-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Chaghcharan'}),
 
 
-    GroupCommander:new({name='maymana-attack-QalaINaw-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Qala i Naw', Altitude = CapAltitude()}),
-    GroupCommander:new({name='maymana-attack-QalaINaw-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Qala i Naw', Altitude = CasAltitude()}),
-    GroupCommander:new({name='maymana-patrol-QalaINaw-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Qala i Naw', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='maymana-attack-QalaINaw-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Qala i Naw', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='maymana-attack-QalaINaw-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Qala i Naw', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='maymana-patrol-QalaINaw-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Qala i Naw', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='maymana-attack-Chaghcharan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Chaghcharan', Altitude = CapAltitude()}),
-    GroupCommander:new({name='maymana-attack-Chaghcharan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Chaghcharan', Altitude = CasAltitude()}),
-    GroupCommander:new({name='maymana-patrol-Chaghcharan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Chaghcharan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='maymana-attack-Chaghcharan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Chaghcharan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='maymana-attack-Chaghcharan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Chaghcharan', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='maymana-patrol-Chaghcharan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Chaghcharan', Altitude = CapAltitude()}),
 
     -- Surface attack routes
     GroupCommander:new({name='Maymana-attack-FOBHamidKarzai', mission='attack', targetzone='FOB-Hamid Karzai', type='surface', SetActiveMission = true}),
-	GroupCommander:new({name='Maymana-attack-FOB-Delaram-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='FOB-Delaram', type='surface',artilleryRangeNm= 7,SetActiveMission = true}),
+	DirectorCapability:new({name='Maymana-attack-FOB-Delaram-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='FOB-Delaram', type='surface',artilleryRangeNm= 7,SetActiveMission = true}),
 
 })
 zones.hamidkarzai:addGroups({
-	GroupCommander:new({name='FOBHamidKarzai-supply-Maymana', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='FOBHamidKarzai-supply-QalaiNaw', mission='supply', template='HeloSupplyTemplate', targetzone='Qala i Naw', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='FOBHamidKarzai-supply-Maymana', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='FOBHamidKarzai-supply-QalaiNaw', mission='supply', template='HeloSupplyTemplate', targetzone='Qala i Naw', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 zones.delaram:addGroups({
-	GroupCommander:new({name='delaram-supply-Maymana', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='delaram-supply-chaghcharan', mission='supply', template='HeloSupplyTemplate', targetzone='Chaghcharan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='delaram-supply-Maymana', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='delaram-supply-chaghcharan', mission='supply', template='HeloSupplyTemplate', targetzone='Chaghcharan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 zones.javidbasharat:addGroups({
-	GroupCommander:new({name='javidbasharat-supply-chaghcharan', mission='supply', template='HeloSupplyTemplate', targetzone='Chaghcharan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='javidbasharat-supply-bamyan', mission='supply', template='HeloSupplyTemplate', targetzone='Bamyan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='javidbasharat-supply-chaghcharan', mission='supply', template='HeloSupplyTemplate', targetzone='Chaghcharan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='javidbasharat-supply-bamyan', mission='supply', template='HeloSupplyTemplate', targetzone='Bamyan', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 zones.bostick:addGroups({
-	GroupCommander:new({name='bostick-supply-Sharana', mission='supply', template='HeloSupplyTemplate', targetzone='Sharana', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='bostick-supply-charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='bostick-supply-Sharana', mission='supply', template='HeloSupplyTemplate', targetzone='Sharana', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='bostick-supply-charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 zones.faridbasharat:addGroups({
-	GroupCommander:new({name='faridbasharat-supply-Jalalabad', mission='supply', template='HeloSupplyTemplate', targetzone='Jalalabad', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='faridbasharat-supply-Gardez', mission='supply', template='HeloSupplyTemplate', targetzone='Gardez', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='faridbasharat-supply-Jalalabad', mission='supply', template='HeloSupplyTemplate', targetzone='Jalalabad', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='faridbasharat-supply-Gardez', mission='supply', template='HeloSupplyTemplate', targetzone='Gardez', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 zones.shank:addGroups({
-	GroupCommander:new({name='Shank-supply-Bravo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='Shank-supply-Charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Shank-supply-Bravo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Shank-supply-Charlie', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Charlie', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 zones.fenty:addGroups({
-	GroupCommander:new({name='Fenty-supply-Bravo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='Fenty-supply-Tarinkot', mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='Fenty-supply-Kandahar', mission='supply', template='HeloSupplyTemplate', targetzone='Kandahar', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Fenty-supply-Bravo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Fenty-supply-Tarinkot', mission='supply', template='HeloSupplyTemplate', targetzone='Tarinkot', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Fenty-supply-Kandahar', mission='supply', template='HeloSupplyTemplate', targetzone='Kandahar', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 zones.jamsheed:addGroups({
-	GroupCommander:new({name='Jamsheed-supply-Farah', mission='supply', template='HeloSupplyTemplate', targetzone='Farah', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='Jamsheed-supply-Nimroz', mission='supply', template='HeloSupplyTemplate', targetzone='Nimroz', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='Jamsheed-supply-Dwyer', mission='supply', template='HeloSupplyTemplate', targetzone='Dwyer', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
-	GroupCommander:new({name='Jamsheed-supply-Camp Bastion', mission='supply', template='HeloSupplyTemplate', targetzone='Camp Bastion', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Jamsheed-supply-Farah', mission='supply', template='HeloSupplyTemplate', targetzone='Farah', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Jamsheed-supply-Nimroz', mission='supply', template='HeloSupplyTemplate', targetzone='Nimroz', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Jamsheed-supply-Dwyer', mission='supply', template='HeloSupplyTemplate', targetzone='Dwyer', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
+	DirectorCapability:new({name='Jamsheed-supply-Camp Bastion', mission='supply', template='HeloSupplyTemplate', targetzone='Camp Bastion', Bluecondition = function(self) return self.side == 2 end, ShopLaunchOnly=true }),
 })
 
 -- CHAGHCHARAN (airport) -> connects to: Maymana Zahiraddin Faryabi, Bamyan
 local chaghcharanAttackFOBDelaramArty = Era == 'Vietnam' and 'Chaghcharan-attack-FOBDelaram VT' or 'Chaghcharan-attack-FOBDelaram'
 zones.chaghcharan:addGroups({
-    GroupCommander:new({name='chaghcharan-supply-Maymana-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi'}),
-    GroupCommander:new({name='chaghcharan-supply-Bamyan-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Bamyan'}),
+    DirectorCapability:new({name='chaghcharan-supply-Maymana-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Maymana Zahiraddin Faryabi'}),
+    DirectorCapability:new({name='chaghcharan-supply-Bamyan-helo',  mission='supply', template='HeloSupplyTemplate', targetzone='Bamyan'}),
 
-    GroupCommander:new({name='chaghcharan-attack-Maymana-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CapAltitude()}),
-    GroupCommander:new({name='chaghcharan-attack-Maymana-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CasAltitude()}),
-    GroupCommander:new({name='chaghcharan-patrol-Maymana-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='chaghcharan-attack-Maymana-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='chaghcharan-attack-Maymana-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='chaghcharan-patrol-Maymana-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Maymana Zahiraddin Faryabi', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='chaghcharan-attack-Bamyan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
-    GroupCommander:new({name='chaghcharan-attack-Bamyan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bamyan', Altitude = CasAltitude()}),
-    GroupCommander:new({name='chaghcharan-patrol-Bamyan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='chaghcharan-attack-Bamyan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='chaghcharan-attack-Bamyan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bamyan', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='chaghcharan-patrol-Bamyan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
 
     -- Surface attack routes
     GroupCommander:new({name=chaghcharanAttackFOBDelaramArty,  mission='attack', targetzone='FOB-Delaram', type='surface',SetActiveMission = true}),
-	GroupCommander:new({name='Chaghcharan-attack-FOB-Javid-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='FOB-Javid Basharat', type='surface',artilleryRangeNm= 7,SetActiveMission = true}),
+	DirectorCapability:new({name='Chaghcharan-attack-FOB-Javid-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='FOB-Javid Basharat', type='surface',artilleryRangeNm= 7,SetActiveMission = true}),
 
 })
 
 -- BAMYAN (airport) -> connects to: Chaghcharan, Kabul, Bagram
 zones.bamyan:addGroups({
-    GroupCommander:new({name='bamyan-supply-Kabul-helo',mission='supply', template='HeloSupplyTemplate', targetzone='Kabul'}),
+    DirectorCapability:new({name='bamyan-supply-Kabul-helo',mission='supply', template='HeloSupplyTemplate', targetzone='Kabul'}),
 
-    GroupCommander:new({name='bamyan-supply-Bagram', mission='supply', template='HeloSupplyTemplate', targetzone='Bagram'}),
+    DirectorCapability:new({name='bamyan-supply-Bagram', mission='supply', template='HeloSupplyTemplate', targetzone='Bagram'}),
 
-    GroupCommander:new({name='bamyan-attack-Chaghcharan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Chaghcharan', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bamyan-attack-Chaghcharan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Chaghcharan', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bamyan-patrol-Chaghcharan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Chaghcharan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bamyan-attack-Chaghcharan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Chaghcharan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bamyan-attack-Chaghcharan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Chaghcharan', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bamyan-patrol-Chaghcharan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Chaghcharan', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='bamyan-attack-Kabul-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kabul', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bamyan-attack-Kabul-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Kabul', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bamyan-patrol-Kabul-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kabul', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bamyan-attack-Kabul-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kabul', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bamyan-attack-Kabul-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Kabul', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bamyan-patrol-Kabul-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kabul', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='bamyan-attack-Bagram-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bagram', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bamyan-attack-Bagram-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bagram', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bamyan-patrol-Bagram-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bagram', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bamyan-attack-Bagram-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bagram', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bamyan-attack-Bagram-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bagram', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bamyan-patrol-Bagram-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bagram', Altitude = CapAltitude()}),
 
     -- Surface attack routes
     GroupCommander:new({name='Bamyan-attack-FOB-JavidBasharat',  mission='attack', targetzone='FOB-Javid Basharat',  type='surface', SetActiveMission = true}),
@@ -1328,21 +1328,21 @@ zones.bamyan:addGroups({
 
 -- BAGRAM (airport) -> connects to: Kabul, Bamyan, Kandahar
 zones.bagram:addGroups({
-    GroupCommander:new({name='bagram-supply-Kabul-plane',      mission='supply', template='SupplyConvoy', targetzone='Kabul',type='surface'}),
-    GroupCommander:new({name='bagram-supply-Jalalabad-plane',  mission='supply', template='PlaneSupplyTemplate', targetzone='Jalalabad'}),
-    GroupCommander:new({name='bagram-supply-Bamyan-plane',     mission='supply', template='PlaneSupplyTemplate', targetzone='Bamyan'}),
+    DirectorCapability:new({name='bagram-supply-Kabul-plane',      mission='supply', template='SupplyConvoy', targetzone='Kabul',type='surface'}),
+    DirectorCapability:new({name='bagram-supply-Jalalabad-plane',  mission='supply', template='PlaneSupplyTemplate', targetzone='Jalalabad'}),
+    DirectorCapability:new({name='bagram-supply-Bamyan-plane',     mission='supply', template='PlaneSupplyTemplate', targetzone='Bamyan'}),
 
-    GroupCommander:new({name='bagram-attack-Kabul-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kabul', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bagram-attack-Kabul-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Kabul', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bagram-patrol-Kabul-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kabul', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bagram-attack-Kabul-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kabul', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bagram-attack-Kabul-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Kabul', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bagram-patrol-Kabul-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kabul', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='bagram-attack-Bamyan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bagram-attack-Bamyan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bamyan', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bagram-patrol-Bamyan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bagram-attack-Bamyan-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bagram-attack-Bamyan-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Bamyan', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bagram-patrol-Bamyan-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Bamyan', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='bagram-attack-Kandahar-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kandahar', Altitude = CapAltitude()}),
-    GroupCommander:new({name='bagram-attack-Kandahar-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Kandahar', Altitude = CasAltitude()}),
-    GroupCommander:new({name='bagram-patrol-Kandahar-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kandahar', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bagram-attack-Kandahar-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kandahar', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='bagram-attack-Kandahar-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Kandahar', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='bagram-patrol-Kandahar-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Kandahar', Altitude = CapAltitude()}),
 
     -- Surface attack routes
     GroupCommander:new({name='Bagram-attack-Kabul',  mission='attack', targetzone='Kabul',  type='surface', SetActiveMission = true}),
@@ -1350,151 +1350,111 @@ zones.bagram:addGroups({
 
 -- KANDAHAR (airport) -> connects to: Tarinkot, Checkpoint Bravo, Checkpoint Alpha
 zones.kandahar:addGroups({
-    GroupCommander:new({name='kandahar-supply-CheckpointBravo-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo'}),
-    GroupCommander:new({name='kandahar-supply-CheckpointAlpha-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Alpha'}),
+    DirectorCapability:new({name='kandahar-supply-CheckpointBravo-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Bravo'}),
+    DirectorCapability:new({name='kandahar-supply-CheckpointAlpha-helo', mission='supply', template='HeloSupplyTemplate', targetzone='Checkpoint Alpha'}),
 
-    GroupCommander:new({name='kandahar-supply-Tarinkot-plane',   mission='supply', template='PlaneSupplyTemplate', targetzone='Tarinkot'}),
-    GroupCommander:new({name='kandahar-supply-Dwyer-plane',      mission='supply', template='PlaneSupplyTemplate', targetzone='Dwyer'}),
-    GroupCommander:new({name='kandahar-supply-Shindand-plane',   mission='supply', template='PlaneSupplyTemplate', targetzone='Shindand'}),
-    GroupCommander:new({name='kandahar-supply-Kabul-plane',      mission='supply', template='PlaneSupplyTemplate', targetzone='Kabul'}),
+    DirectorCapability:new({name='kandahar-supply-Tarinkot-plane',   mission='supply', template='PlaneSupplyTemplate', targetzone='Tarinkot'}),
+    DirectorCapability:new({name='kandahar-supply-Dwyer-plane',      mission='supply', template='PlaneSupplyTemplate', targetzone='Dwyer'}),
+    DirectorCapability:new({name='kandahar-supply-Shindand-plane',   mission='supply', template='PlaneSupplyTemplate', targetzone='Shindand'}),
+    DirectorCapability:new({name='kandahar-supply-Kabul-plane',      mission='supply', template='PlaneSupplyTemplate', targetzone='Kabul'}),
 
-    GroupCommander:new({name='kandahar-attack-Tarinkot-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Tarinkot', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kandahar-attack-Tarinkot-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Tarinkot', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kandahar-patrol-Tarinkot-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Tarinkot', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kandahar-attack-Tarinkot-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Tarinkot', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kandahar-attack-Tarinkot-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Tarinkot', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kandahar-patrol-Tarinkot-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Tarinkot', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='kandahar-attack-CheckpointBravo-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Bravo', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kandahar-attack-CheckpointBravo-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Bravo', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kandahar-patrol-CheckpointBravo-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Bravo', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kandahar-attack-CheckpointBravo-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Bravo', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kandahar-attack-CheckpointBravo-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Bravo', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kandahar-patrol-CheckpointBravo-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Bravo', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name='kandahar-attack-CheckpointAlpha-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
-    GroupCommander:new({name='kandahar-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
-    GroupCommander:new({name='kandahar-patrol-CheckpointAlpha-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kandahar-attack-CheckpointAlpha-cap',  mission='attack', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='kandahar-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='kandahar-patrol-CheckpointAlpha-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
 })
 -------------------------------end of GroupCommander Routes-------------------------------
 
 ---------------Start of airbase definitions(this is what allows you to spawn at the airbase and allows helos------------------------
 
-zones.kandahar.isHeloSpawn = true
 zones.kandahar.airbaseName = 'Kandahar'
 zones.kandahar.LogisticCenter = true
 
-zones.fobkunar.isHeloSpawn = true
 zones.fobkunar.airbaseName = 'FOB Kunar'
 
-zones.jalalabad.isHeloSpawn = true
 zones.jalalabad.airbaseName = 'Jalalabad'
 
-zones.checkpointkabule.isHeloSpawn = true
 zones.checkpointkabule.airbaseName = 'Checkpoint Kabul E'
 
-zones.kabul.isHeloSpawn = true
 zones.kabul.airbaseName = 'Kabul'
 
-zones.checkpointkabulw.isHeloSpawn = true
 zones.checkpointkabulw.airbaseName = 'Checkpoint Kabul W'
 
-zones.kabulsouth.isHeloSpawn = true
 zones.kabulsouth.airbaseName = 'Checkpoint Kabul S'
 
-zones.delta.isHeloSpawn = true
 zones.delta.airbaseName = 'Checkpoint Delta'
 
-zones.gardez.isHeloSpawn = true
 zones.gardez.airbaseName = 'Gardez'
 
-zones.ghazniheliport.isHeloSpawn = true
 zones.ghazniheliport.airbaseName = 'Ghazni Heliport'
 
-zones.sharana.isHeloSpawn = true
 zones.sharana.airbaseName = 'Sharana'
 
-zones.charlie.isHeloSpawn = true
 zones.charlie.airbaseName = 'Checkpoint Charlie'
 
-zones.tarinkot.isHeloSpawn = true
 zones.tarinkot.airbaseName = 'Tarinkot'
 
-zones.alpha.isHeloSpawn = true
 zones.alpha.airbaseName = 'Checkpoint Alpha'
 zones.alpha.LogisticCenter = true
 
-zones.bost.isHeloSpawn = true
 zones.bost.airbaseName = 'Bost'
 
-zones.campbastion.isHeloSpawn = true
 zones.campbastion.airbaseName = 'Camp Bastion'
 
-zones.dwyer.isHeloSpawn = true
 zones.dwyer.airbaseName = 'Dwyer'
 
-zones.nimroz.isHeloSpawn = true
 zones.nimroz.airbaseName = 'Nimroz'
 
-zones.farah.isHeloSpawn = true
 zones.farah.airbaseName = 'Farah'
 
-zones.shindand.isHeloSpawn = true
 zones.shindand.airbaseName = 'Shindand'
 
-zones.herat.isHeloSpawn = true
 zones.herat.airbaseName = 'Herat'
 
-zones.bamyan.isHeloSpawn = true
 zones.bamyan.airbaseName = 'Bamyan'
 
-zones.chaghcharan.isHeloSpawn = true
 zones.chaghcharan.airbaseName = 'Chaghcharan'
 
-zones.qalainaw.isHeloSpawn = true
 zones.qalainaw.airbaseName = 'Qala i Naw'
 
-zones.maymanazahiraddin.isHeloSpawn = true
 zones.maymanazahiraddin.airbaseName = 'Maymana Zahiraddin Faryabi'
 
-zones.bravo.isHeloSpawn = true
 zones.bravo.airbaseName = 'Checkpoint Bravo'
 
-zones.bagram.isHeloSpawn = true
 zones.bagram.airbaseName = 'Bagram'
 
-zones.jamsheed.isHeloSpawn = true
 zones.jamsheed.airbaseName = 'FOB-Jamsheed'
 
-zones.bostick.isHeloSpawn = true
 zones.bostick.airbaseName = 'FOB-Bostick'
 
-zones.lagman.isHeloSpawn = true
 zones.lagman.airbaseName = 'FOB-Lagman'
 
-zones.shank.isHeloSpawn = true
 zones.shank.airbaseName = 'FOB-Shank'
 
-zones.javidbasharat.isHeloSpawn = true
 zones.javidbasharat.airbaseName = 'FOB-Javid Basharat'
 
-zones.hamidkarzai.isHeloSpawn = true
 zones.hamidkarzai.airbaseName = 'FOB-Hamid Karzai'
 
-zones.ismailkhan.isHeloSpawn = true
 zones.ismailkhan.airbaseName = 'FOB-Ismail Khan'
 
-zones.ahmadshahmassoud.isHeloSpawn = true
 zones.ahmadshahmassoud.airbaseName = 'FOB-Ahmad Shah Massoud'
 
-zones.faridbasharat.isHeloSpawn = true
 zones.faridbasharat.airbaseName = 'FOB-Farid Basharat'
 
-zones.delaram.isHeloSpawn = true
 zones.delaram.airbaseName = 'FOB-Delaram'
 
-zones.fenty.isHeloSpawn = true
 zones.fenty.airbaseName = 'FOB-Fenty'
 
 zones.khost.airbaseName = 'Khost'
-zones.khost.isHeloSpawn = true
 
 zones.urgoon.airbaseName = 'Urgoon Heliport'
-zones.urgoon.isHeloSpawn = true
 
 
 --
@@ -2619,7 +2579,7 @@ bc:registerShopItem('dynamicarco', LTGet("SYRIA_SHOP_ITEM_TANKER_DROGUE"), ShopP
 	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_DROGUE_UNLOCKED"), 20)
     return
 end,
-function (sender, params)
+function (sender, params, delayMenuRefresh)
     if ArcoActive then
         return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Arco")
     end
@@ -2627,7 +2587,7 @@ function (sender, params)
         if params.zone.side ~= 2 then
             return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY")
         end
-        spawnArcoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0)
+        spawnArcoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0, nil, nil, delayMenuRefresh)
         return
     end
     buildArcoMenu()
@@ -2687,7 +2647,7 @@ bc:registerShopItem('dynamictexaco', LTGet("SYRIA_SHOP_ITEM_TANKER_BOOM"), ShopP
 	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_BOOM_UNLOCKED"), 20)
     return
 end,
-function (sender, params)
+function (sender, params, delayMenuRefresh)
     if TexacoActive then
         return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Texaco")
     end
@@ -2695,7 +2655,7 @@ function (sender, params)
         if params.zone.side ~= 2 then
             return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY")
         end
-        spawnTexacoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0)
+        spawnTexacoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0, nil, nil, delayMenuRefresh)
         return
     end
     buildTexacoMenu()
@@ -3921,6 +3881,7 @@ mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
 DynamicHybridConfig = DynamicHybridConfig or {
 	enabled = true,
 	runOnce = true,
+	enablePatrol = false,
 	airMaxNm = 120,
 	heloCasMaxNm = 40,
 	minGroundAttackNm = 10,
@@ -5971,7 +5932,11 @@ mc:trackMission({
 
 -------------------------------------------- CAS 1 --------------------------------------------
 local airstrike_COOLDOWN = 1800
-local casGrp = ColdWarTechEra and 'evt-CAScw' or 'evt-CAS'
+local enemyStrikeGroups = BuildEnabledTemplateList(
+	ColdWarTechEra and {'evt-attackcw'} or {'evt-attack', 'evt-attackcw'},
+	RedEnemyStrikePlaneEnabled
+)
+local casGrp = enemyStrikeGroups[1] or 'evt-attack'
 local airstrikeAltitudeFt = 20000
 local airstrikePickOptions = {
 	minTargetSpawnNm = 80,
@@ -5984,16 +5949,17 @@ local airstrikePickOptions = {
 	attackAltitudeFt = airstrikeAltitudeFt,
 }
 
-Group.getByName('evt-CAS'):destroy()
-Group.getByName('evt-CAScw'):destroy()
+Group.getByName('evt-attack'):destroy()
+Group.getByName('evt-attackcw'):destroy()
 evc:addEvent({
 	id='cas',
 	StrikeMission = true,
 	action=function()
+		if #enemyStrikeGroups == 0 then return end
 		local director = Director:getForSide(coalition.side.RED)
 		local selection = director:consumeTacticalAirstrikePlan(airstrikePickOptions)
 		if not selection then return end
-		casGrp = ColdWarTechEra and 'evt-CAScw' or (math.random(1, 2) == 1 and 'evt-CAS' or 'evt-CAScw')
+		casGrp = enemyStrikeGroups[math.random(1, #enemyStrikeGroups)]
 		local spawned = Respawn.SpawnAtPoint(
 			casGrp,
 			selection.spawnCoord,
@@ -6014,6 +5980,7 @@ evc:addEvent({
 	end,
 	canExecute=function()
 		if Era == 'Vietnam' then return false end
+		if #enemyStrikeGroups == 0 then return false end
         if ActiveMission['cas'] then return false end
 		if Group.getByName(casGrp) then return false end
 		return Director:getForSide(coalition.side.RED)

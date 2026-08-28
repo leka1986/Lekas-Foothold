@@ -653,85 +653,85 @@ end
 Hunt = true
 
 zones = {
-	redcarrier = ZoneCommander:new({zone='Red Carrier', side=1, level=10, upgrades=upgrades.redships, crates={}, flavorText=flavor.redcarrier}),
+	redcarrier = ZoneCommander:new({facility='carrier', isHeloSpawn=Era ~= 'Vietnam' and true or nil, zone='Red Carrier', side=1, level=10, upgrades=upgrades.redships, crates={}, flavorText=flavor.redcarrier}),
 	
-	sdedov = ZoneCommander:new({zone='Sde Dov', side=2, size='smallmedium', level=20, upgrades=upgrades.startbase2, crates={}, flavorText=flavor.sdedov}),
-	bengurion = ZoneCommander:new({zone='Ben-Gurion', side=2, size='small', level=25, upgrades=upgrades.airfieldBen, crates={}, flavorText=flavor.bengurion}),
-	palmahim = ZoneCommander:new({zone='Palmahim', side=2, size='small', level=25, upgrades=upgrades.startbase, crates={}, flavorText=flavor.palmahim}),
-	telnof = ZoneCommander:new({zone='Tel Nof', side=2, size='small', level=25, upgrades=upgrades.startbase, crates={}, flavorText=flavor.telnof}),
-	hatzor = ZoneCommander:new({zone='Hatzor', side=2, size='small', level=25, upgrades=upgrades.startbase, crates={}, flavorText=flavor.hatzor}),
-	kedemhatzerim = ZoneCommander:new({zone='Kedem-Hatzerim', side=1, size='bignosam', level=25, upgrades=upgrades.airfield2hat, crates={}, flavorText=flavor.kedemhatzerim}),
-	nevatim = ZoneCommander:new({zone='Nevatim', side=1, size='bignosam', level=25, upgrades=upgrades.airfield3nevatim, crates={}, flavorText=flavor.nevatim}),
-	ramonairbase = ZoneCommander:new({zone='Ramon Airbase', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4Ramon, crates={}, flavorText=flavor.ramonairbase}),
-	elgora = ZoneCommander:new({zone='El Gora', side=1, size='mediumbig', level=25, upgrades=upgrades.ElGoraUpgrade, crates={}, flavorText=flavor.elgora}),
-	elarish = ZoneCommander:new({zone='El Arish', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.elarish}),
-	ovda = ZoneCommander:new({zone='Ovda', side=1, size='big', level=25, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.ovda}),
-	stcatherine = ZoneCommander:new({zone='St Catherine', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4Catherine, crates={}, flavorText=flavor.stcatherine}),
-	sharmelsheikh = ZoneCommander:new({zone='Sharm El Sheikh International Airport', side=1, size='medium', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.sharmelsheikh}),
-	hurghada = ZoneCommander:new({zone='Hurghada International Airport', side=1, size='bigsam', level=25, upgrades=upgrades.airfield4hurghada, crates={}, flavorText=flavor.hurghada}),
-	aburudeis = ZoneCommander:new({zone='Abu Rudeis', side=1, size='medium', level=25, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.aburudeis}),
-	birhasanah = ZoneCommander:new({zone='Bir Hasanah', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.birhasanah}),
-	melez = ZoneCommander:new({zone='Melez', side=1, size='big', level=25, upgrades=upgrades.airfield6Melez, crates={}, flavorText=flavor.melez,customSuspendNm = 90}),
-	baluza = ZoneCommander:new({zone='Baluza', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4Baluza, crates={}, flavorText=flavor.baluza}),
-	assalihiyah = ZoneCommander:new({zone='As Salihiyah', side=1, size='medium', level=25, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.assalihiyah}),
-	alismailiyah = ZoneCommander:new({zone='Al Ismailiyah', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2Ismailiyah, crates={}, flavorText=flavor.alismailiyah}),
-	abusuwayr = ZoneCommander:new({zone='Abu Suwayr', side=1, size='bignosam', level=25, upgrades=upgrades.airfield3Suwayr, crates={}, flavorText=flavor.abusuwayr}),
-	difarsuwarairfield = ZoneCommander:new({zone='Difarsuwar Airfield', side=1, size='medium', level=25, upgrades=upgrades.airfield4Dif, crates={}, flavorText=flavor.difarsuwarairfield}),
-	fayed = ZoneCommander:new({zone='Fayed', side=1, size='medium', level=25, upgrades=upgrades.airfield1Fayed, crates={}, flavorText=flavor.fayed}),
-	kibritairbase = ZoneCommander:new({zone='Kibrit Air Base', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.kibritairbase}),
-	almansurah = ZoneCommander:new({zone='Al Mansurah', side=1, size='bignosam', level=25, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.almansurah}),
-	azzaqaziq = ZoneCommander:new({zone='AzZaqaziq', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4AzZaqaziq, crates={}, flavorText=flavor.azzaqaziq}),
-	bilbeisairbase = ZoneCommander:new({zone='Bilbeis Air Base', side=1, size='medium', level=25, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.bilbeisairbase}),
-	inshasairbase = ZoneCommander:new({zone='Inshas Airbase', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.inshasairbase}),
-	cairointernationalairport = ZoneCommander:new({zone='Cairo International Airport', side=1, size='medium', level=20, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.cairointernationalairport}),
-	wadialjandali = ZoneCommander:new({zone='Wadi al Jandali', side=1, size='medium', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.wadialjandali}),
-	cairowest = ZoneCommander:new({zone='Cairo West', side=1, size='medium', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.cairowest}),
-	benisuef = ZoneCommander:new({zone='Beni Suef', side=1, size='medium', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.benisuef}),
-	komawshim = ZoneCommander:new({zone='Kom Awshim', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.komawshim}),
-	quwaysina = ZoneCommander:new({zone='Quwaysina', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.quwaysina}),
-	birmaairbase = ZoneCommander:new({zone='Birma Air Base', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.birmaairbase}),
+	sdedov = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Sde Dov', side=2, size='smallmedium', level=20, upgrades=upgrades.startbase2, crates={}, flavorText=flavor.sdedov}),
+	bengurion = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Ben-Gurion', side=2, size='small', level=25, upgrades=upgrades.airfieldBen, crates={}, flavorText=flavor.bengurion}),
+	palmahim = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Palmahim', side=2, size='small', level=25, upgrades=upgrades.startbase, crates={}, flavorText=flavor.palmahim}),
+	telnof = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Tel Nof', side=2, size='small', level=25, upgrades=upgrades.startbase, crates={}, flavorText=flavor.telnof}),
+	hatzor = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Hatzor', side=2, size='small', level=25, upgrades=upgrades.startbase, crates={}, flavorText=flavor.hatzor}),
+	kedemhatzerim = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Kedem-Hatzerim', side=1, size='bignosam', level=25, upgrades=upgrades.airfield2hat, crates={}, flavorText=flavor.kedemhatzerim}),
+	nevatim = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Nevatim', side=1, size='bignosam', level=25, upgrades=upgrades.airfield3nevatim, crates={}, flavorText=flavor.nevatim}),
+	ramonairbase = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Ramon Airbase', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4Ramon, crates={}, flavorText=flavor.ramonairbase}),
+	elgora = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='El Gora', side=1, size='mediumbig', level=25, upgrades=upgrades.ElGoraUpgrade, crates={}, flavorText=flavor.elgora}),
+	elarish = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='El Arish', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.elarish}),
+	ovda = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Ovda', side=1, size='big', level=25, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.ovda}),
+	stcatherine = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='St Catherine', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4Catherine, crates={}, flavorText=flavor.stcatherine}),
+	sharmelsheikh = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Sharm El Sheikh International Airport', side=1, size='medium', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.sharmelsheikh}),
+	hurghada = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Hurghada International Airport', side=1, size='bigsam', level=25, upgrades=upgrades.airfield4hurghada, crates={}, flavorText=flavor.hurghada}),
+	aburudeis = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Abu Rudeis', side=1, size='medium', level=25, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.aburudeis}),
+	birhasanah = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Bir Hasanah', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.birhasanah}),
+	melez = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Melez', side=1, size='big', level=25, upgrades=upgrades.airfield6Melez, crates={}, flavorText=flavor.melez,customSuspendNm = 90}),
+	baluza = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Baluza', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4Baluza, crates={}, flavorText=flavor.baluza}),
+	assalihiyah = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='As Salihiyah', side=1, size='medium', level=25, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.assalihiyah}),
+	alismailiyah = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Al Ismailiyah', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2Ismailiyah, crates={}, flavorText=flavor.alismailiyah}),
+	abusuwayr = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Abu Suwayr', side=1, size='bignosam', level=25, upgrades=upgrades.airfield3Suwayr, crates={}, flavorText=flavor.abusuwayr}),
+	difarsuwarairfield = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Difarsuwar Airfield', side=1, size='medium', level=25, upgrades=upgrades.airfield4Dif, crates={}, flavorText=flavor.difarsuwarairfield}),
+	fayed = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Fayed', side=1, size='medium', level=25, upgrades=upgrades.airfield1Fayed, crates={}, flavorText=flavor.fayed}),
+	kibritairbase = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kibrit Air Base', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.kibritairbase}),
+	almansurah = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Al Mansurah', side=1, size='bignosam', level=25, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.almansurah}),
+	azzaqaziq = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='AzZaqaziq', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield4AzZaqaziq, crates={}, flavorText=flavor.azzaqaziq}),
+	bilbeisairbase = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Bilbeis Air Base', side=1, size='medium', level=25, upgrades=upgrades.airfield1, crates={}, flavorText=flavor.bilbeisairbase}),
+	inshasairbase = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Inshas Airbase', side=1, size='mediumbig', level=25, upgrades=upgrades.airfield2, crates={}, flavorText=flavor.inshasairbase}),
+	cairointernationalairport = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Cairo International Airport', side=1, size='medium', level=20, upgrades=upgrades.airfield3, crates={}, flavorText=flavor.cairointernationalairport}),
+	wadialjandali = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Wadi al Jandali', side=1, size='medium', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.wadialjandali}),
+	cairowest = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Cairo West', side=1, size='medium', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.cairowest}),
+	benisuef = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Beni Suef', side=1, size='medium', level=25, upgrades=upgrades.airfield4, crates={}, flavorText=flavor.benisuef}),
+	komawshim = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Kom Awshim', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.komawshim}),
+	quwaysina = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Quwaysina', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.quwaysina}),
+	birmaairbase = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Birma Air Base', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.birmaairbase}),
 	
-	farpalpha = ZoneCommander:new({zone='FARP-Alpha', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1Alpha, crates={}, flavorText=flavor.farpalpha}),
-	farpbravo = ZoneCommander:new({zone='FARP-Bravo', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.farpbravo}),
-	farpcharlie = ZoneCommander:new({zone='FARP-Charlie', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.farpcharlie}),
-	farpdelta = ZoneCommander:new({zone='FARP-Delta', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.farpdelta}),
-	farpecho = ZoneCommander:new({zone='FARP-Echo', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.farpecho}),
-	farpfoxtrot = ZoneCommander:new({zone='FARP-Foxtrot', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.farpfoxtrot}),
-	farpgolf = ZoneCommander:new({zone='FARP-Golf', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.farpgolf}),
-	farphotel = ZoneCommander:new({zone='FARP-Hotel', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.farphotel}),
-	farpindia = ZoneCommander:new({zone='FARP-India', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.farpindia}),
-	farpjuliett = ZoneCommander:new({zone='FARP-Juliett', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.farpjuliett}),
-	farpkilo = ZoneCommander:new({zone='FARP-Kilo', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.farpkilo}),
-	farplima = ZoneCommander:new({zone='FARP-Lima', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.farplima}),
-	farpmike = ZoneCommander:new({zone='FARP-Mike', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.farpmike}),
+	farpalpha = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Alpha', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1Alpha, crates={}, flavorText=flavor.farpalpha}),
+	farpbravo = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Bravo', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.farpbravo}),
+	farpcharlie = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Charlie', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.farpcharlie}),
+	farpdelta = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Delta', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.farpdelta}),
+	farpecho = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Echo', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.farpecho}),
+	farpfoxtrot = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Foxtrot', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.farpfoxtrot}),
+	farpgolf = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Golf', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.farpgolf}),
+	farphotel = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Hotel', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.farphotel}),
+	farpindia = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-India', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.farpindia}),
+	farpjuliett = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Juliett', side=1, size='smallmedium', level=25, upgrades=upgrades.farp2, crates={}, flavorText=flavor.farpjuliett}),
+	farpkilo = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Kilo', side=1, size='small', level=25, upgrades=upgrades.farp3, crates={}, flavorText=flavor.farpkilo}),
+	farplima = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Lima', side=1, size='small', level=25, upgrades=upgrades.farp4, crates={}, flavorText=flavor.farplima}),
+	farpmike = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='FARP-Mike', side=1, size='smallmedium', level=25, upgrades=upgrades.farp1, crates={}, flavorText=flavor.farpmike}),
 	
 	
-	miningfacility = ZoneCommander:new({zone='MiningFacility',size='MiningFacility', side=1, level=20, upgrades=upgrades.mission1, crates={}, flavorText=flavor.miningfacility, income=0.4}),
-	insurgentcamp = ZoneCommander:new({zone='InsurgentCamp', side=1,size='shoradsmall', level=25, upgrades=upgrades.mission2InsurgentCamp, crates={}, flavorText=flavor.insurgentcamp, income=0.3}),
-	secrettechfacility = ZoneCommander:new({zone='SecretTechFacility', side=1,size='sam', level=20, upgrades=upgrades.mission3, crates={}, flavorText=flavor.secrettechfacility, income=0.5}),
-	fueldepo = ZoneCommander:new({zone='FuelDepo', side=1, level=20,size='shorad', upgrades=upgrades.mission4fueldepo, crates={}, flavorText=flavor.fueldepo, income=0.5}),
-	ammonitiondepo = ZoneCommander:new({zone='AmmonitionDepo', side=1,size='shorad', level=20, upgrades=upgrades.mission1Ammo, crates={}, flavorText=flavor.AmmonitionDepo, income=0.5}),
-	tankfactory = ZoneCommander:new({zone='TankFactory', side=1, level=20, upgrades=upgrades.mission2, crates={}, flavorText=flavor.tankfactory, income=0.4}),
-	chemsite = ZoneCommander:new({zone='ChemSite', side=1, level=20,size='maybesam', upgrades=upgrades.mission3chemsite, crates={}, flavorText=flavor.chemsite, income=0.3}),
-	artilleryfactory = ZoneCommander:new({zone='ArtilleryFactory', side=1, level=20, upgrades=upgrades.mission4, crates={}, flavorText=flavor.artilleryfactory, income=0.5}),
-	borjoil = ZoneCommander:new({zone='Borj Oil production Site',size='sam', side=1, level=20, upgrades=upgrades.borjoilFixed, crates={}, flavorText=flavor.borjoil, income=0.5}),
-	missilefactory = ZoneCommander:new({zone='MissileFactory', side=1, level=20,size='sam', upgrades=upgrades.sam5missileFactory, crates={}, flavorText=flavor.missilefactory, income=0.5}),
+	miningfacility = ZoneCommander:new({facility='none', zone='MiningFacility',size='MiningFacility', side=1, level=20, upgrades=upgrades.mission1, crates={}, flavorText=flavor.miningfacility, income=0.4}),
+	insurgentcamp = ZoneCommander:new({facility='none', zone='InsurgentCamp', side=1,size='shoradsmall', level=25, upgrades=upgrades.mission2InsurgentCamp, crates={}, flavorText=flavor.insurgentcamp, income=0.3}),
+	secrettechfacility = ZoneCommander:new({facility='none', zone='SecretTechFacility', side=1,size='sam', level=20, upgrades=upgrades.mission3, crates={}, flavorText=flavor.secrettechfacility, income=0.5}),
+	fueldepo = ZoneCommander:new({facility='none', zone='FuelDepo', side=1, level=20,size='shorad', upgrades=upgrades.mission4fueldepo, crates={}, flavorText=flavor.fueldepo, income=0.5}),
+	ammonitiondepo = ZoneCommander:new({facility='none', zone='AmmonitionDepo', side=1,size='shorad', level=20, upgrades=upgrades.mission1Ammo, crates={}, flavorText=flavor.AmmonitionDepo, income=0.5}),
+	tankfactory = ZoneCommander:new({facility='none', zone='TankFactory', side=1, level=20, upgrades=upgrades.mission2, crates={}, flavorText=flavor.tankfactory, income=0.4}),
+	chemsite = ZoneCommander:new({facility='none', zone='ChemSite', side=1, level=20,size='maybesam', upgrades=upgrades.mission3chemsite, crates={}, flavorText=flavor.chemsite, income=0.3}),
+	artilleryfactory = ZoneCommander:new({facility='none', zone='ArtilleryFactory', side=1, level=20, upgrades=upgrades.mission4, crates={}, flavorText=flavor.artilleryfactory, income=0.5}),
+	borjoil = ZoneCommander:new({facility='none', zone='Borj Oil production Site',size='sam', side=1, level=20, upgrades=upgrades.borjoilFixed, crates={}, flavorText=flavor.borjoil, income=0.5}),
+	missilefactory = ZoneCommander:new({facility='none', zone='MissileFactory', side=1, level=20,size='sam', upgrades=upgrades.sam5missileFactory, crates={}, flavorText=flavor.missilefactory, income=0.5}),
 	
-	samalpha = ZoneCommander:new({zone='SAM-Alpha', side=2, size='sam', level=20, upgrades=upgrades.sam3alpha, crates={}, flavorText=flavor.samalpha}),
-	sambravo = ZoneCommander:new({zone='SAM-Bravo', side=1, size='sam', level=20, upgrades=upgrades.sam1bravo, crates={}, flavorText=flavor.sambravo}),
-	samcharlie = ZoneCommander:new({zone='SAM-Charlie', side=1, size='sam', level=20, upgrades=upgrades.sam2charlie, crates={}, flavorText=flavor.samcharlie}),
-	samdelta = ZoneCommander:new({zone='SAM-Delta', side=1, size='sam', level=20, upgrades=upgrades.sam3delta, crates={}, flavorText=flavor.samdelta}),
-	samecho = ZoneCommander:new({zone='SAM-Echo', side=1, size='sam', level=20, upgrades=upgrades.sam4echo, crates={}, flavorText=flavor.samecho}),
-	samfoxtrot = ZoneCommander:new({zone='SAM-Foxtrot', side=1, size='sam', level=20, upgrades=upgrades.sam5foxtrot, crates={}, flavorText=flavor.samfoxtrot}),
-	samgolf = ZoneCommander:new({zone='SAM-Golf', side=1, size='sam', level=20, upgrades=upgrades.sam1golf, crates={}, flavorText=flavor.samgolf}),
-	samhotel = ZoneCommander:new({zone='SAM-Hotel', side=1, size='sam', level=20, upgrades=upgrades.sam2hotel, crates={}, flavorText=flavor.samhotel}),
-	samindia = ZoneCommander:new({zone='SAM-India', side=1, size='sam', level=20, upgrades=upgrades.sam3india, crates={}, flavorText=flavor.samindia}),
-	samjuliett = ZoneCommander:new({zone='SAM-Juliett', side=1, size='sam', level=20, upgrades=upgrades.sam4juliett, crates={}, flavorText=flavor.samjuliett}),
-	samkilo = ZoneCommander:new({zone='SAM-Kilo', side=1, size='sam', level=20, upgrades=upgrades.sam5kilo, crates={}, flavorText=flavor.samkilo}),
-	samlima = ZoneCommander:new({zone='SAM-Lima', side=1, size='sam', level=20, upgrades=upgrades.sam4lima, crates={}, flavorText=flavor.samlima}),
-	sammike = ZoneCommander:new({zone='SAM-Mike', side=1, size='sam', level=20, upgrades=upgrades.sam6mike, crates={}, flavorText=flavor.sammike,customSuspendNm = 150}),
+	samalpha = ZoneCommander:new({facility='none', zone='SAM-Alpha', side=2, size='sam', level=20, upgrades=upgrades.sam3alpha, crates={}, flavorText=flavor.samalpha}),
+	sambravo = ZoneCommander:new({facility='none', zone='SAM-Bravo', side=1, size='sam', level=20, upgrades=upgrades.sam1bravo, crates={}, flavorText=flavor.sambravo}),
+	samcharlie = ZoneCommander:new({facility='none', zone='SAM-Charlie', side=1, size='sam', level=20, upgrades=upgrades.sam2charlie, crates={}, flavorText=flavor.samcharlie}),
+	samdelta = ZoneCommander:new({facility='none', zone='SAM-Delta', side=1, size='sam', level=20, upgrades=upgrades.sam3delta, crates={}, flavorText=flavor.samdelta}),
+	samecho = ZoneCommander:new({facility='none', zone='SAM-Echo', side=1, size='sam', level=20, upgrades=upgrades.sam4echo, crates={}, flavorText=flavor.samecho}),
+	samfoxtrot = ZoneCommander:new({facility='none', zone='SAM-Foxtrot', side=1, size='sam', level=20, upgrades=upgrades.sam5foxtrot, crates={}, flavorText=flavor.samfoxtrot}),
+	samgolf = ZoneCommander:new({facility='none', zone='SAM-Golf', side=1, size='sam', level=20, upgrades=upgrades.sam1golf, crates={}, flavorText=flavor.samgolf}),
+	samhotel = ZoneCommander:new({facility='none', zone='SAM-Hotel', side=1, size='sam', level=20, upgrades=upgrades.sam2hotel, crates={}, flavorText=flavor.samhotel}),
+	samindia = ZoneCommander:new({facility='none', zone='SAM-India', side=1, size='sam', level=20, upgrades=upgrades.sam3india, crates={}, flavorText=flavor.samindia}),
+	samjuliett = ZoneCommander:new({facility='none', zone='SAM-Juliett', side=1, size='sam', level=20, upgrades=upgrades.sam4juliett, crates={}, flavorText=flavor.samjuliett}),
+	samkilo = ZoneCommander:new({facility='none', zone='SAM-Kilo', side=1, size='sam', level=20, upgrades=upgrades.sam5kilo, crates={}, flavorText=flavor.samkilo}),
+	samlima = ZoneCommander:new({facility='none', zone='SAM-Lima', side=1, size='sam', level=20, upgrades=upgrades.sam4lima, crates={}, flavorText=flavor.samlima}),
+	sammike = ZoneCommander:new({facility='none', zone='SAM-Mike', side=1, size='sam', level=20, upgrades=upgrades.sam6mike, crates={}, flavorText=flavor.sammike,customSuspendNm = 150}),
 
-	hidden1 = ZoneCommander:new({zone='Hidden1', side=1, level=20, upgrades=upgrades.hidden1Group, crates={}, flavorText=flavor.hidden1})
+	hidden1 = ZoneCommander:new({facility='none', zone='Hidden1', side=1, level=20, upgrades=upgrades.hidden1Group, crates={}, flavorText=flavor.hidden1})
 }
 
 if ColdWarTechEra then
@@ -945,6 +945,10 @@ HeloSupplyTemplate = BuildEnabledTemplateList(AllSupplyHeloTemplates, RedSupplyH
     "InsurgentConvoy 1",
     "InsurgentConvoy 2",
 	}
+	AntiShipPlaneTemplate = {
+	--"Viggen_Blue",
+	"Hornet_Anti_Ship"
+	}
 
 function CasAltitude() return math.random(15,25)*1000 end
 function CapAltitude() return math.random(22,32)*1000 end
@@ -952,304 +956,320 @@ function SeadAltitude() return math.random(25,33)*1000 end
 function RunwayStrikeAltitude() return math.random(23,28)*1000 end
 
 zones.bengurion:addGroups({
-    GroupCommander:new({name = 'bengurion-Support-Kedem', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Kedem-Hatzerim'}),
-    GroupCommander:new({name = 'bengurion-Support-Nevatim', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Nevatim'}),
-    GroupCommander:new({name = 'bengurion-Support-Ramon Airbase', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ramon Airbase'}),
+    DirectorCapability:new({name = 'bengurion-Support-Kedem', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Kedem-Hatzerim'}),
+    DirectorCapability:new({name = 'bengurion-Support-Nevatim', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Nevatim'}),
+    DirectorCapability:new({name = 'bengurion-Support-Ramon Airbase', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ramon Airbase'}),
 })
 
 zones.hatzor:addGroups({
-    GroupCommander:new({name = 'Hatzor-Support-Kedem', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kedem-Hatzerim'}),
-    GroupCommander:new({name = 'Hatzor-Support-SAM-Alpha', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Alpha'}),
-    GroupCommander:new({name = 'Hatzor-Attack-Kedem', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'Kedem-Hatzerim'})
+    DirectorCapability:new({name = 'Hatzor-Support-Kedem', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kedem-Hatzerim'}),
+    DirectorCapability:new({name = 'Hatzor-Support-SAM-Alpha', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Alpha'}),
+    DirectorCapability:new({name = 'Hatzor-Attack-Kedem', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'Kedem-Hatzerim'})
 })
 
 zones.elgora:addGroups({
-    GroupCommander:new({name = 'El-Gora-Support-El-Arish', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Arish'})
+    DirectorCapability:new({name = 'El-Gora-Support-El-Arish', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Arish'})
 })
 zones.farpalpha:addGroups({
-    GroupCommander:new({name = 'Farp-Alpha-Supply-Farp-Kilo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Kilo'}),
-    GroupCommander:new({name = 'Farp-Alpha-Supply-Ovda', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Ovda'})
+    DirectorCapability:new({name = 'Farp-Alpha-Supply-Farp-Kilo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Kilo'}),
+    DirectorCapability:new({name = 'Farp-Alpha-Supply-Ovda', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Ovda'})
 })
 zones.farpbravo:addGroups({
-    GroupCommander:new({name = 'evt-FARP-Bravo-attack-ovda', mission = 'attack',template='AttackConvoy', targetzone = 'Ovda', type = 'surface'})
+    DirectorCapability:new({name = 'evt-FARP-Bravo-attack-ovda', mission = 'attack',template='AttackConvoy', targetzone = 'Ovda', type = 'surface'})
 })
 zones.farpdelta:addGroups({
-    GroupCommander:new({name = 'FARP-Delta-supply-St-Catherine', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'St Catherine'}),
-    GroupCommander:new({name = 'FARP-Delta-supply-Sharm-el-sheikh', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Sharm El Sheikh International Airport'})
+    DirectorCapability:new({name = 'FARP-Delta-supply-St-Catherine', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'St Catherine'}),
+    DirectorCapability:new({name = 'FARP-Delta-supply-Sharm-el-sheikh', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Sharm El Sheikh International Airport'})
 })
 zones.farpcharlie:addGroups({
-    GroupCommander:new({name = 'FARP-Charlie-supply-St-Catherine', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'St Catherine'}),
-    GroupCommander:new({name = 'FARP-Charlie-supply-FARP-Delta', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Delta'})
+    DirectorCapability:new({name = 'FARP-Charlie-supply-St-Catherine', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'St Catherine'}),
+    DirectorCapability:new({name = 'FARP-Charlie-supply-FARP-Delta', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Delta'})
 })
 zones.farplima:addGroups({
-    GroupCommander:new({name = 'Farp-Lima-Supply-Baluza', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Baluza'}),
-    GroupCommander:new({name = 'Farp-Lima-Supply-Melez', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Melez'})
+    DirectorCapability:new({name = 'Farp-Lima-Supply-Baluza', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Baluza'}),
+    DirectorCapability:new({name = 'Farp-Lima-Supply-Melez', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Melez'})
 })
 zones.kedemhatzerim:addGroups({
-    GroupCommander:new({name = 'Kedem-Support-Nevatim', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Nevatim'}),
-    GroupCommander:new({name = 'Kedem-Support-El Gora', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Gora'}),
-    GroupCommander:new({name = 'Kedem-Support-Ramon', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Ramon Airbase'}),
-    GroupCommander:new({name = 'Hatzerim-Support-Hatzor', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Hatzor'}),
-    GroupCommander:new({name = 'Hatzerim-Attack-Hatzor', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Hatzor'})
+    DirectorCapability:new({name = 'Kedem-Support-Nevatim', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Nevatim'}),
+    DirectorCapability:new({name = 'Kedem-Support-El Gora', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Gora'}),
+    DirectorCapability:new({name = 'Kedem-Support-Ramon', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Ramon Airbase'}),
+    DirectorCapability:new({name = 'Hatzerim-Support-Hatzor', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Hatzor'}),
+    DirectorCapability:new({name = 'Hatzerim-Attack-Hatzor', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Hatzor'})
 })
 zones.birhasanah:addGroups({
-    GroupCommander:new({name = 'Bir-Hasanah-Support-SAM-Foxtrot', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Foxtrot'})
+    DirectorCapability:new({name = 'Bir-Hasanah-Support-SAM-Foxtrot', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Foxtrot'})
 })
 
 zones.nevatim:addGroups({
-    GroupCommander:new({name = 'nevatim-Support-El Arish', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'El Arish'}),
-    GroupCommander:new({name = 'nevatim-Support-OVda', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ovda'}),
-    GroupCommander:new({name = 'nevatim-Support-Melez', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Melez'}),
+    DirectorCapability:new({name = 'nevatim-Support-El Arish', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'El Arish'}),
+    DirectorCapability:new({name = 'nevatim-Support-OVda', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ovda'}),
+    DirectorCapability:new({name = 'nevatim-Support-Melez', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Melez'}),
 })
 
 zones.ramonairbase:addGroups({
-    GroupCommander:new({name = 'Ramon-Patrol-Hatzerim', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Kedem-Hatzerim', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Ramon-Patrol-Kedem', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Nevatim', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Ramon-Supply-Kedem', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kedem-Hatzerim'}),
-    GroupCommander:new({name = 'Ramon-Supply-Nevatim', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Nevatim'}),
-    GroupCommander:new({name = 'Ramon-Supply-El Gora', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Gora'}),
-    GroupCommander:new({name = 'Ramon-Supply-SAM-Bravo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Bravo'}),
-    GroupCommander:new({name = 'Ramon-Supply-Farp-Alpha', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Alpha'}),
-    GroupCommander:new({name = 'Ramon-Supply-El-Gora', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Gora'}),
-    GroupCommander:new({name = 'Ramon-Attack-Hatzor', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Hatzor'}),
-    GroupCommander:new({name = 'Ramon-Attack-Kedem', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'Kedem-Hatzerim'}),
-    GroupCommander:new({name = 'Ramon-Attack-Melez-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Melez', Altitude = CasAltitude()}),
-    GroupCommander:new({name = 'Ramon-attack-Ovda-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Ovda', Altitude = CasAltitude()})
+    DirectorCapability:new({name = 'Ramon-Patrol-Hatzerim', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Kedem-Hatzerim', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Ramon-Patrol-Kedem', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Nevatim', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Ramon-Supply-Kedem', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kedem-Hatzerim'}),
+    DirectorCapability:new({name = 'Ramon-Supply-Nevatim', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Nevatim'}),
+    DirectorCapability:new({name = 'Ramon-Supply-El Gora', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Gora'}),
+    DirectorCapability:new({name = 'Ramon-Supply-SAM-Bravo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Bravo'}),
+    DirectorCapability:new({name = 'Ramon-Supply-Farp-Alpha', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Alpha'}),
+    DirectorCapability:new({name = 'Ramon-Supply-El-Gora', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Gora'}),
+    DirectorCapability:new({name = 'Ramon-Attack-Hatzor', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Hatzor'}),
+    DirectorCapability:new({name = 'Ramon-Attack-Kedem', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'Kedem-Hatzerim'}),
+    DirectorCapability:new({name = 'Ramon-Attack-Melez-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Melez', Altitude = CasAltitude()}),
+    DirectorCapability:new({name = 'Ramon-attack-Ovda-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Ovda', Altitude = CasAltitude()})
 })
 zones.ovda:addGroups({
-    GroupCommander:new({name = 'Ovda-Patrol-Catherine', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'St Catherine', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Ovda-Patrol-Ramon-Airbase', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ramon Airbase', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Ovda-Support-Ramon', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Ramon Airbase'}),
-    GroupCommander:new({name = 'Ovda-Support-FARP-Alpha', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Alpha'}),
-    GroupCommander:new({name = 'Ovda-Supply-Farp-Bravo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Bravo'}),
-    GroupCommander:new({name = 'Ovda-Attack-Kedem-Runway', mission = 'attack',template='RunwayStrikePlaneTemplate',MissionType='RUNWAYSTRIKE', targetzone = 'Kedem-Hatzerim', Altitude = RunwayStrikeAltitude()}),
-    GroupCommander:new({name = 'Ovda-Attack-Kedem-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Kedem-Hatzerim', Altitude = CasAltitude()}),
-    GroupCommander:new({name = 'Ovda-attack-Ramon-Airbase', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ramon Airbase', Altitude = CapAltitude()})
+    DirectorCapability:new({name = 'Ovda-Patrol-Catherine', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'St Catherine', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Ovda-Patrol-Ramon-Airbase', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ramon Airbase', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Ovda-Support-Ramon', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Ramon Airbase'}),
+    DirectorCapability:new({name = 'Ovda-Support-FARP-Alpha', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Alpha'}),
+    DirectorCapability:new({name = 'Ovda-Supply-Farp-Bravo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Bravo'}),
+    DirectorCapability:new({name = 'Ovda-Attack-Kedem-Runway', mission = 'attack',template='RunwayStrikePlaneTemplate',MissionType='RUNWAYSTRIKE', targetzone = 'Kedem-Hatzerim', Altitude = RunwayStrikeAltitude()}),
+    DirectorCapability:new({name = 'Ovda-Attack-Kedem-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Kedem-Hatzerim', Altitude = CasAltitude()}),
+    DirectorCapability:new({name = 'Ovda-attack-Ramon-Airbase', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ramon Airbase', Altitude = CapAltitude()})
 })
 zones.melez:addGroups({
-    GroupCommander:new({name = 'Melez-Patrol-Bir Hasanah-Cap', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Bir Hasanah', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Melez-patrol-El Arish-Cap', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'El Arish', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Melez-patrol-Melez-Cap', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Melez-Patrol-Bir Hasanah-Cap', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Bir Hasanah', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Melez-patrol-El Arish-Cap', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'El Arish', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Melez-patrol-Melez-Cap', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
 
-    GroupCommander:new({name = 'Melez-Support-Nevatim', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Nevatim'}),
-    GroupCommander:new({name = 'Melez-Support-FARP-Kilo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Kilo'}),
-    GroupCommander:new({name = 'Melez-Support-FARP-Lima', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Lima'}),
-    GroupCommander:new({name = 'Melez-Support-Difarsuwar Airfield', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Difarsuwar Airfield'}),
-    GroupCommander:new({name = 'Melez-Support-Al Ismailiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Ismailiyah'}),
-    GroupCommander:new({name = 'Melez-support-FARP-kibrit-air-base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kibrit Air Base'}),
-    GroupCommander:new({name = 'Melez-Support-Bir Hasanah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Bir Hasanah'}),
-    GroupCommander:new({name = 'Melez-Support-Bir-Hasanah-2', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Bir Hasanah'}),
-    GroupCommander:new({name = 'Melez-Support-Bir-Hasanah-Convoy', mission = 'supply',template='SupplyConvoy', targetzone = 'Bir Hasanah', type = 'surface'}),
-    GroupCommander:new({name = 'Melez-Support-Sam-Golf', mission = 'supply',template='SupplyConvoy', targetzone = 'SAM-Golf', type = 'surface'}),
-    GroupCommander:new({name = 'Melez-Support-Ramon Airbase', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ramon Airbase'}),
-    GroupCommander:new({name = 'Melez-Support-Ovda', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ovda'}),
-    GroupCommander:new({name = 'Melez-Support-El Arish', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'El Arish'}),
+    DirectorCapability:new({name = 'Melez-Support-Nevatim', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Nevatim'}),
+    DirectorCapability:new({name = 'Melez-Support-FARP-Kilo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Kilo'}),
+    DirectorCapability:new({name = 'Melez-Support-FARP-Lima', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Lima'}),
+    DirectorCapability:new({name = 'Melez-Support-Difarsuwar Airfield', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Difarsuwar Airfield'}),
+    DirectorCapability:new({name = 'Melez-Support-Al Ismailiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Ismailiyah'}),
+    DirectorCapability:new({name = 'Melez-support-FARP-kibrit-air-base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kibrit Air Base'}),
+    DirectorCapability:new({name = 'Melez-Support-Bir Hasanah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Bir Hasanah'}),
+    DirectorCapability:new({name = 'Melez-Support-Bir-Hasanah-2', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Bir Hasanah'}),
+    DirectorCapability:new({name = 'Melez-Support-Bir-Hasanah-Convoy', mission = 'supply',template='SupplyConvoy', targetzone = 'Bir Hasanah', type = 'surface'}),
+    DirectorCapability:new({name = 'Melez-Support-Sam-Golf', mission = 'supply',template='SupplyConvoy', targetzone = 'SAM-Golf', type = 'surface'}),
+    DirectorCapability:new({name = 'Melez-Support-Ramon Airbase', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ramon Airbase'}),
+    DirectorCapability:new({name = 'Melez-Support-Ovda', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ovda'}),
+    DirectorCapability:new({name = 'Melez-Support-El Arish', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'El Arish'}),
 
-    GroupCommander:new({name = 'Melez-attack-SAM-India-Cap', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'SAM-India', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Melez-Attack-Ramon-Airbase-Cap', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ramon Airbase', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Melez-attack-El Gora-Cap', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'El Gora', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Melez-attack-Kibrit Air Base-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Kibrit Air Base'}),
-    GroupCommander:new({name = 'Melez-attack-Al Ismailiyah-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Al Ismailiyah'}),
-    GroupCommander:new({name = 'Melez-attack-Ramon Airbase-Cas', mission = 'attack',template='CasPlaneTemplate', MissionType='CAS', targetzone = 'Ramon Airbase', Altitude = CasAltitude()}),
-    GroupCommander:new({name = 'Melez-Attack-Bir Hasanah-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Bir Hasanah'}),
-    GroupCommander:new({name = 'Melez-Attack-FARP-Kilo-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-Kilo'}),
-    GroupCommander:new({name = 'Melez-Attack-FARP-Lima-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-Lima'}),
-    GroupCommander:new({name = 'Melez-attack-Ramon Airbase-Runway', mission = 'attack',template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone = 'Ramon Airbase', Altitude = RunwayStrikeAltitude()})
+    DirectorCapability:new({name = 'Melez-attack-SAM-India-Cap', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'SAM-India', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Melez-Attack-Ramon-Airbase-Cap', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ramon Airbase', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Melez-attack-El Gora-Cap', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'El Gora', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Melez-attack-Kibrit Air Base-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Kibrit Air Base'}),
+    DirectorCapability:new({name = 'Melez-attack-Al Ismailiyah-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Al Ismailiyah'}),
+    DirectorCapability:new({name = 'Melez-attack-Ramon Airbase-Cas', mission = 'attack',template='CasPlaneTemplate', MissionType='CAS', targetzone = 'Ramon Airbase', Altitude = CasAltitude()}),
+    DirectorCapability:new({name = 'Melez-Attack-Bir Hasanah-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Bir Hasanah'}),
+    DirectorCapability:new({name = 'Melez-Attack-FARP-Kilo-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-Kilo'}),
+    DirectorCapability:new({name = 'Melez-Attack-FARP-Lima-Cas', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-Lima'}),
+    DirectorCapability:new({name = 'Melez-attack-Ramon Airbase-Runway', mission = 'attack',template='RunwayStrikePlaneTemplate', MissionType='RUNWAYSTRIKE', targetzone = 'Ramon Airbase', Altitude = RunwayStrikeAltitude()})
 })
 
-zones.baluza:addGroups({
-    GroupCommander:new({name = 'Baluza-Support-SAM-Hotel', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Hotel'}),
-    GroupCommander:new({name = 'Baluza-Support-Melez', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Melez'}),
-    GroupCommander:new({name = 'Baluza-Support-FARP-Lima', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Lima'}),
-    GroupCommander:new({name = 'Baluza-Support-As-Salihiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'As Salihiyah'}),
-    GroupCommander:new({name = 'Baluza-Attack-El Arish', mission = 'attack',template='CasPlaneTemplate', MissionType='CAS', targetzone = 'El Arish', Altitude = CasAltitude()}),
-    GroupCommander:new({name = 'Baluza-Attack-Melez', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'Melez'})
-})
+
+local baluzaGroups = {
+    DirectorCapability:new({name = 'Baluza-Support-SAM-Hotel', mission = 'supply', template = 'HeloSupplyTemplate', targetzone = 'SAM-Hotel'}),
+    DirectorCapability:new({name = 'Baluza-Support-Melez', mission = 'supply', template = 'HeloSupplyTemplate', targetzone = 'Melez'}),
+    DirectorCapability:new({name = 'Baluza-Support-FARP-Lima', mission = 'supply', template = 'HeloSupplyTemplate', targetzone = 'FARP-Lima'}),
+    DirectorCapability:new({name = 'Baluza-Support-As-Salihiyah', mission = 'supply', template = 'HeloSupplyTemplate', targetzone = 'As Salihiyah'}),
+    DirectorCapability:new({name = 'Baluza-Attack-El Arish', mission = 'attack', template = 'CasPlaneTemplate', MissionType = 'CAS', targetzone = 'El Arish', Altitude = CasAltitude()}),
+    DirectorCapability:new({name = 'Baluza-Attack-Melez', mission = 'attack', template = 'CasHeloTemplate', MissionType = 'CAS', targetzone = 'Melez'}),
+}
+
+if Era ~= 'Vietnam' then
+    baluzaGroups[#baluzaGroups + 1] = DirectorCapability:new({
+        name = 'Baluza-Attack-Red Carrier',
+        mission = 'attack',
+        template = 'AntiShipPlaneTemplate',
+        MissionType = 'ANTISHIP',
+        targetzone = 'Red Carrier',
+        Altitude = 15000
+    })
+end
+
+zones.baluza:addGroups(baluzaGroups)
+
 zones.stcatherine:addGroups({
-    GroupCommander:new({name = 'Catherine-Patrol-Ovda', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ovda', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Catherine-Supply-SAM-Charlie', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Charlie'}),
-    GroupCommander:new({name = 'Catherine-Supply-FARP-Bravo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Bravo'}),
-    GroupCommander:new({name = 'Catherine-Supply-FARP-Charlie', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Charlie'}),
-    GroupCommander:new({name = 'Catherine-Supply-FARP-Delta', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Delta'}),
-    GroupCommander:new({name = 'Catherine-Supply-FARP-Echo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Echo'}),
-    GroupCommander:new({name = 'Catherine-Supply-FARP-Golf', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Golf'}),
-    GroupCommander:new({name = 'Catherine-Supply-FARP-Foxtrot', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Foxtrot'}),
-    GroupCommander:new({name = 'Catherine-Supply-FARP-Hotel', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Hotel'}),
-    GroupCommander:new({name = 'Catherine-Supply-Abu-Rudeis', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Abu Rudeis'}),
-    GroupCommander:new({name = 'Catherine-Supply-Sharm-El-Sheikh', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Sharm El Sheikh International Airport'}),
-    GroupCommander:new({name = 'Catherine-Attack-Ovda', mission = 'attack',template='CasPlaneTemplate', MissionType='CAS', targetzone = 'Ovda', Altitude = CasAltitude()}),
-    GroupCommander:new({name = 'Catherine-Patrol-Catherine', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ovda', Altitude = CapAltitude()})
+    DirectorCapability:new({name = 'Catherine-Patrol-Ovda', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ovda', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Catherine-Supply-SAM-Charlie', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Charlie'}),
+    DirectorCapability:new({name = 'Catherine-Supply-FARP-Bravo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Bravo'}),
+    DirectorCapability:new({name = 'Catherine-Supply-FARP-Charlie', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Charlie'}),
+    DirectorCapability:new({name = 'Catherine-Supply-FARP-Delta', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Delta'}),
+    DirectorCapability:new({name = 'Catherine-Supply-FARP-Echo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Echo'}),
+    DirectorCapability:new({name = 'Catherine-Supply-FARP-Golf', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Golf'}),
+    DirectorCapability:new({name = 'Catherine-Supply-FARP-Foxtrot', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Foxtrot'}),
+    DirectorCapability:new({name = 'Catherine-Supply-FARP-Hotel', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Hotel'}),
+    DirectorCapability:new({name = 'Catherine-Supply-Abu-Rudeis', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Abu Rudeis'}),
+    DirectorCapability:new({name = 'Catherine-Supply-Sharm-El-Sheikh', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Sharm El Sheikh International Airport'}),
+    DirectorCapability:new({name = 'Catherine-Attack-Ovda', mission = 'attack',template='CasPlaneTemplate', MissionType='CAS', targetzone = 'Ovda', Altitude = CasAltitude()}),
+    DirectorCapability:new({name = 'Catherine-Patrol-Catherine', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Ovda', Altitude = CapAltitude()})
 })
 
 zones.sharmelsheikh:addGroups({
-    GroupCommander:new({name = 'Sharm-el-sheikh-Supply-Hurghada', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Hurghada International Airport'}),
-    GroupCommander:new({name = 'Sharm-el-sheikh-Supply-FARP-Echo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Echo'}),
-    GroupCommander:new({name = 'Sharm-el-sheikh-Supply-chathrine', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'St Catherine'}),
-    GroupCommander:new({name = 'Sharm-el-sheikh-Supply-Ovda', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ovda'})
+    DirectorCapability:new({name = 'Sharm-el-sheikh-Supply-Hurghada', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Hurghada International Airport'}),
+    DirectorCapability:new({name = 'Sharm-el-sheikh-Supply-FARP-Echo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Echo'}),
+    DirectorCapability:new({name = 'Sharm-el-sheikh-Supply-chathrine', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'St Catherine'}),
+    DirectorCapability:new({name = 'Sharm-el-sheikh-Supply-Ovda', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Ovda'})
 })
 zones.aburudeis:addGroups({
-    GroupCommander:new({name = 'AbuRudeis-Patrol-Catherine', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'St Catherine', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'AbuRudeis-Attack-Catherine', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone='St Catherine'}),
-    GroupCommander:new({name = 'AbuRudeis-Attack-FARP-Golf', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone='FARP-Golf'}),
-    GroupCommander:new({name = 'AbuRudeis-Attack-FARP-Hotel', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone='FARP-Hotel'}),
-    GroupCommander:new({name = 'AbuRudeis-Attack-FARP-Foxtrot', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-Foxtrot'}),
+    DirectorCapability:new({name = 'AbuRudeis-Patrol-Catherine', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'St Catherine', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'AbuRudeis-Attack-Catherine', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone='St Catherine'}),
+    DirectorCapability:new({name = 'AbuRudeis-Attack-FARP-Golf', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone='FARP-Golf'}),
+    DirectorCapability:new({name = 'AbuRudeis-Attack-FARP-Hotel', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone='FARP-Hotel'}),
+    DirectorCapability:new({name = 'AbuRudeis-Attack-FARP-Foxtrot', mission = 'attack',template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-Foxtrot'}),
 
-    GroupCommander:new({name = 'AbuRudeis-Supply-FARP-India', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-India'}),
-    GroupCommander:new({name = 'AbuRudeis-Supply-SAM-Echo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Echo'}),
-    GroupCommander:new({name = 'AbuRudeis-Supply-FARP-Juliett', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Juliett'}),
-    GroupCommander:new({name = 'AbuRudeis-Supply-Catherine', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'St Catherine'}),
-    GroupCommander:new({name = 'AbuRudeis-Supply-FARP-Golf', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Golf'}),
-    GroupCommander:new({name = 'AbuRudeis-Supply-FARP-Hotel', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Hotel'}),
-    GroupCommander:new({name = 'AbuRudeis-Supply-SAM-Delta', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Delta'}),
+    DirectorCapability:new({name = 'AbuRudeis-Supply-FARP-India', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-India'}),
+    DirectorCapability:new({name = 'AbuRudeis-Supply-SAM-Echo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Echo'}),
+    DirectorCapability:new({name = 'AbuRudeis-Supply-FARP-Juliett', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Juliett'}),
+    DirectorCapability:new({name = 'AbuRudeis-Supply-Catherine', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'St Catherine'}),
+    DirectorCapability:new({name = 'AbuRudeis-Supply-FARP-Golf', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Golf'}),
+    DirectorCapability:new({name = 'AbuRudeis-Supply-FARP-Hotel', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Hotel'}),
+    DirectorCapability:new({name = 'AbuRudeis-Supply-SAM-Delta', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Delta'}),
 })
 
 zones.hurghada:addGroups({
-    GroupCommander:new({name = 'Hurghada-patrol-farp-foxtrot', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'FARP-Foxtrot', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Hurghada-patrol-St-Catherine', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'St Catherine', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Hurghada-Support-Farp-Foxtrot', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Foxtrot'})
+    DirectorCapability:new({name = 'Hurghada-patrol-farp-foxtrot', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'FARP-Foxtrot', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Hurghada-patrol-St-Catherine', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'St Catherine', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Hurghada-Support-Farp-Foxtrot', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Foxtrot'})
 })
 
 zones.farphotel:addGroups({
-    GroupCommander:new({name = 'FARP-hotel-support-sam-delta', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Delta'}),
-    GroupCommander:new({name = 'FARP-hotel-attack-sam-delta', mission = 'attack',template='AttackConvoy', targetzone = 'SAM-Delta', type = 'surface'})
+    DirectorCapability:new({name = 'FARP-hotel-support-sam-delta', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Delta'}),
+    DirectorCapability:new({name = 'FARP-hotel-attack-sam-delta', mission = 'attack',template='AttackConvoy', targetzone = 'SAM-Delta', type = 'surface'})
 })
 zones.farpindia:addGroups({
-    GroupCommander:new({name = 'FARP-India-attack-Abu Rudeis', mission = 'attack',template='AttackConvoy', targetzone = 'Abu Rudeis', type = 'surface'})
+    DirectorCapability:new({name = 'FARP-India-attack-Abu Rudeis', mission = 'attack',template='AttackConvoy', targetzone = 'Abu Rudeis', type = 'surface'})
 })
 zones.farpgolf:addGroups({
-    GroupCommander:new({name = 'FARP-Golf-attack-FARP-Echo', mission = 'attack',template='AttackConvoy', targetzone = 'FARP-Echo', type = 'surface'})
+    DirectorCapability:new({name = 'FARP-Golf-attack-FARP-Echo', mission = 'attack',template='AttackConvoy', targetzone = 'FARP-Echo', type = 'surface'})
 })
 zones.farpmike:addGroups({
-    GroupCommander:new({name = 'Farp-Mike-Support-FARP-Juliett', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Juliett'}),
-    GroupCommander:new({name = 'Farp-Mike-Support-FARP-India', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-India'}),
-    GroupCommander:new({name = 'Farp-Mike-Support-Wadi-al-Jandali', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Wadi al Jandali'}),
-    GroupCommander:new({name = 'Farp-Mike-Support-SAM-Echo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Echo'}),
-    GroupCommander:new({name = 'Farp-Mike-Support-Kibrit-Air-Base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kibrit Air Base'}),
-    GroupCommander:new({name = 'Farp-Mike-Attack-FARP-Juliett', mission = 'attack', template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-Juliett'}),
-    GroupCommander:new({name = 'Farp-Mike-Attack-FARP-India', mission = 'attack', template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-India'})
+    DirectorCapability:new({name = 'Farp-Mike-Support-FARP-Juliett', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Juliett'}),
+    DirectorCapability:new({name = 'Farp-Mike-Support-FARP-India', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-India'}),
+    DirectorCapability:new({name = 'Farp-Mike-Support-Wadi-al-Jandali', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Wadi al Jandali'}),
+    DirectorCapability:new({name = 'Farp-Mike-Support-SAM-Echo', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Echo'}),
+    DirectorCapability:new({name = 'Farp-Mike-Support-Kibrit-Air-Base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kibrit Air Base'}),
+    DirectorCapability:new({name = 'Farp-Mike-Attack-FARP-Juliett', mission = 'attack', template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-Juliett'}),
+    DirectorCapability:new({name = 'Farp-Mike-Attack-FARP-India', mission = 'attack', template='CasHeloTemplate', MissionType='CAS', targetzone = 'FARP-India'})
 })
 
 zones.farpjuliett:addGroups({
-    GroupCommander:new({name = 'FARP-Juliett-Supply-FARP-Mike', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Mike'})
+    DirectorCapability:new({name = 'FARP-Juliett-Supply-FARP-Mike', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Mike'})
 })
 zones.farpfoxtrot:addGroups({
-    GroupCommander:new({name = 'Farp-Foxtrot-Supply-Hurhgada', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Hurghada International Airport'})
+    DirectorCapability:new({name = 'Farp-Foxtrot-Supply-Hurhgada', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Hurghada International Airport'})
 })
 zones.elarish:addGroups({
-    GroupCommander:new({name = 'El-Arish-support-Farp-Lima', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Lima'}),
-    GroupCommander:new({name = 'El-Arish-Supply-El-Gorah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Gora'}),
-    GroupCommander:new({name = 'El-Arish-attack-El-Gorah', mission = 'attack',template='AttackConvoy', targetzone = 'El Gora',type='surface'}),
+    DirectorCapability:new({name = 'El-Arish-support-Farp-Lima', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Lima'}),
+    DirectorCapability:new({name = 'El-Arish-Supply-El-Gorah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'El Gora'}),
+    DirectorCapability:new({name = 'El-Arish-attack-El-Gorah', mission = 'attack',template='AttackConvoy', targetzone = 'El Gora',type='surface'}),
 })
 zones.almansurah:addGroups({
-    GroupCommander:new({name = 'Al Mansurah-Support-Al Salihiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'As Salihiyah'}),
-    GroupCommander:new({name = 'Al Mansurah-Support-SAM-Juliett', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Juliett'}),
-    GroupCommander:new({name = 'Al Mansurah-Support-AzZaqaziq', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'AzZaqaziq'}),
-    GroupCommander:new({name = 'Al Mansurah-attack-Abu Suwayr-RunwayStrike', mission = 'attack',template='RunwayStrikePlaneTemplate',MissionType='RUNWAYSTRIKE', targetzone = 'Abu Suwayr', Altitude = RunwayStrikeAltitude()}),
-    GroupCommander:new({name = 'Al Mansurah-attack-Abu Suwayr-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Abu Suwayr', Altitude = CasAltitude()}),
-    GroupCommander:new({name = 'Al Mansurah-attack-As Salihiyah-Cas', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'As Salihiyah'}),
-    GroupCommander:new({name = 'Al Mansurah-Support-Birma-Air-Base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Birma Air Base'}),
+    DirectorCapability:new({name = 'Al Mansurah-Support-Al Salihiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'As Salihiyah'}),
+    DirectorCapability:new({name = 'Al Mansurah-Support-SAM-Juliett', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Juliett'}),
+    DirectorCapability:new({name = 'Al Mansurah-Support-AzZaqaziq', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'AzZaqaziq'}),
+    DirectorCapability:new({name = 'Al Mansurah-attack-Abu Suwayr-RunwayStrike', mission = 'attack',template='RunwayStrikePlaneTemplate',MissionType='RUNWAYSTRIKE', targetzone = 'Abu Suwayr', Altitude = RunwayStrikeAltitude()}),
+    DirectorCapability:new({name = 'Al Mansurah-attack-Abu Suwayr-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Abu Suwayr', Altitude = CasAltitude()}),
+    DirectorCapability:new({name = 'Al Mansurah-attack-As Salihiyah-Cas', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'As Salihiyah'}),
+    DirectorCapability:new({name = 'Al Mansurah-Support-Birma-Air-Base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Birma Air Base'}),
 })
 zones.azzaqaziq:addGroups({
-    GroupCommander:new({name = 'AzZaqaziq-Patrol-Red Carrier', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Red Carrier', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'AzZaqaziq-Support-As Salihiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'As Salihiyah'}),
-    GroupCommander:new({name = 'AzZaqaziq-Support-Abu Suwayr', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Abu Suwayr'}),
-    GroupCommander:new({name = 'AzZaqaziq-Support-Al Ismailiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Ismailiyah'}),
-    GroupCommander:new({name = 'AzZaqaziq-Support-Difarsuwar', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Difarsuwar Airfield'}),
-    GroupCommander:new({name = 'AzZaqaziq-Support-Fayed', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Fayed'}),
-    GroupCommander:new({name = 'AzZaqaziq-Support-Kibrit', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kibrit Air Base'}),
-    GroupCommander:new({name = 'azzaqaziq-Supply-Al-Mansurah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Mansurah'}),
-    GroupCommander:new({name = 'AzZaqaziq-Supply-Al-Mansurah-2', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Mansurah'}),
-    GroupCommander:new({name = 'AzZaqaziq-Supply-Bilbeis-air-base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Bilbeis Air Base'}),
-    GroupCommander:new({name = 'AzZaqaziq-Supply-Quwaysina', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Quwaysina'}),
-    GroupCommander:new({name = 'AzZaqaziq-Attack-As Salihiyah', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'As Salihiyah'}),
-    GroupCommander:new({name = 'AzZaqaziq-Attack-Abu Suwayr', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'Abu Suwayr'}),
-    GroupCommander:new({name = 'AzZaqaziq-Attack-Fayed', mission = 'attack', template='CasHeloTemplate',MissionType='CAS', targetzone = 'Fayed'})
+    DirectorCapability:new({name = 'AzZaqaziq-Patrol-Red Carrier', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Red Carrier', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'AzZaqaziq-Support-As Salihiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'As Salihiyah'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Support-Abu Suwayr', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Abu Suwayr'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Support-Al Ismailiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Ismailiyah'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Support-Difarsuwar', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Difarsuwar Airfield'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Support-Fayed', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Fayed'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Support-Kibrit', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kibrit Air Base'}),
+    DirectorCapability:new({name = 'azzaqaziq-Supply-Al-Mansurah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Mansurah'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Supply-Al-Mansurah-2', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Mansurah'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Supply-Bilbeis-air-base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Bilbeis Air Base'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Supply-Quwaysina', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Quwaysina'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Attack-As Salihiyah', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'As Salihiyah'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Attack-Abu Suwayr', mission = 'attack',template='CasHeloTemplate',MissionType='CAS', targetzone = 'Abu Suwayr'}),
+    DirectorCapability:new({name = 'AzZaqaziq-Attack-Fayed', mission = 'attack', template='CasHeloTemplate',MissionType='CAS', targetzone = 'Fayed'})
 })
 
 
 zones.wadialjandali:addGroups({
-    GroupCommander:new({name = 'Wadi-Support-Beni-Suef', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Beni Suef'}),
-    GroupCommander:new({name = 'Wadi-Support-Bilbeis-Kom-Awshim', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kom Awshim'}),
-    GroupCommander:new({name = 'Wadi-Support-Bilbeis-Air-Base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Bilbeis Air Base'}),
-    GroupCommander:new({name = 'Wadi-Support-Cairo-International-Airport', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo International Airport'}),
-    GroupCommander:new({name = 'Wadi-Support-Kom-Awshim', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kom Awshim'}),
-    GroupCommander:new({name = 'Wadi-Support-Cairo-International-Airport-2', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo International Airport'}),
-    GroupCommander:new({name = 'Wadi-Attack-FARP-Mike', mission = 'attack',template='AttackConvoy', targetzone = 'FARP-Mike', type = 'surface'}),
-    GroupCommander:new({name = 'Wadi-Attack-kibrit-air-base', mission = 'attack',template='AttackConvoy', targetzone = 'Kibrit Air Base', type = 'surface'}),
-    GroupCommander:new({name = 'Wadi-Support-FARP-Mike', mission = 'supply',template='SupplyConvoy', targetzone = 'FARP-Mike', type = 'surface'}),
-    GroupCommander:new({name = 'Wadi-al-jandali-support-Sam-Lima', mission = 'supply',template='SupplyConvoy', targetzone = 'SAM-Lima', type = 'surface'})
+    DirectorCapability:new({name = 'Wadi-Support-Beni-Suef', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Beni Suef'}),
+    DirectorCapability:new({name = 'Wadi-Support-Bilbeis-Kom-Awshim', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kom Awshim'}),
+    DirectorCapability:new({name = 'Wadi-Support-Bilbeis-Air-Base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Bilbeis Air Base'}),
+    DirectorCapability:new({name = 'Wadi-Support-Cairo-International-Airport', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo International Airport'}),
+    DirectorCapability:new({name = 'Wadi-Support-Kom-Awshim', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Kom Awshim'}),
+    DirectorCapability:new({name = 'Wadi-Support-Cairo-International-Airport-2', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo International Airport'}),
+    DirectorCapability:new({name = 'Wadi-Attack-FARP-Mike', mission = 'attack',template='AttackConvoy', targetzone = 'FARP-Mike', type = 'surface'}),
+    DirectorCapability:new({name = 'Wadi-Attack-kibrit-air-base', mission = 'attack',template='AttackConvoy', targetzone = 'Kibrit Air Base', type = 'surface'}),
+    DirectorCapability:new({name = 'Wadi-Support-FARP-Mike', mission = 'supply',template='SupplyConvoy', targetzone = 'FARP-Mike', type = 'surface'}),
+    DirectorCapability:new({name = 'Wadi-al-jandali-support-Sam-Lima', mission = 'supply',template='SupplyConvoy', targetzone = 'SAM-Lima', type = 'surface'})
 })
 
 zones.fayed:addGroups({
-    GroupCommander:new({name = 'Fayed-Patrol-Melez', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Fayed-Support-Difarsuwar-Airfield', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Difarsuwar Airfield'}),
-    GroupCommander:new({name = 'Fayed-Support-abu-Suwayr', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Abu Suwayr'}),
-    GroupCommander:new({name = 'Fayed-Support-Melez', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Melez'}),
-    GroupCommander:new({name = 'Fayed-Support-Wadi-Al-Jandali', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Wadi al Jandali'}),
-    GroupCommander:new({name = 'Fayed-Supply-difarsuwar-airfiled', mission = 'supply',template='SupplyConvoy', targetzone = 'Difarsuwar Airfield', type = 'surface'})
+    DirectorCapability:new({name = 'Fayed-Patrol-Melez', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Fayed-Support-Difarsuwar-Airfield', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Difarsuwar Airfield'}),
+    DirectorCapability:new({name = 'Fayed-Support-abu-Suwayr', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Abu Suwayr'}),
+    DirectorCapability:new({name = 'Fayed-Support-Melez', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Melez'}),
+    DirectorCapability:new({name = 'Fayed-Support-Wadi-Al-Jandali', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Wadi al Jandali'}),
+    DirectorCapability:new({name = 'Fayed-Supply-difarsuwar-airfiled', mission = 'supply',template='SupplyConvoy', targetzone = 'Difarsuwar Airfield', type = 'surface'})
 })
 zones.alismailiyah:addGroups({
-    GroupCommander:new({name = 'ismailiyah-Patrol-Melez', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'ismailiyah-support-difarsuwar', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Difarsuwar Airfield'}),
-    GroupCommander:new({name = 'ismailiyah-support-assalihiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'As Salihiyah'})
+    DirectorCapability:new({name = 'ismailiyah-Patrol-Melez', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'ismailiyah-support-difarsuwar', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Difarsuwar Airfield'}),
+    DirectorCapability:new({name = 'ismailiyah-support-assalihiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'As Salihiyah'})
 })
 zones.bilbeisairbase:addGroups({
-    GroupCommander:new({name = 'bilbeis-air-base-Supply-insha-air-base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Inshas Airbase'}),
+    DirectorCapability:new({name = 'bilbeis-air-base-Supply-insha-air-base', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Inshas Airbase'}),
 
 })
 zones.abusuwayr:addGroups({
-    GroupCommander:new({name = 'Abu-Suway-Support-Azzaqaziq', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'AzZaqaziq'}),
-    GroupCommander:new({name = 'Abu-Suwayr-attack-Melez', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Abu-Suwayr-Attack-Al-Salihiyah', mission = 'attack',template='AttackConvoy', targetzone = 'As Salihiyah', type = 'surface'})
+    DirectorCapability:new({name = 'Abu-Suway-Support-Azzaqaziq', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'AzZaqaziq'}),
+    DirectorCapability:new({name = 'Abu-Suwayr-attack-Melez', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Abu-Suwayr-Attack-Al-Salihiyah', mission = 'attack',template='AttackConvoy', targetzone = 'As Salihiyah', type = 'surface'})
 
 })
 zones.assalihiyah:addGroups({
-    GroupCommander:new({name = 'As-Salihiyah-Patrol-Melez', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'As-Salihiyah-Supply-Baluza', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Baluza'}),
-    GroupCommander:new({name = 'As-Salihiyah-supply-al-ismailiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Ismailiyah'}),
-    GroupCommander:new({name = 'As-Salihiyah-Supply-AzZaqaziq', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'AzZaqaziq'}),
-    GroupCommander:new({name = 'As-Salihiyah-Supply-almansurah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Mansurah'}),
-    GroupCommander:new({name = 'As-Salihiyah-attack-Melez-Cap', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'As-Salihiyah-attack-Melez-Cas', mission = 'attack',template='CasPlaneTemplate', MissionType='CAS', targetzone = 'Melez', Altitude = CasAltitude()}),
-    GroupCommander:new({name = 'As-Salihiyah-Support-Sam-India', mission = 'supply',template='SupplyConvoy', targetzone = 'SAM-India', type = 'surface'}),
-    GroupCommander:new({name = 'As-Salihiyah-attack-Melez', mission = 'attack',template='AttackConvoy', targetzone = 'Melez', type = 'surface'})
+    DirectorCapability:new({name = 'As-Salihiyah-Patrol-Melez', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'As-Salihiyah-Supply-Baluza', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Baluza'}),
+    DirectorCapability:new({name = 'As-Salihiyah-supply-al-ismailiyah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Ismailiyah'}),
+    DirectorCapability:new({name = 'As-Salihiyah-Supply-AzZaqaziq', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'AzZaqaziq'}),
+    DirectorCapability:new({name = 'As-Salihiyah-Supply-almansurah', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Al Mansurah'}),
+    DirectorCapability:new({name = 'As-Salihiyah-attack-Melez-Cap', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Melez', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'As-Salihiyah-attack-Melez-Cas', mission = 'attack',template='CasPlaneTemplate', MissionType='CAS', targetzone = 'Melez', Altitude = CasAltitude()}),
+    DirectorCapability:new({name = 'As-Salihiyah-Support-Sam-India', mission = 'supply',template='SupplyConvoy', targetzone = 'SAM-India', type = 'surface'}),
+    DirectorCapability:new({name = 'As-Salihiyah-attack-Melez', mission = 'attack',template='AttackConvoy', targetzone = 'Melez', type = 'surface'})
 })
 
 zones.kibritairbase:addGroups({
-    GroupCommander:new({name = 'Kibrit-Air-Base-support-fayed', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Fayed'}),
-    GroupCommander:new({name = 'Kibrit-Air-Base-Support-Fayed-2', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Fayed'}),
-    GroupCommander:new({name = 'Kibrit Air Base-supply-Farp-Mike', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Mike'}),
-    GroupCommander:new({name = 'Kibrit-Air-Base-support-sam-foxtrot', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Foxtrot'}),
-    GroupCommander:new({name = 'Kibrit-Air-Base-patrol-Patrol-Abu-Rudeis', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'St Catherine', Altitude = CapAltitude()})
+    DirectorCapability:new({name = 'Kibrit-Air-Base-support-fayed', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Fayed'}),
+    DirectorCapability:new({name = 'Kibrit-Air-Base-Support-Fayed-2', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Fayed'}),
+    DirectorCapability:new({name = 'Kibrit Air Base-supply-Farp-Mike', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'FARP-Mike'}),
+    DirectorCapability:new({name = 'Kibrit-Air-Base-support-sam-foxtrot', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Foxtrot'}),
+    DirectorCapability:new({name = 'Kibrit-Air-Base-patrol-Patrol-Abu-Rudeis', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'St Catherine', Altitude = CapAltitude()})
 })
 zones.inshasairbase:addGroups({
-    GroupCommander:new({name = 'Inshas-Airbase-patrol-al-ismailiyah', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Al Ismailiyah', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Inshas-Airbase-patrol-SAM-Juliett', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'SAM-Juliett', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'Inshas-AirBase-Support-Cairo-International', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo International Airport'}),
-    GroupCommander:new({name = 'Inshas-AirBase-Support-As Salihiyah', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'As Salihiyah'}),
-    GroupCommander:new({name = 'Inshas-AirBase-Support-Fayed', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Fayed'}),
-    GroupCommander:new({name = 'Inshas-AirBase-Support-Cairo-West', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo West'})
+    DirectorCapability:new({name = 'Inshas-Airbase-patrol-al-ismailiyah', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Al Ismailiyah', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Inshas-Airbase-patrol-SAM-Juliett', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'SAM-Juliett', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Inshas-AirBase-Support-Cairo-International', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo International Airport'}),
+    DirectorCapability:new({name = 'Inshas-AirBase-Support-As Salihiyah', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'As Salihiyah'}),
+    DirectorCapability:new({name = 'Inshas-AirBase-Support-Fayed', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Fayed'}),
+    DirectorCapability:new({name = 'Inshas-AirBase-Support-Cairo-West', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo West'})
 })
 zones.komawshim:addGroups({
-    GroupCommander:new({name = 'Kom-Awshim-Support-Beni-Suef', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Beni Suef'}),
-    GroupCommander:new({name = 'Kom-Awshim-Support-Cairo West', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo West'})
+    DirectorCapability:new({name = 'Kom-Awshim-Support-Beni-Suef', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Beni Suef'}),
+    DirectorCapability:new({name = 'Kom-Awshim-Support-Cairo West', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'Cairo West'})
 })
 zones.birmaairbase:addGroups({
-    GroupCommander:new({name = 'Birma-Air-Base-attack-Abu-swayr', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Abu Suwayr', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Birma-Air-Base-attack-Abu-swayr', mission = 'attack',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Abu Suwayr', Altitude = CapAltitude()}),
+	DirectorCapability:new({name = 'Birma-Air-Base-Support-SAM-Mike', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Mike'}),
 })
 zones.quwaysina:addGroups({
-    GroupCommander:new({name = 'Quwaysina-supply-Birma-Air-Base', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Birma Air Base'}),
-	GroupCommander:new({name = 'Quwaysina-attack-As Salihiyah-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'As Salihiyah', Altitude = CasAltitude()}),
-	GroupCommander:new({name = 'Quwaysina-attack-Kibrit Air Base-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Kibrit Air Base', Altitude = CasAltitude()}),
-	GroupCommander:new({name = 'Quwaysina-patrol-AzZaqaziq-Cap', mission = 'patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone = 'AzZaqaziq', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'Quwaysina-supply-Birma-Air-Base', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Birma Air Base'}),
+	DirectorCapability:new({name = 'Quwaysina-attack-As Salihiyah-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'As Salihiyah', Altitude = CasAltitude()}),
+	DirectorCapability:new({name = 'Quwaysina-attack-Kibrit Air Base-Cas', mission = 'attack',template='CasPlaneTemplate',MissionType='CAS', targetzone = 'Kibrit Air Base', Altitude = CasAltitude()}),
+	DirectorCapability:new({name = 'Quwaysina-patrol-AzZaqaziq-Cap', mission = 'patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone = 'AzZaqaziq', Altitude = CapAltitude()}),
 })
 zones.cairowest:addGroups({
-    GroupCommander:new({name = 'CairoWest-Patrol-Wadi', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Wadi al Jandali', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'CairoWest-Patrol-AzZaqaziq', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'AzZaqaziq', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'CairoWest-Patrol-Cario-West', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Cairo West', Altitude = CapAltitude()}),
-    GroupCommander:new({name = 'CairoWest-Support-Melez', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Melez'}),
-    GroupCommander:new({name = 'CairoWest-Support-SAM-Mike', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Mike'}),
-    GroupCommander:new({name = 'CairoWest-Support-Wadi', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Wadi al Jandali'})
+    DirectorCapability:new({name = 'CairoWest-Patrol-Wadi', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Wadi al Jandali', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'CairoWest-Patrol-AzZaqaziq', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'AzZaqaziq', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'CairoWest-Patrol-Cario-West', mission = 'patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone = 'Cairo West', Altitude = CapAltitude()}),
+    DirectorCapability:new({name = 'CairoWest-Support-Melez', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Melez'}),
+    DirectorCapability:new({name = 'CairoWest-Support-SAM-Mike', mission = 'supply',template='HeloSupplyTemplate', targetzone = 'SAM-Mike'}),
+    DirectorCapability:new({name = 'CairoWest-Support-Wadi', mission = 'supply',template='PlaneSupplyTemplate', targetzone = 'Wadi al Jandali'})
 })
 
 	local CarrierNavRefreshZones = {
@@ -1298,12 +1318,12 @@ function SpawnFriendlyAssets(changedZone)
 			transit = true,
 		},
 		CVN72_AREA_EGYPT = {
-			available = not bc:getZoneByName("ArtilleryFactory").active,
-			autoMove = not bc:getZoneByName("ArtilleryFactory").active,
+			available = redCarrierBlue and bc:getZoneByName("ArtilleryFactory").side ~= 1,
+			autoMove = redCarrierBlue and bc:getZoneByName("ArtilleryFactory").side ~= 1,
 		},
 		CVN72_AREA_EGYPT_FINAL = {
-			available = not bc:getZoneByName("Borj Oil production Site").active,
-			autoMove = not bc:getZoneByName("Borj Oil production Site").active,
+			available = redCarrierBlue and not bc:getZoneByName("Borj Oil production Site").active,
+			autoMove = redCarrierBlue and not bc:getZoneByName("Borj Oil production Site").active,
 		},
 	}, false)
 end
@@ -1312,60 +1332,6 @@ end
 zones.secrettechfacility:addCriticalObject('Secret Tech Factory')
 zones.secrettechfacility:addCriticalObject('Secret Tech Command Center')
 zones.secrettechfacility:addCriticalObject('Secret Tech Bulding')
-
-zones.bengurion.isHeloSpawn = true
-
-if Era ~= 'Vietnam' then
-	zones.redcarrier.isHeloSpawn = true
-end
-zones.hatzor.isHeloSpawn = true
-zones.telnof.isHeloSpawn = true
-
-zones.kedemhatzerim.isHeloSpawn = true
-zones.nevatim.isHeloSpawn = true
-zones.ramonairbase.isHeloSpawn = true
-zones.elgora.isHeloSpawn = true
-zones.elarish.isHeloSpawn = true
-zones.ovda.isHeloSpawn = true
-zones.stcatherine.isHeloSpawn = true
-zones.sharmelsheikh.isHeloSpawn = true
-zones.hurghada.isHeloSpawn = true
-zones.aburudeis.isHeloSpawn = true
-zones.birhasanah.isHeloSpawn = true
-zones.melez.isHeloSpawn = true
-zones.baluza.isHeloSpawn = true
-zones.assalihiyah.isHeloSpawn = true
-zones.alismailiyah.isHeloSpawn = true
-zones.abusuwayr.isHeloSpawn = true
-zones.difarsuwarairfield.isHeloSpawn = true
-zones.fayed.isHeloSpawn = true
-zones.kibritairbase.isHeloSpawn = true
-zones.almansurah.isHeloSpawn = true
-zones.azzaqaziq.isHeloSpawn = true
-zones.bilbeisairbase.isHeloSpawn = true
-zones.inshasairbase.isHeloSpawn = true
-zones.cairointernationalairport.isHeloSpawn = true
-zones.wadialjandali.isHeloSpawn = true
-zones.cairowest.isHeloSpawn = true
-zones.benisuef.isHeloSpawn = true
-zones.quwaysina.isHeloSpawn = true
-zones.komawshim.isHeloSpawn = true
-zones.birmaairbase.isHeloSpawn = true
-zones.farpalpha.isHeloSpawn = true
-zones.farpbravo.isHeloSpawn = true
-zones.farpcharlie.isHeloSpawn = true
-zones.farpdelta.isHeloSpawn = true
-zones.farpecho.isHeloSpawn = true
-zones.farpfoxtrot.isHeloSpawn = true
-zones.farpgolf.isHeloSpawn = true
-zones.farphotel.isHeloSpawn = true
-zones.farpindia.isHeloSpawn = true
-zones.farpjuliett.isHeloSpawn = true
-zones.farpkilo.isHeloSpawn = true
-zones.farplima.isHeloSpawn = true
-zones.farpmike.isHeloSpawn = true
-
-
 
 zones.bengurion.airbaseName = "Ben-Gurion"
 zones.telnof.airbaseName = "Tel Nof"
@@ -1480,7 +1446,6 @@ bc:addConnection("Bilbeis Air Base", "AzZaqaziq")
 bc:addConnection("Bilbeis Air Base", "Inshas Airbase")
 bc:addConnection("Inshas Airbase", "Cairo International Airport")
 bc:addConnection("Cairo International Airport", "Wadi al Jandali")
-bc:addConnection("Cairo West", "Quwaysina")
 bc:addConnection("Cairo West", "Quwaysina")
 bc:addConnection("Birma Air Base", "Quwaysina")
 bc:addConnection("Cairo West", "Kom Awshim")
@@ -1822,6 +1787,12 @@ zones.borjoil:registerTrigger('lost', function(event, sender)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_BORJ_OIL_DESTROYED"),20)
 end, 'disablemborjoil')
+zones.artilleryfactory:registerTrigger('lost', function(event, sender)
+	sender:disableZone()
+	bc:addFunds(2,500)
+	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_ARTILLERY_FACTORY_DISABLED"),20)
+end, 'disableartilleryfactory')
+
 
 local missionCompleted = false
 local checkMissionComplete = function(event, sender)
@@ -2072,7 +2043,7 @@ bc:registerShopItem('dynamicarco', LTGet("SYRIA_SHOP_ITEM_TANKER_DROGUE"), ShopP
 	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_DROGUE_UNLOCKED"), 20)
     return
 end,
-function (sender, params)
+function (sender, params, delayMenuRefresh)
     if ArcoActive then
         return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Arco")
     end
@@ -2080,7 +2051,7 @@ function (sender, params)
         if params.zone.side ~= 2 then
             return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY")
         end
-        spawnArcoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0)
+        spawnArcoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0, nil, nil, delayMenuRefresh)
         return
     end
     buildArcoMenu()
@@ -2139,7 +2110,7 @@ bc:registerShopItem('dynamictexaco', LTGet("SYRIA_SHOP_ITEM_TANKER_BOOM"), ShopP
 	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_BOOM_UNLOCKED"), 20)
     return
 end,
-function (sender, params)
+function (sender, params, delayMenuRefresh)
     if TexacoActive then
         return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Texaco")
     end
@@ -2147,7 +2118,7 @@ function (sender, params)
         if params.zone.side ~= 2 then
             return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY")
         end
-        spawnTexacoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0)
+        spawnTexacoAt(params.zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0, nil, nil, delayMenuRefresh)
         return
     end
     buildTexacoMenu()
@@ -3844,6 +3815,7 @@ DynamicHybridConfig = DynamicHybridConfig or {
 	minHeloAttackNm = 15,
 	minSeadAttackNm = 40,
 	minLongRangeSeadAttackNm = 60,
+	enablePatrol = false,
 	log = true,
 }
 bc:startDynamicHybridFiller(DynamicHybridConfig)
@@ -3988,7 +3960,11 @@ mc:trackMission({
 
 ------------------------- Intercept enemy airstrike --------------------------------
 local airstrike_COOLDOWN = 0
-local attackGrp = ColdWarTechEra and 'evt-attackcw' or 'evt-attack'
+local enemyStrikeGroups = BuildEnabledTemplateList(
+	ColdWarTechEra and {'evt-attackcw'} or {'evt-attack', 'evt-attackcw'},
+	RedEnemyStrikePlaneEnabled
+)
+local attackGrp = enemyStrikeGroups[1] or 'evt-attack'
 local airstrikeAltitudeFt = 20000
 local airstrikePickOptions = {
 	minTargetSpawnNm = 80,
@@ -4007,10 +3983,11 @@ evc:addEvent({
 	id='cas',
 	StrikeMission = true,
 	action=function()
+		if #enemyStrikeGroups == 0 then return end
 		local director = Director:getForSide(coalition.side.RED)
 		local selection = director:consumeTacticalAirstrikePlan(airstrikePickOptions)
 		if not selection then return end
-		attackGrp = ColdWarTechEra and 'evt-attackcw' or (math.random(1, 2) == 1 and 'evt-attack' or 'evt-attackcw')
+		attackGrp = enemyStrikeGroups[math.random(1, #enemyStrikeGroups)]
 		local spawned = Respawn.SpawnAtPoint(
 			attackGrp,
 			selection.spawnCoord,
@@ -4031,6 +4008,7 @@ evc:addEvent({
 	end,
 	canExecute = function()
 		if Era == 'Vietnam' then return false end
+		if #enemyStrikeGroups == 0 then return false end
 		if ActiveMission['cas'] then return false end
 		local gr = Group.getByName(attackGrp)
 		if gr then return false end

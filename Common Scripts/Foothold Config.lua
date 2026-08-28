@@ -34,6 +34,7 @@ FootholdConfigTrackedTableNames = {
     "RedSeadPlaneEnabled",
     "BlueSeadPlaneEnabled",
     "RedRunwayStrikePlaneEnabled",
+    "RedEnemyStrikePlaneEnabled",
     "RedCasHeloEnabled",
     "BlueCasHeloEnabled",
     "RedSupplyHeloEnabled",
@@ -326,6 +327,12 @@ RedRunwayStrikePlaneEnabled = {
     ["RED_MIG27K_RUNWAY_BETAB500x2_FAB250x2_R60Mx4_3SHIP"] = true, -- eras=Modern|Coldwar; 3x MiG-27K Runway [Modern/CW]
     ["RED_MIRAGE_F1EE_RUNWAY_DURANDALx6_S530Fx2_AIM9JULIx2_3SHIP"] = true, -- eras=Modern|Coldwar; 3x Mirage F1EE Runway [Modern/CW]
     ["RED_MIG21BIS_RUNWAY_BETAB500x2_R3Rx2_TANK490_3SHIP"] = false, -- eras=Vietnam; 3x MiG-21bis BetAB Runway [VN]
+}
+
+-- @gui label="RED Enemy Strike Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+RedEnemyStrikePlaneEnabled = {
+    ["evt-attack"] = true, -- eras=Modern; 3x Su-34 Enemy Strike (each: 4x Kh-29T, 2x Kh-31P, 2x R-27ER, 2x R-73, 2x L-175V ECM) [Modern]
+    ["evt-attackcw"] = true, -- eras=Modern|Coldwar; 3x Su-24M Enemy Strike (each: 2x Kh-25MPU, 2x KAB-500Kr, 2x R-60M, L-081 ELINT) [Modern/CW]
 }
 
 -- @gui label="RED CAS Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"

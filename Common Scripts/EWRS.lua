@@ -137,6 +137,7 @@ ewrs.specialPlaneTypes = ewrs_specialPlaneTypes or {
 ewrs.reportingNameOverrides = {
   ["A-20G"] = "A-20G",
   ["B-17G"] = "B-17G",
+  ["M-2000C"] = "Mirage",
   ["P-51D-30-NA"] = "Mustang",
   ["SpitfireLFMkIX"] = "Spitfire",
   ["MosquitoFBMkVI"] = "Mosquito",

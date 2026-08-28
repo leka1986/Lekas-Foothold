@@ -324,48 +324,48 @@ end
 Hunt = true
 
 zones = {
-    BigginHill = ZoneCommander:new({zone='BigginHill', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.BigginHill, customSuspendNmBlue = 62}),
-	Odiham = ZoneCommander:new({zone='Odiham', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Odiham}),
-	Farnborough = ZoneCommander:new({zone='Farnborough', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Farnborough}),
-	Manston = ZoneCommander:new({zone='Manston', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Manston}),
+    BigginHill = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='BigginHill', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.BigginHill, customSuspendNmBlue = 62}),
+	Odiham = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Odiham', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Odiham}),
+	Farnborough = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Farnborough', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Farnborough}),
+	Manston = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Manston', side=2, size='medium', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Manston}),
 	Dover = ZoneCommander:new({zone='Dover', side=2, size='big', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Dover, income=1}),
-	Hawkinge = ZoneCommander:new({zone='Hawkinge', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Hawkinge}),
-	Lympne = ZoneCommander:new({zone='Lympne', side=2, size='small', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Lympne}),
-	Chailey = ZoneCommander:new({zone='Chailey', side=2, size='small', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Chailey}),
-	Ford = ZoneCommander:new({zone='Ford', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Ford}),
-	Tangmere = ZoneCommander:new({zone='Tangmere', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Tangmere}),
-	Funtington = ZoneCommander:new({zone='Funtington', side=2, size='small', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Funtington}),
-	NeedsOarPoint = ZoneCommander:new({zone='Needs Oar Point', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.NeedsOarPoint}),
-	Friston = ZoneCommander:new({zone='Friston', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Friston}),
-	Dunkirk = ZoneCommander:new({zone='Dunkirk', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Dunkirk}),
+	Hawkinge = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Hawkinge', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Hawkinge}),
+	Lympne = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Lympne', side=2, size='small', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Lympne}),
+	Chailey = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Chailey', side=2, size='small', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Chailey}),
+	Ford = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Ford', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Ford}),
+	Tangmere = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Tangmere', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Tangmere}),
+	Funtington = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Funtington', side=2, size='small', level=20, upgrades=upgrades.airfieldUK2, crates={}, flavorText=flavor.Funtington}),
+	NeedsOarPoint = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Needs Oar Point', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.NeedsOarPoint}),
+	Friston = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Friston', side=2, size='small', level=20, upgrades=upgrades.airfieldUK1, crates={}, flavorText=flavor.Friston}),
+	Dunkirk = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Dunkirk', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Dunkirk}),
 	DunkirkPort = ZoneCommander:new({zone='Dunkirk-Port', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.DunkirkPort, income=1}),
-	SaintOmer = ZoneCommander:new({zone='Saint-Omer', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.SaintOmer}),
-	Merville = ZoneCommander:new({zone='Merville', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Merville, customSuspendNmRed = 55}),
-	Abbeville = ZoneCommander:new({zone='Abbeville', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Abbeville}),
-	Amiens = ZoneCommander:new({zone='Amiens', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Amiens, customSuspendNmRed = 80}),
+	SaintOmer = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Saint-Omer', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.SaintOmer}),
+	Merville = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Merville', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Merville, customSuspendNmRed = 55}),
+	Abbeville = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Abbeville', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Abbeville}),
+	Amiens = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Amiens', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Amiens, customSuspendNmRed = 80}),
 	Cherbourg = ZoneCommander:new({zone='Cherbourg', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Cherbourg, income=1}),
 	Calais = ZoneCommander:new({zone='Calais', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Calais, income=1}),
-	SaintAubain = ZoneCommander:new({zone='Saint-Aubain', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.SaintAubain}),
-	Fecamp = ZoneCommander:new({zone='Fecamp', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Fecamp}),
+	SaintAubain = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Saint-Aubain', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.SaintAubain}),
+	Fecamp = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Fecamp', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Fecamp}),
 	LeHavre = ZoneCommander:new({zone='Le Havre', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.LeHavre, income=1}),
-	Rouen = ZoneCommander:new({zone='Rouen', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Rouen, customSuspendNmRed = 80}),
-	Carpiquet = ZoneCommander:new({zone='Carpiquet', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Carpiquet}),
+	Rouen = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Rouen', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Rouen, customSuspendNmRed = 80}),
+	Carpiquet = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Carpiquet', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Carpiquet}),
 	Caen = ZoneCommander:new({zone='Caen', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Caen, income=1}),
-	SainteCroix = ZoneCommander:new({zone='Sainte-Croix', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.SainteCroix}),
-	SaintPierre = ZoneCommander:new({zone='Saint-Pierre', side=1, size='small', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.SaintPierre}),
-	LonguesSurMer = ZoneCommander:new({zone='Longues-Sur-Mer', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.LonguesSurMer}),
-	Cricqueville = ZoneCommander:new({zone='Cricqueville', side=1, size='small', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Cricqueville}),
-	LeMolay = ZoneCommander:new({zone='Le Molay', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.LeMolay}),
-	Brucheville = ZoneCommander:new({zone='Brucheville', side=1, size='small', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Brucheville}),
+	SainteCroix = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Sainte-Croix', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.SainteCroix}),
+	SaintPierre = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Saint-Pierre', side=1, size='small', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.SaintPierre}),
+	LonguesSurMer = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Longues-Sur-Mer', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.LonguesSurMer}),
+	Cricqueville = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Cricqueville', side=1, size='small', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Cricqueville}),
+	LeMolay = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Le Molay', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.LeMolay}),
+	Brucheville = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Brucheville', side=1, size='small', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Brucheville}),
 	Valognes = ZoneCommander:new({zone='Valognes', side=1, size='medium', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Valognes}),
-	Maupertus = ZoneCommander:new({zone='Maupertus', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Maupertus}),
-	Bernay = ZoneCommander:new({zone='Bernay', side=1, size='small', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Bernay, customSuspendNmRed = 80}),
-	SaintAndre = ZoneCommander:new({zone='Saint-Andre', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.SaintAndre}),
-	CarrierGroup = ZoneCommander:new({zone='CarrierGroup', side=2, level=20, upgrades=upgrades.CarrierUpgrades, crates={}, flavorText=flavor.CarrierGroup}),
+	Maupertus = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Maupertus', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.Maupertus}),
+	Bernay = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Bernay', side=1, size='small', level=20, upgrades=upgrades.airfieldFR2, crates={}, flavorText=flavor.Bernay, customSuspendNmRed = 80}),
+	SaintAndre = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Saint-Andre', side=1, size='small', level=20, upgrades=upgrades.airfieldFR1, crates={}, flavorText=flavor.SaintAndre}),
+	CarrierGroup = ZoneCommander:new({facility='carrier', isPlaneSpawn=true, zone='CarrierGroup', side=2, level=20, upgrades=upgrades.CarrierUpgrades, crates={}, flavorText=flavor.CarrierGroup}),
 	--hiddenCarrierEssex = ZoneCommander:new({zone='HiddenCarrierEssex', side=2, level=20, upgrades=upgrades.CarrierEssexUpgrades}),
 	AxeCarrierGroup = ZoneCommander:new({zone='AxeCarrierGroup', side=1, level=20, upgrades=upgrades.AxeCarrierUpgrades, crates={}, flavorText=flavor.AxeCarrierGroup}),
 	Paris = ZoneCommander:new({zone='Paris', side=1, size='big', level=20, upgrades=upgrades.Paris, crates={}, flavorText=flavor.Paris, income=1}),
-	Orly = ZoneCommander:new({zone='Orly', side=1, size='big', level=20, upgrades=upgrades.Orly, crates={}, flavorText=flavor.Orly, income=1}),
+	Orly = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, zone='Orly', side=1, size='big', level=20, upgrades=upgrades.Orly, crates={}, flavorText=flavor.Orly, income=1}),
 	London = ZoneCommander:new({zone='London', side=2, size='big', level=20, upgrades=upgrades.London, crates={}, flavorText=flavor.London, income=1,customSuspendNmBlue = 70}),
 	PointeDesGroins = ZoneCommander:new({zone='Pointe des Groins', side=1, level=20, upgrades=upgrades.EWRPointeDesGroins, crates={}, flavorText=flavor.PointeDesGroins}),
 	PointeDuHoc = ZoneCommander:new({zone='Pointe du Hoc', side=1, level=20, upgrades=upgrades.EWRPointeDuHoc, crates={}, flavorText=flavor.PointeDuHoc}),
@@ -1041,7 +1041,7 @@ zones.AxeCarrierGroup:addGroups({
 })
 zones.CarrierGroup:addGroups({
 	GroupCommander:new({name='UK_CarrierGroup-attack-AxeCarrierGroup', mission='attack', template='BattleshipTemplate', MissionType='BATTLESHIP', targetzone='AxeCarrierGroup', type = 'surface'}),
-	GroupCommander:new({name='UK_CarrierGroup-attack-LeHavre', mission='attack', template='BattleshipTemplate', MissionType='BATTLESHIP', targetzone='Le Havre', type = 'surface'}),
+	--GroupCommander:new({name='UK_CarrierGroup-attack-LeHavre', mission='attack', template='BattleshipTemplate', MissionType='BATTLESHIP', targetzone='Le Havre', type = 'surface'}),
 	GroupCommander:new({name='UK_CarrierGroup-attack-Cherbourg', mission='attack', template='BattleshipTemplate', MissionType='BATTLESHIP', targetzone='Cherbourg', type = 'surface'}),
 	GroupCommander:new({name='UK_CarrierGroup-attack-SainteCroix', mission='attack', template='BattleshipTemplate', MissionType='BATTLESHIP', targetzone='Sainte-Croix', type = 'surface'}),
 })
@@ -1108,41 +1108,6 @@ zones.Bernay.airbaseName = "Bernay Saint Martin"
 zones.SaintAndre.airbaseName = "Saint-Andre-de-lEure"
 zones.Orly.airbaseName = "Orly"
 zones.CarrierGroup.airbaseName = "ESSEX"
-
-zones.BigginHill.isHeloSpawn = true
-zones.Odiham.isHeloSpawn = true
-zones.Farnborough.isHeloSpawn = true
-zones.Manston.isHeloSpawn = true
-zones.Hawkinge.isHeloSpawn = true
-zones.Lympne.isHeloSpawn = true
-zones.Chailey.isHeloSpawn = true
-zones.Ford.isHeloSpawn = true
-zones.Tangmere.isHeloSpawn = true
-zones.Funtington.isHeloSpawn = true
-zones.NeedsOarPoint.isHeloSpawn = true
-zones.Friston.isHeloSpawn = true
-zones.Dunkirk.isHeloSpawn = true
-zones.SaintOmer.isHeloSpawn = true
-zones.Merville.isHeloSpawn = true
-zones.Abbeville.isHeloSpawn = true
-zones.Amiens.isHeloSpawn = true
-zones.SaintAubain.isHeloSpawn = true
-zones.Fecamp.isHeloSpawn = true
-zones.Rouen.isHeloSpawn = true
-zones.Carpiquet.isHeloSpawn = true
-zones.SainteCroix.isHeloSpawn = true
-zones.SaintPierre.isHeloSpawn = true
-zones.LonguesSurMer.isHeloSpawn = true
-zones.Cricqueville.isHeloSpawn = true
-zones.LeMolay.isHeloSpawn = true
-zones.Brucheville.isHeloSpawn = true
-zones.Maupertus.isHeloSpawn = true
-zones.Bernay.isHeloSpawn = true
-zones.SaintAndre.isHeloSpawn = true
-zones.Orly.isHeloSpawn = true
-zones.CarrierGroup.isHeloSpawn = true
-
-
 
 -----------BLUE SUPPLY CHAIN ----------------
 bc:addConnectionSupply("BigginHill","Manston")

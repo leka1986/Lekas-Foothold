@@ -14,6 +14,7 @@ if AIEN.config.redAI == nil then AIEN.config.redAI = true end		                 
 if AIEN.config.dismount == nil then AIEN.config.dismount = true end 		                        -- true/false. //BEWARE: CAN AFFECT PERFORMANCES ON LOW END SYSTEMS // Thanks to MBot's original script, if true AI ground units with infantry transport capabilities (mainly APC/IFV/Trucks) will dismount soldiers with rifle, rpg and sometimes mandpads when appropriate
 if AIEN.config.message_feed == nil then AIEN.config.message_feed = true end 		                -- true/false. If true, each relevant AI action starting will also create a trigger message feedback for its coalition
 if AIEN.config.initiative == nil then AIEN.config.initiative = true end                             -- true/false. If true, the ground groups will take limited initiative of attack or advance if intel and terrain allow them
+if AIEN.config.directorReaction == nil then AIEN.config.directorReaction = true end                 -- true/false. If true, eligible attacks can request a Director helicopter or convoy response
 
 -- Action sets allowed (AIEN internal defaults, not exposed in Foothold Config.lua)
 AIEN.config.firemissions = true         -- true/false. If true, each artillery in the coalition will fire automatically at available targets provided by other ground units and drones
@@ -7901,6 +7902,63 @@ local function isRoadClose(pt,limit)
     return dx*dx + dz*dz <= (limit or 1000)^2
 end
 
+-- AIEN_REACTION_ROAD_DECISION_BEGIN
+local function evaluateReactionRoadPath(startPoint, destination, originZone, stayInsideZone)
+    if not (startPoint and destination and startPoint.x and destination.x) then
+        return false, nil
+    end
+
+    local startZ = startPoint.z or startPoint.y
+    local destinationZ = destination.z or destination.y
+    if not (startZ and destinationZ) then return false, nil end
+
+    local dx = startPoint.x - destination.x
+    local dz = startZ - destinationZ
+    local directDistance = math.sqrt(dx * dx + dz * dz)
+    if directDistance <= 0 then return false, nil end
+
+    local zoneShape = stayInsideZone and originZone and originZone._cz or nil
+    if stayInsideZone and (not zoneShape or not zoneShape:isInside({ x = destination.x, z = destinationZ })) then
+        return false, nil
+    end
+
+    local key = math.floor(startPoint.x / 100) .. ':' .. math.floor(startZ / 100)
+        .. ':' .. math.floor(destination.x / 100) .. ':' .. math.floor(destinationZ / 100)
+    local path = PATH_CACHE[key]
+    if path == nil then
+        path = land.findPathOnRoads('roads', startPoint.x, startZ, destination.x, destinationZ)
+        PATH_CACHE[key] = path or false
+    elseif path == false then
+        return false, nil
+    end
+
+    if type(path) ~= 'table' or #path == 0 then return false, nil end
+
+    local roadDistance = 0
+    local previousX, previousZ = startPoint.x, startZ
+    for _, point in ipairs(path) do
+        local pointZ = point.z or point.y
+        if not (point.x and pointZ) then return false, path end
+        if stayInsideZone and not zoneShape:isInside({ x = point.x, z = pointZ }) then
+            return false, path
+        end
+
+        local roadDx = previousX - point.x
+        local roadDz = previousZ - pointZ
+        roadDistance = roadDistance + math.sqrt(roadDx * roadDx + roadDz * roadDz)
+        if roadDistance > directDistance * 2.5 then return false, path end
+        previousX, previousZ = point.x, pointZ
+    end
+
+    local finalDx = previousX - destination.x
+    local finalDz = previousZ - destinationZ
+    roadDistance = roadDistance + math.sqrt(finalDx * finalDx + finalDz * finalDz)
+    if roadDistance > directDistance * 2.5 then return false, path end
+
+    return true, path
+end
+-- AIEN_REACTION_ROAD_DECISION_END
+
 local function multyTypeMessage(var)
     local mexType       = var[1]
     local mexText       = var[2]
@@ -7957,6 +8015,125 @@ local function aienFormat(key, fallback, ...)
     if select("#", ...) == 0 then return text end
     return string.format(text, ...)
 end
+
+-- AIEN_REACTION_MESSAGE_BATCH_BEGIN
+local tostringLL, tostringMGRS
+local reactionMessageBatches = {}
+
+local function queueAIENGroupAttackMessage(group, ownPos, threatTxt, actionMessage, eventCat, eventCls)
+    if not (group and ownPos and ownPos.x and ownPos.z) then return false end
+
+    local coalitionId = group:getCoalition()
+    local cellSize = 2000
+    local cellX = math.floor(ownPos.x / cellSize)
+    local cellZ = math.floor(ownPos.z / cellSize)
+    local threatKey = eventCls or threatTxt or eventCat or "UNKN"
+    local batchKey = table.concat({tostring(coalitionId), tostring(threatKey), tostring(cellX), tostring(cellZ)}, ":")
+    local batch = reactionMessageBatches[batchKey]
+
+    if not batch then
+        batch = {
+            coalitionId = coalitionId,
+            threatTxt = threatTxt,
+            actionMessage = actionMessage,
+            mixedAction = false,
+            groupIds = {},
+            count = 0,
+            sumX = 0,
+            sumY = 0,
+            sumZ = 0,
+            firstGroupName = group:getName(),
+            firstPosition = {x = ownPos.x, y = ownPos.y or 0, z = ownPos.z},
+        }
+        reactionMessageBatches[batchKey] = batch
+
+        timer.scheduleFunction(function()
+            local ready = reactionMessageBatches[batchKey]
+            if not ready then return end
+            reactionMessageBatches[batchKey] = nil
+
+            local reportPosition = ready.firstPosition
+            if ready.count > 1 then
+                reportPosition = {
+                    x = ready.sumX / ready.count,
+                    y = ready.sumY / ready.count,
+                    z = ready.sumZ / ready.count,
+                }
+            end
+
+            local lat, lon = coord.LOtoLL(reportPosition)
+            if not (lat and lon) then return end
+            local MGRS = coord.LLtoMGRS(lat, lon)
+            if not MGRS then return end
+
+            local LL_string = tostringLL(lat, lon, 0, true)
+            local MGRS_string = tostringMGRS(MGRS, 4)
+            local txt
+            if ready.count == 1 then
+                if ready.threatTxt then
+                    txt = aienFormat(
+                        "AIEN_GROUP_UNDER_ATTACK_BY",
+                        "C2, %s, report under attack by %s Coordinates: %s, %s. %s",
+                        tostring(ready.firstGroupName),
+                        tostring(ready.threatTxt),
+                        tostring(LL_string),
+                        tostring(MGRS_string),
+                        tostring(ready.actionMessage)
+                    )
+                else
+                    txt = aienFormat(
+                        "AIEN_GROUP_UNDER_ATTACK",
+                        "C2, %s, report under attack. Coordinates: %s, %s. %s",
+                        tostring(ready.firstGroupName),
+                        tostring(LL_string),
+                        tostring(MGRS_string),
+                        tostring(ready.actionMessage)
+                    )
+                end
+            else
+                local reactionText = ready.mixedAction
+                    and aienText("AIEN_REACTION_MIXED", "Units are taking defensive action.")
+                    or tostring(ready.actionMessage)
+                if ready.threatTxt then
+                    txt = aienFormat(
+                        "AIEN_GROUPS_UNDER_ATTACK_BY",
+                        "C2, %s friendly groups report under attack by %s Impact area center: %s, %s. %s",
+                        tostring(ready.count),
+                        tostring(ready.threatTxt),
+                        tostring(LL_string),
+                        tostring(MGRS_string),
+                        reactionText
+                    )
+                else
+                    txt = aienFormat(
+                        "AIEN_GROUPS_UNDER_ATTACK",
+                        "C2, %s friendly groups report under attack. Impact area center: %s, %s. %s",
+                        tostring(ready.count),
+                        tostring(LL_string),
+                        tostring(MGRS_string),
+                        reactionText
+                    )
+                end
+            end
+
+            multyTypeMessage({"text", txt, 30, nil, nil, nil, ready.coalitionId})
+        end, nil, timer.getTime() + (AIEN.config.reactionMessageBatchWindow or 1.6))
+    end
+
+    local groupId = group:getID()
+    if not batch.groupIds[groupId] then
+        batch.groupIds[groupId] = true
+        batch.count = batch.count + 1
+        batch.sumX = batch.sumX + ownPos.x
+        batch.sumY = batch.sumY + (ownPos.y or 0)
+        batch.sumZ = batch.sumZ + ownPos.z
+        if batch.actionMessage ~= actionMessage then
+            batch.mixedAction = true
+        end
+    end
+    return true
+end
+-- AIEN_REACTION_MESSAGE_BATCH_END
 
 -- AIEN_ZONE_BREACH_MESSAGE_BEGIN
 local function aienZoneAttackMessage(reactionZone, attackerPosition, eventCat, threatTxt, actionMessage)
@@ -8218,7 +8395,7 @@ local function toDegree(angle)
 	return angle*180/math.pi
 end
 
-local function tostringLL(lat, lon, acc, DMS)
+tostringLL = function(lat, lon, acc, DMS)
 
 	local latHemi, lonHemi
 	if lat > 0 then
@@ -8300,7 +8477,7 @@ local function tostringLL(lat, lon, acc, DMS)
 	end
 end
 
-local function tostringMGRS(MGRS, acc)
+tostringMGRS = function(MGRS, acc)
 	if acc == 0 then
 		return MGRS.UTMZone .. ' ' .. MGRS.MGRSDigraph
 	else
@@ -10036,7 +10213,6 @@ local function getSA(group) -- built a situational awareness check
             sa.rng                      = dbEntry["threat"]
             sa.cls                      = dbEntry["class"]
             sa.mobileAaaAttackAllowed   = dbEntry.mobileAaaAttackAllowed == true
-            sa.nearAlly                 = nil
             sa.nearEnemy                = nil
             if sa.pos and sa.coa then
                 
@@ -10110,30 +10286,6 @@ local function getSA(group) -- built a situational awareness check
                         end
                     end
                 end
-                local an,as,near_a = 0,0,nil
-                local r = cfg.proxyUnitsDistance
-                local _volume = {id = world.VolumeType.SPHERE,params = {point = sa.pos,radius = r}}
-                local _search = function(_obj)
-                    if _obj and _obj:isExist() then
-                        local o_coa = _obj:getCoalition()
-                        if o_coa ~= 0 then
-                            local o_pos = _obj:getPosition().p
-                            local o_str = _obj:getLife()
-                            if o_coa == sa.coa then
-                                local d = getDist(sa.pos, o_pos)
-                                an = an + 1
-                                as = as + o_str
-                                if d < r then
-                                    r = d
-                                    near_a = o_pos
-                                end
-                            end
-                        end
-                    end
-                    return true
-                end
-                world.searchObjects(Object.Category.UNIT, _volume, _search)
-                if an and near_a and as then sa.nearAlly = {n = an, p = near_a, s = as} end
                 if sa.targets and next(sa.targets) ~= nil then
                     for _, tgtData in pairs(sa.targets) do
                         local tgt   = tgtData.object
@@ -10288,6 +10440,45 @@ local function groupSuppress(group) -- quite important: provide random "suppress
         end
     end
 end 
+
+
+-- AIEN_ARTILLERY_TASK_CLEANUP_BEGIN
+local function popArtilleryTask(group)
+    if group and group:isExist() then
+        local controller = group:getController()
+        if controller then
+            controller:popTask()
+            return true
+        end
+    end
+    return false
+end
+
+local function canRunScheduledArtilleryTask(gData, plannedTaskTime)
+    return gData and (gData.tasked ~= true or gData.taskTime == plannedTaskTime)
+end
+
+local function stopArtilleryTaskForDeadTarget(unitId)
+    local targetData = intelDb[unitId]
+    if not targetData then return false end
+
+    local groupId = targetData.artyGroupId
+    local taskTime = targetData.artyTaskTime
+    targetData.artyGroupId = nil
+    targetData.artyTaskTime = nil
+    if not groupId or not taskTime then return false end
+
+    local gData = groundgroupsDb[groupId]
+    if not gData or gData.tasked ~= true or gData.taskTime ~= taskTime then
+        return false
+    end
+
+    popArtilleryTask(gData.group)
+    gData.tasked = false
+    gData.taskTime = nil
+    return true
+end
+-- AIEN_ARTILLERY_TASK_CLEANUP_END
 
 
 --## MISSION ACTION -- these are more advanced command for groups
@@ -10750,11 +10941,10 @@ local function moveToPoint(group, Vec3destination, destRadius, destInnerRadius, 
                         end
                     end
                 end
-                local nearDestRoad  = SUBZONE_NEAR_ROAD[zoneSub] or false
-                local nearStartRoad = subz and SUBZONE_NEAR_ROAD[subz]
+                local nearDestRoad  = subz and SUBZONE_NEAR_ROAD[subz]
                 or isRoadClose(point, math.min(1000, radius * 1.5))
                 local tripLong      = radius > 1000   -- straight-line estimate
-                useRoads            = (nearStartRoad or nearDestRoad) and tripLong
+                useRoads            = nearDestRoad and tripLong
                 if not rndCoord then
                     if useZone == true then
                         env.info('UseZone is true')
@@ -10770,6 +10960,10 @@ local function moveToPoint(group, Vec3destination, destRadius, destInnerRadius, 
                     local offset = {}
                     local posStart = getLeadPos(group)
                     if posStart then
+                        if useRoads == true and not evaluateReactionRoadPath(posStart, rndCoord, nil, false) then
+                            useRoads = false
+                            if not groupSpeed then speed = AIEN.config.outRoadSpeed end
+                        end
                         offset.x = round(math.sin(heading - (math.pi/2)) * 50 + rndCoord.x, 3)
                         offset.z = round(math.cos(heading + (math.pi/2)) * 50 + rndCoord.y, 3)
                         path[#path + 1] = buildWP(posStart, form, speed)
@@ -10963,6 +11157,7 @@ local function counterBattery(hitPos, tgtPos, coa) -- this function emulates cou
                                 pickedOg.tasked = true
                                 pickedOg.taskTime = timer.getTime()
                                 pickedOg.firePoint = tgtPos
+                                local counterBatteryTaskTime = pickedOg.taskTime
                                 local t = aie_random(math.floor(AIEN.config.counterBatteryPlanDelay*0.65), math.floor(AIEN.config.counterBatteryPlanDelay*1.35))
                                 
                                 if AIEN.config.message_feed == true then
@@ -10987,6 +11182,10 @@ local function counterBattery(hitPos, tgtPos, coa) -- this function emulates cou
                                 end
 
                                 local func = function()
+                                    if not canRunScheduledArtilleryTask(pickedOg, counterBatteryTaskTime) then return end
+                                    pickedOg.tasked = true
+                                    pickedOg.taskTime = timer.getTime()
+                                    popArtilleryTask(arty)
                                     groupfireAtPoint({arty, fpos, 20, "Counter battery fire"})
                                 end
                                 timer.scheduleFunction(func, nil, timer.getTime() + t)
@@ -11227,6 +11426,9 @@ local function orderInfantryToMoveToPoint(_group, _destination)
         _dTbl = { x = _x, y =_y, z = _z}        
     end
 
+    if routing == 'on_road' and not evaluateReactionRoadPath(_start, _dTbl, nil, false) then
+        routing = 'Off Road'
+    end
 
     table.insert(_path, ground_buildWP(_start, routing, AIEN.config.infantrySpeed))
     table.insert(_path, ground_buildWP(_dTbl, routing, AIEN.config.infantrySpeed))
@@ -11799,10 +12001,13 @@ local function ac_panic(group, ownPos, tgtPos, resume, sa, skill) -- this will m
                     local nearStart = subz and SUBZONE_NEAR_ROAD[subz] or isRoadClose(ownPos, hopMax * 1.5)
                     local nearDest  = isRoadClose(np, hopMax * 1.5)
                     local useRd     = (nearStart or nearDest) and tripLong
+                    if useRd then
+                        useRd = evaluateReactionRoadPath(ownPos, np, main, true)
+                    end
                     local form      = useRd and "On Road" or "Off Road"
 
                     env.info('Panic function is calling moveToPoint')
-                    moveToPoint(group, np, 50, 5, nil, form, nil, nil, nil, nil, nil, nil, "ac_panic")
+                    moveToPoint(group, np, 50, 5, nil, form, nil, nil, nil, nil, nil, "ac_panic")
                 end
             end 
         end
@@ -11912,7 +12117,7 @@ local function ac_dropSmoke(group, ownPos, tgtPos, resume, sa, skill) -- basical
                 end
                 
                 if smoked == true then
-                    moveToPoint(group, ownPos, 5, 14, nil, nil, nil, nil, nil, nil, nil, nil, "ac_dropSmoke") -- 5,14
+                    moveToPoint(group, ownPos, 5, 14, nil, nil, nil, nil, nil, nil, nil, "ac_dropSmoke") -- 5,14
                     if AIEN.config.AIEN_debugProcessDetail == true then
                         env.info((tostring(ModuleName) .. ", ac_dropSmoke group planned reaction"))
                     end
@@ -12516,6 +12721,7 @@ local function ac_fireMissionOnShooter(group, ownPos, tgtPos, resume, sa, skill)
                                 og.tasked = true
                                 og.taskTime = timer.getTime()
                                 og.firePoint = tgtPos
+                                popArtilleryTask(og.group)
                                 groupfireAtPoint({og.group, tgtPos, 20, "Immediate suppression"})
                                 if AIEN.config.AIEN_debugProcessDetail == true then
                                     env.info((tostring(ModuleName) .. ", ac_fireMissionOnShooter return true, planning the fire mission"))
@@ -13315,6 +13521,47 @@ local reactionsDb = {
     --]]--
 }
 
+-- AIEN_ENEMY_POSITION_RESPONSE_POLICY_BEGIN
+local AIEN_ENEMY_POSITION_RESPONSE_CHANCE = 30
+local AIEN_ENEMY_POSITION_RESPONSE_PLAYER_HELO_MAX_METERS = 5 * 1852
+local AIEN_ENEMY_POSITION_RESPONSE_ARTILLERY_MAX_METERS = 10 * 1852
+
+local function enemyPositionResponseEnabled()
+    return AIEN.config.directorReaction == true and map ~= "Normandy"
+end
+
+local function enemyPositionResponseZoneEligible(zoneObj)
+    return zoneObj
+        and zoneObj.active == true
+        and zoneObj.suspended ~= true
+        and zoneObj.isHidden ~= true
+        and zoneObj.side == coalition.side.RED
+        and zoneObj.facility == "airbase"
+        and zoneObj.isPlaneSpawn == true
+        and zoneObj._advanceCaptureThresholdArmed == true
+        and zoneObj._advanceCaptureEligibleForMenu ~= true
+        or false
+end
+
+local function enemyPositionResponseAttackerKind(shooterKnown, detected, category, indirect, shooterClass, playerName, distanceMeters, terrainValid)
+    if shooterKnown ~= true or detected ~= true or terrainValid ~= true or not distanceMeters then return nil end
+    if category == 1 then
+        if type(playerName) == "string" and playerName ~= ""
+            and distanceMeters <= AIEN_ENEMY_POSITION_RESPONSE_PLAYER_HELO_MAX_METERS
+        then
+            return "player-helicopter"
+        end
+        return nil
+    end
+    if category == 2 and (indirect == 1 or shooterClass == "ARTY" or shooterClass == "MLRS")
+        and distanceMeters <= AIEN_ENEMY_POSITION_RESPONSE_ARTILLERY_MAX_METERS
+    then
+        return "artillery"
+    end
+    return nil
+end
+-- AIEN_ENEMY_POSITION_RESPONSE_POLICY_END
+
 -- the functions that handles the reactions, using priorities
 local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventCat, eventCls, airSupportAttackerType, airSupportPlayerName)
     if gr and gr:isExist() and ownPos and tgtPos and actTbl and skill then
@@ -13380,20 +13627,7 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
                                 local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
                                 multyTypeMessage(vars)
                             else
-                                local lat, lon = coord.LOtoLL(ownPos)
-                                local MGRS = coord.LLtoMGRS(coord.LOtoLL(ownPos))
-                                if lat and lon then
-                                    local LL_string = tostringLL(lat, lon, 0, true)
-                                    local MGRS_string = tostringMGRS(MGRS ,4)
-                                    local txt = ""
-                                    if threatTxt then
-                                        txt = txt .. aienFormat("AIEN_GROUP_UNDER_ATTACK_BY", "C2, %s, report under attack by %s Coordinates: %s, %s. %s", tostring(gr:getName()), tostring(threatTxt), tostring(LL_string), tostring(MGRS_string), tostring(actionMessage))
-                                    else
-                                        txt = txt .. aienFormat("AIEN_GROUP_UNDER_ATTACK", "C2, %s, report under attack. Coordinates: %s, %s. %s", tostring(gr:getName()), tostring(LL_string), tostring(MGRS_string), tostring(actionMessage))
-                                    end
-                                    local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
-                                    multyTypeMessage(vars)
-                                end
+                                queueAIENGroupAttackMessage(gr, ownPos, threatTxt, actionMessage, eventCat, eventCls)
                             end
                         end
                         return aData.name
@@ -14351,7 +14585,7 @@ end
                                                     report.id = objId
                                                     intelDb[objId] = report
                                                 end
-                                                if report and report.targeted == nil then
+                                                if report and report.targeted == nil and (gData.coa ~= 2 or jtacOK) then
                                                     local lastContact = now - (report.record or now)
                                                     if lastContact < AIEN.config.artyFireLastContactThereshold then
                                                         local timeFactor = (AIEN.config.artyFireLastContactThereshold-lastContact)/AIEN.config.artyFireLastContactThereshold
@@ -14432,6 +14666,8 @@ end
                                             local guided = (gData.artyWpnGuidance or 0) > 0
                                             local qty    = guided and 1 or (isSAM and 10 or roundsToFire)
                                             local radius = isSAM and 10 or nil
+                                            bestReport.artyGroupId = nil
+                                            bestReport.artyTaskTime = nil
                                             if guided and #candidates > 0 then
                                                 if candidatesSorted then
                                                     for i = 2, #candidates do
@@ -14445,9 +14681,16 @@ end
                                                     table.sort(candidates, function(a,b) return a.pri > b.pri end)
                                                 end
                                                 local k = math.min(6, math.max(1, roundsToFire), #candidates)
-                                                local ctrl = gData.group and gData.group:getController(); if ctrl then for j=1,8 do ctrl:popTask() end end
-                                                for i = 1, k do groupfireAtPoint({gData.group, candidates[i].pos, 1, description, radius}) end
+                                                local ctrl = gData.group and gData.group:getController(); if ctrl then for j=1,math.min(6, roundsToFire) do ctrl:popTask() end end
+                                                for i = 1, k do
+                                                    candidates[i].report.targeted = cycleTime
+                                                    candidates[i].report.targeted_by = "ARTY"
+                                                    groupfireAtPoint({gData.group, candidates[i].pos, 1, description, radius})
+                                                end
                                             else
+                                                bestReport.artyGroupId = gData.group:getID()
+                                                bestReport.artyTaskTime = cycleTime
+                                                popArtilleryTask(gData.group)
                                                 groupfireAtPoint({gData.group, firePoint, qty, description, radius})
                                             end
                                         end
@@ -15213,9 +15456,34 @@ end
                                     end
 
                                     local delegationTasked = false
+                                    local directorResponseTasked = false
                                     local reactionRoamZone = bc:getZoneOfPoint(o_pos)
 
-                                    if (groupCoalition == coalition.side.RED or groupCoalition == coalition.side.BLUE) and shooterKnown and a_pos and s_detected and not counterBatteryDone then
+                                    if enemyPositionResponseEnabled() and groupCoalition == coalition.side.RED and shooterKnown and a_pos and s_detected and reactionRoamZone then
+                                        local attackerPlayerName = s_cat == 1 and shooter:getPlayerName() or nil
+                                        local terrainValid = checkValidTerrainSurface(a_pos) == true
+                                        local responseKind = enemyPositionResponseAttackerKind(
+                                            shooterKnown,
+                                            s_detected,
+                                            s_cat,
+                                            s_indirect,
+                                            s_cls,
+                                            attackerPlayerName,
+                                            getDist(o_pos, a_pos),
+                                            terrainValid
+                                        )
+                                        if responseKind
+                                            and enemyPositionResponseZoneEligible(reactionRoamZone)
+                                            and reactionRoamZone._aienEnemyPositionResponseAttempted ~= true
+                                        then
+                                            reactionRoamZone._aienEnemyPositionResponseAttempted = true
+                                            if math.random(1, 100) <= AIEN_ENEMY_POSITION_RESPONSE_CHANCE then
+                                                directorResponseTasked = bc:reportAIENEnemyPositionAttack(reactionRoamZone, a_pos, responseKind) == true
+                                            end
+                                        end
+                                    end
+
+                                    if (groupCoalition == coalition.side.RED or groupCoalition == coalition.side.BLUE) and shooterKnown and a_pos and s_detected and not counterBatteryDone and not directorResponseTasked then
                                         local delegated = false
                                         if groupCoalition == coalition.side.RED and s_cat == 1 and (o_cls == "SAM" or o_cls == "SHORAD" or o_cls == "ARTY" or o_cls == "MLRS" or (o_cls == "AAA" and allowMobileAaaReaction)) then
                                             delegated = true
@@ -15484,7 +15752,8 @@ end
                                         end
                                     end
 
-                                    if groupCoalition == 1 and counterBatteryDone ~= true and delegationTasked ~= true then
+                                    if groupCoalition == 1 and counterBatteryDone ~= true and delegationTasked ~= true
+                                        and directorResponseTasked ~= true then
                                         maybeReactionRoamZone(reactionRoamZone, groupName, groupCoalition)
                                     end
 
@@ -15617,6 +15886,7 @@ local function event_dead(initiator)
 
     if objCat == 1 and subCat == 2 then
         local unitId = initiator:getID()
+        stopArtilleryTaskForDeadTarget(unitId)
         mountedDb[unitId]   = nil
         infcarrierDb[unitId] = nil
         delegatedAggressorUnitDead(unitId)
