@@ -2474,7 +2474,8 @@ messageEnd=function()
 end,
 startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
+            -- trigger.action.outSoundForCoalition(2, "ding.ogg")
+            trigger.action.outSoundForCoalition(2, "Enemy airstrike detected intercept them before they reach their target..ogg")
         end
     end,
     endAction = function()

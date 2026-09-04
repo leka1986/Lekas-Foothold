@@ -519,6 +519,21 @@ RandomRedPool = {
 	"Red Arty 9",
 }
 
+if Era ~= 'Vietnam' then
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-1"
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-2"
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-3"
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-4"
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-5"
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-6"
+end
+
+if Era == 'Modern' then
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-Modern-1"
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-Modern-2"
+	RandomRedPool[#RandomRedPool + 1] = "Enemy Ground-Light-Modern-3"
+end
+
 RandomBluePool = {
 	"blueInfantry",
 	"blueArmor",
@@ -932,7 +947,7 @@ zones.echo:addGroups({
 	DirectorCapability:new({name='Echo-Supply-Factory', mission='supply', template='HeloSupplyTemplate', targetzone='Factory'}),
 	DirectorCapability:new({name='Echo-Supply-golf', mission='supply', template='HeloSupplyTemplate', targetzone='Golf'}),
 	-- Surface missions
-	GroupCommander:new({name='Echo-attack-delta-art', mission='attack', targetzone='Delta', type='surface'}), -- Me template
+	GroupCommander:new({name='Echo-attack-delta-art', mission='attack', targetzone='Delta', type='surface', FixedArty = true}), -- Me template
 	DirectorCapability:new({name='Echo-attack-Delta', mission='attack', template='AttackConvoy', targetzone='Delta', type='surface'}),
 	DirectorCapability:new({name='Echo-attack-Delta-Arty', mission='attack',template='ArtilleryConvoyLong',MissionType='ARTY',Reward=250, targetzone='Delta', type='surface', SetActiveMission = true}),
 
@@ -1079,7 +1094,7 @@ zones.foxtrot:addGroups({
 	-- Surface missions
 	DirectorCapability:new({name='foxtrot-attack-golf', mission='attack',template='AttackConvoy', targetzone='Golf', type='surface'}),
 	DirectorCapability:new({name='foxtrot-attack-Kish intl-cas', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Kish intl'}),
-	GroupCommander:new({name='foxtrot-artillery-fire-at-golf', mission='attack', targetzone='Golf', type='surface'}),
+	GroupCommander:new({name='foxtrot-artillery-fire-at-golf', mission='attack', targetzone='Golf', type='surface', FixedArty = true}),
 })
 zones.oilfields:addGroups({
 	-- Supply missions
@@ -2221,6 +2236,9 @@ local SHOP_PRICE_DEFAULTS = {
   artillery     = 100,
   recon         = 50,
   airdef        = 150,
+  calav         = 100,
+  camgs         = 100,
+  cadragoon     = 100,
   capture       = 500,
   advancecapture = 500,
   intel         = 150,
@@ -2273,6 +2291,9 @@ local SHOP_RANK_DEFAULTS = {
   artillery      = 3,
   recon          = 3,
   airdef         = 3,
+  calav          = 3,
+  camgs          = 3,
+  cadragoon      = 3,
   ["9lineam"]    = 1,
   ["9linefm"]    = 1,
   cruisemsl      = 10,
@@ -3381,6 +3402,75 @@ bc.shopItems['airdef'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
 }
 
+Group.getByName('CA-CW-Hunter_Killer_LAV'):destroy()
+bc:registerShopItem('calav', LTGet("SYRIA_SHOP_ITEM_DEPLOY_LAV"), ShopPrices.calav, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_DEPLOY_ZONE")
+end,
+function(sender, params)
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
+		local zn = CustomZone:getByName(params.zone.zone)
+		zn:spawnGroup('CA-CW-Hunter_Killer_LAV')
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_LAV_DEPLOYED", params.zone.zone), 15)
+	else
+		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
+	end
+end)
+bc.shopItems['calav'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+
+Group.getByName('CA-Modern-Hunter_Killer_MGS'):destroy()
+bc:registerShopItem('camgs', LTGet("SYRIA_SHOP_ITEM_DEPLOY_MGS"), ShopPrices.camgs, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_DEPLOY_ZONE")
+end,
+function(sender, params)
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
+		local zn = CustomZone:getByName(params.zone.zone)
+		zn:spawnGroup('CA-Modern-Hunter_Killer_MGS')
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_MGS_DEPLOYED", params.zone.zone), 15)
+	else
+		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
+	end
+end)
+bc.shopItems['camgs'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+
+Group.getByName('CA-Modern-Hunter_Killer_Dragoon'):destroy()
+bc:registerShopItem('cadragoon', LTGet("SYRIA_SHOP_ITEM_DEPLOY_DRAGOON"), ShopPrices.cadragoon, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_DEPLOY_ZONE")
+end,
+function(sender, params)
+	if params.zone and params.zone.side == 2 and not params.zone.suspended then
+		local zn = CustomZone:getByName(params.zone.zone)
+		zn:spawnGroup('CA-Modern-Hunter_Killer_Dragoon')
+		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_DRAGOON_DEPLOYED", params.zone.zone), 15)
+	else
+		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
+	end
+end)
+bc.shopItems['cadragoon'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
+}
+
 -- new menu
 local supplyMenu=nil
 bc:registerShopItem('capture',LTGet("SYRIA_SHOP_ITEM_CAPTURE_NEUTRAL"),ShopPrices.capture,
@@ -3763,6 +3853,12 @@ bc.shopItems['recon'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['recon'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 bc.shopItems['airdef'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['airdef'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['calav'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['calav'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['camgs'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['camgs'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+bc.shopItems['cadragoon'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
+bc.shopItems['cadragoon'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 bc.shopItems['zinf'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['zinf'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 bc.shopItems['zsam'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
@@ -4040,6 +4136,8 @@ bc:addShopItem(2, 'zsam', -1, 3, ShopRankRequirements.zsam, ShopCats.ZoneUpgrade
 bc:addShopItem(2, 'gslot', 1, 5, ShopRankRequirements.gslot, ShopCats.ZoneUpgrades) -- add another slot for upgrade
 if Era == 'Modern' then
     bc:addShopItem(2, 'zhimars', -1, 4, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
+end
+if Era ~= 'Vietnam' then
     bc:addShopItem(2, 'zpat', -1, 6, ShopRankRequirements.zpat, ShopCats.ZoneUpgrades) -- Patriot system.
 end
 
@@ -4063,6 +4161,13 @@ bc:addShopItem(2, 'armor', -1, 1, ShopRankRequirements.armor, ShopCats.CombinedA
 bc:addShopItem(2, 'artillery', -1, 2, ShopRankRequirements.artillery, ShopCats.CombinedArms) -- combined arms
 bc:addShopItem(2, 'recon', -1, 3, ShopRankRequirements.recon, ShopCats.CombinedArms) -- combined arms
 bc:addShopItem(2, 'airdef', -1, 4, ShopRankRequirements.airdef, ShopCats.CombinedArms) -- combined arms
+if Era ~= 'Vietnam' then
+	bc:addShopItem(2, 'calav', -1, 5, ShopRankRequirements.calav, ShopCats.CombinedArms)
+end
+if Era == 'Modern' then
+	bc:addShopItem(2, 'camgs', -1, 6, ShopRankRequirements.camgs, ShopCats.CombinedArms)
+	bc:addShopItem(2, 'cadragoon', -1, 7, ShopRankRequirements.cadragoon, ShopCats.CombinedArms)
+end
 
 -- Logistics & Strategic
 bc:addShopItem(2, 'capture', -1, 1, ShopRankRequirements.capture, ShopCats.LogisticsStrategic) -- emergency capture
@@ -4628,7 +4733,8 @@ mc:trackMission({
 	end,
 	startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-            trigger.action.outSoundForCoalition(2, "ding.ogg")
+            -- trigger.action.outSoundForCoalition(2, "ding.ogg")
+            trigger.action.outSoundForCoalition(2, "Enemy airstrike detected intercept them before they reach their target..ogg")
         end
     end,
     endAction = function()

@@ -220,6 +220,7 @@ escortPendingJoin = {}
 menuEscortRequest = {}
 escortRequestMenus = {}
 escortMenus = {}
+escortOwnerByUnitName = {}
 
 local function RemoveEscortRequestMenuHandle(groupName)
     local menuHandle = escortRequestMenus[groupName] or menuEscortRequest[groupName]
@@ -1624,6 +1625,171 @@ local function IsPlayerGroupInAir(group)
     return playerUnit:InAir()
 end
 
+local function BuildEscortEngageAirTask(rangeNm)
+    return {
+        id = "EngageTargets",
+        params = {
+            maxDist = UTILS.NMToMeters(rangeNm),
+            maxDistEnabled = true,
+            targetTypes = { "Air" },
+            priority = 0,
+        },
+    }
+end
+
+local function BuildEscortFollowTask(clientGroup, relativePosition)
+    return {
+        id = "Follow",
+        params = {
+            groupId = clientGroup:GetID(),
+            pos = relativePosition,
+            lastWptIndexFlag = false,
+        },
+    }
+end
+
+local function BuildEscortOrbitTask(center, altitudeFeet, speedKnots, heading, legNm)
+    local point = center.GetVec2 and center:GetVec2()
+        or { x = center.x, y = center.z or center.y }
+    local task = {
+        id = "Orbit",
+        params = {
+            pattern = AI.Task.OrbitPattern.CIRCLE,
+            point = point,
+            speed = UTILS.KnotsToMps(speedKnots),
+            altitude = UTILS.FeetToMeters(altitudeFeet),
+        },
+    }
+    if legNm and legNm > 0 then
+        task.params.pattern = AI.Task.OrbitPattern.RACE_TRACK
+        task.params.point2 = UTILS.Vec2Translate(point, UTILS.NMToMeters(legNm), heading)
+    end
+    return task
+end
+
+local function SetEscortNativeTask(escortGroup, primaryTask, roe, rot)
+    if not escortGroup or not escortGroup:IsAlive() then
+        return false
+    end
+
+    local dcsGroup = Group.getByName(escortGroup:GetName())
+    if not dcsGroup or not dcsGroup:isExist() then
+        return false
+    end
+
+    if roe ~= nil then
+        escortGroup:OptionROE(roe)
+    end
+    if rot ~= nil then
+        escortGroup:OptionROT(rot)
+    end
+
+    dcsGroup:getController():setTask({
+        id = "ComboTask",
+        params = {
+            tasks = {
+                primaryTask,
+                BuildEscortEngageAirTask(40),
+            },
+        },
+    })
+    return true
+end
+
+local function SetEscortFollowMode(groupName, clientGroup, relativePosition)
+    local escortGroup = escortGroups[groupName]
+    if not escortGroup then
+        return false
+    end
+    if not SetEscortNativeTask(escortGroup, BuildEscortFollowTask(clientGroup, relativePosition), 2, 3) then
+        return false
+    end
+    local state = spawnedGroups[groupName]
+    if state then
+        state.escortMode = "follow"
+    end
+    return true
+end
+
+local function RegisterEscortUnitNames(groupName, escortGroup)
+    local state = spawnedGroups[groupName]
+    state.escortUnitNames = {}
+    for _, escortUnit in ipairs(escortGroup:GetUnits()) do
+        local unitName = escortUnit:GetName()
+        state.escortUnitNames[unitName] = true
+        escortOwnerByUnitName[unitName] = groupName
+    end
+end
+
+local function ScheduleInitialEscortTask(groupName, clientGroup, escortGroup, escortHomeCoord, escortAltitudeAboveMeters)
+    timer.scheduleFunction(function(args)
+        if escortGroups[args.groupName] ~= args.escortGroup
+            or not args.escortGroup:IsAlive()
+            or not args.clientGroup:IsAlive()
+        then
+            return nil
+        end
+        local initialState = spawnedGroups[args.groupName]
+        if not initialState or initialState.escortMode ~= "pending_task" then
+            return nil
+        end
+
+        if IsPlayerGroupInAir(args.clientGroup) then
+            if SetEscortFollowMode(args.groupName, args.clientGroup, {
+                x = -100,
+                y = args.escortAltitudeAboveMeters,
+                z = 100,
+            }) then
+                escortPendingJoin[args.groupName] = nil
+            end
+        else
+            local orbitCenter = args.escortHomeCoord or args.clientGroup:GetPointVec2()
+            if orbitCenter then
+                if SetEscortNativeTask(args.escortGroup, BuildEscortOrbitTask(orbitCenter, 10000, 350), 2, 3) then
+                    local state = spawnedGroups[args.groupName]
+                    if state then
+                        state.escortMode = "holding"
+                    end
+                    escortPendingJoin[args.groupName] = true
+                end
+            else
+                SetEscortFollowMode(args.groupName, args.clientGroup, {
+                    x = -100,
+                    y = args.escortAltitudeAboveMeters,
+                    z = 100,
+                })
+            end
+        end
+        return nil
+    end, {
+        groupName = groupName,
+        clientGroup = clientGroup,
+        escortGroup = escortGroup,
+        escortHomeCoord = escortHomeCoord,
+        escortAltitudeAboveMeters = escortAltitudeAboveMeters,
+    }, timer.getTime() + 2)
+end
+
+local function RouteEscortHome(groupName, escortGroup)
+    local state = spawnedGroups[groupName]
+    local homebase = state and state.escortHomebase
+    if homebase then
+        local waypoints = {
+            escortGroup:GetCoordinate():WaypointAirTurningPoint("BARO", 600, {}, "Escort RTB"),
+            homebase:GetCoordinate():WaypointAirLanding(UTILS.MpsToKmph(50), homebase, {}, "Escort RTB Land"),
+        }
+        escortGroup:Route(waypoints, 1)
+    else
+        local dcsGroup = Group.getByName(escortGroup:GetName())
+        if dcsGroup and dcsGroup:isExist() then
+            dcsGroup:getController():resetTask()
+        end
+    end
+    if state then
+        state.escortMode = "rtb"
+    end
+end
+
 function HandleEscortLandingForGroupName(groupName, orbitCenter)
     if not groupName then
         return
@@ -1632,27 +1798,22 @@ function HandleEscortLandingForGroupName(groupName, orbitCenter)
     local escortGroup = escortGroups[groupName]
     if escortGroup then
         local clientGroup = GROUP:FindByName(groupName)
-        local currentMission = escortGroup:GetMissionCurrent()
-        if currentMission and currentMission:GetType() ~= AUFTRAG.Type.ESCORT then
+        local state = spawnedGroups[groupName]
+        if state and state.escortMode ~= "follow" then
             return
         end
         if orbitCenter then
-            local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(orbitCenter, 10000, 250)
-            orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
-            orbitAuftrag:SetEngageDetected(40, {"Air"})
-            orbitAuftrag:SetMissionAltitude(10000)  
-            orbitAuftrag:SetROE(2)
-            orbitAuftrag:SetROT(3)
-            escortGroup:AddMission(orbitAuftrag)
-            if currentMission then
-                currentMission:__Cancel(5)
-            end
-            escortPendingJoin[groupName] = true
-            if clientGroup then
-                AddEscortMenu(clientGroup)
-                if clientGroup:IsAlive() then
-                    local T = getMooseGroupTranslator(clientGroup)
-                    MESSAGE:New(T:Get("WELCOME_ESCORT_ORBITING_OVERHEAD"), 20):ToGroup(clientGroup)
+            if SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(orbitCenter, 10000, 250), 2, 2) then
+                if state then
+                    state.escortMode = "landing_hold"
+                end
+                escortPendingJoin[groupName] = true
+                if clientGroup then
+                    AddEscortMenu(clientGroup)
+                    if clientGroup:IsAlive() then
+                        local T = getMooseGroupTranslator(clientGroup)
+                        MESSAGE:New(T:Get("WELCOME_ESCORT_ORBITING_OVERHEAD"), 20):ToGroup(clientGroup)
+                    end
                 end
             end
         end
@@ -1834,82 +1995,22 @@ function EscortClientGroup(clientGroup)
     local escortHomeCoord = escortHomeBase and escortHomeBase:GetCoordinate()
 
     local function OnEscortSpawn(g)
-        local escortGroup = FLIGHTGROUP:New(g)
+        local escortGroup = g
         local playerInAir = IsPlayerGroupInAir(clientGroup)
-        if escortHomeBase then
-            escortGroup:SetHomebase(escortHomeBase)
-        end
-        escortGroup:GetGroup():CommandSetUnlimitedFuel(true):SetOptionRadarUsingForContinousSearch(true):SetOptionWaypointPassReport(false)
+        escortGroup:CommandSetUnlimitedFuel(true):SetOptionRadarUsingForContinousSearch(true):SetOptionWaypointPassReport(false)
         escortGroups[groupName] = escortGroup
-        if playerInAir then
-            local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, { x = -100, y = escortAltitudeAboveMeters, z = 100 }, 40, {})
-            escortAuftrag:SetMissionAltitude(25000)
-            escortAuftrag:SetEngageDetected(40, {"Air"})
-            escortAuftrag:SetMissionSpeed(600)
-            escortAuftrag:SetROE(2)
-            escortAuftrag:SetROT(3)
-            escortGroup:AddMission(escortAuftrag)
-        else
-            local orbitCenter = escortHomeCoord or clientGroup:GetPointVec2()
-            if orbitCenter then
-                local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(orbitCenter, 10000, 350)
-                orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
-                orbitAuftrag:SetEngageDetected(40, {"Air"})
-                orbitAuftrag:SetROE(2)
-                orbitAuftrag:SetROT(3)
-                orbitAuftrag:SetMissionAltitude(10000)
-                escortGroup:AddMission(orbitAuftrag)
-                escortPendingJoin[groupName] = true
-            else
-                local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, { x = -100, y = escortAltitudeAboveMeters, z = 100 }, 40, {})
-                escortAuftrag:SetMissionAltitude(25000)
-                escortAuftrag:SetEngageDetected(40, {"Air"})
-                escortAuftrag:SetMissionSpeed(600)
-                escortAuftrag:SetROE(2)
-                escortAuftrag:SetROT(3)
-                escortGroup:AddMission(escortAuftrag)
-            end
-        end
+        local state = spawnedGroups[groupName]
+        state.escortHomebase = escortHomeBase
+        state.escortHomeCoord = escortHomeCoord
+        state.escortAltitudeAboveMeters = escortAltitudeAboveMeters
+        state.escortSpawnedFromGround = escortSpawnedFromGround
+        state.escortTakeoffHandled = false
+        state.escortMode = "pending_task"
+        RegisterEscortUnitNames(groupName, escortGroup)
+        ScheduleInitialEscortTask(groupName, clientGroup, escortGroup, escortHomeCoord, escortAltitudeAboveMeters)
         RemoveRequestEscortMenu(clientGroup)
         if escortSpawnedFromGround then
             MESSAGE:New(T:Get("WELCOME_ESCORT_SCRAMBLING_TAXI"), 20):ToGroup(clientGroup)
-            function escortGroup:OnAfterTakeoff(From, Event, To)
-                if clientGroup and clientGroup:IsAlive() then
-                    if IsPlayerGroupInAir(clientGroup) then
-                        local escortAuftrag = AUFTRAG:NewESCORT(clientGroup, {x=-100, y=escortAltitudeAboveMeters, z=300}, 40, {})
-                        escortAuftrag:SetMissionAltitude(25000)
-                        escortAuftrag:SetEngageDetected(40, {"Air"})
-                        escortAuftrag:SetMissionSpeed(600)
-                        escortAuftrag:SetROE(2)
-                        escortAuftrag:SetROT(3)
-                        local currentMission = self:GetMissionCurrent()
-                        self:AddMission(escortAuftrag)
-                        if currentMission then
-                            currentMission:__Cancel(5)
-                        end
-                        escortPendingJoin[groupName] = nil
-                        AddEscortMenu(clientGroup)
-                        SCHEDULER:New(nil, function()
-                            if clientGroup and clientGroup:IsAlive() then
-                                MESSAGE:New(T:Get("WELCOME_ESCORT_AIRBORNE_HEADING"), 20):ToGroup(clientGroup)
-                            end
-                        end, {}, 30)
-                    elseif escortHomeCoord then
-                        local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(escortHomeCoord, 10000, 350)
-                        orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
-                        orbitAuftrag:SetEngageDetected(40, {"Air"})
-                        orbitAuftrag:SetMissionAltitude(10000)
-                        local currentMission = self:GetMissionCurrent()
-                        self:AddMission(orbitAuftrag)
-                        if currentMission then
-                            currentMission:__Cancel(5)
-                        end
-                        escortPendingJoin[groupName] = true
-                        AddEscortMenu(clientGroup)
-                        MESSAGE:New(T:Get("WELCOME_ESCORT_AIRBORNE_HOLDING"), 20):ToGroup(clientGroup)
-                    end
-                end
-            end
         else
             if playerInAir then
                 MESSAGE:New(T:Get("WELCOME_ESCORT_ON_ROUTE"), 20):ToGroup(clientGroup)
@@ -1917,15 +2018,6 @@ function EscortClientGroup(clientGroup)
             else
                 AddEscortMenu(clientGroup)
                 MESSAGE:New(T:Get("WELCOME_ESCORT_HOLDING_OVERHEAD"), 20):ToGroup(clientGroup)
-            end
-        end
-        function escortGroup:OnAfterDead(From, Event, To)
-            self:__Stop(1)
-            escortGroups[groupName] = nil
-            escortPendingJoin[groupName] = nil
-            RemoveEscortMenu(clientGroup)
-            if clientGroup and clientGroup:IsAlive() then
-                MESSAGE:New(T:Get("WELCOME_ESCORT_DESTROYED"), 10):ToGroup(clientGroup)
             end
         end
     end
@@ -1959,14 +2051,14 @@ function AddEscortMenu(group)
     MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_ESCORT_FLIGHTSWEEP"), escortMenus[groupName], function()
         local esc = escortGroups[groupName]
         if esc then
-        esc:SwitchROE(1)
+        esc:OptionROE(1)
         MESSAGE:New(T:Get("WELCOME_ESCORT_SET_ENGAGE_ALL"), 15):ToGroup(group)
     end
     end)
         MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_ESCORT_ENGAGE_IF_ENGAGED"), escortMenus[groupName], function()
         local esc = escortGroups[groupName]
         if esc then
-        esc:SwitchROE(2)
+        esc:OptionROE(2)
         MESSAGE:New(T:Get("WELCOME_ESCORT_SET_ENGAGE_IF_ENGAGED"), 15):ToGroup(group)
     end
     end)
@@ -1986,26 +2078,94 @@ function RemoveEscortMenu(group)
         escortMenus[groupName] = nil
     end
 end
+
+local function ClearEscortUnitMappings(groupName)
+    local state = spawnedGroups[groupName]
+    if not state or not state.escortUnitNames then
+        return
+    end
+    for unitName in pairs(state.escortUnitNames) do
+        if escortOwnerByUnitName[unitName] == groupName then
+            escortOwnerByUnitName[unitName] = nil
+        end
+    end
+    state.escortUnitNames = nil
+end
+
+local function CleanupEscortForGroupName(groupName, destroyEscort, notifyDestroyed)
+    if not groupName then
+        return
+    end
+
+    local escortGroup = escortGroups[groupName]
+    ClearEscortUnitMappings(groupName)
+    escortGroups[groupName] = nil
+    escortPendingJoin[groupName] = nil
+
+    if destroyEscort and escortGroup and escortGroup:IsAlive() then
+        escortGroup:Destroy()
+    end
+
+    local clientGroup = GROUP:FindByName(groupName)
+    if clientGroup then
+        RemoveEscortMenu(clientGroup)
+    end
+
+    local state = spawnedGroups[groupName]
+    if state then
+        state.escortHomebase = nil
+        state.escortHomeCoord = nil
+        state.escortAltitudeAboveMeters = nil
+        state.escortSpawnedFromGround = nil
+        state.escortTakeoffHandled = nil
+        state.escortMode = nil
+        state.escortLossCheckScheduled = nil
+    end
+
+    if notifyDestroyed and clientGroup and clientGroup:IsAlive() then
+        local T = getMooseGroupTranslator(clientGroup)
+        MESSAGE:New(T:Get("WELCOME_ESCORT_DESTROYED"), 10):ToGroup(clientGroup)
+    end
+end
+
+local function ScheduleEscortLossCheck(groupName)
+    local state = spawnedGroups[groupName]
+    if not state or state.escortLossCheckScheduled then
+        return
+    end
+    state.escortLossCheckScheduled = true
+    timer.scheduleFunction(function(ownerGroupName)
+        local currentState = spawnedGroups[ownerGroupName]
+        if currentState then
+            currentState.escortLossCheckScheduled = nil
+        end
+
+        local escortGroup = escortGroups[ownerGroupName]
+        if not escortGroup then
+            return nil
+        end
+        local dcsGroup = Group.getByName(escortGroup:GetName())
+        if dcsGroup and dcsGroup:isExist() and dcsGroup:getSize() > 0 then
+            return nil
+        end
+
+        CleanupEscortForGroupName(ownerGroupName, false, true)
+        return nil
+    end, groupName, timer.getTime() + 1)
+end
 function EscortOrbit(group)
     local T = getMooseGroupTranslator(group)
     local escortGroup = escortGroups[group:GetName()]
     if escortGroup then
         escortPendingJoin[group:GetName()] = nil
         local clientCoord = group:GetPointVec2()
-        local escortHeading = group:GetHeading()
-        local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(clientCoord, 25000, 350)
-        orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
-        orbitAuftrag:SetEngageDetected(40, {"Air"})
-        orbitAuftrag:SetMissionAltitude(25000)
-        local currentMission = escortGroup:GetMissionCurrent()
-        escortGroup:AddMission(orbitAuftrag)
-        if currentMission then
-            currentMission:__Cancel(5)
-        end
-        function orbitAuftrag:OnAfterStarted(From, Event, To)
+        local orbitTask = BuildEscortOrbitTask(clientCoord, 25000, 350)
+        if SetEscortNativeTask(escortGroup, orbitTask) then
+            local state = spawnedGroups[group:GetName()]
+            if state then
+                state.escortMode = "orbit"
+            end
             MESSAGE:New(T:Get("WELCOME_ESCORT_COPY"), 20):ToGroup(group)
-        end
-        function orbitAuftrag:OnAfterExecuting(From, Event, To)
             MESSAGE:New(T:Get("WELCOME_ESCORT_ORBIT_ESTABLISHED"), 20):ToGroup(group)
         end
     else
@@ -2022,20 +2182,22 @@ function PatrolAhead(group)
     local escortGroup = escortGroups[group:GetName()]
     if escortGroup then
         escortPendingJoin[group:GetName()] = nil
-        local currentMission = escortGroup:GetMissionCurrent()
-        if currentMission then
-            currentMission:__Cancel(5)
+        local state = spawnedGroups[group:GetName()]
+        local escortAltitudeAboveMeters = state and state.escortAltitudeAboveMeters
+        if not escortAltitudeAboveMeters then
+            _, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(group)
         end
-        local PatrolAheadAuftrag = AUFTRAG:NewCAPGROUP(group, 25000, 550, 0, 15, 15, 0, 3, {"Air"}, 40)
-        escortGroup:AddMission(PatrolAheadAuftrag)
-
-        function PatrolAheadAuftrag:OnAfterStarted(From, Event, To)
-         MESSAGE:New(T:Get("WELCOME_ESCORT_COPY"), 20):ToGroup(group)
-         escortGroup:SetSpeed(650)
-        end
-        function PatrolAheadAuftrag:OnAfterExecuting(From, Event, To)
-         MESSAGE:New(T:Get("WELCOME_ESCORT_PATROLLING_NOSE"), 20):ToGroup(group)
-         escortGroup:SetSpeed(450)
+        local followTask = BuildEscortFollowTask(group, {
+            x = UTILS.NMToMeters(15),
+            y = escortAltitudeAboveMeters,
+            z = 0,
+        })
+        if SetEscortNativeTask(escortGroup, followTask) then
+            if state then
+                state.escortMode = "patrol_ahead"
+            end
+            MESSAGE:New(T:Get("WELCOME_ESCORT_COPY"), 20):ToGroup(group)
+            MESSAGE:New(T:Get("WELCOME_ESCORT_PATROLLING_NOSE"), 20):ToGroup(group)
         end
     else
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 20):ToGroup(group)
@@ -2048,20 +2210,14 @@ function RaceTrackOnNose(group)
         escortPendingJoin[group:GetName()] = nil
         local clientCoord = group:GetPointVec3()
         local clientHeading = group:GetHeading()
-		
-        local RaceTrackOnNoseAuftrag = AUFTRAG:NewPATROL_RACETRACK(clientCoord, 25000, 370, clientHeading, 20)
-        RaceTrackOnNoseAuftrag:SetMissionAltitude(25000)
-        RaceTrackOnNoseAuftrag:SetEngageDetected(40, {"Air"})
-        RaceTrackOnNoseAuftrag:SetMissionSpeed(450)
-        RaceTrackOnNoseAuftrag:SetROT(2)
-		RaceTrackOnNoseAuftrag:SetROE(3)
-        local currentMission = escortGroup:GetMissionCurrent()
-        escortGroup:AddMission(RaceTrackOnNoseAuftrag)
-        if currentMission then
-		currentMission:__Cancel(5)
+        local racetrackTask = BuildEscortOrbitTask(clientCoord, 25000, 370, clientHeading, 20)
+        if SetEscortNativeTask(escortGroup, racetrackTask, 3, 2) then
+            local state = spawnedGroups[group:GetName()]
+            if state then
+                state.escortMode = "racetrack"
+            end
+            MESSAGE:New(T:Format("WELCOME_ESCORT_RACETRACK_HEADING", clientHeading), 20):ToGroup(group)
         end
-        
-       MESSAGE:New(T:Format("WELCOME_ESCORT_RACETRACK_HEADING", clientHeading), 20):ToGroup(group)
     else
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 10):ToGroup(group)
     end
@@ -2073,21 +2229,15 @@ function RaceTrackLeftToRight(group)
         escortPendingJoin[group:GetName()] = nil
         local clientCoord = group:GetPointVec3()
         local clientHeading = group:GetHeading()
-        local headingLeftToRight = (clientHeading - 90) % 360
-		
-        local RaceTrackLeftToRightAuftrag = AUFTRAG:NewPATROL_RACETRACK(clientCoord, 25000, 370, headingLeftToRight, 20)
-        
-        RaceTrackLeftToRightAuftrag:SetMissionAltitude(25000)
-        RaceTrackLeftToRightAuftrag:SetEngageDetected(40, {"Air"})
-        RaceTrackLeftToRightAuftrag:SetMissionSpeed(500)
-        RaceTrackLeftToRightAuftrag:SetROT(2)
-		RaceTrackLeftToRightAuftrag:SetROE(3)
-        local currentMission = escortGroup:GetMissionCurrent()
-        escortGroup:AddMission(RaceTrackLeftToRightAuftrag)
-        if currentMission then
-		currentMission:__Cancel(3)
+        local headingLeftToRight = (clientHeading + 90) % 360
+        local racetrackTask = BuildEscortOrbitTask(clientCoord, 25000, 370, headingLeftToRight, 20)
+        if SetEscortNativeTask(escortGroup, racetrackTask, 3, 2) then
+            local state = spawnedGroups[group:GetName()]
+            if state then
+                state.escortMode = "racetrack"
+            end
+            MESSAGE:New(T:Format("WELCOME_ESCORT_RACETRACK_HEADING", headingLeftToRight), 20):ToGroup(group)
         end
-        MESSAGE:New(T:Format("WELCOME_ESCORT_RACETRACK_HEADING", headingLeftToRight), 20):ToGroup(group)
     else
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 20):ToGroup(group)
     end
@@ -2099,19 +2249,15 @@ function RaceTrackRightToLeft(group)
         escortPendingJoin[group:GetName()] = nil
         local clientCoord = group:GetPointVec3()
         local clientHeading = group:GetHeading()
-        local headingRightToLeft = (clientHeading + 90) % 360
-        local RaceTrackRightToLeftAuftrag = AUFTRAG:NewPATROL_RACETRACK(clientCoord, 25000, 370, headingRightToLeft, 20)
-        RaceTrackRightToLeftAuftrag:SetMissionAltitude(25000)
-        RaceTrackRightToLeftAuftrag:SetEngageDetected(40, {"Air"})
-        RaceTrackRightToLeftAuftrag:SetMissionSpeed(600)
-        RaceTrackRightToLeftAuftrag:SetROT(2)
-		RaceTrackRightToLeftAuftrag:SetROE(3)
-        local currentMission = escortGroup:GetMissionCurrent()
-        escortGroup:AddMission(RaceTrackRightToLeftAuftrag)
-        if currentMission then
-		currentMission:__Cancel(5)
+        local headingRightToLeft = (clientHeading - 90) % 360
+        local racetrackTask = BuildEscortOrbitTask(clientCoord, 25000, 370, headingRightToLeft, 20)
+        if SetEscortNativeTask(escortGroup, racetrackTask, 3, 2) then
+            local state = spawnedGroups[group:GetName()]
+            if state then
+                state.escortMode = "racetrack"
+            end
+            MESSAGE:New(T:Format("WELCOME_ESCORT_RACETRACK_HEADING", headingRightToLeft), 20):ToGroup(group)
         end
-        MESSAGE:New(T:Format("WELCOME_ESCORT_RACETRACK_HEADING", headingRightToLeft), 20):ToGroup(group)
     else
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 20):ToGroup(group)
     end
@@ -2120,36 +2266,22 @@ function EscortRejoin(group)
     local T = getMooseGroupTranslator(group)
     local escortGroup = escortGroups[group:GetName()]
     if escortGroup then
-        local currentMission = escortGroup:GetMissionCurrent()
-
         if IsPlayerGroupInAir(group) then
             local _, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(group)
-            local escortAuftrag = AUFTRAG:NewESCORT(group, {x=-100, y=escortAltitudeAboveMeters, z=300}, 40, {})
-            escortAuftrag:SetMissionAltitude(25000)
-            escortAuftrag:SetEngageDetected(40, {"Air"})
-            escortAuftrag:SetMissionSpeed(600)
-            escortAuftrag:SetROE(2)
-            escortAuftrag:SetROT(3)
-            escortGroup:AddMission(escortAuftrag)
-            if currentMission then
-                currentMission:__Cancel(5)
+            if SetEscortFollowMode(group:GetName(), group, {x=-100, y=escortAltitudeAboveMeters, z=300}) then
+                escortPendingJoin[group:GetName()] = nil
+                MESSAGE:New(T:Get("WELCOME_ESCORT_REJOINING"), 20):ToGroup(group)
             end
-            escortPendingJoin[group:GetName()] = nil
-            MESSAGE:New(T:Get("WELCOME_ESCORT_REJOINING"), 20):ToGroup(group)
         else
             local clientCoord = group:GetPointVec2()
-            local orbitAuftrag = AUFTRAG:NewORBIT_CIRCLE(clientCoord, 10000, 350)
-            orbitAuftrag.missionAltitude = orbitAuftrag.TrackAltitude
-            orbitAuftrag:SetEngageDetected(40, {"Air"})
-            orbitAuftrag:SetMissionAltitude(10000)
-            orbitAuftrag:SetROE(2)
-            orbitAuftrag:SetROT(2)
-            escortGroup:AddMission(orbitAuftrag)
-            if currentMission then
-                currentMission:__Cancel(5)
+            if SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(clientCoord, 10000, 350), 2, 2) then
+                local state = spawnedGroups[group:GetName()]
+                if state then
+                    state.escortMode = "landing_hold"
+                end
+                escortPendingJoin[group:GetName()] = true
+                MESSAGE:New(T:Get("WELCOME_ESCORT_CANT_JOIN_GROUND"), 20):ToGroup(group)
             end
-            escortPendingJoin[group:GetName()] = true
-            MESSAGE:New(T:Get("WELCOME_ESCORT_CANT_JOIN_GROUND"), 20):ToGroup(group)
         end
     else
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 10):ToGroup(group)
@@ -2157,18 +2289,122 @@ function EscortRejoin(group)
 end
 function EscortAbort(group)
     local T = getMooseGroupTranslator(group)
-    local escortGroup = escortGroups[group:GetName()]
+    local groupName = group:GetName()
+    local escortGroup = escortGroups[groupName]
     if escortGroup then
-        escortPendingJoin[group:GetName()] = nil
+        escortPendingJoin[groupName] = nil
         RemoveEscortMenu(group)
-        if escortGroup.homebase then
-            escortGroup:RTB(escortGroup.homebase)
-        else
-            escortGroup:CancelAllMissions()
-        end
+        RouteEscortHome(groupName, escortGroup)
         MESSAGE:New(T:Get("WELCOME_ESCORT_RTB"), 20):ToGroup(group)
     else
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 10):ToGroup(group)
+    end
+end
+
+function HandleEscortUnitLost(unitName)
+    local groupName = escortOwnerByUnitName[unitName]
+    if not groupName then
+        return
+    end
+
+    escortOwnerByUnitName[unitName] = nil
+    local state = spawnedGroups[groupName]
+    if state and state.escortUnitNames then
+        state.escortUnitNames[unitName] = nil
+    end
+    ScheduleEscortLossCheck(groupName)
+end
+
+function HandleEscortTakeoff(unitName, playerName, playerGroupName, unitType)
+    local escortOwnerGroupName = escortOwnerByUnitName[unitName]
+    if escortOwnerGroupName then
+        local state = spawnedGroups[escortOwnerGroupName]
+        if not state or state.escortTakeoffHandled then
+            return
+        end
+
+        local clientGroup = GROUP:FindByName(escortOwnerGroupName)
+        local escortGroup = escortGroups[escortOwnerGroupName]
+        if not clientGroup or not clientGroup:IsAlive() or not escortGroup or not escortGroup:IsAlive() then
+            return
+        end
+        local T = getMooseGroupTranslator(clientGroup)
+        if IsPlayerGroupInAir(clientGroup) then
+            if escortPendingJoin[escortOwnerGroupName] then
+                if not SetEscortFollowMode(escortOwnerGroupName, clientGroup, {
+                    x = -100,
+                    y = state.escortAltitudeAboveMeters,
+                    z = 300,
+                }) then
+                    return
+                end
+                escortPendingJoin[escortOwnerGroupName] = nil
+            end
+            state.escortTakeoffHandled = true
+            AddEscortMenu(clientGroup)
+            timer.scheduleFunction(function()
+                if clientGroup:IsAlive() and escortGroups[escortOwnerGroupName] == escortGroup then
+                    MESSAGE:New(T:Get("WELCOME_ESCORT_AIRBORNE_HEADING"), 20):ToGroup(clientGroup)
+                end
+                return nil
+            end, nil, timer.getTime() + 30)
+        elseif state.escortHomeCoord then
+            if not escortPendingJoin[escortOwnerGroupName] then
+                if not SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(state.escortHomeCoord, 10000, 350), 2, 3) then
+                    return
+                end
+                state.escortMode = "holding"
+                escortPendingJoin[escortOwnerGroupName] = true
+            end
+            state.escortTakeoffHandled = true
+            AddEscortMenu(clientGroup)
+            MESSAGE:New(T:Get("WELCOME_ESCORT_AIRBORNE_HOLDING"), 20):ToGroup(clientGroup)
+        end
+        return
+    end
+
+    if not playerName or playerName == "" then
+        return
+    end
+    if not IsEscortEligibleType(unitType) then
+        return
+    end
+    local playerGroup = GROUP:FindByName(playerGroupName)
+    if not playerGroup then
+        return
+    end
+
+    local T = getMooseGroupTranslator(playerGroup)
+    EnsureEscortSpawnState(playerGroupName, playerName)
+    local escortGroup = escortGroups[playerGroupName]
+    if escortGroup and not escortGroup:IsAlive() then
+        CleanupEscortForGroupName(playerGroupName, false, false)
+        escortGroup = nil
+    end
+
+    if escortPendingJoin[playerGroupName] and escortGroup and IsPlayerGroupInAir(playerGroup) then
+        local state = spawnedGroups[playerGroupName]
+        local escortAltitudeAboveMeters = state and state.escortAltitudeAboveMeters
+        if not escortAltitudeAboveMeters then
+            _, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(playerGroup)
+        end
+        if SetEscortFollowMode(playerGroupName, playerGroup, {
+            x = -100,
+            y = escortAltitudeAboveMeters,
+            z = 300,
+        }) then
+            escortPendingJoin[playerGroupName] = nil
+            AddEscortMenu(playerGroup)
+            MESSAGE:New(T:Get("WELCOME_ESCORT_HEADING_TO_POSITION"), 20):ToGroup(playerGroup)
+        end
+    end
+
+    if not escortGroup and not escortRequestMenus[playerGroupName] then
+        if EscortTakeoffFromGround ~= true then
+            local playerUnit = UNIT:FindByName(unitName)
+            MESSAGE:New(T:Format("WELCOME_ESCORT_AVAILABLE_PLAYER", playerName), 10, ""):ToUnit(playerUnit)
+        end
+        AddEscortRequestMenu(playerGroup)
     end
 end
 
@@ -2266,224 +2502,106 @@ function static:OnEventRefuelingStop(EventData)
     end
 end
 
-function static:OnEventTakeoff(EventData)
-    if not EventData.IniUnit or not EventData.IniPlayerName then
-        return
+function HandleWelcomePlayerUnavailable(playerName, groupName, groupId)
+    if groupName then
+        CleanupEscortForGroupName(groupName, true, false)
+        RemoveEscortRequestMenuHandle(groupName)
+        spawnedGroups[groupName] = nil
+
+        if activeCSMenus[groupName] then
+            activeCSMenus[groupName]:Remove()
+            activeCSMenus[groupName] = nil
+        end
     end
 
-    local playerUnit = EventData.IniUnit
-    local playerGroup = playerUnit:GetGroup()
-    if not playerGroup then return end
-    local T = getMooseGroupTranslator(playerGroup)
-    local PGName = playerGroup:GetName()
-    if not PGName then return end
-    local playerType = playerUnit:GetTypeName()
+    if followID[playerName] then
+        followID[playerName]:Stop()
+        followID[playerName] = nil
+    end
 
-    if IsEscortEligibleType(playerType) then
-        EnsureEscortSpawnState(PGName, EventData.IniPlayerName)
-
-        local escortGroup = escortGroups[PGName]
-        if escortGroup and not escortGroup:IsAlive() then
-            escortGroups[PGName] = nil
-            escortPendingJoin[PGName] = nil
-            escortGroup = nil
-        end
-
-        if escortPendingJoin[PGName] and escortGroup and IsPlayerGroupInAir(playerGroup) then
-            local _, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(playerGroup)
-            local escortAuftrag = AUFTRAG:NewESCORT(playerGroup, {x=-100, y=escortAltitudeAboveMeters, z=300}, 40, {})
-            escortAuftrag:SetMissionAltitude(25000)
-            escortAuftrag:SetEngageDetected(40, {"Air"})
-            escortAuftrag:SetMissionSpeed(600)
-            escortAuftrag:SetROE(2)
-            escortAuftrag:SetROT(3)
-            local currentMission = escortGroup:GetMissionCurrent()
-            escortGroup:AddMission(escortAuftrag)
-            if currentMission then
-                currentMission:__Cancel(5)
-            end
-            escortPendingJoin[PGName] = nil
-            AddEscortMenu(playerGroup)
-            MESSAGE:New(T:Get("WELCOME_ESCORT_HEADING_TO_POSITION"), 20):ToGroup(playerGroup)
-        end
-
-        if EscortTakeoffFromGround ~= true and not escortGroup and not escortRequestMenus[PGName] then
-            MESSAGE:New(T:Format("WELCOME_ESCORT_AVAILABLE_PLAYER", EventData.IniPlayerName), 10, ""):ToUnit(playerUnit)
-            AddEscortRequestMenu(playerGroup)
-        elseif EscortTakeoffFromGround == true and not escortGroup and not escortRequestMenus[PGName] then
-            AddEscortRequestMenu(playerGroup)
-        end
+    local callsignInfo = globalCallsignAssignments[playerName]
+    if callsignInfo then
+        releaseSlot(playerName, callsignInfo.zoneName)
+        globalCallsignAssignments[playerName] = nil
+    end
+    if groupId and bc.playerNames then
+        bc.playerNames[groupId] = nil
+    end
+    if bc.groupByPlayer then
+        bc.groupByPlayer[playerName] = nil
+    end
+    if bc.groupNameByPlayer then
+        bc.groupNameByPlayer[playerName] = nil
     end
 end
 
 function static:OnEventPlayerLeaveUnit(EventData)
-    local playerGroup = nil
-
-    local function cleanupEscortForGroupName(groupName)
-        if not groupName then return end
-
-
-
-        local escortGroup = escortGroups[groupName]
-        if escortGroup then
-            escortGroup:Destroy()
-            escortGroups[groupName] = nil
-        end
-        escortPendingJoin[groupName] = nil
-
-        if escortMenus and escortMenus[groupName] then
-            escortMenus[groupName]:Remove()
-            escortMenus[groupName] = nil
-        end
-
-        RemoveEscortRequestMenuHandle(groupName)
-
-        if spawnedGroups and spawnedGroups[groupName] then
-            spawnedGroups[groupName] = nil
-        end
+    if EventData.id ~= EVENTS.PlayerLeaveUnit then
+        return
     end
 
-    if EventData.id == EVENTS.PlayerLeaveUnit or EventData.id == EVENTS.PilotDead or EventData.id == EVENTS.Ejection then
-        if EventData.IniUnit and EventData.IniPlayerName then
-            local playerName = EventData.IniPlayerName
-            local playerUnit = EventData.IniUnit
-            bc:markCasMissionPlayerUnavailable(playerName)
-            bc:markSeadMissionPlayerUnavailable(playerName)
-        if EventData.id == EVENTS.PlayerLeaveUnit then
-            local side = playerUnit:GetCoalition()
-            bc:finishCareerFlightForPlayer(playerName, playerUnit:GetName())
-            bc:_resetCareerAirKillStreaks(playerName)
-            bc.lossPenaltyArmByPlayer[playerName] = nil
-            if bc.playerContributions and bc.playerContributions[side] then
-                bc.playerContributions[side][playerName] = 0
-            end
-            if bc.flightTimeTakeoffByPlayer then bc.flightTimeTakeoffByPlayer[playerName] = nil end
-            for _, g in pairs(MissionGroups) do g.killers[playerName] = nil end
-            bc:resetTempStats(playerName, true)
-            bc:clearRefuelRewardState(playerName, playerUnit:GetName())
-            if Hunt then bc.huntDone[playerName] = nil end
+    if EventData.IniUnit and EventData.IniPlayerName then
+        local playerName = EventData.IniPlayerName
+        local playerUnit = EventData.IniUnit
+        bc:markCasMissionPlayerUnavailable(playerName)
+        bc:markSeadMissionPlayerUnavailable(playerName)
+        local side = playerUnit:GetCoalition()
+        bc:finishCareerFlightForPlayer(playerName, playerUnit:GetName())
+        bc:_resetCareerAirKillStreaks(playerName)
+        bc.lossPenaltyArmByPlayer[playerName] = nil
+        if bc.playerContributions and bc.playerContributions[side] then
+            bc.playerContributions[side][playerName] = 0
         end
-            playerGroup = playerUnit:GetGroup()
-            local groupName = playerGroup and playerGroup:GetName()
-            if (not groupName) and globalCallsignAssignments[playerName] then
-                groupName = globalCallsignAssignments[playerName].groupName
-            end
+        if bc.flightTimeTakeoffByPlayer then bc.flightTimeTakeoffByPlayer[playerName] = nil end
+        for _, g in pairs(MissionGroups) do g.killers[playerName] = nil end
+        bc:resetTempStats(playerName, true)
+        bc:clearRefuelRewardState(playerName, playerUnit:GetName())
+        if Hunt then bc.huntDone[playerName] = nil end
+        local playerGroup = playerUnit:GetGroup()
+        local groupName = playerGroup and playerGroup:GetName()
+        if (not groupName) and globalCallsignAssignments[playerName] then
+            groupName = globalCallsignAssignments[playerName].groupName
+        end
 
-            local groupId = playerGroup and playerGroup:GetID() or (bc.groupByPlayer and bc.groupByPlayer[playerName])
-
-            cleanupEscortForGroupName(groupName)
-            if groupId then
-                lc:pruneGroupMenus(groupId, groupName)
+        local groupId = playerGroup and playerGroup:GetID() or (bc.groupByPlayer and bc.groupByPlayer[playerName])
+        if groupId then
+            lc:pruneGroupMenus(groupId, groupName)
+        end
+        HandleWelcomePlayerUnavailable(playerName, groupName, groupId)
+    else
+        local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCategories("helicopter"):FilterCoalitions("blue"):FilterAlive():FilterOnce()
+        local alivePlayers = {}
+        clientSet:ForEachClient(function(client)
+            local pname = client:GetPlayerName()
+            if pname then
+                alivePlayers[pname] = true
             end
+        end)
 
-            if followID[playerName] then
-                followID[playerName]:Stop()
-                followID[playerName] = nil
-            end
-            if groupName then
-                if activeCSMenus[groupName] then
-                    activeCSMenus[groupName]:Remove()
-                    activeCSMenus[groupName] = nil
+        for playerName, callsignInfo in pairs(globalCallsignAssignments) do
+            if not alivePlayers[playerName] then
+                local gname=callsignInfo.groupName
+                local groupId = bc.groupByPlayer and bc.groupByPlayer[playerName]
+                bc:markCasMissionPlayerUnavailable(playerName)
+                bc:markSeadMissionPlayerUnavailable(playerName)
+                bc:_resetCareerAirKillStreaks(playerName)
+                if bc.playerContributions and bc.playerContributions[coalition.side.BLUE] then
+                    bc.playerContributions[coalition.side.BLUE][playerName] = 0
                 end
-            end
-
-            if globalCallsignAssignments[playerName] then
-                local callsignInfo = globalCallsignAssignments[playerName]
-                local zoneName = callsignInfo.zoneName
-
-                releaseSlot(playerName, zoneName)
-                globalCallsignAssignments[playerName] = nil
-            end
-            if groupId then
-                if bc.groupSupportMenus[groupId] then
-                    local supportState = bc.groupSupportMenus[groupId]
-                    for _, handle in ipairs(supportState.items or {}) do
-                        missionCommands.removeItemForGroup(groupId, handle)
-                    end
-                    if supportState.menu then
-                        missionCommands.removeItemForGroup(groupId, supportState.menu)
-                    end
-                    bc.groupSupportMenus[groupId] = nil
+                bc:resetTempStats(playerName, true)
+                if groupId then
+                    lc:pruneGroupMenus(groupId, gname)
                 end
-                if bc.playerNames then
-                    bc.playerNames[groupId] = nil
-                end
-            end
-            if bc.groupByPlayer then
-                bc.groupByPlayer[playerName] = nil
-            end
-            if bc.groupNameByPlayer then
-                bc.groupNameByPlayer[playerName] = nil
-            end
-        else
-            local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCategories("helicopter"):FilterCoalitions("blue"):FilterAlive():FilterOnce()
-            local alivePlayers = {}
-            clientSet:ForEachClient(function(client)
-                local pname = client:GetPlayerName()
-                if pname then
-                    alivePlayers[pname] = true
-                end
-            end)
-
-            for playerName, callsignInfo in pairs(globalCallsignAssignments) do
-                if not alivePlayers[playerName] then
-                    local zoneName=callsignInfo.zoneName
-                    local gname=callsignInfo.groupName
-                    local groupId = bc.groupByPlayer and bc.groupByPlayer[playerName]
-                    bc:markCasMissionPlayerUnavailable(playerName)
-                    bc:markSeadMissionPlayerUnavailable(playerName)
-                    bc:_resetCareerAirKillStreaks(playerName)
-                    if bc.playerContributions and bc.playerContributions[coalition.side.BLUE] then
-                        bc.playerContributions[coalition.side.BLUE][playerName] = 0
-                    end
-                    bc:resetTempStats(playerName, true)
-                    cleanupEscortForGroupName(gname)
-                    if groupId then
-                        lc:pruneGroupMenus(groupId, gname)
-                    end
-                    releaseSlot(playerName,zoneName)
-                    if followID[playerName] then followID[playerName]:Stop() followID[playerName]=nil end
-                    if gname then
-                        if activeCSMenus[gname] then activeCSMenus[gname]:Remove() activeCSMenus[gname]=nil end
-                    end
-                    if groupId then
-                        if bc.groupSupportMenus[groupId] then
-                            local supportState = bc.groupSupportMenus[groupId]
-                            for _, handle in ipairs(supportState.items or {}) do
-                                missionCommands.removeItemForGroup(groupId, handle)
-                            end
-                            if supportState.menu then
-                                missionCommands.removeItemForGroup(groupId, supportState.menu)
-                            end
-                            bc.groupSupportMenus[groupId] = nil
-                        end
-                        if bc.playerNames then
-                            bc.playerNames[groupId] = nil
-                        end
-                    end
-                    if bc.groupByPlayer then
-                        bc.groupByPlayer[playerName] = nil
-                    end
-                    if bc.groupNameByPlayer then
-                        bc.groupNameByPlayer[playerName] = nil
-                    end
-                    bc:clearRefuelRewardState(playerName)
-                    globalCallsignAssignments[playerName]=nil
-                end
+                bc:clearRefuelRewardState(playerName)
+                HandleWelcomePlayerUnavailable(playerName, gname, groupId)
             end
         end
-    end
-    if playerGroup then
-    activeCSMenus[playerGroup:GetName()] = nil
     end
 end
 
 static:HandleEvent(EVENTS.Shot, static.OnEventShot)
 static:HandleEvent(EVENTS.BaseCaptured, static.onBaseCapture)
 static:HandleEvent(EVENTS.PlayerLeaveUnit, static.OnEventPlayerLeaveUnit)
-static:HandleEvent(EVENTS.PilotDead, static.OnEventPlayerLeaveUnit)
-static:HandleEvent(EVENTS.Ejection, static.OnEventPlayerLeaveUnit)
-static:HandleEvent(EVENTS.Takeoff, static.OnEventTakeoff)
 static:HandleEvent(EVENTS.Refueling, static.OnEventRefueling)
 static:HandleEvent(EVENTS.RefuelingStop, static.OnEventRefuelingStop)
 _SETTINGS:SetPlayerMenuOff()

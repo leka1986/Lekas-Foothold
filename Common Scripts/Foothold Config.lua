@@ -538,6 +538,16 @@ ChanceAiAttackHelo = 0
 -- Hunter is when you do a lot of damage to enemy units (both planes and ground), RED dispatches a 2-ship to hunt you down.
 EnableHunter = true
 
+-- Lets the Director remember recent RED sortie and regular-supply outcomes and use them as soft planning influences.
+-- This does not add groups, force launches, bypass cooldowns, or block a route.
+-- @gui label="Director Battlefield Intelligence"
+GlobalSettings.directorBattlefieldIntelligenceEnabled = true
+
+-- Lets the Director remember recent air-combat results and use them as a small influence when redirecting an existing RED CAP.
+-- This does not add aircraft or bypass normal CAP limits, cooldowns, or safety checks.
+-- @gui label="Director Air-Combat Intelligence"
+GlobalSettings.directorAirCombatIntelligenceEnabled = true
+
 -- Valid values: "easy" | "medium" | "hard"
 -- Here, you can adjust how many cap should spawn. medium, is the default (Balanaced)
 CapDifficulty           = "medium" -- RED CAP amount.  This can be further custommized in the advance section.
@@ -1111,6 +1121,9 @@ ShopPrices = {
 	artillery     = 100,  -- Deploy artillery
 	recon         = 50,   -- Deploy recon group
 	airdef        = 150,  -- Deploy air defence
+	calav         = 100,  -- Deploy LAV-25 group
+	camgs         = 100,  -- Deploy M1128 MGS group
+	cadragoon     = 100,  -- Deploy M1296 Dragoon group
 	capture       = 500,  -- Capture neutral zone
 	advancecapture = 500, -- Advance capture pressured enemy zone
 	intel         = 150,  -- Satellite Intel (60 min)
@@ -1163,6 +1176,9 @@ ShopRankRequirements = {
 	artillery      = 3,  -- Deploy artillery
 	recon          = 3,  -- Deploy recon group
 	airdef         = 3,  -- Deploy air defence
+	calav          = 3,  -- Deploy LAV-25 group
+	camgs          = 3,  -- Deploy M1128 MGS group
+	cadragoon      = 3,  -- Deploy M1296 Dragoon group
 	["9lineam"]    = 1,  -- Jtac 9line AM
 	["9linefm"]    = 1,  -- Jtac 9line FM
 	cruisemsl      = 10, -- Cruise Missile Strike -- This does not exist in some maps.
@@ -1886,7 +1902,6 @@ restrictedWeapons = {
     "weapons.missiles.YJ-83",
     "weapons.containers.ALQ-184",
     "weapons.containers.alq-184long",
-    -- "weapons.containers.AN_ASQ_228",
     "weapons.missiles.AGM_114L",
     "weapons.missiles.AGM_114",
     -- "weapons.missiles.AGM_114K",
@@ -1909,6 +1924,10 @@ restrictedWeapons = {
     "weapons.bombs.KAB_1500T",
     "weapons.bombs.LS_6_100",
     "weapons.bombs.GBU-43/B(MOAB)",
+    -- "weapons.containers.AN_ASQ_228",
+    -- "weapons.containers.AAQ-28_LITENING",
+    -- "weapons.containers.AN_AAQ_33",
+    
 	"weapons.missiles.AGR_20A", -- laser rockets
 	"weapons.missiles.AGR_20_M282"} -- laser rockets
 

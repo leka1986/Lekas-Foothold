@@ -13,6 +13,7 @@ if AIEN.config.blueAI == nil then AIEN.config.blueAI = true end		               
 if AIEN.config.redAI == nil then AIEN.config.redAI = true end		                                -- true/false. If true, the AI enhancement will be applied to the red  coalition ground groups, else, no script effect will take place
 if AIEN.config.dismount == nil then AIEN.config.dismount = true end 		                        -- true/false. //BEWARE: CAN AFFECT PERFORMANCES ON LOW END SYSTEMS // Thanks to MBot's original script, if true AI ground units with infantry transport capabilities (mainly APC/IFV/Trucks) will dismount soldiers with rifle, rpg and sometimes mandpads when appropriate
 if AIEN.config.message_feed == nil then AIEN.config.message_feed = true end 		                -- true/false. If true, each relevant AI action starting will also create a trigger message feedback for its coalition
+if AIEN.config.zoneAttackSoundCooldown == nil then AIEN.config.zoneAttackSoundCooldown = 3600 end -- seconds. Per-zone/per-coalition cooldown for the friendly-zone attack sound; text alerts are unaffected
 if AIEN.config.initiative == nil then AIEN.config.initiative = true end                             -- true/false. If true, the ground groups will take limited initiative of attack or advance if intel and terrain allow them
 if AIEN.config.directorReaction == nil then AIEN.config.directorReaction = true end                 -- true/false. If true, eligible attacks can request a Director helicopter or convoy response
 
@@ -131,6 +132,7 @@ local rndMacRT_xper                     = 3                                     
 local stupidIndex                       = 1                                         -- used to avoid infinite loops
 --AI processing timers
 local underAttack                       = {}                                        -- used when a group has been attacked, keeping tactical tasking off while reactions cool down
+local zoneAttackSoundAt                 = {}                                        -- coalition:zone => timer.getTime() when the zone-attack sound last played
 local movingGroups                      = 0                                         -- used to keep track of groups that are currently moving, so that no initiative actions can be taken if the number is more than allowed by AIEN.config.maxGroupInMovement
 local delegationZoneLocks               = {}                                        -- zone name => timer.getTime() when delegation started
 local reactionRoamZoneLocks             = {}                                        -- zone name => timer.getTime() when reaction patrol movement started
@@ -10481,6 +10483,45 @@ end
 -- AIEN_ARTILLERY_TASK_CLEANUP_END
 
 
+-- AIEN_ARTILLERY_MOVING_MESSAGE_BATCH_BEGIN
+local function queueAIENArtilleryMovingTargetMessage(gData)
+    local coalitionId = gData.coa
+    local groupName = tostring(gData.n)
+    local batchKey = "moving:coal:" .. tostring(coalitionId)
+    local batchWindow = AIEN.config.artyMovingMessageBatchWindow or 5
+
+    AIEN._msgBatch = AIEN._msgBatch or {}
+    local batch = AIEN._msgBatch[batchKey]
+    local newBatch = false
+    if not batch then
+        batch = {coal=coalitionId, groupNames={}}
+        AIEN._msgBatch[batchKey] = batch
+        newBatch = true
+    end
+
+    batch.groupNames[groupName] = true
+
+    if newBatch then
+        timer.scheduleFunction(function()
+            local ready = AIEN._msgBatch[batchKey]
+            if not ready then return end
+
+            local groupNames = {}
+            for name in pairs(ready.groupNames) do
+                groupNames[#groupNames + 1] = name
+            end
+            table.sort(groupNames)
+
+            local txt = aienFormat("AIEN_ARTY_TARGET_MOVING", "C2, %s, we can't fire now, target is on the move.", table.concat(groupNames, ", "))
+            multyTypeMessage({"text", txt, 10, nil, nil, nil, ready.coal})
+            AIEN._msgBatch[batchKey] = nil
+            return
+        end, {}, timer.getTime() + batchWindow)
+    end
+end
+-- AIEN_ARTILLERY_MOVING_MESSAGE_BATCH_END
+
+
 --## MISSION ACTION -- these are more advanced command for groups
 local function groupfireAtPoint(var)
     local group = var[1] -- groupTableCheck(var[1])
@@ -13626,6 +13667,25 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
                                 local txt = aienZoneAttackMessage(z, tgtPos, eventCat, threatTxt, actionMessage)
                                 local vars = {"text", txt, 30, nil, nil, nil, gr:getCoalition()}
                                 multyTypeMessage(vars)
+                                local zoneAttackSound = "Friendly zone is under attack.ogg"
+                                if z.side == coalition.side.BLUE
+                                    and eventCat == 2
+                                    and z._cz
+                                    and z._cz:isInside(tgtPos)
+                                then
+                                    zoneAttackSound = "Enemy breach.ogg"
+                                elseif threatTxt == aienThreatLabel("ARTY") then
+                                    zoneAttackSound = "We are under attack by enemy artillery.ogg"
+                                end
+                                local zoneAttackSoundKey = tostring(z.side) .. ":" .. z.zone
+                                local zoneAttackSoundNow = timer.getTime()
+                                local lastZoneAttackSoundAt = zoneAttackSoundAt[zoneAttackSoundKey]
+                                if not lastZoneAttackSoundAt
+                                    or (zoneAttackSoundNow - lastZoneAttackSoundAt) >= AIEN.config.zoneAttackSoundCooldown
+                                then
+                                    zoneAttackSoundAt[zoneAttackSoundKey] = zoneAttackSoundNow
+                                    trigger.action.outSoundForCoalition(gr:getCoalition(), zoneAttackSound)
+                                end
                             else
                                 queueAIENGroupAttackMessage(gr, ownPos, threatTxt, actionMessage, eventCat, eventCls)
                             end
@@ -14650,7 +14710,7 @@ end
                                         if movingSkip and AIEN.config.message_feed then
                                             local cooldown = AIEN.config.artyFireLastContactThereshold or 180
                                             if not gData.lastMoveSkipMsg or (cycleTime - gData.lastMoveSkipMsg) >= cooldown then
-                                                trigger.action.outTextForCoalition(gData.coa, aienFormat("AIEN_ARTY_TARGET_MOVING", "C2, %s, we can't fire now, target is on the move.", tostring(gData.n)), 10)
+                                                queueAIENArtilleryMovingTargetMessage(gData)
                                                 gData.lastMoveSkipMsg = cycleTime
                                             end
                                         end

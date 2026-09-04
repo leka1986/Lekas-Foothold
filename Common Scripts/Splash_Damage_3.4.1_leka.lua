@@ -3512,6 +3512,10 @@ local function processSplashKillfeed()
                 bc:addContribution(playerName, 2, points)
                 bc:registerCasMissionKill(playerName, entry.unitName)
                 bc:registerSeadMissionKill(playerName, entry.unitName, statName)
+                local mt = MissionTargets[entry.unitName]
+                if mt then
+                    bc:registerMissionTargetKill(playerName, 2, entry.unitName, mt)
+                end
                 processedCount = processedCount + 1
             end
             removeSplashKillEntryByUnitId(unitId)
