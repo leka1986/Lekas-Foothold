@@ -3784,7 +3784,7 @@ mc:trackMission({
 	isActive = function()
 		if not ActiveMission['Quwaysinascuds'] then return false end
 		if Group.getByName('Quwaysina-Scuds') then return true end
-		bc:cancelGroupTargetMission('Quwaysinascuds')
+		bc:cancelGroupTargetMission('Quwaysinascuds', 2)
 		ActiveMission['Quwaysinascuds'] = nil
 		return false
 	end
@@ -3857,7 +3857,7 @@ mc:trackMission({
 	isActive = function()
 		if not ActiveMission['Baluza-scuds'] then return false end
 		if Group.getByName('Baluza-Scuds') then return true end
-		bc:cancelGroupTargetMission('Baluza-scuds')
+		bc:cancelGroupTargetMission('Baluza-scuds', 2)
 		ActiveMission['Baluza-scuds'] = nil
 		return false
 	end
@@ -3896,7 +3896,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('bomb')
+		bc:cancelGroupTargetMission('bomb', 2)
 	end,
 	isActive = function()
 		return StrategicBomber.IsMissionActive(1)
@@ -4013,7 +4013,7 @@ mc:trackMission({
 		if not ActiveMission['cas'] then return false end
 		local gr = Group.getByName(attackGrp)
 		if gr then return true end
-		bc:cancelGroupTargetMission('cas')
+		bc:cancelGroupTargetMission('cas', 2)
 		ActiveMission['cas'] = nil
 		return false
 	end
@@ -4109,7 +4109,7 @@ mc:trackMission({
 		if not ActiveMission['shiptercept'] then return false end
 		if Group.getByName('evt-shiptercept2') then return true end
 		if Group.getByName('evt-shiptercept3') then return true end
-		bc:cancelGroupTargetMission('shiptercept')
+		bc:cancelGroupTargetMission('shiptercept', 2)
 		ActiveMission['shiptercept'] = nil
 		return false
     end
@@ -4153,7 +4153,7 @@ mc:trackMission({
 	isActive = function()
 		if not ActiveMission['artilleryattack'] then return false end
 		if Group.getByName('evt-Salihiyah-attack-melez-art') then return true end
-		bc:cancelGroupTargetMission('artilleryattack')
+		bc:cancelGroupTargetMission('artilleryattack', 2)
 		ActiveMission['artilleryattack'] = nil
 		return false
 	end

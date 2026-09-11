@@ -4541,7 +4541,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('scuds')
+		bc:cancelGroupTargetMission('scuds', 2)
     end,
 	isActive = function()
 		if not ActiveMission['scuds']  then return false end
@@ -4615,7 +4615,7 @@ mc:trackMission({
             cw('lar-attack-foxtrot-event'),
         }
         for _, groupName in ipairs(groups) do
-            bc:cancelGroupTargetMission(groupName)
+            bc:cancelGroupTargetMission(groupName, 2)
         end
     end,
     isActive = function()
@@ -4741,7 +4741,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('cas')
+		bc:cancelGroupTargetMission('cas', 2)
     end,
     isActive = function()
 		if not ActiveMission['cas'] then return false end
@@ -4885,7 +4885,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('bomb')
+		bc:cancelGroupTargetMission('bomb', 2)
 	end,
 	isActive = function()
 		return StrategicBomber.IsMissionActive(1)
@@ -5861,7 +5861,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('Echo-attack-delta-art')
+		bc:cancelGroupTargetMission('Echo-attack-delta-art', 2)
     end,
 	isActive = function()
 		if not ActiveMission['Echo-attack-delta-art'] then return false end
@@ -5886,7 +5886,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('foxtrot-artillery-fire-at-golf')
+		bc:cancelGroupTargetMission('foxtrot-artillery-fire-at-golf', 2)
     end,
 	isActive = function()
 		if not ActiveMission['foxtrot-artillery-fire-at-golf'] then return false end

@@ -3757,7 +3757,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('cas')
+		bc:cancelGroupTargetMission('cas', 2)
     end,
 	isActive = function()
 		if not ActiveMission['cas'] then return false end
@@ -3827,7 +3827,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('bomb')
+		bc:cancelGroupTargetMission('bomb', 2)
 	end,
 	isActive = function()
 		return StrategicBomber.IsMissionActive(1)
@@ -4281,7 +4281,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('Artillery2')
+		bc:cancelGroupTargetMission('Artillery2', 2)
     end,
 	isActive = function()
 		if not ActiveMission['Artillery2'] then return false end
@@ -4338,7 +4338,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('helohunt')
+		bc:cancelGroupTargetMission('helohunt', 2)
     end,
     isActive = function()
 		if not ActiveMission['helohunt'] then return false end

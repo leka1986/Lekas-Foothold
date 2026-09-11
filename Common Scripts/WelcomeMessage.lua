@@ -1639,11 +1639,13 @@ end
 
 local function BuildEscortFollowTask(clientGroup, relativePosition)
     return {
-        id = "Follow",
+        id = "Escort",
         params = {
             groupId = clientGroup:GetID(),
             pos = relativePosition,
             lastWptIndexFlag = false,
+            engagementDistMax = UTILS.NMToMeters(40),
+            targetTypes = { "Air" },
         },
     }
 end
@@ -1667,7 +1669,7 @@ local function BuildEscortOrbitTask(center, altitudeFeet, speedKnots, heading, l
     return task
 end
 
-local function SetEscortNativeTask(escortGroup, primaryTask, roe, rot)
+local function SetEscortNativeTask(escortGroup, primaryTask, rot)
     if not escortGroup or not escortGroup:IsAlive() then
         return false
     end
@@ -1677,22 +1679,24 @@ local function SetEscortNativeTask(escortGroup, primaryTask, roe, rot)
         return false
     end
 
-    if roe ~= nil then
-        escortGroup:OptionROE(roe)
-    end
     if rot ~= nil then
         escortGroup:OptionROT(rot)
     end
 
-    dcsGroup:getController():setTask({
-        id = "ComboTask",
-        params = {
-            tasks = {
-                primaryTask,
-                BuildEscortEngageAirTask(40),
+    dcsGroup:getController():setOption(AI.Option.Air.id.MISSILE_ATTACK, AI.Option.Air.val.MISSILE_ATTACK.TARGET_THREAT_EST)
+    if primaryTask.id == "Escort" then
+        dcsGroup:getController():setTask(primaryTask)
+    else
+        dcsGroup:getController():setTask({
+            id = "ComboTask",
+            params = {
+                tasks = {
+                    BuildEscortEngageAirTask(40),
+                    primaryTask,
+                },
             },
-        },
-    })
+        })
+    end
     return true
 end
 
@@ -1701,7 +1705,7 @@ local function SetEscortFollowMode(groupName, clientGroup, relativePosition)
     if not escortGroup then
         return false
     end
-    if not SetEscortNativeTask(escortGroup, BuildEscortFollowTask(clientGroup, relativePosition), 2, 3) then
+    if not SetEscortNativeTask(escortGroup, BuildEscortFollowTask(clientGroup, relativePosition), 2) then
         return false
     end
     local state = spawnedGroups[groupName]
@@ -1745,7 +1749,7 @@ local function ScheduleInitialEscortTask(groupName, clientGroup, escortGroup, es
         else
             local orbitCenter = args.escortHomeCoord or args.clientGroup:GetPointVec2()
             if orbitCenter then
-                if SetEscortNativeTask(args.escortGroup, BuildEscortOrbitTask(orbitCenter, 10000, 350), 2, 3) then
+                if SetEscortNativeTask(args.escortGroup, BuildEscortOrbitTask(orbitCenter, 10000, 350), 3) then
                     local state = spawnedGroups[args.groupName]
                     if state then
                         state.escortMode = "holding"
@@ -1803,7 +1807,7 @@ function HandleEscortLandingForGroupName(groupName, orbitCenter)
             return
         end
         if orbitCenter then
-            if SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(orbitCenter, 10000, 250), 2, 2) then
+            if SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(orbitCenter, 10000, 250), 2) then
                 if state then
                     state.escortMode = "landing_hold"
                 end
@@ -2048,21 +2052,6 @@ function AddEscortMenu(group)
     end
 
     escortMenus[groupName] = MENU_GROUP:New(group, T:Get("WELCOME_MENU_ESCORT"))
-    MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_ESCORT_FLIGHTSWEEP"), escortMenus[groupName], function()
-        local esc = escortGroups[groupName]
-        if esc then
-        esc:OptionROE(1)
-        MESSAGE:New(T:Get("WELCOME_ESCORT_SET_ENGAGE_ALL"), 15):ToGroup(group)
-    end
-    end)
-        MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_ESCORT_ENGAGE_IF_ENGAGED"), escortMenus[groupName], function()
-        local esc = escortGroups[groupName]
-        if esc then
-        esc:OptionROE(2)
-        MESSAGE:New(T:Get("WELCOME_ESCORT_SET_ENGAGE_IF_ENGAGED"), 15):ToGroup(group)
-    end
-    end)
-    
     MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_PATROL_AHEAD"), escortMenus[groupName], PatrolAhead, group)
     MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_RACETRACK_NOSE"), escortMenus[groupName], RaceTrackOnNose, group)
     MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_RACETRACK_LEFT_RIGHT"), escortMenus[groupName], RaceTrackLeftToRight, group)
@@ -2211,7 +2200,7 @@ function RaceTrackOnNose(group)
         local clientCoord = group:GetPointVec3()
         local clientHeading = group:GetHeading()
         local racetrackTask = BuildEscortOrbitTask(clientCoord, 25000, 370, clientHeading, 20)
-        if SetEscortNativeTask(escortGroup, racetrackTask, 3, 2) then
+        if SetEscortNativeTask(escortGroup, racetrackTask, 2) then
             local state = spawnedGroups[group:GetName()]
             if state then
                 state.escortMode = "racetrack"
@@ -2231,7 +2220,7 @@ function RaceTrackLeftToRight(group)
         local clientHeading = group:GetHeading()
         local headingLeftToRight = (clientHeading + 90) % 360
         local racetrackTask = BuildEscortOrbitTask(clientCoord, 25000, 370, headingLeftToRight, 20)
-        if SetEscortNativeTask(escortGroup, racetrackTask, 3, 2) then
+        if SetEscortNativeTask(escortGroup, racetrackTask, 2) then
             local state = spawnedGroups[group:GetName()]
             if state then
                 state.escortMode = "racetrack"
@@ -2251,7 +2240,7 @@ function RaceTrackRightToLeft(group)
         local clientHeading = group:GetHeading()
         local headingRightToLeft = (clientHeading - 90) % 360
         local racetrackTask = BuildEscortOrbitTask(clientCoord, 25000, 370, headingRightToLeft, 20)
-        if SetEscortNativeTask(escortGroup, racetrackTask, 3, 2) then
+        if SetEscortNativeTask(escortGroup, racetrackTask, 2) then
             local state = spawnedGroups[group:GetName()]
             if state then
                 state.escortMode = "racetrack"
@@ -2274,7 +2263,7 @@ function EscortRejoin(group)
             end
         else
             local clientCoord = group:GetPointVec2()
-            if SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(clientCoord, 10000, 350), 2, 2) then
+            if SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(clientCoord, 10000, 350), 2) then
                 local state = spawnedGroups[group:GetName()]
                 if state then
                     state.escortMode = "landing_hold"
@@ -2291,6 +2280,10 @@ function EscortAbort(group)
     local T = getMooseGroupTranslator(group)
     local groupName = group:GetName()
     local escortGroup = escortGroups[groupName]
+    if escortGroup and not escortGroup:IsAlive() then
+        CleanupEscortForGroupName(groupName, false, false)
+        escortGroup = nil
+    end
     if escortGroup then
         escortPendingJoin[groupName] = nil
         RemoveEscortMenu(group)
@@ -2350,7 +2343,7 @@ function HandleEscortTakeoff(unitName, playerName, playerGroupName, unitType)
             end, nil, timer.getTime() + 30)
         elseif state.escortHomeCoord then
             if not escortPendingJoin[escortOwnerGroupName] then
-                if not SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(state.escortHomeCoord, 10000, 350), 2, 3) then
+                if not SetEscortNativeTask(escortGroup, BuildEscortOrbitTask(state.escortHomeCoord, 10000, 350), 3) then
                     return
                 end
                 state.escortMode = "holding"
@@ -2476,6 +2469,7 @@ function static:OnEventRefuelingStop(EventData)
         if not careerSeen[crewName] then
             careerSeen[crewName] = true
             bc:recordCareerStat(crewName, bc.CAREER_STAT.FuelReceivedLbs, gainedWholeLbs)
+            bc.refuelLbsByPlayer[crewName] = (bc.refuelLbsByPlayer[crewName] or 0) + gainedWholeLbs
             if refuelStart.aircraftId then
                 bc:recordCareerAircraftStat(crewName, refuelStart.aircraftId, bc.CAREER_AIRCRAFT_METRIC.FuelReceivedLbs, gainedWholeLbs)
             end

@@ -1298,13 +1298,13 @@ local function isConnectedPlayerName(playerName)
     return playerRegistryByName[playerName] == true
 end
 
-local function getFootholdRewardDataForObject(object)
+local function getFootholdRewardDataForObject(object, objectName)
     if not object then
         return nil, nil
     end
 
     local rewardData = safeGet(function()
-        local points, _, statName = bc:objectToRewardPoints2(object)
+        local points, _, statName = bc:objectToRewardPoints2(object, objectName)
         return {
             statName = statName,
             points = points
@@ -2850,18 +2850,21 @@ function track_wpns()
                     local ifFound = function(foundObject, targets, center)
                         if foundObject:isExist() then
                             local category = foundObject:getCategory()
-                            if (category == Object.Category.UNIT and (foundObject:getDesc().category == Unit.Category.GROUND_UNIT or foundObject:getDesc().category == Unit.Category.AIRPLANE)) or
+                            local desc = category == Object.Category.UNIT and foundObject:getDesc()
+                            if (category == Object.Category.UNIT and (desc.category == Unit.Category.GROUND_UNIT or desc.category == Unit.Category.AIRPLANE)) or
                                category == Object.Category.STATIC then
-                                local statName, points = getFootholdRewardDataForObject(foundObject)
+                                local unitName = foundObject:getName()
+                                local statName, points = getFootholdRewardDataForObject(foundObject, unitName)
+                                local position = foundObject:getPoint()
                                 table.insert(targets, {
                                     name = foundObject:getTypeName(),
-                                    distance = getDistance(center, foundObject:getPoint()),
+                                    distance = getDistance(center, position),
                                     health = foundObject:getLife() or 0,
-                                    position = foundObject:getPoint(),
-                                    maxHealth = (category == Object.Category.UNIT and foundObject:getDesc().life) or foundObject:getLife() or 0,
+                                    position = position,
+                                    maxHealth = (category == Object.Category.UNIT and desc.life) or foundObject:getLife() or 0,
                                     unit = foundObject,
                                     id = foundObject:getID(),
-                                    unitName = foundObject:getName() or "Unknown",
+                                    unitName = unitName or "Unknown",
                                     statName = statName,
                                     points = points
                                 })
@@ -2959,6 +2962,11 @@ function track_wpns()
                     table.insert(weaponsToRemove, wpn_id_)
                 end
                 if not isNapalm and not isTactical then
+                    local weaponData = explTable[wpnData.name] or { explosive = 0, shaped_charge = false, Skip_larger_explosions = false, Skip_blast_wave = false }
+                    local isCluster = weaponData.cluster or false
+                    if wpnData.targetPoint and splash_damage_options.larger_explosions and not weaponData.Skip_larger_explosions and not (splash_damage_options.cluster_enabled and isCluster) then
+                        explosionPoint = wpnData.targetPoint
+                    end
                     if splash_damage_options.ordnance_protection then
                         local checkVol = { id = world.VolumeType.SPHERE, params = { point = explosionPoint, radius = splash_damage_options.ordnance_protection_radius } }
                         world.searchObjects(Object.Category.WEAPON, checkVol, function(obj)
@@ -2969,7 +2977,6 @@ function track_wpns()
                             return true
                         end)
                     end
-                    local weaponData = explTable[wpnData.name] or { explosive = 0, shaped_charge = false, Skip_larger_explosions = false, Skip_blast_wave = false }
                     if safeToBlast then
                         local base_explosive, isShapedCharge = getWeaponExplosive(wpnData.name)
                         base_explosive = base_explosive * splash_damage_options.overall_scaling
@@ -3004,7 +3011,6 @@ function track_wpns()
                             end
                         end
                         --Cluster Bomb Handling
-                        local isCluster = weaponData.cluster or false
                         if splash_damage_options.cluster_enabled and isCluster then
                             local submunitionCount = weaponData.submunition_count or 30
                             local submunitionPower = (weaponData.submunition_explosive or 1) * splash_damage_options.cluster_bomblet_damage_modifier * splash_damage_options.overall_scaling
@@ -3124,18 +3130,8 @@ function track_wpns()
                             local weaponName = args[7]
                             local wpnData = args[8]
                             local status, err = pcall(function()
-                                --Log pre-explosion targets
                                 --Sort pre-explosion targets by distance
                                 table.sort(chosenTargets, function(a, b) return a.distance < b.distance end)
-                                if splash_damage_options.track_pre_explosion then
-                                    if #chosenTargets > 0 then
-                                        local msg = "Targets in blast zone for " .. weaponName .. " BEFORE explosion (last frame, using finalPos):\n"
-                                        for i, target in ipairs(chosenTargets) do
-                                            msg = msg .. "- " .. target.name .. " (ID: " .. target.id .. ", Dist: " .. string.format("%.1f", target.distance) .. "m, Health: " .. target.health .. ")\n"
-                                        end
-                                    else
-                                    end
-                                end
                                 if not (weaponData.Skip_blast_wave or false) then
                                     blastWave(explosionPoint, splash_damage_options.blast_search_radius, wpnData.name, explosionPower, isShapedCharge)
                                 end
@@ -3160,14 +3156,16 @@ function track_wpns()
                                         local ifFound = function(foundObject)
                                             if foundObject:isExist() then
                                                 local category = foundObject:getCategory()
-                                                if (category == Object.Category.UNIT and (foundObject:getDesc().category == Unit.Category.GROUND_UNIT or foundObject:getDesc().category == Unit.Category.AIRPLANE)) or
+                                                local desc = category == Object.Category.UNIT and foundObject:getDesc()
+                                                if (category == Object.Category.UNIT and (desc.category == Unit.Category.GROUND_UNIT or desc.category == Unit.Category.AIRPLANE)) or
                                                    category == Object.Category.STATIC then
-                                                    local distance = getDistance(impactPoint, foundObject:getPoint())
+                                                    local position = foundObject:getPoint()
+                                                    local distance = getDistance(impactPoint, position)
                                                     table.insert(postExplosionTargets, {
                                                         name = foundObject:getTypeName(),
                                                         health = foundObject:getLife() or 0,
-                                                        position = foundObject:getPoint(),
-                                                        maxHealth = (category == Object.Category.UNIT and foundObject:getDesc().life) or foundObject:getLife() or 0,
+                                                        position = position,
+                                                        maxHealth = (category == Object.Category.UNIT and desc.life) or foundObject:getLife() or 0,
                                                         distance = distance,
                                                         id = foundObject:getID(),
                                                         unitName = foundObject:getName() or "Unknown",
@@ -3180,7 +3178,6 @@ function track_wpns()
                                         world.searchObjects({Object.Category.UNIT, Object.Category.STATIC}, volS, ifFound)
                                         --Sort post-explosion targets by distance
                                         table.sort(postExplosionTargets, function(a, b) return a.distance < b.distance end)
-                                        local msg = "Post-explosion analysis for " .. weaponName .. ":\n"
                                         --Match pre-detected units
                                         for _, preTarget in ipairs(preExplosionTargets) do
                                             local found = false
@@ -3203,12 +3200,9 @@ function track_wpns()
                                                 end
                                             end
                                             local healthPercent = preTarget.maxHealth > 0 and (postHealth / preTarget.maxHealth * 100) or 0
-                                            local status = ""
                                             local wasFullyDestroyed = not found or postHealth <= 0
                                             if wasFullyDestroyed then
-                                                status = "WAS FULLY DESTROYED"
                                             elseif healthPercent < splash_damage_options.cargo_damage_threshold then
-                                                status = "WAS DAMAGED BELOW THRESHOLD"
                                                 -- Trigger effects for units below threshold if in cargoUnits
                                                 if splash_damage_options.enable_cargo_effects and not processedCookoffs[preTarget.id] and cargoUnits[preTarget.name] then
                                                     markProcessedCookoff(preTarget.id)
@@ -3228,7 +3222,6 @@ function track_wpns()
                                                     scheduleCargoEffects(preTarget.name, preTarget.unitName, preTarget.id, 0)
                                                 end
                                             else
-                                                status = "SURVIVED (Health: " .. postHealth .. ")"
                                             end
                                             --Killfeed logic
                                             if wasFullyDestroyed and splash_damage_options.killfeed_enable and explTable[weaponName] and isConnectedPlayerName(playerName) then
@@ -3244,8 +3237,6 @@ function track_wpns()
                                                         points = preTarget.points
                                                     }, preTarget.unit)
                                             end
-                                            local coords = found and postPosition or preTarget.position
-                                            msg = msg .. "- " .. preTarget.name .. " (ID: " .. preTarget.id .. ") " .. status .. " AT " .. string.format("X: %.0f, Y: %.0f, Z: %.0f", coords.x, coords.y, coords.z) .. " (Dist: " .. string.format("%.1f", postDistance) .. "m, Pre: " .. preTarget.health .. ", Post: " .. postHealth .. ")\n"
                                         end
                                         --Check for additional units
                                         for _, postTarget in ipairs(postExplosionTargets) do
@@ -3257,7 +3248,6 @@ function track_wpns()
                                                 end
                                             end
                                             if not isPreDetected then
-                                                local coords = postTarget.position
                                                 local healthPercent = postTarget.maxHealth > 0 and (postTarget.health / postTarget.maxHealth * 100) or 0
                                                local status = postTarget.health <= 0 and "WAS FULLY DESTROYED" or 
                                                               (healthPercent < splash_damage_options.cargo_damage_threshold and "WAS DAMAGED BELOW THRESHOLD" or 
@@ -3280,7 +3270,6 @@ function track_wpns()
                                                     end
                                                     scheduleCargoEffects(postTarget.name, postTarget.unitName, postTarget.id, 0)
                                                 end
-                                                msg = msg .. "- " .. postTarget.name .. " " .. status .. " AT " .. string.format("X: %.0f, Y: %.0f, Z: %.0f", coords.x, coords.y, coords.z) .. " (Dist: " .. string.format("%.1f", postTarget.distance) .. "m, Pre: Unknown, Post: " .. postTarget.health .. ")\n"
                                             end
                                         end
                                         --Schedule splashKillFeed if there are entries
@@ -3396,9 +3385,9 @@ function onWpnEvent(event)
             end
             --Handle other tracked weapons in explTable
             if weaponData then
-                if (ordnance:getDesc().category ~= 0) and event.initiator then
-                    if ordnance:getDesc().category == 1 then --Missiles
-                        if (ordnance:getDesc().MissileCategory ~= 1 and ordnance:getDesc().MissileCategory ~= 2) then --Exclude AAM and SAM
+                if (desc.category ~= 0) and event.initiator then
+                    if desc.category == 1 then --Missiles
+                        if (desc.MissileCategory ~= 1 and desc.MissileCategory ~= 2) then --Exclude AAM and SAM
                             tracked_weapons[event.weapon.id_] = { 
                                 wpn = ordnance, 
                                 init = playerName, 
@@ -4492,6 +4481,12 @@ end
 function WpnHandler:onEvent(event)
 	onWpnEvent(event)
 		if event.id == world.event.S_EVENT_HIT then
+			if splash_damage_options.larger_explosions and event.weapon then
+				local trackedWeapon = tracked_weapons[event.weapon.id_]
+				if trackedWeapon and trackedWeapon.init and trackedWeapon.init ~= "Unknown" and not trackedWeapon.targetPoint then
+					trackedWeapon.targetPoint = event.target and event.target:getPoint()
+				end
+			end
 			logEvent("HIT", event)
 		elseif event.id == world.event.S_EVENT_KILL then
 			logEvent("KILL", event)

@@ -4758,7 +4758,7 @@ mc:trackMission({
 		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('scuds')
+		bc:cancelGroupTargetMission('scuds', 2)
     end,
 	isActive = function()
 		if not ActiveMission['scuds'] then return false end
@@ -4877,7 +4877,7 @@ mc:trackMission({
         end
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('shiptercept')
+		bc:cancelGroupTargetMission('shiptercept', 2)
     end,
     isActive = function()
 		if not ActiveMission['shiptercept'] then return false end
@@ -4921,7 +4921,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('bomb')
+		bc:cancelGroupTargetMission('bomb', 2)
 	end,
 	isActive = function()
 		return StrategicBomber.IsMissionActive(1)
@@ -5035,7 +5035,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('cas')
+		bc:cancelGroupTargetMission('cas', 2)
     end,
     isActive = function()
 		if not ActiveMission['cas'] then return false end
@@ -5878,7 +5878,7 @@ mc:trackMission({
 		RegisterGroupTarget(alphaAttackKrymskArty,250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),alphaAttackKrymskArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission(alphaAttackKrymskArty)
+		bc:cancelGroupTargetMission(alphaAttackKrymskArty, 2)
     end,
     isActive = function()
         if not ActiveMission[alphaAttackKrymskArty] then return false end
@@ -5900,7 +5900,7 @@ mc:trackMission({
 		RegisterGroupTarget('Krymsk-attack-Anapa-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Krymsk-attack-Anapa-Arty')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Krymsk-attack-Anapa-Arty')
+		bc:cancelGroupTargetMission('Krymsk-attack-Anapa-Arty', 2)
     end,
     isActive = function()
         if not ActiveMission['Krymsk-attack-Anapa-Arty'] then return false end
@@ -5922,7 +5922,7 @@ mc:trackMission({
 		RegisterGroupTarget(novorossiyskAttackGelendzhikArty,250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),novorossiyskAttackGelendzhikArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission(novorossiyskAttackGelendzhikArty)
+		bc:cancelGroupTargetMission(novorossiyskAttackGelendzhikArty, 2)
     end,
     isActive = function()
         if not ActiveMission[novorossiyskAttackGelendzhikArty] then return false end
@@ -5944,7 +5944,7 @@ mc:trackMission({
 		RegisterGroupTarget('Gudauta-attack-Sukhumi-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Gudauta-attack-Sukhumi-Arty')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Gudauta-attack-Sukhumi-Arty')
+		bc:cancelGroupTargetMission('Gudauta-attack-Sukhumi-Arty', 2)
     end,
     isActive = function()
         if not ActiveMission['Gudauta-attack-Sukhumi-Arty'] then return false end
@@ -5966,7 +5966,7 @@ mc:trackMission({
 		RegisterGroupTarget('Foxtrot-attack-Maykop-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Foxtrot-attack-Maykop-Arty')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Foxtrot-attack-Maykop-Arty')
+		bc:cancelGroupTargetMission('Foxtrot-attack-Maykop-Arty', 2)
     end,
     isActive = function()
         if not ActiveMission['Foxtrot-attack-Maykop-Arty'] then return false end
@@ -6009,7 +6009,7 @@ mc:trackMission({
 		RegisterGroupTarget('Nalchik-attack-Mineralnye-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Nalchik-attack-Mineralnye-Arty')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Nalchik-attack-Mineralnye-Arty')
+		bc:cancelGroupTargetMission('Nalchik-attack-Mineralnye-Arty', 2)
     end,
     isActive = function()
         if not ActiveMission['Nalchik-attack-Mineralnye-Arty'] then return false end
@@ -6031,7 +6031,7 @@ mc:trackMission({
 		RegisterGroupTarget('Nalchik-attack-Mozdok-Arty',250,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'Nalchik-attack-Mozdok-Arty')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Nalchik-attack-Mozdok-Arty')
+		bc:cancelGroupTargetMission('Nalchik-attack-Mozdok-Arty', 2)
     end,
     isActive = function()
         if not ActiveMission['Nalchik-attack-Mozdok-Arty'] then return false end

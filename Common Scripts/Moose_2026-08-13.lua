@@ -29659,10 +29659,10 @@ return n
 end
 return 0
 end
-function GROUP:GetFirstUnitAlive()
+function GROUP:GetFirstUnitAlive(Units)
 local DCSGroup=self:GetDCSObject()
 if DCSGroup then
-local units=self:GetUnits()
+local units=Units or self:GetUnits()
 for _,_unit in pairs(units)do
 local unit=_unit
 if unit and unit:IsAlive()then
@@ -38456,10 +38456,13 @@ local function SuppressionStop(args)
 self:T(string.format("*** SEAD - %s Radar On",args[2]))
 local grp=args[1]
 local name=args[2]
+local ammo=grp:GetProperty("MANTIS_AMMO")
+if not(ammo and ammo.trLost)then
 if self.UseEmissionsOnOff then
 grp:EnableEmission(true)
 end
 grp:OptionAlarmStateRed()
+end
 grp:OptionEngageRange(self.EngagementRange)
 self.SuppressedGroups[name]=false
 if self.UseCallBack then
@@ -56698,6 +56701,10 @@ end
 self.logsamstatus=false
 self:T({self.ewr_templates})
 self.SAM_Group=SET_GROUP:New():FilterPrefixes(self.SAM_Templates_Prefix):FilterCoalitions(self.Coalition)
+function self.SAM_Group:onafterAdded(From,Event,To,Name,Group)
+local ammo=Group:GetProperty("MANTIS_AMMO")
+if ammo then ammo.trUnits=nil end
+end
 self.EWR_Group=SET_GROUP:New():FilterPrefixes(self.ewr_templates):FilterCoalitions(self.Coalition)
 if self.FilterZones then
 self.SAM_Group:FilterZones(self.FilterZones)
@@ -56750,7 +56757,7 @@ end
 end
 return false
 end
-local function SwitchSAMOn(Name,Group)
+local function SwitchSAMOn(Name,Group,lostUnitName)
 if self.NavalPerUnit and Group and Group:IsShip()and self._navalSAMs then
 if not self.SuppressedGroups[Name]then
 for _,_unit in pairs(Group:GetUnits()or{})do
@@ -56767,7 +56774,11 @@ return
 end
 local suppressed=self.SuppressedGroups[Name]or false
 local jammed=self._jammerEnabled and self._jammedSAMs and self._jammedSAMs[Name]or false
-if not suppressed and not jammed and self.SamStateTracker[Name]=="GREEN"then
+local ammo=Group:GetProperty("MANTIS_AMMO")
+if ammo and lostUnitName and(not ammo.trUnits or ammo.trUnits[lostUnitName])then
+self:_RefreshSAMTracking(Group,Name,ammo,lostUnitName)
+end
+if not suppressed and not jammed and not(ammo and(ammo.trLost or ammo.canSleep and ammo.empty))and self.SamStateTracker[Name]=="GREEN"then
 self.SamStateTracker[Name]="RED"
 if self.UseEmOnOff then
 Group:EnableEmission(true)
@@ -56795,7 +56806,7 @@ lasthit=data.TgtGroup:GetProperty("MANTIS_LASTHIT")
 firsthit=(lasthit==nil)and true or false
 if firsthit==true then alerton=true end
 if lasthit~=nil and timer.getTime()-lasthit>self.ShoradTime then alerton=true end
-coordinate=data.TgtGroup:GetCoordinate()
+if alerton or self.debug then coordinate=data.TgtGroup:GetCoordinate()end
 Name=data.TgtGroupName
 Group=data.TgtGroup
 if alerton==true then
@@ -56821,7 +56832,7 @@ coordinate=data.IniGroup:GetCoordinate()
 Name=data.IniGroupName
 Group=data.IniGroup
 alerton=true
-SwitchSAMOn(Name,Group)
+SwitchSAMOn(Name,Group,data.IniUnitName)
 self:__SAMUnitLost(1,Group,Name)
 if coordinate and self.debug then
 local text=coordinate:ToStringMGRS()
@@ -57128,20 +57139,18 @@ return self
 end
 function MANTIS:_CheckAnyEWRAlive()
 self:T(self.lid.."_CheckAnyEWRAlive")
-local alive=false
 for _,group in pairs(self.EWR_Group:GetSet())do
 if group and group:IsAlive()then
-alive=true
-break
+return true
 end
 end
-if not alive and self.AWACS_Prefix then
+if self.AWACS_Prefix then
 local awacs=GROUP:FindByName(self.AWACS_Prefix)
 if awacs and awacs:IsAlive()then
-alive=true
+return true
 end
 end
-return alive
+return false
 end
 function MANTIS:_CalcAdvState()
 self:T(self.lid.."CalcAdvState")
@@ -57268,7 +57277,7 @@ end
 end
 return set
 end
-function MANTIS:_CheckObjectInZone(dectset,samcoordinate,radius,height,dlink,contactSnapshot)
+function MANTIS:_CheckObjectInZone(dectset,samcoordinate,radius,height,dlink,contactSnapshot,closeRadius,zoneResults)
 self:T(self.lid.."_CheckObjectInZone")
 local rad=radius or self.checkradius
 local set=dectset
@@ -57278,6 +57287,8 @@ end
 if self.checkforfriendlies==true and self.friendlyset==nil then
 self.friendlyset=SET_GROUP:New():FilterCoalitions(self.Coalition):FilterCategories({"plane","helicopter"}):FilterFunction(function(grp)if grp and grp:InAir()then return true else return false end end):FilterStart()
 end
+local detectedDistance=nil
+local nofriendlies
 for _,_coord in pairs(set)do
 local coord=_coord
 local targetdistance=samcoordinate:DistanceFromPointVec2(coord)
@@ -57287,7 +57298,13 @@ end
 local zonecheck=true
 self:T("self.usezones = "..tostring(self.usezones))
 if self.usezones then
+if zoneResults then
+zonecheck=zoneResults[coord]
+end
+if not zoneResults or zonecheck==nil then
 zonecheck=self:_CheckCoordinateInZones(coord)
+if zoneResults then zoneResults[coord]=zonecheck end
+end
 end
 if self.verbose and self.debug then
 local samstring=samcoordinate:ToStringMGRS({MGRS_Accuracy=0})
@@ -57321,16 +57338,28 @@ end
 local m=MESSAGE:New(text,10,"Check"):ToAllIf(self.debug)
 self:T(self.lid..text)
 end
-local nofriendlies=true
+if nofriendlies==nil and targetdistance<=rad and zonecheck==true then
+nofriendlies=true
 if self.checkforfriendlies==true then
 local closestfriend,distance=self.friendlyset:GetClosestGroup(samcoordinate)
 if closestfriend and distance and distance<rad then
 nofriendlies=false
 end
 end
+end
 if targetdistance<=rad and zonecheck==true and nofriendlies==true then
+if not closeRadius then
 return true,targetdistance
 end
+-- Keep the original distance for SHORAD; a later contact may qualify for the close-threat allowance.
+detectedDistance=detectedDistance or targetdistance
+if targetdistance<=closeRadius then
+return true,detectedDistance,true
+end
+end
+end
+if detectedDistance then
+return true,detectedDistance,false
 end
 return false,0
 end
@@ -57351,6 +57380,8 @@ local groupset=self.EWR_Group
 local samset=self.SAM_Group
 self.intelset={}
 local IntelOne=INTEL:New(groupset,self.coalition,self.name.." IntelOne")
+IntelOne._detectionBatchSize=1
+IntelOne._detectionBatchInterval=0.1
 IntelOne.DetectAccoustic=self.DetectAccoustic
 IntelOne.DetectAccousticRadius=self.DetectAccousticRadius or 2000
 IntelOne.DetectAccousticUnitTypes=self.DetectAccousticCategories or{Unit.Category.HELICOPTER}
@@ -57362,6 +57393,8 @@ end
 end
 IntelOne:Start()
 local IntelTwo=INTEL:New(samset,self.coalition,self.name.." IntelTwo")
+IntelTwo._detectionBatchSize=1
+IntelTwo._detectionBatchInterval=0.1
 IntelTwo.DetectAccoustic=self.DetectAccoustic
 IntelTwo.DetectAccousticRadius=self.DetectAccousticRadius or 2000
 IntelTwo.DetectAccousticUnitTypes=self.DetectAccousticCategories or{Unit.Category.HELICOPTER}
@@ -57393,7 +57426,7 @@ MANTISAwacs:SetRefreshTimeInterval(interval)
 MANTISAwacs:Start()
 return MANTISAwacs
 end
-function MANTIS:_GetSAMDataFromUnits(grpname,mod,sma,chm)
+function MANTIS:_GetSAMDataFromUnits(grpname,mod,sma,chm,group)
 self:T(self.lid.."_GetSAMDataFromUnits")
 local found=false
 local range=self.checkradius
@@ -57401,7 +57434,7 @@ local height=3000
 local type=MANTIS.SamType.MEDIUM
 local radiusscale=self.radiusscale[type]
 local blind=0
-local group=GROUP:FindByName(grpname)
+group=group or GROUP:FindByName(grpname)
 local units=group:GetUnits()
 local ARMCapacity
 local SearchTables
@@ -57454,7 +57487,7 @@ break
 end
 end
 if not found then
-local grp=GROUP:FindByName(grpname)
+local grp=group
 if(grp and grp:IsAlive()and grp:IsAAA())or string.find(grpname,"AAA",1,true)then
 range=2000
 height=2000
@@ -57468,7 +57501,7 @@ self:E(self.lid..string.format("*****Could not match radar data for %s! Will def
 end
 return range,height,type,blind,ARMCapacity
 end
-function MANTIS:_GetNavalSAMData(grpname)
+function MANTIS:_GetNavalSAMData(grpname,group)
 self:T(self.lid.."_GetNavalSAMData for "..tostring(grpname))
 self._navalSAMs=self._navalSAMs or{}
 self._navalSAMs[grpname]=true
@@ -57478,7 +57511,7 @@ local height=3000
 local type=MANTIS.SamType.POINT
 local blind=0
 local ARMCapacity=0
-local group=GROUP:FindByName(grpname)
+group=group or GROUP:FindByName(grpname)
 if not group then
 self._samJammerParams[grpname]=nil
 return range,height,type,blind,ARMCapacity
@@ -57562,7 +57595,7 @@ end
 end
 end
 local sources={}
-if self.NavalAutonomy then
+if self.NavalAutonomy and next(seen)then
 local managed={}
 for _,gname in pairs(self._navalUnitParent)do managed[gname]=true end
 self.EWR_Group:ForEachGroupAlive(
@@ -57613,13 +57646,11 @@ end
 end
 return self
 end
-function MANTIS:_GetSAMRange(grpname)
+function MANTIS:_GetSAMRange(grpname,group,isship)
 self:T(self.lid.."_GetSAMRange for "..tostring(grpname))
-do
-local grp=GROUP:FindByName(grpname)
-if grp and grp:IsShip()then
-return self:_GetNavalSAMData(grpname)
-end
+group=group or GROUP:FindByName(grpname)
+if group and(isship==true or isship==nil and group:IsShip())then
+return self:_GetNavalSAMData(grpname,group)
 end
 local range=self.checkradius
 local height=3000
@@ -57654,7 +57685,7 @@ break
 end
 end
 if not found then
-local grp=GROUP:FindByName(grpname)
+local grp=group
 if(grp and grp:IsAlive()and grp:IsAAA())or string.find(grpname,"AAA",1,true)then
 range=2000
 height=2000
@@ -57664,7 +57695,7 @@ found=true
 end
 end
 if(not found)or HDSmod or SMAMod or CHMod then
-range,height,type,blind,ARMCapacity=self:_GetSAMDataFromUnits(grpname,HDSmod,SMAMod,CHMod)
+range,height,type,blind,ARMCapacity=self:_GetSAMDataFromUnits(grpname,HDSmod,SMAMod,CHMod,group)
 elseif not found then
 self:E(self.lid..string.format("*****Could not match radar data for %s! Will default to midrange values!",grpname))
 end
@@ -57672,6 +57703,87 @@ if found and string.find(grpname,"SHORAD",1,true)then
 type=MANTIS.SamType.POINT
 end
 return range,height,type,blind,ARMCapacity
+end
+function MANTIS:_RefreshSAMTracking(group,grpname,ammo,lostUnitName)
+if not ammo.trUnits then
+ammo.trUnits={}
+ammo.trLost=nil
+if not self.dynamic then ammo.units={}end
+-- The spawn composition distinguishes a lost TR from a site that never needed one.
+local template=_DATABASE:GetGroupTemplate(grpname)
+if ammo.units then ammo.template=template end
+if template then
+local trTypes={}
+for _,unit in pairs(template.units)do
+if ammo.units then ammo.units[unit.name]=Unit.getByName(unit.name)end
+local tracking=trTypes[unit.type]
+if tracking==nil then
+tracking=Unit.getDescByName(unit.type).attributes["SAM TR"]==true
+trTypes[unit.type]=tracking
+end
+if tracking then ammo.trUnits[unit.name]=true end
+end
+else
+-- Raw DCS spawns may have no registered MOOSE template.
+for _,unit in pairs(group:GetUnits())do
+local name=unit:GetName()
+local DCSUnit=unit:GetDCSObject()
+if ammo.units then ammo.units[name]=DCSUnit end
+if DCSUnit:getDesc().attributes["SAM TR"]then ammo.trUnits[name]=true end
+end
+end
+end
+-- Dynamic sets invalidate through Added; static sets still need periodic repair checks.
+if self.dynamic and ammo.trLost then return end
+local trackingLost=next(ammo.trUnits)~=nil
+for unitname in pairs(ammo.trUnits)do
+if unitname~=lostUnitName then
+local unit=Unit.getByName(unitname)
+if unit and unit:isExist()and unit:getLife()>0 then
+trackingLost=false
+break
+end
+end
+end
+if trackingLost and(not ammo.trLost or self.SamStateTracker[grpname]~="GREEN")then
+if self.UseEmOnOff then group:EnableEmission(false)else group:OptionAlarmStateGreen()end
+if self.state2flag then ammo.advancedSleeping=true end
+if self.SamStateTracker[grpname]~="GREEN"then
+self.SamStateTracker[grpname]="GREEN"
+self:__GreenState(1,group)
+end
+if self.debug or self.verbose then
+MESSAGE:New(self.lid.."SAM "..grpname.." | TR Destroyed",10,"MANTIS"):ToAllIf(self.debug):ToLog()
+end
+end
+ammo.trLost=trackingLost
+end
+function MANTIS:_RefreshSAMAmmo(group,grpname,reset,samType)
+local DCSGroup=group:GetDCSObject()
+local ammo=group:GetProperty("MANTIS_AMMO")
+local replaced=false
+if not self.dynamic and not reset and ammo and ammo.trUnits and ammo.object==DCSGroup and ammo.units then
+local DCSUnit=DCSGroup:getUnit(1)
+-- An original survivor is not a respawn, even when the first unit has died.
+replaced=(DCSUnit and ammo.units[DCSUnit:getName()]~=DCSUnit)
+or ammo.template~=_DATABASE:GetGroupTemplate(grpname)
+end
+if reset or not ammo or not ammo.trUnits or ammo.object~=DCSGroup or replaced then
+local advancedSleeping=ammo and ammo.advancedSleeping
+ammo={object=DCSGroup,isSAM=group:IsSAM(),advancedSleeping=advancedSleeping,}
+group:SetProperty("MANTIS_AMMO",ammo)
+end
+self:_RefreshSAMTracking(group,grpname,ammo)
+local missiles=select(5,group:GetAmmunition())
+-- Cache every ground group's missiles; only non-POINT radar SAMs use the sleep veto.
+ammo.canSleep=ammo.isSAM and samType~=MANTIS.SamType.POINT
+-- Two scheduled zero samples leave one refresh cycle for the last salvo.
+ammo.empty=missiles==0 and ammo.missiles==0
+ammo.missiles=missiles
+if not self.state2flag then
+ammo.advancedSleeping=nil
+end
+return self
 end
 function MANTIS:SetSAMStartState()
 self:T(self.lid.."Setting SAM Start States")
@@ -57685,9 +57797,10 @@ local SAM_Tbl_pt={}
 local SEAD_Grps={}
 local engagerange=self.engagerange
 for _i,_group in pairs(SAM_Grps)do
-if(_group:IsGround()or _group:IsShip())and _group:IsAlive()then
+local isground=_group:IsGround()
+if(isground or _group:IsShip())and _group:IsAlive()then
 local group=_group
-if group:IsShip()and self.NavalPerUnit then
+if (not isground)and self.NavalPerUnit then
 group:OptionAlarmStateGreen()
 elseif self.UseEmOnOff then
 group:OptionAlarmStateRed()
@@ -57698,35 +57811,37 @@ end
 group:OptionEngageRange(engagerange)
 local grpname=group:GetName()
 local grpcoord=group:GetCoordinate()
-if group:IsShip()and self.NavalPerUnit
+if (not isground)and self.NavalPerUnit
 and self:_BuildNavalUnitEntries(group,grpname,SAM_Tbl,SAM_Tbl_lg,SAM_Tbl_md,SAM_Tbl_sh,SAM_Tbl_pt,SEAD_Grps)then
 self:T(grpname.." handled as per-unit naval group")
 else
-local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname)
+local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname,group,not isground)
+if isground then self:_RefreshSAMAmmo(group,grpname,true,type)end
 if ARMCapacity and ARMCapacity>0 then _group:SetProperty("ARMCapacity",ARMCapacity)end
-table.insert(SAM_Tbl,{grpname,grpcoord,grprange,grpheight,blind,type,ARMCapacity})
+local record={grpname,grpcoord,grprange,grpheight,blind,type,ARMCapacity}
+table.insert(SAM_Tbl,record)
 if type==MANTIS.SamType.LONG then
-table.insert(SAM_Tbl_lg,{grpname,grpcoord,grprange,grpheight,blind,type})
-if(not group:IsShip())or self.SEADNaval then
+table.insert(SAM_Tbl_lg,record)
+if(isground)or self.SEADNaval then
 table.insert(SEAD_Grps,grpname)
 end
 self:T("SAM "..grpname.." is type LONG")
 elseif type==MANTIS.SamType.MEDIUM then
-table.insert(SAM_Tbl_md,{grpname,grpcoord,grprange,grpheight,blind,type})
-if(not group:IsShip())or self.SEADNaval then
+table.insert(SAM_Tbl_md,record)
+if(isground)or self.SEADNaval then
 table.insert(SEAD_Grps,grpname)
 end
 self:T("SAM "..grpname.." is type MEDIUM")
 elseif type==MANTIS.SamType.SHORT then
-table.insert(SAM_Tbl_sh,{grpname,grpcoord,grprange,grpheight,blind,type})
-if(not group:IsShip())or self.SEADNaval then
+table.insert(SAM_Tbl_sh,record)
+if(isground)or self.SEADNaval then
 table.insert(SEAD_Grps,grpname)
 end
 self:T("SAM "..grpname.." is type SHORT")
 elseif type==MANTIS.SamType.POINT then
-table.insert(SAM_Tbl_pt,{grpname,grpcoord,grprange,grpheight,blind,type})
+table.insert(SAM_Tbl_pt,record)
 self:T("SAM "..grpname.." is type POINT")
-if group:IsShip()then
+if (not isground)then
 if self.SEADNaval then
 table.insert(SEAD_Grps,grpname)
 end
@@ -57769,34 +57884,37 @@ local engagerange=self.engagerange
 for _i,_group in pairs(SAM_Grps)do
 local group=_group
 group:OptionEngageRange(engagerange)
-if(group:IsGround()or group:IsShip())and group:IsAlive()then
+local isground=group:IsGround()
+if(isground or group:IsShip())and group:IsAlive()then
 local grpname=group:GetName()
 local grpcoord=group:GetCoord()
 if grpcoord then grpcoord.Heading=group:GetHeading()or 0 end
-if group:IsShip()and self.NavalPerUnit
+if (not isground)and self.NavalPerUnit
 and self:_BuildNavalUnitEntries(group,grpname,SAM_Tbl,SAM_Tbl_lg,SAM_Tbl_md,SAM_Tbl_sh,SAM_Tbl_pt,SEAD_Grps)then
 self:T(grpname.." handled as per-unit naval group")
 else
-local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname)
+local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname,group,not isground)
+if isground then self:_RefreshSAMAmmo(group,grpname,false,type)end
 if ARMCapacity and ARMCapacity>0 then _group:SetProperty("ARMCapacity",ARMCapacity)end
 local radaralive=true
-table.insert(SAM_Tbl,{grpname,grpcoord,grprange,grpheight,blind,type,ARMCapacity})
-if type~=MANTIS.SamType.POINT and((not group:IsShip())or self.SEADNaval)then
+local record={grpname,grpcoord,grprange,grpheight,blind,type,ARMCapacity}
+table.insert(SAM_Tbl,record)
+if type~=MANTIS.SamType.POINT and((isground)or self.SEADNaval)then
 table.insert(SEAD_Grps,grpname)
 end
 if type==MANTIS.SamType.LONG and radaralive then
-table.insert(SAM_Tbl_lg,{grpname,grpcoord,grprange,grpheight,blind,type})
+table.insert(SAM_Tbl_lg,record)
 self:T({grpname,grprange,grpheight})
 elseif type==MANTIS.SamType.MEDIUM and radaralive then
-table.insert(SAM_Tbl_md,{grpname,grpcoord,grprange,grpheight,blind,type})
+table.insert(SAM_Tbl_md,record)
 self:T({grpname,grprange,grpheight})
 elseif type==MANTIS.SamType.SHORT and radaralive then
-table.insert(SAM_Tbl_sh,{grpname,grpcoord,grprange,grpheight,blind,type})
+table.insert(SAM_Tbl_sh,record)
 self:T({grpname,grprange,grpheight})
 elseif type==MANTIS.SamType.POINT or(not radaralive)then
-table.insert(SAM_Tbl_pt,{grpname,grpcoord,grprange,grpheight,blind,type})
+table.insert(SAM_Tbl_pt,record)
 self:T({grpname,grprange,grpheight})
-if group:IsShip()then
+if (not isground)then
 if self.SEADNaval then
 table.insert(SEAD_Grps,grpname)
 end
@@ -57888,7 +58006,7 @@ end
 local inbound=self.InboundARMs[targetName]or 0
 self:T(string.format("MANTIS:SeadAllowSuppression THREAT COUNT | target=%s | inboundThreats=%d",tostring(targetName),inbound))
 if targetGroup and targetGroup:IsAlive()then
-local AmmotT,AmmoS,_,_,AmmoM=targetGroup:GetAmmunition()
+local AmmoM=select(5,targetGroup:GetAmmunition())
 if AmmoM and AmmoM==0 then
 self:T(string.format("MANTIS:SeadAllowSuppression DECISION -> APPROVED (no MISSILES) | target=%s",tostring(targetName)))
 return true
@@ -57905,7 +58023,7 @@ end
 self:T(string.format("MANTIS:SeadAllowSuppression DECISION -> DENIED (inbound %d < cap %d) | target=%s",inbound,armcap,tostring(targetName)))
 return false
 end
-function MANTIS:_CheckLoop(samset,detset,dlink,limit,contactSnapshot)
+function MANTIS:_CheckLoop(samset,detset,dlink,limit,contactSnapshot,zoneResults)
 self:T(self.lid.."CheckLoop "..#detset.." Coordinates")
 local switchedon=0
 local instatusred=0
@@ -57934,8 +58052,12 @@ end
 local samalive=false
 if navalparent then samalive=(samunit~=nil)and samunit:IsAlive()or false
 elseif samgroup then samalive=samgroup:IsAlive()or false end
-local IsInZone,Distance=self:_CheckObjectInZone(detset,samcoordinate,radius,height,dlink,contactSnapshot)
-if(not IsInZone)and self.NavalSurfaceWakeup and self._navalSAMs and self._navalSAMs[name]
+local ammo=samalive and samgroup:GetProperty("MANTIS_AMMO")
+local IsInZone,Distance,CloseThreat=false,0,false
+if samalive and not(ammo and(ammo.trLost or ammo.canSleep and ammo.empty))then
+IsInZone,Distance,CloseThreat=self:_CheckObjectInZone(detset,samcoordinate,radius,height,dlink,contactSnapshot,not shortsam and limit>0 and switchedon>=limit and radius*0.5 or nil,zoneResults)
+end
+if samalive and(not IsInZone)and self.NavalSurfaceWakeup and self._navalSAMs and self._navalSAMs[name]
 and not(self._jammerEnabled and self._jammedSAMs and self._jammedSAMs[name])then
 local wakeradius=self.NavalSurfaceWakeupRadius or radius
 if self:_EnemySurfaceInRange(samcoordinate,wakeradius)then
@@ -57949,17 +58071,19 @@ if self.Shorad and self.Shorad.ActiveGroups and self.Shorad.ActiveGroups[name]th
 activeshorad=true
 end
 if samgroup:GetProperty("SHORAD_ACTIVE")==true and activeshorad==false then activeshorad=true end
-if IsInZone and(not suppressed)and(not activeshorad)then
+-- Close long-range threats may exceed the active limit.
+local canSwitch=switchedon<limit or CloseThreat
+if IsInZone and(shortsam or canSwitch)and(not suppressed)and(not activeshorad)then
 if samalive then
 local switch=false
-if navalparent and switchedon<limit then
+if navalparent and canSwitch then
 switchedon=switchedon+1
 switch=true
-elseif self.UseEmOnOff and switchedon<limit then
+elseif self.UseEmOnOff and canSwitch then
 samgroup:EnableEmission(true)
 switchedon=switchedon+1
 switch=true
-elseif(not self.UseEmOnOff)and switchedon<limit then
+elseif(not self.UseEmOnOff)and canSwitch then
 samgroup:OptionAlarmStateRed()
 switchedon=switchedon+1
 switch=true
@@ -58008,26 +58132,27 @@ end
 function MANTIS:_Check(detection,dlink,reporttolog)
 self:T(self.lid.."Check")
 local detset=detection:GetDetectedItemCoordinates()
-if self.checkcounter%3==0 then
-self:_RefreshSAMTable()
-end
-self.checkcounter=self.checkcounter+1
 local contactSnapshot=nil
+local zoneResults=self.usezones and{}or nil
 if dlink then
 contactSnapshot={}
 for _,contact in pairs(detection:GetContactTable())do
 local grp=contact.group
 if grp:IsAlive()then
+local category=grp:GetCategory()
+local side=grp:GetCoalition()
+if self.debug or(category~=Group.Category.GROUND and category~=Group.Category.SHIP and side~=self.coalition)then
 local coord=grp:GetCoord()
 contactSnapshot[#contactSnapshot+1]={
 group=grp,
 coordinate=coord,
 height=grp:GetHeight(true),
-coalition=grp:GetCoalition(),
-isGround=grp:IsGround(),
-isShip=grp:IsShip(),
-isHelicopter=grp:IsHelicopter(),
+coalition=side,
+isGround=category==Group.Category.GROUND,
+isShip=category==Group.Category.SHIP,
+isHelicopter=category==Group.Category.HELICOPTER,
 }
+end
 end
 end
 end
@@ -58036,16 +58161,16 @@ local instatusgreen=0
 local activeshorads=0
 if self.automode then
 local samset=self.SAM_Table_Long
-local instatusredl,instatusgreenl,activeshoradsl=self:_CheckLoop(samset,detset,dlink,self.maxlongrange,contactSnapshot)
+local instatusredl,instatusgreenl,activeshoradsl=self:_CheckLoop(samset,detset,dlink,self.maxlongrange,contactSnapshot,zoneResults)
 local samset=self.SAM_Table_Medium
-local instatusredm,instatusgreenm,activeshoradsm=self:_CheckLoop(samset,detset,dlink,self.maxmidrange,contactSnapshot)
+local instatusredm,instatusgreenm,activeshoradsm=self:_CheckLoop(samset,detset,dlink,self.maxmidrange,contactSnapshot,zoneResults)
 local samset=self.SAM_Table_Short
-local instatusreds,instatusgreens,activeshoradss=self:_CheckLoop(samset,detset,dlink,self.maxshortrange,contactSnapshot)
+local instatusreds,instatusgreens,activeshoradss=self:_CheckLoop(samset,detset,dlink,self.maxshortrange,contactSnapshot,zoneResults)
 local samset=self.SAM_Table_PointDef
-local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxpointdefrange,contactSnapshot)
+local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxpointdefrange,contactSnapshot,zoneResults)
 else
 local samset=self:_GetSAMTable()
-local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxclassic,contactSnapshot)
+local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxclassic,contactSnapshot,zoneResults)
 end
 local function GetReport()
 if self.debug or self.verbose or self.logsamstatus then
@@ -58091,8 +58216,11 @@ function MANTIS:_CheckAdvState()
 self:T(self.lid.."CheckAdvSate")
 local interval,oldstate=self:_CalcAdvState()
 local newstate=self.adv_state
+-- Reuse the scheduled ammo refresh cadence for the existing fail-open policy.
+if newstate~=oldstate or(newstate==2 and self.checkcounter%3==1)then
 if newstate~=oldstate then
 self:__AdvStateChange(1,oldstate,newstate,interval)
+end
 if newstate==2 then
 self.state2flag=true
 local samset=self:_GetSAMTable()
@@ -58111,12 +58239,34 @@ local samalive=false
 if navalparent then samalive=(samunit~=nil)and samunit:IsAlive()or false
 elseif samgroup then samalive=samgroup:IsAlive()or false end
 if samalive then
+local ammo=samgroup:GetProperty("MANTIS_AMMO")
+if newstate~=oldstate or(ammo and(ammo.trLost or ammo.advancedSleeping or ammo.canSleep and ammo.empty))then
+if not(ammo and(ammo.trLost or ammo.canSleep and ammo.empty))then
+if not(ammo and ammo.advancedSleeping and(self.SuppressedGroups[name]
+or(self._jammerEnabled and self._jammedSAMs and self._jammedSAMs[name])))then
 if navalparent then
 self.SamStateTracker[name]="RED"
 elseif self.UseEmOnOff then
 samgroup:EnableEmission(true)
 else
 samgroup:OptionAlarmStateRed()
+end
+if ammo and ammo.advancedSleeping then
+ammo.advancedSleeping=nil
+if self.SamStateTracker[name]~="RED"then
+self.SamStateTracker[name]="RED"
+self:__RedState(1,samgroup)
+end
+end
+end
+elseif not ammo.advancedSleeping then
+if self.UseEmOnOff then samgroup:EnableEmission(false)else samgroup:OptionAlarmStateGreen()end
+ammo.advancedSleeping=true
+if self.SamStateTracker[name]~="GREEN"then
+self.SamStateTracker[name]="GREEN"
+self:__GreenState(1,samgroup)
+end
+end
 end
 end
 end
@@ -58164,17 +58314,27 @@ return self
 end
 function MANTIS:onbeforeStatus(From,Event,To)
 self:T({From,Event,To})
+if self.checkcounter%3==0 then
+self:_RefreshSAMTable()
+end
+self.checkcounter=self.checkcounter+1
 if not self.state2flag then
 self:_Check(self.Detection,self.DLink,self.logsamstatus)
 end
 local EWRAlive=self:_CheckAnyEWRAlive()
 local function FindSAMSRTR()
-for i=1,1000 do
-local randomsam=self.SAM_Group:GetRandom()
+local selected=nil
+local eligible=0
+for _,randomsam in pairs(self.SAM_Group:GetSet())do
 if randomsam and randomsam:IsAlive()then
-if randomsam:IsSAM()then return randomsam end
+local ammo=randomsam:GetProperty("MANTIS_AMMO")
+if not(ammo and(ammo.trLost or ammo.canSleep and ammo.empty))and(ammo and ammo.isSAM or not ammo and randomsam:IsSAM())then
+eligible=eligible+1
+if math.random(eligible)==1 then selected=randomsam end
 end
 end
+end
+return selected
 end
 if not EWRAlive then
 local randomsam=FindSAMSRTR()
@@ -58224,6 +58384,11 @@ return self
 end
 function MANTIS:onafterStop(From,Event,To)
 self:T({From,Event,To})
+if self.intelset then
+for _,_intel in pairs(self.intelset)do
+_intel:Stop()
+end
+end
 return self
 end
 function MANTIS:onafterRelocating(From,Event,To)
@@ -58262,6 +58427,14 @@ function MANTIS:onafterSeadSuppressionEnd(From,Event,To,Group,Name)
 self:T({From,Event,To,Name})
 self.SuppressedGroups[Name]=false
 self.InboundARMs[Name]=0
+local ammo=Group:GetProperty("MANTIS_AMMO")
+if ammo and(ammo.trLost or ammo.canSleep and ammo.empty)and Group:IsAlive()then
+if self.UseEmOnOff then Group:EnableEmission(false)else Group:OptionAlarmStateGreen()end
+if self.SamStateTracker[Name]~="GREEN"then
+self.SamStateTracker[Name]="GREEN"
+self:__GreenState(1,Group)
+end
+end
 return self
 end
 function MANTIS:onafterSeadSuppressionPlanned(From,Event,To,Group,Name,SuppressionStartTime,SuppressionEndTime,Attacker)
@@ -58736,8 +58909,8 @@ end
 if not MANTIS._onbeforeStatusOriginal then
 MANTIS._onbeforeStatusOriginal=MANTIS.onbeforeStatus
 end
-function MANTIS:_CheckLoop(samset,detset,dlink,limit,contactSnapshot)
-local r,g,s=self:_CheckLoopOriginal(samset,detset,dlink,limit,contactSnapshot)
+function MANTIS:_CheckLoop(samset,detset,dlink,limit,contactSnapshot,zoneResults)
+local r,g,s=self:_CheckLoopOriginal(samset,detset,dlink,limit,contactSnapshot,zoneResults)
 if self._jammerEnabled and self._jammedSAMs then
 for _,_data in pairs(samset)do
 local name=_data[1]
@@ -59208,6 +59381,8 @@ end
 end
 end
 local function WakeUp(_group,groupname)
+local ammo=_group:GetProperty("MANTIS_AMMO")
+if ammo and(ammo.trLost or ammo.canSleep and ammo.empty)then return end
 local text=string.format("Waking up SHORAD %s",_group:GetName())
 self:T(text)
 local m=MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
@@ -77226,12 +77401,14 @@ local nearestGroupIndex=-1
 local nearestDistance=10000
 for k,v in pairs(self.DroppedTroops)do
 local distance=self:_GetDistance(v:GetCoord(),unitcoord)
+if distance<nearestDistance and distance~=-1 and distance<=self.EngineerSearch then
 local unit=v:GetUnit(1)
 local desc=unit:GetDesc()or nil
-if distance<nearestDistance and distance~=-1 and not desc.attributes.Infantry then
+if not desc.attributes.Infantry then
 nearestGroup=v
 nearestGroupIndex=k
 nearestDistance=distance
+end
 end
 end
 if nearestGroup==nil or nearestDistance>self.EngineerSearch then
@@ -77558,8 +77735,9 @@ return self
 end
 local capacitySets=nil
 local capacityCrates=nil
+local capabilities
 if Unit then
-local capabilities=self:_GetUnitCapabilities(Unit)
+capabilities=self:_GetUnitCapabilities(Unit)
 local capacity=capabilities and capabilities.cratelimit or 0
 if capacity>0 then
 local loadedData=nil
@@ -77594,7 +77772,7 @@ self:T("_AddCrateQuantityMenus maxQuantity "..maxQuantity.." allowLoad "..tostri
 local maxMassSets=nil
 local maxMassCrates=nil
 if Unit then
-local maxload=self:_GetMaxLoadableMass(Unit)
+local maxload=self:_GetMaxLoadableMass(Unit,nil,capabilities)
 local perCrateMass=(cargoObj.GetMass and cargoObj:GetMass())or cargoObj.PerCrateMass or 0
 local setMass=perCrateMass*(needed>0 and needed or 1)
 if type(maxload)=="number"and maxload>0 and setMass>0 then
@@ -78384,10 +78562,11 @@ function CTLD:_GetDistance(_point1,_point2)
 self:T(self.lid.." _GetDistance")
 if _point1 and _point2 then
 local distance1=_point1:Get2DDistance(_point2)
-local distance2=_point1:DistanceFromPointVec2(_point2)
 if distance1 and type(distance1)=="number"then
 return distance1
-elseif distance2 and type(distance2)=="number"then
+end
+local distance2=_point1:DistanceFromPointVec2(_point2)
+if distance2 and type(distance2)=="number"then
 return distance2
 else
 self:E("*****Cannot calculate distance!")
@@ -78402,16 +78581,17 @@ end
 end
 function CTLD:_FindCratesNearby(_group,_unit,_dist,_ignoreweight,ignoretype,ignoreHercInner)
 self:T(self.lid.." _FindCratesNearby")
+local existingcrates=self.Spawned_Cargo
+if not next(existingcrates)then return {},0,{},0 end
 local finddist=_dist
 local location=_group:GetCoord()
-local existingcrates=self.Spawned_Cargo
 local index=0
 local indexg=0
 local found={}
 local LoadedbyGC={}
 local loadedmass=0
 local unittype="none"
-local capabilities={}
+local innerDist
 local maxloadable=2000
 local IsHook=self:IsHook(_unit)
 if not _ignoreweight then
@@ -78432,14 +78612,16 @@ self:T(self.lid.." Cargo is static: "..tostring(cargoisstatic))
 local restricted=cargoisstatic and restricthooktononstatics
 self:T(self.lid.." Loading restricted: "..tostring(restricted))
 local staticpos=static:GetCoordinate()
-local cando=cargo:UnitCanCarry(_unit)
-if ignoretype==true then cando=true restricted=false end
+local cando=ignoretype==true or cargo:UnitCanCarry(_unit)
+if ignoretype==true then restricted=false end
 self:T(self.lid.." Unit can carry: "..tostring(cando))
 local distance=self:_GetDistance(location,staticpos)
 local hercInnerBlocked=false
 if ignoreHercInner then
+if innerDist==nil then
 local capabilities=self:_GetUnitCapabilities(_unit)
-local innerDist=self:IsC130J(_unit)and 15 or math.max(4,(capabilities.length or 0)/2)
+innerDist=self:IsC130J(_unit)and 15 or math.max(4,(capabilities.length or 0)/2)
+end
 if distance<innerDist then
 hercInnerBlocked=true
 end
@@ -78454,18 +78636,17 @@ end
 end
 return found,index,LoadedbyGC,indexg
 end
-function CTLD:_LoadCratesNearby(Group,Unit)
+function CTLD:_LoadCratesNearby(Group,Unit,canhoverload,capabilities,unitname)
 self:T(self.lid.." _LoadCratesNearby")
 local group=Group
 local unit=Unit
-local unitname=unit:GetName()
-local unittype=unit:GetTypeName()
-local capabilities=self:_GetUnitCapabilities(Unit)
+unitname=unitname or unit:GetName()
+capabilities=capabilities or self:_GetUnitCapabilities(Unit)
 local cancrates=capabilities.crates
 local cratelimit=capabilities.cratelimit
 local grounded=not self:IsUnitInAir(Unit)
-local canhoverload=self:CanHoverLoad(Unit)
-if self.pilotmustopendoors and not UTILS.IsLoadingDoorOpen(Unit:GetName())then
+if canhoverload==nil then canhoverload=self:CanHoverLoad(Unit)end
+if self.pilotmustopendoors and not UTILS.IsLoadingDoorOpen(unitname)then
 local msg=self:_GetEntryForGroup("OPEN_DOORS_LOAD_CARGO",Group)
 self:_SendMessage(msg,10,false,Group)
 if not self.debug then return self end
@@ -78623,12 +78804,12 @@ end
 end
 return loadedmass
 end
-function CTLD:_GetMaxLoadableMass(Unit)
+function CTLD:_GetMaxLoadableMass(Unit,loadedmass,capabilities)
 self:T(self.lid.." _GetMaxLoadableMass")
 if not Unit then return 0 end
 local loadable=0
-local loadedmass=self:_GetUnitCargoMass(Unit)
-local capabilities=self:_GetUnitCapabilities(Unit)
+loadedmass=loadedmass or self:_GetUnitCargoMass(Unit)
+capabilities=capabilities or self:_GetUnitCapabilities(Unit)
 local maxmass=capabilities.cargoweightlimit or 2000
 loadable=maxmass-loadedmass
 return loadable
@@ -78648,7 +78829,7 @@ local trooplimit=capabilities.trooplimit
 local cratelimit=capabilities.cratelimit
 local loadedcargo=self.Loaded_Cargo[unitname]or{}
 local loadedmass=self:_GetUnitCargoMass(Unit)
-local maxloadable=self:_GetMaxLoadableMass(Unit)
+local maxloadable=self:_GetMaxLoadableMass(Unit,loadedmass,capabilities)
 local finddist=self.CrateDistance or 35
 local hercInnerCrates=nil
 local hercInnerCount=0
@@ -79276,6 +79457,7 @@ end
 end
 notified=true
 end
+-- Count all complete builds so different cargo types share the same spacing.
 local totalBuilds=0
 for _,candidate in pairs(buildables)do
 if candidate.CanBuild then
@@ -79291,7 +79473,7 @@ local hdg=(Unit:GetHeading()+180)%360
 local lat=(hdg+90)%360
 local base=Unit:GetCoord():Translate(20,hdg)
 local start=-((totalBuilds-1)*sep)/2
-local buildIndex=0
+local buildIndex=0 -- Keep the position index across cargo types.
 for _,_build in pairs(buildables)do
 local build=_build
 if build.CanBuild then
@@ -80144,18 +80326,16 @@ if u and u:IsAlive()then
 local g=u:GetGroup()
 if g then
 local caps=self:_GetUnitCapabilities(u)
+local loaded=self.Loaded_Cargo[name]
 local needCrate,needTroop=false,false
 if g.CTLD_CrateMenus then
 local cap=caps.cratelimit or 0
+local avail=math.max(0,cap-((loaded and loaded.Cratesloaded)or 0))
 for item,_ in pairs(g.CTLD_CrateMenus)do
 local obj=self:_FindCratesCargoObject(item)
 if obj then
 local per=obj:GetCratesNeeded()or 1
 if per<1 then per=1 end
-local uname=u:GetName()or"none"
-local cap=caps.cratelimit or 0
-local loaded=(self.Loaded_Cargo[uname]and self.Loaded_Cargo[uname].Cratesloaded)or 0
-local avail=math.max(0,cap-loaded)
 local unitAvail=math.max(0,math.min(self.maxCrateMenuQuantity or 1,math.floor(avail/per)))
 local s=obj:GetStock()
 if type(s)=="number"and s>=0 and s<unitAvail then needCrate=true break end
@@ -80164,15 +80344,12 @@ end
 end
 if g.CTLD_TroopMenus then
 local cap=caps.trooplimit or 0
+local avail=math.max(0,cap-((loaded and loaded.Troopsloaded)or 0))
 for item,_ in pairs(g.CTLD_TroopMenus)do
 local obj=self:_FindTroopsCargoObject(item)
 if obj then
 local per=obj:GetCratesNeeded()or 1
 if per<1 then per=1 end
-local uname=u:GetName()or"none"
-local cap=caps.trooplimit or 0
-local loaded=(self.Loaded_Cargo[uname]and self.Loaded_Cargo[uname].Troopsloaded)or 0
-local avail=math.max(0,cap-loaded)
 local unitAvail=math.max(0,math.min(self.maxCrateMenuQuantity or 1,math.floor(avail/per)))
 local s=obj:GetStock()
 if type(s)=="number"and s>=0 and s<unitAvail then needTroop=true break end
@@ -81390,6 +81567,7 @@ end
 end
 return outcome
 end
+-- @param #boolean NoMoveToZone (Optional) If true, skip automatic movement to a MOVE zone when deployed or restored.
 function CTLD:AddTroopsCargo(Name,Templates,Type,NoTroops,PerTroopMass,Stock,SubCategory,NoMoveToZone)
 self:T(self.lid.." AddTroopsCargo")
 self:T({Name,Templates,Type,NoTroops,PerTroopMass,Stock})
@@ -81979,7 +82157,6 @@ end
 end
 self:T(self.lid.." IsUnitInZone")
 self:T(Zonetype)
-local unitname=Unit:GetName()
 local zonetable={}
 local outcome=false
 if Zonetype==CTLD.CargoZoneType.LOAD then
@@ -82008,10 +82185,12 @@ end
 local unitVec2=unitcoord:GetVec2()
 for _,_cargozone in pairs(zonetable)do
 local czone=_cargozone
-local zonename=czone.name
 local active=czone.active
+if active==true or Zonetype==CTLD.CargoZoneType.SHIP then
+local zonename=czone.name
 local color=czone.color
-local zone=nil
+local zone=Zonetype~=CTLD.CargoZoneType.SHIP and ZONE:FindByName(zonename)or nil
+local airbase=not zone and Zonetype~=CTLD.CargoZoneType.SHIP and AIRBASE:FindByName(zonename)or nil
 local zoneradius=100
 local zonewidth=20
 if Zonetype==CTLD.CargoZoneType.SHIP then
@@ -82022,13 +82201,12 @@ zonecoord=ZoneUNIT:GetCoord()
 zoneradius=czone.shiplength
 zonewidth=czone.shipwidth
 zone=ZONE_UNIT:New(ZoneUNIT:GetName(),ZoneUNIT,zoneradius/2)
-elseif ZONE:FindByName(zonename)then
-zone=ZONE:FindByName(zonename)
+elseif zone then
 self:T("Checking Zone: "..zonename)
 zonecoord=zone:GetCoordinate()
 zonewidth=zoneradius
-elseif AIRBASE:FindByName(zonename)then
-zone=AIRBASE:FindByName(zonename):GetZone()
+elseif airbase then
+zone=airbase:GetZone()
 self:T("Checking Zone: "..zonename)
 zonecoord=zone:GetCoordinate()
 zoneradius=2000
@@ -82037,13 +82215,14 @@ end
 local distance=self:_GetDistance(zonecoord,unitcoord)
 self:T("Distance Zone: "..distance)
 self:T("Zone Active: "..tostring(active))
-if(zone:IsVec2InZone(unitVec2)or Zonetype==CTLD.CargoZoneType.MOVE)and active==true and distance<maxdist then
+if(Zonetype==CTLD.CargoZoneType.MOVE or zone:IsVec2InZone(unitVec2))and active==true and distance<maxdist then
 outcome=true
 maxdist=distance
 zoneret=zone
 zonenameret=zonename
 zonewret=zonewidth
 colorret=color
+end
 end
 end
 if Zonetype==CTLD.CargoZoneType.SHIP then
@@ -82167,15 +82346,9 @@ function CTLD:IsCorrectHover(Unit)
 self:T(self.lid.." IsCorrectHover")
 if self:IsFixedWing(Unit)then return false end
 local outcome=false
-if self:IsUnitInAir(Unit)then
+local inair,aheight=self:IsUnitInAir(Unit)
+if inair then
 local uspeed=Unit:GetVelocityMPS()
-local uheight=Unit:GetHeight()
-local ucoord=Unit:GetCoord()
-if not ucoord then
-return false
-end
-local gheight=ucoord:GetLandHeight()
-local aheight=uheight-gheight
 local maxh=self.maximumHoverHeight
 local minh=self.minimumHoverHeight
 local mspeed=2
@@ -82188,15 +82361,9 @@ end
 function CTLD:IsCorrectFlightParameters(Unit)
 self:T(self.lid.." IsCorrectFlightParameters")
 local outcome=false
-if self:IsUnitInAir(Unit)then
+local inair,aheight=self:IsUnitInAir(Unit)
+if inair then
 local uspeed=Unit:GetVelocityMPS()
-local uheight=Unit:GetHeight()
-local ucoord=Unit:GetCoord()
-if not ucoord then
-return false
-end
-local gheight=ucoord:GetLandHeight()
-local aheight=uheight-gheight
 local minh=self.FixedMinAngels
 local maxh=self.FixedMaxAngels
 local maxspeed=self.FixedMaxSpeed
@@ -82255,24 +82422,21 @@ local minheight=self.minimumHoverHeight
 if self.enableFixedWing and self:IsFixedWing(Unit)then
 minheight=5.1
 end
-local uheight=Unit:GetHeight()
 local ucoord=Unit:GetCoord()
 if not ucoord then
 return false
 end
 local gheight=ucoord:GetLandHeight()
-local aheight=uheight-gheight
+local aheight=ucoord.y-gheight
 if aheight>=minheight then
-return true
+return true,aheight
 else
-return false
+return false,aheight
 end
 end
 function CTLD:AutoHoverLoad(Unit)
 self:T(self.lid.." AutoHoverLoad")
-local unittype=Unit:GetTypeName()
 local unitname=Unit:GetName()
-local Group=Unit:GetGroup()
 local capabilities=self:_GetUnitCapabilities(Unit)
 local cancrates=capabilities.crates
 local cratelimit=capabilities.cratelimit
@@ -82284,9 +82448,11 @@ loaded=self.Loaded_Cargo[unitname]
 numberonboard=loaded.Cratesloaded or 0
 end
 local load=cratelimit-numberonboard
+if load>0 then
 local canload=self:CanHoverLoad(Unit)
-if canload and load>0 then
-self:_LoadCratesNearby(Group,Unit)
+if canload then
+self:_LoadCratesNearby(Unit:GetGroup(),Unit,canload,capabilities,unitname)
+end
 end
 end
 return self
@@ -82295,7 +82461,7 @@ function CTLD:CheckAutoHoverload()
 if self.hoverautoloading then
 for _,_pilot in pairs(self.CtldUnits)do
 local Unit=UNIT:FindByName(_pilot)
-if self:CanHoverLoad(Unit)then self:AutoHoverLoad(Unit)end
+self:AutoHoverLoad(Unit)
 end
 end
 return self
@@ -82861,11 +83027,9 @@ self.DroppedTroops[self.TroopCounter]=SPAWN:NewWithAlias(_template,alias)
 :InitDelayOff()
 :OnSpawnGroup(function(grp,TimeStamp)grp.spawntime=TimeStamp or timer.getTime()end,TimeStamp)
 :SpawnFromVec2(randomcoord)
-if self.movetroopstowpzone and type~=CTLD_CARGO.Enum.ENGINEERS then
-local cg=self:GetGenericCargoObjectFromGroupName(self.DroppedTroops[self.TroopCounter]:GetName())
-if not(cg and cg.NoMoveToZone)then
+-- Saved cargo is recreated on load; reuse the registered cargo setting found above.
+if self.movetroopstowpzone and type~=CTLD_CARGO.Enum.ENGINEERS and not(CargoObject or cargo).NoMoveToZone then
 self:_MoveGroupToZone(self.DroppedTroops[self.TroopCounter])
-end
 end
 end
 cargo:SetWasDropped(true)
@@ -83200,6 +83364,7 @@ end
 function CTLD:onafterTroopsDeployed(From,Event,To,Group,Unit,Troops,Type)
 self:T({From,Event,To})
 if self.movetroopstowpzone and Type~=CTLD_CARGO.Enum.ENGINEERS then
+-- Resolve the registered cargo through the existing template cache.
 local cg=self:GetGenericCargoObjectFromGroupName(Troops:GetName())
 if not(cg and cg.NoMoveToZone)then
 self:_MoveGroupToZone(Troops)
@@ -106296,10 +106461,26 @@ self:__Status(-math.random(10))
 return self
 end
 function INTEL:onafterStatus(From,Event,To)
-local fsmstate=self:GetState()
+local batched=self._detectionSweep or self._detectionBatchSize
+if not batched then
 self.ContactsLost={}
 self.ContactsUnknown={}
+end
 self:UpdateIntel()
+if not batched then self:_ReportIntelStatus()end
+self:__Status(self.statusupdate)
+return self
+end
+function INTEL:onafterStop(From,Event,To)
+local sweep=self._detectionSweep
+if sweep then
+if sweep.timer then timer.removeFunction(sweep.timer)end
+self._detectionSweep=nil
+end
+return self
+end
+function INTEL:_ReportIntelStatus()
+local fsmstate=self:GetState()
 local Ncontacts=#self.Contacts
 local Nclusters=#self.Clusters
 if self.verbose>=1 then
@@ -106319,39 +106500,89 @@ end
 end
 self:I(self.lid..text)
 end
-self:__Status(self.statusupdate)
 return self
 end
 function INTEL:UpdateIntel()
-local DetectedUnits={}
-local RecceDetecting={}
-for _,_group in pairs(self.detectionset.Set or{})do
+local sweep=self._detectionSweep
+if sweep and sweep.waiting then return self end
+local groups=self.detectionset.Set or{}
+if sweep or self._detectionBatchSize then
+if not self:Is("Running")then return self end
+if not sweep then
+-- Snapshot membership once; resolve each group from the live set when its batch runs.
+sweep={groups={},units={},recce={},objects={}}
+for name in pairs(groups)do sweep.groups[#sweep.groups+1]=name end
+sweep.interval=self._detectionBatchInterval
+-- Finish within the status interval, including large detection sets.
+local batches=math.max(1,math.floor(math.abs(self.statusupdate)/sweep.interval))
+sweep.batchSize=math.max(self._detectionBatchSize,math.ceil(#sweep.groups/batches))
+self._detectionSweep=sweep
+end
+groups=sweep.groups
+end
+local DetectedUnits=sweep and sweep.units or{}
+local DetectedObjects=sweep and sweep.objects or nil
+local RecceDetecting=sweep and sweep.recce or{}
+local scanned=0
+for index,_group in next,groups,sweep and sweep.index or nil do
 local group=_group
+if sweep then
+sweep.index=index
+group=self.detectionset.Set[_group]
+end
 if group and group:IsAlive()then
-for _,_recce in pairs(group:GetUnits())do
+local units=group:GetUnits()
+for _,_recce in pairs(units)do
 local recce=_recce
 if self.DopplerRadar==true then
-self:GetDetectedUnitsDoppler(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK)
+self:GetDetectedUnitsDoppler(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK,DetectedObjects)
 else
-self:GetDetectedUnits(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK)
+self:GetDetectedUnits(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK,DetectedObjects)
 end
 end
 if self.DetectAccoustic then
-local recce=group:GetFirstUnitAlive()
+local recce=group:GetFirstUnitAlive(units)
 local detectionzone=group:GetProperty("INTEL_DETECT_ACCZONE")
 if not detectionzone then
 detectionzone=ZONE_GROUP:New(group.IdentifiableName.."INTEL_DETECT_ACCZONE",group,self.DetectAccousticRadius or 2000)
 group:SetProperty("INTEL_DETECT_ACCZONE",detectionzone)
 end
 if recce and recce:IsGround()then
-self:GetDetectedUnitsAccoustic(recce,DetectedUnits,RecceDetecting,detectionzone)
+self:GetDetectedUnitsAccoustic(recce,DetectedUnits,RecceDetecting,detectionzone,DetectedObjects)
 end
 end
 end
+if sweep then
+scanned=scanned+1
+if scanned>=sweep.batchSize then break end
+end
+end
+if sweep then
+if next(groups,sweep.index)then
+sweep.waiting=true
+if not sweep.timer then
+sweep.timer=timer.scheduleFunction(function(_,time)
+if self._detectionSweep~=sweep then return nil end
+if not self:Is("Running")then self._detectionSweep=nil;return nil end
+sweep.waiting=false
+self:UpdateIntel()
+if self._detectionSweep==sweep then return time+sweep.interval end
+return nil
+end,nil,timer.getTime()+sweep.interval)
+end
+return self
+end
+self._detectionSweep=nil
+-- Keep the published contact state intact until the entire sweep has finished.
+self.ContactsLost={}
+self.ContactsUnknown={}
 end
 local remove={}
 for unitname,_unit in pairs(DetectedUnits)do
 local unit=_unit
+if sweep and(not unit:IsAlive()or unit:GetDCSObject().id_~=DetectedObjects[unitname])then
+table.insert(remove,unitname)
+else
 local inconflictzone=false
 if self.conflictzoneset:Count()>0 then
 for _,_zone in pairs(self.conflictzoneset.Set)do
@@ -106397,13 +106628,13 @@ if unit:IsInZone(zone)then
 local corridorfloor=zone:GetProperty("CorridorFloor")or self.corridorfloor
 local corridorceiling=zone:GetProperty("CorridorCeiling")or self.corridorceiling
 local debugtext="Corridorzone Check for unit "..unit:GetName().."\n"
-debugtext=debugtext..string.format("IsAir %s | Alt %dft | Floor %dft | Ceil %dft",tostring(unit:IsAir()),tonumber(UTILS.MetersToFeet(unit:GetAltitude())),
-tonumber(UTILS.MetersToFeet(corridorfloor)),tonumber(UTILS.MetersToFeet(corridorceiling)))
+debugtext=debugtext..string.format("IsAir %s | Alt %dft | Floor %s | Ceil %s",tostring(unit:IsAir()),tonumber(UTILS.MetersToFeet(unit:GetAltitude())),
+corridorfloor and string.format("%dft",UTILS.MetersToFeet(corridorfloor))or "none",corridorceiling and string.format("%dft",UTILS.MetersToFeet(corridorceiling))or "none")
 MESSAGE:New(debugtext,15,"INTEL"):ToAllIf(self.verbose>1):ToLogIf(self.verbose>1)
 if unit:IsAir()and(corridorfloor~=nil or corridorceiling~=nil)then
 local alt=unit:GetAltitude()
 if corridorfloor and alt>corridorfloor then inzone=true end
-if corridorceiling and(inzone==true or corridorfloor==nil)and alt<corridorceiling then inzone=true else inzone=false end
+if(inzone==true or corridorfloor==nil)and(corridorceiling==nil or alt<corridorceiling)then inzone=true else inzone=false end
 if inzone==true then break end
 else
 inzone=true
@@ -106427,6 +106658,7 @@ end
 if not keepit then
 self:T(self.lid..string.format("Removing unit %s category=%d",unitname,unit:GetCategory()))
 table.insert(remove,unitname)
+end
 end
 end
 end
@@ -106456,6 +106688,7 @@ self:CreateDetectedItems(DetectedGroups,DetectedStatics,RecceGroups)
 if self.clusteranalysis then
 self:PaintPicture()
 end
+if sweep then self:_ReportIntelStatus()end
 return self
 end
 function INTEL:_UpdateContact(Contact)
@@ -106572,7 +106805,7 @@ end
 end
 return self
 end
-function INTEL:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)
+function INTEL:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK,DetectedObjects)
 local reccename=Unit:GetName()
 local detectedtargets=Unit:GetDetectedTargets(DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)
 for DetectionObjectID,Detection in pairs(detectedtargets or{})do
@@ -106618,6 +106851,7 @@ end
 end
 if DetectionAccepted then
 DetectedUnits[name]=unit
+if DetectedObjects then DetectedObjects[name]=DetectedObject.id_ end
 RecceDetecting[name]=reccename
 self:T(string.format("Unit %s detect by %s",name,reccename))
 end
@@ -106626,6 +106860,7 @@ if self.detectStatics then
 local static=STATIC:FindByName(name,false)
 if static then
 DetectedUnits[name]=static
+if DetectedObjects then DetectedObjects[name]=DetectedObject.id_ end
 RecceDetecting[name]=reccename
 end
 end
@@ -106636,7 +106871,7 @@ end
 end
 end
 end
-function INTEL:GetDetectedUnitsAccoustic(Recce,DetectedUnits,RecceDetecting,detectionzone)
+function INTEL:GetDetectedUnitsAccoustic(Recce,DetectedUnits,RecceDetecting,detectionzone,DetectedObjects)
 local othercoalition=self.coalition==coalition.side.BLUE and coalition.side.RED or coalition.side.BLUE
 self:T("Other coalition = "..othercoalition)
 if detectionzone then
@@ -106649,6 +106884,7 @@ for _,_unit in pairs(unitset.Set or{})do
 if _unit and _unit:IsAlive()and _unit:GetCoalition()~=self.coalition then
 local name=_unit:GetName()or"none"
 DetectedUnits[name]=_unit
+if DetectedObjects then DetectedObjects[name]=_unit:GetDCSObject().id_ end
 RecceDetecting[name]=reccename
 self:T("Unit name = "..name)
 end
@@ -107271,9 +107507,9 @@ end
 end
 return true
 end
-function INTEL:GetDetectedUnitsDoppler(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)
+function INTEL:GetDetectedUnitsDoppler(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK,DetectedObjects)
 self:T(self.lid.."GetDetectedUnitsDoppler")
-self:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)
+self:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK,DetectedObjects)
 if self.DopplerRadar==false then return end
 if DetectRadar==false then return end
 local remove={}

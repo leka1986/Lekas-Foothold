@@ -5225,7 +5225,7 @@ mc:trackMission({
 		RegisterGroupTarget(chaghcharanAttackFOBDelaramArty,250,L10N:Get("MISSION_ARTY_TITLE"),chaghcharanAttackFOBDelaramArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission(chaghcharanAttackFOBDelaramArty)
+		bc:cancelGroupTargetMission(chaghcharanAttackFOBDelaramArty, 2)
     end,
     isActive = function()
         if not ActiveMission[chaghcharanAttackFOBDelaramArty] then return false end
@@ -5247,7 +5247,7 @@ mc:trackMission({
 		RegisterGroupTarget('Maymana-attack-FOBHamidKarzai',250,L10N:Get("MISSION_ARTY_TITLE"),'Maymana-attack-FOBHamidKarzai')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Maymana-attack-FOBHamidKarzai')
+		bc:cancelGroupTargetMission('Maymana-attack-FOBHamidKarzai', 2)
     end,
     isActive = function()
         if not ActiveMission['Maymana-attack-FOBHamidKarzai'] then return false end
@@ -5269,7 +5269,7 @@ mc:trackMission({
 		RegisterGroupTarget('Shindand-attack-Herat',250,L10N:Get("MISSION_ARTY_TITLE"),'Shindand-attack-Herat')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Shindand-attack-Herat')
+		bc:cancelGroupTargetMission('Shindand-attack-Herat', 2)
     end,
     isActive = function()
         if not ActiveMission['Shindand-attack-Herat'] then return false end
@@ -5291,7 +5291,7 @@ mc:trackMission({
 		RegisterGroupTarget('Herat-attack-Shindand',250,L10N:Get("MISSION_ARTY_TITLE"),'Herat-attack-Shindand')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Herat-attack-Shindand')
+		bc:cancelGroupTargetMission('Herat-attack-Shindand', 2)
     end,
     isActive = function()
         if not ActiveMission['Herat-attack-Shindand'] then return false end
@@ -5313,7 +5313,7 @@ mc:trackMission({
 		RegisterGroupTarget(shindandAttackFOBAhmadShahMassoudArty,100,L10N:Get("MISSION_ARTY_TITLE"),shindandAttackFOBAhmadShahMassoudArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission(shindandAttackFOBAhmadShahMassoudArty)
+		bc:cancelGroupTargetMission(shindandAttackFOBAhmadShahMassoudArty, 2)
     end,
     isActive = function()
         if not ActiveMission[shindandAttackFOBAhmadShahMassoudArty] then return false end
@@ -5335,7 +5335,7 @@ mc:trackMission({
 		RegisterGroupTarget('Bamyan-attack-FOB-JavidBasharat',100,L10N:Get("MISSION_ARTY_TITLE"),'Bamyan-attack-FOB-JavidBasharat')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Bamyan-attack-FOB-JavidBasharat')
+		bc:cancelGroupTargetMission('Bamyan-attack-FOB-JavidBasharat', 2)
     end,
     isActive = function()
         if not ActiveMission['Bamyan-attack-FOB-JavidBasharat'] then return false end
@@ -5357,7 +5357,7 @@ mc:trackMission({
 		RegisterGroupTarget('Bagram-attack-Kabul',250,L10N:Get("MISSION_ARTY_TITLE"),'Bagram-attack-Kabul')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('Bagram-attack-Kabul')
+		bc:cancelGroupTargetMission('Bagram-attack-Kabul', 2)
     end,
     isActive = function()
         if not ActiveMission['Bagram-attack-Kabul'] then return false end
@@ -5379,7 +5379,7 @@ mc:trackMission({
 		RegisterGroupTarget('CheckpointDelta-attack-GhazniHeliport',250,L10N:Get("MISSION_ARTY_TITLE"),'CheckpointDelta-attack-GhazniHeliport')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('CheckpointDelta-attack-GhazniHeliport')
+		bc:cancelGroupTargetMission('CheckpointDelta-attack-GhazniHeliport', 2)
     end,
     isActive = function()
         if not ActiveMission['CheckpointDelta-attack-GhazniHeliport'] then return false end
@@ -5401,7 +5401,7 @@ mc:trackMission({
 		RegisterGroupTarget('CheckpointCharlie-attack-FOB-Bostick',250,L10N:Get("MISSION_ARTY_TITLE"),'CheckpointCharlie-attack-FOB-Bostick')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('CheckpointCharlie-attack-FOB-Bostick')
+		bc:cancelGroupTargetMission('CheckpointCharlie-attack-FOB-Bostick', 2)
     end,
     isActive = function()
         if not ActiveMission['CheckpointCharlie-attack-FOB-Bostick'] then return false end
@@ -5423,7 +5423,7 @@ mc:trackMission({
 		RegisterGroupTarget('CheckpointBravo-attack-Tarinkot',250,L10N:Get("MISSION_ARTY_TITLE"),'CheckpointBravo-attack-Tarinkot')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('CheckpointBravo-attack-Tarinkot')
+		bc:cancelGroupTargetMission('CheckpointBravo-attack-Tarinkot', 2)
     end,
     isActive = function()
         if not ActiveMission['CheckpointBravo-attack-Tarinkot'] then return false end
@@ -5445,7 +5445,7 @@ mc:trackMission({
 		RegisterGroupTarget('CheckpointKabulE-attack-Kabul',250,L10N:Get("MISSION_ARTY_TITLE"),'CheckpointKabulE-attack-Kabul')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('CheckpointKabulE-attack-Kabul')
+		bc:cancelGroupTargetMission('CheckpointKabulE-attack-Kabul', 2)
     end,
     isActive = function()
         if not ActiveMission['CheckpointKabulE-attack-Kabul'] then return false end
@@ -6028,7 +6028,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('bomb')
+		bc:cancelGroupTargetMission('bomb', 2)
 	end,
 	isActive = function()
 		return StrategicBomber.IsMissionActive(1)
@@ -6140,7 +6140,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-        bc:cancelGroupTargetMission('cas')
+        bc:cancelGroupTargetMission('cas', 2)
     end,
 	isActive = function()
 		if not ActiveMission['cas'] then return false end

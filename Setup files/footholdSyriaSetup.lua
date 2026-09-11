@@ -1146,6 +1146,7 @@ zones.gecitkale:addGroups({
 	DirectorCapability:new({name='Gecitkale-supply-Pinarbashi', mission='supply', template='HeloSupplyTemplate', targetzone='Pinarbashi'}),
 	DirectorCapability:new({name='Gecitkale-supply-Larnaca', mission='supply', template='HeloSupplyTemplate', targetzone='Larnaca'}),
 	DirectorCapability:new({name='Gecitkale-supply-Incirlik', mission='supply', template='PlaneSupplyTemplate', targetzone='Incirlik',AllowSupplyLaunchFromSuspendedZone = true}),
+	DirectorCapability:new({name='Gecitkale-supply-Bassel Al-Assad', mission='supply', template='PlaneSupplyTemplate', targetzone='Bassel Al-Assad',AllowSupplyLaunchFromSuspendedZone = true}),
 	DirectorCapability:new({name='Gecitkale-patrol-Red carrier', mission='patrol', template='CapPlaneTemplate',MissionType='CAP', targetzone='Red Carrier', Altitude = CapAltitude()}),
 	DirectorCapability:new({name='Gecitkale-patrol-Paphos', mission='patrol', template='CapPlaneTemplate',MissionType='CAP', targetzone='Paphos', Altitude = CapAltitude()}),
 	--GroupCommander:new({name='Gecitkale-supply-Carrier', mission='supply', template='HeloSupplyTemplate', targetzone='Red Carrier'}),
@@ -1215,7 +1216,6 @@ zones.aleppo:addGroups({
 	DirectorCapability:new({name='Aleppo-supply-Minakh', mission='supply', template='HeloSupplyTemplate', targetzone='Minakh'}),
 	DirectorCapability:new({name='Aleppo-supply-Hatay', mission='supply', template='PlaneSupplyTemplate', targetzone='Hatay'}),
 	DirectorCapability:new({name='Aleppo-supply-Bassel Al-Assad', mission='supply', template='PlaneSupplyTemplate', targetzone='Bassel Al-Assad'}),
-	DirectorCapability:new({name='Aleppo-supply-Hama', mission='supply', template='PlaneSupplyTemplate', targetzone='Hama'}),
 	DirectorCapability:new({name='Aleppo-supply-Taftanaz', mission='supply', template='HeloSupplyTemplate', targetzone='Taftanaz'}),
 	DirectorCapability:new({name='Aleppo-supply-Jirah', mission='supply', template='HeloSupplyTemplate', targetzone='Jirah'}),
 	DirectorCapability:new({name='Aleppo-supply-Duhur', mission='supply', template='HeloSupplyTemplate', targetzone='Abu al-Duhur'}),
@@ -1314,6 +1314,7 @@ zones.alassad:addGroups({
 	DirectorCapability:new({name='Alassad-supply-Hatay', mission='supply', template='PlaneSupplyTemplate', targetzone='Hatay'}),
 	DirectorCapability:new({name='Alassad-supply-Hotel', mission='supply', template='HeloSupplyTemplate', targetzone='Hotel', condition = function(self) if self.side == 1 then return not CustomFlags["AssadWarehouse"] end end}),
 	DirectorCapability:new({name='Alassad-supply-Incirlik', mission='supply', template='PlaneSupplyTemplate', targetzone='Incirlik'}),
+	DirectorCapability:new({name='Alassad-supply-Gecitkale', mission='supply', template='PlaneSupplyTemplate', targetzone='Gecitkale',AllowSupplyLaunchFromSuspendedZone = true}),
 	DirectorCapability:new({name='Alassad-supply-Romeo', mission='supply', template='HeloSupplyTemplate', targetzone='Romeo'}),
 	DirectorCapability:new({name='Alassad-patrol-Carrier-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Red Carrier', Altitude = CapAltitude()}),
 	DirectorCapability:new({name='Alassad-patrol-Hotel-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Hotel', Altitude = CapAltitude()}),
@@ -1329,7 +1330,9 @@ zones.alassad:addGroups({
 	DirectorCapability:new({name='Alassad-patrol-Hama-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Hama', Altitude = CapAltitude()}),
 	DirectorCapability:new({name='Alassad-attack-Rene-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Rene Mouawad', Altitude = CapAltitude()}),
 	DirectorCapability:new({name='Alassad-patrol-Rene-Cap', mission='patrol', template='CapPlaneTemplate', MissionType='CAP', targetzone='Rene Mouawad', Altitude = CapAltitude()}),
-	DirectorCapability:new({name='Alassad-attack-al-Duhur-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Abu al-Duhur', Altitude = CapAltitude()})
+	DirectorCapability:new({name='Alassad-attack-al-Duhur-Cap', mission='attack', template='CapPlaneTemplate', MissionType='CAP', targetzone='Abu al-Duhur', Altitude = CapAltitude()}),
+	DirectorCapability:new({name='Alassad-attack-Red Carrier-AntiShip', mission='attack', template='AntiShipPlaneTemplate', MissionType='ANTISHIP', targetzone='Red Carrier', Altitude = 15000}),
+
 })
 
 zones.hama:addGroups({
@@ -1885,11 +1888,36 @@ zones.factory:addCriticalObject('factory3')
 zones.factory:addCriticalObject('factory4')
 
 zones.tv:addCriticalObject('tv1')
+zones.tv:addCriticalObject('tv2')
 
 zones.radio:addCriticalObject('radioTower1')
 
 zones.milbase:addCriticalObject('com_center')
 zones.milbase:addCriticalObject('ammo_depot')
+
+local oscarStaticObjects = {
+	'Static FARP Tent-21',
+	'Static FARP Tent-22',
+	'Static FARP Tent-23',
+	'Static FARP Tent-24',
+	'Static FARP Tent-25',
+	'Static SSM SS-1C Scud-B-1',
+	'Static SSM SS-1C Scud-B-2',
+	'Static SSM SS-1C Scud-B-3',
+	'Static Truck ZIL-135',
+	'Static Truck ZIL-135-2',
+}
+
+local function destroyOscarStatics()
+	for _, staticName in ipairs(oscarStaticObjects) do
+		local static = StaticObject.getByName(staticName)
+		if static then static:destroy() end
+	end
+end
+
+zones.oscar:registerTrigger('lost', function()
+	destroyOscarStatics()
+end, 'oscarstaticcleanup')
 
 
 zones.incirlik.airbaseName = 'Incirlik'
@@ -4555,6 +4583,7 @@ bc:resetSeadMissionSlot(bc.seadMissionDefenceReserveSlot)
 lc:init()
 
 bc:loadFromDisk()
+if zones.oscar.side ~= 1 then destroyOscarStatics() end
 if zonePersistance and zonePersistance.zones and next(zonePersistance.zones) == nil then
     bc.saveLoaded = false
 end
@@ -4864,7 +4893,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('scuds')
+		bc:cancelGroupTargetMission('scuds', 2)
     end,
     isActive = function()
 		if not ActiveMission['scuds'] then return false end
@@ -4988,7 +5017,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('cas')
+		bc:cancelGroupTargetMission('cas', 2)
     end,
 	isActive = function()
 		if not ActiveMission['cas'] then return false end
@@ -5031,7 +5060,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('bomb')
+		bc:cancelGroupTargetMission('bomb', 2)
 	end,
 	isActive = function()
 		return StrategicBomber.IsMissionActive(1)
@@ -5061,6 +5090,7 @@ evc:addEvent({
 	if timer.getTime() - lastShip_COOLDOWN < Ship_COOLDOWN then return false end
     if math.random(1, 100) < 70 then return false end
     if bc:getZoneByName('Red Carrier').side ~= 1 then return false end
+    if bc:getZoneByName('Bassel Al-Assad').side ~= 1 then return false end
     if Group.getByName('evt-shiptercept1') then return false end
     if Group.getByName('evt-shiptercept2') then return false end
     if Group.getByName('evt-shiptercept3') then return false end
@@ -5629,7 +5659,7 @@ evc:addEvent({
 		action = function()
 		local z = zones.dam
 		if not z then return end
-		RegisterStaticGroup('DamFactories', z, 250, L10N:Get("SYRIA_MISSION_TARGET_DAM_FACTORIES"), 'DamFactories',true)
+		RegisterStaticGroup('DamFactories', z, 1000, L10N:Get("SYRIA_MISSION_TARGET_DAM_FACTORIES"), 'DamFactories',true)
 	end,
 	canExecute = function()
 		if ActiveMission['DamFactories'] then return false end
@@ -6164,7 +6194,7 @@ mc:trackMission({
 		RegisterGroupTarget(jirahAttackAleppoSurfaceArty,100,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),jirahAttackAleppoSurfaceArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission(jirahAttackAleppoSurfaceArty)
+		bc:cancelGroupTargetMission(jirahAttackAleppoSurfaceArty, 2)
     end,
     isActive = function()
 		if not ActiveMission[jirahAttackAleppoSurfaceArty] then return false end
@@ -6186,7 +6216,7 @@ mc:trackMission({
 		RegisterGroupTarget(jirahAttackDurayhimArty,100,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),jirahAttackDurayhimArty)
     end,
     endAction = function()
-		bc:cancelGroupTargetMission(jirahAttackDurayhimArty)
+		bc:cancelGroupTargetMission(jirahAttackDurayhimArty, 2)
     end,
     isActive = function()
 		if not ActiveMission[jirahAttackDurayhimArty] then return false end
@@ -6208,7 +6238,7 @@ mc:trackMission({
 		RegisterGroupTarget('November-attack-Duhur',100,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'November-attack-Duhur')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('November-attack-Duhur')
+		bc:cancelGroupTargetMission('November-attack-Duhur', 2)
     end,
     isActive = function()
 		if not ActiveMission['November-attack-Duhur'] then return false end
@@ -6230,7 +6260,7 @@ mc:trackMission({
 		RegisterGroupTarget('November-attack-India',100,L10N:Get("SYRIA_MISSION_ARTY_TITLE"),'November-attack-India')
     end,
     endAction = function()
-		bc:cancelGroupTargetMission('November-attack-India')
+		bc:cancelGroupTargetMission('November-attack-India', 2)
     end,
     isActive = function()
 		if not ActiveMission['November-attack-India'] then return false end
@@ -6255,7 +6285,7 @@ mc:trackMission({
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
-		bc:cancelGroupTargetMission('November-attack-Hama')
+		bc:cancelGroupTargetMission('November-attack-Hama', 2)
     end,
 	isActive = function()
 		if not ActiveMission['November-attack-Hama'] then return false end

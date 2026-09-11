@@ -2482,6 +2482,7 @@ startAction = function()
          if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
             trigger.action.outSoundForCoalition(2, "cancel.ogg")
         end
+        bc:cancelGroupTargetMission('bombRed', 2)
     end,
 isActive = function()
     if not ActiveMission['bombRed'] then return false end
