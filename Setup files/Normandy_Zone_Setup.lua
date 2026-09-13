@@ -3110,6 +3110,26 @@ local function restoreTrainGroupDestructionState()
     restoreTrainLog("restoreTrainGroupDestructionState: Processed " .. trainsProcessed .. " train flags, destroyed " .. trainsDestroyed .. " active trains")
 end
 
+local delayedTrainActivation = {
+    ["UK_Train_London-resupply-Hawkinge"] = true,
+    ["AXE_Train_Paris-resupply-Fecamp"] = true,
+}
+
+local function activateLivingTrainGroups(delayedOnly)
+    local seen = {}
+    for _, groupNames in pairs(RAILWAY_STATION_GROUPS) do
+        for _, groupName in ipairs(groupNames) do
+            local delayed = delayedTrainActivation[groupName] == true
+            if not seen[groupName] and delayed == delayedOnly then
+                seen[groupName] = true
+                if CustomFlags[groupName] ~= true then
+                    GROUP:FindByName(groupName):Activate()
+                end
+            end
+        end
+    end
+end
+
 local function restoreV1GroupDestructionState()
     env.info("V1 Group System: Checking for previously destroyed V1 launchers...")
     
@@ -3152,6 +3172,10 @@ if bc:isNormandyTheatre() then
 		interval = 120,
 		notifyRestored = true,
 	})
+	activateLivingTrainGroups(false)
+	timer.scheduleFunction(function()
+		activateLivingTrainGroups(true)
+	end, {}, timer.getTime() + 600)
 end
 restoreV1GroupDestructionState()
 
@@ -4639,20 +4663,23 @@ local normandyZoneFlagChecks = {
 	{ flag=201, groupName='AXE_Train_Valognes-resupply-Le Molay', zoneName='supply-LeMolay' },
 	{ flag=202, groupName='AXE_Train_Le Molay-resupply-Caen', zoneName='supply-Caen' },
 	{ flag=203, groupName='AXE_Bernay-resupply-Caen', zoneName='supply-Caen' },
-	{ flag=204, groupName='AXE_Train_Saint-Andre-resupply-Bernay', zoneName='supply-Bernay' },
+	{ flag=204, groupName='AXE_Train_Saint-Andre-resupply-Bernay', zoneName='supply-SaintAndre' },
 	{ flag=205, groupName='AXE_Train_Le Havre-resupply-Fecamp', zoneName='supply-Fecamp' },
 	{ flag=206, groupName='AXE_Train_Le Havre-resupply-Rouen', zoneName='supply-Rouen' },
 	{ flag=207, groupName='AXE_Train_Paris-resupply-Fecamp', zoneName='supply-Fecamp' },
 	{ flag=208, groupName='AXE_Train_Paris-resupply-Saint-Aubain', zoneName='supply-SaintAubain' },
-	{ flag=209, groupName='AXE_Train_Dunkirk-Port-resupply-Calais', zoneName='supply-Calais' },
+	{ flag=209, groupName='AXE_Train_Dunkirk-Port-resupply-Calais', zoneName='Dunkirk-Port' },
 	{ flag=210, groupName='AXE_Train_Amiens-resupply-Abbeville', zoneName='supply-Amiens' },
 	{ flag=211, groupName='AXE_Train_Abbeville-resupply-Le Touquet', zoneName='supply-LeTouquet' },
 	{ flag=212, groupName='AXE_Train_Paris-resupply-Orly', zoneName='supply-Orly' },
+	{ flag=213, groupName='AXE_Train_Bernay-resupply-Caen', zoneName='supply-Bernay' },
+	{ flag=214, groupName='AXE_Train_Paris-resupply-Saint-Andre', zoneName='supply-SaintAndre' },
 	{ flag=300, groupName='UK_Train_London-resupply-Farnborough', zoneName='supply-Farnborough' },
 	{ flag=301, groupName='UK_Train_London-resupply-Manston', zoneName='supply-Manston' },
 	{ flag=302, groupName='UK_Train_London-resupply-Ford', zoneName='supply-Ford' },
 	{ flag=303, groupName='UK_Train_London-resupply-Chailey', zoneName='supply-chailey' },
 	{ flag=304, groupName='UK_Train_Manston-resupply-Dover', zoneName='supply-Dover' },
+	{ flag=305, groupName='UK_Train_London-resupply-Hawkinge', zoneName='Hawkinge' },
 }
 
 local function checkNormandyZoneFlag(entry)
@@ -4665,6 +4692,9 @@ local function checkNormandyZoneFlag(entry)
 	entry.zone = entry.zone or CustomZone:getByName(entry.zoneName)
 	if entry.zone:isInside(unit:getPoint()) then
 		trigger.action.setUserFlag(entry.flag, 1)
+		if entry.groupName:find("_Train_", 1, true) then
+			GROUP:FindByName(entry.groupName):Respawn(nil, false)
+		end
 	end
 end
 
@@ -4776,6 +4806,23 @@ if trigger.misc.getUserFlag(300) == 1 then
 		trigger.action.setUserFlag(304, 0)
 	end
 
+	if trigger.misc.getUserFlag(305) == 1 then
+		local znsrc = bc:getZoneByName('London')
+		local zntgt = bc:getZoneByName('Hawkinge')
+            if znsrc and znsrc.side == 2 then
+				if zntgt and zntgt.side == 0 then
+					zntgt:capture(2)
+				elseif zntgt and zntgt.side == 2 then
+					applyTrainSupply(zntgt)
+				else
+					return L10N:Format("NORMANDY_ZONE_IS_SIDE", "Hawkinge", L10N:Get("ZONE_SIDE_RED"))
+				end
+			else
+				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "London", L10N:Get("ZONE_SIDE_BLUE"))
+            end
+		trigger.action.setUserFlag(305, 0)
+	end
+
 
 -------------- Capture/Upgrade Trains Red-------------------
 	if trigger.misc.getUserFlag(200) == 1 then
@@ -4869,8 +4916,8 @@ if trigger.misc.getUserFlag(300) == 1 then
 
 	if trigger.misc.getUserFlag(204) == 1 then
 		--trigger.action.outText("Falg Valognes = 1 trigg ", 10)
-		local znsrc = bc:getZoneByName('Saint-Andre')
-		local zntgt = bc:getZoneByName('Bernay')
+		local znsrc = bc:getZoneByName('Bernay')
+		local zntgt = bc:getZoneByName('Saint-Andre')
             if znsrc and znsrc.side == 1 then 
 				if zntgt and zntgt.side == 0 then
 					zntgt:capture(1)
@@ -4879,11 +4926,11 @@ if trigger.misc.getUserFlag(300) == 1 then
 					applyTrainSupply(zntgt)
 					--trigger.action.outText("Valognes upgraded ", 10)
 				else
-					return L10N:Format("NORMANDY_ZONE_IS_SIDE", "Bernay", L10N:Get("ZONE_SIDE_BLUE"))
+					return L10N:Format("NORMANDY_ZONE_IS_SIDE", "Saint-Andre", L10N:Get("ZONE_SIDE_BLUE"))
 				end
 			else
 				--trigger.action.outText("Cherbourg is not Red, cannot capture or upgrade Valognes", 10)
-				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "Saint-Andre", L10N:Get("ZONE_SIDE_RED"))
+				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "Bernay", L10N:Get("ZONE_SIDE_RED"))
             end
 		trigger.action.setUserFlag(204, 0)
 	end
@@ -4976,8 +5023,8 @@ if trigger.misc.getUserFlag(300) == 1 then
 
 	if trigger.misc.getUserFlag(209) == 1 then
 		--trigger.action.outText("Falg Valognes = 1 trigg ", 10)
-		local znsrc = bc:getZoneByName('Dunkirk-Port')
-		local zntgt = bc:getZoneByName('Calais')
+		local znsrc = bc:getZoneByName('Calais')
+		local zntgt = bc:getZoneByName('Dunkirk-Port')
             if znsrc and znsrc.side == 1 then 
 				if zntgt and zntgt.side == 0 then
 					zntgt:capture(1)
@@ -4986,11 +5033,11 @@ if trigger.misc.getUserFlag(300) == 1 then
 					applyTrainSupply(zntgt)
 					--trigger.action.outText("Valognes upgraded ", 10)
 				else
-					return L10N:Format("NORMANDY_ZONE_IS_SIDE", "Fecamp", L10N:Get("ZONE_SIDE_BLUE"))
+					return L10N:Format("NORMANDY_ZONE_IS_SIDE", "Dunkirk-Port", L10N:Get("ZONE_SIDE_BLUE"))
 				end
 			else
 				--trigger.action.outText("Cherbourg is not Red, cannot capture or upgrade Valognes", 10)
-				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "Amiens", L10N:Get("ZONE_SIDE_RED"))
+				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "Calais", L10N:Get("ZONE_SIDE_RED"))
             end
 		trigger.action.setUserFlag(209, 0)
 	end
@@ -5038,27 +5085,6 @@ if trigger.misc.getUserFlag(300) == 1 then
 		trigger.action.setUserFlag(211, 0)
 	end
 
-	if trigger.misc.getUserFlag(211) == 1 then
-		--trigger.action.outText("Falg Valognes = 1 trigg ", 10)
-		local znsrc = bc:getZoneByName('Calais')
-		local zntgt = bc:getZoneByName('Dunkirk-Port')
-            if znsrc and znsrc.side == 1 then 
-				if zntgt and zntgt.side == 0 then
-					zntgt:capture(1)
-					--trigger.action.outText("Valognes captured ", 10)
-				elseif zntgt and zntgt.side == 1 then
-					applyTrainSupply(zntgt)
-					--trigger.action.outText("Valognes upgraded ", 10)
-				else
-					return L10N:Format("NORMANDY_ZONE_IS_SIDE", "Dunkirk-Port", L10N:Get("ZONE_SIDE_BLUE"))
-				end
-			else
-				--trigger.action.outText("Cherbourg is not Red, cannot capture or upgrade Valognes", 10)
-				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "Calais", L10N:Get("ZONE_SIDE_RED"))
-            end
-		trigger.action.setUserFlag(211, 0)
-	end
-
 	if trigger.misc.getUserFlag(212) == 1 then
 		--trigger.action.outText("Falg Valognes = 1 trigg ", 10)
 		local znsrc = bc:getZoneByName('Paris')
@@ -5078,6 +5104,40 @@ if trigger.misc.getUserFlag(300) == 1 then
 				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "Paris", L10N:Get("ZONE_SIDE_RED"))
             end
 		trigger.action.setUserFlag(212, 0)
+	end
+
+	if trigger.misc.getUserFlag(213) == 1 then
+		local znsrc = bc:getZoneByName('Caen')
+		local zntgt = bc:getZoneByName('Bernay')
+            if znsrc and znsrc.side == 1 then 
+				if zntgt and zntgt.side == 0 then
+					zntgt:capture(1)
+				elseif zntgt and zntgt.side == 1 then
+					applyTrainSupply(zntgt)
+				else
+					return L10N:Format("NORMANDY_ZONE_IS_SIDE", "Bernay", L10N:Get("ZONE_SIDE_BLUE"))
+				end
+			else
+				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "Caen", L10N:Get("ZONE_SIDE_RED"))
+            end
+		trigger.action.setUserFlag(213, 0)
+	end
+
+	if trigger.misc.getUserFlag(214) == 1 then
+		local znsrc = bc:getZoneByName('Paris')
+		local zntgt = bc:getZoneByName('Saint-Andre')
+            if znsrc and znsrc.side == 1 then
+				if zntgt and zntgt.side == 0 then
+					zntgt:capture(1)
+				elseif zntgt and zntgt.side == 1 then
+					applyTrainSupply(zntgt)
+				else
+					return L10N:Format("NORMANDY_ZONE_IS_SIDE", "Saint-Andre", L10N:Get("ZONE_SIDE_BLUE"))
+				end
+			else
+				return L10N:Format("NORMANDY_ZONE_NOT_SIDE", "Paris", L10N:Get("ZONE_SIDE_RED"))
+            end
+		trigger.action.setUserFlag(214, 0)
 	end
 end
 

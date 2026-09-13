@@ -18328,6 +18328,11 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 			end
 			return
 		end
+		local purchaseCost = item.cost
+		if coalition == 1 and not buyerGroupId and type(alternateParams) == 'table'
+			and alternateParams._redDirectorPurchase == true then
+			purchaseCost = alternateParams._directorShopCost
+		end
 		local isPersistentTankerItem = (coalition == 2) and (id == "dynamicarco" or id == "dynamictexaco")
 		if isPersistentTankerItem and _isTankerUnlockedById(id) then
 			if shop and shop[id] then
@@ -18436,7 +18441,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 		end
 
 		local availableCredits = (tonumber(self.accounts[coalition]) or 0) - self:_getPendingShopReservedCredits(coalition)
-		if availableCredits < item.cost then
+		if availableCredits < purchaseCost then
 			if buyerGroupId then
 				trigger.action.outTextForGroup(buyerGroupId, L10N:FormatForGroup(buyerGroupId, "SHOP_NOT_ENOUGH_CREDITS_FOR_ITEM", itemName), 5)
 			else
@@ -18479,7 +18484,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 			return success
 		elseif success == true or success == nil then
 			local refreshShopContents = false
-			self.accounts[coalition] = self.accounts[coalition] - item.cost
+			self.accounts[coalition] = self.accounts[coalition] - purchaseCost
 			if isPersistentTankerItem then
 				_setTankerUnlockedById(id)
 				if self.shops[coalition] and self.shops[coalition][id] then
@@ -18502,21 +18507,21 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 				elseif buyerGroupObj and buyerGroupObj:isExist() then
 					buyerName = buyerGroupObj:getName()
 				end
-				self:addStat(buyerName, "Points spent", item.cost)
+				self:addStat(buyerName, "Points spent", purchaseCost)
 				local careerBuyerName = self.playerNames and self.playerNames[buyerGroupId]
 				if careerBuyerName then
-					self:recordCareerSpending(careerBuyerName, item.cost)
+					self:recordCareerSpending(careerBuyerName, purchaseCost)
 				end
 				trigger.action.outTextForCoalition(
 				  coalition,
-				  L10N:Format("SHOP_BOUGHT_BY_PLAYER", buyerName, coalitionItemName, item.cost, self.accounts[coalition]),5)
+				  L10N:Format("SHOP_BOUGHT_BY_PLAYER", buyerName, coalitionItemName, purchaseCost, self.accounts[coalition]),5)
 				if item.stock == 0 then
 					trigger.action.outTextForCoalition(coalition, L10N:Format("SHOP_WENT_OUT_OF_STOCK", coalitionItemName), 5)
 				end
 			else
 				trigger.action.outTextForCoalition(
 					coalition,
-					L10N:Format("SHOP_BOUGHT", coalitionItemName, item.cost, self.accounts[coalition]),
+					L10N:Format("SHOP_BOUGHT", coalitionItemName, purchaseCost, self.accounts[coalition]),
 					5
 				)
 				if item.stock == 0 then
@@ -19596,6 +19601,8 @@ function BattleCommander:requestFriendlySupplyMission(chosenZone, onDone)
 	elseif bestCommander.unitCategory == Unit.Category.AIRPLANE then
 		bestCommander._pendingSupplyLaunchMessage = L10N:Format("LOGISTICS_FRIENDLY_RESUPPLY_TO", chosenZone.zone)
 		trigger.action.outTextForCoalition(2, L10N:Get("LOGISTICS_LOOKING_FOR_PILOTS"), 10)
+	elseif bestCommander.unitCategory == Unit.Category.SHIP then
+		bestCommander._pendingSupplyLaunchMessage = L10N:Format(bestCommander:_supplyDispatchMessageKey(), launchLabel, chosenZone.zone)
 	elseif bestCommander.type == 'surface' then
 		bestCommander._pendingSupplyLaunchMessage = L10N:Format("LOGISTICS_FRIENDLY_CONVOY_MOVING", launchLabel, chosenZone.zone)
 	else
@@ -19706,6 +19713,13 @@ function BattleCommander:requestCaptureMission(chosenZone, options)
 	elseif bestCommander.unitCategory == Unit.Category.AIRPLANE then
 		bestCommander._pendingSupplyLaunchMessage = farpLaunchApplied and L10N:Format("LOGISTICS_EMERGENCY_CAPTURE_VIA", chosenZone.zone, launchLabel) or L10N:Format("LOGISTICS_EMERGENCY_CAPTURE_TO", chosenZone.zone)
 		trigger.action.outTextForCoalition(2, L10N:Get("LOGISTICS_LOOKING_FOR_PILOTS"), 10)
+	elseif bestCommander.unitCategory == Unit.Category.SHIP then
+		if pendingShopPurchase then
+			bestCommander._pendingSupplyLaunchMessage = L10N:Format(bestCommander:_supplyDispatchMessageKey(), launchLabel, chosenZone.zone)
+		else
+			trigger.action.outTextForCoalition(2, L10N:Format(bestCommander:_supplyDispatchMessageKey(), launchLabel, chosenZone.zone), 10)
+			trigger.action.outSoundForCoalition(2, 'Intel_short.ogg')
+		end
 	elseif bestCommander.type == 'surface' then
 		if pendingShopPurchase then
 			bestCommander._pendingSupplyLaunchMessage = L10N:Format("LOGISTICS_FRIENDLY_CONVOY_MOVING", launchLabel, chosenZone.zone)
@@ -20253,6 +20267,10 @@ function BattleCommander:redZoneUpgradeAction(params)
 	end
 	local zoneObj = pick.zone
 	local slot = pick.slot
+	local category = classifyUpgradeName(slot)
+	if params._directorExpectedCategory and category ~= params._directorExpectedCategory then
+		return "No strategically suitable red zones"
+	end
 	local ok = zoneObj:addExtraSlot(slot)
 	if not ok then
 		return L10N:Get("WAREHOUSE_ZONE_ALREADY_UPGRADED")
@@ -44665,9 +44683,15 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		if side == coalition.side.RED then
 			local repairs, upgrades = zoneCommander:_regularSupplyLocalRecoveryCandidates()
 			local target = repairs[1] or upgrades[1]
-			if not target then return zoneCommander:upgrade() end
-			local samFamily = CustomZone.getSamFamily(target.targetName)
-			return self:_startRedRegularSupplyLocalRecovery(zoneCommander, now, target, samFamily)
+			local delivered
+			if not target then
+				delivered = zoneCommander:upgrade()
+			else
+				local samFamily = CustomZone.getSamFamily(target.targetName)
+				delivered = self:_startRedRegularSupplyLocalRecovery(zoneCommander, now, target, samFamily)
+			end
+			if delivered then self:addFunds(side, 100) end
+			return delivered
 		end
 
 		return zoneCommander:upgrade()
@@ -45568,7 +45592,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			or groupCommander._dynamicHybridRetired == true
 			or groupCommander._regularSupplyPermit
 			or (groupCommander.state ~= 'inhangar' and groupCommander.state ~= 'dead')
-			or groupCommander:_hasDormantFsmBypass(true, true)
+			or groupCommander:_hasDormantFsmBypass(true, true, true)
 		then
 			return false
 		end
@@ -48125,8 +48149,20 @@ function GroupCommander:_clearSupplyLaunchState(opts)
     end
 end
 
+function GroupCommander:_supplyDispatchMessageKey()
+	if self.unitCategory == Unit.Category.AIRPLANE then
+		return "LOGISTICS_SUPPLY_PLANE_DISPATCH"
+	elseif self.unitCategory == Unit.Category.HELICOPTER then
+		return "LOGISTICS_SUPPLY_HELO_DISPATCH"
+	elseif self.unitCategory == Unit.Category.SHIP then
+		return "LOGISTICS_SUPPLY_SHIP_DISPATCH"
+	end
+	return "LOGISTICS_FRIENDLY_CONVOY_MOVING"
+end
+
 function GroupCommander:_announceSupplyDispatch(messageKey, targetOnly)
 	if self.mission ~= 'supply' or self._supplyReturnHome or self._shopLaunchRequested or self._supplyDispatchAnnounced then return false end
+	messageKey = messageKey or self:_supplyDispatchMessageKey()
 	local sourceZone = self._regularSupplySortieOrigin
 		or self._activeSupplyLaunchSourceZone
 		or self.zoneCommander.zone
@@ -48137,6 +48173,8 @@ function GroupCommander:_announceSupplyDispatch(messageKey, targetOnly)
 			fallbackTemplate = "%s is dispatching a supply plane to %s"
 		elseif messageKey == "LOGISTICS_SUPPLY_HELO_DISPATCH" then
 			fallbackTemplate = "%s is dispatching a supply helo to %s"
+		elseif messageKey == "LOGISTICS_SUPPLY_SHIP_DISPATCH" then
+			fallbackTemplate = "%s is dispatching a supply ship to %s"
 		end
 	end
 	local message = fallbackTemplate and string.format(fallbackTemplate, sourceZone, self.targetzone)
@@ -52064,10 +52102,10 @@ local cand, capCand = {}, {}
 				or not packageRunwayZone and ZONE_CONNECTED_TO_BLUE[z.zone])
 			and (RUNWAY_ZONE_COOLDOWN[z.zone] or 0) < now
 		then
-			local hostile, capCnt = false, 0
+			local hostile = blueDirector:_zoneHasCachedBombableRunway(z)
+			local capCnt = 0
 			for _, g in ipairs(z.groups or {}) do
 				if g.side == 1 and g.unitCategory == 0 then
-					if g.mission == 'attack' or g.mission == 'patrol' then hostile = true end
 					if g.MissionType == 'CAP' then capCnt = capCnt + 1 end
 				end
 			end
@@ -52116,15 +52154,7 @@ local cand, capCand = {}, {}
 	  if z.side==1 and z.active and not z.suspended and z.airbaseName
 		and (not packageRunwayZone or z.zone==packageRunwayZone) and
 	  (RUNWAY_ZONE_COOLDOWN[z.zone] or 0) < now then
-        local hostile=false
-        if z.groups then
-          for _,g in ipairs(z.groups) do
-            if g.side==1 and g.unitCategory == 0 and (g.mission=='attack' or g.mission=='patrol') then
-			hostile=true 
-			break 
-			end
-          end
-        end
+        local hostile = blueDirector:_zoneHasCachedBombableRunway(z)
         if hostile then
           local bestdist=math.huge
           local znB=z.zone
@@ -52245,6 +52275,7 @@ local cand, capCand = {}, {}
         end
       end
     end)
+    wp:SetDistanceInterceptPoint(200)
     wp:StartTrack(0.1)
   end
   RunwayHandler:HandleEvent(EVENTS.Shot)
@@ -53315,8 +53346,8 @@ function getClosestCapZonesToPlayers(missionType, side, preMeta)
 end
 
 
-function GroupCommander:_shouldSpawnImmediate()
-	local isUrgent = type(self.urgent) == "function" and self.urgent() or self.urgent
+function GroupCommander:_shouldSpawnImmediate(ignoreUrgent)
+	local isUrgent = ignoreUrgent ~= true and (type(self.urgent) == "function" and self.urgent() or self.urgent)
 	return (self.forceSpawn == true) or (isUrgent == true) or (self._spawnNowImmediateCheck == true)
 end
 
@@ -53325,8 +53356,8 @@ function GroupCommander:_clearDormantFsmDelay()
 	self._dormantFsmReason = nil
 end
 
-function GroupCommander:_hasDormantFsmBypass(ignoreSpawnEvalCache, validateDcsGroup)
-	if self:_shouldSpawnImmediate() then return true end
+function GroupCommander:_hasDormantFsmBypass(ignoreSpawnEvalCache, validateDcsGroup, ignoreUrgent)
+	if self:_shouldSpawnImmediate(ignoreUrgent) then return true end
 	if self._shopLaunchRequested == true then return true end
 	if self._pendingShopPurchase then return true end
 	if self._pendingInAirRestore then return true end
@@ -56922,7 +56953,7 @@ end
 									end
 									self:_announcePendingSupplyLaunchMessage()
 									if self.mission == 'supply' then
-										self:_announceSupplyDispatch("LOGISTICS_FRIENDLY_CONVOY_MOVING")
+										self:_announceSupplyDispatch()
 									end
 									bcObj:_completePendingShopPurchase(self)
 									if self.playerGroundAttack == true then
@@ -56966,7 +56997,7 @@ end
 						bcObj:_consumeRegularSupplyPermit(self)
 						self:_announcePendingSupplyLaunchMessage()
 						if self.mission == 'supply' then
-							self:_announceSupplyDispatch("LOGISTICS_FRIENDLY_CONVOY_MOVING")
+							self:_announceSupplyDispatch()
 						end
 						bcObj:_completePendingShopPurchase(self)
 						if isUrgent then env.info("Group [" .. self.name .. "] is spawning urgently!") else env.info("Group [" .. self.name .. "] is spawning normally.") end
@@ -66768,7 +66799,7 @@ do
 
 	function Director:_zoneInUpgradeCorridor(zoneName, pressureZoneName)
 		if not pressureZoneName then return true end
-		if zoneName == pressureZoneName then return true end
+		if zoneName == pressureZoneName then return false end
 		local neighbors = self:_groundNeighbors(pressureZoneName)
 		return neighbors[zoneName] == true
 	end
@@ -67230,7 +67261,11 @@ do
 		if not shopItem or (shopItem.stock ~= -1 and shopItem.stock <= 0) then return false end
 		local availableCredits = (self.battleCommander.accounts[self.side] or 0)
 			- self.battleCommander:_getPendingShopReservedCredits(self.side)
-		if availableCredits < shopItem.cost then return false end
+		local purchaseCost = shopItem.cost
+		if context._redDirectorPurchase == true then
+			purchaseCost = context._directorShopCost
+		end
+		if availableCredits < purchaseCost then return false end
 		context.purchasedZone = nil
 		self.battleCommander:buyShopItem(self.side, itemId, context)
 		return context.purchasedZone ~= nil
@@ -67595,6 +67630,21 @@ do
 		)
 	end
 
+	function Director:_redLastStandUpgradeCost(baseCost, category)
+		baseCost = math.max(0, tonumber(baseCost) or 0)
+		if category ~= 'sam' and category ~= 'shorad' then return baseCost end
+		local battleCommander = self.battleCommander
+		if battleCommander._redDifficultyDirty or not battleCommander._redDifficultyZoneState then
+			battleCommander:_rebuildRedDifficultyCache()
+		end
+		local total = battleCommander._redDifficultyEligibleTotal or 0
+		local blue = battleCommander._redDifficultyEligibleBlue or 0
+		if total > blue and total > 0 and (blue / total) >= 0.90 then
+			return baseCost * 0.5
+		end
+		return baseCost
+	end
+
 	function Director:_strategicBudgetUpgradePlan(context, now)
 		if not self:zoneUpgradePurchaseAllowed(now) then return nil end
 		local zoneChoices = self.battleCommander:_redZoneUpgradeChoices(false)
@@ -67640,25 +67690,33 @@ do
 				reason = demand.reason,
 				cooldownSec = demand.cooldownSec,
 			} or { reason = 'budget' }
-			local upgradeShortfall = math.max(0, upgradeShop.cost - facts.availableCredits)
+			local upgradeConsiderationCost = self:_redLastStandUpgradeCost(upgradeShop.cost, 'sam')
+			local upgradeShortfall = math.max(0, upgradeConsiderationCost - facts.availableCredits)
 			local upgradeEtaSec = upgradeShortfall <= 0 and 0
 				or (facts.income.perSecond > 0 and upgradeShortfall / facts.income.perSecond or math.huge)
 			local considerUpgrade = demand ~= nil or upgradeEtaSec <= profile.saveHorizonSec
 			local plan = considerUpgrade and self:_strategicBudgetUpgradePlan(context, now) or nil
 			if plan then
-				local urgency = demand and (demand.reason == 'capture' and 3 or 2) or 1
-				local score = 200 + math.min(240, math.max(0, plan.score) * 0.35)
-				if urgency >= 2 then score = score + 400 end
-				addCandidate({
-					action = 'upgrade',
-					itemId = upgradeShop.id,
-					cost = upgradeShop.cost,
-					score = score * profile.upgradeWeight,
-					urgency = urgency,
-					targetZone = plan.zone,
-					category = plan.category,
-					context = context,
-				})
+				local airDefensePlan = plan.category == 'sam' or plan.category == 'shorad'
+				local plannedCost = airDefensePlan and upgradeConsiderationCost or upgradeShop.cost
+				local plannedShortfall = math.max(0, plannedCost - facts.availableCredits)
+				local plannedEtaSec = plannedShortfall <= 0 and 0
+					or (facts.income.perSecond > 0 and plannedShortfall / facts.income.perSecond or math.huge)
+				if demand ~= nil or plannedEtaSec <= profile.saveHorizonSec then
+					local urgency = demand and (demand.reason == 'capture' and 3 or 2) or 1
+					local score = 200 + math.min(240, math.max(0, plan.score) * 0.35)
+					if urgency >= 2 then score = score + 400 end
+					addCandidate({
+						action = 'upgrade',
+						itemId = upgradeShop.id,
+						cost = plannedCost,
+						score = score * profile.upgradeWeight,
+						urgency = urgency,
+						targetZone = plan.zone,
+						category = plan.category,
+						context = context,
+					})
+				end
 			end
 		end
 
@@ -67791,9 +67849,13 @@ do
 		if not candidate or now < (self.strategicSpendCooldownUntil or 0) then return false end
 		local shopItem, itemId = self:_strategicShopEntry(candidate.action)
 		if not shopItem or itemId ~= candidate.itemId then return false end
+		local purchaseCost = shopItem.cost
+		if candidate.action == 'upgrade' then
+			purchaseCost = self:_redLastStandUpgradeCost(shopItem.cost, candidate.category)
+		end
 		local availableCredits = (tonumber(self.battleCommander.accounts[self.side]) or 0)
 			- self.battleCommander:_getPendingShopReservedCredits(self.side)
-		if availableCredits < shopItem.cost then return false end
+		if availableCredits < purchaseCost then return false end
 
 		local purchased = false
 		local targetZoneName = candidate.targetZone
@@ -67802,6 +67864,9 @@ do
 				pressureZone = candidate.context and candidate.context.pressureZone or nil,
 				reason = candidate.context and candidate.context.reason or 'budget',
 				cooldownSec = candidate.context and candidate.context.cooldownSec or nil,
+				_redDirectorPurchase = true,
+				_directorShopCost = purchaseCost,
+				_directorExpectedCategory = candidate.category,
 			}
 			purchased = self:_purchaseZoneUpgrade(context)
 			targetZoneName = context.purchasedZone or targetZoneName
@@ -67834,8 +67899,8 @@ do
 			self.strategicBudgetFailureUntil[candidate.action] = now + math.max(60, self:_strategicBudgetProfile().decisionSec)
 			return false
 		end
-		self:_recordStrategicBudgetPurchase(candidate, targetZoneName, shopItem.cost, now)
-		return true, targetZoneName, shopItem.cost
+		self:_recordStrategicBudgetPurchase(candidate, targetZoneName, purchaseCost, now)
+		return true, targetZoneName, purchaseCost
 	end
 
 	function Director:onStrategicBomberResult(status, now)
@@ -77853,6 +77918,9 @@ end
 			pilotData.hostileZoneName = nil
 			pilotData.hostileGraceUntil = nil
 		end
+		local hostileGroups = pilotData and pilotData.csarHostileGroups
+			or (self.csarHostileGroupsByPilotObject and self.csarHostileGroupsByPilotObject[pid])
+		self:destroyCsarHostileGroups(hostileGroups)
 		local _, index = self:_findCsarPilotByPid(pid)
 		if index then
 			self:_cleanupCsarPilotAtIndex(index, true)

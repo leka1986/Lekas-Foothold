@@ -234,6 +234,7 @@ BlueCapPlaneEnabled = {
     ["BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2"] = true, -- eras=Modern; F/A-18C Fox 3 CAP [Modern]
     ["BLUE_F15C_CAP_AIM120Bx3_AIM120Cx5"] = true, -- eras=Modern; F-15C Fox 3 CAP [Modern]
     ["BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M"] = true, -- eras=Modern; F-16C Fox 3 CAP [Modern]
+    ["BLUE_F16_CAP_AIM120Cx5_AIM9Xx1"] = true, -- eras=Modern; 2x F-16C Fox 3 CAP [Modern]
     ["BLUE_F14B_CAP_AIM54A_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54A-MK47 [Modern/CW]
     ["BLUE_F14B_CAP_AIM54C_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54C-MK47 [Modern/CW]
     ["BLUE_F14B_CAP_AIM54C_MK60x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54C-MK60 [Modern/CW]
@@ -287,6 +288,7 @@ RedCasPlaneEnabled = {
 BlueCasPlaneEnabled = {
     ["BLUE_F4E_CAS_WALLEYEIIx2_GBU12x2_PAVESPIKE_2SHIP"] = true, -- eras=Modern|Coldwar; 2x F-4E Guided CAS [Modern/CW]
     ["BLUE_F4E_CAS_AGM65Dx6_GBU12x2_PAVESPIKE_2SHIP"] = true, -- eras=Modern|Coldwar; 2x F-4E Maverick CAS [Modern/CW]
+    ["BLUE_F16_CAS_AGM65Dx4_GBU12x2_PAVESPIKE_2SHIP"] = true, -- eras=Modern; 2x F-16C Maverick CAS [Modern]
     ["BLUE_F86F_CAS_AIM9Bx2_HVARx8_TANKSx2_2SHIP"] = false, -- eras=Coldwar; 2x F-86F Rocket CAS [CW]
     ["BLUE_F86F_CAS_AIM9Bx2_M117x2_2SHIP"] = false, -- eras=Coldwar; 2x F-86F M117 CAS [CW]
     ["BLUE_F4E_CAS_M117x12_AIM7E2x3_TANKSx2_ALQ131"] = false, -- eras=Vietnam|Coldwar; 2x F-4E M117 CAS [VN/CW]
@@ -317,6 +319,8 @@ RedSeadPlaneEnabled = {
 
 -- @gui label="BLUE SEAD Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
 BlueSeadPlaneEnabled = {
+    ["BLUE_F16_SEAD_AGM88Cx4_AIM120Cx2_AIM9Xx2"] = true, -- eras=Modern; 2x F-16C SEAD [Modern]
+    ["BLUE_F18_SEAD_AGM88Cx2_ADM141Ax6_AIM120Cx1_AIM9Xx2"] = true, -- eras=Modern; 2x F/A-18C SEAD [Modern]
     ["BLUE_F4E_SEAD_AGM45Ax4_AIM7E2x3_TANK600_ALQ131"] = false, -- eras=Vietnam|Coldwar; 2x F-4E Shrike SEAD [VN/CW]
     ["BLUE_F100D_SEAD_AGM45Ax2_CBU7x2_TANKSx2_2SHIP"] = false, -- eras=Vietnam; 2x F-100D SEAD [VN]
 }
@@ -339,14 +343,16 @@ RedEnemyStrikePlaneEnabled = {
 RedCasHeloEnabled = {
     ["RED_MI24P_CAS_9M114x8_B8x2_1SHIP"] = true, -- eras=Modern; Mi-24P CAS [Modern]
     ["RED_MI24P_CAS_9M114x8_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-24P CAS [Modern]
+    ["RED_MI24P_CAS_B13Lx2_B8x2_1SHIP"] = true, -- eras=Modern; Mi-24P B-13L/B-8 rocket CAS [Modern]
+    ["RED_MI24P_CAS_B13Lx2_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-24P B-13L/B-8 rocket CAS [Modern]
     ["RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_1SHIP"] = true, -- eras=Modern; Mi-28N CAS [Modern]
     ["RED_MI28N_CAS_9M114x8_B8x2_1SHIP"] = true, -- eras=Modern; Mi-28N CAS [Modern]
     ["RED_MI28N_CAS_9M114x8_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-28N CAS [Modern]
     ["RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_2SHIP"] = true, -- eras=Modern; 2x Mi-28N CAS [Modern]
     ["RED_MI24V_CAS_B8x4_1SHIP"] = false, -- eras=Coldwar; Mi-24V CAS [CW]
     ["RED_MI24V_CAS_B8x4_2SHIP"] = false, -- eras=Coldwar; 2x Mi-24V CAS [CW]
-    ["RED_MI8_CAS_FAB100x6_1SHIP"] = false, -- eras=Vietnam|Coldwar; Mi-8 FAB-100 CAS [VN/CW]
-    ["RED_MI8_CAS_FAB100x6_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Mi-8 FAB-100 CAS [VN/CW]
+    ["RED_MI8_CAS_FAB100x4_UPK23x2_KORD_PKT_1SHIP"] = false, -- eras=Vietnam|Coldwar; Mi-8 FAB-100/UPK-23 gunpod CAS [VN/CW]
+    ["RED_MI8_CAS_FAB100x4_UPK23x2_KORD_PKT_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Mi-8 FAB-100/UPK-23 gunpod CAS [VN/CW]
     ["RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_1SHIP"] = false, -- eras=Vietnam|Coldwar; Mi-8 gunpod CAS [VN/CW]
     ["RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Mi-8 gunpod CAS [VN/CW]
 }

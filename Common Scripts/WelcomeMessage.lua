@@ -1669,6 +1669,30 @@ local function BuildEscortOrbitTask(center, altitudeFeet, speedKnots, heading, l
     return task
 end
 
+local function BuildEscortOrbitCommandTask(escortGroup, center, altitudeFeet, speedKnots, routeSpeedKnots)
+    local orbitTask = BuildEscortOrbitTask(center, altitudeFeet, speedKnots)
+    local escortCoord = escortGroup:GetCoordinate()
+    local targetAltitude = UTILS.FeetToMeters(altitudeFeet)
+    local centerCoord = COORDINATE:New(center.x, targetAltitude, center.z or center.y)
+    if escortCoord.y >= UTILS.FeetToMeters(altitudeFeet - 2000)
+        or escortCoord:Get2DDistance(centerCoord) > UTILS.NMToMeters(5) then
+        return orbitTask
+    end
+
+    local heading = escortGroup:GetHeading()
+    local routeSpeed = UTILS.KnotsToKmph(routeSpeedKnots)
+    local outboundAltitude = math.min(escortCoord.y + UTILS.FeetToMeters(5000), targetAltitude)
+    local outboundCoord = escortCoord:Translate(UTILS.NMToMeters(5), heading, true):SetAltitude(outboundAltitude, true)
+    local returnCoord = outboundCoord:Translate(UTILS.NMToMeters(10), (heading + 180) % 360, true):SetAltitude(targetAltitude, true)
+    local waypoints = {
+        escortCoord:WaypointAirTurningPoint("BARO", routeSpeed, { BuildEscortEngageAirTask(40) }, "Escort orbit climb"),
+        outboundCoord:WaypointAirTurningPoint("BARO", routeSpeed, {}, "Escort orbit climb outbound"),
+        returnCoord:WaypointAirTurningPoint("BARO", routeSpeed, {}, "Escort orbit climb return"),
+        centerCoord:WaypointAirTurningPoint("BARO", routeSpeed, { orbitTask }, "Escort orbit"),
+    }
+    return escortGroup:TaskRoute(waypoints)
+end
+
 local function SetEscortNativeTask(escortGroup, primaryTask, rot)
     if not escortGroup or not escortGroup:IsAlive() then
         return false
@@ -1684,7 +1708,7 @@ local function SetEscortNativeTask(escortGroup, primaryTask, rot)
     end
 
     dcsGroup:getController():setOption(AI.Option.Air.id.MISSILE_ATTACK, AI.Option.Air.val.MISSILE_ATTACK.TARGET_THREAT_EST)
-    if primaryTask.id == "Escort" then
+    if primaryTask.id == "Escort" or primaryTask.id == "Mission" then
         dcsGroup:getController():setTask(primaryTask)
     else
         dcsGroup:getController():setTask({
@@ -2148,7 +2172,7 @@ function EscortOrbit(group)
     if escortGroup then
         escortPendingJoin[group:GetName()] = nil
         local clientCoord = group:GetPointVec2()
-        local orbitTask = BuildEscortOrbitTask(clientCoord, 25000, 350)
+        local orbitTask = BuildEscortOrbitCommandTask(escortGroup, clientCoord, 25000, 350, 450)
         if SetEscortNativeTask(escortGroup, orbitTask) then
             local state = spawnedGroups[group:GetName()]
             if state then
