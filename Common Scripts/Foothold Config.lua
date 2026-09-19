@@ -186,7 +186,7 @@ Era = "Modern"
 
 -- Choose which RED SAM templates are allowed when the mission replaces or randomizes SAM groups.
 -- Untick a SAM type to prevent that template from being used.
--- @gui label="RED SAM templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select RED SAM templates based on Era?"
+-- @gui label="RED SAM templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select RED SAM templates based on Era?" installPolicy="replaceTable"
 -- @gui untickRowsWhen="NoSA10AndSA11:true:SA-10|SA-11;NoTorM2AndPantsir:true:Tor M2|Pantsir S1;NoSA15:true:SA-15"
 RedTemplateEnabled = {
     ["SA-2"] = true, -- eras=Modern|Coldwar|Vietnam; SA-2 [All]
@@ -207,7 +207,7 @@ RedTemplateEnabled = {
 
 -- AI aircraft templates used by missions that support config-driven template selection.
 -- Rows with a checkmark are available for AI spawning.
--- @gui label="RED CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="RED CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 RedCapPlaneEnabled = {
     ["RED_MIG29S_CAP_R77x3_R27ET_R73x2"] = true, -- eras=Modern; MiG-29S Fox 3 CAP [Modern]
     ["RED_MIG29S_CAP_R77x2_R73x2_TANKSx3"] = true, -- eras=Modern; MiG-29S Fox 3 CAP [Modern]
@@ -229,7 +229,7 @@ RedCapPlaneEnabled = {
     ["RED_L39C_CAP_R3S2X"] = false, -- eras=Vietnam; L-39C Fox 2 CAP [VN]
 }
 
--- @gui label="BLUE CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="BLUE CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 BlueCapPlaneEnabled = {
     ["BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2"] = true, -- eras=Modern; F/A-18C Fox 3 CAP [Modern]
     ["BLUE_F15C_CAP_AIM120Bx3_AIM120Cx5"] = true, -- eras=Modern; F-15C Fox 3 CAP [Modern]
@@ -249,22 +249,22 @@ BlueCapPlaneEnabled = {
     ["BLUE_F86F_CAP_GAR8x2"] = false, -- eras=Vietnam; F-86F IR CAP [VN]
 }
 
--- @gui label="RED CAS Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="RED CAS Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 RedCasPlaneEnabled = {
-    ["RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
-    ["RED_SU25T_CAS_S25Lx6_B13x2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
-    ["RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
-    ["RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
-    ["RED_SU25T_CAS_S25Lx6_B13x2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
-    ["RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_KH25MPx2_VIKHRx2_KH29Tx2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_KH25MLx4_KH29Tx2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_VIKHRx2_FAB500M62x2_KH29Tx2_1SHIP"] = true, -- eras=Modern; Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_KH25MPx2_VIKHRx2_KH29Tx2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_KH25MLx4_KH29Tx2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
+    ["RED_SU25T_CAS_VIKHRx2_FAB500M62x2_KH29Tx2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
     ["RED_MIG21BIS_CAS_RBK250x2_UB32x2_1SHIP"] = true, -- eras=Modern; MiG-21bis CAS [Modern]
     ["RED_MIG21BIS_CAS_RBK250x2_UB32x2_2SHIP"] = true, -- eras=Modern; 2x MiG-21bis CAS [Modern]
-    ["RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_1SHIP"] = true, -- eras=Modern|Coldwar; Su-25 CAS [Modern/CW]
-    ["RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_1SHIP"] = true, -- eras=Modern|Coldwar; Su-25 CAS [Modern/CW]
-    ["RED_SU25_CAS_S25Lx6_B13x2_1SHIP"] = true, -- eras=Modern|Coldwar; Su-25 CAS [Modern/CW]
-    ["RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Su-25 CAS [Modern/CW]
-    ["RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Su-25 CAS [Modern/CW]
-    ["RED_SU25_CAS_S25Lx6_B13x2_1SHIP_DUPLICATE"] = true, -- eras=Modern|Coldwar; Su-25 CAS [Modern/CW]
+    ["RED_SU25_CAS_KH25ML_S25Lx2_FAB500M62x2_B8x2_SPPU_1SHIP"] = false, -- eras=Coldwar; Su-25 CAS [CW]
+    ["RED_SU25_CAS_FAB250x2_FAB500M62x2_B8x2_S24Bx2_1SHIP"] = false, -- eras=Coldwar; Su-25 CAS [CW]
+    ["RED_SU25_CAS_KH25MLx2_S25Lx2_FAB500M62x2_B13x2_1SHIP"] = false, -- eras=Coldwar; Su-25 CAS [CW]
+    ["RED_SU25_CAS_KH25ML_S25Lx2_FAB500M62x2_B8x2_SPPU_2SHIP"] = false, -- eras=Coldwar; 2x Su-25 CAS [CW]
+    ["RED_SU25_CAS_FAB250x2_FAB500M62x2_B8x2_S24Bx2_2SHIP"] = false, -- eras=Coldwar; 2x Su-25 CAS [CW]
+    ["RED_SU25_CAS_KH25MLx2_S25Lx2_FAB500M62x2_B13x2_2SHIP"] = false, -- eras=Coldwar; 2x Su-25 CAS [CW]
     ["RED_MIRAGE_F1BQ_CAS_SAMP400x2_SAMP250x2_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Mirage F1BQ CAS [Modern/CW]
     ["RED_MIRAGE_F1BQ_CAS_MIXED_SNEB_SAMP_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Mirage F1BQ CAS [Modern/CW]
     ["RED_MIG21BIS_CAS_S24Bx4_1SHIP"] = false, -- eras=Coldwar; MiG-21bis S-24B CAS [CW]
@@ -284,7 +284,7 @@ RedCasPlaneEnabled = {
 
 }
 
--- @gui label="BLUE CAS Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="BLUE CAS Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 BlueCasPlaneEnabled = {
     ["BLUE_F4E_CAS_WALLEYEIIx2_GBU12x2_PAVESPIKE_2SHIP"] = true, -- eras=Modern|Coldwar; 2x F-4E Guided CAS [Modern/CW]
     ["BLUE_F4E_CAS_AGM65Dx6_GBU12x2_PAVESPIKE_2SHIP"] = true, -- eras=Modern|Coldwar; 2x F-4E Maverick CAS [Modern/CW]
@@ -301,7 +301,7 @@ BlueCasPlaneEnabled = {
     ["BLUE_F5E3_CAS_MK82SEx4_AIM9Bx2_TANK275_2SHIP"] = false, -- eras=Vietnam; 2x F-5E-3 Snakeye CAS [VN]
 }
 
--- @gui label="RED SEAD Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="RED SEAD Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 RedSeadPlaneEnabled = {
     ["RED_JF17_SEAD_LD10x2_PL5EIIx2_SPJ_TANKSx2_1SHIP"] = true, -- eras=Modern; JF-17 SEAD [Modern]
     ["RED_JF17_SEAD_LD10x2_PL5EIIx2_SPJ_TANKSx2_2SHIP"] = true, -- eras=Modern; 2x JF-17 SEAD [Modern]
@@ -317,7 +317,7 @@ RedSeadPlaneEnabled = {
     ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Su-17M4 SEAD [CW/VN]
 }
 
--- @gui label="BLUE SEAD Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="BLUE SEAD Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 BlueSeadPlaneEnabled = {
     ["BLUE_F16_SEAD_AGM88Cx4_AIM120Cx2_AIM9Xx2"] = true, -- eras=Modern; 2x F-16C SEAD [Modern]
     ["BLUE_F18_SEAD_AGM88Cx2_ADM141Ax6_AIM120Cx1_AIM9Xx2"] = true, -- eras=Modern; 2x F/A-18C SEAD [Modern]
@@ -325,7 +325,7 @@ BlueSeadPlaneEnabled = {
     ["BLUE_F100D_SEAD_AGM45Ax2_CBU7x2_TANKSx2_2SHIP"] = false, -- eras=Vietnam; 2x F-100D SEAD [VN]
 }
 
--- @gui label="RED Runway Strike Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="RED Runway Strike Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 RedRunwayStrikePlaneEnabled = {
     ["RED_SU33_RUNWAY_BETAB500x4_R27ERx4_R73x2_3SHIP"] = true, -- eras=Modern; 3x Su-33 Runway [Modern]
     ["RED_MIG27K_RUNWAY_BETAB500x2_FAB250x2_R60Mx4_3SHIP"] = true, -- eras=Modern|Coldwar; 3x MiG-27K Runway [Modern/CW]
@@ -333,13 +333,13 @@ RedRunwayStrikePlaneEnabled = {
     ["RED_MIG21BIS_RUNWAY_BETAB500x2_R3Rx2_TANK490_3SHIP"] = false, -- eras=Vietnam; 3x MiG-21bis BetAB Runway [VN]
 }
 
--- @gui label="RED Enemy Strike Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="RED Enemy Strike Plane Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 RedEnemyStrikePlaneEnabled = {
     ["evt-attack"] = true, -- eras=Modern; 3x Su-34 Enemy Strike (each: 4x Kh-29T, 2x Kh-31P, 2x R-27ER, 2x R-73, 2x L-175V ECM) [Modern]
     ["evt-attackcw"] = true, -- eras=Modern|Coldwar; 3x Su-24M Enemy Strike (each: 2x Kh-25MPU, 2x KAB-500Kr, 2x R-60M, L-081 ELINT) [Modern/CW]
 }
 
--- @gui label="RED CAS Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="RED CAS Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 RedCasHeloEnabled = {
     ["RED_MI24P_CAS_9M114x8_B8x2_1SHIP"] = true, -- eras=Modern; Mi-24P CAS [Modern]
     ["RED_MI24P_CAS_9M114x8_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-24P CAS [Modern]
@@ -349,15 +349,15 @@ RedCasHeloEnabled = {
     ["RED_MI28N_CAS_9M114x8_B8x2_1SHIP"] = true, -- eras=Modern; Mi-28N CAS [Modern]
     ["RED_MI28N_CAS_9M114x8_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-28N CAS [Modern]
     ["RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_2SHIP"] = true, -- eras=Modern; 2x Mi-28N CAS [Modern]
-    ["RED_MI24V_CAS_B8x4_1SHIP"] = false, -- eras=Coldwar; Mi-24V CAS [CW]
-    ["RED_MI24V_CAS_B8x4_2SHIP"] = false, -- eras=Coldwar; 2x Mi-24V CAS [CW]
+    ["RED_MI24V_CAS_B8x2_B13x2_1SHIP"] = false, -- eras=Coldwar; Mi-24V CAS [CW]
+    ["RED_MI24V_CAS_B8x2_B13x2_2SHIP"] = false, -- eras=Coldwar; 2x Mi-24V CAS [CW]
     ["RED_MI8_CAS_FAB100x4_UPK23x2_KORD_PKT_1SHIP"] = false, -- eras=Vietnam|Coldwar; Mi-8 FAB-100/UPK-23 gunpod CAS [VN/CW]
     ["RED_MI8_CAS_FAB100x4_UPK23x2_KORD_PKT_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Mi-8 FAB-100/UPK-23 gunpod CAS [VN/CW]
     ["RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_1SHIP"] = false, -- eras=Vietnam|Coldwar; Mi-8 gunpod CAS [VN/CW]
     ["RED_MI8_CAS_GUV_YAKB_GSHPx2_KORD_PKT_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Mi-8 gunpod CAS [VN/CW]
 }
 
--- @gui label="BLUE CAS Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="BLUE CAS Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 BlueCasHeloEnabled = {
     ["BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_1SHIP"] = true, -- eras=Modern; AH-64D CAS [Modern]
     ["BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_2SHIP"] = true, -- eras=Modern; 2x AH-64D CAS [Modern]
@@ -372,13 +372,13 @@ BlueCasHeloEnabled = {
     ["BLUE_UH1H_CAS_XM158x2_M134x3_M60_2SHIP"] = false, -- eras=Coldwar|Vietnam; 2x UH-1H CAS [CW/VN]
 }
 
--- @gui label="RED Supply Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="RED Supply Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 RedSupplyHeloEnabled = {
     ["RED_MI8_SUPPLY_KORD"] = true, -- eras=Modern|Coldwar|Vietnam; Mi-8 Supply [All]
     ["RED_MI8_SUPPLY_KORD_PKT"] = true, -- eras=Modern|Coldwar|Vietnam; Mi-8 Supply [All]
 }
 
--- @gui label="BLUE Supply Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?"
+-- @gui label="BLUE Supply Helo Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 BlueSupplyHeloEnabled = {
 	["BLUE_CH47_SUPPLY_M240Hx2"] = true, -- eras=Modern|Coldwar; CH-47 Supply [Modern/CW]
 	["BLUE_CH47_SUPPLY_M60Dx3"] = true, -- eras=Modern|Coldwar; CH-47 Supply [Modern/CW]
@@ -577,28 +577,28 @@ RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 -- @gui installPolicy="keepTable"
 CapLimitStages = {
 	easy = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 2 },
-		{ player = 4,   amount = 3 },
-		{ player = 6,   amount = 4 },
-		{ player = 10,  amount = 5 },
+		{ player = 0, amount = 0 },
+		{ player = 1, amount = 1 },
+		{ player = 2, amount = 1 },
+		{ player = 3, amount = 2 },
+		{ player = 4, amount = 3 },
+		{ player = 6, amount = 4 },
+		{ player = 10, amount = 5 },
 		{ player = 999, amount = 6 },
 	},
 	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
+		{ player = 0, amount = 1 },
+		{ player = 1, amount = 1 },
 		{ player = 2, amount = 1 },
 		{ player = 3, amount = 2 },
 		{ player = 4, amount = 2 },
 		{ player = 5, amount = 3 },
 		{ player = 9, amount = 4 },
-		{ player = 10,  amount = 6 },
+		{ player = 10, amount = 6 },
 		{ player = 999, amount = 7 },
 	},
 	hard = {
-		{ player = 0,   amount = 1 },
+		{ player = 0, amount = 1 },
 		{ player = 1, amount = 1 },
 		{ player = 2, amount = 2 },
 		{ player = 3, amount = 3 },
@@ -618,32 +618,32 @@ CapLimitStages = {
 -- @gui installPolicy="keepTable"
 RedCasLimitStages = {
 	easy = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 0 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 1 },
-		{ player = 4,   amount = 2 },
-		{ player = 5,   amount = 2 },
+		{ player = 0, amount = 0 },
+		{ player = 1, amount = 0 },
+		{ player = 2, amount = 1 },
+		{ player = 3, amount = 1 },
+		{ player = 4, amount = 2 },
+		{ player = 5, amount = 2 },
 		{ player = 999, amount = 3 },
 	},
 	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
+		{ player = 0, amount = 1 },
+		{ player = 1, amount = 1 },
 		{ player = 2, amount = 1 },
-		{ player = 3,   amount = 2 },
+		{ player = 3, amount = 2 },
 		{ player = 4, amount = 2 },
-		{ player = 5,   amount = 3 },
+		{ player = 5, amount = 3 },
 		{ player = 9, amount = 3 },
 		{ player = 999, amount = 4 },
 	},
 	hard = {
-		{ player = 0,   amount = 1 },
+		{ player = 0, amount = 1 },
 		{ player = 1, amount = 1 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 4 },
-		{ player = 5,   amount = 4 },
-		{ player = 9,   amount = 6 },
+		{ player = 2, amount = 2 },
+		{ player = 3, amount = 3 },
+		{ player = 4, amount = 4 },
+		{ player = 5, amount = 4 },
+		{ player = 9, amount = 6 },
 		{ player = 999, amount = 7 },
 	},
 }
@@ -656,18 +656,18 @@ RedCasLimitStages = {
 -- @gui installPolicy="keepTable"
 RedSeadLimitStages = {
 	easy = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 0 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 1 },
-		{ player = 4,   amount = 2 },
-		{ player = 5,   amount = 2 },
+		{ player = 0, amount = 0 },
+		{ player = 1, amount = 0 },
+		{ player = 2, amount = 1 },
+		{ player = 3, amount = 1 },
+		{ player = 4, amount = 2 },
+		{ player = 5, amount = 2 },
 		{ player = 999, amount = 3 },
 	},
 	medium = {
 		{ player = 0, amount = 1 },
-		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 1 },
+		{ player = 1, amount = 1 },
+		{ player = 2, amount = 1 },
 		{ player = 3, amount = 1 },
 		{ player = 4, amount = 2 },
 		{ player = 5, amount = 2 },
@@ -675,13 +675,13 @@ RedSeadLimitStages = {
 		{ player = 999, amount = 4 },
 	},
 	hard = {
-		{ player = 0,   amount = 1 },
+		{ player = 0, amount = 1 },
 		{ player = 1, amount = 1 },
 		{ player = 2, amount = 1 },
 		{ player = 3, amount = 2 },
 		{ player = 4, amount = 3 },
 		{ player = 5, amount = 3 },
-		{ player = 9,   amount = 6 },
+		{ player = 9, amount = 6 },
 		{ player = 999, amount = 7 },
 	},
 }
@@ -694,32 +694,32 @@ RedSeadLimitStages = {
 -- @gui installPolicy="keepTable"
 RedRunwayStrikeLimitStages = {
 	easy = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 0 },
-		{ player = 2,   amount = 1 },
-		{ player = 3,   amount = 1 },
-		{ player = 4,   amount = 2 },
-		{ player = 5,   amount = 2 },
+		{ player = 0, amount = 0 },
+		{ player = 1, amount = 0 },
+		{ player = 2, amount = 1 },
+		{ player = 3, amount = 1 },
+		{ player = 4, amount = 2 },
+		{ player = 5, amount = 2 },
 		{ player = 999, amount = 3 },
 	},
 	medium = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 0 },
-		{ player = 2,   amount = 1 },
+		{ player = 0, amount = 0 },
+		{ player = 1, amount = 1 },
+		{ player = 2, amount = 1 },
 		{ player = 3, amount = 1 },
 		{ player = 4, amount = 2 },
-		{ player = 5,   amount = 3 },
-		{ player = 9,   amount = 4 },
+		{ player = 5, amount = 3 },
+		{ player = 9, amount = 4 },
 		{ player = 999, amount = 4 },
 	},
 	hard = {
-		{ player = 0,   amount = 0 },
-		{ player = 1,   amount = 1 },
-		{ player = 2,   amount = 2 },
-		{ player = 3,   amount = 3 },
-		{ player = 4,   amount = 4 },
-		{ player = 5,   amount = 4 },
-		{ player = 9,   amount = 6 },
+		{ player = 0, amount = 0 },
+		{ player = 1, amount = 1 },
+		{ player = 2, amount = 2 },
+		{ player = 3, amount = 3 },
+		{ player = 4, amount = 4 },
+		{ player = 5, amount = 4 },
+		{ player = 9, amount = 6 },
 		{ player = 999, amount = 7 },
 	},
 }
@@ -732,13 +732,13 @@ RedRunwayStrikeLimitStages = {
 -- @gui installPolicy="keepTable"
 BlueCapSupportStages = {
 	easy = {
-		{ player = 0,   amount = 2 },
-		{ player = 1,   amount = 2 },
+		{ player = 0, amount = 2 },
+		{ player = 1, amount = 2 },
 		{ player = 999, amount = 1 },
 	},
 	medium = {
-		{ player = 0,    amount = 1 },
-		{ player = 1,    amount = 1 },
+		{ player = 0, amount = 1 },
+		{ player = 1, amount = 1 },
 		{ player = 1000, amount = 0 },
 	},
 	hard = {
@@ -753,13 +753,13 @@ BlueCapSupportStages = {
 -- @gui installPolicy="keepTable"
 BlueCasSupportStages = {
 	easy = {
-		{ player = 0,   amount = 2 },
-		{ player = 1,   amount = 2 },
+		{ player = 0, amount = 2 },
+		{ player = 1, amount = 2 },
 		{ player = 999, amount = 1 },
 	},
 	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
+		{ player = 0, amount = 1 },
+		{ player = 1, amount = 1 },
 		{ player = 999, amount = 0 },
 	},
 	hard = {
@@ -774,13 +774,13 @@ BlueCasSupportStages = {
 -- @gui installPolicy="keepTable"
 BlueSeadSupportStages = {
 	easy = {
-		{ player = 0,   amount = 2 },
-		{ player = 1,   amount = 2 },
+		{ player = 0, amount = 2 },
+		{ player = 1, amount = 2 },
 		{ player = 999, amount = 1 },
 	},
 	medium = {
-		{ player = 0,   amount = 1 },
-		{ player = 1,   amount = 1 },
+		{ player = 0, amount = 1 },
+		{ player = 1, amount = 1 },
 		{ player = 999, amount = 0 },
 	},
 	hard = {
@@ -1197,6 +1197,8 @@ ShopRankRequirements = {
 RewardContribution = {
 	infantry         = 10,
 	ground           = 10,
+	ctldGround       = 10, -- CTLD Units built by player reward Ground kill
+	ctldAir          = 20, -- CTLD Units built by player reward Air kill
 	sam              = 30,
 	airplane         = 50,
 	ship             = 200,

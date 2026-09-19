@@ -149,7 +149,26 @@ upgrades = {
 	samjamsheed = {
 		blue = {},
 		red = {  'Red SAM Manpad Jamsheed IsNotShown-1',  'Red SAM Manpad Jamsheed IsNotShown-2', 'Red SAM Manpad Jamsheed IsNotShown-3', 'Red SAM manpad Jamsheed IsNotShown-4', 'Red SAM manpad Jamsheed IsNotShown-5','Red SAM manpad Jamsheed IsNotShown-6', 'Red SAM AAA Jamsheed IsNotShown', 'Red SAM AAA Jamsheed IsNotKnown-2' }
-	},	
+	},
+	hidden2Group = {
+		blue = {},
+		red = {'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2',
+				'hiddenground-Map-Template1', 'hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2'
+			,'hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1'}
+	},
+	hidden3Group = {
+		blue = {},
+		red = {'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2',
+				'hiddenground-Map-Template1', 'hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2'
+			,'hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1'}
+	},
+	hidden4Group = {
+		blue = {},
+		red = {'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2', 'hiddenground-Map-Template1', 'hiddenground-Map-Template2',
+				'hiddenground-Map-Template1', 'hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1','hiddenground-Map-Template2'
+			,'hiddenground-Map-Template1','hiddenground-Map-Template2','hiddenground-Map-Template1'}
+	},
+	
 }
 
 ------------------------------------end upgrades section------------------------------------------
@@ -595,6 +614,10 @@ zones = {
 	samcharlie			= ZoneCommander:new({facility='none', zone='SAM Site Charlie',        	 side=1, size='sam2', level=25, upgrades=upgrades.samfixedcharlie,   crates={},flavorText=flavor.samcharlie}),
 	--samdelta			= ZoneCommander:new({zone='SAM Site Delta',        		 side=1, level=25, upgrades=upgrades.samfixeddelta,     crates={},flavorText=flavor.samdelta}),
 	samjamsheed			= ZoneCommander:new({facility='none', zone='Jamsheed SAM Site',        	 side=1, size='samspecial', level=25, upgrades=upgrades.samjamsheed,     	crates={},flavorText=flavor.samjamsheed}),
+	hiddenground1 		= ZoneCommander:new({zone='HiddenGround1', side=0, facility='none', level=25, upgrades=upgrades.hidden2Group, crates={}, flavorText=flavor.hiddenground1, NeutralAtStart=true}),
+	hiddenground2		= ZoneCommander:new({zone='HiddenGround2', side=0, facility='none', level=25, upgrades=upgrades.hidden3Group, crates={}, flavorText=flavor.hiddenground2, NeutralAtStart=true}),
+	hiddenground3 		= ZoneCommander:new({zone='HiddenGround3', side=0, facility='none', level=25, upgrades=upgrades.hidden4Group, crates={}, flavorText=flavor.hiddenground3, NeutralAtStart=true}),
+
 }
 ----------------------end zone definitions-----------------------------
 ---------------------------------begin template definitions (this defines templates for coldwar and modern)-----------------------
@@ -674,18 +697,18 @@ AllCapPlaneTemplates = {
 }
 
 AllCasPlaneTemplates = {
-	'RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_1SHIP',
-	'RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_1SHIP',
-	'RED_SU25_CAS_S25Lx6_B13x2_1SHIP',
-	'RED_SU25_CAS_KH25ML_S25Lx2_RBK500x2_B8x2_SPPU_2SHIP',
-	'RED_SU25_CAS_FAB250x2_RBK250x2_B8x4_2SHIP',
-	'RED_SU25_CAS_S25Lx6_B13x2_1SHIP_DUPLICATE',
-	'RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_1SHIP',
-	'RED_SU25T_CAS_S25Lx6_B13x2_1SHIP',
-	'RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_1SHIP',
-	'RED_SU25T_CAS_KH25MP_MPU_VIKHRx2_SPPUx2_2SHIP',
-	'RED_SU25T_CAS_S25Lx6_B13x2_2SHIP',
-	'RED_SU25T_CAS_VIKHRx2_S25Lx2_SPPUx2_2SHIP',
+	'RED_SU25_CAS_KH25ML_S25Lx2_FAB500M62x2_B8x2_SPPU_1SHIP',
+	'RED_SU25_CAS_FAB250x2_FAB500M62x2_B8x2_S24Bx2_1SHIP',
+	'RED_SU25_CAS_KH25MLx2_S25Lx2_FAB500M62x2_B13x2_1SHIP',
+	'RED_SU25_CAS_KH25ML_S25Lx2_FAB500M62x2_B8x2_SPPU_2SHIP',
+	'RED_SU25_CAS_FAB250x2_FAB500M62x2_B8x2_S24Bx2_2SHIP',
+	'RED_SU25_CAS_KH25MLx2_S25Lx2_FAB500M62x2_B13x2_2SHIP',
+	'RED_SU25T_CAS_KH25MPx2_VIKHRx2_KH29Tx2_1SHIP',
+	'RED_SU25T_CAS_KH25MLx4_KH29Tx2_1SHIP',
+	'RED_SU25T_CAS_VIKHRx2_FAB500M62x2_KH29Tx2_1SHIP',
+	'RED_SU25T_CAS_KH25MPx2_VIKHRx2_KH29Tx2_2SHIP',
+	'RED_SU25T_CAS_KH25MLx4_KH29Tx2_2SHIP',
+	'RED_SU25T_CAS_VIKHRx2_FAB500M62x2_KH29Tx2_2SHIP',
 	'RED_MIRAGE_F1BQ_CAS_SAMP400x2_SAMP250x2_2SHIP',
 	'RED_MIRAGE_F1BQ_CAS_MIXED_SNEB_SAMP_2SHIP',
 	'RED_MIG21BIS_CAS_RBK250x2_UB32x2_1SHIP',
@@ -758,8 +781,8 @@ AllCasHeloTemplates = {
 	'RED_MI28N_CAS_9M114x8_B8x2_1SHIP',
 	'RED_MI28N_CAS_9M114x8_B8x2_2SHIP',
 	'RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_2SHIP',
-	'RED_MI24V_CAS_B8x4_1SHIP',
-	'RED_MI24V_CAS_B8x4_2SHIP',
+	'RED_MI24V_CAS_B8x2_B13x2_1SHIP',
+	'RED_MI24V_CAS_B8x2_B13x2_2SHIP',
 	'BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_1SHIP',
 	'BLUE_AH64D_CAS_AGM114Kx4_AGM114Lx4_M261x2_FCR_2SHIP',
 	'BLUE_AH64D_CAS_AGM114Kx8_M261x2_1SHIP',
@@ -1391,6 +1414,44 @@ zones.kandahar:addGroups({
     DirectorCapability:new({name='kandahar-attack-CheckpointAlpha-cas',  mission='attack', template='CasPlaneTemplate',  MissionType='CAS',  targetzone='Checkpoint Alpha', Altitude = CasAltitude()}),
     DirectorCapability:new({name='kandahar-patrol-CheckpointAlpha-cap',  mission='patrol', template='CapPlaneTemplate',  MissionType='CAP',  targetzone='Checkpoint Alpha', Altitude = CapAltitude()}),
 })
+
+function SpawnFriendlyAssets(changedZone)
+
+	if zones.hiddenground1.side == 1 and zones.hiddenground1.active then
+		if zones.kandahar.side == 2 and zones.dwyer.side == 2 
+		and zones.checkpointkabulw.side == 2 and zones.gardez.side == 2 then
+			zones.hiddenground1:DestroyHiddenZone()
+		end
+	elseif zones.hiddenground1.side == 0 and (
+	(zones.kandahar.side == 2 and zones.kabul.side ~= 2 and zones.dwyer.side ~= 2) or
+	(zones.kandahar.side ~= 2 and zones.kabul.side == 2) or
+	(zones.kandahar.side ~= 2 and zones.Dwyer.side == 2) ) then
+		zones.hiddenground1:MakeZoneRedAndUpgrade()
+	end
+	if zones.hiddenground2.side == 1 and zones.hiddenground2.active then
+		if zones.bagram.side == 2 and zones.insurgentasadabad.side == 2 
+		and zones.jalalabad.side == 2 and zones.kabulsouth.side == 2 then
+			zones.hiddenground2:DestroyHiddenZone()
+		end
+	elseif zones.hiddenground2.side == 0 and (
+	(zones.bagram.side == 2 and zones.jalalabad.side ~= 2 and zones.insurgentasadabad.side ~= 2) or
+	(zones.bagram.side ~= 2 and zones.kabulsouth.side == 2) or
+	(zones.bagram.side ~= 2 and zones.checkpointkabulw.side == 2) ) then
+		zones.hiddenground2:MakeZoneRedAndUpgrade()
+	end
+
+	if zones.hiddenground3.side == 1 and zones.hiddenground3.active then
+		if zones.insurgentdelaram.side == 2 and zones.maymanazahiraddin.side == 2 
+		and zones.shindand.side == 2 then
+			zones.hiddenground3:DestroyHiddenZone()
+		end
+	elseif zones.hiddenground3.side == 0 and (
+	(zones.insurgentdelaram.side == 2 and zones.maymanazahiraddin.side ~= 2 and zones.shindand.side ~= 2) or
+	(zones.insurgentdelaram.side ~= 2 and zones.maymanazahiraddin.side == 2) ) then
+		zones.hiddenground3:MakeZoneRedAndUpgrade()
+	end
+
+end
 -------------------------------end of GroupCommander Routes-------------------------------
 
 ---------------Start of airbase definitions(this is what allows you to spawn at the airbase and allows helos------------------------
@@ -2844,13 +2905,13 @@ function(sender, params)
         if decoyActive then
             return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "Decoy")
         end
-        local minNM = 40
+        local minNM, attackOffsetNM = getMinNMForZone(params.zone.zone)
         local closestBlue, dist = findClosestBlueZoneOutside(params.zone.zone, minNM)
         if not closestBlue then
             return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "Decoy")
         end
         local offset = (dist and dist < minNM) and (minNM - dist) or 0
-        spawnDecoyAt(closestBlue, params.zone.zone, offset)
+        spawnDecoyAt(closestBlue, params.zone.zone, offset, nil, params.pushMode, attackOffsetNM)
         return
     else
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
@@ -2860,6 +2921,31 @@ bc.shopItems['dynamicdecoy'].groupZoneSelector = {
 	targetzoneside = 1,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		local function remember(handle)
+			if rememberHandle then
+				return rememberHandle(handle)
+			end
+			if handle then
+				track[#track + 1] = handle
+			end
+			return handle
+		end
+
+		local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
+		local T = L10N:ForGroup(groupId)
+		local autoPushLabel = AIAttackTakeoffFromGround == true
+			and "SYRIA_SHOP_DECOY_PUSH_WHEN_READY"
+			or "SYRIA_SHOP_DECOY_PUSH_NOW"
+		remember(missionCommands.addCommandForGroup(groupId, T:Get(autoPushLabel), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			zone = zoneObj,
+			pushMode = "auto",
+		}, groupId, groupObj))
+		remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_DECOY_PUSH_ON_COMMAND"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			zone = zoneObj,
+			pushMode = "command",
+		}, groupId, groupObj))
+	end,
 	allow = function(zoneObj)
 		return zoneObj.side == 1
 	end,
@@ -2879,13 +2965,14 @@ function(sender, params)
         if seadActive then
             return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "SEAD")
         end
-        local minNM = 40
+        local groundMinNM, attackOffsetNM = getSeadDistancesForZone(params.zone.zone, 25)
+        local minNM = AIAttackTakeoffFromGround == true and groundMinNM or attackOffsetNM
         local closestBlue, dist = findClosestBlueZoneOutside(params.zone.zone, minNM)
         if not closestBlue then
             return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "SEAD")
         end
         local offset = (dist and dist < minNM) and (minNM - dist) or 0
-        spawnSeadAt(closestBlue, params.zone.zone, offset)
+        spawnSeadAt(closestBlue, params.zone.zone, offset, nil, params.pushMode, attackOffsetNM)
         return
     else
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
@@ -2895,6 +2982,31 @@ bc.shopItems['dynamicsead'].groupZoneSelector = {
 	targetzoneside = 1,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+		local function remember(handle)
+			if rememberHandle then
+				return rememberHandle(handle)
+			end
+			if handle then
+				track[#track + 1] = handle
+			end
+			return handle
+		end
+
+		local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
+		local T = L10N:ForGroup(groupId)
+		local autoPushLabel = AIAttackTakeoffFromGround == true
+			and "SYRIA_SHOP_SEAD_PUSH_WHEN_READY"
+			or "SYRIA_SHOP_SEAD_PUSH_NOW"
+		remember(missionCommands.addCommandForGroup(groupId, T:Get(autoPushLabel), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			zone = zoneObj,
+			pushMode = "auto",
+		}, groupId, groupObj))
+		remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_SEAD_PUSH_ON_COMMAND"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			zone = zoneObj,
+			pushMode = "command",
+		}, groupId, groupObj))
+	end,
 	allow = function(zoneObj)
 		return zoneObj.side == 1
 	end,
@@ -3909,6 +4021,7 @@ zones.samjamsheed:registerTrigger('lost', function(event, sender)
 end, 'disablesamjamsheed')
 
 lc = LogisticCommander:new({battleCommander = bc, supplyZones = supplyZones})
+bc:initRunwayMissions()
 bc:initCasMissions()
 bc:initSeadMissions()
 bc:initReconMissions()
@@ -3956,6 +4069,8 @@ if DestroyOnce then
 	CustomFlags["Red EWR Bagram Fixed"] = true
 end
 RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
+RewardContribution.ctldGround = RewardContribution.ctldGround or 10
+RewardContribution.ctldAir = RewardContribution.ctldAir or 20
 bc:startRewardPlayerContribution(15,RewardContribution)
 HercCargoDropSupply.init(bc)
 bc:buildZoneDistanceCache()
@@ -4018,6 +4133,7 @@ blueDirector:init()
 if RedReactiveConfig.enabled then
 	bc:startRedReactiveCounterpressure(RedReactiveConfig)
 end
+SpawnFriendlyAssets()
 ---------------------------------------------------------------------
 --                          CAP MISSION                            --
 
@@ -4348,72 +4464,89 @@ end
 ---------------------------------------------------------------------
 --                      RUN WAY STRIKE MISSION                     --
 
-mc:trackMission({
-    title=LTGet("MISSION_BOMB_RUNWAY_TITLE"),
-    description=function(T)
-	  T = LT(T)
-      local wp=WaypointList[runwayTargetZone] or ""
-      if #runwayNames>1 then
-        return T:Format("MISSION_BOMB_RUNWAY_DESC_ALL", runwayTargetZone, wp)
-      else
-        return T:Format("MISSION_BOMB_RUNWAY_DESC_ONE", runwayTargetZone, wp)
-      end
-    end,
-    messageStart=function(T)
-	T = LT(T)
-    local wp=WaypointList[runwayTargetZone] or ""
-      if #runwayNames>1 then
-        return T:Format("MISSION_BOMB_RUNWAY_START_ALL", runwayTargetZone, wp)
-      else
-        return T:Format("MISSION_BOMB_RUNWAY_START_ONE", runwayTargetZone, wp)
-      end
-    end,
-	messageEnd = function(T)
-		T = LT(T)
-		trigger.action.outSoundForCoalition(2,'cancel.ogg')
-		if runwayTargetZone then
-			if runwayCompleted then
-				local cred = (need and need>1) and 200 or 100
-				if bomberName and runwayPartnerName then
-					return T:Format("SYRIA_BOMB_RUNWAY_END_JOINT", runwayTargetZone, bomberName, runwayPartnerName, cred)
-				elseif bomberName then
-					return T:Format("SYRIA_BOMB_RUNWAY_END_SOLO", runwayTargetZone, bomberName, cred)
+function RegisterDirectorRunwayMission(slotIndex)
+	mc:trackMission({
+		title = function(T)
+			local slot = bc.runwayMissions.slots[slotIndex]
+			local title = LT(T):Get("MISSION_BOMB_RUNWAY_TITLE")
+			return slot.targetZone and title .. ': ' .. slot.targetZone or title
+		end,
+		description = function(T)
+			T = LT(T)
+			local slot = bc.runwayMissions.slots[slotIndex]
+			local wp = WaypointList[slot.targetZone] or ""
+			if #slot.runwayNames > 1 then
+				return T:Format("MISSION_BOMB_RUNWAY_DESC_ALL", slot.targetZone, wp)
+			else
+				return T:Format("MISSION_BOMB_RUNWAY_DESC_ONE", slot.targetZone, wp)
+			end
+		end,
+		messageStart = function(T)
+			T = LT(T)
+			local slot = bc.runwayMissions.slots[slotIndex]
+			local wp = WaypointList[slot.targetZone] or ""
+			if #slot.runwayNames > 1 then
+				return T:Format("MISSION_BOMB_RUNWAY_START_ALL", slot.targetZone, wp)
+			else
+				return T:Format("MISSION_BOMB_RUNWAY_START_ONE", slot.targetZone, wp)
+			end
+		end,
+		messageEnd = function(T)
+			T = LT(T)
+			local slot = bc.runwayMissions.slots[slotIndex]
+			trigger.action.outSoundForCoalition(2, 'cancel.ogg')
+			if slot.targetZone then
+				if slot.completed then
+					local cred = slot.need > 1 and 200 or 100
+					if slot.bomberName and slot.partnerName then
+						return T:Format("SYRIA_BOMB_RUNWAY_END_JOINT", slot.targetZone, slot.bomberName, slot.partnerName, cred)
+					elseif slot.bomberName then
+						return T:Format("SYRIA_BOMB_RUNWAY_END_SOLO", slot.targetZone, slot.bomberName, cred)
+					else
+						return T:Format("SYRIA_BOMB_RUNWAY_END_COMPLETED", slot.targetZone)
+					end
 				else
-					return T:Format("SYRIA_BOMB_RUNWAY_END_COMPLETED", runwayTargetZone)
+					return T:Format("SYRIA_BOMB_RUNWAY_END_CANCELED_ZONE", slot.targetZone)
 				end
 			else
-				return T:Format("SYRIA_BOMB_RUNWAY_END_CANCELED_ZONE", runwayTargetZone)
+				return T:Get("SYRIA_BOMB_RUNWAY_CANCELED")
 			end
-		else
-			return T:Get("SYRIA_BOMB_RUNWAY_CANCELED")
-		end
-	end,
-	startAction = function()
-    bc:addMissionTag(runwayTargetZone, "Bomb runway")
-	bc:refreshZoneLabel(runwayTargetZone)
-	if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
-		trigger.action.outSoundForCoalition(2, "ding.ogg")
-	end
-	end,
-endAction = function()
-    if RunwayHandler then
-        RunwayHandler:UnHandleEvent(EVENTS.Shot)
-        RunwayHandler = nil
-        runwayMission = nil
-    end
-    if runwayTargetZone then
-        RUNWAY_ZONE_COOLDOWN[runwayTargetZone] = timer.getTime() + 3000
-        bc:removeMissionTag(runwayTargetZone, "Bomb runway")
-        bc:refreshZoneLabel(runwayTargetZone)
-    end
-    runwayTargetZone, bomberName, runwayTarget = nil, nil, nil
-end,
-	isActive = function()
-        if not runwayMission then return false end
-        local targetzn = bc:getZoneByName(runwayTargetZone)
-        return targetzn and targetzn.side == 1
-    end
-})
+		end,
+		startAction = function()
+			local slot = bc.runwayMissions.slots[slotIndex]
+			slot.started = true
+			bc:addMissionTag(slot.targetZone, "Bomb runway")
+			bc:refreshZoneLabel(slot.targetZone)
+			if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+				trigger.action.outSoundForCoalition(2, "ding.ogg")
+			end
+		end,
+		endAction = function()
+			local slot = bc.runwayMissions.slots[slotIndex]
+			if slot.targetZone then
+				RUNWAY_ZONE_COOLDOWN[slot.targetZone] = timer.getTime() + 3000
+				bc:removeMissionTag(slot.targetZone, "Bomb runway")
+				bc:refreshZoneLabel(slot.targetZone)
+			end
+			bc:resetRunwayMissionSlot(slotIndex)
+		end,
+		isActive = function()
+			local slot = bc.runwayMissions.slots[slotIndex]
+			if slot.completed and not slot.started then return true end
+			if not slot.active then return false end
+			local targetZone = bc:getZoneByName(slot.targetZone)
+			if not slot.started and (not targetZone or targetZone.side ~= 1 or not targetZone.active or targetZone.suspended) then
+				bc:resetRunwayMissionSlot(slotIndex)
+				return false
+			end
+			return targetZone and targetZone.side == 1
+		end,
+	})
+end
+
+for slotIndex = 1, bc.runwayMissionMaxSlots do
+	RegisterDirectorRunwayMission(slotIndex)
+end
 ---------------------------------------------------------------------
 --                      END OF RUN WAY STRIKE MISSION              --
 
@@ -4755,7 +4888,9 @@ local function _seadMissionAnchorZones()
     addAnchor(attackTarget2)
     addAnchor(attackTarget3)
     addAnchor(packageRecommendation and packageRecommendation.runwayZone or nil)
-    addAnchor(runwayTargetZone)
+    for _, slot in ipairs(bc.runwayMissions.slots) do
+        if slot.active or slot.completed then addAnchor(slot.targetZone) end
+    end
     return anchors
 end
 
@@ -6486,7 +6621,7 @@ timer.scheduleFunction(function(_, time)
 	if not hadThirdAttack and attackTarget3 then
 		checkAndGenerateCASMission()
 		generateSEADMission()
-		generateRunwayStrikeMission()
+		checkAndGenerateRunwayMissions()
 	end
 	return time+30
 end, {}, timer.getTime() + 45)
@@ -6536,7 +6671,7 @@ timer.scheduleFunction(function(_,time)
 	end
 end, {}, timer.getTime() + 480)
 timer.scheduleFunction(function(_,time)
-    if generateRunwayStrikeMission() then
+    if checkAndGenerateRunwayMissions() then
         return time+300
     else
         return time+120

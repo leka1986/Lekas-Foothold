@@ -2275,6 +2275,8 @@ end
 
 bc:init()
 RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
+RewardContribution.ctldGround = RewardContribution.ctldGround or 10
+RewardContribution.ctldAir = RewardContribution.ctldAir or 20
 bc:startRewardPlayerContribution(15,RewardContribution)
 HercCargoDropSupply.init(bc)
 bc:buildZoneDistanceCache()
@@ -4663,12 +4665,12 @@ local normandyZoneFlagChecks = {
 	{ flag=201, groupName='AXE_Train_Valognes-resupply-Le Molay', zoneName='supply-LeMolay' },
 	{ flag=202, groupName='AXE_Train_Le Molay-resupply-Caen', zoneName='supply-Caen' },
 	{ flag=203, groupName='AXE_Bernay-resupply-Caen', zoneName='supply-Caen' },
-	{ flag=204, groupName='AXE_Train_Saint-Andre-resupply-Bernay', zoneName='supply-SaintAndre' },
+	{ flag=204, groupName='AXE_Train_Saint-Andre-resupply-Bernay', zoneName='supply-Bernay' },
 	{ flag=205, groupName='AXE_Train_Le Havre-resupply-Fecamp', zoneName='supply-Fecamp' },
 	{ flag=206, groupName='AXE_Train_Le Havre-resupply-Rouen', zoneName='supply-Rouen' },
 	{ flag=207, groupName='AXE_Train_Paris-resupply-Fecamp', zoneName='supply-Fecamp' },
 	{ flag=208, groupName='AXE_Train_Paris-resupply-Saint-Aubain', zoneName='supply-SaintAubain' },
-	{ flag=209, groupName='AXE_Train_Dunkirk-Port-resupply-Calais', zoneName='Dunkirk-Port' },
+	{ flag=209, groupName='AXE_Train_Dunkirk-Port-resupply-Calais', zoneName='supply-Calais' },
 	{ flag=210, groupName='AXE_Train_Amiens-resupply-Abbeville', zoneName='supply-Amiens' },
 	{ flag=211, groupName='AXE_Train_Abbeville-resupply-Le Touquet', zoneName='supply-LeTouquet' },
 	{ flag=212, groupName='AXE_Train_Paris-resupply-Orly', zoneName='supply-Orly' },
@@ -4692,9 +4694,6 @@ local function checkNormandyZoneFlag(entry)
 	entry.zone = entry.zone or CustomZone:getByName(entry.zoneName)
 	if entry.zone:isInside(unit:getPoint()) then
 		trigger.action.setUserFlag(entry.flag, 1)
-		if entry.groupName:find("_Train_", 1, true) then
-			GROUP:FindByName(entry.groupName):Respawn(nil, false)
-		end
 	end
 end
 
@@ -4916,8 +4915,8 @@ if trigger.misc.getUserFlag(300) == 1 then
 
 	if trigger.misc.getUserFlag(204) == 1 then
 		--trigger.action.outText("Falg Valognes = 1 trigg ", 10)
-		local znsrc = bc:getZoneByName('Bernay')
-		local zntgt = bc:getZoneByName('Saint-Andre')
+		local znsrc = bc:getZoneByName('Saint-Andre')
+		local zntgt = bc:getZoneByName('Bernay')
             if znsrc and znsrc.side == 1 then 
 				if zntgt and zntgt.side == 0 then
 					zntgt:capture(1)
@@ -5023,8 +5022,8 @@ if trigger.misc.getUserFlag(300) == 1 then
 
 	if trigger.misc.getUserFlag(209) == 1 then
 		--trigger.action.outText("Falg Valognes = 1 trigg ", 10)
-		local znsrc = bc:getZoneByName('Calais')
-		local zntgt = bc:getZoneByName('Dunkirk-Port')
+		local znsrc = bc:getZoneByName('Dunkirk-Port')
+		local zntgt = bc:getZoneByName('Calais')
             if znsrc and znsrc.side == 1 then 
 				if zntgt and zntgt.side == 0 then
 					zntgt:capture(1)

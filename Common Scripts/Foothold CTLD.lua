@@ -1046,7 +1046,7 @@ local function samMergeSpawnMergedSystemTemplate(profile, template, preferredNam
   return grp
 end
 
-local function samMergeSyncGroundUnits(self, profile, oldSystemName, oldComponentName, newSystemName)
+local function samMergeSyncGroundUnits(self, profile, oldSystemName, oldComponentName, newSystemName, playerName)
   if type(newSystemName) ~= "string" or newSystemName == "" then return end
 
   removeGroundUnitEntryByName(oldSystemName)
@@ -1062,7 +1062,9 @@ local function samMergeSyncGroundUnits(self, profile, oldSystemName, oldComponen
     Timestamp = timer.getTime(),
     CargoName = systemCargoName,
     Stock = currentStock,
+    PlayerName = playerName,
   })
+  return systemCargoName
 end
 
 local function samMergeFindNearestSystemGroup(profile, coord, maxDist)
@@ -1149,6 +1151,7 @@ local function samMergeTryMergeComponentIntoNearbySystem(self, Group, Vehicle, c
   end
 
   local systemName = systemGroup:GetName()
+  local playerRewardEntry = self.PlayerCtldRewards.groupsByName[systemName]
   local componentName = Vehicle:GetName() or "unknown"
   if componentName == systemName then
     samMergeLog(self, profile, "Component group equals system group name, merge skipped.")
@@ -1197,7 +1200,19 @@ local function samMergeTryMergeComponentIntoNearbySystem(self, Group, Vehicle, c
   trackDroppedTroopGroup(self, mergedGroup)
 
   local mergedName = mergedGroup:GetName() or newSystemName
-  samMergeSyncGroundUnits(self, profile, systemName, componentName, mergedName)
+  self:RemovePlayerCtldRewardGroup(systemName)
+  self:RemovePlayerCtldRewardGroup(componentName)
+  local mergedCargoName = samMergeSyncGroundUnits(
+    self,
+    profile,
+    systemName,
+    componentName,
+    mergedName,
+    playerRewardEntry and playerRewardEntry.playerName
+  )
+  if playerRewardEntry then
+    self:RegisterPlayerCtldRewardGroup(mergedGroup, mergedCargoName, playerRewardEntry.playerName)
+  end
 
   samMergeLog(self, profile, string.format("Merged role=%s from %s into %s (dist=%.1f). New group=%s mode=%s",
     tostring(role), tostring(componentName), tostring(systemName), systemDist or -1, tostring(mergedName), tostring(mergeMode)))
@@ -5282,6 +5297,71 @@ local function isCtldBuildRewardPlayer(playerName)
   return playerName and playerName ~= "" and playerName ~= "nil" and playerName ~= "None"
 end
 
+Foothold_ctld.PlayerCtldStatOverrides = {
+  ["HAWK System"] = "CTLD HAWK kill",
+  ["NASAMS System"] = "CTLD NASAMS kill",
+  ["IRIS T System"] = "CTLD IRIS-T kill",
+  ["HIMARS GMLRRS HE GUIDED"] = "CTLD HIMARS kill",
+}
+
+Foothold_ctld.PlayerCtldRewards = {
+  groupsByName = {},
+  unitsById = {},
+}
+
+function Foothold_ctld:RemovePlayerCtldRewardGroup(groupName)
+  local registry = self.PlayerCtldRewards
+  local entry = registry.groupsByName[groupName]
+  if not entry then return false end
+
+  for unitId in pairs(entry.unitIds) do
+    registry.unitsById[unitId] = nil
+  end
+  registry.groupsByName[groupName] = nil
+  return true
+end
+
+function Foothold_ctld:RemovePlayerCtldRewardUnit(unitId)
+  local registry = self.PlayerCtldRewards
+  local entry = registry.unitsById[unitId]
+  if not entry then return false end
+
+  registry.unitsById[unitId] = nil
+  entry.unitIds[unitId] = nil
+  if next(entry.unitIds) == nil then
+    self:RemovePlayerCtldRewardGroup(entry.groupName)
+  end
+  return true
+end
+
+function Foothold_ctld:RegisterPlayerCtldRewardGroup(Vehicle, cargoName, playerName)
+  if not cargoName or not isCtldBuildRewardPlayer(playerName) then return false end
+
+  local groupName = Vehicle:GetName()
+  local units = Vehicle:GetUnits()
+  local statOverride = self.PlayerCtldStatOverrides[cargoName]
+  local entry = {
+    groupName = groupName,
+    playerName = playerName,
+    stat = statOverride or ("CTLD " .. cargoName .. " kill"),
+    unitIds = {},
+  }
+
+  self:RemovePlayerCtldRewardGroup(groupName)
+  for _, unit in ipairs(units) do
+    local unitId = unit:GetID()
+    if unitId then
+      self:RemovePlayerCtldRewardUnit(unitId)
+      entry.unitIds[unitId] = true
+      self.PlayerCtldRewards.unitsById[unitId] = entry
+    end
+  end
+  if next(entry.unitIds) == nil then return false end
+
+  self.PlayerCtldRewards.groupsByName[groupName] = entry
+  return true
+end
+
 local function resolveCtldBuildRewardPlayer(Group, Unit)
   local playerName = Unit and Unit.GetPlayerName and Unit:GetPlayerName() or nil
   if isCtldBuildRewardPlayer(playerName) then return playerName end
@@ -5305,6 +5385,7 @@ function Foothold_ctld:_recordBuildCareer(Group, Unit, statId, aircraftMetricId)
     aircraftId = owner.aircraftId
   end
   self:_recordCareerAction(playerName, Unit, statId, aircraftMetricId, 1, aircraftId)
+  return playerName
 end
 
 function Foothold_ctld:_recordAirdroppedBuildCareer(Group, Unit, airDefense)
@@ -5442,7 +5523,7 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
       end
     end
 
-    self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
+    local buildPlayerName = self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
     self:_recordAirdroppedBuildCareer(Group, Unit, CTLD_BUILD_REWARD_BY_CARGO[cargoName] ~= nil)
     if CTLD_BUILD_REWARD_BY_CARGO[cargoName] then
       self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.AirDefenseBuilt, nil)
@@ -5486,6 +5567,8 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
             g.Stock = currentStock
         end
     end
+
+    self:RegisterPlayerCtldRewardGroup(Vehicle, cargoName, buildPlayerName)
 end
 
 adjustWarehouseStockAtZone = function(zoneName, deltaPerItem, categories)
@@ -6403,10 +6486,22 @@ ApplyIRISAugments = function(rows)
               local spawnName = string.format("%s-%d", tostring(profile.system_template or "CTLD_CARGO_SAM"), math.random(100000, 999999))
               local mergedGroup, err = samMergeSpawnMergedSystemTemplate(profile, template, spawnName)
               if mergedGroup then
+                local playerRewardEntry = Foothold_ctld.PlayerCtldRewards.groupsByName[oldGroupName]
                 if oldGroup and oldGroup:IsAlive() then oldGroup:Destroy() end
                 removeDroppedTroopGroupByName(Foothold_ctld, oldGroupName)
                 trackDroppedTroopGroup(Foothold_ctld, mergedGroup)
-                samMergeSyncGroundUnits(Foothold_ctld, profile, oldGroupName, nil, mergedGroup:GetName() or spawnName)
+                Foothold_ctld:RemovePlayerCtldRewardGroup(oldGroupName)
+                local mergedCargoName = samMergeSyncGroundUnits(
+                  Foothold_ctld,
+                  profile,
+                  oldGroupName,
+                  nil,
+                  mergedGroup:GetName() or spawnName,
+                  playerRewardEntry and playerRewardEntry.playerName
+                )
+                if playerRewardEntry then
+                  Foothold_ctld:RegisterPlayerCtldRewardGroup(mergedGroup, mergedCargoName, playerRewardEntry.playerName)
+                end
                 applied = applied + 1
                 best.group = mergedGroup
                 best.groupName = mergedGroup:GetName() or spawnName
@@ -6566,10 +6661,10 @@ for i,_t in ipairs(LoadedGroups) do
     end
   else
     if cr then
-      table.insert(GroundUnits,{groupName=gName,Timestamp=ts,Group=_t.Group,CargoName=cName,Stock=cr:GetStock() or 0})
+      table.insert(GroundUnits,{groupName=gName,Timestamp=ts,Group=_t.Group,CargoName=cName,Stock=cr:GetStock() or 0,PlayerName=_t.PlayerName})
     end
     if tr then
-      table.insert(TroopUnits,{groupName=gName,Timestamp=ts,Group=_t.Group,CargoName=cName,Stock=tr:GetStock() or 0})
+      table.insert(TroopUnits,{groupName=gName,Timestamp=ts,Group=_t.Group,CargoName=cName,Stock=tr:GetStock() or 0,PlayerName=_t.PlayerName})
     end
   end
 end
@@ -6578,9 +6673,17 @@ end
     Foothold_ctld:AddStockCrates(CargoName, 1)
   end)
 
+  for _, entry in ipairs(GroundUnits) do
+    self:RegisterPlayerCtldRewardGroup(entry.Group, entry.CargoName, entry.PlayerName)
+  end
+
   EnforceMaxAtSpawnForTrackedUnits(TroopUnits, MaxAtSpawn, function(CargoName)
     Foothold_ctld:AddStockTroops(CargoName, 1)
   end)
+
+  for _, entry in ipairs(TroopUnits) do
+    self:RegisterPlayerCtldRewardGroup(entry.Group, entry.CargoName, entry.PlayerName)
+  end
 -- below a code that deletes the cargo that is left on the ground from last session.
   if self.Spawned_Cargo then
     for i=#self.Spawned_Cargo,1,-1 do
@@ -6840,6 +6943,7 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
                 group.Stock = stock
                 group.Group = troopGroup
                 group.CargoName = cargoName
+                group.PlayerName = careerPlayerName
                 groupExists = true
                 break
             end
@@ -6850,7 +6954,8 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
                 Timestamp = newTimestamp,
                 Group = troopGroup,
                 CargoName = cargoName,
-                Stock = stock
+                Stock = stock,
+                PlayerName = careerPlayerName
             })
         end
         for _, g in ipairs(TroopUnits) do
@@ -6858,6 +6963,7 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
                 g.Stock = stock
             end
         end
+        self:RegisterPlayerCtldRewardGroup(troopGroup, cargoName, careerPlayerName)
 
         local trackedEntry = Demolition.FindEntry(troopGroupName)
         if cargoName == Demolition.CARGO_NAME then

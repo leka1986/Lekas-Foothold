@@ -82509,6 +82509,8 @@ self:T({_group.ClassName})
 if _group and _group.ClassName=="GROUP"then
 if _group:IsAlive()then
 newtable[_index]=_group
+elseif self.RemovePlayerCtldRewardGroup then
+self:RemovePlayerCtldRewardGroup(_group:GetName())
 end
 end
 end
@@ -83079,7 +83081,7 @@ end
 if self.keeploadtable and TimeStamp~=nil then
 self:T2("Inserting: "..cargo.CargoType)
 local cargotype=type
-table.insert(self.LoadedGroupsTable,{Group=self.DroppedTroops[self.TroopCounter],TimeStamp=TimeStamp,CargoType=cargotype,CargoName=name})
+table.insert(self.LoadedGroupsTable,{Group=self.DroppedTroops[self.TroopCounter],TimeStamp=TimeStamp,CargoType=cargotype,CargoName=name,PlayerName=cargo.PlayerName})
 end
 if self.eventoninject then
 self:__TroopsDeployed(1,nil,nil,self.DroppedTroops[self.TroopCounter],type)
@@ -83196,7 +83198,7 @@ end
 if self.keeploadtable and TimeStamp~=nil then
 self:T2("Inserting: "..cargo.CargoType)
 local cargotype=type
-table.insert(self.LoadedGroupsTable,{Group=self.DroppedTroops[self.TroopCounter],TimeStamp=TimeStamp,CargoType=cargotype,CargoName=name})
+table.insert(self.LoadedGroupsTable,{Group=self.DroppedTroops[self.TroopCounter],TimeStamp=TimeStamp,CargoType=cargotype,CargoName=name,PlayerName=cargo.PlayerName})
 end
 if self.eventoninject then
 self:__CratesBuild(1,nil,nil,self.DroppedTroops[self.TroopCounter])
@@ -83548,12 +83550,17 @@ if match then break end
 end
 return match,cargo
 end
-local data="Group,x,y,z,CargoName,CargoTemplates,CargoType,CratesNeeded,CrateMass,Structure,StaticCategory,StaticType,StaticShape,SpawnTime,Latitude,Longitude\n"
+local data="Group,x,y,z,CargoName,CargoTemplates,CargoType,CratesNeeded,CrateMass,Structure,StaticCategory,StaticType,StaticShape,SpawnTime,Latitude,Longitude,PlayerName\n"
 local n=0
 for _,_grp in pairs(grouptable)do
 local group=_grp
 if group and group:IsAlive()then
 local name=group:GetName()
+local playername=""
+local ctldreward=self.PlayerCtldRewards and self.PlayerCtldRewards.groupsByName[name]
+if ctldreward then
+playername=tostring(ctldreward.playerName or""):gsub("[\r\n]"," ")
+end
 local template=name
 if string.find(template,"#")then
 template=string.gsub(name,"#(%d+)$","")
@@ -83588,8 +83595,8 @@ cgotemp=templates
 end
 local location=group:GetVec3()
 local lat,lon=coord.LOtoLL(location)
-local txt=string.format("%s,%d,%d,%d,%s,%s,%s,%d,%d,%s,%s,%s,%s,%f,%f,%f\n"
-,template,location.x,location.y,location.z,cgoname,cgotemp,cgotype,cgoneed,cgomass,strucdata,scat,stype,sshape or"none",spawntime,lat,lon)
+local txt=string.format("%s,%d,%d,%d,%s,%s,%s,%d,%d,%s,%s,%s,%s,%f,%f,%f,%s\n"
+,template,location.x,location.y,location.z,cgoname,cgotemp,cgotype,cgoneed,cgomass,strucdata,scat,stype,sshape or"none",spawntime,lat,lon,playername)
 data=data..txt
 end
 end
@@ -83708,6 +83715,8 @@ local StaticType=dataset[12]
 local StaticShape=dataset[13]
 n=n+1
 local timestamp=tonumber(dataset[14])or(timer.getTime()+n)
+local playername=dataset[17]and table.concat(dataset,",",17)or nil
+if playername==""then playername=nil end
 self:T2("TimeStamp = "..timestamp)
 if type(groupname)=="string"and groupname~="STATIC"then
 cargotemplates=string.gsub(cargotemplates,"{","")
@@ -83722,6 +83731,7 @@ local dropzone=ZONE_RADIUS:New("DropZone",vec2,20)
 if cargotype==CTLD_CARGO.Enum.VEHICLE or cargotype==CTLD_CARGO.Enum.FOB then
 local injectvehicle=CTLD_CARGO:New(nil,cargoname,cargotemplates,cargotype,true,true,size,nil,true,mass)
 injectvehicle:SetStaticTypeAndShape(StaticCategory,StaticType,StaticShape)
+injectvehicle.PlayerName=playername
 self:InjectVehicles(dropzone,injectvehicle,self.surfacetypes,self.useprecisecoordloads,structure,timestamp)
 if self.C130GetUnits then
 for _,_unit in pairs(self.C130GetUnits)do
@@ -83736,6 +83746,7 @@ end
 end
 elseif cargotype==CTLD_CARGO.Enum.TROOPS or cargotype==CTLD_CARGO.Enum.ENGINEERS then
 local injecttroops=CTLD_CARGO:New(nil,cargoname,cargotemplates,cargotype,true,true,size,nil,true,mass)
+injecttroops.PlayerName=playername
 self:InjectTroops(dropzone,injecttroops,self.surfacetypes,self.useprecisecoordloads,structure,timestamp)
 end
 elseif self.loadSavedCrates and(type(groupname)=="string"and groupname=="STATIC")or cargotype==CTLD_CARGO.Enum.REPAIR then

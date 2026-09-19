@@ -1658,7 +1658,7 @@ local function BuildEscortOrbitTask(center, altitudeFeet, speedKnots, heading, l
         params = {
             pattern = AI.Task.OrbitPattern.CIRCLE,
             point = point,
-            speed = UTILS.KnotsToMps(speedKnots),
+            speed = UTILS.IasToTas(UTILS.KnotsToMps(speedKnots), UTILS.FeetToMeters(altitudeFeet)),
             altitude = UTILS.FeetToMeters(altitudeFeet),
         },
     }
@@ -1669,28 +1669,91 @@ local function BuildEscortOrbitTask(center, altitudeFeet, speedKnots, heading, l
     return task
 end
 
-local function BuildEscortOrbitCommandTask(escortGroup, center, altitudeFeet, speedKnots, routeSpeedKnots)
-    local orbitTask = BuildEscortOrbitTask(center, altitudeFeet, speedKnots)
+function ScheduleEscortOrbitClimb(ownerGroupName, escortGroupName, generation, altitudeFeet, speedKnots)
+    local escortGroup = escortGroups[ownerGroupName]
+    timer.scheduleFunction(function(args)
+        local state = spawnedGroups[args.ownerGroupName]
+        if not state
+            or state.escortMode ~= "orbit"
+            or state.escortOrbitGeneration ~= args.generation
+            or not args.escortGroup
+            or escortGroups[args.ownerGroupName] ~= args.escortGroup
+            or not args.escortGroup:IsAlive()
+            or args.escortGroup:GetName() ~= args.escortGroupName
+        then
+            return nil
+        end
+
+        local dcsGroup = Group.getByName(args.escortGroupName)
+        if not dcsGroup or not dcsGroup:isExist() then return nil end
+        local altitudeMeters = UTILS.FeetToMeters(args.altitudeFeet)
+        local controller = dcsGroup:getController()
+        controller:setAltitude(altitudeMeters, true, "BARO")
+        controller:setSpeed(UTILS.IasToTas(UTILS.KnotsToMps(args.speedKnots), altitudeMeters), true)
+        return nil
+    end, {
+        ownerGroupName = ownerGroupName,
+        escortGroupName = escortGroupName,
+        escortGroup = escortGroup,
+        generation = generation,
+        altitudeFeet = altitudeFeet,
+        speedKnots = speedKnots,
+    }, timer.getTime() + 15)
+end
+
+local function BuildEscortOrbitCommandTask(escortGroup, center, altitudeFeet, speedKnots, routeSpeedKnots, ownerGroupName, generation)
     local escortCoord = escortGroup:GetCoordinate()
-    local targetAltitude = UTILS.FeetToMeters(altitudeFeet)
-    local centerCoord = COORDINATE:New(center.x, targetAltitude, center.z or center.y)
-    if escortCoord.y >= UTILS.FeetToMeters(altitudeFeet - 2000)
-        or escortCoord:Get2DDistance(centerCoord) > UTILS.NMToMeters(5) then
-        return orbitTask
+    local needsClimb = escortCoord.y < UTILS.FeetToMeters(20000)
+    local orbitAltitudeFeet = needsClimb and UTILS.MetersToFeet(escortCoord.y) or altitudeFeet
+    local orbitTask = BuildEscortOrbitTask(center, orbitAltitudeFeet, speedKnots)
+    local centerCoord = COORDINATE:New(center.x, UTILS.FeetToMeters(orbitAltitudeFeet), center.z or center.y)
+    local routeSpeed = UTILS.KnotsToKmph(routeSpeedKnots)
+    local waypointTasks = {}
+    if ownerGroupName and generation then
+        local arrivalCommand = string.format(
+            "local g=GROUP:FindByName(%q); MESSAGE:New(FH_L10N:ForGroup(g:GetID()):Get(%q), 20):ToGroup(g)",
+            ownerGroupName,
+            "WELCOME_ESCORT_ORBIT_ESTABLISHED"
+        )
+        if needsClimb then
+            arrivalCommand = string.format(
+                "ScheduleEscortOrbitClimb(%q, %q, %d, %s, %s); %s",
+                ownerGroupName,
+                escortGroup:GetName(),
+                generation,
+                tostring(altitudeFeet),
+                tostring(speedKnots),
+                arrivalCommand
+            )
+        end
+        waypointTasks[#waypointTasks + 1] = {
+            id = "WrappedAction",
+            params = {
+                action = {
+                    id = "Script",
+                    params = {
+                        command = arrivalCommand,
+                    },
+                },
+            },
+        }
     end
 
-    local heading = escortGroup:GetHeading()
-    local routeSpeed = UTILS.KnotsToKmph(routeSpeedKnots)
-    local outboundAltitude = math.min(escortCoord.y + UTILS.FeetToMeters(5000), targetAltitude)
-    local outboundCoord = escortCoord:Translate(UTILS.NMToMeters(5), heading, true):SetAltitude(outboundAltitude, true)
-    local returnCoord = outboundCoord:Translate(UTILS.NMToMeters(10), (heading + 180) % 360, true):SetAltitude(targetAltitude, true)
-    local waypoints = {
-        escortCoord:WaypointAirTurningPoint("BARO", routeSpeed, { BuildEscortEngageAirTask(40) }, "Escort orbit climb"),
-        outboundCoord:WaypointAirTurningPoint("BARO", routeSpeed, {}, "Escort orbit climb outbound"),
-        returnCoord:WaypointAirTurningPoint("BARO", routeSpeed, {}, "Escort orbit climb return"),
-        centerCoord:WaypointAirTurningPoint("BARO", routeSpeed, { orbitTask }, "Escort orbit"),
-    }
-    return escortGroup:TaskRoute(waypoints)
+    local waypoints = {}
+    local needsTransit = escortCoord:Get2DDistance(centerCoord) > UTILS.NMToMeters(1)
+    if needsTransit then
+        waypoints[#waypoints + 1] = escortCoord:WaypointAirTurningPoint(
+            "BARO",
+            routeSpeed,
+            { BuildEscortEngageAirTask(40) },
+            "Escort orbit route"
+        )
+    else
+        waypointTasks[#waypointTasks + 1] = BuildEscortEngageAirTask(40)
+    end
+    waypointTasks[#waypointTasks + 1] = orbitTask
+    waypoints[#waypoints + 1] = centerCoord:WaypointAirTurningPoint("BARO", routeSpeed, waypointTasks, "Escort orbit")
+    return escortGroup:TaskRoute(waypoints), needsTransit
 end
 
 local function SetEscortNativeTask(escortGroup, primaryTask, rot)
@@ -2168,18 +2231,30 @@ local function ScheduleEscortLossCheck(groupName)
 end
 function EscortOrbit(group)
     local T = getMooseGroupTranslator(group)
-    local escortGroup = escortGroups[group:GetName()]
+    local groupName = group:GetName()
+    local escortGroup = escortGroups[groupName]
     if escortGroup then
-        escortPendingJoin[group:GetName()] = nil
+        escortPendingJoin[groupName] = nil
+        local state = spawnedGroups[groupName]
+        local orbitGeneration = ((state and state.escortOrbitGeneration) or 0) + 1
         local clientCoord = group:GetPointVec2()
-        local orbitTask = BuildEscortOrbitCommandTask(escortGroup, clientCoord, 25000, 350, 450)
+        local orbitTask, needsTransit = BuildEscortOrbitCommandTask(
+            escortGroup,
+            clientCoord,
+            25000,
+            350,
+            450,
+            groupName,
+            orbitGeneration
+        )
         if SetEscortNativeTask(escortGroup, orbitTask) then
-            local state = spawnedGroups[group:GetName()]
             if state then
+                state.escortOrbitGeneration = orbitGeneration
                 state.escortMode = "orbit"
             end
-            MESSAGE:New(T:Get("WELCOME_ESCORT_COPY"), 20):ToGroup(group)
-            MESSAGE:New(T:Get("WELCOME_ESCORT_ORBIT_ESTABLISHED"), 20):ToGroup(group)
+            if needsTransit then
+                MESSAGE:New(T:Get("WELCOME_ESCORT_COPY"), 20):ToGroup(group)
+            end
         end
     else
         MESSAGE:New(T:Get("WELCOME_ESCORT_NOT_FOUND"), 10):ToGroup(group)
@@ -2412,7 +2487,10 @@ function HandleEscortTakeoff(unitName, playerName, playerGroupName, unitType)
         }) then
             escortPendingJoin[playerGroupName] = nil
             AddEscortMenu(playerGroup)
-            MESSAGE:New(T:Get("WELCOME_ESCORT_HEADING_TO_POSITION"), 20):ToGroup(playerGroup)
+            local messageKey = escortGroup:IsAirborne(true)
+                and "WELCOME_ESCORT_HEADING_TO_POSITION"
+                or "WELCOME_ESCORT_STILL_GROUND"
+            MESSAGE:New(T:Get(messageKey), 20):ToGroup(playerGroup)
         end
     end
 
