@@ -1703,6 +1703,7 @@ end
 
 local function BuildEscortOrbitCommandTask(escortGroup, center, altitudeFeet, speedKnots, routeSpeedKnots, ownerGroupName, generation)
     local escortCoord = escortGroup:GetCoordinate()
+    if not escortCoord then return end
     local needsClimb = escortCoord.y < UTILS.FeetToMeters(20000)
     local orbitAltitudeFeet = needsClimb and UTILS.MetersToFeet(escortCoord.y) or altitudeFeet
     local orbitTask = BuildEscortOrbitTask(center, orbitAltitudeFeet, speedKnots)

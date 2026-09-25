@@ -3829,10 +3829,12 @@ local TypeNameTable={}
 for _,_unt in pairs(units)do
 local unit=_unt
 local typen=unit:GetTypeName()
+if typen then
 if not TypeNameTable[typen]then
 TypeNameTable[typen]=1
 else
 TypeNameTable[typen]=TypeNameTable[typen]+1
+end
 end
 end
 return TypeNameTable
@@ -81006,6 +81008,7 @@ end
 self:_RefreshLoadCratesMenu(Group,Unit)
 self:_RefreshDropCratesMenu(Group,Unit)
 self:_RefreshPackMenus(Group,Unit)
+self:__CratesPickedUp(1,Group,Unit,loadedData.Cargo)
 self:_RefreshCrateQuantityMenus(Group,Unit,self:_FindCratesCargoObject(cargoName))
 if batch and batch.cname==cargoName then
 local setsLoaded=math.floor((loadedHere or 0)/(needed or 1))
@@ -83594,10 +83597,14 @@ templates=templates.."}"
 cgotemp=templates
 end
 local location=group:GetVec3()
+if location then
 local lat,lon=coord.LOtoLL(location)
 local txt=string.format("%s,%d,%d,%d,%s,%s,%s,%d,%d,%s,%s,%s,%s,%f,%f,%f,%s\n"
 ,template,location.x,location.y,location.z,cgoname,cgotemp,cgotype,cgoneed,cgomass,strucdata,scat,stype,sshape or"none",spawntime,lat,lon,playername)
 data=data..txt
+else
+self:E(self.lid.."Skipping CTLD save row for group "..name..": position unavailable")
+end
 end
 end
 end
@@ -83618,10 +83625,14 @@ local cgoneed=object.CratesNeeded
 local cgomass=object.PerCrateMass
 local crateobj=object.Positionable
 local location=crateobj:GetVec3()
+if location then
 local scat,stype,sshape=object:GetStaticTypeAndShape()
 local txt=string.format("%s,%d,%d,%d,%s,%s,%s,%d,%d,'none',%s,%s,%s\n"
 ,"STATIC",location.x,location.y,location.z,cgoname,cgotemp,cgotype,cgoneed,cgomass,scat,stype,sshape or"none")
 data=data..txt
+else
+self:E(self.lid.."Skipping CTLD save row for static cargo "..cgoname..": position unavailable")
+end
 end
 _savefile(filename,data)
 if self.enableLoadSave then

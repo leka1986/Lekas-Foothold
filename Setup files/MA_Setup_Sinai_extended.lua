@@ -794,7 +794,7 @@ AllCapPlaneTemplates = {
 	'RED_MIRAGE_F1CE_CAP_R530F_EMx2_MAGIC2x2',
 	'RED_MIG29S_CAP_R77x3_R27ET_R73x2',
 	'RED_MIG29S_CAP_R77x2_R73x2_TANKSx3',
-	'RED_MIG29A_CAP_R73x6',
+	'RED_MIG29A_CAP_R73x4_R27R2x',
 	'RED_MIG29A_CAP_R73x4_R27ER2X',
 	'RED_SU27_CAP_R27Rx4_R27ER_R73x3_ECM',
 	'RED_SU27_CAP_R27ERx6_R73x2_ECM',
@@ -887,6 +887,7 @@ AllSeadPlaneTemplates = {
 	'BLUE_F4E_SEAD_AGM45Ax4_AIM7E2x3_TANK600_ALQ131',
 	'BLUE_F16_SEAD_AGM88Cx4_AIM120Cx2_AIM9Xx2',
 	'BLUE_F18_SEAD_AGM88Cx2_ADM141Ax6_AIM120Cx1_AIM9Xx2',
+	'BLUE_F18_SEAD_AGM88Cx2_AGM154CAx4_AIM120Cx1_AIM9Xx2',
 }
 
 AllRunwayStrikePlaneTemplates = {
@@ -5600,10 +5601,7 @@ function generateAttackMission()
 			end
 		end
 		if #pool > 0 then
-			attackTarget1 = blueDirector:selectMissionTarget('ATTACK', pool, {
-				anchorZone = attackTarget2 or attackTarget3,
-				captureZone = captureTarget,
-			})
+			attackTarget1 = pool[math.random(1, #pool)]
 			created1 = true
 		end
 	end
@@ -5640,7 +5638,7 @@ function generateAttackMission()
 			end
 		end
 		if #pool > 0 then
-			attackTarget2 = blueDirector:selectMissionTarget('ATTACK_SUPPORT', pool, { primaryZone = attackTarget1 })
+			attackTarget2 = pool[math.random(1, #pool)]
 			created2 = true
 		end
 	end

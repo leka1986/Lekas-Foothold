@@ -3745,6 +3745,8 @@ end,
 
 attackTarget1 = nil
 attackTarget2 = nil
+attackTarget3 = nil
+attackTarget3Started = nil
 resupplyTarget1 = nil
 resupplyTarget2 = nil
 attackCombinedStart1 = nil
@@ -3864,7 +3866,7 @@ end
 local function _getAttackAnchorZones()
 	local anchors = {}
 	local seen = {}
-	for _, zoneName in ipairs({ attackTarget1, attackTarget2 }) do
+	for _, zoneName in ipairs({ attackTarget1, attackTarget2, attackTarget3 }) do
 		if zoneName and not seen[zoneName] then
 			local targetzn = bc:getZoneByName(zoneName)
 			if targetzn and targetzn.zone and targetzn.side == 1 then
@@ -4076,6 +4078,48 @@ mc:trackMission({
 	end
 })
 
+mc:trackMission({
+	title = function()
+		local wp = WaypointList[attackTarget3] or ""
+		return L10N:Format("NORMANDY_MISSION_ATTACK_TITLE", attackTarget3, wp)
+	end,
+	description = function()
+		return L10N:Format("NORMANDY_MISSION_ATTACK_DESC", attackTarget3)
+	end,
+	messageStart = nil,
+	messageEnd = function()
+		return L10N:Format("NORMANDY_MISSION_ATTACK_END", attackTarget3Started or attackTarget3)
+	end,
+	startAction = function()
+		attackTarget3Started = attackTarget3
+		bc:addMissionTag(attackTarget3, L10N:Get("ZONE_MISSION_TAG_ATTACK"))
+		bc:refreshZoneLabel(attackTarget3)
+		local wp = WaypointList[attackTarget3] or ""
+		trigger.action.outTextForCoalition(2, L10N:Format("NORMANDY_MISSION_ATTACK_START_ONE", attackTarget3, wp), 30)
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cas.ogg")
+		end
+	end,
+	endAction = function()
+		local endedTarget = attackTarget3Started or attackTarget3
+		bc:removeMissionTag(endedTarget, L10N:Get("ZONE_MISSION_TAG_ATTACK"))
+		bc:refreshZoneLabel(endedTarget)
+		attackTarget3Started = nil
+		attackTarget3 = nil
+		if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+			trigger.action.outSoundForCoalition(2, "cancel.ogg")
+		end
+	end,
+	isActive = function()
+		if not attackTarget3 then return false end
+		local targetzn = bc:getZoneByName(attackTarget3)
+		if targetzn and targetzn.zone and targetzn.side == 1 then
+			return not targetzn.suspended
+		end
+		return false
+	end
+})
+
 captureTarget = nil
 mc:trackMission({
     title = function()
@@ -4127,7 +4171,7 @@ function generateDEADMission()
     if deadTarget then return true end
     local attackAnchors = {}
     local seenAnchors = {}
-    for _, zoneName in ipairs({ attackTarget1, attackTarget2 }) do
+    for _, zoneName in ipairs({ attackTarget1, attackTarget2, attackTarget3 }) do
         if zoneName and not seenAnchors[zoneName] then
             local targetzn = bc:getZoneByName(zoneName)
             if targetzn and targetzn.zone and targetzn.side == 1 then
@@ -4180,7 +4224,7 @@ function generateDEADMission()
 
     if #validDEADZones == 0 then return false end
 
-    deadTarget = blueDirector:selectMissionTarget('DEAD', validDEADZones, { primaryZone = attackTarget1 or attackTarget2 })
+    deadTarget = blueDirector:selectMissionTarget('DEAD', validDEADZones, { primaryZone = attackTarget3 or attackTarget2 or attackTarget1 })
     return true
 end
 
@@ -4399,15 +4443,12 @@ function generateAttackMission()
 	if not attackTarget1 then
 		local pool = {}
 		for _, zoneName in ipairs(validzones) do
-			if zoneName ~= attackTarget2 then
+			if zoneName ~= attackTarget2 and zoneName ~= attackTarget3 then
 				table.insert(pool, zoneName)
 			end
 		end
 		if #pool > 0 then
-			attackTarget1 = blueDirector:selectMissionTarget('ATTACK', pool, {
-				anchorZone = attackTarget2,
-				captureZone = captureTarget,
-			})
+			attackTarget1 = pool[math.random(1, #pool)]
 			if attackTarget1 then
 				normandyOpeningAttackSlots[1] = openingPhase
 				created1 = true
@@ -4422,13 +4463,14 @@ function generateAttackMission()
 	if not attackTarget2 then
 		local pool = {}
 		local seenPool = {}
-		local anchor = attackTarget1 or attackTarget2
+		local anchor = attackTarget1 or attackTarget2 or attackTarget3
 		if openingPhase and openingFront then
 			for _, zoneNames in ipairs({ openingFront.primary, openingFront.support }) do
 				for _, zoneName in ipairs(zoneNames) do
 					local zone = bc:getZoneByName(zoneName)
-					if zoneName ~= attackTarget1 and zoneName ~= attackTarget2
+					if zoneName ~= attackTarget1 and zoneName ~= attackTarget2 and zoneName ~= attackTarget3
 						and _isValidAttackMissionZone(zone) and not seenPool[zoneName] then
+						validSeen[zoneName] = true
 						seenPool[zoneName] = true
 						pool[#pool + 1] = zoneName
 					end
@@ -4445,7 +4487,8 @@ function generateAttackMission()
 				end
 				if hasAnchor then
 					for _, zoneName in ipairs(redList) do
-						if zoneName ~= attackTarget1 and zoneName ~= attackTarget2 and not seenPool[zoneName] then
+						if zoneName ~= attackTarget1 and zoneName ~= attackTarget2
+							and zoneName ~= attackTarget3 and not seenPool[zoneName] then
 							seenPool[zoneName] = true
 							table.insert(pool, zoneName)
 						end
@@ -4456,7 +4499,7 @@ function generateAttackMission()
 				local anchorArea = blueDirector.areaByZone[anchor]
 				for _, member in ipairs(anchorArea and anchorArea.membersByOperationalRole.infrastructure or {}) do
 					local zoneName = member.name
-					if zoneName ~= attackTarget1 and zoneName ~= attackTarget2
+					if zoneName ~= attackTarget1 and zoneName ~= attackTarget2 and zoneName ~= attackTarget3
 						and _isValidAttackMissionZone(member.zone) and not seenPool[zoneName] then
 						seenPool[zoneName] = true
 						pool[#pool + 1] = zoneName
@@ -4466,19 +4509,35 @@ function generateAttackMission()
 		end
 		if #pool == 0 and not openingPhase then
 			for _, zoneName in ipairs(validzones) do
-				if zoneName ~= attackTarget1 and zoneName ~= attackTarget2 then
+				if zoneName ~= attackTarget1 and zoneName ~= attackTarget2 and zoneName ~= attackTarget3 then
 					table.insert(pool, zoneName)
 				end
 			end
 		end
 		if #pool > 0 then
-			attackTarget2 = blueDirector:selectMissionTarget('ATTACK_SUPPORT', pool, {
-				primaryZone = attackTarget1,
-				allowCrossAreaSupport = openingPhase,
-			})
+			attackTarget2 = pool[math.random(1, #pool)]
 			if attackTarget2 then
 				normandyOpeningAttackSlots[2] = openingPhase
 				created2 = true
+			end
+		end
+	end
+
+	if not openingPhase and not attackTarget3 and attackTarget1 and attackTarget2 then
+		local thirdAttackDemand = blueDirector:hasBlueThirdAttackDemand(timer.getAbsTime())
+		if thirdAttackDemand then
+			local pool = {}
+			for _, zoneName in ipairs(validzones) do
+				if zoneName ~= attackTarget1 and zoneName ~= attackTarget2 then
+					pool[#pool + 1] = zoneName
+				end
+			end
+			if #pool > 0 then
+				attackTarget3 = blueDirector:selectMissionTarget('ATTACK_SUPPORT', pool, {
+					primaryZone = attackTarget1,
+					anchorZone = attackTarget2,
+					thirdAttack = true,
+				})
 			end
 		end
 	end
@@ -4490,7 +4549,7 @@ function generateAttackMission()
 		attackCombinedStart2 = attackTarget2
 	end
 
-	return attackTarget1 ~= nil or attackTarget2 ~= nil
+	return attackTarget1 ~= nil or attackTarget2 ~= nil or attackTarget3 ~= nil
 end
 
 function generateSupplyMission()
@@ -4503,6 +4562,7 @@ function generateSupplyMission()
 	local created2 = false
 	if attackTarget1 then attackFrontSet[attackTarget1] = true end
 	if attackTarget2 then attackFrontSet[attackTarget2] = true end
+	if attackTarget3 then attackFrontSet[attackTarget3] = true end
 
 	for attackZoneName in pairs(attackFrontSet) do
 		local attackZone = bc:getZoneByName(attackZoneName)
@@ -4600,6 +4660,19 @@ timer.scheduleFunction(function(_, time)
 		return time+120
 	end
 end, {}, timer.getTime() + 35)
+
+timer.scheduleFunction(function(_, time)
+	if _isNormandyOpeningPhase() then return time+30 end
+	local hadThirdAttack = attackTarget3 ~= nil
+	if not hadThirdAttack and blueDirector:hasBlueThirdAttackDemand(timer.getAbsTime()) then
+		generateAttackMission()
+	end
+	if not hadThirdAttack and attackTarget3 then
+		checkAndGenerateCASMission()
+		generateRunwayStrikeMission()
+	end
+	return time+30
+end, {}, timer.getTime() + 45)
 
 timer.scheduleFunction(function(_, time)
 

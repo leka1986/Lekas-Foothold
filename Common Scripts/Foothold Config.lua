@@ -81,6 +81,7 @@ FootholdConfigTrackedScalarNames = {
     "NormalSupplyCapacity",
     "WarehouseSupplyCapacity",
     "CTLDSupplyCapacity",
+    "ExtraRedRepairTimeLowPlayerCountPercent",
 }
 
 local function applyExternalConfigWithFallbackWarning()
@@ -216,8 +217,8 @@ RedCapPlaneEnabled = {
     ["RED_MIG31_CAP_R33x4_R40Tx2"] = true, -- eras=Modern; MiG-31 Fox 1 CAP [Modern]
     ["RED_MIRAGE_F1CE_CAP_S530Fx2_MAGIC2x2"] = true, -- eras=Modern|Coldwar; Mirage F1CE Fox 1 CAP [Modern/CW]
     ["RED_MIRAGE_F1CE_CAP_R530F_EMx2_MAGIC2x2"] = true, -- eras=Modern|Coldwar; Mirage F1CE Fox 1 CAP [Modern/CW]
-    ["RED_MIG29A_CAP_R73x6"] = true, -- eras=Modern|Coldwar; MiG-29A IR CAP [Modern/CW]
-    ["RED_MIG29A_CAP_R73x4_R27ER2X"] = true, -- eras=Modern|Coldwar; MiG-29A Fox 1 CAP [Modern/CW]
+    ["RED_MIG29A_CAP_R73x4_R27R2x"] = true, -- eras=Modern|Coldwar; MiG-29A R-27R Fox 1 CAP [Modern/CW]
+    ["RED_MIG29A_CAP_R73x4_R27ER2X"] = true, -- eras=Modern|Coldwar; MiG-29A R-27ER Fox 1 CAP [Modern/CW]
     ["RED_MIG25PD_CAP_R40Rx2_R60Mx2"] = true, --eras=Modern|Coldwar; MiG-25PD Fox 1 CAP [Modern/CW]
     ["RED_SU27_CAP_R27ERx5_R73x3_ECM"] = true, -- eras=Modern|Coldwar; Su-27 Fox 1 CAP [Modern/CW]
     ["RED_MIG23MLD_CAP_R24Rx2_R60Mx2"] = true, -- eras=Modern|Coldwar; MiG-23MLD Fox 1 CAP [Modern/CW]
@@ -321,6 +322,7 @@ RedSeadPlaneEnabled = {
 BlueSeadPlaneEnabled = {
     ["BLUE_F16_SEAD_AGM88Cx4_AIM120Cx2_AIM9Xx2"] = true, -- eras=Modern; 2x F-16C SEAD [Modern]
     ["BLUE_F18_SEAD_AGM88Cx2_ADM141Ax6_AIM120Cx1_AIM9Xx2"] = true, -- eras=Modern; 2x F/A-18C SEAD [Modern]
+    ["BLUE_F18_SEAD_AGM88Cx2_AGM154CAx4_AIM120Cx1_AIM9Xx2"] = true, -- eras=Modern; 2x F/A-18C SEAD [Modern]
     ["BLUE_F4E_SEAD_AGM45Ax4_AIM7E2x3_TANK600_ALQ131"] = false, -- eras=Vietnam|Coldwar; 2x F-4E Shrike SEAD [VN/CW]
     ["BLUE_F100D_SEAD_AGM45Ax2_CBU7x2_TANKSx2_2SHIP"] = false, -- eras=Vietnam; 2x F-100D SEAD [VN]
 }
@@ -1000,6 +1002,13 @@ GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 -- @gui label="Repair Time Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewRed="Unit:60 | SR/TR/STR:180 | Maximum:1200" timePreviewBlue="Normal base:900 | [WH] base:300 | Expedited base:0 | Unit:120 | SR/TR/STR:180 | Maximum:1200"
 GlobalSettings.repairDifficultyScaling = { [1]=1, [2]=1 }
 
+-- Extra time for Red repairs and construction when fewer than 2 eligible Blue CAS players are present.
+-- Uses the cached CAS player list, excluding BlueCasCountIgnoreTypes, once when the job starts.
+-- Adds to the scaled starting duration; later damage-driven timer updates remain unchanged.
+-- 0 disables the extra time (default). Maximum 50% extra time. Blue and supply travel times are unchanged.
+-- @gui label="Extra Red Repair Time — Low Player Count %" validValues="Disabled=0 | 5%=5 | 10%=10 | 15%=15 | 20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50"
+ExtraRedRepairTimeLowPlayerCountPercent = 0
+
 -- If true, player-picked Zone supplies consume one ready supply package from the campaign zone.
 -- Returned or removed cargo restores that package; destroyed or delivered cargo does not.
 -- Carrier and dynamic FARP pickups remain unlimited because they do not hold campaign-zone stock.
@@ -1093,6 +1102,11 @@ WarehouseWeaponCaps = {
 -- ============================================================================
 -- Shop / Rewards
 -- ============================================================================
+
+-- Get extra reward if player keeps the same aircraft after a successful credits redeem and then another sortie with another credits redeem.
+-- Percentage of extra credits. 0 disables the reward, 10 is the default, and 50 is the maximum.
+-- @gui label="Same Aircraft Extra Reward %" validValues="Disabled=0 | 5%=5 | 10%=10 | 15%=15 | 20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50"
+TurnaroundRewardPercent = 10
 
 -- Advance Capture becomes available when an enemy zone has this percent or less of its upgrade groups remaining.
 -- Percent of upgrade groups remaining before Advance Capture appears.
@@ -1657,7 +1671,6 @@ allowedPlanes = {
 allowedPlanesRed = {
     "A-10A",
     "A-10C",
-    "A-10C_2",
     "A-4E-C",
     "AH-1W",
     "AH-64D_BLK_II",
@@ -1669,18 +1682,15 @@ allowedPlanesRed = {
     "C-101CC",
     "C-130J-30",
     "CH-47Fbl1",
-    "E-2C",
     "F-100D",
-    "F-14A",
     "F-14A-135-GR",
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
     --"F-14B",
     --"F-14BU",
+    --"A-10C_2",
     "F-15C",
-    "F-15E",
     "F-15ESE",
-    "F-16A MLU",
     "F-16C_50",
     "F-4E-45MC",
     "F-5E-3",
@@ -1688,7 +1698,6 @@ allowedPlanesRed = {
     "F-86F Sabre",
     "FA-18C_hornet",
     "Hercules",
-    "Ka-27",
     "L-39C",
     "M-2000C",
     "MB-339A",
@@ -1696,8 +1705,6 @@ allowedPlanesRed = {
     "MH-60R",
     "MH-6J",
     "Mi-24P",
-    "Mi-24V",
-    "Mi-28NE",
     "Mi-8MT",
     "MiG-15bis",
     "MiG-15bis_FC",
@@ -1738,12 +1745,13 @@ allowedPlanesRed = {
     "SA342Minigun",
     "SA342Mistral",
     "SU22",
-    "Su-24MR",
     "Su-25",
     "UH-1H",
     "UH-60A",
     "UH-60L",
     "UH-60L_DAP",
+    --"Ka-50_3",
+    --"Ka-50",
 }
 
 -- In this list, you can either remove or add what is allowed for BLUE warehouses in the Vietnam era.

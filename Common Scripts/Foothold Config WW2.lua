@@ -41,6 +41,7 @@ FootholdConfigTrackedTableNames = {
     "AllowedFlightTimeReward",
     "ewrs_specialPlaneTypes",
     "AllowedWW2Planes",
+    "AllowedWW2RedPlanes",
 }
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
@@ -48,6 +49,7 @@ FootholdConfigTrackedScalarNames = {
     "ZoneCaptureBuildSeconds",
     "NormalSupplyCapacity",
     "WarehouseSupplyCapacity",
+    "ExtraRedRepairTimeLowPlayerCountPercent",
 }
 
 local function applyExternalConfigWithFallbackWarning()
@@ -527,6 +529,13 @@ GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 -- @gui label="Repair Time Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewRed="Unit:60 | Sensor:180 | Maximum:1200" timePreviewBlue="Normal base:900 | [WH] base:300 | Expedited base:0 | Unit:120 | Sensor:180 | Maximum:1200"
 GlobalSettings.repairDifficultyScaling = { [1]=1.0, [2]=1.0 }
 
+-- Extra time for Red repairs and construction when fewer than 2 eligible Blue CAS players are present.
+-- Uses the cached CAS player list, excluding BlueCasCountIgnoreTypes, once when the job starts.
+-- Adds to the scaled starting duration; later damage-driven timer updates remain unchanged.
+-- 0 disables the extra time (default). Maximum 50% extra time. Blue and supply travel times are unchanged.
+-- @gui label="Extra Red Repair Time — Low Player Count %" validValues="Disabled=0 | 5%=5 | 10%=10 | 15%=15 | 20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50"
+ExtraRedRepairTimeLowPlayerCountPercent = 0
+
 -- If true, player-picked Zone supplies consume one ready supply package from the campaign zone.
 -- Returned or removed cargo restores that package; destroyed or delivered cargo does not.
 -- Carrier and dynamic FARP pickups remain unlimited because they do not hold campaign-zone stock.
@@ -557,6 +566,11 @@ AllowedToCarrySupplies = {
 -- ============================================================================
 -- Shop / Rewards
 -- ============================================================================
+
+-- Get extra reward if player keeps the same aircraft after a successful credits redeem and then another sortie with another credits redeem.
+-- Percentage of extra credits. 0 disables the reward, 10 is the default, and 50 is the maximum.
+-- @gui label="Same Aircraft Extra Reward %" validValues="Disabled=0 | 5%=5 | 10%=10 | 15%=15 | 20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50"
+TurnaroundRewardPercent = 10
 
 -- Shop prices.
 -- @gui installPolicy="mergeRows"
@@ -795,9 +809,34 @@ phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if
 -- ============================================================================
 -- Aircraft
 -- ============================================================================
--- Aircraft that remain available in Normandy/WW2 warehouse aircraft stocks.
--- @gui label="Allowed WW2 Warehouse Aircraft" installPolicy="mergeRows" editor="bucket"
+-- Aircraft that remain available in Blue Normandy/WW2 warehouse aircraft stocks.
+-- @gui label="Allowed Blue WW2 Warehouse Aircraft" installPolicy="mergeRows" editor="bucket"
 AllowedWW2Planes = {
+	"Bf-109K-4",
+	"F4U-1D",
+	"F4U-1D_CW",
+	"FW-190A8",
+	"FW-190D9",
+	"I-16",
+	"La-7",
+	"MosquitoFBMkVI",
+	"P-47D-30",
+	"P-47D-30bl1",
+	"P-47D-40",
+	"P-51D",
+	"P-51D-25-NA",
+	"P-51D-30-NA",
+	"SpitfireLFMkIX",
+	"SpitfireLFMkIXCW",
+	"TF-51D",
+	"Yak-52",
+	"Ju-88A4",
+	"B-17G",
+}
+
+-- Aircraft that remain available in Red and neutral Normandy/WW2 warehouse aircraft stocks.
+-- @gui label="Allowed Red WW2 Warehouse Aircraft" installPolicy="mergeRows" editor="bucket"
+AllowedWW2RedPlanes = {
 	"Bf-109K-4",
 	"F4U-1D",
 	"F4U-1D_CW",
