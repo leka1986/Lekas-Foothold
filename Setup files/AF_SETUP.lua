@@ -529,15 +529,15 @@ RandomUpgradeTemplates = {
 }
 
 RandomUpgradeTemplatesBlue = {
-	small = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-	smallmedium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-	medium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+	small = { sam = 0, ground = 1, armor = 1, total = 2 },
+	smallmedium = { sam = 0, ground = 1, armor = {1,2}, total = {2,3} },
+	medium = { sam = 0, ground = 1, armor = {0,1}, total = {2,3} },
 	mediumbig = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-	big = { sam = 1, ground = 1, armor = 1, total = {3,4} },
-	extrabig = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-	bignosam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-	sam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-	sam2 = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
+	big = { sam = {0,1}, ground = 1, armor = {1,2}, total = {3,4} },
+	extrabig = { sam = {0,1}, ground = {1,2}, armor = {1,2}, total = {2,4} },
+	bignosam = { sam = {0,1}, ground = {1,2}, armor = {1,2}, total = {2,4} },
+	sam = { sam = {0,1}, ground = 1, armor = 1, total = {2,4} },
+	sam2 = { sam = {0,1}, ground = 1, armor = 1, total = {2,4} },
 	samspecial = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
     insurgent = { sam = 0, shorad = {1,3}, aaa = {1,2}, ground = {1,2}, armor = 0, arty = 0, total = {6,7} },
 }
@@ -1430,25 +1430,25 @@ function SpawnFriendlyAssets(changedZone)
 		zones.hiddenground1:MakeZoneRedAndUpgrade()
 	end
 	if zones.hiddenground2.side == 1 and zones.hiddenground2.active then
-		if zones.bagram.side == 2 and zones.insurgentasadabad.side == 2 
+		if zones.bagram.side == 2 and not zones.insurgentasadabad.active
 		and zones.jalalabad.side == 2 and zones.kabulsouth.side == 2 then
 			zones.hiddenground2:DestroyHiddenZone()
 		end
 	elseif zones.hiddenground2.side == 0 and (
-	(zones.bagram.side == 2 and zones.jalalabad.side ~= 2 and zones.insurgentasadabad.side ~= 2) or
+	(zones.bagram.side == 2 and zones.jalalabad.side ~= 2 and zones.insurgentasadabad.active) or
 	(zones.bagram.side ~= 2 and zones.kabulsouth.side == 2) or
 	(zones.bagram.side ~= 2 and zones.checkpointkabulw.side == 2) ) then
 		zones.hiddenground2:MakeZoneRedAndUpgrade()
 	end
 
 	if zones.hiddenground3.side == 1 and zones.hiddenground3.active then
-		if zones.insurgentdelaram.side == 2 and zones.maymanazahiraddin.side == 2 
+		if not zones.insurgentdelaram.active and zones.maymanazahiraddin.side == 2
 		and zones.shindand.side == 2 then
 			zones.hiddenground3:DestroyHiddenZone()
 		end
 	elseif zones.hiddenground3.side == 0 and (
-	(zones.insurgentdelaram.side == 2 and zones.maymanazahiraddin.side ~= 2 and zones.shindand.side ~= 2) or
-	(zones.insurgentdelaram.side ~= 2 and zones.maymanazahiraddin.side == 2) ) then
+	(not zones.insurgentdelaram.active and zones.maymanazahiraddin.side ~= 2 and zones.shindand.side ~= 2) or
+	(zones.insurgentdelaram.active and zones.maymanazahiraddin.side == 2) ) then
 		zones.hiddenground3:MakeZoneRedAndUpgrade()
 	end
 
@@ -1984,6 +1984,7 @@ local SHOP_PRICE_DEFAULTS = {
   zsam          = 2000,
   zhimars       = 2500,
   zlogc         = 2000,
+  zwhrepair     = 2000,
   zsup3         = 750,
   zwh50         = 500,
   zarm          = 1000,
@@ -3250,7 +3251,6 @@ bc.shopItems['groundattack'].groupZoneSelector = {
 }
 
 
-if UseStatics == true then
 bc:registerShopItem('dynamicstatic', LTGet("CA_SHOP_ITEM_STATIC_STRUCTURE"), ShopPrices.dynamicstatic,
 function(sender)
     if StructureActive then
@@ -3259,7 +3259,7 @@ function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
-    if params.zone and params.zone.side == 1 and params.zone.newStatics and next(params.zone.newStatics) then
+    if params.zone and bc.shopItems['dynamicstatic'].groupZoneSelector.allow(params.zone) then
         if StructureActive then
             return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "building strike")
         end
@@ -3281,12 +3281,11 @@ bc.shopItems['dynamicstatic'].groupZoneSelector = {
 	sortPolicy = 'enemy_frontline',
 	allow = function(zoneObj)
 		return zoneObj.side == 1
-			and zoneObj.newStatics
-			and next(zoneObj.newStatics) ~= nil
+			and ((zoneObj.warehouseFacility and zoneObj:_getWarehouseTarget() ~= nil)
+				or (UseStatics == true and zoneObj.newStatics and next(zoneObj.newStatics) ~= nil))
 	end,
 	emptyLabel = LTGet("CA_SHOP_NO_VALID_BUILDING_TARGET_ZONES"),
 }
-end
 ---------------------------------------------END DYNAMIC SHOP ------------------------------------------
 
 local intelMenu=nil
@@ -3355,6 +3354,40 @@ bc:registerShopItem(RED_STRATEGIC_BOMBER_ID, strategicBomberShopName, ShopPrices
 end, nil, 50)
 
 local infMenu=nil
+local redWarehouseMenu = nil
+bc:registerShopItem('redwarehouse', LTGet("WAREHOUSE_SHOP_RED_CREATE"), 3000, function(sender)
+	if redWarehouseMenu then
+		missionCommands.removeItemForCoalition(1, redWarehouseMenu)
+		redWarehouseMenu = nil
+	end
+	local zoneChoices = {}
+	for _, zoneObj in ipairs(bc:getZones()) do
+		if zoneObj.side == 1 and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden
+			and zoneObj.airbaseName and zoneObj.airbaseName ~= '' and not zoneObj.warehouseFacility
+			and not isCarrierZoneName(zoneObj.zone) then
+			zoneChoices[zoneObj.zone] = zoneObj
+		end
+	end
+	if not next(zoneChoices) then return LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES") end
+	redWarehouseMenu = bc:showTargetZoneMenu(1, LTGet("WAREHOUSE_SHOP_RED_CREATE"), function(zoneName, menu)
+		local zoneObj = zoneChoices[zoneName]
+		bc:buyShopItem(1, 'redwarehouse', {zone = zoneObj})
+		if zoneObj.warehouseFacility then
+			missionCommands.removeItemForCoalition(1, menu)
+			redWarehouseMenu = nil
+		end
+		return true -- Keep the selector on failure; successful purchases close it above.
+	end, 1, false, zoneChoices)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyRedWarehouseUpgrade(params.zone, params.placement, params.now)
+end)
+bc:registerShopItem('redwhrepair', LTGet("WAREHOUSE_SHOP_REPAIR"), 2000, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyWarehouseRepair(params.zone, 1, params.now)
+end)
+
 bc:registerShopItem('zinf',LTGet("SYRIA_SHOP_ITEM_UPGRADE_INFANTRY"),ShopPrices.zinf,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
@@ -3466,7 +3499,24 @@ bc.shopItems['zlogc'].groupZoneSelector = {
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
 	extraPredicate = function(zoneObj)
-		return not zoneObj.LogisticCenter
+		return not zoneObj.LogisticCenter and not zoneObj.warehouseFacility and not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
+}
+
+bc:registerShopItem('zwhrepair', LTGet("WAREHOUSE_SHOP_REPAIR"), ShopPrices.zwhrepair, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyWarehouseRepair(params.zone, 2, timer.getAbsTime())
+end)
+bc.shopItems['zwhrepair'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = true,
+	sortPolicy = 'friendly_frontline',
+	candidateBucket = 'blue_visible',
+	refreshTags = { 'warehouse_targets' },
+	extraPredicate = function(zoneObj)
+		return zoneObj.warehouseFacility ~= nil and zoneObj.warehouseFacility.state == 'destroyed'
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
 }
@@ -3746,6 +3796,7 @@ ShopPrices = ShopPrices or {
 	zsam          = 2000, -- Upgrade zone with Hawk/Nasams
 	zhimars       = 2500, -- Upgrade zone with HIMARS
 	zlogc         = 2000, -- Upgrade zone to logistic center
+	zwhrepair     = 2000, -- Repair the destroyed warehouse building
 	zsup3         = 750,  -- Add 3 supplies to a zone
 	zwh50         = 500,  -- Resupply warehouse with 50
 	zarm          = 1000, -- Upgrade zone with armor
@@ -3798,6 +3849,8 @@ ShopRankRequirements = ShopRankRequirements or {
 
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
 bc:addShopItem(1, 'redmassattack', -1, 1) -- red AI mass airbase attack
+bc:addShopItem(1, 'redwarehouse', -1, 3) -- red AI rear supply depot
+bc:addShopItem(1, 'redwhrepair', -1, 4) -- red AI warehouse repair
 if Era ~= 'Vietnam' then
 bc:addShopItem(1, 'strategicbomberRed', -1, 2) -- red AI strategic bomber
 end
@@ -3833,9 +3886,7 @@ bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, Shop
 end
 bc:addShopItem(2, 'groundattack', -1, 7, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
 bc:addShopItem(2, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
-if UseStatics == true then
-    bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
-end
+bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
 bc:addShopItem(2, 'cruisemsl', 12, 7, ShopRankRequirements.cruisemsl, ShopCats.AIAttack) -- Cruise missiles
 
 -- Zone Upgrades
@@ -3887,6 +3938,7 @@ if AllowScriptedSupplies then
     bc:addShopItem(2, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
 end
 bc:addShopItem(2, 'zlogc', -1, 5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
+bc:addShopItem(2, 'zwhrepair', -1, 5.5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- repair warehouse
 bc:addShopItem(2, 'zsup3', -1, 6, ShopRankRequirements.zsup3, ShopCats.LogisticsStrategic) -- add 3 supplies to a zone
 if WarehouseLogistics then
     bc:addShopItem(2, 'zwh50', -1, 7, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
@@ -4069,9 +4121,10 @@ if DestroyOnce then
 	destroyGroupIfActive('Red EWR Bagram Fixed')
 	CustomFlags["Red EWR Bagram Fixed"] = true
 end
-RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, enemyPilotCapture = 200, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
 RewardContribution.ctldGround = RewardContribution.ctldGround or 10
 RewardContribution.ctldAir = RewardContribution.ctldAir or 20
+RewardContribution.enemyPilotCapture = RewardContribution.enemyPilotCapture or 200
 bc:startRewardPlayerContribution(15,RewardContribution)
 HercCargoDropSupply.init(bc)
 bc:buildZoneDistanceCache()

@@ -457,16 +457,16 @@ RandomUpgradeTemplates = {
 }
 
 RandomUpgradeTemplatesBlue = {
-	small = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-	smallmedium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-	medium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-	mediumbig = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-	big = { sam = 1, ground = 1, armor = 1, total = {3,4} },
-	extrabig = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-	bignosam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-	sam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-	sam2 = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-	samspecial = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
+	small = { sam = 1, ground = {1,2}, armor = 1, total = {2,3} },
+	smallmedium = { sam = 1, ground = {1,2}, armor = 1, total = {2,3} },
+	medium = { sam = 1, ground = 1, armor = {1,2}, total = {2,3} },
+	mediumbig = { sam = 1, ground = 1, armor = {1,2}, total = {2,3} },
+	big = { sam = 1, ground = 1, armor = {1,2}, total = {3,4} },
+	extrabig = { sam = 1, ground = 1, armor = {1,2}, total = {3,4} },
+	bignosam = { sam = 0, ground = 1, armor = {1,2}, total = {3,4} },
+	sam = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+	sam2 = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+	samspecial = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
 }
 
 RandomGroundGroups = true
@@ -2577,6 +2577,7 @@ local SHOP_PRICE_DEFAULTS = {
   zsam          = 2000,
   zhimars       = 2500,
   zlogc         = 2000,
+  zwhrepair     = 2000,
   zsup3         = 750,
   zwh50         = 500,
   zarm          = 1000,
@@ -4024,6 +4025,40 @@ end, nil, 50)
 -- end of red
 
 local infMenu=nil
+local redWarehouseMenu = nil
+bc:registerShopItem('redwarehouse', LTGet("WAREHOUSE_SHOP_RED_CREATE"), 3000, function(sender)
+	if redWarehouseMenu then
+		missionCommands.removeItemForCoalition(1, redWarehouseMenu)
+		redWarehouseMenu = nil
+	end
+	local zoneChoices = {}
+	for _, zoneObj in ipairs(bc:getZones()) do
+		if zoneObj.side == 1 and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden
+			and zoneObj.airbaseName and zoneObj.airbaseName ~= '' and not zoneObj.warehouseFacility
+			and not isCarrierZoneName(zoneObj.zone) then
+			zoneChoices[zoneObj.zone] = zoneObj
+		end
+	end
+	if not next(zoneChoices) then return LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES") end
+	redWarehouseMenu = bc:showTargetZoneMenu(1, LTGet("WAREHOUSE_SHOP_RED_CREATE"), function(zoneName, menu)
+		local zoneObj = zoneChoices[zoneName]
+		bc:buyShopItem(1, 'redwarehouse', {zone = zoneObj})
+		if zoneObj.warehouseFacility then
+			missionCommands.removeItemForCoalition(1, menu)
+			redWarehouseMenu = nil
+		end
+		return true -- Keep the selector on failure; successful purchases close it above.
+	end, 1, false, zoneChoices)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyRedWarehouseUpgrade(params.zone, params.placement, params.now)
+end)
+bc:registerShopItem('redwhrepair', LTGet("WAREHOUSE_SHOP_REPAIR"), 2000, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyWarehouseRepair(params.zone, 1, params.now)
+end)
+
 bc:registerShopItem('zinf',LTGet("SYRIA_SHOP_ITEM_UPGRADE_INFANTRY"),ShopPrices.zinf,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
@@ -4137,7 +4172,24 @@ bc.shopItems['zlogc'].groupZoneSelector = {
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
 	extraPredicate = function(zoneObj)
-		return not zoneObj.LogisticCenter
+		return not zoneObj.LogisticCenter and not zoneObj.warehouseFacility and not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
+}
+
+bc:registerShopItem('zwhrepair', LTGet("WAREHOUSE_SHOP_REPAIR"), ShopPrices.zwhrepair, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyWarehouseRepair(params.zone, 2, timer.getAbsTime())
+end)
+bc.shopItems['zwhrepair'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = true,
+	sortPolicy = 'friendly_frontline',
+	candidateBucket = 'blue_visible',
+	refreshTags = { 'warehouse_targets' },
+	extraPredicate = function(zoneObj)
+		return zoneObj.warehouseFacility ~= nil and zoneObj.warehouseFacility.state == 'destroyed'
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
 }
@@ -4417,6 +4469,7 @@ ShopPrices = ShopPrices or {
 	zsam          = 2000, -- Upgrade zone with Hawk/Nasams
 	zhimars       = 2500, -- Upgrade zone with HIMARS
 	zlogc         = 2000, -- Upgrade zone to logistic center
+	zwhrepair     = 2000, -- Repair the destroyed warehouse building
 	zsup3         = 750,  -- Add 3 supplies to a zone
 	zwh50         = 500,  -- Resupply warehouse with 50
 	zarm          = 1000, -- Upgrade zone with armor
@@ -4492,6 +4545,8 @@ ShopCats.Order = {
 
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
 bc:addShopItem(1, 'redmassattack', -1, 1) -- red AI mass airbase attack
+bc:addShopItem(1, 'redwarehouse', -1, 3) -- red AI rear supply depot
+bc:addShopItem(1, 'redwhrepair', -1, 4) -- red AI warehouse repair
 if Era ~= 'Vietnam' then
 bc:addShopItem(1, 'strategicbomberRed', -1, 2) -- red AI strategic bomber
 end
@@ -4559,6 +4614,7 @@ if AllowScriptedSupplies then
     bc:addShopItem(2, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
 end
 bc:addShopItem(2, 'zsup3', -1, 6, ShopRankRequirements.zsup3, ShopCats.LogisticsStrategic) -- add 3 supplies to a zone
+bc:addShopItem(2, 'zwhrepair', -1, 5.5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- repair warehouse
 if WarehouseLogistics then
 bc:addShopItem(2, 'zlogc', -1, 5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
 bc:addShopItem(2, 'zwh50', -1, 7, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
@@ -4768,9 +4824,10 @@ end
 		end
 	end
 
-RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, enemyPilotCapture = 200, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
 RewardContribution.ctldGround = RewardContribution.ctldGround or 10
 RewardContribution.ctldAir = RewardContribution.ctldAir or 20
+RewardContribution.enemyPilotCapture = RewardContribution.enemyPilotCapture or 200
 bc:startRewardPlayerContribution(15,RewardContribution)
 HercCargoDropSupply.init(bc)
 buildTemplateCache()

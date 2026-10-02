@@ -46,6 +46,8 @@
       - Added C-101CC
 ]]
 
+if ewrs_enabled == false then return end -- Startup-only switch; requires mission restart.
+
 ewrs = {} --DO NOT REMOVE
 local L10N = FH_L10N
 ewrs.HELO = 1

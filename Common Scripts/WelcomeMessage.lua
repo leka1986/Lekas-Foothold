@@ -1859,7 +1859,7 @@ local function ScheduleInitialEscortTask(groupName, clientGroup, escortGroup, es
         escortGroup = escortGroup,
         escortHomeCoord = escortHomeCoord,
         escortAltitudeAboveMeters = escortAltitudeAboveMeters,
-    }, timer.getTime() + 2)
+    }, timer.getTime() + 4)
 end
 
 local function RouteEscortHome(groupName, escortGroup)
@@ -2200,6 +2200,37 @@ local function CleanupEscortForGroupName(groupName, destroyEscort, notifyDestroy
     end
 
     if notifyDestroyed and clientGroup and clientGroup:IsAlive() then
+        local groupId = clientGroup:GetID()
+        local groupMenuToken = lc.groupMenuTokens[groupId]
+        local spawnCount = state.escortSpawnCount
+        local playerName = state.playerName
+        local unitName = clientGroup:GetUnit(1):GetName()
+        if state.escortReplacementTimer then
+            timer.removeFunction(state.escortReplacementTimer)
+        end
+        local replacementTimer
+        replacementTimer = timer.scheduleFunction(function()
+            if state.escortReplacementTimer ~= replacementTimer then
+                return nil
+            end
+            state.escortReplacementTimer = nil
+            if spawnedGroups[groupName] ~= state
+                or lc.groupMenuTokens[groupId] ~= groupMenuToken
+                or state.escortSpawnCount ~= spawnCount
+                or escortGroups[groupName]
+                or not clientGroup:IsAlive()
+                or clientGroup:GetID() ~= groupId
+            then
+                return nil
+            end
+            local playerUnit = clientGroup:GetUnit(1)
+            if not playerUnit or playerUnit:GetName() ~= unitName or playerUnit:GetPlayerName() ~= playerName then
+                return nil
+            end
+            RequestEscort(clientGroup)
+            return nil
+        end, nil, timer.getTime() + 600)
+        state.escortReplacementTimer = replacementTimer
         local T = getMooseGroupTranslator(clientGroup)
         MESSAGE:New(T:Get("WELCOME_ESCORT_DESTROYED"), 10):ToGroup(clientGroup)
     end
@@ -2221,8 +2252,7 @@ local function ScheduleEscortLossCheck(groupName)
         if not escortGroup then
             return nil
         end
-        local dcsGroup = Group.getByName(escortGroup:GetName())
-        if dcsGroup and dcsGroup:isExist() and dcsGroup:getSize() > 0 then
+        if next(currentState.escortUnitNames) then
             return nil
         end
 
@@ -2601,6 +2631,10 @@ end
 
 function HandleWelcomePlayerUnavailable(playerName, groupName, groupId)
     if groupName then
+        if MainMenu[groupName] then
+            MainMenu[groupName]:Remove()
+            MainMenu[groupName] = nil
+        end
         CleanupEscortForGroupName(groupName, true, false)
         RemoveEscortRequestMenuHandle(groupName)
         spawnedGroups[groupName] = nil

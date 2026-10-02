@@ -98,12 +98,12 @@ upgrades = {
     },
     
     andoyaspawn = {
-        blue = {'bluePD1'},
+        blue = {{ n = 'bluePD1', p = true }},
         red = {'Enemy ground forces'}
     },
     
     bodospawn = {
-        blue = {'bluePD1'},
+        blue = {{ n = 'bluePD1', p = true }},
         red = {'Enemy ground forces'}
     },
     
@@ -567,21 +567,21 @@ RandomUpgradeTemplates = {
 }
 
 RandomUpgradeTemplatesBlue = {
-    small = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-    smallsam = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-    smallmedium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+    small = { sam = 0, ground = 1, armor = 1, total = 2 },
+    smallsam = { sam = 0, ground = 1, armor = 1, total = 2 },
+    smallmedium = { sam = 0, ground = 1, armor = 1, total = 2 },
     bigsam = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-    medium = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-    mediumsam = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
-    mediumbig = { sam = {0,1}, ground = 1, armor = 1, total = {2,3} },
+    medium = { sam = 0, ground = 1, armor = 1, total = 2 },
+    mediumsam = { sam = 0, ground = 1, armor = 1, total = 2 },
+    mediumbig = { sam = 0, ground = 1, armor = 1, total = 2 },
     big = { sam = 1, ground = 1, armor = 1, total = {3,4} },
     extrabig = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-    bignosam = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-    shorad = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-    sam = { sam = 1, ground = 1, armor = {0,1}, total = {2,3} },
-    sam2 = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-    samspecial = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
-    shoradsmall = { sam = {0,1}, ground = 1, armor = 1, total = {3,4} },
+    bignosam = { sam = 0, ground = 1, armor = 1, total = 2 },
+    shorad = { sam = 0, ground = 1, armor = 1, total = 2 },
+    sam = { sam = 0, ground = 1, armor = 1, total = 2 },
+    sam2 = { sam = 0, ground = 1, armor = 1, total = 2 },
+    samspecial = { sam = 0, ground = 1, armor = 1, total = 2 },
+    shoradsmall = { sam = 0, ground = 1, armor = 1, total = 2 },
 }
 
 RandomGroundGroups = true
@@ -590,44 +590,59 @@ RandomBlueGroups = true
 WaypointList = {
     Bodo                    = ' (1)',
     Andoya                  = ' (2)',
-    Bardufoss               = ' (3)',
-    Alta                    = ' (4)',
-    Banak                   = ' (5)',
-    Buolbmat                = ' (6)',
-    Kirkenes                = ' (7)',
-    Karasjok                = ' (8)',
-    Guovdageaidnu           = ' (9)',
-    Luspa                   = ' (10)',
-    Kiruna                  = ' (11)',
-    Kalixfors               = ' (12)',
-    Skogsbasen              = ' (13)',
-    BergsBasen              = ' (14)',
-    Kvikkjokk               = ' (15)',
-    Gallivare               = ' (16)',
-    Jokkmokk                = ' (17)',
-    Vidsel                  = ' (18)',
-    Kallax                  = ' (19)',
-    Kalix                   = ' (20)',
-    KemiTornio              = ' (21)',
-    Tervola                 = ' (22)',
-    Rovaniemi               = ' (23)',
-    Vuojarvi                = ' (24)',
-    Savukoski               = ' (25)',
-    Kelloselka              = ' (26)',
-    Maaninkavaara           = ' (27)',
-    Kuusamo                 = ' (28)',
-    Kittila                 = ' (29)',
-    Ivalo                   = ' (30)',
-    Zapolyarnyy             = ' (31)',
-    Severomorsk1            = ' (32)',
-    Severomorsk3            = ' (33)',
-    MurmanskInternational   = ' (34)',
-    Prirechnyi              = ' (35)',
-    Olenya                  = ' (36)',
-    Monchegorsk             = ' (37)',
-    Apatity                 = ' (38)',
-    Kovdor                  = ' (39)',
-    Alakourtti              = ' (40)',
+    Silsand                 = ' (3)',
+    Evenes                  = ' (4)',
+    Abisko                  = ' (5)',
+    Bardufoss               = ' (6)',
+    Tromso                  = ' (7)',
+    Alta                    = ' (8)',
+    Banak                   = ' (9)',
+    Buolbmat                = ' (10)',
+    Kirkenes                = ' (11)',
+    Karasjok                = ' (12)',
+    Maze                    = ' (13)',
+    Guovdageaidnu           = ' (14)',
+    Enontekio               = ' (15)',
+    Luspa                   = ' (16)',
+    Soppero                 = ' (17)',
+    Kiruna                  = ' (18)',
+    Kalixfors               = ' (19)',
+    Skogsbasen              = ' (20)',
+    BergsBasen              = ' (21)',
+    Kvikkjokk               = ' (22)',
+    Gallivare               = ' (23)',
+    Jokkmokk                = ' (24)',
+    Storsand                = ' (25)',
+    Vidsel                  = ' (26)',
+    Hemavan                 = ' (27)',
+    Arvidsjaur              = ' (28)',
+    Kallax                  = ' (29)',
+    Boden                   = ' (30)',
+    Tore                    = ' (31)',
+    Kalix                   = ' (32)',
+    KemiTornio              = ' (33)',
+    Tervola                 = ' (34)',
+    Rovaniemi               = ' (35)',
+    Vuojarvi                = ' (36)',
+    Sodankyla               = ' (37)',
+    Savukoski               = ' (38)',
+    Kelloselka              = ' (39)',
+    Maaninkavaara           = ' (40)',
+    Kuusamo                 = ' (41)',
+    Kittila                 = ' (42)',
+    Ivalontie               = ' (43)',
+    Inari                   = ' (44)',
+    Ivalo                   = ' (45)',
+    Zapolyarnyy             = ' (46)',
+    Severomorsk1            = ' (47)',
+    Severomorsk3            = ' (48)',
+    MurmanskInternational   = ' (49)',
+    Prirechnyi              = ' (50)',
+    Olenya                  = ' (51)',
+    Monchegorsk             = ' (52)',
+    Apatity                 = ' (53)',
+    Kovdor                  = ' (54)',
+    Alakourtti              = ' (55)',
     SkogsFARP1              = '',
     SkogsFARP2              = ''
 }
@@ -788,86 +803,101 @@ end
 Hunt = true
 
 zones = {
-    --redcarrier = ZoneCommander:new({zone='Red Carrier', side=1, level=10, upgrades=upgrades.redships, crates={}, flavorText=flavor.redcarrier}),
-    --bluecarrier = ZoneCommander:new({zone='Blue Carrier', side=2, level=1, upgrades=upgrades.blueships, crates={}, flavorText=flavor.bluecarrier}),
+    --redcarrier          = ZoneCommander:new({                                                         zone='Red Carrier',           side=1,           level=10,                           upgrades=upgrades.redships,                   crates={}, flavorText=flavor.redcarrier}),
+    --bluecarrier         = ZoneCommander:new({                                                         zone='Blue Carrier',          side=2,           level=1,                            upgrades=upgrades.blueships,                  crates={}, flavorText=flavor.bluecarrier}),
     
     ---Sweden
-    kiruna                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kiruna',                side=sideSE    , level=99             , size='big', upgrades=upgrades.kirunaspawn, crates={}, flavorText=flavor.kiruna, income=0.1}),
-    jokkmokk              = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Jokkmokk',              side=sideSE    , level=99             , size='mediumsam', upgrades=upgrades.jokkmokkspawn, crates={}, flavorText=flavor.jokkmokk}),
-    luspa                 = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Luspa',                 side=sideSE    , level=99             , size='small', upgrades=upgrades.farp2, crates={}, flavorText=flavor.luspa}),
-    vidsel                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Vidsel',                side=sideSE    , level=99             , size='medium', upgrades=upgrades.vidselspawn, crates={}, flavorText=flavor.vidsel}),
-    kallax                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kallax',                side=sideSE    , level=99             , size='mediumsam', upgrades=upgrades.kallaxspawn, crates={}, flavorText=flavor.kallax, income=0.1}),
-    samalvik              = ZoneCommander:new({facility='none', zone='SAMAlvik',              side=sideSE    , level=99             , size='sam', upgrades=upgrades.samalvikspawn, crates={}, flavorText=flavor.samalvik}),
-    kvikkjokk             = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Kvikkjokk',             side=sideSE    , level=99             , size='smallmedium', upgrades=upgrades.farp4, crates={}, flavorText=flavor.kvikkjokk}),
-    skogsbasen            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Skogsbasen',            side=sideSE    , level=99             , size='small', upgrades=upgrades.farp1, crates={}, flavorText=flavor.skogsbasen}),
-    gallivare             = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Gallivare',             side=sideSE    , level=99             , size='small', upgrades=upgrades.farp4, crates={}, flavorText=flavor.gallivare}), ---NOTE! This will be a city in one of the next patches!
-    kalixfors             = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Kalixfors',             side=sideSE    , level=99             , size='smallmedium', upgrades=upgrades.kalixforsspawn, crates={}, flavorText=flavor.kalixfors}),
-    kalix                 = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Kalix',                 side=sideSE    , level=99             , size='smallmedium', upgrades=upgrades.farp4, crates={}, flavorText=flavor.kalix}),
+    kiruna                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kiruna',                side=sideSE,      level=99, size='big',               upgrades=upgrades.kirunaspawn,                crates={}, flavorText=flavor.kiruna, income=0.1}),
+    jokkmokk              = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Jokkmokk',              side=sideSE,      level=99, size='mediumsam',         upgrades=upgrades.jokkmokkspawn,              crates={}, flavorText=flavor.jokkmokk}),
+    luspa                 = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Luspa',                 side=sideSE,      level=99, size='small',             upgrades=upgrades.farp2,                      crates={}, flavorText=flavor.luspa}),
+    vidsel                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Vidsel',                side=sideSE,      level=99, size='medium',            upgrades=upgrades.vidselspawn,                crates={}, flavorText=flavor.vidsel}),
+    kallax                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kallax',                side=sideSE,      level=99, size='mediumsam',         upgrades=upgrades.kallaxspawn,                crates={}, flavorText=flavor.kallax, income=0.1}),
+    samalvik              = ZoneCommander:new({facility='none',                                         zone='SAMAlvik',              side=sideSE,      level=99, size='sam',               upgrades=upgrades.samalvikspawn,              crates={}, flavorText=flavor.samalvik}),
+    kvikkjokk             = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Kvikkjokk',             side=sideSE,      level=99, size='smallmedium',       upgrades=upgrades.farp4,                      crates={}, flavorText=flavor.kvikkjokk}),
+    skogsbasen            = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Skogsbasen',            side=sideSE,      level=99, size='small',             upgrades=upgrades.farp1,                      crates={}, flavorText=flavor.skogsbasen}),
+    gallivare             = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Gallivare',             side=sideSE,      level=99, size='small',             upgrades=upgrades.farp4,                      crates={}, flavorText=flavor.gallivare}), ---NOTE! This will be a city in one of the next patches!
+    kalixfors             = ZoneCommander:new({facility='airbase',                    isHeloSpawn=true, zone='Kalixfors',             side=sideSE,      level=99, size='smallmedium',       upgrades=upgrades.kalixforsspawn,             crates={}, flavorText=flavor.kalixfors}),
+    kalix                 = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Kalix',                 side=sideSE,      level=99, size='smallmedium',       upgrades=upgrades.farp4,                      crates={}, flavorText=flavor.kalix}),
+    abisko                = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Abisko',                side=sideSE,      level=99, size='bigsam',            upgrades=upgrades.farp1,                      crates={}}),
+    arvidsjaur            = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Arvidsjaur',            side=sideSE,      level=99, size='mediumsam',         upgrades=upgrades.kola,                       crates={}}),
+    hemavan               = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Hemavan',               side=0,           level=99, size='small',             upgrades=upgrades.kola,                       crates={}, NeutralAtStart=true}),
+    boden                 = ZoneCommander:new({facility='airbase',                    isHeloSpawn=true, zone='Boden',                 side=sideSE,      level=99, size='small',             upgrades=upgrades.kola,                       crates={}}),
+    soppero               = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Soppero',               side=sideSE,      level=99, size='bigsam',            upgrades=upgrades.farp1,                      crates={}}),
+    storsand              = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Storsand',              side=sideSE,      level=99, size='smallmedium',       upgrades=upgrades.farp1,                      crates={}}),
+    tore                  = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Tore',                  side=sideSE,      level=99, size='small',             upgrades=upgrades.farp1,                      crates={}}),
                                                                                            
     ---Norway                                                                              
-    andoya                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Andoya',                side=2         , level=99             , size='sam', upgrades=upgrades.andoyaspawn, crates={}, flavorText=flavor.andoya}),
-    bodo                  = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Bodo',                  side=2         , level=99             , size='sam', upgrades=upgrades.bodospawn, crates={}, flavorText=flavor.bodo, income=0.2}),
-    kirkenes              = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kirkenes',              side=sideNO    , level=99             , size='smallsam', upgrades=upgrades.kirkenesspawn, crates={}, flavorText=flavor.Kirkenes}),
-    banak                 = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Banak',                 side=sideNO    , level=99             , size='mediumsam', upgrades=upgrades.banakspawn, crates={}, flavorText=flavor.banak, income=0.1}),
-    alta                  = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Alta',                  side=0         , level=99             , size='small', upgrades=upgrades.altaspawn, crates={}, flavorText=flavor.alta}),
-    karasjok              = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Karasjok',              side=sideNO    , level=99             , size='smallmedium', upgrades=upgrades.farp3, crates={}, flavorText=flavor.karasjok}),
-    guovdageaidnu         = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Guovdageaidnu',         side=sideNO    , level=99             , size='medium', upgrades=upgrades.farp4, crates={}, flavorText=flavor.guovdageaidnu}),
-    bergsbasen            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='BergsBasen',            side=sideNO    , level=99             , size='shorad', upgrades=upgrades.farp1, crates={}, flavorText=flavor.farpalpha}),
-    bardufoss             = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Bardufoss',             side=sideNO    , level=99             , size='medium',upgrades=upgrades.bardufossspawn, crates={}, flavorText=flavor.bardufoss}),
+    andoya                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Andoya',                side=2,           level=99, size='sam',               upgrades=upgrades.andoyaspawn,                crates={}, flavorText=flavor.andoya}),
+    bodo                  = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Bodo',                  side=2,           level=99, size='sam',               upgrades=upgrades.bodospawn,                  crates={}, flavorText=flavor.bodo, income=0.2}),
+    kirkenes              = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kirkenes',              side=sideNO,      level=99, size='smallsam',          upgrades=upgrades.kirkenesspawn,              crates={}, flavorText=flavor.Kirkenes}),
+    banak                 = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Banak',                 side=sideNO,      level=99, size='mediumsam',         upgrades=upgrades.banakspawn,                 crates={}, flavorText=flavor.banak, income=0.1}),
+    alta                  = ZoneCommander:new({facility='airbase',                    isHeloSpawn=true, zone='Alta',                  side=0,           level=99, size='small',             upgrades=upgrades.altaspawn,                  crates={}, flavorText=flavor.alta,NeutralAtStart=true}),
+    karasjok              = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Karasjok',              side=sideNO,      level=99, size='smallmedium',       upgrades=upgrades.farp3,                      crates={}, flavorText=flavor.karasjok}),
+    guovdageaidnu         = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Guovdageaidnu',         side=sideNO,      level=99, size='medium',            upgrades=upgrades.farp4,                      crates={}, flavorText=flavor.guovdageaidnu}),
+    silsand               = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Silsand',               side=sideNO,      level=99, size='smallmedium',       upgrades=upgrades.farp1,                      crates={}}),
+    maze                  = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Maze',                  side=sideNO,      level=99, size='bigsam',            upgrades=upgrades.farp1,                      crates={}}),
+    evenes                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Evenes',                side=sideNO,      level=99, size='bignosam',          upgrades=upgrades.kola,                       crates={}}),
+    tromso                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Tromso',                side=sideNO,      level=99, size='bignosam',          upgrades=upgrades.kola,                       crates={}}),
+    bergsbasen            = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='BergsBasen',            side=sideNO,      level=99, size='shorad',            upgrades=upgrades.farp1,                      crates={}, flavorText=flavor.farpalpha}),
+    bardufoss             = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Bardufoss',             side=sideNO,      level=99, size='medium',            upgrades=upgrades.bardufossspawn,             crates={}, flavorText=flavor.bardufoss}),
                                                                                            
     ---Finland                                                                             
-    kemitornio            = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='KemiTornio',            side=sideFIN   , level=99             , size='extrabig', upgrades=upgrades.kemitorniospawn, crates={}, flavorText=flavor.kemitornio, income=0.1}),
-    rovaniemi             = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Rovaniemi',             side=sideFIN   , level=99             , size='extrabig', upgrades=upgrades.rovaniemispawn, crates={}, flavorText=flavor.rovaniemi, income=0.2}),
-    vuojarvi              = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Vuojarvi',              side=sideFIN   , level=99             , size='sam', upgrades=upgrades.vuojarvispawn, crates={}, flavorText=flavor.vuojarvi}),
-    kuusamo               = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Kuusamo',               side=sideFIN_SE, level=99             , size='medium', upgrades=upgrades.kuusamospawn, crates={}, flavorText=flavor.kuusamo}),
-    savukoski             = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Savukoski',             side=1         , level=99             , size='medium', upgrades=upgrades.farp3, crates={}, flavorText=flavor.savukoski}),
-    ivalo                 = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Ivalo',                 side=sideFIN   , level=99             , size='bigsam', upgrades=upgrades.ivalospawn, crates={}, flavorText=flavor.ivalo, income=0.1}),
-    kittila               = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kittila',               side=sideFIN   , level=99             , size='bigsam', upgrades=upgrades.kittilaspawn, crates={}, flavorText=flavor.kittila}),
-    tervola               = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Tervola',               side=1         , level=99             , size='shorad', upgrades=upgrades.farp1, crates={}, flavorText=flavor.tervola}),
-    kelloselka            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Kelloselka',            side=1         , level=99             , size='shorad', upgrades=upgrades.kelloselkacenterspawn, crates={}, flavorText=flavor.kelloselka}),
-    buolbmat              = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Buolbmat',              side=sideFIN   , level=99             , size='small', upgrades=upgrades.buolbmatcenterspawn, crates={}, flavorText=flavor.buolbmat}),
-    maaninkavaara         = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Maaninkavaara',         side=1         , level=99             , size='smallsam', upgrades=upgrades.maaninkavaaracenterspawn, crates={}, flavorText=flavor.maaninkavaara}),
-    skogsfarp1            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='SkogsFARP1',            side=1         , level=99             , size='small', upgrades=upgrades.skogsfarp, crates={}, flavorText=flavor.skogsfarp1}),
-    skogsfarp2            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='SkogsFARP2',            side=1         , level=99             , size='small', upgrades=upgrades.skogsfarp, crates={}, flavorText=flavor.skogsfarp2}),
-    skogsfarp3            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='SkogsFARP3',            side=1         , level=99             , size='small', upgrades=upgrades.skogsfarp, crates={}, flavorText=flavor.skogsfarp3}),
-    skogsfarp4            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='SkogsFARP4',            side=1         , level=99             , size='small', upgrades=upgrades.skogsfarp, crates={}, flavorText=flavor.skogsfarp4}),
+    kemitornio            = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='KemiTornio',            side=sideFIN,     level=99, size='extrabig',          upgrades=upgrades.kemitorniospawn,            crates={}, flavorText=flavor.kemitornio, income=0.1}),
+    rovaniemi             = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Rovaniemi',             side=sideFIN,     level=99, size='extrabig',          upgrades=upgrades.rovaniemispawn,             crates={}, flavorText=flavor.rovaniemi, income=0.2}),
+    vuojarvi              = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Vuojarvi',              side=sideFIN,     level=99, size='sam',               upgrades=upgrades.vuojarvispawn,              crates={}, flavorText=flavor.vuojarvi}),
+    kuusamo               = ZoneCommander:new({facility='airbase',                    isHeloSpawn=true, zone='Kuusamo',               side=sideFIN_SE,  level=99, size='medium',            upgrades=upgrades.kuusamospawn,               crates={}, flavorText=flavor.kuusamo}),
+    savukoski             = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Savukoski',             side=1,           level=99, size='medium',            upgrades=upgrades.farp3,                      crates={}, flavorText=flavor.savukoski}),
+    ivalo                 = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Ivalo',                 side=sideFIN,     level=99, size='bigsam',            upgrades=upgrades.ivalospawn,                 crates={}, flavorText=flavor.ivalo, income=0.1}),
+    inari                 = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Inari',                 side=sideFIN,     level=99, size='bigsam',            upgrades=upgrades.farp1,                      crates={}}),
+    ivalontie             = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Ivalontie',             side=sideFIN,     level=99, size='bigsam',            upgrades=upgrades.farp1,                      crates={}}),
+    enontekio             = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Enontekio',             side=sideFIN,     level=99, size='mediumsam',         upgrades=upgrades.kola,                       crates={}}),
+    sodankyla             = ZoneCommander:new({facility='airbase',                    isHeloSpawn=true, zone='Sodankyla',             side=sideFIN,     level=99, size='mediumsam',         upgrades=upgrades.kola,                       crates={}}),
+    kittila               = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Kittila',               side=sideFIN,     level=99, size='bigsam',            upgrades=upgrades.kittilaspawn,               crates={}, flavorText=flavor.kittila}),
+    tervola               = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Tervola',               side=1,           level=99, size='shorad',            upgrades=upgrades.farp1,                      crates={}, flavorText=flavor.tervola}),
+    kelloselka            = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Kelloselka',            side=1,           level=99, size='shorad',            upgrades=upgrades.kelloselkacenterspawn,      crates={}, flavorText=flavor.kelloselka}),
+    buolbmat              = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Buolbmat',              side=sideFIN,     level=99, size='small',             upgrades=upgrades.buolbmatcenterspawn,        crates={}, flavorText=flavor.buolbmat}),
+    maaninkavaara         = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Maaninkavaara',         side=1,           level=99, size='smallsam',          upgrades=upgrades.maaninkavaaracenterspawn,   crates={}, flavorText=flavor.maaninkavaara}),
+    skogsfarp1            = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='SkogsFARP1',            side=1,           level=99, size='small',             upgrades=upgrades.skogsfarp,                  crates={}, flavorText=flavor.skogsfarp1}),
+    skogsfarp2            = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='SkogsFARP2',            side=1,           level=99, size='small',             upgrades=upgrades.skogsfarp,                  crates={}, flavorText=flavor.skogsfarp2}),
+    skogsfarp3            = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='SkogsFARP3',            side=1,           level=99, size='small',             upgrades=upgrades.skogsfarp,                  crates={}, flavorText=flavor.skogsfarp3}),
+    skogsfarp4            = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='SkogsFARP4',            side=1,           level=99, size='small',             upgrades=upgrades.skogsfarp,                  crates={}, flavorText=flavor.skogsfarp4}),
                                                                                            
     ---russia                                                                    
-    apatity               = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Apatity',               side=1         , level=99             , size='smallmedium', upgrades=upgrades.farp2, crates={}, flavorText=flavor.apatity}),
-    zapolyarnyy           = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Zapolyarnyy',           side=1         , level=99             , upgrades=upgrades.farp4, crates={}, flavorText=flavor.zapolyarnyy}),
-    alakourtti            = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Alakourtti',            side=1         , level=99             , size='bigsam', upgrades=upgrades.alakourttispawn, crates={}, flavorText=flavor.alakourtti}),
-    prirechnyi            = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Prirechnyi',            side=1         , level=99             , size='small', upgrades=upgrades.prirechnyispawn, crates={}, flavorText=flavor.prirechnyi}),
-    olenya                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Olenya',                side=1         , level=99             , size='big', upgrades=upgrades.olenyaspawn, crates={}, flavorText=flavor.olenya, income=0.2}),
-    murmanskinternational = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='MurmanskInternational', side=1         , level=99             , size='mediumsam', upgrades=upgrades.murmanskinternationalspawn, crates={}, flavorText=flavor.murmanskinternational, income=0.2}),
-    severomorsk3          = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Severomorsk3',          side=1         , level=99             , size='bigsam', upgrades=upgrades.severomorsk3spawn, crates={}, flavorText=flavor.severomorsk3}),
-    severomorsk1          = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Severomorsk1',          side=1         , level=99             , size='bigsam', upgrades=upgrades.severomorsk1spawn, crates={}, flavorText=flavor.severomorsk1}),
-    kovdor                = ZoneCommander:new({facility='farp', isHeloSpawn=true, zone='Kovdor',                side=1         , level=99             , size='small', upgrades=upgrades.farp1, crates={}, flavorText=flavor.kovdor}),
-    monchegorsk           = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Monchegorsk',           side=1         , level=99             , size='bigsam', upgrades=upgrades.monchegorskspawn, crates={}, flavorText=flavor.monchegorsk, income=0.1}),
-    laplandiya            = ZoneCommander:new({facility='none', zone='LaplandiyaStorage',     side=1         , level=99             , upgrades=upgrades.laplandiyaspawn, crates={}, flavorText=flavor.laplandiya}), --always active, strike target, never supplied
-    zelenoborskij         = ZoneCommander:new({facility='none', zone='ZelenoborskijStorage',  side=1         , level=99             , upgrades=upgrades.zelenoborskijyaspawn, crates={}, flavorText=flavor.zelenoborskij}), --always active, strike target, never supplied
-    lovozeroCCC           = ZoneCommander:new({facility='none', zone='LovozeroCCC',           side=1         , level=99             , upgrades=upgrades.lovozerocccspawn, crates={}, flavorText=flavor.LovozeroCCC}), --always active, strike target, never supplied
-    gadzhiyevoshipyard    = ZoneCommander:new({facility='none', zone='GadzhiyevoShipYard',    side=1         , level=99             , size='small', upgrades=upgrades.gadzhiyevospawn, crates={}, flavorText=flavor.shipyard}),  --always active, strike target, never supplied
+    apatity               = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Apatity',               side=1,           level=99, size='smallmedium',       upgrades=upgrades.farp2,                      crates={}, flavorText=flavor.apatity}),
+    zapolyarnyy           = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Zapolyarnyy',           side=1,           level=99,                           upgrades=upgrades.farp4,                      crates={}, flavorText=flavor.zapolyarnyy}),
+    alakourtti            = ZoneCommander:new({facility='airbase',                    isHeloSpawn=true, zone='Alakourtti',            side=1,           level=99, size='bigsam',            upgrades=upgrades.alakourttispawn,            crates={}, flavorText=flavor.alakourtti}),
+    prirechnyi            = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Prirechnyi',            side=1,           level=99, size='small',             upgrades=upgrades.prirechnyispawn,            crates={}, flavorText=flavor.prirechnyi}),
+    olenya                = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Olenya',                side=1,           level=99, size='big',               upgrades=upgrades.olenyaspawn,                crates={}, flavorText=flavor.olenya, income=0.2}),
+    murmanskinternational = ZoneCommander:new({facility='airbase',                    isHeloSpawn=true, zone='MurmanskInternational', side=1,           level=99, size='mediumsam',         upgrades=upgrades.murmanskinternationalspawn, crates={}, flavorText=flavor.murmanskinternational, income=0.2}),
+    severomorsk3          = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Severomorsk3',          side=1,           level=99, size='bigsam',            upgrades=upgrades.severomorsk3spawn,          crates={}, flavorText=flavor.severomorsk3}),
+    severomorsk1          = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Severomorsk1',          side=1,           level=99, size='bigsam',            upgrades=upgrades.severomorsk1spawn,          crates={}, flavorText=flavor.severomorsk1}),
+    kovdor                = ZoneCommander:new({facility='farp',                       isHeloSpawn=true, zone='Kovdor',                side=1,           level=99, size='small',             upgrades=upgrades.farp1,                      crates={}, flavorText=flavor.kovdor}),
+    monchegorsk           = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Monchegorsk',           side=1,           level=99, size='bigsam',            upgrades=upgrades.monchegorskspawn,           crates={}, flavorText=flavor.monchegorsk, income=0.1}),
+    laplandiya            = ZoneCommander:new({facility='none',                                         zone='LaplandiyaStorage',     side=1,           level=99,                           upgrades=upgrades.laplandiyaspawn,            crates={}, flavorText=flavor.laplandiya}), --always active, strike target, never supplied
+    zelenoborskij         = ZoneCommander:new({facility='none',                                         zone='ZelenoborskijStorage',  side=1,           level=99,                           upgrades=upgrades.zelenoborskijyaspawn,       crates={}, flavorText=flavor.zelenoborskij}), --always active, strike target, never supplied
+    lovozeroCCC           = ZoneCommander:new({facility='none',                                         zone='LovozeroCCC',           side=1,           level=99,                           upgrades=upgrades.lovozerocccspawn,           crates={}, flavorText=flavor.LovozeroCCC}), --always active, strike target, never supplied
+    gadzhiyevoshipyard    = ZoneCommander:new({facility='none',                                         zone='GadzhiyevoShipYard',    side=1,           level=99, size='small',             upgrades=upgrades.gadzhiyevospawn,            crates={}, flavorText=flavor.shipyard}),  --always active, strike target, never supplied
     
     --special strike target zones
-    koashvastorage        = ZoneCommander:new({facility='none', zone='KoashvaStorage',        side=1         , level=99             , upgrades=upgrades.koashvaspawn, crates={}, flavorText=flavor.storage}),  --always active, strike target, never supplied
-    afrikandastorage      = ZoneCommander:new({facility='none', zone='AfrikandaStorage',      side=1         , level=99             , upgrades=upgrades.afrikandaspawn, crates={}, flavorText=flavor.storage}),  --always active, strike target, never supplied
-    kilpyavrstorage       = ZoneCommander:new({facility='none', zone='KilpYavrStorage',       side=1         , level=99             , upgrades=upgrades.kilpyavrspawn, crates={}, flavorText=flavor.storage}),  --always active, strike target, never supplied
-    pyaozerskystorage     = ZoneCommander:new({facility='none', zone='PyaozerskyStorage',     side=1         , level=99             , upgrades=upgrades.pyaozerskspawn, crates={}, flavorText=flavor.storage}),  --always active, strike target, never supplied
+    koashvastorage        = ZoneCommander:new({facility='none',                                         zone='KoashvaStorage',        side=1,           level=99,                           upgrades=upgrades.koashvaspawn,               crates={}, flavorText=flavor.storage}),  --always active, strike target, never supplied
+    afrikandastorage      = ZoneCommander:new({facility='none',                                         zone='AfrikandaStorage',      side=1,           level=99,                           upgrades=upgrades.afrikandaspawn,             crates={}, flavorText=flavor.storage}),  --always active, strike target, never supplied
+    kilpyavrstorage       = ZoneCommander:new({facility='none',                                         zone='KilpYavrStorage',       side=1,           level=99,                           upgrades=upgrades.kilpyavrspawn,              crates={}, flavorText=flavor.storage}),  --always active, strike target, never supplied
+    pyaozerskystorage     = ZoneCommander:new({facility='none',                                         zone='PyaozerskyStorage',     side=1,           level=99,                           upgrades=upgrades.pyaozerskspawn,             crates={}, flavorText=flavor.storage}),  --always active, strike target, never supplied
 
     --FN
-    hiddenKemiRoadblock   = ZoneCommander:new({facility='none', zone='Hidden_KemiRoadblock',  side=0         , level=99             , size='armor4', upgrades=upgrades.hiddenKemiRoadblockGroup, crates={}, flavorText=flavor.hidden1,NeutralAtStart=true}),
-    hiddenForestguard     = ZoneCommander:new({facility='none', zone='Hidden_Forestguard',    side=0         , level=99             , size='armor4', upgrades=upgrades.hiddenForestguardGroup, crates={}, flavorText=flavor.hidden1,NeutralAtStart=true}),
-    hiddenRanuaGuard      = ZoneCommander:new({facility='none', zone='Hidden_RanuaRB',        side=0         , level=99             , size='armor3shorad1', upgrades=upgrades.hiddenRanuaGuardGroup, crates={}, flavorText=flavor.hidden1,NeutralAtStart=true}),
-    hiddenPosioGuard      = ZoneCommander:new({facility='none', zone='Hidden_PosioRB',        side=0         , level=99             , size='armor4', upgrades=upgrades.hiddenPosioGuardGroup, crates={}, flavorText=flavor.hidden1,NeutralAtStart=true}),
-    hiddenVesivoimala     = ZoneCommander:new({facility='none', zone='Hidden_Vesivoimala',    side=1         , level=99             , size='HiddenVesivoimala', upgrades=upgrades.hiddenVesivoimalaGroup, crates={}, flavorText=flavor.hidden1 }),
+    hiddenKemiRoadblock   = ZoneCommander:new({facility='none',                                         zone='Hidden_KemiRoadblock',  side=0,           level=99, size='armor4',            upgrades=upgrades.hiddenKemiRoadblockGroup,   crates={}, flavorText=flavor.hidden1,NeutralAtStart=true}),
+    hiddenForestguard     = ZoneCommander:new({facility='none',                                         zone='Hidden_Forestguard',    side=0,           level=99, size='armor4',            upgrades=upgrades.hiddenForestguardGroup,     crates={}, flavorText=flavor.hidden1,NeutralAtStart=true}),
+    hiddenRanuaGuard      = ZoneCommander:new({facility='none',                                         zone='Hidden_RanuaRB',        side=0,           level=99, size='armor3shorad1',     upgrades=upgrades.hiddenRanuaGuardGroup,      crates={}, flavorText=flavor.hidden1,NeutralAtStart=true}),
+    hiddenPosioGuard      = ZoneCommander:new({facility='none',                                         zone='Hidden_PosioRB',        side=0,           level=99, size='armor4',            upgrades=upgrades.hiddenPosioGuardGroup,      crates={}, flavorText=flavor.hidden1,NeutralAtStart=true}),
+    hiddenVesivoimala     = ZoneCommander:new({facility='none',                                         zone='Hidden_Vesivoimala',    side=1,           level=99, size='HiddenVesivoimala', upgrades=upgrades.hiddenVesivoimalaGroup,     crates={}, flavorText=flavor.hidden1 }),
     --RU
     --those will always be active (until the units are destroyed, they will never get supplies)
-    hiddenKandalaksha     = ZoneCommander:new({facility='none', zone='HiddenKandalaksha',     side=1         , level=99            , size='HiddenTungozero', upgrades=upgrades.hiddenKandalakshaGroup, crates={}, flavorText=flavor.hidden1}),  --always active, strike target
-    hiddenLoukhi          = ZoneCommander:new({facility='none', zone='HiddenLoukhi',          side=1         , level=99            , size='sam', upgrades=upgrades.hiddenLoukhiGroup, crates={}, flavorText=flavor.hidden1}),  --always active, strike target
-    hiddenTungozero       = ZoneCommander:new({facility='none', zone='HiddenTungozero',       side=1         , level=99            , size='HiddenTungozero', upgrades=upgrades.hiddenTungozeroGroup, crates={}, flavorText=flavor.hidden1}),  --always active, strike target
-    hiddenMurmanskSea     = ZoneCommander:new({facility='none', zone='HiddenMurmanskSea',     side=1         , level=99            , upgrades=upgrades.hiddenMurmanskNavalGroup, crates={}, flavorText=flavor.hidden1}),  --always active, ships
-    hiddenOlenyaEWR       = ZoneCommander:new({facility='none', zone='HiddenOlenyaEWR',       side=1         , level=99            , size='sam', upgrades=upgrades.hiddenOlenyaEWRspawn, crates={}, flavorText=flavor.hidden1}),  --always active, EWR
-    hiddenewr             = ZoneCommander:new({facility='none', zone='HiddenEWRScattered',    side=1         , level=99            , upgrades=upgrades.HiddenScatteredEWR, crates={}, flavorText=flavor.hiddenewr}),  --EWR Scattered
+    hiddenKandalaksha     = ZoneCommander:new({facility='none',                                         zone='HiddenKandalaksha',     side=1,           level=99, size='HiddenTungozero',   upgrades=upgrades.hiddenKandalakshaGroup,     crates={}, flavorText=flavor.hidden1}),  --always active, strike target
+    hiddenLoukhi          = ZoneCommander:new({facility='none',                                         zone='HiddenLoukhi',          side=1,           level=99, size='sam',               upgrades=upgrades.hiddenLoukhiGroup,          crates={}, flavorText=flavor.hidden1}),  --always active, strike target
+    hiddenTungozero       = ZoneCommander:new({facility='none',                                         zone='HiddenTungozero',       side=1,           level=99, size='HiddenTungozero',   upgrades=upgrades.hiddenTungozeroGroup,       crates={}, flavorText=flavor.hidden1}),  --always active, strike target
+    hiddenMurmanskSea     = ZoneCommander:new({facility='none',                                         zone='HiddenMurmanskSea',     side=1,           level=99,                           upgrades=upgrades.hiddenMurmanskNavalGroup,   crates={}, flavorText=flavor.hidden1}),  --always active, ships
+    hiddenOlenyaEWR       = ZoneCommander:new({facility='none',                                         zone='HiddenOlenyaEWR',       side=1,           level=99, size='sam',               upgrades=upgrades.hiddenOlenyaEWRspawn,       crates={}, flavorText=flavor.hidden1}),  --always active, EWR
+    hiddenewr             = ZoneCommander:new({facility='none',                                         zone='HiddenEWRScattered',    side=1,           level=99,                           upgrades=upgrades.HiddenScatteredEWR,         crates={}, flavorText=flavor.hiddenewr}),  --EWR Scattered
     
 }
 
@@ -1219,6 +1249,8 @@ function SeadAltitude() return math.random(25,33)*1000 end
 function RunwayStrikeAltitude() return math.random(23,28)*1000 end
 
 zones.bodo:addGroups({
+    DirectorCapability:new({name='Bodo-supply-Hemavan', mission='supply',template='HeloSupplyTemplate', targetzone='Hemavan'}),
+    DirectorCapability:new({name='Bodo-attack-Hemavan-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Hemavan'}),
     DirectorCapability:new({name='Bodo-supply-Kvikkjokk', mission='supply',template='HeloSupplyTemplate', targetzone='Kvikkjokk'}),
     DirectorCapability:new({name='Bodo-supply-Bergsbasen', mission='supply',template='HeloSupplyTemplate', targetzone='BergsBasen'}),
     DirectorCapability:new({name='Bodo-supply-Skogsbasen', mission='supply',template='HeloSupplyTemplate', targetzone='Skogsbasen'}),
@@ -1239,6 +1271,8 @@ zones.andoya:addGroups({
     DirectorCapability:new({name='Andoya-supply-Banak', mission='supply',template='PlaneSupplyTemplate', targetzone='Banak'}),
     DirectorCapability:new({name='Andoya-supply-Ivalo', mission='supply',template='PlaneSupplyTemplate', targetzone='Ivalo'}),
     DirectorCapability:new({name='Andoya-supply-Kirkenes', mission='supply',template='PlaneSupplyTemplate', targetzone='Kirkenes'}),
+    DirectorCapability:new({name='Andoya-supply-Silsand', mission='supply',template='HeloSupplyTemplate', targetzone='Silsand'}),
+    DirectorCapability:new({name='Andoya-supply-Evenes', mission='supply',template='HeloSupplyTemplate', targetzone='Evenes'}),
     DirectorCapability:new({name='Andoya-patrol-Banak-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Banak', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Andoya-patrol-Ivalo-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Ivalo', Altitude = CapAltitude()})
 })
@@ -1249,6 +1283,11 @@ zones.bergsbasen:addGroups({
 })
 
 zones.bardufoss:addGroups({
+    DirectorCapability:new({name='Bardufoss-supply-Evenes', mission='supply',template='HeloSupplyTemplate', targetzone='Evenes'}),
+    DirectorCapability:new({name='Bardufoss-attack-Evenes-Cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Evenes', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='Bardufoss-supply-Tromso', mission='supply',template='HeloSupplyTemplate', targetzone='Tromso'}),
+    DirectorCapability:new({name='Bardufoss-attack-Silsand-surface', mission='attack',template='AttackConvoy', targetzone='Silsand', type='surface'}),
+    DirectorCapability:new({name='Bardufoss-supply-Silsand-surface', mission='supply',template='SupplyConvoy', targetzone='Silsand', type='surface'}),
     DirectorCapability:new({name='Bardufoss-patrol-Bardufoss-Cap', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Bardufoss', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Bardufoss-patrol-Kiruna-Cap', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Kiruna', Altitude = CapAltitude()}),
 
@@ -1258,11 +1297,17 @@ zones.vidsel:addGroups({
     DirectorCapability:new({name='Vidsel-supply-Gallivare', mission='supply',template='HeloSupplyTemplate', targetzone='Gallivare'}),
     DirectorCapability:new({name='Vidsel-supply-Jokkmokk', mission='supply',template='HeloSupplyTemplate', targetzone='Jokkmokk'}),
     DirectorCapability:new({name='Vidsel-supply-Kallax', mission='supply',template='HeloSupplyTemplate', targetzone='Kallax'}),
+    DirectorCapability:new({name='Vidsel-supply-Arvidsjaur', mission='supply',template='HeloSupplyTemplate', targetzone='Arvidsjaur'}),
+    DirectorCapability:new({name='Vidsel-attack-Arvidsjaur-surface', mission='attack',template='AttackConvoy', targetzone='Arvidsjaur', type='surface'}),
+    DirectorCapability:new({name='Vidsel-supply-Arvidsjaur-surface', mission='supply',template='SupplyConvoy', targetzone='Arvidsjaur', type='surface'}),
     DirectorCapability:new({name='Vidsel-patrol-Rovaniemi-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Rovaniemi', Altitude = CapAltitude()})
 })
 
 zones.kallax:addGroups({
     DirectorCapability:new({name='Kallax-supply-Kalix', mission='supply',template='HeloSupplyTemplate', targetzone='Kalix'}),
+    DirectorCapability:new({name='Kallax-supply-Boden', mission='supply',template='HeloSupplyTemplate', targetzone='Boden'}),
+    DirectorCapability:new({name='Kallax-attack-Boden-surface', mission='attack',template='AttackConvoy', targetzone='Boden', type='surface'}),
+    DirectorCapability:new({name='Kallax-supply-Boden-surface', mission='supply',template='SupplyConvoy', targetzone='Boden', type='surface'}),
     DirectorCapability:new({name='Kallax-supply-SAMAlvik', mission='supply',template='SupplyConvoy', targetzone='SAMAlvik', type ='surface'}),
     DirectorCapability:new({name='Kallax-supply-KemiTornio', mission='supply',template='PlaneSupplyTemplate', targetzone='KemiTornio'}),
     DirectorCapability:new({name='Kallax-patrol-Jokkmokk-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Jokkmokk', Altitude = CapAltitude()}),
@@ -1289,10 +1334,17 @@ zones.kirkenes:addGroups({
     DirectorCapability:new({name='Kirkenes-supply-Murmansk', mission='supply',template='PlaneSupplyTemplate', targetzone='MurmanskInternational'}),
     DirectorCapability:new({name='Kirkenes-supply-Prirechnyi', mission='supply',template='HeloSupplyTemplate', targetzone='Prirechnyi'}),
     DirectorCapability:new({name='Kirkenes-supply-Zapolyaryy', mission='supply',template='HeloSupplyTemplate', targetzone='Zapolyarnyy'}),
+    DirectorCapability:new({name='Kirkenes-attack-Zapolyarnyy-surface', mission='attack',template='AttackConvoy', targetzone='Zapolyarnyy', type='surface'}),
+    DirectorCapability:new({name='Kirkenes-supply-Zapolyarnyy-surface', mission='supply',template='SupplyConvoy', targetzone='Zapolyarnyy', type='surface'}),
     DirectorCapability:new({name='Kirkenes-supply-Buolbmat', mission='supply',template='HeloSupplyTemplate', targetzone='Buolbmat'}),
     DirectorCapability:new({name='Kirkenes-supply-Severosmorsk1', mission='supply',template='PlaneSupplyTemplate', targetzone='Severomorsk1'}),
     DirectorCapability:new({name='Kirkenes-supply-Ivalo', mission='supply',template='PlaneSupplyTemplate', targetzone='Ivalo'}),
     --GroupCommander:new({name='Kirkenes-AWACS', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Ivalo', Altitude = CapAltitude()})
+})
+
+zones.zapolyarnyy:addGroups({
+    DirectorCapability:new({name='Zapolyarnyy-attack-Kirkenes-surface', mission='attack',template='AttackConvoy', targetzone='Kirkenes', type='surface'}),
+    DirectorCapability:new({name='Zapolyarnyy-supply-Kirkenes-surface', mission='supply',template='SupplyConvoy', targetzone='Kirkenes', type='surface'})
 })
 
 zones.kittila:addGroups({
@@ -1306,6 +1358,10 @@ zones.ivalo:addGroups({
     DirectorCapability:new({name='Ivalo-supply-Karasjok', mission='supply',template='HeloSupplyTemplate', targetzone='Karasjok'}),
     DirectorCapability:new({name='Ivalo-supply-Luspa', mission='supply',template='HeloSupplyTemplate', targetzone='Luspa'}),
     DirectorCapability:new({name='Ivalo-supply-Guovdageaidnu', mission='supply',template='HeloSupplyTemplate', targetzone='Guovdageaidnu'}),
+    DirectorCapability:new({name='Ivalo-supply-Inari', mission='supply',template='HeloSupplyTemplate', targetzone='Inari'}),
+    DirectorCapability:new({name='Ivalo-supply-Ivalontie', mission='supply',template='HeloSupplyTemplate', targetzone='Ivalontie'}),
+    DirectorCapability:new({name='Ivalo-attack-Inari-surface', mission='attack',template='AttackConvoy', targetzone='Inari', type='surface'}),
+    DirectorCapability:new({name='Ivalo-supply-Inari-surface', mission='supply',template='SupplyConvoy', targetzone='Inari', type='surface'}),
     DirectorCapability:new({name='Ivalo-Patrol-Karasjok-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Karasjok', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Ivalo-Patrol-Gallivare-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Gallivare', Altitude = CapAltitude()})
 })
@@ -1313,6 +1369,8 @@ zones.ivalo:addGroups({
 zones.severomorsk1:addGroups({
     DirectorCapability:new({name='Severomorsk1-supply-Murmansk', mission='supply',template='PlaneSupplyTemplate', targetzone='MurmanskInternational'}),
     DirectorCapability:new({name='Severomorsk1-supply-Severomorsk3', mission='supply',template='PlaneSupplyTemplate', targetzone='Severomorsk3'}),
+    DirectorCapability:new({name='Severomorsk1-attack-Severomorsk3-surface', mission='attack',template='AttackConvoy', targetzone='Severomorsk3', type='surface'}),
+    DirectorCapability:new({name='Severomorsk1-supply-Severomorsk3-surface', mission='supply',template='SupplyConvoy', targetzone='Severomorsk3', type='surface'}),
     DirectorCapability:new({name='Severomorsk1-supply-Prirechnyi', mission='supply',template='HeloSupplyTemplate', targetzone='Prirechnyi'}),
     DirectorCapability:new({name='Severomorsk1-supply-Zapolyarnyy', mission='supply',template='HeloSupplyTemplate', targetzone='Zapolyarnyy'}),
     DirectorCapability:new({name='Severosmorsk1-supply-Monchegorsk', mission='supply',template='PlaneSupplyTemplate', targetzone='Monchegorsk'}),
@@ -1333,6 +1391,10 @@ zones.severomorsk1:addGroups({
 
 
 zones.severomorsk3:addGroups({
+    DirectorCapability:new({name='Severomorsk3-attack-Severomorsk1-surface', mission='attack',template='AttackConvoy', targetzone='Severomorsk1', type='surface'}),
+    DirectorCapability:new({name='Severomorsk3-supply-Severomorsk1-surface', mission='supply',template='SupplyConvoy', targetzone='Severomorsk1', type='surface'}),
+    DirectorCapability:new({name='Severomorsk3-attack-MurmanskInternational-surface', mission='attack',template='AttackConvoy', targetzone='MurmanskInternational', type='surface'}),
+    DirectorCapability:new({name='Severomorsk3-supply-MurmanskInternational-surface', mission='supply',template='SupplyConvoy', targetzone='MurmanskInternational', type='surface'}),
     DirectorCapability:new({name='Severomorsk-3-Sweep-Sweden', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Kiruna', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Severomorsk-3-Sweep-Sweden2', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Kiruna', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Severomorsk-3-Sweep-Sweden3', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Kiruna', Altitude = CapAltitude()}),
@@ -1341,6 +1403,11 @@ zones.severomorsk3:addGroups({
     DirectorCapability:new({name='Severomorsk-3-Sweep-Russia', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Olenya', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Severomorsk-3-Sweep2-Russia', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Olenya', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Severomorsk3-Intercept', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Severomorsk1', Altitude = CapAltitude()})
+})
+
+zones.murmanskinternational:addGroups({
+    DirectorCapability:new({name='MurmanskInternational-attack-Severomorsk3-surface', mission='attack',template='AttackConvoy', targetzone='Severomorsk3', type='surface'}),
+    DirectorCapability:new({name='MurmanskInternational-supply-Severomorsk3-surface', mission='supply',template='SupplyConvoy', targetzone='Severomorsk3', type='surface'})
 })
 
 zones.olenya:addGroups({
@@ -1387,11 +1454,47 @@ zones.alakourtti:addGroups({
 
 zones.kelloselka:addGroups({
     DirectorCapability:new({name='Kelloselka-supply-Alakourtti', mission='supply',template='HeloSupplyTemplate', targetzone='Alakourtti'}),
-    DirectorCapability:new({name='Kelloselka-supply-Maaninkavaara', mission='supply',template='HeloSupplyTemplate', targetzone='Maaninkavaara'})
+    DirectorCapability:new({name='Kelloselka-supply-Maaninkavaara', mission='supply',template='HeloSupplyTemplate', targetzone='Maaninkavaara'}),
+    DirectorCapability:new({name='Kelloselka-attack-Savukoski-surface', mission='attack',template='AttackConvoy', targetzone='Savukoski', type='surface'}),
+    DirectorCapability:new({name='Kelloselka-supply-Savukoski-surface', mission='supply',template='SupplyConvoy', targetzone='Savukoski', type='surface'})
 })
 
 zones.kuusamo:addGroups({
-    DirectorCapability:new({name='Kuusamo-supply-Maaninkavaara', mission='supply',template='HeloSupplyTemplate', targetzone='Maaninkavaara'})
+    DirectorCapability:new({name='Kuusamo-supply-SkogsFARP4', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP4'}),
+    DirectorCapability:new({name='Kuusamo-attack-SkogsFARP4-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP4'}),
+    DirectorCapability:new({name='Kuusamo-supply-Maaninkavaara', mission='supply',template='HeloSupplyTemplate', targetzone='Maaninkavaara'}),
+    DirectorCapability:new({name='Kuusamo-attack-SkogsFARP4-surface', mission='attack',template='AttackConvoy', targetzone='SkogsFARP4', type='surface'}),
+    DirectorCapability:new({name='Kuusamo-supply-SkogsFARP4-surface', mission='supply',template='SupplyConvoy', targetzone='SkogsFARP4', type='surface'})
+})
+
+zones.skogsfarp1:addGroups({
+    DirectorCapability:new({name='SkogsFARP1-supply-KemiTornio', mission='supply',template='HeloSupplyTemplate', targetzone='KemiTornio'}),
+    DirectorCapability:new({name='SkogsFARP1-attack-KemiTornio-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='KemiTornio'}),
+    DirectorCapability:new({name='SkogsFARP1-supply-SkogsFARP2', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP2'}),
+    DirectorCapability:new({name='SkogsFARP1-attack-SkogsFARP2-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP2'})
+})
+
+zones.skogsfarp2:addGroups({
+    DirectorCapability:new({name='SkogsFARP2-supply-SkogsFARP1', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP1'}),
+    DirectorCapability:new({name='SkogsFARP2-attack-SkogsFARP1-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP1'}),
+    DirectorCapability:new({name='SkogsFARP2-supply-SkogsFARP3', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP3'}),
+    DirectorCapability:new({name='SkogsFARP2-attack-SkogsFARP3-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP3'})
+})
+
+zones.skogsfarp3:addGroups({
+    DirectorCapability:new({name='SkogsFARP3-supply-SkogsFARP2', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP2'}),
+    DirectorCapability:new({name='SkogsFARP3-attack-SkogsFARP2-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP2'}),
+    DirectorCapability:new({name='SkogsFARP3-supply-SkogsFARP4', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP4'}),
+    DirectorCapability:new({name='SkogsFARP3-attack-SkogsFARP4-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP4'})
+})
+
+zones.skogsfarp4:addGroups({
+    DirectorCapability:new({name='SkogsFARP4-supply-SkogsFARP3', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP3'}),
+    DirectorCapability:new({name='SkogsFARP4-attack-SkogsFARP3-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP3'}),
+    DirectorCapability:new({name='SkogsFARP4-supply-Kuusamo', mission='supply',template='HeloSupplyTemplate', targetzone='Kuusamo'}),
+    DirectorCapability:new({name='SkogsFARP4-attack-Kuusamo-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Kuusamo'}),
+    DirectorCapability:new({name='SkogsFARP4-attack-Kuusamo-surface', mission='attack',template='AttackConvoy', targetzone='Kuusamo', type='surface'}),
+    DirectorCapability:new({name='SkogsFARP4-supply-Kuusamo-surface', mission='supply',template='SupplyConvoy', targetzone='Kuusamo', type='surface'})
 })
 
 zones.maaninkavaara:addGroups({
@@ -1401,7 +1504,11 @@ zones.maaninkavaara:addGroups({
 zones.savukoski:addGroups({
     DirectorCapability:new({name='Savukoski-supply-Kovdor', mission='supply',template='HeloSupplyTemplate', targetzone='Kovdor'}),
     DirectorCapability:new({name='Savukoski-supply-Kelloselka', mission='supply',template='HeloSupplyTemplate', targetzone='Kelloselka'}),
-    DirectorCapability:new({name='Savukoski-supply-Voujarvi', mission='supply',template='HeloSupplyTemplate', targetzone='Vuojarvi'})
+    DirectorCapability:new({name='Savukoski-supply-Voujarvi', mission='supply',template='HeloSupplyTemplate', targetzone='Vuojarvi'}),
+    DirectorCapability:new({name='Savukoski-attack-Sodankyla-surface', mission='attack',template='AttackConvoy', targetzone='Sodankyla', type='surface'}),
+    DirectorCapability:new({name='Savukoski-supply-Sodankyla-surface', mission='supply',template='SupplyConvoy', targetzone='Sodankyla', type='surface'}),
+    DirectorCapability:new({name='Savukoski-attack-Kelloselka-surface', mission='attack',template='AttackConvoy', targetzone='Kelloselka', type='surface'}),
+    DirectorCapability:new({name='Savukoski-supply-Kelloselka-surface', mission='supply',template='SupplyConvoy', targetzone='Kelloselka', type='surface'})
 })
 
 zones.rovaniemi:addGroups({
@@ -1414,6 +1521,9 @@ zones.rovaniemi:addGroups({
 zones.vuojarvi:addGroups({
     DirectorCapability:new({name='Voujarvi-supply-Kelloselka', mission='supply',template='HeloSupplyTemplate', targetzone='Kelloselka'}),
     DirectorCapability:new({name='Voujarvi-supply-Savukoski', mission='supply',template='HeloSupplyTemplate', targetzone='Savukoski'}),
+    DirectorCapability:new({name='Vuojarvi-supply-Sodankyla', mission='supply',template='HeloSupplyTemplate', targetzone='Sodankyla'}),
+    DirectorCapability:new({name='Vuojarvi-attack-Sodankyla-surface', mission='attack',template='AttackConvoy', targetzone='Sodankyla', type='surface'}),
+    DirectorCapability:new({name='Vuojarvi-supply-Sodankyla-surface', mission='supply',template='SupplyConvoy', targetzone='Sodankyla', type='surface'}),
     DirectorCapability:new({name='Voujarvi-supply-Kittila', mission='supply',template='PlaneSupplyTemplate', targetzone='Kittila'})
 })
 
@@ -1422,8 +1532,12 @@ zones.tervola:addGroups({
 })
 
 zones.kemitornio:addGroups({
+    DirectorCapability:new({name='KemiTornio-supply-SkogsFARP1', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP1'}),
+    DirectorCapability:new({name='KemiTornio-attack-SkogsFARP1-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP1'}),
     DirectorCapability:new({name='KemiTornio-supply-Tervola', mission='supply',template='HeloSupplyTemplate', targetzone='Tervola'}),
     DirectorCapability:new({name='KemiTornio-supply-Kalix', mission='supply',template='HeloSupplyTemplate', targetzone='Kalix'}),
+    DirectorCapability:new({name='KemiTornio-attack-Kalix-surface', mission='attack',template='AttackConvoy', targetzone='Kalix', type='surface'}),
+    DirectorCapability:new({name='KemiTornio-supply-Kalix-surface', mission='supply',template='SupplyConvoy', targetzone='Kalix', type='surface'}),
     DirectorCapability:new({name='KemiTornio-supply-Rovaniemi', mission='supply',template='PlaneSupplyTemplate', targetzone='Rovaniemi'}),
     DirectorCapability:new({name='KemiTornio-supply-Kuusamo', mission='supply',template='HeloSupplyTemplate', targetzone='Kuusamo'}),
     DirectorCapability:new({name='KemiTornio-attack-Kalix-Cas', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Kalix'}),
@@ -1432,6 +1546,7 @@ zones.kemitornio:addGroups({
 
 zones.kiruna:addGroups({
     DirectorCapability:new({name='Kiruna-supply-Guovdageaidnu', mission='supply',template='HeloSupplyTemplate', targetzone='Guovdageaidnu'}),
+    DirectorCapability:new({name='Kiruna-supply-Abisko', mission='supply',template='HeloSupplyTemplate', targetzone='Abisko'}),
     DirectorCapability:new({name='Kiruna-supply-Kalixfors', mission='supply',template='SupplyConvoy', targetzone='Kalixfors', type='surface'}),
     DirectorCapability:new({name='Kiruna-supply-Gallivare', mission='supply',template='HeloSupplyTemplate', targetzone='Gallivare'}),
     DirectorCapability:new({name='Kiruna-supply-Luspa', mission='supply',template='HeloSupplyTemplate', targetzone='Luspa', ForceFromGround = true}),
@@ -1447,13 +1562,123 @@ zones.kiruna:addGroups({
     --GroupCommander:new({name='Kiruna-AWACS-blue', mission='patrol', targetzone='Kittila'})
 })
 zones.jokkmokk:addGroups({
+    DirectorCapability:new({name='Jokkmokk-supply-Storsand', mission='supply',template='HeloSupplyTemplate', targetzone='Storsand'}),
+    DirectorCapability:new({name='Jokkmokk-attack-Storsand-surface', mission='attack',template='AttackConvoy', targetzone='Storsand', type='surface'}),
+    DirectorCapability:new({name='Jokkmokk-supply-Storsand-surface', mission='supply',template='SupplyConvoy', targetzone='Storsand', type='surface'}),
     DirectorCapability:new({name='Jokkmokk-attack-Gallivare', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Gallivare'}),
     DirectorCapability:new({name='Jokkmokk-attack-Vidsel', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Vidsel'}),
     DirectorCapability:new({name='Jokkmokk-patrol-Kvikkjokk', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Kvikkjokk', Altitude = CapAltitude()})
 })
 zones.kalix:addGroups({
+    DirectorCapability:new({name='Kalix-supply-Tore', mission='supply',template='HeloSupplyTemplate', targetzone='Tore'}),
+    DirectorCapability:new({name='Kalix-attack-Tore-surface', mission='attack',template='AttackConvoy', targetzone='Tore', type='surface'}),
+    DirectorCapability:new({name='Kalix-supply-Tore-surface', mission='supply',template='SupplyConvoy', targetzone='Tore', type='surface'}),
+    DirectorCapability:new({name='Kalix-attack-KemiTornio-surface', mission='attack',template='AttackConvoy', targetzone='KemiTornio', type='surface'}),
+    DirectorCapability:new({name='Kalix-supply-KemiTornio-surface', mission='supply',template='SupplyConvoy', targetzone='KemiTornio', type='surface'}),
     DirectorCapability:new({name='Kalix-attack-Kallax', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Kallax'}),
     DirectorCapability:new({name='Kalix-attack-KemiTornio', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='KemiTornio'})
+})
+
+zones.luspa:addGroups({
+    DirectorCapability:new({name='Luspa-supply-Soppero', mission='supply',template='HeloSupplyTemplate', targetzone='Soppero'}),
+    DirectorCapability:new({name='Luspa-supply-Enontekio', mission='supply',template='HeloSupplyTemplate', targetzone='Enontekio'})
+})
+
+zones.guovdageaidnu:addGroups({
+    DirectorCapability:new({name='Guovdageaidnu-supply-Maze', mission='supply',template='HeloSupplyTemplate', targetzone='Maze'})
+})
+
+zones.abisko:addGroups({
+    DirectorCapability:new({name='Abisko-supply-Kiruna', mission='supply',template='HeloSupplyTemplate', targetzone='Kiruna'}),
+    DirectorCapability:new({name='Abisko-attack-Kiruna-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Kiruna'})
+})
+zones.arvidsjaur:addGroups({
+    DirectorCapability:new({name='Arvidsjaur-supply-Hemavan', mission='supply',template='HeloSupplyTemplate', targetzone='Hemavan'}),
+    DirectorCapability:new({name='Arvidsjaur-attack-Hemavan-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Hemavan'}),
+    DirectorCapability:new({name='Arvidsjaur-supply-Vidsel', mission='supply',template='HeloSupplyTemplate', targetzone='Vidsel'}),
+    DirectorCapability:new({name='Arvidsjaur-attack-Vidsel-surface', mission='attack',template='AttackConvoy', targetzone='Vidsel', type='surface'}),
+    DirectorCapability:new({name='Arvidsjaur-supply-Vidsel-surface', mission='supply',template='SupplyConvoy', targetzone='Vidsel', type='surface'}),
+    DirectorCapability:new({name='Arvidsjaur-patrol-Arvidsjaur-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Arvidsjaur', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='Arvidsjaur-attack-Hemavan-Cap', mission='attack',template='CapPlaneTemplate', MissionType='CAP', targetzone='Hemavan', Altitude = CapAltitude()}),
+    DirectorCapability:new({name='Arvidsjaur-attack-Hemavan-cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Hemavan', Altitude = CasAltitude()})
+})
+zones.hemavan:addGroups({
+    DirectorCapability:new({name='Hemavan-supply-Bodo', mission='supply',template='HeloSupplyTemplate', targetzone='Bodo'}),
+    DirectorCapability:new({name='Hemavan-attack-Bodo-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Bodo'}),
+    DirectorCapability:new({name='Hemavan-supply-Arvidsjaur', mission='supply',template='HeloSupplyTemplate', targetzone='Arvidsjaur'}),
+    DirectorCapability:new({name='Hemavan-attack-Arvidsjaur-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Arvidsjaur'}),
+    DirectorCapability:new({name='Hemavan-patrol-Hemavan-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Hemavan', Altitude = CapAltitude()})
+})
+zones.boden:addGroups({
+    DirectorCapability:new({name='Boden-supply-Kallax', mission='supply',template='HeloSupplyTemplate', targetzone='Kallax'}),
+    DirectorCapability:new({name='Boden-attack-Kallax-surface', mission='attack',template='AttackConvoy', targetzone='Kallax', type='surface'}),
+    DirectorCapability:new({name='Boden-supply-Kallax-surface', mission='supply',template='SupplyConvoy', targetzone='Kallax', type='surface'}),
+    DirectorCapability:new({name='Boden-attack-Tore-surface', mission='attack',template='AttackConvoy', targetzone='Tore', type='surface'}),
+    DirectorCapability:new({name='Boden-supply-Tore-surface', mission='supply',template='SupplyConvoy', targetzone='Tore', type='surface'}),
+    DirectorCapability:new({name='Boden-attack-Kallax-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Kallax'})
+})
+zones.soppero:addGroups({
+    DirectorCapability:new({name='Soppero-supply-Luspa', mission='supply',template='HeloSupplyTemplate', targetzone='Luspa'}),
+    DirectorCapability:new({name='Soppero-attack-Luspa-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Luspa'})
+})
+zones.storsand:addGroups({
+    DirectorCapability:new({name='Storsand-supply-Jokkmokk', mission='supply',template='HeloSupplyTemplate', targetzone='Jokkmokk'}),
+    DirectorCapability:new({name='Storsand-attack-Jokkmokk-surface', mission='attack',template='AttackConvoy', targetzone='Jokkmokk', type='surface'}),
+    DirectorCapability:new({name='Storsand-supply-Jokkmokk-surface', mission='supply',template='SupplyConvoy', targetzone='Jokkmokk', type='surface'}),
+    DirectorCapability:new({name='Storsand-attack-Jokkmokk-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Jokkmokk'})
+})
+zones.tore:addGroups({
+    DirectorCapability:new({name='Tore-supply-Kalix', mission='supply',template='HeloSupplyTemplate', targetzone='Kalix'}),
+    DirectorCapability:new({name='Tore-attack-Boden-surface', mission='attack',template='AttackConvoy', targetzone='Boden', type='surface'}),
+    DirectorCapability:new({name='Tore-supply-Boden-surface', mission='supply',template='SupplyConvoy', targetzone='Boden', type='surface'}),
+    DirectorCapability:new({name='Tore-attack-Kalix-surface', mission='attack',template='AttackConvoy', targetzone='Kalix', type='surface'}),
+    DirectorCapability:new({name='Tore-supply-Kalix-surface', mission='supply',template='SupplyConvoy', targetzone='Kalix', type='surface'}),
+    DirectorCapability:new({name='Tore-attack-Kalix-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Kalix'})
+})
+
+zones.silsand:addGroups({
+    DirectorCapability:new({name='Silsand-supply-Bardufoss', mission='supply',template='HeloSupplyTemplate', targetzone='Bardufoss'}),
+    DirectorCapability:new({name='Silsand-attack-Bardufoss-surface', mission='attack',template='AttackConvoy', targetzone='Bardufoss', type='surface'}),
+    DirectorCapability:new({name='Silsand-supply-Bardufoss-surface', mission='supply',template='SupplyConvoy', targetzone='Bardufoss', type='surface'}),
+    DirectorCapability:new({name='Silsand-attack-Bardufoss-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Bardufoss'})
+})
+zones.maze:addGroups({
+    DirectorCapability:new({name='Maze-supply-Guovdageaidnu', mission='supply',template='HeloSupplyTemplate', targetzone='Guovdageaidnu'}),
+    DirectorCapability:new({name='Maze-attack-Guovdageaidnu-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Guovdageaidnu'})
+})
+zones.evenes:addGroups({
+    DirectorCapability:new({name='Evenes-supply-Bardufoss', mission='supply',template='HeloSupplyTemplate', targetzone='Bardufoss'}),
+    DirectorCapability:new({name='Evenes-attack-Bardufoss-Cas', mission='attack',template='CasPlaneTemplate', MissionType='CAS', targetzone='Bardufoss', Altitude = CasAltitude()}),
+    DirectorCapability:new({name='Evenes-supply-Andoya', mission='supply',template='HeloSupplyTemplate', targetzone='Andoya'}),
+    DirectorCapability:new({name='Evenes-patrol-Evenes-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Evenes', Altitude = CapAltitude()})
+})
+zones.tromso:addGroups({
+    DirectorCapability:new({name='Tromso-supply-Andoya', mission='supply',template='HeloSupplyTemplate', targetzone='Andoya'}),
+    DirectorCapability:new({name='Tromso-supply-Alta', mission='supply',template='HeloSupplyTemplate', targetzone='Alta'}),
+    DirectorCapability:new({name='Tromso-patrol-Tromso-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Tromso', Altitude = CapAltitude()})
+})
+
+zones.inari:addGroups({
+    DirectorCapability:new({name='Inari-supply-Ivalo', mission='supply',template='HeloSupplyTemplate', targetzone='Ivalo'}),
+    DirectorCapability:new({name='Inari-attack-Ivalo-surface', mission='attack',template='AttackConvoy', targetzone='Ivalo', type='surface'}),
+    DirectorCapability:new({name='Inari-supply-Ivalo-surface', mission='supply',template='SupplyConvoy', targetzone='Ivalo', type='surface'}),
+    DirectorCapability:new({name='Inari-attack-Ivalo-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Ivalo'})
+})
+zones.ivalontie:addGroups({
+    DirectorCapability:new({name='Ivalontie-supply-Ivalo', mission='supply',template='HeloSupplyTemplate', targetzone='Ivalo'}),
+    DirectorCapability:new({name='Ivalontie-attack-Ivalo-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Ivalo'})
+})
+zones.enontekio:addGroups({
+    DirectorCapability:new({name='Enontekio-supply-Luspa', mission='supply',template='HeloSupplyTemplate', targetzone='Luspa'}),
+    DirectorCapability:new({name='Enontekio-patrol-Enontekio-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Enontekio', Altitude = CapAltitude()})
+})
+zones.sodankyla:addGroups({
+    DirectorCapability:new({name='Sodankyla-supply-Vuojarvi', mission='supply',template='HeloSupplyTemplate', targetzone='Vuojarvi'}),
+    DirectorCapability:new({name='Sodankyla-attack-Vuojarvi-surface', mission='attack',template='AttackConvoy', targetzone='Vuojarvi', type='surface'}),
+    DirectorCapability:new({name='Sodankyla-supply-Vuojarvi-surface', mission='supply',template='SupplyConvoy', targetzone='Vuojarvi', type='surface'}),
+    DirectorCapability:new({name='Sodankyla-attack-Savukoski-surface', mission='attack',template='AttackConvoy', targetzone='Savukoski', type='surface'}),
+    DirectorCapability:new({name='Sodankyla-supply-Savukoski-surface', mission='supply',template='SupplyConvoy', targetzone='Savukoski', type='surface'}),
+    DirectorCapability:new({name='Sodankyla-attack-Vuojarvi-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Vuojarvi'})
 })
 
 for i,v in pairs(zones) do
@@ -1556,6 +1781,21 @@ zones.severomorsk3.airbaseName ='Severomorsk-3'
 zones.monchegorsk.airbaseName ='Monchegorsk'
 zones.olenya.airbaseName ='Olenya'
 zones.alakourtti.airbaseName ='Alakurtti'
+zones.abisko.airbaseName = 'Abisko'
+zones.arvidsjaur.airbaseName = 'Arvidsjaur'
+zones.hemavan.airbaseName = 'Hemavan'
+zones.boden.airbaseName = 'Boden Heli Base'
+zones.soppero.airbaseName = 'Soppero'
+zones.storsand.airbaseName = 'Storsand'
+zones.tore.airbaseName = 'Tore'
+zones.silsand.airbaseName = 'Silsand'
+zones.maze.airbaseName = 'Maze'
+zones.evenes.airbaseName = 'Evenes'
+zones.tromso.airbaseName = 'Tromso'
+zones.inari.airbaseName = 'Inari'
+zones.ivalontie.airbaseName = 'Ivalontie'
+zones.enontekio.airbaseName = 'Enontekio'
+zones.sodankyla.airbaseName = 'Sodankyla'
 
 
 --[[ AirbaseBelonging = AirbaseBelonging or {}
@@ -1570,12 +1810,17 @@ bc:addConnection("Bodo","BergsBasen")
 bc:addConnection("Bodo","Andoya")
 bc:addConnection("Bodo","Vidsel")
 bc:addConnection("Bodo","Kiruna")
-bc:addConnection("Andoya","Alta")
+bc:addConnection("Bodo","Hemavan")
+bc:addConnection("Hemavan","Arvidsjaur")
+bc:addConnection("Hemavan","Vidsel")
+bc:addConnection("Andoya","Tromso")
+bc:addConnection("Tromso","Alta")
 bc:addConnection("Alta","Banak")
 --bc:addConnection("Andoya","Ivalo")
 bc:addConnection("Banak","Buolbmat")
 --bc:addConnection("Andoya","Kirkenes")
-bc:addConnection("Andoya","Bardufoss")
+bc:addConnection("Andoya","Silsand")
+bc:addConnection("Bardufoss","Tromso")
 bc:addConnection("Kiruna","Kittila")
 bc:addConnection("Kittila","Vuojarvi")
 bc:addConnection("BergsBasen","Kvikkjokk")
@@ -1590,7 +1835,12 @@ bc:addConnection("Vidsel","Kallax")
 bc:addConnection("Kallax","Kalix")
 bc:addConnection("Kalix","KemiTornio")
 bc:addConnection("Kallax","SAMAlvik")
-bc:addConnection("Kuusamo","KemiTornio")
+bc:addHiddenConnection("Kuusamo","KemiTornio")
+bc:addConnection("KemiTornio","SkogsFARP1")
+bc:addConnection("SkogsFARP1","SkogsFARP2")
+bc:addConnection("SkogsFARP2","SkogsFARP3")
+bc:addConnection("SkogsFARP3","SkogsFARP4")
+bc:addConnection("SkogsFARP4","Kuusamo")
 bc:addConnection("KemiTornio","Tervola")
 bc:addConnection("Rovaniemi","Tervola")
 bc:addConnection("Rovaniemi","Vuojarvi")
@@ -1608,9 +1858,9 @@ bc:addConnection("Kiruna","Kalixfors")
 bc:addConnection("Luspa","Guovdageaidnu")
 bc:addConnection("Karasjok","Guovdageaidnu")
 bc:addConnection("Karasjok","Banak")
-bc:addConnection("Karasjok","Ivalo")
+bc:addConnection("Karasjok","Inari")
 bc:addConnection("Prirechnyi","Severomorsk1")
-bc:addConnection("Ivalo","Vuojarvi")
+bc:addConnection("Ivalontie","Sodankyla")
 bc:addConnection("Ivalo","Guovdageaidnu")
 bc:addConnection("Luspa","Ivalo")
 bc:addConnection("Kelloselka","Alakourtti")
@@ -1631,22 +1881,201 @@ bc:addConnection("Severomorsk3","Olenya")
 --bc:addConnection("Vuojarvi","Olenya")
 --bc:addConnection("Rovaniemi","Olenya")
 bc:addConnection("Ivalo","Olenya")
+bc:addConnection("Abisko","Kiruna")
+bc:addConnection("Evenes","Abisko")
+bc:addConnection("Arvidsjaur","Vidsel")
+bc:addConnection("Boden","Kallax")
+bc:addConnection("Enontekio","Luspa")
+bc:addConnection("Evenes","Andoya")
+bc:addConnection("Evenes","Bardufoss")
+bc:addConnection("Inari","Ivalo")
+bc:addConnection("Ivalontie","Ivalo")
+bc:addConnection("Maze","Guovdageaidnu")
+bc:addConnection("Silsand","Bardufoss")
+bc:addConnection("Sodankyla","Vuojarvi")
+bc:addConnection("Soppero","Luspa")
+bc:addConnection("Jokkmokk","Storsand")
+bc:addConnection("Tore","Kalix")
 bc:addHiddenConnection("Banak","Kiruna")
 bc:addHiddenConnection("Andoya","Banak")
 --bc:addConnection("Kuusamo","Olenya")
 --bc:addConnection("LaplandiyaStorage","Olenya")
 --bc:addConnection("LovozeroCCC","Olenya")
 
-TheaterInfrastructure = {}
+TheaterInfrastructure = {
+	{
+		id = "olenya_laplandiya_supply",
+		flag = "laplandiyaStorage",
+		effect = "regional_supply",
+		side = coalition.side.RED,
+		scope = "source",
+		sourceZone = "Olenya",
+	},
+	{
+		id = "monchegorsk_zelenoborskij_supply",
+		flag = "ZelenoborskijStorage",
+		effect = "regional_supply",
+		side = coalition.side.RED,
+		scope = "source",
+		sourceZone = "Monchegorsk",
+	},
+}
 
-TheaterRegions = {}
+TheaterRegions = {
+	{
+		id = "norwegian_coast",
+		kind = "coastal_air_network",
+		name = "Norwegian Coast",
+		zones = {
+			{ name = "Bodo", role = "foothold" },
+			{ name = "Andoya", role = "foothold" },
+			{ name = "Bardufoss", role = "core" },
+			{ name = "Evenes", role = "member" },
+			{ name = "Silsand", role = "member" },
+			{ name = "Tromso", role = "member" },
+			{ name = "Alta", role = "member" },
+			{ name = "Banak", role = "member" },
+			{ name = "Buolbmat", role = "member" },
+			{ name = "BergsBasen", role = "member" },
+		},
+	},
+	{
+		id = "western_lapland",
+		kind = "strategic_corridor",
+		name = "Western Lapland",
+		zones = {
+			{ name = "Kiruna", role = "core" },
+			{ name = "Abisko", role = "foothold" },
+			{ name = "Kvikkjokk", role = "foothold" },
+			{ name = "Luspa", role = "member" },
+			{ name = "Guovdageaidnu", role = "member" },
+			{ name = "Karasjok", role = "member" },
+			{ name = "Skogsbasen", role = "member" },
+			{ name = "Gallivare", role = "member" },
+			{ name = "Kalixfors", role = "member" },
+			{ name = "Jokkmokk", role = "member" },
+			{ name = "Vidsel", role = "member" },
+			{ name = "Soppero", role = "member" },
+			{ name = "Storsand", role = "member" },
+			{ name = "Arvidsjaur", role = "member" },
+			{ name = "Hemavan", role = "member" },
+			{ name = "Maze", role = "member" },
+		},
+	},
+	{
+		id = "bothnian_corridor",
+		kind = "air_network",
+		name = "Bothnian Corridor",
+		zones = {
+			{ name = "Kallax", role = "foothold" },
+			{ name = "SAMAlvik", role = "defence" },
+			{ name = "Boden", role = "member" },
+			{ name = "Tore", role = "member" },
+			{ name = "Kalix", role = "member" },
+			{ name = "KemiTornio", role = "core" },
+			{ name = "Tervola", role = "member" },
+			{ name = "Rovaniemi", role = "member" },
+		},
+	},
+	{
+		id = "finnish_lapland",
+		kind = "air_network",
+		name = "Finnish Lapland",
+		zones = {
+			{ name = "Kittila", role = "foothold" },
+			{ name = "Enontekio", role = "foothold" },
+			{ name = "Vuojarvi", role = "member" },
+			{ name = "Ivalo", role = "core" },
+			{ name = "Savukoski", role = "member" },
+			{ name = "Inari", role = "member" },
+			{ name = "Ivalontie", role = "member" },
+			{ name = "Sodankyla", role = "member" },
+		},
+	},
+	{
+		id = "eastern_finland_border",
+		kind = "strategic_corridor",
+		name = "Eastern Finland Border",
+		zones = {
+			{ name = "Kuusamo", role = "foothold" },
+			{ name = "Maaninkavaara", role = "member" },
+			{ name = "Kelloselka", role = "foothold" },
+			{ name = "Alakourtti", role = "core" },
+			{ name = "Kovdor", role = "member" },
+		},
+	},
+	{
+		id = "murmansk_border",
+		kind = "strategic_corridor",
+		name = "Murmansk Border",
+		zones = {
+			{ name = "Kirkenes", role = "foothold" },
+			{ name = "Zapolyarnyy", role = "member" },
+			{ name = "Prirechnyi", role = "member" },
+			{ name = "Severomorsk1", role = "core" },
+		},
+	},
+	{
+		id = "kola_air_network",
+		kind = "air_network",
+		name = "Kola Air Network",
+		zones = {
+			{ name = "Severomorsk3", role = "foothold" },
+			{ name = "MurmanskInternational", role = "member" },
+			{ name = "Olenya", role = "core" },
+			{ name = "Monchegorsk", role = "member" },
+			{ name = "Apatity", role = "foothold" },
+		},
+		infrastructure = {
+			{
+				flag = "laplandiyaStorage",
+				effect = "regional_supply",
+				side = coalition.side.RED,
+				sourceZone = "LaplandiyaStorage",
+				affects = { "Severomorsk3", "MurmanskInternational", "Olenya", "Monchegorsk", "Apatity" },
+			},
+			{
+				flag = "ZelenoborskijStorage",
+				effect = "regional_supply",
+				side = coalition.side.RED,
+				sourceZone = "ZelenoborskijStorage",
+				affects = { "Severomorsk3", "MurmanskInternational", "Olenya", "Monchegorsk", "Apatity" },
+			},
+			{
+				flag = "KoashvaStorage",
+				effect = "regional_supply",
+				side = coalition.side.RED,
+				sourceZone = "KoashvaStorage",
+				affects = { "Severomorsk3", "MurmanskInternational", "Olenya", "Monchegorsk", "Apatity" },
+			},
+			{
+				flag = "KilpYavrStorage",
+				effect = "regional_supply",
+				side = coalition.side.RED,
+				sourceZone = "KilpYavrStorage",
+				affects = { "Severomorsk3", "MurmanskInternational", "Olenya", "Monchegorsk", "Apatity" },
+			},
+			{
+				flag = "AfrikandaStorage",
+				effect = "regional_supply",
+				side = coalition.side.RED,
+				sourceZone = "AfrikandaStorage",
+				affects = { "Severomorsk3", "MurmanskInternational", "Olenya", "Monchegorsk", "Apatity" },
+			},
+		},
+	},
+}
 
 TheaterAreas = {
 	{
 		id = "norwegian_coast",
 		kind = "coastal_air_network",
 		name = "Norwegian Coast",
+		regions = { "norwegian_coast" },
 		zones = {
+			{ name = "Evenes", role = "hub" },
+			{ name = "Silsand", role = "gateway" },
+			{ name = "Tromso", role = "hub" },
 			{ name = "Bodo", role = "hub" },
 			{ name = "Andoya", role = "hub" },
 			{ name = "Bardufoss", role = "hub" },
@@ -1660,7 +2089,14 @@ TheaterAreas = {
 		id = "western_lapland",
 		kind = "strategic_corridor",
 		name = "Western Lapland",
+		regions = { "western_lapland" },
 		zones = {
+			{ name = "Abisko", role = "gateway" },
+			{ name = "Soppero", role = "support" },
+			{ name = "Storsand", role = "support" },
+			{ name = "Arvidsjaur", role = "hub" },
+			{ name = "Hemavan", role = "gateway" },
+			{ name = "Maze", role = "support" },
 			{ name = "Kiruna", role = "hub" },
 			{ name = "Luspa", role = "support" },
 			{ name = "Guovdageaidnu", role = "gateway" },
@@ -1677,7 +2113,10 @@ TheaterAreas = {
 		id = "bothnian_corridor",
 		kind = "air_network",
 		name = "Bothnian Corridor",
+		regions = { "bothnian_corridor" },
 		zones = {
+			{ name = "Boden", role = "support" },
+			{ name = "Tore", role = "gateway" },
 			{ name = "Kallax", role = "hub" },
 			{ name = "SAMAlvik", role = "defence" },
 			{ name = "Kalix", role = "gateway" },
@@ -1690,7 +2129,12 @@ TheaterAreas = {
 		id = "finnish_lapland",
 		kind = "air_network",
 		name = "Finnish Lapland",
+		regions = { "finnish_lapland" },
 		zones = {
+			{ name = "Enontekio", role = "hub" },
+			{ name = "Inari", role = "support" },
+			{ name = "Ivalontie", role = "support" },
+			{ name = "Sodankyla", role = "gateway" },
 			{ name = "Kittila", role = "hub" },
 			{ name = "Vuojarvi", role = "gateway" },
 			{ name = "Ivalo", role = "hub" },
@@ -1701,8 +2145,13 @@ TheaterAreas = {
 		id = "eastern_finland_border",
 		kind = "strategic_corridor",
 		name = "Eastern Finland Border",
+		regions = { "eastern_finland_border" },
 		zones = {
 			{ name = "Kuusamo", role = "hub" },
+			{ name = "SkogsFARP1", role = "support" },
+			{ name = "SkogsFARP2", role = "support" },
+			{ name = "SkogsFARP3", role = "support" },
+			{ name = "SkogsFARP4", role = "support" },
 			{ name = "Maaninkavaara", role = "gateway" },
 			{ name = "Kelloselka", role = "approach" },
 			{ name = "Alakourtti", role = "hub" },
@@ -1713,6 +2162,7 @@ TheaterAreas = {
 		id = "murmansk_border",
 		kind = "strategic_corridor",
 		name = "Murmansk Border",
+		regions = { "murmansk_border" },
 		zones = {
 			{ name = "Kirkenes", role = "hub" },
 			{ name = "Zapolyarnyy", role = "gateway" },
@@ -1724,6 +2174,7 @@ TheaterAreas = {
 		id = "kola_air_network",
 		kind = "air_network",
 		name = "Kola Air Network",
+		regions = { "kola_air_network" },
 		zones = {
 			{ name = "Severomorsk3", role = "gateway" },
 			{ name = "MurmanskInternational", role = "hub" },
@@ -1744,6 +2195,7 @@ TheaterAreas = {
 
 
 supplyZones = {
+    'Hemavan',
     'Kiruna',   
     'Jokkmokk', 
     'Luspa',    
@@ -1790,9 +2242,7 @@ supplyZones = {
     'SkogsFARP2',
     'SkogsFARP3',
     'SkogsFARP4',
-    'LovozeroCCC',
-    'ZelenoborskijStorage',
-    'LaplandiyaStorage'
+
 }
 ----------------------end of asset spawn---------------------------------
 
@@ -1820,29 +2270,38 @@ local checkMissionComplete = function(event, sender)
 			break
 		end
 	end
-
 	if done then
 		missionCompleted = true
 		trigger.action.setUserFlag(180, true)
-		trigger.action.outText(L10N:Get("MISSION_COMPLETE_MANUAL_RESTART"), 120)
 
 		timer.scheduleFunction(function()
 			trigger.action.outSoundForCoalition(2, "BH.ogg")
-		end, {}, timer.getTime() + 5)
-
-			local subMenu = missionCommands.addSubMenuForCoalition(2, L10N:Get("MENU_RESTART_AND_RESET"), nil)
-			missionCommands.addCommandForCoalition(2, L10N:Get("COMMON_YES"), subMenu, function()
-					Utils.saveTable(bc.saveFile, 'zonePersistance', {})
-					if resetSaveFileAndFarp then
-					resetSaveFileAndFarp()
-					end
-				trigger.action.outText(L10N:Get("MISSION_RESTARTING_NOW"), 120)
-				timer.scheduleFunction(function()
-					trigger.action.setUserFlag(181, true)
-				end, {}, timer.getTime() + 5)
+		end, {}, timer.getTime() + 2)
+		if AutoRestart then
+			trigger.action.outText(L10N:Get("MISSION_COMPLETE_AUTORESTART"), 120)
+			Utils.saveTable(bc.saveFile, 'zonePersistance', {})
+			if resetSaveFileAndFarp then
+			resetSaveFileAndFarp()
+			end
+			timer.scheduleFunction(function()
+				trigger.action.setUserFlag(181, true)
+			end, {}, timer.getTime() + 5)
+		else
+				trigger.action.outText(L10N:Get("MISSION_COMPLETE_MANUAL_RESTART"), 120)
+				local subMenu = missionCommands.addSubMenuForCoalition(2, L10N:Get("MENU_RESTART_AND_RESET"), nil)
+				missionCommands.addCommandForCoalition(2, L10N:Get("COMMON_YES"), subMenu, function()
+						Utils.saveTable(bc.saveFile, 'zonePersistance', {})
+						if resetSaveFileAndFarp then
+						resetSaveFileAndFarp()
+						end
+					trigger.action.outText(L10N:Get("MISSION_RESTARTING_NOW"), 120)
+					timer.scheduleFunction(function()
+						trigger.action.setUserFlag(181, true)
+					end, {}, timer.getTime() + 5)
+				end)
+				missionCommands.addCommandForCoalition(2, L10N:Get("COMMON_NO"), subMenu, function()
 			end)
-			missionCommands.addCommandForCoalition(2, L10N:Get("COMMON_NO"), subMenu, function()
-		end)
+		end
 	end
 end
 
@@ -1889,6 +2348,7 @@ local SHOP_PRICE_DEFAULTS = {
   zsam          = 2000,
   zhimars       = 2500,
   zlogc         = 2000,
+  zwhrepair     = 2000,
   zsup3         = 750,
   zwh50         = 500,
   zarm          = 1000,
@@ -3189,6 +3649,40 @@ end, nil, 50)
 -- end red shop
 
 local infMenu=nil
+local redWarehouseMenu = nil
+bc:registerShopItem('redwarehouse', LTGet("WAREHOUSE_SHOP_RED_CREATE"), 3000, function(sender)
+	if redWarehouseMenu then
+		missionCommands.removeItemForCoalition(1, redWarehouseMenu)
+		redWarehouseMenu = nil
+	end
+	local zoneChoices = {}
+	for _, zoneObj in ipairs(bc:getZones()) do
+		if zoneObj.side == 1 and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden
+			and zoneObj.airbaseName and zoneObj.airbaseName ~= '' and not zoneObj.warehouseFacility
+			and not isCarrierZoneName(zoneObj.zone) then
+			zoneChoices[zoneObj.zone] = zoneObj
+		end
+	end
+	if not next(zoneChoices) then return LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES") end
+	redWarehouseMenu = bc:showTargetZoneMenu(1, LTGet("WAREHOUSE_SHOP_RED_CREATE"), function(zoneName, menu)
+		local zoneObj = zoneChoices[zoneName]
+		bc:buyShopItem(1, 'redwarehouse', {zone = zoneObj})
+		if zoneObj.warehouseFacility then
+			missionCommands.removeItemForCoalition(1, menu)
+			redWarehouseMenu = nil
+		end
+		return true -- Keep the selector on failure; successful purchases close it above.
+	end, 1, false, zoneChoices)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyRedWarehouseUpgrade(params.zone, params.placement, params.now)
+end)
+bc:registerShopItem('redwhrepair', LTGet("WAREHOUSE_SHOP_REPAIR"), 2000, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyWarehouseRepair(params.zone, 1, params.now)
+end)
+
 bc:registerShopItem('zinf',LTGet("SYRIA_SHOP_ITEM_UPGRADE_INFANTRY"),ShopPrices.zinf,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
@@ -3300,7 +3794,24 @@ bc.shopItems['zlogc'].groupZoneSelector = {
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
 	extraPredicate = function(zoneObj)
-		return not zoneObj.LogisticCenter
+		return not zoneObj.LogisticCenter and not zoneObj.warehouseFacility and not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
+}
+
+bc:registerShopItem('zwhrepair', LTGet("WAREHOUSE_SHOP_REPAIR"), ShopPrices.zwhrepair, function(sender)
+	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyWarehouseRepair(params.zone, 2, timer.getAbsTime())
+end)
+bc.shopItems['zwhrepair'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = true,
+	sortPolicy = 'friendly_frontline',
+	candidateBucket = 'blue_visible',
+	refreshTags = { 'warehouse_targets' },
+	extraPredicate = function(zoneObj)
+		return zoneObj.warehouseFacility ~= nil and zoneObj.warehouseFacility.state == 'destroyed'
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
 }
@@ -3576,6 +4087,7 @@ ShopPrices = ShopPrices or {
 	zsam          = 2000, -- Upgrade zone with Hawk/Nasams
 	zhimars       = 2500, -- Upgrade zone with HIMARS
 	zlogc         = 2000, -- Upgrade zone to logistic center
+	zwhrepair     = 2000, -- Repair the destroyed warehouse building
 	zsup3         = 750,  -- Add 3 supplies to a zone
 	zwh50         = 500,  -- Resupply warehouse with 50
 	zarm          = 1000, -- Upgrade zone with armor
@@ -3627,6 +4139,8 @@ ShopRankRequirements = ShopRankRequirements or {
 
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
 bc:addShopItem(1, 'redmassattack', -1, 1) -- red AI mass airbase attack
+bc:addShopItem(1, 'redwarehouse', -1, 3) -- red AI rear supply depot
+bc:addShopItem(1, 'redwhrepair', -1, 4) -- red AI warehouse repair
 if Era ~= 'Vietnam' then
 bc:addShopItem(1, 'strategicbomberRed', -1, 2) -- red AI strategic bomber
 end
@@ -3716,6 +4230,7 @@ if AllowScriptedSupplies then
     bc:addShopItem(2, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
 end
 bc:addShopItem(2, 'zlogc', -1, 5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
+bc:addShopItem(2, 'zwhrepair', -1, 5.5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- repair warehouse
 bc:addShopItem(2, 'zsup3', -1, 6, ShopRankRequirements.zsup3, ShopCats.LogisticsStrategic) -- add 3 supplies to a zone
 if WarehouseLogistics then
     bc:addShopItem(2, 'zwh50', -1, 7, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
@@ -3751,9 +4266,10 @@ end
 
 
 bc:init()
-RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, enemyPilotCapture = 200, ['Zone upgrade'] = 100, ['Zone capture'] = 200, ['Warehouse delivery'] = 150, structure = 100}
 RewardContribution.ctldGround = RewardContribution.ctldGround or 10
 RewardContribution.ctldAir = RewardContribution.ctldAir or 20
+RewardContribution.enemyPilotCapture = RewardContribution.enemyPilotCapture or 200
 bc:startRewardPlayerContribution(15,RewardContribution)
 HercCargoDropSupply.init(bc)
 buildTemplateCache()
@@ -3794,10 +4310,10 @@ DynamicHybridConfig = DynamicHybridConfig or {
 	enabled = true,
 	runOnce = true,
 	enablePatrol = false,
-	airMaxNm = 120,
+	airMaxNm = 150,
 	heloCasMaxNm = 40,
 	minGroundAttackNm = 10,
-	surfaceMaxNm = 30,
+	surfaceMaxNm = 40,
 	minTargetNm = 10,
 	filterDelaySec = 5,
 	minCapAttackNm = 35,
@@ -5008,7 +5524,7 @@ evc:addEvent({
 	id = 'PyaozerskyStorage',
 	StrikeMission = true,
 		action = function()
-		local z = zones.PyaozerskyStorage
+		local z = zones.pyaozerskystorage
 		if not z then return end
 		RegisterStaticGroup('PyaozerskyStorage', z, 1000, L10N:Get("KOLA_TARGET_PYAOZERSKY_STORAGE"), 'PyaozerskyStorage', true)
 		ActiveMission['PyaozerskyStorage'] = true
@@ -5177,7 +5693,7 @@ evc:addEvent({
 	id = 'lovozeroCCCBunker',
 	StrikeMission = true,
 		action = function()
-		local z = zones.LovozeroCCC
+		local z = zones.lovozeroCCC
 		if not z then return end
 		RegisterStaticGroup('lovozeroCCCBunker', z, 1000, L10N:Get("KOLA_TARGET_LOVOZERO_CCC"), 'lovozeroCCCBunker', true)
 		ActiveMission['lovozeroCCCBunker'] = true
@@ -6626,6 +7142,14 @@ airbaseStatics = {
 	["Guovdageaidnu"] = {"Guovdageaidnuammo", "Guovdageaidnufuel", "Guovdageaidnutent1", "Guovdageaidnutent2", "Guovdageaidnutent3", "Guovdageaidnutent4", "Guovdageaidnucenter", "Guovdageaidnuwind"},
 	["Kalix"] = {"Kalixammo", "Kalixfuel", "Kalixtent1", "Kalixtent2", "Kalixtent3", "Kalixtent4", "Kalixcenter", "KalixWind"},
 	["Gallivare"] = {"Gallivareammo", "Gallivarefuel", "Gallivaretent1", "Gallivaretent2", "Gallivaretent3", "Gallivaretent4", "Gallivarecenter", "GallivareWind"},
+	["Abisko"] = {"Abiskoammo", "Abiskofuel", "Abiskotent1", "Abiskotent2", "Abiskotent3", "Abiskotent4", "Abiskocenter", "AbiskoWind"},
+	["Inari"] = {"Inariammo", "Inarifuel", "Inaritent1", "Inaritent2", "Inaritent3", "Inaritent4", "Inaricenter", "InariWind"},
+	["Ivalontie"] = {"Ivalontieammo", "Ivalontiefuel", "Ivalontietent1", "Ivalontietent2", "Ivalontietent3", "Ivalontietent4", "Ivalontiecenter", "IvalontieWind"},
+	["Maze"] = {"Mazeammo", "Mazefuel", "Mazetent1", "Mazetent2", "Mazetent3", "Mazetent4", "Mazecenter", "MazeWind-1"},
+	["Silsand"] = {"Silsandammo", "Silsandfuel", "Silsandtent1", "Silsandtent2", "Silsandtent3", "Silsandtent4", "Silsandcenter", "SilsandWind"},
+	["Soppero"] = {"Sopperoammo", "Sopperofuel", "Sopperotent1", "Sopperotent2", "Sopperotent3", "Sopperotent4", "Sopperocenter", "SopperoWind"},
+	["Storsand"] = {"Storsandammo", "Storsandfuel", "Storsandtent1", "Storsandtent2", "Storsandtent3", "Storsandtent4", "Storsandcenter", "StorsandWind"},
+	["Tore"] = {"Toreammo", "Torefuel", "Toretent1", "Toretent2", "Toretent3", "Toretent4", "Torecenter", "ToreWind"},
 	["Kandalaksha"] = {"Kandalakshaammo", "Kandalakshafuel", "Kandalakshatent1", "Kandalakshatent2", "Kandalakshatent3", "Kandalakshatent4", "Kandalakshacenter", "Kandalakshawind"},
 	["Apatity"] = {"Apatityammo", "Apatityfuel", "Apatitytent1", "Apatitytent2", "Apatitytent3", "Apatitytent4", "Apatitycenter", "Apatitywind"},
 	["Kovdor"] = {"Kovdorammo", "Kovdorfuel", "Kovdortent1", "Kovdortent2", "Kovdortent3", "Kovdortent4", "Kovdorcenter", "Kovdorcwind"},

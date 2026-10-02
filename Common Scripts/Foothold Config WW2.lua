@@ -45,6 +45,7 @@ FootholdConfigTrackedTableNames = {
 }
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
+    "ewrs_enabled",
     "PlayerZoneSuppliesConsumeStock",
     "ZoneCaptureBuildSeconds",
     "NormalSupplyCapacity",
@@ -726,6 +727,9 @@ AllowedFlightTimeReward = {
 -- ============================================================================
 -- EWRS
 -- ============================================================================
+
+-- @gui label="Enable EWRS" validValues="Enabled=true | Disabled=false"
+ewrs_enabled = true -- Enable EWRS reports and F10 menus. Requires mission restart; load the config before EWRS.lua.
 
 -- @gui validValues="Style 1=1 | Style 2=2"
 ewrs_defaultReportStyle = 2 -- Default EWRS report format. Style 1 keeps the current format. Style 2 uses compact separator lines. Players can change this via the F10 EWRS menu.

@@ -1569,6 +1569,7 @@ local SHOP_PRICE_DEFAULTS = {
   zsam          = 1000,
   zewr          = 1000,
   zlogc         = 2000,
+  zwhrepair     = 2000,
   zsup3         = 750,
   zarm          = 1000,
   gslot         = 3000,
@@ -1823,7 +1824,6 @@ bc.shopItems['dynamicbomb'].groupZoneSelector = {
 }
 
 
-if UseStatics == true then
 bc:registerShopItem('dynamicstatic', L10N:Get("CA_SHOP_ITEM_STATIC_STRUCTURE"), ShopPrices.dynamicstatic,
 function(sender)
     if StructureActive then
@@ -1832,7 +1832,7 @@ function(sender)
 	return L10N:Get("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
-    if params.zone and params.zone.side == 1 and params.zone.newStatics and next(params.zone.newStatics) then
+    if params.zone and bc.shopItems['dynamicstatic'].groupZoneSelector.allow(params.zone) then
         if StructureActive then
             return L10N:Format("SYRIA_SHOP_MISSION_STILL_PROGRESS", L10N:Get("CA_SHOP_LABEL_BUILDING_STRIKE"))
         end
@@ -1854,12 +1854,11 @@ bc.shopItems['dynamicstatic'].groupZoneSelector = {
 	sortPolicy = 'enemy_frontline',
 	allow = function(zoneObj)
 		return zoneObj.side == 1
-			and zoneObj.newStatics
-			and next(zoneObj.newStatics) ~= nil
+			and ((zoneObj.warehouseFacility and zoneObj:_getWarehouseTarget() ~= nil)
+				or (UseStatics == true and zoneObj.newStatics and next(zoneObj.newStatics) ~= nil))
 	end,
 	emptyLabel = L10N:Get("CA_SHOP_NO_VALID_BUILDING_TARGET_ZONES"),
 }
-end
 ---------------------------------------------END DYNAMIC SHOP ------------------------------------------
 
 bc:registerShopItem('intel',L10N:Get("NORMANDY_SHOP_ITEM_OPERATIONAL_INTEL"),ShopPrices.intel,function(sender)
@@ -1900,6 +1899,40 @@ local function redMassAttackAction()
 end
 
 bc:registerShopItem(RED_MASS_ATTACK_ID, L10N:Get("SYRIA_SHOP_ITEM_RED_MASS_ATTACK"), RED_MASS_ATTACK_COST, redMassAttackAction)
+
+local redWarehouseMenu = nil
+bc:registerShopItem('redwarehouse', L10N:Get("WAREHOUSE_SHOP_RED_CREATE"), 3000, function(sender)
+	if redWarehouseMenu then
+		missionCommands.removeItemForCoalition(1, redWarehouseMenu)
+		redWarehouseMenu = nil
+	end
+	local zoneChoices = {}
+	for _, zoneObj in ipairs(bc:getZones()) do
+		if zoneObj.side == 1 and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden
+			and zoneObj.airbaseName and zoneObj.airbaseName ~= '' and not zoneObj.warehouseFacility
+			and not isCarrierZoneName(zoneObj.zone) then
+			zoneChoices[zoneObj.zone] = zoneObj
+		end
+	end
+	if not next(zoneChoices) then return L10N:Get("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES") end
+	redWarehouseMenu = bc:showTargetZoneMenu(1, L10N:Get("WAREHOUSE_SHOP_RED_CREATE"), function(zoneName, menu)
+		local zoneObj = zoneChoices[zoneName]
+		bc:buyShopItem(1, 'redwarehouse', {zone = zoneObj})
+		if zoneObj.warehouseFacility then
+			missionCommands.removeItemForCoalition(1, menu)
+			redWarehouseMenu = nil
+		end
+		return true -- Keep the selector on failure; successful purchases close it above.
+	end, 1, false, zoneChoices)
+	return L10N:Get("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyRedWarehouseUpgrade(params.zone, params.placement, params.now)
+end)
+bc:registerShopItem('redwhrepair', L10N:Get("WAREHOUSE_SHOP_REPAIR"), 2000, function(sender)
+	return L10N:Get("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyWarehouseRepair(params.zone, 1, params.now)
+end)
 
 bc:registerShopItem('zinf',L10N:Get("SYRIA_SHOP_ITEM_UPGRADE_INFANTRY"),ShopPrices.zinf,function(sender)
 	return L10N:Get("SYRIA_SHOP_CHOOSE_ZONE")
@@ -2006,8 +2039,26 @@ bc.shopItems['zlogc'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
+	refreshTags = { 'warehouse_targets', 'friendly_targets' },
 	extraPredicate = function(zoneObj)
-		return not zoneObj.LogisticCenter
+		return not zoneObj.LogisticCenter and not zoneObj.warehouseFacility and not isCarrierZoneName(zoneObj.zone)
+	end,
+	emptyLabel = L10N:Get("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
+}
+
+bc:registerShopItem('zwhrepair', L10N:Get("WAREHOUSE_SHOP_REPAIR"), ShopPrices.zwhrepair, function(sender)
+	return L10N:Get("SYRIA_SHOP_CHOOSE_ZONE")
+end, function(sender, params)
+	return bc:applyWarehouseRepair(params.zone, 2, timer.getAbsTime())
+end)
+bc.shopItems['zwhrepair'].groupZoneSelector = {
+	targetzoneside = 2,
+	includeSuspended = true,
+	sortPolicy = 'friendly_frontline',
+	candidateBucket = 'blue_visible',
+	refreshTags = { 'warehouse_targets' },
+	extraPredicate = function(zoneObj)
+		return zoneObj.warehouseFacility ~= nil and zoneObj.warehouseFacility.state == 'destroyed'
 	end,
 	emptyLabel = L10N:Get("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
 }
@@ -2131,6 +2182,7 @@ ShopPrices = ShopPrices or {
 	zsam          = 1000, -- Upgrade zone with AA guns
 	zewr          = 1000, -- Upgrade zone with Early Warning Radar
 	zlogc         = 2000, -- Upgrade zone to logistic center
+	zwhrepair     = 2000, -- Repair the destroyed warehouse building
 	zsup3         = 750,  -- Add 3 supplies to a zone
 	zarm          = 1000, -- Upgrade zone with armor
 	gslot         = 3000, -- Unlock extra upgrade slot
@@ -2161,6 +2213,8 @@ ShopRankRequirements = ShopRankRequirements or {
 
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
 bc:addShopItem(1, 'redmassattack', -1, 2) -- red AI mass airbase attack
+bc:addShopItem(1, 'redwarehouse', -1, 3) -- red AI rear supply depot
+bc:addShopItem(1, 'redwhrepair', -1, 4) -- red AI warehouse repair
 
 ShopCategoryLabels = ShopCategoryLabels or {}
 local ShopCats = ShopCategoryLabels
@@ -2187,9 +2241,7 @@ ShopCats.Order = ShopCats.Order or {
 bc:addShopItem(2, 'dynamiccap', -1, 1, ShopRankRequirements.dynamiccap, ShopCats.AIAttack) -- CAP Flight
 bc:addShopItem(2, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats.AIAttack) -- CAS Flight
 bc:addShopItem(2, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack) -- Bomber Flight
-if UseStatics == true then
-    bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
-end
+bc:addShopItem(2, 'dynamicstatic', -1, 6, ShopRankRequirements.dynamicstatic, ShopCats.AIAttack) -- Static structure Flight
 
 -- Zone Upgrades
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
@@ -2212,6 +2264,7 @@ if AllowScriptedSupplies then
     bc:addShopItem(2, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
 end
 bc:addShopItem(2, 'zlogc', -1, 5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
+bc:addShopItem(2, 'zwhrepair', -1, 5.5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- repair warehouse
 bc:addShopItem(2, 'zsup3', -1, 6, ShopRankRequirements.zsup3, ShopCats.LogisticsStrategic) -- add 3 supplies to a zone
 
 supplyZones = {
@@ -2274,9 +2327,10 @@ else
 end
 
 bc:init()
-RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
+RewardContribution = RewardContribution or {infantry = 10, ground = 10, sam = 30, airplane = 50, ship = 200, helicopter=50, crate=100, rescue = 300, enemyPilotCapture = 200, ['Zone upgrade'] = 100, ['Zone capture'] = 200, structure = 100}
 RewardContribution.ctldGround = RewardContribution.ctldGround or 10
 RewardContribution.ctldAir = RewardContribution.ctldAir or 20
+RewardContribution.enemyPilotCapture = RewardContribution.enemyPilotCapture or 200
 bc:startRewardPlayerContribution(15,RewardContribution)
 HercCargoDropSupply.init(bc)
 bc:buildZoneDistanceCache()
@@ -4368,7 +4422,7 @@ function generateCaptureMission()
 end
 
 
-function generateAttackMission()
+function generateAttackMission(thirdAttackDemand)
     if missionCompleted then return true end
 	local validzones = {}
 	local validSeen = {}
@@ -4524,7 +4578,9 @@ function generateAttackMission()
 	end
 
 	if not openingPhase and not attackTarget3 and attackTarget1 and attackTarget2 then
-		local thirdAttackDemand = blueDirector:hasBlueThirdAttackDemand(timer.getAbsTime())
+		if thirdAttackDemand == nil then
+			thirdAttackDemand = blueDirector:hasBlueThirdAttackDemand(timer.getAbsTime())
+		end
 		if thirdAttackDemand then
 			local pool = {}
 			for _, zoneName in ipairs(validzones) do
@@ -4665,7 +4721,7 @@ timer.scheduleFunction(function(_, time)
 	if _isNormandyOpeningPhase() then return time+30 end
 	local hadThirdAttack = attackTarget3 ~= nil
 	if not hadThirdAttack and blueDirector:hasBlueThirdAttackDemand(timer.getAbsTime()) then
-		generateAttackMission()
+		generateAttackMission(true)
 	end
 	if not hadThirdAttack and attackTarget3 then
 		checkAndGenerateCASMission()
