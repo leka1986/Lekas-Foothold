@@ -50,3 +50,13 @@ https://discord.com/invite/cshgmgXuxE
 ## Getting started video
 
 [Watch the Foothold video playlist](https://www.youtube.com/playlist?list=PL2Fv_TsrZbNC_KMMPBkTHmWoRW6rzDwHH)
+
+## License
+
+Copyright (c) 2026 Leka (leka1986), for Leka's original contributions.
+
+Leka's original code and modifications are licensed under the
+[GNU General Public License, version 3 only](LICENSE) (`GPL-3.0-only`).
+Third-party components retain their own licenses. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution, license copies
+and the scope of this grant, including material with unverified permissions.
