@@ -20,9 +20,7 @@ permission allows it. Material with unverified permissions is identified below.
 - Original author: Dzsek / dzsekeb.
 - Upstream: [Dzsek/zoneCommander](https://github.com/Dzsek/zoneCommander).
 - Upstream license: [Apache License 2.0](LICENSES/Apache-2.0.txt).
-- Foothold files: `Common Scripts/zoneCommanderv2.lua`,
-  `Common Scripts/zoneCommanderv2_before.lua`, and
-  `Common Scripts/zoneCommander_working_as_intended.lua`.
+- Foothold files: `Common Scripts/zoneCommanderv2.lua`
 
 These Foothold variants contain modifications maintained by Leka. The original
 upstream portions retain Apache-2.0 notices and permissions; Leka's modifications
