@@ -53031,33 +53031,37 @@ function GroupCommander:_buildHeloInternalCargoRoute(groupName, targetZoneName, 
 		end
 		tasks[#tasks + 1] = gmoose:TaskWrappedAction(gmoose:CommandDoScript(string.format('bc:_markInternalSupplyLoaded(%q, %d, %d)', groupName, internal.version + 1, internal.heloUnitId)), #tasks + 1)
 	end
-	local holdX, holdZ, holdAglM
+	local holdX, holdZ, holdAglM, slowdownX, slowdownZ
 	if hold then
 		local held = self._advanceCaptureHold or {}
 		holdX, holdZ = held.x, held.z
-		holdAglM = held.aglM or 200
-		if not holdX or not holdZ then
-			local dx, dz = plan.destx - pos.x, plan.destz - pos.z
-			local length = math.sqrt(dx * dx + dz * dz)
-			local distance = math.max(0, math.min(length * 0.8, length - UTILS.NMToMeters(10)))
-			local ux, uz = 1, 0
-			if length > 1 then ux, uz = dx / length, dz / length end
+		holdAglM = 100
+		local hasHold = holdX and holdZ
+		local dx, dz = (hasHold and holdX or plan.destx) - pos.x, (hasHold and holdZ or plan.destz) - pos.z
+		local length = math.sqrt(dx * dx + dz * dz)
+		local ux, uz = 1, 0
+		if length > 0 then ux, uz = dx / length, dz / length end
+		local distance = length
+		if not hasHold then
+			distance = math.max(0, math.min(length * 0.8, length - UTILS.NMToMeters(10)))
 			holdX, holdZ = pos.x + ux * distance, pos.z + uz * distance
 		end
+		local slowdownDistance = math.min(UTILS.NMToMeters(1.5), distance)
+		slowdownX, slowdownZ = holdX - ux * slowdownDistance, holdZ - uz * slowdownDistance
 	end
 	local transitX, transitZ, transitAdded = ExternalHeloCargoRoute.AppendSupplyTransitWaypoints(route, {
 		originZoneName = originZone, targetZoneName = targetZoneName,
 		fromX = pos.x, fromZ = pos.z, destinationX = plan.destx, destinationZ = plan.destz,
 		routeEndX = plan.routeApproach and plan.approachX or nil,
 		routeEndZ = plan.routeApproach and plan.approachZ or nil,
-		stopX = holdX, stopZ = holdZ,
+		stopX = slowdownX, stopZ = slowdownZ,
 		altitudeFeet = self.Altitude or 1000, altitudeType = self.AltitudeType, speedKmh = speedKmh,
 	})
 	if self.Altitude then
 		ExternalHeloCargoRoute.AppendAltitudeWaypoints(route, {
 			fromX = transitX, fromZ = transitZ,
-			approachX = holdX or plan.approachX, approachZ = holdZ or plan.approachZ,
-			destinationX = holdX or plan.destx, destinationZ = holdZ or plan.destz,
+			approachX = slowdownX or plan.approachX, approachZ = slowdownZ or plan.approachZ,
+			destinationX = slowdownX or plan.destx, destinationZ = slowdownZ or plan.destz,
 			altitudeFeet = self.Altitude, altitudeType = self.AltitudeType,
 			descentStartDistanceNm = self.DescentStartDistanceNm, speedKmh = speedKmh,
 			descentOnly = transitAdded, descentName = 'Internal Cargo Descent Start',
@@ -53065,8 +53069,10 @@ function GroupCommander:_buildHeloInternalCargoRoute(groupName, targetZoneName, 
 	end
 	local version = internal.version + 1
 	if hold then
+		local holdSpeedKmh = 140
 		local orbitTask, holdAltitude = ExternalHeloCargoRoute.TaskRaceTrackOrbit(holdX, holdZ, holdAglM, 1)
-		route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(holdX, holdZ, holdAglM, speedKmh, { orbitTask }, 'Internal Cargo Hold')
+		route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(slowdownX, slowdownZ, holdAglM, holdSpeedKmh, {}, 'Internal Cargo Hold Slowdown')
+		route[#route + 1] = ExternalHeloCargoRoute.AirWaypoint(holdX, holdZ, holdAglM, holdSpeedKmh, { orbitTask }, 'Internal Cargo Hold')
 		self._advanceCaptureHold = { x = holdX, z = holdZ, aglM = holdAglM, altitude = holdAltitude }
 		local now = timer.getAbsTime()
 		self._advanceCaptureExternalCargoReady = nil
