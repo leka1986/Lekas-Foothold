@@ -1005,6 +1005,9 @@ local function fetchActiveRunway(zoneName, translator, includeCourse)
         local coord = runway.center or runway.position
         local magDecl = coord and coord:GetMagneticDeclination() or 0
         local course = math.floor(((runway.heading or runway.magheading or 0) - magDecl + 360) % 360 + 0.5)
+        if math.abs((course - runway.magheading + 180) % 360 - 180) > 90 then
+            course = (course + 180) % 360
+        end
         return string.format("%s (course %03d°M)", name, course)
     end
     local landingRunwayName

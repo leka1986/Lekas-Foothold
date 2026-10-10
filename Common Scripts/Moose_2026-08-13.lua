@@ -10812,10 +10812,10 @@ end
 function ZONE_RADIUS:GetVec3(Height)
 Height=Height or 0
 local Vec2=self:GetVec2()
-local Vec3={x=Vec2.x,y=land.getHeight(self:GetVec2())+Height,z=Vec2.y}
+local Vec3={x=Vec2.x,y=land.getHeight(Vec2)+Height,z=Vec2.y}
 return Vec3
 end
-function ZONE_RADIUS:Scan(ObjectCategories,UnitCategories)
+function ZONE_RADIUS:Scan(ObjectCategories,UnitCategories,UseZoneCenterSnapshot)
 self.ScanData={}
 self.ScanData.Coalitions={}
 self.ScanData.Scenery={}
@@ -10823,6 +10823,8 @@ self.ScanData.SceneryTable={}
 self.ScanData.Units={}
 local ZoneCoord=self:GetCoordinate():SetAlt()
 local ZoneRadius=self:GetRadius()
+local ZoneVec2=UseZoneCenterSnapshot and ZoneCoord:GetVec2()
+local ZoneRadiusSquared=UseZoneCenterSnapshot and ZoneRadius*ZoneRadius
 local SphereSearch={
 id=world.VolumeType.SPHERE,
 params={
@@ -10831,7 +10833,17 @@ radius=ZoneRadius,
 }
 }
 local function EvaluateZone(ZoneObject)
-if ZoneObject and self:IsVec3InZone(ZoneObject:getPoint())then
+local InZone=false
+if ZoneObject then
+local Point=ZoneObject:getPoint()
+if UseZoneCenterSnapshot then
+local dx,dz=Point.x-ZoneVec2.x,Point.z-ZoneVec2.y
+InZone=dx*dx+dz*dz<=ZoneRadiusSquared
+else
+InZone=self:IsVec3InZone(Point)
+end
+end
+if InZone then
 local ObjectCategory=Object.getCategory(ZoneObject)
 if(ObjectCategory==Object.Category.UNIT and ZoneObject:isExist()and ZoneObject:isActive())or(ObjectCategory==Object.Category.STATIC and ZoneObject:isExist())then
 local Include=false
@@ -24929,10 +24941,10 @@ end
 BASE:E({"Cannot GetPointVec3",Positionable=self,Alive=self:IsAlive()})
 return nil
 end
-function POSITIONABLE:GetCoord()
-local DCSPositionable=self:GetDCSObject()
+function POSITIONABLE:GetCoord(DCSPositionable,DCSUnits)
+DCSPositionable=DCSPositionable or self:GetDCSObject()
 if DCSPositionable then
-local PositionableVec3=self:GetVec3()
+local PositionableVec3=self:GetVec3(DCSPositionable,DCSUnits)
 if PositionableVec3 then
 if self.coordinate then
 self.coordinate:UpdateFromVec3(PositionableVec3)
@@ -29414,8 +29426,8 @@ end
 end
 return nil
 end
-function GROUP:IsAlive()
-local DCSGroup=self:GetDCSObject()
+function GROUP:IsAlive(DCSGroup)
+DCSGroup=DCSGroup or self:GetDCSObject()
 if DCSGroup then
 if DCSGroup:isExist()then
 local DCSUnit=DCSGroup:getUnit(1)
@@ -29567,15 +29579,15 @@ return Rangemin
 end
 return nil
 end
-function GROUP:GetUnits()
-local DCSGroup=self:GetDCSObject()
+function GROUP:GetUnits(DCSGroup,DCSUnits)
+DCSGroup=DCSGroup or self:GetDCSObject()
 if DCSGroup then
-local DCSUnits=DCSGroup:getUnits()or{}
+local DCSUnits=DCSUnits or DCSGroup:getUnits()or{}
 local Units={}
 for Index,UnitData in pairs(DCSUnits)do
 local unit=UNIT:Find(UnitData)
 if unit then
-Units[#Units+1]=UNIT:Find(UnitData)
+Units[#Units+1]=unit
 else
 local UnitName=UnitData:getName()
 unit=_DATABASE:AddUnit(UnitName)
@@ -29608,11 +29620,11 @@ return unit:IsPlayer()
 end
 return false
 end
-function GROUP:GetUnit(UnitNumber)
-local DCSGroup=self:GetDCSObject()
+function GROUP:GetUnit(UnitNumber,DCSGroup,DCSUnits)
+DCSGroup=DCSGroup or self:GetDCSObject()
 if DCSGroup then
 local UnitFound=nil
-local units=DCSGroup:getUnits()or{}
+local units=DCSUnits or DCSGroup:getUnits()or{}
 if units[UnitNumber]then
 local UnitFound=UNIT:Find(units[UnitNumber])
 if UnitFound then
@@ -29645,8 +29657,8 @@ end
 end
 return nil
 end
-function GROUP:GetSize()
-local DCSGroup=self:GetDCSObject()
+function GROUP:GetSize(DCSGroup)
+DCSGroup=DCSGroup or self:GetDCSObject()
 if DCSGroup then
 local GroupSize=DCSGroup:getSize()
 if GroupSize then
@@ -29672,10 +29684,10 @@ return n
 end
 return 0
 end
-function GROUP:GetFirstUnitAlive(Units)
-local DCSGroup=self:GetDCSObject()
+function GROUP:GetFirstUnitAlive(Units,DCSGroup)
+DCSGroup=DCSGroup or self:GetDCSObject()
 if DCSGroup then
-local units=Units or self:GetUnits()
+local units=Units or self:GetUnits(DCSGroup)
 for _,_unit in pairs(units)do
 local unit=_unit
 if unit and unit:IsAlive()then
@@ -29822,8 +29834,8 @@ local vec2=Unit:GetVec2()
 return vec2
 end
 end
-function GROUP:GetVec3()
-local unit=self:GetUnit(1)
+function GROUP:GetVec3(DCSGroup,DCSUnits)
+local unit=self:GetUnit(1,DCSGroup,DCSUnits)
 if unit then
 local vec3=unit:GetVec3()
 return vec3
@@ -29938,11 +29950,11 @@ end
 --BASE:E({"Cannot GetRandomVec3",Group=self,Alive=self:IsAlive()})
 return nil
 end
-function GROUP:GetHeading()
-local GroupSize=self:GetSize()
+function GROUP:GetHeading(DCSGroup,Units)
+local GroupSize=self:GetSize(DCSGroup)
 local HeadingAccumulator=0
 local n=0
-local Units=self:GetUnits()
+local Units=Units or self:GetUnits(DCSGroup)
 if GroupSize then
 for _,unit in pairs(Units)do
 if unit and unit:IsAlive()then
@@ -29993,8 +30005,8 @@ end
 function GROUP:GetFuel()
 return self:GetFuelAvg()
 end
-function GROUP:GetAmmunition()
-local DCSControllable=self:GetDCSObject()
+function GROUP:GetAmmunition(DCSControllable,Units)
+DCSControllable=DCSControllable or self:GetDCSObject()
 local Ntot=0
 local Nshells=0
 local Nrockets=0
@@ -30002,7 +30014,7 @@ local Nmissiles=0
 local Nbombs=0
 local Narti=0
 if DCSControllable then
-for UnitID,UnitData in pairs(self:GetUnits())do
+for UnitID,UnitData in pairs(Units or self:GetUnits(DCSControllable))do
 local Unit=UnitData
 local ntot,nshells,nrockets,nbombs,nmissiles,narti=Unit:GetAmmunition()
 Ntot=Ntot+ntot
@@ -30127,8 +30139,8 @@ return GroupCategory==Group.Category.GROUND
 end
 return nil
 end
-function GROUP:IsShip()
-local DCSGroup=self:GetDCSObject()
+function GROUP:IsShip(DCSGroup)
+DCSGroup=DCSGroup or self:GetDCSObject()
 if DCSGroup then
 local GroupCategory=DCSGroup:getCategory()
 return GroupCategory==Group.Category.SHIP
@@ -30763,9 +30775,9 @@ end
 return PlayerCount
 end
 end
-function GROUP:EnableEmission(switch)
+function GROUP:EnableEmission(switch,DCSGroup)
 local switch=switch or false
-local DCSUnit=self:GetDCSObject()
+local DCSUnit=DCSGroup or self:GetDCSObject()
 if DCSUnit then
 DCSUnit:enableEmission(switch)
 end
@@ -30913,9 +30925,9 @@ report:Add("==================")
 local text=report:Text()
 return tSTN,text
 end
-function GROUP:IsSAM()
+function GROUP:IsSAM(Units)
 local issam=false
-local units=self:GetUnits()
+local units=Units or self:GetUnits()
 for _,_unit in pairs(units or{})do
 local unit=_unit
 if unit:IsSAM()then
@@ -30925,9 +30937,9 @@ end
 end
 return issam
 end
-function GROUP:IsAAA()
+function GROUP:IsAAA(Units)
 local isAAA=false
-local units=self:GetUnits()
+local units=Units or self:GetUnits()
 for _,_unit in pairs(units or{})do
 local unit=_unit
 if unit:IsAAA()then
@@ -56750,10 +56762,12 @@ self:AddTransition("*","SAMUnitLost","*")
 self:AddTransition("*","Stop","Stopped")
 return self
 end
-function MANTIS:SetAccousticDetectionOn(Radius,UnitCategories)
+function MANTIS:SetAccousticDetectionOn(Radius,UnitCategories,PlayersOnly,PlayerSnapshotProvider)
 self.DetectAccoustic=true
 self.DetectAccousticRadius=Radius or 2000
 self.DetectAccousticCategories=UnitCategories or{Unit.Category.HELICOPTER}
+self.DetectAccousticPlayersOnly=PlayersOnly or false
+self.AccousticPlayerSnapshotProvider=PlayerSnapshotProvider
 return self
 end
 function MANTIS:SetAccousticDetectionOff()
@@ -57398,6 +57412,8 @@ IntelOne._detectionBatchInterval=0.1
 IntelOne.DetectAccoustic=self.DetectAccoustic
 IntelOne.DetectAccousticRadius=self.DetectAccousticRadius or 2000
 IntelOne.DetectAccousticUnitTypes=self.DetectAccousticCategories or{Unit.Category.HELICOPTER}
+IntelOne.DetectAccousticPlayersOnly=self.DetectAccousticPlayersOnly
+IntelOne.AccousticPlayerSnapshotProvider=self.AccousticPlayerSnapshotProvider
 if self.usecorridors==true then
 IntelOne:SetCorridorZones(self.corridorzones)
 if self.corridorfloor or self.corridorceiling then
@@ -57411,6 +57427,8 @@ IntelTwo._detectionBatchInterval=0.1
 IntelTwo.DetectAccoustic=self.DetectAccoustic
 IntelTwo.DetectAccousticRadius=self.DetectAccousticRadius or 2000
 IntelTwo.DetectAccousticUnitTypes=self.DetectAccousticCategories or{Unit.Category.HELICOPTER}
+IntelTwo.DetectAccousticPlayersOnly=self.DetectAccousticPlayersOnly
+IntelTwo.AccousticPlayerSnapshotProvider=self.AccousticPlayerSnapshotProvider
 if self.usecorridors==true then
 IntelTwo:SetCorridorZones(self.corridorzones)
 if self.corridorfloor or self.corridorceiling then
@@ -57439,7 +57457,7 @@ MANTISAwacs:SetRefreshTimeInterval(interval)
 MANTISAwacs:Start()
 return MANTISAwacs
 end
-function MANTIS:_GetSAMDataFromUnits(grpname,mod,sma,chm,group)
+function MANTIS:_GetSAMDataFromUnits(grpname,mod,sma,chm,group,DCSGroup,Units)
 self:T(self.lid.."_GetSAMDataFromUnits")
 local found=false
 local range=self.checkradius
@@ -57448,7 +57466,7 @@ local type=MANTIS.SamType.MEDIUM
 local radiusscale=self.radiusscale[type]
 local blind=0
 group=group or GROUP:FindByName(grpname)
-local units=group:GetUnits()
+local units=Units or group:GetUnits(DCSGroup)
 local ARMCapacity
 local SearchTables
 if mod then
@@ -57501,7 +57519,7 @@ end
 end
 if not found then
 local grp=group
-if(grp and grp:IsAlive()and grp:IsAAA())or string.find(grpname,"AAA",1,true)then
+if(grp and grp:IsAlive(DCSGroup)and grp:IsAAA(units))or string.find(grpname,"AAA",1,true)then
 range=2000
 height=2000
 blind=50
@@ -57514,7 +57532,7 @@ self:E(self.lid..string.format("*****Could not match radar data for %s! Will def
 end
 return range,height,type,blind,ARMCapacity
 end
-function MANTIS:_GetNavalSAMData(grpname,group)
+function MANTIS:_GetNavalSAMData(grpname,group,Units)
 self:T(self.lid.."_GetNavalSAMData for "..tostring(grpname))
 self._navalSAMs=self._navalSAMs or{}
 self._navalSAMs[grpname]=true
@@ -57529,7 +57547,7 @@ if not group then
 self._samJammerParams[grpname]=nil
 return range,height,type,blind,ARMCapacity
 end
-local units=group:GetUnits()or{}
+local units=Units or group:GetUnits()or{}
 for _,_unit in pairs(units)do
 local typename=string.lower(_unit:GetTypeName())
 for _,entry in pairs(self.SamDataNaval)do
@@ -57550,13 +57568,13 @@ self._samJammerParams[grpname]=nil
 self:E(self.lid..string.format("*****Could not match naval radar data for %s! Defaulting to POINT.",grpname))
 return 2000,2000,MANTIS.SamType.POINT,50,0
 end
-function MANTIS:_BuildNavalUnitEntries(group,grpname,SAM_Tbl,SAM_Tbl_lg,SAM_Tbl_md,SAM_Tbl_sh,SAM_Tbl_pt,SEAD_Grps)
+function MANTIS:_BuildNavalUnitEntries(group,grpname,SAM_Tbl,SAM_Tbl_lg,SAM_Tbl_md,SAM_Tbl_sh,SAM_Tbl_pt,SEAD_Grps,Units)
 self:T(self.lid.."_BuildNavalUnitEntries for "..tostring(grpname))
 self._navalSAMs=self._navalSAMs or{}
 self._samJammerParams=self._samJammerParams or{}
 local entries=0
 local seadadded=false
-local units=group:GetUnits()or{}
+local units=Units or group:GetUnits()or{}
 for _,_unit in pairs(units)do
 if _unit and _unit:IsAlive()then
 local typename=string.lower(_unit:GetTypeName())
@@ -57659,11 +57677,11 @@ end
 end
 return self
 end
-function MANTIS:_GetSAMRange(grpname,group,isship)
+function MANTIS:_GetSAMRange(grpname,group,isship,DCSGroup,Units)
 self:T(self.lid.."_GetSAMRange for "..tostring(grpname))
 group=group or GROUP:FindByName(grpname)
-if group and(isship==true or isship==nil and group:IsShip())then
-return self:_GetNavalSAMData(grpname,group)
+if group and(isship==true or isship==nil and group:IsShip(DCSGroup))then
+return self:_GetNavalSAMData(grpname,group,Units)
 end
 local range=self.checkradius
 local height=3000
@@ -57699,7 +57717,7 @@ end
 end
 if not found then
 local grp=group
-if(grp and grp:IsAlive()and grp:IsAAA())or string.find(grpname,"AAA",1,true)then
+if(grp and grp:IsAlive(DCSGroup)and grp:IsAAA(Units))or string.find(grpname,"AAA",1,true)then
 range=2000
 height=2000
 blind=50
@@ -57708,7 +57726,7 @@ found=true
 end
 end
 if(not found)or HDSmod or SMAMod or CHMod then
-range,height,type,blind,ARMCapacity=self:_GetSAMDataFromUnits(grpname,HDSmod,SMAMod,CHMod,group)
+range,height,type,blind,ARMCapacity=self:_GetSAMDataFromUnits(grpname,HDSmod,SMAMod,CHMod,group,DCSGroup,Units)
 elseif not found then
 self:E(self.lid..string.format("*****Could not match radar data for %s! Will default to midrange values!",grpname))
 end
@@ -57717,7 +57735,7 @@ type=MANTIS.SamType.POINT
 end
 return range,height,type,blind,ARMCapacity
 end
-function MANTIS:_RefreshSAMTracking(group,grpname,ammo,lostUnitName)
+function MANTIS:_RefreshSAMTracking(group,grpname,ammo,lostUnitName,Units)
 if not ammo.trUnits then
 ammo.trUnits={}
 ammo.trLost=nil
@@ -57738,7 +57756,7 @@ if tracking then ammo.trUnits[unit.name]=true end
 end
 else
 -- Raw DCS spawns may have no registered MOOSE template.
-for _,unit in pairs(group:GetUnits())do
+for _,unit in pairs(Units or group:GetUnits())do
 local name=unit:GetName()
 local DCSUnit=unit:GetDCSObject()
 if ammo.units then ammo.units[name]=DCSUnit end
@@ -57771,8 +57789,8 @@ end
 end
 ammo.trLost=trackingLost
 end
-function MANTIS:_RefreshSAMAmmo(group,grpname,reset,samType)
-local DCSGroup=group:GetDCSObject()
+function MANTIS:_RefreshSAMAmmo(group,grpname,reset,samType,DCSGroup,Units)
+DCSGroup=DCSGroup or group:GetDCSObject()
 local ammo=group:GetProperty("MANTIS_AMMO")
 local replaced=false
 if not self.dynamic and not reset and ammo and ammo.trUnits and ammo.object==DCSGroup and ammo.units then
@@ -57783,11 +57801,11 @@ or ammo.template~=_DATABASE:GetGroupTemplate(grpname)
 end
 if reset or not ammo or not ammo.trUnits or ammo.object~=DCSGroup or replaced then
 local advancedSleeping=ammo and ammo.advancedSleeping
-ammo={object=DCSGroup,isSAM=group:IsSAM(),advancedSleeping=advancedSleeping,}
+ammo={object=DCSGroup,isSAM=group:IsSAM(Units),advancedSleeping=advancedSleeping,}
 group:SetProperty("MANTIS_AMMO",ammo)
 end
-self:_RefreshSAMTracking(group,grpname,ammo)
-local missiles=select(5,group:GetAmmunition())
+self:_RefreshSAMTracking(group,grpname,ammo,nil,Units)
+local missiles=select(5,group:GetAmmunition(DCSGroup,Units))
 -- Cache every ground group's missiles; only non-POINT radar SAMs use the sleep veto.
 ammo.canSleep=ammo.isSAM and samType~=MANTIS.SamType.POINT
 -- Two scheduled zero samples leave one refresh cycle for the last salvo.
@@ -57897,17 +57915,21 @@ local engagerange=self.engagerange
 for _i,_group in pairs(SAM_Grps)do
 local group=_group
 group:OptionEngageRange(engagerange)
-local isground=group:IsGround()
-if(isground or group:IsShip())and group:IsAlive()then
+local DCSGroup=group:GetDCSObject()
+local category=DCSGroup and DCSGroup:getCategory()
+local isground=category==Group.Category.GROUND
+if DCSGroup and(isground or category==Group.Category.SHIP)and group:IsAlive(DCSGroup)then
+local DCSUnits=DCSGroup:getUnits()or{}
 local grpname=group:GetName()
-local grpcoord=group:GetCoord()
-if grpcoord then grpcoord.Heading=group:GetHeading()or 0 end
+local grpcoord=group:GetCoord(DCSGroup,DCSUnits)
+local units=group:GetUnits(DCSGroup,DCSUnits)
+if grpcoord then grpcoord.Heading=group:GetHeading(DCSGroup,units)or 0 end
 if (not isground)and self.NavalPerUnit
-and self:_BuildNavalUnitEntries(group,grpname,SAM_Tbl,SAM_Tbl_lg,SAM_Tbl_md,SAM_Tbl_sh,SAM_Tbl_pt,SEAD_Grps)then
+and self:_BuildNavalUnitEntries(group,grpname,SAM_Tbl,SAM_Tbl_lg,SAM_Tbl_md,SAM_Tbl_sh,SAM_Tbl_pt,SEAD_Grps,units)then
 self:T(grpname.." handled as per-unit naval group")
 else
-local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname,group,not isground)
-if isground then self:_RefreshSAMAmmo(group,grpname,false,type)end
+local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname,group,not isground,DCSGroup,units)
+if isground then self:_RefreshSAMAmmo(group,grpname,false,type,DCSGroup,units)end
 if ARMCapacity and ARMCapacity>0 then _group:SetProperty("ARMCapacity",ARMCapacity)end
 local radaralive=true
 local record={grpname,grpcoord,grprange,grpheight,blind,type,ARMCapacity}
@@ -58063,8 +58085,12 @@ else
 samgroup=GROUP:FindByName(name)
 end
 local samalive=false
+local DCSGroup=nil
 if navalparent then samalive=(samunit~=nil)and samunit:IsAlive()or false
-elseif samgroup then samalive=samgroup:IsAlive()or false end
+elseif samgroup then
+DCSGroup=samgroup:GetDCSObject()
+samalive=DCSGroup and samgroup:IsAlive(DCSGroup)or false
+end
 local ammo=samalive and samgroup:GetProperty("MANTIS_AMMO")
 local IsInZone,Distance,CloseThreat=false,0,false
 if samalive and not(ammo and(ammo.trLost or ammo.canSleep and ammo.empty))then
@@ -58093,7 +58119,7 @@ if navalparent and canSwitch then
 switchedon=switchedon+1
 switch=true
 elseif self.UseEmOnOff and canSwitch then
-samgroup:EnableEmission(true)
+samgroup:EnableEmission(true,DCSGroup)
 switchedon=switchedon+1
 switch=true
 elseif(not self.UseEmOnOff)and canSwitch then
@@ -58125,7 +58151,7 @@ else
 if samalive and not suppressed and not activeshorad then
 if navalparent then
 elseif self.UseEmOnOff then
-samgroup:EnableEmission(false)
+samgroup:EnableEmission(false,DCSGroup)
 else
 samgroup:OptionAlarmStateGreen()
 end
@@ -58938,12 +58964,16 @@ else
 samgroup=GROUP:FindByName(name)
 end
 local samalive=false
+local DCSGroup=nil
 if navalparent then samalive=(samunit~=nil)and samunit:IsAlive()or false
-elseif samgroup then samalive=samgroup:IsAlive()or false end
+elseif samgroup then
+DCSGroup=samgroup:GetDCSObject()
+samalive=DCSGroup and samgroup:IsAlive(DCSGroup)or false
+end
 if samalive then
 if navalparent then
 elseif self.UseEmOnOff then
-samgroup:EnableEmission(false)
+samgroup:EnableEmission(false,DCSGroup)
 else
 samgroup:OptionAlarmStateGreen()
 end
@@ -106322,10 +106352,12 @@ function INTEL:SetAcceptZones(AcceptZoneSet)
 self.acceptzoneset=AcceptZoneSet or SET_ZONE:New()
 return self
 end
-function INTEL:SetAccousticDetectionOn(Radius,UnitCategories)
+function INTEL:SetAccousticDetectionOn(Radius,UnitCategories,PlayersOnly,PlayerSnapshotProvider)
 self.DetectAccoustic=true
 self.DetectAccousticRadius=Radius or 1000
 self.DetectAccousticUnitTypes=UnitCategories or{Unit.Category.HELICOPTER}
+self.DetectAccousticPlayersOnly=PlayersOnly or false
+self.AccousticPlayerSnapshotProvider=PlayerSnapshotProvider
 return self
 end
 function INTEL:SetAccousticDetectionOff()
@@ -106580,6 +106612,10 @@ end
 local DetectedUnits=sweep and sweep.units or{}
 local DetectedObjects=sweep and sweep.objects or nil
 local RecceDetecting=sweep and sweep.recce or{}
+local AccousticPlayers
+if self.DetectAccoustic and self.DetectAccousticPlayersOnly then
+AccousticPlayers=self:_GetAccousticPlayers()
+end
 local scanned=0
 for index,_group in next,groups,sweep and sweep.index or nil do
 local group=_group
@@ -106587,8 +106623,9 @@ if sweep then
 sweep.index=index
 group=self.detectionset.Set[_group]
 end
-if group and group:IsAlive()then
-local units=group:GetUnits()
+local DCSGroup=group and group:GetDCSObject()
+if DCSGroup and group:IsAlive(DCSGroup)then
+local units=group:GetUnits(DCSGroup)
 for _,_recce in pairs(units)do
 local recce=_recce
 if self.DopplerRadar==true then
@@ -106597,15 +106634,15 @@ else
 self:GetDetectedUnits(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK,DetectedObjects)
 end
 end
-if self.DetectAccoustic then
-local recce=group:GetFirstUnitAlive(units)
+if self.DetectAccoustic and(not AccousticPlayers or#AccousticPlayers>0)then
+local recce=group:GetFirstUnitAlive(units,DCSGroup)
 local detectionzone=group:GetProperty("INTEL_DETECT_ACCZONE")
 if not detectionzone then
 detectionzone=ZONE_GROUP:New(group.IdentifiableName.."INTEL_DETECT_ACCZONE",group,self.DetectAccousticRadius or 2000)
 group:SetProperty("INTEL_DETECT_ACCZONE",detectionzone)
 end
 if recce and recce:IsGround()then
-self:GetDetectedUnitsAccoustic(recce,DetectedUnits,RecceDetecting,detectionzone,DetectedObjects)
+self:GetDetectedUnitsAccoustic(recce,DetectedUnits,RecceDetecting,detectionzone,DetectedObjects,AccousticPlayers)
 end
 end
 end
@@ -106747,6 +106784,34 @@ self:PaintPicture()
 end
 if sweep then self:_ReportIntelStatus()end
 return self
+end
+function INTEL:_GetAccousticPlayers()
+local othercoalition=self.coalition==coalition.side.BLUE and coalition.side.RED or coalition.side.BLUE
+-- Refresh positions for this batch; never retain them across scheduled batches.
+local rows=self.AccousticPlayerSnapshotProvider and self.AccousticPlayerSnapshotProvider(othercoalition).rows
+local players=rows or coalition.getPlayers(othercoalition)or{}
+local categories=self.DetectAccousticUnitTypes or{Unit.Category.HELICOPTER}
+local AccousticPlayers={}
+for _,entry in ipairs(players)do
+local unit=rows and entry.unit or entry
+local category
+if rows then category=entry.category else category=unit:getDesc().category end
+for _,allowed in pairs(categories)do
+if category==allowed then
+if unit:isExist()and unit:isActive()and unit:getPlayerName()then
+local name=unit:getName()
+local detectedUnit=UNIT:FindByName(name)
+if detectedUnit then
+local point
+if rows then point=entry.point else point=unit:getPoint()end
+AccousticPlayers[#AccousticPlayers+1]={unit=detectedUnit,name=name,id=unit.id_,point=point}
+end
+end
+break
+end
+end
+end
+return AccousticPlayers
 end
 function INTEL:_UpdateContact(Contact)
 if Contact.isStatic then
@@ -106928,13 +106993,32 @@ end
 end
 end
 end
-function INTEL:GetDetectedUnitsAccoustic(Recce,DetectedUnits,RecceDetecting,detectionzone,DetectedObjects)
+function INTEL:GetDetectedUnitsAccoustic(Recce,DetectedUnits,RecceDetecting,detectionzone,DetectedObjects,AccousticPlayers)
+if self.DetectAccousticPlayersOnly then
+if not detectionzone then return end
+AccousticPlayers=AccousticPlayers or self:_GetAccousticPlayers()
+if#AccousticPlayers==0 then return end
+local center=detectionzone:GetCoordinate():SetAlt():GetVec3()
+local radius=detectionzone:GetRadius()
+local radiusSquared=radius*radius
+local reccename=Recce:GetName()
+for _,row in ipairs(AccousticPlayers)do
+local point=row.point
+local dx,dy,dz=point.x-center.x,point.y-center.y,point.z-center.z
+if dx*dx+dy*dy+dz*dz<=radiusSquared then
+DetectedUnits[row.name]=row.unit
+if DetectedObjects then DetectedObjects[row.name]=row.id end
+RecceDetecting[row.name]=reccename
+end
+end
+return
+end
 local othercoalition=self.coalition==coalition.side.BLUE and coalition.side.RED or coalition.side.BLUE
 self:T("Other coalition = "..othercoalition)
 if detectionzone then
 local reccename=Recce:GetName()
 local DetectAccousticUnitTypes=self.DetectAccousticUnitTypes or{Unit.Category.HELICOPTER}
-detectionzone:Scan({Object.Category.UNIT},DetectAccousticUnitTypes)
+detectionzone:Scan({Object.Category.UNIT},DetectAccousticUnitTypes,true)
 local unitset=detectionzone:GetScannedSetUnit(othercoalition)
 self:T("Accoustic detection found #Units "..unitset:CountAlive())
 for _,_unit in pairs(unitset.Set or{})do

@@ -5260,7 +5260,15 @@ if WarehouseLogistics == true and WarehousePersistence and WarehousePersistence.
   WarehousePersistence.RegisterExtraAirbase(FName)
 end
 
-  SCHEDULER:New(nil, function() bc:CopyWarehouse(FName, isFromSave) end, {}, 1)
+  SCHEDULER:New(nil, function()
+    bc:CopyWarehouse(FName, isFromSave)
+    if not isFromSave and type(stamp) == "table" and stamp.landingUnit and bc.playerRewardsOn then
+      local builderUnit = stamp.landingUnit
+      if builderUnit:isExist() and not Utils.isInAir(builderUnit) then
+        bc:_handleRewardPlayerLanding(builderUnit, stamp.landingPlayerName, 2, stamp.landingGroupId, stamp.landingGroupName, nil, true)
+      end
+    end
+  end, {}, 1)
 
   if not NextMarkupId then NextMarkupId = 120000 end
   local markId = NextMarkupId; NextMarkupId = NextMarkupId + 1
@@ -5450,12 +5458,22 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
     if string.find(groupName,"CTLD_TROOP_FOB_ZELL",1,true) then
         local Coord = Vehicle:GetCoordinate()
         Vehicle:Destroy(false)
-        BuildAFARP(Coord, { zell = true })
+        local farpBuild = { zell = true }
+        BuildAFARP(Coord, farpBuild)
         if Group then
-          self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
+          local playerName = self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
           self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.FarpsBuilt, nil)
           self:_recordAirdroppedBuildCareer(Group, Unit, false)
           awardCtldBuildReward(Group, Unit, CTLD_BUILD_REWARD_BY_CARGO["FARP"])
+          if playerName and bc.playerRewardsOn then
+            local builderUnit = Unit:GetDCSObject()
+            if builderUnit:getTypeName() == "C-130J-30" and not Utils.isInAir(builderUnit) then
+              farpBuild.landingUnit = builderUnit
+              farpBuild.landingPlayerName = playerName
+              farpBuild.landingGroupId = Group:GetID()
+              farpBuild.landingGroupName = Group:GetName()
+            end
+          end
         end
         return
     end
@@ -5463,12 +5481,22 @@ function Foothold_ctld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
     if string.find(groupName,"CTLD_TROOP_FOB",1,true) then
         local Coord = Vehicle:GetCoordinate()
         Vehicle:Destroy(false)
-        BuildAFARP(Coord)
+        local farpBuild = {}
+        BuildAFARP(Coord, farpBuild)
         if Group then
-          self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
+          local playerName = self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
           self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.FarpsBuilt, nil)
           self:_recordAirdroppedBuildCareer(Group, Unit, false)
           awardCtldBuildReward(Group, Unit, CTLD_BUILD_REWARD_BY_CARGO["FARP"])
+          if playerName and bc.playerRewardsOn then
+            local builderUnit = Unit:GetDCSObject()
+            if builderUnit:getTypeName() == "C-130J-30" and not Utils.isInAir(builderUnit) then
+              farpBuild.landingUnit = builderUnit
+              farpBuild.landingPlayerName = playerName
+              farpBuild.landingGroupId = Group:GetID()
+              farpBuild.landingGroupName = Group:GetName()
+            end
+          end
         end
         return
     end

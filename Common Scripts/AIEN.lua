@@ -12272,7 +12272,7 @@ local function ac_withdraw(group, ownPos, tgtPos, resume, sa, skill) -- this wil
 end
 
 
-local function ac_attack(group, ownPos, tgtPos, resume, sa, skill, returnToZone, zoneLockName, aggressorGroup) -- this will make the group to run toward the shooting enemy and open fire
+local function ac_attack(group, ownPos, tgtPos, resume, sa, skill, returnToZone, zoneLockName, aggressorGroup, attackerCategory) -- this will make the group to run toward the shooting enemy and open fire
     -- group is the group subject of the action
     -- pos is, when needed, the reference position for the actions, or own position
     -- resume is a boolean. If true, after some time the group will resume it's previous condition, else no.
@@ -12334,7 +12334,7 @@ local function ac_attack(group, ownPos, tgtPos, resume, sa, skill, returnToZone,
         local funcDoAction = function()
             if not returnIssued and group:isExist() then
                 local speed = 10
-                if AIEN.config.dismount == true then
+                if AIEN.config.dismount == true and attackerCategory ~= 1 then
                     local deployed = groupDeployTroop(group, false, tgtPos)
                     if deployed == true then
                         speed = 4
@@ -13598,7 +13598,12 @@ local function executeReactions(gr, ownPos, tgtPos, actTbl, saTbl, skill, eventC
             for _, aData in ipairs(actTbl) do
                 local f = aData.ac_function
                 if f then
-                    local success = f(gr, ownPos, tgtPos, aData.resume, saTbl, skill)
+                    local success
+                    if f == ac_attack then
+                        success = f(gr, ownPos, tgtPos, aData.resume, saTbl, skill, nil, nil, nil, eventCat)
+                    else
+                        success = f(gr, ownPos, tgtPos, aData.resume, saTbl, skill)
+                    end
                     if AIEN.config.AIEN_debugProcessDetail == true then
                         env.info(("AIEN.executeReactions, action success = " .. tostring(success)))
                     end
@@ -14551,7 +14556,12 @@ end
                                                         report.jtacFallback = false
                                                     else
                                                         local grp = _obj:getGroup()
-                                                        local cls = (grp and getGroupClass(grp)) or getUnitClass(_obj) or "UNKN"
+                                                        local cls = grp and queueGroupClassCache[grp.id_]
+                                                        if grp and cls == nil then
+                                                            cls = getGroupClass(grp) or false
+                                                            queueGroupClassCache[grp.id_] = cls
+                                                        end
+                                                        cls = cls or getUnitClass(_obj) or "UNKN"
                                                         if cls == "none" then cls = "UNKN" end
                                                         report = { pos = p, cls = cls, record = now, speed = 0, life = life, jtacFallback = false, obj = _obj, coa = objCoalition, id = objId }
                                                     end
@@ -14572,7 +14582,12 @@ end
                                                         report.jtacFallback = false
                                                     else
                                                         local grp = _obj:getGroup()
-                                                        local cls = (grp and getGroupClass(grp)) or getUnitClass(_obj) or "UNKN"
+                                                        local cls = grp and queueGroupClassCache[grp.id_]
+                                                        if grp and cls == nil then
+                                                            cls = getGroupClass(grp) or false
+                                                            queueGroupClassCache[grp.id_] = cls
+                                                        end
+                                                        cls = cls or getUnitClass(_obj) or "UNKN"
                                                         if cls == "none" then cls = "UNKN" end
                                                         report = { pos = p, cls = cls, record = now, speed = 0, life = life, jtacFallback = false, obj = _obj, coa = objCoalition, id = objId }
                                                     end
@@ -14583,7 +14598,12 @@ end
                                                 end
                                                 if (not report) and jtacOK and jtacSrc == "scout" then
                                                     local grp = _obj:getGroup()
-                                                    local cls = (grp and getGroupClass(grp)) or getUnitClass(_obj) or "UNKN"
+                                                    local cls = grp and queueGroupClassCache[grp.id_]
+                                                    if grp and cls == nil then
+                                                        cls = getGroupClass(grp) or false
+                                                        queueGroupClassCache[grp.id_] = cls
+                                                    end
+                                                    cls = cls or getUnitClass(_obj) or "UNKN"
                                                     if cls == "none" then cls = "UNKN" end
                                                     report = { pos = p, cls = cls, record = now, speed = 0, life = life, jtacFallback = false, obj = _obj, coa = objCoalition, id = objId }
                                                     intelDb[objId] = report
@@ -14607,10 +14627,10 @@ end
                                                         intelDb[objId] = nil
                                                         return
                                                     end
-                                                    local cls = queueGroupClassCache[gName]
+                                                    local cls = queueGroupClassCache[grp.id_]
                                                     if cls == nil then
                                                         cls = getGroupClass(grp) or false
-                                                        queueGroupClassCache[gName] = cls
+                                                        queueGroupClassCache[grp.id_] = cls
                                                     end
                                                     cls = cls or getUnitClass(_obj) or "UNKN"
                                                     if cls == "none" then cls = "UNKN" end
@@ -15618,7 +15638,7 @@ end
                                                 if bestGroup1 then
                                                     local gid1 = bestGroup1:getID()
                                                     local gData1 = groundgroupsDb[gid1]
-                                                    local attack1 = ac_attack(bestGroup1, gData1.sa.pos, a_pos, true, gData1.sa, gData1.skill or 1, true, z1.zone)
+                                                    local attack1 = ac_attack(bestGroup1, gData1.sa.pos, a_pos, true, gData1.sa, gData1.skill or 1, true, z1.zone, nil, s_cat)
 
                                                     if attack1 == true then
                                                         delegationTasked = true
@@ -15641,7 +15661,7 @@ end
                                                             local group2 = picked.group
                                                             local gData2 = picked.data
                                                             local gid2 = group2:getID()
-                                                            local attack2 = ac_attack(group2, gData2.sa.pos, a_pos, true, gData2.sa, gData2.skill or 1, true, z1.zone)
+                                                            local attack2 = ac_attack(group2, gData2.sa.pos, a_pos, true, gData2.sa, gData2.skill or 1, true, z1.zone, nil, s_cat)
 
                                                             if attack2 == true then
                                                                 gData2.tasked = true

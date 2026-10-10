@@ -48,6 +48,7 @@
 
 if ewrs_enabled == false then return end -- Startup-only switch; requires mission restart.
 
+if ewrs and ewrs.radarRegistry then ewrs.closeRadarRegistry() end
 ewrs = {} --DO NOT REMOVE
 local L10N = FH_L10N
 ewrs.HELO = 1
@@ -1156,6 +1157,7 @@ function ewrs.buildActivePlayers()
         end
       end
     end
+    if #ewrs.activePlayers == 0 then ewrs.closeRadarRegistry() end
   end) -- pcall
   
   if not status then
@@ -1234,6 +1236,7 @@ function ewrs.removeActivePlayersForGroup(groupID)
     end
   end
   ewrs.activePlayers = kept
+  if #kept == 0 then ewrs.closeRadarRegistry() end
 end
 
 function ewrs.registerPlayer(playerName, groupID, unit, unitType, unitName, unitCoalition, unitCategory)
@@ -1272,15 +1275,71 @@ function ewrs.getDetectedTargets()
   end
 end
 
+function ewrs.closeRadarRegistry()
+  local registry = ewrs.radarRegistry
+  if not registry then return end
+  for _, eventID in ipairs({EVENTS.Birth, EVENTS.Dead, EVENTS.Crash, EVENTS.RemoveUnit, EVENTS.UnitLost}) do
+    registry:UnHandleEvent(eventID)
+  end
+  ewrs.radarRegistry = nil
+end
+
+local function ewrsAddRadar(registry, unit, name, side, exists)
+  local previous = registry.byName[name]
+  if previous then
+    registry.rows[previous.side][name] = nil
+    registry.byName[name] = nil
+  end
+  if side ~= 1 and side ~= 2 then return end
+  if exists == nil then exists = unit:isExist() end
+  if exists and (unit:hasAttribute("SAM SR") or unit:hasAttribute("EWR") or unit:hasAttribute("AWACS")) then
+    local row = {unit = unit, name = name, side = side, id = unit.id_}
+    registry.byName[name] = row
+    registry.rows[side][name] = row
+  end
+end
+
+local function ewrsNewRadarRegistry()
+  local registry = BASE:New()
+  registry.rows = {[1] = {}, [2] = {}}
+  registry.byName = {}
+  registry.birth = function(self, event)
+    if event.IniObjectCategory ~= Object.Category.UNIT then return end
+    ewrsAddRadar(self, event.IniDCSUnit, event.IniDCSUnitName, event.IniCoalition)
+  end
+  registry.remove = function(self, event)
+    if event.IniObjectCategory ~= Object.Category.UNIT then return end
+    local row = self.byName[event.IniDCSUnitName]
+    if row and row.id == event.IniDCSUnit.id_ then
+      self.rows[row.side][row.name] = nil
+      self.byName[row.name] = nil
+    end
+  end
+  registry:HandleEvent(EVENTS.Birth, registry.birth)
+  for _, eventID in ipairs({EVENTS.Dead, EVENTS.Crash, EVENTS.RemoveUnit, EVENTS.UnitLost}) do
+    registry:HandleEvent(eventID, registry.remove)
+  end
+  -- Include radars born before the first report; later births use the same dispatcher.
+  for side = 1, 2 do
+    for _, group in ipairs(coalition.getGroups(side)) do
+      for _, unit in ipairs(group:getUnits()) do
+        local exists = unit:isExist()
+        if exists then ewrsAddRadar(registry, unit, unit:getName(), side, exists) end
+      end
+    end
+  end
+  return registry
+end
+
   function ewrs.findDetectedTargets(side)
+    if not ewrs.radarRegistry then ewrs.radarRegistry = ewrsNewRadarRegistry() end
+    local registry = ewrs.radarRegistry
     local dets = {}
     local tgtCoal = side == "red" and 2 or 1
 
-    for _, grp in ipairs(coalition.getGroups(tgtCoal)) do
-      for _, u in ipairs(grp:getUnits()) do
-        if u:isExist() 
-          and (u:hasAttribute("SAM SR") or u:hasAttribute("EWR") or u:hasAttribute("AWACS")) 
-        then
+    for name, row in pairs(registry.rows[tgtCoal]) do
+        local u = row.unit
+        if u:isExist() then
           for _, d in ipairs(u:getController():getDetectedTargets(Controller.Detection.RADAR)) do
             local obj = d.object
             if obj and obj:isExist() and obj:inAir()
@@ -1289,8 +1348,10 @@ end
               dets[obj:getName()] = obj
             end
           end
+        else
+          registry.rows[tgtCoal][name] = nil
+          registry.byName[name] = nil
         end
-      end
     end
 
     local out = {}
