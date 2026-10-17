@@ -1,5 +1,7 @@
 env.info("Mission Setup : is loading.")
 
+
+
 local L10N = FH_L10N
 local function LT(T) return T or L10N end
 local function LTGet(key) return L10N:DeferredGet(key) end
@@ -6050,7 +6052,6 @@ function RegisterDirectorCasMission(slotIndex)
 					bc:scheduleRewardClaimIfLanded(playerName)
 				end
 				if #participantNames == 0 then
-					trigger.action.outTextForCoalition(2,L10N:Get("MISSION_CAS_COMPLETED_NO_REWARD"),20)
 				elseif #participantNames == 1 then
 					local playerName = participantNames[1]
 					trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAS_COMPLETED_SOLO", playerName, rewards[playerName]),20)
@@ -7192,6 +7193,79 @@ airbaseStatics = {
     ["Digora"] = {"Farpdigoraammo", "Farpdigorafuel", "Farpdigoratent", "Farpdigorawind"},
 	    
 }
+
+-- BEGIN CA TESTING AREA
+if Testing then
+	local testingZone = ZONE:New('testing')
+	local testingTemplates = {
+		'Testing light 7', 'Testing light 9', 'Testing light 4',
+		'Testing light 6', 'Testing Light', 'Testing light 2',
+		'Testing light 3', 'Testing light 8', 'Testing light 5',
+		'Testing special 3', 'Testing Special 1', 'Testing mech 2',
+		'Testing mech 3', 'Testing Special 2', 'Testing special 5',
+		'Testing mech 1', 'Testing special 6', 'Testing special 4',
+	}
+	local testingGroups = {}
+	local function spawnTestingGroup(target)
+		local group
+		if target.position then
+			group = target.spawner:SpawnFromVec3(target.position)
+			group:SetTask(group:TaskOrbit(target.position, target.position.y, target.speed), 1)
+		else
+			group = target.spawner:Spawn()
+			group:OptionAlarmStateGreen()
+		end
+		group:OptionROEHoldFire()
+		target.group = group
+	end
+	for _, templateName in ipairs(testingTemplates) do
+		-- Hidden uses AIEN's existing exclusion, preserving Hold Fire.
+		local target = { spawner = SPAWN:NewWithAlias(templateName, 'Hidden ' .. templateName) }
+		target.spawner:OnBeforeTemplateSpawnGroup(function(_, template)
+			template.hidden = false
+		end)
+		GROUP:FindByName(templateName):Destroy(false)
+		spawnTestingGroup(target)
+		testingGroups[#testingGroups + 1] = target
+	end
+	local testingAirTemplates = merge({
+		BuildEnabledTemplateList(CapPlaneTemplate, RedCapPlaneEnabled),
+		BuildEnabledTemplateList(CasPlaneTemplate, RedCasPlaneEnabled),
+	})
+	if #testingAirTemplates > 0 then
+		for _, zoneName in ipairs({ 'testing air', 'testing air-2', 'testing air-1', 'testing air-3' }) do
+			local zonePosition = ZONE:New(zoneName):GetVec3()
+			for slot = 1, 2 do
+				local target = {
+					spawner = SPAWN:NewWithAlias(testingAirTemplates[1], 'Hidden ' .. zoneName .. ' ' .. slot),
+					position = { x = zonePosition.x + (slot - 1) * 9260, y = zonePosition.y + 2000 + slot * 1000, z = zonePosition.z },
+					speed = 220,
+				}
+				target.spawner:InitRandomizeTemplate(testingAirTemplates):InitSpeedMps(target.speed)
+				target.spawner.SpawnTemplate.route.points[1].speed = target.speed
+				target.spawner:OnBeforeTemplateSpawnGroup(function(_, template)
+					for unitIndex, unit in ipairs(template.units) do
+						local offset = (unitIndex - 1) * 500
+						unit.x = target.position.x - offset
+						unit.y = target.position.z + offset
+						unit.alt = target.position.y + (unitIndex - 1) * 100
+					end
+				end)
+				spawnTestingGroup(target)
+				testingGroups[#testingGroups + 1] = target
+			end
+		end
+	end
+	SCHEDULER:New(nil, function()
+		testingZone:RemoveJunk()
+		for _, target in ipairs(testingGroups) do
+			if target.group:CountAliveUnits() == 0 then
+				spawnTestingGroup(target)
+			end
+		end
+	end, {}, 600, 600)
+end
+-- END CA TESTING AREA
 
 env.info("Mission Setup : is completed!")
 

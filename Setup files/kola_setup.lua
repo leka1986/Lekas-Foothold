@@ -1574,7 +1574,7 @@ zones.savukoski:addGroups({
 
 zones.rovaniemi:addGroups({
     DirectorCapability:new({name='Rovaniemi-supply-Tervola', mission='supply',template='HeloSupplyTemplate', targetzone='Tervola'}),
-    DirectorCapability:new({name='Rovaniemi-supply-Voujarvi', mission='supply',template='PlaneSupplyTemplate', targetzone='Vuojarvi'}),
+    DirectorCapability:new({name='Rovaniemi-supply-Voujarvi', mission='supply',template='HeloSupplyTemplate', targetzone='Vuojarvi'}),
     DirectorCapability:new({name='Rovaniemi-patrol-KemiTornio-Cap', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='KemiTornio', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Rovaniemi-attack-Kallax-Cas', mission='attack',template='CasPlaneTemplate',MissionType='CAS', targetzone='Kallax', Altitude = CasAltitude()}),
 })
@@ -1596,7 +1596,7 @@ zones.kemitornio:addGroups({
     DirectorCapability:new({name='KemiTornio-supply-SkogsFARP1', mission='supply',template='HeloSupplyTemplate', targetzone='SkogsFARP1'}),
     DirectorCapability:new({name='KemiTornio-attack-SkogsFARP1-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='SkogsFARP1'}),
     DirectorCapability:new({name='KemiTornio-supply-Tervola', mission='supply',template='HeloSupplyTemplate', targetzone='Tervola'}),
-    DirectorCapability:new({name='KemiTornio-supply-Kalix', mission='supply',template='HeloSupplyTemplate', targetzone='Kalix'}),
+    DirectorCapability:new({name='KemiTornio-supply-Kalix', mission='supply',template='HeloSupplyTemplate', targetzone='Kalix', Bluecondition = function(self) return true end}),
     DirectorCapability:new({name='KemiTornio-attack-Kalix-surface', mission='attack',template='AttackConvoy', targetzone='Kalix', type='surface'}),
     DirectorCapability:new({name='KemiTornio-supply-Kalix-surface', mission='supply',template='SupplyConvoy', targetzone='Kalix', type='surface'}),
     DirectorCapability:new({name='KemiTornio-supply-Rovaniemi', mission='supply',template='PlaneSupplyTemplate', targetzone='Rovaniemi'}),
@@ -1634,11 +1634,10 @@ zones.jokkmokk:addGroups({
     DirectorCapability:new({name='Jokkmokk-patrol-Kvikkjokk', mission='patrol',template='CapPlaneTemplate',MissionType='CAP', targetzone='Kvikkjokk', Altitude = CapAltitude()})
 })
 zones.kalix:addGroups({
-    DirectorCapability:new({name='Kalix-supply-Tore', mission='supply',template='HeloSupplyTemplate', targetzone='Tore'}),
     DirectorCapability:new({name='Kalix-attack-Tore-surface', mission='attack',template='AttackConvoy', targetzone='Tore', type='surface'}),
     DirectorCapability:new({name='Kalix-supply-Tore-surface', mission='supply',template='SupplyConvoy', targetzone='Tore', type='surface'}),
     DirectorCapability:new({name='Kalix-attack-KemiTornio-surface', mission='attack',template='AttackConvoy', targetzone='KemiTornio', type='surface'}),
-    DirectorCapability:new({name='Kalix-supply-KemiTornio-surface', mission='supply',template='SupplyConvoy', targetzone='KemiTornio', type='surface'}),
+    DirectorCapability:new({name='Kalix-supply-KemiTornio-surface', mission='supply',template='SupplyConvoy', targetzone='KemiTornio', type='surface', Redcondition=function(self) return true end}),
     DirectorCapability:new({name='Kalix-attack-Kallax', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='Kallax'}),
     DirectorCapability:new({name='Kalix-attack-KemiTornio', mission='attack',template='CasHeloTemplate',MissionType='CAS', targetzone='KemiTornio'})
 })
@@ -1684,11 +1683,12 @@ zones.hemavan:addGroups({
     DirectorCapability:new({name='Hemavan-patrol-Hemavan-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Hemavan', Altitude = CapAltitude()})
 })
 zones.boden:addGroups({
-    DirectorCapability:new({name='Boden-supply-Kallax', mission='supply',template='HeloSupplyTemplate', targetzone='Kallax'}),
+    DirectorCapability:new({name='Boden-supply-Kallax', mission='supply',template='HeloSupplyTemplate', targetzone='Kallax', ForceFromGround = true, Bluecondition = function(self) return true end}),
+    DirectorCapability:new({name='Boden-supply-Tore', mission='supply',template='HeloSupplyTemplate', targetzone='Tore', ForceFromGround = true, Bluecondition = function(self) return true end}),
     DirectorCapability:new({name='Boden-attack-Kallax-surface', mission='attack',template='AttackConvoy', targetzone='Kallax', type='surface'}),
-    DirectorCapability:new({name='Boden-supply-Kallax-surface', mission='supply',template='SupplyConvoy', targetzone='Kallax', type='surface'}),
+    DirectorCapability:new({name='Boden-supply-Kallax-surface', mission='supply',template='SupplyConvoy', targetzone='Kallax', type='surface', Redcondition = function(self) return true end}),
     DirectorCapability:new({name='Boden-attack-Tore-surface', mission='attack',template='AttackConvoy', targetzone='Tore', type='surface'}),
-    DirectorCapability:new({name='Boden-supply-Tore-surface', mission='supply',template='SupplyConvoy', targetzone='Tore', type='surface'}),
+    DirectorCapability:new({name='Boden-supply-Tore-surface', mission='supply',template='SupplyConvoy', targetzone='Tore', type='surface', Redcondition = function(self) return true end}),
     DirectorCapability:new({name='Boden-attack-Kallax-Cas', mission='attack',template='CasHeloTemplate', MissionType='CAS', targetzone='Kallax'})
 })
 zones.soppero:addGroups({
@@ -1876,6 +1876,7 @@ zones.enontekio.airbaseName = 'Enontekio'
 zones.sodankyla.airbaseName = 'Sodankyla'
 
 
+
 --[[ AirbaseBelonging = AirbaseBelonging or {}
 AirbaseBelonging["Lar"]     = AirbaseBelonging["Lar"]     or {"Shiraz Intl"}
 AirbaseBelonging["Samathe"] = AirbaseBelonging["Samathe"] or {"Jiroft","Kerman"}
@@ -2003,47 +2004,89 @@ TheaterRegions = {
 	{
 		id = "norwegian_coast",
 		kind = "coastal_air_network",
-		name = "Norwegian Coast",
+		name = "Norwegian Coast Central",
 		zones = {
-			{ name = "Bodo", role = "foothold" },
 			{ name = "Andoya", role = "foothold" },
 			{ name = "Bardufoss", role = "core" },
 			{ name = "Evenes", role = "member" },
 			{ name = "Silsand", role = "member" },
 			{ name = "Tromso", role = "member" },
-			{ name = "Alta", role = "member" },
-			{ name = "Banak", role = "member" },
-			{ name = "Buolbmat", role = "member" },
+		},
+	},
+	{
+		id = "norwegian_coast_south",
+		kind = "coastal_air_network",
+		name = "Norwegian Coast South",
+		zones = {
+			{ name = "Bodo", role = "core" },
 			{ name = "BergsBasen", role = "member" },
+		},
+	},
+	{
+		id = "norwegian_coast_north",
+		kind = "coastal_air_network",
+		name = "Norwegian Coast North",
+		zones = {
+			{ name = "Alta", role = "member" },
+			{ name = "Banak", role = "core" },
+			{ name = "Buolbmat", role = "member" },
 		},
 	},
 	{
 		id = "western_lapland",
 		kind = "strategic_corridor",
-		name = "Western Lapland",
+		name = "Kiruna District",
 		zones = {
 			{ name = "Kiruna", role = "core" },
 			{ name = "Abisko", role = "foothold" },
-			{ name = "Kvikkjokk", role = "foothold" },
 			{ name = "Luspa", role = "member" },
-			{ name = "Guovdageaidnu", role = "member" },
-			{ name = "Karasjok", role = "member" },
 			{ name = "Skogsbasen", role = "member" },
-			{ name = "Gallivare", role = "member" },
 			{ name = "Kalixfors", role = "member" },
-			{ name = "Jokkmokk", role = "member" },
-			{ name = "Vidsel", role = "member" },
 			{ name = "Soppero", role = "member" },
+		},
+	},
+	{
+		id = "western_lapland_north",
+		kind = "strategic_corridor",
+		name = "Northern Inland",
+		zones = {
+			{ name = "Guovdageaidnu", role = "member" },
+			{ name = "Karasjok", role = "core" },
+			{ name = "Maze", role = "member" },
+		},
+	},
+	{
+		id = "western_lapland_central",
+		kind = "strategic_corridor",
+		name = "Gallivare-Jokkmokk",
+		zones = {
+			{ name = "Kvikkjokk", role = "foothold" },
+			{ name = "Gallivare", role = "core" },
+			{ name = "Jokkmokk", role = "member" },
+		},
+	},
+	{
+		id = "western_lapland_south",
+		kind = "strategic_corridor",
+		name = "Vidsel-Arvidsjaur",
+		zones = {
+			{ name = "Vidsel", role = "core" },
 			{ name = "Storsand", role = "member" },
 			{ name = "Arvidsjaur", role = "member" },
-			{ name = "Hemavan", role = "member" },
-			{ name = "Maze", role = "member" },
+		},
+	},
+	{
+		id = "western_lapland_hemavan",
+		kind = "strategic_corridor",
+		name = "Hemavan",
+		zones = {
+			{ name = "Hemavan", role = "core" },
 		},
 	},
 	{
 		id = "bothnian_corridor",
 		kind = "air_network",
-		name = "Bothnian Corridor",
+		name = "Bothnian Coast",
 		zones = {
 			{ name = "Kallax", role = "foothold" },
 			{ name = "SAMAlvik", role = "defence" },
@@ -2052,22 +2095,43 @@ TheaterRegions = {
 			{ name = "Kalix", role = "member" },
 			{ name = "KemiTornio", role = "core" },
 			{ name = "Tervola", role = "member" },
-			{ name = "Rovaniemi", role = "member" },
+		},
+	},
+	{
+		id = "bothnian_inland",
+		kind = "air_network",
+		name = "Rovaniemi",
+		zones = {
+			{ name = "Rovaniemi", role = "core" },
 		},
 	},
 	{
 		id = "finnish_lapland",
 		kind = "air_network",
-		name = "Finnish Lapland",
+		name = "Finnish Lapland North",
 		zones = {
-			{ name = "Kittila", role = "foothold" },
-			{ name = "Enontekio", role = "foothold" },
-			{ name = "Vuojarvi", role = "member" },
 			{ name = "Ivalo", role = "core" },
-			{ name = "Savukoski", role = "member" },
 			{ name = "Inari", role = "member" },
 			{ name = "Ivalontie", role = "member" },
-			{ name = "Sodankyla", role = "member" },
+		},
+	},
+	{
+		id = "finnish_lapland_northwest",
+		kind = "air_network",
+		name = "Finnish Lapland Northwest",
+		zones = {
+			{ name = "Kittila", role = "core" },
+			{ name = "Enontekio", role = "foothold" },
+		},
+	},
+	{
+		id = "finnish_lapland_central",
+		kind = "air_network",
+		name = "Finnish Lapland Central",
+		zones = {
+			{ name = "Vuojarvi", role = "member" },
+			{ name = "Savukoski", role = "member" },
+			{ name = "Sodankyla", role = "core" },
 		},
 	},
 	{
@@ -2149,7 +2213,7 @@ TheaterAreas = {
 		id = "norwegian_coast",
 		kind = "coastal_air_network",
 		name = "Norwegian Coast",
-		regions = { "norwegian_coast" },
+		regions = { "norwegian_coast", "norwegian_coast_south", "norwegian_coast_north" },
 		zones = {
 			{ name = "Evenes", role = "hub" },
 			{ name = "Silsand", role = "gateway" },
@@ -2167,7 +2231,7 @@ TheaterAreas = {
 		id = "western_lapland",
 		kind = "strategic_corridor",
 		name = "Western Lapland",
-		regions = { "western_lapland" },
+		regions = { "western_lapland", "western_lapland_north", "western_lapland_central", "western_lapland_south", "western_lapland_hemavan" },
 		zones = {
 			{ name = "Abisko", role = "gateway" },
 			{ name = "Soppero", role = "support" },
@@ -2191,7 +2255,7 @@ TheaterAreas = {
 		id = "bothnian_corridor",
 		kind = "air_network",
 		name = "Bothnian Corridor",
-		regions = { "bothnian_corridor" },
+		regions = { "bothnian_corridor", "bothnian_inland" },
 		zones = {
 			{ name = "Boden", role = "support" },
 			{ name = "Tore", role = "gateway" },
@@ -2207,7 +2271,7 @@ TheaterAreas = {
 		id = "finnish_lapland",
 		kind = "air_network",
 		name = "Finnish Lapland",
-		regions = { "finnish_lapland" },
+		regions = { "finnish_lapland", "finnish_lapland_northwest", "finnish_lapland_central" },
 		zones = {
 			{ name = "Enontekio", role = "hub" },
 			{ name = "Inari", role = "support" },
@@ -3747,7 +3811,7 @@ bc:registerShopItem('redwarehouse', LTGet("WAREHOUSE_SHOP_RED_CREATE"), 3000, fu
 	end
 	local zoneChoices = {}
 	for _, zoneObj in ipairs(bc:getZones()) do
-		if zoneObj.side == 1 and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden
+		if zoneObj.side == 1 and zoneObj.active and (not zoneObj.suspended or zoneObj._idleSuspended) and not zoneObj.isHidden
 			and zoneObj.airbaseName and zoneObj.airbaseName ~= '' and not zoneObj.warehouseFacility
 			and not isCarrierZoneName(zoneObj.zone) then
 			zoneChoices[zoneObj.zone] = zoneObj
@@ -3762,7 +3826,7 @@ bc:registerShopItem('redwarehouse', LTGet("WAREHOUSE_SHOP_RED_CREATE"), 3000, fu
 			redWarehouseMenu = nil
 		end
 		return true -- Keep the selector on failure; successful purchases close it above.
-	end, 1, false, zoneChoices)
+	end, 1, false, zoneChoices, true)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end, function(sender, params)
 	return bc:applyRedWarehouseUpgrade(params.zone, params.placement, params.now)
@@ -6007,7 +6071,6 @@ function RegisterDirectorCasMission(slotIndex)
 					bc:scheduleRewardClaimIfLanded(playerName)
 				end
 				if #participantNames == 0 then
-					trigger.action.outTextForCoalition(2,L10N:Get("MISSION_CAS_COMPLETED_NO_REWARD"),20)
 				elseif #participantNames == 1 then
 					local playerName = participantNames[1]
 					trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAS_COMPLETED_SOLO", playerName, rewards[playerName]),20)

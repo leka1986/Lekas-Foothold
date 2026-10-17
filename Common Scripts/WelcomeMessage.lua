@@ -927,31 +927,35 @@ local function getCarrierRadioLine(name, translator)
     return T:Format("WELCOME_CARRIER_FREQ_MORSE", info.frequency, info.morse or "")
 end
 
-local function getCarrierBriefingLine(name, translator)
+local function getCarrierBriefingLine(name, translator, knownRadioLine, knownBRC)
     local T = translator or L10N
-    local radioLine = getCarrierRadioLine(name, T)
+    local radioLine = knownRadioLine
+    if radioLine == nil then radioLine = getCarrierRadioLine(name, T) end
     if radioLine then
-        return radioLine .. "\n\n" .. getBRC(name, T)
+        return radioLine .. "\n\n" .. (knownBRC or getBRC(name, T))
     end
-    return getBRC(name, T)
+    return knownBRC or getBRC(name, T)
 end
 
-local function getCarrierWind(cvnName, translator)
+local function getCarrierWind(cvnName, translator, knownCoordinate)
     local T = translator or L10N
-    local cvn
-
-    if cvnName then
-        cvn = UNIT:FindByName(cvnName)
-    else
-        local activeCarrierName = getFirstActiveCarrierName()
-        if activeCarrierName then
-            cvn = UNIT:FindByName(activeCarrierName)
+    local carrierCoordinate = knownCoordinate
+    if not carrierCoordinate then
+        local cvn
+        if cvnName then
+            cvn = UNIT:FindByName(cvnName)
+        else
+            local activeCarrierName = getFirstActiveCarrierName()
+            if activeCarrierName then
+                cvn = UNIT:FindByName(activeCarrierName)
+            end
         end
+        if not cvn then
+            return T:Get("WELCOME_CARRIER_NOT_FOUND")
+        end
+        carrierCoordinate = cvn:GetCoordinate()
     end
-    if not cvn then
-        return T:Get("WELCOME_CARRIER_NOT_FOUND")
-    end
-    local dir, spd = cvn:GetCoordinate():GetWind(18)
+    local dir, spd = carrierCoordinate:GetWind(18)
     if not dir or not spd then
         return T:Get("WELCOME_WIND_UNAVAILABLE")
     end
@@ -965,11 +969,12 @@ function getCarrierInfo()
     end
 end
 
-local function getAirbaseWind(airbaseName, translator)
+local function getAirbaseWind(airbaseName, translator, knownAirbase, knownCoordinate)
     local T = translator or L10N
-    local airbase = GetAirbaseByNameCached(airbaseName)
+    local airbase = knownAirbase
+    if airbase == nil then airbase = GetAirbaseByNameCached(airbaseName) end
     if airbase then
-        local airbaseCoord = airbase:GetCoordinate()  
+        local airbaseCoord = knownCoordinate or airbase:GetCoordinate()
         local windDirection, windSpeed = airbaseCoord:GetWind(10)
         if windDirection and windSpeed then
             local windSpeedKnots = math.floor(windSpeed * 1.94384)
@@ -983,13 +988,14 @@ local function getAirbaseWind(airbaseName, translator)
     end
 end
 
-local function fetchActiveRunway(zoneName, translator, includeCourse)
+local function fetchActiveRunway(zoneName, translator, includeCourse, knownAirbase)
     local T = translator or L10N
     local zoneData = atisZones[zoneName]
     if not zoneData or not zoneData.airbaseName then
         return T:Get("WELCOME_AIRBASE_DATA_UNAVAILABLE")
     end
-    local airbase = GetAirbaseByNameCached(zoneData.airbaseName)
+    local airbase = knownAirbase
+    if airbase == nil then airbase = GetAirbaseByNameCached(zoneData.airbaseName) end
     if not airbase then
         trigger.action.outText(L10N:Format("WELCOME_AIRBASE_CONFLICT", zoneData.airbaseName), 10)
         return T:Get("WELCOME_AIRBASE_DATA_UNAVAILABLE")
@@ -1105,16 +1111,21 @@ local MainMenu = {}
 
 local function getNearestCarrierName(coord)
     local nearest=nil local minDist=math.huge
+    local nearestCoordinate
     for _,name in ipairs(WelcomeCarrierNames) do
         if IsGroupActive(name) then
             local unit=UNIT:FindByName(name)
             if unit then
-                local distance=coord:Get2DDistance(unit:GetCoordinate())
-                if distance<minDist then minDist=distance nearest=name end
+                local carrierCoordinate=unit:GetCoordinate()
+                local distance=coord:Get2DDistance(carrierCoordinate)
+                if distance<minDist then
+                    minDist=distance nearest=name
+                    nearestCoordinate=carrierCoordinate
+                end
             end
         end
     end
-    if minDist<200 then return nearest end
+    if minDist<200 then return nearest,nearestCoordinate,minDist end
 end
 
 
@@ -1134,6 +1145,7 @@ function getClosestFriendlyAirbaseInfo(client)
     local considerCarrier = playerSide == coalition.side.BLUE 
     and (clientType == "FA-18C_hornet" or clientType == "F-14B" or clientType == "F-14BU" or clientType == "F-14A-135-GR" or clientType == "F-14A-135-GR-Early" or clientType == "F-14A-95-GR")
     local lines           = {}
+    local magDecl
 
     if considerCarrier then
         for _,name in ipairs(WelcomeCarrierNames) do
@@ -1142,7 +1154,9 @@ function getClosestFriendlyAirbaseInfo(client)
                 if cvn then
                     local ccoord   = cvn:GetCoordinate()
                     local cdist    = playerCoord:Get2DDistance(ccoord)
-                    local cbrg     = (playerCoord:HeadingTo(ccoord,nil) - playerCoord:GetMagneticDeclination() + 360) % 360
+                    local trueBrg  = playerCoord:HeadingTo(ccoord,nil)
+                    magDecl = magDecl or playerCoord:GetMagneticDeclination()
+                    local cbrg     = (trueBrg - magDecl + 360) % 360
                     local pretty,tacan = hullPrettyAndTCN(name)
                     local radioLine = getCarrierRadioLine(name, T)
                     local msg
@@ -1161,17 +1175,21 @@ function getClosestFriendlyAirbaseInfo(client)
 
     local minimumRunwayLength = env.mission.theatre == "GermanyCW" and GermanyCWMinRunwayLengthMeters or 0
     local closestNormalZoneName,closestNormalDistance,closestNormalBearing = nil,math.huge,nil
+    local closestNormalAirbase,closestNormalCoordinate
     for zoneName,details in pairs(atisZones) do
         local airbase = GetAirbaseByNameCached(details.airbaseName)
         if airbase and airbase:GetCoalition() == playerSide and details.maxRunwayLengthMeters >= minimumRunwayLength then
-            local dist     = playerCoord:Get2DDistance(airbase:GetCoordinate())
-            local trueBrg  = playerCoord:HeadingTo(airbase:GetCoordinate(),nil)
-            local magDecl  = playerCoord:GetMagneticDeclination()
+            local airbaseCoord = airbase:GetCoordinate()
+            local dist     = playerCoord:Get2DDistance(airbaseCoord)
+            local trueBrg  = playerCoord:HeadingTo(airbaseCoord,nil)
+            magDecl = magDecl or playerCoord:GetMagneticDeclination()
             local magBrg   = (trueBrg - magDecl + 360) % 360
             if not isCarrierZoneName(zoneName) and dist < closestNormalDistance then
                 closestNormalZoneName = zoneName
                 closestNormalDistance = dist
                 closestNormalBearing  = magBrg
+                closestNormalAirbase = airbase
+                closestNormalCoordinate = airbaseCoord
             end
         end
     end
@@ -1179,11 +1197,11 @@ function getClosestFriendlyAirbaseInfo(client)
     if closestNormalZoneName then
         local distanceInNM   = closestNormalDistance * 0.000539957
         local displayName    = closestNormalZoneName .. (WaypointList[closestNormalZoneName] or "")
-        local windMessage,windDirection = getAirbaseWind(atisZones[closestNormalZoneName] and atisZones[closestNormalZoneName].airbaseName or "", T)
+        local windMessage,windDirection = getAirbaseWind(atisZones[closestNormalZoneName] and atisZones[closestNormalZoneName].airbaseName or "", T, closestNormalAirbase, closestNormalCoordinate)
         local altimeterMessage,runwayInfo = "",""
         if windMessage ~= T:Get("WELCOME_WIND_UNAVAILABLE") and windMessage ~= T:Get("WELCOME_AIRBASE_NOT_FOUND") then
             altimeterMessage = getAltimeter(T)
-            runwayInfo       = fetchActiveRunway(closestNormalZoneName, T, true) or T:Get("WELCOME_RUNWAY_INFO_UNAVAILABLE")
+            runwayInfo       = fetchActiveRunway(closestNormalZoneName, T, true, closestNormalAirbase) or T:Get("WELCOME_RUNWAY_INFO_UNAVAILABLE")
         end
         local airfieldLine = T:Format("WELCOME_CLOSEST_AIRFIELD",
         displayName,distanceInNM,closestNormalBearing,windMessage,altimeterMessage~=""and(", " .. altimeterMessage)or"", runwayInfo~= ""and("\n\n" .. runwayInfo)or"")
@@ -1197,30 +1215,7 @@ end
 
 
 
-function SetupATISMenu(client)
-    local group = client:GetGroup()
-    if not group then return end
-    local T = getMooseGroupTranslator(group)
-    local playerSide = client:GetCoalition()
-
-    local groupID = group:GetName()
-
-    if MainMenu[groupID] then
-        MainMenu[groupID]:Remove()
-    end
-
-    local mainMenu = MENU_GROUP:New(group, T:Get("WELCOME_MENU_ATIS_CLOSEST"))
-    MainMenu[groupID] = mainMenu
-
-    local atisMenu = MENU_GROUP:New(group, T:Get("WELCOME_MENU_ATIS_INFO"), mainMenu)
-    MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_CLOSEST_FRIENDLY"), mainMenu, getClosestFriendlyAirbaseInfo, client)
-    local hasMother = playerSide == coalition.side.BLUE and IsThereACarrier()
-    if hasMother then
-    MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_ATIS_MOTHER"), atisMenu, sendATISInformation, client, group, "Carrier")
-    end
-    local currentMenu = atisMenu
-    local menuItemCount = hasMother and 2 or 0
-
+local function getATISMenuEntries(playerSide)
     local entries = {}
     for zoneName, details in pairs(atisZones) do
         if not isCarrierZoneName(zoneName) then
@@ -1247,6 +1242,35 @@ function SetupATISMenu(client)
         return a.zoneName < b.zoneName
     end)
 
+    return entries
+end
+
+function SetupATISMenu(client, knownGroup, knownTranslator, knownEntries, knownSide)
+    local group = knownGroup or client:GetGroup()
+    if not group then return end
+    local T = knownTranslator or getMooseGroupTranslator(group)
+    local playerSide = knownSide or client:GetCoalition()
+
+    local groupID = group:GetName()
+
+    if MainMenu[groupID] then
+        MainMenu[groupID]:Remove()
+    end
+
+    local mainMenu = MENU_GROUP:New(group, T:Get("WELCOME_MENU_ATIS_CLOSEST"))
+    MainMenu[groupID] = mainMenu
+
+    local atisMenu = MENU_GROUP:New(group, T:Get("WELCOME_MENU_ATIS_INFO"), mainMenu)
+    MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_CLOSEST_FRIENDLY"), mainMenu, getClosestFriendlyAirbaseInfo, client)
+    local hasMother = playerSide == coalition.side.BLUE and IsThereACarrier()
+    if hasMother then
+    MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_ATIS_MOTHER"), atisMenu, sendATISInformation, client, group, "Carrier")
+    end
+    local currentMenu = atisMenu
+    local menuItemCount = hasMother and 2 or 0
+
+    local entries = knownEntries or getATISMenuEntries(playerSide)
+
     for _, entry in ipairs(entries) do
         if menuItemCount >= 9 then
             currentMenu = MENU_GROUP:New(group, T:Get("MENU_MORE"), currentMenu)
@@ -1270,12 +1294,17 @@ function static:onBaseCapture(_event)
                 local ownerCoalitionName = coalitionSide == coalition.side.RED and "red" or "blue"
                 for _, coalitionName in ipairs({ "blue", "red" }) do
                     local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCoalitions(coalitionName):FilterAlive():FilterOnce()
+                    local entries
+                    local playerSide = coalitionName == "blue" and coalition.side.BLUE or coalition.side.RED
                     clientSet:ForEachClient(function(client)
-                        SetupATISMenu(client)  
+                        local group = client:GetGroup()
+                        if group then
+                            entries = entries or getATISMenuEntries(playerSide)
+                            SetupATISMenu(client, group, nil, entries, playerSide)
+                        end
                         if coalitionName ~= ownerCoalitionName then return end
                         SCHEDULER:New(nil, function()
-                            local group=client:GetGroup()
-                            sendATISInformation(client,group,zname)
+                            sendATISInformation(client,nil,zname)
                         end, {}, 10)
                     end)
                 end
@@ -1314,11 +1343,11 @@ function static:processPlayerSpawn(player, zoneNameOverride)
 			rankDisplay = rn .. ' ' .. playerName
 		end
 	end
-	if player:GetUnitCategory() == Unit.Category.AIRPLANE then
-		SetupATISMenu(player)
-	end
 	local group = player:GetGroup()
 	local T = getMooseGroupTranslator(group)
+	if player:GetUnitCategory() == Unit.Category.AIRPLANE then
+		SetupATISMenu(player, group, T)
+	end
 	local groupName = group:GetName()
 	local playerType = player:GetTypeName()
 
@@ -1359,7 +1388,7 @@ function static:processPlayerSpawn(player, zoneNameOverride)
 	                foundZone = true
 	                
 	                local playerUnitID = player:GetID()
-                local playerGroupID = player:GetGroup():GetID()
+                local playerGroupID = group:GetID()
                 
                 local isNewVisit = not playerZoneVisits[playerName] or not playerZoneVisits[playerName][zoneName]
                 playerZoneVisits[playerName] = playerZoneVisits[playerName] or {}
@@ -1371,23 +1400,29 @@ function static:processPlayerSpawn(player, zoneNameOverride)
 		                local temperatureMessage = getPlayerTemperature(playerCoord, T)
 		                local greetingMessage, detailedMessage
 		                local windMessage, displayWindDirection
+                    local airbase
 		                if atisZones[zoneName] then
-		                    windMessage, displayWindDirection = getAirbaseWind(atisZones[zoneName].airbaseName, T)
+                        airbase = GetAirbaseByNameCached(atisZones[zoneName].airbaseName) or false
+		                    windMessage, displayWindDirection = getAirbaseWind(atisZones[zoneName].airbaseName, T, airbase)
 		                else
 		                    windMessage, displayWindDirection = getPlayerWind(playerCoord, T)
 		                end
-		                local activeRunwayMessage = atisZones[zoneName] and fetchActiveRunway(zoneName, T) or "N/A"
+		                local activeRunwayMessage = atisZones[zoneName] and fetchActiveRunway(zoneName, T, nil, airbase) or "N/A"
 
-	                    local carrierHull=getNearestCarrierName(playerCoord)
+	                    local carrierHull,carrierCoordinate
+                    local carrierZone=isCarrierZoneName(zoneName)
+                    if carrierZone then
+                        carrierHull,carrierCoordinate=getNearestCarrierName(playerCoord)
+                    end
                     local carrierName,tacanCode,brcMessage,carrierWindMessage,carrierRadioLine,carrierBriefingLine
                     if carrierHull then
                         brcMessage=getBRC(carrierHull, T)
-                        carrierWindMessage=getCarrierWind(carrierHull, T)
+                        carrierWindMessage=getCarrierWind(carrierHull, T, carrierCoordinate)
                         carrierName,tacanCode=hullPrettyAndTCN(carrierHull)
                         carrierRadioLine=getCarrierRadioLine(carrierHull, T)
-                        carrierBriefingLine=getCarrierBriefingLine(carrierHull, T)
+                        carrierBriefingLine=getCarrierBriefingLine(carrierHull, T, carrierRadioLine or false, brcMessage)
                     end
-                    if isCarrierZoneName(zoneName) and carrierHull then
+                    if carrierZone and carrierHull then
                         bc:registerPlayerCarrierOrigin(playerName, carrierHull)
 
                     if assignedCallsign and assignedIFF then
@@ -1515,12 +1550,8 @@ function static:processPlayerSpawn(player, zoneNameOverride)
 	        end
 	    end
         if not foundZone then
-            local carrierHull = getNearestCarrierName(player:GetCoordinate())
+            local carrierHull,carrierPos,distanceToCar = getNearestCarrierName(playerCoord)
             if carrierHull then
-                local carrierUnit   = UNIT:FindByName(carrierHull)
-                local carrierPos    = carrierUnit:GetCoordinate()
-                local playerPos     = player:GetCoordinate()
-                local distanceToCar = playerPos:Get2DDistance(carrierPos)
 
                 if distanceToCar < 200 then
                     bc:registerPlayerCarrierOrigin(playerName, carrierHull)
@@ -1530,8 +1561,8 @@ function static:processPlayerSpawn(player, zoneNameOverride)
                     local altimeterMessage          = getAltimeter(T)
                     local temperatureMsg            = getPlayerTemperature(carrierPos, T)
                     local brcMessage                = getBRC(carrierHull, T)
-                    local windMessage               = getCarrierWind(carrierHull, T)
-                    local carrierBriefingLine       = getCarrierBriefingLine(carrierHull, T)
+                    local windMessage               = getCarrierWind(carrierHull, T, carrierPos)
+                    local carrierBriefingLine       = getCarrierBriefingLine(carrierHull, T, nil, brcMessage)
 
                     if assignedCallsign and assignedIFF then
                         greetingMessage = T:Format("WELCOME_GREETING_CARRIER_ASSIGNED",prettyName,rankDisplay,assignedCallsign,assignedIFF)
@@ -1542,7 +1573,7 @@ function static:processPlayerSpawn(player, zoneNameOverride)
                     end
                     sendGreetingToPlayer(UnitName,greetingMessage)
                     if followID[playerName] then followID[playerName]:Stop() followID[playerName]=nil end
-                        followID[playerName]=SCHEDULER:New(nil, sendDetailedMessageToPlayer,{playerUnitID,detailedMessage,player:GetGroup():GetID(),UnitName},60)
+                        followID[playerName]=SCHEDULER:New(nil, sendDetailedMessageToPlayer,{playerUnitID,detailedMessage,group:GetID(),UnitName},60)
                     else
                     return
                 end
@@ -2503,7 +2534,7 @@ function HandleEscortTakeoff(unitName, playerName, playerGroupName, unitType)
     local T = getMooseGroupTranslator(playerGroup)
     EnsureEscortSpawnState(playerGroupName, playerName)
     local escortGroup = escortGroups[playerGroupName]
-    if escortGroup and not escortGroup:IsAlive() then
+    if escortGroup and (not escortGroup:IsAlive() or spawnedGroups[playerGroupName].escortMode == "rtb") then
         CleanupEscortForGroupName(playerGroupName, false, false)
         escortGroup = nil
     end

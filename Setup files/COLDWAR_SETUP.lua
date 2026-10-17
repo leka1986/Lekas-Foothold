@@ -6161,7 +6161,6 @@ function RegisterDirectorCasMission(slotIndex)
 					bc:scheduleRewardClaimIfLanded(playerName)
 				end
 				if #participantNames == 0 then
-					trigger.action.outTextForCoalition(2,L10N:Get("MISSION_CAS_COMPLETED_NO_REWARD"),20)
 				elseif #participantNames == 1 then
 					local playerName = participantNames[1]
 					trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAS_COMPLETED_SOLO", playerName, rewards[playerName]),20)

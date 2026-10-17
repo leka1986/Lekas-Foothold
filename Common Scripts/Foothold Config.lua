@@ -391,6 +391,7 @@ BlueSupplyHeloEnabled = {
 -- Mission options
 -- ============================================================================
 --
+
 -- Global language use for Foothold.
 -- This does not set the menu's language as it can be changed in the players radio menu.
 -- This will be the language used for on screen messages and other global text.
@@ -560,12 +561,13 @@ GlobalSettings.directorAirCombatIntelligenceEnabled = true
 CapDifficulty           = "medium" -- RED CAP amount.  This can be further custommized in the advance section.
 CasDifficulty           = "medium" -- RED CAS amount.  This can be further custommized in the advance section.
 SeadDifficulty          = "medium" -- RED SEAD amount.  This can be further custommized in the advance section.
+RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
+RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 
 FriendlyCapSupport      = "medium" -- BLUE CAP support limit. This can be further custommized in the advance section.
 FriendlyCasSupport      = "medium" -- BLUE CAS support limit.  This can be further custommized in the advance section.
 FriendlySeadSupport     = "medium" -- BLUE SEAD support limit.  This can be further custommized in the advance section.
-RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
-RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
+
 
 -- ============================================================================
 -- Difficulty advanced
@@ -2052,6 +2054,8 @@ ForbiddWeaponsInAllEra = {
     "weapons.bombs.RN-28", -- Nukes for the Mig-21
     -- "weapons.containers.ah-64d_radar",
     -- Missiles
+    -- "weapons.missiles.P_27TE",
+    -- "weapons.missiles.P_27ET",
     -- "weapons.missiles.AIM_120C",
     -- "weapons.missiles.AIM_120",
     -- "weapons.missiles.AGM_154",
@@ -2139,6 +2143,13 @@ ForbiddWeaponsInAllEra = {
 	-- "weapons.missiles.AGR_20A", -- laser rockets
 	-- "weapons.missiles.AGR_20_M282" -- laser rockets
 }
+
+-- ============================================================================
+-- Testing
+-- ============================================================================
+
+-- @gui label="Testing" testing="true"
+Testing = false
 
 -- Don't touch this.
 if externalConfigChunk then
