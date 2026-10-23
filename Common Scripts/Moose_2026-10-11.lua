@@ -38284,6 +38284,7 @@ SEAD.Harms={
 ["AGM_154"]="AGM_154",
 ["HY-2"]="HY-2",
 ["ADM_141A"]="ADM_141A",
+["F16V_GBU53"]="F16V_GBU53",
 }
 SEAD.HarmData={
 ["AGM_88"]={150,3},
@@ -38302,6 +38303,7 @@ SEAD.HarmData={
 ["AGM_154"]={130,0.61},
 ["HY-2"]={90,1},
 ["ADM_141A"]={126,0.6},
+["F16V_GBU53"]={70,0.6},
 }
 function SEAD:New(SEADGroupPrefixes,Padding)
 local self=BASE:Inherit(self,FSM:New())
@@ -77529,6 +77531,10 @@ return self
 end
 self.CargoCounter=self.CargoCounter+1
 local loadcargotype=CTLD_CARGO:New(self.CargoCounter,Cargotype.Name,Cargotype.Templates,cgotype,true,true,Cargotype.CratesNeeded,nil,nil,Cargotype.PerCrateMass)
+loadcargotype._footholdPickupZone=not Inject and inzone and zonename or false
+if loadcargotype._footholdPickupZone and self.GetTroopPickupZone then
+loadcargotype._footholdPickupZone=self:GetTroopPickupZone(Group,Unit)or false
+end
 self:T({cargotype=loadcargotype})
 loaded.Troopsloaded=loaded.Troopsloaded+troopsize
 table.insert(loaded.Cargo,loadcargotype)
@@ -77537,7 +77543,7 @@ local msg=self:_GetEntryForGroup("BOARDED",Group)
 msg=string.format(msg,cgoname)
 self:_SendMessage(msg,10,false,Group)
 self:_RefreshDropTroopsMenu(Group,Unit)
-self:__TroopsPickedUp(1,Group,Unit,Cargotype)
+self:__TroopsPickedUp(1,Group,Unit,Cargotype,loadcargotype)
 self:_UpdateUnitCargoMass(Unit)
 Cargotype:RemoveStock()
 self:_RefreshTroopQuantityMenus(Group,Unit,Cargotype)
@@ -77730,6 +77736,7 @@ else
 self.CargoCounter=self.CargoCounter+1
 nearestGroup.ExtractTime=timer.getTime()
 local loadcargotype=CTLD_CARGO:New(self.CargoCounter,Cargotype.Name,Cargotype.Templates,Cargotype.CargoType,true,true,Cargotype.CratesNeeded,nil,nil,Cargotype.PerCrateMass)
+loadcargotype._footholdPickupZone=nearestGroup._footholdPickupZone or false
 self:T({cargotype=loadcargotype})
 local running=math.floor(nearestDistance/4)+20
 loaded.Troopsloaded=loaded.Troopsloaded+troopsize
@@ -79260,6 +79267,7 @@ self.DroppedTroops[self.TroopCounter]=SPAWN:NewWithAlias(_template,alias)
 :InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits)
 :OnSpawnGroup(function(grp)grp.spawntime=timer.getTime()end)
 :SpawnFromVec2(randomcoord:GetVec2())
+self.DroppedTroops[self.TroopCounter]._footholdPickupZone=cargo._footholdPickupZone or false
 self:__TroopsDeployed(1,Group,Unit,self.DroppedTroops[self.TroopCounter],type)
 end
 cargo:SetWasDropped(true)
@@ -81208,8 +81216,14 @@ if not self.debug then return self end
 return self
 end
 local needed=crateObj:GetCratesNeeded()or 1
+local pvpDrop=GlobalSettings and GlobalSettings.pvpEnabled==true
+if not pvpDrop then
 self:_GetCrates(Group,Unit,crateObj,#chunk,true)
+end
 for _,cObj in ipairs(chunk)do
+if pvpDrop then
+self:_GetCrates(Group,Unit,cObj,1,true)
+end
 cObj:SetWasDropped(true)
 cObj:SetHasMoved(true)
 end
@@ -81565,6 +81579,7 @@ self.DroppedTroops[self.TroopCounter]=SPAWN:NewWithAlias(_template,alias)
 :InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits)
 :OnSpawnGroup(function(grp)grp.spawntime=timer.getTime()end)
 :SpawnFromVec2(randomcoord:GetVec2())
+self.DroppedTroops[self.TroopCounter]._footholdPickupZone=foundCargo._footholdPickupZone or false
 self:__TroopsDeployed(1,Group,Unit,self.DroppedTroops[self.TroopCounter],cType)
 end
 foundCargo:SetWasDropped(true)
@@ -83181,6 +83196,7 @@ self.DroppedTroops[self.TroopCounter]=SPAWN:NewWithAlias(_template,alias)
 :InitDelayOff()
 :OnSpawnGroup(function(grp,TimeStamp)grp.spawntime=TimeStamp or timer.getTime()end,TimeStamp)
 :SpawnFromVec2(randomcoord)
+self.DroppedTroops[self.TroopCounter]._footholdPickupZone=false
 -- Saved cargo is recreated on load; reuse the registered cargo setting found above.
 if self.movetroopstowpzone and type~=CTLD_CARGO.Enum.ENGINEERS and not(CargoObject or cargo).NoMoveToZone then
 self:_MoveGroupToZone(self.DroppedTroops[self.TroopCounter])

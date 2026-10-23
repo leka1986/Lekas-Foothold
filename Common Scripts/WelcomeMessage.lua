@@ -1314,6 +1314,7 @@ function static:onBaseCapture(_event)
 end
 
 local function IsEscortEligibleType(playerType)
+    if GlobalSettings.pvpEnabled == true and PvPEscorts ~= true then return false end
     local escortConfig = EscortTypeByPlayerType and EscortTypeByPlayerType[playerType]
     return type(escortConfig) == "table" and escortConfig[1] == true
 end
@@ -1584,42 +1585,8 @@ function static:processPlayerSpawn(player, zoneNameOverride)
     end
 
 
-function WeaponImpact(Weapon)
-    local impactPos = Weapon:GetImpactVec3()
-    if impactPos then
-        trigger.action.explosion(impactPos, 150)
-    end
-	Weapon:StopTrack()
-end
-function WeaponTrack(Weapon)
-    local target = Weapon:GetTarget()
-    if target and target.GetUnitCategory and target:GetUnitCategory() == Unit.Category.HELICOPTER and target:GetCoalition() == coalition.side.RED then
-        return
-    end
-end
-
-function static:OnEventShot(EventData)
-    local eventdata = EventData
-    if eventdata and eventdata.weapon and eventdata.IniUnit and eventdata.IniPlayerName then
-        if eventdata.WeaponName == "ZELL Booster" then return end
-        local initiator = eventdata.IniUnit
-        local playerName = eventdata.IniPlayerName
-
-        if initiator and (initiator:GetUnitCategory() == Unit.Category.AIRPLANE or initiator:GetUnitCategory() == Unit.Category.HELICOPTER) then
-            local weapon = WEAPON:New(eventdata.weapon)
-            if weapon:IsMissile() then
-                local target = eventdata.TgtUnit
-                if target and target.GetUnitCategory and target:GetUnitCategory() == Unit.Category.HELICOPTER and target:GetCoalition() == coalition.side.RED then
-                    weapon:SetFuncTrack(WeaponTrack)
-                    weapon:SetFuncImpact(WeaponImpact)
-                    weapon:StartTrack()
-                end
-            end
-        end
-    end
-end
-
 function AddEscortRequestMenu(group)
+    if GlobalSettings.pvpEnabled == true and PvPEscorts ~= true then return end
     if not group then
         return
     end
@@ -1805,11 +1772,12 @@ local function SetEscortNativeTask(escortGroup, primaryTask, rot)
         escortGroup:OptionROT(rot)
     end
 
-    dcsGroup:getController():setOption(AI.Option.Air.id.MISSILE_ATTACK, AI.Option.Air.val.MISSILE_ATTACK.TARGET_THREAT_EST)
+    local controller = dcsGroup:getController()
+    controller:setOption(AI.Option.Air.id.MISSILE_ATTACK, AI.Option.Air.val.MISSILE_ATTACK.TARGET_THREAT_EST)
     if primaryTask.id == "Escort" or primaryTask.id == "Mission" then
-        dcsGroup:getController():setTask(primaryTask)
+        controller:setTask(primaryTask)
     else
-        dcsGroup:getController():setTask({
+        controller:setTask({
             id = "ComboTask",
             params = {
                 tasks = {
@@ -1951,8 +1919,8 @@ function HandleEscortLandingForGroupName(groupName, orbitCenter)
     end
 end
 
-function FindEscortTemplateWithAlias(clientGroup, alias)
-    local aircraftType = clientGroup:GetUnit(1):GetTypeName()
+function FindEscortTemplateWithAlias(clientGroup, alias, knownClientUnit)
+    local aircraftType = (knownClientUnit or clientGroup:GetUnit(1)):GetTypeName()
     local isColdwar = (Era == "Coldwar")
     local templateName
     local escortConfig = EscortTypeByPlayerType and EscortTypeByPlayerType[aircraftType]
@@ -1969,7 +1937,7 @@ function FindEscortTemplateWithAlias(clientGroup, alias)
     return templateName, altitudeAboveMeters
 end
 
-function GetClosestEscortAirdromeZone(clientGroup)
+function GetClosestEscortAirdromeZone(clientGroup, knownClientUnit, knownSide)
     if not clientGroup then
         return nil, nil
     end
@@ -1978,11 +1946,16 @@ function GetClosestEscortAirdromeZone(clientGroup)
         return nil, nil
     end
 
-    local clientUnit = clientGroup:GetUnit(1)
+    local clientUnit = knownClientUnit or clientGroup:GetUnit(1)
     if not clientUnit then
         return nil, nil
     end
 
+    local clientSide = coalition.side.BLUE
+    if GlobalSettings.pvpEnabled == true then
+        clientSide = knownSide
+        if clientSide == nil then clientSide = clientUnit:GetCoalition() end
+    end
     local clientCoord = clientUnit:GetCoordinate()
     if not clientCoord then
         return nil, nil
@@ -1994,11 +1967,11 @@ function GetClosestEscortAirdromeZone(clientGroup)
     local closestDistance = math.huge
 
     for _, zone in pairs(zoneList) do
-        if zone and zone.side == 2 and zone.active then
+        if zone and zone.side == clientSide and zone.active then
             local airbaseName = zone.airbaseName
             if type(airbaseName) == "string" and airbaseName ~= "" and not seenAirbases[airbaseName] then
                 local airbase = GetAirbaseByNameCached(airbaseName)
-                local sideOk = airbase:GetCoalition() == coalition.side.BLUE
+                local sideOk = airbase:GetCoalition() == clientSide
                 if sideOk and airbase:IsAirdrome() then
                     local airbaseCoord = airbase:GetCoordinate()
                     if airbaseCoord then
@@ -2018,7 +1991,7 @@ function GetClosestEscortAirdromeZone(clientGroup)
     return closestZoneName, closestAirbase
 end
 
-function SpawnEscortInAirBehindClient(clientGroup, templateName, alias, onSpawn, spawnCenterCoord)
+function SpawnEscortInAirBehindClient(clientGroup, templateName, alias, onSpawn, spawnCenterCoord, knownSide, knownCountry)
     if not clientGroup or not templateName or not alias then
         return nil
     end
@@ -2044,6 +2017,13 @@ function SpawnEscortInAirBehindClient(clientGroup, templateName, alias, onSpawn,
     spawnHeading = ((spawnHeading % 360) + 360) % 360
 
     local sp = SPAWN:NewWithAlias(templateName, alias)
+    if GlobalSettings.pvpEnabled == true then
+        local clientUnit
+        if knownSide == nil or knownCountry == nil then clientUnit = clientGroup:GetUnit(1) end
+        if knownSide == nil then knownSide = clientUnit:GetCoalition() end
+        if knownCountry == nil then knownCountry = clientUnit:GetCountry() end
+        sp:InitCoalition(knownSide):InitCountry(knownCountry)
+    end
     sp:InitHeading(spawnHeading, spawnHeading)
     if onSpawn then
         sp:OnSpawnGroup(onSpawn)
@@ -2052,12 +2032,16 @@ function SpawnEscortInAirBehindClient(clientGroup, templateName, alias, onSpawn,
     return sp:SpawnFromCoordinate(coord)
 end
 
-function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn)
+function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn, knownHomebase, knownSide, knownCountry)
     if not clientGroup or not templateName or not alias then
         return nil
     end
 
-    local _, homebase = GetClosestEscortAirdromeZone(clientGroup)
+    local homebase = knownHomebase
+    if homebase == nil then
+        local _, selectedHomebase = GetClosestEscortAirdromeZone(clientGroup)
+        homebase = selectedHomebase
+    end
     if not homebase then
         return nil
     end
@@ -2079,6 +2063,13 @@ function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn)
     end
 
     local sp = SPAWN:NewWithAlias(templateName, alias)
+    if GlobalSettings.pvpEnabled == true then
+        local clientUnit
+        if knownSide == nil or knownCountry == nil then clientUnit = clientGroup:GetUnit(1) end
+        if knownSide == nil then knownSide = clientUnit:GetCoalition() end
+        if knownCountry == nil then knownCountry = clientUnit:GetCountry() end
+        sp:InitCoalition(knownSide):InitCountry(knownCountry)
+    end
     sp:OnSpawnGroup(function(spawnedGroup)
         --spawnedGroup:OptionAIRunwayLineUp()
 
@@ -2108,24 +2099,39 @@ function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn)
 end
 
 function EscortClientGroup(clientGroup)
+    if GlobalSettings.pvpEnabled == true and PvPEscorts ~= true then return end
     local T = getMooseGroupTranslator(clientGroup)
     local groupName = clientGroup:GetName()
-    local playerName = clientGroup:GetUnit(1):GetPlayerName() or groupName
-    EnsureEscortSpawnState(groupName, playerName)
-    local spawnCount = spawnedGroups[groupName] and spawnedGroups[groupName].escortSpawnCount or 1
+    local clientUnit = clientGroup:GetUnit(1)
+    local playerName = clientUnit:GetPlayerName() or groupName
+    local escortState = EnsureEscortSpawnState(groupName, playerName)
+    local spawnCount = escortState.escortSpawnCount or 1
     local safePlayerName = playerName:gsub("%s+", "_"):gsub("[^%w_%-]", "_")
     local alias = groupName .. "_" .. safePlayerName .. "_Escort_" .. string.format("%03d", spawnCount)
-    local templateName, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(clientGroup, alias)
+    local templateName, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(clientGroup, alias, clientUnit)
     local escortSpawnedFromGround = false
-    local _, escortHomeBase = GetClosestEscortAirdromeZone(clientGroup)
+    local clientSide, clientCountry
+    local _, escortHomeBase
+    if GlobalSettings.pvpEnabled == true then
+        clientSide = clientUnit:GetCoalition()
+        clientCountry = clientUnit:GetCountry()
+        _, escortHomeBase = GetClosestEscortAirdromeZone(clientGroup, clientUnit, clientSide)
+    else
+        _, escortHomeBase = GetClosestEscortAirdromeZone(clientGroup, clientUnit)
+    end
     local escortHomeCoord = escortHomeBase and escortHomeBase:GetCoordinate()
+    local spawnedDcsGroup
 
     local function OnEscortSpawn(g)
+        if spawnedGroups[groupName] ~= escortState then
+            if spawnedDcsGroup and spawnedDcsGroup:isExist() then spawnedDcsGroup:destroy() end
+            return
+        end
         local escortGroup = g
         local playerInAir = IsPlayerGroupInAir(clientGroup)
         escortGroup:CommandSetUnlimitedFuel(true):SetOptionRadarUsingForContinousSearch(true):SetOptionWaypointPassReport(false)
         escortGroups[groupName] = escortGroup
-        local state = spawnedGroups[groupName]
+        local state = escortState
         state.escortHomebase = escortHomeBase
         state.escortHomeCoord = escortHomeCoord
         state.escortAltitudeAboveMeters = escortAltitudeAboveMeters
@@ -2151,17 +2157,26 @@ function EscortClientGroup(clientGroup)
     local spawned = nil
     if EscortTakeoffFromGround == true then
         escortSpawnedFromGround = true
-        spawned = SpawnEscortFromGround(clientGroup, templateName, alias, OnEscortSpawn)
+        if GlobalSettings.pvpEnabled == true then
+            spawned = SpawnEscortFromGround(clientGroup, templateName, alias, OnEscortSpawn, escortHomeBase or false, clientSide, clientCountry)
+        else
+            spawned = SpawnEscortFromGround(clientGroup, templateName, alias, OnEscortSpawn, escortHomeBase or false)
+        end
         if not spawned then
             escortSpawnedFromGround = false
         end
     end
     if not spawned then
         escortSpawnedFromGround = false
-        spawned = SpawnEscortInAirBehindClient(clientGroup, templateName, alias, OnEscortSpawn, escortHomeCoord)
+        if GlobalSettings.pvpEnabled == true then
+            spawned = SpawnEscortInAirBehindClient(clientGroup, templateName, alias, OnEscortSpawn, escortHomeCoord, clientSide, clientCountry)
+        else
+            spawned = SpawnEscortInAirBehindClient(clientGroup, templateName, alias, OnEscortSpawn, escortHomeCoord)
+        end
     end
 
-    spawnedGroups[groupName].escortSpawnCount = spawnCount + 1
+    spawnedDcsGroup = spawned and spawned:GetDCSObject()
+    escortState.escortSpawnCount = spawnCount + 1
 end
 function AddEscortMenu(group)
     if not group then
@@ -2599,13 +2614,17 @@ function static:OnEventRefueling(EventData)
                 local dx = playerPoint.x - tankerPoint.x
                 local dz = playerPoint.z - tankerPoint.z
                 if (dx * dx + dz * dz) <= (300 * 300) then
-                    refuelStartByUnitName[playerUnit:getName()] = {
-                        playerName = playerName,
-                        side = playerUnit:getCoalition(),
-                        fuel = playerUnit:getFuel(),
-                        fuelMassMax = playerUnit:getDesc().fuelMassMax,
-                        aircraftId = bc:getCareerAircraftId(playerUnit:getTypeName()),
-                    }
+                    local unitName = playerUnit:getName()
+                    local existing = refuelStartByUnitName[unitName]
+                    if not existing or existing.playerName ~= playerName then
+                        refuelStartByUnitName[unitName] = {
+                            playerName = playerName,
+                            side = EventData.IniCoalition,
+                            fuel = playerUnit:getFuel(),
+                            fuelMassMax = playerUnit:getDesc().fuelMassMax,
+                            aircraftId = bc:getCareerAircraftId(playerUnit:getTypeName()),
+                        }
+                    end
                 end
             end
         end
@@ -2635,10 +2654,10 @@ function static:OnEventRefuelingStop(EventData)
     for _, crewName in ipairs(careerCrew) do
         if not careerSeen[crewName] then
             careerSeen[crewName] = true
-            bc:recordCareerStat(crewName, bc.CAREER_STAT.FuelReceivedLbs, gainedWholeLbs)
+            local _, _, record, achievementSide = bc:recordCareerStat(crewName, bc.CAREER_STAT.FuelReceivedLbs, gainedWholeLbs)
             bc.refuelLbsByPlayer[crewName] = (bc.refuelLbsByPlayer[crewName] or 0) + gainedWholeLbs
             if refuelStart.aircraftId then
-                bc:recordCareerAircraftStat(crewName, refuelStart.aircraftId, bc.CAREER_AIRCRAFT_METRIC.FuelReceivedLbs, gainedWholeLbs)
+                bc:recordCareerAircraftStat(crewName, refuelStart.aircraftId, bc.CAREER_AIRCRAFT_METRIC.FuelReceivedLbs, gainedWholeLbs, record, achievementSide)
             end
         end
     end
@@ -2734,7 +2753,7 @@ function static:OnEventPlayerLeaveUnit(EventData)
         end
         HandleWelcomePlayerUnavailable(playerName, groupName, groupId)
     else
-        local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCategories("helicopter"):FilterCoalitions("blue"):FilterAlive():FilterOnce()
+        local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCategories("helicopter"):FilterAlive():FilterOnce()
         local alivePlayers = {}
         clientSet:ForEachClient(function(client)
             local pname = client:GetPlayerName()
@@ -2750,9 +2769,10 @@ function static:OnEventPlayerLeaveUnit(EventData)
                 bc:markCasMissionPlayerUnavailable(playerName)
                 bc:markSeadMissionPlayerUnavailable(playerName)
                 bc:_resetCareerAirKillStreaks(playerName)
-                if bc.playerContributions and bc.playerContributions[coalition.side.BLUE] then
-                    bc.playerContributions[coalition.side.BLUE][playerName] = 0
-                end
+                local blueContributions = bc.playerContributions and bc.playerContributions[coalition.side.BLUE]
+                local redContributions = bc.playerContributions and bc.playerContributions[coalition.side.RED]
+                if blueContributions and blueContributions[playerName] ~= nil then blueContributions[playerName] = 0 end
+                if redContributions and redContributions[playerName] ~= nil then redContributions[playerName] = 0 end
                 bc:resetTempStats(playerName, true)
                 if groupId then
                     lc:pruneGroupMenus(groupId, gname)
@@ -2764,7 +2784,6 @@ function static:OnEventPlayerLeaveUnit(EventData)
     end
 end
 
-static:HandleEvent(EVENTS.Shot, static.OnEventShot)
 static:HandleEvent(EVENTS.BaseCaptured, static.onBaseCapture)
 static:HandleEvent(EVENTS.PlayerLeaveUnit, static.OnEventPlayerLeaveUnit)
 static:HandleEvent(EVENTS.Refueling, static.OnEventRefueling)

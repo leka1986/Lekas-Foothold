@@ -711,6 +711,7 @@ explTable = {
     --*** GLIDE BOMBS (JSOW) ***
     ["AGM_154A"] = { explosive = 0, cluster = true, submunition_count = 145, submunition_explosive = 2, submunition_name = "BLU-97/B" }, --JSOW-A, confirmed 145 BLU-97 bomblets from datamine
     ["AGM_154C"] = { explosive = 305 },
+    ["F16V_GBU53"] = { explosive = 50 },
     ["AGM_154"] = { explosive = 305 },
     ["BK90_MJ1"] = { explosive = 0 },
     ["BK90_MJ1_MJ2"] = { explosive = 0 },

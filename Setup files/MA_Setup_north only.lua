@@ -1661,6 +1661,7 @@ local checkMissionComplete = function(event, sender)
 		end, {}, timer.getTime() + 2)
 		if AutoRestart then
 			trigger.action.outText(L10N:Get("MISSION_COMPLETE_AUTORESTART"), 120)
+			bc._persistenceResetPending = true
 			Utils.saveTable(bc.saveFile, 'zonePersistance', {})
 			if resetSaveFileAndFarp then
 			resetSaveFileAndFarp()
@@ -1672,6 +1673,7 @@ local checkMissionComplete = function(event, sender)
 				trigger.action.outText(L10N:Get("MISSION_COMPLETE_MANUAL_RESTART"), 120)
 				local subMenu = missionCommands.addSubMenuForCoalition(2, L10N:Get("MENU_RESTART_AND_RESET"), nil)
 				missionCommands.addCommandForCoalition(2, L10N:Get("COMMON_YES"), subMenu, function()
+						bc._persistenceResetPending = true
 						Utils.saveTable(bc.saveFile, 'zonePersistance', {})
 						if resetSaveFileAndFarp then
 						resetSaveFileAndFarp()
@@ -1734,7 +1736,6 @@ local SHOP_PRICE_DEFAULTS = {
   jtac          = 500,
   ["9lineam"]   = 0,
   ["9linefm"]   = 0,
-  jam           = 500,
   armor         = 100,
   artillery     = 100,
   recon         = 50,
@@ -1813,7 +1814,6 @@ local SHOP_RANK_DEFAULTS = {
   ["9lineam"]    = 1,
   ["9linefm"]    = 1,
   cruisemsl      = 10,
-  jam            = 4,
 }
 
 local function mergeDefaults(defaults, overrides)
@@ -1941,6 +1941,7 @@ function(sender,params)
             trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_ZONE_FULLY_UPGRADED", params.zone.zone),15)
         end) then
             trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_ZONE_FULLY_UPGRADED", params.zone.zone),15)
+            return false
         end
     else
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY")
@@ -2540,7 +2541,7 @@ function(sender, params)
 	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup(ColdWarTechEra and 'ca-tanks-Coldwar' or 'ca-tanks')
+		if not zn:spawnGroup(ColdWarTechEra and 'ca-tanks-Coldwar' or 'ca-tanks') then return false end
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_ARMOR_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -2564,7 +2565,7 @@ function(sender, params)
 	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('ca-arty')
+		if not zn:spawnGroup('ca-arty') then return false end
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_ARTY_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -2588,7 +2589,7 @@ function(sender, params)
 	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('ca-recon')
+		if not zn:spawnGroup('ca-recon') then return false end
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_RECON_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -2612,7 +2613,7 @@ function(sender, params)
 	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('ca-airdef')
+		if not zn:spawnGroup('ca-airdef') then return false end
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_AIRDEF_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -2635,7 +2636,7 @@ end,
 function(sender, params)
 	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('CA-CW-Hunter_Killer_LAV')
+		if not zn:spawnGroup('CA-CW-Hunter_Killer_LAV') then return false end
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_LAV_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -2658,7 +2659,7 @@ end,
 function(sender, params)
 	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('CA-Modern-Hunter_Killer_MGS')
+		if not zn:spawnGroup('CA-Modern-Hunter_Killer_MGS') then return false end
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_MGS_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -2681,7 +2682,7 @@ end,
 function(sender, params)
 	if params.zone and params.zone.side == 2 and not params.zone.suspended then
 		local zn = CustomZone:getByName(params.zone.zone)
-		zn:spawnGroup('CA-Modern-Hunter_Killer_Dragoon')
+		if not zn:spawnGroup('CA-Modern-Hunter_Killer_Dragoon') then return false end
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_FRIENDLY_DRAGOON_DEPLOYED", params.zone.zone), 15)
 	else
 		return LTGet("SYRIA_SHOP_CAN_ONLY_DEPLOY_FRIENDLY")
@@ -3561,7 +3562,6 @@ ShopPrices = ShopPrices or {
 	jtac          = 500,  -- MQ-9 Reaper JTAC mission
 	["9lineam"]   = 0,    -- Jtac 9line AM
 	["9linefm"]   = 0,    -- Jtac 9line FM
-	jam           = 500,  -- Jam radars at zone
 	armor         = 100,  -- Deploy armor (for combined arms)
 	artillery     = 100,  -- Deploy artillery (for combined arms)
 	recon         = 50,   -- Deploy recon group (for combined arms)
@@ -3632,7 +3632,6 @@ ShopRankRequirements = ShopRankRequirements or {
 	["9lineam"]    = 1,  -- Jtac 9line AM
 	["9linefm"]    = 1,  -- Jtac 9line FM
 	cruisemsl      = 10, -- Cruise Missile Strike
-	jam            = 4,  -- Jam radars at zone
 }
 
 

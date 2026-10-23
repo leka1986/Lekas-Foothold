@@ -2,7 +2,8 @@
 -- ## Red CTLD ##
 ---------------------------------------------------------------------------
 
-if Allow_Red_CTLD == true then
+if Allow_Red_CTLD == true or GlobalSettings.pvpEnabled == true then
+local pvpEnabled = GlobalSettings.pvpEnabled == true
     
 BASE:I("Red CTLD : is loading.")
 
@@ -36,7 +37,17 @@ end
 CTLD_Logging = false
 CTLD_Logging_DEEP = false
 
-Foothold_redCtld = CTLD:New(coalition.side.RED, {--[[ "CH.47", "C.130J.30",]] "Mi.8MT", "Hercules", "Ми.8МТВ2", "Ми.24П", "Mi.24P"}, "Red Logistics")
+Foothold_redCtld = CTLD:New(coalition.side.RED, pvpEnabled
+    and {"Mi.8MT", "Hercules", "Ми.8МТВ2", "Ми.24П", "Mi.24P", "C.130J.30"}
+    or {--[[ "CH.47", "C.130J.30",]] "Mi.8MT", "Hercules", "Ми.8МТВ2", "Ми.24П", "Mi.24P"}, "Red Logistics")
+if pvpEnabled then
+    local injectTroops = Foothold_redCtld.InjectTroops
+    function Foothold_redCtld:InjectTroops(Zone, Cargo, ...)
+        local cargoName = Cargo:GetName()
+        if cargoName == "Zone Spy" or cargoName == "Demolition Team" then return end
+        return injectTroops(self, Zone, Cargo, ...)
+    end
+end
 Foothold_redCtld:SetGroupLocaleResolver(function(_, Group)
     return getFootholdLocalization():GetMooseGroupLocale(Group)
 end)
@@ -58,7 +69,7 @@ Foothold_redCtld.enableFixedWing = true
 Foothold_redCtld.FixedMinAngels = 100
 Foothold_redCtld.FixedMaxSpeed = 200
 Foothold_redCtld.dropAsCargoCrate = true
-Foothold_redCtld.nobuildinloadzones = true
+Foothold_redCtld.nobuildinloadzones = not pvpEnabled
 Foothold_redCtld.movecratesbeforebuild = false
 Foothold_redCtld.hoverautoloading = false
 Foothold_redCtld.enableslingload = true
@@ -82,6 +93,32 @@ Foothold_redCtld:__Start(4)
 
 local RED_CTLD_DEFAULT_PRICE = 0
 
+if pvpEnabled then
+    local defaults = {
+        ["Squad 4 AK47"] = { price = 25, reqRank = 1 },
+        ["Squad 8 AK47"] = { price = 50, reqRank = 1 },
+        ["Scout BRDM 2"] = { price = 100, reqRank = 1 },
+        ["Ammo Truck"] = { price = 100, reqRank = 1 },
+        ["Arty SPH 253 Akatsia 8 NM"] = { price = 150, reqRank = 1 },
+        ["Arty SPM 259 Nona 3 NM"] = { price = 150, reqRank = 1 },
+        ["MLRS LC 80 MM 2.2 NM"] = { price = 150, reqRank = 1 },
+        ["ATGM AT-3 SAGGER"] = { price = 250, reqRank = 2 },
+        ["Kord 12.7 MM"] = { price = 100, reqRank = 1 },
+        ["MRAP M-ATV"] = { price = 100, reqRank = 1 },
+        ["Truck with ZU-23"] = { price = 300, reqRank = 2 },
+        ["SA-8"] = { price = 300, reqRank = 2 },
+        ["SA-3 SAM system"] = { price = 750, reqRank = 3 },
+        ["Pantsir S1"] = CTLDPrices["Pantsir S1"],
+        ["Tor M2"] = { price = 500, reqRank = 2 },
+        ["FARP"] = CTLDPrices["FARP"],
+        ["FARP with ZELL"] = CTLDPrices["FARP with ZELL"],
+    }
+    for name, value in pairs(defaults) do
+        if CTLDPrices[name] == nil then CTLDPrices[name] = value end
+    end
+    RedCTLDPrices = CTLDPrices
+end
+
 RedCTLDPrices = RedCTLDPrices or {
     ["Scout BRDM 2"] = { price = 150, reqRank = 2 },
     ["ATGM AT-3 SAGGER"] = { price = 300, reqRank = 2 },
@@ -98,20 +135,23 @@ RedCTLDPrices = RedCTLDPrices or {
     ["Squad 8 AK47"] = { price = 150, reqRank = 1 },
 }
 
-local function redCtldPriceOf(name)
-    local v = RedCTLDPrices and RedCTLDPrices[name]
+local function readRedCtldPolicy(name)
+    local v = CTLDPrices and CTLDPrices[name]
+    if v == nil then v = RedCTLDPrices and RedCTLDPrices[name] end
     if type(v) == "table" then
-        return v.price or v.cost or RED_CTLD_DEFAULT_PRICE
+        return v.available ~= false, v.price or v.cost or RED_CTLD_DEFAULT_PRICE, v.reqRank or 0
     end
-    return v or RED_CTLD_DEFAULT_PRICE
+    return true, v or RED_CTLD_DEFAULT_PRICE, 0
+end
+
+local function redCtldPriceOf(name)
+    local _, price = readRedCtldPolicy(name)
+    return price
 end
 
 local function redCtldReqRankOf(name)
-    local v = RedCTLDPrices and RedCTLDPrices[name]
-    if type(v) == "table" then
-        return v.reqRank or 0
-    end
-    return 0
+    local _, _, reqRank = readRedCtldPolicy(name)
+    return reqRank
 end
 
 function Foothold_redCtld:GetCargoPrice(name, cargo)
@@ -157,7 +197,7 @@ local function redCtldZoneSupplyPickupDebitKey(Group, Unit)
     return nil
 end
 
-local function redCtldQueueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, quantity)
+local function redCtldQueueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, quantity, kind, sourceSide, items, knownRequest, sourceNativeId)
     local key = redCtldZoneSupplyPickupDebitKey(Group, Unit)
     if not key then return end
     local queue = Foothold_redCtld.ZoneSupplyPickupDebits[key]
@@ -165,24 +205,44 @@ local function redCtldQueueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZ
         queue = {}
         Foothold_redCtld.ZoneSupplyPickupDebits[key] = queue
     end
-    queue[#queue + 1] = {
+    local debit = knownRequest or {
         cargoName = cargoName,
         sourceZone = sourceZoneName,
         remaining = quantity,
     }
+    if kind == "warehouse" then
+        debit.cargoName = cargoName
+        debit.sourceZone = sourceZoneName
+        debit.remaining = quantity
+        debit.kind = kind
+        debit.sourceSide = sourceSide
+        debit.items = items
+        debit.sourceNativeId = sourceNativeId
+        debit._warehousePickupKey = key
+    end
+    if pvpEnabled then
+      debit._pickupUnit, debit._pickupRecord, debit._pickupNative = nil, nil, nil
+      debit._pickupZone, debit._pickupRequestNumber = nil, nil
+      if kind == "farp" then
+        debit.kind, debit.sourceSide, debit.sourceNativeId = kind, sourceSide, sourceNativeId
+      end
+    end
+    queue[#queue + 1] = debit
 end
 
-local function redCtldClaimZoneSupplyPickupDebit(unitName, groupName, cargoName)
+local function redCtldClaimZoneSupplyPickupDebit(unitName, groupName, cargoName, knownRequest)
     local key = unitName or groupName
     local queue = key and Foothold_redCtld.ZoneSupplyPickupDebits[key] or nil
     if not queue then return nil end
 
     for index, debit in ipairs(queue) do
-        if debit.cargoName == cargoName and (debit.remaining or 0) > 0 then
+        if debit.cargoName == cargoName and (debit.remaining or 0) > 0 and (knownRequest == nil or debit == knownRequest) then
             debit.remaining = debit.remaining - 1
             local sourceZone = debit.sourceZone
             if debit.remaining <= 0 then table.remove(queue, index) end
             if #queue == 0 then Foothold_redCtld.ZoneSupplyPickupDebits[key] = nil end
+            if debit.kind == "warehouse" then return sourceZone, debit end
+            if pvpEnabled then return sourceZone, debit end
             return sourceZone
         end
     end
@@ -192,24 +252,24 @@ end
 local redCtldRefundPlayerZoneSupplyStock
 
 function Foothold_redCtld:CanGetUnits(Group, Unit, Config, quantity, quiet)
-    if CTLDCost ~= true then return true end
     local name = Config and Config.Name or "none"
+    local available, price, reqRank = readRedCtldPolicy(name)
+    if not available then return false end
+    if CTLDCost ~= true then return true end
     local n = math.max(1, tonumber(quantity) or 1)
-    local price = redCtldPriceOf(name)
-    local reqRank = redCtldReqRankOf(name)
     local charge = price * n
     return redCtldDebit(Group, charge, name, reqRank)
 end
 
 function Foothold_redCtld:CanGetTroops(Group, Unit, Cargo, quantity, Inject)
     if Inject then return true end
-    if self.suppressmessages and tonumber(quantity) == 1 then return true end
-    if CTLDCost ~= true then return true end
     local name = Cargo and Cargo.GetName and Cargo:GetName() or nil
     if type(name) ~= "string" then return true end
+    local available, price, reqRank = readRedCtldPolicy(name)
+    if not available then return false end
+    if self.suppressmessages and tonumber(quantity) == 1 then return true end
+    if CTLDCost ~= true then return true end
     local n = math.max(1, tonumber(quantity) or 1)
-    local price = redCtldPriceOf(name)
-    local reqRank = redCtldReqRankOf(name)
     local charge = price * n
     local reason = (n > 1) and string.format("%dx %s", n, name) or name
     return redCtldDebit(Group, charge, reason, reqRank)
@@ -217,12 +277,58 @@ end
 
 function Foothold_redCtld:CanGetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
     if drop or pack then return true end
+    local pickupZone
+    if pvpEnabled and Cargo and Cargo.GetName and Cargo.Subcategory ~= "Warehouse" then
+        local request = Foothold_ctld._warehousePickupRequest
+        if request and (request._warehouseOwner ~= self or request._warehouseOriginalCargo ~= Cargo
+            or request._pickupUnit ~= Unit or request._pickupRequestNumber ~= number) then request = nil end
+        local record
+        if request then pickupZone, record = request._pickupZone, request._pickupRecord
+        else
+            local inLoad, name = self:IsUnitInZone(Unit, CTLD.CargoZoneType.LOAD)
+            pickupZone = inLoad and name or false
+            record = inLoad and bc.dynamicFarpsByName and bc.dynamicFarpsByName[name] or nil
+        end
+        if record then
+            local cargoName = Cargo:GetName()
+            local accepted, sourceZoneName, physicalCount, sourceSide, sourceNativeId = Foothold_ctld.CanGetCrates(self, Group, Unit, Cargo, number,
+                drop, pack, quiet, suppressGetEvent, cargoName, false,
+                request == nil and pickupZone or nil, request == nil and record or nil)
+            if accepted and sourceZoneName then
+                redCtldQueueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, physicalCount, "farp", sourceSide, nil, nil, sourceNativeId)
+            end
+            return accepted
+        end
+    end
+    if pvpEnabled and Cargo and Cargo.Subcategory == "Warehouse" then
+        local request = Foothold_ctld._warehousePickupRequest
+        if request and (request._warehouseOwner ~= self or request._warehouseOriginalCargo ~= Cargo) then request = nil end
+        local cargoName = request and request.cargoName or Cargo:GetName()
+        local meta = request and request._warehouseMeta or Foothold_ctld.WarehouseSupplyTypes[cargoName]
+        if meta then
+            local accepted, sourceZoneName, physicalCount, items, sourceNativeId = Foothold_ctld.CanGetCrates(self, Group, Unit, Cargo, number,
+                drop, pack, quiet, suppressGetEvent, cargoName, meta)
+            if accepted and sourceZoneName then
+                if sourceNativeId ~= nil then
+                redCtldQueueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, physicalCount,
+                    "warehouse", self.coalition, items, request, sourceNativeId)
+                else
+                redCtldQueueZoneSupplyPickupDebit(Group, Unit, cargoName, sourceZoneName, physicalCount,
+                    "warehouse", self.coalition, items, request)
+                end
+            end
+            return accepted
+        end
+    end
     if not (Cargo and Cargo.GetName) or Cargo.Subcategory ~= "Zone supplies" then return true end
     if PlayerZoneSuppliesConsumeStock ~= true then return true end
 
     local cargoName = Cargo:GetName()
     local requestedSets = redCtldRequestedSets(Cargo, number)
-    local _, pickupZone = self:IsUnitInZone(Unit, CTLD.CargoZoneType.LOAD)
+    if pickupZone == nil then
+        local _
+        _, pickupZone = self:IsUnitInZone(Unit, CTLD.CargoZoneType.LOAD)
+    end
     local sourceZone = pickupZone and bc:getZoneByName(pickupZone) or nil
 
     -- Non-campaign load zones do not own regular campaign supply stock.
@@ -260,12 +366,61 @@ function Foothold_redCtld:OnAfterRemoveCratesNearby(From, Event, To, Group, Unit
     if not inzone then return end
 
     local byName = {}
+    local warehouseChecked, warehouseStorage, warehouseFarp, warehouseNativeId
+    local warehouseGroupId, warehouseGroupObject
     for _, cargo in pairs(Cargotable or {}) do
-        if cargo._zoneSupplySourceZone == zoneName then
+        local warehouse = pvpEnabled and cargo.Subcategory == "Warehouse"
+        if not warehouse and cargo._zoneSupplySourceZone == zoneName then
             redCtldRefundPlayerZoneSupplyStock(cargo)
         end
         local name = cargo.GetName and cargo:GetName() or cargo.name or "none"
-        byName[name] = (byName[name] or 0) + 1
+        warehouse = warehouse or (pvpEnabled and Foothold_ctld.WarehouseSupplyTypes[name] ~= nil)
+        if warehouse then
+            if cargo._warehouseDebitItems and not cargo._warehouseSettlementStatus
+                and cargo._warehouseSourceZone == zoneName and cargo._warehouseSourceSide == self.coalition
+                and WarehouseLogistics == true
+            then
+                if not warehouseChecked then
+                    warehouseChecked = true
+                    warehouseFarp = bc.dynamicFarpsByName and bc.dynamicFarpsByName[zoneName]
+                    if warehouseFarp then
+                      if warehouseFarp.side == self.coalition then
+                        local native = bc:getDynamicFarpAirbase(warehouseFarp)
+                        if native then
+                          warehouseNativeId = warehouseFarp.nativeId
+                          local storage = STORAGE:FindByName(zoneName)
+                          if storage and storage.airbase == native and storage.warehouse then warehouseStorage = storage end
+                        end
+                      end
+                    else
+                    local sourceZone = bc:getZoneByName(zoneName)
+                    if sourceZone and sourceZone.active and sourceZone.side == cargo._warehouseSourceSide then
+                        local abName = sourceZone.airbaseName or sourceZone.baseName or zoneName
+                        warehouseStorage = STORAGE:FindByName(abName)
+                        if not warehouseStorage and abName ~= zoneName then warehouseStorage = STORAGE:FindByName(zoneName) end
+                    end
+                    end
+                end
+                if warehouseStorage and (warehouseFarp and cargo._warehouseSourceNativeId ~= nil
+                      and cargo._warehouseSourceNativeId == warehouseNativeId
+                      or not warehouseFarp and cargo._warehouseSourceNativeId == nil)
+                    and Foothold_ctld.ApplyWarehouseDebitItems(warehouseStorage, cargo, zoneName, "return") then
+                    if cargo._warehousePaidAmount and cargo._warehousePaidAmount > 0 then
+                        if not warehouseGroupObject then
+                            warehouseGroupObject = Group:GetDCSObject()
+                            warehouseGroupId = warehouseGroupObject:getID()
+                        end
+                        if bc:credit(cargo._warehousePaidSide, cargo._warehousePaidAmount, warehouseGroupId, warehouseGroupObject,
+                            "remove: 1x " .. name, cargo._warehousePaidBuyerName) == true then
+                            cargo._warehousePaidAmount = 0
+                        end
+                    end
+                end
+            end
+            cargo._warehouseSettlementStatus = cargo._warehouseSettlementStatus or "discarded"
+        else
+            byName[name] = (byName[name] or 0) + 1
+        end
     end
 
     if CTLDCost ~= true then return end
@@ -284,6 +439,30 @@ end
 ---------------------------------------------------------------------------
 
 local RedGroundUnits = {}
+
+if pvpEnabled then
+    local defaults = {
+        ["Squad 4 AK47"] = 0,
+        ["Squad 8 AK47"] = 0,
+        ["Scout BRDM 2"] = 1,
+        ["Ammo Truck"] = 3,
+        ["Arty SPH 253 Akatsia 8 NM"] = 3,
+        ["Arty SPM 259 Nona 3 NM"] = 3,
+        ["MLRS LC 80 MM 2.2 NM"] = 3,
+        ["ATGM AT-3 SAGGER"] = 2,
+        ["Kord 12.7 MM"] = 1,
+        ["MRAP M-ATV"] = 1,
+        ["Truck with ZU-23"] = 2,
+        ["SA-8"] = 2,
+        ["SA-3 SAM system"] = 3,
+        ["Pantsir S1"] = MAX_AT_SPAWN["Pantsir S1"],
+        ["Tor M2"] = 4,
+    }
+    for name, value in pairs(defaults) do
+        if MAX_AT_SPAWN[name] == nil then MAX_AT_SPAWN[name] = value end
+    end
+    RED_MAX_AT_SPAWN = MAX_AT_SPAWN
+end
 
 RED_MAX_AT_SPAWN = RED_MAX_AT_SPAWN or {
     ["Scout BRDM 2"] = 5,
@@ -323,7 +502,7 @@ local function redDestroyTrackedGroup(entry)
     end
 end
 
-local function redEnforceMaxAtSpawnForTrackedUnits(trackedUnits, maxAtSpawnMap, restockCallback)
+local function redEnforceMaxAtSpawnForTrackedUnits(trackedUnits, maxAtSpawnMap, restockCallback, knownLoadedRows)
     local unitsByName = {}
     for _, trackedEntry in ipairs(trackedUnits) do
         local cargoName = trackedEntry.CargoName
@@ -332,15 +511,23 @@ local function redEnforceMaxAtSpawnForTrackedUnits(trackedUnits, maxAtSpawnMap, 
     end
 
     for normalizedName, groupedEntries in pairs(unitsByName) do
-        table.sort(groupedEntries, function(entryA, entryB) return entryA.Timestamp > entryB.Timestamp end)
+        table.sort(groupedEntries, function(entryA, entryB)
+            if knownLoadedRows then return entryA.TimeStamp > entryB.TimeStamp end
+            return entryA.Timestamp > entryB.Timestamp
+        end)
         local maxAllowed = maxAtSpawnMap[normalizedName] or RED_MAX_AT_SPAWN[normalizedName] or 0
         local totalEntries = #groupedEntries
         for listIndex = totalEntries, maxAllowed + 1, -1 do
             local oldEntry = groupedEntries[listIndex]
-            redDestroyTrackedGroup(oldEntry)
+            if knownLoadedRows then
+                if oldEntry.Group:IsAlive() then oldEntry.Group:Destroy() end
+            else
+                redDestroyTrackedGroup(oldEntry)
+            end
             restockCallback(oldEntry.CargoName)
             for trackedIndex, trackedData in ipairs(trackedUnits) do
-                if trackedData.groupName == oldEntry.groupName then
+                if (knownLoadedRows and trackedData == oldEntry)
+                  or (not knownLoadedRows and trackedData.groupName == oldEntry.groupName) then
                     table.remove(trackedUnits, trackedIndex)
                     break
                 end
@@ -432,6 +619,7 @@ local function redResolveBuiltCargoName(self, groupName)
         stock = bestCargoData:GetStock()
     end
 
+    if pvpEnabled then return cargoName, stock, bestCargoData end
     return cargoName, stock
 end
 
@@ -476,6 +664,9 @@ function Foothold_redCtld:OnAfterCratesBuildStarted(From, Event, To, Group, Unit
 end
 
 function Foothold_redCtld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehicle)
+    if pvpEnabled and string.find(Vehicle.GroupName, "CTLD_TROOP_FOB", 1, true) then
+        return Foothold_ctld.OnAfterCratesBuild(self, From, Event, To, Group, Unit, Vehicle)
+    end
     if self.buildRunning > 0 then
         self.buildRunning = self.buildRunning - 1
     end
@@ -485,10 +676,21 @@ function Foothold_redCtld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehic
 
     if not Group then return end
 
-    local cargoName, stock = redResolveBuiltCargoName(self, groupName)
+    local cargoName, stock, resolvedCargo
+    if pvpEnabled then cargoName, stock, resolvedCargo = redResolveBuiltCargoName(self, groupName)
+    else cargoName, stock = redResolveBuiltCargoName(self, groupName) end
     if cargoName == "unknown" then
         self:I(string.format("[RED BUILD] unable to resolve cargo for group=%s", groupName))
         return
+    end
+
+    local buildPlayerName
+    if pvpEnabled then
+        local rewardDef = self._buildRewardByCargo[cargoName]
+        buildPlayerName = self:_recordBuildCareer(Group, Unit, bc.CAREER_STAT.CtldBuilds, bc.CAREER_AIRCRAFT_METRIC.CtldBuilds)
+        self:_recordAirdroppedBuildCareer(Group, Unit, rewardDef ~= nil)
+        if rewardDef and buildPlayerName then bc:recordCareerStat(buildPlayerName, bc.CAREER_STAT.AirDefenseBuilt, 1) end
+        self._awardCtldBuildReward(Group, Unit, rewardDef, self.coalition, buildPlayerName or false)
     end
 
     local maxTimestamp = 0
@@ -498,8 +700,12 @@ function Foothold_redCtld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehic
         end
     end
 
-    local cargoObject = self:_FindCratesCargoObject(cargoName)
-    local currentStock = cargoObject and cargoObject:GetStock() or stock
+    local cargoObject, currentStock
+    if pvpEnabled then cargoObject, currentStock = resolvedCargo, stock
+    else
+        cargoObject = self:_FindCratesCargoObject(cargoName)
+        currentStock = cargoObject and cargoObject:GetStock() or stock
+    end
     local configuredMax = RED_MAX_AT_SPAWN[cargoName] or cargoObject and cargoObject:GetStock0() or 0
     local newTimestamp = (maxTimestamp > 0) and (maxTimestamp + 1) or currentTime
     self:I(string.format("[RED BUILD] complete cargoName=%s, max=%d, currentStock=%d", cargoName, configuredMax, currentStock))
@@ -528,8 +734,14 @@ function Foothold_redCtld:OnAfterCratesBuild(From, Event, To, Group, Unit, Vehic
             trackedGroup.Stock = currentStock
         end
     end
+    if pvpEnabled then self:RegisterPlayerCtldRewardGroup(Vehicle, cargoName, buildPlayerName) end
 end
 
+if pvpEnabled then
+    for unitType, v in pairs(Foothold_ctld.UnitTypeCapabilities) do
+        Foothold_redCtld:SetUnitCapabilities(unitType, v.crates, v.troops, v.cratelimit, v.trooplimit, v.length, v.cargoweightlimit)
+    end
+else
 RedCTLDUnitCapabilities = RedCTLDUnitCapabilities or {
     ["Mi-8MT"] = { true, true, 3, 16, 15, 6000 },
     ["Mi-8MTV2"] = { true, true, 3, 18, 15, 6000 },
@@ -543,40 +755,103 @@ RedCTLDUnitCapabilities = RedCTLDUnitCapabilities or {
 for unitType, v in pairs(RedCTLDUnitCapabilities) do
     Foothold_redCtld:SetUnitCapabilities(unitType, v[1], v[2], v[3], v[4], v[5], v[6])
 end
+end
 
 local function addRedStaticFromType(name, typeName, mass, subCategory, unitTypes, displayName)
     return Foothold_redCtld:AddStaticsCargoFromType(name, typeName, mass, nil, subCategory, true, nil, unitTypes, nil, nil, nil, displayName)
 end
 
 
-Foothold_redCtld:AddTroopsCargo("Squad 4 AK47",{"CTLD_TROOPS_RED_Squad_4"},CTLD_CARGO.Enum.TROOPS,4,80,6)
-Foothold_redCtld:AddTroopsCargo("Squad 8 AK47",{"CTLD_TROOPS_RED_Squad_8"},CTLD_CARGO.Enum.TROOPS,8,80,6)
+if pvpEnabled then
+    for _, spec in ipairs({
+        { "CTLD_TROOP_FOB", "CTLD_TROOP_FOB_RED", "FARP", 1200 },
+        { "CTLD_TROOP_FOB_ZELL", "CTLD_TROOP_FOB_ZELL_RED", "FARP with ZELL", 750 },
+    }) do
+        local sourceTemplate = _DATABASE.Templates.Groups[spec[1]]
+        if spec[1] == "CTLD_TROOP_FOB" or sourceTemplate then
+            local template = UTILS.DeepCopy(sourceTemplate.Template)
+            template.name, template.groupId = spec[2], nil
+            for i, unit in ipairs(template.units) do
+                unit.name, unit.unitId = spec[2] .. "-" .. i, nil
+            end
+            _DATABASE:_RegisterGroupTemplate(template, coalition.side.RED, Group.Category.GROUND, country.id.RUSSIA, spec[2])
+            _DATABASE:AddGroup(spec[2])
+            Foothold_redCtld:AddCratesCargo(spec[3], { spec[2] }, CTLD_CARGO.Enum.FOB, 3, spec[4], 10, "FARP", nil, nil, nil, "Cargos", "ammo_cargo", nil, "cds_crate")
+        end
+    end
+end
 
-Foothold_redCtld:AddCratesCargo("Scout BRDM 2",{"CTLD_CARGO_RED_Scout"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "Support")
-Foothold_redCtld:AddCratesCargo("Ammo Truck",{"CTLD_CARGO_RED_AmmoTruck"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "Support")
-Foothold_redCtld:AddCratesCargo("Arty SPH 253 Akatsia 8 NM",{"CTLD_CARGO_RED_ARTY_Akatsia"},CTLD_CARGO.Enum.VEHICLE,2,2500,6, "ARTY")
-Foothold_redCtld:AddCratesCargo("Truck with ZU-23",{"CTLD_CARGO_RED_ZU_23"},CTLD_CARGO.Enum.VEHICLE,2,1000,5, "SAM/AAA")
+local standardCargoStock = pvpEnabled and 10 or 6
+local artilleryCargoStock = pvpEnabled and 12 or 6
+local airDefenseCargoStock = pvpEnabled and standardCargoStock or 5
+
+Foothold_redCtld:AddTroopsCargo("Squad 4 AK47",{"CTLD_TROOPS_RED_Squad_4"},CTLD_CARGO.Enum.TROOPS,4,80,standardCargoStock)
+Foothold_redCtld:AddTroopsCargo("Squad 8 AK47",{"CTLD_TROOPS_RED_Squad_8"},CTLD_CARGO.Enum.TROOPS,8,80,standardCargoStock)
+
+Foothold_redCtld:AddCratesCargo("Scout BRDM 2",{"CTLD_CARGO_RED_Scout"},CTLD_CARGO.Enum.VEHICLE,2,500,standardCargoStock, "Support")
+Foothold_redCtld:AddCratesCargo("Ammo Truck",{"CTLD_CARGO_RED_AmmoTruck"},CTLD_CARGO.Enum.VEHICLE,2,500,standardCargoStock, "Support")
+Foothold_redCtld:AddCratesCargo("Arty SPH 253 Akatsia 8 NM",{"CTLD_CARGO_RED_ARTY_Akatsia"},CTLD_CARGO.Enum.VEHICLE,2,2500,artilleryCargoStock, "ARTY")
+Foothold_redCtld:AddCratesCargo("Truck with ZU-23",{"CTLD_CARGO_RED_ZU_23"},CTLD_CARGO.Enum.VEHICLE,2,1000,airDefenseCargoStock, "SAM/AAA")
 
 if Era ~= "Vietnam" then
-Foothold_redCtld:AddCratesCargo("Arty SPM 259 Nona 3 NM",{"CTLD_CARGO_RED_ARTY_Nona"},CTLD_CARGO.Enum.VEHICLE,2,2000,6, "ARTY")
-Foothold_redCtld:AddCratesCargo("ATGM AT-3 SAGGER",{"CTLD_CARGO_RED_AT_3"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "ANTI TANK")
-Foothold_redCtld:AddCratesCargo("Kord 12.7 MM",{"CTLD_CARGO_RED_Kord"},CTLD_CARGO.Enum.VEHICLE,2,500,6, "LIGHT ARMOR")
-Foothold_redCtld:AddCratesCargo("MLRS LC 80 MM 2.2 NM",{"CTLD_CARGO_RED_ARTY_BBM1"},CTLD_CARGO.Enum.VEHICLE,2,2500,6, "ARTY")
-Foothold_redCtld:AddCratesCargo("MRAP M-ATV",{"CTLD_CARGO_RED_MRAP"},CTLD_CARGO.Enum.VEHICLE,2,1000,6, "LIGHT ARMOR")
+Foothold_redCtld:AddCratesCargo("Arty SPM 259 Nona 3 NM",{"CTLD_CARGO_RED_ARTY_Nona"},CTLD_CARGO.Enum.VEHICLE,2,2000,artilleryCargoStock, "ARTY")
+Foothold_redCtld:AddCratesCargo("ATGM AT-3 SAGGER",{"CTLD_CARGO_RED_AT_3"},CTLD_CARGO.Enum.VEHICLE,2,500,standardCargoStock, "ANTI TANK")
+Foothold_redCtld:AddCratesCargo("Kord 12.7 MM",{"CTLD_CARGO_RED_Kord"},CTLD_CARGO.Enum.VEHICLE,2,500,standardCargoStock, "LIGHT ARMOR")
+Foothold_redCtld:AddCratesCargo("MLRS LC 80 MM 2.2 NM",{"CTLD_CARGO_RED_ARTY_BBM1"},CTLD_CARGO.Enum.VEHICLE,2,2500,artilleryCargoStock, "ARTY")
+Foothold_redCtld:AddCratesCargo("MRAP M-ATV",{"CTLD_CARGO_RED_MRAP"},CTLD_CARGO.Enum.VEHICLE,2,1000,standardCargoStock, "LIGHT ARMOR")
+end
+
+if pvpEnabled and Era == "Modern"
+    and hasGroupTemplate("Red SAM SHORAD Tor M2") then
+Foothold_redCtld:AddCratesCargoNoMove("Tor M2", {"Red SAM SHORAD Tor M2"}, CTLD_CARGO.Enum.FOB, 2, 3000, standardCargoStock, "SAM/AAA",nil,nil,nil,nil,nil,nil,"iso_container")
 end
 
 if isRedTemplateEnabled("SA-8") then
-Foothold_redCtld:AddCratesCargoNoMove("SA-8",{"CTLD_CARGO_RED_SA_8"},CTLD_CARGO.Enum.VEHICLE,2,3000,5, "SAM/AAA")
+Foothold_redCtld:AddCratesCargoNoMove("SA-8",{"CTLD_CARGO_RED_SA_8"},CTLD_CARGO.Enum.VEHICLE,2,2000,airDefenseCargoStock, "SAM/AAA",nil,nil,nil,nil,nil,nil,"iso_container")
 end
 
 if isRedTemplateEnabled("SA-3") then
-Foothold_redCtld:AddCratesCargoNoMove("SA-3 SAM system",{"CTLD_CARGO_RED_SA_3"},CTLD_CARGO.Enum.VEHICLE,5,2500,4, "SAM/AAA")
+Foothold_redCtld:AddCratesCargoNoMove("SA-3 SAM system",{"CTLD_CARGO_RED_SA_3"},CTLD_CARGO.Enum.VEHICLE,4,4000,pvpEnabled and standardCargoStock or 4, "SAM/AAA",nil,nil,nil,nil,nil,nil,"iso_container_small")
 end
 
 --addRedStaticFromType("Red zone supplies CH-47", "cds_crate", 3500, "Zone supplies", {"CH-47Fbl1"}, "Zone supplies")
 addRedStaticFromType("Red zone supplies C-130J", "iso_container_small", 4000, "Zone supplies", {"C-130J-30"}, "Zone supplies")
 addRedStaticFromType("Red zone supplies MI-8", "ammo_cargo", 2000, "Zone supplies", {"Mi-8MT"}, "Zone supplies")
 addRedStaticFromType("Red zone supplies Mi-24P", "ammo_cargo", 500, "Zone supplies", {"Mi-24P"}, "Zone supplies")
+
+if pvpEnabled then
+    for _, cargo in ipairs(Foothold_ctld.Cargo_Statics) do
+        if cargo.Subcategory == "Warehouse" then
+            local name = cargo:GetName()
+            Foothold_redCtld:AddStaticsCargoFromType(name, cargo.StaticType, cargo:GetMass(), cargo.Stock0,
+                cargo.Subcategory, cargo.DontShowInMenu, cargo.Location, cargo.TypeNames,
+                cargo.StaticCategory, cargo.StaticShape, cargo.ResourceMap, cargo:GetDisplayName())
+            if RedCTLDPrices[name] == nil then
+                local price, rank = priceOf(name), reqRankOf(name)
+                if price ~= 0 or rank ~= 0 then
+                    RedCTLDPrices[name] = { price = price, reqRank = rank }
+                end
+            end
+        end
+    end
+end
+
+do
+    for _, catalog in ipairs({Foothold_redCtld.Cargo_Troops, Foothold_redCtld.Cargo_Crates, Foothold_redCtld.Cargo_Statics}) do
+        for _, cargo in ipairs(catalog) do
+            local available = readRedCtldPolicy(cargo.Name)
+            cargo.DontShowInMenu = cargo.DontShowInMenu or not available
+        end
+    end
+    local unavailableUnitTypes
+    for _, entry in ipairs(Foothold_redCtld.C130GetUnits or {}) do
+        local available = readRedCtldPolicy(entry.Name)
+        if not available then
+            unavailableUnitTypes = unavailableUnitTypes or {}
+            entry.UnitTypes = unavailableUnitTypes
+        end
+    end
+end
 
 local RED_ZONE_SUPPLY_TYPES = {
     ["Red zone supplies CH-47"] = true,
@@ -610,6 +885,18 @@ Foothold_redCtld.ZoneSupplyOnboardByGroup = Foothold_redCtld.ZoneSupplyOnboardBy
 redCtldRefundPlayerZoneSupplyStock = function(entryOrCargo)
     if not entryOrCargo or entryOrCargo._zoneSupplySourceConsumed ~= true then return false end
     local sourceZoneName = entryOrCargo._zoneSupplySourceZone
+    local farpReturned = false
+    if pvpEnabled then
+        local stock, record, native = Foothold_ctld:GetFarpSupplyStock(sourceZoneName, coalition.side.RED)
+        if record then
+            if entryOrCargo._zoneSupplySourceSide ~= record.side
+                or entryOrCargo._zoneSupplySourceNativeId ~= record.nativeId then return false end
+            if Foothold_ctld:AddFarpSupplyStock(sourceZoneName, 1, coalition.side.RED, record, native) == nil then return false end
+            farpReturned = true
+        elseif entryOrCargo._zoneSupplySourceNativeId ~= nil
+            or (sourceZoneName and bc.dynamicFarpsByName and bc.dynamicFarpsByName[sourceZoneName]) then return false end
+    end
+    if not farpReturned then
     local sourceZone = sourceZoneName and bc:getZoneByName(sourceZoneName) or nil
     if not sourceZone or not sourceZone.active or sourceZone.side ~= coalition.side.RED
         or sourceZone._regularSupplyStockSide ~= coalition.side.RED
@@ -619,6 +906,7 @@ redCtldRefundPlayerZoneSupplyStock = function(entryOrCargo)
     end
 
     sourceZone:_addImportedRegularSupplyStock(1, timer.getAbsTime())
+    end
     entryOrCargo._zoneSupplySourceConsumed = false
     entryOrCargo._zoneSupplySourceRefunded = true
     if entryOrCargo.cargo then
@@ -702,13 +990,17 @@ local function redCtldIsZoneSupplyCargo(cargoItem)
     end
 
     local name = redCtldCargoName(cargoItem)
-    if type(name) ~= "string" then return false end
+    if type(name) ~= "string" then
+        if pvpEnabled then return false, name end
+        return false
+    end
     if RED_ZONE_SUPPLY_TYPES[name] == true then return true end
     for baseName in pairs(RED_ZONE_SUPPLY_TYPES) do
         if name:sub(1, #baseName + 1) == baseName .. "-" then
             return true
         end
     end
+    if pvpEnabled then return false, name end
     return false
 end
 
@@ -1135,7 +1427,11 @@ local function redCtldFinalizeDelivery(key, entry, zoneObj, actionKey, statLabel
     redCtldSimulateLandingForEntryIfOnGround(entry, zoneObj.zone)
     redCtldDestroyStatic(redCtldCargoStatic(entry.cargo, entry))
     redCtldRemoveTrackedSupply(key)
-    addCTLDZonesForRedControlled(zoneObj.zone)
+    if pvpEnabled then
+        addCTLDZonesForRedControlled(zoneObj.zone, zoneObj)
+    else
+        addCTLDZonesForRedControlled(zoneObj.zone)
+    end
 end
 
 function completePendingRedCtldSupply(zoneObj, payload, succeeded)
@@ -1156,7 +1452,11 @@ function completePendingRedCtldSupply(zoneObj, payload, succeeded)
     local text = redCtldFormatForEntry(entry, "CTLD_ZONE_SUPPLIES_DELIVERED", actionText, zoneObj.zone)
     redCtldSendToEntry(entry, text, 15)
     redCtldRewardPlayer(entry, joinedCapture and "Zone supply delivery" or "Zone capture", joinedCapture and 150 or ZONE_SUPPLY_CAPTURE_REWARD)
-    addCTLDZonesForRedControlled(zoneObj.zone)
+    if pvpEnabled then
+        addCTLDZonesForRedControlled(zoneObj.zone, zoneObj)
+    else
+        addCTLDZonesForRedControlled(zoneObj.zone)
+    end
 end
 
 bc:registerPendingCaptureHandler("red_ctld_capture_delivery", completePendingRedCtldSupply)
@@ -1169,15 +1469,37 @@ local function redCtldDestroySupplyInZone(key, entry, zoneObj, reason)
 end
 
 local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, groupId, playerName, unitName, carrierUnitObject, flags)
-    if not redCtldIsZoneSupplyCargo(cargoItem) then return nil, nil end
+    local warehouseMeta, cargoName
+    if pvpEnabled and cargoItem.Subcategory == "Warehouse" then
+        cargoName = redCtldCargoName(cargoItem)
+        warehouseMeta = Foothold_ctld.WarehouseSupplyTypes[cargoName]
+        if not warehouseMeta or not cargoItem._warehouseDebitItems or cargoItem._warehouseSettlementStatus
+            or cargoItem._warehouseSourceSide ~= Foothold_redCtld.coalition then return nil, nil end
+        pickupZone = cargoItem._warehouseSourceZone
+    else
+        local isZoneSupply, knownName = redCtldIsZoneSupplyCargo(cargoItem)
+        if not isZoneSupply then
+            if pvpEnabled then return nil, nil, false, knownName end
+            return nil, nil
+        end
+    end
     local key = redCtldCargoKey(cargoItem)
     if not key then return nil, nil end
 
-    if cargoItem._zoneSupplySourceConsumed ~= true then
-        local sourceZoneName = redCtldClaimZoneSupplyPickupDebit(unitName, groupName, redCtldCargoName(cargoItem))
+    if not warehouseMeta and cargoItem._zoneSupplySourceConsumed ~= true then
+        local sourceZoneName, debit
+        if pvpEnabled then
+            sourceZoneName, debit = redCtldClaimZoneSupplyPickupDebit(unitName, groupName, redCtldCargoName(cargoItem))
+        else
+        sourceZoneName = redCtldClaimZoneSupplyPickupDebit(unitName, groupName, redCtldCargoName(cargoItem))
+        end
         if sourceZoneName then
             cargoItem._zoneSupplySourceConsumed = true
             cargoItem._zoneSupplySourceZone = sourceZoneName
+            if pvpEnabled and debit and debit.kind == "farp" then
+                cargoItem._zoneSupplySourceSide, cargoItem._zoneSupplySourceNativeId = debit.sourceSide, debit.sourceNativeId
+                pickupZone, cargoItem._zoneSupplyPickupZone = sourceZoneName, sourceZoneName
+            end
         end
     end
 
@@ -1197,7 +1519,7 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
             groupId = groupId,
             playerName = playerName,
             unitName = unitName,
-            cargoName = redCtldCargoName(cargoItem),
+            cargoName = cargoName or redCtldCargoName(cargoItem),
             createdAt = timer.getTime(),
             wasLoaded = false,
             wasAirborne = false,
@@ -1210,6 +1532,9 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
             _zoneSupplySourceZone = cargoItem._zoneSupplySourceZone,
             _lastVec3 = initialVec3 and { x = initialVec3.x, y = initialVec3.y, z = initialVec3.z } or nil,
         }
+        if pvpEnabled then
+            entry._zoneSupplySourceSide, entry._zoneSupplySourceNativeId = cargoItem._zoneSupplySourceSide, cargoItem._zoneSupplySourceNativeId
+        end
         redZoneSupplyCrates[key] = entry
     else
         entry.cargo = cargoItem
@@ -1219,13 +1544,20 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
         entry.groupId = groupId or entry.groupId
         entry.playerName = playerName or entry.playerName
         entry.unitName = unitName or entry.unitName
-        entry.cargoName = redCtldCargoName(cargoItem) or entry.cargoName
+        entry.cargoName = cargoName or redCtldCargoName(cargoItem) or entry.cargoName
         if cargoItem._zoneSupplySourceConsumed == true then
             entry._zoneSupplySourceConsumed = true
             entry._zoneSupplySourceZone = cargoItem._zoneSupplySourceZone
+            if pvpEnabled then
+                entry._zoneSupplySourceSide, entry._zoneSupplySourceNativeId = cargoItem._zoneSupplySourceSide, cargoItem._zoneSupplySourceNativeId
+            end
         end
     end
 
+    if warehouseMeta then
+        entry.deliveryType = "warehouse"
+        entry.warehouseMeta = warehouseMeta
+    end
     if carrierUnitObject and carrierUnitObject.isExist and carrierUnitObject:isExist() then
         entry._unitObj = carrierUnitObject
         entry._unitDim = RED_ZONE_SUPPLY_AIRCRAFT_DIMENSIONS[carrierUnitObject:getTypeName()]
@@ -1277,8 +1609,15 @@ function Foothold_redCtld:OnAfterGetCrates(From, Event, To, GroupObj, Unit, Carg
     local unitName = Unit and Unit.GetName and Unit:GetName() or nil
     local carrierUnitObject = Unit and Unit.GetDCSObject and Unit:GetDCSObject() or nil
 
+    local c130Items = pvpEnabled and self.UseC130LoadAndUnload and Unit and self:IsC130J(Unit) and {} or nil
     for _, cargoItem in ipairs(cargoItems) do
-        local key, entry = redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, groupId, playerName, unitName, carrierUnitObject)
+        local key, entry, isZoneSupply, cargoName = redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, groupId, playerName, unitName, carrierUnitObject)
+        if c130Items and isZoneSupply == false and type(cargoName) == "string"
+            and not Foothold_ctld.WarehouseSupplyTypes[cargoName]
+            and self:_FindCratesCargoObject(cargoName)
+            and not Foothold_ctld.C130AutoBuildCrates[cargoItem] then
+            c130Items[#c130Items + 1] = cargoItem
+        end
         if entry then
             local staticObj = redCtldCargoStatic(cargoItem, entry)
             local vec3 = staticObj and staticObj:GetVec3() or nil
@@ -1286,6 +1625,9 @@ function Foothold_redCtld:OnAfterGetCrates(From, Event, To, GroupObj, Unit, Carg
                 redCtldMarkSupplyLoaded(key, entry, staticObj)
             end
         end
+    end
+    if c130Items and #c130Items > 0 then
+        Foothold_ctld._registerC130AutoBuildSet(groupName, playerName, unitName, pickupZone, c130Items, self, carrierUnitObject or false)
     end
 end
 
@@ -1300,7 +1642,36 @@ function Foothold_redCtld:OnAfterCratesPickedUp(From, Event, To, GroupObj, Unit,
     local unitName = Unit and Unit.GetName and Unit:GetName() or nil
     local carrierUnitObject = Unit and Unit.GetDCSObject and Unit:GetDCSObject() or nil
 
+    local c130CountryId, c130AircraftId
+    local loaded = pvpEnabled and self.Loaded_Cargo[unitName] or nil
+    if loaded and loaded.Cargo ~= Cargo then loaded = nil end
     for _, cargoItem in ipairs(cargoItems) do
+      if pvpEnabled and loaded then
+        local entry = Foothold_ctld.C130AutoBuildCrates[cargoItem]
+        local set = entry and Foothold_ctld.C130AutoBuildSets[entry.setId] or nil
+        if set and set.ctld == self then
+          if c130CountryId == nil then
+            c130CountryId = false
+            if GroupObj and self.UseC130LoadAndUnload and self.C130JUnits[unitName] == true
+              and carrierUnitObject and carrierUnitObject:getCoalition() == self.coalition then
+              local carrierType = carrierUnitObject:getTypeName()
+              if carrierType == "C-130J-30" or (self.C130JTypes and self.C130JTypes[carrierType]) then
+                c130CountryId = carrierUnitObject:getCountry()
+                c130AircraftId = bc:getCareerAircraftId(carrierType)
+              end
+            end
+          end
+          if c130CountryId ~= false then
+            entry.onboard = loaded
+            entry.static = nil
+            entry._missingCount = nil
+            entry.groupName, entry.playerName, entry.unitName = groupName, playerName, unitName
+            entry._unitObj, entry._unitDim = carrierUnitObject, nil
+            set.groupName, set.playerName, set.unitName = groupName, playerName, unitName
+            set.aircraftId, set.countryId = c130AircraftId, c130CountryId
+          end
+        end
+      end
         local key, entry = redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, groupId, playerName, unitName, carrierUnitObject, { wasLoaded = true })
         if entry and not entry._gcLoadedMsg then
             redCtldSendLocalized(entry, "CTLD_CRATE_LOADED_GROUND_CREW", 10, tostring(entry.cargoName or key))
@@ -1310,15 +1681,164 @@ function Foothold_redCtld:OnAfterCratesPickedUp(From, Event, To, GroupObj, Unit,
 end
 
 local FootholdRedOriginalGetCrates = Foothold_redCtld._GetCrates
-function Foothold_redCtld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
-    local beforeCount = #(self.Spawned_Cargo or {})
-    local result = FootholdRedOriginalGetCrates(self, Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
-    if suppressGetEvent == true and #(self.Spawned_Cargo or {}) > beforeCount then
-        local obtainedCargo = {}
-        for index = beforeCount + 1, #self.Spawned_Cargo do
-            obtainedCargo[#obtainedCargo + 1] = self.Spawned_Cargo[index]
+if pvpEnabled then
+    local originalCargoPrice = Foothold_redCtld.GetCargoPrice
+    if originalCargoPrice then
+        Foothold_redCtld.GetCargoPrice = function(self, ...)
+            local request = Foothold_ctld._warehousePickupRequest
+            if request and request._warehouseQuotePhase == "awaiting" and request._warehouseOwner == self
+                and select(2, ...) == request._warehouseOriginalCargo then
+                request._warehouseQuotePhase = "method"
+                return Foothold_ctld._observeWarehousePrice(request, "method", originalCargoPrice(self, ...))
+            end
+            return originalCargoPrice(self, ...)
         end
-        self:OnAfterGetCrates(nil, nil, nil, Group, Unit, obtainedCargo)
+    end
+end
+function Foothold_redCtld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+    if not drop and not pack then
+        if Cargo.Name == "Pantsir S1" or (Cargo.Name == "Tor M2"
+          and (not pvpEnabled or Era ~= "Modern")) then
+          return false
+        end
+        local available = readRedCtldPolicy(Cargo.Name)
+        if not available then return false end
+    end
+    local beforeCount = #(self.Spawned_Cargo or {})
+    local c130Entry = pvpEnabled and drop and Foothold_ctld.C130AutoBuildCrates[Cargo] or nil
+    local c130Set = c130Entry and Foothold_ctld.C130AutoBuildSets[c130Entry.setId] or nil
+    if c130Set and (c130Set.ctld ~= self or not c130Entry.onboard
+      or c130Entry.unitName ~= Unit:GetName()
+      or self.Loaded_Cargo[c130Entry.unitName] ~= c130Entry.onboard) then
+      c130Entry, c130Set = nil, nil
+    end
+    local request, previousRequest
+    if pvpEnabled and not drop and not pack then
+      local inLoad, pickupZone = self:IsUnitInZone(Unit, CTLD.CargoZoneType.LOAD)
+      local record = inLoad and bc.dynamicFarpsByName and bc.dynamicFarpsByName[pickupZone] or nil
+      local native
+      if record then
+        if record.side ~= self.coalition or record.side ~= Unit:GetCoalition() then return false end
+        native = bc:getDynamicFarpAirbase(record)
+        if not native then return false end
+      end
+      local perSet = Cargo:GetCratesNeeded() or 1
+      if perSet < 1 then perSet = 1 end
+      local requestNumber = tonumber(number)
+      if requestNumber then requestNumber = math.floor(requestNumber); if requestNumber < 1 then requestNumber = perSet end
+      else requestNumber = perSet end
+      request = { _warehouseOwner = self, _warehouseOriginalCargo = Cargo,
+        _pickupUnit = Unit, _pickupRequestNumber = requestNumber, _pickupZone = inLoad and pickupZone or false,
+        _pickupRecord = record or false, _pickupNative = native or false }
+      previousRequest = Foothold_ctld._warehousePickupRequest
+      Foothold_ctld._warehousePickupRequest = request
+    end
+    if pvpEnabled and not drop and not pack and WarehouseLogistics == true
+        and Cargo and Cargo.Subcategory == "Warehouse"
+    then
+        local cargoName = Cargo:GetName()
+        local meta = Foothold_ctld.WarehouseSupplyTypes[cargoName]
+        if meta then
+            request.cargoName = cargoName
+            request._warehouseMeta = meta
+            request._warehouseQuotePhase = CTLDCost == true and "awaiting" or "free"
+        end
+    end
+    local result = FootholdRedOriginalGetCrates(self, Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+    if request then
+      request._pickupUnit, request._pickupRecord, request._pickupNative = nil, nil, nil
+      request._pickupZone, request._pickupRequestNumber = nil, nil
+      Foothold_ctld._warehousePickupRequest = previousRequest
+    end
+    if pvpEnabled and drop and result == true and Cargo._warehouseDebitItems
+        and #self.Spawned_Cargo == beforeCount + 1 then
+        local replacement = self.Spawned_Cargo[beforeCount + 1]
+        replacement._warehouseSourceZone = Cargo._warehouseSourceZone
+        replacement._warehouseSourceSide = Cargo._warehouseSourceSide
+        replacement._warehouseSourceNativeId = Cargo._warehouseSourceNativeId
+        replacement._warehouseDebitItems = Cargo._warehouseDebitItems
+        replacement._warehouseSettlementZone = Cargo._warehouseSettlementZone
+        replacement._warehouseSettlementKind = Cargo._warehouseSettlementKind
+        replacement._warehouseSettlementKey = Cargo._warehouseSettlementKey
+        replacement._warehouseSettlementWritten = Cargo._warehouseSettlementWritten
+        replacement._warehouseSettlementStatus = Cargo._warehouseSettlementStatus
+        replacement._warehousePaidAmount = Cargo._warehousePaidAmount
+        replacement._warehousePaidSide = Cargo._warehousePaidSide
+        replacement._warehousePaidBuyerName = Cargo._warehousePaidBuyerName
+        Cargo._warehouseSourceZone = nil
+        Cargo._warehouseSourceSide = nil
+        Cargo._warehouseSourceNativeId = nil
+        Cargo._warehouseDebitItems = nil
+        Cargo._warehouseSettlementZone = nil
+        Cargo._warehouseSettlementKind = nil
+        Cargo._warehouseSettlementKey = nil
+        Cargo._warehouseSettlementWritten = nil
+        Cargo._warehouseSettlementStatus = nil
+        Cargo._warehousePaidAmount = nil
+        Cargo._warehousePaidSide = nil
+        Cargo._warehousePaidBuyerName = nil
+        local oldKey = redCtldCargoKey(Cargo)
+        local entry = redZoneSupplyCrates[oldKey]
+        local needsRegistration = entry == nil
+        if needsRegistration then
+            local _, registeredEntry = redCtldRegisterSupplyCargo(replacement, replacement._warehouseSourceZone,
+                Group:GetName(), Group:GetID(), Unit:GetPlayerName(), Unit:GetName(), Unit:GetDCSObject())
+            entry = registeredEntry
+        end
+        if entry then
+            if not needsRegistration then redZoneSupplyCrates[oldKey] = nil end
+            entry.cargo = replacement
+            entry.static = replacement:GetPositionable()
+            entry.wasAirborne = true
+            entry._wasUnloaded = true
+            entry.attached = false
+            entry.detached = true
+            entry._lastVec3 = nil
+            entry.noZoneAt = nil
+            entry.noZoneNextCheckAt = nil
+            entry.noNeedAt = nil
+            if not needsRegistration then redZoneSupplyCrates[redCtldCargoKey(replacement)] = entry end
+            self:RefreshZoneSupplyOnboardForGroup(entry.groupId)
+        end
+    end
+    if c130Entry and result == true and Foothold_ctld.C130AutoBuildCrates[Cargo] == c130Entry
+      and Foothold_ctld.C130AutoBuildSets[c130Entry.setId] == c130Set and not c130Set.completed
+      and c130Set.crates[c130Entry.setIndex] == Cargo
+      and #self.Spawned_Cargo == beforeCount + 1 then
+      local replacement = self.Spawned_Cargo[beforeCount + 1]
+      Foothold_ctld.C130AutoBuildCrates[Cargo] = nil
+      c130Entry.cargo = replacement
+      c130Entry.static = replacement:GetPositionable()
+      c130Entry.onboard = nil
+      c130Entry.attached = true
+      c130Entry.detached = true
+      c130Entry.landed = false
+      c130Entry._missingCount = nil
+      c130Entry._lastVec3 = nil
+      c130Entry._landAglConfirm = nil
+      c130Set.crates[c130Entry.setIndex] = replacement
+      Foothold_ctld.C130AutoBuildCrates[replacement] = c130Entry
+    end
+    local bindRequest = request and result == true and request._warehouseStockAdmitted
+    if (suppressGetEvent == true or bindRequest) and #(self.Spawned_Cargo or {}) > beforeCount then
+        local obtainedCargo = suppressGetEvent == true and {} or nil
+        for index = beforeCount + 1, #self.Spawned_Cargo do
+            local cargoItem = self.Spawned_Cargo[index]
+            if bindRequest and cargoItem._warehouseSourceZone == nil then
+                local sourceZoneName, debit = redCtldClaimZoneSupplyPickupDebit(request._warehousePickupKey, nil, request.cargoName, request)
+                if sourceZoneName then
+                    cargoItem._warehouseSourceZone = sourceZoneName
+                    cargoItem._warehouseSourceSide = debit.sourceSide
+                    cargoItem._warehouseSourceNativeId = debit.sourceNativeId
+                    cargoItem._warehouseDebitItems = debit.items
+                    cargoItem._warehousePaidAmount = debit._warehouseQuotePhase == "quoted" and debit._warehouseQuotedPrice or 0
+                    cargoItem._warehousePaidSide = debit._warehousePaidSide
+                    cargoItem._warehousePaidBuyerName = debit._warehousePaidBuyerName
+                end
+            end
+            if obtainedCargo then obtainedCargo[#obtainedCargo + 1] = cargoItem end
+        end
+        if obtainedCargo then self:OnAfterGetCrates(nil, nil, nil, Group, Unit, obtainedCargo) end
     end
     return result
 end
@@ -1344,6 +1864,9 @@ function Foothold_redCtld:OnAfterCratesDropped(From, Event, To, GroupObj, Unit, 
             then
                 cargoItem._zoneSupplySourceConsumed = true
                 cargoItem._zoneSupplySourceZone = oldEntry._zoneSupplySourceZone
+                if pvpEnabled then
+                    cargoItem._zoneSupplySourceSide, cargoItem._zoneSupplySourceNativeId = oldEntry._zoneSupplySourceSide, oldEntry._zoneSupplySourceNativeId
+                end
             end
             if oldKey then
                 redZoneSupplyCrates[oldKey] = nil
@@ -1452,6 +1975,58 @@ local function redCtldProcessZoneSupply(key, entry, now)
 
     if entry.noZoneNextCheckAt and now < entry.noZoneNextCheckAt then return end
     local zoneName = redCtldResolveZoneNameFromVec3(vec3)
+    local farpWarehouseStorage
+    if pvpEnabled and not zoneName and (entry.deliveryType ~= "warehouse"
+        or (WarehouseLogistics == true and cargo and cargo._warehouseDebitItems and not cargo._warehouseSettlementStatus
+            and cargo._warehouseSourceSide == Foothold_redCtld.coalition)) then
+        local inLoad, farpName = Foothold_redCtld:IsUnitInZone(staticObj, CTLD.CargoZoneType.LOAD)
+        local farp = inLoad and bc.dynamicFarpsByName and bc.dynamicFarpsByName[farpName]
+        if farp then
+          if entry.deliveryType == "warehouse" then
+            if farp.side == Foothold_redCtld.coalition
+                and ((farpName ~= cargo._warehouseSourceZone and farpName ~= entry.pickupZone)
+                    or (farpName == cargo._warehouseSourceZone and cargo._warehouseSourceNativeId ~= nil
+                        and cargo._warehouseSourceNativeId == farp.nativeId)) then
+                local native = bc:getDynamicFarpAirbase(farp)
+                if native then
+                    local storage = STORAGE:FindByName(farpName)
+                    if storage and storage.airbase == native and storage.warehouse then
+                        farpWarehouseStorage, zoneName = storage, farpName
+                    end
+                end
+            end
+          else
+            local accepted
+            if entry._zoneSupplySourceConsumed == true and entry._zoneSupplySourceZone == farpName then
+                accepted = redCtldRefundPlayerZoneSupplyStock(entry)
+                if accepted then
+                    redCtldSendLocalized(entry, "CTLD_SUPPLIES_RETURNED_TO_ZONE", 15,
+                        ctldLocalizedCargoLabel(L10N, "Zone supplies"), farpName)
+                end
+            elseif entry.pickupZone ~= farpName then
+                local stock, record, native = Foothold_ctld:GetFarpSupplyStock(farpName, coalition.side.RED)
+                if record then
+                    accepted = Foothold_ctld:AddFarpSupplyStock(farpName, 1, coalition.side.RED, record, native) ~= nil
+                end
+                if accepted then
+                    Foothold_ctld:_recordCareerSupply(entry, bc.CAREER_STAT.FarpSupplyUnits, false)
+                    local playerName = redCtldResolvePlayer(entry)
+                    if playerName then
+                        trigger.action.outTextForCoalition(Foothold_redCtld.coalition, L10N:Format("CTLD_SUPPLIES_DELIVERED_BY",
+                            ctldLocalizedCargoLabel(L10N, entry.cargoName or "Zone supplies"), farpName, tostring(playerName)), 15)
+                        redCtldRewardPlayer(entry, "Zone supply delivery", 150)
+                    end
+                    redCtldSimulateLandingForEntryIfOnGround(entry, farpName)
+                end
+            end
+            if accepted then
+                redCtldDestroyStatic(staticObj)
+                redCtldRemoveTrackedSupply(key)
+                return
+            end
+          end
+        end
+    end
     if not zoneName then
         entry.noZoneAt = entry.noZoneAt or now
         entry.noZoneNextCheckAt = now + RED_ZONE_SUPPLY_NOZONE_RECHECK
@@ -1462,6 +2037,73 @@ local function redCtldProcessZoneSupply(key, entry, now)
     end
     entry.noZoneAt = nil
     entry.noZoneNextCheckAt = nil
+
+    if pvpEnabled and entry.deliveryType == "warehouse" then
+        local zoneObj
+        if not farpWarehouseStorage then zoneObj = bc:getZoneByName(zoneName) end
+        if not farpWarehouseStorage and (not zoneObj or not zoneObj.active) then return end
+        if not cargo or not cargo._warehouseDebitItems or cargo._warehouseSettlementStatus
+            or cargo._warehouseSourceSide ~= Foothold_redCtld.coalition then
+            if cargo then cargo._warehouseSettlementStatus = cargo._warehouseSettlementStatus or "discarded" end
+            redCtldDestroySupplyInZone(key, entry, zoneObj, "not available")
+            return
+        end
+        local returning = zoneName == cargo._warehouseSourceZone
+        if not farpWarehouseStorage and zoneObj.side ~= Foothold_redCtld.coalition then
+            if zoneObj.side == coalition.side.NEUTRAL and not returning then return end
+            cargo._warehouseSettlementStatus = "discarded"
+            redCtldDestroySupplyInZone(key, entry, zoneObj,
+                zoneObj.side == coalition.side.NEUTRAL and "neutral zone timeout" or "enemy zone")
+            return
+        end
+        if WarehouseLogistics ~= true then
+            cargo._warehouseSettlementStatus = "discarded"
+            redCtldDestroySupplyInZone(key, entry, zoneObj, "warehouse logistics disabled")
+            return
+        end
+        local storage = farpWarehouseStorage
+        if not storage then
+            local abName = zoneObj.airbaseName or zoneObj.baseName or zoneName
+            storage = STORAGE:FindByName(abName)
+            if not storage and abName ~= zoneName then storage = STORAGE:FindByName(zoneName) end
+        end
+        if not storage then
+            cargo._warehouseSettlementStatus = "discarded"
+            redCtldDestroySupplyInZone(key, entry, zoneObj, "no storage")
+            return
+        end
+        if not Foothold_ctld.ApplyWarehouseDebitItems(storage, cargo, zoneName, returning and "return" or "delivery") then
+            cargo._warehouseSettlementStatus = cargo._warehouseSettlementStatus or "discarded"
+            if farpWarehouseStorage then
+                redCtldSendLocalized(entry, "CTLD_ZONE_SUPPLIES_DESTROYED", 15, zoneName, "no applicable inventory")
+                redCtldDestroyStatic(staticObj)
+                redCtldRemoveTrackedSupply(key)
+            else
+                redCtldDestroySupplyInZone(key, entry, zoneObj, "no applicable inventory")
+            end
+            return
+        end
+        local meta = entry.warehouseMeta
+        if returning then
+            local grp = redCtldResolveGroup(entry)
+            local T = grp and L10N:ForMooseGroup(grp) or L10N
+            redCtldSendToEntry(entry, T:Format("CTLD_SUPPLIES_RETURNED_TO_ZONE",
+                ctldLocalizedCargoLabel(T, meta.label or "Supplies"), zoneName), 15)
+        else
+            Foothold_ctld:_recordCareerSupply(entry, nil, true)
+            local playerName = redCtldResolvePlayer(entry)
+            if playerName then
+                trigger.action.outTextForCoalition(Foothold_redCtld.coalition, L10N:Format("CTLD_SUPPLIES_DELIVERED_BY",
+                    ctldLocalizedCargoLabel(L10N, meta.label or "Supplies"), zoneName, tostring(playerName)), 15)
+                local reward = meta.reward or ((meta.categories and #meta.categories > 1) and 100 or 50)
+                redCtldRewardPlayer(entry, "Warehouse delivery", reward)
+            end
+            redCtldSimulateLandingForEntryIfOnGround(entry, zoneName)
+        end
+        redCtldDestroyStatic(staticObj)
+        redCtldRemoveTrackedSupply(key)
+        return
+    end
 
     if entry.pickupZone and zoneName == entry.pickupZone
         and entry._zoneSupplySourceConsumed == true
@@ -1580,9 +2222,9 @@ for _, zoneObj in ipairs(bc:getZones()) do
     end
 end
 
-function addCTLDZonesForRedControlled(zoneName)
-    local function applyZone(zName)
-        local zoneObj = bc:getZoneByName(zName)
+function addCTLDZonesForRedControlled(zoneName, knownZone)
+    local function applyZone(zName, knownZone)
+        local zoneObj = (GlobalSettings.pvpEnabled == true and knownZone) or bc:getZoneByName(zName)
         if not zoneObj or not redCtldZoneEligible(zName) then return end
 
         if not zoneObj.active then
@@ -1598,10 +2240,18 @@ function addCTLDZonesForRedControlled(zoneName)
     end
 
     if zoneName then
-        applyZone(zoneName)
+        if GlobalSettings.pvpEnabled == true then
+            applyZone(zoneName, knownZone)
+        else
+            applyZone(zoneName)
+        end
     else
         for _, zoneObj in ipairs(bc:getZones()) do
-            applyZone(zoneObj.zone)
+            if GlobalSettings.pvpEnabled == true then
+                applyZone(zoneObj.zone, zoneObj)
+            else
+                applyZone(zoneObj.zone)
+            end
         end
     end
 end
@@ -1618,7 +2268,7 @@ if lfs then
 
     local _redCtldBaseName = (FootholdSaveBaseName and tostring(FootholdSaveBaseName) ~= "") and tostring(FootholdSaveBaseName) or nil
 
-    Foothold_redCtld.enableLoadSave = true
+    Foothold_redCtld.enableLoadSave = GlobalSettings.pvpEnabled ~= true or not bc._persistenceResetPending
     Foothold_redCtld.saveinterval = 300
     Foothold_redCtld.filename = _redCtldBaseName .. "_CTLD_Red_Save.csv"
     Foothold_redCtld.filepath = FootholdSavePath or (lfs.writedir() .. "Missions\\Saves")
@@ -1632,11 +2282,33 @@ end
 -- Red CTLD: Persistence Load Hook
 ---------------------------------------------------------------------------
 
+if pvpEnabled then
+    Foothold_redCtld._resolveCareerAircraftId = Foothold_ctld._resolveCareerAircraftId
+    Foothold_redCtld._pvpProtectedBuilds = {}
+    Foothold_redCtld.CanBuildCrates = Foothold_ctld.CanBuildCrates
+    Foothold_redCtld._CleanUpCrates = Foothold_ctld._CleanUpCrates
+    Foothold_redCtld._BuildObjectFromCrates = Foothold_ctld._BuildObjectFromCrates
+    Foothold_redCtld._recordCareerAction = Foothold_ctld._recordCareerAction
+    Foothold_redCtld._recordBuildCareer = Foothold_ctld._recordBuildCareer
+    Foothold_redCtld._recordAirdroppedBuildCareer = Foothold_ctld._recordAirdroppedBuildCareer
+    Foothold_redCtld._buildRewardByCargo = Foothold_ctld._buildRewardByCargo
+    Foothold_redCtld._awardCtldBuildReward = Foothold_ctld._awardCtldBuildReward
+    Foothold_redCtld.GetTroopPickupZone = Foothold_ctld.GetTroopPickupZone
+    Foothold_redCtld.OnAfterTroopsPickedUp = Foothold_ctld.OnAfterTroopsPickedUp
+    Foothold_redCtld.OnAfterTroopsDeployed = Foothold_ctld.OnAfterTroopsDeployed
+    Foothold_redCtld.RegisterPlayerCtldRewardGroup = Foothold_ctld.RegisterPlayerCtldRewardGroup
+    Foothold_redCtld.RemovePlayerCtldRewardGroup = Foothold_ctld.RemovePlayerCtldRewardGroup
+    Foothold_redCtld.RemovePlayerCtldRewardUnit = Foothold_ctld.RemovePlayerCtldRewardUnit
+    Foothold_redCtld.PlayerCtldRewards = Foothold_ctld.PlayerCtldRewards
+    Foothold_redCtld.PlayerCtldStatOverrides = Foothold_ctld.PlayerCtldStatOverrides
+end
+
 Foothold_redCtld:__Load(10)
 
 function Foothold_redCtld:OnAfterLoaded(From, Event, To, LoadedGroups)
     self:I("***** Red CTLD Groups Loaded! *****")
 
+    local acceptedTroopRows = pvpEnabled and {} or nil
     local MaxAtSpawn = {}
     for rawName, limit in pairs(RED_MAX_AT_SPAWN) do
         local key = tostring(rawName)
@@ -1657,31 +2329,65 @@ function Foothold_redCtld:OnAfterLoaded(From, Event, To, LoadedGroups)
         local cargoName = tostring(loadedGroup.CargoName)
         local groupCoord = loadedGroup.Group:GetCoordinate()
         local groupPoint = groupCoord and groupCoord:GetVec3() or nil
-        local skipRestore, nearestEnemyName, nearestEnemyNm = redRestorePointTooFarFromBlue(groupPoint, 120)
+        local skipRestore, nearestEnemyName, nearestEnemyNm
+        if pvpEnabled then
+            skipRestore, nearestEnemyName, nearestEnemyNm = bc:_restorePointTooFarFromEnemy(groupPoint, 80, self.coalition)
+        else
+            skipRestore, nearestEnemyName, nearestEnemyNm = redRestorePointTooFarFromBlue(groupPoint, 120)
+        end
         local crateCargo = self:_FindCratesCargoObject(cargoName)
+        local troopCargo, captureObjectState
+        if pvpEnabled then
+            troopCargo = self:_FindTroopsCargoObject(cargoName)
+            captureObjectState = bc:isPendingCaptureObject(groupName)
+        end
 
-        if skipRestore then
-            self:I(string.format("[RED RESTORE] skip loaded group=%s cargo=%s nearestEnemy=%s dist=%.1fNm limit=120.0Nm", groupName, cargoName, tostring(nearestEnemyName), nearestEnemyNm or -1))
+        if captureObjectState == "active" then
+            self:I(string.format("[RED RESTORE] pending capture group retained=%s cargo=%s", groupName, cargoName))
+        elseif captureObjectState == "consumed" then
+            if loadedGroup.Group:IsAlive() then loadedGroup.Group:Destroy() end
+        elseif pvpEnabled and deployedTroops[groupName] == loadedGroup.Group then
+            -- Already enrolled by this restore completion.
+        elseif skipRestore then
+            self:I(string.format(pvpEnabled and "[RED RESTORE] skip loaded group=%s cargo=%s nearestEnemy=%s dist=%.1fNm limit=80.0Nm" or "[RED RESTORE] skip loaded group=%s cargo=%s nearestEnemy=%s dist=%.1fNm limit=120.0Nm", groupName, cargoName, tostring(nearestEnemyName), nearestEnemyNm or -1))
             if crateCargo then
                 self:AddStockCrates(cargoName, 1)
             end
+            if troopCargo then self:AddStockTroops(cargoName, 1) end
             if loadedGroup.Group:IsAlive() then
                 loadedGroup.Group:Destroy()
             end
         elseif crateCargo then
-            table.insert(RedGroundUnits, {
+            local trackedGroup = {
                 groupName = groupName,
                 Timestamp = timestamp,
                 Group = loadedGroup.Group,
                 CargoName = cargoName,
                 Stock = crateCargo:GetStock() or 0
-            })
+            }
+            if pvpEnabled then trackedGroup.PlayerName = loadedGroup.PlayerName end
+            table.insert(RedGroundUnits, trackedGroup)
+        elseif troopCargo then
+            acceptedTroopRows[#acceptedTroopRows + 1] = loadedGroup
         end
     end
 
     redEnforceMaxAtSpawnForTrackedUnits(RedGroundUnits, MaxAtSpawn, function(CargoName)
         Foothold_redCtld:AddStockCrates(CargoName, 1)
     end)
+
+    if pvpEnabled then
+        for _, entry in ipairs(RedGroundUnits) do
+            if entry.Group then self:RegisterPlayerCtldRewardGroup(entry.Group, entry.CargoName, entry.PlayerName) end
+        end
+        redEnforceMaxAtSpawnForTrackedUnits(acceptedTroopRows, MaxAtSpawn, function(CargoName)
+            self:AddStockTroops(CargoName, 1)
+        end, true)
+        for _, loadedRow in ipairs(acceptedTroopRows) do
+            local cargo = self._troopsByName[loadedRow.CargoName]
+            self:OnAfterTroopsDeployed(From, Event, To, nil, nil, loadedRow.Group, cargo.CargoType, loadedRow, cargo)
+        end
+    end
 
     -- below a code that deletes the cargo that is left on the ground from last session.
     if self.Spawned_Cargo then

@@ -20,6 +20,7 @@ local saveFile = "Foothold Config WW2.lua"
 local externalConfigChunk = nil
 -- Add new top-level config tables here so an omitted external table triggers the warning.
 FootholdConfigTrackedTableNames = {
+    "AdminCommandAliases",
     "CapLimitStages",
     "RedCasLimitStages",
     "RedRunwayStrikeLimitStages",
@@ -34,6 +35,7 @@ FootholdConfigTrackedTableNames = {
     "MessageOfTheDay",
     "CallsignOverrides",
     "AllowedToCarrySupplies",
+    "AvailableShopItems",
     "ShopPrices",
     "ShopRankRequirements",
     "RewardContribution",
@@ -45,6 +47,7 @@ FootholdConfigTrackedTableNames = {
 }
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
+    "AdminCommands",
     "ewrs_enabled",
     "PlayerZoneSuppliesConsumeStock",
     "ZoneCaptureBuildSeconds",
@@ -573,8 +576,36 @@ AllowedToCarrySupplies = {
 -- @gui label="Same Aircraft Extra Reward %" validValues="Disabled=0 | 5%=5 | 10%=10 | 15%=15 | 20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50"
 TurnaroundRewardPercent = 10
 
+-- Available NEW shop purchases. False removes an item; true keeps its existing eligibility.
+-- Mode, era, national template and operator restrictions still apply. Changes take effect on restart.
+-- Existing owned services and accepted purchases remain; hidden finite stock is not retained.
+-- @gui label="Shop Items" installPolicy="replaceTable" editor="linkedTable" fields="self:Available:boolean|ShopPrices:Price:number|ShopRankRequirements:Rank:number" rowLabel="comment"
+AvailableShopItems = {
+    ["supplies2"] = true, -- Resupply friendly Zone
+    ["supplies"] = true, -- Fully Upgrade Friendly Zone
+    ["smoke"] = true, -- Smoke markers
+    ["flare"] = true, -- Flare markers
+    ["illum"] = true, -- Illumination bomb
+    ["capture"] = true, -- Capture neutral zone
+    ["dynamiccap"] = true, -- CAP Flight
+    ["dynamiccas"] = true, -- CAS Flight
+    ["dynamicbomb"] = true, -- Bomber Flight
+    ["dynamicstatic"] = true, -- Static structure Flight
+    ["intel"] = true, -- Satellite Intel
+    ["zinf"] = true, -- Upgrade zone with infantry
+    ["zsam"] = true, -- Zone SAM defense (era dependent)
+    ["zlogc"] = true, -- Build Logistics Center
+    -- @gui linkedKeys="ShopRankRequirements:zlogc"
+    ["zwhrepair"] = true, -- Repair Logistic Center (30 min)
+    ["zsup3"] = true, -- Add 3 supplies to zone
+    ["zarm"] = true, -- Upgrade zone with armor
+    ["gslot"] = true, -- Unlock extra upgrade slot
+    ["zewr"] = true, -- Early Warning Radar
+    ["ztrainrepair"] = true, -- Repair train supply route
+}
+
 -- Shop prices.
--- @gui installPolicy="mergeRows"
+-- @gui installPolicy="replaceTable" rowLabel="comment"
 ShopPrices = {
 	smoke         = 20,   -- Smoke markers
     flare         = 20,   -- Flare markers
@@ -586,12 +617,12 @@ ShopPrices = {
 	supplies2     = 200,  -- Resupply friendly Zone
 	supplies      = 1000, -- Fully Upgrade Friendly Zone
 	capture       = 500,  -- Capture neutral zone
-	advancecapture = 500, -- Advance capture pressured enemy zone
 	intel         = 150,  -- Operational Intelligence (60 min)
 	zinf          = 500,  -- Add infantry squad to zone
 	zsam          = 1000, -- Add AA guns to a zone
 	zewr          = 1000, -- Add Early Warning Radar to a zone
 	zlogc         = 5000, -- Make a zone logistic center
+	zwhrepair     = 2000, -- Repair warehouse building (30 minutes)
 	ztrainrepair  = 2000, -- Repair a destroyed train route between Blue zones
 	zsup3         = 750,  -- Add 3 supplies to a zone
 	zarm          = 1000, -- Add armor group to a zone
@@ -599,14 +630,13 @@ ShopPrices = {
 }
 
 -- Shop ranks.
--- @gui installPolicy="mergeRows"
+-- @gui installPolicy="replaceTable" rowLabel="comment"
 ShopRankRequirements = {
 	dynamiccap     = 2,  -- CAP Flight
 	dynamiccas     = 5,  -- CAS Flight
 	dynamicbomb    = 4,  -- Bomber Flight
 	dynamicstatic  = 4,  -- Static structure Flight
 	capture        = 1,  -- Capture neutral zone
-	advancecapture = 1, -- Advance capture pressured enemy zone
 	smoke          = 1,  -- Smoke markers
 	flare          = 1,  -- Flare markers
 	illum          = 1,  -- Illumination bomb
@@ -863,6 +893,52 @@ AllowedWW2RedPlanes = {
 	"Yak-52",
 	"Ju-88A4",
 	"B-17G",
+}
+
+-- ============================================================================
+-- Admin Commands
+-- ============================================================================
+-- Enable this option, then enter the command words below.
+-- @gui label="Enable admin commands"
+AdminCommands = false
+
+-- Enter a command word for each action. Leave a field blank to disable that action.
+-- Examples show the complete format; only the entered word is saved.
+-- @gui label="Command words" layout="fields" visibleWhen="AdminCommands:true"
+AdminCommandAliases = {
+    -- Adjust the shared Blue account within its limits.
+    -- @gui label="Add Blue coalition funds" exampleFormat="{value}:500"
+    addBlueFunds = "",
+    -- Adjust the shared Red account within its limits.
+    -- @gui label="Add Red coalition funds" exampleFormat="{value}:500"
+    addRedFunds = "",
+    -- Add weapons to a ready zone or CTLD/FARP warehouse. Default amount: 50.
+    -- @gui label="Add weapons to zone warehouse" exampleFormat="{value}:500"
+    addZoneItems = "",
+    -- Enter the command alone to list shop items, or append an item ID to purchase. Cost and availability requirements still apply.
+    -- @gui label="List shop / purchase without rank check" exampleFormat="{value}:<shop-id>"
+    buyWithoutRank = "",
+    -- Build an ordinary FARP at the marker.
+    -- @gui label="Build ordinary marker FARP" exampleFormat="{value}"
+    createFarp = "",
+    -- Capture an eligible neutral zone for Blue.
+    -- @gui label="Capture eligible neutral zone for Blue" exampleFormat="{value}"
+    captureNeutralBlue = "",
+    -- Capture an eligible neutral zone for Red.
+    -- @gui label="Capture eligible neutral zone for Red" exampleFormat="{value}"
+    captureNeutralRed = "",
+    -- Remove built assets from the zone.
+    -- @gui label="Clear zone built assets" exampleFormat="{value}"
+    clearZone = "",
+    -- Upgrade or repair the zone once for its current owner.
+    -- @gui label="Upgrade or repair zone once" exampleFormat="{value}"
+    upgradeZone = "",
+    -- Fully upgrade an eligible active zone for its current owner.
+    -- @gui label="Fully upgrade current-owner zone" exampleFormat="{value}"
+    fullyUpgradeZone = "",
+    -- Trigger the mission restart command using flag181; the mission/server controls subsequent loading.
+    -- @gui label="Restart mission" exampleFormat="{value}"
+    restartMission = "",
 }
 
 -- Don't touch this.

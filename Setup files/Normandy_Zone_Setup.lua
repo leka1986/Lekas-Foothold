@@ -1392,6 +1392,7 @@ timer.scheduleFunction(SpawnFriendlyAssets,{},timer.getTime()+10)
 
 local missionCompleted = false
 local resetMissionCompletionSave = function()
+	bc._persistenceResetPending = true
 	Utils.saveTable(bc.saveFile, 'zonePersistance', {})
 	if resetSaveFileAndFarp then
 	resetSaveFileAndFarp()
@@ -1575,6 +1576,8 @@ local SHOP_PRICE_DEFAULTS = {
   zinf          = 500,
   zsam          = 1000,
   zewr          = 1000,
+  redwarehouse  = 3000,
+  redwhrepair   = 2000,
   zlogc         = 2000,
   ztrainrepair  = 2000,
   zwhrepair     = 2000,
@@ -1598,6 +1601,8 @@ local SHOP_RANK_DEFAULTS = {
   zinf           = 5,
   zsam           = 6,
   zewr           = 2,
+  redwarehouse   = 0, -- No minimum rank unless configured.
+  redwhrepair    = 0,
   zlogc          = 1,
   ztrainrepair   = 1,
   zsup3          = 2,
@@ -1910,7 +1915,7 @@ end
 bc:registerShopItem(RED_MASS_ATTACK_ID, L10N:Get("SYRIA_SHOP_ITEM_RED_MASS_ATTACK"), RED_MASS_ATTACK_COST, redMassAttackAction)
 
 local redWarehouseMenu = nil
-bc:registerShopItem('redwarehouse', L10N:Get("WAREHOUSE_SHOP_RED_CREATE"), 3000, function(sender)
+bc:registerShopItem('redwarehouse', L10N:Get("WAREHOUSE_SHOP_RED_CREATE"), ShopPrices.redwarehouse, function(sender)
 	if redWarehouseMenu then
 		missionCommands.removeItemForCoalition(1, redWarehouseMenu)
 		redWarehouseMenu = nil
@@ -1937,7 +1942,7 @@ bc:registerShopItem('redwarehouse', L10N:Get("WAREHOUSE_SHOP_RED_CREATE"), 3000,
 end, function(sender, params)
 	return bc:applyRedWarehouseUpgrade(params.zone, params.placement, params.now)
 end)
-bc:registerShopItem('redwhrepair', L10N:Get("WAREHOUSE_SHOP_REPAIR"), 2000, function(sender)
+bc:registerShopItem('redwhrepair', L10N:Get("WAREHOUSE_SHOP_REPAIR"), ShopPrices.redwhrepair, function(sender)
 	return L10N:Get("SYRIA_SHOP_CHOOSE_ZONE")
 end, function(sender, params)
 	return bc:applyWarehouseRepair(params.zone, 1, params.now)
@@ -2166,9 +2171,6 @@ bc:registerShopItem('gslot',L10N:Get("SYRIA_SHOP_ITEM_EXTRA_SLOT"),ShopPrices.gs
         return L10N:Get("SYRIA_SHOP_ALREADY_UNLOCKED")
     end
     bc.globalExtraUnlock = true
-    for _,z in pairs(bc:getZones()) do
-
-    end
     trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE"),15)
 	bc:removeShopItem(2, 'gslot')
 	return nil
@@ -2222,8 +2224,8 @@ ShopRankRequirements = ShopRankRequirements or {
 
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
 bc:addShopItem(1, 'redmassattack', -1, 2) -- red AI mass airbase attack
-bc:addShopItem(1, 'redwarehouse', -1, 3) -- red AI rear supply depot
-bc:addShopItem(1, 'redwhrepair', -1, 4) -- red AI warehouse repair
+bc:addShopItem(1, 'redwarehouse', -1, 3, ShopRankRequirements.redwarehouse) -- red AI rear supply depot
+bc:addShopItem(1, 'redwhrepair', -1, 4, ShopRankRequirements.redwhrepair) -- red AI warehouse repair
 
 ShopCategoryLabels = ShopCategoryLabels or {}
 local ShopCats = ShopCategoryLabels
