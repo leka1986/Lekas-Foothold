@@ -1453,11 +1453,20 @@ end
 
 SCHEDULER:New(nil,function()
 	checkMissionComplete(nil, nil)
-    bc:roamGroupsToLocalSubZone({
+    local roamPrefixes = {
         "AXE-TRUCK #",
 		"AXE-ARMOR-LIGHT #"
 
-	}, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+	}
+    if GlobalSettings.pvpEnabled == true then
+    	roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Modern #"
+    	roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Coldwar #"
+    	roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Vietnam #"
+    	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Gepard #"
+    	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
+    	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
+    end
+    bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
 end,{},5,0)
 
 -- SCHEDULER:New(nil,function()

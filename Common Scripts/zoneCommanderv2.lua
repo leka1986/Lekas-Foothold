@@ -16708,6 +16708,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 				pvpCombatAIGroupLimit = 10
 			end
 			obj.pvpCombatAIGroupLimit = math.max(0, math.floor(pvpCombatAIGroupLimit))
+			obj.pvpDisableCombatAI = PvPDisableCombatAI == true
 			TANKER_PERSISTENCE.bySide = TANKER_PERSISTENCE.bySide or { [coalition.side.RED] = {}, [coalition.side.BLUE] = {} }
 			BlueClients:FilterCoalitions({"blue", "red"}):FilterOnce()
 			obj.awacsLost = { [1] = false, [2] = false, [3] = false, [4] = false }
@@ -27511,7 +27512,6 @@ end
 					or text:find('^event:')
 					or text:find('^Message%s*:')
 					or text:find('SpelaMusik')
-					or text=='AvslutaFoothold'
 					or text=='whynot'
 					or lower == "tarawahere"
 					or lower == "tarawahereandstop"
@@ -27566,6 +27566,7 @@ end
 			addAdminAlias("upgradeZone")
 			addAdminAlias("fullyUpgradeZone")
 			addAdminAlias("restartMission")
+			addAdminAlias("endMission")
 		end
 		markEditedEvent = {}
 		markEditedEvent.context = self
@@ -28040,7 +28041,7 @@ end
 						trigger.action.setUserFlag(180, false)
 					end,{},300,0)
 				end
-				if event.text=='AvslutaFoothold' then
+				if (not adminAliases and event.text=='AvslutaFoothold') or customAdminAction == "endMission" then
 					if forceMissionComplete then
 						forceMissionComplete()
 						trigger.action.removeMark(event.idx)
@@ -44024,6 +44025,11 @@ function BattleCommander:loadFromDisk()
 						if pvpBaseProfile then
 							local normalized = {}
 							local maxMobile = resolveMaxCount(pvpBaseProfile.total)
+							-- Canonical saved arrays contain names; retain pin intent from the authored Red list.
+							local pinnedRed = {}
+							for _, configuredEntry in ipairs(zn.upgrades.red) do
+								if isPinnedUpgradeEntry(configuredEntry) then pinnedRed[getUpgradeEntryName(configuredEntry)] = true end
+							end
 							for owner = 1, 2 do
 								local original = owner == 1 and v.randomUpgradesRed or v.randomUpgradesBlue
 								local list = {}
@@ -44038,7 +44044,7 @@ function BattleCommander:loadFromDisk()
 									local isStatic = not isCore and not pvpRetiredSet[name] and isStaticUpgrade(name)
 									local keep = not pvpRetiredSet[name] and (isCore or (shouldKeepUpgradeName(name, isStatic)
 										and (UseStatics or not isStatic)
-										and (owner ~= 1 or isRedTemplateEnabled(name, "base-garrison"))))
+										and (owner ~= 1 or isRedTemplateEnabled(name, pinnedRed[name] and "pinned" or "base-garrison"))))
 									if keep and not isCore and not isStatic then
 										if mobileCount < maxMobile then mobileCount = mobileCount + 1 else keep = false end
 									end
@@ -47899,7 +47905,7 @@ function buildRandomBlueUpgrades(zoneObj, actualOwner)
 				if pvpSelected and actualOwner == 1 then cat = classifyUpgradeName(name)
 				else cat = classifyBlueUpgradeName(name) end
 				if not pvpSelected or (totalFixed < targetTotal and (zoneSize ~= "bignosam" or cat ~= "sam")
-					and (actualOwner ~= 1 or isRedTemplateEnabled(name, "base-garrison"))) then
+					and (actualOwner ~= 1 or isRedTemplateEnabled(name, isPinnedUpgradeEntry(entry) and "pinned" or "base-garrison"))) then
 					fixedList[#fixedList+1] = name
 					totalFixed = totalFixed + 1
 					if fixedCounts[cat] ~= nil then
@@ -50166,7 +50172,8 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 								break
 							end
 						end
-						if not foundInBuilt then
+						if not foundInBuilt and not (GlobalSettings.pvpEnabled == true and context.side == 0
+							and context.industryCores and context.industryCores[staticName]) then
 							st:destroy()
 							operationalStateChanged = true
 						end
@@ -59030,10 +59037,13 @@ function refreshPlayers()
         AnyPlayers[name] = true
     end
 	if currentPvpBlue then
+		local balanceChanged = bc.pvpCombatAIGroupLimit == 0 and bc.pvpDisableCombatAI ~= true
+			and (currentPvpBlue.combatPlaneCount ~= previousPvpBlue.combatPlaneCount
+				or currentPvpRed.combatPlaneCount ~= previousPvpRed.combatPlaneCount)
 		currentPvpBlue.generation = previousPvpBlue.generation
-			+ ((pvpBlueChanged or currentPvpBlue.aircraftCount ~= previousPvpBlue.aircraftCount) and 1 or 0)
+			+ ((pvpBlueChanged or balanceChanged or currentPvpBlue.aircraftCount ~= previousPvpBlue.aircraftCount) and 1 or 0)
 		currentPvpRed.generation = previousPvpRed.generation
-			+ ((pvpRedChanged or currentPvpRed.aircraftCount ~= previousPvpRed.aircraftCount) and 1 or 0)
+			+ ((pvpRedChanged or balanceChanged or currentPvpRed.aircraftCount ~= previousPvpRed.aircraftCount) and 1 or 0)
 		bc.pvpPlayerCohortsBySide[coalition.side.BLUE] = currentPvpBlue
 		bc.pvpPlayerCohortsBySide[coalition.side.RED] = currentPvpRed
 	end
@@ -83754,8 +83764,14 @@ do
 
 	function Director:_configuredAirCapacity()
 		if GlobalSettings.pvpEnabled == true then
-			local cohort = self.battleCommander.pvpPlayerCohortsBySide[self.side]
-			return math.max(0, self.battleCommander.pvpCombatAIGroupLimit - cohort.combatPlaneCount)
+			local bc = self.battleCommander
+			if bc.pvpDisableCombatAI == true then return 0 end
+			local cohort = bc.pvpPlayerCohortsBySide[self.side]
+			local limit = bc.pvpCombatAIGroupLimit
+			if limit == 0 then
+				limit = bc.pvpPlayerCohortsBySide[3 - self.side].combatPlaneCount
+			end
+			return math.max(0, limit - cohort.combatPlaneCount)
 		end
 		local cap = math.max(0, tonumber(self:_configuredRoleLimit('CAP')) or 0)
 		local cas = math.max(0, tonumber(self:_configuredRoleLimit('CAS')) or 0)

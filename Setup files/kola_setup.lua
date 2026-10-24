@@ -1427,7 +1427,7 @@ zones.ivalo:addGroups({
 
 zones.severomorsk1:addGroups({
     DirectorCapability:new({name='Severomorsk1-supply-Murmansk', mission='supply',template='PlaneSupplyTemplate', targetzone='MurmanskInternational'}),
-    DirectorCapability:new({name='Severomorsk1-supply-Severomorsk3', mission='supply',template='PlaneSupplyTemplate', targetzone='Severomorsk3'}),
+    DirectorCapability:new({name='Severomorsk1-supply-Severomorsk3', mission='supply',template='HeloSupplyTemplate', targetzone='Severomorsk3'}),
     DirectorCapability:new({name='Severomorsk1-attack-Severomorsk3-surface', mission='attack',template='AttackConvoy', targetzone='Severomorsk3', type='surface'}),
     DirectorCapability:new({name='Severomorsk1-supply-Severomorsk3-surface', mission='supply',template='SupplyConvoy', targetzone='Severomorsk3', type='surface'}),
     DirectorCapability:new({name='Severomorsk1-supply-Prirechnyi', mission='supply',template='HeloSupplyTemplate', targetzone='Prirechnyi'}),
@@ -2455,6 +2455,16 @@ end
 
 timer.scheduleFunction(function()
 	checkMissionComplete(nil, nil)
+	if GlobalSettings.pvpEnabled == true then
+		bc:roamGroupsToLocalSubZone({
+			"^Blue Armor Modern #",
+			"^Blue Armor Coldwar #",
+			"^Blue Armor Vietnam #",
+			"^Blue SAM AAA Gepard #",
+			"^Blue SAM AAA Vulcan #",
+			"^Blue SAM SHORAD Avenger #",
+		}, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+	end
 end, {}, timer.getTime() +10)
 
 local SHOP_PRICE_DEFAULTS = {

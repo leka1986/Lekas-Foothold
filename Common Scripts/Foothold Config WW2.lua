@@ -939,6 +939,9 @@ AdminCommandAliases = {
     -- Trigger the mission restart command using flag181; the mission/server controls subsequent loading.
     -- @gui label="Restart mission" exampleFormat="{value}"
     restartMission = "",
+    -- End the mission using the campaign reset/restart flow. AutoRestart selects automatic restart or the confirmation menu.
+    -- @gui label="End mission and reset campaign" exampleFormat="{value}"
+    endMission = "",
 }
 
 -- Don't touch this.

@@ -27,6 +27,7 @@ local externalConfigChunk = nil
 -- Add new top-level config tables here so an omitted external table triggers the warning.
 FootholdConfigTrackedTableNames = {
     "AdminCommandAliases",
+    "StartupFunds",
     "RedTemplateEnabled",
     "RedCapPlaneEnabled",
     "BlueCapPlaneEnabled",
@@ -176,7 +177,7 @@ if mizConfigPath and not FootholdConfigLoaded then
         else
             SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " from mission.", 30) end, {}, 1)
         end
-        if env.mission.theatre ~= 'Caucasus' then PvP = false end
+        if env.mission.theatre ~= 'Caucasus' and env.mission.theatre ~= 'Syria' and env.mission.theatre ~= 'PersianGulf' then PvP = false end
         FootholdConfigLoadedOk = true
         return
     else
@@ -199,13 +200,22 @@ end
 -- In the editor, Don't copy to all ships, make sure all planes in every warehouse are set to LIMITED!!!
 Era = "Modern"
 
--- PvP settings for Caucasus (Modern, Coldwar, and Vietnam).
--- @gui label="Caucasus PvP"
+-- Supported maps: Caucasus, Syria and Persian Gulf. Available in Modern, Coldwar and Vietnam.
+-- @gui label="PvP"
 PvP = false
 
 -- ============================================================================
 -- PvP settings
 -- ============================================================================
+-- Coalition credits at the start of a new/reset PvP round in Caucasus, Syria and Persian Gulf.
+-- Enter an amount for each side; 0 starts that side without credits.
+-- Existing campaigns retain their saved balances; restarting does not add these funds again.
+-- @gui label="Startup Funds" visibleWhen="PvP:true" rowLabel="comment" installPolicy="mergeRows"
+StartupFunds = {
+    [1] = 1000, -- Red
+    [2] = 1000, -- Blue
+}
+
 -- Starting share for EACH coalition; the selection shows Red, Blue and neutral percentages.
 -- 20 =20% Red,20% Blue,60% neutral;30 =30% Red,30% Blue,40% neutral.
 -- 40 =40% Red,40% Blue,20% neutral;50 divides all eligible territory between both sides.
@@ -228,9 +238,14 @@ PvPEscorts = false
 -- @gui label="PvP Chance AI Attack Helo" visibleWhen="PvP:true" disabledWhen="InvisibleA10:true"
 PvPChanceAiAttackHelo = 0
 
--- Total automatic fixed-wing combat groups per coalition, reduced by qualifying player planes.
--- Shared by combat roles; this is not a separate allowance for each role.
--- @gui label="PvP Combat AI Group Limit" visibleWhen="PvP:true"
+-- Disable ordinary automatic combat flights for both coalitions. Paid support and supplies keep their own settings.
+-- @gui label="Disable Automatic Combat AI" visibleWhen="PvP:true"
+PvPDisableCombatAI = false
+
+-- Positive values: total automatic fixed-wing combat groups per coalition, reduced by qualifying own player planes.
+-- 0: balance player-plane counts, adding AI only to the side with fewer qualifying player planes.
+-- Shared by combat roles; for example, 3 Blue players versus 1 Red allows up to 2 Red AI groups at 0.
+-- @gui label="PvP Combat AI Group Limit" visibleWhen="PvP:true" disabledWhen="PvPDisableCombatAI:true"
 PvPCombatAIGroupLimit = 10
 
 -- ============================================================================
@@ -594,13 +609,15 @@ StartNormal = true
 
 -- SYRIA ONLY.
 -- If true while StartNormal is true, the campaign starts from Incirlik instead of Akrotiri.
--- @gui label="Start From Incirlik" disabledWhen="StartNormal:false"
+-- PvE only. PvP always uses Incirlik and Palmyra; StartNormal swaps their coalitions.
+-- @gui label="Start From Incirlik" visibleWhen="StartNormal:true" disabledWhen="PvP:true"
 StartFromIncirlik = false
 
 -- SYRIA ONLY.
 -- If true, removes the southern Syria zones from the campaign.
 -- Current campaign progress is kept. If later set to false, the southern zones return using their default setup state.
--- @gui label="Remove Southern Syria" disabledWhen="PvP:true"
+-- In PvP, selects the reduced mainland layout; false selects the full mainland layout. Cyprus is excluded in both.
+-- @gui label="Remove Southern Syria"
 RemoveSouthSyria = false
  
 -- When the mission is completed, if you want the server to restart automatically and reset everything, then set this to true.
@@ -1188,13 +1205,14 @@ GlobalSettings.supplyDifficultyScaling = { [1]=1.0, [2]=1.0 }
 -- 1.0 = normal speed
 -- 1.5 = 50% slower
 --
--- Red normal speed: 1 minute per unit, 3 minutes per SR/TR/STR, maximum 20 minutes.
+-- PvE Red normal speed: 1 minute per unit, 3 minutes per SR/TR/STR, maximum 20 minutes.
 -- Blue normal speed: 15 minute normal-zone base or 5 minute [WH] base + 2 minutes per unit or 3 minutes per SR/TR/STR, maximum 20 minutes.
 -- Blue has a base time because Blue zones consume supplies directly from their own storage.
 -- Red has no base time here because Red must first wait for supplies delivered from another zone.
+-- PvP: both coalitions use the Blue timing policy above, each with its own multiplier.
 -- Player, CTLD, airdropped, zsup3, and supplies2 supplies skip the Blue base time.
 -- Supply production, dispatch, and travel times are not changed by this setting.
--- @gui label="Repair Time Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewRed="Unit:60 | SR/TR/STR:180 | Maximum:1200" timePreviewBlue="Normal base:900 | [WH] base:300 | Expedited base:0 | Unit:120 | SR/TR/STR:180 | Maximum:1200"
+-- @gui label="Repair Time Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05" timePreviewSharedWhen="PvP:true" timePreview="Normal base:900 | [WH] base:300 | Expedited base:0 | Unit:120 | SR/TR/STR:180 | Maximum:1200" timePreviewRed="Unit:60 | SR/TR/STR:180 | Maximum:1200" timePreviewBlue="Normal base:900 | [WH] base:300 | Expedited base:0 | Unit:120 | SR/TR/STR:180 | Maximum:1200"
 GlobalSettings.repairDifficultyScaling = { [1]=1, [2]=1 }
 
 -- Extra time for Red repairs and construction when fewer than 2 eligible Blue CAS players are present.
@@ -2061,10 +2079,10 @@ PvPSeparateAircraftLists = false
 -- Shared aircraft requirements for the Config Manager; Lua ignores these comments.
 -- requiredSet defines reusable rules; requiredEach reads every row of its source table.
 -- $ selects the current row, and {key} keeps the explanation linked to that row.
+-- E-3A AWACS spawns in the air; its warehouse aircraft entries are optional.
 -- Used by: allowedPlanesModern
 -- @gui requiredSet="AircraftRequirements01" requiredValuesFrom="BlueCapPlaneEnabled|BlueCasPlaneEnabled|BlueSeadPlaneEnabled|BlueCasHeloEnabled|BlueSupplyHeloEnabled|AvailableShopItems.dynamiccap|AvailableShopItems.dynamiccas|AvailableShopItems.dynamicsead|AvailableShopItems.dynamicdecoy|AvailableShopItems.dynamicbomb|AvailableShopItems.strategicbomber|AvailableShopItems.dynamicarco|AvailableShopItems.dynamictexaco|pvp_supplies"
 -- Used by: allowedPlanesModern, allowedPlanes, allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP
--- @gui requiredSet="AircraftRequirements02" requiredValues="E-3A" requiredReason="Caucasus BLUE automatic AWACS"
 -- @gui requiredSet="AircraftRequirements02" requiredValues="S-3B Tanker" requiredReason="Caucasus BLUE carrier recovery tanker"
 -- Used by: allowedPlanesModern, allowedPlanesRedModern, allowedPlanesSharedVietnamPvP, allowedPlanesBlueVietnamPvP, allowedPlanesRedVietnamPvP
 -- @gui requiredSet="AircraftRequirements03" requiredValues="F-16C_50" requiredEach="EscortTypeByPlayerType" requiredWhen="PvPEscorts:true;$[1]:true;$[2]:2" requiredReason="Player escort for {key}"
@@ -2347,7 +2365,7 @@ allowedPlanesRedModern = {
     --"OH58D",
     --"AH-1W",
     --"B-1B",
-    --"E-3A",
+    "E-3A",
     --"F-15E",
     --"F-4E-45MC",
     --"S-3B Tanker",
@@ -2945,6 +2963,7 @@ allowedPlanesRedColdwarPvP = {
     --"Ka-50_3",
     --"Ka-50",
     "A-50",
+    "E-3A",
     "An-26B",
     "IL-76MD",
     "JF-17",
@@ -3034,6 +3053,7 @@ allowedPlanesSharedVietnamPvP = {
     "MiG-19P",
     "MiG-21Bis",
     "A-50",
+    "E-3A",
     "An-26B",
     "An-30M",
     "IL-76MD",
@@ -3160,6 +3180,7 @@ allowedPlanesRedVietnamPvP = {
     -- "UH-1H",
     "Su-17M4",
     "A-50",
+    "E-3A",
     "An-26B",
     "An-30M",
     "IL-76MD",
@@ -3558,6 +3579,9 @@ AdminCommandAliases = {
     -- Trigger the mission restart command using flag181; the mission/server controls subsequent loading.
     -- @gui label="Restart mission" exampleFormat="{value}"
     restartMission = "",
+    -- End the mission using the campaign reset/restart flow. AutoRestart selects automatic restart or the confirmation menu.
+    -- @gui label="End mission and reset campaign" exampleFormat="{value}"
+    endMission = "",
 }
 
 -- Don't touch this.
@@ -3569,7 +3593,7 @@ if externalConfigChunk then
     SCHEDULER:New(nil, function() trigger.action.outText("Loaded " .. saveFile .. " externally.", 30) end, {}, 1)
 end
 
-if env.mission.theatre ~= 'Caucasus' then PvP = false end
+if env.mission.theatre ~= 'Caucasus' and env.mission.theatre ~= 'Syria' and env.mission.theatre ~= 'PersianGulf' then PvP = false end
 FootholdConfigLoadedOk = true
 
 -- ============================================================================

@@ -663,7 +663,32 @@ WaypointList = {
     ["Ben Gurion"] = ' (66)',
 }
 
+GlobalSettings.pvpEnabled = (PvP == true)
+if GlobalSettings.pvpEnabled == true and Era ~= 'Vietnam' then
+	upgrades.sa5.blue[2] = { n = 'Blue SAM PATRIOT', p = true }
+end
+if GlobalSettings.pvpEnabled == true and PvPSeparateAircraftLists == true then
+	if Era == 'Coldwar' then
+		if allowedPlanesBlueColdwarPvP ~= nil then allowedPlanes = allowedPlanesBlueColdwarPvP end
+		if allowedPlanesRedColdwarPvP ~= nil then allowedPlanesRed = allowedPlanesRedColdwarPvP end
+	elseif Era == 'Vietnam' then
+		if allowedPlanesBlueVietnamPvP ~= nil then allowedPlanesVietnam = allowedPlanesBlueVietnamPvP end
+		if allowedPlanesRedVietnamPvP ~= nil then allowedPlanesRedVietnam = allowedPlanesRedVietnamPvP end
+	end
+elseif GlobalSettings.pvpEnabled == true then
+	if Era == 'Coldwar' then
+		if allowedPlanesSharedColdwarPvP ~= nil then allowedPlanes = allowedPlanesSharedColdwarPvP end
+		allowedPlanesRed = allowedPlanes
+	elseif Era == 'Vietnam' then
+		if allowedPlanesSharedVietnamPvP ~= nil then allowedPlanesVietnam = allowedPlanesSharedVietnamPvP end
+		allowedPlanesRedVietnam = allowedPlanesVietnam
+	end
+end
+
 FootholdSaveBaseName = (Era == 'Vietnam') and 'footholdSyria_Extended_0.1_vietnam' or ((Era == 'Coldwar') and 'footholdSyria_Extended_0.1_coldwar' or 'footholdSyria_Extended_0.1')
+if GlobalSettings.pvpEnabled then
+	FootholdSaveBaseName = FootholdSaveBaseName .. 'Pvp'
+end
 
 local filepath = FootholdSaveBaseName .. '.lua'
 if lfs then
@@ -673,16 +698,37 @@ if lfs then
   env.info('Foothold - Save file path: '..filepath)
 end
 
+if GlobalSettings.pvpEnabled == true then
+	local pvpBig = UTILS.DeepCopy(RandomUpgradeTemplatesBlue.big)
+	local pvpBigNoSam = UTILS.DeepCopy(RandomUpgradeTemplatesBlue.bignosam)
+	local pvpSam = UTILS.DeepCopy(RandomUpgradeTemplatesBlue.sam)
+	pvpBig.total, pvpBigNoSam.total, pvpSam.total = {3,3}, {3,3}, {3,3}
+	PvPBaseGarrisonProfiles = {
+		none = RandomUpgradeTemplatesBlue.small,
+		small = RandomUpgradeTemplatesBlue.small,
+		smallwithShorad = RandomUpgradeTemplatesBlue.small,
+		smallmedium = RandomUpgradeTemplatesBlue.small,
+		medium = RandomUpgradeTemplatesBlue.medium,
+		mediumbig = RandomUpgradeTemplatesBlue.medium,
+		big = pvpBig,
+		extrabig = pvpBig,
+		bignosam = pvpBigNoSam,
+		sam = pvpSam,
+		sam2 = pvpSam,
+		samspecial = pvpSam,
+	}
+end
+
 bc = BattleCommander:new(filepath, 10, 60)
 if RankingSystem then
 bc.rankFile = (lfs and (lfs.writedir()..'Missions/Saves/Foothold_Ranks.lua')) or 'Foothold_Ranks.lua'
 env.info('Foothold - Rank file path: '..bc.rankFile)
 end
-Hunt = true
+Hunt = GlobalSettings.pvpEnabled ~= true
 
 -- RemoveSouthSyria support begin
 local configuredRemoveSouthSyria = RemoveSouthSyria == true
-local configuredStartFromIncirlik = StartNormal == true and StartFromIncirlik == true
+local configuredStartFromIncirlik = GlobalSettings.pvpEnabled ~= true and StartNormal == true and StartFromIncirlik == true
 local SOUTH_SYRIA_ZONE_NAMES = {
 	'Beirut',
 	'Rayak',
@@ -894,11 +940,24 @@ zones = {
 
 }
 
+local pvpVictoryZones, pvpStartingOwners, pvpStartingTerritoryOrder
+
+-- National fixed radar owners.
+if GlobalSettings.pvpEnabled == true then
+	zones.hiddenewr.upgrades = { blue={}, red={'Red EWR Fixed Pvp'} }
+	zones.hiddenewr.isHidden = true
+	zones.hiddenewr.size = nil
+	zones.hiddenewr.level = 1
+	zones.blueEwr = ZoneCommander:new({zone='HiddenBlueEWR', side=2, facility='none', level=10,
+		upgrades={blue={'Blue EWR Fixed Pvp', 'Blue EWR Fixed Pvp-1', 'Blue EWR Fixed Pvp-2', 'Blue EWR Fixed Pvp-3', 'Blue EWR Fixed Pvp-4', 'Blue EWR Fixed Pvp-5'}, red={}}, crates={}, isHidden=true})
+end
+-- End national fixed radar owners.
+
 -- Guaranteed SAMs apply only to these starting Blue zones.
-if zones.akrotiri.side == 2 then
+if GlobalSettings.pvpEnabled ~= true and zones.akrotiri.side == 2 then
 	zones.akrotiri.upgrades.blue[3] = { n = zones.akrotiri.upgrades.blue[3], p = true }
 end
-if zones.bengurion.side == 2 then
+if GlobalSettings.pvpEnabled ~= true and zones.bengurion.side == 2 then
 	zones.bengurion.upgrades.blue[3] = { n = zones.bengurion.upgrades.blue[3], p = true }
 end
 
@@ -1643,6 +1702,10 @@ zones.bengurion:addGroups({
 		["Red Carrier"] = true,
 		["Silkworm Site"] = true,
 	}
+if GlobalSettings.pvpEnabled == true then
+	CarrierNavRefreshZones["Incirlik"] = true
+	CarrierNavRefreshZones["Bassel Al-Assad"] = true
+end
 
 local function deployStartFromIncirlikCarrier()
 	RespawnGroup("CVN-72")
@@ -1652,6 +1715,45 @@ local function deployStartFromIncirlikCarrier()
 end
 
 function SpawnFriendlyAssets(changedZone)
+	if GlobalSettings.pvpEnabled == true then
+		if Era == 'Vietnam' then return end
+		if changedZone and not CarrierNavRefreshZones[changedZone] then return end
+		local incirlikBlue = zones.incirlik.side == coalition.side.BLUE
+		local basselBlue = zones.alassad.side == coalition.side.BLUE
+		local incirlikSouthBlue = incirlikBlue and not StartNormal
+		local redCarrierBlue = basselBlue or (StartNormal and incirlikBlue)
+		local reneBlue = zones.renemouawad.side == coalition.side.BLUE
+		local beirutBlue = not RemoveSouthSyria and zones.beirut.side == coalition.side.BLUE
+		local ramatBlue = not RemoveSouthSyria and zones.ramatdavid.side == coalition.side.BLUE
+		local reverse = not StartNormal
+		local route = StartNormal and {
+			"CVN72_AREA_INCIRLIK_SOUTH", "CVN72_AREA_RED_CARRIER", "CVN72_AREA_RENE",
+			"CVN72_AREA_BEIRUT", "CVN72_AREA_RAMAT",
+		} or {
+			"CVN72_AREA_RAMAT", "CVN72_AREA_BEIRUT", "CVN72_AREA_RENE",
+			"CVN72_AREA_RED_CARRIER", "CVN72_AREA_INCIRLIK_SOUTH",
+		}
+		local availability = {
+			CVN72_AREA_INCIRLIK_SOUTH = { available = incirlikSouthBlue, autoMove = incirlikSouthBlue, reverse = reverse },
+			CVN72_AREA_RED_CARRIER = { available = redCarrierBlue, autoMove = redCarrierBlue, reverse = true },
+			CVN72_AREA_RENE = { available = reneBlue, autoMove = reneBlue, reverse = reverse },
+			CVN72_AREA_BEIRUT = { available = beirutBlue, autoMove = beirutBlue, reverse = reverse },
+			CVN72_AREA_RAMAT = { available = ramatBlue, autoMove = ramatBlue, reverse = reverse },
+			CVN72_AREA_CYPRUS_SOUTH = false,
+			CVN72_AREA_TRANSITION = false,
+		}
+		bc:setCarrierNavigationAutoRoute(route)
+		bc:setCarrierNavigationAreaAvailability(availability, false)
+		if not bc.carrierNavigation or not next(bc.carrierNavigation) then
+			for _, area in ipairs(route) do
+				if availability[area].available then
+					bc:deployCarrierNavigationArea(area)
+					break
+				end
+			end
+		end
+		return
+	end
 
 	if zones.alpha.side == 2 and not zones.alpha.suspended then
 		activateGroupIfNotActive('FOB ALPHA')
@@ -2075,6 +2177,26 @@ for i, v in ipairs(AirBaseToDisable) do
 end
 
 
+-- National industrial cores.
+if GlobalSettings.pvpEnabled == true then
+	for _, zoneObj in ipairs({ zones.powerplant, zones.factory, zones.dam, zones.refinery }) do
+		local cores = zoneObj.criticalObjects
+		zoneObj.industryCores = {}
+		for _, name in ipairs(cores) do
+			zoneObj.industryCores[name] = true
+			zoneObj.upgrades.blue[#zoneObj.upgrades.blue + 1] = name
+			zoneObj.upgrades.red[#zoneObj.upgrades.red + 1] = name
+			zoneObj._configuredStaticUpgrades[#zoneObj._configuredStaticUpgrades + 1] = name
+		end
+		zoneObj.criticalObjects = {}
+		zoneObj:_cacheUpgradeStatics()
+		for _, name in ipairs(cores) do
+			assert(zoneObj:_getTrackedStaticBaseName(name) == name, "Missing Syria industrial core: " .. name)
+		end
+	end
+end
+-- End national industrial cores.
+
 for i,v in pairs(zones) do
 	bc:addZone(v)
 end
@@ -2396,9 +2518,58 @@ TheaterAreas = {
 	},
 }
 
+if GlobalSettings.pvpEnabled == true then
+	L10N:Register("EN", { PVP_MISSION_WINNER = "%s coalition wins!" })
+end
 local missionCompleted = false
 local checkMissionComplete = function(event, sender)
 	if missionCompleted then return end
+	if GlobalSettings.pvpEnabled == true then
+		local redOwnsZone, blueOwnsZone = false, false
+		for i = 1, #pvpVictoryZones do
+			local side = pvpVictoryZones[i].side
+			if side == 1 then redOwnsZone = true elseif side == 2 then blueOwnsZone = true end
+			if redOwnsZone and blueOwnsZone then return end
+		end
+		local winningSide
+		if redOwnsZone then winningSide = 1 elseif blueOwnsZone then winningSide = 2 else return end
+		local endingFlag = 181
+		local winnerMessage = L10N:Format("PVP_MISSION_WINNER", L10N:Get(winningSide == 1 and "ZONE_SIDE_RED" or "ZONE_SIDE_BLUE"))
+		missionCompleted = true
+		trigger.action.setUserFlag(180, true)
+
+		timer.scheduleFunction(function()
+			trigger.action.outSoundForCoalition(winningSide, "BH.ogg")
+		end, {}, timer.getTime() + 2)
+		if AutoRestart then
+			trigger.action.outText(winnerMessage .. "\n\n" .. L10N:Get("SYRIA_SETUP_MISSION_COMPLETE_RESTART"), 120)
+			bc._persistenceResetPending = true
+			Utils.saveTable(bc.saveFile, 'zonePersistance', {})
+			if resetSaveFileAndFarp then
+				resetSaveFileAndFarp()
+			end
+			timer.scheduleFunction(function()
+				trigger.action.setUserFlag(endingFlag, true)
+			end, {}, timer.getTime() + 5)
+		else
+			trigger.action.outText(winnerMessage .. "\n\n" .. L10N:Get("SYRIA_SETUP_MISSION_COMPLETE_MENU"), 120)
+			local subMenu = missionCommands.addSubMenuForCoalition(winningSide, L10N:Get("SYRIA_SETUP_RESTART_MENU"), nil)
+			missionCommands.addCommandForCoalition(winningSide, L10N:Get("COMMON_YES"), subMenu, function()
+				bc._persistenceResetPending = true
+				Utils.saveTable(bc.saveFile, 'zonePersistance', {})
+				if resetSaveFileAndFarp then
+					resetSaveFileAndFarp()
+				end
+				trigger.action.outText(L10N:Get("SYRIA_SETUP_RESTARTING_NOW"), 120)
+				timer.scheduleFunction(function()
+					trigger.action.setUserFlag(endingFlag, true)
+				end, {}, timer.getTime() + 5)
+			end)
+			missionCommands.addCommandForCoalition(winningSide, L10N:Get("COMMON_NO"), subMenu, function()
+			end)
+		end
+		return
+	end
 	local done = true
 	for i, v in ipairs(bc:getZones()) do
 		if not v.zone:lower():find("hidden") and v.side == 1 then
@@ -2443,14 +2614,16 @@ local checkMissionComplete = function(event, sender)
 	end
 end
 
+if GlobalSettings.pvpEnabled ~= true then
 for i,v in ipairs(bc:getZones()) do
 	v:registerTrigger('lost', checkMissionComplete, 'missioncompleted')
+end
 end
 
 
 SCHEDULER:New(nil,function()
 	checkMissionComplete(nil, nil)
-	bc:roamGroupsToLocalSubZone({
+	local roamPrefixes = {
 		"Red Armour Group",
 		"Red Armor Group",
 		"Red Mech group",
@@ -2464,7 +2637,20 @@ SCHEDULER:New(nil,function()
 		"Red SAM AAA 9 #",
 		"Red SAM AAA 10 #",
 		"Red SAM SHORAD",
-	}, 30, { "Dam" }, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+	}
+	if GlobalSettings.pvpEnabled == true then
+		roamPrefixes[#roamPrefixes + 1] = "^blueInfantry #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Modern #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Coldwar #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Vietnam #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Gepard #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA C-RAM #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Roland #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Pantsir #"
+	end
+	bc:roamGroupsToLocalSubZone(roamPrefixes, 30, { "Dam" }, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
 	bc:roamGroupsToLocalSubZone({
 		"Molniya #",
 		"Rezky #",
@@ -2475,6 +2661,7 @@ SCHEDULER:New(nil,function()
 	}, 30, nil, { groupMin = 60, groupMax = 180, zoneMin = 120, zoneMax = 360, cycleMin = 3600, cycleMax = 3600, carrierRangeNm = 90 })
 end,{},5,0)
 
+if GlobalSettings.pvpEnabled ~= true then
 zones.charlie:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
@@ -2594,6 +2781,7 @@ zones.silkworm:registerTrigger('lost', function(event, sender)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_SETUP_SILKWORM_DESTROYED"),20)
 end, 'disablesilkworm')
+end
 
 
 --------------------------------------- cutsom disable ''''''''''''''''''''''''''''''''''''''''''
@@ -2605,6 +2793,7 @@ local SHOP_PRICE_DEFAULTS = {
   dynamiccap    = 500,
   dynamicarco   = 1000,
   dynamictexaco = 1000,
+  replaceawacs  = 1000, -- Replace one lost AWACS
   dynamiccas    = 1000,
   dynamicdecoy  = 300,
   dynamicsead   = 500,
@@ -2658,6 +2847,7 @@ local SHOP_RANK_DEFAULTS = {
   dynamicdecoy   = 1,
   dynamicarco    = 3,
   dynamictexaco  = 3,
+  replaceawacs   = 3, -- Replace one lost AWACS
   farphere       = 4,
   capture        = 1,
   advancecapture = 1,
@@ -2706,6 +2896,9 @@ ShopPrices = mergeDefaults(SHOP_PRICE_DEFAULTS, ShopPrices)
 ShopRankRequirements = mergeDefaults(SHOP_RANK_DEFAULTS, ShopRankRequirements)
 
 
+if GlobalSettings.pvpEnabled == true then
+	destroyGroupIfActive('cruise1')
+end
 bc:addMonitoredROE('cruise1')
 local cruiseMissileTargetMenu = nil
 bc:registerShopItem('cruisemsl', LTGet("SYRIA_SHOP_ITEM_CRUISE_MISSILE"), ShopPrices.cruisemsl, function(sender)
@@ -2745,6 +2938,10 @@ bc:registerShopItem('supplies2', LTGet("SYRIA_SHOP_ITEM_RESUPPLY_ZONE"), ShopPri
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender, params)
+    local supplySide = 2
+    if GlobalSettings.pvpEnabled == true and params and params._shopPurchaseContext then
+        supplySide = params._shopPurchaseContext.coalition
+    end
     local carrierSupplyTarget = params and params.zone and isCarrierZoneName(params.zone.zone)
     local useScriptedSupply = AllowScriptedSupplies or carrierSupplyTarget
 
@@ -2756,7 +2953,9 @@ function(sender, params)
             return bc:requestFriendlySupplyMission(params.zone, params)
         end
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_FRIENDLY")
-    elseif params.zone and params.zone.side == 2 and not params.zone.suspended then
+    elseif params.zone and params.zone.side == supplySide and (not params.zone.suspended
+        or (GlobalSettings.pvpEnabled == true and params._shopPurchaseContext and params.zone._idleSuspended
+            and params.zone.active and not params.zone.isHidden and not carrierSupplyTarget)) then
         local supplied
         if carrierSupplyTarget then
             supplied = params.zone:upgrade()
@@ -2777,7 +2976,8 @@ bc.shopItems['supplies2'].groupZoneSelector = {
     extraPredicate = function(zoneObj)
         return zoneObj.active and zoneObj.side == 2 and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
     end,
-    zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+    zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, knownOwnerSide)
+        local ownerSide = (GlobalSettings.pvpEnabled == true and knownOwnerSide) or 2
         local function remember(handle)
             if rememberHandle then
                 return rememberHandle(handle)
@@ -2789,15 +2989,20 @@ bc.shopItems['supplies2'].groupZoneSelector = {
         end
 
         if not AllowScriptedSupplies and not isCarrierZoneName(zoneObj.zone) then
-            local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
+            local bestCommander
+            if GlobalSettings.pvpEnabled == true then
+                bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj, { ownerSide = ownerSide }))
+            else
+                bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
+            end
             local canUseFarp = bestCommander and (bestCommander.type == 'surface' or bestCommander.unitCategory == Unit.Category.HELICOPTER)
             local hasFriendlyDynamicFarp = false
             local hasNearbyFriendlyDynamicFarp = false
-            local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[2] or nil
+            local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[ownerSide] or nil
             if farps then
                 for i = 1, #farps do
                     local farpAb = AIRBASE:FindByName(farps[i].name)
-                    if farpAb and farpAb:GetCoalition() == 2 then
+                    if farpAb and farpAb:GetCoalition() == ownerSide then
                         hasFriendlyDynamicFarp = true
                         local distMeters = bcRef:_getDynamicFarpZoneDistance(farps[i], zoneObj.zone)
                         if distMeters and distMeters <= (30 * 1852) then
@@ -2806,16 +3011,29 @@ bc.shopItems['supplies2'].groupZoneSelector = {
                     end
                 end
             end
-            local hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj) ~= nil)
-            if (canUseFarp and hasFriendlyDynamicFarp) or hasFallbackHeloFarp or bcRef:_hasDynamicShopSupplyFarpOption(zoneObj) then
+            local hasFallbackHeloFarp
+            if GlobalSettings.pvpEnabled == true then
+                hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj, ownerSide) ~= nil)
+            else
+                hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj) ~= nil)
+            end
+            local hasFarpOption = (canUseFarp and hasFriendlyDynamicFarp) or hasFallbackHeloFarp
+            if not hasFarpOption then
+                if GlobalSettings.pvpEnabled == true then
+                    hasFarpOption = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj, ownerSide)
+                else
+                    hasFarpOption = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj)
+                end
+            end
+            if hasFarpOption then
 				local T = L10N:ForGroup(groupId)
                 local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
                 remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_DEPLOY_FROM_FARP"), zoneMenu, function() end))
-                remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+                remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, ownerSide, itemInfo.id, {
                     zone = zoneObj,
                     allowFarp = true,
                 }, groupId, groupObj))
-                remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+                remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, ownerSide, itemInfo.id, {
                     zone = zoneObj,
                     allowFarp = false,
                 }, groupId, groupObj))
@@ -2823,7 +3041,7 @@ bc.shopItems['supplies2'].groupZoneSelector = {
             end
         end
 
-        remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+        remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, ownerSide, itemInfo.id, {
             zone = zoneObj,
         }, groupId, groupObj))
     end,
@@ -2831,19 +3049,28 @@ bc.shopItems['supplies2'].groupZoneSelector = {
     emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
 }
 
+if GlobalSettings.pvpEnabled == true then
+    local selector = bc.shopItems['supplies2'].groupZoneSelector
+    selector.targetzonesideByCoalition = { [1] = 1, [2] = 2 }
+    selector.candidateBucketByCoalition = { [1] = 'enemy_unsuspended', [2] = 'blue_unsuspended' }
+    selector.refreshTagsByCoalition = { [1] = { 'enemy_targets' }, [2] = { 'friendly_targets' } }
+end
+
 if AllowScriptedSupplies then
 local fullyUpgradeMenu=nil
 bc:registerShopItem('supplies',LTGet("SYRIA_SHOP_ITEM_FULLY_UPGRADE_ZONE"),ShopPrices.supplies,
 function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE_FULLY_UPGRADE")
 end,
-function(sender,params)
-    if params.zone and params.zone.side==2 and not params.zone.suspended then
+function(sender,params,ownerSide)
+    local targetSide = 2
+    if GlobalSettings.pvpEnabled == true then targetSide = ownerSide end
+    if params.zone and params.zone.side==targetSide and not params.zone.suspended then
         local zn=params.zone
         if not zn:UpgradeUntilComplete(function()
-            trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_ZONE_FULLY_UPGRADED", params.zone.zone),15)
+            trigger.action.outTextForCoalition(targetSide,L10N:Format("SYRIA_SHOP_ZONE_FULLY_UPGRADED", params.zone.zone),15)
         end) then
-            trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_ZONE_FULLY_UPGRADED", params.zone.zone),15)
+            trigger.action.outTextForCoalition(targetSide,L10N:Format("SYRIA_SHOP_ZONE_FULLY_UPGRADED", params.zone.zone),15)
             return false
         end
     else
@@ -2855,16 +3082,38 @@ bc.shopItems['supplies'].groupZoneSelector = {
     showUpgradeStatus = true,
     includeSuspended = false,
     extraPredicate = function(zoneObj)
-        return zoneObj.active and zoneObj.side == 2 and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
+        return zoneObj.active and (zoneObj.side == 2 or (GlobalSettings.pvpEnabled == true and zoneObj.side == 1))
+            and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
     end,
     sortPolicy = 'friendly_frontline',
     emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
 }
+if GlobalSettings.pvpEnabled == true then
+    local selector = bc.shopItems['supplies'].groupZoneSelector
+    selector.targetzonesideByCoalition = { [1] = 1, [2] = 2 }
+    selector.candidateBucketByCoalition = { [1] = 'enemy_unsuspended', [2] = 'blue_unsuspended' }
+    selector.refreshTagsByCoalition = { [1] = { 'enemy_targets' }, [2] = { 'friendly_targets' } }
+end
 end
 -----------------------------------------------DYNAMIC SHOP ------------------------------------------
 
 
-bc:registerShopItem('dynamiccap', LTGet("SYRIA_SHOP_ITEM_CAP_FLIGHT"), ShopPrices.dynamiccap, function(sender)
+-- National CAP support.
+do
+local capRows
+if GlobalSettings.pvpEnabled == true then
+	local blueRow = _DATABASE.Templates.Groups[capTemplate]
+	local redName = Era == 'Vietnam' and 'RED_CAP_Template_VT' or (Era == 'Coldwar' and 'RED_CAP_Template_CW' or 'RED_CAP_Template')
+	local redRow = _DATABASE.Templates.Groups[redName]
+	if not blueRow or blueRow.CoalitionID ~= 2 or blueRow.CategoryID ~= Group.Category.AIRPLANE or #blueRow.Template.units == 0 then blueRow = false end
+	if not redRow or redRow.CoalitionID ~= 1 or redRow.CategoryID ~= Group.Category.AIRPLANE or #redRow.Template.units == 0 then redRow = false end
+	capRows = { [1] = redRow, [2] = blueRow }
+end
+bc:registerShopItem('dynamiccap', LTGet("SYRIA_SHOP_ITEM_CAP_FLIGHT"), ShopPrices.dynamiccap, function(sender, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if sender.flightBySide[ownerSide] then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAP") end
+        return LTGet("SYRIA_SHOP_CHOOSE_SPAWN_ZONE")
+    end
     if capActive then
         return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAP")
     end
@@ -2875,7 +3124,15 @@ bc:registerShopItem('dynamiccap', LTGet("SYRIA_SHOP_ITEM_CAP_FLIGHT"), ShopPrice
 	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_CAP_REQUESTED"), 20)
     return
 end,
-function (sender, params)
+function (sender, params, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if sender.flightBySide[ownerSide] then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAP") end
+        if not params or not params.zone then return LTGet("SYRIA_SHOP_CHOOSE_SPAWN_ZONE") end
+        local zone = params.zone
+        if zone.side ~= ownerSide or (zone.suspended and not zone._idleSuspended) then return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY") end
+        return spawnCapAt(zone.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0,
+            ownerSide, params._shopPurchaseContext, sender, zone)
+    end
     if capActive then
         return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAP")
     end
@@ -2890,12 +3147,12 @@ function (sender, params)
 
 	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_CAP_REQUESTED"), 10)
     return
-end)
+end, nil, capRows and 'CAP' or nil, capRows)
 bc.shopItems['dynamiccap'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
-	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide)
 		local function remember(handle)
 			if rememberHandle then
 				return rememberHandle(handle)
@@ -2910,7 +3167,7 @@ bc.shopItems['dynamiccap'].groupZoneSelector = {
 		local T = L10N:ForGroup(groupId)
 		for _, headingName in ipairs({ "Orbit", "Hot 360", "Hot 045", "Hot 090", "Hot 135", "Hot 180", "Hot 225", "Hot 270", "Hot 315" }) do
 			if headingName == "Orbit" then
-				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, GlobalSettings.pvpEnabled == true and ownerSide or 2, itemInfo.id, {
 					zone = zoneObj,
 					heading = 45,
 					leg = 0,
@@ -2920,7 +3177,7 @@ bc.shopItems['dynamiccap'].groupZoneSelector = {
 				local headingMenu = remember(missionCommands.addSubMenuForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu))
 				for _, legName in ipairs({ "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg" }) do
 					local legVal = capLegs[legName]
-					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, GlobalSettings.pvpEnabled == true and ownerSide or 2, itemInfo.id, {
 						zone = zoneObj,
 						heading = headingVal,
 						leg = legVal,
@@ -2931,8 +3188,19 @@ bc.shopItems['dynamiccap'].groupZoneSelector = {
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
 }
+end
 
-bc:registerShopItem('dynamicarco', LTGet("SYRIA_SHOP_ITEM_TANKER_DROGUE"), ShopPrices.dynamicarco, function(sender)
+-- End national CAP support.
+bc:registerShopItem('dynamicarco', LTGet("SYRIA_SHOP_ITEM_TANKER_DROGUE"), ShopPrices.dynamicarco, function(sender, ownerSide)
+	if GlobalSettings.pvpEnabled == true then
+		ownerSide = ownerSide or coalition.side.BLUE
+		local runtime = bc.dynamicTankersBySide[ownerSide]["arco"]
+		if runtime.active then return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Arco") end
+		if runtime.requestMenu then return LTGet("SYRIA_SHOP_CHOOSE_SPAWN_ZONE") end
+		buildArcoMenu(ownerSide)
+		trigger.action.outTextForCoalition(ownerSide, L10N:Get("SYRIA_SHOP_TANKER_DROGUE_UNLOCKED"), 20)
+		return
+	end
     if ArcoActive then
         return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Arco")
     end
@@ -2943,7 +3211,21 @@ bc:registerShopItem('dynamicarco', LTGet("SYRIA_SHOP_ITEM_TANKER_DROGUE"), ShopP
 	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_DROGUE_UNLOCKED"), 20)
     return
 end,
-function (sender, params, delayMenuRefresh)
+function (sender, params, delayMenuRefresh, ownerSide)
+	if GlobalSettings.pvpEnabled == true then
+		ownerSide = ownerSide or coalition.side.BLUE
+		local runtime = bc.dynamicTankersBySide[ownerSide]["arco"]
+		if runtime.active then return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Arco") end
+		if params and params.zone then
+			local source = bc:getZoneByName(params.zone.zone)
+			if source ~= params.zone or source.side ~= ownerSide or not source.active or source.isHidden then return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY") end
+			spawnArcoAt(source.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0, nil, nil, delayMenuRefresh, ownerSide, source)
+			return
+		end
+		buildArcoMenu(ownerSide)
+		trigger.action.outTextForCoalition(ownerSide, L10N:Get("SYRIA_SHOP_TANKER_DROGUE_UNLOCKED"), 20)
+		return
+	end
     if ArcoActive then
         return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Arco")
     end
@@ -2963,7 +3245,8 @@ bc.shopItems['dynamicarco'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = true,
 	sortPolicy = 'friendly_frontline',
-	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide)
+		local menuSide = GlobalSettings.pvpEnabled == true and (ownerSide or coalition.side.BLUE) or 2
 		local function remember(handle)
 			if rememberHandle then
 				return rememberHandle(handle)
@@ -2978,7 +3261,7 @@ bc.shopItems['dynamicarco'].groupZoneSelector = {
 		local T = L10N:ForGroup(groupId)
 		for _, headingName in ipairs({ "Orbit", "Hot 360", "Hot 045", "Hot 090", "Hot 135", "Hot 180", "Hot 225", "Hot 270", "Hot 315" }) do
 			if headingName == "Orbit" then
-				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, menuSide, itemInfo.id, {
 					zone = zoneObj,
 					heading = 45,
 					leg = 0,
@@ -2988,7 +3271,7 @@ bc.shopItems['dynamicarco'].groupZoneSelector = {
 				local headingMenu = remember(missionCommands.addSubMenuForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu))
 				for _, legName in ipairs({ "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg" }) do
 					local legVal = capLegs[legName]
-					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, menuSide, itemInfo.id, {
 						zone = zoneObj,
 						heading = headingVal,
 						leg = legVal,
@@ -3000,7 +3283,16 @@ bc.shopItems['dynamicarco'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
 }
 
-bc:registerShopItem('dynamictexaco', LTGet("SYRIA_SHOP_ITEM_TANKER_BOOM"), ShopPrices.dynamictexaco, function(sender)
+bc:registerShopItem('dynamictexaco', LTGet("SYRIA_SHOP_ITEM_TANKER_BOOM"), ShopPrices.dynamictexaco, function(sender, ownerSide)
+	if GlobalSettings.pvpEnabled == true then
+		ownerSide = ownerSide or coalition.side.BLUE
+		local runtime = bc.dynamicTankersBySide[ownerSide]["texaco"]
+		if runtime.active then return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Texaco") end
+		if runtime.requestMenu then return LTGet("SYRIA_SHOP_CHOOSE_SPAWN_ZONE") end
+		buildTexacoMenu(ownerSide)
+		trigger.action.outTextForCoalition(ownerSide, L10N:Get("SYRIA_SHOP_TANKER_BOOM_UNLOCKED"), 20)
+		return
+	end
     if TexacoActive then
         return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Texaco")
     end
@@ -3011,7 +3303,21 @@ bc:registerShopItem('dynamictexaco', LTGet("SYRIA_SHOP_ITEM_TANKER_BOOM"), ShopP
 	trigger.action.outTextForCoalition(2, L10N:Get("SYRIA_SHOP_TANKER_BOOM_UNLOCKED"), 20)
     return
 end,
-function (sender, params, delayMenuRefresh)
+function (sender, params, delayMenuRefresh, ownerSide)
+	if GlobalSettings.pvpEnabled == true then
+		ownerSide = ownerSide or coalition.side.BLUE
+		local runtime = bc.dynamicTankersBySide[ownerSide]["texaco"]
+		if runtime.active then return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Texaco") end
+		if params and params.zone then
+			local source = bc:getZoneByName(params.zone.zone)
+			if source ~= params.zone or source.side ~= ownerSide or not source.active or source.isHidden then return LTGet("SYRIA_SHOP_CAN_ONLY_SPAWN_FRIENDLY") end
+			spawnTexacoAt(source.zone, tonumber(params.heading) or 45, tonumber(params.leg) or 0, nil, nil, delayMenuRefresh, ownerSide, source)
+			return
+		end
+		buildTexacoMenu(ownerSide)
+		trigger.action.outTextForCoalition(ownerSide, L10N:Get("SYRIA_SHOP_TANKER_BOOM_UNLOCKED"), 20)
+		return
+	end
     if TexacoActive then
         return LTFormat("SYRIA_SHOP_AIRCRAFT_STILL_AIRBORNE", "Texaco")
     end
@@ -3031,7 +3337,8 @@ bc.shopItems['dynamictexaco'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = true,
 	sortPolicy = 'friendly_frontline',
-	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide)
+		local menuSide = GlobalSettings.pvpEnabled == true and (ownerSide or coalition.side.BLUE) or 2
 		local function remember(handle)
 			if rememberHandle then
 				return rememberHandle(handle)
@@ -3046,7 +3353,7 @@ bc.shopItems['dynamictexaco'].groupZoneSelector = {
 		local T = L10N:ForGroup(groupId)
 		for _, headingName in ipairs({ "Orbit", "Hot 360", "Hot 045", "Hot 090", "Hot 135", "Hot 180", "Hot 225", "Hot 270", "Hot 315" }) do
 			if headingName == "Orbit" then
-				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+				remember(missionCommands.addCommandForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu, bcRef.buyShopItem, bcRef, menuSide, itemInfo.id, {
 					zone = zoneObj,
 					heading = 45,
 					leg = 0,
@@ -3056,7 +3363,7 @@ bc.shopItems['dynamictexaco'].groupZoneSelector = {
 				local headingMenu = remember(missionCommands.addSubMenuForGroup(groupId, localizedHeadingLabel(headingName, T), zoneMenu))
 				for _, legName in ipairs({ "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg" }) do
 					local legVal = capLegs[legName]
-					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+					remember(missionCommands.addCommandForGroup(groupId, localizedLegLabel(legName, T), headingMenu, bcRef.buyShopItem, bcRef, menuSide, itemInfo.id, {
 						zone = zoneObj,
 						heading = headingVal,
 						leg = legVal,
@@ -3068,14 +3375,50 @@ bc.shopItems['dynamictexaco'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),
 }
 
+-- PvP AWACS replacement.
+if GlobalSettings.pvpEnabled == true then
+    bc:registerShopItem('replaceawacs', LTGet("PVP_AWACS_REPLACEMENT_ITEM"), ShopPrices.replaceawacs, function(_, ownerSide)
+        return bc:replaceLostAwacs(ownerSide)
+    end)
+end
+-- End PvP AWACS replacement.
+
+-- National CAS support.
+do
+local casRows
+if GlobalSettings.pvpEnabled == true then
+	local blueRow = _DATABASE.Templates.Groups[casTemplate]
+	local redName = Era == 'Vietnam' and 'RED_DynamicCas_Template_VT' or (Era == 'Coldwar' and 'RED_DynamicCas_Template_CW' or 'RED_DynamicCas_Template')
+	local redRow = _DATABASE.Templates.Groups[redName]
+	if not blueRow or blueRow.CoalitionID ~= 2 or blueRow.CategoryID ~= Group.Category.AIRPLANE or #blueRow.Template.units == 0 then blueRow = false end
+	if not redRow or redRow.CoalitionID ~= 1 or redRow.CategoryID ~= Group.Category.AIRPLANE or #redRow.Template.units == 0 then redRow = false end
+	casRows = { [1] = redRow, [2] = blueRow }
+end
 bc:registerShopItem('dynamiccas', LTGet("SYRIA_SHOP_ITEM_CAS_FLIGHT"), ShopPrices.dynamiccas,
-function(sender)
+function(sender, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if ownerSide ~= 1 and ownerSide ~= 2 then return false end
+        if sender.flightBySide[ownerSide] then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAS") end
+        return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+    end
     if casActive then
         return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAS")
     end
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
-function(sender, params)
+function(sender, params, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if ownerSide ~= 1 and ownerSide ~= 2 then return false end
+        if sender.flightBySide[ownerSide] then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAS") end
+        local target = params and params.zone
+        if not target or bc.indexedZones[target.zone] ~= target or target.side ~= 3 - ownerSide
+            or not target.active or target.isHidden or target.suspended then return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY") end
+        local minNM = 25
+        local originName, dist, origin = findClosestBlueZoneOutside(target.zone, minNM, ownerSide)
+        if not originName then return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "CAS") end
+        local offset = (dist and dist < minNM) and (minNM - dist) or 0
+        return spawnCasAt(originName, target.zone, offset, ownerSide, params._shopPurchaseContext, sender, origin, target)
+    end
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         if casActive then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "CAS") end
         local minNM = 25
@@ -3089,7 +3432,7 @@ function(sender, params)
     else
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
-end)
+end, nil, casRows and 'CAS' or nil, casRows)
 bc.shopItems['dynamiccas'].groupZoneSelector = {
 	targetzoneside = 1,
 	includeSuspended = false,
@@ -3099,9 +3442,34 @@ bc.shopItems['dynamiccas'].groupZoneSelector = {
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
+if GlobalSettings.pvpEnabled == true then
+	local selector = bc.shopItems['dynamiccas'].groupZoneSelector
+	selector.targetzonesideByCoalition = { [1] = 2, [2] = 1 }
+	selector.candidateBucketByCoalition = { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' }
+	selector.refreshTagsByCoalition = { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } }
+	selector.allow = function(zoneObj) return zoneObj.active == true and not zoneObj.suspended end
+end
+end
 
+-- End national CAS support.
+-- Blue-only DECOY support.
+do
+local decoyRows
+if GlobalSettings.pvpEnabled == true then
+	local blueRow = Era ~= 'Vietnam' and _DATABASE.Templates.Groups[decoyTemplate] or false
+	if blueRow and (blueRow.CoalitionID ~= 2 or blueRow.CategoryID ~= Group.Category.AIRPLANE or #blueRow.Template.units == 0) then blueRow = false end
+	decoyRows = { [2] = blueRow }
+end
 bc:registerShopItem('dynamicdecoy', LTGet("SYRIA_SHOP_ITEM_TALD_DECOY"), ShopPrices.dynamicdecoy,
-function(sender)
+function(sender, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if ownerSide ~= 2 then return false end
+        if sender.flightBySide[2] then return function(T)
+            local Tr = LT(T)
+            return Tr:Format("SYRIA_SHOP_MISSION_STILL_PROGRESS", Tr:Get("SYRIA_SHOP_LABEL_DECOY"))
+        end end
+        return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+    end
     if decoyActive then
         return function(T)
 			local Tr = LT(T)
@@ -3110,7 +3478,26 @@ function(sender)
     end
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
-function(sender, params)
+function(sender, params, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if ownerSide ~= 2 then return false end
+        if sender.flightBySide[2] then return function(T)
+            local Tr = LT(T)
+            return Tr:Format("SYRIA_SHOP_MISSION_STILL_PROGRESS", Tr:Get("SYRIA_SHOP_LABEL_DECOY"))
+        end end
+        local target = params and params.zone
+        if not target or bc.indexedZones[target.zone] ~= target or target.side ~= 1
+            or not target.active or target.isHidden or target.suspended then return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY") end
+        local minNM = 40
+        local originName, dist, origin = findClosestBlueZoneOutside(target.zone, minNM, ownerSide)
+        if not originName then return function(T)
+            local Tr = LT(T)
+            return Tr:Format("SYRIA_SHOP_NO_FRIENDLY_SPAWN", Tr:Get("SYRIA_SHOP_LABEL_DECOY"))
+        end end
+        local offset = (dist and dist < minNM) and (minNM - dist) or 0
+        return spawnDecoyAt(originName, target.zone, offset, nil, params.pushMode, nil,
+            ownerSide, params._shopPurchaseContext, sender, target, origin)
+    end
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         if decoyActive then
             return function(T)
@@ -3132,7 +3519,7 @@ function(sender, params)
     else
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
-end)
+end, nil, decoyRows and 'DECOY' or nil, decoyRows)
 bc.shopItems['dynamicdecoy'].groupZoneSelector = {
 	targetzoneside = 1,
 	includeSuspended = false,
@@ -3167,16 +3554,52 @@ bc.shopItems['dynamicdecoy'].groupZoneSelector = {
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
+if GlobalSettings.pvpEnabled == true then
+	bc.shopItems['dynamicdecoy'].groupZoneSelector.allow = function(zoneObj)
+		return zoneObj.side == 1 and zoneObj.active == true and not zoneObj.isHidden and not zoneObj.suspended
+	end
+end
+end
 
 
+-- National SEAD support.
+do
+local seadRows
+if GlobalSettings.pvpEnabled == true then
+	local blueRow = _DATABASE.Templates.Groups[seadTemplate]
+	local redName = Era == 'Vietnam' and 'RED_DynamicSead_Template_VT' or (Era == 'Coldwar' and 'RED_DynamicSead_Template_CW' or 'RED_DynamicSead_Template')
+	local redRow = _DATABASE.Templates.Groups[redName]
+	if not blueRow or blueRow.CoalitionID ~= 2 or blueRow.CategoryID ~= Group.Category.AIRPLANE or #blueRow.Template.units == 0 then blueRow = false end
+	if not redRow or redRow.CoalitionID ~= 1 or redRow.CategoryID ~= Group.Category.AIRPLANE or #redRow.Template.units == 0 then redRow = false end
+	seadRows = { [1] = redRow, [2] = blueRow }
+end
 bc:registerShopItem('dynamicsead', LTGet("SYRIA_SHOP_ITEM_SEAD_FLIGHT"), ShopPrices.dynamicsead,
-function(sender)
+function(sender, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if ownerSide ~= 1 and ownerSide ~= 2 then return false end
+        if sender.flightBySide[ownerSide] then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "SEAD") end
+        return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+    end
     if seadActive then
         return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "SEAD")
     end
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
-function(sender, params)
+function(sender, params, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if ownerSide ~= 1 and ownerSide ~= 2 then return false end
+        if sender.flightBySide[ownerSide] then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "SEAD") end
+        local target = params and params.zone
+        if not target or bc.indexedZones[target.zone] ~= target or target.side ~= 3 - ownerSide
+            or not target.active or target.isHidden or target.suspended then return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY") end
+        local groundMinNM, attackOffsetNM = getSeadDistancesForZone(target.zone, 25)
+        local minNM = AIAttackTakeoffFromGround == true and groundMinNM or attackOffsetNM
+        local originName, dist, origin = findClosestBlueZoneOutside(target.zone, minNM, ownerSide)
+        if not originName then return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "SEAD") end
+        local offset = (dist and dist < minNM) and (minNM - dist) or 0
+        return spawnSeadAt(originName, target.zone, offset, nil, params.pushMode, attackOffsetNM,
+            ownerSide, params._shopPurchaseContext, sender, origin, target)
+    end
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         if seadActive then
             return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "SEAD")
@@ -3193,12 +3616,12 @@ function(sender, params)
     else
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
-end)
+end, nil, seadRows and 'SEAD' or nil, seadRows)
 bc.shopItems['dynamicsead'].groupZoneSelector = {
 	targetzoneside = 1,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
-	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide)
 		local function remember(handle)
 			if rememberHandle then
 				return rememberHandle(handle)
@@ -3214,11 +3637,11 @@ bc.shopItems['dynamicsead'].groupZoneSelector = {
 		local autoPushLabel = AIAttackTakeoffFromGround == true
 			and "SYRIA_SHOP_SEAD_PUSH_WHEN_READY"
 			or "SYRIA_SHOP_SEAD_PUSH_NOW"
-		remember(missionCommands.addCommandForGroup(groupId, T:Get(autoPushLabel), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+		remember(missionCommands.addCommandForGroup(groupId, T:Get(autoPushLabel), zoneMenu, bcRef.buyShopItem, bcRef, GlobalSettings.pvpEnabled == true and ownerSide or 2, itemInfo.id, {
 			zone = zoneObj,
 			pushMode = "auto",
 		}, groupId, groupObj))
-		remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_SEAD_PUSH_ON_COMMAND"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+		remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_SEAD_PUSH_ON_COMMAND"), zoneMenu, bcRef.buyShopItem, bcRef, GlobalSettings.pvpEnabled == true and ownerSide or 2, itemInfo.id, {
 			zone = zoneObj,
 			pushMode = "command",
 		}, groupId, groupObj))
@@ -3228,9 +3651,34 @@ bc.shopItems['dynamicsead'].groupZoneSelector = {
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
+if GlobalSettings.pvpEnabled == true then
+	local selector = bc.shopItems['dynamicsead'].groupZoneSelector
+	selector.targetzonesideByCoalition = { [1] = 2, [2] = 1 }
+	selector.candidateBucketByCoalition = { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' }
+	selector.refreshTagsByCoalition = { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } }
+	selector.allow = function(zoneObj) return zoneObj.active == true and not zoneObj.suspended end
+end
+end
 
+-- End national SEAD support.
+-- National BOMBER support.
+do
+local bomberRows
+if GlobalSettings.pvpEnabled == true then
+	local blueRow = _DATABASE.Templates.Groups[bombTemplate]
+	local redName = Era == 'Vietnam' and 'RED_DynamicBomber_Template_VT' or (Era == 'Coldwar' and 'RED_DynamicBomber_Template_CW' or 'RED_DynamicBomber_Template')
+	local redRow = _DATABASE.Templates.Groups[redName]
+	if not blueRow or blueRow.CoalitionID ~= 2 or blueRow.CategoryID ~= Group.Category.AIRPLANE or #blueRow.Template.units == 0 then blueRow = false end
+	if not redRow or redRow.CoalitionID ~= 1 or redRow.CategoryID ~= Group.Category.AIRPLANE or #redRow.Template.units == 0 then redRow = false end
+	bomberRows = { [1] = redRow, [2] = blueRow }
+end
 bc:registerShopItem('dynamicbomb', LTGet("SYRIA_SHOP_ITEM_BOMBER_FLIGHT"), ShopPrices.dynamicbomb,
-function(sender)
+function(sender, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if ownerSide ~= 1 and ownerSide ~= 2 then return false end
+        if sender.flightBySide[ownerSide] then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "Bomber") end
+        return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+    end
     if bomberActive then
         return function(T)
 			local Tr = LT(T)
@@ -3239,7 +3687,19 @@ function(sender)
     end
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
-function(sender, params)
+function(sender, params, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        if ownerSide ~= 1 and ownerSide ~= 2 then return false end
+        if sender.flightBySide[ownerSide] then return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "Bomber") end
+        local target = params and params.zone
+        if not target or bc.indexedZones[target.zone] ~= target or target.side ~= 3 - ownerSide
+            or not target.active or target.isHidden or target.suspended then return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY") end
+        local minNM = 25
+        local originName, dist, origin = findClosestBlueZoneOutside(target.zone, minNM, ownerSide)
+        if not originName then return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "Bomber") end
+        local offset = (dist and dist < minNM) and (minNM - dist) or 0
+        return spawnBomberAt(originName, target.zone, offset, ownerSide, params._shopPurchaseContext, sender, origin, target)
+    end
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         if bomberActive then
             return function(T)
@@ -3261,7 +3721,7 @@ function(sender, params)
     else
         return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
     end
-end)
+end, nil, bomberRows and 'BOMBER' or nil, bomberRows)
 bc.shopItems['dynamicbomb'].groupZoneSelector = {
 	targetzoneside = 1,
 	includeSuspended = false,
@@ -3271,7 +3731,16 @@ bc.shopItems['dynamicbomb'].groupZoneSelector = {
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
+if GlobalSettings.pvpEnabled == true then
+	local selector = bc.shopItems['dynamicbomb'].groupZoneSelector
+	selector.targetzonesideByCoalition = { [1] = 2, [2] = 1 }
+	selector.candidateBucketByCoalition = { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' }
+	selector.refreshTagsByCoalition = { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } }
+	selector.allow = function(zoneObj) return zoneObj.active == true and not zoneObj.suspended end
+end
+end
 
+-- End national BOMBER support.
 Group.getByName('RedBomberEvent'):destroy()
 Group.getByName('RedBomberEvent_CW'):destroy()
 Group.getByName('BlueBomberEvent'):destroy()
@@ -3361,6 +3830,62 @@ local strategicBomberShopName = function(T)
 	return LT(T):Get("STRATEGIC_BOMBER_SHOP_NAME")
 end
 
+if GlobalSettings.pvpEnabled == true then
+    local blueName = ColdWarTechEra and 'BlueBomberEvent_CW' or 'BlueBomberEvent'
+    local redName = ColdWarTechEra and 'RedBomberEvent_CW' or 'RedBomberEvent'
+    local blueRow, redRow = false, false
+    if Era ~= 'Vietnam' then
+        blueRow = _DATABASE.Templates.Groups[blueName]
+        redRow = _DATABASE.Templates.Groups[redName]
+        if not blueRow or blueRow.CoalitionID ~= 2 or blueRow.CategoryID ~= Group.Category.AIRPLANE or #blueRow.Template.units == 0 then blueRow = false end
+        if not redRow or redRow.CoalitionID ~= 1 or redRow.CategoryID ~= Group.Category.AIRPLANE or #redRow.Template.units == 0 then redRow = false end
+    end
+    bc:registerShopItem('strategicbomber', strategicBomberShopName, ShopPrices.strategicbomber,
+    function(sender, ownerSide)
+        if ownerSide ~= 1 and ownerSide ~= 2 then return false end
+        if sender.flightBySide[ownerSide] then return LTGet("STRATEGIC_BOMBER_ALREADY_ACTIVE") end
+        return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+    end,
+    function(sender, params, ownerSide)
+        if ownerSide ~= 1 and ownerSide ~= 2 then return false end
+        if params and params.targetZone and params.originZone then
+            return StrategicBomber.LaunchBlue(params, ownerSide, sender)
+        end
+        local targetZone = params and params.zone
+        if type(targetZone) == 'string' then targetZone = bc:getZoneByName(targetZone) end
+        local cfg = StrategicBomber.GetConfig(ownerSide)
+        if not targetZone or bc.indexedZones[targetZone.zone] ~= targetZone or not StrategicBomber.BlueTargetAllowed(targetZone, cfg or false, ownerSide) then
+            return LTGet("STRATEGIC_BOMBER_INVALID_TARGET")
+        end
+        local bestOrigin, bestAirbase, bestDist = nil, nil, math.huge
+        for _, originZone in ipairs(bc:getZones()) do
+            local allowed, airbase, dist = StrategicBomber.BlueOriginAllowed(originZone, targetZone, cfg or false, ownerSide)
+            if allowed and dist < bestDist then bestDist, bestOrigin, bestAirbase = dist, originZone, airbase end
+        end
+        if not bestOrigin then return LTGet("STRATEGIC_BOMBER_NO_VALID_ORIGIN") end
+        return StrategicBomber.LaunchBlue({targetZone=targetZone,originZone=bestOrigin,escortMode='ai',_shopPurchaseContext=params._shopPurchaseContext}, ownerSide, sender, cfg or false, true, bestAirbase)
+    end, nil, 'STRATEGIC', {[1]=redRow,[2]=blueRow})
+    bc.shopItems.strategicbomber.groupZoneSelector = {
+        targetzonesideByCoalition = {[1]=2,[2]=1},
+        candidateBucketByCoalition = {[1]='blue_unsuspended',[2]='enemy_unsuspended'},
+        refreshTagsByCoalition = {[1]={'friendly_targets','enemy_targets'},[2]={'enemy_targets','friendly_targets'}},
+        includeSuspended = false,
+        sortPolicy = 'enemy_frontline',
+        extraPredicate = function(zoneObj)
+            local ownerSide = 3-zoneObj.side
+            local cfg = StrategicBomber.GetConfig(ownerSide)
+            if not StrategicBomber.BlueTargetAllowed(zoneObj, cfg or false, ownerSide) then return false end
+            for _, originZone in ipairs(bc:getZones()) do
+                if StrategicBomber.BlueOriginAllowed(originZone, zoneObj, cfg or false, ownerSide) then return true end
+            end
+            return false
+        end,
+        zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide)
+            return StrategicBomber.BuildBlueShopMenu(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide)
+        end,
+        emptyLabel = LTGet("STRATEGIC_BOMBER_NO_VALID_TARGETS"),
+    }
+else
 bc:registerShopItem('strategicbomber', strategicBomberShopName, ShopPrices.strategicbomber,
 function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
@@ -3418,6 +3943,7 @@ bc.shopItems['strategicbomber'].groupZoneSelector = {
 	end,
 	emptyLabel = LTGet("STRATEGIC_BOMBER_NO_VALID_TARGETS"),
 }
+end
 
 ---------------------------------------------END DYNAMIC SHOP ------------------------------------------
 
@@ -3427,6 +3953,7 @@ for _,n in ipairs({'jtacDroneColdwar1','jtacDroneColdwar2','jtacDrone1','jtacDro
     local g = Group.getByName(n)
     if g then g:destroy() end
 end
+if GlobalSettings.pvpEnabled ~= true then
 if ColdWarTechEra then
 jtacDrones = {JTAC:new({name = 'jtacDroneColdwar1'}),JTAC:new({name = 'jtacDroneColdwar2'})}
 else
@@ -3476,12 +4003,14 @@ bc.shopItems['jtac'].groupZoneSelector = {
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
+end
 ----------------------------------- START own 9 line jtac AM START ----------------------------------
 jtacZones = {}
 local jtacTargetMenu2 = nil
 local droneAM
 Group.getByName('JTAC9lineamColdwar'):destroy()
 Group.getByName('JTAC9lineam'):destroy()
+if GlobalSettings.pvpEnabled ~= true then
 if ColdWarTechEra then
 droneAM = JTAC9line:new({name = 'JTAC9lineamColdwar'})
 else
@@ -3510,6 +4039,7 @@ bc.shopItems['9lineam'].groupZoneSelector = {
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
+end
 
   ------------------------------ END 9 line jtac AM END ----------------------------------
   ----------------------------- START 9 line jtac fm START ---------------------------
@@ -3517,6 +4047,7 @@ Group.getByName('JTAC9linefmColdwar'):destroy()
 Group.getByName('JTAC9linefm'):destroy()
 local jtacTargetMenu3 = nil
 local droneFM
+if GlobalSettings.pvpEnabled ~= true then
 if ColdWarTechEra then
 droneFM = JTAC9line:new({name = 'JTAC9linefmColdwar'})
 else
@@ -3546,6 +4077,7 @@ bc.shopItems['9linefm'].groupZoneSelector = {
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
+end
 
   -------------------------- END 9 line jtac FM END ----------------------------------
 
@@ -3579,6 +4111,9 @@ function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
 function(sender, params)
+	if GlobalSettings.pvpEnabled == true then
+		return bc:launchPlayerGroundAttack(params.zone, params.allowFarp, params._shopPurchaseContext)
+	end
 	if params.zone and params.zone.side == 1 and not params.zone.suspended and not isCarrierZoneName(params.zone.zone) then
 		return bc:launchPlayerGroundAttack(params.zone, params.allowFarp)
 	else
@@ -3587,15 +4122,18 @@ function(sender, params)
 end)
 bc.shopItems['groundattack'].groupZoneSelector = {
 	targetzoneside = 1,
+	targetzonesideByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 2, [2] = 1 } or nil,
+	candidateBucketByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' } or nil,
+	refreshTagsByCoalition = GlobalSettings.pvpEnabled == true and { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } } or nil,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	allow = function(zoneObj)
-		return zoneObj.side == 1
+		return GlobalSettings.pvpEnabled == true or zoneObj.side == 1
 	end,
 	extraPredicate = function(zoneObj)
-		return not isCarrierZoneName(zoneObj.zone)
+		return (GlobalSettings.pvpEnabled ~= true or zoneObj.active) and not isCarrierZoneName(zoneObj.zone)
 	end,
-	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide, knownFriendlyFarp)
 		local function remember(handle)
 			if rememberHandle then
 				return rememberHandle(handle)
@@ -3606,7 +4144,12 @@ bc.shopItems['groundattack'].groupZoneSelector = {
 			return handle
 		end
 
+		local pvpEnabled = GlobalSettings.pvpEnabled == true
+		local purchaseSide = pvpEnabled and ownerSide or 2
 		local hasFriendlyDynamicFarp = false
+		if pvpEnabled then
+			hasFriendlyDynamicFarp = knownFriendlyFarp
+		else
 		local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[2] or nil
 		if farps then
 			for i = 1, #farps do
@@ -3617,22 +4160,23 @@ bc.shopItems['groundattack'].groupZoneSelector = {
 				end
 			end
 		end
+		end
 		if hasFriendlyDynamicFarp then
 			local T = L10N:ForGroup(groupId)
 			local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
 			remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_DEPLOY_FROM_FARP"), zoneMenu, function() end))
-			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, purchaseSide, itemInfo.id, {
 				zone = zoneObj,
 				allowFarp = true,
 			}, groupId, groupObj))
-			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, purchaseSide, itemInfo.id, {
 				zone = zoneObj,
 				allowFarp = false,
 			}, groupId, groupObj))
 			return
 		end
 
-		remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+		remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, purchaseSide, itemInfo.id, {
 			zone = zoneObj,
 		}, groupId, groupObj))
 	end,
@@ -3643,7 +4187,18 @@ local smokeTargetMenu = nil
 bc:registerShopItem('smoke', LTGet("SYRIA_SHOP_ITEM_SMOKE_MARKERS"), ShopPrices.smoke, function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
-function(sender, params)
+function(sender, params, ownerSide)
+	if GlobalSettings.pvpEnabled == true then
+		local zoneObj = params.zone
+		if (ownerSide ~= 1 and ownerSide ~= 2) or not zoneObj
+			or bc.indexedZones[zoneObj.zone] ~= zoneObj or not zoneObj.active or zoneObj.isHidden
+			or zoneObj.side ~= 3 - ownerSide or zoneObj.suspended then
+			return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
+		end
+		bc:smokeTargets(zoneObj, ownerSide)
+		trigger.action.outTextForCoalition(ownerSide, L10N:Format("SYRIA_SHOP_TARGETS_RED_SMOKE", zoneObj.zone), 15)
+		return nil
+	end
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
 		bc:smokeTargets(params.zone)
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_TARGETS_RED_SMOKE", params.zone.zone), 15)
@@ -3653,6 +4208,9 @@ function(sender, params)
 end)
 bc.shopItems['smoke'].groupZoneSelector = {
 	targetzoneside = 1,
+	targetzonesideByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 2, [2] = 1 } or nil,
+	candidateBucketByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' } or nil,
+	refreshTagsByCoalition = GlobalSettings.pvpEnabled == true and { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } } or nil,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
@@ -3661,7 +4219,18 @@ local flareTargetMenu = nil
 bc:registerShopItem('flare', LTGet("SYRIA_SHOP_ITEM_FLARE_MARKERS"), ShopPrices.flare, function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
-function(sender, params)
+function(sender, params, ownerSide)
+	if GlobalSettings.pvpEnabled == true then
+		local zoneObj = params.zone
+		if (ownerSide ~= 1 and ownerSide ~= 2) or not zoneObj
+			or bc.indexedZones[zoneObj.zone] ~= zoneObj or not zoneObj.active or zoneObj.isHidden
+			or zoneObj.side ~= 3 - ownerSide or zoneObj.suspended then
+			return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
+		end
+		bc:flareTargets(zoneObj, ownerSide)
+		trigger.action.outTextForCoalition(ownerSide, L10N:Format("SYRIA_SHOP_TARGETS_RED_FLARE", zoneObj.zone), 15)
+		return nil
+	end
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
 		bc:flareTargets(params.zone)
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_TARGETS_RED_FLARE", params.zone.zone), 15)
@@ -3671,6 +4240,9 @@ function(sender, params)
 end)
 bc.shopItems['flare'].groupZoneSelector = {
 	targetzoneside = 1,
+	targetzonesideByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 2, [2] = 1 } or nil,
+	candidateBucketByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' } or nil,
+	refreshTagsByCoalition = GlobalSettings.pvpEnabled == true and { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } } or nil,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
@@ -3680,7 +4252,18 @@ local illumTargetMenu = nil
 bc:registerShopItem('illum', LTGet("SYRIA_SHOP_ITEM_ILLUMINATION"), ShopPrices.illum, function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,
-function(sender, params)
+function(sender, params, ownerSide)
+	if GlobalSettings.pvpEnabled == true then
+		local zoneObj = params.zone
+		if (ownerSide ~= 1 and ownerSide ~= 2) or not zoneObj
+			or bc.indexedZones[zoneObj.zone] ~= zoneObj or not zoneObj.active or zoneObj.isHidden
+			or zoneObj.side ~= 3 - ownerSide or zoneObj.suspended then
+			return LTGet("SYRIA_SHOP_CAN_ONLY_TARGET_ENEMY")
+		end
+		bc:illumTargets(zoneObj, ownerSide)
+		trigger.action.outTextForCoalition(ownerSide, L10N:Format("SYRIA_SHOP_TARGETS_ILLUMINATED", zoneObj.zone), 15)
+		return nil
+	end
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
 		bc:illumTargets(params.zone)
 		trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_TARGETS_ILLUMINATED", params.zone.zone), 15)
@@ -3690,6 +4273,9 @@ function(sender, params)
 end)
 bc.shopItems['illum'].groupZoneSelector = {
 	targetzoneside = 1,
+	targetzonesideByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 2, [2] = 1 } or nil,
+	candidateBucketByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' } or nil,
+	refreshTagsByCoalition = GlobalSettings.pvpEnabled == true and { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } } or nil,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
@@ -3884,7 +4470,8 @@ bc.shopItems['capture'].groupZoneSelector = {
 	extraPredicate = function(zoneObj)
 		return zoneObj.active and (not zoneObj.NeutralAtStart or zoneObj.firstCaptureByRed)
 	end,
-	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, knownOwnerSide)
+		local ownerSide = (GlobalSettings.pvpEnabled == true and knownOwnerSide) or 2
 		local function remember(handle)
 			if rememberHandle then
 				return rememberHandle(handle)
@@ -3896,15 +4483,20 @@ bc.shopItems['capture'].groupZoneSelector = {
 		end
 
 		local advanceCaptureMenu = itemInfo and itemInfo.id == 'advancecapture'
-		local bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj, advanceCaptureMenu and { heloOnly = true } or nil))
+		local bestCommander
+		if GlobalSettings.pvpEnabled == true then
+			bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj, { heloOnly = advanceCaptureMenu, ownerSide = ownerSide }))
+		else
+			bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj, advanceCaptureMenu and { heloOnly = true } or nil))
+		end
 		local canUseFarp = bestCommander and ((not advanceCaptureMenu and bestCommander.type == 'surface') or bestCommander.unitCategory == Unit.Category.HELICOPTER)
 		local hasFriendlyDynamicFarp = false
 		local hasNearbyFriendlyDynamicFarp = false
-		local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[2] or nil
+		local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[ownerSide] or nil
 		if farps then
 			for i = 1, #farps do
 				local farpAb = AIRBASE:FindByName(farps[i].name)
-				if farpAb and farpAb:GetCoalition() == 2 then
+				if farpAb and farpAb:GetCoalition() == ownerSide then
 					hasFriendlyDynamicFarp = true
 					local distMeters = bcRef:_getDynamicFarpZoneDistance(farps[i], zoneObj.zone)
 					if distMeters and distMeters <= (30 * 1852) then
@@ -3913,23 +4505,36 @@ bc.shopItems['capture'].groupZoneSelector = {
 				end
 			end
 		end
-		local hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj) ~= nil)
-		if (canUseFarp and hasFriendlyDynamicFarp) or hasFallbackHeloFarp or bcRef:_hasDynamicShopSupplyFarpOption(zoneObj) then
+		local hasFallbackHeloFarp
+		if GlobalSettings.pvpEnabled == true then
+			hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj, ownerSide) ~= nil)
+		else
+			hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj) ~= nil)
+		end
+		local hasFarpOption = (canUseFarp and hasFriendlyDynamicFarp) or hasFallbackHeloFarp
+		if not hasFarpOption then
+			if GlobalSettings.pvpEnabled == true then
+				hasFarpOption = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj, ownerSide)
+			else
+				hasFarpOption = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj)
+			end
+		end
+		if hasFarpOption then
 			local T = L10N:ForGroup(groupId)
 			local zoneMenu = remember(missionCommands.addSubMenuForGroup(groupId, label, parentMenu))
 			remember(missionCommands.addCommandForGroup(groupId, T:Get("SYRIA_SHOP_DEPLOY_FROM_FARP"), zoneMenu, function() end))
-			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_YES"), zoneMenu, bcRef.buyShopItem, bcRef, ownerSide, itemInfo.id, {
 				zone = zoneObj,
 				allowFarp = true,
 			}, groupId, groupObj))
-			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+			remember(missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), zoneMenu, bcRef.buyShopItem, bcRef, ownerSide, itemInfo.id, {
 				zone = zoneObj,
 				allowFarp = false,
 			}, groupId, groupObj))
 			return
 		end
 
-		remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, 2, itemInfo.id, {
+		remember(missionCommands.addCommandForGroup(groupId, label, parentMenu, bcRef.buyShopItem, bcRef, ownerSide, itemInfo.id, {
 			zone = zoneObj,
 		}, groupId, groupObj))
 	end,
@@ -3999,6 +4604,7 @@ bc.shopItems['intel'].groupZoneSelector = {
 
 ------------------------------------------- Zone upgrades --------------------------------------------
 -- red Shop
+if GlobalSettings.pvpEnabled ~= true then
 local RED_ZONE_UPGRADE_ID = "redzoneupgrade"
 local RED_ZONE_UPGRADE_COST = 3000
 
@@ -4028,8 +4634,10 @@ bc:registerShopItem(RED_STRATEGIC_BOMBER_ID, strategicBomberShopName, ShopPrices
 end, nil, 50)
 
 -- end of red
+end
 
 local infMenu=nil
+if GlobalSettings.pvpEnabled ~= true then
 local redWarehouseMenu = nil
 bc:registerShopItem('redwarehouse', LTGet("WAREHOUSE_SHOP_RED_CREATE"), 3000, function(sender)
 	if redWarehouseMenu then
@@ -4063,11 +4671,14 @@ bc:registerShopItem('redwhrepair', LTGet("WAREHOUSE_SHOP_REPAIR"), 2000, functio
 end, function(sender, params)
 	return bc:applyWarehouseRepair(params.zone, 1, params.now)
 end)
+end
 
+local samItem
 bc:registerShopItem('zinf',LTGet("SYRIA_SHOP_ITEM_UPGRADE_INFANTRY"),ShopPrices.zinf,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
-function(sender,params)
+function(sender,params,ownerSide)
+	if GlobalSettings.pvpEnabled == true then return samItem.altAction(sender,params,ownerSide) end
 	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 2 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
@@ -4087,6 +4698,11 @@ function(sender,params)
 		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
+if GlobalSettings.pvpEnabled == true then
+	bc.shopItems['zinf'].upgradeSide = 2
+	bc.shopItems['zinf'].upgradeTemplate = 'blueInfantry'
+	bc.shopItems['zinf'].upgradeLabel = L10N:Get("SYRIA_SHOP_LABEL_INFANTRY")
+end
 bc.shopItems['zinf'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
@@ -4099,7 +4715,29 @@ local samMenu=nil
 bc:registerShopItem('zsam',samLabel,ShopPrices.zsam,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
-function(sender,params)
+function(sender,params,ownerSide)
+	if GlobalSettings.pvpEnabled == true then
+		local zoneObj = params.zone
+		if sender.upgradeSide ~= ownerSide or (ownerSide ~= 1 and ownerSide ~= 2)
+			or not zoneObj or bc.indexedZones[zoneObj.zone] ~= zoneObj
+			or not bc:isEligibleBlueZoneUpgradeTarget(zoneObj,ownerSide)
+			or zoneObj.suspended or zoneObj._idleRestorePending then
+			return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
+		end
+		if (sender.upgradeTemplate == 'Blue SAM SHORAD Pantsir' and Era ~= 'Modern')
+			or sender.upgradeTemplate == 'Red SAM SHORAD Pantsir S1'
+			or (sender.upgradeTemplate == 'Red SAM SHORAD Tor M2' and Era ~= 'Modern') then
+			return LTGet("SHOP_NOT_AVAILABLE_NOW")
+		end
+		if not hasGroupTemplate(sender.upgradeTemplate)
+			or (ownerSide == 1 and not isRedTemplateEnabled(sender.upgradeTemplate)) then
+			return LTGet("SHOP_NOT_AVAILABLE_NOW")
+		end
+		if not zoneObj:addExtraSlot(sender.upgradeTemplate) then return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED") end
+		bc:refreshZoneLabel(zoneObj.zone)
+		trigger.action.outTextForCoalition(ownerSide,L10N:Format("SYRIA_SHOP_UPGRADE_ADDED",sender.upgradeLabel,zoneObj.zone,tostring(sender.cost)),10)
+		return nil
+	end
 	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 2 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
@@ -4127,9 +4765,10 @@ bc.shopItems['zsam'].groupZoneSelector = {
 	extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
 }
-local samItem = bc.shopItems['zsam']
+samItem = bc.shopItems['zsam']
 samItem.upgradeTemplate = 'Blue SAM NASAMS'
 samItem.upgradeLabel = 'NASAMS'
+if GlobalSettings.pvpEnabled == true then samItem.upgradeSide = 2 end
 
 -- Each defense choice reuses the same purchase action and zone selector.
 for _, defense in ipairs({
@@ -4144,6 +4783,17 @@ for _, defense in ipairs({
 	local item = bc.shopItems[defense.id]
 	item.upgradeTemplate = defense.template
 	item.upgradeLabel = defense.label
+	if GlobalSettings.pvpEnabled == true then item.upgradeSide = 2 end
+	item.groupZoneSelector = samItem.groupZoneSelector
+end
+
+if GlobalSettings.pvpEnabled == true and Era == 'Modern'
+	and hasGroupTemplate('Blue SAM SHORAD Pantsir') then
+	bc:registerShopItem('zpantsir','Pantsir',ShopPrices.zcram,samItem.action,samItem.altAction)
+	local item = bc.shopItems['zpantsir']
+	item.upgradeSide = 2
+	item.upgradeTemplate = 'Blue SAM SHORAD Pantsir'
+	item.upgradeLabel = 'Pantsir'
 	item.groupZoneSelector = samItem.groupZoneSelector
 end
 
@@ -4151,7 +4801,8 @@ local himarsMenu=nil
 bc:registerShopItem('zhimars',LTGet("SYRIA_SHOP_ITEM_UPGRADE_HIMARS"),ShopPrices.zhimars,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
-function(sender,params)
+function(sender,params,ownerSide)
+	if GlobalSettings.pvpEnabled == true then return samItem.altAction(sender,params,ownerSide) end
 	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 2 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
@@ -4171,6 +4822,11 @@ function(sender,params)
 		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
+if GlobalSettings.pvpEnabled == true then
+	bc.shopItems['zhimars'].upgradeSide = 2
+	bc.shopItems['zhimars'].upgradeTemplate = 'HiMars'
+	bc.shopItems['zhimars'].upgradeLabel = 'HIMARS'
+end
 bc.shopItems['zhimars'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
@@ -4182,7 +4838,8 @@ bc.shopItems['zhimars'].groupZoneSelector = {
 bc:registerShopItem('zlogc',LTGet("SYRIA_SHOP_ITEM_LOGISTIC_CENTER"),ShopPrices.zlogc,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
-function(sender,params)
+function(sender,params,ownerSide)
+	if GlobalSettings.pvpEnabled == true then return bc:applyLogisticCenterUpgrade(params.zone,ownerSide) end
 	if params.zone then
 		return bc:applyLogisticCenterUpgrade(params.zone)
 	end
@@ -4190,25 +4847,31 @@ function(sender,params)
 end)
 bc.shopItems['zlogc'].groupZoneSelector = {
 	targetzoneside = 2,
+	targetzonesideByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 1, [2] = 2 } or nil,
+	candidateBucketByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 'enemy_unsuspended', [2] = 'blue_airbase_unsuspended' } or nil,
+	refreshTagsByCoalition = GlobalSettings.pvpEnabled == true and { [1] = { 'warehouse_targets', 'enemy_targets' }, [2] = { 'warehouse_targets', 'friendly_targets' } } or nil,
 	includeSuspended = false,
 	sortPolicy = 'friendly_frontline',
 	extraPredicate = function(zoneObj)
-		return not zoneObj.LogisticCenter and not zoneObj.warehouseFacility and not isCarrierZoneName(zoneObj.zone)
+		return (GlobalSettings.pvpEnabled ~= true or (zoneObj.airbaseName ~= nil and zoneObj.airbaseName ~= ''))
+			and not zoneObj.LogisticCenter and not zoneObj.warehouseFacility and not isCarrierZoneName(zoneObj.zone)
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
 }
 
 bc:registerShopItem('zwhrepair', LTGet("WAREHOUSE_SHOP_REPAIR"), ShopPrices.zwhrepair, function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
-end, function(sender, params)
+end, function(sender, params, ownerSide)
+	if GlobalSettings.pvpEnabled == true then return bc:applyWarehouseRepair(params.zone, ownerSide, timer.getAbsTime()) end
 	return bc:applyWarehouseRepair(params.zone, 2, timer.getAbsTime())
 end)
 bc.shopItems['zwhrepair'].groupZoneSelector = {
 	targetzoneside = 2,
+	targetzonesideByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 1, [2] = 2 } or nil,
 	includeSuspended = true,
 	sortPolicy = 'friendly_frontline',
-	candidateBucket = 'blue_visible',
-	refreshTags = { 'warehouse_targets' },
+	candidateBucket = GlobalSettings.pvpEnabled ~= true and 'blue_visible' or nil,
+	refreshTags = GlobalSettings.pvpEnabled == true and { 'warehouse_targets', 'friendly_targets', 'enemy_targets' } or { 'warehouse_targets' },
 	extraPredicate = function(zoneObj)
 		return zoneObj.warehouseFacility ~= nil and zoneObj.warehouseFacility.state == 'destroyed'
 	end,
@@ -4263,23 +4926,55 @@ bc.shopItems['flare'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['flare'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 bc.shopItems['illum'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['illum'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+-- National CAP selector ownership.
+if GlobalSettings.pvpEnabled == true then
+	bc.shopItems['dynamiccap'].groupZoneSelector.candidateBucketByCoalition = { [1] = 'enemy_unsuspended', [2] = 'blue_unsuspended' }
+	bc.shopItems['dynamiccap'].groupZoneSelector.targetzonesideByCoalition = { [1] = 1, [2] = 2 }
+	bc.shopItems['dynamiccap'].groupZoneSelector.includeSuspended = true
+	bc.shopItems['dynamiccap'].groupZoneSelector.refreshTagsByCoalition = { [1] = { 'enemy_targets' }, [2] = { 'friendly_targets' } }
+else
 bc.shopItems['dynamiccap'].groupZoneSelector.candidateBucket = 'blue_visible'
 bc.shopItems['dynamiccap'].groupZoneSelector.includeSuspended = true
 bc.shopItems['dynamiccap'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+end
+if GlobalSettings.pvpEnabled == true then
+	bc.shopItems['dynamicarco'].groupZoneSelector.candidateBucket = nil
+	bc.shopItems['dynamicarco'].groupZoneSelector.candidateBucketByCoalition = { [2] = 'blue_visible' }
+	bc.shopItems['dynamicarco'].groupZoneSelector.targetzonesideByCoalition = { [1] = 1, [2] = 2 }
+	bc.shopItems['dynamicarco'].groupZoneSelector.extraPredicate = function(zoneObj) return zoneObj.active == true end
+	bc.shopItems['dynamicarco'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+else
 bc.shopItems['dynamicarco'].groupZoneSelector.candidateBucket = 'blue_visible'
 bc.shopItems['dynamicarco'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+end
+if GlobalSettings.pvpEnabled == true then
+	bc.shopItems['dynamictexaco'].groupZoneSelector.candidateBucket = nil
+	bc.shopItems['dynamictexaco'].groupZoneSelector.candidateBucketByCoalition = { [2] = 'blue_visible' }
+	bc.shopItems['dynamictexaco'].groupZoneSelector.targetzonesideByCoalition = { [1] = 1, [2] = 2 }
+	bc.shopItems['dynamictexaco'].groupZoneSelector.extraPredicate = function(zoneObj) return zoneObj.active == true end
+	bc.shopItems['dynamictexaco'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+else
 bc.shopItems['dynamictexaco'].groupZoneSelector.candidateBucket = 'blue_visible'
 bc.shopItems['dynamictexaco'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+end
+if GlobalSettings.pvpEnabled ~= true then
 bc.shopItems['dynamiccas'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['dynamiccas'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+end
 bc.shopItems['dynamicdecoy'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['dynamicdecoy'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+if GlobalSettings.pvpEnabled ~= true then
 bc.shopItems['dynamicsead'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['dynamicsead'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+end
+if GlobalSettings.pvpEnabled ~= true then
 bc.shopItems['dynamicbomb'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['dynamicbomb'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+end
+if GlobalSettings.pvpEnabled ~= true then
 bc.shopItems['strategicbomber'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['strategicbomber'].groupZoneSelector.refreshTags = { 'enemy_targets', 'friendly_targets' }
+end
 bc.shopItems['groundattack'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['groundattack'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 bc.shopItems['cruisemsl'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
@@ -4290,12 +4985,14 @@ if bc.shopItems['supplies'] and bc.shopItems['supplies'].groupZoneSelector then
 	bc.shopItems['supplies'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 	bc.shopItems['supplies'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 end
+if GlobalSettings.pvpEnabled ~= true then
 bc.shopItems['jtac'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['jtac'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 bc.shopItems['9lineam'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['9lineam'].groupZoneSelector.refreshTags = { 'enemy_targets' }
 bc.shopItems['9linefm'].groupZoneSelector.candidateBucket = 'enemy_unsuspended'
 bc.shopItems['9linefm'].groupZoneSelector.refreshTags = { 'enemy_targets' }
+end
 bc.shopItems['armor'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['armor'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 bc.shopItems['artillery'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
@@ -4335,7 +5032,8 @@ local armMenu=nil
 bc:registerShopItem('zarm',LTGet("SYRIA_SHOP_ITEM_UPGRADE_ARMOR"),ShopPrices.zarm,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
-function(sender,params)
+function(sender,params,ownerSide)
+	if GlobalSettings.pvpEnabled == true then return samItem.altAction(sender,params,ownerSide) end
 	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 2 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
@@ -4357,6 +5055,11 @@ function(sender,params)
 		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
+if GlobalSettings.pvpEnabled == true then
+	bc.shopItems['zarm'].upgradeSide = 2
+	bc.shopItems['zarm'].upgradeTemplate = Era == 'Vietnam' and 'Blue Armor Vietnam' or (Era == 'Coldwar' and 'Blue Armor Coldwar' or 'Blue Armor Modern')
+	bc.shopItems['zarm'].upgradeLabel = L10N:Get("SYRIA_SHOP_LABEL_ARMOR")
+end
 bc.shopItems['zarm'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
@@ -4372,6 +5075,7 @@ bc:registerShopItem('zpat', LTGet("SYRIA_SHOP_ITEM_UPGRADE_PATRIOT"), ShopPrices
 local patItem = bc.shopItems['zpat']
 patItem.upgradeTemplate = 'Blue SAM PATRIOT'
 patItem.upgradeLabel = 'PATRIOT'
+if GlobalSettings.pvpEnabled == true then patItem.upgradeSide = 2 end
 patItem.groupZoneSelector = samItem.groupZoneSelector
 bc.shopItems['zpat'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['zpat'].groupZoneSelector.refreshTags = { 'friendly_targets' }
@@ -4380,7 +5084,8 @@ Group.getByName('BlueGCI'):destroy()
 bc:registerShopItem('zgci',LTGet("SYRIA_SHOP_ITEM_UPGRADE_GCI"),ShopPrices.zgci,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
-function(sender,params)
+function(sender,params,ownerSide)
+	if GlobalSettings.pvpEnabled == true then return samItem.altAction(sender,params,ownerSide) end
 	if params.zone and params.zone.side==2 and not params.zone.suspended then
 		local max = 2 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
@@ -4401,6 +5106,11 @@ function(sender,params)
 		return LTGet("SYRIA_SHOP_MUST_PICK_FRIENDLY_ZONE")
 	end
 end)
+if GlobalSettings.pvpEnabled == true then
+	bc.shopItems['zgci'].upgradeSide = 2
+	bc.shopItems['zgci'].upgradeTemplate = 'BlueGCI'
+	bc.shopItems['zgci'].upgradeLabel = L10N:Get("SYRIA_SHOP_LABEL_GCI")
+end
 bc.shopItems['zgci'].groupZoneSelector = {
 	targetzoneside = 2,
 	includeSuspended = false,
@@ -4411,7 +5121,15 @@ bc.shopItems['zgci'].groupZoneSelector = {
 bc.shopItems['zgci'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['zgci'].groupZoneSelector.refreshTags = { 'friendly_targets' }
 
-bc:registerShopItem('gslot',LTGet("SYRIA_SHOP_ITEM_EXTRA_SLOT"),ShopPrices.gslot,function(sender)
+bc:registerShopItem('gslot',LTGet("SYRIA_SHOP_ITEM_EXTRA_SLOT"),ShopPrices.gslot,function(sender, ownerSide)
+    if GlobalSettings.pvpEnabled == true then
+        local _, unlocked = bc:getExtraUpgradeLimit(ownerSide)
+        if unlocked then return LTGet("SYRIA_SHOP_ALREADY_UNLOCKED") end
+        bc.globalExtraUnlock[ownerSide] = true
+        trigger.action.outTextForCoalition(ownerSide,L10N:Get("SYRIA_SHOP_ALL_ZONES_SECOND_UPGRADE"),15)
+        bc:removeShopItem(ownerSide, 'gslot')
+        return nil
+    end
     if bc.globalExtraUnlock then
         return LTGet("SYRIA_SHOP_ALREADY_UNLOCKED")
     end
@@ -4422,7 +5140,8 @@ bc:registerShopItem('gslot',LTGet("SYRIA_SHOP_ITEM_EXTRA_SLOT"),ShopPrices.gslot
 end)
 bc:registerShopItem('farphere',LTGet("SYRIA_SHOP_ITEM_DEPLOY_FARP"),ShopPrices.farphere,function(sender)
         return LTGet("SYRIA_SHOP_FARP_MARKER_HELP")
-end,function(_, params)
+end,function(_, params, ownerSide)
+        if GlobalSettings.pvpEnabled == true then return bc:processMapFarpPurchase(params, ownerSide) end
         return bc:processMapFarpPurchase(params)
 end)
 ------------------------------------------- End of Zone upgrades ----------------------------------------
@@ -4434,6 +5153,7 @@ ShopPrices = ShopPrices or {
 	dynamiccap    = 500,  -- CAP Flight
 	dynamicarco   = 1000,  -- Dynamic Tanker (Drogue)
 	dynamictexaco = 1000,  -- Dynamic Tanker (Boom)
+	replaceawacs  = 1000, -- Replace one lost AWACS
 	dynamiccas    = 1000, -- CAS Flight
 	dynamicdecoy  = 300,  -- TALD DECOY Flight
 	dynamicsead   = 500,  -- SEAD Flight
@@ -4483,6 +5203,7 @@ ShopRankRequirements = ShopRankRequirements or {
 	dynamicdecoy   = 1,  -- TALD DECOY Flight
 	dynamicarco    = 3,  -- Dynamic Tanker (Drogue)
 	dynamictexaco  = 3,  -- Dynamic Tanker (Boom)
+	replaceawacs   = 3, -- Replace one lost AWACS
 	farphere       = 4,  -- Deploy FARP
 	capture        = 1,  -- Emergency capture zone
 	advancecapture = 1,  -- Advance capture pressured enemy zone
@@ -4542,6 +5263,7 @@ ShopCats.Order = {
 
 -- first value below is how much in stock, the second number value is the ranking in the shop menu list, the third is the new ranking system.
 
+if GlobalSettings.pvpEnabled ~= true then
 bc:addShopItem(1, 'redzoneupgrade', -1, 1) -- red AI zone upgrade
 bc:addShopItem(1, 'redmassattack', -1, 1) -- red AI mass airbase attack
 bc:addShopItem(1, 'redwarehouse', -1, 3) -- red AI rear supply depot
@@ -4549,20 +5271,35 @@ bc:addShopItem(1, 'redwhrepair', -1, 4) -- red AI warehouse repair
 if Era ~= 'Vietnam' then
 bc:addShopItem(1, 'strategicbomberRed', -1, 2) -- red AI strategic bomber
 end
+end
 
 -- AI Attack
 bc:addShopItem(2, 'dynamiccap', -1, 1, ShopRankRequirements.dynamiccap, ShopCats.AIAttack) -- CAP Flight
+if GlobalSettings.pvpEnabled == true then
+	bc:addShopItem(1, 'dynamiccap', -1, 1, ShopRankRequirements.dynamiccap, ShopCats.AIAttack)
+end
 bc:addShopItem(2, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats.AIAttack) -- CAS Flight
+if GlobalSettings.pvpEnabled == true then
+	bc:addShopItem(1, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats.AIAttack)
+end
 bc:addShopItem(2, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack) -- Bomber Flight
+if GlobalSettings.pvpEnabled == true then
+	bc:addShopItem(1, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack)
+end
 if Era ~= 'Vietnam' then
 end
 bc:addShopItem(2, 'dynamicsead', -1, 4, ShopRankRequirements.dynamicsead, ShopCats.AIAttack) -- SEAD Flight
+if GlobalSettings.pvpEnabled == true then
+	bc:addShopItem(1, 'dynamicsead', -1, 4, ShopRankRequirements.dynamicsead, ShopCats.AIAttack)
+end
 if Era ~= 'Vietnam' then
 bc:addShopItem(2, 'dynamicdecoy', -1, 5, ShopRankRequirements.dynamicdecoy, ShopCats.AIAttack) -- TALD DECOY Flight
 end
 bc:addShopItem(2, 'groundattack', -1, 6, ShopRankRequirements.groundattack, ShopCats.AIAttack) -- Ground attack convoy
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'groundattack', -1, 6, ShopRankRequirements.groundattack, ShopCats.AIAttack) end
 bc:addShopItem(2, 'cruisemsl', 12, 7, ShopRankRequirements.cruisemsl, ShopCats.AIAttack) -- Cruise missiles
 bc:addShopItem(2, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) -- Strategic Bomber
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'strategicbomber', -1, 8, ShopRankRequirements.strategicbomber, ShopCats.AIAttack) end
 -- Zone Upgrades
 bc:addShopItem(2, 'zinf', -1, 1, ShopRankRequirements.zinf, ShopCats.ZoneUpgrades) -- add infantry to a zone
 bc:addShopItem(2, 'zarm', -1, 2, ShopRankRequirements.zarm, ShopCats.ZoneUpgrades) -- add armour group to a zone
@@ -4570,18 +5307,126 @@ bc:addShopItem(2, 'zhawk', -1, 3, ShopRankRequirements.zhawk, ShopCats.ZoneUpgra
 if Era == 'Modern' then
 	bc:addShopItem(2, 'zsam', -1, 4, ShopRankRequirements.zsam, ShopCats.ZoneUpgrades) -- NASAMS system
 	bc:addShopItem(2, 'zcram', -1, 10, ShopRankRequirements.zcram, ShopCats.ZoneUpgrades) -- C-RAM
+	if GlobalSettings.pvpEnabled == true and bc.shopItems['zpantsir'] then
+		bc:addShopItem(2, 'zpantsir', -1, 10.5, ShopRankRequirements.zcram, ShopCats.ZoneUpgrades)
+	end
 end
 bc:addShopItem(2, 'zavenger', -1, 6, ShopRankRequirements.zavenger, ShopCats.ZoneUpgrades) -- Avenger
 bc:addShopItem(2, 'zroland', -1, 7, ShopRankRequirements.zroland, ShopCats.ZoneUpgrades) -- Roland
 bc:addShopItem(2, 'zgepard', -1, 8, ShopRankRequirements.zgepard, ShopCats.ZoneUpgrades) -- Gepard
 bc:addShopItem(2, 'zvulcan', -1, 9, ShopRankRequirements.zvulcan, ShopCats.ZoneUpgrades) -- Vulcan
 bc:addShopItem(2, 'gslot', 1, 14, ShopRankRequirements.gslot, ShopCats.ZoneUpgrades) -- add another slot for upgrade
+if GlobalSettings.pvpEnabled == true then
+	bc:addShopItem(1, 'gslot', 1, 14, ShopRankRequirements.gslot, ShopCats.ZoneUpgrades)
+end
 if Era == 'Modern' then
 	bc:addShopItem(2, 'zhimars', -1, 11, ShopRankRequirements.zhimars, ShopCats.ZoneUpgrades) -- add HIMARS to a zone
 end
 if Era ~= 'Vietnam' then
 	bc:addShopItem(2, 'zpat', -1, 5, ShopRankRequirements.zpat, ShopCats.ZoneUpgrades) -- Patriot system.
 end
+
+-- National paid radar templates.
+if GlobalSettings.pvpEnabled == true then
+	for _, radar in ipairs({
+		{source='Blue EWR', name='Blue EWR Upgrade', side=2},
+		{source='Red EWR Fixed', name='Red EWR Upgrade', side=1},
+	}) do
+		local source = _DATABASE.Templates.Groups[radar.source]
+		if source then
+			assert(source.CoalitionID == radar.side, "EWR seed must match its national owner")
+			local template = UTILS.DeepCopy(source.Template)
+			template.name = radar.name
+			template.hidden, template.hiddenOnMFD, template.hiddenOnPlanner = false, false, false
+			template.units = {template.units[1]}
+			template.units[1].name = radar.name .. '-unit-1'
+			local tasks = template.route.points[1].task.params.tasks
+			for index = #tasks, 1, -1 do
+				local task = tasks[index]
+				if task.id == 'WrappedAction' then
+					local action = task.params.action
+					if action.id == 'ActivateGCI' then table.remove(tasks,index)
+					elseif action.id == 'SetInvisible' then action.params.value = false end
+				end
+			end
+			GROUP:NewTemplate(template,radar.side,source.CategoryID,source.CountryID)
+			-- Blue fixed templates are authored in the mission; only Red needs a generated identity before load.
+			if radar.side == 1 then
+				local fixedTemplate = UTILS.DeepCopy(template)
+				fixedTemplate.name = 'Red EWR Fixed Pvp'
+				fixedTemplate.units[1].name = fixedTemplate.name .. '-unit-1'
+				GROUP:NewTemplate(fixedTemplate,radar.side,source.CategoryID,source.CountryID)
+			end
+			if radar.side == 1 and Era == 'Modern' then
+				local gciTemplate = UTILS.DeepCopy(source.Template)
+				gciTemplate.name = 'RedGCI'
+				gciTemplate.hidden, gciTemplate.hiddenOnMFD, gciTemplate.hiddenOnPlanner = false, false, false
+				for index, unit in ipairs(gciTemplate.units) do unit.name = 'RedGCI-unit-' .. tostring(index) end
+				for _, task in ipairs(gciTemplate.route.points[1].task.params.tasks) do
+					if task.id == 'WrappedAction' and task.params.action.id == 'SetInvisible' then task.params.action.params.value = false end
+				end
+				GROUP:NewTemplate(gciTemplate,radar.side,source.CategoryID,source.CountryID)
+			end
+		end
+	end
+end
+if GlobalSettings.pvpEnabled == true and hasGroupTemplate('Blue EWR Upgrade') then
+	bc:registerShopItem('zewr','EWR',ShopPrices.zgci,samItem.action,samItem.altAction)
+	local item = bc.shopItems['zewr']
+	item.upgradeSide = 2
+	item.upgradeTemplate = 'Blue EWR Upgrade'
+	item.upgradeLabel = 'EWR'
+	item.groupZoneSelector = samItem.groupZoneSelector
+	bc:addShopItem(2,'zewr',-1,12.5,ShopRankRequirements.zgci,ShopCats.ZoneUpgrades)
+end
+-- End national paid radar templates.
+
+-- National Red zone upgrades.
+if GlobalSettings.pvpEnabled == true then
+	local redDefenseSelector = {
+		targetzoneside = 1, includeSuspended = false, sortPolicy = 'friendly_frontline',
+		candidateBucket = 'enemy_unsuspended', refreshTags = { 'enemy_targets' },
+		extraPredicate = function(zoneObj) return bc:isEligibleBlueZoneUpgradeTarget(zoneObj,1) end,
+		emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
+	}
+	for priority, defense in ipairs({
+		{ id='rzinf', template='Enemy ground forces', label='Scouts/technicals', tier='zinf' },
+		{ id='rzarm1', template='Red Armour Group', label='Armor 1', tier='zarm' },
+		{ id='rzarm2', template='Red Armour Group 2', label='Armor 2', tier='zarm' },
+		{ id='rzarm3', template='Red Armour Group 3', label='Armor 3', tier='zarm' },
+		{ id='rzaaa', template='Red SAM AAA', label='AAA', tier='zvulcan' },
+		{ id='rzsa2', template='Red SAM SA-2', label='SA-2', tier='zhawk' },
+		{ id='rzsa3', template='Red SAM SA-3', label='SA-3', tier='zhawk' },
+		{ id='rzsa6', template='Red SAM SA-6', label='SA-6', tier='zhawk', postVietnam=true },
+		{ id='rzsa10', template='Red SAM SA-10', label='SA-10', tier='zpat', postVietnam=true },
+		{ id='rzsa11', template='Red SAM SA-11', label='SA-11', tier='zsam', postVietnam=true },
+		{ id='rzsa8', template='Red SAM SHORAD SA-8', label='SA-8', tier='zavenger', postVietnam=true },
+		{ id='rzsa9', template='Red SAM SHORAD SA-9', label='SA-9', tier='zavenger', postVietnam=true },
+		{ id='rzsa13', template='Red SAM SHORAD SA-13', label='SA-13', tier='zavenger', postVietnam=true },
+		{ id='rzsa15', template='Red SAM SHORAD SA-15', label='SA-15', tier='zroland', postVietnam=true },
+		{ id='rzsa19', template='Red SAM SHORAD SA-19', label='SA-19', tier='zavenger', postVietnam=true },
+		{ id='rztorm2', template='Red SAM SHORAD Tor M2', label='Tor M2', tier='zcram', modernOnly=true },
+		{ id='rzmanpad', template='Enemy Task forces', label='MANPAD/scouts', tier='zavenger', postVietnam=true },
+		{ id='rzgci', template='RedGCI', label='GCI', tier='zgci', modernOnly=true },
+		{ id='rzarty', template='Red Arty', label='Grad', tier='zhimars', modernOnly=true },
+		{ id='rzewr', template='Red EWR Upgrade', label='EWR', tier='zgci' },
+	}) do
+		local template = defense.template
+		if Era == 'Coldwar' then template = cwSwap[template] or template
+		elseif Era == 'Vietnam' then template = vnSwap[template] or template end
+		if (not defense.postVietnam or Era ~= 'Vietnam') and (not defense.modernOnly or Era == 'Modern')
+			and hasGroupTemplate(template) and isRedTemplateEnabled(template) then
+			bc:registerShopItem(defense.id,defense.label,ShopPrices[defense.tier],samItem.action,samItem.altAction)
+			local item = bc.shopItems[defense.id]
+			item.upgradeSide = 1
+			item.upgradeTemplate = template
+			item.upgradeLabel = defense.label
+			item.groupZoneSelector = redDefenseSelector
+			bc:addShopItem(1,defense.id,-1,priority,ShopRankRequirements[defense.tier],ShopCats.ZoneUpgrades)
+		end
+	end
+end
+-- End national Red zone upgrades.
 
 -- JTAC & Intel
 
@@ -4591,9 +5436,13 @@ bc:addShopItem(2, 'zgci', -1, 12, ShopRankRequirements.zgci, ShopCats.ZoneUpgrad
 bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac, ShopCats.JTACIntel) -- MQ-9 Reaper JTAC mission
 end
 bc:addShopItem(2, 'smoke', -1, 2, ShopRankRequirements.smoke, ShopCats.JTACIntel) -- smoke on target
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'smoke', -1, 2, ShopRankRequirements.smoke, ShopCats.JTACIntel) end
 bc:addShopItem(2, 'flare', -1, 3, ShopRankRequirements.flare, ShopCats.JTACIntel) -- flare on target
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'flare', -1, 3, ShopRankRequirements.flare, ShopCats.JTACIntel) end
 bc:addShopItem(2, 'illum', -1, 4, ShopRankRequirements.illum, ShopCats.JTACIntel) -- illumination bomb
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'illum', -1, 4, ShopRankRequirements.illum, ShopCats.JTACIntel) end
 bc:addShopItem(2, 'intel', -1, 5, ShopRankRequirements.intel, ShopCats.JTACIntel) -- Intel
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'intel', -1, 5, ShopRankRequirements.intel, ShopCats.JTACIntel) end
 if Era ~= 'Vietnam' then
 bc:addShopItem(2, '9lineam', -1, 6, ShopRankRequirements["9lineam"], ShopCats.JTACIntel) -- free jtac
 bc:addShopItem(2, '9linefm', -1, 7, ShopRankRequirements["9linefm"], ShopCats.JTACIntel) -- free jtac
@@ -4615,21 +5464,39 @@ end
 
 -- Logistics & Strategic
 bc:addShopItem(2, 'capture', -1, 1, ShopRankRequirements.capture, ShopCats.LogisticsStrategic) -- emergency capture
+if GlobalSettings.pvpEnabled == true then
+	bc:addShopItem(1, 'capture', -1, 1, ShopRankRequirements.capture, ShopCats.LogisticsStrategic)
+end
 bc:addShopItem(2, 'advancecapture', -1, 2, ShopRankRequirements.advancecapture, ShopCats.LogisticsStrategic) -- advance capture
 bc:addShopItem(2, 'supplies2', -1, 3, ShopRankRequirements.supplies2, ShopCats.LogisticsStrategic) -- upgrade friendly zone
+if GlobalSettings.pvpEnabled == true then
+	bc:addShopItem(1, 'supplies2', -1, 3, ShopRankRequirements.supplies2, ShopCats.LogisticsStrategic)
+end
 if AllowScriptedSupplies then
     bc:addShopItem(2, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic) -- fully upgrade friendly zone
+    if GlobalSettings.pvpEnabled == true then
+        bc:addShopItem(1, 'supplies', -1, 4, ShopRankRequirements.supplies, ShopCats.LogisticsStrategic)
+    end
 end
 bc:addShopItem(2, 'zsup3', -1, 6, ShopRankRequirements.zsup3, ShopCats.LogisticsStrategic) -- add 3 supplies to a zone
 bc:addShopItem(2, 'zwhrepair', -1, 5.5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- repair warehouse
-if WarehouseLogistics then
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'zwhrepair', -1, 5.5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) end
+if WarehouseLogistics or GlobalSettings.pvpEnabled == true then
 bc:addShopItem(2, 'zlogc', -1, 5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) -- upgrade zone to logistic center
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'zlogc', -1, 5, ShopRankRequirements.zlogc, ShopCats.LogisticsStrategic) end
+end
+if WarehouseLogistics then
 bc:addShopItem(2, 'zwh50', -1, 7, ShopRankRequirements.zwh50, ShopCats.LogisticsStrategic) -- resupply warehouse with 50
 end
 -- Other Support
 bc:addShopItem(2, 'dynamicarco', 1, 1, ShopRankRequirements.dynamicarco, ShopCats.OtherSupport) -- Navy tanker
 bc:addShopItem(2, 'dynamictexaco', 1, 2, ShopRankRequirements.dynamictexaco, ShopCats.OtherSupport) -- Airforce tanker
+if GlobalSettings.pvpEnabled == true then
+	bc:addShopItem(1, 'dynamicarco', 1, 1, ShopRankRequirements.dynamicarco, ShopCats.OtherSupport)
+	bc:addShopItem(1, 'dynamictexaco', 1, 2, ShopRankRequirements.dynamictexaco, ShopCats.OtherSupport)
+end
 bc:addShopItem(2, 'farphere', -1, 3, ShopRankRequirements.farphere, ShopCats.OtherSupport) -- deploy FARP
+if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'farphere', -1, 3, ShopRankRequirements.farphere, ShopCats.OtherSupport) end
 
 
 supplyZones = {
@@ -4694,15 +5561,34 @@ supplyZones = {
 TerritoryOverlayOuterDrawPushMeters = 30000
 
 lc = LogisticCommander:new({battleCommander = bc, supplyZones = supplyZones})
+if GlobalSettings.pvpEnabled == true then
+	bc:initRunwayMissions(coalition.side.BLUE)
+	bc:initRunwayMissions(coalition.side.RED)
+	bc:initCasMissions(coalition.side.BLUE)
+	bc:initCasMissions(coalition.side.RED)
+	bc:initDeadMissions(coalition.side.BLUE)
+	bc:initDeadMissions(coalition.side.RED)
+	bc:initSeadMissions(coalition.side.BLUE)
+	bc:initSeadMissions(coalition.side.RED)
+	bc.reconMissionTracker = {nextSlotIndex = 1, scheduled = false}
+	bc:initReconMissions(coalition.side.RED)
+	bc:initReconMissions(coalition.side.BLUE)
+else
 bc:initRunwayMissions()
 bc:initCasMissions()
 bc:initDeadMissions()
 bc:initSeadMissions()
 bc:initReconMissions()
+end
 bc.seadMissionRegularSlots = bc.seadMissionMaxSlots
 bc.seadMissionDefenceReserveSlot = bc.seadMissionRegularSlots + 1
 bc.seadMissionMaxSlots = bc.seadMissionDefenceReserveSlot
+if GlobalSettings.pvpEnabled == true then
+	bc:resetSeadMissionSlot(bc.seadMissionDefenceReserveSlot, coalition.side.BLUE)
+	bc:resetSeadMissionSlot(bc.seadMissionDefenceReserveSlot, coalition.side.RED)
+else
 bc:resetSeadMissionSlot(bc.seadMissionDefenceReserveSlot)
+end
 lc:init()
 
 bc:loadFromDisk()
@@ -4718,6 +5604,14 @@ end
 if zones.oscar.side ~= 1 then destroyOscarStatics() end
 if zonePersistance and zonePersistance.zones and next(zonePersistance.zones) == nil then
     bc.saveLoaded = false
+end
+
+if GlobalSettings.pvpEnabled == true and not bc.saveLoaded then
+    local funds = StartupFunds or {}
+    local redFunds = funds[coalition.side.RED] or 1000
+    local blueFunds = funds[coalition.side.BLUE] or 1000
+    bc:addFunds(coalition.side.RED, redFunds - bc.accounts[coalition.side.RED])
+    bc:addFunds(coalition.side.BLUE, blueFunds - bc.accounts[coalition.side.BLUE])
 end
 
 resolveRemoveSouthSyria()
@@ -4737,9 +5631,115 @@ if bc.saveLoaded then
 else
 	CustomFlags['StartFromIncirlik'] = StartNormal and configuredStartFromIncirlik
 end
-StartFromIncirlik = StartNormal and CustomFlags['StartFromIncirlik'] == true
+StartFromIncirlik = GlobalSettings.pvpEnabled ~= true and StartNormal and CustomFlags['StartFromIncirlik'] == true
 
-if not StartNormal then
+-- National fixed radar positions.
+if GlobalSettings.pvpEnabled == true then
+	-- Blue keeps its scattered Mission Editor positions; place the generated Red site for this orientation.
+	for _, radar in ipairs({
+		{source='Red EWR Upgrade', name='Red EWR Fixed Pvp', side=1, anchor=StartNormal and 'Red EWR-southeast Fixed' or 'Red EWR north Fixed'},
+	}) do
+		local source = _DATABASE.Templates.Groups[radar.source]
+		local anchor = _DATABASE.Templates.Groups[radar.anchor].Template.units[1]
+		local template = UTILS.DeepCopy(source.Template)
+		local unit = template.units[1]
+		local dx, dy = anchor.x - unit.x, anchor.y - unit.y
+		template.name, template.x, template.y = radar.name, anchor.x, anchor.y
+		unit.name, unit.x, unit.y, unit.heading = radar.name .. '-unit-1', anchor.x, anchor.y, anchor.heading
+		for _, point in ipairs(template.route.points) do
+			point.x, point.y = point.x + dx, point.y + dy
+		end
+		GROUP:NewTemplate(template,radar.side,source.CategoryID,source.CountryID)
+	end
+end
+-- End national fixed radar positions.
+
+-- PvP starting territory (after saved removal/orientation resolution).
+if GlobalSettings.pvpEnabled then
+	pvpStartingTerritoryOrder = RemoveSouthSyria and {
+		[1] = {
+			'incirlik', 'incirlikdefence', 'alpha', 'hatay', 'bravo',
+			'alassad', 'hotel', 'taftanaz', 'delta', 'alduhur', 'papa', 'november',
+			'india', 'foblima', 'aleppo', 'minakh',
+		},
+		[2] = {
+			'palmyra', 'sa5', 'milbase', 'tiyas', 'hama', 'romeo',
+			'shayrat', 'renemouawad', 'tabqa', 'juliett', 'fobmike',
+			'jirah', 'durayhim', 'foxtrot', 'golf', 'oscar',
+		},
+	} or {
+		[1] = {
+			'incirlik', 'incirlikdefence', 'alpha', 'hatay', 'bravo',
+			'minakh', 'aleppo', 'taftanaz', 'delta', 'alduhur',
+			'papa', 'november', 'alassad', 'hotel', 'hama', 'romeo', 'india',
+			'foblima', 'jirah', 'durayhim', 'tabqa', 'golf', 'juliett', 'foxtrot',
+		},
+		[2] = {
+			'palmyra', 'sa5', 'tiyas', 'shayrat', 'renemouawad', 'beirut', 'rayak',
+			'annasiriyah', 'damascus', 'roshpina', 'ramatdavid', 'ramatdaviddefence',
+			'thalah', 'kinghussein', 'jordandefence', 'princehassan',
+			'muwaffaq', 'marka', 'bengurion', 'benguriondefence',
+			'milbase', 'oscar', 'fobmike',
+		},
+	}
+	local startingPercent = bc.saveLoaded and CustomFlags.PvPStartingTerritoryPercent or nil
+	if startingPercent == nil then startingPercent = PvPStartingTerritoryPercent or 50 end
+	assert(startingPercent == 20 or startingPercent == 30 or startingPercent == 40 or startingPercent == 50,
+		"PvP starting territory must be 20, 30, 40 or 50 percent per coalition")
+	CustomFlags.PvPStartingTerritoryPercent = startingPercent
+	GlobalSettings.pvpStartingTerritoryPercent = startingPercent
+	local territoryCount = #pvpStartingTerritoryOrder[1] + #pvpStartingTerritoryOrder[2]
+	local quota = math.floor(territoryCount * startingPercent / 100 + 0.5)
+	pvpStartingOwners, pvpVictoryZones = {}, {}
+	for side, order in ipairs(pvpStartingTerritoryOrder) do
+		local ownerSide = StartNormal and 3 - side or side
+		for index, key in ipairs(order) do
+			local zoneObj = zones[key]
+			local startingSide = index <= quota and ownerSide or 0
+			pvpStartingOwners[key] = startingSide
+			pvpVictoryZones[#pvpVictoryZones + 1] = zoneObj
+			zoneObj:registerTrigger('lost', checkMissionComplete, 'missioncompleted')
+			zoneObj:registerTrigger('captured', checkMissionComplete, 'missioncompleted')
+			if not bc.saveLoaded or not zonePersistance.zones[zoneObj.zone] then
+				zoneObj.side = startingSide
+				zoneObj._regularSupplyEfficiencySide = startingSide
+				zoneObj.firstCaptureByRed = startingSide ~= 0 and true or nil
+			end
+			zoneObj.NeutralAtStart = false
+		end
+	end
+	for _, region in ipairs({
+		{ 'powerplant', 'taftanaz' }, { 'factory', 'alduhur' },
+		{ 'dam', 'tabqa' }, { 'refinery', 'palmyra' },
+	}) do
+		local zoneObj, parent = zones[region[1]], zones[region[2]]
+		if not bc.saveLoaded or not zonePersistance.zones[zoneObj.zone] then
+			zoneObj.side = parent.side
+			zoneObj._regularSupplyEfficiencySide = parent.side
+		end
+	end
+	for _, key in ipairs({
+		'redcarrier', 'carrier', 'hidden2', 'hidden3', 'charlie', 'kilo',
+		'substationnorth', 'substationwest', 'tv', 'radio', 'sierra',
+		'tango', 'uniform', 'victor', 'silkworm',
+		-- Cyprus has only the Incirlik mainland gateway; keep both PvP fronts on the mainland.
+		'akrotiri', 'paphos', 'polis', 'karavostasi', 'larnaca', 'ercan', 'pinarbashi', 'gecitkale',
+	}) do
+		zones[key].side, zones[key].active = 0, false
+	end
+	if not RemoveSouthSyria then zones.hidden4.side, zones.hidden4.active = 0, false end
+	for _, zoneObj in ipairs({ zones.incirlikdefence, zones.sa5 }) do
+		zoneObj.active = true
+		zoneObj.customSuspendNm = 1000
+		zoneObj.noIdleSuspend = true
+	end
+	bc:addConnection('FOB Lima', 'India')
+	bc:addConnection('FOB Mike', 'Military Base')
+	if not RemoveSouthSyria then bc:addConnection('Jordan Defence', 'King Hussein Air College') end
+end
+
+-- PvE start progression.
+if GlobalSettings.pvpEnabled ~= true and not StartNormal then
 	for _, upgradeList in pairs({ zones.hiddenewr.upgrades.red, zones.hiddenewr.randomUpgradesRed, zones.hiddenewr._configuredStaticUpgrades }) do
 		removeArrayEntries(upgradeList, function(entry)
 			local entryName = type(entry) == 'table' and (entry.n or entry.name or entry[1]) or entry
@@ -4748,11 +5748,11 @@ if not StartNormal then
 	end
 end
 
-if not bc.saveLoaded and RemoveSouthSyria and not StartNormal then
+if GlobalSettings.pvpEnabled ~= true and not bc.saveLoaded and RemoveSouthSyria and not StartNormal then
 	zones.palmyra.side = coalition.side.BLUE
 end
 
-if CustomFlags['StartNormalFalse'] == true then
+if GlobalSettings.pvpEnabled ~= true and CustomFlags['StartNormalFalse'] == true then
 	if not RemoveSouthSyria then
 		zones.thalah.size = 'medium'
 		zones.marka.size = 'medium'
@@ -4770,9 +5770,9 @@ if CustomFlags['StartNormalFalse'] == true then
 	zones.larnaca.size = 'big'
 end
 
-local disableBlueCarrierAfterInit = not StartNormal or StartFromIncirlik
+local disableBlueCarrierAfterInit = GlobalSettings.pvpEnabled == true or not StartNormal or StartFromIncirlik
 
-if RemoveSouthSyria then
+if GlobalSettings.pvpEnabled ~= true and RemoveSouthSyria then
 	zones.palmyra.LogisticCenter = true
 end
 
@@ -4780,7 +5780,14 @@ if not bc.saveLoaded then
     applyRandomRedUpgrades()
     applyRandomBlueUpgrades()
 
-    if not StartNormal then
+    if GlobalSettings.pvpEnabled then
+		zones.incirlik.LogisticCenter = true
+		zones.palmyra.LogisticCenter = true
+		zones.incirlik._regularSupplyStockSide = zones.incirlik.side
+		zones.incirlik._regularSupplyReady = zones.incirlik:_regularSupplyMaxStock()
+		zones.palmyra._regularSupplyStockSide = zones.palmyra.side
+		zones.palmyra._regularSupplyReady = zones.palmyra:_regularSupplyMaxStock()
+    elseif not StartNormal then
 		if not RemoveSouthSyria then
 			zones.bengurion.LogisticCenter = true
 		end
@@ -4797,6 +5804,10 @@ else
 end
 
 bc:init()
+if GlobalSettings.pvpEnabled then
+	if zones.incirlikdefence.suspended then zones.incirlikdefence:resume() end
+	if zones.sa5.suspended then zones.sa5:resume() end
+end
 if StartFromIncirlik then
 	zones.incirlikdefence:disableZone(true)
 end
@@ -4805,11 +5816,11 @@ if StartFromIncirlik and (not bc.carrierNavigation or not next(bc.carrierNavigat
 	destroyGroupIfActive('CVN-74')
 	destroyGroupIfActive('Tarawa')
 end
-if not bc.saveLoaded and RemoveSouthSyria and not StartNormal then
+if GlobalSettings.pvpEnabled ~= true and not bc.saveLoaded and RemoveSouthSyria and not StartNormal then
 	zones.sa5:disableZone(true)
 end
 if disableBlueCarrierAfterInit then
-	if not StartNormal then
+	if GlobalSettings.pvpEnabled ~= true and not StartNormal then
 		if not RemoveSouthSyria then
 			bc:addConnection("Ramat David", "Ben Gurion")
 			bc:addConnection("Thalah", "Ben Gurion")
@@ -4824,7 +5835,7 @@ if disableBlueCarrierAfterInit then
 	end
 	zones.carrier:disableZone(true)
 end
-	if not StartNormal or RemoveSouthSyria then
+	if RemoveSouthSyria or (GlobalSettings.pvpEnabled ~= true and not StartNormal) then
 		destroyGroupIfActive('Red EWR-south Fixed Coldwar')
 		destroyGroupIfActive('Red EWR-south Fixed')
 		destroyGroupIfActive('HQ Fixed')
@@ -4861,6 +5872,15 @@ bc:buildCapSpawnBuckets()
 startWarehousePersistence()
 if Era ~= 'Vietnam' then
 	bc:enableCarrierNavigation()
+	if GlobalSettings.pvpEnabled == true then
+		bc:addCarrierNavigationSuspendConnection("CVN72_AREA_INCIRLIK_SOUTH", "Incirlik", "occupied")
+		bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Bassel Al-Assad", "occupied")
+		bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RENE", "Rene Mouawad", "occupied")
+		if not RemoveSouthSyria then
+			bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Beirut", "occupied")
+			bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RAMAT", "Ramat David", "occupied")
+		end
+	else
 	if not bc.carrierNavigation or not next(bc.carrierNavigation) then
 		if not StartFromIncirlik then
 			if CustomFlags['StartNormalFalse'] == true then
@@ -4884,29 +5904,54 @@ if Era ~= 'Vietnam' then
 	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_BEIRUT", "Silkworm Site", "true")
 	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Gecitkale", "true") ]]
 	--bc:addCarrierNavigationSuspendConnection("CVN72_AREA_INCIRLIK_SOUTH", "Incirlik")
+	end
 else
 	destroyGroupIfActive('CVN-72')
 	destroyGroupIfActive('CVN-74')
 	destroyGroupIfActive('Tarawa')
 end
+-- PvP Hunter admission.
+if GlobalSettings.pvpEnabled == true then
+bc:initHunter()
+else
 local HuntNumber = SplashDamage and math.random(10,15) or math.random(8,15)
 local AirHuntNumber = math.random(4,8)
 bc:initHunter(HuntNumber, AirHuntNumber)
 SCHEDULER:New(nil, function() bc:_buildHunterBaseList() end, {}, 1)
+end
 
 SCHEDULER:New(nil, function() spawnAwacs(1,nil,10) end, {}, 5)
 SCHEDULER:New(nil, function() spawnAwacs(2,nil,10) end, {}, 6)
+if GlobalSettings.pvpEnabled == true then
+    SCHEDULER:New(nil, function() spawnAwacs(3,nil,10) end, {}, 14)
+    SCHEDULER:New(nil, function() spawnAwacs(4,nil,10) end, {}, 14)
+end
 
 AWACS_CFG = {
     [1] = { alt=30000, speed=350, hdg=270, leg=15, sep=150 }, -- red
     [2] = { alt=30000, speed=350, hdg=270, leg=15, sep=65 }   -- blue
 }
+if GlobalSettings.pvpEnabled == true then
+    AWACS_CFG[1].sep = 150
+    AWACS_CFG[2].sep = 150
+end
 
 
+-- National suspension policy.
+if GlobalSettings.pvpEnabled == true then
+	GlobalSettings.autoSuspendNmBlue = 100
+	GlobalSettings.autoSuspendNmRed = 100
+	GlobalSettings.proximityWakeNm = 50
+else
 GlobalSettings.autoSuspendNmBlue = 90   		-- suspend blue zones deeper than this nm
 GlobalSettings.autoSuspendNmRed = 90   		-- suspend red zones deeper than this nm
+end
 evc = EventCommander:new({ decissionFrequency=15*60, decissionVariance=10*60, skipChance = 15, strikeFrequency=5*60})
-evc:init()
+if GlobalSettings.pvpEnabled ~= true then
+	evc:init()
+else
+	timer.scheduleFunction(evc.scheduleStrikeDecission, evc, timer.getTime() + evc.strikeFrequency)
+end
 mc = MissionCommander:new({side = 2, battleCommander = bc, checkFrequency = 60})
 
 DynamicHybridConfig = DynamicHybridConfig or {
@@ -4960,6 +6005,7 @@ end
 SpawnFriendlyAssets()
 --------------------------------------- Oscar Scuds ---------------------------------------
 Group.getByName('oscar-scud-1'):destroy()
+if GlobalSettings.pvpEnabled ~= true then
 local oscarScudEvent = {
 	id='scuds',
 	action = function(event)
@@ -5057,6 +6103,7 @@ mc:trackMission({
     end
 })
 
+end
 --------------------------------------- End of Oscar Scuds ---------------------------------------
 -------------------------------------------- Airstrike --------------------------------------------
 local airstrike_COOLDOWN = 1800
@@ -5080,6 +6127,7 @@ local airstrikePickOptions = {
 
 Group.getByName('evt-attack'):destroy()
 Group.getByName('evt-attackcw'):destroy()
+if GlobalSettings.pvpEnabled ~= true then
 local tacticalAirstrikeEvent = {
 	id='cas',
 	StrikeMission = true,
@@ -5202,8 +6250,10 @@ mc:trackMission({
 		return false
 	end
 })
+end
 -------------------------------------------- End of Airstrike -----------------------------------------
 ------------------------------------------------ Bomber event ---------------------------------------------
+if GlobalSettings.pvpEnabled ~= true then
 mc:trackMission({
 	title = LTGet("SYRIA_MISSION_INTERCEPT_BOMBERS_TITLE"),
 	description = function(T)
@@ -5242,6 +6292,7 @@ mc:trackMission({
 	end
 })
 
+end
 -------------------------------------------- End of Bomber event ------------------------------------------
 
 ------------------------------------------------- Ship event ----------------------------------------------
@@ -5252,6 +6303,7 @@ Group.getByName('evt-shiptercept2'):destroy()
 Group.getByName('evt-shiptercept3'):destroy()
 local shipDieEvent = nil
 
+if GlobalSettings.pvpEnabled ~= true then
 evc:addEvent({
   id = 'shiptercept',
   action = function()
@@ -5299,6 +6351,7 @@ mc:trackMission({
 })
 
 
+end
 -------------------------------------------- End of Ship event ---------------------------------------------
 ------------------------------------------------- Cargo event ---------------------------------------------
 local Cargo_COOLDOWN = 1800
@@ -5306,6 +6359,7 @@ local lastCargo_COOLDOWN   = -Cargo_COOLDOWN
 Group.getByName('evt-cargointercept1'):destroy()
 Group.getByName('evt-cargointercept2'):destroy()
 Group.getByName('evt-cargointercept3'):destroy()
+if GlobalSettings.pvpEnabled ~= true then
 evc:addEvent({
 	id='cargointercept',
 	action = function()
@@ -5350,6 +6404,7 @@ mc:trackMission({
         return false
     end
 })
+end
 ------------------------------------------ End of Cargo event -----------------------------------------
 -------------------------------------------- Duhur attack ---------------------------------------------
 duhurForce = {
@@ -5364,6 +6419,7 @@ for i,v in pairs(duhurForce) do
 		Group.getByName(v2):destroy()
 	end
 end
+if GlobalSettings.pvpEnabled ~= true then
 local duhurAttackEvent = {
 	id='duhurattack',
 	idleAttackIsActive = function()
@@ -5462,12 +6518,14 @@ mc:trackMission({
     end
 })
 
+end
 ------------------------------------End of Duhur attack --------------------------------------
 ------------------------------------ Convoy intercept ----------------------------------------
 Group.getByName('GroundConvoy1'):destroy()
 Group.getByName('GroundConvoy2'):destroy()
 Group.getByName('GroundConvoy3'):destroy()
 local Convoyintercept = nil
+if GlobalSettings.pvpEnabled ~= true then
 evc:addEvent({
 	id='Convoyintercept',
 	StrikeMission = true,
@@ -5522,9 +6580,12 @@ mc:trackMission({
         return false
     end
 })
+end
 -------------------------------- End of Convoy intercept -----------------------------
 
-local sceneryList = {
+local sceneryList
+if GlobalSettings.pvpEnabled ~= true then
+sceneryList = {
     ["StrikeTarget"] = {SCENERY:FindByZoneName("StrikeTarget")},
     ["StrikeTarget1"] = {SCENERY:FindByZoneName("StrikeTarget1")},
     ["StrikeTarget2"] = {SCENERY:FindByZoneName("StrikeTarget2")},
@@ -6124,7 +7185,9 @@ mc:trackMission({
 -------------------------------- Strike the rebels --------------------------------
 
 
+end
 Group.getByName('StrikeTargetGroup'):destroy()
+if GlobalSettings.pvpEnabled ~= true then
 evc:addEvent({
 	id='StrikeTarget',
 	StrikeMission = true,
@@ -6165,7 +7228,9 @@ mc:trackMission({
 	end,
 })
 
+end
 Group.getByName('StrikeTargetGroup1'):destroy()
+if GlobalSettings.pvpEnabled ~= true then
 evc:addEvent({
 	id='StrikeTarget1',
 	StrikeMission = true,
@@ -6204,9 +7269,11 @@ mc:trackMission({
 	end,
 })
 
+end
 Group.getByName('StrikeTargetGroup2'):destroy()
 Group.getByName('StrikeTargetGroup3'):destroy()
 Group.getByName('Red SAM SA-3 Fixed Event'):destroy()
+if GlobalSettings.pvpEnabled ~= true then
 evc:addEvent({
 	id='StrikeTarget2',
 	StrikeMission = true,
@@ -6522,6 +7589,7 @@ mc:trackMission({
 	end
 })
 
+end
 ------------------------------------ End of custom missions --------------------------------
 attackTarget1 = nil
 attackTarget2 = nil
@@ -6540,6 +7608,213 @@ resupplySuppressStart2 = nil
 
 
 
+-- National Supply descriptors.
+if GlobalSettings.pvpEnabled == true then
+	local function RegisterSupplyMission(slotIndex, ownerSide)
+		assert(ownerSide == coalition.side.RED or ownerSide == coalition.side.BLUE, "Supply mission requires actual owner side")
+		local state = bc.objectivesBySide[ownerSide].supplyMissions
+		local mission
+		mission = {
+			side = ownerSide,
+			missionType = "SUPPLY",
+			objectiveState = state,
+			objectiveSlotIndex = slotIndex,
+			title = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = slot and slot.activation end
+				end
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or not slot or (knownSlot ~= nil and knownSlot ~= slot)
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" or not slot.targetZone then return nil end
+				local target = activationIdentity.targetZone
+				local wp = WaypointList[target] or ""
+				local text = LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_TITLE", target, wp)
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return nil end
+				return text
+			end,
+			description = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = slot and slot.activation end
+				end
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or not slot or (knownSlot ~= nil and knownSlot ~= slot)
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" or not slot.targetZone then return nil end
+				local target = activationIdentity.targetZone
+				local text = LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_DESC", target)
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return nil end
+				return text
+			end,
+			messageStart = nil,
+			messageEnd = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or not slot or knownSlot ~= slot
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" or not slot.targetZone then return nil end
+				local target = activationIdentity.targetZone
+				local text = LT(T):Format("SYRIA_DYNAMIC_RESUPPLY_END", target)
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return nil end
+				return text
+			end,
+			startAction = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or not slot or knownSlot ~= slot
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" or not slot.targetZone then return false end
+				local target = activationIdentity.targetZone
+				local secondSlot = slotIndex == 1 and state.slots[2] or nil
+				local secondActivation = secondSlot and secondSlot.activation
+				local combined = slotIndex == 1 and state.combinedStart1 == activationIdentity
+					and secondActivation ~= nil and state.combinedStart2 == secondActivation
+					and secondActivation.ownerSide == ownerSide and secondActivation.role == "SUPPLY"
+					and secondSlot.targetZone ~= nil and secondSlot.targetZone == secondActivation.targetZone
+				local secondTarget = combined and secondActivation.targetZone or nil
+				local combinedStart1, combinedStart2 = state.combinedStart1, state.combinedStart2
+				local suppressed = slotIndex == 2 and state.suppressStart2 == activationIdentity
+				local text
+				if not suppressed then
+					local wp = WaypointList[target] or ""
+					if combined then
+						local wp2 = WaypointList[secondTarget] or ""
+						text = L10N:Format("SYRIA_DYNAMIC_RESUPPLY_START_TWO", target, wp, secondTarget, wp2)
+					else
+						text = L10N:Format("SYRIA_DYNAMIC_RESUPPLY_START_ONE", target, wp)
+					end
+				end
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				if combined and (state.slots[2] ~= secondSlot or secondSlot.activation ~= secondActivation
+					or secondSlot.targetZone ~= secondTarget or secondActivation.targetZone ~= secondTarget
+					or secondActivation.ownerSide ~= ownerSide or secondActivation.role ~= "SUPPLY"
+					or state.combinedStart1 ~= activationIdentity or state.combinedStart2 ~= secondActivation) then return false end
+				local targetzn = bc:getZoneByName(target)
+				local demandCache = {}
+				if not targetzn or not bc:_playerSupplyTargetNeedsSupply(targetzn, demandCache, ownerSide) then return false end
+				if combined then
+					local secondZone = bc:getZoneByName(secondTarget)
+					if not secondZone or not bc:_playerSupplyTargetNeedsSupply(secondZone, demandCache, ownerSide) then return false end
+				end
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				if combined and (state.slots[2] ~= secondSlot or secondSlot.activation ~= secondActivation
+					or secondSlot.targetZone ~= secondTarget or secondActivation.targetZone ~= secondTarget
+					or secondActivation.ownerSide ~= ownerSide or secondActivation.role ~= "SUPPLY"
+					or state.combinedStart1 ~= activationIdentity or state.combinedStart2 ~= secondActivation) then return false end
+				bc:addMissionTag(target, "Resupply", ownerSide, activationIdentity)
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				bc:refreshZoneLabel(target, ownerSide, targetzn)
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				if combined and (state.slots[2] ~= secondSlot or secondSlot.activation ~= secondActivation
+					or secondSlot.targetZone ~= secondTarget or secondActivation.targetZone ~= secondTarget
+					or secondActivation.ownerSide ~= ownerSide or secondActivation.role ~= "SUPPLY"
+					or state.combinedStart1 ~= activationIdentity or state.combinedStart2 ~= secondActivation) then return false end
+				if text then trigger.action.outTextForCoalition(ownerSide, text, 30) end
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				if combined then
+					if state.slots[2] ~= secondSlot or secondSlot.activation ~= secondActivation
+						or secondSlot.targetZone ~= secondTarget or secondActivation.targetZone ~= secondTarget
+						or secondActivation.ownerSide ~= ownerSide or secondActivation.role ~= "SUPPLY"
+						or state.combinedStart1 ~= activationIdentity or state.combinedStart2 ~= secondActivation then return false end
+					state.suppressStart2 = secondActivation
+					state.combinedStart1 = nil
+					state.combinedStart2 = nil
+				elseif slotIndex == 2 then
+					if combinedStart2 == activationIdentity and state.combinedStart1 == combinedStart1 and state.combinedStart2 == combinedStart2 then
+						state.combinedStart1 = nil
+						state.combinedStart2 = nil
+					end
+					if suppressed and state.suppressStart2 == activationIdentity then state.suppressStart2 = nil end
+				end
+				if not suppressed and not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+					if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+						or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+						or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+					trigger.action.outSoundForCoalition(ownerSide, "ding.ogg")
+				end
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				return true
+			end,
+			endAction = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or not slot or knownSlot ~= slot
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" or not slot.targetZone then return false end
+				local target = activationIdentity.targetZone
+				bc:removeMissionTag(target, "Resupply", ownerSide, activationIdentity)
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				local targetzn = bc:getZoneByName(target)
+				bc:refreshZoneLabel(target, ownerSide, targetzn or false)
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				if state.combinedStart1 == activationIdentity then state.combinedStart1 = nil end
+				if state.combinedStart2 == activationIdentity then state.combinedStart2 = nil end
+				if state.suppressStart2 == activationIdentity then state.suppressStart2 = nil end
+				slot.targetZone = nil
+				slot.activation = nil
+				if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+					if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+						or slot.activation ~= nil or slot.targetZone ~= nil then return false end
+					trigger.action.outSoundForCoalition(ownerSide, "cancel.ogg")
+				end
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= nil or slot.targetZone ~= nil then return false end
+				return true
+			end,
+			isActive = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then activationIdentity = slot and slot.activation end
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or not slot or (knownSlot ~= nil and knownSlot ~= slot)
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" or not slot.targetZone then return false end
+				local target = activationIdentity.targetZone
+				local combinedStart1, combinedStart2 = state.combinedStart1, state.combinedStart2
+				local targetzn = bc:getZoneByName(target)
+				if bc.objectivesBySide[ownerSide].supplyMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "SUPPLY" then return false end
+				local active = targetzn and bc:_playerSupplyTargetNeedsSupply(targetzn, {}, ownerSide) or false
+				if not active and not mission.isRunning then
+					if ((slotIndex == 1 and combinedStart1 == activationIdentity)
+						or (slotIndex == 2 and combinedStart2 == activationIdentity))
+						and state.combinedStart1 == combinedStart1 and state.combinedStart2 == combinedStart2 then
+						state.combinedStart1 = nil
+						state.combinedStart2 = nil
+					end
+					if slotIndex == 2 and state.suppressStart2 == activationIdentity then state.suppressStart2 = nil end
+					slot.targetZone = nil
+					slot.activation = nil
+				end
+				return active
+			end
+		}
+		mc:trackMission(mission)
+	end
+	for _, ownerSide in ipairs({coalition.side.RED, coalition.side.BLUE}) do
+		for slotIndex = 1, 2 do RegisterSupplyMission(slotIndex, ownerSide) end
+	end
+else
 mc:trackMission({
 	title = function(T)
 		local wp = WaypointList[resupplyTarget1] or ""
@@ -6641,6 +7916,198 @@ mc:trackMission({
 	end
 })
 
+end
+-- End national supply descriptors.
+-- National Attack descriptors.
+if GlobalSettings.pvpEnabled then
+	local function RegisterDirectorAttackMission(slotIndex, ownerSide)
+		assert(ownerSide == coalition.side.RED or ownerSide == coalition.side.BLUE, "Attack mission requires actual owner side")
+		local state = bc.objectivesBySide[ownerSide].attackMissions
+		local opponentSide = ownerSide == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+		local mission
+		mission = {
+			side = ownerSide,
+			missionType = "ATTACK",
+			objectiveState = state,
+			objectiveSlotIndex = slotIndex,
+			title = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = slot and slot.activation end
+				end
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or not slot or (knownSlot ~= nil and knownSlot ~= slot)
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" or not slot.targetZone then return nil end
+				local target = activationIdentity.targetZone
+				local wp = WaypointList[target] or ""
+				local text = LT(T):Format("SYRIA_DYNAMIC_ATTACK_TITLE", target, wp)
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return nil end
+				return text
+			end,
+			description = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = slot and slot.activation end
+				end
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or not slot or (knownSlot ~= nil and knownSlot ~= slot)
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" or not slot.targetZone then return nil end
+				local target = activationIdentity.targetZone
+				local text = LT(T):Format("SYRIA_DYNAMIC_ATTACK_DESC", target)
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return nil end
+				return text
+			end,
+			messageStart = nil,
+			messageEnd = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or not slot or knownSlot ~= slot
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" or not slot.targetZone then return nil end
+				local target = activationIdentity.targetZone
+				local text = LT(T):Format("SYRIA_DYNAMIC_ATTACK_END", target)
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return nil end
+				return text
+			end,
+			startAction = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or not slot or knownSlot ~= slot
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" or not slot.targetZone then return false end
+				local target = activationIdentity.targetZone
+				local secondSlot = slotIndex == 1 and state.slots[2] or nil
+				local secondActivation = secondSlot and secondSlot.activation
+				local combined = slotIndex == 1 and state.combinedStart1 == activationIdentity
+					and secondActivation ~= nil and state.combinedStart2 == secondActivation
+					and secondActivation.ownerSide == ownerSide and secondActivation.role == "ATTACK"
+					and secondSlot.targetZone ~= nil and secondSlot.targetZone == secondActivation.targetZone
+				local secondTarget = combined and secondActivation.targetZone or nil
+				local combinedStart1, combinedStart2 = state.combinedStart1, state.combinedStart2
+				local suppressed = slotIndex == 2 and state.suppressStart2 == activationIdentity
+				local text
+				if not suppressed then
+					local wp = WaypointList[target] or ""
+					if combined then
+						local wp2 = WaypointList[secondTarget] or ""
+						text = L10N:Format("SYRIA_DYNAMIC_ATTACK_START_TWO", target, wp, secondTarget, wp2)
+					else
+						text = L10N:Format("SYRIA_DYNAMIC_ATTACK_START_ONE", target, wp)
+					end
+				end
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+				if combined and (state.slots[2] ~= secondSlot or secondSlot.activation ~= secondActivation
+					or secondSlot.targetZone ~= secondTarget or secondActivation.targetZone ~= secondTarget
+					or secondActivation.ownerSide ~= ownerSide or secondActivation.role ~= "ATTACK"
+					or state.combinedStart1 ~= activationIdentity or state.combinedStart2 ~= secondActivation) then return false end
+				bc:addMissionTag(target, "Attack", ownerSide, activationIdentity)
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+				bc:refreshZoneLabel(target, ownerSide)
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+				if combined and (state.slots[2] ~= secondSlot or secondSlot.activation ~= secondActivation
+					or secondSlot.targetZone ~= secondTarget or secondActivation.targetZone ~= secondTarget
+					or secondActivation.ownerSide ~= ownerSide or secondActivation.role ~= "ATTACK"
+					or state.combinedStart1 ~= activationIdentity or state.combinedStart2 ~= secondActivation) then return false end
+				if text then trigger.action.outTextForCoalition(ownerSide, text, 30) end
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+				if combined then
+					if state.slots[2] ~= secondSlot or secondSlot.activation ~= secondActivation
+						or secondSlot.targetZone ~= secondTarget or secondActivation.targetZone ~= secondTarget
+						or secondActivation.ownerSide ~= ownerSide or secondActivation.role ~= "ATTACK"
+						or state.combinedStart1 ~= activationIdentity or state.combinedStart2 ~= secondActivation then return false end
+					state.suppressStart2 = secondActivation
+					state.combinedStart1 = nil
+					state.combinedStart2 = nil
+				elseif slotIndex == 2 then
+					if combinedStart2 == activationIdentity and state.combinedStart1 == combinedStart1 and state.combinedStart2 == combinedStart2 then
+						state.combinedStart1 = nil
+						state.combinedStart2 = nil
+					end
+					if suppressed and state.suppressStart2 == activationIdentity then state.suppressStart2 = nil end
+				end
+				if not suppressed and not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+					if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+						or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+						or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+					trigger.action.outSoundForCoalition(ownerSide, "cas.ogg")
+				end
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+				return true
+			end,
+			endAction = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or not slot or knownSlot ~= slot
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" or not slot.targetZone then return false end
+				local target = activationIdentity.targetZone
+				bc:removeMissionTag(target, "Attack", ownerSide, activationIdentity)
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+				bc:refreshZoneLabel(target, ownerSide)
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+				slot.targetZone = nil
+				slot.activation = nil
+				if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+					if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+						or slot.activation ~= nil or slot.targetZone ~= nil then return false end
+					trigger.action.outSoundForCoalition(ownerSide, "cancel.ogg")
+				end
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= nil or slot.targetZone ~= nil then return false end
+				return true
+			end,
+			isActive = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then activationIdentity = slot and slot.activation end
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or not slot or (knownSlot ~= nil and knownSlot ~= slot)
+					or activationIdentity == nil or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" or not slot.targetZone then return false end
+				local target = activationIdentity.targetZone
+				local combinedStart1, combinedStart2 = state.combinedStart1, state.combinedStart2
+				local targetzn = bc:getZoneByName(target)
+				if bc.objectivesBySide[ownerSide].attackMissions ~= state or state.slots[slotIndex] ~= slot
+					or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+					or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "ATTACK" then return false end
+				local active = targetzn and targetzn.zone and targetzn.side == opponentSide and not targetzn.suspended or false
+				if not active and not mission.isRunning then
+					if ((slotIndex == 1 and combinedStart1 == activationIdentity)
+						or (slotIndex == 2 and combinedStart2 == activationIdentity))
+						and state.combinedStart1 == combinedStart1 and state.combinedStart2 == combinedStart2 then
+						state.combinedStart1 = nil
+						state.combinedStart2 = nil
+					end
+					if slotIndex == 2 and state.suppressStart2 == activationIdentity then state.suppressStart2 = nil end
+					slot.targetZone = nil
+					slot.activation = nil
+				end
+				return active
+			end
+		}
+		mc:trackMission(mission)
+	end
+	for _, ownerSide in ipairs({coalition.side.RED, coalition.side.BLUE}) do
+		for slotIndex = 1, 3 do RegisterDirectorAttackMission(slotIndex, ownerSide) end
+	end
+else
 mc:trackMission({
 	title = function(T)
 		local wp = WaypointList[attackTarget1] or ""
@@ -6786,6 +8253,193 @@ mc:trackMission({
 		return active
 	end
 })
+end
+-- End national attack descriptors.
+-- National Capture descriptors.
+if GlobalSettings.pvpEnabled == true then
+    for actualOwner = coalition.side.RED, coalition.side.BLUE do
+        local ownerSide = actualOwner
+        local state = bc.objectivesBySide[ownerSide].captureMissions
+        local mission
+        mission = {
+            side = ownerSide,
+            missionType = "CAPTURE",
+            objectiveState = state,
+            objectiveSlotIndex = 1,
+            title = function(T, activationIdentity, knownSlot)
+            local slot = state.slots[1]
+            if activationIdentity == nil then
+                if mission.isRunning then activationIdentity = mission.objectiveActivation
+                else activationIdentity = slot and slot.activation end
+            end
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            local wp = WaypointList[slot.targetZone] or ""
+            local text = LT(T):Format("SYRIA_DYNAMIC_CAPTURE_TITLE", slot.targetZone, wp)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            return text
+            end,
+            description = function(T, activationIdentity, knownSlot)
+            local slot = state.slots[1]
+            if activationIdentity == nil then
+                if mission.isRunning then activationIdentity = mission.objectiveActivation
+                else activationIdentity = slot and slot.activation end
+            end
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            local text = LT(T):Format("SYRIA_DYNAMIC_CAPTURE_DESC", slot.targetZone)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            return text
+            end,
+            messageStart = function(T, activationIdentity, knownSlot)
+            local slot = state.slots[1]
+            if activationIdentity == nil then
+                if mission.isRunning then activationIdentity = mission.objectiveActivation
+                else activationIdentity = slot and slot.activation end
+            end
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            local wp = WaypointList[slot.targetZone] or ""
+            local text = LT(T):Format("SYRIA_DYNAMIC_CAPTURE_START", slot.targetZone, wp)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            return text
+            end,
+            messageEnd = function(T, activationIdentity, knownSlot)
+            local slot = state.slots[1]
+            if activationIdentity == nil then
+                if mission.isRunning then activationIdentity = mission.objectiveActivation
+                else activationIdentity = slot and slot.activation end
+            end
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            local target = bc:getZoneByName(slot.targetZone)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            if target and (target.pendingCapture or target._pendingCaptureRestore) then return nil end
+            local text = LT(T):Format("SYRIA_DYNAMIC_CAPTURE_END", slot.targetZone)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return nil end
+            return text
+            end,
+            startAction = function(_, activationIdentity, knownSlot)
+            local slot = state.slots[1]
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or knownSlot ~= slot or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return false end
+            bc:addMissionTag(slot.targetZone, "Capture", ownerSide, activationIdentity)
+            bc:refreshZoneLabel(slot.targetZone, ownerSide)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or knownSlot ~= slot or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return false end
+            slot.started = true
+            if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+                trigger.action.outSoundForCoalition(ownerSide, "ding.ogg")
+            end
+            return true
+            end,
+            endAction = function(_, activationIdentity, knownSlot)
+            local slot = state.slots[1]
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or knownSlot ~= slot or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return false end
+            local target = bc:getZoneByName(slot.targetZone)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or knownSlot ~= slot or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return false end
+            local capturePending = target and (target.pendingCapture ~= nil or target._pendingCaptureRestore ~= nil)
+            bc:removeMissionTag(slot.targetZone, "Capture", ownerSide, activationIdentity)
+            bc:refreshZoneLabel(slot.targetZone, ownerSide, target or false)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or knownSlot ~= slot or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return false end
+            state.slots[1] = { active = false }
+            if not missionCompleted and not capturePending then
+                trigger.action.outSoundForCoalition(ownerSide, "cancel.ogg")
+            end
+            return true
+            end,
+            isActive = function(_, activationIdentity, knownSlot)
+            local slot = state.slots[1]
+            if activationIdentity == nil then
+                if mission.isRunning then activationIdentity = mission.objectiveActivation
+                else activationIdentity = slot and slot.activation end
+            end
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return false end
+            local target = bc:getZoneByName(slot.targetZone)
+            if bc.objectivesBySide[ownerSide].captureMissions ~= state or state.slots[1] ~= slot
+                or mission.side ~= ownerSide or mission.objectiveState ~= state
+                or mission.missionType ~= "CAPTURE" or mission.objectiveSlotIndex ~= 1
+                or slot == nil or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil or slot.activation ~= activationIdentity
+                or slot.targetZone == nil or slot.targetZone ~= activationIdentity.targetZone
+                or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "CAPTURE" then return false end
+            local active = slot.active == true and target and target.side == coalition.side.NEUTRAL and target.active
+                and not target.pendingCapture and not target._pendingCaptureRestore
+            if not active and not mission.isRunning then state.slots[1] = { active = false } end
+            return active == true
+            end,
+        }
+        mc:trackMission(mission)
+    end
+else
 captureTarget = nil
 mc:trackMission({
     title = function(T)
@@ -6834,93 +8488,381 @@ mc:trackMission({
 })
 
 
+end
+-- End national capture descriptors.
 seadTargets = {}
 
-function RegisterDirectorSeadMission(slotIndex)
+function RegisterDirectorSeadMission(slotIndex, ownerSide)
+    local objectiveState
+    local missionSide = coalition.side.BLUE
+    local missionTargetSide = coalition.side.RED
+    if GlobalSettings.pvpEnabled then
+        assert(ownerSide == coalition.side.RED or ownerSide == coalition.side.BLUE, "SEAD mission requires a RED or BLUE owner")
+        objectiveState = bc.objectivesBySide[ownerSide].seadMissions
+        missionSide = ownerSide
+        missionTargetSide = ownerSide == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+    end
     local mission
     mission = {
         missionType = "SEAD",
         zone = nil,
-        title = function(T)
-            local slot = bc.seadMissions.slots[slotIndex]
+        title = function(T, activationIdentity, knownSlot)
+            local slot
+            if objectiveState then
+                if activationIdentity == nil then
+                    knownSlot = objectiveState.slots[slotIndex]
+                    if mission.isRunning then activationIdentity = mission.objectiveActivation
+                    else activationIdentity = knownSlot.activation end
+                end
+                if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+                    or knownSlot.activation ~= activationIdentity then return nil end
+                slot = knownSlot
+            else
+                slot = bc.seadMissions.slots[slotIndex]
+            end
             return LT(T):Format("MISSION_SEAD_TITLE", slot.targetZone)
         end,
-        description = function(T)
-            local slot = bc.seadMissions.slots[slotIndex]
+        description = function(T, activationIdentity, knownSlot)
+            local slot
+            if objectiveState then
+                if activationIdentity == nil then
+                    knownSlot = objectiveState.slots[slotIndex]
+                    if mission.isRunning then activationIdentity = mission.objectiveActivation
+                    else activationIdentity = knownSlot.activation end
+                end
+                if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+                    or knownSlot.activation ~= activationIdentity then return nil end
+                slot = knownSlot
+            else
+                slot = bc.seadMissions.slots[slotIndex]
+            end
             return LT(T):Format("MISSION_SEAD_DESCRIPTION", slot.targetZone)
         end,
-        messageStart = function(T)
-            local slot = bc.seadMissions.slots[slotIndex]
+        messageStart = function(T, activationIdentity, knownSlot)
+            local slot
+            if objectiveState then
+                if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+                    or knownSlot.activation ~= activationIdentity then return nil end
+                slot = knownSlot
+            else
+                slot = bc.seadMissions.slots[slotIndex]
+            end
             return LT(T):Format("MISSION_SEAD_START", slot.targetZone)
         end,
-        messageEnd = function(T) return LT(T):Get("MISSION_SEAD_END") end,
-        startAction = function()
-            local slot = bc.seadMissions.slots[slotIndex]
+        messageEnd = function(T, activationIdentity, knownSlot)
+            if objectiveState then
+                if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+                    or knownSlot.activation ~= activationIdentity then return nil end
+            end
+            return LT(T):Get("MISSION_SEAD_END")
+        end,
+        startAction = function(_, activationIdentity, knownSlot)
+            local slot
+            if objectiveState then
+                if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+                    or knownSlot.activation ~= activationIdentity then return false end
+                slot = knownSlot
+            else
+                slot = bc.seadMissions.slots[slotIndex]
+            end
             slot.started = true
             mission.zone = slot.targetZone
-            bc:addMissionTag(slot.targetZone, "SEAD")
-            bc:refreshZoneLabel(slot.targetZone)
-            if not missionCompleted then trigger.action.outSoundForCoalition(2,"ding.ogg") end
+            if objectiveState then bc:addMissionTag(slot.targetZone, "SEAD", ownerSide, activationIdentity)
+            else bc:addMissionTag(slot.targetZone, "SEAD") end
+            if objectiveState then bc:refreshZoneLabel(slot.targetZone, ownerSide)
+            else bc:refreshZoneLabel(slot.targetZone) end
+            if not missionCompleted then trigger.action.outSoundForCoalition(missionSide,"ding.ogg") end
+            if objectiveState then return true end
         end,
-        endAction = function()
-            local slot = bc.seadMissions.slots[slotIndex]
+        endAction = function(_, activationIdentity, knownSlot)
+            local slot
+            if objectiveState then
+                if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+                    or knownSlot.activation ~= activationIdentity then return false end
+                slot = knownSlot
+            else
+                slot = bc.seadMissions.slots[slotIndex]
+            end
             local targetZone = slot.targetZone
             if targetZone then
-                bc:removeMissionTag(targetZone, "SEAD")
-                bc:refreshZoneLabel(targetZone)
+                if objectiveState then bc:removeMissionTag(targetZone, "SEAD", ownerSide, activationIdentity)
+                else bc:removeMissionTag(targetZone, "SEAD") end
+                if objectiveState then bc:refreshZoneLabel(targetZone, ownerSide)
+                else bc:refreshZoneLabel(targetZone) end
             end
             if slot.completed then
-                local participantNames, rewards = bc:buildSeadMissionRewards(slotIndex)
+                local participantNames, rewards
+                if objectiveState then participantNames, rewards = bc:buildSeadMissionRewards(slotIndex, ownerSide, activationIdentity)
+                else participantNames, rewards = bc:buildSeadMissionRewards(slotIndex) end
                 for _, playerName in ipairs(participantNames) do
-                    bc:addContribution(playerName, coalition.side.BLUE, rewards[playerName], {playerName})
+                    bc:addContribution(playerName, missionSide, rewards[playerName], {playerName})
                     bc:addTempStat(playerName, 'SEAD mission', 1)
                     bc:scheduleRewardClaimIfLanded(playerName)
                 end
                 if #participantNames == 1 then
                     local playerName = participantNames[1]
-                    trigger.action.outTextForCoalition(2,L10N:Format("MISSION_REWARD_COMPLETED_SOLO", "SEAD", playerName, rewards[playerName]),20)
+                    trigger.action.outTextForCoalition(missionSide,L10N:Format("MISSION_REWARD_COMPLETED_SOLO", "SEAD", playerName, rewards[playerName]),20)
                 elseif #participantNames > 1 then
                     local rewardLines = {}
                     for _, playerName in ipairs(participantNames) do
                         rewardLines[#rewardLines + 1] = L10N:Format("MISSION_CAS_REWARD_LINE", playerName, rewards[playerName])
                     end
-                    trigger.action.outTextForCoalition(2,L10N:Format("MISSION_REWARD_COMPLETED_GROUP_VARIABLE", "SEAD", table.concat(rewardLines, '\n')),20)
+                    trigger.action.outTextForCoalition(missionSide,L10N:Format("MISSION_REWARD_COMPLETED_GROUP_VARIABLE", "SEAD", table.concat(rewardLines, '\n')),20)
                 end
             end
-            seadTargets[slotIndex] = nil
-            bc:resetSeadMissionSlot(slotIndex)
+            if not objectiveState then seadTargets[slotIndex] = nil end
+            if objectiveState then bc:resetSeadMissionSlot(slotIndex, ownerSide, activationIdentity)
+            else bc:resetSeadMissionSlot(slotIndex) end
             mission.zone = nil
-            if not missionCompleted then trigger.action.outSoundForCoalition(2,"cancel.ogg") end
+            if not missionCompleted then trigger.action.outSoundForCoalition(missionSide,"cancel.ogg") end
+            if objectiveState then return true end
         end,
-        isActive = function()
-            local slot = bc.seadMissions.slots[slotIndex]
+        isActive = function(_, activationIdentity, knownSlot)
+            local slot
+            if objectiveState then
+                if activationIdentity == nil then
+                    knownSlot = objectiveState.slots[slotIndex]
+                    activationIdentity = knownSlot.activation
+                end
+                if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+                    or knownSlot.activation ~= activationIdentity then return false end
+                slot = knownSlot
+            else
+                slot = bc.seadMissions.slots[slotIndex]
+            end
             if slot.completed and not slot.started then return true end
             if not slot.active then return false end
             if not slot.started then
                 local targetZone = bc:getZoneByName(slot.targetZone)
-                if targetZone.side ~= coalition.side.RED or not targetZone.active or targetZone.suspended then
-                    seadTargets[slotIndex] = nil
-                    bc:resetSeadMissionSlot(slotIndex)
+                if targetZone.side ~= missionTargetSide or not targetZone.active or targetZone.suspended then
+                    if not objectiveState then seadTargets[slotIndex] = nil end
+                    if objectiveState then bc:resetSeadMissionSlot(slotIndex, ownerSide, activationIdentity)
+                    else bc:resetSeadMissionSlot(slotIndex) end
                     return false
                 end
                 return true
             end
+            if objectiveState then return bc:isSeadMissionSlotContinuing(slotIndex, ownerSide, activationIdentity) end
             return bc:isSeadMissionSlotContinuing(slotIndex)
         end
     }
+    if objectiveState then
+        mission.side = ownerSide
+        mission.missionType = "SEAD"
+        mission.objectiveState = objectiveState
+        mission.objectiveSlotIndex = slotIndex
+    end
     mc:trackMission(mission)
 end
 
-for slotIndex = 1, bc.seadMissionMaxSlots do
-    RegisterDirectorSeadMission(slotIndex)
+if GlobalSettings.pvpEnabled then
+    for ownerSide = coalition.side.RED, coalition.side.BLUE do
+        for slotIndex = 1, bc.seadMissionMaxSlots do
+            RegisterDirectorSeadMission(slotIndex, ownerSide)
+        end
+    end
+else
+    for slotIndex = 1, bc.seadMissionMaxSlots do
+        RegisterDirectorSeadMission(slotIndex)
+    end
 end
 
+-- National Dead descriptors.
+if GlobalSettings.pvpEnabled == true then
+	mc:registerDeadMissions(coalition.side.RED)
+	mc:registerDeadMissions(coalition.side.BLUE)
+else
 mc:registerDeadMissions()
+end
+-- End national dead descriptors.
 
 
 ---------------------------------------------------------------------
 --                          CAP MISSION                            --
 
+-- National Cap descriptors.
+if GlobalSettings.pvpEnabled then
+    local function registerCapMission(ownerSide)
+        local owner = bc.objectivesBySide[ownerSide]
+        local state = owner.capMissions
+        local m = { side = ownerSide, missionType = 'CAP', objectiveState = state, objectiveSlotIndex = 1 }
+        local callbacks = {
+            title = function(T, activation, knownSlot)
+                local slot = knownSlot or state.slots[1]
+                activation = activation or (m.isRunning and m.objectiveActivation or slot.activation)
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return nil end
+                local message = LT(T):Get("MISSION_CAP_TITLE")
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return nil end
+                return message
+            end,
+            description = function(T, activation, knownSlot)
+                local slot = knownSlot or state.slots[1]
+                activation = activation or (m.isRunning and m.objectiveActivation or slot.activation)
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return nil end
+                T = LT(T)
+                local message
+                if not next(slot.killsByPlayer) then
+                    message = T:Format("MISSION_CAP_DESCRIPTION_EMPTY", slot.targetPlanes)
+                else
+                    local scoreboard = T:Get("MISSION_CAP_SCOREBOARD_HEADER")
+                    for playerName, kills in pairs(slot.killsByPlayer) do
+                        scoreboard = scoreboard .. string.format("%s: %d\n", playerName, kills)
+                    end
+                    message = T:Format("MISSION_CAP_DESCRIPTION_WITH_SCORE", slot.targetPlanes, scoreboard)
+                end
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return nil end
+                return message
+            end,
+            messageStart = function(T, activation, knownSlot)
+                local slot = knownSlot or state.slots[1]
+                activation = activation or (m.isRunning and m.objectiveActivation or slot.activation)
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return nil end
+                local message = L10N:Format("MISSION_CAP_START", slot.targetPlanes)
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return nil end
+                return message
+            end,
+            messageEnd = function(T, activation, knownSlot)
+                local slot = knownSlot or state.slots[1]
+                activation = activation or (m.isRunning and m.objectiveActivation or slot.activation)
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return nil end
+                local message = L10N:Get("MISSION_CAP_END")
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return nil end
+                return message
+            end,
+            startAction = function(self, activation, knownSlot)
+                local slot = knownSlot or state.slots[1]
+                activation = activation or (m.isRunning and m.objectiveActivation or slot.activation)
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return false end
+                slot.started = true
+                if not missionCompleted then trigger.action.outSoundForCoalition(ownerSide, "ding.ogg") end
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return false end
+                return true
+            end,
+            endAction = function(self, activation, knownSlot)
+                local slot = knownSlot or state.slots[1]
+                activation = activation or (m.isRunning and m.objectiveActivation or slot.activation)
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return false end
+                if not slot.completed then return false end
+                local pname, receipt = slot.winner, slot.winnerOwner
+                if pname then
+                    local groupid = bc.groupByPlayer[pname]
+                    local currentOwner = groupid and bc.jointMenuOwnersByGroup[groupid]
+                    local aliveSnapshot = { [ownerSide == coalition.side.RED and coalition.side.BLUE or coalition.side.RED] = {} }
+                    local eligible = receipt ~= nil and currentOwner == receipt and receipt.player == pname and receipt.side == ownerSide
+                        and bc:_jointPartnerAlive(pname, aliveSnapshot)
+                    if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                        and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                        and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                        and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                        and slot.targetZone == nil and activation.targetZone == nil) then return false end
+                    if eligible and bc.groupByPlayer[pname] == groupid and bc.jointMenuOwnersByGroup[groupid] == receipt then
+                        local reward = slot.targetPlanes * 100
+                        local jp = bc:awardJointMissionReward(pname, ownerSide, reward, 'CAP mission', nil, nil, nil, nil, aliveSnapshot)
+                        if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                            and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                            and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                            and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                            and slot.targetZone == nil and activation.targetZone == nil) then return false end
+
+                        local message
+                        if jp then message = L10N:Format("MISSION_CAP_COMPLETED_JOINT", pname, jp, reward)
+                        else message = L10N:Format("MISSION_CAP_COMPLETED_SOLO", pname, reward) end
+                        if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                            and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                            and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                            and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                            and slot.targetZone == nil and activation.targetZone == nil) then return false end
+
+                        trigger.action.outTextForCoalition(ownerSide, message, 20)
+                        if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                            and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                            and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                            and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                            and slot.targetZone == nil and activation.targetZone == nil) then return false end
+
+                    end
+                    local now = timer.getTime()
+                    if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                        and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                        and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                        and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                        and slot.targetZone == nil and activation.targetZone == nil) then return false end
+
+                    state.cooldownUntil = now + 900
+                end
+                if not missionCompleted then trigger.action.outSoundForCoalition(ownerSide, "cancel.ogg") end
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return false end
+
+                slot.active, slot.completed, slot.started = false, false, false
+                slot.killsByPlayer, slot.targetPlanes = {}, 0
+                slot.winner, slot.winnerOwner, slot.activation = nil, nil, nil
+                return true
+            end,
+            isActive = function(self, activation, knownSlot)
+                local slot = knownSlot or state.slots[1]
+                activation = activation or slot.activation
+                if not (bc.objectivesBySide[ownerSide] == owner and owner.capMissions == state
+                    and m.side == ownerSide and m.missionType == 'CAP' and m.objectiveState == state and m.objectiveSlotIndex == 1
+                    and state.slots[1] == slot and slot.activation == activation and activation ~= nil
+                    and activation.ownerSide == ownerSide and activation.role == 'CAP'
+                    and slot.targetZone == nil and activation.targetZone == nil) then return false end
+                return slot.active or (slot.completed and not slot.started)
+            end,
+        }
+        for key, callback in pairs(callbacks) do m[key] = callback end
+        mc:trackMission(m)
+    end
+    registerCapMission(coalition.side.RED)
+    registerCapMission(coalition.side.BLUE)
+else
 capMissionTarget = nil
 capKillsByPlayer = {}
 capTargetPlanes = 0
@@ -6977,20 +8919,57 @@ mc:trackMission({
 
 
 
+end
+-- End national cap descriptors.
 --                    End of CAP MISSION                           --
 ---------------------------------------------------------------------
 
 ---------------------------------------------------------------------
 --                          CAS MISSION                            --
-function RegisterDirectorCasMission(slotIndex)
-	mc:trackMission({
-		title = function(T)
-			local slot = bc.casMissions.slots[slotIndex]
+function RegisterDirectorCasMission(slotIndex, ownerSide)
+	local objectiveState
+	local missionSide = coalition.side.BLUE
+	local missionTargetSide = coalition.side.RED
+	if GlobalSettings.pvpEnabled then
+		assert(ownerSide == coalition.side.RED or ownerSide == coalition.side.BLUE, "CAS mission requires a RED or BLUE owner")
+		objectiveState = bc.objectivesBySide[ownerSide].casMissions
+		missionSide = ownerSide
+		missionTargetSide = ownerSide == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+	end
+	local mission
+	mission = {
+		title = function(T, activationIdentity, knownSlot)
+			local slot
+			if objectiveState then
+				if activationIdentity == nil then
+					knownSlot = objectiveState.slots[slotIndex]
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = knownSlot.activation end
+				end
+				if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+					or knownSlot.activation ~= activationIdentity then return nil end
+				slot = knownSlot
+			else
+				slot = bc.casMissions.slots[slotIndex]
+			end
 			return LT(T):Format("MISSION_CAS_TITLE", slot.targetZone)
 		end,
-		description = function(T)
-			T = LT(T)
-			local slot = bc.casMissions.slots[slotIndex]
+		description = function(T, activationIdentity, knownSlot)
+			if not objectiveState then T = LT(T) end
+			local slot
+			if objectiveState then
+				if activationIdentity == nil then
+					knownSlot = objectiveState.slots[slotIndex]
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = knownSlot.activation end
+				end
+				if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+					or knownSlot.activation ~= activationIdentity then return nil end
+				slot = knownSlot
+			else
+				slot = bc.casMissions.slots[slotIndex]
+			end
+			if objectiveState then T = LT(T) end
 			if not next(slot.killsByPlayer) then
 				return T:Format("MISSION_CAS_DESCRIPTION_EMPTY", slot.targetZone, slot.totalKills, slot.targetKills)
 			else
@@ -7001,68 +8980,339 @@ function RegisterDirectorCasMission(slotIndex)
 				return T:Format("MISSION_CAS_DESCRIPTION_WITH_SCORE", slot.targetZone, slot.totalKills, slot.targetKills, scoreboard)
 			end
 		end,
-		messageStart = function(T)
-			local slot = bc.casMissions.slots[slotIndex]
+		messageStart = function(T, activationIdentity, knownSlot)
+			local slot
+			if objectiveState then
+				if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+					or knownSlot.activation ~= activationIdentity then return nil end
+				slot = knownSlot
+			else
+				slot = bc.casMissions.slots[slotIndex]
+			end
 			return LT(T):Format("MISSION_CAS_START", slot.targetZone, slot.targetKills)
 		end,
-		messageEnd = function(T) return LT(T):Get("MISSION_CAS_END") end,
-		startAction = function()
-			local slot = bc.casMissions.slots[slotIndex]
-			slot.started = true
-			if not slot.completed and not missionCompleted then trigger.action.outSoundForCoalition(2,'ding.ogg') end
+		messageEnd = function(T, activationIdentity, knownSlot)
+			if objectiveState then
+				if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+					or knownSlot.activation ~= activationIdentity then return nil end
+			end
+			return LT(T):Get("MISSION_CAS_END")
 		end,
-		endAction = function()
-			local slot = bc.casMissions.slots[slotIndex]
+		startAction = function(_, activationIdentity, knownSlot)
+			local slot
+			if objectiveState then
+				if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+					or knownSlot.activation ~= activationIdentity then return false end
+				slot = knownSlot
+			else
+				slot = bc.casMissions.slots[slotIndex]
+			end
+			slot.started = true
+			if not slot.completed and not missionCompleted then trigger.action.outSoundForCoalition(missionSide,'ding.ogg') end
+			if objectiveState then return true end
+		end,
+		endAction = function(_, activationIdentity, knownSlot)
+			local slot
+			if objectiveState then
+				if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+					or knownSlot.activation ~= activationIdentity then return false end
+				slot = knownSlot
+			else
+				slot = bc.casMissions.slots[slotIndex]
+			end
 			if slot.completed then
-				local participantNames, rewards = bc:buildCasMissionRewards(slotIndex)
+				local participantNames, rewards
+				if objectiveState then participantNames, rewards = bc:buildCasMissionRewards(slotIndex, ownerSide, activationIdentity)
+				else participantNames, rewards = bc:buildCasMissionRewards(slotIndex) end
 				for _, playerName in ipairs(participantNames) do
 					local reward = rewards[playerName]
-					bc:addContribution(playerName, 2, reward, {playerName})
+					bc:addContribution(playerName, missionSide, reward, {playerName})
 					bc:addTempStat(playerName,'CAS mission',1)
 					bc:scheduleRewardClaimIfLanded(playerName)
 				end
 				if #participantNames == 0 then
 				elseif #participantNames == 1 then
 					local playerName = participantNames[1]
-					trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAS_COMPLETED_SOLO", playerName, rewards[playerName]),20)
+					trigger.action.outTextForCoalition(missionSide,L10N:Format("MISSION_CAS_COMPLETED_SOLO", playerName, rewards[playerName]),20)
 				else
 					local rewardLines = {}
 					for _, playerName in ipairs(participantNames) do
 						rewardLines[#rewardLines + 1] = L10N:Format("MISSION_CAS_REWARD_LINE", playerName, rewards[playerName])
 					end
-					trigger.action.outTextForCoalition(2,L10N:Format("MISSION_CAS_COMPLETED_GROUP", table.concat(rewardLines, '\n')),20)
+					trigger.action.outTextForCoalition(missionSide,L10N:Format("MISSION_CAS_COMPLETED_GROUP", table.concat(rewardLines, '\n')),20)
 				end
 				slot.cooldownUntil = timer.getTime()+900
 			end
-			bc:resetCasMissionSlot(slotIndex)
-			if not missionCompleted then trigger.action.outSoundForCoalition(2,'cancel.ogg') end
+			if objectiveState then bc:resetCasMissionSlot(slotIndex, ownerSide, activationIdentity)
+			else bc:resetCasMissionSlot(slotIndex) end
+			if not missionCompleted then trigger.action.outSoundForCoalition(missionSide,'cancel.ogg') end
+			if objectiveState then return true end
 		end,
-		isActive = function()
-			local slot = bc.casMissions.slots[slotIndex]
+		isActive = function(_, activationIdentity, knownSlot)
+			local slot
+			if objectiveState then
+				if activationIdentity == nil then
+					knownSlot = objectiveState.slots[slotIndex]
+					activationIdentity = knownSlot.activation
+				end
+				if activationIdentity == nil or knownSlot == nil or objectiveState.slots[slotIndex] ~= knownSlot
+					or knownSlot.activation ~= activationIdentity then return false end
+				slot = knownSlot
+			else
+				slot = bc.casMissions.slots[slotIndex]
+			end
 			if slot.completed and not slot.started then return true end
 			if not slot.active then return false end
 			if not slot.started then
 				local targetZone = bc:getZoneByName(slot.targetZone)
-				if targetZone.side ~= 1 or not targetZone.active or targetZone.suspended then
-					bc:resetCasMissionSlot(slotIndex)
+				if targetZone.side ~= missionTargetSide or not targetZone.active or targetZone.suspended then
+					if objectiveState then bc:resetCasMissionSlot(slotIndex, ownerSide, activationIdentity)
+					else bc:resetCasMissionSlot(slotIndex) end
 					return false
 				end
 				return true
 			end
+			if objectiveState then return bc:isCasMissionSlotContinuing(slotIndex, ownerSide, activationIdentity) end
 			return bc:isCasMissionSlotContinuing(slotIndex)
 		end
-	})
+	}
+	if objectiveState then
+		mission.side = ownerSide
+		mission.missionType = "CAS"
+		mission.objectiveState = objectiveState
+		mission.objectiveSlotIndex = slotIndex
+	end
+	mc:trackMission(mission)
 end
 
-for slotIndex = 1, bc.casMissionMaxSlots do
-	RegisterDirectorCasMission(slotIndex)
+if GlobalSettings.pvpEnabled then
+	for ownerSide = coalition.side.RED, coalition.side.BLUE do
+		for slotIndex = 1, bc.casMissionMaxSlots do
+			RegisterDirectorCasMission(slotIndex, ownerSide)
+		end
+	end
+else
+	for slotIndex = 1, bc.casMissionMaxSlots do
+		RegisterDirectorCasMission(slotIndex)
+	end
 end
 --                    End of CAS MISSION                           --
 ---------------------------------------------------------------------
 
 ---------------------------------------------------------------------
 --                         RECON MISSION                           --
-function RegisterDirectorReconMission(slotIndex)
+-- National Recon descriptors.
+function RegisterDirectorReconMission(slotIndex, ownerSide)
+    if GlobalSettings.pvpEnabled then
+        assert(ownerSide == coalition.side.RED or ownerSide == coalition.side.BLUE, 'Recon mission requires a RED or BLUE owner')
+        local objectiveOwner = bc.objectivesBySide[ownerSide]
+        local state = objectiveOwner.reconMissions
+        local mission = {side = ownerSide, missionType = 'RECON', objectiveState = state, objectiveSlotIndex = slotIndex,
+            title = function(T, activationIdentity, knownSlot)
+                local slot = knownSlot
+                local activation = activationIdentity
+                if activation == nil then slot = state.slots[slotIndex]; activation = slot.activation end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return '' end
+                local text = LT(T):Format('SYRIA_DYNAMIC_RECON_TITLE', slot.targetZone, WaypointList[slot.targetZone] or '')
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return '' end
+                return text
+            end,
+            description = function(T, activationIdentity, knownSlot)
+                local slot = knownSlot
+                local activation = activationIdentity
+                if activation == nil then slot = state.slots[slotIndex]; activation = slot.activation end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return '' end
+                local text = LT(T):Format('SYRIA_DYNAMIC_RECON_DESC', slot.targetZone)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return '' end
+                return text
+            end,
+            messageStart = function(T, activationIdentity, knownSlot)
+                local slot = knownSlot
+                local activation = activationIdentity
+                if activation == nil then slot = state.slots[slotIndex]; activation = slot.activation end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return '' end
+                local text = (T or L10N):Format('SYRIA_DYNAMIC_RECON_START', slot.targetZone, WaypointList[slot.targetZone] or '')
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return '' end
+                return text
+            end,
+            messageEnd = function(T, activationIdentity, knownSlot)
+                local slot = knownSlot
+                local activation = activationIdentity
+                if activation == nil then slot = state.slots[slotIndex]; activation = slot.activation end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return '' end
+                local text
+                if slot.completed and slot.winner then text = (T or L10N):Format('SYRIA_DYNAMIC_RECON_END_BY', slot.targetZone, slot.winner)
+                else text = (T or L10N):Format('SYRIA_DYNAMIC_RECON_END_TARGET', slot.targetZone) end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return '' end
+                return text
+            end,
+            startAction = function(_, activationIdentity, knownSlot)
+                local slot, activation = knownSlot, activationIdentity
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                if not slot.active or slot.started then return false end
+                slot.completed, slot.winner, slot.winnerIdentity, slot.started = false, nil, nil, true
+                bc:addMissionTag(slot.targetZone, 'Recon', ownerSide, activation)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                bc:refreshZoneLabel(slot.targetZone, ownerSide)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                if not startReconMissionZoneTracker(slot.targetZone, ownerSide, activation, slot) then return false end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                    trigger.action.outSoundForCoalition(ownerSide, 'ding.ogg')
+                end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                return true
+            end,
+            endAction = function(_, activationIdentity, knownSlot)
+                local slot, activation = knownSlot, activationIdentity
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                if not slot.started then return false end
+                local target, winner, completed, identity = slot.targetZone, slot.winner, slot.completed, slot.winnerIdentity
+                slot.started = false
+                stopReconMissionZoneTracker(target, ownerSide, activation, slot)
+                bc:removeMissionTag(target, 'Recon', ownerSide, activation)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                bc:refreshZoneLabel(target, ownerSide)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                if completed and winner then
+                    if identity and bc.jointMenuOwnersByGroup[identity.groupID] == identity.owner
+                        and identity.owner.player == winner and identity.owner.side == ownerSide
+                        and identity.unit:isExist() and identity.unit:getLife() > 0
+                        and identity.unit:getCoalition() == ownerSide and identity.unit:getPlayerName() == winner
+                        and identity.unit:getID() == identity.unitID then
+                        local aliveSnapshot = {[winner] = true}
+                        local party = bc.jointPartiesByPlayer[winner]
+                        local members = party and bc:_jointOtherMembers(winner, false, party) or {}
+                        local options = {partySnapshot = true, party = party, members = members}
+                        local crewsByName = {}
+                        local crew, plist = bc:getMulticrewPlayersNow(winner, nil, nil, crewsByName)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                        if identity and bc.jointMenuOwnersByGroup[identity.groupID] == identity.owner
+                        and identity.owner.player == winner and identity.owner.side == ownerSide
+                        and identity.unit:isExist() and identity.unit:getLife() > 0
+                        and identity.unit:getCoalition() == ownerSide and identity.unit:getPlayerName() == winner
+                        and identity.unit:getID() == identity.unitID then
+                            for index = #members, 1, -1 do
+                                local member = members[index]
+                                local groupID = bc.jointGroupByPlayerBySide[ownerSide][member]
+                                local owner = groupID and bc.jointMenuOwnersByGroup[groupID]
+                                if not owner or owner.player ~= member or owner.side ~= ownerSide then table.remove(members, index) end
+                            end
+                            local jp = bc:awardJointMissionReward(winner, ownerSide, 100, 'Recon mission', options, crew, plist, crewsByName, aliveSnapshot)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                            local text
+                            if jp then text = L10N:Format('SYRIA_DYNAMIC_RECON_COMPLETED_JOINT', winner, jp, target, 100)
+                            else text = L10N:Format('SYRIA_DYNAMIC_RECON_COMPLETED_SOLO', winner, target, 100) end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                            trigger.action.outTextForCoalition(ownerSide, text, 20)
+                        end
+                    end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                    local now = timer.getTime()
+                    state.cooldownByTarget[target] = now + 900
+                    startZoneIntel(target, 600, ownerSide)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                end
+                if not bc:resetReconMissionSlot(slotIndex, ownerSide, activation) then return false end
+                local retiredSlot = state.slots[slotIndex]
+                if not missionCompleted and trigger.misc.getUserFlag(180) == 0
+                    and bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                    and state.slots[slotIndex] == retiredSlot and retiredSlot.activation == nil then
+                    trigger.action.outSoundForCoalition(ownerSide, 'cancel.ogg')
+                end
+                return true
+            end,
+            isActive = function(_, activationIdentity, knownSlot)
+                local slot = knownSlot
+                local activation = activationIdentity
+                if activation == nil then slot = state.slots[slotIndex]; activation = slot.activation end
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                if slot.completed or not slot.active then return false end
+                local targetZone = bc:getZoneByName(slot.targetZone)
+                if not (bc.objectivesBySide[ownerSide] == objectiveOwner and objectiveOwner.reconMissions == state
+                and state.slots[slotIndex] == slot and slot.activation == activation and activation ~= nil
+                and activation.ownerSide == ownerSide and activation.role == 'RECON'
+                and slot.targetZone ~= nil and activation.targetZone == slot.targetZone) then return false end
+                if not targetZone or targetZone.side ~= 3 - ownerSide or not targetZone.active or targetZone.suspended then
+                    if not slot.started then bc:resetReconMissionSlot(slotIndex, ownerSide, activation) end
+                    return false
+                end
+                return true
+            end,
+        }
+        mc:trackMission(mission)
+        return
+    end
 	mc:trackMission({
 	title = function(T)
 		local Tr = LT(T)
@@ -7150,9 +9400,16 @@ function RegisterDirectorReconMission(slotIndex)
 	})
 end
 
+if GlobalSettings.pvpEnabled == true then
+	for ownerSide = coalition.side.RED, coalition.side.BLUE do
+		for slotIndex = 1, bc.reconMissionMaxSlots do RegisterDirectorReconMission(slotIndex, ownerSide) end
+	end
+else
 for slotIndex = 1, bc.reconMissionMaxSlots do
 	RegisterDirectorReconMission(slotIndex)
 end
+end
+-- End national recon descriptors.
 --                    End of RECON MISSION                         --
 ---------------------------------------------------------------------
 
@@ -7160,6 +9417,7 @@ end
 --                     		ESCORT MISSION                         --
 
 function generateEscortMission(zoneName, groupName, groupID, group, mission)
+    if GlobalSettings.pvpEnabled == true then return false end
     local mission = mission or missions[zoneName]
     if not mission then return false end
 	local T = L10N:ForGroup(groupID)
@@ -7345,7 +9603,180 @@ end
 ---------------------------------------------------------------------
 --                      RUN WAY STRIKE MISSION                     --
 
-function RegisterDirectorRunwayMission(slotIndex)
+-- National Runway descriptors.
+function RegisterDirectorRunwayMission(slotIndex, ownerSide)
+	if GlobalSettings.pvpEnabled then
+		assert(ownerSide == coalition.side.RED or ownerSide == coalition.side.BLUE, "Runway mission requires a RED or BLUE owner")
+		local state = bc.objectivesBySide[ownerSide].runwayMissions
+		local opponentSide = ownerSide == coalition.side.RED and coalition.side.BLUE or coalition.side.RED
+		local mission
+		mission = {
+			side = ownerSide,
+			missionType = "RUNWAYSTRIKE",
+			objectiveState = state,
+			objectiveSlotIndex = slotIndex,
+			title = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = slot and slot.activation end
+				end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or not slot
+				or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil
+				or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE"
+				or slot.targetZone == nil then return nil end
+				local target = activationIdentity.targetZone
+				local title = LT(T):Get("MISSION_BOMB_RUNWAY_TITLE")
+				local text = target and title .. ': ' .. target or title
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return nil end
+				return text
+			end,
+			description = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = slot and slot.activation end
+				end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or not slot
+				or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil
+				or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE"
+				or slot.targetZone == nil then return nil end
+				local target = activationIdentity.targetZone
+				local wp = WaypointList[target] or ""
+				local text
+				if #slot.runwayNames > 1 then text = LT(T):Format("MISSION_BOMB_RUNWAY_DESC_ALL", target, wp)
+				else text = LT(T):Format("MISSION_BOMB_RUNWAY_DESC_ONE", target, wp) end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return nil end
+				return text
+			end,
+			messageStart = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = slot and slot.activation end
+				end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or not slot
+				or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil
+				or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE"
+				or slot.targetZone == nil then return nil end
+				local target = activationIdentity.targetZone
+				local wp = WaypointList[target] or ""
+				local text
+				if #slot.runwayNames > 1 then text = LT(T):Format("MISSION_BOMB_RUNWAY_START_ALL", target, wp)
+				else text = LT(T):Format("MISSION_BOMB_RUNWAY_START_ONE", target, wp) end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return nil end
+				return text
+			end,
+			messageEnd = function(T, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then
+					if mission.isRunning then activationIdentity = mission.objectiveActivation
+					else activationIdentity = slot and slot.activation end
+				end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or not slot
+				or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil
+				or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE"
+				or slot.targetZone == nil then return nil end
+				local target = activationIdentity.targetZone
+				local text
+				if slot.completed then
+					local cred = slot.need > 1 and 200 or 100
+					if slot.bomberName and slot.partnerName then text = LT(T):Format("SYRIA_BOMB_RUNWAY_END_JOINT", target, slot.bomberName, slot.partnerName, cred)
+					elseif slot.bomberName then text = LT(T):Format("SYRIA_BOMB_RUNWAY_END_SOLO", target, slot.bomberName, cred)
+					else text = LT(T):Format("SYRIA_BOMB_RUNWAY_END_COMPLETED", target) end
+				else text = LT(T):Format("SYRIA_BOMB_RUNWAY_END_CANCELED_ZONE", target) end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return nil end
+				return text
+			end,
+			startAction = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or not slot
+				or knownSlot ~= slot or activationIdentity == nil
+				or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE"
+				or slot.targetZone == nil then return false end
+				local target = activationIdentity.targetZone
+				slot.started = true
+				bc:addMissionTag(target, "Bomb runway", ownerSide, activationIdentity)
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return false end
+				bc:refreshZoneLabel(target, ownerSide)
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return false end
+				if not missionCompleted and trigger.misc.getUserFlag(180) == 0 then
+					trigger.action.outSoundForCoalition(ownerSide, "ding.ogg")
+				end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return false end
+				return true
+			end,
+			endAction = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or not slot
+				or knownSlot ~= slot or activationIdentity == nil
+				or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE"
+				or slot.targetZone == nil then return false end
+				local target = activationIdentity.targetZone
+				trigger.action.outSoundForCoalition(ownerSide, 'cancel.ogg')
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return false end
+				local now = timer.getTime()
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return false end
+				state.cooldownByTarget[target] = now + 3000
+				bc:removeMissionTag(target, "Bomb runway", ownerSide, activationIdentity)
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return false end
+				bc:refreshZoneLabel(target, ownerSide)
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return false end
+				return bc:resetRunwayMissionSlot(slotIndex, ownerSide, activationIdentity)
+			end,
+			isActive = function(_, activationIdentity, knownSlot)
+				local slot = state.slots[slotIndex]
+				if activationIdentity == nil then activationIdentity = slot and slot.activation end
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or not slot
+				or (knownSlot ~= nil and knownSlot ~= slot) or activationIdentity == nil
+				or slot.activation ~= activationIdentity or slot.targetZone ~= activationIdentity.targetZone
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE"
+				or slot.targetZone == nil then return false end
+				local target = activationIdentity.targetZone
+				if slot.completed and not slot.started then return true end
+				if not slot.active then return false end
+				local targetZone = bc:getZoneByName(target)
+				if bc.objectivesBySide[ownerSide].runwayMissions ~= state or state.slots[slotIndex] ~= slot
+				or slot.activation ~= activationIdentity or slot.targetZone ~= target or activationIdentity.targetZone ~= target
+				or activationIdentity.ownerSide ~= ownerSide or activationIdentity.role ~= "RUNWAYSTRIKE" then return false end
+				if not slot.started and (not targetZone or targetZone.side ~= opponentSide or not targetZone.active or targetZone.suspended) then
+					bc:resetRunwayMissionSlot(slotIndex, ownerSide, activationIdentity)
+					return false
+				end
+				return targetZone and targetZone.side == opponentSide
+			end,
+		}
+		mc:trackMission(mission)
+		return
+	end
 	mc:trackMission({
 		title = function(T)
 			local slot = bc.runwayMissions.slots[slotIndex]
@@ -7425,16 +9856,31 @@ function RegisterDirectorRunwayMission(slotIndex)
 	})
 end
 
+if GlobalSettings.pvpEnabled == true then
+	for ownerSide = coalition.side.RED, coalition.side.BLUE do
+		for slotIndex = 1, bc.runwayMissionMaxSlots do RegisterDirectorRunwayMission(slotIndex, ownerSide) end
+	end
+else
 for slotIndex = 1, bc.runwayMissionMaxSlots do
 	RegisterDirectorRunwayMission(slotIndex)
 end
 ---------------------------------------------------------------------
+end
+-- End national runway descriptors.
 --                      END OF RUN WAY STRIKE MISSION              --
 
 
 
 
 timer.scheduleFunction(function(_, time)
+	if GlobalSettings.pvpEnabled == true then
+		local now = timer.getAbsTime()
+		local hasMission = false
+		for ownerSide = coalition.side.RED, coalition.side.BLUE do
+			if generateCaptureMission(ownerSide, now) then hasMission = true end
+		end
+		if hasMission then return time+300 else return time+120 end
+	end
 	if generateCaptureMission() then
 		return time+300
 	else
@@ -7443,6 +9889,13 @@ timer.scheduleFunction(function(_, time)
 end, {}, timer.getTime() + 20)
 
 timer.scheduleFunction(function(_, time)
+	if GlobalSettings.pvpEnabled == true then
+		local hasMission = false
+		for ownerSide = coalition.side.RED, coalition.side.BLUE do
+			if generateAttackMission(nil, ownerSide) then hasMission = true end
+		end
+		if hasMission then return time+300 else return time+120 end
+	end
 	if generateAttackMission() then
 		return time+300
 	else
@@ -7451,6 +9904,41 @@ timer.scheduleFunction(function(_, time)
 end, {}, timer.getTime() + 35)
 
 timer.scheduleFunction(function(_, time)
+	if GlobalSettings.pvpEnabled == true then
+		local now
+		for ownerSide = coalition.side.RED, coalition.side.BLUE do
+			local owner = bc.objectivesBySide[ownerSide]
+			local state = owner.attackMissions
+			local third = state.slots[3]
+			local previousActivation, previousTarget = third.activation, third.targetZone
+			if not previousTarget then
+				local director = Director:getForSide(ownerSide)
+				if now == nil then now = timer.getAbsTime() end
+				local demand = director:hasBlueThirdAttackDemand(now)
+				if demand and bc.objectivesBySide[ownerSide] == owner and owner.attackMissions == state
+					and state.slots[3] == third and third.activation == previousActivation and third.targetZone == previousTarget then
+					local generated = generateAttackMission(true, ownerSide, director, now)
+					local activation, target = third.activation, third.targetZone
+					if generated and activation and activation ~= previousActivation and target ~= nil
+						and bc.objectivesBySide[ownerSide] == owner and owner.attackMissions == state and state.slots[3] == third
+						and activation.ownerSide == ownerSide and activation.role == 'ATTACK' and activation.targetZone == target then
+						checkAndGenerateCASMission(ownerSide, time)
+						if bc.objectivesBySide[ownerSide] == owner and owner.attackMissions == state and state.slots[3] == third
+							and third.activation == activation and third.targetZone == target and activation.ownerSide == ownerSide
+							and activation.role == 'ATTACK' and activation.targetZone == target then
+							generateSEADMission(ownerSide)
+						end
+						if bc.objectivesBySide[ownerSide] == owner and owner.attackMissions == state and state.slots[3] == third
+							and third.activation == activation and third.targetZone == target and activation.ownerSide == ownerSide
+							and activation.role == 'ATTACK' and activation.targetZone == target then
+							checkAndGenerateRunwayMissions(time, ownerSide)
+						end
+					end
+				end
+			end
+		end
+		return time+30
+	end
 	local hadThirdAttack = attackTarget3 ~= nil
 	if not hadThirdAttack then
 		local thirdAttackDemand = blueDirector:hasBlueThirdAttackDemand(timer.getAbsTime())
@@ -7467,6 +9955,13 @@ timer.scheduleFunction(function(_, time)
 end, {}, timer.getTime() + 45)
 
 timer.scheduleFunction(function(_, time)
+	if GlobalSettings.pvpEnabled == true then
+		local hasMission = false
+		for ownerSide = coalition.side.RED, coalition.side.BLUE do
+			if generateSEADMission(ownerSide) then hasMission = true end
+		end
+		if hasMission then return time+300 else return time+120 end
+	end
 	if generateSEADMission() then
 		return time+300
 	else
@@ -7474,6 +9969,13 @@ timer.scheduleFunction(function(_, time)
 	end
 end, {}, timer.getTime() + 120)
 timer.scheduleFunction(function(_, time)
+	if GlobalSettings.pvpEnabled == true then
+		local hasMission = false
+		for ownerSide = coalition.side.RED, coalition.side.BLUE do
+			if generateDEADMission(ownerSide) then hasMission = true end
+		end
+		if hasMission then return time+300 else return time+120 end
+	end
 	if generateDEADMission() then
 		return time+300
 	else
@@ -7481,6 +9983,13 @@ timer.scheduleFunction(function(_, time)
 	end
 end, {}, timer.getTime() + 140)
 timer.scheduleFunction(function(_, time)
+	if GlobalSettings.pvpEnabled == true then
+		local hasMission = false
+		for ownerSide = coalition.side.RED, coalition.side.BLUE do
+			if checkAndGenerateCASMission(ownerSide, time) then hasMission = true end
+		end
+		if hasMission then return time+300 else return time+120 end
+	end
 	if checkAndGenerateCASMission() then
 		return time+300
 	else
@@ -7488,6 +9997,13 @@ timer.scheduleFunction(function(_, time)
 	end
 end, {}, timer.getTime() + 180)
 timer.scheduleFunction(function(_, time)
+	if GlobalSettings.pvpEnabled == true then
+		local hasMission = false
+		for ownerSide = coalition.side.RED, coalition.side.BLUE do
+			if checkAndGenerateReconMissionV2(ownerSide, time) then hasMission = true end
+		end
+		if hasMission then return time+300 else return time+120 end
+	end
 	if checkAndGenerateReconMissionV2() then
 		return time+300
 	else
@@ -7495,6 +10011,12 @@ timer.scheduleFunction(function(_, time)
 	end
 end, {}, timer.getTime() + 200)
 timer.scheduleFunction(function(_, time)
+	if GlobalSettings.pvpEnabled == true then
+		local redActive = generateSupplyMission(coalition.side.RED)
+		local blueActive = generateSupplyMission(coalition.side.BLUE)
+		if redActive or blueActive then return time+300 end
+		return time+120
+	end
 	if generateSupplyMission() then
 		return time+300
 	else
@@ -7502,6 +10024,11 @@ timer.scheduleFunction(function(_, time)
 	end
 end, {}, timer.getTime() + 60)
 timer.scheduleFunction(function(_,time)
+   if GlobalSettings.pvpEnabled == true then
+        checkAndGenerateCAPMission(time)
+        return math.min(bc.objectivesBySide[coalition.side.RED].capMissions.nextGenerationAt,
+            bc.objectivesBySide[coalition.side.BLUE].capMissions.nextGenerationAt)
+   end
    if checkAndGenerateCAPMission() then
 		return time+300
 	else
@@ -7509,6 +10036,9 @@ timer.scheduleFunction(function(_,time)
 	end
 end, {}, timer.getTime() + 480)
 timer.scheduleFunction(function(_,time)
+    if GlobalSettings.pvpEnabled == true then
+        if checkAndGenerateRunwayMissions(time) then return time+300 else return time+120 end
+    end
     if checkAndGenerateRunwayMissions() then
         return time+300
     else

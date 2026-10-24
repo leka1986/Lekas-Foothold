@@ -860,8 +860,8 @@ zones = {
 }
 
 if GlobalSettings.pvpEnabled == true then
-	zones.blueEwr = ZoneCommander:new({facility='none', zone='BlueEWR', side=2, level=6,
-		upgrades={blue={'Blue EWR Fixed Pvp', 'Blue EWR Fixed Pvp-1', 'Blue EWR Fixed Pvp-2', 'Blue EWR Fixed Pvp-3', 'Blue EWR Fixed Pvp-4', 'Blue EWR Fixed Pvp-5'}, red={}},
+	zones.blueEwr = ZoneCommander:new({facility='none', zone='HiddenBlueEWR', side=2, level=10,
+		upgrades={blue={'Blue EWR Fixed Pvp', 'Blue EWR Fixed Pvp-1', 'Blue EWR Fixed Pvp-2', 'Blue EWR Fixed Pvp-3', 'Blue EWR Fixed Pvp-4', 'Blue EWR Fixed Pvp-5', 'Blue EWR Fixed Pvp-6', 'Blue EWR Fixed Pvp-7'}, red={}},
 		crates={}, isHidden=true})
 end
 
@@ -5572,7 +5572,7 @@ end
 
 if GlobalSettings.pvpEnabled == true then
 	for _, radar in ipairs({
-		{source='Blue EWR Fixed Pvp', name='Blue EWR Upgrade', side=2},
+		{source='Blue EWR', name='Blue EWR Upgrade', side=2},
 		{source='Red EWR Fixed 1', name='Red EWR Upgrade', side=1},
 	}) do
 		local source = _DATABASE.Templates.Groups[radar.source]
@@ -5838,6 +5838,14 @@ end
 
 if zonePersistance and zonePersistance.zones and next(zonePersistance.zones) == nil then
     bc.saveLoaded = false
+end
+
+if GlobalSettings.pvpEnabled == true and not bc.saveLoaded then
+    local funds = StartupFunds or {}
+    local redFunds = funds[coalition.side.RED] or 1000
+    local blueFunds = funds[coalition.side.BLUE] or 1000
+    bc:addFunds(coalition.side.RED, redFunds - bc.accounts[coalition.side.RED])
+    bc:addFunds(coalition.side.BLUE, blueFunds - bc.accounts[coalition.side.BLUE])
 end
 
 if bc.saveLoaded and CustomFlags['StartNormalFalse'] ~= nil then

@@ -1568,7 +1568,7 @@ end
 
 SCHEDULER:New(nil,function()
 	checkMissionComplete(nil, nil)
-	bc:roamGroupsToLocalSubZone({
+	local roamPrefixes = {
 		"Red SAM AAA #",
 		"Red SAM AAA 2 #",
 		"Red SAM AAA 5 #",
@@ -1582,7 +1582,16 @@ SCHEDULER:New(nil,function()
 		'Red Armour Group',
 		"Red Mech group",
 		"Red Special",
-	}, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+	}
+	if GlobalSettings.pvpEnabled == true then
+		roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Modern #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Coldwar #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue Armor Vietnam #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Gepard #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
+		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
+	end
+	bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
 end,{},30,0)
 
 -----------------------------------------------DYNAMIC SHOP ------------------------------------------
