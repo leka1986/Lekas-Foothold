@@ -3424,11 +3424,21 @@ bc.shopItems['zinf'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
 }
 local samLabel = LTGet("SYRIA_SHOP_ITEM_UPGRADE_NASAMS")
+local function canAddPlacementSam(zoneObj)
+	if CustomSamSpawnSlots[zoneObj.zone] ~= true then return true end
+	for _, entry in ipairs(zoneObj.upgrades.blue) do
+		if classifyBlueUpgradeName(getUpgradeEntryName(entry)) == 'sam' then return false end
+	end
+	return true
+end
 bc:registerShopItem('zsam',samLabel,ShopPrices.zsam,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
 	if params.zone and params.zone.side==2 and not params.zone.suspended then
+		if classifyBlueUpgradeName(sender.upgradeTemplate) == 'sam' and not canAddPlacementSam(params.zone) then
+			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
+		end
 		local max = 2 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
 			if not bc.globalExtraUnlock then
@@ -3712,6 +3722,21 @@ patItem.upgradeLabel = 'PATRIOT'
 patItem.groupZoneSelector = samItem.groupZoneSelector
 bc.shopItems['zpat'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['zpat'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+-- Placement-based SAMs share one slot per zone; SHORAD/AAA retain their ordinary allowance.
+local placementSamSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) and canAddPlacementSam(zoneObj)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
+	candidateBucket = 'blue_unsuspended',
+	refreshTags = { 'friendly_targets' },
+}
+for _, itemId in ipairs({ 'zsam', 'zhawk', 'zpat' }) do
+	bc.shopItems[itemId].groupZoneSelector = placementSamSelector
+end
 
 Group.getByName('BlueGCI'):destroy()
 bc:registerShopItem('zgci',LTGet("SYRIA_SHOP_ITEM_UPGRADE_GCI"),ShopPrices.zgci,function(sender)
@@ -4038,6 +4063,122 @@ if not bc.saveLoaded then
 	applyRandomBlueUpgrades()
 else
 	applyRandomUpgradesForNewZonesOnly()
+end
+
+-- Normalize Sinai Blue SAM-site bases and legacy paid SAM slots before any zone spawns.
+do
+	for _, zoneObj in pairs(zones) do
+		local oldUpgrades = zoneObj.upgrades.blue
+		local bluePaidCount = 0
+		for _, extra in ipairs(zoneObj.extraUpgrade or {}) do
+			if (type(extra) == 'table' and extra.side == 2) or type(extra) == 'string' then
+				bluePaidCount = bluePaidCount + 1
+			end
+		end
+		local oldBaseCount = #oldUpgrades - bluePaidCount
+		local shoradOnly = CustomSamSpawnSlots[zoneObj.zone] == true
+		local base, upgrades, extras, remap = {}, {}, {}, {}
+		local hasSam, shoradIndex = false, nil
+		if shoradOnly then
+			for index = 1, oldBaseCount do
+				local name = getUpgradeEntryName(oldUpgrades[index])
+				if classifyBlueUpgradeName(name) == 'shorad' then
+					shoradIndex = index
+					base[1] = name
+					break
+				end
+			end
+			base[1] = base[1] or 'Blue SAM SHORAD Roland'
+			upgrades[1] = base[1]
+			if shoradIndex then remap[shoradIndex] = 1 end
+		else
+			for index = 1, oldBaseCount do
+				local name = getUpgradeEntryName(oldUpgrades[index])
+				base[index], upgrades[index], remap[index] = name, oldUpgrades[index], index
+				if classifyBlueUpgradeName(name) == 'sam' then hasSam = true end
+			end
+		end
+		local oldPaidIndex, keptBluePaid, removedPaid = 0, 0, false
+		for _, extra in ipairs(zoneObj.extraUpgrade or {}) do
+			local side = type(extra) == 'table' and extra.side or 2
+			local name = getUpgradeEntryName(extra)
+			if side == 2 then
+				oldPaidIndex = oldPaidIndex + 1
+				local isSam = classifyBlueUpgradeName(name) == 'sam'
+				if not shoradOnly or not isSam or not hasSam then
+					extras[#extras + 1] = extra
+					upgrades[#upgrades + 1] = name
+					remap[oldBaseCount + oldPaidIndex] = #upgrades
+					keptBluePaid = keptBluePaid + 1
+					if isSam then hasSam = true end
+				else
+					removedPaid = true
+				end
+			else
+				extras[#extras + 1] = extra
+			end
+		end
+		local baseChanged = shoradOnly and (oldBaseCount ~= 1 or shoradIndex ~= 1)
+		if baseChanged or removedPaid then
+			zoneObj.upgrades.blue, zoneObj.randomUpgradesBlue, zoneObj.extraUpgrade = upgrades, base, extras
+			zoneObj:_setUpgradesUsed(2, keptBluePaid)
+			if zoneObj.side == 2 then
+				local oldLevel, newLevel = zoneObj.level, 0
+				for oldIndex, newIndex in pairs(remap) do
+					if oldIndex <= oldLevel then newLevel = math.max(newLevel, newIndex) end
+				end
+				local newShorad = shoradOnly and not shoradIndex and oldLevel > 0
+				if newShorad then newLevel = math.max(newLevel, 1) end
+				local newShoradUnits
+				for _, field in ipairs({ 'built', 'remainingUnits', 'remainingUnitNames', 'spawnSubZones',
+					'remainingUnitsSnapshot', 'remainingUnitNamesSnapshot' }) do
+					local source = zoneObj[field]
+					if source then
+						local mapped = {}
+						for oldIndex, newIndex in pairs(remap) do mapped[newIndex] = source[oldIndex] end
+						if newShorad and (field == 'remainingUnits' or field == 'remainingUnitsSnapshot') then
+							if not newShoradUnits then
+								local count, units = zoneObj:_getUpgradeTemplateUnitCount(base[1])
+								assert(count and units, 'Missing Sinai SHORAD template: '..base[1])
+								newShoradUnits = {}
+								for index, unit in ipairs(units) do newShoradUnits[index] = unit.type end
+							end
+							mapped[1] = newShoradUnits
+						end
+						zoneObj[field] = mapped
+					end
+				end
+				zoneObj.level = newLevel
+				local jobs = zoneObj._regularSupplyLocalRecoveryRestoreJobs
+				for slot, job in pairs(jobs or {}) do
+					if job.side == 2 then
+						local targetIndex = job.targetIndex and remap[job.targetIndex]
+						if not job.targetIndex then
+							for index, name in ipairs(upgrades) do
+								if zoneObj:_builtTemplateMatches(index, getUpgradeEntryName(name), job.targetName, upgrades) then targetIndex = index; break end
+							end
+						end
+						if targetIndex then
+							job.targetIndex = targetIndex
+						else
+							jobs[slot] = nil
+							if job.usesStoredSupply then
+								zoneObj._regularSupplyReady = zoneObj._regularSupplyReady + 1
+								if job.usesExpeditedSupply then
+									zoneObj._regularSupplyExpeditedReady = zoneObj._regularSupplyExpeditedReady + 1
+								end
+							end
+						end
+					end
+				end
+				if jobs and not next(jobs) then zoneObj._regularSupplyLocalRecoveryRestoreJobs = nil end
+				zoneObj:_markRegularSupplyEfficiencyDirty(true)
+			end
+			env.info('[Sinai SAM] '..zoneObj.zone..': Blue base='..#base..', paid='..keptBluePaid)
+		elseif shoradOnly and zoneObj:getUpgradesUsed(2) ~= keptBluePaid then
+			zoneObj:_setUpgradesUsed(2, keptBluePaid)
+		end
+	end
 end
 
 bc:init()

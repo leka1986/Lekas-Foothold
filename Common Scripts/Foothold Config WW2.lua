@@ -866,8 +866,6 @@ AllowedWW2Planes = {
 	"SpitfireLFMkIXCW",
 	"TF-51D",
 	"Yak-52",
-	"Ju-88A4",
-	"B-17G",
 }
 
 -- Aircraft that remain available in Red and neutral Normandy/WW2 warehouse aircraft stocks.
@@ -891,8 +889,6 @@ AllowedWW2RedPlanes = {
 	"SpitfireLFMkIXCW",
 	"TF-51D",
 	"Yak-52",
-	"Ju-88A4",
-	"B-17G",
 }
 
 -- ============================================================================

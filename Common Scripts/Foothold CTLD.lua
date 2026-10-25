@@ -6910,6 +6910,7 @@ function Foothold_ctld:OnAfterCratesPickedUp(From, Event, To, Group, Unit, Cargo
   local cargoItems = extractCargoItems(Cargo)
   if #cargoItems == 0 then return end
   local loaded, unitName, carrierUnit, countryId, groupName, playerName, aircraftId
+  local groupId, carrierType, carrierDimensions, carrierResolved
   if GlobalSettings.pvpEnabled == true then
     unitName = Unit and Unit:GetName() or nil
     loaded = unitName and self.Loaded_Cargo[unitName] or nil
@@ -6927,7 +6928,7 @@ function Foothold_ctld:OnAfterCratesPickedUp(From, Event, To, Group, Unit, Cargo
           if Group and self.UseC130LoadAndUnload and self.C130JUnits[unitName] == true then
             carrierUnit = Unit:GetDCSObject()
             if carrierUnit and carrierUnit:getCoalition() == self.coalition then
-              local carrierType = carrierUnit:getTypeName()
+              carrierType = carrierUnit:getTypeName()
               if carrierType == "C-130J-30" or (self.C130JTypes and self.C130JTypes[carrierType]) then
                 countryId = carrierUnit:getCountry()
                 groupName, playerName = Group:GetName(), Unit:GetPlayerName()
@@ -6964,12 +6965,34 @@ function Foothold_ctld:OnAfterCratesPickedUp(From, Event, To, Group, Unit, Cargo
     local trackingKey = getZoneSupplyCargoTrackingKey(cargoItem)
     local entry = trackingKey and zoneSupplyCrates[trackingKey] or nil
     if entry then
+      if not carrierResolved then
+        carrierResolved = true
+        groupId = Group:GetID()
+        groupName = groupName or Group:GetName()
+        unitName = unitName or Unit:GetName()
+        playerName = playerName or Unit:GetPlayerName()
+        carrierUnit = carrierUnit or Unit:GetDCSObject()
+        carrierType = carrierType or Unit:GetTypeName()
+        carrierDimensions = ZONE_SUPPLY_AIRCRAFT_DIMENSIONS[carrierType]
+        aircraftId = aircraftId or (carrierType and bc:getCareerAircraftId(carrierType))
+      end
+      local previousGroupId = entry.groupId
+      if previousGroupId and previousGroupId ~= groupId then
+        self.ZoneSupplyOnboardByGroup[previousGroupId] = nil
+      end
+      entry.groupId, entry.groupName, entry.unitName = groupId, groupName, unitName
+      entry.playerName, entry.aircraftId = playerName, aircraftId
+      entry._unitObj, entry._unitDim = carrierUnit, carrierDimensions
+      entry._isC130 = carrierType == "C-130J-30"
+      cargoItem._zoneSupplyGroupName, cargoItem._zoneSupplyPlayer = groupName, playerName
       entry.attached = true
       entry.detached = false
       entry.wasAirborne = true
       entry._wasUnloaded = false
       entry._careerAirdropped = nil
-      refreshZoneSupplyOnboardForEntry(entry)
+      if groupId then
+        self.ZoneSupplyOnboardByGroup[groupId] = true
+      end
     end
   end
 end

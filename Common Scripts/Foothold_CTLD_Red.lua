@@ -1537,6 +1537,12 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
         end
         redZoneSupplyCrates[key] = entry
     else
+        if flags and flags.wasLoaded and not flags.wasUnloaded then
+            if entry.groupId and groupId and entry.groupId ~= groupId then
+                Foothold_redCtld.ZoneSupplyOnboardByGroup[entry.groupId] = nil
+            end
+            pickupZone = entry.pickupZone or pickupZone
+        end
         entry.cargo = cargoItem
         entry.static = staticObj or entry.static
         entry.pickupZone = pickupZone or entry.pickupZone
@@ -1561,6 +1567,8 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
     if carrierUnitObject and carrierUnitObject.isExist and carrierUnitObject:isExist() then
         entry._unitObj = carrierUnitObject
         entry._unitDim = RED_ZONE_SUPPLY_AIRCRAFT_DIMENSIONS[carrierUnitObject:getTypeName()]
+    elseif flags and flags.wasLoaded and not flags.wasUnloaded then
+        entry._unitObj, entry._unitDim = nil, nil
     end
 
     flags = flags or {}
@@ -1580,7 +1588,11 @@ local function redCtldRegisterSupplyCargo(cargoItem, pickupZone, groupName, grou
     end
 
     if groupId then
-        Foothold_redCtld:RefreshZoneSupplyOnboardForGroup(groupId)
+        if flags.wasLoaded and not flags.wasUnloaded then
+            Foothold_redCtld.ZoneSupplyOnboardByGroup[groupId] = true
+        else
+            Foothold_redCtld:RefreshZoneSupplyOnboardForGroup(groupId)
+        end
     end
 
     return key, entry

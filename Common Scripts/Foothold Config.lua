@@ -225,7 +225,6 @@ PvPStartingTerritoryPercent = 50
 
 -- @gui label="PvP AI Supplies" visibleWhen="PvP:true"
 -- if true, Ai supplies on both sides will still run automated, otherwise only when bought.
--- @gui requiredValues="C-130J-30"
 pvp_supplies = true
 
 
@@ -277,6 +276,7 @@ RedTemplateEnabled = {
 -- @gui label="RED CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 RedCapPlaneEnabled = {
     -- @gui requiredValues="MiG-29S"
+    -- @gui choiceDefaultWhen="Era:Modern"
     ["RED_MIG29S_CAP_R77x3_R27ET_R73x2"] = true, -- eras=Modern; MiG-29S Fox 3 CAP [Modern]
     -- @gui requiredValues="MiG-29S"
     ["RED_MIG29S_CAP_R77x2_R73x2_TANKSx3"] = true, -- eras=Modern; MiG-29S Fox 3 CAP [Modern]
@@ -284,21 +284,19 @@ RedCapPlaneEnabled = {
     ["RED_SU27_CAP_R27Rx4_R27ER_R73x3_ECM"] = true, -- eras=Modern; Su-27 Fox 1 CAP [Modern]
     -- @gui requiredValues="Su-27"
     ["RED_SU27_CAP_R27ERx6_R73x2_ECM"] = true, -- eras=Modern; Su-27 Fox 1 CAP [Modern]
-    -- @gui requiredValues="MiG-31"
     ["RED_MIG31_CAP_R33x4_R40Tx2"] = true, -- eras=Modern; MiG-31 Fox 1 CAP [Modern]
     -- @gui requiredValues="Mirage-F1CE"
     ["RED_MIRAGE_F1CE_CAP_S530Fx2_MAGIC2x2"] = true, -- eras=Modern|Coldwar; Mirage F1CE Fox 1 CAP [Modern/CW]
     -- @gui requiredValues="Mirage-F1CE"
     ["RED_MIRAGE_F1CE_CAP_R530F_EMx2_MAGIC2x2"] = true, -- eras=Modern|Coldwar; Mirage F1CE Fox 1 CAP [Modern/CW]
     -- @gui requiredValues="MiG-29 Fulcrum"
+    -- @gui choiceDefaultWhen="Era:Coldwar|Gulfwar"
     ["RED_MIG29A_CAP_R73x4_R27R2x"] = true, -- eras=Modern|Coldwar; MiG-29A R-27R Fox 1 CAP [Modern/CW]
     -- @gui requiredValues="MiG-29 Fulcrum"
     ["RED_MIG29A_CAP_R73x4_R27ER2X"] = true, -- eras=Modern|Coldwar; MiG-29A R-27ER Fox 1 CAP [Modern/CW]
-    -- @gui requiredValues="MiG-25PD"
     ["RED_MIG25PD_CAP_R40Rx2_R60Mx2"] = true, --eras=Modern|Coldwar; MiG-25PD Fox 1 CAP [Modern/CW]
     -- @gui requiredValues="Su-27"
     ["RED_SU27_CAP_R27ERx5_R73x3_ECM"] = true, -- eras=Modern|Coldwar; Su-27 Fox 1 CAP [Modern/CW]
-    -- @gui requiredValues="MiG-23MLD"
     ["RED_MIG23MLD_CAP_R24Rx2_R60Mx2"] = true, -- eras=Modern|Coldwar; MiG-23MLD Fox 1 CAP [Modern/CW]
     -- @gui requiredValues="MiG-21Bis"
     ["RED_MIG21BIS_CAP_R3Rx4"] = false, -- eras=Coldwar|Vietnam; MiG-21bis Fox 1 CAP [CW/VN]
@@ -309,6 +307,7 @@ RedCapPlaneEnabled = {
     -- @gui requiredValues="MiG-19P"
     ["RED_MIG19P_CAP_K13A"] = false, -- eras=Vietnam; MiG-19P IR CAP [VN]
     -- @gui requiredValues="MiG-21Bis"
+    -- @gui choiceDefaultWhen="Era:Vietnam"
     ["RED_MIG21BIS_CAP_R3Rx2_R3Sx2"] = false, -- eras=Vietnam; MiG-21bis Fox 1 CAP [VN]
     -- @gui requiredValues="L-39C"
     ["RED_L39C_CAP_R3S2X"] = false, -- eras=Vietnam; L-39C Fox 2 CAP [VN]
@@ -317,13 +316,14 @@ RedCapPlaneEnabled = {
 -- @gui label="BLUE CAP Templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select aircraft templates based on Era?" installPolicy="replaceTable"
 BlueCapPlaneEnabled = {
     -- @gui requiredValues="FA-18C_hornet"
+    -- @gui choiceDefaultWhen="Era:Modern"
     ["BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2"] = true, -- eras=Modern; F/A-18C Fox 3 CAP [Modern]
     -- @gui requiredValues="F-15C"
     ["BLUE_F15C_CAP_AIM120Bx3_AIM120Cx5"] = true, -- eras=Modern; F-15C Fox 3 CAP [Modern]
     -- @gui requiredValues="F-16C_50"
-    ["BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M"] = true, -- eras=Modern; F-16C Fox 3 CAP [Modern]
+    ["BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M"] = true, -- eras=Modern; F-16C Fox 3 CAP (AIM-120B/C) [Modern]
     -- @gui requiredValues="F-16C_50"
-    ["BLUE_F16_CAP_AIM120Cx5_AIM9Xx1"] = true, -- eras=Modern; 2x F-16C Fox 3 CAP [Modern]
+    ["BLUE_F16_CAP_AIM120Cx5_AIM9Xx1"] = true, -- eras=Modern; F-16C Fox 3 CAP (AIM-120C) [Modern]
     -- @gui requiredValues="F-14B"
     ["BLUE_F14B_CAP_AIM54A_MK47x4_AIM7Mx2_AIM9Mx2_TANKSx2"] = true, -- eras=Modern|Coldwar; F-14B AIM54A-MK47 [Modern/CW]
     -- @gui requiredValues="F-14B"
@@ -335,12 +335,14 @@ BlueCapPlaneEnabled = {
     -- @gui requiredValues="FA-18C_hornet"
     ["BLUE_FA18C_CAP_AIM7Mx6_AIM9Mx2"] = false, -- eras=Coldwar; F/A-18C Fox 1 CAP [CW]
     -- @gui requiredValues="F-15C"
+    -- @gui choiceDefaultWhen="Era:Coldwar|Gulfwar"
     ["BLUE_F15C_CAP_AIM7Mx4_AIM9Mx4"] = false, -- eras=Coldwar; F-15C Fox 1 CAP [CW]
     -- @gui requiredValues="F-14A-135-GR"
     ["BLUE_F14A_CAP_AIM54A_MK47x6_AIM9Mx2_TANKSx2"] = false, -- eras=Coldwar; F-14A AIM54A-MK47x6 [CW]
     -- @gui requiredValues="F-14A-135-GR"
     ["BLUE_F14A_CAP_AIM54A_MK47x2_AIM7Fx3_AIM9Lx2_TANKSx2"] = false, -- eras=Coldwar; F-14A AIM54A-MK47/AIM7F [CW]
     -- @gui requiredValues="F-4E-45MC"
+    -- @gui choiceDefaultWhen="Era:Vietnam"
     ["BLUE_F4E_CAP_AIM7E2x4_AIM9Jx4_TANKSx3_ALE40"] = false, -- eras=Vietnam|Coldwar; F-4E Fox 1 CAP [VN/CW]
     -- @gui requiredValues="F-100D"
     ["BLUE_F100D_CAP_AIM9Ex2"] = false, -- eras=Vietnam; F-100D IR CAP [VN]
@@ -380,9 +382,7 @@ RedCasPlaneEnabled = {
     ["RED_SU25_CAS_FAB250x2_FAB500M62x2_B8x2_S24Bx2_2SHIP"] = false, -- eras=Coldwar; 2x Su-25 CAS [CW]
     -- @gui requiredValues="Su-25"
     ["RED_SU25_CAS_KH25MLx2_S25Lx2_FAB500M62x2_B13x2_2SHIP"] = false, -- eras=Coldwar; 2x Su-25 CAS [CW]
-    -- @gui requiredValues="Mirage-F1BQ"
     ["RED_MIRAGE_F1BQ_CAS_SAMP400x2_SAMP250x2_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Mirage F1BQ CAS [Modern/CW]
-    -- @gui requiredValues="Mirage-F1BQ"
     ["RED_MIRAGE_F1BQ_CAS_MIXED_SNEB_SAMP_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Mirage F1BQ CAS [Modern/CW]
     -- @gui requiredValues="MiG-21Bis"
     ["RED_MIG21BIS_CAS_S24Bx4_1SHIP"] = false, -- eras=Coldwar; MiG-21bis S-24B CAS [CW]
@@ -455,21 +455,13 @@ RedSeadPlaneEnabled = {
     ["RED_SU25T_SEAD_KH58Ux2_KH25MPU_S24B_B13x2_R73x2_1SHIP"] = true, -- eras=Modern; Su-25T SEAD [Modern]
     -- @gui requiredValues="Su-25T"
     ["RED_SU25T_SEAD_KH58Ux2_KH25MPU_S24B_B13x2_R73x2_2SHIP"] = true, -- eras=Modern; 2x Su-25T SEAD [Modern]
-    -- @gui requiredValues="Su-34"
     ["RED_SU34_SEAD_KH31Px4_R77x2_R27Rx2_R73x2_1SHIP"] = true, -- eras=Modern; Su-34 SEAD [Modern]
-    -- @gui requiredValues="Su-34"
     ["RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_1SHIP"] = true, -- eras=Modern; Su-34 SEAD [Modern]
-    -- @gui requiredValues="Su-34"
     ["RED_SU34_SEAD_KH31Px4_R77x2_R27Rx2_R73x2_2SHIP"] = true, -- eras=Modern; 2x Su-34 SEAD [Modern]
-    -- @gui requiredValues="Su-34"
     ["RED_SU34_SEAD_KH31Px2_KH58Ux2_BETAB500SHP_R27ERx2_R27R_R73x2_2SHIP"] = true, -- eras=Modern; 2x Su-34 SEAD [Modern]
-    -- @gui requiredValues="Su-24M"
     ["RED_SU24M_SEAD_KH58x2_FAB1500M54_L081_R60Mx4_2SHIP"] = true, -- eras=Modern|Coldwar; 2x Su-24M SEAD [Modern/CW]
-    -- @gui requiredValues="Su-24M"
     ["RED_SU24M_SEAD_KH31Px2_KH25MLx2_FAB1500M54_L081_1SHIP"] = true, -- eras=Modern|Coldwar; Su-24M SEAD [Modern/CW]
-    -- @gui requiredValues="Su-17M4"
     ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_1SHIP"] = false, -- eras=Vietnam|Coldwar; Su-17M4 SEAD [CW/VN]
-    -- @gui requiredValues="Su-17M4"
     ["RED_SU17M4_SEAD_KH25MRx4_R60x2_TANKSx2_2SHIP"] = false, -- eras=Vietnam|Coldwar; 2x Su-17M4 SEAD [CW/VN]
 }
 
@@ -491,7 +483,6 @@ BlueSeadPlaneEnabled = {
 RedRunwayStrikePlaneEnabled = {
     -- @gui requiredValues="Su-33"
     ["RED_SU33_RUNWAY_BETAB500x4_R27ERx4_R73x2_3SHIP"] = true, -- eras=Modern; 3x Su-33 Runway [Modern]
-    -- @gui requiredValues="MiG-27K"
     ["RED_MIG27K_RUNWAY_BETAB500x2_FAB250x2_R60Mx4_3SHIP"] = true, -- eras=Modern|Coldwar; 3x MiG-27K Runway [Modern/CW]
     -- @gui requiredValues="Mirage-F1EE"
     ["RED_MIRAGE_F1EE_RUNWAY_DURANDALx6_S530Fx2_AIM9JULIx2_3SHIP"] = true, -- eras=Modern|Coldwar; 3x Mirage F1EE Runway [Modern/CW]
@@ -515,17 +506,11 @@ RedCasHeloEnabled = {
     ["RED_MI24P_CAS_B13Lx2_B8x2_1SHIP"] = true, -- eras=Modern; Mi-24P B-13L/B-8 rocket CAS [Modern]
     -- @gui requiredValues="Mi-24P"
     ["RED_MI24P_CAS_B13Lx2_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-24P B-13L/B-8 rocket CAS [Modern]
-    -- @gui requiredValues="Mi-28N"
     ["RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_1SHIP"] = true, -- eras=Modern; Mi-28N CAS [Modern]
-    -- @gui requiredValues="Mi-28N"
     ["RED_MI28N_CAS_9M114x8_B8x2_1SHIP"] = true, -- eras=Modern; Mi-28N CAS [Modern]
-    -- @gui requiredValues="Mi-28N"
     ["RED_MI28N_CAS_9M114x8_B8x2_2SHIP"] = true, -- eras=Modern; 2x Mi-28N CAS [Modern]
-    -- @gui requiredValues="Mi-28N"
     ["RED_MI28N_CAS_9M120x8_9M120Fx8_B13x2_2SHIP"] = true, -- eras=Modern; 2x Mi-28N CAS [Modern]
-    -- @gui requiredValues="Mi-24V"
     ["RED_MI24V_CAS_B8x2_B13x2_1SHIP"] = false, -- eras=Coldwar; Mi-24V CAS [CW]
-    -- @gui requiredValues="Mi-24V"
     ["RED_MI24V_CAS_B8x2_B13x2_2SHIP"] = false, -- eras=Coldwar; 2x Mi-24V CAS [CW]
     -- @gui requiredValues="Mi-8MT"
     ["RED_MI8_CAS_FAB100x4_UPK23x2_KORD_PKT_1SHIP"] = false, -- eras=Vietnam|Coldwar; Mi-8 FAB-100/UPK-23 gunpod CAS [VN/CW]
@@ -547,7 +532,6 @@ BlueCasHeloEnabled = {
     ["BLUE_AH64D_CAS_AGM114Kx8_M261x2_1SHIP"] = true, -- eras=Modern; AH-64D CAS [Modern]
     -- @gui requiredValues="AH-64D_BLK_II"
     ["BLUE_AH64D_CAS_AGM114Kx8_M261x2_2SHIP"] = true, -- eras=Modern; 2x AH-64D CAS [Modern]
-    -- @gui requiredValues="AH-1W"
     ["BLUE_AH1W_CAS_AGM114Kx8_M260x2_1SHIP"] = true, -- eras=Modern; AH-1W CAS [Modern]
     -- @gui requiredValues="SA342M"
     ["BLUE_SA342M_CAS_HOT3x4_1SHIP"] = true, -- eras=Modern; SA342M CAS [Modern]
@@ -1131,29 +1115,30 @@ CallsignOverrides = {
 
 -- Choose to have the option to get escorted by 2 jets. Recommended to A10 / C-130J, Harrier.
 -- set to true for escort option available once spawned, false for no escort option.
--- escortType: 1 = Hornet (F-18C in Coldwar or Gulfwar with AIM-7),
---             2 = Viper (F-15C in Coldwar or Gulfwar with AIM-7)
---             3 = MIG29S with R-77 (MiG-29A in Coldwar or Gulfwar with R-27ET)
+-- escortType is the exact checked BLUE CAP template name; the optional fourth value is its RED equivalent.
+-- Choose a checked CAP template in the Manager. Era changes retain valid choices and replace unavailable ones.
+-- Rows for inactive player aircraft retain their choices but do not offer an escort.
 -- The third value is how many feet above the player the escort follows.
 -- Use 0 for the same altitude, or 1000 through 10000 in 1000-foot steps.
+-- @gui tupleChoices="2:BlueCapPlaneEnabled:allowedPlanesModern,allowedPlanes,allowedPlanesSharedColdwarPvP,allowedPlanesBlueColdwarPvP,allowedPlanesVietnam,allowedPlanesSharedVietnamPvP,allowedPlanesBlueVietnamPvP|4:RedCapPlaneEnabled:allowedPlanesRedModern,allowedPlanesSharedColdwarPvP,allowedPlanesRed,allowedPlanesRedColdwarPvP,allowedPlanesSharedVietnamPvP,allowedPlanesRedVietnam,allowedPlanesRedVietnamPvP" tupleChoiceLabels="2:Blue escort|4:Red escort" tupleChoiceVisibleWhen="4:PvP:true"
 -- @gui installPolicy="mergeRows" disabledWhen="PvP:true;PvPEscorts:false"
 EscortTypeByPlayerType = {
-    ["C-130J-30"]      = { true, 1, 10000 },
-    ["AV8BNA"]         = { true, 1, 5000 },
-    ["A-10C_2"]        = { true, 1, 10000 },
-    ["A-10C"]          = { true, 1, 10000 },
-    ["A-10A"]          = { true, 1, 10000 },
-    ["Hercules"]       = { true, 1, 10000 },
-    ["F-15ESE"]        = { true, 2, 2000 },
-    ["AJS37"]          = { true, 1, 10000 },
-    ["MiG-29 Fulcrum"] = { false, 2, 2000 },
-    ["F-16C_50"]       = { false, 2, 2000 },
-    ["FA-18C_hornet"]  = { false, 2, 2000 },
-    ["MiG-21Bis"]      = { false, 3, 2000 },
-    ["Su-25T"]         = { false, 3, 5000 },
-    ["Su-25"]          = { false, 3, 5000 },
-    ["M-2000C"]        = { false, 2, 5000 },
-    ["Bronco-OV-10A"]  = { false, 1, 5000 },
+    ["C-130J-30"]      = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["AV8BNA"]         = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["A-10C_2"]        = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["A-10C"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["A-10A"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["Hercules"]       = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["F-15ESE"]        = { true, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["AJS37"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["MiG-29 Fulcrum"] = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["F-16C_50"]       = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["FA-18C_hornet"]  = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["MiG-21Bis"]      = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["Su-25T"]         = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["Su-25"]          = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["M-2000C"]        = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["Bronco-OV-10A"]  = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
 }
 
 -- Plane escort option for takeoff from the ground.
@@ -1372,25 +1357,21 @@ AvailableShopItems = {
     -- @gui disabledWhen="PvP:true" disabledValue="false"
     -- @gui visibleWhen="PvP:false"
     ["advancecapture"] = true, -- Advance capture zone
-    -- @gui requiredValues="F-16C_50"
+    -- @gui requiredValues="F-16C_50" requiredWhen="AIAttackTakeoffFromGround:true"
     ["dynamiccap"] = true, -- CAP Flight
-    -- @gui requiredValues="KC135MPRS"
     ["dynamicarco"] = true, -- Tanker (Drogue)
-    -- @gui requiredValues="KC-135"
     ["dynamictexaco"] = true, -- Tanker (Boom)
     -- @gui visibleWhen="PvP:true"
     ["replaceawacs"] = true, -- Replace one lost AWACS
-    -- @gui requiredValues="F-16C_50"
+    -- @gui requiredValues="F-16C_50" requiredWhen="AIAttackTakeoffFromGround:true"
     ["dynamiccas"] = true, -- AI Attack CAS Flight
     -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
-    -- @gui requiredValues="FA-18C_hornet"
+    -- @gui requiredValues="FA-18C_hornet" requiredWhen="AIAttackTakeoffFromGround:true"
     ["dynamicdecoy"] = true, -- AI Attack TALD DECOY Flight
-    -- @gui requiredValues="FA-18C_hornet"
+    -- @gui requiredValues="FA-18C_hornet" requiredWhen="AIAttackTakeoffFromGround:true"
     ["dynamicsead"] = true, -- AI Attack SEAD Flight
-    -- @gui requiredValues="F-15E"
     ["dynamicbomb"] = true, -- AI AttackBomber Flight
     -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
-    -- @gui requiredValues="B-1B"
     ["strategicbomber"] = true, -- AI Attack Strategic bomber
     ["groundattack"] = true, -- AI Attack Ground attack
     -- @gui disabledWhen="PvP:true" disabledValue="false"
@@ -1703,40 +1684,60 @@ CTLDPrices = {
   ["Squad 8"]                = { available = true, price = 50, reqRank = 1 }, -- Blue Squad 8
   ["Platoon 16"]             = { available = true, price = 100, reqRank = 1 }, -- Blue Platoon 16
   ["Platoon 32"]             = { available = true, price = 200, reqRank = 1 }, -- Blue Platoon 32
+  -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
   ["Anti-Air Soldiers"]      = { available = true, price = 100, reqRank = 1 }, -- Blue Anti-Air Soldiers
   ["Mortar Squad"]           = { available = true, price = 100, reqRank = 1 }, -- Blue Mortar Squad
+  -- @gui visibleWhen="PvP:false"
   ["Zone Spy"]               = { available = true, price = 100, reqRank = 2 }, -- Blue Zone Spy
+  -- @gui visibleWhen="PvP:false;UseStatics:true"
   ["Demolition Team"]        = { available = true, price = 100, reqRank = 2 }, -- Blue Demolition Team
+  -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
   ["Mephisto"]               = { available = true, price = 250, reqRank = 2 }, -- Blue Mephisto
   ["Humvee"]                 = { available = true, price = 250, reqRank = 1 }, -- Blue Humvee
+  -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
   ["Bradly"]                 = { available = true, price = 250, reqRank = 1 }, -- Blue Bradly
   ["L118"]                   = { available = true, price = 150, reqRank = 1 }, -- Blue L118
   ["Ammo Truck"]             = { available = true, price = 100, reqRank = 1 }, -- Ammo Truck
   ["Humvee scout"]           = { available = true, price = 100, reqRank = 1 }, -- Blue Humvee scout
+  -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
   ["Linebacker"]             = { available = true, price = 300, reqRank = 2 }, -- Blue Linebacker
+  -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
   ["Vulcan"]                 = { available = true, price = 300, reqRank = 2 }, -- Blue Vulcan
   ["HAWK System"]            = { available = true, price = 750, reqRank = 3 }, -- Blue HAWK System
   ["Hawk TR Add-on"]         = { available = true, price = 250, reqRank = 3 }, -- Blue Hawk TR Add-on
   ["Hawk SR Add-on"]         = { available = true, price = 250, reqRank = 3 }, -- Blue Hawk SR Add-on
   ["Hawk LN Add-on"]         = { available = true, price = 250, reqRank = 3 }, -- Blue Hawk LN Add-on
+  -- @gui visibleWhen="Era:Modern"
   ["NASAMS System"]          = { available = true, price = 750, reqRank = 3 }, -- Blue NASAMS System
+  -- @gui visibleWhen="Era:Modern"
   ["NASAMS C2 Add-on"]       = { available = true, price = 250, reqRank = 3 }, -- Blue NASAMS C2 Add-on
+  -- @gui visibleWhen="Era:Modern"
   ["NASAMS SR Add-on"]       = { available = true, price = 250, reqRank = 3 }, -- Blue NASAMS SR Add-on
+  -- @gui visibleWhen="Era:Modern"
   ["NASAMS LN Add-on"]       = { available = true, price = 250, reqRank = 3 }, -- Blue NASAMS LN Add-on
   ["FARP"]                   = { available = true, price = 500, reqRank = 1 }, -- FARP
   ["FARP with ZELL"]         = { available = true, price = 750, reqRank = 1 }, -- FARP with ZELL
+  -- @gui visibleWhen="Era:Modern"
   ["IRIS T STR Add-on"]      = { available = true, price = 750, reqRank = 3 }, -- Blue IRIS T STR Add-on
+  -- @gui visibleWhen="Era:Modern"
   ["IRIS T LN Add-on"]       = { available = true, price = 500, reqRank = 3 }, -- Blue IRIS T LN Add-on
+  -- @gui visibleWhen="Era:Modern"
   ["IRIS T C2 Add-on"]       = { available = true, price = 500, reqRank = 3 }, -- Blue IRIS T C2 Add-on
+  -- @gui visibleWhen="Era:Modern"
   ["IRIS T System"]          = { available = true, price = 1800, reqRank = 3 }, -- Blue IRIS T System
+  -- @gui visibleWhen="Era:Modern"
   ["C-RAM"]                  = { available = true, price = 500, reqRank = 2 }, -- Blue C-RAM
   -- @gui visibleWhen="PvP:true;Era:Modern"
   ["Pantsir S1"]             = { available = true, price = 500, reqRank = 2 }, -- Blue Pantsir S1
   -- @gui visibleWhen="PvP:true;Era:Modern"
   ["Tor M2"]                 = { available = true, price = 500, reqRank = 2 }, -- Red Tor M2
+  -- @gui visibleWhen="Era:Modern"
   ["HIMARS GMLRRS HE GUIDED"]= { available = true, price = 1000, reqRank = 3 }, -- Blue HIMARS GMLRRS HE GUIDED
+  -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
   ["FV-107 Scimitar"]        = { available = true, price = 250, reqRank = 2 }, -- Blue FV-107 Scimitar
+  -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
   ["FV-101 Scorpion"]        = { available = true, price = 250, reqRank = 2 }, -- Blue FV-101 Scorpion
+  -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
   ["Avenger"]                = { available = true, price = 250, reqRank = 2 }, -- Blue Avenger
     -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
     ["Squad 4 AK47"] = { available = true, price = 25, reqRank = 1 }, -- Red Squad 4 AK47
@@ -1746,21 +1747,21 @@ CTLDPrices = {
     ["Scout BRDM 2"] = { available = true, price = 100, reqRank = 1 }, -- Red Scout BRDM 2
     -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
     ["Arty SPH 253 Akatsia 8 NM"] = { available = true, price = 150, reqRank = 1 }, -- Red Arty SPH 253 Akatsia 8 NM
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["Arty SPM 259 Nona 3 NM"] = { available = true, price = 150, reqRank = 1 }, -- Red Arty SPM 259 Nona 3 NM
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["MLRS LC 80 MM 2.2 NM"] = { available = true, price = 150, reqRank = 1 }, -- Red MLRS LC 80 MM 2.2 NM
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["ATGM AT-3 SAGGER"] = { available = true, price = 250, reqRank = 2 }, -- Red ATGM AT-3 SAGGER
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["Kord 12.7 MM"] = { available = true, price = 100, reqRank = 1 }, -- Red Kord 12.7 MM
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["MRAP M-ATV"] = { available = true, price = 100, reqRank = 1 }, -- Red MRAP M-ATV
     -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
     ["Truck with ZU-23"] = { available = true, price = 300, reqRank = 2 }, -- Red Truck with ZU-23
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;RedTemplateEnabled.SA-8:true"
     ["SA-8"] = { available = true, price = 300, reqRank = 2 }, -- Red SA-8
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;RedTemplateEnabled.SA-3:true"
     ["SA-3 SAM system"] = { available = true, price = 750, reqRank = 3 }, -- Red SA-3 SAM system
 }
 
@@ -1768,8 +1769,10 @@ CTLDPrices = {
 -- @gui installPolicy="replaceTable" rowLabel="comment"
 MAX_AT_SPAWN = {
     ["Engineer soldier"]        = 0, -- Blue Engineer soldier
+    -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["Mephisto"]                = 2, -- Blue Mephisto
     ["Humvee"]                  = 2, -- Blue Humvee
+    -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["Bradly"]                  = 2, -- Blue Bradly
     ["L118"]                    = 3, -- Blue L118
     ["Ammo Truck"]              = 3, -- Ammo Truck
@@ -1777,31 +1780,49 @@ MAX_AT_SPAWN = {
     ["Squad 8"]                 = 0, -- Blue Squad 8
     ["Platoon 16"]              = 0, -- Blue Platoon 16
     ["Platoon 32"]              = 0, -- Blue Platoon 32
+    -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["Anti-Air Soldiers"]       = 2, -- Blue Anti-Air Soldiers
     ["Mortar Squad"]            = 2, -- Blue Mortar Squad
+    -- @gui visibleWhen="PvP:false"
     ["Zone Spy"]                = 0, -- Blue Zone Spy
+    -- @gui visibleWhen="PvP:false;UseStatics:true"
     ["Demolition Team"]         = 0, -- Blue Demolition Team
+    -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["Linebacker"]              = 2, -- Blue Linebacker
+    -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["Vulcan"]                  = 2, -- Blue Vulcan
     ["HAWK System"]             = 3, -- Blue HAWK System
     ["Hawk TR Add-on"]          = 3, -- Blue Hawk TR Add-on
     ["Hawk SR Add-on"]          = 3, -- Blue Hawk SR Add-on
     ["Hawk LN Add-on"]          = 8, -- Blue Hawk LN Add-on
+    -- @gui visibleWhen="Era:Modern"
     ["NASAMS System"]           = 3, -- Blue NASAMS System
+    -- @gui visibleWhen="Era:Modern"
     ["NASAMS C2 Add-on"]        = 3, -- Blue NASAMS C2 Add-on
+    -- @gui visibleWhen="Era:Modern"
     ["NASAMS SR Add-on"]        = 3, -- Blue NASAMS SR Add-on
+    -- @gui visibleWhen="Era:Modern"
     ["NASAMS LN Add-on"]        = 8, -- Blue NASAMS LN Add-on
     ["FARP"]                    = 3, -- FARP
+    -- @gui visibleWhen="Era:Modern"
     ["IRIS T STR Add-on"]       = 3, -- Blue IRIS T STR Add-on
+    -- @gui visibleWhen="Era:Modern"
     ["IRIS T LN Add-on"]        = 8, -- Blue IRIS T LN Add-on
+    -- @gui visibleWhen="Era:Modern"
     ["IRIS T C2 Add-on"]        = 3, -- Blue IRIS T C2 Add-on
+    -- @gui visibleWhen="Era:Modern"
     ["IRIS T System"]           = 2, -- Blue IRIS T System
+    -- @gui visibleWhen="Era:Modern"
     ["C-RAM"]                   = 4, -- Blue C-RAM
     -- @gui visibleWhen="PvP:true;Era:Modern"
     ["Pantsir S1"]              = 4, -- Blue Pantsir S1
+    -- @gui visibleWhen="Era:Modern"
     ["HIMARS GMLRRS HE GUIDED"] = 4, -- Blue HIMARS GMLRRS HE GUIDED
+    -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["FV-107 Scimitar"]         = 2, -- Blue FV-107 Scimitar
+    -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["FV-101 Scorpion"]         = 2, -- Blue FV-101 Scorpion
+    -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["Avenger"]                 = 2, -- Blue Avenger
     -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
     ["Squad 4 AK47"] = 0, -- Red Squad 4 AK47
@@ -1811,21 +1832,21 @@ MAX_AT_SPAWN = {
     ["Scout BRDM 2"] = 1, -- Red Scout BRDM 2
     -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
     ["Arty SPH 253 Akatsia 8 NM"] = 3, -- Red Arty SPH 253 Akatsia 8 NM
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["Arty SPM 259 Nona 3 NM"] = 3, -- Red Arty SPM 259 Nona 3 NM
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["MLRS LC 80 MM 2.2 NM"] = 3, -- Red MLRS LC 80 MM 2.2 NM
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["ATGM AT-3 SAGGER"] = 2, -- Red ATGM AT-3 SAGGER
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["Kord 12.7 MM"] = 1, -- Red Kord 12.7 MM
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;Era:Modern|Coldwar|Gulfwar"
     ["MRAP M-ATV"] = 1, -- Red MRAP M-ATV
     -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
     ["Truck with ZU-23"] = 2, -- Red Truck with ZU-23
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;RedTemplateEnabled.SA-8:true"
     ["SA-8"] = 2, -- Red SA-8
-    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true"
+    -- @gui visibleWhen="PvP|Allow_Red_CTLD:true;RedTemplateEnabled.SA-3:true"
     ["SA-3 SAM system"] = 3, -- Red SA-3 SAM system
     -- @gui visibleWhen="PvP:true;Era:Modern"
     ["Tor M2"] = 4, -- Red Tor M2
@@ -2079,90 +2100,32 @@ PvPSeparateAircraftLists = false
 -- Shared aircraft requirements for the Config Manager; Lua ignores these comments.
 -- requiredSet defines reusable rules; requiredEach reads every row of its source table.
 -- $ selects the current row, and {key} keeps the explanation linked to that row.
--- E-3A AWACS spawns in the air; its warehouse aircraft entries are optional.
--- Used by: allowedPlanesModern
--- @gui requiredSet="AircraftRequirements01" requiredValuesFrom="BlueCapPlaneEnabled|BlueCasPlaneEnabled|BlueSeadPlaneEnabled|BlueCasHeloEnabled|BlueSupplyHeloEnabled|AvailableShopItems.dynamiccap|AvailableShopItems.dynamiccas|AvailableShopItems.dynamicsead|AvailableShopItems.dynamicdecoy|AvailableShopItems.dynamicbomb|AvailableShopItems.strategicbomber|AvailableShopItems.dynamicarco|AvailableShopItems.dynamictexaco|pvp_supplies"
--- Used by: allowedPlanesModern, allowedPlanes, allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP
--- @gui requiredSet="AircraftRequirements02" requiredValues="S-3B Tanker" requiredReason="Caucasus BLUE carrier recovery tanker"
--- Used by: allowedPlanesModern, allowedPlanesRedModern, allowedPlanesSharedVietnamPvP, allowedPlanesBlueVietnamPvP, allowedPlanesRedVietnamPvP
--- @gui requiredSet="AircraftRequirements03" requiredValues="F-16C_50" requiredEach="EscortTypeByPlayerType" requiredWhen="PvPEscorts:true;$[1]:true;$[2]:2" requiredReason="Player escort for {key}"
--- @gui requiredSet="AircraftRequirements03" requiredValues="MiG-29S" requiredEach="EscortTypeByPlayerType" requiredWhen="PvPEscorts:true;$[1]:true;$[2]:3" requiredReason="Player escort for {key}"
--- Used by: allowedPlanesModern, allowedPlanesRedModern, allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP, allowedPlanesRedColdwarPvP, allowedPlanesSharedVietnamPvP, allowedPlanesBlueVietnamPvP, allowedPlanesRedVietnamPvP
--- @gui requiredSet="AircraftRequirements04" requiredValues="FA-18C_hornet" requiredEach="EscortTypeByPlayerType" requiredWhen="PvPEscorts:true;$[1]:true;$[2]!:2|3" requiredReason="Player escort for {key}"
--- Used by: allowedPlanesModern, allowedPlanes, allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP, allowedPlanesVietnam, allowedPlanesSharedVietnamPvP, allowedPlanesBlueVietnamPvP
--- @gui requiredSet="AircraftRequirements05" requiredValues="C-130J-30" requiredWhen="AvailableShopItems.supplies2:true;AllowScriptedSupplies:false" requiredSource="AvailableShopItems.supplies2" requiredReason="Paid plane-capable zone resupply"
--- @gui requiredSet="AircraftRequirements05" requiredValues="C-130J-30" requiredWhen="AvailableShopItems.capture:true" requiredSource="AvailableShopItems.capture" requiredReason="Paid plane-capable neutral capture"
--- Used by: allowedPlanesRedModern, allowedPlanesSharedColdwarPvP, allowedPlanesRedColdwarPvP, allowedPlanesSharedVietnamPvP, allowedPlanesRedVietnamPvP
+-- @gui requiredSet="AircraftRequirements01" requiredValuesFrom="BlueCapPlaneEnabled|BlueCasPlaneEnabled|BlueSeadPlaneEnabled|BlueCasHeloEnabled|BlueSupplyHeloEnabled|AvailableShopItems.dynamiccap|AvailableShopItems.dynamiccas|AvailableShopItems.dynamicsead|AvailableShopItems.dynamicdecoy"
 -- @gui requiredSet="AircraftRequirements06" requiredValuesFrom="RedCapPlaneEnabled|RedCasPlaneEnabled|RedSeadPlaneEnabled|RedRunwayStrikePlaneEnabled|RedCasHeloEnabled|RedSupplyHeloEnabled"
--- @gui requiredSet="AircraftRequirements06" requiredValues="IL-76MD|An-30M" requiredWhen="AvailableShopItems.supplies2:true;AllowScriptedSupplies:false" requiredSource="AvailableShopItems.supplies2" requiredReason="Paid plane-capable zone resupply"
--- @gui requiredSet="AircraftRequirements06" requiredValues="IL-76MD|An-30M" requiredWhen="AvailableShopItems.capture:true" requiredSource="AvailableShopItems.capture" requiredReason="Paid plane-capable neutral capture"
--- Used by: allowedPlanesRedModern
--- @gui requiredSet="AircraftRequirements07" requiredValues="MiG-29S" requiredWhen="AvailableShopItems.dynamiccap:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="paid CAP"
--- @gui requiredSet="AircraftRequirements07" requiredValues="Su-25T" requiredWhen="AvailableShopItems.dynamiccas:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="paid CAS"
--- @gui requiredSet="AircraftRequirements07" requiredValues="JF-17" requiredWhen="AvailableShopItems.dynamicsead:true" requiredSource="AvailableShopItems.dynamicsead" requiredReason="paid SEAD"
--- @gui requiredSet="AircraftRequirements07" requiredValues="JF-17" requiredWhen="AvailableShopItems.dynamicbomb:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="ordinary paid Bomber"
--- @gui requiredSet="AircraftRequirements07" requiredValues="Tu-22M3" requiredWhen="AvailableShopItems.strategicbomber:true" requiredSource="AvailableShopItems.strategicbomber" requiredReason="paid Strategic Bomber"
--- @gui requiredSet="AircraftRequirements07" requiredValues="KC135MPRS" requiredWhen="AvailableShopItems.dynamicarco:true" requiredSource="AvailableShopItems.dynamicarco" requiredReason="paid drogue tanker"
--- @gui requiredSet="AircraftRequirements07" requiredValues="KC-135" requiredWhen="AvailableShopItems.dynamictexaco:true" requiredSource="AvailableShopItems.dynamictexaco" requiredReason="paid boom tanker"
--- @gui requiredSet="AircraftRequirements07" requiredValues="IL-76MD|An-30M" requiredWhen="pvp_supplies:true" requiredSource="pvp_supplies" requiredReason="automatic regular fixed-wing supply"
--- Used by: allowedPlanesRedModern, allowedPlanesSharedColdwarPvP, allowedPlanesRedColdwarPvP
--- @gui requiredSet="AircraftRequirements08" requiredValues="A-50" requiredReason="Caucasus RED automatic AWACS"
--- Used by: allowedPlanes, allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP, allowedPlanesVietnam, allowedPlanesSharedVietnamPvP, allowedPlanesBlueVietnamPvP
+-- @gui requiredSet="AircraftRequirements07" requiredValues="MiG-29S" requiredWhen="AvailableShopItems.dynamiccap:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="paid CAP"
+-- @gui requiredSet="AircraftRequirements07" requiredValues="Su-25T" requiredWhen="AvailableShopItems.dynamiccas:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="paid CAS"
+-- @gui requiredSet="AircraftRequirements07" requiredValues="JF-17" requiredWhen="AvailableShopItems.dynamicsead:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicsead" requiredReason="paid SEAD"
+-- @gui requiredSet="AircraftRequirements07" requiredValues="JF-17" requiredWhen="AvailableShopItems.dynamicbomb:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="ordinary paid Bomber"
 -- @gui requiredSet="AircraftRequirements09" requiredValuesFrom="BlueCapPlaneEnabled|BlueCasPlaneEnabled|BlueSeadPlaneEnabled|BlueCasHeloEnabled|BlueSupplyHeloEnabled"
--- Used by: allowedPlanes, allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP
--- @gui requiredSet="AircraftRequirements10" requiredValues="F-14A-135-GR" requiredWhen="AvailableShopItems.dynamiccap:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="Coldwar CAP flight"
--- @gui requiredSet="AircraftRequirements10" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamiccas:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="Coldwar CAS flight"
--- @gui requiredSet="AircraftRequirements10" requiredValues="Tornado IDS" requiredWhen="AvailableShopItems.dynamicsead:true" requiredSource="AvailableShopItems.dynamicsead" requiredReason="Coldwar SEAD flight"
--- @gui requiredSet="AircraftRequirements10" requiredValues="F-14B" requiredWhen="AvailableShopItems.dynamicdecoy:true" requiredSource="AvailableShopItems.dynamicdecoy" requiredReason="Coldwar Decoy flight"
--- @gui requiredSet="AircraftRequirements10" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamicbomb:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Coldwar Bomber flight"
--- @gui requiredSet="AircraftRequirements10" requiredValues="B-52H" requiredWhen="AvailableShopItems.strategicbomber:true" requiredSource="AvailableShopItems.strategicbomber" requiredReason="Coldwar Strategic Bomber"
--- Used by: allowedPlanes, allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP, allowedPlanesRedColdwarPvP, allowedPlanesVietnam, allowedPlanesSharedVietnamPvP, allowedPlanesBlueVietnamPvP, allowedPlanesRedVietnamPvP
--- @gui requiredSet="AircraftRequirements11" requiredValues="KC135MPRS" requiredWhen="AvailableShopItems.dynamicarco:true" requiredSource="AvailableShopItems.dynamicarco" requiredReason="Drogue tanker"
--- @gui requiredSet="AircraftRequirements11" requiredValues="KC-135" requiredWhen="AvailableShopItems.dynamictexaco:true" requiredSource="AvailableShopItems.dynamictexaco" requiredReason="Boom tanker"
--- Used by: allowedPlanes, allowedPlanesVietnam
--- @gui requiredSet="AircraftRequirements12" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamicstatic:true" requiredSource="AvailableShopItems.dynamicstatic" requiredReason="Static building strike"
--- @gui requiredSet="AircraftRequirements12" requiredValues="F-14A-135-GR" requiredWhen="AvailableShopItems.jtac:true" requiredSource="AvailableShopItems.jtac" requiredReason="JTAC flight"
--- @gui requiredSet="AircraftRequirements12" requiredValues="F-14A-135-GR" requiredWhen="AvailableShopItems.9lineam:true" requiredSource="AvailableShopItems.9lineam" requiredReason="9-line AM JTAC"
--- @gui requiredSet="AircraftRequirements12" requiredValues="F-14A-135-GR" requiredWhen="AvailableShopItems.9linefm:true" requiredSource="AvailableShopItems.9linefm" requiredReason="9-line FM JTAC"
--- @gui requiredSet="AircraftRequirements12" requiredValues="C-130J-30" requiredWhen="NoAIBlueSupplies:false" requiredSource="NoAIBlueSupplies" requiredReason="Automatic regular fixed-wing supply"
--- @gui requiredSet="AircraftRequirements12" requiredValues="FA-18C_hornet" requiredEach="EscortTypeByPlayerType" requiredWhen="$[1]:true;$[2]!:2|3" requiredReason="Player escort for {key}"
--- @gui requiredSet="AircraftRequirements12" requiredValues="C-130J-30" requiredWhen="AvailableShopItems.advancecapture:true" requiredSource="AvailableShopItems.advancecapture" requiredReason="Paid plane-capable advance capture at eligible airbase target"
--- Used by: allowedPlanes
--- @gui requiredSet="AircraftRequirements13" requiredValues="F-15C" requiredEach="EscortTypeByPlayerType" requiredWhen="$[1]:true;$[2]:2" requiredReason="Player escort for {key}"
--- @gui requiredSet="AircraftRequirements13" requiredValues="MiG-29 Fulcrum" requiredEach="EscortTypeByPlayerType" requiredWhen="$[1]:true;$[2]:3" requiredReason="Player escort for {key}"
--- Used by: allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP, allowedPlanesSharedVietnamPvP, allowedPlanesBlueVietnamPvP
--- @gui requiredSet="AircraftRequirements14" requiredValues="C-130J-30" requiredWhen="pvp_supplies:true" requiredSource="pvp_supplies" requiredReason="Automatic regular fixed-wing supply"
--- Used by: allowedPlanesSharedColdwarPvP, allowedPlanesBlueColdwarPvP, allowedPlanesRedColdwarPvP
--- @gui requiredSet="AircraftRequirements15" requiredValues="F-15C" requiredEach="EscortTypeByPlayerType" requiredWhen="PvPEscorts:true;$[1]:true;$[2]:2" requiredReason="Player escort for {key}"
--- @gui requiredSet="AircraftRequirements15" requiredValues="MiG-29 Fulcrum" requiredEach="EscortTypeByPlayerType" requiredWhen="PvPEscorts:true;$[1]:true;$[2]:3" requiredReason="Player escort for {key}"
--- Used by: allowedPlanesSharedColdwarPvP, allowedPlanesRedColdwarPvP
--- @gui requiredSet="AircraftRequirements16" requiredValues="MiG-29 Fulcrum" requiredWhen="AvailableShopItems.dynamiccap:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="Coldwar CAP flight"
--- @gui requiredSet="AircraftRequirements16" requiredValues="Su-25" requiredWhen="AvailableShopItems.dynamiccas:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="Coldwar CAS flight"
--- @gui requiredSet="AircraftRequirements16" requiredValues="Su-24M" requiredWhen="AvailableShopItems.dynamicsead:true" requiredSource="AvailableShopItems.dynamicsead" requiredReason="Coldwar SEAD flight"
--- @gui requiredSet="AircraftRequirements16" requiredValues="Su-25" requiredWhen="AvailableShopItems.dynamicbomb:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Coldwar Bomber flight"
--- @gui requiredSet="AircraftRequirements16" requiredValues="Tu-95MS" requiredWhen="AvailableShopItems.strategicbomber:true" requiredSource="AvailableShopItems.strategicbomber" requiredReason="Coldwar Strategic Bomber"
--- Used by: allowedPlanesSharedColdwarPvP, allowedPlanesRedColdwarPvP, allowedPlanesSharedVietnamPvP, allowedPlanesRedVietnamPvP
--- @gui requiredSet="AircraftRequirements17" requiredValues="IL-76MD|An-30M" requiredWhen="pvp_supplies:true" requiredSource="pvp_supplies" requiredReason="Automatic regular fixed-wing supply"
--- Used by: allowedPlanesVietnam, allowedPlanesSharedVietnamPvP, allowedPlanesBlueVietnamPvP
--- @gui requiredSet="AircraftRequirements18" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamiccap:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="Vietnam CAP flight"
--- @gui requiredSet="AircraftRequirements18" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamiccas:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="Vietnam CAS flight"
--- @gui requiredSet="AircraftRequirements18" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamicsead:true" requiredSource="AvailableShopItems.dynamicsead" requiredReason="Vietnam SEAD flight"
--- @gui requiredSet="AircraftRequirements18" requiredValues="F-100D" requiredWhen="AvailableShopItems.dynamicbomb:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Vietnam Bomber flight"
--- @gui requiredSet="AircraftRequirements18" requiredValues="E-2C" requiredReason="Caucasus blue automatic AWACS"
--- Used by: allowedPlanesVietnam
--- @gui requiredSet="AircraftRequirements19" requiredValues="FA-18C_hornet" requiredWhen="AvailableShopItems.dynamicdecoy:true" requiredSource="AvailableShopItems.dynamicdecoy" requiredReason="Vietnam Decoy flight"
--- @gui requiredSet="AircraftRequirements19" requiredValues="F-16C_50" requiredEach="EscortTypeByPlayerType" requiredWhen="$[1]:true;$[2]:2" requiredReason="Player escort for {key}"
--- @gui requiredSet="AircraftRequirements19" requiredValues="MiG-29S" requiredEach="EscortTypeByPlayerType" requiredWhen="$[1]:true;$[2]:3" requiredReason="Player escort for {key}"
--- Used by: allowedPlanesSharedVietnamPvP, allowedPlanesRedVietnamPvP
--- @gui requiredSet="AircraftRequirements20" requiredValues="MiG-29 Fulcrum" requiredWhen="AvailableShopItems.dynamiccap:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="Vietnam CAP flight"
--- @gui requiredSet="AircraftRequirements20" requiredValues="MiG-19P" requiredWhen="AvailableShopItems.dynamiccas:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="Vietnam CAS flight"
--- @gui requiredSet="AircraftRequirements20" requiredValues="Su-17M4" requiredWhen="AvailableShopItems.dynamicsead:true" requiredSource="AvailableShopItems.dynamicsead" requiredReason="Vietnam SEAD flight"
--- @gui requiredSet="AircraftRequirements20" requiredValues="MiG-15bis" requiredWhen="AvailableShopItems.dynamicbomb:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Vietnam Bomber flight"
--- @gui requiredSet="AircraftRequirements20" requiredValues="A-50" requiredReason="Caucasus red automatic AWACS"
+-- @gui requiredSet="AircraftRequirements10" requiredValues="F-14A-135-GR" requiredWhen="AvailableShopItems.dynamiccap:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="Coldwar CAP flight"
+-- @gui requiredSet="AircraftRequirements10" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamiccas:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="Coldwar CAS flight"
+-- @gui requiredSet="AircraftRequirements10" requiredValues="F-14B" requiredWhen="AvailableShopItems.dynamicdecoy:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicdecoy" requiredReason="Coldwar Decoy flight"
+-- @gui requiredSet="AircraftRequirements10" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamicbomb:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Coldwar Bomber flight"
+-- @gui requiredSet="AircraftRequirements12" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamicstatic:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicstatic" requiredReason="Static building strike"
+-- @gui requiredSet="AircraftRequirements16" requiredValues="MiG-29 Fulcrum" requiredWhen="AvailableShopItems.dynamiccap:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="Coldwar CAP flight"
+-- @gui requiredSet="AircraftRequirements16" requiredValues="Su-25" requiredWhen="AvailableShopItems.dynamiccas:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="Coldwar CAS flight"
+-- @gui requiredSet="AircraftRequirements16" requiredValues="Su-25" requiredWhen="AvailableShopItems.dynamicbomb:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Coldwar Bomber flight"
+-- @gui requiredSet="AircraftRequirements18" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamiccap:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="Vietnam CAP flight"
+-- @gui requiredSet="AircraftRequirements18" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamiccas:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="Vietnam CAS flight"
+-- @gui requiredSet="AircraftRequirements18" requiredValues="F-4E-45MC" requiredWhen="AvailableShopItems.dynamicsead:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicsead" requiredReason="Vietnam SEAD flight"
+-- @gui requiredSet="AircraftRequirements18" requiredValues="F-100D" requiredWhen="AvailableShopItems.dynamicbomb:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Vietnam Bomber flight"
+-- @gui requiredSet="AircraftRequirements20" requiredValues="MiG-21Bis" requiredWhen="AvailableShopItems.dynamiccap:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccap" requiredReason="Vietnam CAP flight"
+-- @gui requiredSet="AircraftRequirements20" requiredValues="MiG-19P" requiredWhen="AvailableShopItems.dynamiccas:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamiccas" requiredReason="Vietnam CAS flight"
+-- @gui requiredSet="AircraftRequirements20" requiredValues="MiG-15bis" requiredWhen="AvailableShopItems.dynamicbomb:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Vietnam Bomber flight"
 
 -- Allowed BLUE warehouse aircraft in Modern PvP when separate lists are enabled.
 -- @gui label="Modern Allowed BLUE Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
--- @gui requiredSets="AircraftRequirements01|AircraftRequirements02|AircraftRequirements03|AircraftRequirements04|AircraftRequirements05" requiredWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui requiredSets="AircraftRequirements01" requiredWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesModern = {
     "A-10A",
     "A-10C",
@@ -2179,14 +2142,7 @@ allowedPlanesModern = {
     "C-130J-30",
     "UH-1H",
     "OH58D",
-    "AH-1W",
-    "B-1B",
-    "E-3A",
-    "F-15E",
     "F-4E-45MC",
-    "KC-135",
-    "KC135MPRS",
-    "S-3B Tanker",
     "SA342M",
     --"MiG-29A",
     --"MiG-29S",
@@ -2201,86 +2157,40 @@ allowedPlanesModern = {
     --"Ka-50",
     --"Ka-50_3",
     --"L-39C",
-    --"A-50",
-    --"An-26B",
-    --"An-30M",
-    --"IL-76MD",
     --"JF-17",
-    --"Mi-28N",
-    --"MiG-23MLD",
-    --"MiG-25PD",
-    --"MiG-27K",
-    --"MiG-31",
-    --"Mirage-F1BQ",
     --"Mirage-F1CE",
     --"Mirage-F1EE",
-    --"Su-24M",
-    --"Su-34",
-    --"Tu-22M3",
-    --"Tu-95MS",
     --"A-4E-C",
     --"AH-6J",
     --"AJS37",
     --"Bronco-OV-10A",
     --"C-101CC",
-    --"E-2C",
-    --"F/A-18A",
     --"F-100D",
-    --"F-14A",
     --"F-14A-135-GR",
     --"F-14A-135-GR-Early",
     --"F-14A-95-GR",
     --"F-14BU",
-    --"F-16A MLU",
     --"F-5E-3",
     --"F-5E-3_FC",
     --"F-86F Sabre",
     --"Hercules",
-    --"Ka-27",
     --"MB-339A",
     --"MB-339APAN",
     --"MH-60R",
     --"MH-6J",
-    --"Mi-24V",
     --"Mi-28NE",
     --"MiG-15bis",
     --"MiG-15bis_FC",
     --"MiG-19P",
-    --"Mirage-F1AD",
-    --"Mirage-F1AZ",
-    --"Mirage-F1B",
-    --"Mirage-F1BD",
     --"Mirage-F1BE",
-    --"Mirage-F1C",
-    --"Mirage-F1C-200",
-    --"Mirage-F1CG",
-    --"Mirage-F1CH",
-    --"Mirage-F1CJ",
-    --"Mirage-F1CK",
-    --"Mirage-F1CR",
-    --"Mirage-F1CT",
-    --"Mirage-F1CZ",
-    --"Mirage-F1DDA",
-    --"Mirage-F1ED",
-    --"Mirage-F1EDA",
-    --"Mirage-F1EH",
-    --"Mirage-F1EQ",
-    --"Mirage-F1M-CE",
-    --"Mirage-F1M-EE",
     --"OH-6A",
     --"P3C_Orion",
     --"SA342L",
     --"SA342Minigun",
-    --"SA342Mistral",
     --"SU22",
-    --"Su-24MR",
-    --"UH-60A",
     --"UH-60L",
     --"UH-60L_DAP",
-    --"Su-17M4",
     --"A-29B",
-    --"B-52H",
-    --"Bell-47",
     --"EA-18G",
     --"Eurofighter",
     --"EurofighterT",
@@ -2314,7 +2224,7 @@ allowedPlanesModern = {
 
 -- Allowed RED warehouse aircraft in Modern PvP when separate lists are enabled.
 -- @gui label="Modern Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
--- @gui requiredSets="AircraftRequirements06|AircraftRequirements07|AircraftRequirements08|AircraftRequirements03|AircraftRequirements04" requiredWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui requiredSets="AircraftRequirements06|AircraftRequirements07" requiredWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesRedModern = {
     "MiG-29A",
     "MiG-29S",
@@ -2329,25 +2239,9 @@ allowedPlanesRedModern = {
     "Ka-50",
     "Ka-50_3",
     "L-39C",
-    "A-50",
-    "An-26B",
-    "An-30M",
-    "IL-76MD",
     "JF-17",
-    "KC-135",
-    "KC135MPRS",
-    "Mi-28N",
-    "MiG-23MLD",
-    "MiG-25PD",
-    "MiG-27K",
-    "MiG-31",
-    "Mirage-F1BQ",
     "Mirage-F1CE",
     "Mirage-F1EE",
-    "Su-24M",
-    "Su-34",
-    "Tu-22M3",
-    "Tu-95MS",
     --"A-10A",
     --"A-10C",
     --"A-10C_2",
@@ -2363,76 +2257,40 @@ allowedPlanesRedModern = {
     --"C-130J-30",
     --"UH-1H",
     --"OH58D",
-    --"AH-1W",
-    --"B-1B",
-    "E-3A",
-    --"F-15E",
     --"F-4E-45MC",
-    --"S-3B Tanker",
     --"SA342M",
     --"A-4E-C",
     --"AH-6J",
     --"AJS37",
     --"Bronco-OV-10A",
     --"C-101CC",
-    --"E-2C",
-    --"F/A-18A",
     --"F-100D",
-    --"F-14A",
     --"F-14A-135-GR",
     --"F-14A-135-GR-Early",
     --"F-14A-95-GR",
     --"F-14BU",
-    --"F-16A MLU",
     --"F-5E-3",
     --"F-5E-3_FC",
     --"F-86F Sabre",
+    --"F-86F_FC",
     --"Hercules",
-    --"Ka-27",
     --"MB-339A",
     --"MB-339APAN",
     --"MH-60R",
     --"MH-6J",
-    --"Mi-24V",
     --"Mi-28NE",
     --"MiG-15bis",
     --"MiG-15bis_FC",
     --"MiG-19P",
-    --"Mirage-F1AD",
-    --"Mirage-F1AZ",
-    --"Mirage-F1B",
-    --"Mirage-F1BD",
     --"Mirage-F1BE",
-    --"Mirage-F1C",
-    --"Mirage-F1C-200",
-    --"Mirage-F1CG",
-    --"Mirage-F1CH",
-    --"Mirage-F1CJ",
-    --"Mirage-F1CK",
-    --"Mirage-F1CR",
-    --"Mirage-F1CT",
-    --"Mirage-F1CZ",
-    --"Mirage-F1DDA",
-    --"Mirage-F1ED",
-    --"Mirage-F1EDA",
-    --"Mirage-F1EH",
-    --"Mirage-F1EQ",
-    --"Mirage-F1M-CE",
-    --"Mirage-F1M-EE",
     --"OH-6A",
     --"P3C_Orion",
     --"SA342L",
     --"SA342Minigun",
-    --"SA342Mistral",
     --"SU22",
-    --"Su-24MR",
-    --"UH-60A",
     --"UH-60L",
     --"UH-60L_DAP",
-    --"Su-17M4",
     --"A-29B",
-    --"B-52H",
-    --"Bell-47",
     --"EA-18G",
     --"Eurofighter",
     --"EurofighterT",
@@ -2465,43 +2323,35 @@ allowedPlanesRedModern = {
 
 -- In this list, you can either remove or add what is allowed in the Coldwar or Gulfwar era.
 -- @gui label="Allowed Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:false"
--- @gui requiredSets="AircraftRequirements09|AircraftRequirements10|AircraftRequirements11|AircraftRequirements12|AircraftRequirements02|AircraftRequirements13|AircraftRequirements05" requiredWhen="Era:Coldwar|Gulfwar;PvP:false"
+-- @gui requiredSets="AircraftRequirements09|AircraftRequirements10|AircraftRequirements12" requiredWhen="Era:Coldwar|Gulfwar;PvP:false"
 allowedPlanes = {
     "A-10A",
     "A-10C",
     --"A-10C_2",
     "A-4E-C",
-    "AH-1W",
     --"AH-64D_BLK_II",
     "AH-6J",
     "AJS37",
-    "An-30M",
     "AV8BNA",
     "Bronco-OV-10A",
     "C-101CC",
     "C-130J-30",
     "CH-47Fbl1",
-    "E-2C",
-    "F/A-18A",
     "F-100D",
-    "F-14A",
     "F-14A-135-GR",
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
     "F-14B",
     --"F-14BU",
     "F-15C",
-    "F-15E",
     "F-15ESE",
-    "F-16A MLU",
     "F-16C_50",
     "F-4E-45MC",
     "F-5E-3",
     "F-5E-3_FC",
     "F-86F Sabre",
-    --"FA-18C_hornet",
+    "FA-18C_hornet",
     "Hercules",
-    "Ka-27",
     "L-39C",
     "M-2000C",
     "MB-339A",
@@ -2509,52 +2359,26 @@ allowedPlanes = {
     "MH-60R",
     "MH-6J",
     "Mi-24P",
-    "Mi-24V",
     "Mi-28NE",
     "Mi-8MT",
     "MiG-15bis",
     "MiG-15bis_FC",
     "MiG-19P",
     "MiG-21Bis",
-    "MiG-23MLD",
     "MiG-29 Fulcrum",
     "MiG-29A",
-    "Mirage-F1AD",
-    "Mirage-F1AZ",
-    "Mirage-F1B",
-    "Mirage-F1BD",
     "Mirage-F1BE",
-    "Mirage-F1BQ",
-    "Mirage-F1C",
-    "Mirage-F1C-200",
     "Mirage-F1CE",
-    "Mirage-F1CG",
-    "Mirage-F1CH",
-    "Mirage-F1CJ",
-    "Mirage-F1CK",
-    "Mirage-F1CR",
-    "Mirage-F1CT",
-    "Mirage-F1CZ",
-    "Mirage-F1DDA",
-    "Mirage-F1ED",
-    "Mirage-F1EDA",
     "Mirage-F1EE",
-    "Mirage-F1EH",
-    "Mirage-F1EQ",
-    "Mirage-F1M-CE",
-    "Mirage-F1M-EE",
     "OH58D",
     "OH-6A",
     "P3C_Orion",
     "SA342L",
     "SA342M",
     "SA342Minigun",
-    "SA342Mistral",
     "SU22",
-    "Su-24MR",
     "Su-25",
     "UH-1H",
-    "UH-60A",
     "UH-60L",
     "UH-60L_DAP",
 }
@@ -2562,39 +2386,31 @@ allowedPlanes = {
 -- Shared Coldwar PvP warehouse aircraft for both coalitions when separate lists are disabled.
 -- Saved independently from PvE; enabled AI services require their aircraft to remain active.
 -- @gui label="Coldwar Allowed Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:false"
--- @gui requiredSets="AircraftRequirements09|AircraftRequirements10|AircraftRequirements11|AircraftRequirements02|AircraftRequirements14|AircraftRequirements15|AircraftRequirements04|AircraftRequirements05|AircraftRequirements06|AircraftRequirements16|AircraftRequirements08|AircraftRequirements17" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:false"
+-- @gui requiredSets="AircraftRequirements09|AircraftRequirements10|AircraftRequirements06|AircraftRequirements16" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:false"
 allowedPlanesSharedColdwarPvP = {
     "A-10A",
     "A-10C",
     "A-4E-C",
-    "AH-1W",
     "AH-6J",
     "AJS37",
-    "An-30M",
     "AV8BNA",
     "Bronco-OV-10A",
     "C-101CC",
     "C-130J-30",
     "CH-47Fbl1",
-    "E-2C",
-    "F/A-18A",
     "F-100D",
-    "F-14A",
     "F-14A-135-GR",
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
     "F-14B",
     "F-15C",
-    "F-15E",
     "F-15ESE",
-    "F-16A MLU",
     "F-16C_50",
     "F-4E-45MC",
     "F-5E-3",
     "F-5E-3_FC",
     "F-86F Sabre",
     "Hercules",
-    "Ka-27",
     "L-39C",
     "M-2000C",
     "MB-339A",
@@ -2602,117 +2418,67 @@ allowedPlanesSharedColdwarPvP = {
     "MH-60R",
     "MH-6J",
     "Mi-24P",
-    "Mi-24V",
     "Mi-28NE",
     "Mi-8MT",
     "MiG-15bis",
     "MiG-15bis_FC",
     "MiG-19P",
     "MiG-21Bis",
-    "MiG-23MLD",
     "MiG-29 Fulcrum",
     "MiG-29A",
-    "Mirage-F1AD",
-    "Mirage-F1AZ",
-    "Mirage-F1B",
-    "Mirage-F1BD",
     "Mirage-F1BE",
-    "Mirage-F1BQ",
-    "Mirage-F1C",
-    "Mirage-F1C-200",
     "Mirage-F1CE",
-    "Mirage-F1CG",
-    "Mirage-F1CH",
-    "Mirage-F1CJ",
-    "Mirage-F1CK",
-    "Mirage-F1CR",
-    "Mirage-F1CT",
-    "Mirage-F1CZ",
-    "Mirage-F1DDA",
-    "Mirage-F1ED",
-    "Mirage-F1EDA",
     "Mirage-F1EE",
-    "Mirage-F1EH",
-    "Mirage-F1EQ",
-    "Mirage-F1M-CE",
-    "Mirage-F1M-EE",
     "OH58D",
     "OH-6A",
     "P3C_Orion",
     "SA342L",
     "SA342M",
     "SA342Minigun",
-    "SA342Mistral",
     "SU22",
-    "Su-24MR",
     "Su-25",
     "UH-1H",
-    "UH-60A",
     "UH-60L",
     "UH-60L_DAP",
     "AH-64D_BLK_II",
     "FA-18C_hornet",
-    "B-52H",
-    "E-3A",
-    "KC-135",
-    "KC135MPRS",
-    "S-3B Tanker",
-    "Tornado IDS",
-    "A-50",
-    "An-26B",
-    "IL-76MD",
-    "JF-17",
-    "Mi-28N",
-    "MiG-25PD",
-    "MiG-27K",
-    "MiG-29S",
-    "MiG-31",
-    "Su-24M",
-    "Su-25T",
+    --"JF-17",
+    --"MiG-29S",
+    --"Su-25T",
     "Su-27",
-    "Su-33",
-    "Su-34",
-    "Tu-95MS",
+    --"Su-33",
     --"A-10C_2",
     --"F-14BU",
     --"F-86F_FC",
     --"Ka-50_3",
     --"Ka-50",
-    --"Su-17M4",
 }
 
 -- BLUE Coldwar/Gulfwar warehouse aircraft when separate PvP lists are enabled.
 -- Legacy aircraft rows remain unchanged; this override also includes enabled AI requirements.
 -- @gui label="Coldwar Allowed BLUE Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
--- @gui requiredSets="AircraftRequirements09|AircraftRequirements10|AircraftRequirements11|AircraftRequirements02|AircraftRequirements14|AircraftRequirements15|AircraftRequirements04|AircraftRequirements05" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui requiredSets="AircraftRequirements09|AircraftRequirements10" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesBlueColdwarPvP = {
     "A-10A",
     "A-10C",
     --"A-10C_2",
     "A-4E-C",
-    "AH-1W",
     "AH-64D_BLK_II",
     "AH-6J",
     "AJS37",
-    "An-30M",
     "AV8BNA",
     "Bronco-OV-10A",
     "C-101CC",
     "C-130J-30",
     "CH-47Fbl1",
-    "E-2C",
-    "F/A-18A",
     "F-100D",
-    "F-14A",
     "F-14A-135-GR",
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
     "F-14B",
     --"F-14BU",
     "F-15C",
-    "F-15E",
     "F-15ESE",
-    "F-16A MLU",
     "F-16C_50",
     "F-4E-45MC",
     "F-5E-3",
@@ -2720,7 +2486,6 @@ allowedPlanesBlueColdwarPvP = {
     "F-86F Sabre",
     "FA-18C_hornet",
     "Hercules",
-    "Ka-27",
     "L-39C",
     "M-2000C",
     "MB-339A",
@@ -2728,60 +2493,28 @@ allowedPlanesBlueColdwarPvP = {
     "MH-60R",
     "MH-6J",
     "Mi-24P",
-    "Mi-24V",
     "Mi-28NE",
     "Mi-8MT",
     "MiG-15bis",
     "MiG-15bis_FC",
     "MiG-19P",
     "MiG-21Bis",
-    "MiG-23MLD",
     "MiG-29 Fulcrum",
     "MiG-29A",
-    "Mirage-F1AD",
-    "Mirage-F1AZ",
-    "Mirage-F1B",
-    "Mirage-F1BD",
     "Mirage-F1BE",
-    "Mirage-F1BQ",
-    "Mirage-F1C",
-    "Mirage-F1C-200",
     "Mirage-F1CE",
-    "Mirage-F1CG",
-    "Mirage-F1CH",
-    "Mirage-F1CJ",
-    "Mirage-F1CK",
-    "Mirage-F1CR",
-    "Mirage-F1CT",
-    "Mirage-F1CZ",
-    "Mirage-F1DDA",
-    "Mirage-F1ED",
-    "Mirage-F1EDA",
     "Mirage-F1EE",
-    "Mirage-F1EH",
-    "Mirage-F1EQ",
-    "Mirage-F1M-CE",
-    "Mirage-F1M-EE",
     "OH58D",
     "OH-6A",
     "P3C_Orion",
     "SA342L",
     "SA342M",
     "SA342Minigun",
-    "SA342Mistral",
     "SU22",
-    "Su-24MR",
     "Su-25",
     "UH-1H",
-    "UH-60A",
     "UH-60L",
     "UH-60L_DAP",
-    "B-52H",
-    "E-3A",
-    "KC-135",
-    "KC135MPRS",
-    "S-3B Tanker",
-    "Tornado IDS",
     --"F-86F_FC",
 }
 
@@ -2792,11 +2525,9 @@ allowedPlanesRed = {
     "A-10A",
     "A-10C",
     "A-4E-C",
-    "AH-1W",
     "AH-64D_BLK_II",
     "AH-6J",
     "AJS37",
-    "An-30M",
     "AV8BNA",
     "Bronco-OV-10A",
     "C-101CC",
@@ -2830,44 +2561,20 @@ allowedPlanesRed = {
     "MiG-15bis_FC",
     "MiG-19P",
     "MiG-21Bis",
-    "MiG-23MLD",
     "MiG-29 Fulcrum",
     "MiG-29A",
-    "Mirage-F1AD",
-    "Mirage-F1AZ",
-    "Mirage-F1B",
-    "Mirage-F1BD",
     "Mirage-F1BE",
-    "Mirage-F1BQ",
-    "Mirage-F1C",
-    "Mirage-F1C-200",
     "Mirage-F1CE",
-    "Mirage-F1CG",
-    "Mirage-F1CH",
-    "Mirage-F1CJ",
-    "Mirage-F1CK",
-    "Mirage-F1CR",
-    "Mirage-F1CT",
-    "Mirage-F1CZ",
-    "Mirage-F1DDA",
-    "Mirage-F1ED",
-    "Mirage-F1EDA",
     "Mirage-F1EE",
-    "Mirage-F1EH",
-    "Mirage-F1EQ",
-    "Mirage-F1M-CE",
-    "Mirage-F1M-EE",
     "OH58D",
     "OH-6A",
     "P3C_Orion",
     "SA342L",
     "SA342M",
     "SA342Minigun",
-    "SA342Mistral",
     "SU22",
     "Su-25",
     "UH-1H",
-    "UH-60A",
     "UH-60L",
     "UH-60L_DAP",
     --"Ka-50_3",
@@ -2877,16 +2584,14 @@ allowedPlanesRed = {
 -- RED Coldwar/Gulfwar warehouse aircraft when separate PvP lists are enabled.
 -- Legacy aircraft rows remain unchanged; this override also includes enabled AI requirements.
 -- @gui label="Coldwar Allowed RED Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
--- @gui requiredSets="AircraftRequirements06|AircraftRequirements16|AircraftRequirements11|AircraftRequirements08|AircraftRequirements17|AircraftRequirements15|AircraftRequirements04" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui requiredSets="AircraftRequirements06|AircraftRequirements16" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesRedColdwarPvP = {
     "A-10A",
     "A-10C",
     "A-4E-C",
-    "AH-1W",
     "AH-64D_BLK_II",
     "AH-6J",
     "AJS37",
-    "An-30M",
     "AV8BNA",
     "Bronco-OV-10A",
     "C-101CC",
@@ -2920,79 +2625,39 @@ allowedPlanesRedColdwarPvP = {
     "MiG-15bis_FC",
     "MiG-19P",
     "MiG-21Bis",
-    "MiG-23MLD",
     "MiG-29 Fulcrum",
     "MiG-29A",
-    "Mirage-F1AD",
-    "Mirage-F1AZ",
-    "Mirage-F1B",
-    "Mirage-F1BD",
     "Mirage-F1BE",
-    "Mirage-F1BQ",
-    "Mirage-F1C",
-    "Mirage-F1C-200",
     "Mirage-F1CE",
-    "Mirage-F1CG",
-    "Mirage-F1CH",
-    "Mirage-F1CJ",
-    "Mirage-F1CK",
-    "Mirage-F1CR",
-    "Mirage-F1CT",
-    "Mirage-F1CZ",
-    "Mirage-F1DDA",
-    "Mirage-F1ED",
-    "Mirage-F1EDA",
     "Mirage-F1EE",
-    "Mirage-F1EH",
-    "Mirage-F1EQ",
-    "Mirage-F1M-CE",
-    "Mirage-F1M-EE",
     "OH58D",
     "OH-6A",
     "P3C_Orion",
     "SA342L",
     "SA342M",
     "SA342Minigun",
-    "SA342Mistral",
     "SU22",
     "Su-25",
     "UH-1H",
-    "UH-60A",
     "UH-60L",
     "UH-60L_DAP",
     --"Ka-50_3",
     --"Ka-50",
-    "A-50",
-    "E-3A",
-    "An-26B",
-    "IL-76MD",
-    "JF-17",
-    "KC-135",
-    "KC135MPRS",
-    "Mi-28N",
-    "MiG-25PD",
-    "MiG-27K",
-    "MiG-29S",
-    "MiG-31",
-    "Su-24M",
-    "Su-25T",
-    "Su-27",
-    "Su-33",
-    "Su-34",
-    "Tu-95MS",
-    --"Mi-24V",
-    --"Su-17M4",
+    --"JF-17",
+    --"MiG-29S",
+    --"Su-25T",
+    --"Su-27",
+    --"Su-33",
 }
 
 -- In this list, you can either remove or add what is allowed for BLUE warehouses in the Vietnam era.
 -- @gui label="Vietnam Allowed Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam;PvP:false"
--- @gui requiredSets="AircraftRequirements09|AircraftRequirements18|AircraftRequirements11|AircraftRequirements19|AircraftRequirements12|AircraftRequirements05" requiredWhen="Era:Vietnam;PvP:false"
+-- @gui requiredSets="AircraftRequirements09|AircraftRequirements18|AircraftRequirements12" requiredWhen="Era:Vietnam;PvP:false"
 allowedPlanesVietnam = {
     "A-4E-C",
     "Bronco-OV-10A",
     "CH-47Fbl1",
     "F-100D",
-    "F-14A",
     "F-14A-135-GR",
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
@@ -3001,11 +2666,9 @@ allowedPlanesVietnam = {
     "F-86F Sabre",
     "OH-6A",
     "UH-1H",
-    "Su-17M4",
     --"F-14B",
     --"F-14BU",
-    -- "AH-1W",
-    -- "C-130J-30",
+    "C-130J-30",
     -- "F-5E-3_FC",
     -- "Hercules",
     -- "Mi-8MT",
@@ -3013,18 +2676,20 @@ allowedPlanesVietnam = {
     -- "MiG-15bis_FC",
     -- "MiG-19P",
     -- "MiG-21Bis",
+    --"OH58D",
+    "SA342M",
+    "F-86F_FC",
 }
 
 -- Shared Vietnam PvP warehouse aircraft for both coalitions when separate lists are disabled.
 -- Saved independently from PvE; enabled AI services require their aircraft to remain active.
 -- @gui label="Vietnam Allowed Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:false"
--- @gui requiredSets="AircraftRequirements09|AircraftRequirements18|AircraftRequirements11|AircraftRequirements14|AircraftRequirements03|AircraftRequirements04|AircraftRequirements05|AircraftRequirements06|AircraftRequirements20|AircraftRequirements17" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:false"
+-- @gui requiredSets="AircraftRequirements09|AircraftRequirements18|AircraftRequirements06|AircraftRequirements20" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:false"
 allowedPlanesSharedVietnamPvP = {
     "A-4E-C",
     "Bronco-OV-10A",
     "CH-47Fbl1",
     "F-100D",
-    "F-14A",
     "F-14A-135-GR",
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
@@ -3033,67 +2698,47 @@ allowedPlanesSharedVietnamPvP = {
     "F-86F Sabre",
     "OH-6A",
     "UH-1H",
-    "Su-17M4",
-    "F-14B",
-    "AH-1W",
+    --"F-14B",
     "C-130J-30",
-    "AH-64D_BLK_II",
-    "E-2C",
-    "F-15C",
-    "F-16C_50",
-    "FA-18C_hornet",
-    "KC-135",
-    "KC135MPRS",
-    "M-2000C",
-    "OH58D",
+    --"AH-64D_BLK_II",
+    --"F-15C",
+    --"F-16C_50",
+    --"FA-18C_hornet",
+    --"M-2000C",
+    --"OH58D",
     "SA342M",
     "Mi-8MT",
     "MiG-15bis",
     "MiG-15bis_FC",
     "MiG-19P",
     "MiG-21Bis",
-    "A-50",
-    "E-3A",
-    "An-26B",
-    "An-30M",
-    "IL-76MD",
-    "JF-17",
-    "Mi-24P",
-    "Mi-28N",
-    "MiG-23MLD",
-    "MiG-25PD",
-    "MiG-27K",
-    "MiG-29 Fulcrum",
-    "MiG-29S",
-    "MiG-31",
-    "Mirage-F1BQ",
-    "Mirage-F1CE",
-    "Mirage-F1EE",
-    "Su-24M",
-    "Su-25T",
-    "Su-27",
-    "Su-33",
-    "Su-34",
+    --"JF-17",
+    --"Mi-24P",
+    --"MiG-29 Fulcrum",
+    --"MiG-29S",
+    --"Mirage-F1CE",
+    --"Mirage-F1EE",
+    --"Su-25T",
+    --"Su-27",
+    --"Su-33",
     --"F-14BU",
     --"F-5E-3_FC",
     --"Hercules",
-    --"F-86F_FC",
+    "F-86F_FC",
     --"SU22",
-    --"L-39C",
-    --"Mi-24V",
+    "L-39C",
     --"Su-25",
 }
 
 -- BLUE Vietnam warehouse aircraft when separate PvP lists are enabled.
 -- Legacy aircraft rows remain unchanged; this override also includes enabled AI requirements.
 -- @gui label="Vietnam Allowed BLUE Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
--- @gui requiredSets="AircraftRequirements09|AircraftRequirements18|AircraftRequirements11|AircraftRequirements14|AircraftRequirements03|AircraftRequirements04|AircraftRequirements05" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui requiredSets="AircraftRequirements09|AircraftRequirements18" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesBlueVietnamPvP = {
     "A-4E-C",
     "Bronco-OV-10A",
     "CH-47Fbl1",
     "F-100D",
-    "F-14A",
     "F-14A-135-GR",
     "F-14A-135-GR-Early",
     "F-14A-95-GR",
@@ -3102,10 +2747,8 @@ allowedPlanesBlueVietnamPvP = {
     "F-86F Sabre",
     "OH-6A",
     "UH-1H",
-    "Su-17M4",
-    "F-14B",
+    --"F-14B",
     --"F-14BU",
-    "AH-1W",
     "C-130J-30",
     -- "F-5E-3_FC",
     -- "Hercules",
@@ -3114,18 +2757,16 @@ allowedPlanesBlueVietnamPvP = {
     -- "MiG-15bis_FC",
     -- "MiG-19P",
     -- "MiG-21Bis",
-    "AH-64D_BLK_II",
-    "E-2C",
-    "F-15C",
-    "F-16C_50",
-    "FA-18C_hornet",
-    "KC-135",
-    "KC135MPRS",
-    "M-2000C",
-    "OH58D",
+    --"AH-64D_BLK_II",
+    --"F-15C",
+    --"F-16C_50",
+    --"FA-18C_hornet",
+    --"M-2000C",
+    --"OH58D",
     "SA342M",
-    --"F-86F_FC",
+    "F-86F_FC",
     --"MiG-29S",
+    --"MiG-29 Fulcrum",
 }
 
 -- In this list, you can either remove or add what is allowed for RED warehouses in the Vietnam era.
@@ -3142,7 +2783,6 @@ allowedPlanesRedVietnam = {
     -- "Bronco-OV-10A",
     -- "CH-47Fbl1",
     -- "F-100D",
-    -- "F-14A",
     -- "F-14A-135-GR",
     -- "F-14A-135-GR-Early",
     -- "F-14A-95-GR",
@@ -3150,26 +2790,27 @@ allowedPlanesRedVietnam = {
     -- "F-5E-3",
     -- "F-86F Sabre",
     -- "OH-6A",
+    --"OH58D",
     -- "UH-1H",
-    -- "Su-17M4",
+    "C-130J-30",
 }
 
 -- RED Vietnam warehouse aircraft when separate PvP lists are enabled.
 -- Legacy aircraft rows remain unchanged; this override also includes enabled AI requirements.
 -- @gui label="Vietnam Allowed RED Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
--- @gui requiredSets="AircraftRequirements06|AircraftRequirements20|AircraftRequirements11|AircraftRequirements17|AircraftRequirements03|AircraftRequirements04" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui requiredSets="AircraftRequirements06|AircraftRequirements20" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesRedVietnamPvP = {
     "Mi-8MT",
     "MiG-15bis",
     "MiG-15bis_FC",
     "MiG-19P",
     "MiG-21Bis",
+    "C-130J-30",
     -- "SU22",
     -- "A-4E-C",
     -- "Bronco-OV-10A",
     -- "CH-47Fbl1",
     -- "F-100D",
-    -- "F-14A",
     -- "F-14A-135-GR",
     -- "F-14A-135-GR-Early",
     -- "F-14A-95-GR",
@@ -3177,34 +2818,18 @@ allowedPlanesRedVietnamPvP = {
     -- "F-5E-3",
     -- "F-86F Sabre",
     -- "OH-6A",
+    --"OH58D",
     -- "UH-1H",
-    "Su-17M4",
-    "A-50",
-    "E-3A",
-    "An-26B",
-    "An-30M",
-    "IL-76MD",
-    "JF-17",
-    "KC-135",
-    "KC135MPRS",
-    "Mi-24P",
-    "Mi-28N",
-    "MiG-23MLD",
-    "MiG-25PD",
-    "MiG-27K",
-    "MiG-29 Fulcrum",
-    "MiG-29S",
-    "MiG-31",
-    "Mirage-F1BQ",
-    "Mirage-F1CE",
-    "Mirage-F1EE",
-    "Su-24M",
-    "Su-25T",
-    "Su-27",
-    "Su-33",
-    "Su-34",
-    --"L-39C",
-    --"Mi-24V",
+    --"JF-17",
+    --"Mi-24P",
+    --"MiG-29 Fulcrum",
+    --"MiG-29S",
+    --"Mirage-F1CE",
+    --"Mirage-F1EE",
+    --"Su-25T",
+    --"Su-27",
+    --"Su-33",
+    "L-39C",
     --"Su-25",
     --"F-16C_50",
     --"FA-18C_hornet",
@@ -3215,8 +2840,6 @@ allowedPlanesRedVietnamPvP = {
 restockAircraft = {
     "A-29B",
     "A-4E-C",
-    "B-52H",
-    "Bell-47",
     "Bronco-OV-10A",
     "EA-18G",
     "Eurofighter",

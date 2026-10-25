@@ -1313,10 +1313,29 @@ function static:onBaseCapture(_event)
     end
 end
 
-local function IsEscortEligibleType(playerType)
+-- Config selections are exact enabled CAP templates. Legacy numeric rows use a deterministic checked template.
+local function SelectEscortTemplate(playerType, playerSide)
+    local escortConfig = EscortTypeByPlayerType and EscortTypeByPlayerType[playerType]
+    if type(escortConfig) ~= "table" then return nil end
+    local isRed = GlobalSettings.pvpEnabled == true and playerSide == coalition.side.RED
+    local templates = isRed and RedCapPlaneEnabled or BlueCapPlaneEnabled
+    local selection
+    if isRed then selection = escortConfig[4] else selection = escortConfig[2] end
+    if type(selection) == "string" then
+        if templates[selection] == true then return selection end
+        return nil
+    end
+    local selected
+    for name, enabled in pairs(templates) do
+        if enabled == true and (not selected or name < selected) then selected = name end
+    end
+    return selected
+end
+
+local function IsEscortEligibleType(playerType, playerSide)
     if GlobalSettings.pvpEnabled == true and PvPEscorts ~= true then return false end
     local escortConfig = EscortTypeByPlayerType and EscortTypeByPlayerType[playerType]
-    return type(escortConfig) == "table" and escortConfig[1] == true
+    return type(escortConfig) == "table" and escortConfig[1] == true and SelectEscortTemplate(playerType, playerSide) ~= nil
 end
 
 local function EnsureEscortSpawnState(groupName, playerName)
@@ -1352,7 +1371,7 @@ function static:processPlayerSpawn(player, zoneNameOverride)
 	local groupName = group:GetName()
 	local playerType = player:GetTypeName()
 
-	if IsEscortEligibleType(playerType) then
+	if IsEscortEligibleType(playerType, GlobalSettings.pvpEnabled == true and player:GetCoalition() or coalition.side.BLUE) then
 		EnsureEscortSpawnState(groupName, playerName)
 		if not escortGroups[groupName] and not escortRequestMenus[groupName] then
 			SCHEDULER:New(nil, function(unitName, expectedGroupName, fallbackPlayerName)
@@ -1919,22 +1938,16 @@ function HandleEscortLandingForGroupName(groupName, orbitCenter)
     end
 end
 
-function FindEscortTemplateWithAlias(clientGroup, alias, knownClientUnit)
-    local aircraftType = (knownClientUnit or clientGroup:GetUnit(1)):GetTypeName()
-    local isColdwar = (Era == "Coldwar")
-    local templateName
+function FindEscortTemplateWithAlias(clientGroup, alias, knownClientUnit, knownSide)
+    local clientUnit = knownClientUnit or clientGroup:GetUnit(1)
+    local aircraftType = clientUnit:GetTypeName()
     local escortConfig = EscortTypeByPlayerType and EscortTypeByPlayerType[aircraftType]
-    local escortType = (type(escortConfig) == "table" and escortConfig[2]) or 1
     local altitudeAboveFeet = (type(escortConfig) == "table" and escortConfig[3]) or 10000
-    local altitudeAboveMeters = UTILS.FeetToMeters(altitudeAboveFeet)
-    if escortType == 2 then
-        templateName = isColdwar and "Escort2_Viper_Coldwar" or "Escort2_Viper"
-    elseif escortType == 3 then
-        templateName = isColdwar and "Escort3_Mig29A_Coldwar" or "Escort3_Mig29S"
-    else
-        templateName = isColdwar and "Escort1_Hornet_Coldwar" or "Escort1_Hornet"
+    local playerSide = knownSide
+    if playerSide == nil then
+        playerSide = GlobalSettings.pvpEnabled == true and clientUnit:GetCoalition() or coalition.side.BLUE
     end
-    return templateName, altitudeAboveMeters
+    return SelectEscortTemplate(aircraftType, playerSide), UTILS.FeetToMeters(altitudeAboveFeet)
 end
 
 function GetClosestEscortAirdromeZone(clientGroup, knownClientUnit, knownSide)
@@ -2016,7 +2029,7 @@ function SpawnEscortInAirBehindClient(clientGroup, templateName, alias, onSpawn,
     local spawnHeading = tonumber(clientHeading) or 0
     spawnHeading = ((spawnHeading % 360) + 360) % 360
 
-    local sp = SPAWN:NewWithAlias(templateName, alias)
+    local sp = SPAWN:NewWithAlias(templateName, alias):InitGrouping(2)
     if GlobalSettings.pvpEnabled == true then
         local clientUnit
         if knownSide == nil or knownCountry == nil then clientUnit = clientGroup:GetUnit(1) end
@@ -2046,23 +2059,7 @@ function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn, knownH
         return nil
     end
 
-    local function GetEscortTemplateUnitCount(name)
-        local tpl = _DATABASE.Templates.Groups[name]
-        if tpl and type(tpl.UnitCount) == "number" and tpl.UnitCount > 0 then
-            return tpl.UnitCount
-        end
-        local units = tpl and (tpl.Units or (tpl.Template and tpl.Template.units))
-        if (not units or #units == 0) and FetchMETemplate then
-            tpl = FetchMETemplate(name)
-            units = tpl and tpl.units
-        end
-        if type(units) == "table" and #units > 0 then
-            return #units
-        end
-        return 1
-    end
-
-    local sp = SPAWN:NewWithAlias(templateName, alias)
+    local sp = SPAWN:NewWithAlias(templateName, alias):InitGrouping(2)
     if GlobalSettings.pvpEnabled == true then
         local clientUnit
         if knownSide == nil or knownCountry == nil then clientUnit = clientGroup:GetUnit(1) end
@@ -2078,7 +2075,7 @@ function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn, knownH
         end
     end)
 
-    local need = math.max(GetEscortTemplateUnitCount(templateName), 1)
+    local need = 2
     local terminalType = AIRBASE.TerminalType.OpenMedOrBig
     local freeSpots = homebase:GetFreeParkingSpotsTable(terminalType, false) or {}
     if #freeSpots < need then
@@ -2091,7 +2088,18 @@ function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn, knownH
     local parkingIds = PickCachedParkingIdsForAirbase(homebase, terminalType, freeSpots, need)
     local spawned = nil
     if parkingIds then
-        bc:_prepareBlueAiWarehouseSpawn(templateName, homebase)
+        local manifest
+        if WarehouseLogistics == true then
+            manifest = bc:_getBlueAiWarehouseLoadout(templateName)
+            if manifest and manifest.unitCount == 1 then
+                local items = {}
+                for index, item in ipairs(manifest.items) do
+                    items[index] = { key = item.key, count = item.count * 2 }
+                end
+                manifest = { items = items }
+            end
+        end
+        bc:_prepareBlueAiWarehouseSpawn(templateName, homebase, manifest)
         spawned = sp:SpawnAtParkingSpot(homebase, parkingIds, SPAWN.Takeoff.Hot)
     end
 
@@ -2108,7 +2116,6 @@ function EscortClientGroup(clientGroup)
     local spawnCount = escortState.escortSpawnCount or 1
     local safePlayerName = playerName:gsub("%s+", "_"):gsub("[^%w_%-]", "_")
     local alias = groupName .. "_" .. safePlayerName .. "_Escort_" .. string.format("%03d", spawnCount)
-    local templateName, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(clientGroup, alias, clientUnit)
     local escortSpawnedFromGround = false
     local clientSide, clientCountry
     local _, escortHomeBase
@@ -2119,6 +2126,8 @@ function EscortClientGroup(clientGroup)
     else
         _, escortHomeBase = GetClosestEscortAirdromeZone(clientGroup, clientUnit)
     end
+    local templateName, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(clientGroup, alias, clientUnit, clientSide)
+    if not templateName then return end
     local escortHomeCoord = escortHomeBase and escortHomeBase:GetCoordinate()
     local spawnedDcsGroup
 

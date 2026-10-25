@@ -3878,11 +3878,21 @@ bc.shopItems['zinf'].groupZoneSelector = {
 	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
 }
 local samLabel = LTGet("SYRIA_SHOP_ITEM_UPGRADE_NASAMS")
+local function canAddPlacementSam(zoneObj)
+	if CustomSamSpawnSlots[zoneObj.zone] ~= true then return true end
+	for _, entry in ipairs(zoneObj.upgrades.blue) do
+		if classifyBlueUpgradeName(getUpgradeEntryName(entry)) == 'sam' then return false end
+	end
+	return true
+end
 bc:registerShopItem('zsam',samLabel,ShopPrices.zsam,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_ZONE")
 end,
 function(sender,params)
 	if params.zone and params.zone.side==2 and not params.zone.suspended then
+		if classifyBlueUpgradeName(sender.upgradeTemplate) == 'sam' and not canAddPlacementSam(params.zone) then
+			return LTGet("SYRIA_SHOP_ZONE_ALREADY_UPGRADED")
+		end
 		local max = 2 + (bc.globalExtraUnlock and 1 or 0)
 		if params.zone.upgradesUsed >= max then
 			if not bc.globalExtraUnlock then
@@ -4155,6 +4165,21 @@ patItem.upgradeLabel = 'PATRIOT'
 patItem.groupZoneSelector = samItem.groupZoneSelector
 bc.shopItems['zpat'].groupZoneSelector.candidateBucket = 'blue_unsuspended'
 bc.shopItems['zpat'].groupZoneSelector.refreshTags = { 'friendly_targets' }
+
+local placementSamSelector = {
+	targetzoneside = 2,
+	includeSuspended = false,
+	sortPolicy = 'friendly_frontline',
+	extraPredicate = function(zoneObj)
+		return bc:isEligibleBlueZoneUpgradeTarget(zoneObj) and canAddPlacementSam(zoneObj)
+	end,
+	emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_ZONE"),
+	candidateBucket = 'blue_unsuspended',
+	refreshTags = { 'friendly_targets' },
+}
+for _, itemId in ipairs({ 'zsam', 'zhawk', 'zpat' }) do
+	bc.shopItems[itemId].groupZoneSelector = placementSamSelector
+end
 
 Group.getByName('BlueGCI'):destroy()
 bc:registerShopItem('zgci',LTGet("SYRIA_SHOP_ITEM_UPGRADE_GCI"),ShopPrices.zgci,function(sender)

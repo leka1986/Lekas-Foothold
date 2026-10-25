@@ -1494,7 +1494,6 @@ zones.monchegorsk:addGroups({
     DirectorCapability:new({name='Monchegorsk-supply-Kovdor', mission='supply',template='HeloSupplyTemplate', targetzone='Kovdor'}),
     DirectorCapability:new({name='Monchegorsk-supply-Zelenoborskij', mission='supply',template='HeloSupplyTemplate', targetzone='ZelenoborskijStorage'}),
     DirectorCapability:new({name='Monchegorsk-supply-Olenya', mission='supply',template='HeloSupplyTemplate', targetzone='Olenya'}),
-    DirectorCapability:new({name='Monchegorsk-supply-Tungozero', mission='supply',template='HeloSupplyTemplate', targetzone='HiddenTungozero'}),
     DirectorCapability:new({name='Monchegorsk-Patrol-Kovdor-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Kovdor', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Monchegorsk-Patrol-Rovaniemi-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Rovaniemi', Altitude = CapAltitude()}),
     DirectorCapability:new({name='Monchegorsk-attack-Rovaniemi-Cas', mission='attack',template='CasPlaneTemplate',MissionType='CAS', targetzone='Rovaniemi', Altitude = CasAltitude()}),

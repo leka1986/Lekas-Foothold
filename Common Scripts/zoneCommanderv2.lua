@@ -4,6 +4,66 @@ if map == "Normandy" and WarehouseLogistics == nil then
 	WarehouseLogistics = false
 end
 
+-- Internal aircraft stock; player Config aircraft lists contain only selectable types.
+AIOnlyAircraft = AIOnlyAircraft or {
+    "A-20G", "B-17G", "C-47", "Ju-88A4",
+    "A-50",
+    "AH-1W",
+    "An-26B",
+    "An-30M",
+    "B-1B",
+    "B-52H",
+    "E-2C",
+    "E-3A",
+    "F-15E",
+    "F-16A MLU",
+    "F/A-18A",
+    "IL-76MD",
+    "Ka-27",
+    "KC-135",
+    "KC135MPRS",
+    "Mi-24V",
+    "Mi-28N",
+    "MiG-23MLD",
+    "MiG-25PD",
+    "MiG-27K",
+    "MiG-31",
+    "Mirage-F1AD",
+    "Mirage-F1AZ",
+    "Mirage-F1B",
+    "Mirage-F1BD",
+    "Mirage-F1BQ",
+    "Mirage-F1C",
+    "Mirage-F1C-200",
+    "Mirage-F1CG",
+    "Mirage-F1CH",
+    "Mirage-F1CJ",
+    "Mirage-F1CK",
+    "Mirage-F1CR",
+    "Mirage-F1CT",
+    "Mirage-F1CZ",
+    "Mirage-F1DDA",
+    "Mirage-F1ED",
+    "Mirage-F1EDA",
+    "Mirage-F1EH",
+    "Mirage-F1EQ",
+    "Mirage-F1M-CE",
+    "Mirage-F1M-EE",
+    "MQ-9 Reaper",
+    "S-3B Tanker",
+    "SA342Mistral",
+    "Su-17M4",
+    "Su-24M",
+    "Su-24MR",
+    "Su-34",
+    "Tornado IDS",
+    "Tu-22M3",
+    "Tu-95MS",
+    "UH-60A",
+    "Bell-47",
+    "F-14A",
+}
+
 local function getFootholdLocalization()
 	local localization = FH_L10N or FootholdLocalization
 	if not localization then
@@ -4930,7 +4990,8 @@ function SpawnCustom(grname, zoneName, side, requestedAlias)
 			for i = 1, #unitIndexes do
 				local pickedSlot = nil
 				if role == "DEFAULT" then
-					pickedSlot = pickNumberedSlot()
+					pickedSlot = pickSlotFromRole("SUPPORT")
+					if not pickedSlot then pickedSlot = pickNumberedSlot() end
 				else
 					local preferSensorIndex = role == "SENSOR" and plan.SENSOR_SLOT and plan.SENSOR_SLOT[unitIndexes[i]]
 					for _, fallbackRole in ipairs(customSamSlotFallbackRoles[role] or { role }) do
@@ -9711,15 +9772,18 @@ end
 
 function RepositionAwacsToFront()
 	if not AwacsConfigured() then return end
-	local blueVec = nil
+	local blueCoord, blueZone, blueHeading
 	local primaryCoords = GlobalSettings.pvpEnabled == true and {} or nil
 	local zi = _buildAwacsZoneInfo()
 	for side=1,2 do
 		local coord, z, h = _computeAwacsStationWithZone(side, zi)
 		if primaryCoords then primaryCoords[side] = coord end
 		if coord then
-			if GlobalSettings.pvpEnabled ~= true and side == 2 then blueVec = coord.GetVec3 and coord:GetVec3() or nil end
-			setAwacsRacetrack(side, coord, h, nil, z)
+			if GlobalSettings.pvpEnabled ~= true and side == 2 then
+				blueCoord, blueZone, blueHeading = coord, z, h
+			else
+				setAwacsRacetrack(side, coord, h, nil, z)
+			end
 		end
 	end
 	if primaryCoords then
@@ -9735,11 +9799,26 @@ function RepositionAwacsToFront()
 	end
 	if GlobalSettings.pvpEnabled ~= true then
 	if IsGroupActive(AWACS_GROUPS[3]) then
-		local avoidX = (blueVec and blueVec.x) or (_awacsMissionParams[2] and _awacsMissionParams[2].x) or nil
-		local avoidZ = (blueVec and blueVec.z) or (_awacsMissionParams[2] and _awacsMissionParams[2].z) or nil
+		local avoidX = (blueCoord and blueCoord.x) or (_awacsMissionParams[2] and _awacsMissionParams[2].x) or nil
+		local avoidZ = (blueCoord and blueCoord.z) or (_awacsMissionParams[2] and _awacsMissionParams[2].z) or nil
 		local coord2, z2, h2 = _computeAwacsStationWithZoneSecondary(2, avoidX, avoidZ, 100, zi)
+		local previousPrimary, previousSecondary = _awacsMissionParams[2], _awacsMissionParams[3]
+		if blueCoord and coord2 and previousPrimary and previousSecondary then
+			-- Keep aircraft with their existing coverage area when station labels change.
+			local directCost = (blueCoord.x - previousPrimary.x)^2 + (blueCoord.z - previousPrimary.z)^2
+				+ (coord2.x - previousSecondary.x)^2 + (coord2.z - previousSecondary.z)^2
+			local swappedCost = (coord2.x - previousPrimary.x)^2 + (coord2.z - previousPrimary.z)^2
+				+ (blueCoord.x - previousSecondary.x)^2 + (blueCoord.z - previousSecondary.z)^2
+			if swappedCost < directCost then
+				blueCoord, coord2 = coord2, blueCoord
+				blueZone, z2 = z2, blueZone
+				blueHeading, h2 = h2, blueHeading
+			end
+		end
+		if blueCoord then setAwacsRacetrack(2, blueCoord, blueHeading, nil, blueZone) end
 		if coord2 then setAwacsRacetrack(3, coord2, h2, nil, z2) end
 	else
+		if blueCoord then setAwacsRacetrack(2, blueCoord, blueHeading, nil, blueZone) end
 		spawnAwacs(3, nil, nil)
 	end
 	end
@@ -9750,7 +9829,8 @@ function setAwacsRacetrack(side, coord, heading, leg, zoneName)
     local cfg = AWACS_CFG[cfgSide] or {}
     local fg = _awacsFG[side]
     if not fg or not coord then return end
-    if GlobalSettings.pvpEnabled == true and not fg:isExist() then return end
+    local pvpEnabled = GlobalSettings.pvpEnabled == true
+    if pvpEnabled and not fg:isExist() then return end
 
     local alt = cfg.alt or 30000
     local spd = cfg.speed or 350
@@ -9783,7 +9863,7 @@ function setAwacsRacetrack(side, coord, heading, leg, zoneName)
     if leglen > 0 then
         local p2 = UTILS.Vec2Translate(pBase, UTILS.NMToMeters(leglen), hdg)
         orbitTask.params.pattern = AI.Task.OrbitPattern.RACE_TRACK
-        orbitTask.params.point2 = p2
+        orbitTask.params.point2 = { x = p2.x, y = p2.y }
     end
     local lead = fg:getUnit(1)
     if not lead then return end
@@ -9793,6 +9873,9 @@ function setAwacsRacetrack(side, coord, heading, leg, zoneName)
     local controller = fg:getController()
     if not controller then return end
 
+    if pvpEnabled then
+        controller:setOption(AI.Option.Air.id.REACTION_ON_THREAT, AI.Option.Air.val.REACTION_ON_THREAT.NO_REACTION)
+    end
     controller:setTask({
         id = 'Mission',
         params = {
@@ -9846,6 +9929,13 @@ function setAwacsRacetrack(side, coord, heading, leg, zoneName)
         leg = leglen,
         zone = _awacsZone[side],
     }
+    if pvpEnabled then
+        params = _awacsMissionParams[side]
+        timer.scheduleFunction(function(group)
+            if _awacsFG[side] ~= group or _awacsMissionParams[side] ~= params or not group:isExist() then return end
+            group:getController():setOption(AI.Option.Air.id.REACTION_ON_THREAT, AI.Option.Air.val.REACTION_ON_THREAT.EVADE_FIRE)
+        end, fg, timer.getTime() + 5)
+    end
 end
 
 function spawnAwacs(side, heading, leg)
@@ -9920,6 +10010,9 @@ function spawnAwacs(side, heading, leg)
             id = 'SetImmortal',
             params = { value = not pvpEnabled }
         })
+        if not pvpEnabled then
+            groupController:setOption(AI.Option.Air.id.REACTION_ON_THREAT, AI.Option.Air.val.REACTION_ON_THREAT.NO_REACTION)
+        end
         groupController:setCommand({
             id = 'SetUnlimitedFuel',
             params = { value = true }
@@ -9932,7 +10025,7 @@ function spawnAwacs(side, heading, leg)
             }
         })
 
-        if pvpEnabled then _awacsMissionParams[side] = nil end
+        _awacsMissionParams[side] = nil
         _awacsFG[side] = dcsGroup
         setAwacsRacetrack(side, coord, hdg, lg, z)
 
@@ -11778,6 +11871,11 @@ function DirectorCapability:new(obj)
 end
 
 BattleCommander = {}
+function BattleCommander.stockAIOnlyAircraft(storage)
+    for i = 1, #AIOnlyAircraft do
+        storage:SetItem(AIOnlyAircraft[i], 1073741823)
+    end
+end
 do
 	BattleCommander._directorPersistenceVersion = 1
 	BattleCommander.zones = {}
@@ -18976,12 +19074,15 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 	end
 
 	-- Unit:getAmmo() exposes consumable weapons; these pylon resources must be stocked separately.
+	-- AIRCRAFT/LOADOUT CHANGES: check weapons AND equipment; see .agent/areas/logistics/ai-loadouts.md.
 	BattleCommander.BlueAiWarehouseEquipmentByClsid = {
 		["ALQ_184_Long"] = { 4, 15, 45, 968 },
 		["{8A0BE8AE-58D4-4572-9263-3144C0D06364}"] = { 1, 3, 43, 12 },
-		["{AN_AAQ_33}"] = { 4, 15, 44, 2723 },
+		["{AN_AAQ_33}"] = "weapons.containers.AN_AAQ_33",
 		["{AN_APG_78}"] = { 4, 15, 44, 2114 },
 		["{AN_ASQ_228}"] = { 4, 15, 44, 426 },
+		["{AN_ASQ_213}"] = "weapons.containers.16c_hts_pod",
+		["{A111396E-D3E8-4b9c-8AC9-2432489304D5}"] = "weapons.containers.AAQ-28_LITENING",
 		["{DAC53A2F-79CA-42FF-A77A-F5649B601308}"] = { 4, 15, 47, 4 },
 		["{E1F29B21-F291-4589-9FD8-3272EEC69506}"] = { 1, 3, 43, 10 },
 		["{Eclair}"] = { 4, 15, 48, 608 },
@@ -18995,6 +19096,59 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 		["{HB_PAVE_SPIKE_FAST_ON_ADAPTER_IN_AERO7}"] = { 4, 15, 44, 2149 },
 		["{IR_Deflector}"] = { 4, 15, 47, 680 },
 		["{M2KC_RPL_522}"] = { 1, 3, 43, 605 },
+		["DIS_SPJ_POD"] = "weapons.containers.kg600",
+		["DIS_TANK1100"] = "weapons.droptanks.1100L Tank",
+		["DIS_WMD7"] = "weapons.containers.wmd7",
+		["PTB-1200-F1"] = "weapons.droptanks.PTB_1200_F1",
+		["PTB-580G-F1"] = "weapons.droptanks.PTB_580G_F1",
+		["PTB300_MIG15"] = "weapons.droptanks.PTB300_MIG15",
+		["PTB760_MIG19"] = "weapons.droptanks.PTB760_MIG19",
+		["{0395076D-2F77-4420-9D33-087A4398130B}"] = "weapons.droptanks.PTB-275",
+		["{0519A264-0AB6-11d6-9193-00A0249B6F00}"] = "weapons.containers.Fantasm",
+		["{2BEC576B-CDF5-4B7F-961F-B0FA4312B841}"] = "weapons.droptanks.PTB-1500",
+		["{44EE8698-89F9-48EE-AF36-5FD31896A82A}"] = "weapons.containers.SORBCIJA_R",
+		["{44EE8698-89F9-48EE-AF36-5FD31896A82C}"] = "weapons.containers.MPS-410",
+		["{44EE8698-89F9-48EE-AF36-5FD31896A82D}"] = "weapons.containers.MPS-410",
+		["{44EE8698-89F9-48EE-AF36-5FD31896A82F}"] = "weapons.containers.SORBCIJA_L",
+		["{8C3F26A1-FA0F-11d5-9190-00A0249B6F00}"] = "weapons.containers.BOZ-100",
+		["{8C3F26A2-FA0F-11d5-9190-00A0249B6F00}"] = "weapons.containers.SKY_SHADOW",
+		["{A5BAEAB7-6FAF-4236-AF72-0FD900F493F9}"] = "weapons.droptanks.MIG-23-PTB",
+		["{ASO-2}"] = "weapons.containers.ASO-2",
+		["{B1EF6B0E-3D91-4047-A7A5-A99E7D8B4A8B}"] = "weapons.containers.KINGAL",
+		["{C0FF4842-FBAC-11d5-9190-00A0249B6F00}"] = "weapons.droptanks.PTB-1150-29",
+		["{E92CBFE5-C153-11d8-9897-000476191836}"] = "weapons.containers.{E92CBFE5-C153-11d8-9897-000476191836}",
+		["{F4_SARGENT_TANK_370_GAL_R}"] = "weapons.droptanks.HB_F-4E_EXT_WingTank_R",
+		["{F4_SARGENT_TANK_370_GAL}"] = "weapons.droptanks.HB_F-4E_EXT_WingTank",
+		["{GD_F100_200_GAL_TANK}"] = "weapons.droptanks.GD_F100_TANK_200",
+		["{GD_F100_335_GAL_TANK_L}"] = "weapons.droptanks.GD_F100_TANK_335_L",
+		["{GD_F100_335_GAL_TANK_R}"] = "weapons.droptanks.GD_F100_TANK_335_R",
+		["{HB_ALQ-131_ON_ADAPTER_IN_AERO7}"] = "weapons.containers.ALQ-131",
+		["{PTB-150GAL}"] = "weapons.droptanks.PTB-150",
+		["{PTB_120_F86F35}"] = "weapons.droptanks.PTB_120_F86F35",
+		["{PTB_1500_MIG29A}"] = "weapons.droptanks.PTB_1500_MIG29A",
+		["{PTB_200_F86F35}"] = "weapons.droptanks.PTB_200_F86F35",
+		["{PTB_490C_MIG21}"] = "weapons.droptanks.PTB-490C-MIG21",
+		["{PTB_800_MIG21}"] = "weapons.droptanks.PTB-800-MIG21",
+		["{SPS-141-100}"] = "weapons.containers.SPS-141-100",
+		["GUV_YakB_GSHP"] = "weapons.containers.GUV_YakB_GSHP", -- Mi-8MT
+		["KORD_12_7"] = "weapons.containers.KORD_12_7", -- Mi-8MT
+		["M134_L"] = "weapons.containers.M134_L", -- UH-1H
+		["M134_R"] = "weapons.containers.M134_R", -- UH-1H
+		["M134_SIDE_L"] = "weapons.containers.M134_SIDE_L", -- UH-1H
+		["M60_SIDE_R"] = "weapons.containers.M60_SIDE_R", -- UH-1H
+		["PKT_7_62"] = "weapons.containers.PKT_7_62", -- Mi-8MT
+		["{05544F1A-C39C-466b-BC37-5BD1D52E57BB}"] = "weapons.containers.{05544F1A-C39C-466b-BC37-5BD1D52E57BB}", -- Mi-8MT
+		["{CH47_AFT_M60D}"] = "weapons.containers.{CH47_AFT_M60D}", -- CH-47Fbl1
+		["{CH47_PORT_M240H}"] = "weapons.containers.{CH47_PORT_M240H}", -- CH-47Fbl1
+		["{CH47_PORT_M60D}"] = "weapons.containers.{CH47_PORT_M60D}", -- CH-47Fbl1
+		["{CH47_STBD_M240H}"] = "weapons.containers.{CH47_STBD_M240H}", -- CH-47Fbl1
+		["{CH47_STBD_M60D}"] = "weapons.containers.{CH47_STBD_M60D}", -- CH-47Fbl1
+		["{ECM_POD_L_175V}"] = "weapons.containers.{ECM_POD_L_175V}", -- Su-34
+		["{F14-LANTIRN-TP}"] = "weapons.containers.{F14-LANTIRN-TP}", -- F-14A-135-GR
+		["{F14-TARPS}"] = "weapons.containers.HB_F14_EXT_TARPS", -- F-14A-135-GR
+		["{UB-32_S5M}"] = { 4, 7, 32, 3169 }, -- MiG-21Bis loaded shipping unit; recheck after weapon-database changes (no named resource).
+		["{E6A6262A-CA08-4B3D-B030-E1A993B98452}"] = "weapons.adapters.lau-88", -- F-16C_50 double Maverick launcher (left)
+		["{E6A6262A-CA08-4B3D-B030-E1A993B98453}"] = "weapons.adapters.lau-88", -- F-16C_50 double Maverick launcher (right)
 	}
 
 	function BattleCommander:_blueAiWarehouseKeyId(key)
@@ -19535,6 +19689,7 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 			if FootholdSavePath then opts.path = FootholdSavePath end
 			WarehousePersistence.Load({}, opts)
 		end
+		BattleCommander.stockAIOnlyAircraft(dstStore)
 		if pvpOwned then
 			if readyConsumer then readyConsumer(FName, fromSave, expectedRecord, dstStore) end
 			return dstStore
@@ -54800,7 +54955,13 @@ SCHEDULER:New(nil,function() for i,v in pairs(bc.zones or {}) do v:validateTarge
 
 	function ZoneCommander:syncColdwarAllowedPlanesAtAirbase()
 		local pvpModernAircraftLists = GlobalSettings.pvpEnabled == true and PvPSeparateAircraftLists == true and Era == "Modern"
-		if map ~= "Normandy" and Era ~= "Coldwar" and Era ~= "Vietnam" and not pvpModernAircraftLists then return end
+		if map ~= "Normandy" and Era ~= "Coldwar" and Era ~= "Vietnam" and not pvpModernAircraftLists then
+			if self.airbaseName then
+				local storage = STORAGE:FindByName(self.airbaseName)
+				if storage then BattleCommander.stockAIOnlyAircraft(storage) end
+			end
+			return
+		end
 		if not self.airbaseName then return end
 		local storage = STORAGE:FindByName(self.airbaseName)
 		if not storage then return end
@@ -54822,6 +54983,7 @@ SCHEDULER:New(nil,function() for i,v in pairs(bc.zones or {}) do v:validateTarge
 		for i = 1, #(planeList or {}) do
 			storage:SetItem(planeList[i], 1073741823)
 		end
+		BattleCommander.stockAIOnlyAircraft(storage)
 	end
 	
 
@@ -99084,11 +99246,14 @@ end
 
 function LogisticCommander:_warnIfSupplyCarrierTakesOffEmpty(groupid, unitType, un, unitName, groupName, point)
 	if WarehouseLogistics == true or WarehouseLogistics == false then
+		local unitCoalition = un:getCoalition()
+		local ctld = Foothold_ctld
+		if unitCoalition == coalition.side.RED then ctld = Foothold_redCtld end
 		local zoneSupplyCarrier = nil
 		local farpSupplyCarrier = nil
 		local warnForUnitType = self.ZoneSupplyTakeoffWarningTypes[unitType] == true
 		if WarehouseLogistics == true then
-			zoneSupplyCarrier = Foothold_ctld and warnForUnitType and Foothold_ctld:CanUnitTypeCarryZoneActionCargo(unitType)
+			zoneSupplyCarrier = ctld and warnForUnitType and Foothold_ctld.CanUnitTypeCarryZoneActionCargo(ctld, unitType)
 			farpSupplyCarrier = zoneSupplyCarrier
 		else
 			zoneSupplyCarrier = warnForUnitType and self.AllowedToCarrySupplies[unitType]
@@ -99097,7 +99262,12 @@ function LogisticCommander:_warnIfSupplyCarrierTakesOffEmpty(groupid, unitType, 
 
 		local function hasWarningCargoLoaded()
 			if WarehouseLogistics == true then
-				return Foothold_ctld and Foothold_ctld:HasZoneActionCargoOnboard(groupid, unitName) or false
+				if not ctld then return false end
+				if unitCoalition == coalition.side.RED then
+					return ctld:HasZoneSupplyCargoOnboard(groupid, unitName)
+						or Foothold_ctld.HasLoadedZoneActionCargo(ctld, unitName)
+				end
+				return ctld:HasZoneActionCargoOnboard(groupid, unitName)
 			end
 			return self.carriedCargo[groupid]
 		end
@@ -99115,20 +99285,29 @@ function LogisticCommander:_warnIfSupplyCarrierTakesOffEmpty(groupid, unitType, 
 
 		local zn = self.battleCommander:getZoneOfPoint(point)
 
-		if zn and zn.side == un:getCoalition() then
+		if zn and zn.side == unitCoalition then
 			for _, v in ipairs(self.supplyZones) do
 				if v == zn.zone then
+					if zn.active ~= true then return end
+					if PlayerZoneSuppliesConsumeStock == true then
+						local ready = tonumber(zn._regularSupplyReady) or 0
+						local reserved = math.max(0, tonumber(zn._regularSupplyPendingStock) or 0)
+						if zn._regularSupplyStockSide ~= unitCoalition or ready - reserved < 1 then return end
+					end
 					warnIfNotLoaded(zoneSupplyCarrier)
 					return
 				end
 			end
 		else
 			local group = GROUP:FindByName(groupName)
-			if group and un:getCoalition() == 2 then
+			if group and (unitCoalition == coalition.side.BLUE
+				or (GlobalSettings.pvpEnabled == true and unitCoalition == coalition.side.RED)) then
 				for _, zName in ipairs(self.supplyZones) do
 					if string.find(zName, "CTLD FARP") or string.find(zName, "Escort Mission FARP") then
 						local zObj = ZONE:FindByName(zName)
 						if zObj and group:IsInZone(zObj) then
+							local stock = Foothold_ctld and Foothold_ctld:GetFarpSupplyStock(zName, unitCoalition)
+							if stock == nil or stock < 1 then return end
 							warnIfNotLoaded(farpSupplyCarrier)
 							return
 						end
@@ -109138,7 +109317,7 @@ do
 		for _, item in ipairs(WarehouseWeaponCaps or {}) do operationalNames[item] = true end
 		local operationalIds = {}
 		for _, key in pairs(BattleCommander.BlueAiWarehouseEquipmentByClsid or {}) do
-			operationalIds[bc:_blueAiWarehouseKeyId(key)] = true
+			operationalIds[bc:_blueAiWarehouseKeyId(_warehouseHealthResourceKey(key, resourceMap))] = true
 		end
 
 		local byId, sourceNames = {}, {}
@@ -112307,6 +112486,7 @@ local function syncColdwarPlanesInStorage(storage, planeList)
 	for i = 1, #(planeList or {}) do
 		storage:SetItem(planeList[i], 1073741823)
 	end
+	BattleCommander.stockAIOnlyAircraft(storage)
 end
 
 function checkWeaponsList(airbase, knownZone, knownSide)
@@ -112326,6 +112506,11 @@ function checkWeaponsList(airbase, knownZone, knownSide)
 		return
 	end
 	local pvpModernAircraftLists = GlobalSettings.pvpEnabled == true and PvPSeparateAircraftLists == true and Era == "Modern"
+	if not airbase and not _wsIsRestrictedEra() and not pvpModernAircraftLists then
+		for _, airbaseObj in ipairs(AIRBASE.GetAllAirbases()) do
+			BattleCommander.stockAIOnlyAircraft(airbaseObj:GetStorage())
+		end
+	end
 	local targetZone = knownZone
 	if airbase and not targetZone then local _, z = getZoneSideByAirbaseName(airbase); targetZone = z end
 	if airbase and not _wsIsRestrictedEra() then
@@ -112352,6 +112537,8 @@ function checkWeaponsList(airbase, knownZone, knownSide)
 			end
 			if pvpModernAircraftLists then
 				syncColdwarPlanesInStorage(storage, getColdwarAllowedPlaneListByAirbase(airbase, targetZone, knownSide))
+			else
+				BattleCommander.stockAIOnlyAircraft(storage)
 			end
 		end
 		return
