@@ -1563,6 +1563,7 @@ end
 
 for i,v in ipairs(bc:getZones()) do
 	v:registerTrigger('lost', checkMissionComplete, 'missioncompleted')
+	v:registerTrigger('destroyed', checkMissionComplete, 'missioncompleted')
 end
 
 

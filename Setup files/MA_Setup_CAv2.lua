@@ -2827,11 +2827,13 @@ if GlobalSettings.pvpEnabled then
 	L10N:Register("EN", { PVP_MISSION_WINNER = "%s coalition wins!" })
 	for _, v in ipairs(pvpVictoryZones) do
 		v:registerTrigger('lost', checkMissionComplete, 'missioncompleted')
+		v:registerTrigger('destroyed', checkMissionComplete, 'missioncompleted')
 		v:registerTrigger('captured', checkMissionComplete, 'missioncompleted')
 	end
 else
 for i,v in ipairs(bc:getZones()) do
 	v:registerTrigger('lost', checkMissionComplete, 'missioncompleted')
+	v:registerTrigger('destroyed', checkMissionComplete, 'missioncompleted')
 end
 end
 

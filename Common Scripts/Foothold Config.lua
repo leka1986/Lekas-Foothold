@@ -27,6 +27,11 @@ local externalConfigChunk = nil
 -- Add new top-level config tables here so an omitted external table triggers the warning.
 FootholdConfigTrackedTableNames = {
     "AdminCommandAliases",
+    "CarrierNavigationRadios",
+    "CarrierNavigationICLS",
+    "CarrierNavigationLink4",
+    "AWACSRadioFrequencies",
+    "TankerRadioSettings",
     "StartupFunds",
     "RedTemplateEnabled",
     "RedCapPlaneEnabled",
@@ -672,6 +677,66 @@ CarrierRankRequirement = 5
 AllowTarawaToMoveFreely = false
 
 -- ============================================================================
+-- Frequencies
+-- ============================================================================
+
+-- AWACS radio frequencies in MHz AM. Both Blue slots apply to every era.
+-- Red radio overrides apply only in PvP; the existing PvE Red AWACS keeps its default.
+-- Changes take effect when the mission is restarted. Aircraft presets are unchanged.
+-- @gui label="AWACS frequencies (MHz AM)" installPolicy="mergeRows"
+AWACSRadioFrequencies = {
+    ["Blue AWACS 1"] = 251,
+    ["Blue AWACS 2"] = 251.5,
+    -- @gui visibleWhen="PvP:true"
+    ["Red AWACS 1"] = 252,
+    -- @gui visibleWhen="PvP:true"
+    ["Red AWACS 2"] = 252.5,
+}
+
+-- Tanker frequencies in MHz AM and TACAN channels (1-126, Y band).
+-- Tanker Help, approaching and on-station messages use these same settings.
+-- BTN 14/20 is shown only while Arco/Texaco keeps its default 260/266 MHz frequency.
+-- Red radio overrides apply only in PvP. Shell is the Blue carrier recovery tanker.
+-- Changes take effect when the mission is restarted. Aircraft presets are unchanged.
+-- @gui label="Tanker radios" editor="fieldTable" fields="frequencyMHz:Frequency MHz:number|tacanChannel:TACAN (Y):number" installPolicy="mergeRows"
+TankerRadioSettings = {
+    ["Blue Arco"] = { frequencyMHz = 260, tacanChannel = 101 },
+    ["Blue Texaco"] = { frequencyMHz = 266, tacanChannel = 102 },
+    ["Shell"] = { frequencyMHz = 253, tacanChannel = 103 },
+    -- @gui visibleWhen="PvP:true"
+    ["Red Arco"] = { frequencyMHz = 260, tacanChannel = 104 },
+    -- @gui visibleWhen="PvP:true"
+    ["Red Texaco"] = { frequencyMHz = 266, tacanChannel = 105 },
+}
+
+
+-- Radio settings apply only to CarrierNavigation's CVN-72, CVN-74 and Tarawa.
+-- ATC is in MHz AM. TACAN channel is 1-126; Y band unchecked means X, checked means Y.
+-- ICLS is a channel (1-20), not a frequency. Set ICLS or Link 4 to 0 to leave it off.
+-- Changes take effect when the mission is restarted. Aircraft radio presets are unchanged.
+-- Unsupported systems are absent from the linked tables and show read-only dashes.
+-- @gui label="Carrier radios" editor="linkedTable" fields="self.tacanChannel:TACAN:number|self.tacanY:Y band:boolean|self.atcMHz:ATC MHz:number|CarrierNavigationICLS:ICLS:number|CarrierNavigationLink4:Link 4 MHz:number" installPolicy="mergeRows"
+CarrierNavigationRadios = {
+    ["CVN-72"] = { tacanChannel = 72, tacanY = false, atcMHz = 262 },
+    ["CVN-74"] = { tacanChannel = 74, tacanY = false, atcMHz = 254 },
+    ["Tarawa"] = { tacanChannel = 1, tacanY = false, atcMHz = 271.5 },
+}
+
+-- ICLS channels for equipped carriers. Use 0 to switch ICLS off.
+-- @gui label="Carrier ICLS channels" installPolicy="mergeRows"
+CarrierNavigationICLS = {
+    ["CVN-72"] = 12,
+    ["CVN-74"] = 14,
+}
+
+-- Link 4 frequencies in MHz for equipped carriers. Use 0 to switch Link 4 off.
+-- @gui label="Carrier Link 4 frequencies" installPolicy="mergeRows"
+CarrierNavigationLink4 = {
+    ["CVN-72"] = 372,
+    ["CVN-74"] = 374,
+}
+
+-- ============================================================================
 -- F10 Map
 -- ============================================================================
 -- Controls how supply connections are drawn on the F10 map.
@@ -694,9 +759,6 @@ GlobalSettings = GlobalSettings or {}
 -- 1.0 = normal speed
 -- 0.5 = twice as fast
 -- 1.5 = 50% slower
---
--- [1] = RED coalition
--- [2] = BLUE coalition
 -- @gui label="AI Spawn Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05"
 GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
 
@@ -714,7 +776,7 @@ BlueAiGroundSkill       = "Excellent" -- AI skill used for spawned BLUE zone gro
 -- false    = always shown on MFD
 -- true     = always hidden on MFD (default)
 -- "random" = 50% chance hidden on each spawn
-HideSAMOnMFD = true -- if random, use "random" (string)
+HideSAMOnMFD = "random" -- if random, use "random" (string)
 
 -- Chance in percent that RED AI air missions may also engage helicopters in PvE.
 -- 0 disables helicopter targeting, 100 always allows it.
@@ -1115,30 +1177,29 @@ CallsignOverrides = {
 
 -- Choose to have the option to get escorted by 2 jets. Recommended to A10 / C-130J, Harrier.
 -- set to true for escort option available once spawned, false for no escort option.
--- escortType is the exact checked BLUE CAP template name; the optional fourth value is its RED equivalent.
+-- escortType is the exact checked BLUE CAP template name; the optional third value is its RED equivalent.
 -- Choose a checked CAP template in the Manager. Era changes retain valid choices and replace unavailable ones.
 -- Rows for inactive player aircraft retain their choices but do not offer an escort.
--- The third value is how many feet above the player the escort follows.
--- Use 0 for the same altitude, or 1000 through 10000 in 1000-foot steps.
--- @gui tupleChoices="2:BlueCapPlaneEnabled:allowedPlanesModern,allowedPlanes,allowedPlanesSharedColdwarPvP,allowedPlanesBlueColdwarPvP,allowedPlanesVietnam,allowedPlanesSharedVietnamPvP,allowedPlanesBlueVietnamPvP|4:RedCapPlaneEnabled:allowedPlanesRedModern,allowedPlanesSharedColdwarPvP,allowedPlanesRed,allowedPlanesRedColdwarPvP,allowedPlanesSharedVietnamPvP,allowedPlanesRedVietnam,allowedPlanesRedVietnamPvP" tupleChoiceLabels="2:Blue escort|4:Red escort" tupleChoiceVisibleWhen="4:PvP:true"
+-- Choose the escort altitude above the player from the in-game Request Escort menu.
+-- @gui tupleChoices="2:BlueCapPlaneEnabled:allowedPlanesModern,allowedPlanes,allowedPlanesSharedColdwarPvP,allowedPlanesBlueColdwarPvP,allowedPlanesVietnam,allowedPlanesSharedVietnamPvP,allowedPlanesBlueVietnamPvP|3:RedCapPlaneEnabled:allowedPlanesRedModern,allowedPlanesSharedColdwarPvP,allowedPlanesRed,allowedPlanesRedColdwarPvP,allowedPlanesSharedVietnamPvP,allowedPlanesRedVietnam,allowedPlanesRedVietnamPvP" tupleChoiceLabels="2:Blue escort|3:Red escort" tupleChoiceVisibleWhen="3:PvP:true"
 -- @gui installPolicy="mergeRows" disabledWhen="PvP:true;PvPEscorts:false"
 EscortTypeByPlayerType = {
-    ["C-130J-30"]      = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["AV8BNA"]         = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["A-10C_2"]        = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["A-10C"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["A-10A"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["Hercules"]       = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["F-15ESE"]        = { true, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["AJS37"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 10000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["MiG-29 Fulcrum"] = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["F-16C_50"]       = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["FA-18C_hornet"]  = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["MiG-21Bis"]      = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 2000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["Su-25T"]         = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["Su-25"]          = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["M-2000C"]        = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
-    ["Bronco-OV-10A"]  = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", 5000, "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["C-130J-30"]      = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["AV8BNA"]         = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["A-10C_2"]        = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["A-10C"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["A-10A"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["Hercules"]       = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["F-15ESE"]        = { true, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["AJS37"]          = { true, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["MiG-29 Fulcrum"] = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["F-16C_50"]       = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["FA-18C_hornet"]  = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["MiG-21Bis"]      = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["Su-25T"]         = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["Su-25"]          = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["M-2000C"]        = { false, "BLUE_F16C_CAP_AIM120Bx4_AIM120C_AIM9M", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
+    ["Bronco-OV-10A"]  = { false, "BLUE_FA18C_CAP_AIM120Cx6_AIM9Xx2", "RED_MIG29S_CAP_R77x3_R27ET_R73x2" },
 }
 
 -- Plane escort option for takeoff from the ground.
@@ -1222,7 +1283,7 @@ SuppliesCargoTransport = true
 -- How much AI delivery brings per supply run.
 AIDeliveryamount = 20
 
--- Every 15 minutes, BLUE zones gain this many resources (covers AI usage).
+-- Every 15 minutes, BLUE zones gain this many resources.
 AutoFillResources = 5
 
 -- Permanently disable regular BLUE AI supply deliveries. Player and shop logistics remain available.

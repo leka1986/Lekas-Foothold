@@ -2617,6 +2617,7 @@ end
 if GlobalSettings.pvpEnabled ~= true then
 for i,v in ipairs(bc:getZones()) do
 	v:registerTrigger('lost', checkMissionComplete, 'missioncompleted')
+	v:registerTrigger('destroyed', checkMissionComplete, 'missioncompleted')
 end
 end
 
@@ -5699,6 +5700,7 @@ if GlobalSettings.pvpEnabled then
 			pvpStartingOwners[key] = startingSide
 			pvpVictoryZones[#pvpVictoryZones + 1] = zoneObj
 			zoneObj:registerTrigger('lost', checkMissionComplete, 'missioncompleted')
+			zoneObj:registerTrigger('destroyed', checkMissionComplete, 'missioncompleted')
 			zoneObj:registerTrigger('captured', checkMissionComplete, 'missioncompleted')
 			if not bc.saveLoaded or not zonePersistance.zones[zoneObj.zone] then
 				zoneObj.side = startingSide

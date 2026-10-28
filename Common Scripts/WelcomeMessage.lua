@@ -774,7 +774,8 @@ if isNormandyTheatre() then
 end
 local CarrierLink4ACLSUnitIds = {}
 
-local function getCarrierUnitAndController(name)
+local function getCarrierUnitAndController(name, knownUnit, knownController)
+    if knownUnit then return knownUnit, knownController end
     local group = Group.getByName(name)
     if not group or not group:isExist() or group:getSize() == 0 then return nil, nil end
     local unit = Unit.getByName(name) or group:getUnit(1)
@@ -782,8 +783,8 @@ local function getCarrierUnitAndController(name)
     return unit, group:getController()
 end
 
-local function activateCarrierTACAN(name, channel, mode, morse, bearing)
-    local unit, controller = getCarrierUnitAndController(name)
+local function activateCarrierTACAN(name, channel, mode, morse, bearing, knownUnit, knownController, knownUnitId)
+    local unit, controller = getCarrierUnitAndController(name, knownUnit, knownController)
     if not unit or not controller then return end
     local frequency = UTILS.TACANToFrequency(channel, mode)
     if not frequency then return end
@@ -793,7 +794,7 @@ local function activateCarrierTACAN(name, channel, mode, morse, bearing)
             type = 4,
             system = 3,
             frequency = frequency,
-            unitId = unit:getID(),
+            unitId = knownUnitId or unit:getID(),
             channel = channel,
             modeChannel = mode,
             AA = false,
@@ -803,53 +804,57 @@ local function activateCarrierTACAN(name, channel, mode, morse, bearing)
     })
 end
 
-local function activateCarrierICLS(name, channel, callsign)
-    local unit, controller = getCarrierUnitAndController(name)
+local function activateCarrierICLS(name, channel, callsign, knownUnit, knownController, knownUnitId)
+    local unit, controller = getCarrierUnitAndController(name, knownUnit, knownController)
     if not unit or not controller then return end
     controller:setCommand({
         id = "ActivateICLS",
         params = {
             type = 131584,
             channel = channel,
-            unitId = unit:getID(),
+            unitId = knownUnitId or unit:getID(),
             callsign = callsign,
         },
     })
 end
 
-local function activateCarrierLink4(name, frequency, callsign)
-    local unit, controller = getCarrierUnitAndController(name)
+local function activateCarrierLink4(name, frequency, callsign, knownUnit, knownController, knownUnitId)
+    local unit, controller = getCarrierUnitAndController(name, knownUnit, knownController)
     if not unit or not controller then return end
     controller:setCommand({
         id = "ActivateLink4",
         params = {
             frequency = frequency * 1000000,
-            unitId = unit:getID(),
+            unitId = knownUnitId or unit:getID(),
             name = callsign,
         },
     })
 end
 
-local function activateCarrierACLS(name, callsign)
-    local unit, controller = getCarrierUnitAndController(name)
+local function activateCarrierACLS(name, callsign, knownUnit, knownController, knownUnitId)
+    local unit, controller = getCarrierUnitAndController(name, knownUnit, knownController)
     if not unit or not controller then return end
     controller:setCommand({
         id = "ActivateACLS",
         params = {
-            unitId = unit:getID(),
+            unitId = knownUnitId or unit:getID(),
             name = callsign or "ACL",
         },
     })
 end
 
-local function activateCarrierLink4AndACLSOnce(name, frequency, callsign)
+local function activateCarrierLink4AndACLSOnce(name, frequency, callsign, knownUnit, knownController, knownUnitId)
     if not frequency then return end
-    local unit = getCarrierUnitAndController(name)
+    local unit, controller = getCarrierUnitAndController(name, knownUnit, knownController)
     if not unit then return end
-    local unitId = unit:getID()
+    local unitId = knownUnitId or unit:getID()
     if CarrierLink4ACLSUnitIds[name] == unitId then return end
-    activateCarrierLink4(name, frequency, callsign)
-    activateCarrierACLS(name, callsign)
+    if frequency > 0 then
+        activateCarrierLink4(name, frequency, callsign, knownUnit, knownController, knownUnitId)
+    else
+        controller:setCommand({ id = "DeactivateLink4", params = {} })
+    end
+    activateCarrierACLS(name, callsign, knownUnit, knownController, knownUnitId)
     CarrierLink4ACLSUnitIds[name] = unitId
 end
 
@@ -866,15 +871,33 @@ local function getCarrierBRC(name)
     return math.floor(brc + 0.5)
 end
 
-local function activateCarrierBeacons(name, tacanChannel, tacanMode, tacanMorse, iclsChannel, link4Frequency)
-    if IsGroupActive(name) then
-        activateCarrierTACAN(name, tacanChannel, tacanMode, tacanMorse, true)
+local function activateCarrierBeacons(name, tacanChannel, tacanMode, tacanMorse, iclsChannel, link4Frequency, knownUnit, resetLink4)
+    local settings = bc:getCarrierNavigationRadioSettings(name)
+    local knownController, knownUnitId
+    if settings then
+        knownUnit = knownUnit or Unit.getByName(name)
+        if not knownUnit or not knownUnit:isExist() then return end
+        knownController = knownUnit:getController()
+        knownUnitId = knownUnit:getID()
+        tacanChannel, tacanMode, tacanMorse = settings.tacanChannel, settings.tacanMode, settings.callsign
+        iclsChannel = settings.iclsChannel > 0 and settings.iclsChannel or nil
+        link4Frequency = (settings.link4MHz > 0 or settings.deactivateLink4) and settings.link4MHz or nil
+        if settings.deactivateICLS then
+            knownController:setCommand({ id = "DeactivateICLS", params = {} })
+        end
+        if resetLink4 then CarrierLink4ACLSUnitIds[name] = nil end
+    elseif not tacanChannel then
+        return
+    end
+    if knownUnit or IsGroupActive(name) then
+        activateCarrierTACAN(name, tacanChannel, tacanMode, tacanMorse, true, knownUnit, knownController, knownUnitId)
         if iclsChannel then
-            activateCarrierICLS(name, iclsChannel, tacanMorse)
+            activateCarrierICLS(name, iclsChannel, tacanMorse, knownUnit, knownController, knownUnitId)
         end
         if link4Frequency then
-            activateCarrierLink4AndACLSOnce(name, link4Frequency, tacanMorse)
+            activateCarrierLink4AndACLSOnce(name, link4Frequency, tacanMorse, knownUnit, knownController, knownUnitId)
         end
+        return true
     end
 end
 
@@ -886,7 +909,10 @@ local function getFirstActiveCarrierName()
     end
 end
 
-function refreshBeacons()
+function refreshBeacons(targetName, knownUnit, resetLink4)
+    if targetName then
+        return activateCarrierBeacons(targetName, nil, nil, nil, nil, nil, knownUnit, resetLink4)
+    end
     activateCarrierBeacons("CVN-73", 73, "X", "GWN", 13)
     activateCarrierBeacons("CVN-72", 72, "X", "ABE", 12, 372)
     activateCarrierBeacons("CVN-59", 59, "X", "FTS", 9)
@@ -916,11 +942,15 @@ local function getBRC(cvnName, translator)
 end
 
 function hullPrettyAndTCN(name)
+    local settings = bc:getCarrierNavigationRadioSettings(name)
+    if settings then return settings.displayName, settings.tacan end
     local info = WelcomeCarrierInfo[name]
     if info then return info.displayName, info.tacan or info.frequency end
 end
 
 local function getCarrierRadioLine(name, translator)
+    local settings = bc:getCarrierNavigationRadioSettings(name)
+    if settings then return bc:formatCarrierNavigationRadioInfo(settings, translator or L10N) end
     local info = WelcomeCarrierInfo[name]
     if not (info and info.frequency) then return nil end
     local T = translator or L10N
@@ -1320,7 +1350,7 @@ local function SelectEscortTemplate(playerType, playerSide)
     local isRed = GlobalSettings.pvpEnabled == true and playerSide == coalition.side.RED
     local templates = isRed and RedCapPlaneEnabled or BlueCapPlaneEnabled
     local selection
-    if isRed then selection = escortConfig[4] else selection = escortConfig[2] end
+    if isRed then selection = type(escortConfig[3]) == "string" and escortConfig[3] or escortConfig[4] else selection = escortConfig[2] end
     if type(selection) == "string" then
         if templates[selection] == true then return selection end
         return nil
@@ -1612,8 +1642,13 @@ function AddEscortRequestMenu(group)
     local T = getMooseGroupTranslator(group)
     local groupName = group:GetName()
     RemoveEscortRequestMenuHandle(groupName)
-    escortRequestMenus[groupName] = MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_REQUEST_ESCORT"), nil, EscortClientGroup, group)
-    menuEscortRequest[groupName] = escortRequestMenus[groupName]
+    local requestMenu = MENU_GROUP:New(group, T:Get("WELCOME_MENU_REQUEST_ESCORT"))
+    escortRequestMenus[groupName] = requestMenu
+    menuEscortRequest[groupName] = requestMenu
+    MENU_GROUP_COMMAND:New(group, T:Get("WELCOME_MENU_ESCORT_SAME_ALTITUDE"), requestMenu, EscortClientGroup, group, 0)
+    MENU_GROUP_COMMAND:New(group, T:Format("WELCOME_MENU_ESCORT_ABOVE", 2000), requestMenu, EscortClientGroup, group, 2000)
+    MENU_GROUP_COMMAND:New(group, T:Format("WELCOME_MENU_ESCORT_ABOVE", 5000), requestMenu, EscortClientGroup, group, 5000)
+    MENU_GROUP_COMMAND:New(group, T:Format("WELCOME_MENU_ESCORT_ABOVE", 10000), requestMenu, EscortClientGroup, group, 10000)
 end
 function EnableEscortRequestMenu(group)
     if not group then
@@ -1938,16 +1973,20 @@ function HandleEscortLandingForGroupName(groupName, orbitCenter)
     end
 end
 
-function FindEscortTemplateWithAlias(clientGroup, alias, knownClientUnit, knownSide)
+function FindEscortTemplateWithAlias(clientGroup, alias, knownClientUnit, knownSide, knownAltitudeAboveMeters)
     local clientUnit = knownClientUnit or clientGroup:GetUnit(1)
     local aircraftType = clientUnit:GetTypeName()
-    local escortConfig = EscortTypeByPlayerType and EscortTypeByPlayerType[aircraftType]
-    local altitudeAboveFeet = (type(escortConfig) == "table" and escortConfig[3]) or 10000
+    local altitudeAboveMeters = knownAltitudeAboveMeters
+    if altitudeAboveMeters == nil then
+        local escortConfig = EscortTypeByPlayerType and EscortTypeByPlayerType[aircraftType]
+        local altitudeAboveFeet = (type(escortConfig) == "table" and type(escortConfig[3]) == "number" and escortConfig[3]) or 10000
+        altitudeAboveMeters = UTILS.FeetToMeters(altitudeAboveFeet)
+    end
     local playerSide = knownSide
     if playerSide == nil then
         playerSide = GlobalSettings.pvpEnabled == true and clientUnit:GetCoalition() or coalition.side.BLUE
     end
-    return SelectEscortTemplate(aircraftType, playerSide), UTILS.FeetToMeters(altitudeAboveFeet)
+    return SelectEscortTemplate(aircraftType, playerSide), altitudeAboveMeters
 end
 
 function GetClosestEscortAirdromeZone(clientGroup, knownClientUnit, knownSide)
@@ -2106,7 +2145,7 @@ function SpawnEscortFromGround(clientGroup, templateName, alias, onSpawn, knownH
     return spawned
 end
 
-function EscortClientGroup(clientGroup)
+function EscortClientGroup(clientGroup, altitudeAboveFeet)
     if GlobalSettings.pvpEnabled == true and PvPEscorts ~= true then return end
     local T = getMooseGroupTranslator(clientGroup)
     local groupName = clientGroup:GetName()
@@ -2126,7 +2165,12 @@ function EscortClientGroup(clientGroup)
     else
         _, escortHomeBase = GetClosestEscortAirdromeZone(clientGroup, clientUnit)
     end
-    local templateName, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(clientGroup, alias, clientUnit, clientSide)
+    local escortAltitudeAboveMeters = escortState.escortAltitudeAboveMeters
+    if altitudeAboveFeet ~= nil then
+        escortAltitudeAboveMeters = UTILS.FeetToMeters(altitudeAboveFeet)
+    end
+    local templateName
+    templateName, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(clientGroup, alias, clientUnit, clientSide, escortAltitudeAboveMeters)
     if not templateName then return end
     local escortHomeCoord = escortHomeBase and escortHomeBase:GetCoordinate()
     local spawnedDcsGroup
@@ -2250,7 +2294,7 @@ local function CleanupEscortForGroupName(groupName, destroyEscort, notifyDestroy
     if state then
         state.escortHomebase = nil
         state.escortHomeCoord = nil
-        state.escortAltitudeAboveMeters = nil
+        if not notifyDestroyed then state.escortAltitudeAboveMeters = nil end
         state.escortSpawnedFromGround = nil
         state.escortTakeoffHandled = nil
         state.escortMode = nil
@@ -2441,12 +2485,17 @@ function RaceTrackRightToLeft(group)
 end
 function EscortRejoin(group)
     local T = getMooseGroupTranslator(group)
-    local escortGroup = escortGroups[group:GetName()]
+    local groupName = group:GetName()
+    local escortGroup = escortGroups[groupName]
     if escortGroup then
         if IsPlayerGroupInAir(group) then
-            local _, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(group)
-            if SetEscortFollowMode(group:GetName(), group, {x=-100, y=escortAltitudeAboveMeters, z=300}) then
-                escortPendingJoin[group:GetName()] = nil
+            local state = spawnedGroups[groupName]
+            local escortAltitudeAboveMeters = state and state.escortAltitudeAboveMeters
+            if escortAltitudeAboveMeters == nil then
+                _, escortAltitudeAboveMeters = FindEscortTemplateWithAlias(group)
+            end
+            if SetEscortFollowMode(groupName, group, {x=-100, y=escortAltitudeAboveMeters, z=300}) then
+                escortPendingJoin[groupName] = nil
                 MESSAGE:New(T:Get("WELCOME_ESCORT_REJOINING"), 20):ToGroup(group)
             end
         else

@@ -1337,7 +1337,7 @@ function Respawn.Group(groupName, uncontrolled)
   return newGrp
 end
 
-function Respawn.SpawnAtPoint(grpName, coord, headingDeg, distNm, alt, spd, preserveFirstWaypointTask, spawnName, unitSpeed, knownAltitudeMeters, countryId, knownTemplateRow)
+function Respawn.SpawnAtPoint(grpName, coord, headingDeg, distNm, alt, spd, preserveFirstWaypointTask, spawnName, unitSpeed, knownAltitudeMeters, countryId, knownTemplateRow, radioSettings)
   local tpl
   if knownTemplateRow ~= nil then
     if knownTemplateRow == false then return end
@@ -1358,6 +1358,19 @@ function Respawn.SpawnAtPoint(grpName, coord, headingDeg, distNm, alt, spd, pres
   end
   if not firstWaypointTask then
     firstWaypointTask = {id="ComboTask",params={tasks={}}}
+  end
+
+  if radioSettings then
+    tpl.frequency, tpl.modulation = radioSettings.frequencyMHz, 0
+    if preserveFirstWaypointTask and radioSettings.tacanChannel then
+      for _, task in ipairs(firstWaypointTask.params.tasks) do
+        local action = task.id == "WrappedAction" and task.params.action
+        if action and action.id == "ActivateBeacon" then
+          action.params.channel = radioSettings.tacanChannel
+          action.params.frequency = radioSettings.tacanFrequency
+        end
+      end
+    end
   end
 
   local cx, cz = coord.x, coord.z
@@ -7328,16 +7341,7 @@ do
 			else
 				local targetStatic = StaticObject.getByName(builtName)
 				if targetStatic and targetStatic:isExist() then
-					local isCritical = false
-					for _, criticalName in ipairs(self.tgtzone.criticalObjects or {}) do
-						if criticalName == builtName then
-							isCritical = true
-							break
-						end
-					end
-					if not isCritical then
-						viableTargets[#viableTargets + 1] = targetStatic
-					end
+					viableTargets[#viableTargets + 1] = targetStatic
 				end
 			end
 		end
@@ -9977,11 +9981,12 @@ function spawnAwacs(side, heading, leg)
     local alt = cfg.alt or 30000
     local spd = cfg.speed or 350
     local lg  = leg or cfg.leg or 10
+    local radioSettings = bc:getAwacsRadioSettings(side)
     local g
     if pvpEnabled and side == 4 then
-        g = Respawn.SpawnAtPoint(AWACS_GROUPS[1], coord, hdg, lg, alt, spd, nil, AWACS_GROUPS[4])
+        g = Respawn.SpawnAtPoint(AWACS_GROUPS[1], coord, hdg, lg, alt, spd, nil, AWACS_GROUPS[4], nil, nil, nil, nil, radioSettings)
     else
-        g = Respawn.SpawnAtPoint(AWACS_GROUPS[side], coord, hdg, lg, alt, spd)
+        g = Respawn.SpawnAtPoint(AWACS_GROUPS[side], coord, hdg, lg, alt, spd, nil, nil, nil, nil, nil, nil, radioSettings)
     end
     if not g then return end
     local spawnedName, spawnedId
@@ -13322,9 +13327,9 @@ do
 	local DYNAMIC_CARRIER_NAV_DRAWN_FLAG_PREFIX = "DYNAMIC_CARRIER_NAV_AREA_DRAWN_"
 	local DYNAMIC_CARRIER_NAV_AUTO_MOVED_FLAG_PREFIX = "DYNAMIC_CARRIER_NAV_AUTO_MOVED_"
 	local DYNAMIC_CARRIER_INFO_LINES = {
-		{ groupName = "CVN-72", text = "Abraham Lincoln CVN-72\n272 AM TCN 72X ICLS 12" },
-		{ groupName = "CVN-74", text = "John C. Stennis CVN-74\n274 AM TCN 74X ICLS 14" },
-		{ groupName = "Tarawa", text = "Tarawa\n271.50 AM TCN 1X" },
+		{ groupName = "CVN-72", displayName = "Abraham Lincoln", callsign = "ABE", atcMHz = 262, tacanChannel = 72, tacanY = false, iclsChannel = 12, link4MHz = 372 },
+		{ groupName = "CVN-74", displayName = "John C. Stennis", callsign = "JCS", atcMHz = 254, tacanChannel = 74, tacanY = false, iclsChannel = 14, link4MHz = 374 },
+		{ groupName = "Tarawa", displayName = "Tarawa", callsign = "TRW", atcMHz = 271.5, tacanChannel = 1, tacanY = false, iclsChannel = 0, link4MHz = 0 },
 	}
 
 	local function _carrierNavPointFromZone(zoneObj)
@@ -13457,7 +13462,53 @@ do
 	end
 
 	function BattleCommander:enableCarrierNavigation()
+		local initializeRadios = self.carrierNavigationRadios == nil
+		if initializeRadios then
+			local overrides = CarrierNavigationRadios
+			if overrides == nil then overrides = {} end
+			assert(type(overrides) == "table", "CarrierNavigationRadios must be a table")
+			local iclsOverrides, link4Overrides = CarrierNavigationICLS, CarrierNavigationLink4
+			if iclsOverrides == nil then iclsOverrides = {} end
+			if link4Overrides == nil then link4Overrides = {} end
+			assert(type(iclsOverrides) == "table", "CarrierNavigationICLS must be a table")
+			assert(type(link4Overrides) == "table", "CarrierNavigationLink4 must be a table")
+			local radios = {}
+			for _, defaults in ipairs(DYNAMIC_CARRIER_INFO_LINES) do
+				local override = overrides[defaults.groupName]
+				if override == nil then override = {} end
+				assert(type(override) == "table", "CarrierNavigationRadios: "..defaults.groupName.." must be a table")
+				local settings = {}
+				for key, default in pairs(defaults) do
+					local value = override[key]
+					if key == "iclsChannel" then value = iclsOverrides[defaults.groupName] end
+					if key == "link4MHz" then value = link4Overrides[defaults.groupName] end
+					if value == nil or type(default) == "string" then value = default end
+					settings[key] = value
+				end
+				local prefix = "CarrierNavigationRadios: "..defaults.groupName.." "
+				assert(type(settings.atcMHz) == "number" and settings.atcMHz >= 30 and settings.atcMHz <= 400, prefix.."ATC MHz must be between 30 and 400")
+				assert(type(settings.tacanChannel) == "number" and settings.tacanChannel >= 1 and settings.tacanChannel <= 126 and settings.tacanChannel == math.floor(settings.tacanChannel), prefix.."TACAN channel must be an integer from 1 to 126")
+				assert(type(settings.tacanY) == "boolean", prefix.."Y band must be true or false")
+				assert(type(settings.iclsChannel) == "number" and settings.iclsChannel >= 0 and settings.iclsChannel <= 20 and settings.iclsChannel == math.floor(settings.iclsChannel), prefix.."ICLS channel must be 0 (off) or an integer from 1 to 20")
+				assert(type(settings.link4MHz) == "number" and (settings.link4MHz == 0 or settings.link4MHz >= 30 and settings.link4MHz <= 400), prefix.."Link 4 MHz must be 0 (off) or between 30 and 400")
+				settings.tacanMode = settings.tacanY and "Y" or "X"
+				settings.tacan = tostring(settings.tacanChannel)..settings.tacanMode
+				settings.deactivateICLS = defaults.iclsChannel > 0 and settings.iclsChannel == 0
+				settings.deactivateLink4 = defaults.link4MHz > 0 and settings.link4MHz == 0
+				radios[defaults.groupName] = settings
+			end
+			self.carrierNavigationRadios = radios
+		end
 		self.carrierNavigationEnabled = true
+		if initializeRadios then
+			for _, defaults in ipairs(DYNAMIC_CARRIER_INFO_LINES) do
+				local unit = Unit.getByName(defaults.groupName)
+				if unit and unit:isExist() then
+					local settings = self.carrierNavigationRadios[defaults.groupName]
+					unit:getController():setCommand({ id = "SetFrequency", params = { frequency = settings.atcMHz * 1000000, modulation = 0, power = 10 } })
+				end
+			end
+		end
 		if type(self.carrierNavigationAreaAvailability) == "table" then
 			self:_refreshCarrierNavigationAreaState()
 			self:_refreshCarrierAndDynamicControlMenusForBlue(true)
@@ -13468,6 +13519,78 @@ do
 
 	function BattleCommander:_isCarrierNavigationEnabled()
 		return self.carrierNavigationEnabled == true
+	end
+
+	function BattleCommander:getCarrierNavigationRadioSettings(groupName)
+		if not self:_isCarrierNavigationEnabled() then return nil end
+		return self.carrierNavigationRadios[groupName]
+	end
+
+	function BattleCommander:formatCarrierNavigationRadioInfo(settings, T)
+		local text = T:Format("CARRIER_NAV_RADIO", settings.atcMHz, settings.tacan, settings.callsign)
+		if settings.iclsChannel > 0 then text = text..T:Format("CARRIER_NAV_ICLS", settings.iclsChannel) end
+		if settings.link4MHz > 0 then text = text..T:Format("CARRIER_NAV_LINK4", settings.link4MHz) end
+		return text
+	end
+
+	function BattleCommander:_initializeSupportRadioSettings(pvpEnabled)
+		local awacsOverrides, tankerOverrides = AWACSRadioFrequencies, TankerRadioSettings
+		if awacsOverrides == nil then awacsOverrides = {} end
+		if tankerOverrides == nil then tankerOverrides = {} end
+		assert(type(awacsOverrides) == "table", "AWACSRadioFrequencies must be a table")
+		assert(type(tankerOverrides) == "table", "TankerRadioSettings must be a table")
+		local function frequency(value, default, label)
+			if value == nil then value = default end
+			assert(type(value) == "number" and value >= 30 and value <= 400, label.." frequency must be between 30 and 400 MHz")
+			return value
+		end
+		local resolved = { awacs = {}, tankers = { [1] = {}, [2] = {} } }
+		local awacsDefaults = {
+			{ key = "Red AWACS 1", frequencyMHz = 252, side = 1 },
+			{ key = "Blue AWACS 1", frequencyMHz = 251, side = 2 },
+			{ key = "Blue AWACS 2", frequencyMHz = 251.5, side = 2 },
+			{ key = "Red AWACS 2", frequencyMHz = 252.5, side = 1 },
+		}
+		for slot, defaults in ipairs(awacsDefaults) do
+			local value
+			if pvpEnabled or defaults.side == 2 then value = awacsOverrides[defaults.key] end
+			resolved.awacs[slot] = { frequencyMHz = frequency(value, defaults.frequencyMHz, defaults.key) }
+		end
+		local tankerDefaults = {
+			{ key = "Blue Arco", kind = "arco", side = 2, frequencyMHz = 260, tacanChannel = 101, callsign = "ARC", preset = 14 },
+			{ key = "Blue Texaco", kind = "texaco", side = 2, frequencyMHz = 266, tacanChannel = 102, callsign = "TEX", preset = 20 },
+			{ key = "Red Arco", kind = "arco", side = 1, frequencyMHz = 260, tacanChannel = 104, callsign = "RAC", preset = 14 },
+			{ key = "Red Texaco", kind = "texaco", side = 1, frequencyMHz = 266, tacanChannel = 105, callsign = "RTX", preset = 20 },
+			{ key = "Shell", kind = "shell", side = 2, frequencyMHz = 253, tacanChannel = 103 },
+		}
+		for _, defaults in ipairs(tankerDefaults) do
+			local override
+			if pvpEnabled or defaults.side == 2 then override = tankerOverrides[defaults.key] end
+			if override == nil then override = {} end
+			assert(type(override) == "table", "TankerRadioSettings: "..defaults.key.." must be a table")
+			local channel = override.tacanChannel
+			if channel == nil then channel = defaults.tacanChannel end
+			assert(type(channel) == "number" and channel >= 1 and channel <= 126 and channel == math.floor(channel), defaults.key.." TACAN must be an integer from 1 to 126")
+			local settings = { frequencyMHz = frequency(override.frequencyMHz, defaults.frequencyMHz, defaults.key), tacanChannel = channel,
+				tacan = tostring(channel).."Y", tacanFrequency = UTILS.TACANToFrequency(channel, "Y"), callsign = defaults.callsign }
+			if settings.frequencyMHz == defaults.frequencyMHz then settings.preset = defaults.preset end
+			if defaults.kind == "shell" then resolved.shell = settings else resolved.tankers[defaults.side][defaults.kind] = settings end
+		end
+		self.supportRadioSettings = resolved
+	end
+
+	function BattleCommander:getAwacsRadioSettings(slot)
+		return self.supportRadioSettings.awacs[slot]
+	end
+
+	function BattleCommander:getTankerRadioSettings(kind, ownerSide)
+		if kind == "shell" then return self.supportRadioSettings.shell end
+		return self.supportRadioSettings.tankers[ownerSide or coalition.side.BLUE][kind]
+	end
+
+	function BattleCommander:formatTankerRadioInfo(settings, T)
+		local preset = settings.preset and T:Format("TANKER_RADIO_PRESET", settings.preset) or ""
+		return T:Format("TANKER_RADIO_INFO", settings.tacan, preset, settings.frequencyMHz)
 	end
 
 	function BattleCommander:_getCarrierNavigationRequiredRank()
@@ -15300,8 +15423,13 @@ do
 			return false
 		end
 
+		local radioSettings = self:getCarrierNavigationRadioSettings(groupName)
 		for _, unitData in ipairs(groupData.units or {}) do
 			unitData.unitName = nil
+			if radioSettings and unitData.name == groupName then
+				unitData.frequency = radioSettings.atcMHz * 1000000
+				unitData.modulation = 0
+			end
 		end
 		local spawnedGroup = coalition.addGroup(countryId, categoryId, groupData)
 		if spawnedGroup and spawnedGroup:isExist() then
@@ -15345,6 +15473,7 @@ do
 		end
 		if not teleported then return false end
 
+		local beaconResetPending = true
 		local function applyTarawaCustomRoute(param, time)
 			local restoredGroup = Group.getByName(param.groupName)
 			if restoredGroup and restoredGroup:isExist() and restoredGroup:getSize() > 0 then
@@ -15358,6 +15487,7 @@ do
 				end
 
 				param.context:_carrierNavigationSetRoute(restoredGroup, freshRoutePoints)
+				if refreshBeacons(param.groupName, restoredLead, beaconResetPending) then beaconResetPending = false end
 				param.context.carrierNavigation = param.context.carrierNavigation or {}
 				param.context.carrierNavigation[param.groupName] = param.context:_carrierNavigationCaptureTarawaCustomState(param.saved, param.saved.customMode, param.saved.customPoints, param.saved.speedKt, routeMeta)
 				if param.saved.customArrived == true then
@@ -15459,6 +15589,7 @@ do
 		end
 		if not teleported then return false end
 
+		local beaconResetPending = true
 		local function applyCarrierNavigationRoute(param, time)
 			local restoredGroup = Group.getByName(param.groupName)
 			if restoredGroup and restoredGroup:isExist() and restoredGroup:getSize() > 0 then
@@ -15486,6 +15617,7 @@ do
 
 				param.context:_carrierNavigationAddRouteTurnScripts(param.groupName, param.area, param.saved.lane, freshRoutePoints, routeMeta, param.saved.speedKt)
 				param.context:_carrierNavigationSetRoute(restoredGroup, freshRoutePoints)
+				if refreshBeacons(param.groupName, restoredLead, beaconResetPending) then beaconResetPending = false end
 				param.context.carrierNavigation = param.context.carrierNavigation or {}
 				param.context.carrierNavigation[param.groupName] = param.context:_carrierNavigationCaptureGroupState(param.groupName, param.saved, restoredGroup)
 				if param.groupName == "CVN-72" and ShellHaveSpawned ~= true then
@@ -15571,7 +15703,7 @@ do
 			distNm or 2,
 			nil,
 			nil,
-			true
+			true, nil, nil, nil, nil, nil, self:getTankerRadioSettings("shell", coalition.side.BLUE)
 		)
 		if not spawned then
 			env.info("[CarrierNavigation] recovery tanker spawn failed: "..tostring(recoveryTankerName))
@@ -15829,7 +15961,10 @@ do
 		local carrierInfoLines = {}
 		for _, info in ipairs(DYNAMIC_CARRIER_INFO_LINES) do
 			if IsGroupActive(info.groupName) then
-				carrierInfoLines[#carrierInfoLines + 1] = info.text
+				local settings = self:getCarrierNavigationRadioSettings(info.groupName)
+				local title = settings.displayName
+				if title ~= info.groupName then title = title.." "..info.groupName end
+				carrierInfoLines[#carrierInfoLines + 1] = title.."\n"..self:formatCarrierNavigationRadioInfo(settings, T)
 			end
 		end
 		if #carrierInfoLines > 0 then
@@ -16771,11 +16906,11 @@ do
 		local tankerInfoLines = {}
 		if arcoEligible and (pvpEnabled and runtimes.arco.active or not pvpEnabled and ArcoActive) then
 			local arcoAlt = arcoAltitudeLabel or _formatFeetMenuLabel(arcoAltCurrent)
-			tankerInfoLines[#tankerInfoLines + 1] = T:Format("DYNAMIC_TANKER_ARCO_INFO", arcoAlt)
+			tankerInfoLines[#tankerInfoLines + 1] = T:Format("DYNAMIC_TANKER_ARCO_INFO", self:formatTankerRadioInfo(self:getTankerRadioSettings("arco", ownerSide), T), arcoAlt)
 		end
 		if texacoEligible and (pvpEnabled and runtimes.texaco.active or not pvpEnabled and TexacoActive) then
 			local texacoAlt = texacoAltitudeLabel or _formatFeetMenuLabel(texacoAltCurrent)
-			tankerInfoLines[#tankerInfoLines + 1] = T:Format("DYNAMIC_TANKER_TEXACO_INFO", texacoAlt)
+			tankerInfoLines[#tankerInfoLines + 1] = T:Format("DYNAMIC_TANKER_TEXACO_INFO", self:formatTankerRadioInfo(self:getTankerRadioSettings("texaco", ownerSide), T), texacoAlt)
 		end
 		if #tankerInfoLines > 0 then
 			local tankerHelpText = table.concat(tankerInfoLines, "\n")
@@ -16945,6 +17080,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		
 		setmetatable(obj, self)
 		self.__index = self
+		obj:_initializeSupportRadioSettings(GlobalSettings.pvpEnabled == true)
 		return obj
 	end
 
@@ -20632,6 +20768,8 @@ end
 			local landTask = gmoose:TaskLandAtVec2({ x = destx, y = desty }, 2, true, nil)
 			local loadTasks, landingTasks = {}, { landTask }
 			local heloUnitId = unitTemplate.unitId
+			--[[ Temporarily disabled after the DCS update: FARP Chinook flies without cargo.
+			     Remove this comment block to restore internal cargo after the DCS fix.
 			for i = 1, 3 do
 				local cargoGroupId = gid; gid = gid + 1
 				local cargoUnitId = uid; uid = uid + 1
@@ -20651,6 +20789,7 @@ end
 					params = { groupId = cargoGroupId, unitId = cargoUnitId },
 				}
 			end
+			--]]
 			local finishCommand
 			if pvpEnabled then
 				finishCommand = string.format(
@@ -21284,6 +21423,15 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 			return success
 		end
 		if sitem and sitem.purchaseAvailable == false then return false end
+		if id == 'zpat' and type(alternateParams) == 'table' and alternateParams.zone
+			and alternateParams.zone:_hasPatriotUpgrade() then
+			if buyerGroupId then
+				trigger.action.outTextForGroup(buyerGroupId, L10N:GetForGroup(buyerGroupId, "SHOP_NOT_AVAILABLE_NOW"), 10)
+			else
+				trigger.action.outTextForCoalition(coalition, L10N:Get("SHOP_NOT_AVAILABLE_NOW"), 10)
+			end
+			return false
+		end
 		if StoreLimit == true then
 			if item.cost > 250 and buyerGroupId and not exempt and earned < 100 then
 				trigger.action.outTextForGroup(buyerGroupId,L10N:FormatForGroup(buyerGroupId, "SHOP_PERSONAL_CREDITS_REQUIRED", 100, pname),20)
@@ -21594,6 +21742,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 					or (GlobalSettings.pvpEnabled == true and zoneObj._idleSuspended
 						and zoneObj.side == coalitionSide and not isCarrierZoneName(zoneObj.zone)))
 				and (includeSuspended or not zoneObj.suspended or zoneObj._idleSuspended)
+				and (itemId ~= 'zpat' or not zoneObj:_hasPatriotUpgrade())
 				and ((itemId == 'supplies2' and zoneObj.active and zoneObj.side == (GlobalSettings.pvpEnabled == true and coalitionSide or coalition.side.BLUE))
 					or ((not extraPredicate) or extraPredicate(zoneObj) == true))
 			then
@@ -44049,6 +44198,7 @@ function BattleCommander:loadFromDisk()
 				for i, v in pairs(zonePersistance.zones) do
 					local zn = self:getZoneByName(i)
 					if zn and (GlobalSettings.pvpEnabled ~= true or zn.zone ~= "Hidden1" or v.firstCaptureByRed == true) then
+						zn._patriotUpgradePresent = nil
 						local persistedSuspended = ShouldTreatSavedZoneAsSuspended(v)
 						local pvpBaseProfile = GlobalSettings.pvpEnabled == true and not zn.Popup
 							and not isCarrierZoneName(zn.zone) and getPvpBaseGarrisonProfile(getZoneSize(zn))
@@ -46848,6 +46998,24 @@ function ZoneCommander:suspend(idle)
 	end
 
 	
+	function ZoneCommander:_hasPatriotUpgrade()
+		local upgrades = self.side == 1 and self.upgrades.red or self.upgrades.blue
+		if self._patriotUpgradeList == upgrades and self._patriotUpgradePresent ~= nil then
+			return self._patriotUpgradePresent
+		end
+		local present = false
+		for _, entry in pairs(upgrades) do
+			local _, templateUnits = self:_getUpgradeTemplateUnitCount(getUpgradeEntryName(entry))
+			if templateUnits and templateUnits.samFamilies.PATRIOT then
+				present = true
+				break
+			end
+		end
+		self._patriotUpgradeList = upgrades
+		self._patriotUpgradePresent = present
+		return present
+	end
+
 	function ZoneCommander:getUpgradesUsed(side)
 		local s = side or self.side
 		if s == 1 then
@@ -50099,6 +50267,7 @@ function ZoneCommander:init()
 								end
 								if replacement then
 									upgrades[i] = replacement
+									self._patriotUpgradePresent = nil
 									self._upgradeDisplaySlots = nil
 									if self.side == 1 and self.upgrades and self.upgrades.red then
 										local cur = self.upgrades.red[i]
@@ -50736,6 +50905,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 
 	function ZoneCommander:_markRegularSupplyEfficiencyDirty(upgradeSetChanged, resetEfficiency)
 		if upgradeSetChanged == true then
+			self._patriotUpgradePresent = nil
 			self._regularSupplyUpgradeTotal = nil
 			self._upgradeDisplaySlots = nil
 		end
@@ -54171,13 +54341,6 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			self:checkCriticalObjects()
 		end
 		local jtacTargetsByBuilt = self:_beginJtacTargetMaintenance()
-		local jtacCriticalObjects = nil
-		if jtacTargetsByBuilt then
-			jtacCriticalObjects = {}
-			for _, criticalName in ipairs(self.criticalObjects or {}) do
-				jtacCriticalObjects[criticalName] = true
-			end
-		end
 
 		local toRemove = {}
 		local trackRegularSupplyEfficiency = not self.isHidden and self:_regularSupplyHasRouteForSide(self.side)
@@ -54384,7 +54547,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			end
 
 			if not gr and not toRemove[i] then
-				if jtacBuiltTargets and st and not jtacCriticalObjects[v] then
+				if jtacBuiltTargets and st then
 					jtacBuiltTargets[#jtacBuiltTargets + 1] = st
 				end
 				local staticDesc = st and demandStaticLife >= 1 and st.getDesc and st:getDesc() or nil
@@ -65199,6 +65362,8 @@ function GroupCommander:_spawnFromGroundAt(resolved, originZone, targetZone, hot
     if not spot then return nil end
     self._lastGroundSpawnSpot = spot
     local sp = SPAWN:NewFromTemplate(tpl, resolved, self:_getSpawnAlias(), true)
+	-- Temporarily use NotCargo for Blue Chinook supplies while DCS internal cargo is broken.
+	if self:_usesInternalHeloCargo(resolved) then self.NotCargo = true end
     if self.mission=='supply' and self.unitCategory==Unit.Category.HELICOPTER then
 		if self._advanceCaptureWaitingForNeutral == true then
         sp = sp:OnSpawnGroup(function(g)timer.scheduleFunction(function()
@@ -65258,7 +65423,8 @@ function GroupCommander:_spawnFromGroundAt(resolved, originZone, targetZone, hot
     elseif self.MissionType=='CAS' and self.unitCategory==Unit.Category.AIRPLANE and self.template then
         sp = sp:OnSpawnGroup(function(g) bc:EngageCasMission(self.targetzone, g:GetName(), nil, nil, self.Altitude or self.AltitudeFt, self._landUnitID, nil, nil, nil, { knownMooseGroup = g }) end)
     end
-	self:_prepareHeloInternalCargoSpawn(sp, resolved, originZone, targetZone, self.side, nil)
+	-- Internal cargo temporarily disabled after the DCS update; restore this call when fixed.
+	-- self:_prepareHeloInternalCargoSpawn(sp, resolved, originZone, targetZone, self.side, nil)
 	local spawned = sp:Spawn()
 	if spawned then
 		self._lastSpawnTemplate = resolved
@@ -66906,7 +67072,10 @@ end
 						end)
 							local spawnHot = ((self.mission == 'supply' and (self.side == 2 or (GlobalSettings.pvpEnabled == true and self.side == 1))) or self.SpawnHot) and true or false
 							local tk = spawnHot and SPAWN.Takeoff.Hot or SPAWN.Takeoff.Cold
-							self:_prepareHeloInternalCargoSpawn(sp, resolved, originZone, self.targetzone, self.side, farpLaunch)
+							-- Temporarily use NotCargo for Blue Chinook supplies while DCS internal cargo is broken.
+							if self:_usesInternalHeloCargo(resolved) then self.NotCargo = true end
+							-- Internal cargo temporarily disabled after the DCS update; restore this call when fixed.
+							-- self:_prepareHeloInternalCargoSpawn(sp, resolved, originZone, self.targetzone, self.side, farpLaunch)
 							local spawned = nil
 							local farpSpawnFailed = false
 							if farpLaunch then
@@ -103423,7 +103592,7 @@ local function StartTankerProximityWatch(TankerGroup, ProximityZoneName, Proximi
 	if not TankerGroup then return nil end
 	local pvpEnabled = GlobalSettings.pvpEnabled == true
 	local LeadUnitDcs
-	if pvpEnabled and knownLeadUnit ~= nil then LeadUnitDcs = knownLeadUnit else LeadUnitDcs = TankerGroup:getUnit(1) end
+	if knownLeadUnit ~= nil then LeadUnitDcs = knownLeadUnit else LeadUnitDcs = TankerGroup:getUnit(1) end
 	if not LeadUnitDcs or not LeadUnitDcs:isExist() then return nil end
 	local TankerUnit = UNIT:FindByName(LeadUnitDcs:getName())
 	if not TankerUnit then return nil end
@@ -103447,24 +103616,26 @@ local function StartTankerProximityWatch(TankerGroup, ProximityZoneName, Proximi
 	return ProximityZone
 end
 
-function startArcoProximityWatch(ownerSide, knownRuntime, knownLeadUnit)
+function startArcoProximityWatch(ownerSide, knownRuntime, knownLeadUnit, knownRadioInfo)
+	local radioInfo = knownRadioInfo or bc:formatTankerRadioInfo(bc:getTankerRadioSettings("arco", GlobalSettings.pvpEnabled == true and ownerSide or coalition.side.BLUE), L10N)
 	if GlobalSettings.pvpEnabled == true then
 		ownerSide = ownerSide or coalition.side.BLUE
 		local runtime = knownRuntime or bc.dynamicTankersBySide[ownerSide]["arco"]
 		if runtime.proximityZone then stopArcoProximityWatch(ownerSide, runtime) end
-		return StartTankerProximityWatch(runtime.group, "Arco_Prox_" .. ownerSide, ARCO_PROX_RADIUS_M, ARCO_APPROACH_ALT_M, L10N:Get("DYNAMIC_TANKER_APPROACHING_ARCO"), ownerSide, runtime, knownLeadUnit, "arco")
+		return StartTankerProximityWatch(runtime.group, "Arco_Prox_" .. ownerSide, ARCO_PROX_RADIUS_M, ARCO_APPROACH_ALT_M, L10N:Format("DYNAMIC_TANKER_APPROACHING_ARCO", radioInfo), ownerSide, runtime, knownLeadUnit, "arco")
 	end
-	ArcoZone = StartTankerProximityWatch(ArcoGroup, "Arco_Prox", ARCO_PROX_RADIUS_M, ARCO_APPROACH_ALT_M, L10N:Get("DYNAMIC_TANKER_APPROACHING_ARCO"))
+	ArcoZone = StartTankerProximityWatch(ArcoGroup, "Arco_Prox", ARCO_PROX_RADIUS_M, ARCO_APPROACH_ALT_M, L10N:Format("DYNAMIC_TANKER_APPROACHING_ARCO", radioInfo), nil, nil, knownLeadUnit)
 end
 
-function startTexacoProximityWatch(ownerSide, knownRuntime, knownLeadUnit)
+function startTexacoProximityWatch(ownerSide, knownRuntime, knownLeadUnit, knownRadioInfo)
+	local radioInfo = knownRadioInfo or bc:formatTankerRadioInfo(bc:getTankerRadioSettings("texaco", GlobalSettings.pvpEnabled == true and ownerSide or coalition.side.BLUE), L10N)
 	if GlobalSettings.pvpEnabled == true then
 		ownerSide = ownerSide or coalition.side.BLUE
 		local runtime = knownRuntime or bc.dynamicTankersBySide[ownerSide]["texaco"]
 		if runtime.proximityZone then stopTexacoProximityWatch(ownerSide, runtime) end
-		return StartTankerProximityWatch(runtime.group, "Texaco_Prox_" .. ownerSide, TEXACO_PROX_RADIUS_M, TEXACO_APPROACH_ALT_M, L10N:Get("DYNAMIC_TANKER_APPROACHING_TEXACO"), ownerSide, runtime, knownLeadUnit, "texaco")
+		return StartTankerProximityWatch(runtime.group, "Texaco_Prox_" .. ownerSide, TEXACO_PROX_RADIUS_M, TEXACO_APPROACH_ALT_M, L10N:Format("DYNAMIC_TANKER_APPROACHING_TEXACO", radioInfo), ownerSide, runtime, knownLeadUnit, "texaco")
 	end
-	TexacoZone = StartTankerProximityWatch(TexacoGroup, "Texaco_Prox", TEXACO_PROX_RADIUS_M, TEXACO_APPROACH_ALT_M, L10N:Get("DYNAMIC_TANKER_APPROACHING_TEXACO"))
+	TexacoZone = StartTankerProximityWatch(TexacoGroup, "Texaco_Prox", TEXACO_PROX_RADIUS_M, TEXACO_APPROACH_ALT_M, L10N:Format("DYNAMIC_TANKER_APPROACHING_TEXACO", radioInfo), nil, nil, knownLeadUnit)
 end
 
 -- BASE:TraceOn()
@@ -105320,9 +105491,9 @@ local function ApplyProtectionCommandsToGroupController(GroupController, MooseGr
 	MooseGroup:CommandEPLRS(true,5)
 end
 
-local function ActivateTankerBeacon(TankerUnit, TacanChannelNumber, TacanCallsignCode)
+local function ActivateTankerBeacon(TankerUnit, TacanChannelNumber, TacanCallsignCode, knownFrequency)
 	if not TankerUnit then return end
-	local BeaconFrequency = UTILS.TACANToFrequency(TacanChannelNumber, "Y")
+	local BeaconFrequency = knownFrequency or UTILS.TACANToFrequency(TacanChannelNumber, "Y")
 	if not BeaconFrequency then return end
 	local UnitController = TankerUnit:getController()
 	if not UnitController then return end
@@ -105441,11 +105612,12 @@ function spawnArcoAt(zoneOrCoord, heading, leg, zoneLabel, fromRestore, delayMen
 	else
 		if pvpEnabled then _setTankerCurrentSpeed("arco", _getTankerDefaultSpeed("arco"), ownerSide) else _setTankerCurrentSpeed("arco", _getTankerDefaultSpeed("arco")) end
 	end
+	local radioSettings = bc:getTankerRadioSettings("arco", pvpEnabled and ownerSide or coalition.side.BLUE)
 	local g
 	if pvpEnabled then
-		g = Respawn.SpawnAtPoint('Arco', spawn.coord, spawn.heading, 2, arcoAltFt, ARCO_DEFAULT_SPEED_KT, nil, 'Arco-PvP-' .. ownerSide, nil, nil, ownerSide == coalition.side.RED and 81 or nil)
+		g = Respawn.SpawnAtPoint('Arco', spawn.coord, spawn.heading, 2, arcoAltFt, ARCO_DEFAULT_SPEED_KT, nil, 'Arco-PvP-' .. ownerSide, nil, nil, ownerSide == coalition.side.RED and 81 or nil, nil, radioSettings)
 	else
-		g = Respawn.SpawnAtPoint('Arco', spawn.coord, spawn.heading, 2, arcoAltFt, ARCO_DEFAULT_SPEED_KT)
+		g = Respawn.SpawnAtPoint('Arco', spawn.coord, spawn.heading, 2, arcoAltFt, ARCO_DEFAULT_SPEED_KT, nil, nil, nil, nil, nil, nil, radioSettings)
 	end
 	if not g then return end
 	local zoneToSave = spawn.zoneName or ((zoneLabel and zoneLabel ~= "saved position") and zoneLabel or nil)
@@ -105470,33 +105642,34 @@ function spawnArcoAt(zoneOrCoord, heading, leg, zoneLabel, fromRestore, delayMen
 		local groupController = supportGroup:getController()
 		ApplyProtectionCommandsToGroupController(groupController, GROUP:FindByName(supportGroup:getName()))
 		local arcoUnit = supportGroup:getUnit(1)
-		if pvpEnabled and ownerSide == coalition.side.RED then ActivateTankerBeacon(arcoUnit, 104, "RAC") else ActivateTankerBeacon(arcoUnit, 101, "ARC") end
+		ActivateTankerBeacon(arcoUnit, radioSettings.tacanChannel, radioSettings.callsign, radioSettings.tacanFrequency)
+		local radioInfo = bc:formatTankerRadioInfo(radioSettings, L10N)
 		local speed, station
 		if pvpEnabled then
 			station = _getTankerState("arco", ownerSide)
 			speed = _getTankerCurrentSpeed("arco", station, ownerSide) or _getTankerDefaultSpeed("arco") or ARCO_DEFAULT_SPEED_KT
 			if not setArcoRacetrack(COORDINATE:New(station.x, station.y, station.z), station.heading, station.leg, station.zone, speed, true, ownerSide, arcoUnit) then return end
-			startArcoProximityWatch(ownerSide, runtime, arcoUnit)
+			startArcoProximityWatch(ownerSide, runtime, arcoUnit, radioInfo)
 		else
 		local speed = _getTankerCurrentSpeed("arco") or _getTankerDefaultSpeed("arco") or ARCO_DEFAULT_SPEED_KT
 		setArcoRacetrack(spawn.coord, spawn.heading, spawnLeg, zoneToSave, speed, true)
-		startArcoProximityWatch()
+		startArcoProximityWatch(nil, nil, arcoUnit, radioInfo)
 		end
 		local msg
 		if pvpEnabled then
 			if fromRestore then
-				msg = station.leg == 0 and L10N:Get("DYNAMIC_ARCO_STATION_ORBIT") or L10N:Format("DYNAMIC_ARCO_STATION_RACETRACK", string.format("%.0f", station.heading), tostring(station.leg))
+				msg = station.leg == 0 and L10N:Format("DYNAMIC_ARCO_STATION_ORBIT", radioInfo) or L10N:Format("DYNAMIC_ARCO_STATION_RACETRACK", radioInfo, string.format("%.0f", station.heading), tostring(station.leg))
 			else
-				msg = station.leg == 0 and L10N:Format("DYNAMIC_ARCO_STATION_ORBIT_AT", station.zone or spawn.label) or L10N:Format("DYNAMIC_ARCO_STATION_RACETRACK_AT", station.zone or spawn.label, station.heading, tostring(station.leg))
+				msg = station.leg == 0 and L10N:Format("DYNAMIC_ARCO_STATION_ORBIT_AT", radioInfo, station.zone or spawn.label) or L10N:Format("DYNAMIC_ARCO_STATION_RACETRACK_AT", radioInfo, station.zone or spawn.label, station.heading, tostring(station.leg))
 			end
 		elseif fromRestore then
 			msg = (spawnLeg == 0)
-				and L10N:Get("DYNAMIC_ARCO_STATION_ORBIT")
-				or L10N:Format("DYNAMIC_ARCO_STATION_RACETRACK", string.format("%.0f", spawn.heading), string.format("%.0f", spawnLeg))
+				and L10N:Format("DYNAMIC_ARCO_STATION_ORBIT", radioInfo)
+				or L10N:Format("DYNAMIC_ARCO_STATION_RACETRACK", radioInfo, string.format("%.0f", spawn.heading), string.format("%.0f", spawnLeg))
 		else
 			msg = (spawnLeg == 0)
-				and L10N:Format("DYNAMIC_ARCO_STATION_ORBIT_AT", spawn.label)
-				or  L10N:Format("DYNAMIC_ARCO_STATION_RACETRACK_AT", spawn.label, spawn.heading, tostring(spawnLeg))
+				and L10N:Format("DYNAMIC_ARCO_STATION_ORBIT_AT", radioInfo, spawn.label)
+				or  L10N:Format("DYNAMIC_ARCO_STATION_RACETRACK_AT", radioInfo, spawn.label, spawn.heading, tostring(spawnLeg))
 		end
 		if pvpEnabled then MESSAGE:New(msg, 20):ToCoalition(ownerSide) else MESSAGE:New(msg, 20):ToBlue() end
 		if pvpEnabled then
@@ -105562,11 +105735,12 @@ function spawnTexacoAt(zoneOrCoord, heading, leg, zoneLabel, fromRestore, delayM
 	else
 		if pvpEnabled then _setTankerCurrentSpeed("texaco", _getTankerDefaultSpeed("texaco"), ownerSide) else _setTankerCurrentSpeed("texaco", _getTankerDefaultSpeed("texaco")) end
 	end
+	local radioSettings = bc:getTankerRadioSettings("texaco", pvpEnabled and ownerSide or coalition.side.BLUE)
 	local g
 	if pvpEnabled then
-		g = Respawn.SpawnAtPoint('Texaco', spawn.coord, spawn.heading, 2, texacoAltFt, TEXACO_DEFAULT_SPEED_KT, nil, 'Texaco-PvP-' .. ownerSide, nil, nil, ownerSide == coalition.side.RED and 81 or nil)
+		g = Respawn.SpawnAtPoint('Texaco', spawn.coord, spawn.heading, 2, texacoAltFt, TEXACO_DEFAULT_SPEED_KT, nil, 'Texaco-PvP-' .. ownerSide, nil, nil, ownerSide == coalition.side.RED and 81 or nil, nil, radioSettings)
 	else
-		g = Respawn.SpawnAtPoint('Texaco', spawn.coord, spawn.heading, 2, texacoAltFt, TEXACO_DEFAULT_SPEED_KT)
+		g = Respawn.SpawnAtPoint('Texaco', spawn.coord, spawn.heading, 2, texacoAltFt, TEXACO_DEFAULT_SPEED_KT, nil, nil, nil, nil, nil, nil, radioSettings)
 	end
 	if not g then return end
 	local zoneToSave = spawn.zoneName or ((zoneLabel and zoneLabel ~= "saved position") and zoneLabel or nil)
@@ -105591,33 +105765,34 @@ function spawnTexacoAt(zoneOrCoord, heading, leg, zoneLabel, fromRestore, delayM
 		local groupController = supportGroup:getController()
 		ApplyProtectionCommandsToGroupController(groupController, GROUP:FindByName(supportGroup:getName()))
 		local texacoUnit = supportGroup:getUnit(1)
-		if pvpEnabled and ownerSide == coalition.side.RED then ActivateTankerBeacon(texacoUnit, 105, "RTX") else ActivateTankerBeacon(texacoUnit, 102, "TEX") end
+		ActivateTankerBeacon(texacoUnit, radioSettings.tacanChannel, radioSettings.callsign, radioSettings.tacanFrequency)
+		local radioInfo = bc:formatTankerRadioInfo(radioSettings, L10N)
 		local speed, station
 		if pvpEnabled then
 			station = _getTankerState("texaco", ownerSide)
 			speed = _getTankerCurrentSpeed("texaco", station, ownerSide) or _getTankerDefaultSpeed("texaco") or TEXACO_DEFAULT_SPEED_KT
 			if not setTexacoRacetrack(COORDINATE:New(station.x, station.y, station.z), station.heading, station.leg, station.zone, speed, true, ownerSide, texacoUnit) then return end
-			startTexacoProximityWatch(ownerSide, runtime, texacoUnit)
+			startTexacoProximityWatch(ownerSide, runtime, texacoUnit, radioInfo)
 		else
 		local speed = _getTankerCurrentSpeed("texaco") or _getTankerDefaultSpeed("texaco") or TEXACO_DEFAULT_SPEED_KT
 		setTexacoRacetrack(spawn.coord, spawn.heading, spawnLeg, zoneToSave, speed, true)
-		startTexacoProximityWatch()
+		startTexacoProximityWatch(nil, nil, texacoUnit, radioInfo)
 		end
 		local msg
 		if pvpEnabled then
 			if fromRestore then
-				msg = station.leg == 0 and L10N:Get("DYNAMIC_TEXACO_STATION_ORBIT") or L10N:Format("DYNAMIC_TEXACO_STATION_RACETRACK", string.format("%.0f", station.heading), tostring(station.leg))
+				msg = station.leg == 0 and L10N:Format("DYNAMIC_TEXACO_STATION_ORBIT", radioInfo) or L10N:Format("DYNAMIC_TEXACO_STATION_RACETRACK", radioInfo, string.format("%.0f", station.heading), tostring(station.leg))
 			else
-				msg = station.leg == 0 and L10N:Format("DYNAMIC_TEXACO_STATION_ORBIT_AT", station.zone or spawn.label) or L10N:Format("DYNAMIC_TEXACO_STATION_RACETRACK_AT", station.zone or spawn.label, station.heading, tostring(station.leg))
+				msg = station.leg == 0 and L10N:Format("DYNAMIC_TEXACO_STATION_ORBIT_AT", radioInfo, station.zone or spawn.label) or L10N:Format("DYNAMIC_TEXACO_STATION_RACETRACK_AT", radioInfo, station.zone or spawn.label, station.heading, tostring(station.leg))
 			end
 		elseif fromRestore then
 			msg = (spawnLeg == 0)
-				and L10N:Get("DYNAMIC_TEXACO_STATION_ORBIT")
-				or  L10N:Format("DYNAMIC_TEXACO_STATION_RACETRACK", spawn.heading, tostring(spawnLeg))
+				and L10N:Format("DYNAMIC_TEXACO_STATION_ORBIT", radioInfo)
+				or  L10N:Format("DYNAMIC_TEXACO_STATION_RACETRACK", radioInfo, spawn.heading, tostring(spawnLeg))
 		else
 			msg = (spawnLeg == 0)
-				and L10N:Format("DYNAMIC_TEXACO_STATION_ORBIT_AT", spawn.label)
-				or  L10N:Format("DYNAMIC_TEXACO_STATION_RACETRACK_AT", spawn.label, spawn.heading, tostring(spawnLeg))
+				and L10N:Format("DYNAMIC_TEXACO_STATION_ORBIT_AT", radioInfo, spawn.label)
+				or  L10N:Format("DYNAMIC_TEXACO_STATION_RACETRACK_AT", radioInfo, spawn.label, spawn.heading, tostring(spawnLeg))
 		end
 		if pvpEnabled then MESSAGE:New(msg, 20):ToCoalition(ownerSide) else MESSAGE:New(msg, 20):ToBlue() end
 		if pvpEnabled then

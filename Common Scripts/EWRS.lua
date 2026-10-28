@@ -109,7 +109,7 @@ end
 
 ----SCRIPT OPTIONS----
 
-ewrs.messageUpdateInterval = ewrs_messageUpdateInterval or 60 --How often EWRS will update automated BRA messages (seconds)
+ewrs.messageUpdateInterval = ewrs_messageUpdateInterval or 20 --How often EWRS will update automated BRA messages (seconds)
 ewrs.messageDisplayTime = ewrs_messageDisplayTime or 15 --How long EWRS BRA messages will show for (seconds)
 if ewrs_restrictToOneReference ~= nil then ewrs.restrictToOneReference = ewrs_restrictToOneReference else ewrs.restrictToOneReference = false end -- Disables the ability to change the BRA calls from pilot's own aircraft or bullseye. If this is true, set ewrs.defaultReference to the option you want to restrict to.
 ewrs.defaultReference = ewrs_defaultReference or "self" --The default reference for BRA calls - can be changed via f10 radio menu if ewrs.restrictToOneReference is false (self or bulls)
@@ -1659,7 +1659,7 @@ if not ewrs.onDemand then
     end
   end
   ewrs.inAuto=false
-  return time + 20
+  return time + ewrs.messageUpdateInterval
 end, nil, timer.getTime() + 6)
 end
 --trigger.action.outText("EWRS by Steggles is now running",15)
