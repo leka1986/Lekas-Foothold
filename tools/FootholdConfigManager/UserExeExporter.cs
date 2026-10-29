@@ -8,17 +8,33 @@ internal static class UserExeExporter
     {
         var projectDir = FindProjectDirectory() ??
                          throw new InvalidOperationException("Could not find FootholdConfigManager.csproj. Export is available only from the admin/source copy of the tool.");
-        var metadataPath = Path.Combine(projectDir, "EmbeddedGuiMetadata.json");
-        var buildModePath = Path.Combine(projectDir, "EmbeddedBuildMode.txt");
-        var publishDir = Path.Combine(projectDir, "bin", "UserExport-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+        var exportDir = Path.Combine(Path.GetTempPath(), "FootholdConfigManagerExport-" + Guid.NewGuid().ToString("N"));
+        var buildDir = Path.Combine(exportDir, "source");
+        var metadataPath = Path.Combine(buildDir, "EmbeddedGuiMetadata.json");
+        var buildModePath = Path.Combine(buildDir, "EmbeddedBuildMode.txt");
+        var publishDir = Path.Combine(exportDir, "publish");
 
         try
         {
+            Directory.CreateDirectory(buildDir);
+            foreach (var sourceFile in Directory.EnumerateFiles(projectDir))
+            {
+                File.Copy(sourceFile, Path.Combine(buildDir, Path.GetFileName(sourceFile)));
+            }
+
+            var configDir = Path.Combine(exportDir, "test-configs");
+            Directory.CreateDirectory(configDir);
+            foreach (var configFileName in RuntimeSettings.SupportedConfigFileNames)
+            {
+                File.Copy(Path.Combine(projectDir, "..", "test-configs", configFileName),
+                    Path.Combine(configDir, configFileName));
+            }
+
             File.WriteAllText(metadataPath, document.Metadata.ToJson());
             File.WriteAllText(buildModePath, buildMode);
 
             Directory.CreateDirectory(publishDir);
-            var result = RunDotnetPublish(projectDir, publishDir);
+            var result = RunDotnetPublish(buildDir, publishDir);
             if (result.ExitCode != 0)
             {
                 throw new InvalidOperationException("dotnet publish failed:" + Environment.NewLine + result.Output);
@@ -36,9 +52,7 @@ internal static class UserExeExporter
         }
         finally
         {
-            TryDeleteFile(metadataPath);
-            TryDeleteFile(buildModePath);
-            TryDeleteDirectory(publishDir);
+            TryDeleteDirectory(exportDir);
         }
     }
 
@@ -66,8 +80,10 @@ internal static class UserExeExporter
         process.StartInfo.ArgumentList.Add(publishDir);
 
         process.Start();
-        var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        var standardError = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
+        var output = standardOutput.GetAwaiter().GetResult() + standardError.GetAwaiter().GetResult();
         return (process.ExitCode, output);
     }
 
@@ -86,21 +102,6 @@ internal static class UserExeExporter
         }
 
         return null;
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-            // Best-effort cleanup only; export result is already determined.
-        }
     }
 
     private static void TryDeleteDirectory(string path)

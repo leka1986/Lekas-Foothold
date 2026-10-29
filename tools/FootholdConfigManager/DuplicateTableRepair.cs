@@ -27,9 +27,11 @@ internal static class DuplicateTableRepair
         ConfigDocument incomingDocument)
     {
         var result = new DuplicateTableRepairResult();
+        var duplicateTables = FindDirectDuplicateTableKeys(playerDocument);
+        if (duplicateTables.Count == 0) return result;
         var cleanIncomingDocument = ConfigDocument.Load(incomingDocument.Path);
 
-        foreach (var table in FindDirectDuplicateTableKeys(playerDocument))
+        foreach (var table in duplicateTables)
         {
             var playerRows = GetEffectiveRows(playerDocument, table);
             var previousRows = previousCleanDocument is null
@@ -54,7 +56,7 @@ internal static class DuplicateTableRepair
             try
             {
                 OverlayPlayerValues(incomingDocument, table, playerRows, previousRows, previousCleanDocument is not null);
-                var errors = incomingDocument.Validate();
+                var errors = incomingDocument.ValidateForImport(new List<string>());
                 if (errors.Count > 0)
                 {
                     throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
@@ -239,7 +241,7 @@ internal static class DuplicateTableRepair
         var preservedWholeTable = incomingDocument.TryGetTableBlockText(table, out _)
             ? incomingDocument.ReplaceTableBodyFrom(playerDocument, table)
             : incomingDocument.AppendTableBlockFrom(playerDocument, table);
-        if (preservedWholeTable && incomingDocument.Validate().Count == 0)
+        if (preservedWholeTable && incomingDocument.ValidateForImport(new List<string>()).Count == 0)
         {
             result.HandledTables.Add(table);
             result.PreservedWholeTables.Add(table);
@@ -257,7 +259,7 @@ internal static class DuplicateTableRepair
                                  incomingDocument.RemoveTableBlock(table);
         }
 
-        if (!cleanTableRestored || incomingDocument.Validate().Count > 0)
+        if (!cleanTableRestored || incomingDocument.ValidateForImport(new List<string>()).Count > 0)
         {
             throw new InvalidOperationException("Could not restore the clean table state for " + table + ".");
         }

@@ -132,7 +132,7 @@ internal sealed partial class MainForm
 
     private string? RunSupportedZoomSmoke()
     {
-        foreach (var zoomPercent in new[] { 80, 90, 100, 110, 120, 130, 140, 150 })
+        foreach (var zoomPercent in new[] { 80, 90, 100, 110, 120, 130 })
         {
             SetUiZoom(zoomPercent, persist: false);
             for (var index = 0; index < _categoryList.Items.Count; index++)

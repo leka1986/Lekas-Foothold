@@ -5,6 +5,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+#if !FOOTHOLD_USER_BUILD
         if (args.Length > 0 && args[0].Equals("--self-test-stability", StringComparison.OrdinalIgnoreCase))
         {
             return StabilityRegressionSelfTest.Run();
@@ -20,6 +21,7 @@ internal static class Program
             ApplicationConfiguration.Initialize();
             return MainForm.RunPerformanceProbe(args.Skip(1).ToList());
         }
+#endif
 
         if (args.Length > 0 && args[0].Equals("--check", StringComparison.OrdinalIgnoreCase))
         {

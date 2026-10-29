@@ -10,11 +10,13 @@ namespace FootholdConfigManager;
 internal sealed partial class MainForm : Form
 {
     private const string AdminPassword = "configfoothold";
+    private const string TestingPassword = "testing";
     private const string DiscordInviteUrl = "https://discord.gg/cshgmgXuxE";
     private const string GitHubRepositoryUrl = "https://github.com/leka1986/Lekas-Foothold";
     private const int TableActionColumnWidth = 168;
     private const int TableActionButtonWidth = 148;
-    private const float BaseFontSize = 9F;
+    private const float BaseFontSize = 10.5F;
+    private const float UiZoomBaselinePercent = 125F;
     private const string ToolbarSeparatorTag = "ToolbarSeparator";
     private const string AboutLinkTag = "AboutLink";
     private const string ImportedNewHighlightTag = "ImportedNewHighlight";
@@ -33,6 +35,7 @@ internal sealed partial class MainForm : Form
     private static Color PrimaryTextColor = Color.FromArgb(17, 24, 39);
     private static Color HelpTextColor = Color.FromArgb(61, 75, 89);
     private static Color BorderColor = Color.FromArgb(134, 151, 166);
+    private static Color ControlBorderColor => IsDarkPalette() ? BorderColor : Color.FromArgb(100, 117, 137);
     private static Color ButtonBackground = Color.FromArgb(236, 242, 246);
     private static Color HeaderBackground = Color.FromArgb(207, 220, 229);
     private static Color SelectionBackground = Color.FromArgb(36, 71, 102);
@@ -53,10 +56,12 @@ internal sealed partial class MainForm : Form
         string? CollapseKey = null,
         string? BeforeValue = null,
         string? AfterValue = null,
-        int CollapseGeneration = 0);
+        int CollapseGeneration = 0,
+        Func<string?>? Preflight = null);
     private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly, bool IsNew);
     private sealed record ImportedNewEntryMarker(string Category, string DisplayKey);
     private sealed record SideMultiplierPreviewBinding(ConfigEntry Entry, NumericUpDown Input, bool IsRed);
+    private sealed record StageEditorBinding(string Key, DataGridView Grid, Control Actions, Label LockNote, Label LockedPrefix);
     private sealed class EntryEditorBinding
     {
         public EntryEditorBinding(ConfigEntry entry, Control editor, Label lockedPrefix, Label helpText, string description)
@@ -77,7 +82,8 @@ internal sealed partial class MainForm : Form
 
     private sealed class TableEditorBinding
     {
-        public TableEditorBinding(string key, string title, string helpText, FlowLayoutPanel header, DataGridView grid, Button addButton, Button removeButton)
+        internal TupleChoiceSnapshot? TupleChoices { get; set; }
+        public TableEditorBinding(string key, string title, string helpText, FlowLayoutPanel header, DataGridView grid, Button addButton, Button removeButton, Label rowLockNote, Label lockedPrefix)
         {
             Key = key;
             Title = title;
@@ -86,6 +92,8 @@ internal sealed partial class MainForm : Form
             Grid = grid;
             AddButton = addButton;
             RemoveButton = removeButton;
+            RowLockNote = rowLockNote;
+            LockedPrefix = lockedPrefix;
         }
 
         public string Key { get; }
@@ -95,6 +103,14 @@ internal sealed partial class MainForm : Form
         public DataGridView Grid { get; }
         public Button AddButton { get; }
         public Button RemoveButton { get; }
+        public Label RowLockNote { get; }
+        public Label LockedPrefix { get; }
+        public LinkedTableData? Linked { get; set; }
+        public List<ConfigEntry>? Entries { get; set; }
+        public Label? SharedNote { get; set; }
+        public int StructureVersion { get; set; }
+        public string? DisplayedHelpText { get; set; }
+        public bool DisplayedHelpEditable { get; set; }
     }
 
     private sealed record ConfigVariantItem(string Label, string Path)
@@ -268,12 +284,13 @@ internal sealed partial class MainForm : Form
             e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
             using var fill = new SolidBrush(fillColor);
-            e.Graphics.FillRectangle(fill, bounds);
+            using var shape = ConfigSearchSurface.RoundedRectangle(new RectangleF(0.5F, 0.5F, bounds.Width - 1, bounds.Height - 1), 5);
+            e.Graphics.FillPath(fill, shape);
             var borderColor = Enabled && (_hover || _pressed)
                 ? HoverBorderColor.IsEmpty ? BrandColor : HoverBorderColor
                 : NormalBorderColor.IsEmpty ? BorderColor : NormalBorderColor;
             using var border = new Pen(borderColor, _pressed ? 2 : 1);
-            e.Graphics.DrawRectangle(border, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
+            e.Graphics.DrawPath(border, shape);
 
             var undoIcon = IconKind == ToolbarIconKind.Undo;
             var iconSize = undoIcon
@@ -341,11 +358,12 @@ internal sealed partial class MainForm : Form
         new("AllowMods", "Era", "Locked while Era is Gulfwar or Coldwar.", "Gulfwar", "Coldwar")
     };
 
-    private sealed class SmoothDataGridView : DataGridView
+    private sealed partial class SmoothDataGridView : DataGridView
     {
         public SmoothDataGridView()
         {
             DoubleBuffered = true;
+            InitializeScrollbarPresentation();
         }
     }
 
@@ -572,7 +590,7 @@ internal sealed partial class MainForm : Form
             graphics.DrawLine(pen, cx + half, cy - half, cx - half, cy + half);
         }
 
-        private static System.Drawing.Drawing2D.GraphicsPath RoundedRectangle(RectangleF bounds, float radius)
+        internal static System.Drawing.Drawing2D.GraphicsPath RoundedRectangle(RectangleF bounds, float radius)
         {
             var path = new System.Drawing.Drawing2D.GraphicsPath();
             var diameter = Math.Min(Math.Min(bounds.Width, bounds.Height), Math.Max(0, radius * 2F));
@@ -780,6 +798,7 @@ internal sealed partial class MainForm : Form
         public List<ConfigEntry> Entries { get; }
         public ConfigStringListTable? StringListTable { get; }
         public ConfigStageTable? StageTable { get; }
+        public LinkedTableData? Linked { get; set; }
 
         public override string ToString()
         {
@@ -1057,8 +1076,10 @@ internal sealed partial class MainForm : Form
 
     private sealed class MizMergePreview
     {
+        public List<string> ImportWarnings { get; } = new();
         public List<MizKeptValue> KeptValues { get; } = new();
         public List<ConfigEntry> NewEntries { get; } = new();
+        public Dictionary<string, ImportedNewEntryMarker> NewEditorMarkers { get; } = new(StringComparer.Ordinal);
         public List<(string Table, int ItemCount)> KeptStringListTables { get; } = new();
         public List<MizKeptTableBlock> KeptTableBlocks { get; } = new();
         public List<(string Key, string Value)> PreservedTableRows { get; } = new();
@@ -1157,6 +1178,7 @@ internal sealed partial class MainForm : Form
         public string OtherValue { get; }
         public string HelpText { get; }
         public bool Selected { get; set; } = true;
+        public InstanceImportPlan? ImportPlan { get; set; }
     }
 
     private readonly List<CategorySpec> _categories = new()
@@ -1325,7 +1347,7 @@ internal sealed partial class MainForm : Form
     private readonly Label _redMultiplierText = new();
     private readonly Label _blueMultiplierText = new();
     private readonly TableLayoutPanel _tuplePanel = new();
-    private readonly ListBox _categoryList = new();
+    private readonly ListBox _categoryList = new CategoryNavigationListBox();
     private readonly ListBox _searchResultsList = new();
     private ConfigSearchSurface? _configSearchSurface;
     private readonly Panel _formHost = new BackgroundFocusPanel();
@@ -1342,6 +1364,7 @@ internal sealed partial class MainForm : Form
     private readonly Label _footerVersionLabel = new();
     private readonly Label _discordLabel = new();
     private readonly Label _zoomLabel = new();
+    private ContextMenuStrip? _fileMenu;
     private ContextMenuStrip? _updateConfigMenu;
     private ContextMenuStrip? _manageInstanceMenu;
     private ThemeIconButton? _themeButton;
@@ -1371,6 +1394,7 @@ internal sealed partial class MainForm : Form
     private bool _pendingNewItemLoadWarningShown;
     private readonly bool _requestAdminOnLoad;
     private bool _adminUnlocked;
+    private bool _testingUnlocked;
     private bool _loadingEntry;
     private bool _loadingForm;
     private bool _loadingInstances;
@@ -1418,10 +1442,10 @@ internal sealed partial class MainForm : Form
         ApplyApplicationIcon();
         MinimumSize = GetMainMinimumSize(Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080));
         StartPosition = FormStartPosition.Manual;
-        _uiZoomPercent = Math.Clamp(_settings.UiZoomPercent, 80, 150);
+        _uiZoomPercent = Math.Clamp(_settings.UiZoomPercent, 80, 130);
         _darkMode = _settings.DarkMode;
         ApplyThemePalette();
-        Font = new Font("Segoe UI", BaseFontSize * _uiZoomPercent / 100F);
+        Font = new Font("Segoe UI", BaseFontSize * _uiZoomPercent / UiZoomBaselinePercent);
         BackColor = MainBackground;
         ForeColor = PrimaryTextColor;
         ApplyInitialWindowBounds();
@@ -1437,6 +1461,7 @@ internal sealed partial class MainForm : Form
             RestoreConfigSearchHighlight();
             ClearCategoryPanelCache();
         };
+        Disposed += (_, _) => _releaseManagedNewReview?.Invoke();
         Load += (_, _) =>
         {
             RefreshDcsDesanitizeStatus(updateStatusLine: false);
@@ -1468,15 +1493,15 @@ internal sealed partial class MainForm : Form
     {
         if (_darkMode)
         {
-            MainBackground = Color.FromArgb(37, 37, 38);
-            EditorBackground = Color.FromArgb(30, 30, 30);
-            InputBackground = Color.FromArgb(45, 45, 48);
-            PrimaryTextColor = Color.FromArgb(230, 230, 230);
-            HelpTextColor = Color.FromArgb(198, 198, 198);
-            BorderColor = Color.FromArgb(80, 80, 86);
-            ButtonBackground = Color.FromArgb(45, 45, 48);
-            HeaderBackground = Color.FromArgb(51, 51, 51);
-            SelectionBackground = Color.FromArgb(38, 79, 120);
+            MainBackground = Color.FromArgb(20, 26, 35);
+            EditorBackground = Color.FromArgb(24, 32, 43);
+            InputBackground = Color.FromArgb(30, 40, 53);
+            PrimaryTextColor = Color.FromArgb(230, 237, 246);
+            HelpTextColor = Color.FromArgb(165, 182, 202);
+            BorderColor = Color.FromArgb(57, 72, 91);
+            ButtonBackground = Color.FromArgb(30, 40, 53);
+            HeaderBackground = Color.FromArgb(35, 46, 61);
+            SelectionBackground = Color.FromArgb(39, 67, 101);
             SelectionText = Color.White;
             UndoBackground = Color.FromArgb(79, 63, 28);
             UndoMutedBorder = Color.FromArgb(126, 95, 45);
@@ -1489,23 +1514,23 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        MainBackground = Color.FromArgb(221, 229, 234);
-        EditorBackground = Color.FromArgb(238, 243, 246);
-        InputBackground = Color.FromArgb(248, 251, 253);
-        PrimaryTextColor = Color.FromArgb(17, 24, 39);
-        HelpTextColor = Color.FromArgb(61, 75, 89);
-        BorderColor = Color.FromArgb(134, 151, 166);
-        ButtonBackground = Color.FromArgb(236, 242, 246);
-        HeaderBackground = Color.FromArgb(207, 220, 229);
-        SelectionBackground = Color.FromArgb(36, 71, 102);
-        SelectionText = Color.White;
+        MainBackground = Color.FromArgb(230, 236, 242);
+        EditorBackground = Color.FromArgb(211, 221, 231);
+        InputBackground = Color.FromArgb(248, 250, 252);
+        PrimaryTextColor = Color.FromArgb(31, 45, 61);
+        HelpTextColor = Color.FromArgb(70, 90, 109);
+        BorderColor = Color.FromArgb(183, 196, 209);
+        ButtonBackground = Color.FromArgb(248, 250, 252);
+        HeaderBackground = Color.FromArgb(220, 228, 237);
+        SelectionBackground = Color.FromArgb(199, 221, 238);
+        SelectionText = Color.FromArgb(31, 45, 61);
         UndoBackground = Color.FromArgb(244, 232, 203);
         UndoMutedBorder = Color.FromArgb(176, 128, 48);
         UndoMutedText = Color.FromArgb(102, 75, 30);
-        SavePendingBackground = Color.FromArgb(218, 235, 249);
-        SavePendingHoverBackground = Color.FromArgb(202, 226, 246);
-        SavePendingBorder = Color.FromArgb(30, 115, 216);
-        BrandColor = Color.FromArgb(30, 136, 183);
+        SavePendingBackground = Color.FromArgb(199, 221, 238);
+        SavePendingHoverBackground = Color.FromArgb(219, 229, 239);
+        SavePendingBorder = Color.FromArgb(36, 91, 131);
+        BrandColor = Color.FromArgb(36, 91, 131);
         LockedTextColor = Color.Firebrick;
     }
 
@@ -1527,6 +1552,8 @@ internal sealed partial class MainForm : Form
         BackColor = MainBackground;
         ForeColor = PrimaryTextColor;
         ApplyThemeToControl(this, restyleButtons: true);
+        _categoryList.Invalidate();
+        ApplyOptionsMarkers();
         RestyleStageDifficultyButtons(this);
         _status.ForeColor = PrimaryTextColor;
         _zoomLabel.ForeColor = PrimaryTextColor;
@@ -1546,8 +1573,10 @@ internal sealed partial class MainForm : Form
 
     private void StyleToolbarMenus()
     {
+        StyleToolbarMenu(_fileMenu);
         StyleToolbarMenu(_updateConfigMenu);
         StyleToolbarMenu(_manageInstanceMenu);
+        StyleToolbarMenu(_zoomLabel.ContextMenuStrip);
     }
 
     private void StyleToolbarMenu(ContextMenuStrip? menu)
@@ -1572,7 +1601,7 @@ internal sealed partial class MainForm : Form
         switch (control)
         {
             case ConfigSearchSurface searchSurface:
-                searchSurface.ApplyPalette(InputBackground, BorderColor, BrandColor, HelpTextColor, HeaderBackground);
+                searchSurface.ApplyPalette(InputBackground, ControlBorderColor, BrandColor, HelpTextColor, HeaderBackground);
                 break;
 
             case TextBoxBase:
@@ -1727,11 +1756,12 @@ internal sealed partial class MainForm : Form
         StyleToolbarIconButton(_saveButton);
         if (hasChanges)
         {
-            _saveButton.NormalBackColor = SavePendingBackground;
+            _saveButton.NormalBackColor = PrimaryActionColor;
+            _saveButton.ForeColor = Color.White;
+            _saveButton.HoverBackColor = IsDarkPalette() ? Color.FromArgb(0, 84, 200) : Color.FromArgb(29, 77, 112);
+            _saveButton.PressedBackColor = IsDarkPalette() ? Color.FromArgb(0, 70, 175) : Color.FromArgb(23, 63, 93);
             _saveButton.NormalBorderColor = SavePendingBorder;
-            _saveButton.HoverBackColor = SavePendingHoverBackground;
             _saveButton.HoverBorderColor = SavePendingBorder;
-            _saveButton.PressedBackColor = SelectionBackground;
         }
         else
         {
@@ -1768,18 +1798,21 @@ internal sealed partial class MainForm : Form
     {
         var panel = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 2,
-            Margin = new Padding(0),
-            Padding = new Padding(0),
-            BackColor = MainBackground
+            Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 2,
+            Margin = new Padding(0), Padding = new Padding(0), BackColor = MainBackground
         };
         _topAreaLayout = panel;
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(88)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(40)));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(32)));
-        panel.Controls.Add(BuildToolbar(), 0, 0);
-        panel.Controls.Add(BuildInstanceBar(), 0, 1);
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
+        var toolbar = BuildToolbar();
+        var fileButton = _topToolbarButtons.First(button => button.Text == "File ▼");
+        panel.Controls.Add(fileButton, 0, 0);
+        panel.Controls.Add(BuildInstanceBar(), 1, 0);
+        panel.Controls.Add(toolbar, 2, 0);
+        SizeChanged += (_, _) => { LayoutPreviewHeader(); LayoutPreviewFooter(); };
         return panel;
     }
 
@@ -1817,10 +1850,10 @@ internal sealed partial class MainForm : Form
 
     private Control BuildToolbar()
     {
-        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, BackColor = MainBackground };
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 2, BackColor = MainBackground };
         _toolbarLayout = panel;
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0));
 
         var actions = new FlowLayoutPanel
         {
@@ -1833,10 +1866,16 @@ internal sealed partial class MainForm : Form
             BackColor = MainBackground
         };
         _topToolbarButtons.Clear();
-        actions.Controls.Add(MakeToolbarButton("Open Config", OpenConfig, "Select a Foothold Config.lua file to edit.", ToolbarIconKind.Open));
-        actions.Controls.Add(MakeToolbarButton("Reload", ReloadConfig, "Reload the current config from disk and discard unsaved changes after confirmation.", ToolbarIconKind.Reload));
-        actions.Controls.Add(MakeToolbarSeparator());
-        actions.Controls.Add(MakeToolbarButton("Validate", ValidateConfig, "Check editable values for basic formatting errors before saving.", ToolbarIconKind.Validate));
+        _fileMenu = new ContextMenuStrip { ShowImageMargin = false, ShowCheckMargin = false };
+        _fileMenu.Items.Add("Open Config…", null, (_, _) => OpenConfig());
+        _fileMenu.Items.Add("Reload", null, (_, _) => ReloadConfig());
+        _fileMenu.Items.Add("Restore Defaults", null, (_, _) => RestoreConfigDefaults());
+        ToolbarIconButton fileButton = null!;
+        fileButton = MakeToolbarButton("File ▼",
+            () => _fileMenu.Show(fileButton, new Point(0, fileButton.Height)),
+            "Open, reload, or restore a config.", ToolbarIconKind.Open);
+        fileButton.ContextMenuStrip = _fileMenu;
+        actions.Controls.Add(fileButton);
         _updateConfigMenu?.Dispose();
         _updateConfigMenu = new ContextMenuStrip
         {
@@ -1854,7 +1893,6 @@ internal sealed partial class MainForm : Form
             ToolbarIconKind.Import);
         updateConfigButton.ContextMenuStrip = _updateConfigMenu;
         actions.Controls.Add(updateConfigButton);
-        actions.Controls.Add(MakeToolbarButton("Restore Defaults", RestoreConfigDefaults, "Restore from defaults previously stored during Update from MIZ.", ToolbarIconKind.Restore));
         actions.Controls.Add(MakeToolbarSeparator());
         _undoButton = MakeToolbarButton("Undo", UndoLastChange, "Revert the last unsaved edit, add, or remove action.", ToolbarIconKind.Undo);
         actions.Controls.Add(_undoButton);
@@ -1868,8 +1906,37 @@ internal sealed partial class MainForm : Form
         _pathBox.ReadOnly = true;
         StyleInput(_pathBox);
         SetToolbarHelp(_pathBox, "Current Foothold config file.");
-        panel.Controls.Add(_pathBox, 1, 0);
+        _pathBox.Visible = false;
         return panel;
+    }
+
+    private void LayoutPreviewHeader()
+    {
+        if (_topAreaLayout is null || _instanceLayout is null || _toolbarLayout is null || _rootLayout is null)
+            return;
+
+        var wrapped = ClientSize.Width < Zoomed(1250);
+        var fileButton = _topAreaLayout.GetControlFromPosition(0, 0)!;
+        var fileWidth = ToolbarIconButtonWidth(fileButton.Text, 88, fileButton.Font) + fileButton.Margin.Horizontal;
+        var toolbarSize = _toolbarLayout.GetPreferredSize(Size.Empty);
+        var instanceHeight = _instanceLayout.GetPreferredSize(Size.Empty).Height + _instanceLayout.Margin.Vertical;
+        var toolbarHeight = toolbarSize.Height + _toolbarLayout.Margin.Vertical;
+        var firstRowHeight = Math.Max(Zoomed(40), Math.Max(instanceHeight, wrapped ? 0 : toolbarHeight));
+        var secondRowHeight = wrapped ? Math.Max(Zoomed(36), toolbarHeight) : 0;
+        _topAreaLayout.SuspendLayout();
+        _topAreaLayout.SetColumnSpan(_instanceLayout, wrapped ? 2 : 1);
+        _topAreaLayout.SetCellPosition(_toolbarLayout, new TableLayoutPanelCellPosition(2, wrapped ? 1 : 0));
+        SetRowHeight(_topAreaLayout, 0, firstRowHeight);
+        SetRowHeight(_topAreaLayout, 1, secondRowHeight);
+        SetRowHeight(_rootLayout, 0, Math.Max(Zoomed(wrapped ? 80 : 44), firstRowHeight + secondRowHeight + Zoomed(4)));
+        SetColumnWidth(_topAreaLayout, 0, fileWidth);
+        var availableWidth = _topAreaLayout.ClientSize.Width - fileWidth -
+            (wrapped ? 0 : toolbarSize.Width) - Zoomed(12);
+        var fixedWidth = _instanceLayout.ColumnStyles.Cast<ColumnStyle>()
+            .Where((_, index) => index != 1 && index != 8).Sum(style => style.Width);
+        SetColumnWidth(_instanceLayout, 1, Math.Max(Zoomed(60),
+            Math.Min(Zoomed(200), (int)(availableWidth - fixedWidth))));
+        _topAreaLayout.ResumeLayout();
     }
 
     private Control MakeToolbarSeparator()
@@ -1914,7 +1981,7 @@ internal sealed partial class MainForm : Form
 
     private void ApplyTopToolbarFont(Control control)
     {
-        var targetSize = (BaseFontSize + 0.75F) * _uiZoomPercent / 100F;
+        var targetSize = (BaseFontSize + 0.75F) * _uiZoomPercent / UiZoomBaselinePercent;
         if (Math.Abs(control.Font.Size - targetSize) > 0.05F)
         {
             control.Font = new Font("Segoe UI", targetSize);
@@ -1970,16 +2037,17 @@ internal sealed partial class MainForm : Form
 
     private Control BuildInstanceBar()
     {
-        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 8, BackColor = MainBackground };
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 9, BackColor = MainBackground };
         _instanceLayout = panel;
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth("Instance", 70)));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(200)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth("Config", 55)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Normal", 95)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Advanced", 105)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Presets...", 110)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Manage ▼", 105)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Copy To...", 110)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         panel.Controls.Add(MakeLabel("Instance"), 0, 0);
         _instanceBox.Dock = DockStyle.Fill;
@@ -1987,6 +2055,7 @@ internal sealed partial class MainForm : Form
         StyleInput(_instanceBox);
         _instanceBox.SelectedIndexChanged += (_, _) => SwitchInstance();
         SetToolbarHelp(_instanceBox, "Select a saved server/config instance.");
+        _instanceBox.DropDown += (_, _) => _instanceBox.DropDownWidth = GetComboBoxDropDownWidth(_instanceBox);
         panel.Controls.Add(_instanceBox, 1, 0);
         panel.Controls.Add(MakeLabel("Config"), 2, 0);
         _configVariantBox.Dock = DockStyle.Fill;
@@ -2135,7 +2204,7 @@ internal sealed partial class MainForm : Form
         MarkAllCategoryPanelsDirty();
         var selectedCategory = GetSelectedCategoryName();
         var refreshCurrentCategory = DoesAdvancedToggleAffectCategory(selectedCategory);
-        ReloadCategoriesPreservingSelection(refreshCurrentCategory);
+        ReloadCategoriesPreservingSelection(refreshCurrentCategory, selectedCategory);
         if (IsRawCategorySelected())
         {
             RefreshGrid();
@@ -2154,14 +2223,24 @@ internal sealed partial class MainForm : Form
 
     private void SetUiZoom(int percent, bool persist)
     {
-        _uiZoomPercent = Math.Clamp(percent, 80, 150);
-        Font = new Font("Segoe UI", BaseFontSize * _uiZoomPercent / 100F);
-        UpdateZoomLabel();
-        ApplyZoomLayoutSizes();
+        var zoomPercent = Math.Clamp(percent, 80, 130);
+        var zoomChanged = zoomPercent != _uiZoomPercent;
+        _uiZoomPercent = zoomPercent;
+        if (zoomChanged)
+        {
+            Font = new Font("Segoe UI", BaseFontSize * _uiZoomPercent / UiZoomBaselinePercent);
+            UpdateZoomLabel();
+            ApplyZoomLayoutSizes();
+        }
         if (persist)
         {
             _settings.UiZoomPercent = _uiZoomPercent;
             _settings.Save();
+        }
+
+        if (!zoomChanged)
+        {
+            return;
         }
 
         ClearCategoryPanelCache();
@@ -2170,17 +2249,18 @@ internal sealed partial class MainForm : Form
 
     private void UpdateZoomLabel()
     {
-        _zoomLabel.Text = _uiZoomPercent.ToString(CultureInfo.InvariantCulture) + "%";
+        _zoomLabel.Text = _uiZoomPercent.ToString(CultureInfo.InvariantCulture) + "% ▼";
     }
 
     private int Zoomed(int value)
     {
-        return Math.Max(1, (int)Math.Ceiling(value * _uiZoomPercent / 100.0));
+        return Math.Max(1, (int)Math.Ceiling(value * _uiZoomPercent / (double)UiZoomBaselinePercent));
     }
 
     private int ToolbarButtonWidth(string text, int minimum)
     {
-        return Math.Max(Zoomed(minimum), TextRenderer.MeasureText(text, Font).Width + Zoomed(34));
+        return Math.Max(Zoomed(minimum), TextRenderer.MeasureText(text, Font, Size.Empty,
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width + Math.Max(45, Zoomed(34)));
     }
 
     private int TopToolbarButtonWidth(string text, int minimum, Font font)
@@ -2256,16 +2336,17 @@ internal sealed partial class MainForm : Form
 
     private void ApplyZoomLayoutSizes()
     {
+        _categoryList.Invalidate();
         if (_rootLayout is not null)
         {
-            SetRowHeight(_rootLayout, 0, Zoomed(76));
+            LayoutPreviewHeader();
             SetRowHeight(_rootLayout, 2, Zoomed(34));
         }
 
         if (_topAreaLayout is not null)
         {
             SetRowHeight(_topAreaLayout, 0, Zoomed(40));
-            SetRowHeight(_topAreaLayout, 1, Zoomed(32));
+            LayoutPreviewHeader();
         }
 
         if (_toolbarLayout is not null)
@@ -2273,8 +2354,8 @@ internal sealed partial class MainForm : Form
             if (_toolbarLayout.ColumnStyles.Count >= 2)
             {
                 _toolbarLayout.ColumnStyles[0].SizeType = SizeType.AutoSize;
-                _toolbarLayout.ColumnStyles[1].SizeType = SizeType.Percent;
-                _toolbarLayout.ColumnStyles[1].Width = 100;
+                _toolbarLayout.ColumnStyles[1].SizeType = SizeType.Absolute;
+                _toolbarLayout.ColumnStyles[1].Width = 0;
             }
 
             foreach (var button in _topToolbarButtons)
@@ -2306,7 +2387,7 @@ internal sealed partial class MainForm : Form
 
         if (_mainSplit is not null)
         {
-            var desiredWidth = Zoomed(250);
+            var desiredWidth = Zoomed(260);
             var maxWidth = Math.Max(Zoomed(210), ClientSize.Width / 3);
             _mainSplit.SplitterDistance = Math.Min(desiredWidth, maxWidth);
         }
@@ -2335,6 +2416,20 @@ internal sealed partial class MainForm : Form
             SetRowHeight(toolsPanel, 4, Zoomed(34));
         }
 
+        if (_statusPanel is TableLayoutPanel footer)
+        {
+            SetRowHeight(footer, 0, Zoomed(34));
+            var widths = new[] { 190, 0, 180, 42, 130, 60, 130 };
+            for (var column = 0; column < widths.Length; column++)
+                if (column != 1) SetColumnWidth(footer, column, Zoomed(widths[column]));
+            foreach (var row in footer.Controls.OfType<TableLayoutPanel>())
+            {
+                if (row.RowStyles.Count == 0) row.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(34)));
+                else SetRowHeight(row, 0, Zoomed(34));
+            }
+        }
+        LayoutPreviewHeader();
+        LayoutPreviewFooter();
         LayoutFooterLinks();
     }
 
@@ -2469,23 +2564,45 @@ internal sealed partial class MainForm : Form
 
     private Control BuildStatusBar()
     {
-        var panel = new Panel
+        var panel = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            BackColor = MainBackground
+            Dock = DockStyle.Fill, ColumnCount = 7, RowCount = 2,
+            Margin = new Padding(0), BackColor = MainBackground
         };
         _statusPanel = panel;
-
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(40)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(190)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        foreach (var width in new[] { 180, 42, 130, 60, 130 })
+            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(width)));
+        var fileLabel = new Label { Dock = DockStyle.Fill, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft };
+        void UpdateFileLabel()
+        {
+            fileLabel.Text = "Config: " + System.IO.Path.GetFileName(_pathBox.Text);
+            _toolTip.SetToolTip(fileLabel, _pathBox.Text);
+        }
+        _pathBox.TextChanged += (_, _) => UpdateFileLabel();
+        UpdateFileLabel();
+        panel.Controls.Add(fileLabel, 0, 0);
         _status.Dock = DockStyle.Fill;
         _status.TextAlign = ContentAlignment.MiddleLeft;
         _status.ForeColor = PrimaryTextColor;
-        panel.Controls.Add(_status);
+        panel.Controls.Add(_status, 1, 0);
+        var tools = (TableLayoutPanel)_leftToolsPanel!;
+        for (var row = 1; row <= 4; row++)
+            panel.Controls.Add(tools.GetControlFromPosition(0, row)!, row + 1, 0);
+        tools.Visible = false;
+        _previewCommentsButton = MakeLeftToolButton("Comments", ShowPreviewComments, "Read the comments for the selected table or category.");
+        panel.Controls.Add(_previewCommentsButton, 6, 0);
+        LayoutPreviewFooter();
         return panel;
     }
 
     private void UpdateFooterLabels()
     {
         var version = _document?.Metadata.FooterVersion?.Trim() ?? "";
+        Text = "Foothold Config Manager" + (string.IsNullOrWhiteSpace(version) ? "" : " — " + version);
         _footerVersionLabel.Text = version;
         _footerVersionLabel.Visible = !string.IsNullOrWhiteSpace(version);
     }
@@ -3153,7 +3270,7 @@ internal sealed partial class MainForm : Form
         _zoomLayout = panel;
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("A-", 42)));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Math.Max(Zoomed(62), TextRenderer.MeasureText("150%", Font).Width + Zoomed(16))));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Math.Max(Zoomed(62), TextRenderer.MeasureText("130%", Font).Width + Zoomed(16))));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("A+", 42)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(10)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(36)));
@@ -3223,7 +3340,7 @@ internal sealed partial class MainForm : Form
         button.BackColor = ButtonBackground;
         button.ForeColor = button.Enabled ? PrimaryTextColor : HelpTextColor;
         button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderColor = BorderColor;
+        button.FlatAppearance.BorderColor = ControlBorderColor;
         button.FlatAppearance.MouseOverBackColor = HeaderBackground;
         button.FlatAppearance.MouseDownBackColor = SelectionBackground;
     }
@@ -3231,7 +3348,7 @@ internal sealed partial class MainForm : Form
     private static void StyleToolbarIconButton(ToolbarIconButton button)
     {
         button.NormalBackColor = ButtonBackground;
-        button.NormalBorderColor = Color.Empty;
+        button.NormalBorderColor = IsDarkPalette() ? Color.Empty : ControlBorderColor;
         button.HoverBackColor = Color.Empty;
         button.HoverBorderColor = Color.Empty;
         button.PressedBackColor = Color.Empty;
@@ -3496,6 +3613,10 @@ internal sealed partial class MainForm : Form
         if (control is ComboBox comboBox)
         {
             comboBox.DrawItem -= DrawComboBoxItem;
+            if (comboBox is WheelSafeComboBox wheelSafeCombo)
+            {
+                wheelSafeCombo.OutlineColor = IsDarkPalette() ? Color.Empty : ControlBorderColor;
+            }
             if (IsDarkPalette())
             {
                 comboBox.FlatStyle = FlatStyle.Flat;
@@ -3504,7 +3625,7 @@ internal sealed partial class MainForm : Form
             }
             else
             {
-                comboBox.FlatStyle = FlatStyle.Popup;
+                comboBox.FlatStyle = FlatStyle.Standard;
                 comboBox.DrawMode = DrawMode.Normal;
             }
 
@@ -3549,18 +3670,20 @@ internal sealed partial class MainForm : Form
 
     private static void ApplyGridTheme(DataGridView grid)
     {
-        grid.BackgroundColor = EditorBackground;
+        grid.BackgroundColor = IsDarkPalette() ? EditorBackground : InputBackground;
         grid.GridColor = BorderColor;
-        grid.BorderStyle = BorderStyle.FixedSingle;
+        grid.BorderStyle = grid.RowHeadersVisible ? BorderStyle.None : BorderStyle.FixedSingle;
         grid.AllowUserToResizeRows = false;
         grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
         grid.RowTemplate.Resizable = DataGridViewTriState.False;
         grid.EnableHeadersVisualStyles = false;
-        grid.DefaultCellStyle.BackColor = EditorBackground;
+        if (grid is SmoothDataGridView smoothGrid) smoothGrid.RefreshScrollbarTheme();
+        grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+        grid.DefaultCellStyle.BackColor = IsDarkPalette() ? EditorBackground : InputBackground;
         grid.DefaultCellStyle.ForeColor = PrimaryTextColor;
         grid.DefaultCellStyle.SelectionBackColor = SelectionBackground;
         grid.DefaultCellStyle.SelectionForeColor = SelectionText;
-        grid.AlternatingRowsDefaultCellStyle.BackColor = EditorBackground;
+        grid.AlternatingRowsDefaultCellStyle.BackColor = IsDarkPalette() ? EditorBackground : MainBackground;
         grid.AlternatingRowsDefaultCellStyle.ForeColor = PrimaryTextColor;
         grid.ColumnHeadersDefaultCellStyle.BackColor = HeaderBackground;
         grid.ColumnHeadersDefaultCellStyle.ForeColor = PrimaryTextColor;
@@ -3756,7 +3879,7 @@ internal sealed partial class MainForm : Form
 
     private static void ApplyGridColumnTheme(DataGridViewColumn column)
     {
-        column.DefaultCellStyle.BackColor = EditorBackground;
+        column.DefaultCellStyle.BackColor = IsDarkPalette() ? EditorBackground : Color.Empty;
         column.DefaultCellStyle.ForeColor = PrimaryTextColor;
         column.DefaultCellStyle.SelectionBackColor = SelectionBackground;
         column.DefaultCellStyle.SelectionForeColor = SelectionText;
@@ -3904,21 +4027,25 @@ internal sealed partial class MainForm : Form
 
     private void UnlockAdminDesigner()
     {
-        if (AppMode.IsExportedUserBuild)
-        {
-            MessageBox.Show(this, "Admin Designer is not included in this exported user build.", "Admin Designer", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-
-        if (_adminUnlocked)
-        {
-            SelectCategory("Admin Designer");
-            return;
-        }
-
         var password = PromptForAdminPassword();
         if (password is null)
         {
+            return;
+        }
+
+        if (password.Equals(TestingPassword, StringComparison.Ordinal))
+        {
+            _testingUnlocked = true;
+            MarkAllCategoryPanelsDirty();
+            ReloadCategoriesPreservingSelection(refreshSelectedCategory: true);
+            RefreshGrid();
+            SetStatus("Testing options unlocked.");
+            return;
+        }
+
+        if (AppMode.IsExportedUserBuild)
+        {
+            MessageBox.Show(this, "Admin Designer is not included in this exported user build.", "Admin Designer", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
@@ -4070,22 +4197,23 @@ internal sealed partial class MainForm : Form
         };
 
         _categoryList.Dock = DockStyle.Fill;
-        _categoryList.BorderStyle = BorderStyle.FixedSingle;
+        _categoryList.BorderStyle = BorderStyle.None;
         _categoryList.DrawMode = DrawMode.OwnerDrawFixed;
         _categoryList.IntegralHeight = false;
         ApplyCategoryListSizing();
         StyleInput(_categoryList);
         _categoryList.DrawItem += DrawCategoryListItem;
-        _categoryList.MouseEnter += (_, _) => _categoryList.Invalidate();
-        _categoryList.MouseLeave += (_, _) => _categoryList.Invalidate();
         _categoryList.GotFocus += (_, _) => _categoryList.Invalidate();
         _categoryList.LostFocus += (_, _) => _categoryList.Invalidate();
         _categoryList.SelectedIndexChanged += (_, _) =>
         {
             if (!_loadingCategories)
             {
+                var optionsPreviousCategory = _optionsViewedCategory;
                 PrepareImportedNewMarkersForCategory(GetSelectedCategoryName());
                 RenderSelectedCategory();
+                if (string.Equals(_renderedCategoryName, GetSelectedCategoryName(), StringComparison.Ordinal))
+                    OptionsCategoryDisplayed(GetSelectedCategoryName(), optionsPreviousCategory);
             }
         };
         navigationHost.Controls.Add(_categoryList);
@@ -4125,7 +4253,7 @@ internal sealed partial class MainForm : Form
             Dock = DockStyle.Fill,
             Margin = new Padding(0, 0, 0, Zoomed(6))
         };
-        _configSearchSurface.ApplyPalette(InputBackground, BorderColor, BrandColor, HelpTextColor, HeaderBackground);
+        _configSearchSurface.ApplyPalette(InputBackground, ControlBorderColor, BrandColor, HelpTextColor, HeaderBackground);
         SetToolbarHelp(_configSearchSurface, "Search visible config names, keys, and help comments.");
         SetToolbarHelp(_searchBox, "Search visible config names, keys, and help comments.");
 
@@ -4214,6 +4342,22 @@ internal sealed partial class MainForm : Form
         UpdateZoomLabel();
         row.Controls.Add(_zoomLabel, 1, 0);
         row.Controls.Add(MakeStatusZoomButton("A+", ZoomIn, "Make manager text larger."), 2, 0);
+        row.Controls[0].Visible = false;
+        row.GetControlFromPosition(2, 0)!.Visible = false;
+        row.ColumnStyles[0].Width = 0;
+        row.ColumnStyles[0].SizeType = SizeType.Absolute;
+        row.ColumnStyles[2].Width = 0;
+        row.ColumnStyles[2].SizeType = SizeType.Absolute;
+        var zoomMenu = new ContextMenuStrip { ShowImageMargin = false };
+        foreach (var percent in new[] { 80, 90, 100, 110, 120, 130 })
+        {
+            var choice = percent;
+            zoomMenu.Items.Add(choice + "%", null, (_, _) => SetUiZoom(choice, persist: true));
+        }
+        _zoomLabel.ContextMenuStrip = zoomMenu;
+        _zoomLabel.Cursor = Cursors.Hand;
+        _zoomLabel.Click += (_, _) => zoomMenu.Show(_zoomLabel, Point.Empty, ToolStripDropDownDirection.AboveRight);
+        _zoomLabel.Disposed += (_, _) => zoomMenu.Dispose();
         _zoomLayout = row;
         return row;
     }
@@ -4245,18 +4389,18 @@ internal sealed partial class MainForm : Form
 
     private void ApplyCategoryListSizing()
     {
-        var targetSize = (BaseFontSize + 1F) * _uiZoomPercent / 100F;
+        var targetSize = BaseFontSize * _uiZoomPercent / UiZoomBaselinePercent;
         if (Math.Abs(_categoryList.Font.Size - targetSize) > 0.05F)
         {
             _categoryList.Font = new Font("Segoe UI", targetSize);
         }
 
-        _categoryList.ItemHeight = Math.Max(Zoomed(28), _categoryList.Font.Height + Zoomed(10));
+        _categoryList.ItemHeight = Math.Max(Zoomed(42), _categoryList.Font.Height + Zoomed(14));
     }
 
     private void ApplyConfigSearchResultListSizing()
     {
-        var targetSize = (BaseFontSize + 0.5F) * _uiZoomPercent / 100F;
+        var targetSize = (BaseFontSize + 0.5F) * _uiZoomPercent / UiZoomBaselinePercent;
         if (Math.Abs(_searchResultsList.Font.Size - targetSize) > 0.05F)
         {
             _searchResultsList.Font = new Font("Segoe UI", targetSize);
@@ -4277,7 +4421,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        _configSearchSurface.Margin = new Padding(0, 0, 0, Zoomed(6));
+        _configSearchSurface.Margin = new Padding(Zoomed(3), Zoomed(3), Zoomed(3), Zoomed(3));
         _configSearchSurface.ApplyMetrics(
             Zoomed(9),
             Zoomed(15),
@@ -4301,7 +4445,7 @@ internal sealed partial class MainForm : Form
         var selected = (args.State & DrawItemState.Selected) == DrawItemState.Selected;
         var focused = (args.State & DrawItemState.Focus) == DrawItemState.Focus;
         var backColor = selected
-            ? (IsDarkPalette() ? Color.FromArgb(28, 49, 56) : SelectionBackground)
+            ? SelectionBackground
             : EditorBackground;
         var textColor = selected ? SelectionText : PrimaryTextColor;
 
@@ -4322,19 +4466,40 @@ internal sealed partial class MainForm : Form
         var itemName = GetCategoryItemName(list.Items[args.Index]);
         var displayText = list.Items[args.Index]?.ToString() ?? "";
         var hasNewMarker = HasUnseenImportedNewEntries(itemName);
+        DrawCategoryIcon(args.Graphics, itemName,
+            new Rectangle(args.Bounds.X + Zoomed(10), args.Bounds.Y + (args.Bounds.Height - Zoomed(18)) / 2, Zoomed(18), Zoomed(18)), textColor);
         var textBounds = new Rectangle(
-            args.Bounds.X + Zoomed(8),
+            args.Bounds.X + Zoomed(42),
             args.Bounds.Y,
-            Math.Max(0, args.Bounds.Width - Zoomed(12)),
+            Math.Max(0, args.Bounds.Width - Zoomed(48)),
             args.Bounds.Height);
+        var optionsCount = OptionsCategoryCount(itemName);
+        var optionsBadgeWidth = 0;
+        if (optionsCount > 0)
+        {
+            const string countText = "CHANGED";
+            optionsBadgeWidth = TextRenderer.MeasureText(args.Graphics, countText, args.Font).Width + Zoomed(12);
+            var countBounds = new Rectangle(args.Bounds.Right - optionsBadgeWidth - Zoomed(8), args.Bounds.Y + Zoomed(4),
+                optionsBadgeWidth, Math.Max(1, args.Bounds.Height - Zoomed(8)));
+            using var countBrush = new SolidBrush(SavePendingBackground);
+            using var countPen = new Pen(BrandColor);
+            using var countShape = ConfigSearchSurface.RoundedRectangle(new RectangleF(countBounds.X + 0.5F, countBounds.Y + 0.5F, countBounds.Width - 1, countBounds.Height - 1), Zoomed(4));
+            args.Graphics.FillPath(countBrush, countShape);
+            args.Graphics.DrawPath(countPen, countShape);
+            TextRenderer.DrawText(args.Graphics, countText, args.Font, countBounds, IsDarkPalette() ? PrimaryTextColor : BrandColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+            textBounds.Width = Math.Max(0, countBounds.Left - textBounds.Left - Zoomed(6));
+        }
         if (hasNewMarker)
         {
             var badgeText = "NEW";
             var badgeSize = TextRenderer.MeasureText(args.Graphics, badgeText, args.Font);
             var badgeWidth = badgeSize.Width + Zoomed(12);
             var badgeHeight = Math.Min(args.Bounds.Height - Zoomed(8), badgeSize.Height + Zoomed(4));
+            var labelWidth = TextRenderer.MeasureText(args.Graphics, displayText, args.Font).Width;
             var badgeBounds = new Rectangle(
-                args.Bounds.Right - badgeWidth - Zoomed(8),
+                Math.Min(textBounds.Left + labelWidth + Zoomed(6),
+                    args.Bounds.Right - badgeWidth - Zoomed(8) - (optionsCount > 0 ? optionsBadgeWidth + Zoomed(6) : 0)),
                 args.Bounds.Y + Math.Max(0, (args.Bounds.Height - badgeHeight) / 2),
                 badgeWidth,
                 badgeHeight);
@@ -4350,7 +4515,8 @@ internal sealed partial class MainForm : Form
                 args.Font,
                 badgeBounds,
                 GetNewBadgeTextColor(),
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding |
+                TextFormatFlags.PreserveGraphicsTranslateTransform | TextFormatFlags.PreserveGraphicsClipping);
         }
 
         TextRenderer.DrawText(
@@ -4359,7 +4525,8 @@ internal sealed partial class MainForm : Form
             args.Font,
             textBounds,
             textColor,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis |
+            TextFormatFlags.PreserveGraphicsTranslateTransform | TextFormatFlags.PreserveGraphicsClipping);
 
         if (focused)
         {
@@ -4384,7 +4551,7 @@ internal sealed partial class MainForm : Form
         var selected = result.CanNavigate &&
                        (args.State & DrawItemState.Selected) == DrawItemState.Selected;
         var backColor = selected
-            ? (IsDarkPalette() ? Color.FromArgb(28, 49, 56) : SelectionBackground)
+            ? SelectionBackground
             : EditorBackground;
         var primaryColor = selected ? SelectionText : PrimaryTextColor;
         var secondaryColor = selected ? SelectionText : HelpTextColor;
@@ -4700,15 +4867,15 @@ internal sealed partial class MainForm : Form
                     continue;
                 }
 
-                foreach (var entry in item.Entries)
+                foreach (var entry in item.Entries.Where(IsTableRowVisible))
                 {
                     items.Add(new ConfigSearchIndexItem(
                             item.Key,
                             entry.DisplayKey,
-                            entry.DisplayName,
+                            item.Linked is null ? entry.DisplayName : GetTableRowDisplayName(entry),
                             categoryName,
                             categoryLabel,
-                            GetConfigSearchEntryDescription(entry),
+                            GetLinkedSearchDescription(item, entry),
                             order++));
                 }
             }
@@ -4828,8 +4995,8 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        SelectConfigSearchTableRow(target, result.RowKey);
         _formHost.PerformLayout();
+        SelectConfigSearchTableRow(target, result.RowKey);
         var targetLocation = _formHost.PointToClient(target.PointToScreen(Point.Empty));
         var currentScroll = new Point(-_formHost.AutoScrollPosition.X, -_formHost.AutoScrollPosition.Y);
         var targetScrollY = Math.Max(0, currentScroll.Y + targetLocation.Y - Zoomed(12));
@@ -4884,7 +5051,7 @@ internal sealed partial class MainForm : Form
                     grid.CurrentCell = row.Cells[firstVisibleColumn.Index];
                 }
 
-                grid.FirstDisplayedScrollingRowIndex = row.Index;
+                RestoreFirstDisplayedRowIndex(grid, row.Index);
                 grid.Focus();
                 SetGridSelectionHighlight(grid, focused: true);
                 return;
@@ -5112,7 +5279,7 @@ internal sealed partial class MainForm : Form
 
     private static Button MakeButton(string text, Action action)
     {
-        var button = new Button
+        var button = new PreviewButton
         {
             Text = text,
             Dock = DockStyle.Fill,
@@ -5263,7 +5430,7 @@ internal sealed partial class MainForm : Form
             MaximizeBox = true,
             ClientSize = FittedDialogClientSize(820, 540, 700, 460),
             MinimumSize = FittedDialogMinimumSize(700, 460, 700, 460),
-            Font = new Font("Segoe UI", (BaseFontSize + 1.25F) * _uiZoomPercent / 100F),
+            Font = new Font("Segoe UI", (BaseFontSize + 1.25F) * _uiZoomPercent / UiZoomBaselinePercent),
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor,
             AutoScroll = true
@@ -7037,16 +7204,19 @@ internal sealed partial class MainForm : Form
             throw new InvalidOperationException("Open a config first.");
         }
 
+        var hasEdits = _document.HasUnsavedChanges;
+        var needsManaged = !hasEdits && _document.NeedsManagedStringListPreparation();
+        if (hasEdits || needsManaged)
+        {
+            if (needsManaged) _document.SaveManagedSnapshotTo(targetPath);
+            else _document.SaveSnapshotTo(targetPath);
+            return;
+        }
+
         var errors = _document.Validate();
         if (errors.Count > 0)
         {
             throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
-        }
-
-        if (_document.HasUnsavedChanges)
-        {
-            _document.SaveSnapshotTo(targetPath);
-            return;
         }
 
         File.Copy(_document.Path, targetPath, overwrite: false);
@@ -7203,7 +7373,7 @@ internal sealed partial class MainForm : Form
 
                 ApplyKeptTableChoices(outputDocument, preview, tableChoices);
                 ApplyKeptValueChoices(outputDocument, preview, valueChoices);
-                var validationErrors = outputDocument.Validate();
+                var validationErrors = outputDocument.ValidateForImport(preview.ImportWarnings);
                 if (validationErrors.Count > 0)
                 {
                     throw new InvalidOperationException(string.Join(Environment.NewLine, validationErrors.Take(8)));
@@ -7221,8 +7391,9 @@ internal sealed partial class MainForm : Form
                         "Presets",
                         MakeSafeFileName(target.Preset.Name)),
                     profile.Name);
-                PresetStore.ReplaceConfig(target.Preset, path => outputDocument.SaveTo(path));
+                PresetStore.ReplaceConfig(target.Preset, path => outputDocument.SaveImportedTo(path, preview.ImportWarnings));
                 result.UpdatedNames.Add(target.Preset.Name);
+                result.Warnings.AddRange(preview.ImportWarnings.Select(warning => target.Preset.Name + ": " + warning));
                 var markerWarning = PersistImportedBucketNewItems(target.Preset.ConfigPath, preview);
                 if (markerWarning is not null)
                 {
@@ -7255,13 +7426,13 @@ internal sealed partial class MainForm : Form
                 : "") +
             (result.Warnings.Count > 0
                 ? (result.Errors.Count > 0 ? Environment.NewLine + Environment.NewLine : "") +
-                  "NEW review marker warnings:" + Environment.NewLine +
+                  "Warnings:" + Environment.NewLine +
                   string.Join(Environment.NewLine, result.Warnings)
                 : "");
         MessageBox.Show(
             this,
             message,
-            "Preset update incomplete",
+            result.Errors.Count > 0 ? "Preset update incomplete" : "Presets updated — review warnings",
             MessageBoxButtons.OK,
             MessageBoxIcon.Warning);
     }
@@ -7333,7 +7504,8 @@ internal sealed partial class MainForm : Form
             BackColor = MainBackground
         };
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        content.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(230)));
+        var actionColumn = new ColumnStyle(SizeType.Absolute, Zoomed(230));
+        content.ColumnStyles.Add(actionColumn);
         root.Controls.Add(content, 0, 1);
 
         var presetList = new ListBox
@@ -7362,9 +7534,13 @@ internal sealed partial class MainForm : Form
             var button = new Button
             {
                 Text = text,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right,
                 Margin = new Padding(0, 0, 0, Zoomed(7))
             };
             SizeDialogButton(button, 205);
+            actionColumn.Width = Math.Max(actionColumn.Width,
+                button.Width + button.Margin.Horizontal + actions.Padding.Horizontal + actions.Margin.Horizontal +
+                SystemInformation.VerticalScrollBarWidth);
             button.Click += handler;
             actions.Controls.Add(button);
             return button;
@@ -7865,12 +8041,7 @@ internal sealed partial class MainForm : Form
         {
             if (!File.Exists(targetPath))
             {
-                if (sourceConfigFileName.Equals(RuntimeSettings.Ww2ConfigFileName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return new CopyTargetPlan(target, targetPath, new List<CopyChange>(), missingTargetConfig: true, canCreateMissingConfig: true);
-                }
-
-                return new CopyTargetPlan(target, targetPath, new List<CopyChange>(), GetConfigVariantLabel(sourceConfigFileName) + " config does not exist.");
+                return new CopyTargetPlan(target, targetPath, new List<CopyChange>(), missingTargetConfig: true, canCreateMissingConfig: true);
             }
 
             var targetDocument = ConfigDocument.Load(targetPath);
@@ -9169,6 +9340,7 @@ internal sealed partial class MainForm : Form
 
     private void LoadCategories(bool renderSelection = true)
     {
+        EnsureOptionsBaseline();
         SetCategoryListItems(GetCategoryListNames(), preferredSelection: null);
         WriteAdminUiMapLog("load-categories");
 
@@ -9272,9 +9444,9 @@ internal sealed partial class MainForm : Form
         return OrderCategoryNames(names);
     }
 
-    private void ReloadCategoriesPreservingSelection(bool refreshSelectedCategory = false)
+    private void ReloadCategoriesPreservingSelection(bool refreshSelectedCategory = false, string? knownSelectedCategory = null)
     {
-        var selected = GetSelectedCategoryName();
+        var selected = knownSelectedCategory ?? GetSelectedCategoryName();
         var names = GetCategoryListNames();
         if (CategoryListMatches(names))
         {
@@ -9534,15 +9706,9 @@ internal sealed partial class MainForm : Form
             return false;
         }
 
-        if (_document.Entries.Any(entry =>
-                entry.EffectiveCategory.Equals(categoryName, StringComparison.OrdinalIgnoreCase) &&
-                (ShouldIncludeAdvancedEntries() || !entry.IsAdvanced)))
-        {
-            return true;
-        }
-
-        return _document.StringListTables.Any(table => table.Section.Equals(categoryName, StringComparison.OrdinalIgnoreCase)) ||
-               _document.StageTables.Any(table => table.Section.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+        var items = GetDesignerItems(categoryName, includeTableRows: false);
+        RefreshNewCategoryVisibility(categoryName, items);
+        return items.Count > 0;
     }
 
     private bool DoesAdvancedToggleAffectCategory(string categoryName)
@@ -9670,6 +9836,11 @@ internal sealed partial class MainForm : Form
         }
 
         _pendingNewItemSession = new PendingNewItemSession(_pendingNewItemStore, configPath);
+        BindManagedNewReview(document);
+        _newCategoryVisibility.Clear();
+        if (ReferenceEquals(_optionsDocument, document))
+            foreach (var category in _optionsCurrent.Keys)
+                RefreshNewCategoryVisibility(category, GetDesignerItems(category, includeTableRows: false));
         return warnings.Count == 0 ? null : string.Join(Environment.NewLine, warnings);
     }
 
@@ -9678,7 +9849,8 @@ internal sealed partial class MainForm : Form
         return _document is not null &&
                _pendingNewItemSession?.IsPending(table.Key, value) == true &&
                IsCommentWhenVisiblePolicy(table) &&
-               VisibleWhenMatches(_document, table.GuiVisibleWhen!);
+               VisibleWhenMatches(_document, table.GuiVisibleWhen!) &&
+               _document.GetManagedStringListValues(table)?.Contains(value) != true;
     }
 
     private bool IsStoredBucketNewItem(ConfigStringListTable table, string value)
@@ -9687,26 +9859,12 @@ internal sealed partial class MainForm : Form
                _pendingNewItemStore.Contains(_document.Path, table.Key, value);
     }
 
-    private bool HasPendingBucketNewItems(string categoryName)
-    {
-        if (_document is null || _pendingNewItemSession is null)
-        {
-            return false;
-        }
-
-        var pending = _pendingNewItemSession.GetPending().ToHashSet();
-        return _document.StringListTables.Any(table =>
-            table.Section.Equals(categoryName, StringComparison.OrdinalIgnoreCase) &&
-            IsCommentWhenVisiblePolicy(table) &&
-            VisibleWhenMatches(_document, table.GuiVisibleWhen!) &&
-            pending.Any(item => item.TableKey.Equals(table.Key, StringComparison.Ordinal)));
-    }
-
     private bool ResolvePendingBucketNewItem(ConfigStringListTable table, string value)
     {
         var changed = _pendingNewItemSession?.Resolve(table.Key, value) == true;
         if (changed)
         {
+            RefreshNewCategoryVisibility(table.Section, GetDesignerItems(table.Section, includeTableRows: false));
             _categoryList.Invalidate();
         }
 
@@ -9718,6 +9876,7 @@ internal sealed partial class MainForm : Form
         var changed = _pendingNewItemSession?.Restore(table.Key, value) == true;
         if (changed)
         {
+            RefreshNewCategoryVisibility(table.Section, GetDesignerItems(table.Section, includeTableRows: false));
             _categoryList.Invalidate();
         }
 
@@ -9727,6 +9886,7 @@ internal sealed partial class MainForm : Form
     private void ClearImportedNewMarkers()
     {
         _unseenImportedNewEntryKeysByCategory.Clear();
+        foreach (var visible in _newCategoryVisibility.Values) visible.EntryKeys.Clear();
         _activeImportedNewEntryKeys.Clear();
         _activeImportedNewCategoryName = null;
         _categoryList.Invalidate();
@@ -9751,9 +9911,10 @@ internal sealed partial class MainForm : Form
             keys.Add(marker.DisplayKey);
         }
 
-        foreach (var categoryName in _unseenImportedNewEntryKeysByCategory.Keys)
+        foreach (var categoryName in GetVisibleCategoryNames())
         {
-            MarkCategoryPanelDirty(categoryName);
+            if (_newCategoryVisibility.TryGetValue(categoryName, out var visible) && visible.EntryKeys.Count > 0)
+                MarkCategoryPanelDirty(categoryName);
         }
 
         if (_unseenImportedNewEntryKeysByCategory.Count == 0)
@@ -9764,7 +9925,7 @@ internal sealed partial class MainForm : Form
         _categoryList.Invalidate();
         var selectedCategory = GetSelectedCategoryName();
         if (!string.IsNullOrWhiteSpace(selectedCategory) &&
-            _unseenImportedNewEntryKeysByCategory.ContainsKey(selectedCategory))
+            _newCategoryVisibility.TryGetValue(selectedCategory, out var selectedVisible) && selectedVisible.EntryKeys.Count > 0)
         {
             PrepareImportedNewMarkersForCategory(selectedCategory);
             RenderSelectedCategory(force: true);
@@ -9782,17 +9943,15 @@ internal sealed partial class MainForm : Form
             changed = true;
         }
 
-        _activeImportedNewEntryKeys.Clear();
-        _activeImportedNewCategoryName = null;
-
-        if (_unseenImportedNewEntryKeysByCategory.TryGetValue(categoryName, out var keys))
+        if (!string.Equals(previousCategory, categoryName, StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var key in keys)
-            {
-                _activeImportedNewEntryKeys.Add(key);
-            }
+            _activeImportedNewEntryKeys.Clear();
+            _activeImportedNewCategoryName = null;
+        }
 
-            _unseenImportedNewEntryKeysByCategory.Remove(categoryName);
+        if (_newCategoryVisibility.TryGetValue(categoryName, out var visible) && visible.EntryKeys.Count > 0)
+        {
+            _activeImportedNewEntryKeys.UnionWith(visible.EntryKeys);
             _activeImportedNewCategoryName = categoryName;
             MarkCategoryPanelDirty(categoryName);
             changed = true;
@@ -9808,8 +9967,51 @@ internal sealed partial class MainForm : Form
 
     private bool HasUnseenImportedNewEntries(string categoryName)
     {
-        return (_unseenImportedNewEntryKeysByCategory.TryGetValue(categoryName, out var keys) && keys.Count > 0) ||
-               HasPendingBucketNewItems(categoryName);
+        return _newCategoryVisibility.TryGetValue(categoryName, out var visible) &&
+               (visible.EntryKeys.Count > 0 || visible.HasBucketItems);
+    }
+
+    private void AcknowledgeDisplayedBucketNewItems(string categoryName, IReadOnlyList<DesignerItem> items)
+    {
+        if (_document is null || _pendingNewItemSession is null ||
+            !_pendingNewItemStore.Configs.ContainsKey(_document.Path))
+        {
+            return;
+        }
+
+        var displayedTables = items
+            .Where(item => item.StringListTable is not null && IsCommentWhenVisiblePolicy(item.StringListTable))
+            .Select(item => item.StringListTable!)
+            .ToDictionary(table => table.Key, table => _document.GetManagedStringListValues(table), StringComparer.Ordinal);
+        if (displayedTables.Count == 0)
+        {
+            return;
+        }
+
+        var reviewed = _pendingNewItemSession.GetPending()
+            .Where(item => displayedTables.TryGetValue(item.TableKey, out var managed) && managed?.Contains(item.Value) != true)
+            .ToList();
+        if (reviewed.Count == 0)
+        {
+            return;
+        }
+
+        _pendingNewItemStore.Remove(_document.Path, reviewed);
+        try
+        {
+            _pendingNewItemStore.Save();
+        }
+        catch (Exception ex)
+        {
+            _pendingNewItemStore.Add(_document.Path, reviewed);
+            MarkCategoryPanelDirty(categoryName);
+            SetStatus("NEW review markers could not be saved: " + ex.Message);
+            return;
+        }
+
+        // Keep the first rendering's row highlights; rebuild that cached panel on return.
+        _activeImportedNewCategoryName = categoryName;
+        _categoryList.Invalidate();
     }
 
     private bool IsImportedNewEntryHighlighted(ConfigEntry entry)
@@ -9823,6 +10025,7 @@ internal sealed partial class MainForm : Form
             .Where(entry => !string.IsNullOrWhiteSpace(entry.EffectiveCategory) &&
                             !string.IsNullOrWhiteSpace(entry.DisplayKey))
             .Select(entry => new ImportedNewEntryMarker(entry.EffectiveCategory, entry.DisplayKey))
+            .Concat(preview.NewEditorMarkers.Values)
             .Distinct()
             .ToList();
     }
@@ -9967,39 +10170,67 @@ internal sealed partial class MainForm : Form
 
         SaveRenderedCategoryScroll();
         var viewGeneration = _uiViewGeneration.Next();
-        _loadingForm = true;
+        panel.SuspendLayout();
         try
         {
-            _formHost.SuspendLayout();
+            _loadingForm = true;
             try
             {
-                DetachFormHostControlsForRender();
-                _formHost.Controls.Add(panel);
-                _renderedCategoryName = categoryName;
-                _categoryPanelRecency.Touch(categoryName);
+                _formHost.SuspendLayout();
+                try
+                {
+                    DetachFormHostControlsForRender(suspendCachedPanels: true);
+                    _formHost.Controls.Add(panel);
+                    _formHost.AutoScrollMinSize = new Size(panel.MinimumSize.Width, 0);
+                    _renderedCategoryName = categoryName;
+                    _categoryPanelRecency.Touch(categoryName);
+                }
+                finally
+                {
+                    _formHost.ResumeLayout();
+                }
             }
             finally
             {
-                _formHost.ResumeLayout();
+                _loadingForm = false;
             }
+
+            RestoreCategoryScroll(categoryName, viewGeneration);
+            _optionsViewedCategory = categoryName;
+            ApplyOptionsMarkers();
         }
         finally
         {
-            _loadingForm = false;
+            panel.ResumeLayout(ReferenceEquals(panel.Parent, _formHost));
         }
-
-        RestoreCategoryScroll(categoryName, viewGeneration);
         return true;
     }
 
-    private void DetachFormHostControlsForRender()
+    private void DetachFormHostControlsForRender(bool suspendCachedPanels = false)
     {
+        _formHost.AutoScrollMinSize = Size.Empty;
         while (_formHost.Controls.Count > 0)
         {
             var control = _formHost.Controls[0];
-            if (IsCachedCategoryPanel(control) || IsReusableRawEditorControl(control))
+            var isCachedPanel = IsCachedCategoryPanel(control);
+            if (isCachedPanel || IsReusableRawEditorControl(control))
             {
-                control.Parent = null;
+                if (suspendCachedPanels && isCachedPanel)
+                {
+                    control.SuspendLayout();
+                    try
+                    {
+                        control.Parent = null;
+                    }
+                    finally
+                    {
+                        control.ResumeLayout(false);
+                    }
+                }
+                else
+                {
+                    control.Parent = null;
+                }
             }
             else
             {
@@ -10069,6 +10300,7 @@ internal sealed partial class MainForm : Form
 
     private void MarkAllCategoryPanelsDirty()
     {
+        InvalidateLinkedTableData();
         foreach (var categoryName in _categoryPanelCache.Keys.ToList())
         {
             _dirtyCategoryPanels.Add(categoryName);
@@ -10108,6 +10340,7 @@ internal sealed partial class MainForm : Form
 
     private void ClearCategoryPanelCache()
     {
+        InvalidateLinkedTableData();
         var panels = _categoryPanelCache.Values.Distinct().ToList();
         _categoryPanelCache.Clear();
         _categoryPanelRecency.Clear();
@@ -10192,6 +10425,8 @@ internal sealed partial class MainForm : Form
             _loadingForm = false;
             ApplyThemeToControl(_formHost, restyleButtons: false);
             WireBackgroundDehighlightHandlers(_formHost);
+            _optionsViewedCategory = categoryName;
+            ApplyOptionsMarkers();
         }
 
         if (categoryName == "Admin Designer")
@@ -10209,13 +10444,19 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        var items = GetDesignerItems(categoryName, includeTableRows: false);
+        RefreshNewCategoryVisibility(categoryName, items);
+        PrepareImportedNewMarkersForCategory(categoryName);
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
             AutoSize = true,
             ColumnCount = 1,
-            Padding = new Padding(16)
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(Zoomed(24))
         };
+        // Retain the effective font after native DPI initialization for cached detaches.
+        panel.HandleCreated += (_, _) => panel.Font = panel.Font;
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         panel.SuspendLayout();
         try
@@ -10225,14 +10466,14 @@ internal sealed partial class MainForm : Form
                 Text = GetCategoryDisplayName(categoryName),
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                Font = new Font(Font, FontStyle.Bold),
-                Padding = new Padding(0, 0, 0, 10)
+                Font = new Font(Font.FontFamily, 19F * _uiZoomPercent / UiZoomBaselinePercent, FontStyle.Bold),
+                Padding = new Padding(0, 0, 0, Zoomed(20))
             };
             panel.Controls.Add(title);
 
             if (categoryName.Equals("Difficulty Stages", StringComparison.OrdinalIgnoreCase))
             {
-                var tables = GetDesignerItems(categoryName, includeTableRows: false)
+                var tables = items
                     .Select(item => item.StageTable)
                     .Where(table => table is not null)
                     .Cast<ConfigStageTable>()
@@ -10244,32 +10485,46 @@ internal sealed partial class MainForm : Form
             }
             else
             {
-                foreach (var item in GetDesignerItems(categoryName, includeTableRows: false))
+                foreach (var item in items)
                 {
                     if (item.StringListTable is not null)
                     {
-                        panel.Controls.Add(MarkConfigSearchTarget(BuildStringListEditor(item.StringListTable), item.Key));
+                        panel.Controls.Add(RegisterOptionsTarget(panel, BuildStringListEditor(item.StringListTable), item.Key));
                         continue;
                     }
 
                     if (item.StageTable is not null)
                     {
-                        panel.Controls.Add(MarkConfigSearchTarget(BuildStageTableEditor(item.StageTable), item.Key));
+                        panel.Controls.Add(RegisterOptionsTarget(panel, BuildStageTableEditor(item.StageTable), item.Key));
                         continue;
                     }
 
                     if (item.IsGroup)
                     {
-                        panel.Controls.Add(MarkConfigSearchTarget(item.Key.Equals("CallsignOverrides", StringComparison.Ordinal)
+                        var editor = MarkConfigSearchTarget(item.Key.Equals("CallsignOverrides", StringComparison.Ordinal)
                             ? BuildCallsignOverridesEditor(item.Key, item.Entries)
-                            : BuildTableEditor(item.Key, item.Entries), item.Key));
+                            : BuildLinkedOrStandardTableEditor(item.Key, item.Entries, item.Linked), item.Key);
+                        if (categoryName.Equals("Mission Rules", StringComparison.OrdinalIgnoreCase))
+                            PrepareTemplateEditor(editor, item);
+                        panel.Controls.Add(RegisterOptionsTarget(panel, editor, item.Key));
+                        if (item.Linked is not null)
+                        {
+                            void KeepLinkedTableReachable()
+                            {
+                                var width = editor.MinimumSize.Width + editor.Margin.Horizontal + panel.Padding.Horizontal;
+                                if (panel.MinimumSize.Width < width) panel.MinimumSize = new Size(width, panel.MinimumSize.Height);
+                                if (ReferenceEquals(panel.Parent, _formHost)) _formHost.AutoScrollMinSize = new Size(panel.MinimumSize.Width, 0);
+                            }
+                            editor.SizeChanged += (_, _) => KeepLinkedTableReachable();
+                            KeepLinkedTableReachable();
+                        }
                         continue;
                     }
 
                     var entry = item.Entries.FirstOrDefault();
                     if (entry is not null)
                     {
-                        panel.Controls.Add(MarkConfigSearchTarget(BuildEntryEditor(entry), item.Key));
+                        panel.Controls.Add(RegisterOptionsTarget(panel, BuildEntryEditor(entry), item.Key, entry));
                     }
                 }
             }
@@ -10293,6 +10548,7 @@ internal sealed partial class MainForm : Form
         try
         {
             _formHost.Controls.Add(panel);
+            _formHost.AutoScrollMinSize = new Size(panel.MinimumSize.Width, 0);
             CacheCategoryPanel(categoryName, panel);
         }
         finally
@@ -10301,6 +10557,10 @@ internal sealed partial class MainForm : Form
         }
 
         FinishRender();
+        AcknowledgeDisplayedImportedNewItems();
+        AcknowledgeDisplayedBucketNewItems(categoryName, items);
+        RefreshNewCategoryVisibility(categoryName, items);
+        _categoryList.Invalidate();
         RestoreCategoryScroll(categoryName, viewGeneration);
     }
 
@@ -10454,6 +10714,28 @@ internal sealed partial class MainForm : Form
         }
 
         group.Controls.Add(header);
+        var lockHelpRow = new TableLayoutPanel
+        {
+            AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2, RowCount = 1,
+            BackColor = MainBackground, Margin = new Padding(0), Visible = false
+        };
+        lockHelpRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        lockHelpRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        var lockedPrefix = new Label
+        {
+            Text = "Locked", AutoSize = true, Visible = false,
+            Font = new Font(Font, FontStyle.Bold), ForeColor = LockedTextColor,
+            BackColor = MainBackground, Margin = new Padding(0, 4, 0, 0), Tag = LockedPrefixTag
+        };
+        var lockNote = new Label
+        {
+            AutoSize = true, Visible = false, ForeColor = HelpTextColor, BackColor = MainBackground,
+            Padding = new Padding(0, 4, 0, 0), Margin = new Padding(0)
+        };
+        lockHelpRow.Controls.Add(lockedPrefix, 0, 0);
+        lockHelpRow.Controls.Add(lockNote, 1, 0);
+        group.Controls.Add(lockHelpRow);
+        ConfigureHelpSizing(group, lockNote, lockedPrefix);
         var stageHint = GetStageTableHint(table);
         if (!string.IsNullOrWhiteSpace(stageHint))
         {
@@ -10488,8 +10770,21 @@ internal sealed partial class MainForm : Form
             var grid = EnumerateChildControls<DataGridView>(editorHost).FirstOrDefault();
             if (grid is null)
             {
-                editorHost.Controls.Add(BuildStageDifficultyEditor(table, () => selectedDifficulty));
+                var editor = BuildStageDifficultyEditor(table, () => selectedDifficulty, lockNote, lockedPrefix);
+                void SizeEditorHost()
+                {
+                    var width = editor.MinimumSize.Width + editor.Margin.Horizontal;
+                    if (editorHost.MinimumSize.Width != width)
+                        editorHost.MinimumSize = new Size(width, editorHost.MinimumSize.Height);
+                    width += editorHost.Margin.Horizontal + group.Padding.Horizontal;
+                    if (group.MinimumSize.Width != width)
+                        group.MinimumSize = new Size(width, group.MinimumSize.Height);
+                }
+                editor.SizeChanged += (_, _) => SizeEditorHost();
+                SizeEditorHost();
+                editorHost.Controls.Add(editor);
                 ApplyThemeToControl(editorHost, restyleButtons: true);
+                ApplyStageEditorLockState((StageEditorBinding)editor.Tag!);
                 return;
             }
 
@@ -10509,6 +10804,7 @@ internal sealed partial class MainForm : Form
         group.Controls.Add(editorHost);
         RenderDifficulty(selectedDifficulty);
         group.Controls.Add(MakeValueHint("Rows are read from top to bottom. The first row where active players is less than or equal to Up to players controls the amount."));
+        ConfigureTableHeaderSizing(group, header);
         return MarkConfigSearchTarget(group, table.Key);
     }
 
@@ -10596,7 +10892,7 @@ internal sealed partial class MainForm : Form
         return null;
     }
 
-    private Control BuildStageDifficultyEditor(ConfigStageTable table, Func<string> getDifficulty)
+    private Control BuildStageDifficultyEditor(ConfigStageTable table, Func<string> getDifficulty, Label lockNote, Label lockedPrefix)
     {
         var difficulty = getDifficulty();
         var group = new TableLayoutPanel
@@ -10607,7 +10903,7 @@ internal sealed partial class MainForm : Form
             RowCount = 1,
             Padding = new Padding(8)
         };
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, GetStageGridWidth()));
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, GetStageGridWidth() + 6));
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
 
         var playerColumnWidth = GetStagePlayerColumnWidth();
@@ -10625,7 +10921,6 @@ internal sealed partial class MainForm : Form
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
             Width = GetStageGridWidth(),
-            Height = GetStageGridHeight(table, difficulty),
             RowTemplate = { Height = GetStageGridRowHeight() },
             ColumnHeadersHeight = GetStageGridHeaderHeight(),
             ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
@@ -10634,20 +10929,40 @@ internal sealed partial class MainForm : Form
         grid.Columns.Add("amount", "Amount");
         ConfigureLockedStageColumn(grid.Columns["player"], playerColumnWidth);
         ConfigureLockedStageColumn(grid.Columns["amount"], amountColumnWidth);
-        grid.ScrollBars = GetStageDesiredGridHeight(table, difficulty) > grid.Height ? ScrollBars.Vertical : ScrollBars.None;
+        grid.ScrollBars = ScrollBars.Vertical;
         group.Controls.Add(grid, 0, 0);
+        var scrollbar = grid.Controls.OfType<VScrollBar>().Single();
+        void SizeGridWidth()
+        {
+            var width = grid.Columns.GetColumnsWidth(DataGridViewElementStates.Visible) + 4 +
+                (scrollbar.Visible ? scrollbar.Width : 0) + grid.Margin.Horizontal;
+            if (group.ColumnStyles[0].Width != width) group.ColumnStyles[0].Width = width;
+        }
+        scrollbar.VisibleChanged += (_, _) => SizeGridWidth();
+        grid.Layout += (_, _) => SizeGridWidth();
+        SizeGridWidth();
 
         RefreshStageGrid(grid, table, difficulty);
-        group.Controls.Add(MakeTableActionPanel(
+        var actions = MakeTableActionPanel(
             MakeDesignerButton("Add row", () => AddStageRow(table, getDifficulty(), grid), TableActionButtonWidth),
             MakeDesignerButton("Remove selected", () => RemoveStageRow(table, grid), TableActionButtonWidth),
             MakeDesignerButton("Move up", () => MoveStageRow(table, grid, -1), TableActionButtonWidth),
-            MakeDesignerButton("Move down", () => MoveStageRow(table, grid, 1), TableActionButtonWidth)), 1, 0);
+            MakeDesignerButton("Move down", () => MoveStageRow(table, grid, 1), TableActionButtonWidth));
+        group.Controls.Add(actions, 1, 0);
+        var binding = new StageEditorBinding(table.Key, grid, actions, lockNote, lockedPrefix);
+        group.Tag = binding;
+        ApplyStageEditorLockState(binding);
 
         grid.CellValueChanged += (_, args) =>
         {
             if (_loadingForm || args.RowIndex < 0 || grid.Rows[args.RowIndex].Tag is not ConfigStageRow row)
             {
+                return;
+            }
+
+            if (ShouldLockTableEditor(table.Key, out var lockReason))
+            {
+                RefreshStageGrid(grid, table, getDifficulty());
                 return;
             }
 
@@ -10667,6 +10982,25 @@ internal sealed partial class MainForm : Form
         };
         grid.DataError += (_, _) => { };
         return group;
+    }
+
+    private void ApplyStageEditorLockState(StageEditorBinding binding)
+    {
+        var locked = ShouldLockTableEditor(binding.Key, out var reason);
+        if (locked) RefreshControlValue(() => binding.Grid.CancelEdit());
+        binding.Grid.ReadOnly = locked;
+        binding.Actions.Enabled = !locked;
+        binding.LockedPrefix.Visible = locked;
+        binding.LockNote.Text = locked ? LockReasonAfterPrefix(reason) : "";
+        binding.LockNote.Visible = locked;
+        binding.LockNote.Parent!.Visible = locked;
+        _toolTip.SetToolTip(binding.Grid, locked ? reason : "");
+        foreach (DataGridViewRow row in binding.Grid.Rows)
+        {
+            row.DefaultCellStyle.ForeColor = locked ? HelpTextColor : PrimaryTextColor;
+            row.DefaultCellStyle.SelectionForeColor = locked ? HelpTextColor : Color.Empty;
+            row.DefaultCellStyle.SelectionBackColor = locked ? row.InheritedStyle.BackColor : Color.Empty;
+        }
     }
 
     private static List<ConfigStageRow> GetStageRows(ConfigStageTable table, string difficulty)
@@ -10689,7 +11023,7 @@ internal sealed partial class MainForm : Form
 
     private int GetStageGridWidth()
     {
-        return GetStagePlayerColumnWidth() + GetStageAmountColumnWidth() + SystemInformation.VerticalScrollBarWidth + 12;
+        return GetStagePlayerColumnWidth() + GetStageAmountColumnWidth() + 4;
     }
 
     private static void ConfigureLockedStageColumn(DataGridViewColumn column, int width)
@@ -10715,26 +11049,11 @@ internal sealed partial class MainForm : Form
         return Math.Max(25, Font.Height + 9);
     }
 
-    private int GetStageDesiredGridHeight(ConfigStageTable table, string difficulty)
+    private int GetStageGridHeight(SmoothDataGridView grid)
     {
-        var rows = Math.Max(1, GetStageRows(table, difficulty).Count);
-        return GetStageGridHeaderHeight() + rows * GetStageGridRowHeight() + 4;
-    }
-
-    private int GetStageGridHeight(ConfigStageTable table, string difficulty)
-    {
-        var desired = GetStageDesiredGridHeight(table, difficulty);
-        if (IsAutoTableHeight(table.Key))
-        {
-            return Math.Max(78, desired);
-        }
-
-        var maxVisibleRows = GetConfiguredMaxVisibleRows(table.Key);
-        var maxHeight = maxVisibleRows > 0
-            ? Math.Max(78, GetStageGridHeaderHeight() + maxVisibleRows * GetStageGridRowHeight() + 4)
-            : GetStageGridMaxHeight();
-
-        return Math.Min(maxHeight, Math.Max(78, desired));
+        var gridChrome = GetTableGridChromeHeight(grid);
+        return GetConfiguredTableHeight(grid, 0, GetStageGridMaxHeight(), gridChrome,
+            grid.Rows.GetRowsHeight(DataGridViewElementStates.Visible));
     }
 
     private void RefreshStageGrid(DataGridView grid, ConfigStageTable table, string difficulty)
@@ -10746,8 +11065,14 @@ internal sealed partial class MainForm : Form
             var rows = GetStageRows(table, difficulty);
             SyncGridRows(grid, rows, AddStageGridRow, UpdateStageGridRow);
 
-            grid.Height = GetStageGridHeight(table, difficulty);
-            grid.ScrollBars = GetStageDesiredGridHeight(table, difficulty) > grid.Height ? ScrollBars.Vertical : ScrollBars.None;
+            var smoothGrid = (SmoothDataGridView)grid;
+            smoothGrid.ConfigureCompactHeightLayout((TableLayoutPanel)grid.Parent!, () =>
+            {
+                var height = GetStageGridHeight(smoothGrid);
+                if (grid.Height != height) grid.Height = height;
+            });
+            grid.ScrollBars = ScrollBars.Vertical;
+            if (grid.Parent!.Tag is StageEditorBinding binding) ApplyStageEditorLockState(binding);
         }
         finally
         {
@@ -10854,7 +11179,7 @@ internal sealed partial class MainForm : Form
 
     private void AddStageRow(ConfigStageTable table, string difficulty, DataGridView grid)
     {
-        if (_document is null)
+        if (_document is null || ShouldLockTableEditor(table.Key, out _))
         {
             return;
         }
@@ -10879,7 +11204,7 @@ internal sealed partial class MainForm : Form
 
     private void RemoveStageRow(ConfigStageTable table, DataGridView grid)
     {
-        if (_document is null || grid.CurrentRow?.Tag is not ConfigStageRow row)
+        if (_document is null || ShouldLockTableEditor(table.Key, out _) || grid.CurrentRow?.Tag is not ConfigStageRow row)
         {
             return;
         }
@@ -10892,17 +11217,15 @@ internal sealed partial class MainForm : Form
         try
         {
             var difficulty = row.Difficulty;
-            var player = row.Player;
-            var amount = row.Amount;
             var selectedIndex = grid.CurrentRow.Index;
-            _document.RemoveStageRow(table, row);
+            var restoreRow = _document.RemoveStageRowWithUndo(table, row);
             RefreshStageGrid(grid, table, difficulty);
             SelectStageGridRowByIndex(grid, selectedIndex);
             SetUndoAction("remove stage row", () =>
             {
-                var restored = _document.AddStageRow(table, difficulty, player, amount);
+                restoreRow();
                 RefreshStageGrid(grid, table, difficulty);
-                SelectStageGridRow(grid, restored);
+                SelectStageGridRow(grid, row);
             });
             SetChangedStatus();
         }
@@ -10914,7 +11237,7 @@ internal sealed partial class MainForm : Form
 
     private void MoveStageRow(ConfigStageTable table, DataGridView grid, int delta)
     {
-        if (_document is null || grid.CurrentRow?.Tag is not ConfigStageRow row)
+        if (_document is null || ShouldLockTableEditor(table.Key, out _) || grid.CurrentRow?.Tag is not ConfigStageRow row)
         {
             return;
         }
@@ -11005,9 +11328,10 @@ internal sealed partial class MainForm : Form
         var group = new TableLayoutPanel
         {
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Top,
             ColumnCount = 1,
-            Padding = new Padding(0, 0, 0, Zoomed(12)),
+            Padding = new Padding(0, 0, 0, Zoomed(24)),
             BackColor = MainBackground
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -11017,7 +11341,7 @@ internal sealed partial class MainForm : Form
             Dock = DockStyle.Top,
             AutoSize = true,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
             Padding = GetTableHeaderPadding(),
             BackColor = headerBackColor,
             Tag = isNewImportEntry ? ImportedNewHighlightTag : null
@@ -11050,7 +11374,32 @@ internal sealed partial class MainForm : Form
         group.Controls.Add(header);
 
         var editor = BuildFriendlyControl(entry);
+        if (entry.DisplayKey.Equals("MessageOfTheDay.text", StringComparison.Ordinal))
+        {
+            editor.MinimumSize = new Size(0, editor.Height);
+            editor.MaximumSize = new Size(Zoomed(GetTextEditorWidth(entry)), editor.Height);
+        }
         group.Controls.Add(editor);
+        if (entry.GuiExampleFormat is { } exampleFormat && editor is TextBox textBox)
+        {
+            var example = new Label
+            {
+                Text = exampleFormat.Replace("{value}", textBox.Text, StringComparison.Ordinal),
+                UseMnemonic = false,
+                ForeColor = HelpTextColor,
+                BackColor = MainBackground,
+                Padding = new Padding(0, Zoomed(4), 0, 0)
+            };
+            textBox.TextChanged += (_, _) => example.Text = exampleFormat.Replace("{value}", textBox.Text, StringComparison.Ordinal);
+            group.Controls.Add(example);
+            group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            ConfigureHelpSizing(group, example);
+        }
+
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        ConfigureTableHeaderSizing(group, header);
 
         if (!CanEntryEditorBeLocked(entry))
         {
@@ -11068,13 +11417,14 @@ internal sealed partial class MainForm : Form
             SetHelp(help, entry);
             ConfigureEditableHelpControl(help, entry.DisplayKey, entry.DisplayName, description);
             group.Controls.Add(help);
+            ConfigureHelpSizing(group, help);
             return group;
         }
 
         var helpRow = new TableLayoutPanel
         {
-            AutoSize = false,
-            Height = 36,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Top,
             ColumnCount = 2,
             RowCount = 1,
@@ -11110,6 +11460,7 @@ internal sealed partial class MainForm : Form
         ConfigureEditableHelpControl(helpText, entry.DisplayKey, entry.DisplayName, description);
         helpRow.Controls.Add(helpText, 1, 0);
         group.Controls.Add(helpRow);
+        ConfigureHelpSizing(group, helpText, lockedPrefix);
 
         var binding = new EntryEditorBinding(entry, editor, lockedPrefix, helpText, description);
         group.Tag = binding;
@@ -11117,9 +11468,38 @@ internal sealed partial class MainForm : Form
         return group;
     }
 
+    private void ConfigureHelpSizing(TableLayoutPanel group, Label help, Label? prefix = null)
+    {
+        help.AutoSize = true;
+        help.Dock = DockStyle.Top;
+        void ResizeHelp()
+        {
+            var available = help.Parent!.ClientSize.Width - help.Parent.Padding.Horizontal - help.Margin.Horizontal;
+            if (prefix?.Visible == true) available -= prefix.Width + prefix.Margin.Horizontal;
+            help.MaximumSize = new Size(Math.Max(Zoomed(180), Math.Min(Zoomed(720), available)), 0);
+        }
+        help.Parent!.SizeChanged += (_, _) => ResizeHelp();
+        var layoutPending = false;
+        help.SizeChanged += (_, _) =>
+        {
+            if (layoutPending || !group.IsHandleCreated) return;
+            layoutPending = true;
+            // Propagate the measured height after the current layout has settled.
+            group.BeginInvoke((Action)(() =>
+            {
+                layoutPending = false;
+                if (!group.IsDisposed)
+                    group.Parent?.PerformLayout(group, nameof(Control.PreferredSize));
+            }));
+        };
+        if (prefix is not null) prefix.VisibleChanged += (_, _) => ResizeHelp();
+        ResizeHelp();
+    }
+
     private static bool CanEntryEditorBeLocked(ConfigEntry entry)
     {
         return !string.IsNullOrWhiteSpace(entry.GuiDisabledWhen) ||
+               string.Equals(entry.ParentGuiLayout, "fields", StringComparison.OrdinalIgnoreCase) ||
                EditorLockRules.Any(rule =>
                    rule.TargetKey.Equals(entry.DisplayKey, StringComparison.Ordinal));
     }
@@ -11128,6 +11508,19 @@ internal sealed partial class MainForm : Form
     {
         var isLocked = ShouldLockEntryEditor(binding.Entry, out var lockReason);
         binding.Editor.Enabled = !isLocked;
+        if (binding.Editor is ComboBox comboBox &&
+            (binding.Entry.Kind == ConfigValueKind.Boolean ||
+             string.Equals(binding.Entry.ControlTypeOverride, "checkbox", StringComparison.OrdinalIgnoreCase)) &&
+            bool.TryParse(binding.Entry.GuiDisabledValue, out var disabledValue))
+        {
+            var displayValue = isLocked ? (disabledValue ? "true" : "false") : binding.Entry.ValueText;
+            if (binding.Entry.Choices.Count > 0 && isLocked)
+                displayValue = binding.Entry.Choices.FirstOrDefault(choice => StringComparer.OrdinalIgnoreCase.Equals(choice.Literal, displayValue))?.Display ?? displayValue;
+            else if (binding.Entry.Choices.Count == 0)
+                displayValue = FormatBooleanDisplay(displayValue);
+            if (!StringComparer.Ordinal.Equals(comboBox.Text, displayValue))
+                RefreshControlValue(() => comboBox.Text = displayValue);
+        }
         binding.LockedPrefix.Visible = isLocked;
         binding.HelpText.Text = isLocked
             ? LockReasonAfterPrefix(lockReason)
@@ -11145,15 +11538,17 @@ internal sealed partial class MainForm : Form
 
     private bool ShouldLockEntryEditor(ConfigEntry entry, out string reason)
     {
-        return TryGetEditorLockReason(entry.DisplayKey, out reason);
+        if (string.Equals(entry.ParentGuiLayout, "fields", StringComparison.OrdinalIgnoreCase) &&
+            ShouldLockTableEditor(entry.ParentKey, out reason)) return true;
+        return ReadOptionsLockFact(entry.DisplayKey, entry, out reason);
     }
 
     private bool ShouldLockTableEditor(string key, out string reason)
     {
-        return TryGetEditorLockReason(key, out reason);
+        return ReadOptionsLockFact(key, null, out reason);
     }
 
-    private bool TryGetEditorLockReason(string targetKey, out string reason)
+    private bool TryGetEditorLockReason(string targetKey, out string reason, ConfigEntry? knownTarget = null)
     {
         foreach (var rule in EditorLockRules.Where(rule => rule.TargetKey.Equals(targetKey, StringComparison.Ordinal)))
         {
@@ -11164,7 +11559,11 @@ internal sealed partial class MainForm : Form
             }
         }
 
-        var disabledWhen = FindEntry(targetKey)?.GuiDisabledWhen;
+        var disabledWhen = (knownTarget ?? FindEntry(targetKey))?.GuiDisabledWhen;
+        if (string.IsNullOrWhiteSpace(disabledWhen) && _document is not null)
+        {
+            _document.GuiTableDisabledWhen.TryGetValue(targetKey, out disabledWhen);
+        }
         if (!string.IsNullOrWhiteSpace(disabledWhen) &&
             TryBuildDisabledWhenReason(disabledWhen, out reason))
         {
@@ -11188,13 +11587,16 @@ internal sealed partial class MainForm : Form
         foreach (var rule in rules)
         {
             var sourceEntry = FindVisibleWhenSourceEntry(rule.SourceKey);
-            if (sourceEntry is null || !VisibleWhenValueMatches(sourceEntry.ValueText, rule.Values))
+            var matches = sourceEntry is not null && VisibleWhenValueMatches(sourceEntry.ValueText, rule.Values);
+            if (sourceEntry is null && _document is not null && rule.SourceKey.Contains('|'))
+                matches = AlternativeVisibilityValueMatches(_document, rule.SourceKey, rule.Values, out sourceEntry);
+            if (!matches)
             {
                 reason = "";
                 return false;
             }
 
-            conditions.Add(FormatEditorLockCondition(sourceEntry, rule.Values));
+            conditions.Add(FormatEditorLockCondition(sourceEntry!, rule.Values));
         }
 
         reason = "Locked while " + string.Join(" and ", conditions) + ".";
@@ -11223,60 +11625,123 @@ internal sealed partial class MainForm : Form
         return sourceEntry.DisplayName + " is " + string.Join(" or ", normalizedValues);
     }
 
-    private void RefreshDependentEditors(ConfigEntry entry)
+    private List<string> GetDependentEditorTargetKeys(ConfigEntry entry)
+    {
+        RequiredValueSources? sources = null;
+        return GetDependentEditorTargetKeysCore(entry, () => sources ??= new RequiredValueSources(_document!.Entries));
+    }
+
+    private List<string> GetDependentEditorTargetKeysCore(ConfigEntry entry, Func<RequiredValueSources> getRequiredSources, Func<string, List<(string SourceKey, List<string> Values)>>? getParsedRules = null)
     {
         var sourceKeys = new HashSet<string>(StringComparer.Ordinal)
         {
             entry.DisplayKey,
             entry.Key
         };
-        var targetKeys = EditorLockRules
+        return EditorLockRules
             .Where(rule => sourceKeys.Contains(rule.SourceKey))
             .Select(rule => rule.TargetKey)
             .Concat(_document?.Entries
-                .Where(target => DisabledWhenDependsOn(target.GuiDisabledWhen, sourceKeys))
+                .Where(target => DisabledWhenDependsOn(target.GuiDisabledWhen, sourceKeys, getParsedRules))
                 .Select(target => target.DisplayKey) ?? Enumerable.Empty<string>())
+            .Concat(_document?.GuiTableDisabledWhen
+                .Where(target => DisabledWhenDependsOn(target.Value, sourceKeys, getParsedRules))
+                .Select(target => target.Key) ?? Enumerable.Empty<string>())
+            .Concat(_document?.StringListTables.Where(table => _document.RequiredValuesDependOn(table, entry, source => VisibleWhenDependsOn(source.GuiVisibleWhen, sourceKeys, getParsedRules, _document) || VisibleWhenDependsOn(source.ParentGuiVisibleWhen, sourceKeys, getParsedRules, _document), getRequiredSources)).Select(table => table.Key) ?? Enumerable.Empty<string>())
+            .Concat(_document?.TupleChoiceTargets.Where(key => _document.TupleChoicesDependOn(key, entry)) ?? Enumerable.Empty<string>())
             .Distinct(StringComparer.Ordinal)
             .ToList();
+    }
+
+    private void RefreshDependentEditors(ConfigEntry entry, RequiredAircraftUpdate? prepared = null) => RefreshDependentEditorEntries(new[] { entry }, prepared);
+    private void RefreshDependentEditorEntries(IEnumerable<ConfigEntry> entries, RequiredAircraftUpdate? prepared = null)
+    {
+        var changed = entries.ToList();
+        using var optionsTransition = BeginOptionsTransition(changed.FirstOrDefault()?.DisplayName ?? "Options");
+        RequiredValueSources? requirementSources = prepared?.Sources;
+        RequiredValueSources GetRequiredSources() => requirementSources ??= new RequiredValueSources(_document!.Entries);
+        var targetKeys = prepared?.TargetKeys ?? changed.SelectMany(entry => GetDependentEditorTargetKeysCore(entry, GetRequiredSources)).Distinct(StringComparer.Ordinal).ToList();
         if (targetKeys.Count == 0)
         {
             return;
         }
 
         var targetKeySet = targetKeys.ToHashSet(StringComparer.Ordinal);
+        AddOptionsLockCategories(targetKeySet);
+        if (prepared is not null)
+            foreach (var change in prepared.Changes) _optionsAffected!.Add(change.Table.Section);
+        var review = _requiredUseReview;
+        RequiredValueResolution? reviewFacts = null;
+        if (review is not null && ReferenceEquals(review.Document, _document) && targetKeySet.Contains(review.Table.Key))
+        {
+            reviewFacts = prepared?.Facts.GetValueOrDefault(review.Table) ?? _document!.ResolveRequiredValues(review.Table, GetRequiredSources());
+            _requiredUseReview = review with { Sources = ReadRequiredUseSources(reviewFacts, review.Value, review.Category) };
+            _formHost.Invalidate(true);
+        }
         var roots = _categoryPanelCache.Values.Distinct().ToList();
-        foreach (var binding in roots
-                     .SelectMany(EnumerateChildControls<TableLayoutPanel>)
-                     .Select(panel => panel.Tag)
-                     .OfType<EntryEditorBinding>()
-                     .Where(binding => targetKeySet.Contains(binding.Entry.DisplayKey))
-                     .Distinct())
+        var bindings = roots
+            .SelectMany(EnumerateChildControls<TableLayoutPanel>)
+            .Select(panel => panel.Tag)
+            .Where(binding => binding is StringListRequirementBinding requiredBinding && targetKeySet.Contains(requiredBinding.Table.Key) ||
+                              binding is StageEditorBinding stageBinding && targetKeySet.Contains(stageBinding.Key) ||
+                              binding is EntryEditorBinding entryBinding && (targetKeySet.Contains(entryBinding.Entry.DisplayKey) ||
+                                  string.Equals(entryBinding.Entry.ParentGuiLayout, "fields", StringComparison.OrdinalIgnoreCase) && targetKeySet.Contains(entryBinding.Entry.ParentKey)) ||
+                              binding is TableEditorBinding tableBinding && (targetKeySet.Contains(tableBinding.Key) ||
+                                   tableBinding.Linked is not null && (tableBinding.Linked.SourceKeys.Overlaps(targetKeySet) || tableBinding.Linked.Owners.Keys.Any(target => targetKeySet.Contains(target.DisplayKey))) ||
+                                   tableBinding.Grid.Rows.Cast<DataGridViewRow>().Any(row =>
+                                       row.Tag is ConfigEntry rowEntry && targetKeySet.Contains(rowEntry.DisplayKey))))
+            .Distinct()
+            .ToList();
+        var requirementBindings = bindings.OfType<StringListRequirementBinding>().ToList();
+        if (requirementBindings.Count > 0 && _document is not null)
+        {
+            var sources = GetRequiredSources();
+            foreach (var binding in requirementBindings)
+            {
+                var facts = prepared?.Facts.GetValueOrDefault(binding.Table) ?? (ReferenceEquals(review?.Table, binding.Table) ? reviewFacts : null);
+                if (prepared?.Changes.Any(change => ReferenceEquals(change.Table, binding.Table)) == true)
+                    RefreshStringListGrids(binding.Active, binding.Inactive, binding.Table, preparedFacts: facts);
+                else RefreshRequiredValueBinding(binding, sources, facts);
+            }
+        }
+        foreach (var binding in bindings.OfType<EntryEditorBinding>())
         {
             ApplyEntryEditorLockState(binding);
         }
 
-        foreach (var binding in roots
-                     .SelectMany(EnumerateChildControls<TableLayoutPanel>)
-                     .Select(panel => panel.Tag)
-                     .OfType<TableEditorBinding>()
-                     .Where(binding => targetKeySet.Contains(binding.Key))
-                     .Distinct())
+        foreach (var binding in bindings.OfType<StageEditorBinding>()) ApplyStageEditorLockState(binding);
+
+        foreach (var binding in bindings.OfType<TableEditorBinding>())
         {
-            ApplyTableEditorLockState(binding);
+            if (binding.Linked is not null || targetKeySet.Contains(binding.Key))
+            {
+                ApplyTableEditorLockState(binding, GetRequiredSources());
+                continue;
+            }
+            foreach (DataGridViewRow row in binding.Grid.Rows)
+            {
+                if (row.Tag is ConfigEntry rowEntry && targetKeySet.Contains(rowEntry.DisplayKey))
+                {
+                    ApplyTableRowLockState(row, rowEntry);
+                }
+            }
+            UpdateTableRowLockNote(binding);
         }
     }
 
-    private static bool DisabledWhenDependsOn(string? ruleText, IReadOnlySet<string> sourceKeys)
+    private bool DisabledWhenDependsOn(string? ruleText, IReadOnlySet<string> sourceKeys, Func<string, List<(string SourceKey, List<string> Values)>>? getParsedRules = null)
     {
-        return VisibleWhenDependsOn(ruleText, sourceKeys);
+        return VisibleWhenDependsOn(ruleText, sourceKeys, getParsedRules, _document);
     }
 
-    private void RefreshVisibleWhenTargets(ConfigEntry entry)
+    private bool RefreshVisibleWhenTargets(ConfigEntry entry, bool deferReload = false)
     {
+        using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
         var affectedCategories = GetCategoriesContainingVisibleWhenSource(entry);
+        _optionsAffected!.UnionWith(affectedCategories);
         if (affectedCategories.Count == 0)
         {
-            return;
+            return false;
         }
 
         foreach (var categoryName in affectedCategories)
@@ -11284,13 +11749,33 @@ internal sealed partial class MainForm : Form
             MarkCategoryPanelDirty(categoryName);
         }
 
-        if (affectedCategories.Contains(GetSelectedCategoryName(), StringComparer.OrdinalIgnoreCase))
+        if (!deferReload)
         {
-            RenderSelectedCategory(force: true);
+            var selectedCategory = GetSelectedCategoryName();
+            ReloadCategoriesPreservingSelection(
+                affectedCategories.Contains(selectedCategory, StringComparer.OrdinalIgnoreCase), selectedCategory);
+            return true;
         }
+
+        // A condition edit may originate inside a native control notification.
+        // Rebuild after that notification returns, rather than disposing its sender.
+        var document = _document;
+        BeginInvoke(() =>
+        {
+            if (IsDisposed || Disposing || !ReferenceEquals(_document, document))
+            {
+                return;
+            }
+
+            // Navigation may have changed while the refresh was queued.
+            var selectedCategory = GetSelectedCategoryName();
+            ReloadCategoriesPreservingSelection(
+                affectedCategories.Contains(selectedCategory, StringComparer.OrdinalIgnoreCase), selectedCategory);
+        });
+        return true;
     }
 
-    private List<string> GetCategoriesContainingVisibleWhenSource(ConfigEntry sourceEntry)
+    private List<string> GetCategoriesContainingVisibleWhenSource(ConfigEntry sourceEntry, Func<string, List<(string SourceKey, List<string> Values)>>? getParsedRules = null)
     {
         if (_document is null)
         {
@@ -11306,8 +11791,8 @@ internal sealed partial class MainForm : Form
         var categories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in _document.Entries)
         {
-            if (VisibleWhenDependsOn(entry.GuiVisibleWhen, sourceKeys) ||
-                VisibleWhenDependsOn(entry.ParentGuiVisibleWhen, sourceKeys))
+            if (VisibleWhenDependsOn(entry.GuiVisibleWhen, sourceKeys, getParsedRules, _document) ||
+                VisibleWhenDependsOn(entry.ParentGuiVisibleWhen, sourceKeys, getParsedRules, _document))
             {
                 categories.Add(entry.EffectiveCategory);
             }
@@ -11315,7 +11800,7 @@ internal sealed partial class MainForm : Form
 
         foreach (var table in _document.StringListTables)
         {
-            if (VisibleWhenDependsOn(table.GuiVisibleWhen, sourceKeys))
+            if (VisibleWhenDependsOn(table.GuiVisibleWhen, sourceKeys, getParsedRules, _document))
             {
                 categories.Add(table.Section);
             }
@@ -11323,10 +11808,17 @@ internal sealed partial class MainForm : Form
 
         foreach (var table in _document.StageTables)
         {
-            if (VisibleWhenDependsOn(table.GuiVisibleWhen, sourceKeys))
+            if (VisibleWhenDependsOn(table.GuiVisibleWhen, sourceKeys, getParsedRules, _document))
             {
                 categories.Add(table.Section);
             }
+        }
+
+        EnsureLinkedTableData();
+        foreach (var linked in _linkedDataByKey!.Values)
+        {
+            if (linked.Owners.Keys.Any(target => categories.Contains(target.EffectiveCategory)))
+                foreach (var primary in linked.Rows.Keys) categories.Add(primary.EffectiveCategory);
         }
 
         return categories
@@ -11334,15 +11826,33 @@ internal sealed partial class MainForm : Form
             .ToList();
     }
 
-    private static bool VisibleWhenDependsOn(string? ruleText, IReadOnlySet<string> sourceKeys)
+    private static bool VisibleWhenDependsOn(string? ruleText, IReadOnlySet<string> sourceKeys, Func<string, List<(string SourceKey, List<string> Values)>>? getParsedRules = null, ConfigDocument? visibilityDocument = null)
     {
         if (string.IsNullOrWhiteSpace(ruleText))
         {
             return false;
         }
 
-        return ParseVisibleWhenRules(ruleText)
-            .Any(rule => sourceKeys.Contains(rule.SourceKey));
+        return (getParsedRules is null ? ParseVisibleWhenRules(ruleText) : getParsedRules(ruleText))
+            .Any(rule => sourceKeys.Contains(rule.SourceKey) || visibilityDocument is not null && AlternativeVisibilitySourceDependsOn(visibilityDocument, rule.SourceKey, sourceKeys));
+    }
+
+    private static bool AlternativeVisibilitySourceDependsOn(ConfigDocument document, string sourceKey, IReadOnlySet<string> sourceKeys)
+    {
+        if (!sourceKey.Contains('|')) return false;
+        var remaining = sourceKey.AsSpan();
+        while (true)
+        {
+            var separator = remaining.IndexOf('|');
+            var alternative = (separator < 0 ? remaining : remaining[..separator]).Trim();
+            foreach (var changedKey in sourceKeys)
+            {
+                if (alternative.Equals(changedKey.AsSpan(), StringComparison.Ordinal))
+                    return FindVisibleWhenSourceEntry(document, sourceKey) is null;
+            }
+            if (separator < 0) return false;
+            remaining = remaining[(separator + 1)..];
+        }
     }
 
     private void RefreshLinkedStageEditors(ConfigEntry entry)
@@ -11381,6 +11891,7 @@ internal sealed partial class MainForm : Form
 
     private Control BuildFriendlyControl(ConfigEntry entry)
     {
+        var isFieldsEntry = string.Equals(entry.ParentGuiLayout, "fields", StringComparison.OrdinalIgnoreCase);
         if (string.Equals(entry.ControlTypeOverride, "multiline", StringComparison.OrdinalIgnoreCase))
         {
             var multilineBox = new TextBox
@@ -11393,11 +11904,25 @@ internal sealed partial class MainForm : Form
             };
             multilineBox.TextChanged += (_, _) =>
             {
+                if (isFieldsEntry && !multilineBox.Enabled)
+                {
+                    RefreshControlValue(() => multilineBox.Text = entry.ValueText);
+                    return;
+                }
                 ChangeEntryValue(
                     entry,
                     "edit " + entry.DisplayName,
                     () => entry.ValueText = multilineBox.Text,
-                    () => RefreshControlValue(() => multilineBox.Text = entry.ValueText));
+                    () =>
+                    {
+                        if (multilineBox.IsDisposed && (isFieldsEntry || entry.GuiExampleFormat is not null))
+                        {
+                            MarkCategoryPanelDirty(entry.EffectiveCategory);
+                            if (GetSelectedCategoryName().Equals(entry.EffectiveCategory, StringComparison.OrdinalIgnoreCase))
+                                RenderSelectedCategory(false);
+                        }
+                        else RefreshControlValue(() => multilineBox.Text = entry.ValueText);
+                    });
             };
             return multilineBox;
         }
@@ -11414,11 +11939,25 @@ internal sealed partial class MainForm : Form
             };
             textBox.TextChanged += (_, _) =>
             {
+                if (isFieldsEntry && !textBox.Enabled)
+                {
+                    RefreshControlValue(() => textBox.Text = entry.ValueText);
+                    return;
+                }
                 ChangeEntryValue(
                     entry,
                     "edit " + entry.DisplayName,
                     () => entry.ValueText = textBox.Text,
-                    () => RefreshControlValue(() => textBox.Text = entry.ValueText));
+                    () =>
+                    {
+                        if (textBox.IsDisposed && (isFieldsEntry || entry.GuiExampleFormat is not null))
+                        {
+                            MarkCategoryPanelDirty(entry.EffectiveCategory);
+                            if (GetSelectedCategoryName().Equals(entry.EffectiveCategory, StringComparison.OrdinalIgnoreCase))
+                                RenderSelectedCategory(false);
+                        }
+                        else RefreshControlValue(() => textBox.Text = entry.ValueText);
+                    });
             };
             return textBox;
         }
@@ -11445,6 +11984,7 @@ internal sealed partial class MainForm : Form
             ConfigureCompactEditor(comboBox, GetChoiceEditorWidth(entry));
             comboBox.SelectedIndexChanged += (_, _) =>
             {
+                if (!comboBox.Enabled) return;
                 ChangeEntryValue(
                     entry,
                     "edit " + entry.DisplayName,
@@ -11453,7 +11993,7 @@ internal sealed partial class MainForm : Form
                     {
                         comboBox.Text = entry.ValueText;
                         RefreshLinkedStageEditors(entry);
-                    }));
+                    }), deferVisibilityRefresh: true);
                 RefreshLinkedStageEditors(entry);
             };
             return comboBox;
@@ -11472,11 +12012,13 @@ internal sealed partial class MainForm : Form
             ConfigureCompactEditor(comboBox, 170);
             comboBox.SelectedIndexChanged += (_, _) =>
             {
+                if (!comboBox.Enabled) return;
                 ChangeEntryValue(
                     entry,
                     "edit " + entry.DisplayName,
                     () => entry.ValueText = ParseBooleanDisplay(comboBox.Text),
-                    () => RefreshControlValue(() => comboBox.Text = FormatBooleanDisplay(entry.ValueText)));
+                    () => RefreshControlValue(() => comboBox.Text = FormatBooleanDisplay(entry.ValueText)),
+                    deferVisibilityRefresh: true);
             };
             return comboBox;
         }
@@ -11496,16 +12038,30 @@ internal sealed partial class MainForm : Form
         ConfigureCompactEditor(plainTextBox, GetTextEditorWidth(entry));
         plainTextBox.TextChanged += (_, _) =>
         {
+            if (isFieldsEntry && !plainTextBox.Enabled)
+            {
+                RefreshControlValue(() => plainTextBox.Text = entry.ValueText);
+                return;
+            }
             ChangeEntryValue(
                 entry,
                 "edit " + entry.DisplayName,
                 () => entry.ValueText = plainTextBox.Text,
-                () => RefreshControlValue(() => plainTextBox.Text = entry.ValueText));
+                () =>
+                {
+                    if (plainTextBox.IsDisposed && (isFieldsEntry || entry.GuiExampleFormat is not null))
+                    {
+                        MarkCategoryPanelDirty(entry.EffectiveCategory);
+                        if (GetSelectedCategoryName().Equals(entry.EffectiveCategory, StringComparison.OrdinalIgnoreCase))
+                            RenderSelectedCategory(false);
+                    }
+                    else RefreshControlValue(() => plainTextBox.Text = entry.ValueText);
+                });
         };
         return plainTextBox;
     }
 
-    private void ChangeEntryValue(ConfigEntry entry, string description, Action applyChange, Action? refreshAction = null)
+    private void ChangeEntryValue(ConfigEntry entry, string description, Action applyChange, Action? refreshAction = null, bool deferVisibilityRefresh = false)
     {
         if (_loadingForm)
         {
@@ -11518,7 +12074,10 @@ internal sealed partial class MainForm : Form
         string? followUpStatus = null;
         if (!StringComparer.Ordinal.Equals(newValue, oldValue))
         {
+            var beforeUndoCount = _undoStack.Count;
             SetEntryValueUndoAction(entry, description, oldValue, newValue, refreshAction);
+            var sourceUndo = _undoStack.Count >= beforeUndoCount && _undoStack.TryPeek(out var addedStep) ? addedStep : null;
+            var afterSourceCount = _undoStack.Count;
             var followUpStatuses = new List<string>();
             var untickStatus = ApplyUntickRowsWhenRules(entry);
             if (!string.IsNullOrWhiteSpace(untickStatus))
@@ -11532,9 +12091,15 @@ internal sealed partial class MainForm : Form
                 followUpStatuses.Add(eraStatus);
             }
 
+            var aircraft = ActivateRequiredAircraft(entry);
+            ApplyTupleChoiceDefaults(entry);
+            GroupAutomaticAircraftUndo(aircraft, entry, oldValue, sourceUndo, afterSourceCount);
+            if (aircraft.Changes.Count > 0)
+                followUpStatuses.Add(aircraft.Changes.Count.ToString(CultureInfo.InvariantCulture) + " aircraft activated for AI. Review the CHANGED aircraft category.");
             followUpStatus = followUpStatuses.Count == 0 ? null : string.Join(" ", followUpStatuses);
-            RefreshVisibleWhenTargets(entry);
-            RefreshDependentEditors(entry);
+            using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
+            RefreshVisibleWhenTargets(entry, deferVisibilityRefresh);
+            RefreshDependentEditors(entry, aircraft);
             RefreshSideMultiplierPreviewLabels();
         }
 
@@ -11629,8 +12194,13 @@ internal sealed partial class MainForm : Form
                     item.Entry.ValueText = item.OldValue;
                 }
             },
-            () => RefreshVisibleTableRows(changedRows.Select(item => item.Entry)));
+            () =>
+            {
+                RefreshVisibleTableRows(changedRows.Select(item => item.Entry));
+                RefreshDependentEditorEntries(changedRows.Select(item => item.Entry));
+            });
         RefreshVisibleTableRows(changedRows.Select(item => item.Entry));
+        RefreshDependentEditorEntries(changedRows.Select(item => item.Entry));
         return FormatListForStatus(changedRows.Select(item => item.Entry.Key).Distinct(StringComparer.Ordinal).ToList()) + " disabled.";
     }
 
@@ -11717,8 +12287,13 @@ internal sealed partial class MainForm : Form
                     item.Entry.ValueText = item.OldValue;
                 }
             },
-            () => RefreshVisibleTableRows(changedRows.Select(item => item.Entry)));
+            () =>
+            {
+                RefreshVisibleTableRows(changedRows.Select(item => item.Entry));
+                RefreshDependentEditorEntries(changedRows.Select(item => item.Entry));
+            });
         RefreshVisibleTableRows(changedRows.Select(item => item.Entry));
+        RefreshDependentEditorEntries(changedRows.Select(item => item.Entry));
 
         var rowCount = changedRows.Select(item => item.Entry.DisplayKey).Distinct(StringComparer.Ordinal).Count();
         return rowCount.ToString(CultureInfo.InvariantCulture) + " Era template row" +
@@ -11854,14 +12429,18 @@ internal sealed partial class MainForm : Form
         _loadingForm = true;
         try
         {
-            foreach (var grid in roots.SelectMany(EnumerateChildControls<DataGridView>))
+            foreach (var grid in roots.SelectMany(EnumerateChildControls<DataGridView>).Distinct())
             {
-                if (grid.Tag is not string tableKey || !tableKeys.Contains(tableKey))
+                if (grid.Tag is not string tableKey ||
+                    (!tableKeys.Contains(tableKey) && !(grid.Parent?.Tag is TableEditorBinding { Linked: not null } linkedBinding && linkedBinding.Linked.SourceKeys.Overlaps(tableKeys))))
                 {
                     continue;
                 }
 
-                RefreshTableGrid(grid, FindChildren(tableKey));
+                var binding = grid.Parent?.Tag as TableEditorBinding;
+                var entries = binding?.Entries is not null && binding.StructureVersion == _linkedStructureVersion
+                    ? binding.Entries : FilterLinkedSecondaryEntries(tableKey, FindChildren(tableKey));
+                RefreshTableGrid(grid, entries);
             }
         }
         finally
@@ -11923,6 +12502,7 @@ internal sealed partial class MainForm : Form
         {
             Dock = DockStyle.Top,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 3
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(70)));
@@ -11933,6 +12513,16 @@ internal sealed partial class MainForm : Form
         var blueInput = CreateMultiplierInput(entry, blue);
         var redText = MakeValueHint(GetSideMultiplierHint(entry, redInput.Value, isRed: true));
         var blueText = MakeValueHint(GetSideMultiplierHint(entry, blueInput.Value, isRed: false));
+        redText.AutoSize = true;
+        blueText.AutoSize = true;
+        var redLabel = MakeLabel("RED");
+        var blueLabel = MakeLabel("BLUE");
+        redLabel.Dock = DockStyle.Top;
+        blueLabel.Dock = DockStyle.Top;
+        redLabel.Height = redInput.Height;
+        blueLabel.Height = blueInput.Height;
+        redInput.SizeChanged += (_, _) => redLabel.Height = redInput.Height;
+        blueInput.SizeChanged += (_, _) => blueLabel.Height = blueInput.Height;
         redText.Tag = new SideMultiplierPreviewBinding(entry, redInput, IsRed: true);
         blueText.Tag = new SideMultiplierPreviewBinding(entry, blueInput, IsRed: false);
 
@@ -11969,10 +12559,10 @@ internal sealed partial class MainForm : Form
                 }));
         };
 
-        panel.Controls.Add(MakeLabel("RED"), 0, 0);
+        panel.Controls.Add(redLabel, 0, 0);
         panel.Controls.Add(redInput, 1, 0);
         panel.Controls.Add(redText, 2, 0);
-        panel.Controls.Add(MakeLabel("BLUE"), 0, 1);
+        panel.Controls.Add(blueLabel, 0, 1);
         panel.Controls.Add(blueInput, 1, 1);
         panel.Controls.Add(blueText, 2, 1);
         return panel;
@@ -12204,14 +12794,15 @@ internal sealed partial class MainForm : Form
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(54)));
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
-        group.RowStyles.Add(new RowStyle(SizeType.Absolute, GetTableHeaderRowHeight()));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         var header = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
+            AutoSize = true,
             Padding = GetTableHeaderPadding()
         };
         header.Controls.Add(new Label
@@ -12227,28 +12818,51 @@ internal sealed partial class MainForm : Form
         }
         group.Controls.Add(header, 0, 0);
 
-        group.Controls.Add(MakeStringListBucketHeader("Available / commented"), 2, 0);
+        group.Controls.Add(MakeStringListBucketHeader("Not active"), 2, 0);
 
         activeGrid = MakeStringListBucketGrid(table.Key, "Active", showNewStatus: false);
+        if (table.RequiredValueRules.Count > 0) AddRequiredStatusColumn(activeGrid);
+        activeGrid.RowPostPaint += PaintOptionsRowMarker;
         inactiveGrid = MakeStringListBucketGrid(table.Key + ":inactive", "Inactive", showNewStatus: true);
         DataGridView? selectedBucketGrid = activeGrid;
         activeGrid.Enter += (_, _) => selectedBucketGrid = activeGrid;
         inactiveGrid.Enter += (_, _) => selectedBucketGrid = inactiveGrid;
         activeGrid.CellMouseDown += (_, _) => selectedBucketGrid = activeGrid;
         inactiveGrid.CellMouseDown += (_, _) => selectedBucketGrid = inactiveGrid;
+        var deactivateButton = MakeDesignerButton(">", () => DeactivateStringListItemRow(table, activeGrid, inactiveGrid), Zoomed(42));
         var movePanel = MakeStringListMovePanel(
-            MakeDesignerButton(">", () => DeactivateStringListItemRow(table, activeGrid, inactiveGrid), Zoomed(42)),
+            deactivateButton,
             MakeDesignerButton("<", () => ActivateStringListItemRow(table, activeGrid, inactiveGrid), Zoomed(42)));
         _toolTip.SetToolTip(movePanel, "Move selected items between active and commented.");
         group.Controls.Add(activeGrid, 0, 1);
         group.Controls.Add(movePanel, 1, 1);
         group.Controls.Add(inactiveGrid, 2, 1);
+        var removeButton = MakeDesignerButton("Remove selected", () => RemoveStringListItemRow(table, activeGrid, inactiveGrid, selectedBucketGrid), TableActionButtonWidth);
         group.Controls.Add(MakeTableActionPanel(
-            MakeDesignerButton("Add item", () => AddStringListItemRow(table, activeGrid, inactiveGrid), TableActionButtonWidth),
-            MakeDesignerButton("Remove selected", () => RemoveStringListItemRow(table, activeGrid, inactiveGrid, selectedBucketGrid), TableActionButtonWidth)), 3, 1);
+            MakeDesignerButton("Add item", () => AddStringListItemRow(table, activeGrid, inactiveGrid), TableActionButtonWidth), removeButton), 3, 1);
+        if (table.RequiredValueRules.Count > 0)
+        {
+            var reasons = new FlowLayoutPanel { Name = "RequiredValueReasons:" + table.Key, Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0, Zoomed(6), 0, 0) };
+            group.RowCount = 3; group.RowStyles.Add(new RowStyle(SizeType.AutoSize)); group.Controls.Add(reasons, 0, 2); group.SetColumnSpan(reasons, 4);
+            var binding = new StringListRequirementBinding(table, activeGrid, inactiveGrid, deactivateButton, removeButton, reasons);
+            group.Tag = binding;
+            binding.Selected = activeGrid;
+            activeGrid.CurrentCellChanged += (_, _) => { if (binding.Selected == activeGrid || activeGrid.ContainsFocus) ShowRequiredValueReasons(binding, activeGrid); };
+            inactiveGrid.CurrentCellChanged += (_, _) => { if (binding.Selected == inactiveGrid || inactiveGrid.ContainsFocus) ShowRequiredValueReasons(binding, inactiveGrid); };
+            activeGrid.Enter += (_, _) => ShowRequiredValueReasons(binding, activeGrid);
+            inactiveGrid.Enter += (_, _) => ShowRequiredValueReasons(binding, inactiveGrid);
+        }
 
+        BindManagedStringListRefresh(table, group, values => RefreshStringListGrids(activeGrid, inactiveGrid, table, values));
         RefreshStringListGrids(activeGrid, inactiveGrid, table);
-        ApplyStringListBucketLayout(group, activeGrid, inactiveGrid);
+        ((SmoothDataGridView)activeGrid).ConfigureCompactHeightLayout(group, () =>
+        {
+            var height = Math.Max(GetTableActionMinimumHeight(group),
+                GetStringListBucketHeight(activeGrid, inactiveGrid, 220, 640, GetTableHeightPadding(76)));
+            height += group.Tag is StringListRequirementBinding requirements ? requirements.Reasons.PreferredSize.Height : 0;
+            if (group.Height != height) group.Height = height;
+        });
+        ConfigureTableHeaderSizing(group, header);
         return group;
     }
 
@@ -12269,14 +12883,15 @@ internal sealed partial class MainForm : Form
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
-        group.RowStyles.Add(new RowStyle(SizeType.Absolute, GetTableHeaderRowHeight()));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         var header = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
+            AutoSize = true,
             Padding = GetTableHeaderPadding()
         };
         header.Controls.Add(new Label
@@ -12312,8 +12927,10 @@ internal sealed partial class MainForm : Form
             MakeDesignerButton("Add item", () => AddSimpleStringListItemRow(table, grid), TableActionButtonWidth),
             MakeDesignerButton("Remove selected", () => RemoveSimpleStringListItemRow(table, grid), TableActionButtonWidth)), 1, 1);
 
+        BindManagedStringListRefresh(table, group, values => RefreshSimpleStringListGrid(grid, table, values));
         RefreshSimpleStringListGrid(grid, table);
         ApplyCompactTableLayout(group, grid, 220, 640, GetTableHeightPadding(76));
+        ConfigureTableHeaderSizing(group, header);
         return group;
     }
 
@@ -12351,30 +12968,17 @@ internal sealed partial class MainForm : Form
             grid.Columns.Add("status", "Status");
             grid.Columns["status"].Width = Zoomed(58);
             grid.Columns["status"].MinimumWidth = Zoomed(48);
-            grid.Columns["status"].DisplayIndex = 0;
-            grid.Columns["status"].Frozen = true;
+            grid.Columns["status"].DisplayIndex = 1;
             grid.Columns["status"].SortMode = DataGridViewColumnSortMode.NotSortable;
             grid.Columns["status"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
         }
         return grid;
     }
 
-    private static FlowLayoutPanel MakeStringListMovePanel(params Button[] buttons)
+    private FlowLayoutPanel MakeStringListMovePanel(params Button[] buttons)
     {
-        var panel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Padding = new Padding(6, 42, 0, 0)
-        };
-
-        foreach (var button in buttons)
-        {
-            button.Margin = new Padding(0, 0, 0, 8);
-            panel.Controls.Add(button);
-        }
-
+        var panel = MakeTableActionPanel(1, buttons);
+        panel.Padding = new Padding(6, 42, 0, 0);
         return panel;
     }
 
@@ -12392,6 +12996,7 @@ internal sealed partial class MainForm : Form
         group.Height = Math.Max(
             GetTableActionMinimumHeight(group),
             GetStringListBucketHeight(activeGrid, inactiveGrid, 220, 640, GetTableHeightPadding(76)));
+        if (group.Tag is StringListRequirementBinding requirements) group.Height += requirements.Reasons.PreferredSize.Height;
         inactiveGrid.Height = activeGrid.Height;
     }
 
@@ -12402,7 +13007,9 @@ internal sealed partial class MainForm : Form
             GetConfiguredTableHeight(inactiveGrid, minimumHeight, maximumHeight, heightPadding));
     }
 
-    private static FlowLayoutPanel MakeTableActionPanel(params Button[] buttons)
+    private FlowLayoutPanel MakeTableActionPanel(params Button[] buttons) => MakeTableActionPanel(null, buttons);
+
+    private FlowLayoutPanel MakeTableActionPanel(int? actionColumn, params Button[] buttons)
     {
         var panel = new FlowLayoutPanel
         {
@@ -12415,9 +13022,42 @@ internal sealed partial class MainForm : Form
         foreach (var button in buttons)
         {
             button.Margin = new Padding(0, 0, 0, 8);
+            button.Anchor = AnchorStyles.Left | AnchorStyles.Right;
             panel.Controls.Add(button);
         }
 
+        void SizeActionColumn()
+        {
+            if (panel.Parent is not TableLayoutPanel group) return;
+            var column = actionColumn ?? group.ColumnCount - 1;
+            var header = group.RowCount > 1 ? group.GetControlFromPosition(0, 0) : null;
+            var headerHeight = header is null ? 0 : header.Height + header.Margin.Vertical;
+            var height = headerHeight + buttons.Sum(button => button.Height + button.Margin.Vertical) +
+                panel.Padding.Vertical + panel.Margin.Vertical + group.Padding.Vertical;
+            if (group.GetControlFromPosition(0, 1) is not SmoothDataGridView { HasCompactHeightLayout: true } &&
+                group.MinimumSize.Height < height)
+            {
+                group.MinimumSize = new Size(group.MinimumSize.Width, height);
+                group.PerformLayout();
+            }
+            var width = buttons.Max(button => button.Width + button.Margin.Horizontal) +
+                panel.Padding.Horizontal + panel.Margin.Horizontal;
+            if (Math.Abs(group.ColumnStyles[column].Width - width) < 1) return;
+            group.ColumnStyles[column].Width = width;
+            if (group.RowCount == 1)
+                group.MinimumSize = new Size((int)Math.Ceiling(group.ColumnStyles.Cast<ColumnStyle>().Sum(style => style.Width)) +
+                    group.Padding.Horizontal, group.MinimumSize.Height);
+            if (group.Tag is TableEditorBinding binding)
+                ApplyCompactTableLayout(group, binding.Grid);
+        }
+        panel.ParentChanged += (_, _) =>
+        {
+            if (panel.Parent is TableLayoutPanel group && group.RowCount > 1 &&
+                group.GetControlFromPosition(0, 0) is Control header)
+                header.SizeChanged += (_, _) => SizeActionColumn();
+            SizeActionColumn();
+        };
+        foreach (var button in buttons) button.SizeChanged += (_, _) => SizeActionColumn();
         return panel;
     }
 
@@ -12515,17 +13155,20 @@ internal sealed partial class MainForm : Form
 
             RefreshStringListGrids(activeGrid, inactiveGrid, table);
             SelectBucketRowByValue(activeGrid, itemValue);
+            RequiredValueResolution? preparedRemoval = null;
             SetUndoAction("add " + itemValue, () =>
             {
+                var required = preparedRemoval!;
+                preparedRemoval = null; // valid only between this Undo preflight and its immediate action
                 if (FindActiveStringListItem(table, itemValue) is { } active)
                 {
                     if (wasCommented)
                     {
-                        _document.DeactivateStringListItem(table, active);
+                        _document.DeactivateStringListItem(table, active, required);
                     }
                     else
                     {
-                        _document.RemoveStringListItem(table, active);
+                        _document.RemoveStringListItem(table, active, required);
                     }
                 }
 
@@ -12535,6 +13178,11 @@ internal sealed partial class MainForm : Form
                 }
 
                 RefreshStringListGrids(activeGrid, inactiveGrid, table);
+            }, null, () =>
+            {
+                var required = _document.ResolveRequiredValues(table);
+                preparedRemoval = required.IsRequired(itemValue) ? null : required;
+                return required.IsRequired(itemValue) ? required.RemovalMessage(itemValue) : null;
             });
             SetChangedStatus();
         }
@@ -12555,11 +13203,26 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        var required = _document.ResolveRequiredValues(table);
+        if (required.IsRequired(bucket.Value))
+        {
+            if (activeGrid.Parent?.Tag is StringListRequirementBinding binding)
+            {
+                binding.Selected = activeGrid;
+                binding.Presentation = null;
+                binding.BlockedValue = bucket.Value;
+                binding.ExpandedValue = bucket.Value;
+                RefreshRequiredValueBinding(binding, facts: required);
+                _formHost.ScrollControlIntoView(binding.Reasons.Controls[0]);
+            }
+            SetStatus(required.RemovalMessage(bucket.Value)); return;
+        }
+
         try
         {
             var itemValue = bucket.Value;
             var markerWasPending = IsPendingBucketNewItem(table, itemValue);
-            _document.DeactivateStringListItem(table, bucket.Item);
+            _document.DeactivateStringListItem(table, bucket.Item, required);
             if (IsStoredBucketNewItem(table, itemValue))
             {
                 RestorePendingBucketNewItem(table, itemValue);
@@ -12615,8 +13278,11 @@ internal sealed partial class MainForm : Form
 
             RefreshStringListGrids(activeGrid, inactiveGrid, table);
             SelectBucketRowByValue(activeGrid, itemValue);
+            RequiredValueResolution? preparedRemoval = null;
             SetUndoAction("activate " + itemValue, () =>
             {
+                var required = preparedRemoval!;
+                preparedRemoval = null; // valid only between this Undo preflight and its immediate action
                 if (FindActiveStringListItem(table, itemValue) is not { } active)
                 {
                     return;
@@ -12624,11 +13290,11 @@ internal sealed partial class MainForm : Form
 
                 if (bucket.CatalogOnly)
                 {
-                    _document.RemoveStringListItem(table, active);
+                    _document.RemoveStringListItem(table, active, required);
                 }
                 else
                 {
-                    _document.DeactivateStringListItem(table, active);
+                    _document.DeactivateStringListItem(table, active, required);
                 }
 
                 if (markerWasPending)
@@ -12638,6 +13304,11 @@ internal sealed partial class MainForm : Form
 
                 RefreshStringListGrids(activeGrid, inactiveGrid, table);
                 SelectBucketRowByValue(inactiveGrid, itemValue);
+            }, null, () =>
+            {
+                var required = _document.ResolveRequiredValues(table);
+                preparedRemoval = required.IsRequired(itemValue) ? null : required;
+                return required.IsRequired(itemValue) ? required.RemovalMessage(itemValue) : null;
             });
             SetChangedStatus();
         }
@@ -12663,6 +13334,8 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        if (RejectRequiredRemoval(table, bucket.Value)) return;
+
         if (MessageBox.Show(this, "Remove " + bucket.Value + " from this list and catalog?", "Remove item", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
         {
             return;
@@ -12670,12 +13343,14 @@ internal sealed partial class MainForm : Form
 
         try
         {
+            var required = _document.ResolveRequiredValues(table);
+            if (required.IsRequired(bucket.Value)) { SetStatus(required.RemovalMessage(bucket.Value)); return; }
             var removedValue = bucket.Value;
             var markerWasPending = IsPendingBucketNewItem(table, removedValue);
             var changedConfig = false;
             if (bucket.IsActive && bucket.Item is not null)
             {
-                _document.RemoveStringListItem(table, bucket.Item);
+                _document.RemoveStringListItem(table, bucket.Item, required);
                 changedConfig = true;
             }
             else if (bucket.Item is not null)
@@ -12735,7 +13410,10 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private Control BuildTableEditor(string key, List<ConfigEntry> entries)
+    private Control BuildTableEditor(string key, List<ConfigEntry> entries) =>
+        BuildLinkedOrStandardTableEditor(key, entries, GetLinkedTableData(key));
+
+    private Control BuildLinkedOrStandardTableEditor(string key, List<ConfigEntry> entries, LinkedTableData? linked)
     {
         GuiMetadataEntry? metadata = null;
         _document?.Metadata.Entries.TryGetValue(key, out metadata);
@@ -12754,14 +13432,15 @@ internal sealed partial class MainForm : Form
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
-        group.RowStyles.Add(new RowStyle(SizeType.Absolute, GetTableHeaderRowHeight()));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         var header = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            WrapContents = true,
+            AutoSize = true,
             Padding = GetTableHeaderPadding()
         };
         var label = new Label
@@ -12772,7 +13451,34 @@ internal sealed partial class MainForm : Form
             Margin = GetTableHeaderLabelMargin()
         };
         header.Controls.Add(label);
+        if (_activeImportedNewEntryKeys.Contains(key)) header.Controls.Add(MakeNewBadgeLabel());
+        var lockHelpRow = new TableLayoutPanel
+        {
+            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 2, RowCount = 1, BackColor = MainBackground, Margin = new Padding(0), Visible = false
+        };
+        lockHelpRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        lockHelpRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        var lockedPrefix = new Label
+        {
+            Text = "Locked", AutoSize = true, Visible = false,
+            Font = new Font(Font, FontStyle.Bold), ForeColor = LockedTextColor,
+            BackColor = MainBackground, Margin = new Padding(0, 4, 0, 0), Tag = LockedPrefixTag
+        };
+        var rowLockNote = new Label
+        {
+            AutoSize = true, Visible = false, ForeColor = HelpTextColor, BackColor = MainBackground,
+            Padding = new Padding(0, 4, 0, 0), Margin = new Padding(0)
+        };
+        lockHelpRow.Controls.Add(lockedPrefix, 0, 0);
+        lockHelpRow.Controls.Add(rowLockNote, 1, 0);
+        header.Controls.Add(lockHelpRow);
         group.Controls.Add(header, 0, 0);
+        group.SetColumnSpan(header, 2);
+        void ResizeLockHelpRow() => lockHelpRow.Width = Math.Max(Zoomed(180), header.ClientSize.Width - header.Padding.Horizontal);
+        header.SizeChanged += (_, _) => ResizeLockHelpRow();
+        ResizeLockHelpRow();
+        ConfigureHelpSizing(group, rowLockNote, lockedPrefix);
 
         var grid = new SmoothDataGridView
         {
@@ -12786,21 +13492,71 @@ internal sealed partial class MainForm : Form
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
         };
         group.Controls.Add(grid, 0, 1);
-        BuildTableColumns(grid, entries, useCheckboxValueColumn);
+        var initialTupleChoices = linked is null ? GetTupleChoiceSnapshot(key) : null;
+        if (linked is not null) BuildLinkedTableColumns(grid, linked);
+        else
+        {
+            if (initialTupleChoices is { } tupleChoices)
+                foreach (var entry in entries) _document!.ConfigureTupleChoiceFields(entry, tupleChoices);
+            BuildTableColumns(grid, entries, useCheckboxValueColumn);
+        }
+        if (linked is not null || grid.Columns.Contains("field0"))
+        {
+            var headerColumns = grid.Columns.Cast<DataGridViewColumn>().Skip(1)
+                .Select(column => (Column: column, BaseWidth: column.Tag is int preferredWidth ? preferredWidth : column.Width)).ToArray();
+            Font? measuredHeaderFont = null;
+            void SizeLinkedHeaders()
+            {
+                var headerFont = grid.ColumnHeadersDefaultCellStyle.Font ?? grid.Font;
+                if (Equals(measuredHeaderFont, headerFont)) return;
+                measuredHeaderFont = headerFont;
+                foreach (var (column, baseWidth) in headerColumns)
+                {
+                    var width = Math.Max(baseWidth, GetTableHeaderWidth(column, headerFont));
+                    if (column.AutoSizeMode == DataGridViewAutoSizeColumnMode.Fill)
+                    {
+                        if (!Equals(column.Tag, width)) column.Tag = width;
+                        if (column.MinimumWidth != width) column.MinimumWidth = width;
+                    }
+                    else if (column.Width != width) column.Width = width;
+                }
+                ApplyCompactTableLayout(group, grid);
+            }
+            grid.FontChanged += (_, _) => SizeLinkedHeaders();
+            grid.ColumnHeadersDefaultCellStyleChanged += (_, _) => SizeLinkedHeaders();
+            SizeLinkedHeaders();
+        }
+        if (grid.Columns["value"] is DataGridViewCheckBoxColumn enabledColumn)
+        {
+            void SizeEnabledColumn()
+            {
+                ConfigureCheckboxValueColumn(grid, enabledColumn);
+                ApplyCompactTableLayout(group, grid);
+            }
+            grid.FontChanged += (_, _) => SizeEnabledColumn();
+            grid.ColumnHeadersDefaultCellStyleChanged += (_, _) => SizeEnabledColumn();
+            SizeEnabledColumn();
+        }
         ApplyCompactTableLayout(group, grid);
         var addButton = MakeDesignerButton("Add row", () => AddTableEntryRow(key, entries, grid), TableActionButtonWidth);
         var removeButton = MakeDesignerButton("Remove selected", () => RemoveTableEntryRow(entries, grid), TableActionButtonWidth);
         group.Controls.Add(MakeTableActionPanel(addButton, removeButton), 1, 1);
-        var binding = new TableEditorBinding(key, title, helpText, header, grid, addButton, removeButton);
+        var binding = new TableEditorBinding(key, title, helpText, header, grid, addButton, removeButton, rowLockNote, lockedPrefix);
+        binding.Linked = linked;
+        binding.Entries = entries;
+        binding.StructureVersion = _linkedStructureVersion;
         group.Tag = binding;
-        ApplyTableEditorLockState(binding);
+        if (linked is not null) ConfigureLinkedTableHelp(binding);
+        ApplyTableEditorLockState(binding, prepared: initialTupleChoices);
 
         grid.SuspendLayout();
         try
         {
-            foreach (var entry in entries)
+            var linkedPolicy = linked is null ? null : ReadLinkedDisplayPolicy(binding);
+            foreach (var entry in entries.Where(IsTableRowVisible))
             {
-                AddTableRow(grid, entry);
+                if (linkedPolicy is null) AddTableRow(grid, entry);
+                else AddLinkedTableRow(binding, entry, linkedPolicy);
             }
         }
         finally
@@ -12808,6 +13564,8 @@ internal sealed partial class MainForm : Form
             grid.ResumeLayout();
         }
 
+        if (linked is not null) UpdateLinkedSharedNote(binding);
+        UpdateTableRowLockNote(binding);
         ApplyCompactTableLayout(group, grid, 170, 520, GetTableHeightPadding(70));
         grid.CellValueChanged += (_, args) =>
         {
@@ -12816,33 +13574,124 @@ internal sealed partial class MainForm : Form
                 return;
             }
 
+            var row = grid.Rows[args.RowIndex];
+            if (binding.Linked is not null)
+            {
+                ApplyLinkedCellEdit(binding, row, args.ColumnIndex);
+                return;
+            }
+            var rowLocked = ShouldLockEntryEditor(entry, out var rowLockReason);
+            if (grid.ReadOnly || row.ReadOnly || row.Cells[args.ColumnIndex].ReadOnly || rowLocked)
+            {
+                grid.CancelEdit();
+                ApplyTableRowLockState(row, entry, rowLocked, rowLockReason);
+                return;
+            }
             var oldValue = entry.ValueText;
             ApplyTableRow(grid.Rows[args.RowIndex], entry);
             if (!StringComparer.Ordinal.Equals(entry.ValueText, oldValue))
             {
-                SetEntryValueUndoAction(entry, "edit " + entry.DisplayName, oldValue, entry.ValueText, () => RefreshTableGrid(grid, entries));
+                using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
+                var beforeUndoCount = _undoStack.Count;
+                SetEntryValueUndoAction(entry, "edit " + entry.DisplayName, oldValue, entry.ValueText, () =>
+                {
+                    RefreshVisibleTableRows(new[] { entry });
+                });
+                var sourceUndo = _undoStack.Count >= beforeUndoCount && _undoStack.TryPeek(out var addedStep) ? addedStep : null;
+                var aircraft = ActivateRequiredAircraft(entry);
+                GroupAutomaticAircraftUndo(aircraft, entry, oldValue, sourceUndo, _undoStack.Count);
+                RefreshVisibleTableRows(new[] { entry });
+                RefreshDependentEditors(entry, aircraft);
+                SetChangedStatus();
+                RefreshVisibleWhenTargets(entry);
+                return;
             }
 
             SetChangedStatus();
         };
+        grid.RowPostPaint += PaintOptionsRowMarker;
         grid.CurrentCellDirtyStateChanged += (_, _) =>
         {
-            if (grid.IsCurrentCellDirty)
+            if (!_loadingForm && grid.IsCurrentCellDirty)
             {
-                grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+                if (grid.CurrentRow?.Tag is ConfigEntry entry)
+                {
+                    var rowLocked = ShouldLockEntryEditor(entry, out var rowLockReason);
+                    if (grid.ReadOnly || rowLocked || binding.Linked is not null && !CanEditLinkedCell(binding, grid.CurrentCell, out _))
+                    {
+                        grid.CancelEdit();
+                        ApplyTableRowLockState(grid.CurrentRow, entry, rowLocked, rowLockReason);
+                        return;
+                    }
+                }
+                if (grid.CurrentCell is DataGridViewCheckBoxCell or DataGridViewComboBoxCell)
+                {
+                    grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+                }
             }
         };
+        grid.CellPainting += (_, args) =>
+        {
+            if (args.RowIndex >= 0 && grid.Rows[args.RowIndex].Tag is ConfigEntry source && IsRequiredUseHighlighted(source))
+            {
+                args.CellStyle!.BackColor = IsDarkPalette() ? Color.FromArgb(35, 59, 80) : Color.FromArgb(225, 240, 250);
+                args.CellStyle.SelectionBackColor = IsDarkPalette() ? Color.FromArgb(45, 79, 112) : Color.FromArgb(194, 222, 246);
+            }
+            if (args.RowIndex < 0 || args.ColumnIndex < 0 ||
+                !(grid.ReadOnly || grid.Rows[args.RowIndex].ReadOnly || grid.Rows[args.RowIndex].Cells[args.ColumnIndex].ReadOnly) ||
+                grid.Rows[args.RowIndex].Cells[args.ColumnIndex] is not DataGridViewCheckBoxCell cell) return;
+            args.Paint(args.CellBounds, args.PaintParts & ~DataGridViewPaintParts.ContentForeground);
+            var state = cell.Value is true
+                ? System.Windows.Forms.VisualStyles.CheckBoxState.CheckedDisabled
+                : System.Windows.Forms.VisualStyles.CheckBoxState.UncheckedDisabled;
+            var glyph = CheckBoxRenderer.GetGlyphSize(args.Graphics!, state);
+            CheckBoxRenderer.DrawCheckBox(args.Graphics!, new Point(
+                args.CellBounds.X + (args.CellBounds.Width - glyph.Width) / 2,
+                args.CellBounds.Y + (args.CellBounds.Height - glyph.Height) / 2), state);
+            args.Handled = true;
+        };
+        grid.CellBeginEdit += (_, args) =>
+        {
+            if (args.RowIndex >= 0 && grid.Rows[args.RowIndex].Tag is ConfigEntry entry)
+            {
+                args.Cancel = grid.ReadOnly || grid.Rows[args.RowIndex].ReadOnly || grid.Rows[args.RowIndex].Cells[args.ColumnIndex].ReadOnly || ShouldLockEntryEditor(entry, out var rowLockReason) ||
+                    binding.Linked is not null && !CanEditLinkedCell(binding, grid.Rows[args.RowIndex].Cells[args.ColumnIndex], out var linkedReason);
+            }
+        };
+        grid.SelectionChanged += (_, _) =>
+            binding.RemoveButton.Enabled = !grid.ReadOnly && grid.CurrentRow?.Tag is ConfigEntry && !grid.CurrentRow.ReadOnly;
         grid.DataError += (_, _) => { };
+        ConfigureTableHeaderSizing(group, header);
         return group;
     }
 
-    private void ApplyTableEditorLockState(TableEditorBinding binding)
+    private void ApplyTableEditorLockState(TableEditorBinding binding, RequiredValueSources? sources = null, TupleChoiceSnapshot? prepared = null)
     {
+        RefreshControlValue(() => RefreshTupleChoiceColumns(binding, sources, prepared));
         var isLocked = ShouldLockTableEditor(binding.Key, out var lockReason);
-        binding.Grid.ReadOnly = isLocked;
+        if (binding.Grid.ReadOnly != isLocked) binding.Grid.ReadOnly = isLocked;
         binding.AddButton.Enabled = !isLocked;
         binding.RemoveButton.Enabled = !isLocked;
         _toolTip.SetToolTip(binding.Grid, isLocked ? lockReason : binding.HelpText);
+        var linkedPolicy = binding.Linked is null || binding.Grid.Rows.Count == 0 ? null : ReadLinkedDisplayPolicy(binding, lockReason);
+        foreach (DataGridViewRow row in binding.Grid.Rows)
+        {
+            if (row.Tag is ConfigEntry entry)
+            {
+                if (linkedPolicy is null) ApplyTableRowLockState(row, entry);
+                else ApplyLinkedRowPolicy(binding, row, entry, linkedPolicy);
+            }
+        }
+
+        if (binding.Linked is not null) UpdateLinkedSharedNote(binding);
+
+        var currentHelp = isLocked ? lockReason : binding.HelpText;
+        var helpEditable = _adminUnlocked && !AppMode.IsExportedUserBuild && !string.IsNullOrWhiteSpace(binding.Key);
+        if (binding.DisplayedHelpText == currentHelp && binding.DisplayedHelpEditable == helpEditable)
+        {
+            UpdateTableRowLockNote(binding);
+            return;
+        }
 
         foreach (var helpButton in binding.Header.Controls.OfType<Button>().ToList())
         {
@@ -12850,20 +13699,23 @@ internal sealed partial class MainForm : Form
             helpButton.Dispose();
         }
 
-        var currentHelp = isLocked ? lockReason : binding.HelpText;
         if (!string.IsNullOrWhiteSpace(currentHelp))
         {
             binding.Header.Controls.Add(MakeHelpButton(binding.Title, currentHelp, binding.Key));
         }
+        binding.DisplayedHelpText = currentHelp;
+        binding.DisplayedHelpEditable = helpEditable;
+        UpdateTableRowLockNote(binding);
     }
 
     private void AddTableEntryRow(string parentKey, List<ConfigEntry> entries, DataGridView? grid)
     {
-        if (_document is null || grid is null || entries.Count == 0)
+        if (_document is null || grid is null || grid.ReadOnly || entries.Count == 0)
         {
             return;
         }
 
+        var linkedStructure = grid.Parent?.Tag is TableEditorBinding { Linked: not null };
         var key = PromptForText("Add table row", "Item name");
         if (string.IsNullOrWhiteSpace(key))
         {
@@ -12876,23 +13728,26 @@ internal sealed partial class MainForm : Form
             var template = entries[0];
             var entry = _document.AddTableEntry(parentKey, key, GetDefaultTableValue(entries), template);
             entries.Add(entry);
-            AddTableRow(grid, entry);
-            if (grid.Parent is TableLayoutPanel group)
-            {
-                ApplyCompactTableLayout(group, grid, 170, 520, GetTableHeightPadding(70));
-            }
-
-            grid.ClearSelection();
-            grid.Rows[grid.Rows.Count - 1].Selected = true;
+            InvalidateLinkedTableData();
+            using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
+            _optionsAffected!.Add(entry.EffectiveCategory);
+            RefreshTableGrid(grid, entries);
+            RefreshDependentEditors(entry);
+            SelectGridRowByTag(grid, entry);
             SetUndoAction("add " + key, () =>
             {
                 _document.RemoveEntry(entry);
                 entries.Remove(entry);
-                RefreshTableGrid(grid, entries);
-                RefreshConfigSearchResultsIfOpen();
+                InvalidateLinkedTableData();
+                using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
+                _optionsAffected!.Add(entry.EffectiveCategory);
+                if (grid.IsDisposed) RefreshVisibleTableRows(new[] { entry });
+                else RefreshTableGrid(grid, entries);
+                RefreshDependentEditors(entry);
+                if (!RefreshLinkedTableStructure(linkedStructure, entry.ParentKey) && !RefreshVisibleWhenTargets(entry)) RefreshConfigSearchResultsIfOpen();
             });
-            RefreshConfigSearchResultsIfOpen();
             SetChangedStatus();
+            if (!RefreshLinkedTableStructure(linkedStructure, entry.ParentKey) && !RefreshVisibleWhenTargets(entry)) RefreshConfigSearchResultsIfOpen();
         }
         catch (Exception ex)
         {
@@ -12907,6 +13762,9 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        if (grid.ReadOnly || ShouldLockEntryEditor(entry, out _)) return;
+        var linkedStructure = grid.Parent?.Tag is TableEditorBinding { Linked: not null };
+
         if (MessageBox.Show(this, "Remove " + entry.Key + " from this table?", "Remove row", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
         {
             return;
@@ -12914,25 +13772,32 @@ internal sealed partial class MainForm : Form
 
         try
         {
-            var parentKey = entry.ParentKey;
             var key = entry.Key;
-            var valueText = entry.ValueText;
-            var template = entry;
+            var entryIndex = entries.IndexOf(entry);
             var selectedIndex = grid.CurrentRow.Index;
-            _document.RemoveEntry(entry);
+            var restore = _document.RemoveEntryWithUndo(entry);
             entries.Remove(entry);
+            InvalidateLinkedTableData();
+            using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
+            _optionsAffected!.Add(entry.EffectiveCategory);
             RefreshTableGrid(grid, entries);
+            RefreshDependentEditors(entry);
             SelectGridRowByIndex(grid, selectedIndex);
             SetUndoAction("remove " + key, () =>
             {
-                var restored = _document.AddTableEntry(parentKey, key, valueText, template);
-                entries.Add(restored);
-                RefreshTableGrid(grid, entries);
-                SelectGridRowByTag(grid, restored);
-                RefreshConfigSearchResultsIfOpen();
+                restore();
+                entries.Insert(entryIndex, entry);
+                InvalidateLinkedTableData();
+                using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
+                _optionsAffected!.Add(entry.EffectiveCategory);
+                if (grid.IsDisposed) RefreshVisibleTableRows(new[] { entry });
+                else RefreshTableGrid(grid, entries);
+                RefreshDependentEditors(entry);
+                if (!grid.IsDisposed) SelectGridRowByTag(grid, entry);
+                if (!RefreshLinkedTableStructure(linkedStructure, entry.ParentKey) && !RefreshVisibleWhenTargets(entry)) RefreshConfigSearchResultsIfOpen();
             });
-            RefreshConfigSearchResultsIfOpen();
             SetChangedStatus();
+            if (!RefreshLinkedTableStructure(linkedStructure, entry.ParentKey) && !RefreshVisibleWhenTargets(entry)) RefreshConfigSearchResultsIfOpen();
         }
         catch (Exception ex)
         {
@@ -12940,15 +13805,21 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private void RefreshStringListGrids(DataGridView activeGrid, DataGridView inactiveGrid, ConfigStringListTable table)
+    private void RefreshStringListGrids(DataGridView activeGrid, DataGridView inactiveGrid, ConfigStringListTable table, IReadOnlySet<string>? knownManaged = null, RequiredValueResolution? preparedFacts = null)
     {
+        _optionsTupleChoices?.Clear();
+        RefreshTupleChoiceBindings(table.Key);
+        var managed = knownManaged ?? _document?.GetManagedStringListValues(table);
         var activeItems = GetStringListItemsInSourceOrder(table)
+            .Where(item => managed?.Contains(item.Value) != true)
             .Select(item => new StringListBucketItem(item.Value, item, IsActive: true, CatalogOnly: false, IsNew: false))
             .ToList();
-        var inactiveItems = GetInactiveStringListBucketItems(table);
+        var inactiveItems = GetInactiveStringListBucketItems(table, managed);
 
         SyncGridRows(activeGrid, activeItems, AddStringListBucketGridRow, UpdateStringListBucketGridRow);
         SyncGridRows(inactiveGrid, inactiveItems, AddStringListBucketGridRow, UpdateStringListBucketGridRow);
+
+        if (activeGrid.Parent?.Tag is StringListRequirementBinding requirements) RefreshRequiredValueBinding(requirements, facts: preparedFacts);
 
         if (activeGrid.Parent is TableLayoutPanel group)
         {
@@ -12956,9 +13827,10 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private void RefreshSimpleStringListGrid(DataGridView grid, ConfigStringListTable table)
+    private void RefreshSimpleStringListGrid(DataGridView grid, ConfigStringListTable table, IReadOnlySet<string>? knownManaged = null)
     {
-        var items = GetStringListItemsInSourceOrder(table);
+        var managed = knownManaged ?? _document?.GetManagedStringListValues(table);
+        var items = GetStringListItemsInSourceOrder(table).Where(item => managed?.Contains(item.Value) != true).ToList();
         SyncGridRows(grid, items, AddStringListGridRow, UpdateStringListGridRow);
 
         if (grid.Parent is TableLayoutPanel group)
@@ -12967,7 +13839,7 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private List<StringListBucketItem> GetInactiveStringListBucketItems(ConfigStringListTable table)
+    private List<StringListBucketItem> GetInactiveStringListBucketItems(ConfigStringListTable table, IReadOnlySet<string>? managed = null)
     {
         var document = _document ?? throw new InvalidOperationException("No config is loaded.");
         var activeValues = table.Items
@@ -12977,11 +13849,12 @@ internal sealed partial class MainForm : Form
             .GroupBy(item => item.Value, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         var values = new List<string>();
+        var seenValues = new HashSet<string>(StringComparer.Ordinal);
         if (ShowCatalogOnlyInactiveBucketItems(table))
         {
             foreach (var value in _stringListCatalog.GetValues(document, table.Key))
             {
-                if (!values.Any(existing => existing.Equals(value, StringComparison.Ordinal)))
+                if (seenValues.Add(value))
                 {
                     values.Add(value);
                 }
@@ -12990,14 +13863,14 @@ internal sealed partial class MainForm : Form
 
         foreach (var value in commentedByValue.Keys)
         {
-            if (!values.Any(existing => existing.Equals(value, StringComparison.Ordinal)))
+            if (seenValues.Add(value))
             {
                 values.Add(value);
             }
         }
 
         return values
-            .Where(value => !activeValues.Contains(value))
+            .Where(value => !activeValues.Contains(value) && managed?.Contains(value) != true)
             .Select(value => commentedByValue.TryGetValue(value, out var item)
                 ? new StringListBucketItem(
                     value,
@@ -13086,9 +13959,40 @@ internal sealed partial class MainForm : Form
         }
     }
 
+    private bool IsTableRowVisible(ConfigEntry entry) =>
+        (_testingUnlocked || !entry.GuiTesting) &&
+        (string.IsNullOrWhiteSpace(entry.GuiVisibleWhen) || VisibleWhenMatches(entry.GuiVisibleWhen));
+
     private void RefreshTableGrid(DataGridView grid, List<ConfigEntry> entries)
     {
-        SyncGridRows(grid, entries, AddTableRow, UpdateTableGridRow);
+        if (grid.Parent?.Tag is TableEditorBinding bindingOwner)
+        {
+            bindingOwner.Entries = entries;
+            bindingOwner.StructureVersion = _linkedStructureVersion;
+            if (bindingOwner.Linked is not null) bindingOwner.Linked = GetLinkedTableData(bindingOwner.Key);
+        }
+        var visibleEntries = entries.Where(IsTableRowVisible).ToList();
+        var selectedEntry = grid.CurrentRow?.Tag;
+        RefreshControlValue(() =>
+        {
+            if (grid.IsCurrentCellInEditMode && grid.CurrentRow is DataGridViewRow editingRow &&
+                (editingRow.Index >= visibleEntries.Count || !ReferenceEquals(editingRow.Tag, visibleEntries[editingRow.Index])))
+            {
+                grid.CancelEdit();
+            }
+            if (grid.Parent?.Tag is TableEditorBinding { Linked: not null } linkedBinding)
+            {
+                var policy = ReadLinkedDisplayPolicy(linkedBinding);
+                SyncGridRows(grid, visibleEntries, (_, entry) => AddLinkedTableRow(linkedBinding, entry, policy),
+                    (row, entry) => UpdateLinkedTableRow(linkedBinding, row, entry, policy));
+                UpdateLinkedSharedNote(linkedBinding);
+            }
+            else SyncGridRows(grid, visibleEntries, AddTableRow, UpdateTableGridRow);
+            if (selectedEntry is not null && !ReferenceEquals(grid.CurrentRow?.Tag, selectedEntry))
+                SelectGridRowByTag(grid, selectedEntry);
+        });
+
+        if (grid.Parent?.Tag is TableEditorBinding binding) UpdateTableRowLockNote(binding);
 
         if (grid.Parent is TableLayoutPanel group)
         {
@@ -13394,6 +14298,7 @@ internal sealed partial class MainForm : Form
 
     private static string GetDefaultTupleValue(ConfigTupleField field)
     {
+        if (field.DefaultValue is not null) return field.DefaultValue;
         return field.Kind switch
         {
             ConfigTupleFieldKind.Boolean => "false",
@@ -13565,6 +14470,7 @@ internal sealed partial class MainForm : Form
             SetChangedStatus();
         };
         grid.DataError += (_, _) => { };
+        ConfigureTableHeaderSizing(group, header);
         return group;
     }
 
@@ -13766,6 +14672,32 @@ internal sealed partial class MainForm : Form
     {
         column.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
         column.MinimumWidth = minimumWidth;
+        column.Tag = minimumWidth;
+        var grid = column.DataGridView!;
+        void SizeFlexibleColumn()
+        {
+            if (!column.Visible) return;
+            var preferredMinimumWidth = column.Tag is int preferredWidth ? preferredWidth : minimumWidth;
+            var columns = grid.Columns.Cast<DataGridViewColumn>().Where(item => item.Visible).ToArray();
+            var fillWeight = columns.Where(item => item.AutoSizeMode == DataGridViewAutoSizeColumnMode.Fill)
+                .Sum(item => item.FillWeight);
+            var fixedWidth = columns.Where(item => item.AutoSizeMode != DataGridViewAutoSizeColumnMode.Fill)
+                .Sum(item => item.Width);
+            var availableWidth = grid.ClientSize.Width - fixedWidth - SystemInformation.VerticalScrollBarWidth - 4 -
+                (grid.RowHeadersVisible ? grid.RowHeadersWidth : 0);
+            var shareWidth = (int)Math.Floor(availableWidth * column.FillWeight / fillWeight);
+            var headerFont = grid.ColumnHeadersDefaultCellStyle.Font ?? grid.Font;
+            var readableWidth = Math.Min(preferredMinimumWidth, TextRenderer.MeasureText(column.HeaderText, headerFont,
+                Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width + 24);
+            // Fit fixed columns when possible; retain readable columns and native horizontal overflow otherwise.
+            column.MinimumWidth = shareWidth >= readableWidth ? Math.Min(preferredMinimumWidth, shareWidth) : preferredMinimumWidth;
+        }
+        grid.SizeChanged += (_, _) => SizeFlexibleColumn();
+        grid.ColumnWidthChanged += (_, args) =>
+        {
+            if (args.Column.AutoSizeMode != DataGridViewAutoSizeColumnMode.Fill) SizeFlexibleColumn();
+        };
+        SizeFlexibleColumn();
     }
 
     private static void ConfigureFixedColumn(DataGridViewColumn column, int width)
@@ -13794,13 +14726,17 @@ internal sealed partial class MainForm : Form
 
     private static void ConfigureCheckboxValueColumn(DataGridView grid, DataGridViewColumn column)
     {
-        var headerFont = grid.ColumnHeadersDefaultCellStyle.Font ?? grid.Font;
+        ConfigureFixedColumn(column, Math.Max(72, GetTableHeaderWidth(column, grid.ColumnHeadersDefaultCellStyle.Font ?? grid.Font)));
+    }
+
+    private static int GetTableHeaderWidth(DataGridViewColumn column, Font headerFont)
+    {
         var headerWidth = TextRenderer.MeasureText(
             column.HeaderText,
             headerFont,
             new Size(int.MaxValue, int.MaxValue),
             TextFormatFlags.SingleLine | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
-        ConfigureFixedColumn(column, Math.Max(72, headerWidth + 24));
+        return headerWidth + 24;
     }
 
     private static string FormatBooleanDisplay(string value)
@@ -13848,26 +14784,46 @@ internal sealed partial class MainForm : Form
             .Cast<DataGridViewColumn>()
             .Where(column => column.Visible)
             .Sum(column => column.AutoSizeMode == DataGridViewAutoSizeColumnMode.Fill
-                ? column.MinimumWidth
+                ? column.Tag is int preferredMinimumWidth ? preferredMinimumWidth : column.MinimumWidth
                 : column.Width);
         desiredWidth += SystemInformation.VerticalScrollBarWidth + 28;
+        desiredWidth += grid.RowHeadersVisible ? grid.RowHeadersWidth : 0;
         if (group.ColumnCount > 1)
         {
-            desiredWidth += TableActionColumnWidth;
+            desiredWidth += (int)Math.Ceiling(group.ColumnStyles[group.ColumnCount - 1].Width);
         }
 
         var availableWidth = _formHost.ClientSize.Width > 0
             ? _formHost.ClientSize.Width - 48
             : ClientSize.Width - 280;
-        group.Width = Math.Max(320, Math.Min(desiredWidth, Math.Max(320, availableWidth)));
+        // Linked fields must remain reachable; the existing host scrolls when a narrow window cannot fit them.
+        var minimumWidth = group.Tag is TableEditorBinding { Linked: not null } ? desiredWidth : 320;
+        group.MinimumSize = new Size(minimumWidth, group.MinimumSize.Height);
+        group.Width = Math.Max(minimumWidth, Math.Min(desiredWidth, Math.Max(minimumWidth, availableWidth)));
     }
 
     private void ApplyCompactTableLayout(TableLayoutPanel group, DataGridView grid, int minimumHeight, int maximumHeight, int heightPadding)
     {
         ApplyCompactTableLayout(group, grid);
-        group.Height = Math.Max(
-            GetTableActionMinimumHeight(group),
-            GetConfiguredTableHeight(grid, minimumHeight, maximumHeight, heightPadding));
+        var header = group.GetControlFromPosition(0, 0)!;
+        var smoothGrid = (SmoothDataGridView)grid;
+        smoothGrid.ConfigureCompactHeightLayout(group, () =>
+        {
+            var headerHeight = header.Height + header.Margin.Vertical;
+            var containerChrome = headerHeight + group.Padding.Vertical + grid.Margin.Vertical;
+            var gridChrome = GetTableGridChromeHeight(smoothGrid);
+            var firstRowHeight = GetTableRowsHeight(grid, 1);
+            var gridHeight = GetConfiguredTableHeight(grid, 0, Math.Max(gridChrome, maximumHeight - containerChrome), gridChrome,
+                grid.Rows.GetRowsHeight(DataGridViewElementStates.Visible), firstRowHeight);
+            var actionMinimum = GetTableActionMinimumHeight(group);
+            var minimum = Math.Max(actionMinimum, containerChrome + gridChrome + firstRowHeight);
+            var height = Math.Max(actionMinimum, containerChrome + gridHeight);
+            var maximum = new Size(0, gridHeight);
+            if (grid.MaximumSize != maximum) grid.MaximumSize = maximum;
+            if (group.MinimumSize.Height != minimum)
+                group.MinimumSize = new Size(group.MinimumSize.Width, minimum);
+            if (group.Height != height) group.Height = height;
+        });
     }
 
     private int GetTableHeaderRowHeight()
@@ -13892,9 +14848,8 @@ internal sealed partial class MainForm : Form
 
     private static int GetTableActionMinimumHeight(TableLayoutPanel group)
     {
-        var headerHeight = group.RowStyles.Count > 0
-            ? (int)Math.Ceiling(group.RowStyles[0].Height)
-            : 0;
+        var header = group.GetControlFromPosition(0, 0);
+        var headerHeight = header is null ? 0 : header.Height + header.Margin.Vertical;
         var actionHeight = 0;
         foreach (Control control in group.Controls)
         {
@@ -13911,7 +14866,7 @@ internal sealed partial class MainForm : Form
     {
         if (control is FlowLayoutPanel flow)
         {
-            var height = flow.Padding.Vertical;
+            var height = flow.Padding.Vertical + flow.Margin.Vertical;
             foreach (Control child in flow.Controls)
             {
                 if (!child.Visible)
@@ -13930,10 +14885,18 @@ internal sealed partial class MainForm : Form
                control.Margin.Vertical;
     }
 
-    private int GetConfiguredTableHeight(DataGridView grid, int minimumHeight, int maximumHeight, int heightPadding)
+    private static int GetTableGridChromeHeight(SmoothDataGridView grid)
     {
-        var desiredHeight = GetTableRowsHeight(grid, grid.Rows.Count) + heightPadding;
-        var contentMinimumHeight = GetTableRowsHeight(grid, Math.Min(Math.Max(grid.Rows.Count, 1), 1)) + heightPadding;
+        var borderHeight = grid.BorderStyle == BorderStyle.Fixed3D ? SystemInformation.Border3DSize.Height * 2
+            : grid.BorderStyle == BorderStyle.FixedSingle ? SystemInformation.BorderSize.Height * 2 : 0;
+        return (grid.ColumnHeadersVisible ? grid.ColumnHeadersHeight : 0) +
+            borderHeight + grid.CompactHorizontalScrollbarHeight;
+    }
+
+    private int GetConfiguredTableHeight(DataGridView grid, int minimumHeight, int maximumHeight, int heightPadding, int? rowsHeight = null, int? firstRowHeight = null)
+    {
+        var desiredHeight = (rowsHeight ?? GetTableRowsHeight(grid, grid.Rows.GetRowCount(DataGridViewElementStates.Visible))) + heightPadding;
+        var contentMinimumHeight = (firstRowHeight ?? GetTableRowsHeight(grid, 1)) + heightPadding;
         var metadata = GetGridMetadata(grid);
         if (metadata is not null &&
             string.Equals(metadata.TableHeightMode, "Auto", StringComparison.OrdinalIgnoreCase))
@@ -13941,10 +14904,16 @@ internal sealed partial class MainForm : Form
             return Math.Max(contentMinimumHeight, desiredHeight);
         }
 
-        var cappedHeight = SnapTableHeightToFullRows(grid, maximumHeight, heightPadding);
+        int cappedHeight;
         if (metadata?.TableMaxVisibleRows is > 0)
         {
-            cappedHeight = Math.Max(contentMinimumHeight, GetTableRowsHeight(grid, metadata.TableMaxVisibleRows.Value) + heightPadding);
+            cappedHeight = metadata.TableMaxVisibleRows.Value == 1
+                ? contentMinimumHeight
+                : Math.Max(contentMinimumHeight, GetTableRowsHeight(grid, metadata.TableMaxVisibleRows.Value) + heightPadding);
+        }
+        else
+        {
+            cappedHeight = SnapTableHeightToFullRows(grid, maximumHeight, heightPadding);
         }
 
         return Math.Min(cappedHeight, Math.Max(contentMinimumHeight, desiredHeight));
@@ -14047,7 +15016,10 @@ internal sealed partial class MainForm : Form
         }
 
         var firstTuple = entries.FirstOrDefault(entry => entry.TupleFields.Count > 0);
-        if (firstTuple is not null)
+        if (firstTuple is not null &&
+            !((string.Equals(firstTuple.ParentGuiEditor, "fieldTable", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(firstTuple.ParentGuiEditor, "linkedTable", StringComparison.OrdinalIgnoreCase)) &&
+              entries.Any(entry => entry.TupleFields.Count == 0 || !entry.ValueText.TrimStart().StartsWith("{", StringComparison.Ordinal))))
         {
             ConfigureFillColumn(grid.Columns["name"], 150);
             for (var i = 0; i < firstTuple.TupleFields.Count; i++)
@@ -14114,7 +15086,7 @@ internal sealed partial class MainForm : Form
         {
             if (cell is DataGridViewCheckBoxCell)
             {
-                cell.Value = entry.ValueText.Equals("true", StringComparison.OrdinalIgnoreCase);
+                SetTableCellValue(cell, entry.ValueText.Equals("true", StringComparison.OrdinalIgnoreCase));
                 return;
             }
 
@@ -14130,11 +15102,11 @@ internal sealed partial class MainForm : Form
             if (cell is DataGridViewComboBoxCell booleanCell)
             {
                 booleanCell.FlatStyle = IsDarkPalette() ? FlatStyle.Flat : FlatStyle.Standard;
-                booleanCell.Style.BackColor = EditorBackground;
+                booleanCell.Style.BackColor = IsDarkPalette() ? EditorBackground : Color.Empty;
                 booleanCell.Style.ForeColor = PrimaryTextColor;
             }
 
-            cell.Value = FormatBooleanDisplay(entry.ValueText);
+            SetTableCellValue(cell, FormatBooleanDisplay(entry.ValueText));
             return;
         }
 
@@ -14145,22 +15117,35 @@ internal sealed partial class MainForm : Form
             cell = row.Cells["value"];
         }
 
-        cell.Value = entry.ValueText;
+        SetTableCellValue(cell, entry.ValueText);
+    }
+
+    private static void SetTableCellValue(DataGridViewCell cell, object? value)
+    {
+        if (Equals(cell.Value, value)) return;
+        if (cell.DataGridView is { IsCurrentCellInEditMode: true } grid && ReferenceEquals(grid.CurrentCell, cell))
+            grid.CancelEdit();
+        cell.Value = value;
     }
 
     private void AddTableRow(DataGridView grid, ConfigEntry entry)
     {
+        if (grid.Parent?.Tag is TableEditorBinding { Linked: not null } binding)
+        {
+            var index = grid.Rows.Add();
+            UpdateLinkedTableRow(binding, grid.Rows[index], entry);
+            return;
+        }
         var rowName = GetTableRowDisplayName(entry);
         if (IsPriceRankEntry(entry) && TryReadPriceRank(entry.ValueText, out var price, out var rank))
         {
             var priceRankIndex = grid.Rows.Add(rowName, price, rank);
             grid.Rows[priceRankIndex].Tag = entry;
-            ApplyTableRowTooltip(grid.Rows[priceRankIndex], entry);
             ApplyImportedNewRowHighlight(grid.Rows[priceRankIndex], entry);
             return;
         }
 
-        if (entry.TupleFields.Count > 0)
+        if (entry.TupleFields.Count > 0 && grid.Columns.Contains("field0"))
         {
             var values = entry.GetTupleValues();
             var cells = new List<object> { rowName };
@@ -14174,7 +15159,7 @@ internal sealed partial class MainForm : Form
                 }
                 else if (field.Kind == ConfigTupleFieldKind.Choice)
                 {
-                    cells.Add(FindChoiceDisplay(field, value));
+                    cells.Add(TableTupleChoiceDisplay(grid, i, field, value)!);
                 }
                 else
                 {
@@ -14184,8 +15169,7 @@ internal sealed partial class MainForm : Form
 
             var index = grid.Rows.Add(cells.ToArray());
             grid.Rows[index].Tag = entry;
-            ApplyTableRowTooltip(grid.Rows[index], entry);
-            ApplyImportedNewRowHighlight(grid.Rows[index], entry);
+            ApplyImportedNewRowHighlight(grid.Rows[index], entry, values);
             return;
         }
 
@@ -14193,25 +15177,28 @@ internal sealed partial class MainForm : Form
         var row = grid.Rows[rowIndex];
         ApplyTableValueCell(row, entry);
         row.Tag = entry;
-        ApplyTableRowTooltip(row, entry);
         ApplyImportedNewRowHighlight(row, entry);
     }
 
     private void UpdateTableGridRow(DataGridViewRow row, ConfigEntry entry)
     {
+        if (row.DataGridView?.Parent?.Tag is TableEditorBinding { Linked: not null } binding)
+        {
+            UpdateLinkedTableRow(binding, row, entry);
+            return;
+        }
         if (IsPriceRankEntry(entry) && TryReadPriceRank(entry.ValueText, out var price, out var rank))
         {
             row.Cells["name"].Value = GetTableRowDisplayName(entry);
-            row.Cells["price"].Value = price;
-            row.Cells["rank"].Value = rank;
+            SetTableCellValue(row.Cells["price"], price);
+            SetTableCellValue(row.Cells["rank"], rank);
             row.Tag = entry;
-            ApplyTableRowTooltip(row, entry);
             ApplyImportedNewRowHighlight(row, entry);
             return;
         }
 
         row.Cells["name"].Value = GetTableRowDisplayName(entry);
-        if (entry.TupleFields.Count > 0)
+        if (entry.TupleFields.Count > 0 && row.DataGridView!.Columns.Contains("field0"))
         {
             var values = entry.GetTupleValues();
             for (var i = 0; i < entry.TupleFields.Count; i++)
@@ -14220,38 +15207,118 @@ internal sealed partial class MainForm : Form
                 var field = entry.TupleFields[i];
                 if (field.Kind == ConfigTupleFieldKind.Boolean)
                 {
-                    row.Cells[i + 1].Value = value.Equals("true", StringComparison.OrdinalIgnoreCase);
+                    SetTableCellValue(row.Cells[i + 1], value.Equals("true", StringComparison.OrdinalIgnoreCase));
                 }
                 else if (field.Kind == ConfigTupleFieldKind.Choice)
                 {
-                    row.Cells[i + 1].Value = FindChoiceDisplay(field, value);
+                    SetTableCellValue(row.Cells[i + 1], TableTupleChoiceDisplay(row.DataGridView!, i, field, value));
                 }
                 else
                 {
-                    row.Cells[i + 1].Value = value;
+                    SetTableCellValue(row.Cells[i + 1], value);
                 }
             }
 
             row.Tag = entry;
-            ApplyTableRowTooltip(row, entry);
-            ApplyImportedNewRowHighlight(row, entry);
+            ApplyImportedNewRowHighlight(row, entry, values);
             return;
         }
 
         ApplyTableValueCell(row, entry);
         row.Tag = entry;
-        ApplyTableRowTooltip(row, entry);
         ApplyImportedNewRowHighlight(row, entry);
     }
 
-    private void ApplyImportedNewRowHighlight(DataGridViewRow row, ConfigEntry entry)
+    private void ApplyImportedNewRowHighlight(DataGridViewRow row, ConfigEntry entry, IReadOnlyList<string>? tupleValues = null)
     {
         row.DefaultCellStyle.BackColor = IsImportedNewEntryHighlighted(entry)
             ? GetNewHighlightBackColor()
-            : EditorBackground;
+            : IsDarkPalette() ? EditorBackground : Color.Empty;
         row.DefaultCellStyle.ForeColor = PrimaryTextColor;
+        ApplyTableRowLockState(row, entry, tupleValues: tupleValues);
     }
 
+    private void ApplyTableRowLockState(DataGridViewRow row, ConfigEntry entry, bool? knownLocked = null, string lockReason = "", IReadOnlyList<string>? tupleValues = null)
+    {
+        if (row.DataGridView?.Parent?.Tag is TableEditorBinding { Linked: not null } linkedBinding)
+        {
+            ApplyLinkedRowPolicy(linkedBinding, row, entry);
+            return;
+        }
+        var isLocked = knownLocked ?? ShouldLockEntryEditor(entry, out lockReason);
+        var tupleBinding = row.DataGridView?.Parent?.Tag as TableEditorBinding;
+        if (!isLocked && tupleBinding?.TupleChoices is { } tupleChoices && !tupleChoices.Admits(entry.Key))
+        {
+            isLocked = true;
+            lockReason = tupleChoices.Fields.Values.Any(field => field.Visible && field.Choices.Count > 0)
+                ? "Aircraft not active in this era’s aircraft list." : "No enabled templates.";
+        }
+        RefreshControlValue(() =>
+        {
+            if (isLocked && row.DataGridView is { } grid && grid.CurrentRow == row)
+            {
+                grid.CancelEdit();
+            }
+            if (row.ReadOnly != isLocked) row.ReadOnly = isLocked;
+            if (tupleBinding is not null) ApplyTupleChoiceRow(tupleBinding, row, entry, isLocked, tupleValues);
+            if (entry.Kind == ConfigValueKind.Boolean && row.Cells["value"] is DataGridViewCheckBoxCell cell)
+            {
+                cell.Value = isLocked && string.Equals(entry.GuiDisabledValue, "false", StringComparison.OrdinalIgnoreCase)
+                    ? false : entry.ValueText.Equals("true", StringComparison.OrdinalIgnoreCase);
+            }
+        });
+        row.DefaultCellStyle.ForeColor = isLocked ? HelpTextColor : PrimaryTextColor;
+        row.DefaultCellStyle.SelectionForeColor = isLocked ? HelpTextColor : Color.Empty;
+        row.DefaultCellStyle.SelectionBackColor = isLocked ? row.InheritedStyle.BackColor : Color.Empty;
+        if (row.DataGridView?.Parent is TableLayoutPanel { Tag: TableEditorBinding binding } && binding.Grid.CurrentRow == row)
+        {
+            binding.RemoveButton.Enabled = !binding.Grid.ReadOnly && !row.ReadOnly;
+        }
+        ApplyTableRowTooltip(row, entry);
+        if (isLocked)
+        {
+            foreach (DataGridViewCell cell in row.Cells)
+            {
+                cell.ToolTipText = string.IsNullOrWhiteSpace(cell.ToolTipText)
+                    ? lockReason : cell.ToolTipText + Environment.NewLine + lockReason;
+            }
+        }
+    }
+    private static void UpdateTableRowLockNote(TableEditorBinding binding)
+    {
+        var note = binding.RowLockNote;
+        if (binding.Grid.ReadOnly)
+        {
+            note.Text = LockReasonAfterPrefix(binding.DisplayedHelpText ?? "");
+            note.Visible = !string.IsNullOrWhiteSpace(note.Text);
+        }
+        else
+        {
+            var conditions = new HashSet<string>(StringComparer.Ordinal);
+            foreach (DataGridViewRow row in binding.Grid.Rows)
+            {
+                if (!row.ReadOnly || row.Tag is not ConfigEntry) continue;
+                var tooltip = row.Cells[0].ToolTipText;
+                var reason = tooltip[(tooltip.LastIndexOf((char)10) + 1)..].Trim();
+                if (reason.StartsWith("Locked while ", StringComparison.Ordinal))
+                {
+                    conditions.Add(reason["Locked while ".Length..].TrimEnd('.')
+                        .Replace(" is enabled", "", StringComparison.Ordinal));
+                }
+            }
+            note.Text = conditions.Count == 0 ? "" : "Some are disabled due to " + string.Join("; ", conditions) + ".";
+            note.Visible = conditions.Count > 0;
+        }
+        var hasNote = !string.IsNullOrWhiteSpace(note.Text);
+        binding.LockedPrefix.Visible = binding.Grid.ReadOnly && hasNote;
+        var helpRow = note.Parent!;
+        helpRow.Visible = hasNote;
+        binding.Header.Controls.SetChildIndex(helpRow, binding.Header.Controls.Count - 1);
+        for (var index = 0; index < binding.Header.Controls.Count; index++)
+        {
+            binding.Header.SetFlowBreak(binding.Header.Controls[index], index == binding.Header.Controls.Count - 2);
+        }
+    }
     private static string GetTableRowDisplayName(ConfigEntry entry)
     {
         if (entry.ParentGuiRowLabel?.Equals("comment", StringComparison.OrdinalIgnoreCase) == true &&
@@ -14290,7 +15357,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        if (entry.TupleFields.Count > 0)
+        if (entry.TupleFields.Count > 0 && row.DataGridView!.Columns.Contains("field0"))
         {
             var values = new List<string>();
             for (var i = 0; i < entry.TupleFields.Count; i++)
@@ -14303,7 +15370,13 @@ internal sealed partial class MainForm : Form
                 }
                 else if (field.Kind == ConfigTupleFieldKind.Choice)
                 {
-                    values.Add(FindChoiceLiteral(field, value));
+                    values.Add(row.DataGridView?.Parent?.Tag is TableEditorBinding { TupleChoices: not null } dynamicBinding &&
+                        dynamicBinding.TupleChoices.Fields.ContainsKey(i) && !field.Choices.Any(choice => choice.Display == value)
+                        ? entry.GetTupleValues().ElementAtOrDefault(i) ?? "nil" : FindChoiceLiteral(field, value));
+                }
+                else if (field.Kind == ConfigTupleFieldKind.Number && field.DefaultValue is not null)
+                {
+                    values.Add(NormalizeNumberCell(value.Trim(), field.DefaultValue));
                 }
                 else
                 {
@@ -14329,7 +15402,9 @@ internal sealed partial class MainForm : Form
 
     private static bool IsPriceRankEntry(ConfigEntry entry)
     {
-        return entry.ParentKey.Equals("CTLDPrices", StringComparison.Ordinal) &&
+        return !(entry.TupleFields.Count > 0 && (string.Equals(entry.ParentGuiEditor, "fieldTable", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(entry.ParentGuiEditor, "linkedTable", StringComparison.OrdinalIgnoreCase))) &&
+               entry.ParentKey.Equals("CTLDPrices", StringComparison.Ordinal) &&
                TryReadPriceRank(entry.ValueText, out _, out _);
     }
 
@@ -14507,10 +15582,11 @@ internal sealed partial class MainForm : Form
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 42,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.LeftToRight,
             Padding = new Padding(0, 6, 0, 4),
-            WrapContents = false
+            WrapContents = true
         };
         panel.Controls.Add(buttons);
 
@@ -14629,7 +15705,7 @@ internal sealed partial class MainForm : Form
         var tabs = new TabControl
         {
             Dock = DockStyle.Top,
-            Height = 410,
+            Height = Math.Max(440, Zoomed(410)),
             Padding = new Point(8, 4)
         };
         var tab = new TabPage("Layout");
@@ -14644,11 +15720,11 @@ internal sealed partial class MainForm : Form
             Padding = new Padding(10)
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         tab.Controls.Add(panel);
 
         panel.Controls.Add(MakeLabel("Category"), 0, 0);
@@ -14681,7 +15757,7 @@ internal sealed partial class MainForm : Form
         };
         for (var i = 0; i < 7; i++)
         {
-            moveButtons.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            moveButtons.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
         panel.Controls.Add(moveButtons, 1, 2);
 
@@ -14692,11 +15768,15 @@ internal sealed partial class MainForm : Form
         moveButtons.Controls.Add(MakeButton("Add", () => AddLayoutItem(categoryBox.Text, itemList)), 0, 4);
         moveButtons.Controls.Add(MakeButton("Move to...", () => MoveLayoutItemToCategory(categoryBox.Text, itemList)), 0, 5);
         moveButtons.Controls.Add(MakeButton("Remove", () => RemoveLayoutItem(itemList)), 0, 6);
+        foreach (var button in moveButtons.Controls.OfType<Button>()) button.AutoSize = true;
+        foreach (var button in panel.Controls.OfType<Button>()) button.AutoSize = true;
 
         var bottomButtons = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink
         };
         var saveButton = MakeDesignerButton("Save Layout", () => SaveDesignerLayout(categoryBox.Text, itemList), 120);
         var previewButton = MakeDesignerButton("Preview Layout", () =>
@@ -14708,6 +15788,7 @@ internal sealed partial class MainForm : Form
         }, 120);
         bottomButtons.Controls.Add(saveButton);
         bottomButtons.Controls.Add(previewButton);
+        panel.SetColumnSpan(bottomButtons, 2);
         panel.Controls.Add(bottomButtons, 0, 3);
 
         void reloadLayoutItems()
@@ -14758,10 +15839,10 @@ internal sealed partial class MainForm : Form
             Padding = new Padding(10)
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         tab.Controls.Add(panel);
 
         panel.Controls.Add(MakeLabel("Left-side category order"), 0, 0);
@@ -14788,7 +15869,7 @@ internal sealed partial class MainForm : Form
         };
         for (var i = 0; i < 8; i++)
         {
-            buttons.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            buttons.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
         buttons.Controls.Add(MakeButton("Top", () => MoveLayoutItem(categoryList, int.MinValue)), 0, 0);
         buttons.Controls.Add(MakeButton("Up", () => MoveLayoutItem(categoryList, -1)), 0, 1);
@@ -14798,15 +15879,19 @@ internal sealed partial class MainForm : Form
         buttons.Controls.Add(MakeButton("Show", () => SetSelectedCategoryHidden(categoryList, hidden: false)), 0, 5);
         buttons.Controls.Add(MakeButton("Rename", () => RenameSelectedCategory(categoryList)), 0, 6);
         buttons.Controls.Add(MakeButton("Delete", () => DeleteSelectedCategory(categoryList)), 0, 7);
+        foreach (var button in buttons.Controls.OfType<Button>()) button.AutoSize = true;
         panel.Controls.Add(buttons, 1, 1);
 
         var bottomButtons = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink
         };
         bottomButtons.Controls.Add(MakeDesignerButton("Save Categories", () => SaveCategoryOrder(categoryList, previewAfterSave: false), 130));
         bottomButtons.Controls.Add(MakeDesignerButton("Preview Categories", () => SaveCategoryOrder(categoryList, previewAfterSave: true), 140));
+        panel.SetColumnSpan(bottomButtons, 2);
         panel.Controls.Add(bottomButtons, 0, 2);
         return tab;
     }
@@ -15443,7 +16528,7 @@ internal sealed partial class MainForm : Form
 
     private static Button MakeDesignerButton(string text, Action action, int width)
     {
-        var button = new Button
+        var button = new PreviewButton
         {
             Text = text,
             Width = width,
@@ -15565,27 +16650,57 @@ internal sealed partial class MainForm : Form
         {
             // Config-backed categories use Lua source order; designer metadata still controls labels and rendering.
             items = GetConfigSourceDesignerItems(categoryName, includeTableRows, includeAdvanced);
-            return FilterVisibleDesignerItems(items);
+            return FilterVisibleDesignerItems(items, combineTables: !includeAdvanced && !includeTableRows, includeTableRows);
         }
 
         if (_document is not null &&
             _document.Metadata.CategoryLayouts.TryGetValue(categoryName, out var layout))
         {
             items = GetSavedLayoutDesignerItems(categoryName, layout, includeTableRows, includeAdvanced);
-            return FilterVisibleDesignerItems(items);
+            return FilterVisibleDesignerItems(items, combineTables: !includeAdvanced && !includeTableRows, includeTableRows);
         }
 
         items = GetAutoDesignerItems(categoryName, includeTableRows, includeAdvanced);
-        return FilterVisibleDesignerItems(items);
+        return FilterVisibleDesignerItems(items, combineTables: !includeAdvanced && !includeTableRows, includeTableRows);
     }
 
-    private List<DesignerItem> FilterVisibleDesignerItems(IEnumerable<DesignerItem> items)
+    private List<DesignerItem> FilterVisibleDesignerItems(List<DesignerItem> items, bool combineTables, bool includeTableRows)
     {
-        return items.Where(IsDesignerItemVisible).ToList();
+        // Source, saved-layout and designer routes retain the same original field entries.
+        for (var index = items.Count - 1; index >= 0; index--)
+        {
+            var item = items[index];
+            if (!item.IsGroup || !string.Equals(item.Entries.FirstOrDefault()?.ParentGuiLayout, "fields", StringComparison.OrdinalIgnoreCase) ||
+                !ShouldRenderRecordTableAsEntries(item.Key, item.Entries)) continue;
+            items.RemoveAt(index);
+            if (!includeTableRows)
+                items.InsertRange(index, item.Entries.Select(child => new DesignerItem(child.DisplayKey, child.DisplayName, item.Category, isGroup: false, new List<ConfigEntry> { child })));
+        }
+        var visible = items.Where(item =>
+        {
+            if (!_testingUnlocked)
+            {
+                // These are view-owned lists; keep the document and its hidden values intact.
+                item.Entries.RemoveAll(entry => entry.GuiTesting);
+            }
+
+            return IsDesignerItemVisible(item);
+        }).ToList();
+        return combineTables ? CombineLinkedDesignerItems(visible) : visible;
     }
 
     private bool IsDesignerItemVisible(DesignerItem item)
     {
+        if (item.StringListTable?.Key == "AIOnlyAircraft" ||
+            item.StringListTable is null && item.StageTable is null && item.Entries.Count == 0 ||
+            !_testingUnlocked && (item.StringListTable?.GuiTesting == true || item.StageTable?.GuiTesting == true))
+        {
+            return false;
+        }
+
+        if (!item.IsGroup && item.Entries.FirstOrDefault() is { } field &&
+            string.Equals(field.ParentGuiLayout, "fields", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(field.ParentGuiVisibleWhen) && !VisibleWhenMatches(field.ParentGuiVisibleWhen)) return false;
         var visibleWhen = GetDesignerItemVisibleWhen(item);
         return string.IsNullOrWhiteSpace(visibleWhen) || VisibleWhenMatches(visibleWhen);
     }
@@ -15604,7 +16719,7 @@ internal sealed partial class MainForm : Form
 
         var entry = item.Entries.FirstOrDefault();
         return item.IsGroup
-            ? entry?.ParentGuiVisibleWhen ?? entry?.GuiVisibleWhen
+            ? entry?.ParentGuiVisibleWhen
             : entry?.GuiVisibleWhen ?? entry?.ParentGuiVisibleWhen;
     }
 
@@ -15615,26 +16730,30 @@ internal sealed partial class MainForm : Form
             return true;
         }
 
-        return VisibleWhenMatches(_document, ruleText);
+        if (_optionsVisibilityFacts?.TryGetValue(ruleText, out var known) == true) return known;
+        var visible = VisibleWhenMatches(_document, ruleText);
+        if (_optionsVisibilityFacts is not null) _optionsVisibilityFacts[ruleText] = visible;
+        return visible;
     }
 
     private static bool VisibleWhenMatches(ConfigDocument document, string ruleText)
-    {
-        foreach (var rule in ParseVisibleWhenRules(ruleText))
-        {
-            var sourceEntry = FindVisibleWhenSourceEntry(document, rule.SourceKey);
-            if (sourceEntry is null)
-            {
-                continue;
-            }
+        => ConfigConditions.Matches(document, ParseVisibleWhenRules(ruleText));
 
-            if (!VisibleWhenValueMatches(sourceEntry.ValueText, rule.Values))
+    private static bool AlternativeVisibilityValueMatches(ConfigDocument document, string sourceKey, IReadOnlyList<string> expectedValues, out ConfigEntry? matchingSource)
+    {
+        matchingSource = null;
+        var alternatives = sourceKey.Split('|', StringSplitOptions.TrimEntries);
+        if (alternatives.Any(string.IsNullOrWhiteSpace)) return false;
+        foreach (var key in alternatives)
+        {
+            var source = FindVisibleWhenSourceEntry(document, key);
+            if (source is not null && VisibleWhenValueMatches(source.ValueText, expectedValues))
             {
-                return false;
+                matchingSource = source;
+                return true;
             }
         }
-
-        return true;
+        return false;
     }
 
     private ConfigEntry? FindVisibleWhenSourceEntry(string key)
@@ -15642,50 +16761,10 @@ internal sealed partial class MainForm : Form
         return _document is null ? null : FindVisibleWhenSourceEntry(_document, key);
     }
 
-    private static ConfigEntry? FindVisibleWhenSourceEntry(ConfigDocument document, string key)
-    {
-        return document.Entries.FirstOrDefault(entry => entry.DisplayKey.Equals(key, StringComparison.Ordinal)) ??
-               document.Entries.FirstOrDefault(entry => entry.Key.Equals(key, StringComparison.Ordinal));
-    }
-
-    private static bool VisibleWhenValueMatches(string sourceValue, IReadOnlyList<string> expectedValues)
-    {
-        var normalizedSourceValue = NormalizeVisibleWhenValue(sourceValue);
-        return expectedValues.Any(value =>
-            NormalizeVisibleWhenValue(value).Equals(normalizedSourceValue, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string NormalizeVisibleWhenValue(string value)
-    {
-        return ConfigEntry.UnquoteLuaString(value.Trim());
-    }
-
-    private static List<(string SourceKey, List<string> Values)> ParseVisibleWhenRules(string ruleText)
-    {
-        var rules = new List<(string SourceKey, List<string> Values)>();
-        foreach (var rawRule in ruleText.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var separator = rawRule.IndexOf(':');
-            if (separator <= 0 || separator >= rawRule.Length - 1)
-            {
-                continue;
-            }
-
-            var sourceKey = rawRule[..separator].Trim();
-            var values = rawRule[(separator + 1)..]
-                .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .ToList();
-            if (string.IsNullOrWhiteSpace(sourceKey) || values.Count == 0)
-            {
-                continue;
-            }
-
-            rules.Add((sourceKey, values));
-        }
-
-        return rules;
-    }
+    private static ConfigEntry? FindVisibleWhenSourceEntry(ConfigDocument document, string key) => ConfigConditions.FindSource(document, key);
+    private static bool VisibleWhenValueMatches(string sourceValue, IReadOnlyList<string> expectedValues) => ConfigConditions.ValueMatches(sourceValue, expectedValues);
+    private static string NormalizeVisibleWhenValue(string value) => ConfigConditions.Normalize(value);
+    private static List<(string SourceKey, List<string> Values)> ParseVisibleWhenRules(string ruleText) => ConfigConditions.Parse(ruleText);
 
     private List<DesignerItem> GetAutoDesignerItems(string categoryName, bool includeTableRows, bool includeAdvanced = false)
     {
@@ -15991,8 +17070,10 @@ internal sealed partial class MainForm : Form
         return !groupKey.Contains(".", StringComparison.Ordinal) &&
                children.Count > 0 &&
                children.All(child => child.ParentKey.Equals(groupKey, StringComparison.Ordinal)) &&
-               children.Any(child => child.IsLongText ||
-                                     string.Equals(child.ControlTypeOverride, "multiline", StringComparison.OrdinalIgnoreCase));
+               (children.All(child => child.Kind == ConfigValueKind.String &&
+                                      string.Equals(child.ParentGuiLayout, "fields", StringComparison.OrdinalIgnoreCase)) ||
+                children.Any(child => child.IsLongText ||
+                                      string.Equals(child.ControlTypeOverride, "multiline", StringComparison.OrdinalIgnoreCase)));
     }
 
     private HashSet<string> GetCategoryLayoutRenderedKeys(string categoryName)
@@ -16316,6 +17397,8 @@ internal sealed partial class MainForm : Form
         TextBox footerVersionBox,
         bool previewAfterSave)
     {
+        try
+        {
         if (_document is null)
         {
             return false;
@@ -16410,6 +17493,13 @@ internal sealed partial class MainForm : Form
 
         SetStatus("Designer metadata saved: " + _document.Metadata.Path);
         return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Save Designer failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            SetStatus("Designer metadata could not be saved.");
+            return false;
+        }
     }
 
     private void ExportConfiguredExe(
@@ -16444,7 +17534,7 @@ internal sealed partial class MainForm : Form
             FileName = buildMode.Equals("admin", StringComparison.OrdinalIgnoreCase)
                 ? "Foothold Config Manager Admin.exe"
                 : "Foothold Config Manager.exe",
-            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            InitialDirectory = RuntimeSettings.SettingsDirectory,
             OverwritePrompt = true
         };
 
@@ -16614,14 +17704,14 @@ internal sealed partial class MainForm : Form
         SetUndoAction(description, action, null);
     }
 
-    private void SetUndoAction(string description, Action action, Action? refreshAction)
+    private void SetUndoAction(string description, Action action, Action? refreshAction, Func<string?>? preflight = null)
     {
         if (_restoringUndo)
         {
             return;
         }
 
-        _undoStack.Push(new UndoStep(description, action, refreshAction));
+        _undoStack.Push(new UndoStep(description, action, refreshAction, Preflight: preflight));
         UpdateEditActionButtonStates();
     }
 
@@ -16659,6 +17749,7 @@ internal sealed partial class MainForm : Form
         var undoValue = oldValue;
         Action? undoRefreshAction = () =>
         {
+            using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
             refreshAction?.Invoke();
             RefreshVisibleWhenTargets(entry);
             RefreshDependentEditors(entry);
@@ -16689,6 +17780,8 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        var rejection = _undoStack.Peek().Preflight?.Invoke();
+        if (rejection is not null) { SetStatus(rejection); return; }
         var step = _undoStack.Pop();
 
         try
@@ -16739,7 +17832,7 @@ internal sealed partial class MainForm : Form
 
         var search = IsRawCategorySelected() ? _rawSearchBox.Text.Trim() : _searchBox.Text.Trim();
         var section = _sectionFilter.SelectedItem?.ToString();
-        var entries = _document.Entries.AsEnumerable();
+        var entries = _document.Entries.Where(entry => _testingUnlocked || !entry.GuiTesting);
 
         if (!string.IsNullOrWhiteSpace(section) && section != "All sections")
         {
@@ -16913,9 +18006,13 @@ internal sealed partial class MainForm : Form
     private void RefreshSideMultiplierPreviewLabels()
     {
         var roots = _categoryPanelCache.Values
+            .Where(panel => !ReferenceEquals(panel.Parent, _formHost))
             .Append(_formHost)
-            .Append(_multiplierPanel)
             .Distinct();
+        if (!_formHost.Contains(_multiplierPanel))
+        {
+            roots = roots.Append(_multiplierPanel);
+        }
         foreach (var label in roots.SelectMany(EnumerateChildControls<Label>))
         {
             if (label.Tag is SideMultiplierPreviewBinding binding)
@@ -17250,13 +18347,15 @@ internal sealed partial class MainForm : Form
             Title = "Select updated Foothold mission MIZ",
             Filter = "DCS mission (*.miz)|*.miz|All files (*.*)|*.*",
             FileName = "*.miz",
-            InitialDirectory = _document is null
+            InitialDirectory = GetExistingInitialDirectory(_settings.LastMizDirectory) ?? (_document is null
                 ? RuntimeSettings.GetBestInitialDirectory()
-                : Path.GetDirectoryName(_document.Path)
+                : Path.GetDirectoryName(_document.Path))
         };
 
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
+            _settings.LastMizDirectory = Path.GetDirectoryName(dialog.FileName);
+            _settings.Save();
             InstallConfigFromMiz(dialog.FileName);
         }
     }
@@ -17317,7 +18416,8 @@ internal sealed partial class MainForm : Form
 
                 Directory.CreateDirectory(targetDirectory);
                 var installedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
-                newDocument.SaveTo(targetPath);
+                var installedWarnings = new List<string>();
+                newDocument.SaveImportedTo(targetPath, installedWarnings);
                 var installedPresetSynced = TrySyncActivePresetFromLive(
                     targetPath,
                     out var installedPresetName,
@@ -17325,6 +18425,7 @@ internal sealed partial class MainForm : Form
                 UpdateSelectedInstanceConfigPath(targetPath);
                 LoadConfig(targetPath);
                 SetStatus("Installed " + extractedConfig.ConfigFileName + " from MIZ. Stored defaults from " + installedDefaults.MizName + ".");
+                ShowImportWarnings(installedWarnings);
                 if (!installedPresetSynced)
                 {
                     ShowActivePresetSyncWarning("MIZ update", installedPresetName, installedPresetError);
@@ -17332,9 +18433,10 @@ internal sealed partial class MainForm : Form
                 return;
             }
 
+            var cleanSource = newDocument.CreateWorkingCopy();
             var previousCleanDocument = TryLoadStoredMizDefaultsForConfig(currentDocument.Path);
             var preview = MergeCurrentConfigIntoNewConfig(currentDocument, newDocument, previousCleanDocument);
-            if (!ValidateInstallMizDocument(newDocument, "The merged MIZ config"))
+            if (!ValidateInstallMizDocument(newDocument, "The merged MIZ config", preview.ImportWarnings))
             {
                 return;
             }
@@ -17346,6 +18448,10 @@ internal sealed partial class MainForm : Form
             var tableChoices = BuildKeptTableChoices(preview, "current table text", "new MIZ table text");
             var choices = valueChoices.Concat(tableChoices).ToList();
             var presetTargets = GetOtherPresetUpdateTargets(targetPath);
+            var currentPlan = new InstanceImportPlan(
+                FindInstanceProfileForConfig(targetPath)?.Name ?? "Current config",
+                currentDocument, newDocument, previousCleanDocument, preview, valueChoices, tableChoices);
+            var importScope = new InstanceImportScope(this, currentPlan, cleanSource);
             if (!ConfirmSelectableValuePreview(
                     previewText,
                     "Import MIZ Config Preview",
@@ -17360,15 +18466,21 @@ internal sealed partial class MainForm : Form
                     "Use new config value",
                     choices,
                     BuildMizInstallInfoTabs(preview),
-                    presetTargets))
+                    presetTargets, importScope))
             {
+                return;
+            }
+
+            if (importScope.AllInstances)
+            {
+                CompleteInstanceImports(importScope, mizPath, extractedConfig);
                 return;
             }
 
             ApplyKeptTableChoices(newDocument, preview, tableChoices);
             ApplyKeptValueChoices(newDocument, preview, valueChoices);
 
-            if (!ValidateInstallMizDocument(newDocument, "The final imported MIZ config"))
+            if (!ValidateInstallMizDocument(newDocument, "The final imported MIZ config", preview.ImportWarnings))
             {
                 return;
             }
@@ -17376,7 +18488,7 @@ internal sealed partial class MainForm : Form
             var importedNewMarkers = CaptureImportedNewMarkers(preview);
             var storedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
             BackupCurrentConfigBeforeMizUpdate(currentDocument.Path, mizPath);
-            newDocument.SaveTo(targetPath);
+            newDocument.SaveImportedTo(targetPath, preview.ImportWarnings);
             var pendingNewItemWarning = PersistImportedBucketNewItems(targetPath, preview);
             var presetSynced = TrySyncActivePresetFromLive(
                 targetPath,
@@ -17412,6 +18524,7 @@ internal sealed partial class MainForm : Form
                 ShowActivePresetSyncWarning("MIZ update", activePresetName, activePresetError);
             }
             ShowPendingNewItemWarning(pendingNewItemWarning);
+            ShowImportWarnings(preview.ImportWarnings);
             ReportPresetBatchUpdate(presetUpdateResult);
         }
         catch (Exception ex)
@@ -17575,14 +18688,14 @@ internal sealed partial class MainForm : Form
         return MessageBox.Show(this, message, "Install " + variantLabel + " Config", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
     }
 
-    private bool ValidateInstallMizDocument(ConfigDocument document, string context)
+    private bool ValidateInstallMizDocument(ConfigDocument document, string context, List<string>? importWarnings = null)
     {
-        return ValidateMergeDocument(document, "Import MIZ Config validation failed", context);
+        return ValidateMergeDocument(document, "Import MIZ Config validation failed", context, importWarnings ?? new List<string>());
     }
 
-    private bool ValidateMergeDocument(ConfigDocument document, string title, string context)
+    private bool ValidateMergeDocument(ConfigDocument document, string title, string context, List<string>? importWarnings = null)
     {
-        var errors = document.Validate();
+        var errors = importWarnings is null ? document.Validate() : document.ValidateForImport(importWarnings);
         if (errors.Count == 0)
         {
             return true;
@@ -17590,6 +18703,16 @@ internal sealed partial class MainForm : Form
 
         ShowValidationIssues(title, new[] { context + " has validation issues. No file was changed." }.Concat(errors.Take(20)).ToList());
         return false;
+    }
+
+    private void ShowImportWarnings(IReadOnlyCollection<string> warnings)
+    {
+        if (warnings.Count == 0) return;
+        ShowValidationIssues("Config updated — review aircraft", new[]
+        {
+            "The update completed. Your selected aircraft and AI settings were kept.",
+            "Some aircraft used by AI are inactive in their allowed lists. Review Aircraft / Weapons or the requiring AI options."
+        }.Concat(warnings.Distinct(StringComparer.Ordinal)).ToList());
     }
 
     private ExtractedMizConfig ExtractFootholdConfigFromMiz(string mizPath, string tempDir, string? preferredConfigFileName)
@@ -17675,7 +18798,7 @@ internal sealed partial class MainForm : Form
         };
         panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(18)));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(24)));
         dialog.Controls.Add(panel);
 
         panel.Controls.Add(new Label
@@ -17731,7 +18854,8 @@ internal sealed partial class MainForm : Form
         ExtractedMizConfig extractedConfig,
         string? targetConfigPath = null,
         string? storedDefaultsDirectory = null,
-        DateTime? storedAtOverride = null)
+        DateTime? storedAtOverride = null,
+        IReadOnlyCollection<string>? targetConfigPaths = null)
     {
         storedDefaultsDirectory ??= StoredDefaultsDirectory;
         Directory.CreateDirectory(storedDefaultsDirectory);
@@ -17771,8 +18895,24 @@ internal sealed partial class MainForm : Form
         var replacedItems = index.Items
             .Where(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase))
             .ToList();
-        info.TargetConfigPaths = MergeStoredTargetConfigPaths(replacedItems, targetConfigPath);
-        index.Items.RemoveAll(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
+        if (targetConfigPaths is not null || !string.IsNullOrWhiteSpace(targetConfigPath))
+        {
+            info.TargetConfigPaths = NormalizeStoredTargetConfigPaths(targetConfigPaths ?? new[] { targetConfigPath! });
+            foreach (var item in replacedItems)
+            {
+                item.TargetConfigPaths = item.TargetConfigPaths
+                    .Where(path => !info.TargetConfigPaths.Contains(path, StringComparer.OrdinalIgnoreCase)).ToList();
+            }
+
+            replacedItems = replacedItems.Where(item => item.TargetConfigPaths.Count == 0).ToList();
+            index.Items.RemoveAll(item => replacedItems.Contains(item));
+        }
+        else
+        {
+            info.TargetConfigPaths = MergeStoredTargetConfigPaths(replacedItems, targetConfigPath);
+            index.Items.RemoveAll(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
+        }
+
         index.Items.Insert(0, info);
         NormalizeStoredMizDefaultsIndex(index, out var removedByNormalize);
         try
@@ -17795,28 +18935,83 @@ internal sealed partial class MainForm : Form
         return info;
     }
 
-    private static StoredMizDefaultsInfo StoreConfigDefaults(string configPath)
+    private static StoredMizDefaultsInfo StoreConfigDefaults(
+        string configPath,
+        IReadOnlyCollection<string>? targetConfigPaths = null,
+        ConfigDocument? cleanSource = null)
     {
         Directory.CreateDirectory(StoredDefaultsDirectory);
         var index = LoadStoredMizDefaultsIndex();
         var fullConfigPath = Path.GetFullPath(configPath);
+        var storedAt = DateTime.Now;
+        var storedConfigPath = fullConfigPath;
+        var configFileName = Path.GetFileName(fullConfigPath);
+        if (cleanSource is not null)
+        {
+            if (!IsSupportedConfigFileName(configFileName) && targetConfigPaths is { Count: > 0 })
+            {
+                configFileName = Path.GetFileName(targetConfigPaths.First());
+            }
+
+            storedConfigPath = Path.Combine(StoredDefaultsDirectory,
+                storedAt.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "-" +
+                MakeSafeFileName(Path.GetFileNameWithoutExtension(configFileName)) + "-" + Guid.NewGuid().ToString("N") + ".lua");
+            cleanSource.SaveImportedSnapshotTo(storedConfigPath, new List<string>());
+        }
+
         var info = new StoredMizDefaultsInfo
         {
             Id = "config:" + fullConfigPath,
             SourceKind = "config",
             MizName = Path.GetFileName(fullConfigPath),
             MizPath = fullConfigPath,
-            ConfigFileName = Path.GetFileName(fullConfigPath),
-            ConfigPath = fullConfigPath,
-            StoredAt = DateTime.Now
+            ConfigFileName = configFileName,
+            ConfigPath = storedConfigPath,
+            StoredAt = storedAt
         };
 
         var sourceKey = GetStoredDefaultsSourceKey(info);
-        index.Items.RemoveAll(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
+        var replacedItems = index.Items
+            .Where(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (targetConfigPaths is not null)
+        {
+            info.TargetConfigPaths = NormalizeStoredTargetConfigPaths(targetConfigPaths);
+            foreach (var item in replacedItems)
+            {
+                item.TargetConfigPaths = item.TargetConfigPaths
+                    .Where(path => !info.TargetConfigPaths.Contains(path, StringComparer.OrdinalIgnoreCase)).ToList();
+            }
+
+            replacedItems = replacedItems.Where(item => item.TargetConfigPaths.Count == 0).ToList();
+            index.Items.RemoveAll(item => replacedItems.Contains(item));
+        }
+        else
+        {
+            info.TargetConfigPaths = NormalizeStoredTargetConfigPaths(
+                replacedItems.SelectMany(item => item.TargetConfigPaths));
+            index.Items.RemoveAll(item => GetStoredDefaultsSourceKey(item).Equals(sourceKey, StringComparison.OrdinalIgnoreCase));
+        }
+
         index.Items.Insert(0, info);
         NormalizeStoredMizDefaultsIndex(index, out var removedItems);
-        SaveStoredMizDefaultsIndex(index);
-        foreach (var item in removedItems)
+        try
+        {
+            SaveStoredMizDefaultsIndex(index);
+        }
+        catch
+        {
+            if (cleanSource is not null)
+            {
+                TryDeleteOwnedStoredDefaultsConfig(storedConfigPath);
+            }
+
+            throw;
+        }
+
+        foreach (var item in replacedItems.Concat(removedItems)
+                     .Where(item => !PathsEqual(item.ConfigPath, storedConfigPath))
+                     .DistinctBy(item => item.ConfigPath, StringComparer.OrdinalIgnoreCase))
         {
             TryDeleteOwnedStoredDefaultsConfig(item.ConfigPath);
         }
@@ -17856,7 +19051,7 @@ internal sealed partial class MainForm : Form
         {
             var document = ConfigDocument.Load(source.ConfigPath);
             document.RepairStringListSeparators();
-            return document.Validate().Count == 0 ? document : null;
+            return document.ValidateForImport(new List<string>()).Count == 0 ? document : null;
         }
         catch
         {
@@ -17918,33 +19113,53 @@ internal sealed partial class MainForm : Form
         var originalItems = index.Items.ToList();
         var keptItems = new List<StoredMizDefaultsInfo>();
         var removed = new List<StoredMizDefaultsInfo>();
-        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var targetPathsBySource = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var targetPathsChanged = false;
 
         foreach (var item in index.Items
                      .Where(item => !string.IsNullOrWhiteSpace(item.ConfigPath) && File.Exists(item.ConfigPath))
                      .OrderByDescending(item => item.StoredAt))
         {
             var key = GetStoredDefaultsSourceKey(item);
-            if (string.IsNullOrWhiteSpace(key) || !seenKeys.Add(key))
+            if (string.IsNullOrWhiteSpace(key))
             {
                 removed.Add(item);
                 continue;
             }
 
-            if (keptItems.Count < 20)
+            if (targetPathsBySource.TryGetValue(key, out var seenTargets))
             {
-                keptItems.Add(item);
+                var retainedTargets = item.TargetConfigPaths
+                    .Where(path => !seenTargets.Contains(path)).ToList();
+                if (retainedTargets.Count == 0)
+                {
+                    removed.Add(item);
+                    continue;
+                }
+
+                targetPathsChanged |= retainedTargets.Count != item.TargetConfigPaths.Count;
+                item.TargetConfigPaths = retainedTargets;
             }
             else
             {
-                removed.Add(item);
+                if (targetPathsBySource.Count >= 20)
+                {
+                    removed.Add(item);
+                    continue;
+                }
+
+                seenTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                targetPathsBySource.Add(key, seenTargets);
             }
+
+            seenTargets.UnionWith(item.TargetConfigPaths);
+            keptItems.Add(item);
         }
 
         removed.AddRange(originalItems.Where(item => !keptItems.Contains(item) && !removed.Contains(item)));
         removedItems = removed;
         index.Items = keptItems;
-        return originalItems.Count != keptItems.Count ||
+        return targetPathsChanged || originalItems.Count != keptItems.Count ||
                originalItems.Where((item, itemIndex) => itemIndex >= keptItems.Count || !ReferenceEquals(item, keptItems[itemIndex])).Any();
     }
 
@@ -19159,6 +20374,7 @@ internal sealed partial class MainForm : Form
     private const string InstallPolicyForceValue = "forceValue";
     private const string NewItemPolicyCommentWhenVisible = "commentWhenVisible";
 
+#if !FOOTHOLD_USER_BUILD
     internal static int RunMergeRegressionSelfTest()
     {
         const string keptTableKey = "NestedOverrides";
@@ -19191,6 +20407,16 @@ internal sealed partial class MainForm : Form
                 KeepCurrentOption = false
                 UseIncomingOption = false
                 ForceIncomingOption = false
+
+                ReplaceRows = {
+                    ["Shared"] = false,
+                    ["Removed"] = true,
+                }
+
+                MergeRows = {
+                    ["Shared"] = false,
+                    ["PlayerOnly"] = true,
+                }
                 """, new System.Text.UTF8Encoding(false));
             File.WriteAllText(incomingPath, """
                 -- Incoming nested-table header — keep this.
@@ -19215,6 +20441,17 @@ internal sealed partial class MainForm : Form
                 -- @gui installPolicy="forceValue"
                 ForceIncomingOption = true
                 NewOption = 42
+
+                -- @gui editor="checkboxTable" installPolicy="replaceTable"
+                ReplaceRows = {
+                    ["Shared"] = true,
+                    ["Added"] = false,
+                }
+
+                MergeRows = {
+                    ["Shared"] = true,
+                    ["Added"] = false,
+                }
                 """, new System.Text.UTF8Encoding(false));
             File.WriteAllText(duplicateCurrentPath, """
                 MAX_AT_SPAWN = {
@@ -19731,6 +20968,21 @@ internal sealed partial class MainForm : Form
                 "The generic nested-table keep policy was not retained.");
             Require(incomingDocument.GetInstallPolicy("ForceIncomingOption")?.Equals(InstallPolicyForceValue, StringComparison.OrdinalIgnoreCase) == true,
                 "The forced scalar policy was not retained.");
+            Require(incomingDocument.Entries.Any(entry =>
+                        entry.DisplayKey.Equals("ReplaceRows.Shared", StringComparison.Ordinal) &&
+                        entry.ValueText.Equals("false", StringComparison.Ordinal)),
+                "replaceTable did not preserve a matching player value.");
+            Require(incomingDocument.Entries.Any(entry =>
+                        entry.DisplayKey.Equals("ReplaceRows.Added", StringComparison.Ordinal) &&
+                        entry.ValueText.Equals("false", StringComparison.Ordinal)),
+                "replaceTable did not retain a new source row and its default.");
+            Require(!incomingDocument.Entries.Any(entry =>
+                        entry.DisplayKey.Equals("ReplaceRows.Removed", StringComparison.Ordinal)),
+                "replaceTable retained a row removed from the source table.");
+            Require(incomingDocument.Entries.Any(entry =>
+                        entry.DisplayKey.Equals("MergeRows.PlayerOnly", StringComparison.Ordinal) &&
+                        entry.ValueText.Equals("true", StringComparison.Ordinal)),
+                "The default merge behavior stopped preserving player-only table rows.");
             Require(incomingDocument.TryGetTableBlockText(keptTableKey, out var keptTableBlock),
                 "The merged nested table was not found.");
             Require(keptTableBlock.Contains("[\"Custom1\"]", StringComparison.Ordinal),
@@ -19946,11 +21198,15 @@ internal sealed partial class MainForm : Form
         }
     }
 
+#endif
+
     private static MizMergePreview MergeCurrentConfigIntoNewConfig(
         ConfigDocument currentDocument,
         ConfigDocument newDocument,
         ConfigDocument? previousCleanDocument = null)
     {
+        if (currentDocument.StringListTables.Any(table => table.Key == "AIOnlyAircraft" && table.ManagedTargetKeys.Length == 0))
+            newDocument.AppendTableBlockFrom(currentDocument, "AIOnlyAircraft");
         var preview = new MizMergePreview();
         ApplyStringListInstallPolicies(currentDocument, newDocument, previousCleanDocument, preview);
         ApplyNonStringKeepTableInstallPolicies(currentDocument, newDocument, preview);
@@ -19989,6 +21245,10 @@ internal sealed partial class MainForm : Form
                 preview.NewEntries.Add(newEntry);
                 continue;
             }
+
+            if (!preview.NewEditorMarkers.ContainsKey(newEntry.ParentKey) &&
+                newDocument.HasTupleChoices(newEntry.ParentKey) && !currentDocument.HasTupleChoices(newEntry.ParentKey))
+                preview.NewEditorMarkers.Add(newEntry.ParentKey, new(newEntry.EffectiveCategory, newEntry.ParentKey));
 
             if (string.Equals(newEntry.ValueText, currentEntry.ValueText, StringComparison.Ordinal))
             {
@@ -20034,6 +21294,7 @@ internal sealed partial class MainForm : Form
         }
 
         PreserveStringListItems(currentDocument, newDocument, preview);
+        newDocument.PrepareTupleChoiceMigration();
         return preview;
     }
 
@@ -20121,15 +21382,23 @@ internal sealed partial class MainForm : Form
             }
 
             if (currentDocument.TryGetTableBlockText(newTable.Key, out var currentBlock) &&
-                newDocument.TryGetTableBlockText(newTable.Key, out var newDefaultBlock) &&
-                !TableBlockTextEquals(currentBlock, newDefaultBlock))
+                newDocument.TryGetTableBlockText(newTable.Key, out var newDefaultBlock))
             {
-                preview.KeptTableBlocks.Add(new MizKeptTableBlock(
-                    newTable.Key,
-                    currentBlock,
-                    newDefaultBlock,
-                    currentTable.Items.Count,
-                    newTable.Items.Count));
+                var sameBody = TableBlockTextEquals(currentBlock, newDefaultBlock);
+                if (sameBody && !IsBucketStringListEditor(newTable))
+                {
+                    preview.KeptStringListTables.Add((newTable.Key, currentTable.Items.Count));
+                    continue;
+                }
+                if (!sameBody)
+                {
+                    preview.KeptTableBlocks.Add(new MizKeptTableBlock(
+                        newTable.Key,
+                        currentBlock,
+                        newDefaultBlock,
+                        currentTable.Items.Count,
+                        newTable.Items.Count));
+                }
             }
 
             var keptTable = IsBucketStringListEditor(newTable)
@@ -20183,7 +21452,10 @@ internal sealed partial class MainForm : Form
 
         if (currentTable is not null)
         {
-            if (!newDocument.ReplaceTableBodyFrom(currentDocument, incomingTable.Key))
+            var sameBody = currentDocument.TryGetTableBlockText(incomingTable.Key, out var currentBlock) &&
+                newDocument.TryGetTableBlockText(incomingTable.Key, out var incomingBlock) &&
+                TableBlockTextEquals(currentBlock, incomingBlock);
+            if (!sameBody && !newDocument.ReplaceTableBodyFrom(currentDocument, incomingTable.Key))
             {
                 throw new InvalidOperationException(
                     "Could not preserve the current table body for " + incomingTable.Key + ".");
@@ -20249,17 +21521,16 @@ internal sealed partial class MainForm : Form
                 continue;
             }
 
+            if (TableBlockTextEquals(currentBlock, newDefaultBlock)) continue;
+
             var currentItemCount = CountEntriesUnderTable(currentDocument, key);
             var newDefaultItemCount = CountEntriesUnderTable(newDocument, key);
-            if (!TableBlockTextEquals(currentBlock, newDefaultBlock))
-            {
-                preview.KeptTableBlocks.Add(new MizKeptTableBlock(
-                    key,
-                    currentBlock,
-                    newDefaultBlock,
-                    currentItemCount,
-                    newDefaultItemCount));
-            }
+            preview.KeptTableBlocks.Add(new MizKeptTableBlock(
+                key,
+                currentBlock,
+                newDefaultBlock,
+                currentItemCount,
+                newDefaultItemCount));
 
             if (!newDocument.ReplaceTableBodyFrom(currentDocument, key))
             {
@@ -20319,7 +21590,10 @@ internal sealed partial class MainForm : Form
     {
         if (string.IsNullOrWhiteSpace(currentEntry.ParentKey) ||
             currentEntry.ParentKey.Contains('.', StringComparison.Ordinal) ||
-            newTopLevelByKey.ContainsKey(currentEntry.Key))
+            newTopLevelByKey.ContainsKey(currentEntry.Key) ||
+            newDocument.GetInstallPolicy(currentEntry.ParentKey)?.Equals(
+                InstallPolicyReplaceTable,
+                StringComparison.OrdinalIgnoreCase) == true)
         {
             return false;
         }
@@ -20332,7 +21606,8 @@ internal sealed partial class MainForm : Form
 
         try
         {
-            newDocument.AddTableEntry(currentEntry.ParentKey, currentEntry.Key, currentEntry.ValueText, template);
+            var added = newDocument.AddTableEntry(currentEntry.ParentKey, currentEntry.Key, currentEntry.ValueText, template);
+            newDocument.PreserveRequiredValueMetadata(added, currentEntry);
             return true;
         }
         catch
@@ -20471,6 +21746,7 @@ internal sealed partial class MainForm : Form
                     : keptValue.NewDefault;
             }
         }
+        targetDocument.PrepareTupleChoiceMigration();
     }
 
     private void ImportValuesFromOldConfig()
@@ -20496,7 +21772,7 @@ internal sealed partial class MainForm : Form
             Title = "Select Foothold Config.lua",
             Filter = "Lua config (*.lua)|*.lua|All files (*.*)|*.*",
             FileName = GetCurrentConfigFileName(_document),
-            InitialDirectory = Path.GetDirectoryName(_document.Path)
+            InitialDirectory = GetExistingInitialDirectory(_settings.LastImportConfigDirectory) ?? Path.GetDirectoryName(_document.Path)
         };
 
         if (dialog.ShowDialog(this) != DialogResult.OK)
@@ -20506,6 +21782,8 @@ internal sealed partial class MainForm : Form
 
         try
         {
+            _settings.LastImportConfigDirectory = Path.GetDirectoryName(dialog.FileName);
+            _settings.Save();
             var currentPath = Path.GetFullPath(_document.Path);
             var sourcePath = Path.GetFullPath(dialog.FileName);
             if (string.Equals(currentPath, sourcePath, StringComparison.OrdinalIgnoreCase))
@@ -20517,7 +21795,7 @@ internal sealed partial class MainForm : Form
             var currentDocument = _document;
             var sourceDocument = ConfigDocument.Load(sourcePath);
             sourceDocument.RepairStringListSeparators();
-            if (!ValidateMergeDocument(sourceDocument, "Import Config File validation failed", "The selected config"))
+            if (!ValidateMergeDocument(sourceDocument, "Import Config File validation failed", "The selected config", new List<string>()))
             {
                 return;
             }
@@ -20529,7 +21807,7 @@ internal sealed partial class MainForm : Form
                 currentDocument,
                 outputDocument,
                 previousCleanDocument);
-            if (!ValidateMergeDocument(outputDocument, "Import Config File validation failed", "The merged Import Config File config"))
+            if (!ValidateMergeDocument(outputDocument, "Import Config File validation failed", "The merged Import Config File config", preview.ImportWarnings))
             {
                 return;
             }
@@ -20547,6 +21825,10 @@ internal sealed partial class MainForm : Form
             var tableChoices = BuildKeptTableChoices(preview, "current table text", "selected config table text");
             var choices = valueChoices.Concat(tableChoices).ToList();
             var presetTargets = GetOtherPresetUpdateTargets(currentPath);
+            var currentPlan = new InstanceImportPlan(
+                FindInstanceProfileForConfig(currentPath)?.Name ?? "Current config",
+                currentDocument, outputDocument, previousCleanDocument, preview, valueChoices, tableChoices);
+            var importScope = new InstanceImportScope(this, currentPlan, sourceDocument);
             if (!ConfirmSelectableValuePreview(
                     previewText,
                     "Import Config File Preview",
@@ -20560,22 +21842,28 @@ internal sealed partial class MainForm : Form
                     "Use selected config value",
                     choices,
                     BuildMizInstallInfoTabs(preview),
-                    presetTargets))
+                    presetTargets, importScope))
             {
+                return;
+            }
+
+            if (importScope.AllInstances)
+            {
+                CompleteInstanceImports(importScope, sourcePath, extracted: null);
                 return;
             }
 
             ApplyKeptTableChoices(outputDocument, preview, tableChoices);
             ApplyKeptValueChoices(outputDocument, preview, valueChoices);
 
-            if (!ValidateMergeDocument(outputDocument, "Import Config File validation failed", "The final Import Config File config"))
+            if (!ValidateMergeDocument(outputDocument, "Import Config File validation failed", "The final Import Config File config", preview.ImportWarnings))
             {
                 return;
             }
 
             var importedNewMarkers = CaptureImportedNewMarkers(preview);
-            var storedDefaults = StoreConfigDefaults(sourcePath);
-            outputDocument.SaveTo(currentPath);
+            var storedDefaults = StoreConfigDefaults(sourcePath, new[] { currentPath }, sourceDocument);
+            outputDocument.SaveImportedTo(currentPath, preview.ImportWarnings);
             var pendingNewItemWarning = PersistImportedBucketNewItems(currentPath, preview);
             var presetSynced = TrySyncActivePresetFromLive(
                 currentPath,
@@ -20609,6 +21897,7 @@ internal sealed partial class MainForm : Form
                 ShowActivePresetSyncWarning("config-file update", activePresetName, activePresetError);
             }
             ShowPendingNewItemWarning(pendingNewItemWarning);
+            ShowImportWarnings(preview.ImportWarnings);
             ReportPresetBatchUpdate(presetUpdateResult);
         }
         catch (Exception ex)
@@ -20702,7 +21991,8 @@ internal sealed partial class MainForm : Form
         string otherActionLabel,
         List<SelectableValueChoice> choices,
         IReadOnlyList<(string Title, IReadOnlyList<string> Rows)>? infoTabs = null,
-        IReadOnlyList<PresetUpdateTargetChoice>? presetTargets = null)
+        IReadOnlyList<PresetUpdateTargetChoice>? presetTargets = null,
+        InstanceImportScope? importScope = null)
     {
         using var dialog = new Form
         {
@@ -20721,15 +22011,25 @@ internal sealed partial class MainForm : Form
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            RowCount = 5,
+            RowCount = importScope is null ? 5 : 6,
             ColumnCount = 1,
             Padding = new Padding(Zoomed(10)),
             BackColor = MainBackground
         };
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(64)));
-        panel.RowStyles.Add(new RowStyle(
+        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var presetRow = importScope is null ? 1 : 2;
+        var choicesRow = presetRow + 1;
+        var detailsRow = choicesRow + 1;
+        var buttonsRow = detailsRow + 1;
+        if (importScope is not null)
+        {
+            importScope.AllInstances = false;
+            panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        }
+        var presetRowStyle = new RowStyle(
             SizeType.Absolute,
-            presetTargets is { Count: > 0 } ? Zoomed(82) : 0));
+            presetTargets is { Count: > 0 } ? Zoomed(82) : 0);
+        panel.RowStyles.Add(presetRowStyle);
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var detailsRowStyle = new RowStyle(SizeType.Absolute, 0);
         panel.RowStyles.Add(detailsRowStyle);
@@ -20819,14 +22119,16 @@ internal sealed partial class MainForm : Form
         (int CategoryIndex, string CategoryName, string CategoryLabel, int ItemIndex) ResolveChoicePosition(SelectableValueChoice choice)
         {
             var key = GetChoiceConfigKey(choice);
-            if (choicePositions.TryGetValue(key, out var configuredPosition))
+            if ((choice.ImportPlan is null || ReferenceEquals(choice.ImportPlan.Current, _document)) &&
+                choicePositions.TryGetValue(key, out var configuredPosition))
             {
                 return configuredPosition;
             }
 
-            var entry = _document?.Entries.FirstOrDefault(candidate => candidate.DisplayKey.Equals(key, StringComparison.Ordinal));
-            var stringListTable = _document?.StringListTables.FirstOrDefault(candidate => candidate.Key.Equals(key, StringComparison.Ordinal));
-            var stageTable = _document?.StageTables.FirstOrDefault(candidate => candidate.Key.Equals(key, StringComparison.Ordinal));
+            var choiceDocument = choice.ImportPlan?.Current ?? _document;
+            var entry = choiceDocument?.Entries.FirstOrDefault(candidate => candidate.DisplayKey.Equals(key, StringComparison.Ordinal));
+            var stringListTable = choiceDocument?.StringListTables.FirstOrDefault(candidate => candidate.Key.Equals(key, StringComparison.Ordinal));
+            var stageTable = choiceDocument?.StageTables.FirstOrDefault(candidate => candidate.Key.Equals(key, StringComparison.Ordinal));
             var categoryName = entry?.EffectiveCategory ?? stringListTable?.Section ?? stageTable?.Section ?? "Other";
             var categoryIndex = categoryNames.FindIndex(candidate => candidate.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
             var itemIndex = entry?.LineIndex ?? stringListTable?.StartLineIndex ?? stageTable?.StartLineIndex ?? int.MaxValue;
@@ -20837,56 +22139,393 @@ internal sealed partial class MainForm : Form
                 itemIndex);
         }
 
-        var orderedChoiceRows = choices
-            .Select((choice, originalIndex) =>
-            {
-                var position = ResolveChoicePosition(choice);
-                return new
-                {
-                    Choice = choice,
-                    position.CategoryIndex,
-                    position.CategoryName,
-                    position.CategoryLabel,
-                    position.ItemIndex,
-                    OriginalIndex = originalIndex
-                };
-            })
-            .OrderBy(row => row.CategoryIndex)
-            .ThenBy(row => row.CategoryLabel, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(row => row.ItemIndex)
-            .ThenBy(row => row.OriginalIndex)
-            .ToList();
-        var orderedChoices = orderedChoiceRows.Select(row => row.Choice).ToList();
-        var choiceGroups = orderedChoiceRows
-            .GroupBy(row => (row.CategoryIndex, row.CategoryName, row.CategoryLabel))
-            .Select(group => (
-                CategoryName: group.Key.CategoryName,
-                CategoryLabel: group.Key.CategoryLabel,
-                Choices: group.Select(row => row.Choice).ToList()))
-            .ToList();
-        var newRows = new List<(string Label, string Summary)>();
-        if (infoTabs is not null)
+        Action? refreshScopeSummary = null;
+
+        Control BuildChoiceControl(InstanceImportPlan? plan)
         {
-            foreach (var tab in infoTabs.Where(tab =>
-                         tab.Title.Equals("New", StringComparison.OrdinalIgnoreCase) ||
-                         tab.Title.Equals("New Options", StringComparison.OrdinalIgnoreCase) ||
-                         tab.Title.Equals("New Rows", StringComparison.OrdinalIgnoreCase)))
+            var orderedChoiceRows = (plan?.Choices ?? choices)
+                .Select((choice, originalIndex) =>
+                {
+                    var position = ResolveChoicePosition(choice);
+                    return new
+                    {
+                        Choice = choice,
+                        position.CategoryIndex,
+                        position.CategoryName,
+                        position.CategoryLabel,
+                        position.ItemIndex,
+                        OriginalIndex = originalIndex
+                    };
+                })
+                .OrderBy(row => row.CategoryIndex)
+                .ThenBy(row => row.CategoryLabel, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(row => row.ItemIndex)
+                .ThenBy(row => row.OriginalIndex)
+                .ToList();
+            var orderedChoices = orderedChoiceRows.Select(row => row.Choice).ToList();
+            var choiceGroups = orderedChoiceRows
+                .GroupBy(row => (row.CategoryIndex, row.CategoryName, row.CategoryLabel))
+                .Select(group => (
+                    CategoryName: group.Key.CategoryName,
+                    CategoryLabel: group.Key.CategoryLabel,
+                    Choices: group.Select(row => row.Choice).ToList()))
+                .ToList();
+            var newRows = new List<(string Label, string Summary)>();
+            var planInfoTabs = plan is null ? infoTabs : BuildMizInstallInfoTabs(plan.Preview);
+            if (planInfoTabs is not null)
             {
-                newRows.AddRange(tab.Rows.Select(row => (FormatNewImportRowLabel(row), "NEW")));
+                foreach (var tab in planInfoTabs.Where(tab =>
+                             tab.Title.Equals("New", StringComparison.OrdinalIgnoreCase) ||
+                             tab.Title.Equals("New Options", StringComparison.OrdinalIgnoreCase) ||
+                             tab.Title.Equals("New Rows", StringComparison.OrdinalIgnoreCase)))
+                {
+                    newRows.AddRange(tab.Rows.Select(row => (FormatNewImportRowLabel(row), "NEW")));
+                }
             }
+
+            Control choiceControl;
+            if (plan is null && orderedChoices.Count == 0 && newRows.Count == 0)
+            {
+                choiceControl = new Label
+                {
+                    Text = "No changed matching values need a checkbox decision.",
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    BackColor = MainBackground,
+                    ForeColor = PrimaryTextColor
+                };
+            }
+            else
+            {
+                var groupName = plan?.Name ?? (_instanceBox.SelectedItem is InstanceItem instanceItem
+                    ? instanceItem.Profile.Name
+                    : "Current config");
+                var choicePanel = new TableLayoutPanel
+                {
+                    Dock = plan is null ? DockStyle.Fill : DockStyle.Top,
+                    AutoSize = plan is not null,
+                    RowCount = 2,
+                    ColumnCount = 1,
+                    Margin = new Padding(0),
+                    Padding = new Padding(0),
+                    BackColor = MainBackground
+                };
+                choicePanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(38)));
+                choicePanel.RowStyles.Add(plan is null ? new RowStyle(SizeType.Percent, 100) : new RowStyle(SizeType.AutoSize));
+
+                var actionBar = new FlowLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+                    FlowDirection = FlowDirection.LeftToRight,
+                    Margin = new Padding(0),
+                    WrapContents = false,
+                    AutoScroll = true,
+                    BackColor = MainBackground
+                };
+                var selectAllButton = new Button { Text = selectedActionLabel, Margin = new Padding(Zoomed(2)) };
+                var clearAllButton = new Button { Text = otherActionLabel, Margin = new Padding(Zoomed(2)) };
+                selectAllButton.Enabled = orderedChoices.Count > 0;
+                clearAllButton.Enabled = orderedChoices.Count > 0;
+                SizeDialogButton(selectAllButton, 190);
+                SizeDialogButton(clearAllButton, 170);
+                actionBar.Controls.Add(selectAllButton);
+                actionBar.Controls.Add(clearAllButton);
+                choicePanel.Controls.Add(actionBar, 0, 0);
+
+                var scrollPanel = new Panel
+                {
+                    Dock = plan is null ? DockStyle.Fill : DockStyle.Top,
+                    AutoSize = plan is not null,
+                    AutoScroll = plan is null,
+                    BackColor = MainBackground
+                };
+                var rows = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Top,
+                    AutoSize = true,
+                    ColumnCount = 1,
+                    BackColor = MainBackground,
+                    Padding = new Padding(0, Zoomed(4), 0, Zoomed(4))
+                };
+                rows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                scrollPanel.Controls.Add(rows);
+
+                var updatingSelectionUi = false;
+                var childChecks = new List<CheckBox>();
+                var categoryChecks = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
+                var categorySummaryLabels = new Dictionary<string, Label>(StringComparer.OrdinalIgnoreCase);
+                CheckBox? parentCheck = null;
+                Label? parentSummaryLabel = null;
+
+                string BuildChangeSummary(SelectableValueChoice choice)
+                {
+                    return PreviewValue(choice.OtherValue) + " -> " + PreviewValue(choice.SelectedValue);
+                }
+
+                string BuildGroupSummary(IReadOnlyCollection<SelectableValueChoice> groupChoices)
+                {
+                    if (groupChoices.Count == 0)
+                    {
+                        return newRows.Count > 0 ? Plural(newRows.Count, "new item", "new items") : "No changed values";
+                    }
+
+                    var selectedCount = groupChoices.Count(choice => choice.Selected);
+                    if (selectedCount == 0)
+                    {
+                        return "Not selected";
+                    }
+
+                    return selectedCount == groupChoices.Count
+                        ? groupChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes"
+                        : selectedCount.ToString(CultureInfo.InvariantCulture) + " of " + groupChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes selected";
+                }
+
+                static CheckState GetSelectionState(IReadOnlyCollection<SelectableValueChoice> groupChoices)
+                {
+                    var selectedCount = groupChoices.Count(choice => choice.Selected);
+                    if (selectedCount == 0)
+                    {
+                        return CheckState.Unchecked;
+                    }
+
+                    return selectedCount == groupChoices.Count
+                        ? CheckState.Checked
+                        : CheckState.Indeterminate;
+                }
+
+                void RefreshSelectionUi()
+                {
+                    updatingSelectionUi = true;
+                    try
+                    {
+                        if (parentCheck is not null)
+                        {
+                            parentCheck.CheckState = GetSelectionState(orderedChoices);
+                        }
+
+                        if (parentSummaryLabel is not null)
+                        {
+                            parentSummaryLabel.Text = BuildGroupSummary(orderedChoices);
+                        }
+
+                        foreach (var group in choiceGroups)
+                        {
+                            if (categoryChecks.TryGetValue(group.CategoryName, out var categoryCheck))
+                            {
+                                categoryCheck.CheckState = GetSelectionState(group.Choices);
+                            }
+
+                            if (categorySummaryLabels.TryGetValue(group.CategoryName, out var categorySummaryLabel))
+                            {
+                                categorySummaryLabel.Text = BuildGroupSummary(group.Choices);
+                            }
+                        }
+
+                        for (var i = 0; i < orderedChoices.Count && i < childChecks.Count; i++)
+                        {
+                            if (childChecks[i].Checked != orderedChoices[i].Selected)
+                            {
+                                childChecks[i].Checked = orderedChoices[i].Selected;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        updatingSelectionUi = false;
+                    }
+                    refreshScopeSummary?.Invoke();
+                }
+
+                void AddRow(Control control)
+                {
+                    rows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                    rows.Controls.Add(control, 0, rows.RowCount);
+                    rows.RowCount++;
+                }
+
+                TableLayoutPanel MakeImportRow(int indent, CheckBox? checkBox, string label, string summary)
+                {
+                    var row = new TableLayoutPanel
+                    {
+                        AutoSize = true,
+                        Dock = DockStyle.Top,
+                        ColumnCount = 3,
+                        Padding = new Padding(0, Zoomed(2), 0, Zoomed(2)),
+                        Font = Font,
+                        BackColor = MainBackground
+                    };
+                    row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(indent)));
+                    row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
+                    row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
+
+                    if (checkBox is not null)
+                    {
+                        checkBox.Dock = DockStyle.Fill;
+                        checkBox.Margin = new Padding(0);
+                        checkBox.BackColor = MainBackground;
+                        checkBox.ForeColor = PrimaryTextColor;
+                        row.Controls.Add(checkBox, 0, 0);
+                    }
+
+                    row.Controls.Add(new Label
+                    {
+                        Text = label,
+                        Dock = DockStyle.Fill,
+                        TextAlign = ContentAlignment.MiddleLeft,
+                        AutoEllipsis = true,
+                        BackColor = MainBackground,
+                        ForeColor = PrimaryTextColor
+                    }, 1, 0);
+
+                    row.Controls.Add(new Label
+                    {
+                        Text = summary,
+                        Dock = DockStyle.Fill,
+                        TextAlign = ContentAlignment.MiddleLeft,
+                        AutoEllipsis = true,
+                        BackColor = MainBackground,
+                        ForeColor = HelpTextColor
+                    }, 2, 0);
+
+                    return row;
+                }
+
+                static void BoldImportRow(TableLayoutPanel row)
+                {
+                    foreach (var label in row.Controls.OfType<Label>())
+                    {
+                        label.Font = new Font(label.Font, FontStyle.Bold);
+                    }
+                }
+
+                parentCheck = new CheckBox
+                {
+                    ThreeState = true,
+                    AutoCheck = false,
+                    CheckState = GetSelectionState(orderedChoices),
+                    Enabled = orderedChoices.Count > 0
+                };
+                parentCheck.Click += (_, _) =>
+                {
+                    var selectAll = orderedChoices.Any(choice => !choice.Selected);
+                    foreach (var choice in orderedChoices)
+                    {
+                        choice.Selected = selectAll;
+                    }
+
+                    RefreshSelectionUi();
+                };
+                var parentRow = MakeImportRow(28, parentCheck, groupName, BuildGroupSummary(orderedChoices));
+                BoldImportRow(parentRow);
+                parentSummaryLabel = parentRow.Controls.OfType<Label>().LastOrDefault();
+                AddRow(parentRow);
+
+                foreach (var group in choiceGroups)
+                {
+                    var groupChoices = group.Choices;
+                    var categoryCheck = new CheckBox
+                    {
+                        ThreeState = true,
+                        AutoCheck = false,
+                        CheckState = GetSelectionState(groupChoices)
+                    };
+                    categoryCheck.Click += (_, _) =>
+                    {
+                        var selectAll = groupChoices.Any(choice => !choice.Selected);
+                        foreach (var choice in groupChoices)
+                        {
+                            choice.Selected = selectAll;
+                        }
+
+                        RefreshSelectionUi();
+                    };
+                    var categoryRow = MakeImportRow(48, categoryCheck, group.CategoryLabel, BuildGroupSummary(groupChoices));
+                    BoldImportRow(categoryRow);
+                    categoryChecks[group.CategoryName] = categoryCheck;
+                    var categorySummaryLabel = categoryRow.Controls.OfType<Label>().LastOrDefault();
+                    if (categorySummaryLabel is not null)
+                    {
+                        categorySummaryLabels[group.CategoryName] = categorySummaryLabel;
+                    }
+                    AddRow(categoryRow);
+
+                    foreach (var choice in groupChoices)
+                    {
+                        var changeCheck = new CheckBox { Checked = choice.Selected, Tag = choice };
+                        changeCheck.CheckedChanged += (_, _) =>
+                        {
+                            if (updatingSelectionUi)
+                            {
+                                return;
+                            }
+
+                            choice.Selected = changeCheck.Checked;
+                            RefreshSelectionUi();
+                        };
+                        childChecks.Add(changeCheck);
+                        AddRow(MakeImportRow(88, changeCheck, choice.Key, BuildChangeSummary(choice)));
+                    }
+                }
+
+                if (newRows.Count > 0)
+                {
+                    var newItemsRow = MakeImportRow(48, null, "New items", Plural(newRows.Count, "new item", "new items"));
+                    BoldImportRow(newItemsRow);
+                    AddRow(newItemsRow);
+                    foreach (var newRow in newRows.OrderBy(row => row.Label, StringComparer.OrdinalIgnoreCase))
+                    {
+                        AddRow(MakeImportRow(88, null, newRow.Label, newRow.Summary));
+                    }
+                }
+
+                selectAllButton.Click += (_, _) =>
+                {
+                    foreach (var choice in orderedChoices)
+                    {
+                        choice.Selected = true;
+                    }
+
+                    RefreshSelectionUi();
+                };
+                clearAllButton.Click += (_, _) =>
+                {
+                    foreach (var choice in orderedChoices)
+                    {
+                        choice.Selected = false;
+                    }
+
+                    RefreshSelectionUi();
+                };
+
+                choicePanel.Controls.Add(scrollPanel, 0, 1);
+                choiceControl = choicePanel;
+            }
+
+            return choiceControl;
+
         }
 
         string BuildCompactSummary()
         {
+            var activePlans = importScope?.Plans;
+            var changeCount = activePlans?.Sum(plan => plan.Choices.Count) ?? choices.Count;
+            var newCount = activePlans?.Sum(plan => BuildMizInstallInfoTabs(plan.Preview).Where(tab => tab.Title is "New" or "New Options" or "New Rows").Sum(tab => tab.Rows.Count)) ??
+                infoTabs?.Where(tab => tab.Title is "New" or "New Options" or "New Rows").Sum(tab => tab.Rows.Count) ?? 0;
             var parts = new List<string>();
-            if (orderedChoices.Count > 0)
+            if (activePlans is not null)
             {
-                parts.Add(Plural(orderedChoices.Count, "change", "changes"));
+                parts.Add(Plural(activePlans.Count, "instance", "instances") + " (" +
+                    GetConfigVariantLabel(importScope!.Current.Current.Path) + ")");
             }
-
-            if (newRows.Count > 0)
+            if (changeCount > 0)
             {
-                parts.Add(Plural(newRows.Count, "new item", "new items"));
+                parts.Add(Plural(changeCount, "change", "changes"));
+                if (activePlans is not null)
+                    parts.Add(Plural(activePlans.Sum(plan => plan.Choices.Count(choice => choice.Selected)), "value kept", "values kept"));
+            }
+            if (newCount > 0)
+            {
+                parts.Add(Plural(newCount, "new item", "new items"));
             }
 
             return parts.Count == 0
@@ -20894,16 +22533,51 @@ internal sealed partial class MainForm : Form
                 : string.Join(", ", parts) + ".";
         }
 
-        panel.Controls.Add(new Label
+        var summaryLabel = new Label
         {
             Text = BuildCompactSummary() + Environment.NewLine + message,
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            Padding = new Padding(0, Zoomed(4), 0, Zoomed(6)),
             TextAlign = ContentAlignment.MiddleLeft,
             BackColor = MainBackground,
             ForeColor = PrimaryTextColor
-        }, 0, 0);
+        };
+        panel.Controls.Add(summaryLabel, 0, 0);
+        panel.SizeChanged += (_, _) => summaryLabel.MaximumSize = new Size(
+            Math.Max(1, panel.ClientSize.Width - panel.Padding.Horizontal - summaryLabel.Margin.Horizontal), 0);
+
+        var currentScopeButton = new RadioButton
+        {
+            Text = "Current instance",
+            Checked = true,
+            AutoSize = true,
+            Margin = new Padding(Zoomed(2), Zoomed(4), Zoomed(18), Zoomed(4))
+        };
+        var allScopeButton = new RadioButton
+        {
+            Text = "All instances" + (importScope is null ? "" : " (" + importScope.TargetCount + " " +
+                GetConfigVariantLabel(importScope.Current.Current.Path) + ")"),
+            AutoSize = true,
+            Margin = new Padding(Zoomed(2), Zoomed(4), Zoomed(2), Zoomed(4))
+        };
+        if (importScope is not null)
+        {
+            var scopePanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                WrapContents = true,
+                Margin = new Padding(0),
+                BackColor = MainBackground
+            };
+            scopePanel.Controls.Add(currentScopeButton);
+            scopePanel.Controls.Add(allScopeButton);
+            panel.Controls.Add(scopePanel, 0, 1);
+        }
 
         CheckedListBox? presetTargetList = null;
+        Control? presetTargetControl = null;
         if (presetTargets is { Count: > 0 })
         {
             var presetTargetPanel = new TableLayoutPanel
@@ -20939,323 +22613,55 @@ internal sealed partial class MainForm : Form
             }
 
             presetTargetPanel.Controls.Add(presetTargetList, 0, 1);
-            panel.Controls.Add(presetTargetPanel, 0, 1);
+            presetTargetControl = presetTargetPanel;
+            panel.Controls.Add(presetTargetPanel, 0, presetRow);
         }
 
-        Control choiceControl;
-        if (orderedChoices.Count == 0 && newRows.Count == 0)
+        var choiceHost = new Panel
         {
-            choiceControl = new Label
-            {
-                Text = "No changed matching values need a checkbox decision.",
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft,
-                BackColor = MainBackground,
-                ForeColor = PrimaryTextColor
-            };
-        }
-        else
+            Dock = DockStyle.Fill,
+            AutoScroll = importScope is not null,
+            BackColor = MainBackground
+        };
+        panel.Controls.Add(choiceHost, 0, choicesRow);
+        Control? choiceControl = null;
+
+        void RebuildChoiceControls()
         {
-            var groupName = _instanceBox.SelectedItem is InstanceItem instanceItem
-                ? instanceItem.Profile.Name
-                : "Current config";
-            var choicePanel = new TableLayoutPanel
+            choiceHost.SuspendLayout();
+            try
             {
-                Dock = DockStyle.Fill,
-                RowCount = 2,
-                ColumnCount = 1,
-                Margin = new Padding(0),
-                Padding = new Padding(0),
-                BackColor = MainBackground
-            };
-            choicePanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(38)));
-            choicePanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-
-            var actionBar = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                Margin = new Padding(0),
-                WrapContents = false,
-                BackColor = MainBackground
-            };
-            var selectAllButton = new Button { Text = selectedActionLabel, Margin = new Padding(Zoomed(2)) };
-            var clearAllButton = new Button { Text = otherActionLabel, Margin = new Padding(Zoomed(2)) };
-            selectAllButton.Enabled = orderedChoices.Count > 0;
-            clearAllButton.Enabled = orderedChoices.Count > 0;
-            SizeDialogButton(selectAllButton, 190);
-            SizeDialogButton(clearAllButton, 170);
-            actionBar.Controls.Add(selectAllButton);
-            actionBar.Controls.Add(clearAllButton);
-            choicePanel.Controls.Add(actionBar, 0, 0);
-
-            var scrollPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                BackColor = MainBackground
-            };
-            var rows = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                ColumnCount = 1,
-                BackColor = MainBackground,
-                Padding = new Padding(0, Zoomed(4), 0, Zoomed(4))
-            };
-            rows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            scrollPanel.Controls.Add(rows);
-
-            var updatingSelectionUi = false;
-            var childChecks = new List<CheckBox>();
-            var categoryChecks = new Dictionary<string, CheckBox>(StringComparer.OrdinalIgnoreCase);
-            var categorySummaryLabels = new Dictionary<string, Label>(StringComparer.OrdinalIgnoreCase);
-            CheckBox? parentCheck = null;
-            Label? parentSummaryLabel = null;
-
-            string BuildChangeSummary(SelectableValueChoice choice)
-            {
-                return PreviewValue(choice.OtherValue) + " -> " + PreviewValue(choice.SelectedValue);
-            }
-
-            string BuildGroupSummary(IReadOnlyCollection<SelectableValueChoice> groupChoices)
-            {
-                if (groupChoices.Count == 0)
+                choiceControl?.Dispose();
+                choiceHost.Controls.Clear();
+                if (importScope is null)
                 {
-                    return Plural(newRows.Count, "new item", "new items");
+                    choiceControl = BuildChoiceControl(null);
                 }
-
-                var selectedCount = groupChoices.Count(choice => choice.Selected);
-                if (selectedCount == 0)
+                else
                 {
-                    return "Not selected";
-                }
-
-                return selectedCount == groupChoices.Count
-                    ? groupChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes"
-                    : selectedCount.ToString(CultureInfo.InvariantCulture) + " of " + groupChoices.Count.ToString(CultureInfo.InvariantCulture) + " changes selected";
-            }
-
-            static CheckState GetSelectionState(IReadOnlyCollection<SelectableValueChoice> groupChoices)
-            {
-                var selectedCount = groupChoices.Count(choice => choice.Selected);
-                if (selectedCount == 0)
-                {
-                    return CheckState.Unchecked;
-                }
-
-                return selectedCount == groupChoices.Count
-                    ? CheckState.Checked
-                    : CheckState.Indeterminate;
-            }
-
-            void RefreshSelectionUi()
-            {
-                updatingSelectionUi = true;
-                try
-                {
-                    if (parentCheck is not null)
+                    var instanceRows = new TableLayoutPanel
                     {
-                        parentCheck.CheckState = GetSelectionState(orderedChoices);
-                    }
-
-                    if (parentSummaryLabel is not null)
-                    {
-                        parentSummaryLabel.Text = BuildGroupSummary(orderedChoices);
-                    }
-
-                    foreach (var group in choiceGroups)
-                    {
-                        if (categoryChecks.TryGetValue(group.CategoryName, out var categoryCheck))
-                        {
-                            categoryCheck.CheckState = GetSelectionState(group.Choices);
-                        }
-
-                        if (categorySummaryLabels.TryGetValue(group.CategoryName, out var categorySummaryLabel))
-                        {
-                            categorySummaryLabel.Text = BuildGroupSummary(group.Choices);
-                        }
-                    }
-
-                    for (var i = 0; i < orderedChoices.Count && i < childChecks.Count; i++)
-                    {
-                        if (childChecks[i].Checked != orderedChoices[i].Selected)
-                        {
-                            childChecks[i].Checked = orderedChoices[i].Selected;
-                        }
-                    }
-                }
-                finally
-                {
-                    updatingSelectionUi = false;
-                }
-            }
-
-            void AddRow(Control control)
-            {
-                rows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-                rows.Controls.Add(control, 0, rows.RowCount);
-                rows.RowCount++;
-            }
-
-            TableLayoutPanel MakeImportRow(int indent, CheckBox? checkBox, string label, string summary)
-            {
-                var row = new TableLayoutPanel
-                {
-                    AutoSize = true,
-                    Dock = DockStyle.Top,
-                    ColumnCount = 3,
-                    Padding = new Padding(0, Zoomed(2), 0, Zoomed(2)),
-                    BackColor = MainBackground
-                };
-                row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(indent)));
-                row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(360)));
-                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-                if (checkBox is not null)
-                {
-                    checkBox.Dock = DockStyle.Fill;
-                    checkBox.Margin = new Padding(0);
-                    checkBox.BackColor = MainBackground;
-                    checkBox.ForeColor = PrimaryTextColor;
-                    row.Controls.Add(checkBox, 0, 0);
-                }
-
-                row.Controls.Add(new Label
-                {
-                    Text = label,
-                    Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    AutoEllipsis = true,
-                    BackColor = MainBackground,
-                    ForeColor = PrimaryTextColor
-                }, 1, 0);
-
-                row.Controls.Add(new Label
-                {
-                    Text = summary,
-                    Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    AutoEllipsis = true,
-                    BackColor = MainBackground,
-                    ForeColor = HelpTextColor
-                }, 2, 0);
-
-                return row;
-            }
-
-            static void BoldImportRow(TableLayoutPanel row)
-            {
-                foreach (var label in row.Controls.OfType<Label>())
-                {
-                    label.Font = new Font(label.Font, FontStyle.Bold);
-                }
-            }
-
-            parentCheck = new CheckBox
-            {
-                ThreeState = true,
-                AutoCheck = false,
-                CheckState = GetSelectionState(orderedChoices),
-                Enabled = orderedChoices.Count > 0
-            };
-            parentCheck.Click += (_, _) =>
-            {
-                var selectAll = orderedChoices.Any(choice => !choice.Selected);
-                foreach (var choice in orderedChoices)
-                {
-                    choice.Selected = selectAll;
-                }
-
-                RefreshSelectionUi();
-            };
-            var parentRow = MakeImportRow(28, parentCheck, groupName, BuildGroupSummary(orderedChoices));
-            BoldImportRow(parentRow);
-            parentSummaryLabel = parentRow.Controls.OfType<Label>().LastOrDefault();
-            AddRow(parentRow);
-
-            foreach (var group in choiceGroups)
-            {
-                var groupChoices = group.Choices;
-                var categoryCheck = new CheckBox
-                {
-                    ThreeState = true,
-                    AutoCheck = false,
-                    CheckState = GetSelectionState(groupChoices)
-                };
-                categoryCheck.Click += (_, _) =>
-                {
-                    var selectAll = groupChoices.Any(choice => !choice.Selected);
-                    foreach (var choice in groupChoices)
-                    {
-                        choice.Selected = selectAll;
-                    }
-
-                    RefreshSelectionUi();
-                };
-                var categoryRow = MakeImportRow(48, categoryCheck, group.CategoryLabel, BuildGroupSummary(groupChoices));
-                BoldImportRow(categoryRow);
-                categoryChecks[group.CategoryName] = categoryCheck;
-                var categorySummaryLabel = categoryRow.Controls.OfType<Label>().LastOrDefault();
-                if (categorySummaryLabel is not null)
-                {
-                    categorySummaryLabels[group.CategoryName] = categorySummaryLabel;
-                }
-                AddRow(categoryRow);
-
-                foreach (var choice in groupChoices)
-                {
-                    var changeCheck = new CheckBox { Checked = choice.Selected };
-                    changeCheck.CheckedChanged += (_, _) =>
-                    {
-                        if (updatingSelectionUi)
-                        {
-                            return;
-                        }
-
-                        choice.Selected = changeCheck.Checked;
-                        RefreshSelectionUi();
+                        Dock = DockStyle.Top,
+                        AutoSize = true,
+                        ColumnCount = 1,
+                        RowCount = 0,
+                        Margin = new Padding(0),
+                        BackColor = MainBackground
                     };
-                    childChecks.Add(changeCheck);
-                    AddRow(MakeImportRow(88, changeCheck, choice.Key, BuildChangeSummary(choice)));
+                    instanceRows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                    foreach (var plan in importScope.Plans)
+                    {
+                        instanceRows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                        instanceRows.Controls.Add(BuildChoiceControl(plan), 0, instanceRows.RowCount++);
+                    }
+                    choiceControl = instanceRows;
                 }
+                choiceHost.Controls.Add(choiceControl);
+                ApplyThemeToControl(choiceControl, restyleButtons: true);
             }
-
-            if (newRows.Count > 0)
-            {
-                var newItemsRow = MakeImportRow(48, null, "New items", Plural(newRows.Count, "new item", "new items"));
-                BoldImportRow(newItemsRow);
-                AddRow(newItemsRow);
-                foreach (var newRow in newRows.OrderBy(row => row.Label, StringComparer.OrdinalIgnoreCase))
-                {
-                    AddRow(MakeImportRow(88, null, newRow.Label, newRow.Summary));
-                }
-            }
-
-            selectAllButton.Click += (_, _) =>
-            {
-                foreach (var choice in orderedChoices)
-                {
-                    choice.Selected = true;
-                }
-
-                RefreshSelectionUi();
-            };
-            clearAllButton.Click += (_, _) =>
-            {
-                foreach (var choice in orderedChoices)
-                {
-                    choice.Selected = false;
-                }
-
-                RefreshSelectionUi();
-            };
-
-            choicePanel.Controls.Add(scrollPanel, 0, 1);
-            choiceControl = choicePanel;
+            finally { choiceHost.ResumeLayout(true); }
         }
-
-        panel.Controls.Add(choiceControl, 0, 2);
+        RebuildChoiceControls();
 
         var previewFrame = new Panel
         {
@@ -21275,7 +22681,7 @@ internal sealed partial class MainForm : Form
             Margin = new Padding(0),
             Padding = new Padding(0)
         };
-        previewPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(36)));
+        previewPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, DialogButtonHeight() + Zoomed(6) + SystemInformation.HorizontalScrollBarHeight));
         previewPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         previewFrame.Controls.Add(previewPanel);
 
@@ -21284,6 +22690,7 @@ internal sealed partial class MainForm : Form
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoScroll = true,
             BackColor = EditorBackground,
             Margin = new Padding(0),
             Padding = new Padding(0, 0, 0, Zoomed(6))
@@ -21356,7 +22763,7 @@ internal sealed partial class MainForm : Form
             }
         }
 
-        panel.Controls.Add(previewFrame, 0, 3);
+        panel.Controls.Add(previewFrame, 0, detailsRow);
 
         var buttons = new FlowLayoutPanel
         {
@@ -21383,7 +22790,7 @@ internal sealed partial class MainForm : Form
         detailsButton.Click += (_, _) =>
         {
             previewFrame.Visible = !previewFrame.Visible;
-            detailsRowStyle.Height = previewFrame.Visible ? Zoomed(220) : 0;
+            detailsRowStyle.Height = previewFrame.Visible ? Math.Min(Zoomed(220), Math.Max(Zoomed(100), panel.ClientSize.Height / 3)) : 0;
             detailsButton.Text = previewFrame.Visible ? "Hide details" : "Show details";
             panel.PerformLayout();
         };
@@ -21393,7 +22800,104 @@ internal sealed partial class MainForm : Form
         buttons.Controls.Add(confirmButton);
         buttons.Controls.Add(cancelButton);
         buttons.Controls.Add(detailsButton);
-        panel.Controls.Add(buttons, 0, 4);
+        panel.Controls.Add(buttons, 0, buttonsRow);
+
+        var sourceHeading = string.Join(Environment.NewLine, previewText.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split('\n').TakeWhile(line => !line.StartsWith("Current config", StringComparison.OrdinalIgnoreCase))).TrimEnd();
+
+        void RefreshScopeText()
+        {
+            if (importScope is null) return;
+            var plans = importScope.Plans;
+            summaryLabel.Text = BuildCompactSummary() + Environment.NewLine +
+                (importScope.AllInstances
+                    ? "Tick rows to keep each instance's current values. Untick rows to use the source defaults." +
+                        Environment.NewLine + "Each updated config receives its own backup."
+                    : message);
+            confirmButton.Text = confirmText + " " + Plural(plans.Count, "instance", "instances");
+            SizeDialogButton(confirmButton);
+            allScopeButton.Text = "All instances (" + (importScope.AllInstances ? plans.Count : importScope.TargetCount) + " " +
+                GetConfigVariantLabel(importScope.Current.Current.Path) + ")";
+            var selectedTitle = previewTabText.Keys.FirstOrDefault(button => button.BackColor == SelectionBackground)?.Text ?? "Summary";
+            foreach (var button in previewTabText.Keys.ToList()) button.Dispose();
+            previewTabText.Clear();
+            previewTabs.Controls.Clear();
+            var summaryLines = new List<string> { sourceHeading, "", BuildCompactSummary() };
+            var detailGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var nonEmptyDetailTabs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var plan in plans)
+            {
+                summaryLines.Add("");
+                summaryLines.Add(plan.Name);
+                summaryLines.Add(plan.Current.Path);
+                summaryLines.Add(Plural(plan.Choices.Count, "checkbox decision", "checkbox decisions") + "; " +
+                    Plural(plan.Choices.Count(choice => choice.Selected), "current value kept", "current values kept") + "; " +
+                    Plural(BuildMizInstallInfoTabs(plan.Preview).Where(tab => tab.Title is "New" or "New Options" or "New Rows").Sum(tab => tab.Rows.Count), "new item", "new items") + "; " +
+                    Plural(plan.Preview.UnchangedCount, "unchanged value", "unchanged values") + ".");
+                var choiceRows = plan.Choices.Select(choice => choice.Key + ": " + PreviewValue(choice.SelectedValue) + " -> " +
+                    PreviewValue(choice.Selected ? choice.SelectedValue : choice.OtherValue) +
+                    (choice.Selected ? " (keep current)" : " (use source default)")).ToList();
+                var tabs = BuildMizInstallInfoTabs(plan.Preview).Concat(new[]
+                {
+                    (Title: "Choices", Rows: (IReadOnlyList<string>)choiceRows)
+                });
+                foreach (var tab in tabs)
+                {
+                    if (!detailGroups.TryGetValue(tab.Title, out var lines))
+                    {
+                        lines = new List<string>();
+                        detailGroups.Add(tab.Title, lines);
+                    }
+                    if (tab.Rows.Count > 0) nonEmptyDetailTabs.Add(tab.Title);
+                    lines.Add(plan.Name);
+                    lines.Add(plan.Current.Path);
+                    lines.AddRange(tab.Rows.Count == 0 ? new[] { "None." } : tab.Rows);
+                    lines.Add("");
+                }
+            }
+            if (importScope.AllInstances && importScope.Skipped.Count > 0)
+            {
+                summaryLines.Add("");
+                summaryLines.Add("Skipped instances:");
+                summaryLines.AddRange(importScope.Skipped);
+                detailGroups["Skipped Instances"] = importScope.Skipped.ToList();
+            }
+            summaryButton = AddPreviewTab("Summary", string.Join(Environment.NewLine, summaryLines));
+            foreach (var group in detailGroups)
+            {
+                // Keep empty instance sections in tabs that contain information for another target.
+                if (nonEmptyDetailTabs.Contains(group.Key) || group.Key == "Choices" || group.Key == "Skipped Instances")
+                    AddPreviewTab(group.Key, string.Join(Environment.NewLine, group.Value));
+            }
+            SelectPreviewTab(previewTabText.Keys.FirstOrDefault(button => button.Text == selectedTitle) ?? summaryButton);
+        }
+
+        void ChangeImportScope(bool allInstances)
+        {
+            importScope!.AllInstances = allInstances;
+            RebuildChoiceControls();
+            if (presetTargetControl is not null)
+            {
+                presetTargetControl.Visible = !allInstances;
+                presetTargetControl.Enabled = !allInstances;
+                presetRowStyle.Height = allInstances ? 0 : Zoomed(82);
+            }
+            RefreshScopeText();
+            panel.PerformLayout();
+        }
+        if (importScope is not null)
+        {
+            currentScopeButton.CheckedChanged += (_, _) =>
+            {
+                if (currentScopeButton.Checked) ChangeImportScope(false);
+            };
+            allScopeButton.CheckedChanged += (_, _) =>
+            {
+                if (allScopeButton.Checked) ChangeImportScope(true);
+            };
+            refreshScopeSummary = RefreshScopeText;
+            RefreshScopeText();
+        }
 
         ApplyDialogChrome(dialog);
         SelectPreviewTab(summaryButton);
@@ -21404,7 +22908,7 @@ internal sealed partial class MainForm : Form
             return false;
         }
 
-        if (presetTargetList is not null && presetTargets is not null)
+        if (importScope?.AllInstances != true && presetTargetList is not null && presetTargets is not null)
         {
             for (var i = 0; i < presetTargets.Count && i < presetTargetList.Items.Count; i++)
             {
@@ -21412,7 +22916,7 @@ internal sealed partial class MainForm : Form
             }
         }
 
-        if (TryFindChoiceList(choiceControl, out var listView))
+        if (choiceControl is not null && TryFindChoiceList(choiceControl, out var listView))
         {
             foreach (ListViewItem item in listView.Items)
             {
@@ -21678,6 +23182,7 @@ internal sealed partial class MainForm : Form
         var newRows = GetNewRowEntries(preview);
         return new List<(string Title, IReadOnlyList<string> Rows)>
         {
+            ("Warnings", preview.ImportWarnings),
             ("New Options", newOptions
                 .OrderBy(entry => entry.DisplayKey, StringComparer.OrdinalIgnoreCase)
                 .Select(FormatNewOptionDetail)
@@ -21896,19 +23401,36 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        HideCurrentGridSelectionHighlights();
+        foreach (var input in EnumerateChildControls<NumericUpDown>(_formHost))
+        {
+            _ = input.Value;
+        }
+
         if (IsRawCategorySelected())
         {
             ApplyEntryValue();
         }
 
+        _document.PrepareManagedStringLists();
+        ApplyTupleChoiceDefaults(null);
+        var aircraft = ActivateRequiredAircraft(null);
+        if (aircraft.Changes.Count > 0)
+        {
+            GroupAutomaticAircraftUndo(aircraft, null, null, null, _undoStack.Count);
+            RefreshDependentEditorEntries(Array.Empty<ConfigEntry>(), aircraft);
+        }
         var duplicateTables = DuplicateTableRepair.FindDirectDuplicateTableKeys(_document);
         if (!HasChanges() && duplicateTables.Count == 0)
         {
+            var requirementErrors = _document.ValidateRequiredValues();
+            if (requirementErrors.Count > 0) { SetStatus(string.Join(" ", requirementErrors)); return; }
             UpdateEditActionButtonStates();
             SetStatus(_undoStack.Count > 0 ? "No changes to save. Undo is still available." : "No changes to save.");
             return;
         }
 
+        if (!ConfirmAutomaticAircraftSave(out var confirmedAircraft)) return;
         try
         {
             var savedPath = _document.Path;
@@ -21919,9 +23441,10 @@ internal sealed partial class MainForm : Form
             }
             else
             {
-                _document.Save();
+                _document.SavePrepared();
             }
 
+            foreach (var change in confirmedAircraft) change.Saved = true;
             string? pendingNewItemWarning = null;
             try
             {
@@ -21929,6 +23452,7 @@ internal sealed partial class MainForm : Form
             }
             catch (Exception ex)
             {
+                ReloadCategoriesPreservingSelection();
                 pendingNewItemWarning =
                     "The config was saved, but resolved NEW review markers could not be saved: " + ex.Message;
             }
@@ -21979,6 +23503,7 @@ internal sealed partial class MainForm : Form
         catch (Exception ex)
         {
             _pendingNewItemSession?.ResetResolved();
+            ReloadCategoriesPreservingSelection();
             _categoryList.Invalidate();
             MessageBox.Show(this, ex.Message, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -22043,6 +23568,9 @@ internal sealed partial class MainForm : Form
                 applied++;
             }
 
+            using var optionsTransition = BeginOptionsTransition("Preset " + name);
+            MarkAllCategoryPanelsDirty();
+            AddOptionsDependencies(undoValues.Select(item => item.Entry));
             if (undoValues.Count > 0)
             {
                 SetUndoAction("apply preset", () =>
@@ -22051,10 +23579,16 @@ internal sealed partial class MainForm : Form
                     {
                         item.Entry.ValueText = item.Value;
                     }
-                }, () => RefreshCurrentView());
+                }, () =>
+                {
+                    using var optionsUndo = BeginOptionsTransition("Undo preset " + name);
+                    MarkAllCategoryPanelsDirty();
+                    AddOptionsDependencies(undoValues.Select(item => item.Entry));
+                    ReloadCategoriesPreservingSelection(refreshSelectedCategory: true);
+                });
             }
 
-            RefreshCurrentView();
+            ReloadCategoriesPreservingSelection(refreshSelectedCategory: true);
             SetStatus($"Applied {applied.ToString(CultureInfo.InvariantCulture)} preset values. Use Save to write the config.");
         }
         catch (Exception ex)

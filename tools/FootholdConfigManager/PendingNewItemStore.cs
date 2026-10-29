@@ -30,6 +30,15 @@ internal sealed class PendingNewItemSession
         return !_resolved.Contains(key) && _store.Contains(_configPath, tableKey, value);
     }
 
+    internal bool HasPending(string tableKey)
+    {
+        if (!_store.Configs.TryGetValue(_configPath, out var tables) ||
+            !tables.TryGetValue(tableKey, out var values)) return false;
+        foreach (var value in values)
+            if (!_resolved.Contains(new PendingNewItemKey(tableKey, value))) return true;
+        return false;
+    }
+
     internal bool Resolve(string tableKey, string value)
     {
         return _store.Contains(_configPath, tableKey, value) &&

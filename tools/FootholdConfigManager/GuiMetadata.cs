@@ -37,6 +37,19 @@ internal sealed class GuiMetadataStore
             }
         }
 
+        var sourcePath = !AppMode.IsExportedUserBuild && FindProjectDirectory() is { } projectDir
+            ? System.IO.Path.Combine(projectDir, "Foothold Config.gui.json")
+            : null;
+        if (sourcePath is not null && File.Exists(sourcePath))
+        {
+            var loaded = FromJson(File.ReadAllText(sourcePath));
+            if (loaded is not null)
+            {
+                loaded.Path = store.Path;
+                return loaded;
+            }
+        }
+
         var legacyPath = GetLegacyPathForConfig(configPath);
         if (!legacyPath.Equals(store.Path, StringComparison.OrdinalIgnoreCase) &&
             File.Exists(legacyPath))
@@ -100,11 +113,6 @@ internal sealed class GuiMetadataStore
 
     private static string GetMetadataDirectory()
     {
-        if (!AppMode.IsExportedUserBuild && FindProjectDirectory() is { } projectDir)
-        {
-            return projectDir;
-        }
-
         return RuntimeSettings.SettingsDirectory;
     }
 

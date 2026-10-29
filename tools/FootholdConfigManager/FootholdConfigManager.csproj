@@ -10,16 +10,24 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>FootholdConfigManager.ico</ApplicationIcon>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <FootholdBuildMode Condition="Exists('EmbeddedBuildMode.txt')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/EmbeddedBuildMode.txt').Trim())</FootholdBuildMode>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(FootholdBuildMode)' == 'user'">
+    <DefineConstants>$(DefineConstants);FOOTHOLD_USER_BUILD</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="backups\**\*.cs" />
+    <Compile Remove="StabilityRegressionSelfTest.cs;MainForm.PerformanceProbe.cs;MainForm.PreviewStartup.cs" Condition="'$(FootholdBuildMode)' == 'user'" />
     <EmbeddedResource Remove="backups\**\*.resx" />
-    <EmbeddedResource Include="Foothold Config.gui.json" LogicalName="FootholdConfigManager.DefaultGuiMetadata.json" Condition="Exists('Foothold Config.gui.json')" />
+    <EmbeddedResource Include="Foothold Config.gui.json" LogicalName="FootholdConfigManager.DefaultGuiMetadata.json" Condition="Exists('Foothold Config.gui.json') And ('$(FootholdBuildMode)' != 'user' Or !Exists('EmbeddedGuiMetadata.json'))" />
     <EmbeddedResource Include="EmbeddedGuiMetadata.json" LogicalName="FootholdConfigManager.EmbeddedGuiMetadata.json" Condition="Exists('EmbeddedGuiMetadata.json')" />
     <EmbeddedResource Include="EmbeddedBuildMode.txt" LogicalName="FootholdConfigManager.EmbeddedBuildMode.txt" Condition="Exists('EmbeddedBuildMode.txt')" />
     <EmbeddedResource Include="ThirdPartyNotices.txt" LogicalName="FootholdConfigManager.ThirdPartyNotices.txt" />
+    <EmbeddedResource Include="../test-configs/Foothold Config.lua" LogicalName="FootholdConfigManager.Preview.Foothold Config.lua" Condition="'$(FootholdBuildMode)' != 'user'" />
+    <EmbeddedResource Include="../test-configs/Foothold Config WW2.lua" LogicalName="FootholdConfigManager.Preview.Foothold Config WW2.lua" Condition="'$(FootholdBuildMode)' != 'user'" />
   </ItemGroup>
 </Project>

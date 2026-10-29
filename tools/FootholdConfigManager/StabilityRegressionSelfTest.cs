@@ -12,6 +12,9 @@ internal static class StabilityRegressionSelfTest
             Directory.CreateDirectory(tempDirectory);
             VerifyAtomicWritePreservesExistingFile(tempDirectory);
             VerifyAtomicCopyCreatesAndPreservesFiles(tempDirectory);
+            VerifyMissingStandardConfigCanBeCopiedToInstance(tempDirectory);
+            VerifySingleSaveCommitsActiveGridEdit(tempDirectory);
+            VerifySingleSaveCommitsActiveNumberEdit(tempDirectory);
             VerifyAtomicStagedWritePreservesExistingFile(tempDirectory);
             VerifyFailedConfigSaveKeepsScalarDirty(tempDirectory);
             VerifyFailedConfigSaveKeepsStageRowDirty(tempDirectory);
@@ -38,6 +41,7 @@ internal static class StabilityRegressionSelfTest
             LuaSyntaxValidatorRegressionSelfTest.Run(tempDirectory);
             VerifyControlTreeDisposerClearsToolTips();
             VerifyUiViewGenerationRejectsStaleCallbacks();
+            VerifyReviewedImportedNewCategoryClearsBadge();
             VerifyConfigSearchIndexSemantics();
             VerifyDebouncedSearchQueryKeepsOnlyLatestInput();
             Console.WriteLine("Stability regression self-test passed.");
@@ -118,6 +122,205 @@ internal static class StabilityRegressionSelfTest
             "Atomic copy changed the destination after a failed commit.");
         RequireStability(!Directory.EnumerateFiles(tempDirectory, "*.tmp-*").Any(),
             "Atomic copy left a staged file after a failed commit.");
+    }
+
+    private static void VerifyMissingStandardConfigCanBeCopiedToInstance(string tempDirectory)
+    {
+        var sourceDirectory = Path.Combine(tempDirectory, "copy-source");
+        var targetDirectory = Path.Combine(tempDirectory, "copy-target");
+        var sourcePath = Path.Combine(sourceDirectory, RuntimeSettings.DefaultConfigFileName);
+        var targetPath = Path.Combine(targetDirectory, RuntimeSettings.DefaultConfigFileName);
+        Directory.CreateDirectory(sourceDirectory);
+        const string sourceText = "TestValue = 1\n";
+        File.WriteAllText(sourcePath, sourceText, new System.Text.UTF8Encoding(false));
+
+        var sourceDocument = ConfigDocument.Load(sourcePath);
+        var profile = new ServerProfileSettings
+        {
+            Id = "copy-target",
+            Name = "Copy Target",
+            ConfigPath = targetPath
+        };
+        var form = (MainForm)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(MainForm));
+        var buildPlan = typeof(MainForm).GetMethod(
+            "BuildCopyTargetPlan",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("BuildCopyTargetPlan was not found.");
+        var plan = buildPlan.Invoke(form, new object[]
+        {
+            sourceDocument,
+            profile,
+            RuntimeSettings.DefaultConfigFileName
+        }) ?? throw new InvalidOperationException("BuildCopyTargetPlan did not return a plan.");
+        var selectedProperty = plan.GetType().GetProperty("IsTargetSelected")
+            ?? throw new InvalidOperationException("Copy target selection state was not found.");
+        selectedProperty.SetValue(plan, true);
+
+        var canApply = typeof(MainForm).GetMethod(
+            "CanApplyCopyPlan",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("CanApplyCopyPlan was not found.");
+        RequireStability(
+            canApply.Invoke(null, new[] { plan }) is true,
+            "A missing standard config could not be selected as a copy target.");
+
+        var applyPlan = typeof(MainForm).GetMethod(
+            "ApplyCopyPlan",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ApplyCopyPlan was not found.");
+        applyPlan.Invoke(form, new[] { sourcePath, plan });
+
+        RequireStability(File.Exists(targetPath),
+            "Copy To did not create the missing standard config.");
+        RequireStability(File.ReadAllText(targetPath) == sourceText,
+            "Copy To did not preserve the source config when creating the missing standard config.");
+    }
+
+    private static void VerifySingleSaveCommitsActiveGridEdit(string tempDirectory)
+    {
+        var configPath = Path.Combine(tempDirectory, "active-grid-save.lua");
+        File.WriteAllText(
+            configPath,
+            "FirstValue = 1\nSecondValue = 2\n",
+            new System.Text.UTF8Encoding(false));
+        var document = ConfigDocument.Load(configPath);
+        document.Entries.Single(candidate => candidate.DisplayKey == "FirstValue").ValueText = "10";
+        var activeEntry = document.Entries.Single(candidate => candidate.DisplayKey == "SecondValue");
+
+        using var form = new MainForm();
+        var documentField = typeof(MainForm).GetField(
+            "_document",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("MainForm document field was not found.");
+        documentField.SetValue(form, document);
+        var formHostField = typeof(MainForm).GetField(
+            "_formHost",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("MainForm editor host was not found.");
+        var formHost = (Control)(formHostField.GetValue(form)
+            ?? throw new InvalidOperationException("MainForm editor host was not initialized."));
+
+        using var grid = new DataGridView
+        {
+            AllowUserToAddRows = false,
+            Width = 200,
+            Height = 80
+        };
+        grid.Columns.Add("value", "Value");
+        grid.Rows.Add(activeEntry.ValueText);
+        grid.CellValueChanged += (_, args) =>
+        {
+            if (args.RowIndex >= 0)
+            {
+                activeEntry.ValueText = grid.Rows[args.RowIndex].Cells["value"].Value?.ToString() ?? "";
+            }
+        };
+        formHost.Controls.Add(grid);
+        try
+        {
+            _ = form.Handle;
+            _ = grid.Handle;
+            grid.CurrentCell = grid.Rows[0].Cells["value"];
+            RequireStability(grid.BeginEdit(true), "The active-grid save test could not begin editing.");
+            var editingControl = grid.EditingControl as DataGridViewTextBoxEditingControl;
+            RequireStability(
+                editingControl is not null,
+                "The active-grid save test did not create a text editor.");
+            editingControl!.Text = "20";
+            RequireStability(activeEntry.ValueText == "2",
+                "The active-grid save test committed its edit before Save was invoked.");
+
+            var saveConfig = typeof(MainForm).GetMethod(
+                "SaveConfig",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("SaveConfig was not found.");
+            saveConfig.Invoke(form, null);
+
+            var savedDocument = ConfigDocument.Load(configPath);
+            RequireStability(
+                savedDocument.Entries.Single(candidate => candidate.DisplayKey == "FirstValue").ValueText == "10",
+                "Save lost an edit that was already pending.");
+            RequireStability(
+                savedDocument.Entries.Single(candidate => candidate.DisplayKey == "SecondValue").ValueText == "20",
+                "Save did not commit the active grid edit before writing the config.");
+            RequireStability(!document.HasUnsavedChanges,
+                "Save left the document dirty after committing the active grid edit.");
+        }
+        finally
+        {
+            if (grid.IsCurrentCellInEditMode)
+            {
+                grid.CancelEdit();
+                grid.EndEdit();
+            }
+
+            grid.CurrentCell = null;
+            formHost.Controls.Remove(grid);
+        }
+    }
+
+    private static void VerifySingleSaveCommitsActiveNumberEdit(string tempDirectory)
+    {
+        var configPath = Path.Combine(tempDirectory, "active-number-save.lua");
+        File.WriteAllText(
+            configPath,
+            "FirstValue = 1\nSecondValue = 2\n",
+            new System.Text.UTF8Encoding(false));
+        var document = ConfigDocument.Load(configPath);
+        document.Entries.Single(candidate => candidate.DisplayKey == "FirstValue").ValueText = "10";
+        var activeEntry = document.Entries.Single(candidate => candidate.DisplayKey == "SecondValue");
+
+        using var form = new MainForm();
+        var documentField = typeof(MainForm).GetField(
+            "_document",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("MainForm document field was not found.");
+        documentField.SetValue(form, document);
+        var formHostField = typeof(MainForm).GetField(
+            "_formHost",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("MainForm editor host was not found.");
+        var formHost = (Control)(formHostField.GetValue(form)
+            ?? throw new InvalidOperationException("MainForm editor host was not initialized."));
+
+        using var input = new NumericUpDown
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Value = 2,
+            Width = 100
+        };
+        input.ValueChanged += (_, _) => activeEntry.ValueText = input.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        formHost.Controls.Add(input);
+        try
+        {
+            _ = form.Handle;
+            _ = input.Handle;
+            var textBox = input.Controls.OfType<TextBox>().Single();
+            textBox.Text = "20";
+            RequireStability(activeEntry.ValueText == "2",
+                "The active-number save test committed its edit before Save was invoked.");
+
+            var saveConfig = typeof(MainForm).GetMethod(
+                "SaveConfig",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("SaveConfig was not found.");
+            saveConfig.Invoke(form, null);
+
+            var savedDocument = ConfigDocument.Load(configPath);
+            RequireStability(
+                savedDocument.Entries.Single(candidate => candidate.DisplayKey == "FirstValue").ValueText == "10",
+                "Save lost an edit that was already pending.");
+            RequireStability(
+                savedDocument.Entries.Single(candidate => candidate.DisplayKey == "SecondValue").ValueText == "20",
+                "Save did not commit the active number edit before writing the config.");
+            RequireStability(!document.HasUnsavedChanges,
+                "Save left the document dirty after committing the active number edit.");
+        }
+        finally
+        {
+            formHost.Controls.Remove(input);
+        }
     }
 
     private static void VerifyAtomicStagedWritePreservesExistingFile(string tempDirectory)
@@ -928,6 +1131,35 @@ internal static class StabilityRegressionSelfTest
         var secondView = generation.Next();
         RequireStability(!generation.IsCurrent(firstView) && generation.IsCurrent(secondView),
             "A callback from the previous UI view was not rejected.");
+    }
+
+    private static void VerifyReviewedImportedNewCategoryClearsBadge()
+    {
+        using var form = new MainForm();
+        var activeCategoryField = typeof(MainForm).GetField(
+            "_activeImportedNewCategoryName",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Active imported-new category state was not found.");
+        var activeKeysField = typeof(MainForm).GetField(
+            "_activeImportedNewEntryKeys",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Active imported-new entry state was not found.");
+        var hasNewEntries = typeof(MainForm).GetMethod(
+            "HasUnseenImportedNewEntries",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Category NEW-badge predicate was not found.");
+
+        activeCategoryField.SetValue(form, "Mission Rules");
+        var activeKeys = (HashSet<string>)(activeKeysField.GetValue(form)
+            ?? throw new InvalidOperationException("Active imported-new entry state was not initialized."));
+        activeKeys.Add("RedCasPlaneEnabled.RED_SU25T_CAS_TEST");
+
+        RequireStability(
+            hasNewEntries.Invoke(form, new object[] { "Mission Rules" }) is false,
+            "Reviewed imported rows retained their sidebar NEW badge.");
+        RequireStability(
+            hasNewEntries.Invoke(form, new object[] { "Shop / Rewards" }) is false,
+            "An unrelated category inherited the active imported-row NEW badge.");
     }
 
     private static void VerifyConfigSearchIndexSemantics()

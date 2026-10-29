@@ -5,6 +5,25 @@ namespace FootholdConfigManager;
 
 internal sealed class WheelSafeComboBox : ComboBox
 {
+    private const int WmPaint = 0x000F;
+    private const int WmPrint = 0x0317;
+    private const int WmPrintClient = 0x0318;
+    public Color OutlineColor { get; set; } = Color.Empty;
+
+    protected override void WndProc(ref Message message)
+    {
+        base.WndProc(ref message);
+        var printing = message.Msg is WmPrint or WmPrintClient;
+        if ((message.Msg == WmPaint || printing) && !OutlineColor.IsEmpty && Width > 1 && Height > 1)
+        {
+            using var graphics = printing && message.WParam != IntPtr.Zero
+                ? Graphics.FromHdc(message.WParam)
+                : Graphics.FromHwnd(Handle);
+            using var pen = new Pen(OutlineColor);
+            graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
+        }
+    }
+
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         WheelRedirector.RedirectToScrollableParent(this, e);

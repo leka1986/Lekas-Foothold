@@ -24,6 +24,8 @@ internal sealed class RuntimeSettings
     public string Path { get; private set; } = SettingsPath;
 
     public string? LastConfigPath { get; set; }
+    public string? LastMizDirectory { get; set; }
+    public string? LastImportConfigDirectory { get; set; }
     public List<string> RecentConfigPaths { get; set; } = new();
     public List<ServerProfileSettings> ServerProfiles { get; set; } = new();
     public string? MasterConfigPath { get; set; }
@@ -63,7 +65,7 @@ internal sealed class RuntimeSettings
             loaded.RecentConfigPaths = NormalizePaths(loaded.RecentConfigPaths);
             loaded.DeployTargetFolders = NormalizePaths(loaded.DeployTargetFolders);
             loaded.ServerProfiles = NormalizeServerProfiles(loaded.ServerProfiles);
-            loaded.UiZoomPercent = Math.Clamp(loaded.UiZoomPercent, 80, 150);
+            loaded.UiZoomPercent = Math.Clamp(loaded.UiZoomPercent, 80, 130);
             loaded.WindowWidth = Math.Max(0, loaded.WindowWidth);
             loaded.WindowHeight = Math.Max(0, loaded.WindowHeight);
             return loaded;
