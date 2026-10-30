@@ -61,7 +61,7 @@ internal sealed partial class MainForm : Form
     private sealed record StringListBucketItem(string Value, ConfigStringListItem? Item, bool IsActive, bool CatalogOnly, bool IsNew);
     private sealed record ImportedNewEntryMarker(string Category, string DisplayKey);
     private sealed record SideMultiplierPreviewBinding(ConfigEntry Entry, NumericUpDown Input, bool IsRed);
-    private sealed record StageEditorBinding(string Key, DataGridView Grid, Control Actions, Label LockNote, Label LockedPrefix);
+    private sealed record StageEditorBinding(string Key, DataGridView Grid, Control Actions, Label LockNote, Label LockedPrefix, Func<string> GetDifficulty);
     private sealed class EntryEditorBinding
     {
         public EntryEditorBinding(ConfigEntry entry, Control editor, Label lockedPrefix, Label helpText, string description)
@@ -179,7 +179,8 @@ internal sealed partial class MainForm : Form
         Install,
         Restore,
         Undo,
-        Save
+        Save,
+        Weather
     }
 
     private sealed class ToolbarIconButton : Control
@@ -358,7 +359,7 @@ internal sealed partial class MainForm : Form
         new("AllowMods", "Era", "Locked while Era is Gulfwar or Coldwar.", "Gulfwar", "Coldwar")
     };
 
-    private sealed partial class SmoothDataGridView : DataGridView
+    internal sealed partial class SmoothDataGridView : DataGridView
     {
         public SmoothDataGridView()
         {
@@ -367,7 +368,7 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private sealed class BackgroundFocusPanel : Panel
+    internal sealed class BackgroundFocusPanel : Panel
     {
         public BackgroundFocusPanel()
         {
@@ -1393,6 +1394,7 @@ internal sealed partial class MainForm : Form
     private PendingNewItemSession? _pendingNewItemSession;
     private bool _pendingNewItemLoadWarningShown;
     private readonly bool _requestAdminOnLoad;
+    private SingleInstanceCoordinator? _singleInstance;
     private bool _adminUnlocked;
     private bool _testingUnlocked;
     private bool _loadingEntry;
@@ -1430,6 +1432,7 @@ internal sealed partial class MainForm : Form
     private IReadOnlyList<ConfigSearchIndexItem>? _configSearchIndex;
     private string? _renderedConfigSearchQuery;
     private int _undoCollapseGeneration;
+    private bool _lastConfigSaveSucceeded;
     private bool _restoringUndo;
     private int _uiZoomPercent;
     private bool _darkMode;
@@ -1461,16 +1464,53 @@ internal sealed partial class MainForm : Form
             RestoreConfigSearchHighlight();
             ClearCategoryPanelCache();
         };
-        Disposed += (_, _) => _releaseManagedNewReview?.Invoke();
+        Disposed += (_, _) =>
+        {
+            DisposeUpdates();
+            _releaseManagedNewReview?.Invoke();
+            foreach (var font in _configDropdownFonts.Values) font.Dispose();
+        };
         Load += (_, _) =>
         {
             RefreshDcsDesanitizeStatus(updateStatusLine: false);
             LoadDefaultConfig();
-            if (_requestAdminOnLoad)
-            {
-                UnlockAdminDesigner();
-            }
+            if (!_startupPreparationPending) CompleteStartupPreparation();
         };
+    }
+
+    internal void AttachSingleInstance(SingleInstanceCoordinator owner)
+    {
+        if (_singleInstance is not null) throw new InvalidOperationException("Single-instance owner already attached.");
+        _singleInstance = owner;
+        _ = Handle;
+        var dispatcher = SynchronizationContext.Current as WindowsFormsSynchronizationContext
+            ?? throw new InvalidOperationException("The existing Windows Forms dispatcher was not installed.");
+        owner.BindUi(this, dispatcher, UnlockAdminDesigner,
+            () => !_loadingForm && _weatherWindow is not { IsDisposed: false, IsBusy: true });
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        _singleInstance?.PresentationChanged();
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _singleInstance?.PresentationChanged();
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        base.OnFormClosing(e); // Includes every existing handler, including late Weather cancellation.
+        if (!e.Cancel && e.CloseReason != CloseReason.WindowsShutDown) _singleInstance?.BeginClosing();
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        try { _singleInstance?.BeginClosing(); }
+        finally { base.OnFormClosed(e); }
     }
 
     private void ApplyApplicationIcon()
@@ -1569,6 +1609,7 @@ internal sealed partial class MainForm : Form
         UpdateDcsDesanitizeButtonState();
         UpdateEditActionButtonStates();
         StyleToolbarMenus();
+        if (_weatherWindow is { IsDisposed: false }) _weatherWindow.RefreshOwnerTheme();
     }
 
     private void StyleToolbarMenus()
@@ -1609,6 +1650,13 @@ internal sealed partial class MainForm : Form
             case NumericUpDown:
             case ListBox:
                 StyleInput(control);
+                if ((control is ComboBox or NumericUpDown || control is TextBoxBase { ReadOnly: false } && control.Parent is not NumericUpDown && control.Parent is not DataGridView) && control.FindForm() is MainForm owner &&
+                    (owner._formHost.Contains(control) || ReferenceEquals(control, owner._choiceBox) || ReferenceEquals(control, owner._valueBox) ||
+                     ReferenceEquals(control, owner._redMultiplier) || ReferenceEquals(control, owner._blueMultiplier) || owner._tuplePanel.Contains(control)))
+                {
+                    if (control is ComboBox configChoice) owner.StyleConfigDropdown(configChoice);
+                    else control.Font = control is NumericUpDown ? owner.ConfigDropdownFont : owner.ConfigCellValueFont;
+                }
                 break;
 
             case ListView listView:
@@ -1821,14 +1869,20 @@ internal sealed partial class MainForm : Form
         AllowDrop = true;
         DragEnter += (_, args) =>
         {
-            args.Effect = HasDraggedMiz(args) ? DragDropEffects.Copy : DragDropEffects.None;
+            args.Effect = _weatherWindow is { Visible: true } weather ? weather.WeatherDropEffect(args)
+                : HasDraggedMiz(args) ? DragDropEffects.Copy : DragDropEffects.None;
         };
-        DragDrop += (_, args) =>
+        DragDrop += async (_, args) =>
         {
+            if (_weatherWindow is { Visible: true } weather)
+            {
+                await weather.ApplyDroppedMizAsync(args);
+                return;
+            }
             var path = GetDraggedMizPath(args);
             if (path is not null)
             {
-                InstallConfigFromMiz(path);
+                await InstallConfigFromMizAsync(path, CancellationToken.None);
             }
         };
     }
@@ -1876,6 +1930,7 @@ internal sealed partial class MainForm : Form
             "Open, reload, or restore a config.", ToolbarIconKind.Open);
         fileButton.ContextMenuStrip = _fileMenu;
         actions.Controls.Add(fileButton);
+        actions.Controls.Add(MakeToolbarButton("Mission settings", ShowWeatherWindow, "Choose mission settings, then drop a MIZ. Click again to return to Config.", ToolbarIconKind.Weather));
         _updateConfigMenu?.Dispose();
         _updateConfigMenu = new ContextMenuStrip
         {
@@ -2225,28 +2280,51 @@ internal sealed partial class MainForm : Form
     {
         var zoomPercent = Math.Clamp(percent, 80, 130);
         var zoomChanged = zoomPercent != _uiZoomPercent;
-        _uiZoomPercent = zoomPercent;
-        if (zoomChanged)
+        if (zoomChanged && _weatherWindow is { IsDisposed: false, IsBusy: true }) return;
+        var layouts = new Control?[] { this, _rootLayout, _topAreaLayout, _toolbarLayout, _instanceLayout, _mainSplit, _statusPanel, _weatherWindow };
+        var deferPainting = zoomChanged && IsHandleCreated && Visible;
+        if (deferPainting) SendZoomRedrawMessage(Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);
+        if (zoomChanged) foreach (var layout in layouts) layout?.SuspendLayout();
+        try
         {
-            Font = new Font("Segoe UI", BaseFontSize * _uiZoomPercent / UiZoomBaselinePercent);
-            UpdateZoomLabel();
-            ApplyZoomLayoutSizes();
+            _uiZoomPercent = zoomPercent;
+            if (zoomChanged)
+            {
+                Font = new Font("Segoe UI", BaseFontSize * _uiZoomPercent / UiZoomBaselinePercent);
+                UpdateZoomLabel();
+                ApplyZoomLayoutSizes();
+            }
+            if (persist)
+            {
+                _settings.UiZoomPercent = _uiZoomPercent;
+                _settings.Save();
+            }
+            if (!zoomChanged) return;
+            ClearCategoryPanelCache();
+            _configZoomRefreshPending = _weatherWindow is { Visible: true };
+            if (!_configZoomRefreshPending) RefreshCurrentView();
+            RefreshWeatherZoom();
         }
-        if (persist)
+        finally
         {
-            _settings.UiZoomPercent = _uiZoomPercent;
-            _settings.Save();
+            try
+            {
+                if (zoomChanged)
+                {
+                    try { foreach (var layout in layouts.Reverse()) layout?.ResumeLayout(true); }
+                    finally { _weatherWindow?.FinishUiZoom(); }
+                }
+            }
+            finally
+            {
+                if (deferPainting && IsHandleCreated)
+                {
+                    SendZoomRedrawMessage(Handle, 0x000B, new IntPtr(1), IntPtr.Zero);
+                    Invalidate(true);
+                }
+            }
         }
-
-        if (!zoomChanged)
-        {
-            return;
-        }
-
-        ClearCategoryPanelCache();
-        RefreshCurrentView();
     }
-
     private void UpdateZoomLabel()
     {
         _zoomLabel.Text = _uiZoomPercent.ToString(CultureInfo.InvariantCulture) + "% ▼";
@@ -2336,6 +2414,8 @@ internal sealed partial class MainForm : Form
 
     private void ApplyZoomLayoutSizes()
     {
+        StyleConfigDropdown(_choiceBox);
+        _redMultiplier.Font = _blueMultiplier.Font = ConfigDropdownFont;
         _categoryList.Invalidate();
         if (_rootLayout is not null)
         {
@@ -2419,7 +2499,7 @@ internal sealed partial class MainForm : Form
         if (_statusPanel is TableLayoutPanel footer)
         {
             SetRowHeight(footer, 0, Zoomed(34));
-            var widths = new[] { 190, 0, 180, 42, 130, 60, 130 };
+            var widths = new[] { 190, 0, 180, 42, 130, 60, 116, 0 };
             for (var column = 0; column < widths.Length; column++)
                 if (column != 1) SetColumnWidth(footer, column, Zoomed(widths[column]));
             foreach (var row in footer.Controls.OfType<TableLayoutPanel>())
@@ -2545,28 +2625,34 @@ internal sealed partial class MainForm : Form
     private void SetToolbarHelp(Control control, string helpText)
     {
         _toolTip.SetToolTip(control, helpText);
-        control.MouseEnter += (_, _) =>
-        {
-            _hoverStatusRestore = _status.Text;
-            SetStatus(helpText);
-        };
-        control.MouseLeave += (_, _) =>
-        {
-            if (_hoverStatusRestore is null)
-            {
-                return;
-            }
+        control.MouseEnter -= HandleToolbarHelpMouseEnter;
+        control.MouseLeave -= HandleToolbarHelpMouseLeave;
+        control.MouseEnter += HandleToolbarHelpMouseEnter;
+        control.MouseLeave += HandleToolbarHelpMouseLeave;
+    }
 
-            SetStatus(_hoverStatusRestore);
-            _hoverStatusRestore = null;
-        };
+    private void HandleToolbarHelpMouseEnter(object? sender, EventArgs args)
+    {
+        _hoverStatusRestore = _status.Text;
+        SetStatus(_toolTip.GetToolTip((Control)sender!) ?? "");
+    }
+
+    private void HandleToolbarHelpMouseLeave(object? sender, EventArgs args)
+    {
+        if (_hoverStatusRestore is null)
+        {
+            return;
+        }
+
+        SetStatus(_hoverStatusRestore);
+        _hoverStatusRestore = null;
     }
 
     private Control BuildStatusBar()
     {
         var panel = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill, ColumnCount = 7, RowCount = 2,
+            Dock = DockStyle.Fill, ColumnCount = 8, RowCount = 2,
             Margin = new Padding(0), BackColor = MainBackground
         };
         _statusPanel = panel;
@@ -2574,7 +2660,7 @@ internal sealed partial class MainForm : Form
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(190)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        foreach (var width in new[] { 180, 42, 130, 60, 130 })
+        foreach (var width in new[] { 180, 42, 130, 60, 116, 0 })
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(width)));
         var fileLabel = new Label { Dock = DockStyle.Fill, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft };
         void UpdateFileLabel()
@@ -2594,14 +2680,18 @@ internal sealed partial class MainForm : Form
             panel.Controls.Add(tools.GetControlFromPosition(0, row)!, row + 1, 0);
         tools.Visible = false;
         _previewCommentsButton = MakeLeftToolButton("Comments", ShowPreviewComments, "Read the comments for the selected table or category.");
-        panel.Controls.Add(_previewCommentsButton, 6, 0);
+        _previewCommentsButton.Visible = false;
+        panel.Controls.Add(_previewCommentsButton, 7, 0);
+        _updatesButton = MakeLeftToolButton("Updates", ShowUpdatesPanel, "Check Manager updates and Foothold mission releases.");
+        _updatesButton.Name = "UpdatesButton";
+        panel.Controls.Add(_updatesButton, 6, 0);
         LayoutPreviewFooter();
         return panel;
     }
 
     private void UpdateFooterLabels()
     {
-        var version = _document?.Metadata.FooterVersion?.Trim() ?? "";
+        var version = ManagerBuildInfo.VersionText;
         Text = "Foothold Config Manager" + (string.IsNullOrWhiteSpace(version) ? "" : " — " + version);
         _footerVersionLabel.Text = version;
         _footerVersionLabel.Visible = !string.IsNullOrWhiteSpace(version);
@@ -3085,7 +3175,7 @@ internal sealed partial class MainForm : Form
             BackColor = MainBackground
         }, 0, 0);
 
-        var version = _document?.Metadata.FooterVersion?.Trim();
+        var version = ManagerBuildInfo.VersionText;
         panel.Controls.Add(new Label
         {
             Text = string.IsNullOrWhiteSpace(version) ? "Version unavailable" : version,
@@ -3347,6 +3437,7 @@ internal sealed partial class MainForm : Form
 
     private static void StyleToolbarIconButton(ToolbarIconButton button)
     {
+        if (button.IconKind == ToolbarIconKind.Weather) button.AccessibleRole = AccessibleRole.PushButton;
         button.NormalBackColor = ButtonBackground;
         button.NormalBorderColor = IsDarkPalette() ? Color.Empty : ControlBorderColor;
         button.HoverBackColor = Color.Empty;
@@ -3375,6 +3466,10 @@ internal sealed partial class MainForm : Form
 
         switch (iconKind)
         {
+            case ToolbarIconKind.Weather:
+                WeatherArtwork.Draw(graphics, bounds, color);
+                break;
+
             case ToolbarIconKind.Open:
                 graphics.DrawLines(pen, new[]
                 {
@@ -3610,12 +3705,13 @@ internal sealed partial class MainForm : Form
     {
         control.BackColor = control is ListBox ? EditorBackground : InputBackground;
         control.ForeColor = PrimaryTextColor;
+        InputChrome.Apply(control);
         if (control is ComboBox comboBox)
         {
             comboBox.DrawItem -= DrawComboBoxItem;
             if (comboBox is WheelSafeComboBox wheelSafeCombo)
             {
-                wheelSafeCombo.OutlineColor = IsDarkPalette() ? Color.Empty : ControlBorderColor;
+                wheelSafeCombo.OutlineColor = Color.Empty;
             }
             if (IsDarkPalette())
             {
@@ -3652,7 +3748,7 @@ internal sealed partial class MainForm : Form
         args.Graphics.FillRectangle(backBrush, args.Bounds);
 
         var text = args.Index >= 0 && args.Index < comboBox.Items.Count
-            ? comboBox.Items[args.Index]?.ToString() ?? ""
+            ? comboBox.GetItemText(comboBox.Items[args.Index])
             : comboBox.Text;
         TextRenderer.DrawText(
             args.Graphics,
@@ -3660,11 +3756,18 @@ internal sealed partial class MainForm : Form
             comboBox.Font,
             args.Bounds,
             foreColor,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+            | (comboBox is WeatherChoiceBox ? TextFormatFlags.NoPrefix : 0));
 
         if ((args.State & DrawItemState.Focus) == DrawItemState.Focus)
         {
-            args.DrawFocusRectangle();
+            if (comboBox is WeatherChoiceBox)
+            {
+                using var focus = new Pen(BrandColor);
+                var bounds = Rectangle.Inflate(args.Bounds, -1, -1);
+                args.Graphics.DrawRectangle(focus, bounds);
+            }
+            else args.DrawFocusRectangle();
         }
     }
 
@@ -3693,6 +3796,12 @@ internal sealed partial class MainForm : Form
         grid.RowHeadersDefaultCellStyle.ForeColor = PrimaryTextColor;
         grid.RowHeadersDefaultCellStyle.SelectionBackColor = HeaderBackground;
         grid.RowHeadersDefaultCellStyle.SelectionForeColor = PrimaryTextColor;
+        grid.CellMouseEnter -= InputChrome.EnterGridChoice;
+        grid.CellMouseEnter += InputChrome.EnterGridChoice;
+        grid.CellMouseLeave -= InputChrome.LeaveGridChoice;
+        grid.CellMouseLeave += InputChrome.LeaveGridChoice;
+        grid.CellPainting -= InputChrome.PaintGridChoice;
+        grid.CellPainting += InputChrome.PaintGridChoice;
         grid.EditingControlShowing -= ApplyGridEditingControlTheme;
         grid.EditingControlShowing += ApplyGridEditingControlTheme;
         grid.CellMouseClick -= OpenGridComboBoxCellOnFirstClick;
@@ -3706,14 +3815,32 @@ internal sealed partial class MainForm : Form
         grid.Leave -= HideGridSelectionHighlight;
         grid.Leave += HideGridSelectionHighlight;
 
+        var dropdownOwner = grid.FindForm() as MainForm;
+        var valueRowHeight = dropdownOwner?.ConfigCellValueFont.Height + 6 ?? 0;
+        if (dropdownOwner is not null)
+        {
+            grid.DefaultCellStyle.Font = dropdownOwner.ConfigCellValueFont;
+            grid.RowTemplate.MinimumHeight = Math.Max(grid.RowTemplate.MinimumHeight, valueRowHeight);
+        }
+        var dropdownRowHeight = dropdownOwner?.ConfigDropdownFont.Height + 6 ?? 0;
+        var hasDropdownColumn = false;
         foreach (DataGridViewColumn column in grid.Columns)
         {
             ApplyGridColumnTheme(column);
+            if (dropdownOwner is not null && column is DataGridViewComboBoxColumn)
+            {
+                column.DefaultCellStyle.Font = dropdownOwner.ConfigDropdownFont;
+                hasDropdownColumn = true;
+                grid.RowTemplate.MinimumHeight = Math.Max(grid.RowTemplate.MinimumHeight, dropdownRowHeight);
+            }
         }
 
         foreach (DataGridViewRow row in grid.Rows)
         {
             row.Resizable = DataGridViewTriState.False;
+            row.MinimumHeight = Math.Max(row.MinimumHeight, hasDropdownColumn ? dropdownRowHeight : valueRowHeight);
+            if (dropdownOwner is not null && grid.Columns.Contains("value") && row.Cells["value"] is DataGridViewComboBoxCell choiceCell)
+                StyleConfigChoiceCell(choiceCell, dropdownOwner);
         }
 
         SetGridSelectionHighlight(grid, grid.Focused);
@@ -3895,6 +4022,8 @@ internal sealed partial class MainForm : Form
     private static void ApplyGridEditingControlTheme(object? sender, DataGridViewEditingControlShowingEventArgs args)
     {
         StyleInput(args.Control);
+        if (args.Control is ComboBox choice && sender is DataGridView grid && grid.FindForm() is MainForm owner)
+            owner.StyleConfigDropdown(choice);
     }
 
     private static void OpenGridComboBoxCellOnFirstClick(object? sender, DataGridViewCellMouseEventArgs args)
@@ -4205,10 +4334,15 @@ internal sealed partial class MainForm : Form
         _categoryList.DrawItem += DrawCategoryListItem;
         _categoryList.GotFocus += (_, _) => _categoryList.Invalidate();
         _categoryList.LostFocus += (_, _) => _categoryList.Invalidate();
+        _categoryList.MouseClick += (_, args) =>
+        {
+            if (args.Button == MouseButtons.Left && _categoryList.IndexFromPoint(args.Location) >= 0) _updatesPanel?.Hide();
+        };
         _categoryList.SelectedIndexChanged += (_, _) =>
         {
             if (!_loadingCategories)
             {
+                if (_categoryList.ContainsFocus) _updatesPanel?.Hide();
                 var optionsPreviousCategory = _optionsViewedCategory;
                 PrepareImportedNewMarkersForCategory(GetSelectedCategoryName());
                 RenderSelectedCategory();
@@ -4260,7 +4394,7 @@ internal sealed partial class MainForm : Form
         if (!_configSearchBound)
         {
             _searchBox.TextChanged += (_, _) => ScheduleConfigSearchResultsRefresh();
-            _searchBox.Enter += (_, _) => RefreshConfigSearchResults();
+            _searchBox.Enter += (_, _) => RefreshImmediateConfigSearchResults();
             _searchBox.KeyDown += HandleConfigSearchBoxKeyDown;
             _configSearchBound = true;
         }
@@ -4474,20 +4608,22 @@ internal sealed partial class MainForm : Form
             Math.Max(0, args.Bounds.Width - Zoomed(48)),
             args.Bounds.Height);
         var optionsCount = OptionsCategoryCount(itemName);
+        var attentionCount = TableChoiceAttentionCount(itemName);
         var optionsBadgeWidth = 0;
-        if (optionsCount > 0)
+        if (optionsCount > 0 || attentionCount > 0)
         {
-            const string countText = "CHANGED";
+            var countText = attentionCount > 0 ? "ATTENTION" : "CHANGED";
             optionsBadgeWidth = TextRenderer.MeasureText(args.Graphics, countText, args.Font).Width + Zoomed(12);
             var countBounds = new Rectangle(args.Bounds.Right - optionsBadgeWidth - Zoomed(8), args.Bounds.Y + Zoomed(4),
                 optionsBadgeWidth, Math.Max(1, args.Bounds.Height - Zoomed(8)));
-            using var countBrush = new SolidBrush(SavePendingBackground);
-            using var countPen = new Pen(BrandColor);
+            using var countBrush = new SolidBrush(attentionCount > 0 ? GetAttentionBadgeBackColor() : SavePendingBackground);
+            using var countPen = new Pen(attentionCount > 0 ? GetAttentionBadgeTextColor() : BrandColor);
             using var countShape = ConfigSearchSurface.RoundedRectangle(new RectangleF(countBounds.X + 0.5F, countBounds.Y + 0.5F, countBounds.Width - 1, countBounds.Height - 1), Zoomed(4));
             args.Graphics.FillPath(countBrush, countShape);
             args.Graphics.DrawPath(countPen, countShape);
-            TextRenderer.DrawText(args.Graphics, countText, args.Font, countBounds, IsDarkPalette() ? PrimaryTextColor : BrandColor,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(args.Graphics, countText, args.Font, countBounds, attentionCount > 0 ? GetAttentionBadgeTextColor() : IsDarkPalette() ? PrimaryTextColor : BrandColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding |
+                TextFormatFlags.PreserveGraphicsTranslateTransform | TextFormatFlags.PreserveGraphicsClipping);
             textBounds.Width = Math.Max(0, countBounds.Left - textBounds.Left - Zoomed(6));
         }
         if (hasNewMarker)
@@ -4499,7 +4635,7 @@ internal sealed partial class MainForm : Form
             var labelWidth = TextRenderer.MeasureText(args.Graphics, displayText, args.Font).Width;
             var badgeBounds = new Rectangle(
                 Math.Min(textBounds.Left + labelWidth + Zoomed(6),
-                    args.Bounds.Right - badgeWidth - Zoomed(8) - (optionsCount > 0 ? optionsBadgeWidth + Zoomed(6) : 0)),
+                    args.Bounds.Right - badgeWidth - Zoomed(8) - (optionsBadgeWidth > 0 ? optionsBadgeWidth + Zoomed(6) : 0)),
                 args.Bounds.Y + Math.Max(0, (args.Bounds.Height - badgeHeight) / 2),
                 badgeWidth,
                 badgeHeight);
@@ -4620,7 +4756,10 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        RefreshConfigSearchResults();
+        if (!RefreshImmediateConfigSearchResults())
+        {
+            return;
+        }
         var firstResult = _searchResultsList.Items
             .OfType<ConfigSearchResult>()
             .FirstOrDefault(result => result.CanNavigate);
@@ -4752,6 +4891,27 @@ internal sealed partial class MainForm : Form
         }
     }
 
+    private bool RefreshImmediateConfigSearchResults()
+    {
+        FlushPendingConfigSearchRefresh();
+        var query = _searchBox.Text.Trim();
+        if (_document is null || string.IsNullOrWhiteSpace(query) ||
+            !string.Equals(_renderedConfigSearchQuery, query, StringComparison.Ordinal))
+        {
+            HideConfigSearchResults();
+            return false;
+        }
+
+        if (!_searchResultsList.Visible)
+        {
+            _categoryList.Visible = false;
+            _searchResultsList.Visible = true;
+            _searchResultsList.BringToFront();
+            _searchResultsList.Invalidate();
+        }
+        return true;
+    }
+
     private void CancelPendingConfigSearchRefresh()
     {
         _configSearchRefreshTimer?.Stop();
@@ -4841,8 +5001,9 @@ internal sealed partial class MainForm : Form
             return items;
         }
 
+        var resolvedCategories = new Dictionary<string, List<DesignerItem>>(StringComparer.OrdinalIgnoreCase);
         var order = 0;
-        foreach (var categoryName in GetVisibleCategoryNames())
+        foreach (var categoryName in GetVisibleCategoryNames(resolvedCategories))
         {
             if (IsReservedCategory(categoryName))
             {
@@ -4850,7 +5011,7 @@ internal sealed partial class MainForm : Form
             }
 
             var categoryLabel = GetCategoryDisplayName(categoryName);
-            foreach (var item in GetDesignerItems(categoryName, includeTableRows: false))
+            foreach (var item in resolvedCategories[categoryName])
             {
                 var description = GetConfigSearchItemDescription(item);
                 items.Add(new ConfigSearchIndexItem(
@@ -5355,7 +5516,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        var path = AppMode.IsExportedUserBuild ? null : ConfigDocument.FindDefaultConfig();
+        var path = AppMode.IsExportedUserBuild || ExperimentBootstrap.IsIsolated ? null : ConfigDocument.FindDefaultConfig();
         if (path is not null && rejectedPaths.Contains(Path.GetFullPath(path)))
         {
             path = null;
@@ -5415,7 +5576,7 @@ internal sealed partial class MainForm : Form
 
     private (string SourcePath, FirstRunInstanceCandidate Instance, string ConfigFileName)? PromptForFirstRunInstall()
     {
-        var mizCandidates = FindFirstRunMizCandidates();
+        List<FirstRunMizCandidate>? mizCandidates = null;
         var instanceCandidates = FindFirstRunInstanceCandidates();
         string? selectedSourcePath = null;
         string? selectedConfigFileName = null;
@@ -5670,7 +5831,7 @@ internal sealed partial class MainForm : Form
                 Filter = "DCS mission (*.miz)|*.miz|All files (*.*)|*.*",
                 FileName = "*.miz",
                 InitialDirectory = GetExistingInitialDirectory(selectedSourcePath) ??
-                                   GetExistingInitialDirectory(mizCandidates.FirstOrDefault(candidate => !candidate.IsConfigFile)?.Path) ??
+                                   GetExistingInitialDirectory((mizCandidates ??= FindFirstRunMizCandidates()).FirstOrDefault(candidate => !candidate.IsConfigFile)?.Path) ??
                                    RuntimeSettings.GetBestInitialDirectory()
             };
             if (fileDialog.ShowDialog(dialog) != DialogResult.OK)
@@ -5820,7 +5981,7 @@ internal sealed partial class MainForm : Form
         list.SelectedIndex = 0;
     }
 
-    private void OpenConfig()
+    private async void OpenConfig()
     {
         using var dialog = new OpenFileDialog
         {
@@ -5833,7 +5994,12 @@ internal sealed partial class MainForm : Form
 
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
-            LoadConfig(dialog.FileName);
+            await RunConfigLoadingAsync((_, token) =>
+            {
+                token.ThrowIfCancellationRequested();
+                LoadConfig(dialog.FileName);
+                return Task.CompletedTask;
+            }, CancellationToken.None, "Opening configuration…");
         }
     }
 
@@ -6022,6 +6188,7 @@ internal sealed partial class MainForm : Form
             if (showLoadError)
             {
                 var error = selection.Failures.FirstOrDefault()?.Error ?? "The config could not be loaded.";
+                using var modal = _loadingScreen?.SuspendForModal();
                 MessageBox.Show(this, error, "Load failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
@@ -6061,8 +6228,15 @@ internal sealed partial class MainForm : Form
             RefreshConfigVariantList();
             RefreshPresetButtonState();
             ClearUndo();
+            ApplyTupleChoiceDefaults(null);
+            if (_undoStack.Count > 0)
+            {
+                _optionsViewedCategory = null;
+                _categoryList.Invalidate();
+            }
             if (loadWarnings.Count > 0)
             {
+                using var modal = _loadingScreen?.SuspendForModal();
                 SetStatus("Repaired config while loading. Use Save to write the repair.");
                 MessageBox.Show(
                     this,
@@ -6080,6 +6254,7 @@ internal sealed partial class MainForm : Form
 
             if (settingsSaveError is not null)
             {
+                using var modal = _loadingScreen?.SuspendForModal();
                 SetStatus("Config loaded, but recent-config settings could not be saved.");
                 MessageBox.Show(
                     this,
@@ -6092,6 +6267,7 @@ internal sealed partial class MainForm : Form
 
             if (pendingNewItemWarning is not null && showLoadError)
             {
+                using var modal = _loadingScreen?.SuspendForModal();
                 SetStatus("Config loaded, but NEW review markers need attention.");
                 MessageBox.Show(
                     this,
@@ -6107,6 +6283,7 @@ internal sealed partial class MainForm : Form
         {
             if (showLoadError)
             {
+                using var modal = _loadingScreen?.SuspendForModal();
                 MessageBox.Show(this, ex.Message, "Config display failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
@@ -6201,9 +6378,9 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private void SwitchConfigVariant()
+    private async void SwitchConfigVariant()
     {
-        if (_loadingConfigVariants || _configVariantBox.SelectedItem is not ConfigVariantItem item)
+        if (_loadingConfigVariants || _configLoadingOperation || _configVariantBox.SelectedItem is not ConfigVariantItem item)
         {
             return;
         }
@@ -6227,12 +6404,17 @@ internal sealed partial class MainForm : Form
             _settings.Save();
         }
 
-        LoadConfig(targetPath);
+        await RunConfigLoadingAsync((_, token) =>
+        {
+            token.ThrowIfCancellationRequested();
+            LoadConfig(targetPath);
+            return Task.CompletedTask;
+        }, CancellationToken.None, "Switching configuration…");
     }
 
-    private void SwitchInstance()
+    private async void SwitchInstance()
     {
-        if (_loadingInstances || _instanceBox.SelectedItem is not InstanceItem item)
+        if (_loadingInstances || _configLoadingOperation || _instanceBox.SelectedItem is not InstanceItem item)
         {
             return;
         }
@@ -6257,13 +6439,26 @@ internal sealed partial class MainForm : Form
             {
                 item.Profile.ConfigPath = Path.GetFullPath(recovery.Path);
                 _settings.Save();
-                LoadConfig(item.Profile.ConfigPath);
+                var replacementPath = item.Profile.ConfigPath;
+                await RunConfigLoadingAsync((_, token) =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    LoadConfig(replacementPath);
+                    return Task.CompletedTask;
+                }, CancellationToken.None, "Switching instance…");
                 return;
             }
 
             if (recovery.Kind == MissingInstanceRecoveryKind.InstallFromMiz && !string.IsNullOrWhiteSpace(recovery.Path))
             {
-                if (!InstallMissingInstanceConfigFromMiz(item.Profile, targetPath, recovery.Path))
+                var installed = false;
+                await RunConfigLoadingAsync((_, token) =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    installed = InstallMissingInstanceConfigFromMiz(item.Profile, targetPath, recovery.Path);
+                    return Task.CompletedTask;
+                }, CancellationToken.None, "Preparing instance configuration…");
+                if (!installed)
                 {
                     RefreshInstanceList();
                 }
@@ -6284,7 +6479,12 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        LoadConfig(targetPath);
+        await RunConfigLoadingAsync((_, token) =>
+        {
+            token.ThrowIfCancellationRequested();
+            LoadConfig(targetPath);
+            return Task.CompletedTask;
+        }, CancellationToken.None, "Switching instance…");
     }
 
     private MissingInstanceRecovery PromptForMissingInstanceRecovery(ServerProfileSettings profile, string missingPath)
@@ -6470,6 +6670,7 @@ internal sealed partial class MainForm : Form
                 profile.ConfigPath = targetPath;
                 _settings.Save();
                 LoadConfig(targetPath);
+                using var modal = _loadingScreen?.SuspendForModal();
                 MessageBox.Show(
                     this,
                     "A " + extractedConfig.ConfigFileName + " already exists for this instance. It was opened and no file was overwritten.",
@@ -6498,6 +6699,7 @@ internal sealed partial class MainForm : Form
         }
         catch (Exception ex)
         {
+            using var modal = _loadingScreen?.SuspendForModal();
             MessageBox.Show(this, ex.Message, "Install Missing Config failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
@@ -7114,6 +7316,19 @@ internal sealed partial class MainForm : Form
         var configFileName = GetCurrentConfigFileName(_document);
         var presets = PresetStore.List(EnsureInstanceId(profile), configFileName);
         var active = GetActivePreset(profile, configFileName, presets);
+        RefreshPresetButtonState(profile, configFileName, active);
+    }
+
+    private void RefreshPresetButtonState(ServerProfileSettings profile, string configFileName, StoredConfigPreset? active)
+    {
+        _presetsButton!.Enabled = profile is not null && _document is not null;
+        _presetsButton.ForeColor = _presetsButton.Enabled ? PrimaryTextColor : HelpTextColor;
+        if (profile is null || _document is null)
+        {
+            SetToolbarHelp(_presetsButton, "Select a saved instance to manage its presets.");
+            return;
+        }
+
         SetToolbarHelp(
             _presetsButton,
             active is null
@@ -7268,6 +7483,7 @@ internal sealed partial class MainForm : Form
         string? presetName,
         string? error)
     {
+        using var modal = _loadingScreen?.SuspendForModal();
         MessageBox.Show(
             this,
             "The live config completed its " +
@@ -7416,6 +7632,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        using var modal = _loadingScreen?.SuspendForModal();
         var message =
             (result.UpdatedNames.Count > 0
                 ? "Updated presets: " + string.Join(", ", result.UpdatedNames) + Environment.NewLine + Environment.NewLine
@@ -7755,7 +7972,7 @@ internal sealed partial class MainForm : Form
             importLegacyButton.Enabled =
                 importLegacyButton.Visible && presets.Count < PresetStore.MaximumPresetsPerConfig;
             RefreshActionStates();
-            RefreshPresetButtonState();
+            RefreshPresetButtonState(profile, configFileName, active);
         }
 
         void RefreshActionStates()
@@ -8400,7 +8617,7 @@ internal sealed partial class MainForm : Form
 
         var sourceDocument = ConfigDocument.Load(sourcePath);
         var output = ConfigDocument.Load(plan.TargetPath);
-        foreach (var change in selectedChanges)
+        foreach (var change in selectedChanges.OrderBy(change => change.Kind == CopyChangeKind.Entry ? 1 : 0))
         {
             if (change.Kind == CopyChangeKind.Entry)
             {
@@ -8570,9 +8787,11 @@ internal sealed partial class MainForm : Form
                 itemIndex);
         }
 
+        var changeGroupsByPlan = new Dictionary<CopyTargetPlan, List<(string CategoryName, string CategoryLabel, List<CopyChange> Changes)>>();
         List<(string CategoryName, string CategoryLabel, List<CopyChange> Changes)> GetChangeGroups(CopyTargetPlan plan)
         {
-            return plan.Changes
+            if (changeGroupsByPlan.TryGetValue(plan, out var groups)) return groups;
+            groups = plan.Changes
                 .Select((change, originalIndex) =>
                 {
                     var position = ResolveChangePosition(change);
@@ -8596,6 +8815,8 @@ internal sealed partial class MainForm : Form
                     CategoryLabel: group.Key.CategoryLabel,
                     Changes: group.Select(row => row.Change).ToList()))
                 .ToList();
+            changeGroupsByPlan.Add(plan, groups);
+            return groups;
         }
 
         var updatingSelectionUi = false;
@@ -8742,7 +8963,10 @@ internal sealed partial class MainForm : Form
             rows.SuspendLayout();
             try
             {
-                rows.Controls.Clear();
+                for (var i = rows.Controls.Count - 1; i >= 0; i--)
+                {
+                    ControlTreeDisposer.Dispose(rows.Controls[i], _toolTip);
+                }
                 rows.RowStyles.Clear();
                 rows.RowCount = 0;
                 targetCheckBoxes.Clear();
@@ -8845,6 +9069,7 @@ internal sealed partial class MainForm : Form
                             {
                                 ApplyCopyPlan(sourcePath, plan);
                                 plan.MarkCreated();
+                                changeGroupsByPlan.Remove(plan);
                                 SetStatus("Created " + sourceConfigLabel + " config for " + plan.Profile.Name + ".");
                                 RebuildRows();
                             }
@@ -9081,18 +9306,25 @@ internal sealed partial class MainForm : Form
             ApplyThemeToControl(dialog, restyleButtons: true);
         }
 
-        ApplyDialogChrome(dialog);
-        RebuildRows();
-        dialog.AcceptButton = copyButton;
-        dialog.CancelButton = cancelButton;
-        if (dialog.ShowDialog(this) != DialogResult.OK)
+        try
         {
-            return null;
-        }
+            ApplyDialogChrome(dialog);
+            RebuildRows();
+            dialog.AcceptButton = copyButton;
+            dialog.CancelButton = cancelButton;
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+            {
+                return null;
+            }
 
-        return plans
-            .Where(CanCopy)
-            .ToList();
+            return plans
+                .Where(CanCopy)
+                .ToList();
+        }
+        finally
+        {
+            ControlTreeDisposer.Dispose(rows, _toolTip);
+        }
     }
 
     private static string GuessInstanceName(string path)
@@ -9322,7 +9554,7 @@ internal sealed partial class MainForm : Form
         return directory.FullName;
     }
 
-    private void ReloadConfig()
+    private async void ReloadConfig()
     {
         if (_document is null)
         {
@@ -9335,7 +9567,13 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        LoadConfig(_document.Path);
+        var path = _document.Path;
+        await RunConfigLoadingAsync((_, token) =>
+        {
+            token.ThrowIfCancellationRequested();
+            LoadConfig(path);
+            return Task.CompletedTask;
+        }, CancellationToken.None, "Reloading configuration…");
     }
 
     private void LoadCategories(bool renderSelection = true)
@@ -9434,11 +9672,11 @@ internal sealed partial class MainForm : Form
         return true;
     }
 
-    private List<string> GetVisibleCategoryNames()
+    private List<string> GetVisibleCategoryNames(Dictionary<string, List<DesignerItem>>? resolvedCategories = null)
     {
         var names = GetDesignerCategoryNames()
             .Where(name => !IsCategoryHidden(name))
-            .Where(ShouldShowCategory)
+            .Where(name => ShouldShowCategory(name, resolvedCategories))
             .ToList();
 
         return OrderCategoryNames(names);
@@ -9684,7 +9922,7 @@ internal sealed partial class MainForm : Form
         return ShouldIncludeAdvancedEntries() || entries.Any(entry => !entry.IsAdvanced);
     }
 
-    private bool ShouldShowCategory(string categoryName)
+    private bool ShouldShowCategory(string categoryName, Dictionary<string, List<DesignerItem>>? resolvedCategories = null)
     {
         if (_document is null || IsReservedCategory(categoryName) || IsCategoryHidden(categoryName))
         {
@@ -9693,13 +9931,13 @@ internal sealed partial class MainForm : Form
 
         if (HasConfigCategory(categoryName))
         {
-            return HasVisibleConfigCategoryContent(categoryName);
+            return HasVisibleConfigCategoryContent(categoryName, resolvedCategories);
         }
 
         return false;
     }
 
-    private bool HasVisibleConfigCategoryContent(string categoryName)
+    private bool HasVisibleConfigCategoryContent(string categoryName, Dictionary<string, List<DesignerItem>>? resolvedCategories = null)
     {
         if (_document is null)
         {
@@ -9707,6 +9945,7 @@ internal sealed partial class MainForm : Form
         }
 
         var items = GetDesignerItems(categoryName, includeTableRows: false);
+        if (resolvedCategories is not null) resolvedCategories[categoryName] = items;
         RefreshNewCategoryVisibility(categoryName, items);
         return items.Count > 0;
     }
@@ -9953,7 +10192,7 @@ internal sealed partial class MainForm : Form
         {
             _activeImportedNewEntryKeys.UnionWith(visible.EntryKeys);
             _activeImportedNewCategoryName = categoryName;
-            MarkCategoryPanelDirty(categoryName);
+            if (!_preparedUnviewedCategories.Contains(categoryName)) MarkCategoryPanelDirty(categoryName);
             changed = true;
         }
 
@@ -10058,6 +10297,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        using var modal = _loadingScreen?.SuspendForModal();
         MessageBox.Show(
             this,
             warning,
@@ -10158,7 +10398,7 @@ internal sealed partial class MainForm : Form
         return !IsReservedCategory(categoryName);
     }
 
-    private bool TryShowCachedCategoryPanel(string categoryName)
+    private bool TryShowCachedCategoryPanel(string categoryName, bool preparing = false)
     {
         if (!ShouldCacheCategoryPanel(categoryName) ||
             _dirtyCategoryPanels.Contains(categoryName) ||
@@ -10196,8 +10436,10 @@ internal sealed partial class MainForm : Form
             }
 
             RestoreCategoryScroll(categoryName, viewGeneration);
-            _optionsViewedCategory = categoryName;
-            ApplyOptionsMarkers();
+            if (!preparing)
+            {
+                CompleteCategoryPresentation(categoryName);
+            }
         }
         finally
         {
@@ -10300,6 +10542,7 @@ internal sealed partial class MainForm : Form
 
     private void MarkAllCategoryPanelsDirty()
     {
+        _configPreparationVersion++;
         InvalidateLinkedTableData();
         foreach (var categoryName in _categoryPanelCache.Keys.ToList())
         {
@@ -10317,6 +10560,7 @@ internal sealed partial class MainForm : Form
 
     private void RemoveCachedCategoryPanel(string categoryName, bool removeFromRecency = true)
     {
+        _preparedUnviewedCategories.Remove(categoryName);
         if (!_categoryPanelCache.TryGetValue(categoryName, out var panel))
         {
             _dirtyCategoryPanels.Remove(categoryName);
@@ -10340,6 +10584,8 @@ internal sealed partial class MainForm : Form
 
     private void ClearCategoryPanelCache()
     {
+        _configPreparationVersion++;
+        _preparedUnviewedCategories.Clear();
         InvalidateLinkedTableData();
         var panels = _categoryPanelCache.Values.Distinct().ToList();
         _categoryPanelCache.Clear();
@@ -10394,7 +10640,11 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        var categoryName = GetSelectedCategoryName();
+        RenderCategory(GetSelectedCategoryName(), force, preparing: _startupPreparationPending || _deferCategoryPresentation);
+    }
+
+    private void RenderCategory(string categoryName, bool force, bool preparing)
+    {
         if (!force &&
             string.Equals(_renderedCategoryName, categoryName, StringComparison.Ordinal) &&
             !_dirtyCategoryPanels.Contains(categoryName))
@@ -10402,7 +10652,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        if (!force && TryShowCachedCategoryPanel(categoryName))
+        if (!force && TryShowCachedCategoryPanel(categoryName, preparing))
         {
             return;
         }
@@ -10418,15 +10668,19 @@ internal sealed partial class MainForm : Form
         var category = _categories.FirstOrDefault(item => item.Name == categoryName);
 
         _loadingForm = true;
-        DetachFormHostControlsForRender();
+        DetachFormHostControlsForRender(suspendCachedPanels: true);
 
         void FinishRender()
         {
             _loadingForm = false;
             ApplyThemeToControl(_formHost, restyleButtons: false);
             WireBackgroundDehighlightHandlers(_formHost);
-            _optionsViewedCategory = categoryName;
-            ApplyOptionsMarkers();
+            if (!preparing)
+            {
+                if (_optionsViewedCategory is not null || !_optionsPending.ContainsKey(categoryName))
+                    _optionsViewedCategory = categoryName;
+                ApplyOptionsMarkers();
+            }
         }
 
         if (categoryName == "Admin Designer")
@@ -10446,7 +10700,16 @@ internal sealed partial class MainForm : Form
 
         var items = GetDesignerItems(categoryName, includeTableRows: false);
         RefreshNewCategoryVisibility(categoryName, items);
-        PrepareImportedNewMarkersForCategory(categoryName);
+        if (preparing)
+        {
+            // Derive first-display highlights from the freshly resolved visibility snapshot.
+            _activeImportedNewEntryKeys.Clear();
+            if (_newCategoryVisibility.TryGetValue(categoryName, out var visible))
+                _activeImportedNewEntryKeys.UnionWith(visible.EntryKeys);
+            _activeImportedNewCategoryName = _activeImportedNewEntryKeys.Count > 0 || visible is { HasBucketItems: true }
+                ? categoryName : null;
+        }
+        else PrepareImportedNewMarkersForCategory(categoryName);
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
@@ -10556,9 +10819,26 @@ internal sealed partial class MainForm : Form
             _formHost.ResumeLayout(performLayout: true);
         }
 
-        FinishRender();
-        AcknowledgeDisplayedImportedNewItems();
-        AcknowledgeDisplayedBucketNewItems(categoryName, items);
+        var themeLayouts = EnumerateChildControls<Panel>(_formHost).Prepend(_formHost).ToArray();
+        foreach (var layout in themeLayouts) layout.SuspendLayout();
+        try
+        {
+            FinishRender();
+        }
+        finally
+        {
+            foreach (var layout in themeLayouts.Reverse()) layout.ResumeLayout(false);
+            _formHost.PerformLayout();
+        }
+        if (preparing)
+        {
+            if (HasUnseenImportedNewEntries(categoryName)) _preparedUnviewedCategories.Add(categoryName);
+        }
+        else
+        {
+            AcknowledgeDisplayedImportedNewItems();
+            AcknowledgeDisplayedBucketNewItems(categoryName, items);
+        }
         RefreshNewCategoryVisibility(categoryName, items);
         _categoryList.Invalidate();
         RestoreCategoryScroll(categoryName, viewGeneration);
@@ -10664,7 +10944,10 @@ internal sealed partial class MainForm : Form
 
         void RenderSelection()
         {
-            host.Controls.Clear();
+            for (var i = host.Controls.Count - 1; i >= 0; i--)
+            {
+                ControlTreeDisposer.Dispose(host.Controls[i], _toolTip);
+            }
             if (selector.SelectedItem is StageTableItem item)
             {
                 host.Controls.Add(BuildStageTableEditor(item.Table));
@@ -10739,7 +11022,9 @@ internal sealed partial class MainForm : Form
         var stageHint = GetStageTableHint(table);
         if (!string.IsNullOrWhiteSpace(stageHint))
         {
-            group.Controls.Add(MakeValueHint(stageHint));
+            var hint = MakeValueHint(stageHint);
+            group.Controls.Add(hint);
+            ConfigureHelpSizing(group, hint);
         }
 
         var buttonRow = new FlowLayoutPanel
@@ -10803,7 +11088,9 @@ internal sealed partial class MainForm : Form
         group.Controls.Add(buttonRow);
         group.Controls.Add(editorHost);
         RenderDifficulty(selectedDifficulty);
-        group.Controls.Add(MakeValueHint("Rows are read from top to bottom. The first row where active players is less than or equal to Up to players controls the amount."));
+        var rowHint = MakeValueHint("Rows are read from top to bottom. The first row where active players is less than or equal to Up to players controls the amount.");
+        group.Controls.Add(rowHint);
+        ConfigureHelpSizing(group, rowHint);
         ConfigureTableHeaderSizing(group, header);
         return MarkConfigSearchTarget(group, table.Key);
     }
@@ -10949,7 +11236,7 @@ internal sealed partial class MainForm : Form
             MakeDesignerButton("Move up", () => MoveStageRow(table, grid, -1), TableActionButtonWidth),
             MakeDesignerButton("Move down", () => MoveStageRow(table, grid, 1), TableActionButtonWidth));
         group.Controls.Add(actions, 1, 0);
-        var binding = new StageEditorBinding(table.Key, grid, actions, lockNote, lockedPrefix);
+        var binding = new StageEditorBinding(table.Key, grid, actions, lockNote, lockedPrefix, getDifficulty);
         group.Tag = binding;
         ApplyStageEditorLockState(binding);
 
@@ -10971,17 +11258,46 @@ internal sealed partial class MainForm : Form
             ApplyStageGridRow(grid.Rows[args.RowIndex], row);
             if (row.Player != oldPlayer || row.Amount != oldAmount)
             {
-                SetUndoAction("edit " + GetConfiguredGroupLabel(table.Key), () =>
-                {
-                    row.Player = oldPlayer;
-                    row.Amount = oldAmount;
-                }, () => RefreshStageGrid(grid, table, getDifficulty()));
+                RecordStageRowEditUndo(table, row, oldPlayer, oldAmount);
             }
 
             SetChangedStatus();
         };
         grid.DataError += (_, _) => { };
         return group;
+    }
+
+    private void RecordStageRowEditUndo(ConfigStageTable table, ConfigStageRow row, decimal oldPlayer, decimal oldAmount)
+    {
+        SetUndoAction("edit " + GetConfiguredGroupLabel(table.Key), () =>
+        {
+            row.Player = oldPlayer;
+            row.Amount = oldAmount;
+        }, () => RefreshLiveStageEditors(table));
+    }
+
+    private void RefreshLiveStageEditors(ConfigStageTable table, ConfigStageRow? rowToSelect = null)
+    {
+        var bindings = _categoryPanelCache.Values
+            .Where(panel => !ReferenceEquals(panel.Parent, _formHost))
+            .Append(_formHost)
+            .Distinct()
+            .SelectMany(EnumerateChildControls<TableLayoutPanel>)
+            .Select(panel => panel.Tag)
+            .OfType<StageEditorBinding>()
+            .Where(binding => binding.Key.Equals(table.Key, StringComparison.Ordinal) &&
+                              !binding.Grid.IsDisposed && !binding.Grid.Disposing)
+            .Distinct()
+            .ToArray();
+        foreach (var binding in bindings)
+        {
+            var difficulty = binding.GetDifficulty();
+            RefreshStageGrid(binding.Grid, table, difficulty);
+            if (rowToSelect is not null && rowToSelect.Difficulty.Equals(difficulty, StringComparison.OrdinalIgnoreCase))
+            {
+                SelectStageGridRow(binding.Grid, rowToSelect);
+            }
+        }
     }
 
     private void ApplyStageEditorLockState(StageEditorBinding binding)
@@ -11189,11 +11505,8 @@ internal sealed partial class MainForm : Form
             var row = _document.AddStageRow(table, difficulty);
             RefreshStageGrid(grid, table, difficulty);
             SelectStageGridRow(grid, row);
-            SetUndoAction("add stage row", () =>
-            {
-                _document.RemoveStageRow(table, row);
-                RefreshStageGrid(grid, table, difficulty);
-            });
+            SetUndoAction("add stage row", () => _document.RemoveStageRow(table, row),
+                () => RefreshLiveStageEditors(table));
             SetChangedStatus();
         }
         catch (Exception ex)
@@ -11221,12 +11534,8 @@ internal sealed partial class MainForm : Form
             var restoreRow = _document.RemoveStageRowWithUndo(table, row);
             RefreshStageGrid(grid, table, difficulty);
             SelectStageGridRowByIndex(grid, selectedIndex);
-            SetUndoAction("remove stage row", () =>
-            {
-                restoreRow();
-                RefreshStageGrid(grid, table, difficulty);
-                SelectStageGridRow(grid, row);
-            });
+            SetUndoAction("remove stage row", restoreRow,
+                () => RefreshLiveStageEditors(table, row));
             SetChangedStatus();
         }
         catch (Exception ex)
@@ -11245,15 +11554,18 @@ internal sealed partial class MainForm : Form
         try
         {
             var difficulty = row.Difficulty;
+            var previousLineIndex = row.LineIndex;
             _document.MoveStageRow(table, row, delta);
+            if (row.LineIndex == previousLineIndex)
+            {
+                return;
+            }
+
             RefreshStageGrid(grid, table, difficulty);
             SelectStageGridRow(grid, row);
-            SetUndoAction(delta < 0 ? "move stage row up" : "move stage row down", () =>
-            {
-                _document.MoveStageRow(table, row, -delta);
-                RefreshStageGrid(grid, table, difficulty);
-                SelectStageGridRow(grid, row);
-            });
+            SetUndoAction(delta < 0 ? "move stage row up" : "move stage row down",
+                () => _document.MoveStageRow(table, row, -delta),
+                () => RefreshLiveStageEditors(table, row));
             SetChangedStatus();
         }
         catch (Exception ex)
@@ -11399,6 +11711,19 @@ internal sealed partial class MainForm : Form
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        if (editor is ComboBox)
+        {
+            var editorRow = group.RowStyles[1];
+            editorRow.SizeType = SizeType.Absolute;
+            void SizeEditorRow()
+            {
+                var height = editor.Height + editor.Margin.Vertical;
+                if (editorRow.Height != height) editorRow.Height = height;
+            }
+            editor.SizeChanged += (_, _) => SizeEditorRow();
+            editor.MarginChanged += (_, _) => SizeEditorRow();
+            SizeEditorRow();
+        }
         ConfigureTableHeaderSizing(group, header);
 
         if (!CanEntryEditorBeLocked(entry))
@@ -11470,6 +11795,7 @@ internal sealed partial class MainForm : Form
 
     private void ConfigureHelpSizing(TableLayoutPanel group, Label help, Label? prefix = null)
     {
+        help.Font = GetConfigValueFont(1f);
         help.AutoSize = true;
         help.Dock = DockStyle.Top;
         void ResizeHelp()
@@ -11633,6 +11959,17 @@ internal sealed partial class MainForm : Form
 
     private List<string> GetDependentEditorTargetKeysCore(ConfigEntry entry, Func<RequiredValueSources> getRequiredSources, Func<string, List<(string SourceKey, List<string> Values)>>? getParsedRules = null)
     {
+        if (getParsedRules is null)
+        {
+            Dictionary<string, List<(string SourceKey, List<string> Values)>>? parsedRules = null;
+            getParsedRules = text =>
+            {
+                parsedRules ??= new(StringComparer.Ordinal);
+                if (!parsedRules.TryGetValue(text, out var rules))
+                    parsedRules[text] = rules = ParseVisibleWhenRules(text);
+                return rules;
+            };
+        }
         var sourceKeys = new HashSet<string>(StringComparer.Ordinal)
         {
             entry.DisplayKey,
@@ -11782,6 +12119,18 @@ internal sealed partial class MainForm : Form
             return new List<string>();
         }
 
+        if (getParsedRules is null)
+        {
+            Dictionary<string, List<(string SourceKey, List<string> Values)>>? parsedRules = null;
+            getParsedRules = text =>
+            {
+                parsedRules ??= new(StringComparer.Ordinal);
+                if (!parsedRules.TryGetValue(text, out var rules))
+                    parsedRules[text] = rules = ParseVisibleWhenRules(text);
+                return rules;
+            };
+        }
+
         var sourceKeys = new HashSet<string>(StringComparer.Ordinal)
         {
             sourceEntry.DisplayKey,
@@ -11871,7 +12220,9 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        foreach (var root in _categoryPanelCache.Values.Append(_formHost).Distinct())
+        foreach (var root in _categoryPanelCache.Values
+            .Where(panel => !ReferenceEquals(panel.Parent, _formHost))
+            .Append(_formHost).Distinct())
         {
             foreach (var button in EnumerateChildControls<Button>(root))
             {
@@ -11973,7 +12324,8 @@ internal sealed partial class MainForm : Form
         {
             var comboBox = new WheelSafeComboBox
             {
-                DropDownStyle = ComboBoxStyle.DropDownList
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                DrawMode = IsDarkPalette() ? DrawMode.OwnerDrawFixed : DrawMode.Normal
             };
             foreach (var choice in entry.Choices)
             {
@@ -12004,7 +12356,8 @@ internal sealed partial class MainForm : Form
         {
             var comboBox = new WheelSafeComboBox
             {
-                DropDownStyle = ComboBoxStyle.DropDownList
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                DrawMode = IsDarkPalette() ? DrawMode.OwnerDrawFixed : DrawMode.Normal
             };
             comboBox.Items.Add("true");
             comboBox.Items.Add("false");
@@ -13491,6 +13844,7 @@ internal sealed partial class MainForm : Form
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
         };
+        grid.DataError += (_, args) => HandleTableChoiceDataError(grid, args);
         group.Controls.Add(grid, 0, 1);
         var initialTupleChoices = linked is null ? GetTupleChoiceSnapshot(key) : null;
         if (linked is not null) BuildLinkedTableColumns(grid, linked);
@@ -13598,8 +13952,10 @@ internal sealed partial class MainForm : Form
                     RefreshVisibleTableRows(new[] { entry });
                 });
                 var sourceUndo = _undoStack.Count >= beforeUndoCount && _undoStack.TryPeek(out var addedStep) ? addedStep : null;
+                var afterSourceCount = _undoStack.Count;
                 var aircraft = ActivateRequiredAircraft(entry);
-                GroupAutomaticAircraftUndo(aircraft, entry, oldValue, sourceUndo, _undoStack.Count);
+                ApplyTupleChoiceDefaults(entry);
+                GroupAutomaticAircraftUndo(aircraft, entry, oldValue, sourceUndo, afterSourceCount);
                 RefreshVisibleTableRows(new[] { entry });
                 RefreshDependentEditors(entry, aircraft);
                 SetChangedStatus();
@@ -13660,7 +14016,6 @@ internal sealed partial class MainForm : Form
         };
         grid.SelectionChanged += (_, _) =>
             binding.RemoveButton.Enabled = !grid.ReadOnly && grid.CurrentRow?.Tag is ConfigEntry && !grid.CurrentRow.ReadOnly;
-        grid.DataError += (_, _) => { };
         ConfigureTableHeaderSizing(group, header);
         return group;
     }
@@ -14480,7 +14835,7 @@ internal sealed partial class MainForm : Form
             .OrderBy(GetCallsignAircraft, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        SyncGridRows(grid, sortedEntries, AddCallsignGridRow, UpdateCallsignGridRow);
+        RefreshControlValue(() => SyncGridRows(grid, sortedEntries, AddCallsignGridRow, UpdateCallsignGridRow));
 
         if (grid.Parent is TableLayoutPanel group)
         {
@@ -15031,7 +15386,7 @@ internal sealed partial class MainForm : Form
                 }
                 else if (field.Kind == ConfigTupleFieldKind.Choice)
                 {
-                    var column = new DataGridViewComboBoxColumn { Name = "field" + i, HeaderText = field.Name };
+                    var column = new DataGridViewComboBoxColumn { Name = "field" + i, HeaderText = field.Name, CellTemplate = new TableTupleChoiceCell() };
                     foreach (var choice in field.Choices)
                     {
                         column.Items.Add(choice.Display);
@@ -15104,6 +15459,7 @@ internal sealed partial class MainForm : Form
                 booleanCell.FlatStyle = IsDarkPalette() ? FlatStyle.Flat : FlatStyle.Standard;
                 booleanCell.Style.BackColor = IsDarkPalette() ? EditorBackground : Color.Empty;
                 booleanCell.Style.ForeColor = PrimaryTextColor;
+                if (row.DataGridView?.FindForm() is MainForm owner) StyleConfigChoiceCell(booleanCell, owner);
             }
 
             SetTableCellValue(cell, FormatBooleanDisplay(entry.ValueText));
@@ -15124,7 +15480,17 @@ internal sealed partial class MainForm : Form
     {
         if (Equals(cell.Value, value)) return;
         if (cell.DataGridView is { IsCurrentCellInEditMode: true } grid && ReferenceEquals(grid.CurrentCell, cell))
+        {
             grid.CancelEdit();
+            cell.Value = value;
+            if (grid.EditingControl is DataGridViewComboBoxEditingControl editor)
+            {
+                editor.EditingControlFormattedValue = cell.FormattedValue ?? "";
+                editor.EditingControlValueChanged = false;
+                grid.NotifyCurrentCellDirty(false);
+            }
+            return;
+        }
         cell.Value = value;
     }
 
@@ -15137,7 +15503,7 @@ internal sealed partial class MainForm : Form
             return;
         }
         var rowName = GetTableRowDisplayName(entry);
-        if (IsPriceRankEntry(entry) && TryReadPriceRank(entry.ValueText, out var price, out var rank))
+        if (IsPriceRankEntry(entry, out var price, out var rank))
         {
             var priceRankIndex = grid.Rows.Add(rowName, price, rank);
             grid.Rows[priceRankIndex].Tag = entry;
@@ -15148,28 +15514,31 @@ internal sealed partial class MainForm : Form
         if (entry.TupleFields.Count > 0 && grid.Columns.Contains("field0"))
         {
             var values = entry.GetTupleValues();
-            var cells = new List<object> { rowName };
+            var tupleRow = (DataGridViewRow)grid.RowTemplate.Clone();
+            tupleRow.Tag = entry;
+            tupleRow.CreateCells(grid);
+            tupleRow.Cells[0].Value = rowName;
             for (var i = 0; i < entry.TupleFields.Count; i++)
             {
                 var value = i < values.Count ? values[i] : "";
                 var field = entry.TupleFields[i];
                 if (field.Kind == ConfigTupleFieldKind.Boolean)
                 {
-                    cells.Add(value.Equals("true", StringComparison.OrdinalIgnoreCase));
+                    tupleRow.Cells[i + 1].Value = value.Equals("true", StringComparison.OrdinalIgnoreCase);
                 }
                 else if (field.Kind == ConfigTupleFieldKind.Choice)
                 {
-                    cells.Add(TableTupleChoiceDisplay(grid, i, field, value)!);
+                    SetTableTupleChoiceValue(grid, tupleRow.Cells[i + 1], i, field, value);
                 }
                 else
                 {
-                    cells.Add(value);
+                    tupleRow.Cells[i + 1].Value = value;
                 }
             }
 
-            var index = grid.Rows.Add(cells.ToArray());
-            grid.Rows[index].Tag = entry;
-            ApplyImportedNewRowHighlight(grid.Rows[index], entry, values);
+            grid.Rows.Add(tupleRow);
+            ApplyImportedNewRowHighlight(tupleRow, entry, values);
+            PublishTableChoiceIssues(grid, tupleRow);
             return;
         }
 
@@ -15187,7 +15556,7 @@ internal sealed partial class MainForm : Form
             UpdateLinkedTableRow(binding, row, entry);
             return;
         }
-        if (IsPriceRankEntry(entry) && TryReadPriceRank(entry.ValueText, out var price, out var rank))
+        if (IsPriceRankEntry(entry, out var price, out var rank))
         {
             row.Cells["name"].Value = GetTableRowDisplayName(entry);
             SetTableCellValue(row.Cells["price"], price);
@@ -15197,6 +15566,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        row.Tag = entry;
         row.Cells["name"].Value = GetTableRowDisplayName(entry);
         if (entry.TupleFields.Count > 0 && row.DataGridView!.Columns.Contains("field0"))
         {
@@ -15211,7 +15581,7 @@ internal sealed partial class MainForm : Form
                 }
                 else if (field.Kind == ConfigTupleFieldKind.Choice)
                 {
-                    SetTableCellValue(row.Cells[i + 1], TableTupleChoiceDisplay(row.DataGridView!, i, field, value));
+                    SetTableTupleChoiceValue(row.DataGridView!, row.Cells[i + 1], i, field, value);
                 }
                 else
                 {
@@ -15360,6 +15730,8 @@ internal sealed partial class MainForm : Form
         if (entry.TupleFields.Count > 0 && row.DataGridView!.Columns.Contains("field0"))
         {
             var values = new List<string>();
+            var storedValues = entry.GetTupleValues();
+            var tupleChoices = (row.DataGridView.Parent?.Tag as TableEditorBinding)?.TupleChoices;
             for (var i = 0; i < entry.TupleFields.Count; i++)
             {
                 var field = entry.TupleFields[i];
@@ -15370,9 +15742,9 @@ internal sealed partial class MainForm : Form
                 }
                 else if (field.Kind == ConfigTupleFieldKind.Choice)
                 {
-                    values.Add(row.DataGridView?.Parent?.Tag is TableEditorBinding { TupleChoices: not null } dynamicBinding &&
-                        dynamicBinding.TupleChoices.Fields.ContainsKey(i) && !field.Choices.Any(choice => choice.Display == value)
-                        ? entry.GetTupleValues().ElementAtOrDefault(i) ?? "nil" : FindChoiceLiteral(field, value));
+                    var stored = storedValues.ElementAtOrDefault(i) ?? "nil";
+                    values.Add(value == TupleChoiceState.DynamicChoice.Display && tupleChoices?.Fields.GetValueOrDefault(i)?.IsDynamic(stored) == true
+                        ? stored : !field.Choices.Any(choice => choice.Display == value) ? stored : FindChoiceLiteral(field, value));
                 }
                 else if (field.Kind == ConfigTupleFieldKind.Number && field.DefaultValue is not null)
                 {
@@ -15402,10 +15774,17 @@ internal sealed partial class MainForm : Form
 
     private static bool IsPriceRankEntry(ConfigEntry entry)
     {
+        return IsPriceRankEntry(entry, out _, out _);
+    }
+
+    private static bool IsPriceRankEntry(ConfigEntry entry, out string price, out string rank)
+    {
+        price = "";
+        rank = "";
         return !(entry.TupleFields.Count > 0 && (string.Equals(entry.ParentGuiEditor, "fieldTable", StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(entry.ParentGuiEditor, "linkedTable", StringComparison.OrdinalIgnoreCase))) &&
                entry.ParentKey.Equals("CTLDPrices", StringComparison.Ordinal) &&
-               TryReadPriceRank(entry.ValueText, out _, out _);
+               TryReadPriceRank(entry.ValueText, out price, out rank);
     }
 
     private static bool TryReadPriceRank(string value, out string price, out string rank)
@@ -15561,7 +15940,8 @@ internal sealed partial class MainForm : Form
         var choicesBox = MakeDesignerTextBox(singleLine: false);
         choicesBox.Height = 110;
         var footerVersionBox = MakeDesignerTextBox(singleLine: true);
-        footerVersionBox.Text = _document?.Metadata.FooterVersion ?? "";
+        footerVersionBox.Text = ManagerBuildInfo.TryParseReleaseVersion(_document?.Metadata.FooterVersion, out _)
+            ? _document!.Metadata.FooterVersion : ManagerBuildInfo.VersionText;
         var advancedToggleVisibleBox = new CheckBox
         {
             Text = "Show Advanced checkbox in normal GUI",
@@ -15606,6 +15986,16 @@ internal sealed partial class MainForm : Form
         var exportButton = MakeDesignerButton("Export User EXE", () =>
             ExportConfiguredExe(itemSelector.SelectedItem as DesignerItem, labelBox, controlTypeBox, advancedBox, tableHeightModeBox, tableMaxVisibleRowsBox, choicesBox, advancedToggleVisibleBox, rawValuesVisibleBox, footerVersionBox, "user"), 130);
         buttons.Controls.Add(exportButton);
+
+#if !FOOTHOLD_USER_BUILD
+        var signedReleaseButton = MakeDesignerButton("Build signed release…", () =>
+        {
+            if (SaveDesignerMetadata(itemSelector.SelectedItem as DesignerItem, labelBox, controlTypeBox, advancedBox, tableHeightModeBox, tableMaxVisibleRowsBox, choicesBox, advancedToggleVisibleBox, rawValuesVisibleBox, footerVersionBox, previewAfterSave: false))
+                OpenSignedReleaseDialog();
+        }, 170);
+        signedReleaseButton.Name = "BuildSignedRelease";
+        buttons.Controls.Add(signedReleaseButton);
+#endif
 
         var exportAdminButton = MakeDesignerButton("Export Admin EXE", () =>
             ExportConfiguredExe(itemSelector.SelectedItem as DesignerItem, labelBox, controlTypeBox, advancedBox, tableHeightModeBox, tableMaxVisibleRowsBox, choicesBox, advancedToggleVisibleBox, rawValuesVisibleBox, footerVersionBox, "admin"), 135);
@@ -16908,7 +17298,7 @@ internal sealed partial class MainForm : Form
     private List<DesignerItem> GetConfigSourceDesignerItems(string categoryName, bool includeTableRows, bool includeAdvanced)
     {
         var rendered = new HashSet<string>(StringComparer.Ordinal);
-        var layoutVisibleKeys = GetCategoryLayoutRenderedKeys(categoryName);
+        var layoutVisibleKeys = includeAdvanced || ShouldIncludeAdvancedEntries() ? null : GetCategoryLayoutRenderedKeys(categoryName);
         var sourceItems = GetUnlistedSourceDesignerItems(
             categoryName,
             rendered,
@@ -17525,6 +17915,12 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        if (!ManagerBuildInfo.TryParseReleaseVersion(footerVersionBox.Text, out var release))
+        {
+            MessageBox.Show(this, "Enter a numeric Manager release version, such as 2.1.2, before exporting.", "Export version", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        var releaseText = release.ToString(release.Revision == 0 ? 3 : 4);
         using var dialog = new SaveFileDialog
         {
             Title = buildMode.Equals("admin", StringComparison.OrdinalIgnoreCase)
@@ -17532,8 +17928,8 @@ internal sealed partial class MainForm : Form
                 : "Export user Foothold Config Manager EXE",
             Filter = "EXE files (*.exe)|*.exe|All files (*.*)|*.*",
             FileName = buildMode.Equals("admin", StringComparison.OrdinalIgnoreCase)
-                ? "Foothold Config Manager Admin.exe"
-                : "Foothold Config Manager.exe",
+                ? "Foothold Config Manager Admin " + releaseText + ".exe"
+                : "Foothold Config Manager " + releaseText + ".exe",
             InitialDirectory = RuntimeSettings.SettingsDirectory,
             OverwritePrompt = true
         };
@@ -17849,21 +18245,26 @@ internal sealed partial class MainForm : Form
             entries = entries.Where(entry => !entry.IsAdvanced);
         }
 
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            entries = entries.Where(entry =>
-                entry.DisplayKey.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                entry.DisplayName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                entry.Section.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                entry.EffectiveCategory.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                entry.ValueText.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                entry.FriendlyValueText.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                EntryDescription(entry).Contains(search, StringComparison.OrdinalIgnoreCase));
-        }
-
+        var hasSearch = !string.IsNullOrWhiteSpace(search);
         foreach (var entry in entries)
         {
-            var rowIndex = _grid.Rows.Add(entry.EffectiveCategory, entry.DisplayName, entry.FriendlyValueText, entry.TypeLabel, FirstLine(EntryDescription(entry)));
+            string? friendlyValue = null;
+            string? description = null;
+            string FriendlyValue() => friendlyValue ??= entry.FriendlyValueText;
+            string Description() => description ??= EntryDescription(entry);
+            if (hasSearch &&
+                !(entry.DisplayKey.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                  entry.DisplayName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                  entry.Section.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                  entry.EffectiveCategory.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                  entry.ValueText.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                  FriendlyValue().Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                  Description().Contains(search, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            var rowIndex = _grid.Rows.Add(entry.EffectiveCategory, entry.DisplayName, FriendlyValue(), entry.TypeLabel, FirstLine(Description()));
             var row = _grid.Rows[rowIndex];
             row.Tag = entry;
             if (entry.IsChanged)
@@ -18040,7 +18441,10 @@ internal sealed partial class MainForm : Form
     private void BuildTupleEditor(ConfigEntry entry)
     {
         _tupleControls.Clear();
-        _tuplePanel.Controls.Clear();
+        for (var i = _tuplePanel.Controls.Count - 1; i >= 0; i--)
+        {
+            ControlTreeDisposer.Dispose(_tuplePanel.Controls[i], _toolTip);
+        }
         _tuplePanel.RowStyles.Clear();
         _tuplePanel.RowCount = entry.TupleFields.Count;
 
@@ -18337,10 +18741,11 @@ internal sealed partial class MainForm : Form
 
     private void ShowValidationIssues(string title, IReadOnlyCollection<string> errors)
     {
+        using var modal = _loadingScreen?.SuspendForModal();
         MessageBox.Show(this, string.Join(Environment.NewLine, errors.Take(20)), title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 
-    private void InstallConfigFromMiz()
+    private async void InstallConfigFromMiz()
     {
         using var dialog = new OpenFileDialog
         {
@@ -18356,11 +18761,16 @@ internal sealed partial class MainForm : Form
         {
             _settings.LastMizDirectory = Path.GetDirectoryName(dialog.FileName);
             _settings.Save();
-            InstallConfigFromMiz(dialog.FileName);
+            await InstallConfigFromMizAsync(dialog.FileName, CancellationToken.None);
         }
     }
 
-    private void InstallConfigFromMiz(string mizPath)
+    private async void InstallConfigFromMiz(string mizPath)
+    {
+        await InstallConfigFromMizAsync(mizPath, CancellationToken.None);
+    }
+
+    private async Task InstallConfigFromMizAsync(string mizPath, CancellationToken cancellationToken)
     {
         if (_document is null)
         {
@@ -18379,11 +18789,17 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        await RunConfigLoadingAsync(async (progress, token) =>
+        {
+        token.ThrowIfCancellationRequested();
         var tempDir = Path.Combine(Path.GetTempPath(), "FootholdConfigManager-" + Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(tempDir);
             var extractedConfig = ExtractFootholdConfigFromMiz(mizPath, tempDir, GetCurrentConfigFileName(_document));
+            progress.Report(new LoadingProgress("Reading mission configuration…"));
+            await Task.Yield();
+            token.ThrowIfCancellationRequested();
             var currentDocument = _document;
             var targetPath = Path.GetFileName(currentDocument.Path).Equals(extractedConfig.ConfigFileName, StringComparison.OrdinalIgnoreCase)
                 ? currentDocument.Path
@@ -18442,6 +18858,9 @@ internal sealed partial class MainForm : Form
             }
 
             var previewText = BuildMizInstallPreviewText(mizPath, currentDocument.Path, preview);
+            progress.Report(new LoadingProgress("Preparing update preview…"));
+            await Task.Yield();
+            token.ThrowIfCancellationRequested();
             var valueChoices = preview.KeptValues
                 .Select(item => new SelectableValueChoice(item.Key, item.CurrentValue, item.NewDefault, item.Entry.EffectiveDescription))
                 .ToList();
@@ -18527,8 +18946,10 @@ internal sealed partial class MainForm : Form
             ShowImportWarnings(preview.ImportWarnings);
             ReportPresetBatchUpdate(presetUpdateResult);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
+            using var modal = _loadingScreen?.SuspendForModal();
             MessageBox.Show(this, ex.Message, "Import MIZ Config failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
@@ -18545,6 +18966,7 @@ internal sealed partial class MainForm : Form
                 // Temporary cleanup failure should not hide the install result.
             }
         }
+        }, cancellationToken);
     }
 
     private bool InstallInitialConfigFromSource(
@@ -18670,6 +19092,7 @@ internal sealed partial class MainForm : Form
 
     private bool ConfirmInstallMissingMizConfigVariant(string configFileName, string targetPath, string currentPath, string mizPath)
     {
+        using var modal = _loadingScreen?.SuspendForModal();
         var variantLabel = GetConfigVariantLabel(configFileName);
         var currentLabel = GetConfigVariantLabel(currentPath);
         var message =
@@ -18775,6 +19198,7 @@ internal sealed partial class MainForm : Form
 
     private string? PromptForMizConfigFileName(string mizPath, List<string> configFileNames)
     {
+        using var modal = _loadingScreen?.SuspendForModal();
         using var dialog = new Form
         {
             Text = "Select MIZ Config",
@@ -19556,7 +19980,7 @@ internal sealed partial class MainForm : Form
         return StoreConfigDefaults(fullPath);
     }
 
-    private void RestoreConfigDefaults()
+    private async void RestoreConfigDefaults()
     {
         if (_document is null)
         {
@@ -19585,7 +20009,12 @@ internal sealed partial class MainForm : Form
 
         try
         {
-            ApplyRestoreDefaultsSelection(_document, selection);
+            await RunConfigLoadingAsync((_, token) =>
+            {
+                token.ThrowIfCancellationRequested();
+                ApplyRestoreDefaultsSelection(_document, selection);
+                return Task.CompletedTask;
+            }, CancellationToken.None, "Restoring configuration…");
         }
         catch (Exception ex)
         {
@@ -19604,7 +20033,7 @@ internal sealed partial class MainForm : Form
 
         RefreshStringListCatalogFromDefaults(defaultDocument);
         var outputDocument = ConfigDocument.Load(currentDocument.Path);
-        foreach (var item in selection.SelectedItems)
+        foreach (var item in selection.SelectedItems.OrderBy(item => item.Kind == CopyChangeKind.Entry ? 1 : 0))
         {
             ApplyDefaultRestoreItem(outputDocument, defaultDocument, item);
         }
@@ -19630,6 +20059,7 @@ internal sealed partial class MainForm : Form
                 : " and updated preset " + activePresetName + "."));
         if (!presetSynced)
         {
+            using var modal = _loadingScreen?.SuspendForModal();
             MessageBox.Show(
                 this,
                 "The live config was restored, but the active preset " +
@@ -19663,7 +20093,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        if (!outputDocument.ReplaceTableBlockFrom(defaultDocument, item.Key))
+        if (!outputDocument.ReplaceTableBlockFrom(defaultDocument, item.Key, includeAttachedComments: defaultDocument.HasTupleChoices(item.Key)))
         {
             throw new InvalidOperationException(item.Label + " is not in the current config. Use Import MIZ Config first if you need to add new config tables.");
         }
@@ -21749,7 +22179,7 @@ internal sealed partial class MainForm : Form
         targetDocument.PrepareTupleChoiceMigration();
     }
 
-    private void ImportValuesFromOldConfig()
+    private async void ImportValuesFromOldConfig()
     {
         if (_document is null)
         {
@@ -21780,14 +22210,24 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        await ImportValuesFromOldConfigAsync(dialog.FileName, CancellationToken.None);
+    }
+
+    private async Task ImportValuesFromOldConfigAsync(string selectedPath, CancellationToken cancellationToken)
+    {
+        if (_document is null) return;
+        await RunConfigLoadingAsync(async (progress, token) =>
+        {
+        token.ThrowIfCancellationRequested();
         try
         {
-            _settings.LastImportConfigDirectory = Path.GetDirectoryName(dialog.FileName);
+            _settings.LastImportConfigDirectory = Path.GetDirectoryName(selectedPath);
             _settings.Save();
             var currentPath = Path.GetFullPath(_document.Path);
-            var sourcePath = Path.GetFullPath(dialog.FileName);
+            var sourcePath = Path.GetFullPath(selectedPath);
             if (string.Equals(currentPath, sourcePath, StringComparison.OrdinalIgnoreCase))
             {
+                using var modal = _loadingScreen?.SuspendForModal();
                 MessageBox.Show(this, "Select another config file, not the config that is already open.", "Import Config File", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -21795,6 +22235,9 @@ internal sealed partial class MainForm : Form
             var currentDocument = _document;
             var sourceDocument = ConfigDocument.Load(sourcePath);
             sourceDocument.RepairStringListSeparators();
+            progress.Report(new LoadingProgress("Reading selected configuration…"));
+            await Task.Yield();
+            token.ThrowIfCancellationRequested();
             if (!ValidateMergeDocument(sourceDocument, "Import Config File validation failed", "The selected config", new List<string>()))
             {
                 return;
@@ -21814,11 +22257,15 @@ internal sealed partial class MainForm : Form
 
             if (preview.KeptValues.Count == 0 && preview.UnchangedCount == 0)
             {
+                using var modal = _loadingScreen?.SuspendForModal();
                 MessageBox.Show(this, "No matching config keys were found in the selected config.", "Import Config File", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             var previewText = BuildImportMergePreviewText(sourcePath, currentPath, preview);
+            progress.Report(new LoadingProgress("Preparing update preview…"));
+            await Task.Yield();
+            token.ThrowIfCancellationRequested();
             var valueChoices = preview.KeptValues
                 .Select(item => new SelectableValueChoice(item.Key, item.CurrentValue, item.NewDefault, item.Entry.EffectiveDescription))
                 .ToList();
@@ -21900,10 +22347,13 @@ internal sealed partial class MainForm : Form
             ShowImportWarnings(preview.ImportWarnings);
             ReportPresetBatchUpdate(presetUpdateResult);
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
+            using var modal = _loadingScreen?.SuspendForModal();
             MessageBox.Show(this, ex.Message, "Import Config File failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+        }, cancellationToken);
     }
 
     private bool ConfirmImportValues(
@@ -21994,6 +22444,7 @@ internal sealed partial class MainForm : Form
         IReadOnlyList<PresetUpdateTargetChoice>? presetTargets = null,
         InstanceImportScope? importScope = null)
     {
+        using var modal = _loadingScreen?.SuspendForModal();
         using var dialog = new Form
         {
             Text = title,
@@ -22140,6 +22591,20 @@ internal sealed partial class MainForm : Form
         }
 
         Action? refreshScopeSummary = null;
+        var planPreviewInfo = new Dictionary<InstanceImportPlan,
+            (IReadOnlyList<(string Title, IReadOnlyList<string> Rows)> Tabs, int NewCount)>();
+
+        (IReadOnlyList<(string Title, IReadOnlyList<string> Rows)> Tabs, int NewCount) GetPlanPreviewInfo(InstanceImportPlan plan)
+        {
+            if (planPreviewInfo.TryGetValue(plan, out var info)) return info;
+            var tabs = ReferenceEquals(plan, importScope?.Current) && infoTabs is not null
+                ? infoTabs : BuildMizInstallInfoTabs(plan.Preview);
+            var materialized = tabs.Select(tab =>
+                (tab.Title, Rows: (IReadOnlyList<string>)tab.Rows.ToArray())).ToList();
+            info = (materialized, materialized.Where(tab => tab.Title is "New" or "New Options" or "New Rows").Sum(tab => tab.Rows.Count));
+            planPreviewInfo.Add(plan, info);
+            return info;
+        }
 
         Control BuildChoiceControl(InstanceImportPlan? plan)
         {
@@ -22171,7 +22636,7 @@ internal sealed partial class MainForm : Form
                     Choices: group.Select(row => row.Choice).ToList()))
                 .ToList();
             var newRows = new List<(string Label, string Summary)>();
-            var planInfoTabs = plan is null ? infoTabs : BuildMizInstallInfoTabs(plan.Preview);
+            var planInfoTabs = plan is null ? infoTabs : GetPlanPreviewInfo(plan).Tabs;
             if (planInfoTabs is not null)
             {
                 foreach (var tab in planInfoTabs.Where(tab =>
@@ -22509,7 +22974,7 @@ internal sealed partial class MainForm : Form
         {
             var activePlans = importScope?.Plans;
             var changeCount = activePlans?.Sum(plan => plan.Choices.Count) ?? choices.Count;
-            var newCount = activePlans?.Sum(plan => BuildMizInstallInfoTabs(plan.Preview).Where(tab => tab.Title is "New" or "New Options" or "New Rows").Sum(tab => tab.Rows.Count)) ??
+            var newCount = activePlans?.Sum(plan => GetPlanPreviewInfo(plan).NewCount) ??
                 infoTabs?.Where(tab => tab.Title is "New" or "New Options" or "New Rows").Sum(tab => tab.Rows.Count) ?? 0;
             var parts = new List<string>();
             if (activePlans is not null)
@@ -22753,9 +23218,9 @@ internal sealed partial class MainForm : Form
             }
         }
 
-        var summaryButton = AddPreviewTab("Summary", previewText);
+        Button summaryButton = importScope is null ? AddPreviewTab("Summary", previewText) : null!;
 
-        if (infoTabs is not null)
+        if (importScope is null && infoTabs is not null)
         {
             foreach (var tab in infoTabs.Where(tab => tab.Rows.Count > 0))
             {
@@ -22805,11 +23270,12 @@ internal sealed partial class MainForm : Form
         var sourceHeading = string.Join(Environment.NewLine, previewText.Replace("\r\n", "\n", StringComparison.Ordinal)
             .Split('\n').TakeWhile(line => !line.StartsWith("Current config", StringComparison.OrdinalIgnoreCase))).TrimEnd();
 
-        void RefreshScopeText()
+        void RefreshScopeText(bool rebuildTabs = false)
         {
             if (importScope is null) return;
             var plans = importScope.Plans;
-            summaryLabel.Text = BuildCompactSummary() + Environment.NewLine +
+            var compactSummary = BuildCompactSummary();
+            summaryLabel.Text = compactSummary + Environment.NewLine +
                 (importScope.AllInstances
                     ? "Tick rows to keep each instance's current values. Untick rows to use the source defaults." +
                         Environment.NewLine + "Each updated config receives its own backup."
@@ -22819,10 +23285,13 @@ internal sealed partial class MainForm : Form
             allScopeButton.Text = "All instances (" + (importScope.AllInstances ? plans.Count : importScope.TargetCount) + " " +
                 GetConfigVariantLabel(importScope.Current.Current.Path) + ")";
             var selectedTitle = previewTabText.Keys.FirstOrDefault(button => button.BackColor == SelectionBackground)?.Text ?? "Summary";
-            foreach (var button in previewTabText.Keys.ToList()) button.Dispose();
-            previewTabText.Clear();
-            previewTabs.Controls.Clear();
-            var summaryLines = new List<string> { sourceHeading, "", BuildCompactSummary() };
+            if (rebuildTabs)
+            {
+                foreach (var button in previewTabText.Keys.ToList()) button.Dispose();
+                previewTabText.Clear();
+                previewTabs.Controls.Clear();
+            }
+            var summaryLines = new List<string> { sourceHeading, "", compactSummary };
             var detailGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             var nonEmptyDetailTabs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var plan in plans)
@@ -22832,12 +23301,14 @@ internal sealed partial class MainForm : Form
                 summaryLines.Add(plan.Current.Path);
                 summaryLines.Add(Plural(plan.Choices.Count, "checkbox decision", "checkbox decisions") + "; " +
                     Plural(plan.Choices.Count(choice => choice.Selected), "current value kept", "current values kept") + "; " +
-                    Plural(BuildMizInstallInfoTabs(plan.Preview).Where(tab => tab.Title is "New" or "New Options" or "New Rows").Sum(tab => tab.Rows.Count), "new item", "new items") + "; " +
+                    Plural(GetPlanPreviewInfo(plan).NewCount, "new item", "new items") + "; " +
                     Plural(plan.Preview.UnchangedCount, "unchanged value", "unchanged values") + ".");
                 var choiceRows = plan.Choices.Select(choice => choice.Key + ": " + PreviewValue(choice.SelectedValue) + " -> " +
                     PreviewValue(choice.Selected ? choice.SelectedValue : choice.OtherValue) +
                     (choice.Selected ? " (keep current)" : " (use source default)")).ToList();
-                var tabs = BuildMizInstallInfoTabs(plan.Preview).Concat(new[]
+                var staticTabs = rebuildTabs ? GetPlanPreviewInfo(plan).Tabs
+                    : Array.Empty<(string Title, IReadOnlyList<string> Rows)>();
+                var tabs = staticTabs.Concat(new[]
                 {
                     (Title: "Choices", Rows: (IReadOnlyList<string>)choiceRows)
                 });
@@ -22860,14 +23331,25 @@ internal sealed partial class MainForm : Form
                 summaryLines.Add("");
                 summaryLines.Add("Skipped instances:");
                 summaryLines.AddRange(importScope.Skipped);
-                detailGroups["Skipped Instances"] = importScope.Skipped.ToList();
+                if (rebuildTabs) detailGroups["Skipped Instances"] = importScope.Skipped.ToList();
             }
-            summaryButton = AddPreviewTab("Summary", string.Join(Environment.NewLine, summaryLines));
-            foreach (var group in detailGroups)
+            var summaryText = string.Join(Environment.NewLine, summaryLines);
+            if (rebuildTabs)
             {
-                // Keep empty instance sections in tabs that contain information for another target.
-                if (nonEmptyDetailTabs.Contains(group.Key) || group.Key == "Choices" || group.Key == "Skipped Instances")
-                    AddPreviewTab(group.Key, string.Join(Environment.NewLine, group.Value));
+                summaryButton = AddPreviewTab("Summary", summaryText);
+                foreach (var group in detailGroups)
+                {
+                    // Keep empty instance sections in tabs that contain information for another target.
+                    if (nonEmptyDetailTabs.Contains(group.Key) || group.Key == "Choices" || group.Key == "Skipped Instances")
+                        AddPreviewTab(group.Key, string.Join(Environment.NewLine, group.Value));
+                }
+            }
+            else
+            {
+                previewTabText[summaryButton] = summaryText;
+                var choicesButton = previewTabText.Keys.FirstOrDefault(button => button.Text == "Choices");
+                if (choicesButton is not null)
+                    previewTabText[choicesButton] = string.Join(Environment.NewLine, detailGroups["Choices"]);
             }
             SelectPreviewTab(previewTabText.Keys.FirstOrDefault(button => button.Text == selectedTitle) ?? summaryButton);
         }
@@ -22882,7 +23364,7 @@ internal sealed partial class MainForm : Form
                 presetTargetControl.Enabled = !allInstances;
                 presetRowStyle.Height = allInstances ? 0 : Zoomed(82);
             }
-            RefreshScopeText();
+            RefreshScopeText(true);
             panel.PerformLayout();
         }
         if (importScope is not null)
@@ -22895,8 +23377,8 @@ internal sealed partial class MainForm : Form
             {
                 if (allScopeButton.Checked) ChangeImportScope(true);
             };
-            refreshScopeSummary = RefreshScopeText;
-            RefreshScopeText();
+            refreshScopeSummary = () => RefreshScopeText();
+            RefreshScopeText(true);
         }
 
         ApplyDialogChrome(dialog);
@@ -23330,6 +23812,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        using var modal = _loadingScreen?.SuspendForModal();
         MessageBox.Show(
             this,
             message,
@@ -23390,6 +23873,7 @@ internal sealed partial class MainForm : Form
 
     private void SaveConfig()
     {
+        _lastConfigSaveSucceeded = false;
         if (_document is null)
         {
             return;
@@ -23427,6 +23911,7 @@ internal sealed partial class MainForm : Form
             if (requirementErrors.Count > 0) { SetStatus(string.Join(" ", requirementErrors)); return; }
             UpdateEditActionButtonStates();
             SetStatus(_undoStack.Count > 0 ? "No changes to save. Undo is still available." : "No changes to save.");
+            _lastConfigSaveSucceeded = true;
             return;
         }
 
@@ -23497,11 +23982,13 @@ internal sealed partial class MainForm : Form
             var savedTarget = string.IsNullOrWhiteSpace(activePresetName)
                 ? "Saved config."
                 : "Saved config and preset " + activePresetName + ".";
+            _lastConfigSaveSucceeded = string.IsNullOrWhiteSpace(pendingNewItemWarning);
             SetStatus(_undoStack.Count > 0 ? savedTarget + " Undo is still available." : savedTarget);
             ShowPendingNewItemWarning(pendingNewItemWarning);
         }
         catch (Exception ex)
         {
+            _lastConfigSaveSucceeded = false;
             _pendingNewItemSession?.ResetResolved();
             ReloadCategoriesPreservingSelection();
             _categoryList.Invalidate();

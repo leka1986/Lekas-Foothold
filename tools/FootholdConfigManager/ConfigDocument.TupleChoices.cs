@@ -1,13 +1,23 @@
+using System.Globalization;
+
 namespace FootholdConfigManager;
 
 internal sealed record TupleChoiceSpec(int Index, string Source, string[] ActiveLists, string Label,
     IReadOnlyList<(string SourceKey, List<string> Values)> VisibleWhen);
 internal sealed record TupleChoiceState(TupleChoiceSpec Spec, List<ConfigChoice> Choices, string? Default,
-    HashSet<string>? Active, bool Visible)
+    HashSet<string>? Active, bool Visible, bool SupportsDynamic = false)
 {
+    internal static readonly ConfigChoice DynamicChoice = new("Dynamic", "nil");
     internal bool Admits(string key) => Visible && Choices.Count > 0 && (Active is null || Active.Contains(key));
     internal ConfigChoice? Find(string value) => Choices.FirstOrDefault(choice =>
-        StringComparer.Ordinal.Equals(ConfigEntry.UnquoteLuaString(choice.Literal), ConfigEntry.UnquoteLuaString(value)));
+        ReferenceEquals(choice, DynamicChoice) ? IsDynamic(value) :
+            StringComparer.Ordinal.Equals(ConfigEntry.UnquoteLuaString(choice.Literal), ConfigEntry.UnquoteLuaString(value)));
+    internal bool IsDynamic(string value) => SupportsDynamic && (value is "nil" or "false" or "true" ||
+        double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _));
+    internal bool CanPreserve(string value) => SupportsDynamic && (IsDynamic(value) ||
+        value.Length >= 2 && value[0] is '\'' or '"' && value[^1] == value[0]);
+    internal string? DisplayStored(string value) => Find(value)?.Display ?? (IsDynamic(value) ? DynamicChoice.Display :
+        CanPreserve(value) ? "Unavailable: " + ConfigEntry.UnquoteLuaString(value) : null);
 }
 internal sealed record TupleChoiceSnapshot(Dictionary<int, TupleChoiceState> Fields)
 {
@@ -83,7 +93,10 @@ internal sealed partial class ConfigDocument
                 active ??= new(StringComparer.Ordinal);
                 active.UnionWith(table.Items.Select(item => item.Value));
             }
-            fields[spec.Index] = new(spec, choices, defaultValue ?? choices.FirstOrDefault()?.Literal, active, Matches(spec.VisibleWhen));
+            var defaultChoice = defaultValue ?? choices.FirstOrDefault()?.Literal;
+            var supportsDynamic = key == "EscortTypeByPlayerType" && spec.Source is "BlueCapPlaneEnabled" or "RedCapPlaneEnabled";
+            if (supportsDynamic && defaultChoice is null) choices.Add(TupleChoiceState.DynamicChoice);
+            fields[spec.Index] = new(spec, choices, defaultChoice, active, Matches(spec.VisibleWhen), supportsDynamic);
         }
         return new(fields);
     }
@@ -100,15 +113,22 @@ internal sealed partial class ConfigDocument
     internal List<TupleChoiceChange> PlanTupleChoiceChanges(string key, TupleChoiceSnapshot snapshot, bool legacyOnly = false)
     {
         var changes = new List<TupleChoiceChange>();
+        var altitudeFreeEscort = key == "EscortTypeByPlayerType" &&
+            snapshot.Fields.TryGetValue(2, out var redEscort) && redEscort.Spec.Source == "RedCapPlaneEnabled";
         foreach (var entry in Entries.Where(entry => entry.ParentKey == key))
         {
             var values = entry.GetTupleValues();
             var changed = false;
+            if (altitudeFreeEscort && values.Count == 4 && (values[2] == "nil" || DetectTupleFieldKind(values[2]) == ConfigTupleFieldKind.Number))
+            {
+                values.RemoveAt(2);
+                changed = true;
+            }
             foreach (var state in snapshot.Fields.Values)
             {
                 if (state.Default is null || (legacyOnly ? state.Choices.Count == 0 : !state.Admits(entry.Key))) continue;
                 var previous = values.ElementAtOrDefault(state.Spec.Index);
-                if (legacyOnly && previous is not null && previous != "nil" && !int.TryParse(previous, out _)) continue;
+                if (legacyOnly && previous is not null && previous != "nil" && !int.TryParse(previous, out _) && !state.IsDynamic(previous)) continue;
                 while (values.Count <= state.Spec.Index) values.Add("nil");
                 if (state.Find(values[state.Spec.Index]) is not null) continue;
                 values[state.Spec.Index] = state.Default;
@@ -145,7 +165,8 @@ internal sealed partial class ConfigDocument
                 var values = entry.GetTupleValues();
                 if (values.Count == 0 || !values[0].Equals("true", StringComparison.OrdinalIgnoreCase)) continue;
                 foreach (var field in snapshot.Fields.Values)
-                    if (field.Admits(entry.Key) && field.Find(values.ElementAtOrDefault(field.Spec.Index) ?? "nil") is null)
+                    if (field.Admits(entry.Key) && field.Find(values.ElementAtOrDefault(field.Spec.Index) ?? "nil") is null &&
+                        !field.CanPreserve(values.ElementAtOrDefault(field.Spec.Index) ?? "nil"))
                         errors.Add(entry.DisplayName + ": select an enabled " + field.Spec.Label + " template, or turn this row off.");
             }
         }

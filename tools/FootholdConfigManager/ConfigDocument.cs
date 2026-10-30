@@ -989,10 +989,21 @@ internal sealed partial class ConfigDocument
 
     public bool ReplaceTableBlockFrom(ConfigDocument sourceDocument, string key)
     {
+        return ReplaceTableBlockFrom(sourceDocument, key, includeAttachedComments: false);
+    }
+
+    internal bool ReplaceTableBlockFrom(ConfigDocument sourceDocument, string key, bool includeAttachedComments)
+    {
         if (!sourceDocument.TryFindTableBlock(key, out var sourceStart, out var sourceEnd) ||
             !TryFindTableBlock(key, out var targetStart, out var targetEnd))
         {
             return false;
+        }
+
+        if (includeAttachedComments)
+        {
+            sourceStart = AttachedCommentStart(sourceDocument, sourceStart);
+            targetStart = AttachedCommentStart(this, targetStart);
         }
 
         var replacement = sourceDocument._lines.Skip(sourceStart).Take(sourceEnd - sourceStart + 1).ToList();
@@ -1002,6 +1013,20 @@ internal sealed partial class ConfigDocument
         ApplyMetadata();
         _hasStructuralChanges = true;
         return true;
+
+        static int AttachedCommentStart(ConfigDocument document, int tableStart)
+        {
+            var start = tableStart;
+            for (var index = tableStart - 1; index >= 0; index--)
+            {
+                var trimmed = document._lines[index].Trim();
+                if (trimmed.Length == 0 && index == tableStart - 1) continue;
+                if (!trimmed.StartsWith("--", StringComparison.Ordinal) || IsSectionDelimiter(trimmed) ||
+                    document.TryReadSection(index, out _) || document.IsSectionTitleLine(index)) break;
+                start = index;
+            }
+            return start;
+        }
     }
 
     public bool ReplaceTableBodyFrom(ConfigDocument sourceDocument, string key)
@@ -1372,8 +1397,15 @@ internal sealed partial class ConfigDocument
             .Where(edit => edit.LineIndex >= 0 && edit.LineIndex + edit.Count <= lines.Count)
             .OrderByDescending(edit => edit.LineIndex))
         {
-            lines.RemoveRange(edit.LineIndex, edit.Count);
-            lines.InsertRange(edit.LineIndex, edit.Replacement);
+            if (edit.Count == 1 && edit.Replacement.Count == 1)
+            {
+                lines[edit.LineIndex] = edit.Replacement[0];
+            }
+            else
+            {
+                lines.RemoveRange(edit.LineIndex, edit.Count);
+                lines.InsertRange(edit.LineIndex, edit.Replacement);
+            }
         }
 
         return string.Join(NewLine, lines);

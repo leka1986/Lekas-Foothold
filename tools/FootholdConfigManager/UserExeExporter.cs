@@ -6,32 +6,19 @@ internal static class UserExeExporter
 {
     public static string Export(ConfigDocument document, string outputPath, string buildMode)
     {
+        if (!ManagerBuildInfo.TryParseReleaseVersion(document.Metadata.FooterVersion, out var releaseVersion))
+        {
+            throw new InvalidOperationException("Enter a numeric release version (for example 2.1.2 or 2.1.2.1) in the Designer before exporting.");
+        }
         var projectDir = FindProjectDirectory() ??
                          throw new InvalidOperationException("Could not find FootholdConfigManager.csproj. Export is available only from the admin/source copy of the tool.");
         var exportDir = Path.Combine(Path.GetTempPath(), "FootholdConfigManagerExport-" + Guid.NewGuid().ToString("N"));
         var buildDir = Path.Combine(exportDir, "source");
-        var metadataPath = Path.Combine(buildDir, "EmbeddedGuiMetadata.json");
-        var buildModePath = Path.Combine(buildDir, "EmbeddedBuildMode.txt");
         var publishDir = Path.Combine(exportDir, "publish");
 
         try
         {
-            Directory.CreateDirectory(buildDir);
-            foreach (var sourceFile in Directory.EnumerateFiles(projectDir))
-            {
-                File.Copy(sourceFile, Path.Combine(buildDir, Path.GetFileName(sourceFile)));
-            }
-
-            var configDir = Path.Combine(exportDir, "test-configs");
-            Directory.CreateDirectory(configDir);
-            foreach (var configFileName in RuntimeSettings.SupportedConfigFileNames)
-            {
-                File.Copy(Path.Combine(projectDir, "..", "test-configs", configFileName),
-                    Path.Combine(configDir, configFileName));
-            }
-
-            File.WriteAllText(metadataPath, document.Metadata.ToJson());
-            File.WriteAllText(buildModePath, buildMode);
+            PrepareBuildSource(projectDir, buildDir, document.Metadata.ToJson(), buildMode, releaseVersion);
 
             Directory.CreateDirectory(publishDir);
             var result = RunDotnetPublish(buildDir, publishDir);
@@ -54,6 +41,28 @@ internal static class UserExeExporter
         {
             TryDeleteDirectory(exportDir);
         }
+    }
+
+    internal static void PrepareBuildSource(string projectDirectory, string buildDirectory,
+        string metadataJson, string buildMode, Version releaseVersion)
+    {
+        Directory.CreateDirectory(buildDirectory);
+        foreach (var sourceFile in Directory.EnumerateFiles(projectDirectory))
+        {
+            File.Copy(sourceFile, Path.Combine(buildDirectory, Path.GetFileName(sourceFile)));
+        }
+
+        var configDirectory = Path.Combine(Path.GetDirectoryName(buildDirectory)!, "test-configs");
+        Directory.CreateDirectory(configDirectory);
+        foreach (var configFileName in RuntimeSettings.SupportedConfigFileNames)
+        {
+            File.Copy(Path.Combine(projectDirectory, "..", "test-configs", configFileName),
+                Path.Combine(configDirectory, configFileName));
+        }
+
+        File.WriteAllText(Path.Combine(buildDirectory, "EmbeddedGuiMetadata.json"), metadataJson);
+        File.WriteAllText(Path.Combine(buildDirectory, "EmbeddedBuildMode.txt"), buildMode);
+        File.WriteAllText(Path.Combine(buildDirectory, "ManagerVersion.txt"), releaseVersion.ToString(4));
     }
 
     private static (int ExitCode, string Output) RunDotnetPublish(string projectDir, string publishDir)
@@ -87,7 +96,7 @@ internal static class UserExeExporter
         return (process.ExitCode, output);
     }
 
-    private static string? FindProjectDirectory()
+    internal static string? FindProjectDirectory()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)

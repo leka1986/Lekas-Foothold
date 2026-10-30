@@ -13,20 +13,22 @@ internal sealed partial class MainForm
     {
         if (_statusPanel is not TableLayoutPanel footer || _rootLayout is null ||
             _configSearchSurface is null || _previewCommentsButton is null) return;
-        var wrapped = ClientSize.Width < Zoomed(1070);
+        var missionSettings = _weatherWindow is { Visible: true };
+        var wrapped = _previewCommentsButton.Visible && !missionSettings && ClientSize.Width < Zoomed(1070);
         footer.SuspendLayout();
-        var widths = new[] { 190, 0, 180, 42, 130, 60, wrapped ? 0 : 130 };
+        var widths = new[] { 190, 0, 180, 42, 130, 60, 116, 0 };
         for (var column = 0; column < widths.Length; column++)
             if (column != 1) SetColumnWidth(footer, column, column == 5
                 ? Math.Max(Zoomed(widths[column]), TextRenderer.MeasureText("About", Font, Size.Empty,
                     TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width + 14 + Zoomed(2) * 2)
-                : Zoomed(widths[column]));
+                : widths[column] == 0 ? 0 : Zoomed(widths[column]));
         SetRowHeight(footer, 0, Zoomed(40));
         SetRowHeight(footer, 1, wrapped ? Zoomed(40) : 0);
         SetRowHeight(_rootLayout, 2, Zoomed(wrapped ? 80 : 40));
-        footer.SetCellPosition(_previewCommentsButton, new TableLayoutPanelCellPosition(wrapped ? 0 : 6, wrapped ? 1 : 0));
+        footer.SetCellPosition(_previewCommentsButton, new TableLayoutPanelCellPosition(wrapped ? 0 : 7, wrapped ? 1 : 0));
         footer.ResumeLayout();
         ApplyConfigSearchBarSizing();
+        LayoutUpdatesPanel();
     }
 
     private string GetPreviewComments()
@@ -219,6 +221,19 @@ internal sealed partial class MainForm
             case "F10 Map":
                 Lines(new(2, 4), new(7, 2), new(13, 5), new(18, 3), new(18, 16), new(13, 18), new(7, 15), new(2, 17), new(2, 4));
                 graphics.DrawLine(pen, 7, 2, 7, 15); graphics.DrawLine(pen, 13, 5, 13, 18); break;
+            case "Frequencies":
+                graphics.DrawRectangle(pen, 2, 7, 16, 10); graphics.DrawLine(pen, 4, 7, 14, 2);
+                graphics.DrawEllipse(pen, 5, 10, 4, 4); graphics.DrawLine(pen, 12, 10, 15, 10);
+                graphics.DrawLine(pen, 12, 13, 15, 13); break;
+            case "Carriers":
+                graphics.DrawLine(pen, 2, 10, 18, 10); graphics.DrawLine(pen, 3, 10, 5, 16);
+                graphics.DrawLine(pen, 5, 16, 15, 16); graphics.DrawLine(pen, 15, 16, 18, 10);
+                graphics.DrawRectangle(pen, 11, 6, 4, 4); graphics.DrawLine(pen, 13, 3, 13, 6);
+                graphics.DrawLine(pen, 3, 13, 17, 13); break;
+            case "Admin Commands":
+                graphics.DrawRectangle(pen, 2, 3, 16, 14);
+                graphics.DrawLine(pen, 5, 7, 8, 10); graphics.DrawLine(pen, 8, 10, 5, 13);
+                graphics.DrawLine(pen, 11, 13, 15, 13); break;
             default:
                 graphics.DrawRectangle(pen, 5, 2, 11, 16); graphics.DrawLine(pen, 8, 6, 13, 6);
                 graphics.DrawLine(pen, 8, 10, 13, 10); graphics.DrawLine(pen, 8, 14, 13, 14); break;

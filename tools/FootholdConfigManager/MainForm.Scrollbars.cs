@@ -7,7 +7,7 @@ namespace FootholdConfigManager;
 
 internal sealed partial class MainForm
 {
-    private sealed partial class SmoothDataGridView
+    internal sealed partial class SmoothDataGridView
     {
         private SlimScrollbarWindow _verticalScrollbar = null!;
         private SlimScrollbarWindow _horizontalScrollbar = null!;
@@ -37,7 +37,7 @@ internal sealed partial class MainForm
 
     // The grid still owns scrolling, range calculation, validation and accessibility.
     // This presents its real ScrollBar controls with an arrow-free track and thumb.
-    private sealed class SlimScrollbarWindow : NativeWindow, IDisposable
+    internal sealed class SlimScrollbarWindow : NativeWindow, IDisposable
     {
         private static readonly Action<ScrollBar, ScrollEventArgs> RaiseScroll =
             typeof(ScrollBar).GetMethod("OnScroll", BindingFlags.Instance | BindingFlags.NonPublic)!
@@ -52,22 +52,22 @@ internal sealed partial class MainForm
         private float Scale => ScrollBar.Font.SizeInPoints / BaseFontSize * ScrollBar.DeviceDpi / 96f;
         private int Length => _vertical ? ScrollBar.ClientSize.Height : ScrollBar.ClientSize.Width;
 
-        public Rectangle ThumbBounds
+        public Rectangle ThumbBounds => CalculateThumbBounds(_vertical, ScrollBar.ClientSize, ScrollBar.Minimum,
+            ScrollBar.Maximum, ScrollBar.LargeChange, ScrollBar.Value, Scale, ScrollBar.Enabled);
+
+        internal static Rectangle CalculateThumbBounds(bool vertical, Size size, int minimum, int maximum, int page, int value, float scale, bool enabled)
         {
-            get
-            {
-                if (!ScrollBar.Enabled || MaximumValue <= ScrollBar.Minimum || Length <= 0) return Rectangle.Empty;
-                var cross = _vertical ? ScrollBar.ClientSize.Width : ScrollBar.ClientSize.Height;
-                if (cross < 5) return Rectangle.Empty;
-                var thumbLength = Math.Clamp((int)Math.Round((double)Length * ScrollBar.LargeChange /
-                    (ScrollBar.Maximum - ScrollBar.Minimum + 1)), Math.Min(Length, (int)Math.Round(24 * Scale)), Length);
-                var thumbWidth = Math.Clamp((int)Math.Round(12 * Scale), 4, cross - 2);
-                var position = (int)Math.Round((double)(Length - thumbLength) *
-                    (ScrollBar.Value - ScrollBar.Minimum) / (MaximumValue - ScrollBar.Minimum));
-                return _vertical
-                    ? new Rectangle((cross - thumbWidth) / 2, position, thumbWidth, thumbLength)
-                    : new Rectangle(position, (cross - thumbWidth) / 2, thumbLength, thumbWidth);
-            }
+            var maximumValue = Math.Max(minimum, maximum - page + 1);
+            var length = vertical ? size.Height : size.Width;
+            var cross = vertical ? size.Width : size.Height;
+            if (!enabled || maximumValue <= minimum || length <= 0 || cross < 5) return Rectangle.Empty;
+            var thumbLength = Math.Clamp((int)Math.Round((double)length * page / (maximum - minimum + 1)),
+                Math.Min(length, (int)Math.Round(24 * scale)), length);
+            var thumbWidth = Math.Clamp((int)Math.Round(12 * scale), 4, cross - 2);
+            var position = (int)Math.Round((double)(length - thumbLength) * (value - minimum) / (maximumValue - minimum));
+            return vertical
+                ? new Rectangle((cross - thumbWidth) / 2, position, thumbWidth, thumbLength)
+                : new Rectangle(position, (cross - thumbWidth) / 2, thumbLength, thumbWidth);
         }
 
         public SlimScrollbarWindow(ScrollBar scrollBar, bool vertical)
@@ -96,27 +96,27 @@ internal sealed partial class MainForm
         public void Refresh()
         {
             ScrollBar.Invalidate();
-            if (ScrollBar.IsHandleCreated && ScrollBar.Visible) ScrollBar.Update();
+            // Let the message loop coalesce layout/range changes into one frame.
         }
 
         private void Draw(IntPtr hdc)
         {
             using var frame = BufferedGraphicsManager.Current.Allocate(hdc, ScrollBar.ClientRectangle);
             var graphics = frame.Graphics;
+            DrawPresentation(graphics, ScrollBar.ClientRectangle, ThumbBounds, _hover || _dragging);
+            frame.Render(hdc);
+        }
+
+        internal static void DrawPresentation(Graphics graphics, Rectangle track, Rectangle thumb, bool active)
+        {
             using var trackBrush = new SolidBrush(HeaderBackground);
-            graphics.FillRectangle(trackBrush, ScrollBar.ClientRectangle);
-            var thumb = ThumbBounds;
-            if (thumb.IsEmpty)
-            {
-                frame.Render(hdc);
-                return;
-            }
+            graphics.FillRectangle(trackBrush, track);
+            if (thumb.IsEmpty) return;
             graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             using var path = ConfigSearchSurface.RoundedRectangle(thumb, Math.Min(thumb.Width, thumb.Height) / 2f);
-            using var brush = new SolidBrush(_hover || _dragging ? PrimaryTextColor :
+            using var brush = new SolidBrush(active ? PrimaryTextColor :
                 IsDarkPalette() ? HelpTextColor : Color.FromArgb(100, 117, 137));
             graphics.FillPath(brush, path);
-            frame.Render(hdc);
         }
 
         private void RequestScroll(ScrollEventType type, int value)

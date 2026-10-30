@@ -177,6 +177,7 @@ internal sealed partial class MainForm
         if (result.Failed.Count > 0) lines.Add("Not updated:" + Environment.NewLine + string.Join(Environment.NewLine, result.Failed));
         if (result.Warnings.Count > 0) lines.Add("Warnings:" + Environment.NewLine + string.Join(Environment.NewLine, result.Warnings));
         SetStatus("Updated " + result.Updated.Count + " instances from " + Path.GetFileName(sourcePath) + ".");
+        using var modal = _loadingScreen?.SuspendForModal();
         MessageBox.Show(this, string.Join(Environment.NewLine + Environment.NewLine, lines),
             "Instance update results", MessageBoxButtons.OK,
             result.Failed.Count + result.Warnings.Count > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);

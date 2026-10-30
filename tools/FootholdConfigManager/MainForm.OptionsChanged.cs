@@ -132,6 +132,7 @@ internal sealed partial class MainForm
         _optionsReviewed.Clear();
         _optionsCurrent.Clear();
         _optionsPending.Clear();
+        _tableChoiceAttention.Clear();
         _optionsKnownEntries.Clear();
         _automaticAircraftChanges.Clear();
         _requiredUseReview = null;
@@ -308,6 +309,9 @@ internal sealed partial class MainForm
         !string.Equals(category, _optionsViewedCategory, StringComparison.OrdinalIgnoreCase) &&
         _optionsPending.TryGetValue(category, out var pending) ? pending.Count : 0;
 
+    private static Color GetAttentionBadgeBackColor() => IsDarkPalette() ? Color.FromArgb(77, 60, 18) : Color.FromArgb(254, 243, 199);
+    private static Color GetAttentionBadgeTextColor() => IsDarkPalette() ? Color.FromArgb(253, 224, 71) : Color.FromArgb(120, 73, 10);
+
     private Control RegisterOptionsTarget(TableLayoutPanel owner, Control editor, string key, ConfigEntry? entry = null)
     {
         if (owner.Tag is not Dictionary<string, OptionsMarkerTarget> targets)
@@ -375,7 +379,8 @@ internal sealed partial class MainForm
             if (!_categoryPanelCache.TryGetValue(category, out var panel) || panel.IsDisposed ||
                 panel.Tag is not Dictionary<string, OptionsMarkerTarget> targets) continue;
             var pending = _optionsPending.GetValueOrDefault(category);
-            if (pending is null && targets.Values.All(target => target.Number == 0)) continue;
+            if (pending is null && TableChoiceAttentionCount(category) == 0 &&
+                targets.Values.All(target => target.Number == 0 && !target.Marker.Visible)) continue;
             panel.SuspendLayout();
             try
             {
@@ -383,9 +388,20 @@ internal sealed partial class MainForm
                 foreach (var target in targets)
                 {
                     var notice = pending?.FirstOrDefault(n => n.Block.Key == target.Key);
+                    var attention = TableChoiceAttentionCount(category, target.Key);
                     var marker = target.Value.Marker;
                     target.Value.Number = notice is null ? 0 : ++number;
-                    if (notice is null) marker.Visible = false;
+                    if (attention > 0)
+                    {
+                        marker.Text = "ATTENTION";
+                        marker.BackColor = GetAttentionBadgeBackColor();
+                        marker.ForeColor = GetAttentionBadgeTextColor();
+                        marker.Visible = true;
+                        _toolTip.SetToolTip(marker, attention.ToString(CultureInfo.InvariantCulture) +
+                            " unresolved choice(s). Select an enabled template or turn off the affected row." +
+                            (notice is null ? "" : Environment.NewLine + notice.Status + " · " + notice.Details));
+                    }
+                    else if (notice is null) marker.Visible = false;
                     else
                     {
                         marker.Text = notice.Status;

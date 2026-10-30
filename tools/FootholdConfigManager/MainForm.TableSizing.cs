@@ -4,7 +4,7 @@ namespace FootholdConfigManager;
 
 internal sealed partial class MainForm
 {
-    private sealed partial class SmoothDataGridView
+    internal sealed partial class SmoothDataGridView
     {
         private TableLayoutPanel? _compactHeightGroup;
         private Action? _compactHeightLayout;

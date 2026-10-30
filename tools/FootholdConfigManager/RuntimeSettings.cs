@@ -39,10 +39,8 @@ internal sealed class RuntimeSettings
     public bool DarkMode { get; set; }
 
     public static string SettingsDirectory =>
-        System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "Saved Games",
-            "Foothold Config Manager");
+        AppContext.GetData("FootholdManager3.DataDirectory") as string ??
+        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Foothold Config Manager");
 
     public static string SettingsPath => System.IO.Path.Combine(SettingsDirectory, "settings.json");
 
@@ -134,7 +132,7 @@ internal sealed class RuntimeSettings
 
     public static List<string> FindSavedGamesConfigs()
     {
-        var savedGames = System.IO.Path.Combine(
+        var savedGames = ExperimentBootstrap.IsIsolated ? SettingsDirectory : System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             "Saved Games");
         if (!Directory.Exists(savedGames))
@@ -149,7 +147,7 @@ internal sealed class RuntimeSettings
             {
                 foreach (var path in Directory.EnumerateFiles(savedGames, configFileName, SearchOption.AllDirectories))
                 {
-                    if (IsMissionsSavesPath(path))
+                    if (ExperimentBootstrap.IsIsolated || IsMissionsSavesPath(path))
                     {
                         results.Add(System.IO.Path.GetFullPath(path));
                     }
@@ -170,6 +168,7 @@ internal sealed class RuntimeSettings
 
     public static string GetBestInitialDirectory()
     {
+        if (ExperimentBootstrap.IsIsolated) return SettingsDirectory;
         var savedGames = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             "Saved Games");

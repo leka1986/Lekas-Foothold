@@ -103,7 +103,7 @@ internal sealed partial class MainForm
             else grid.Columns.Add("linked" + i, field.Name);
             ConfigureFixedColumn(grid.Columns["linked" + i], field.Kind == ConfigTupleFieldKind.Boolean ? 85 : 95);
             if (field.Kind == ConfigTupleFieldKind.Number) grid.Columns["linked" + i].DefaultCellStyle.Alignment =
-                field.Key!.StartsWith("self.", StringComparison.Ordinal) ? DataGridViewContentAlignment.MiddleLeft : DataGridViewContentAlignment.MiddleRight;
+                field.Key!.StartsWith("self.", StringComparison.Ordinal) || (linked.Entries[0].ParentKey == "CTLDPrices" && field.Key == "MAX_AT_SPAWN") ? DataGridViewContentAlignment.MiddleLeft : DataGridViewContentAlignment.MiddleRight;
             grid.Columns["linked" + i].ToolTipText = linked.Rows.Values.Select(targets => targets[i]?.Entry.ParentDescription).FirstOrDefault(description => !string.IsNullOrWhiteSpace(description)) ?? "";
         }
     }

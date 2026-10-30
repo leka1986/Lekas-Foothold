@@ -5,6 +5,22 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (ManagerSelfUpdater.TryRunHelper(args, out var updateExitCode)) return updateExitCode;
+        try
+        {
+            ExperimentBootstrap.Initialize(args.Any(arg => arg.Equals("--normal-data", StringComparison.OrdinalIgnoreCase)));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            if (args.Length > 0) Console.Error.WriteLine(error.Message);
+            else
+            {
+                ApplicationConfiguration.Initialize();
+                MessageBox.Show("The experiment data folder could not be prepared." + Environment.NewLine + error.Message,
+                    "Foothold Config Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            return 3;
+        }
 #if !FOOTHOLD_USER_BUILD
         if (args.Length > 0 && args[0].Equals("--self-test-stability", StringComparison.OrdinalIgnoreCase))
         {
@@ -30,7 +46,7 @@ internal static class Program
                 ? args[1]
                 : settings.FindRememberedConfig() ??
                   RuntimeSettings.FindSavedGamesConfigs().FirstOrDefault() ??
-                  ConfigDocument.FindDefaultConfig();
+                  (ExperimentBootstrap.IsIsolated ? null : ConfigDocument.FindDefaultConfig());
             if (path is null)
             {
                 return 2;
@@ -47,7 +63,7 @@ internal static class Program
                 ? args[1]
                 : settings.FindRememberedConfig() ??
                   RuntimeSettings.FindSavedGamesConfigs().FirstOrDefault() ??
-                  ConfigDocument.FindDefaultConfig();
+                  (ExperimentBootstrap.IsIsolated ? null : ConfigDocument.FindDefaultConfig());
             if (path is null)
             {
                 return 2;
@@ -66,10 +82,38 @@ internal static class Program
 
         var requestAdminOnLoad = args.Any(arg => arg.Equals("--admin", StringComparison.OrdinalIgnoreCase));
 
-        InstallCrashLogging();
-        ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm(requestAdminOnLoad));
-        return 0;
+        SingleInstanceCoordinator instance;
+        try
+        {
+            instance = SingleInstanceCoordinator.Enter(RuntimeSettings.SettingsDirectory, requestAdminOnLoad);
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or
+            System.ComponentModel.Win32Exception or InvalidOperationException or WaitHandleCannotBeOpenedException or System.Security.SecurityException)
+        {
+            ApplicationConfiguration.Initialize();
+            MessageBox.Show("The manager could not take ownership of this data folder." + Environment.NewLine + error.Message,
+                "Foothold Config Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return 3;
+        }
+        using (instance)
+        {
+            if (!instance.IsOwner)
+            {
+                if (instance.SecondaryResult != 0)
+                {
+                    ApplicationConfiguration.Initialize();
+                    MessageBox.Show(instance.FailureReason, "Foothold Config Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                return instance.SecondaryResult;
+            }
+            InstallCrashLogging();
+            ApplicationConfiguration.Initialize();
+            var picture = SplashPictureSequence.SelectAndAdvance(Path.Combine(RuntimeSettings.SettingsDirectory, "splash-next.txt"));
+            using var loading = new LoadingScreenController(picture);
+            using var startup = new ManagerStartupContext(instance, loading, requestAdminOnLoad);
+            Application.Run(startup);
+            return 0;
+        }
     }
 
     private static void InstallCrashLogging()
@@ -111,7 +155,7 @@ internal static class Program
                 "Time: " + DateTime.Now.ToString("O") + Environment.NewLine +
                 "Source: " + source + Environment.NewLine +
                 "Executable: " + (Environment.ProcessPath ?? AppContext.BaseDirectory) + Environment.NewLine +
-                "Version: " + typeof(Program).Assembly.GetName().Version + Environment.NewLine +
+                "Version: " + ManagerBuildInfo.VersionText + Environment.NewLine +
                 Environment.NewLine +
                 exception);
             return path;

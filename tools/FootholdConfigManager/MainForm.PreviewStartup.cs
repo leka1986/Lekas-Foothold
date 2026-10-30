@@ -2,7 +2,7 @@ namespace FootholdConfigManager;
 
 internal sealed partial class MainForm
 {
-    private static string CreatePreviewSampleConfigs()
+    internal static string CreatePreviewSampleConfigs()
     {
         var directory = Path.Combine(RuntimeSettings.SettingsDirectory, "PreviewConfigs");
         foreach (var name in RuntimeSettings.SupportedConfigFileNames)

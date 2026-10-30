@@ -1,0 +1,106 @@
+name: Foothold Manager signed release
+run-name: Foothold Manager signed release ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Numeric player release version (for example 2.1.6)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-sign-verify:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      SOURCE_COMMIT: ${{ github.sha }}
+      REQUEST_REF: ${{ github.ref }}
+      PROJECT_DIRECTORY: ${{ github.workspace }}/tools/FootholdConfigManager
+      RELEASE_INPUTS_DIRECTORY: ${{ github.workspace }}/tools/FootholdConfigManager/release-inputs
+      BUILD_WORK_DIRECTORY: ${{ runner.temp }}/foothold-manager-build
+      UNSIGNED_DIRECTORY: ${{ runner.temp }}/foothold-manager-unsigned
+      SIGNED_DIRECTORY: ${{ runner.temp }}/foothold-manager-signed
+
+    steps:
+      - name: Check signing setup
+        env:
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          $missing = @(@('SIGNPATH_ORGANIZATION_ID', 'SIGNPATH_PROJECT_SLUG', 'SIGNPATH_SIGNING_POLICY_SLUG', 'SIGNPATH_API_TOKEN') | Where-Object {
+            [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_))
+          })
+          if ($missing.Count) {
+            throw ('Signing is not configured. Complete SIGNED_RELEASE_SETUP.md and set: ' + ($missing -join ', '))
+          }
+          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+(?:\.\d+)?$') { throw 'Enter a numeric release version.' }
+          if (-not $env:REQUEST_REF.StartsWith('refs/heads/foothold-manager/releases/', [StringComparison]::Ordinal)) {
+            throw 'Dispatch this workflow on the unique foothold-manager/releases/* branch prepared by the Manager.'
+          }
+
+      - name: Check out exact release source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            tools/FootholdConfigManager
+            tools/test-configs
+
+      - name: Install .NET 8 SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build and verify player candidate
+        run: |
+          $checkedOutCommit = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $checkedOutCommit -cne $env:SOURCE_COMMIT) { throw 'The checked-out commit differs from GITHUB_SHA.' }
+          & "$env:PROJECT_DIRECTORY/BuildSignedRelease.ps1" -Mode Build -ProjectDirectory $env:PROJECT_DIRECTORY -ReleaseInputsDirectory $env:RELEASE_INPUTS_DIRECTORY -Version $env:RELEASE_VERSION -SourceCommit $env:SOURCE_COMMIT -WorkDirectory $env:BUILD_WORK_DIRECTORY -ArtifactDirectory $env:UNSIGNED_DIRECTORY
+
+      - name: Upload unsigned candidate for SignPath
+        id: unsigned
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: foothold-manager-unsigned-${{ inputs.version }}
+          path: ${{ runner.temp }}/foothold-manager-unsigned/Foothold Config Manager ${{ inputs.version }}.exe
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Request SignPath signing
+        id: signing
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: ${{ runner.temp }}/foothold-manager-signed
+
+      - name: Verify signed release and create result manifest
+        run: |
+          & "$env:PROJECT_DIRECTORY/BuildSignedRelease.ps1" -Mode VerifySigned -Version $env:RELEASE_VERSION -SourceCommit $env:SOURCE_COMMIT -ArtifactDirectory $env:SIGNED_DIRECTORY
+
+      - name: Upload verified signed release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: foothold-manager-signed-${{ inputs.version }}
+          path: |
+            ${{ runner.temp }}/foothold-manager-signed/Foothold Config Manager ${{ inputs.version }}.exe
+            ${{ runner.temp }}/foothold-manager-signed/release-result.json
+          if-no-files-found: error
+          retention-days: 30

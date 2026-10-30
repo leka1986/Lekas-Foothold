@@ -2,7 +2,7 @@ namespace FootholdConfigManager;
 
 internal sealed class BoundedLruSet<TKey> where TKey : notnull
 {
-    private readonly int _capacity;
+    private int _capacity;
     private readonly LinkedList<TKey> _recency = new();
     private readonly Dictionary<TKey, LinkedListNode<TKey>> _nodes;
 
@@ -20,6 +20,12 @@ internal sealed class BoundedLruSet<TKey> where TKey : notnull
     public int Count => _nodes.Count;
 
     public bool Contains(TKey key) => _nodes.ContainsKey(key);
+
+    public void EnsureCapacityAtLeast(int minimumCapacity)
+    {
+        if (minimumCapacity < 1) throw new ArgumentOutOfRangeException(nameof(minimumCapacity));
+        _capacity = Math.Max(_capacity, minimumCapacity);
+    }
 
     public TKey? Touch(TKey key)
     {
