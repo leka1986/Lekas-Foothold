@@ -17,6 +17,10 @@ internal sealed partial class MainForm
     private Task? _updatesStartupTask;
     private bool _updatesBusy, _updatesRendering, _updatesInstalling, _updatesDisposed;
     private string? _updatesError;
+    private Form? _managerUpdateNotice;
+    private Form? _managerNoticeModal;
+    private Version? _managerNoticePendingVersion;
+    private readonly HashSet<Version> _announcedManagerVersions = new();
 
     internal Task BeginUpdateChecksAsync() => _updatesStartupTask ??= BeginUpdateChecksCoreAsync();
 
@@ -24,12 +28,20 @@ internal sealed partial class MainForm
     {
         await Task.Yield(); // Even a warm cache is presented after the interactive startup handoff.
         if (IsDisposed || Disposing) return;
+        Activated += OnManagerNoticeReadinessChanged;
+        Deactivate += OnManagerNoticeReadinessChanged;
+        EnabledChanged += OnManagerNoticeReadinessChanged;
+        VisibleChanged += OnManagerNoticeReadinessChanged;
+        Resize += OnManagerNoticeReadinessChanged;
+        FontChanged += OnManagerNoticeAppearanceChanged;
+        BackColorChanged += OnManagerNoticeAppearanceChanged;
         var token = _updatesLifetime.Token;
         try
         {
             _updateChecker ??= new GitHubUpdateChecker(ManagerBuildInfo.ReleaseVersion);
             PresentUpdateResult(await _updateChecker.GetCurrentAsync(token));
-            if (!IsDisposed && !Disposing) await CheckForUpdatesAsync(force: false);
+            if (!IsDisposed && !Disposing && _updatesResult?.AutomaticChecksEnabled == true)
+                await CheckForUpdatesAsync(force: true);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { if (!IsDisposed && !Disposing) { _updatesError = error.Message; RefreshUpdatesPresentation(); } }
@@ -42,7 +54,14 @@ internal sealed partial class MainForm
         _updatesBusy = true;
         _updatesError = null;
         RefreshUpdatesPresentation();
-        try { PresentUpdateResult(await _updateChecker.CheckAsync(force, token)); }
+        try
+        {
+            var result = await _updateChecker.CheckAsync(force, token);
+            PresentUpdateResult(result);
+            if (!IsDisposed && !Disposing && result.AutomaticChecksEnabled && result.ManagerUpdateAvailable &&
+                result.ManagerCheckedThisOperation && result.Manager.Status == UpdateFeedStatus.Fresh)
+                _managerNoticePendingVersion = result.Manager.Data!.Version;
+        }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { if (!IsDisposed && !Disposing) _updatesError = error.Message; }
         finally { if (!IsDisposed && !Disposing) { _updatesBusy = false; RefreshUpdatesPresentation(); } }
@@ -51,6 +70,9 @@ internal sealed partial class MainForm
     private void PresentUpdateResult(UpdateCheckResult result)
     {
         if (IsDisposed || Disposing) return;
+        if (_updatesResult?.ImportedFootholdVersion is { } imported &&
+            (result.ImportedFootholdVersion is not { } incoming || incoming < imported))
+            result = result with { State = result.State with { HighestImportedFootholdTag = _updatesResult.State.HighestImportedFootholdTag }, PersistenceError = _updatesResult.PersistenceError };
         _updatesResult = result;
         RefreshUpdatesPresentation();
     }
@@ -64,9 +86,26 @@ internal sealed partial class MainForm
         catch (Exception error) { if (!IsDisposed && !Disposing) { _updatesError = error.Message; RefreshUpdatesPresentation(); } }
     }
 
+    private void RecordImportedMissionRelease(ConfigDocument source)
+    {
+        if (source.MissionReleaseTag is not { } tag) return;
+        _updateChecker ??= new GitHubUpdateChecker(ManagerBuildInfo.ReleaseVersion);
+        try
+        {
+            // Synchronous import/install paths share this already-loaded source and one atomic history write.
+            PresentUpdateResult(_updateChecker.RecordImportedFootholdAsync(tag, _updatesLifetime.Token).GetAwaiter().GetResult());
+        }
+        catch (OperationCanceledException) when (_updatesLifetime.IsCancellationRequested) { }
+        catch (Exception error) { _updatesError = error.Message; RefreshUpdatesPresentation(); }
+    }
     private void ShowUpdatesPanel()
     {
         if (_mainSplit is null) return;
+        if (_weatherWindow is { Visible: true })
+        {
+            _weatherWindow.LeaveWeather();
+            if (_weatherWindow.Visible) return;
+        }
         if (_updatesPanel is null) BuildUpdatesPanel();
         _updatesPanel!.Visible = true;
         _updatesPanel.BringToFront();
@@ -120,7 +159,7 @@ internal sealed partial class MainForm
                 _ = RunUpdateActionAsync((checker, token) => checker.AcknowledgeFootholdAsync(displayed.Id, displayed.Tag, token));
         });
         Actions(_updatesReleaseAction, _updatesDismiss);
-        _updatesAutomatic = new CheckBox { Text = "Check for updates automatically", AutoSize = true, Margin = new Padding(0, Zoomed(10), 0, Zoomed(8)) };
+        _updatesAutomatic = new CheckBox { Text = "Check for updates on every startup", AutoSize = true, Margin = new Padding(0, Zoomed(10), 0, Zoomed(8)) };
         _updatesAutomatic.CheckedChanged += (_, _) =>
         {
             if (_updatesRendering) return;
@@ -171,9 +210,24 @@ internal sealed partial class MainForm
     {
         if (IsDisposed || Disposing) return;
         var result = _updatesResult;
-        var count = result is null ? 0 : (result.ManagerUpdateAvailable ? 1 : 0) + (result.FootholdUpdateAvailable ? 1 : 0);
-        var caption = count == 0 ? "Updates" : "Updates · " + count;
-        if (_updatesButton is not null && _updatesButton.Text != caption) { _updatesButton.Text = caption; LayoutPreviewFooter(); }
+        var managerNotice = result?.ManagerUpdateAvailable == true;
+        var missionNotice = result?.FootholdUpdateAvailable == true;
+        var hasNotice = managerNotice || missionNotice;
+        var caption = managerNotice && missionNotice ? "New updates available"
+            : managerNotice ? "Manager update available" : missionNotice ? "New mission release" : "Updates";
+        if (_updatesButton is PreviewButton updateButton)
+        {
+            var changed = updateButton.Text != caption || updateButton.HasUpdateNotice != hasNotice;
+            updateButton.HasUpdateNotice = hasNotice;
+            updateButton.Text = caption;
+            updateButton.AccessibleName = caption;
+            if (changed)
+            {
+                LayoutPreviewFooter();
+                updateButton.Update(); // Flush the invalidation raised by the text/notice change without waiting for hover.
+            }
+        }
+        RefreshManagerUpdateNotice();
         if (_updatesPanel is null) return;
         if (result is null)
         {
@@ -195,12 +249,12 @@ internal sealed partial class MainForm
             _updatesSkip.Enabled = !_updatesInstalling;
             var release = result.Foothold.Data;
             _updatesFootholdTitle!.Text = release is null ? "Foothold mission releases" : release.Title + (result.FootholdUpdateAvailable ? " is available" : "");
-            _updatesFootholdDetail!.Text = FeedDetail(result.Foothold, release is null ? "No release information is available." : result.FootholdUpdateAvailable ? "View the release notes and download the maps you use." : "You have already seen this release. All map downloads remain available on GitHub.");
+            _updatesFootholdDetail!.Text = FeedDetail(result.Foothold, release is null ? "No release information is available." : result.FootholdUpdateAvailable ? "View the release notes and download the maps you use." : result.ImportedFootholdVersion is null ? "Mission notifications start after importing a release-tagged MIZ or config. You can view the latest release here." : result.FootholdReleaseImported ? "This release has already been imported. All map downloads remain available on GitHub." : "You have already seen this release. All map downloads remain available on GitHub.");
             _updatesReleaseAction!.Visible = release is not null;
             _updatesDismiss!.Visible = result.FootholdUpdateAvailable;
             _updatesAutomatic!.Checked = result.AutomaticChecksEnabled;
             _updatesCheck!.Enabled = !_updatesBusy && !_updatesInstalling;
-            _updatesStatus!.Text = _updatesInstalling ? "Preparing the Manager update…" : _updatesBusy ? "Checking GitHub…" : _updatesError ?? result.PersistenceError ?? "Checks use saved results for up to 24 hours. Check again requests a refresh.";
+            _updatesStatus!.Text = _updatesInstalling ? "Preparing the Manager update…" : _updatesBusy ? "Checking GitHub…" : _updatesError ?? result.PersistenceError ?? (result.AutomaticChecksEnabled ? "Checks GitHub on every startup. Check again refreshes now." : "Automatic checks are off. Use Check again to check GitHub.");
         }
         finally { _updatesRendering = false; }
         LayoutUpdatesPanel();
@@ -274,10 +328,155 @@ internal sealed partial class MainForm
         finally { if (!IsDisposed && !Disposing) { _updatesInstalling = false; RefreshUpdatesPresentation(); } }
     }
 
+    private sealed class ManagerUpdateNoticeForm : Form
+    {
+        protected override bool ShowWithoutActivation => true;
+    }
+
+    private void OnManagerNoticeReadinessChanged(object? sender, EventArgs args)
+    {
+        RefreshManagerUpdateNotice();
+        // Native dialogs can activate their owner just before re-enabling its HWND.
+        if (!_updatesDisposed && !IsDisposed && !Disposing && IsHandleCreated &&
+            (_managerNoticePendingVersion is not null || _managerUpdateNotice is not null))
+            BeginInvoke((Action)RefreshManagerUpdateNotice);
+    }
+
+    private void OnManagerNoticeAppearanceChanged(object? sender, EventArgs args)
+    {
+        if (_managerUpdateNotice is { IsDisposed: false } notice) LayoutManagerUpdateNotice(notice);
+    }
+
+    private void TrackManagerNoticeModal(Form? modal)
+    {
+        if (ReferenceEquals(_managerNoticeModal, modal)) return;
+        if (_managerNoticeModal is not null) _managerNoticeModal.FormClosed -= OnManagerNoticeModalClosed;
+        _managerNoticeModal = modal;
+        if (modal is not null) modal.FormClosed += OnManagerNoticeModalClosed;
+    }
+
+    private void OnManagerNoticeModalClosed(object? sender, FormClosedEventArgs args)
+    {
+        TrackManagerNoticeModal(null);
+        // A modal's owner can be re-enabled before ShowDialog has finished hiding it.
+        if (!_updatesDisposed && !IsDisposed && !Disposing && IsHandleCreated)
+            BeginInvoke((Action)RefreshManagerUpdateNotice);
+    }
+
+    private void RefreshManagerUpdateNotice()
+    {
+        if (_updatesDisposed || IsDisposed || Disposing) return;
+        var result = _updatesResult;
+        var manager = result?.Manager.Data;
+        if (result?.AutomaticChecksEnabled != true || !result.ManagerUpdateAvailable ||
+            result.Manager.Status != UpdateFeedStatus.Fresh || _updatesInstalling)
+        {
+            TrackManagerNoticeModal(null);
+            _managerNoticePendingVersion = null;
+            _managerUpdateNotice?.Close();
+            return;
+        }
+        if (_managerUpdateNotice?.Tag is Version shown && shown != manager!.Version)
+            _managerUpdateNotice.Close();
+        if (_managerNoticePendingVersion is { } pending && pending != manager!.Version)
+            _managerNoticePendingVersion = null;
+        if (_managerUpdateNotice is null && (_managerNoticePendingVersion is null ||
+            _announcedManagerVersions.Contains(manager!.Version))) return;
+
+        var modal = OwnedForms.FirstOrDefault(owned => owned.Visible && owned.Modal);
+        TrackManagerNoticeModal(modal);
+        var ready = !_startupPreparationPending && !_configLoadingOperation && Visible && Enabled && Opacity == 1 &&
+            SingleInstanceCoordinator.IsWindowEnabled(Handle) &&
+            WindowState != FormWindowState.Minimized && modal is null;
+        if (!ready)
+        {
+            _managerUpdateNotice?.Hide();
+            return;
+        }
+        if (_managerUpdateNotice is { } existing)
+        {
+            if (!existing.Visible) { LayoutManagerUpdateNotice(existing); existing.Show(); }
+            return;
+        }
+        if (_updatesBusy) return;
+
+        var notice = new ManagerUpdateNoticeForm
+        {
+            Name = "ManagerUpdateNotice", Text = "New Manager available", Tag = manager!.Version,
+            StartPosition = FormStartPosition.Manual, FormBorderStyle = FormBorderStyle.FixedDialog,
+            ShowInTaskbar = false, MinimizeBox = false, MaximizeBox = false, Font = Font,
+            AutoScaleMode = AutoScaleMode.None
+        };
+        var content = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
+        content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var version = manager.Version.ToString(manager.Version.Revision == 0 ? 3 : 4);
+        content.Controls.Add(new Label
+        {
+            AutoSize = true, Dock = DockStyle.Fill, Margin = Padding.Empty,
+            Text = "Foothold Config Manager " + version + " is available." + Environment.NewLine + Environment.NewLine +
+                "You are running " + ManagerBuildInfo.VersionText + ". Would you like to update?"
+        });
+        var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, Margin = Padding.Empty };
+        var update = MakeButton(AppMode.IsExportedUserBuild ? "Update Manager" : "View download", () =>
+        {
+            notice.Close();
+            _ = UpdateManagerFromNoticeAsync(); // The existing action owns confirmation, Save and updater authorization.
+        });
+        var later = MakeButton("Later", () => notice.Close());
+        actions.Controls.Add(update);
+        actions.Controls.Add(later);
+        content.Controls.Add(actions);
+        notice.Controls.Add(content);
+        notice.AcceptButton = update;
+        notice.CancelButton = later;
+        notice.FormClosed += (_, _) => { if (ReferenceEquals(_managerUpdateNotice, notice)) _managerUpdateNotice = null; };
+        _managerUpdateNotice = notice;
+        LayoutManagerUpdateNotice(notice);
+        _announcedManagerVersions.Add(manager.Version);
+        _managerNoticePendingVersion = null;
+        notice.Show(this);
+    }
+
+    private void LayoutManagerUpdateNotice(Form notice)
+    {
+        notice.SuspendLayout();
+        try
+        {
+            notice.Font = Font;
+            notice.Padding = new Padding(Zoomed(18));
+            notice.ClientSize = FittedDialogClientSize(500, 210, 360, 190);
+            foreach (var button in notice.Controls.OfType<TableLayoutPanel>().Single().Controls
+                .OfType<FlowLayoutPanel>().Single().Controls.OfType<Button>())
+            {
+                button.Dock = DockStyle.None;
+                button.Margin = new Padding(0, Zoomed(12), Zoomed(10), 0);
+                SizeDialogButton(button, 110);
+            }
+            ApplyDialogChrome(notice);
+            var area = Screen.FromControl(this).WorkingArea;
+            notice.Location = new Point(Math.Clamp(Left + (Width - notice.Width) / 2, area.Left, Math.Max(area.Left, area.Right - notice.Width)),
+                Math.Clamp(Top + (Height - notice.Height) / 2, area.Top, Math.Max(area.Top, area.Bottom - notice.Height)));
+        }
+        finally { notice.ResumeLayout(true); }
+    }
+
     private void DisposeUpdates()
     {
         if (_updatesDisposed) return;
         _updatesDisposed = true;
+        Activated -= OnManagerNoticeReadinessChanged;
+        Deactivate -= OnManagerNoticeReadinessChanged;
+        EnabledChanged -= OnManagerNoticeReadinessChanged;
+        VisibleChanged -= OnManagerNoticeReadinessChanged;
+        Resize -= OnManagerNoticeReadinessChanged;
+        FontChanged -= OnManagerNoticeAppearanceChanged;
+        BackColorChanged -= OnManagerNoticeAppearanceChanged;
+        TrackManagerNoticeModal(null);
+        _managerNoticePendingVersion = null;
+        _managerUpdateNotice?.Dispose();
+        _managerUpdateNotice = null;
         _updatesLifetime.Cancel();
         _updatesLifetime.Dispose();
         _updatesHeadingFont?.Dispose();

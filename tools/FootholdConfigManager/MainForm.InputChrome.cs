@@ -19,13 +19,14 @@ internal sealed partial class MainForm
         private readonly bool _weatherSlider;
         private bool _hover;
         private bool _pressed;
+        [ThreadStatic] private static ChoiceInputMode? _choiceInputMode;
         private int _pointerY;
         private PopupScrollbarWindow? _popupScrollbar;
 
         private InputChrome(Control target, Control input)
         {
             _target = target; _input = input;
-            _weatherSlider = input is TrackBar { Name: "WeatherCloudBaseSlider" };
+            _weatherSlider = input is TrackBar { Name: "WeatherCloudBaseSlider" or "MissionBirdsSlider" };
             target.HandleCreated += (_, _) => AssignHandle(target.Handle);
             target.HandleDestroyed += (_, _) => { _popupScrollbar?.Dispose(); ReleaseHandle(); };
             if (input is not NumericUpDown)
@@ -35,6 +36,7 @@ internal sealed partial class MainForm
                 target.MouseMove += (_, e) =>
                 {
                     if (input is NumericUpDown && (_pointerY < target.Height / 2) != (e.Y < target.Height / 2)) target.Invalidate();
+                    if (input is ComboBox && UpdateChoiceHover(e.Location)) target.Invalidate();
                     _pointerY = e.Y;
                 };
                 target.MouseDown += (_, e) => { _pressed = e.Button == MouseButtons.Left; target.Invalidate(); };
@@ -46,6 +48,10 @@ internal sealed partial class MainForm
             input.EnabledChanged += (_, _) => target.Invalidate();
             if (input is ComboBox combo)
             {
+                var mode = _choiceInputMode ??= new ChoiceInputMode();
+                if (combo.Focused) mode.FocusedChoice = combo;
+                combo.GotFocus += (_, _) => mode.FocusedChoice = combo;
+                combo.LostFocus += (_, _) => { if (ReferenceEquals(mode.FocusedChoice, combo)) mode.FocusedChoice = null; };
                 combo.SelectedIndexChanged += (_, _) => target.Invalidate();
                 combo.TextChanged += (_, _) => target.Invalidate();
                 combo.DropDown += (_, _) =>
@@ -53,8 +59,8 @@ internal sealed partial class MainForm
                     (_popupScrollbar ??= new PopupScrollbarWindow(combo)).Attach();
                     target.Invalidate();
                 };
-                combo.DropDownClosed += (_, _) => { _popupScrollbar?.CancelInstantOpening(); _popupScrollbar?.EndDrag(); _pressed = false; target.Invalidate(); };
-                combo.Disposed += (_, _) => _popupScrollbar?.Dispose();
+                combo.DropDownClosed += (_, _) => { _popupScrollbar?.CancelInstantOpening(); _popupScrollbar?.EndDrag(); _pressed = false; UpdateChoiceHover(target.PointToClient(Control.MousePosition), rearm: true); target.Invalidate(); };
+                combo.Disposed += (_, _) => { _popupScrollbar?.Dispose(); if (ReferenceEquals(mode.FocusedChoice, combo)) mode.FocusedChoice = null; };
             }
             if (target.IsHandleCreated) AssignHandle(target.Handle);
         }
@@ -72,6 +78,14 @@ internal sealed partial class MainForm
 
         protected override void WndProc(ref Message message)
         {
+            if (_input is ComboBox combo && message.Msg is 0x0201 or 0x0203 or 0x0100 or 0x0104)
+                SetChoiceMouseFocus(combo, message.Msg is 0x0201 or 0x0203);
+            if (_input is ComboBox && message.Msg == 0x02A3) // WM_MOUSELEAVE can arrive without a managed MouseLeave.
+            {
+                _hover = _pressed = false;
+                _target.Invalidate();
+                if (_target.Parent?.Parent is WeatherInputFrame frame) frame.ClearHover();
+            }
             // UpDownButtons forwards managed mouse events to its parent. Observe
             // its native messages so every numeric stepper owns its actual hot half.
             if (_input is NumericUpDown)
@@ -143,12 +157,51 @@ internal sealed partial class MainForm
             {
                 var framed = combo.Parent?.Parent is WeatherInputFrame;
                 DrawChoice(graphics, bounds, combo.Text, combo.Font, combo.BackColor, combo.ForeColor,
-                    combo.Enabled, _hover, combo.Focused || combo.DroppedDown, !framed, combo.DeviceDpi / 96f);
+                    combo.Enabled, _hover, ShowChoiceFocus(combo), !framed, combo.DeviceDpi / 96f);
             }
             else if (_input is TrackBar slider) DrawSlider(graphics,slider);
             else
             {
                 DrawStepper(graphics, bounds, _input.BackColor, _input.Enabled, _hover, _pressed, _pointerY, _input.DeviceDpi / 96f);
+            }
+        }
+
+        private bool UpdateChoiceHover(Point point, bool rearm = false)
+        {
+            var hover = _target.ClientRectangle.Contains(point);
+            var changed = _hover != hover;
+            _hover = hover;
+            if (hover && (changed || rearm)) PopupScrollbarWindow.TrackClientLeave(_target.Handle);
+            return changed;
+        }
+
+        internal static void SetChoiceMouseFocus(ComboBox combo, bool mouseFocus)
+        {
+            if (_choiceInputMode is not { } mode || !Owners.TryGetValue(combo, out var owner) || mode.MouseInput == mouseFocus) return;
+            mode.MouseInput = mouseFocus;
+            owner._target.Invalidate();
+            if (owner._target.Parent?.Parent is WeatherInputFrame frame) frame.Invalidate();
+        }
+
+        // Keep keyboard/open-popup cues separate from ordinary mouse focus.
+        internal static bool ShowChoiceFocus(ComboBox combo) => combo.DroppedDown || combo.Focused
+            && _choiceInputMode is { MouseInput: false };
+
+        private sealed class ChoiceInputMode : IMessageFilter
+        {
+            internal bool MouseInput = true;
+            internal ComboBox? FocusedChoice;
+            internal ChoiceInputMode() => Application.AddMessageFilter(this);
+
+            public bool PreFilterMessage(ref Message message)
+            {
+                bool mouse;
+                if (message.Msg is 0x0100 or 0x0104) mouse = false;
+                else if (message.Msg is >= 0x0200 and <= 0x020E or >= 0x00A0 and <= 0x00AD) mouse = true;
+                else return false;
+                if (FocusedChoice is { IsDisposed: false } combo) SetChoiceMouseFocus(combo, mouse);
+                else MouseInput = mouse;
+                return false;
             }
         }
 

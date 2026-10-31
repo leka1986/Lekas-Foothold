@@ -81,11 +81,34 @@ internal sealed class LoadingScreenController : IDisposable
         return new ModalScope(this);
     }
 
-    private sealed class ModalScope(LoadingScreenController? controller) : IDisposable
+    internal IDisposable SuspendForModal(Form dialog)
+    {
+        if (_activeCancellation is null) return new ModalScope(null);
+        EventHandler? shown = null;
+        if (_modalDepth++ == 0)
+        {
+            SetOwnerPreparing(false); // Let ShowDialog establish normal modal ownership while loading stays visible.
+            shown = (_, _) =>
+            {
+                dialog.Refresh();
+                if (_radar is not null) _radar.Pause();
+                else Presentation.Hide();
+            };
+            dialog.Shown += shown;
+        }
+        return new ModalScope(this, dialog, shown);
+    }
+
+    private sealed class ModalScope(LoadingScreenController? controller, Form? dialog = null, EventHandler? shown = null) : IDisposable
     {
         private LoadingScreenController? _controller = controller;
+        private Form? _dialog = dialog;
+        private EventHandler? _shown = shown;
         public void Dispose()
         {
+            if (_dialog is not null && _shown is not null) _dialog.Shown -= _shown;
+            _dialog = null;
+            _shown = null;
             var owner = _controller;
             _controller = null;
             if (owner is null || --owner._modalDepth != 0 || owner._activeCancellation is null) return;

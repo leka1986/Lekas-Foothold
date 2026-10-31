@@ -21,6 +21,7 @@ internal sealed record UpdateNotificationState
     public bool AutomaticChecksEnabled { get; init; } = true;
     public long? AcknowledgedFootholdReleaseId { get; init; }
     public string? AcknowledgedFootholdTag { get; init; }
+    public string? HighestImportedFootholdTag { get; init; }
     public string? SkippedManagerVersion { get; init; }
     public UpdateFeedResult<ManagerUpdateInfo> Manager { get; init; } = new();
     public UpdateFeedResult<FootholdReleaseInfo> Foothold { get; init; } = new();
@@ -28,6 +29,7 @@ internal sealed record UpdateNotificationState
 
 internal sealed record UpdateCheckResult(UpdateNotificationState State, Version? LocalVersion, string? PersistenceError = null)
 {
+    public bool ManagerCheckedThisOperation { get; init; }
     public UpdateFeedResult<ManagerUpdateInfo> Manager => State.Manager;
     public UpdateFeedResult<FootholdReleaseInfo> Foothold => State.Foothold;
     public bool AutomaticChecksEnabled => State.AutomaticChecksEnabled;
@@ -36,7 +38,11 @@ internal sealed record UpdateCheckResult(UpdateNotificationState State, Version?
     public string? SkippedManagerVersion => State.SkippedManagerVersion;
     public bool ManagerUpdateAvailable => Manager.Data is { } manager && LocalVersion is { } local
         && manager.Version > local && manager.Version.ToString(4) != SkippedManagerVersion;
-    public bool FootholdUpdateAvailable => Foothold.Data is { } release
+    public bool FootholdReleaseImported => ImportedFootholdVersion is { } imported && Foothold.Data is { } release
+        && ManagerBuildInfo.TryParseReleaseVersion(release.Tag.TrimStart('v', 'V'), out var latest) && imported >= latest;
+    public Version? ImportedFootholdVersion => ManagerBuildInfo.TryParseReleaseVersion(State.HighestImportedFootholdTag?.TrimStart('v', 'V'), out var imported) ? imported : null;
+    public bool FootholdUpdateAvailable => ImportedFootholdVersion is { } imported && Foothold.Data is { } release
+        && ManagerBuildInfo.TryParseReleaseVersion(release.Tag.TrimStart('v', 'V'), out var latest) && latest > imported
         && (AcknowledgedFootholdReleaseId is { } acknowledged ? release.Id != acknowledged : release.Tag != AcknowledgedFootholdTag);
     public bool HasNotifications => ManagerUpdateAvailable || FootholdUpdateAvailable;
 }

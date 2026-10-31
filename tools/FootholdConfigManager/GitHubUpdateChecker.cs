@@ -66,6 +66,15 @@ internal sealed class GitHubUpdateChecker
     public Task<UpdateCheckResult> AcknowledgeFootholdAsync(long id, string tag, CancellationToken cancellationToken = default) =>
         MutateAsync(state => state with { AcknowledgedFootholdReleaseId = id, AcknowledgedFootholdTag = tag }, cancellationToken);
 
+    public async Task<UpdateCheckResult> RecordImportedFootholdAsync(string? tag, CancellationToken cancellationToken = default)
+    {
+        var current = await GetCurrentAsync(cancellationToken).ConfigureAwait(false);
+        if (!ManagerBuildInfo.TryParseReleaseVersion(tag?.TrimStart('v', 'V'), out var imported)) return current;
+        if (current.PersistenceError is null && current.ImportedFootholdVersion is { } previous && previous >= imported) return current;
+        return await MutateAsync(state =>
+            ManagerBuildInfo.TryParseReleaseVersion(state.HighestImportedFootholdTag?.TrimStart('v', 'V'), out var latest) && latest >= imported
+                ? state : state with { HighestImportedFootholdTag = "v" + imported.ToString(imported.Revision == 0 ? 3 : 4) }, cancellationToken).ConfigureAwait(false);
+    }
     public Task<UpdateCheckResult> SkipManagerAsync(CancellationToken cancellationToken = default) =>
         MutateAsync(state => state.Manager.Data is { } manager
             ? state with { SkippedManagerVersion = manager.Version.ToString(4) } : state, cancellationToken);
@@ -101,6 +110,7 @@ internal sealed class GitHubUpdateChecker
             ? release.RetryAfterUtc : manager.RetryAfterUtc;
         if (retryAfterUtc > _timeProvider.GetUtcNow()) return snapshot;
         var changed = false;
+        var managerChecked = false;
         if (NeedsCheck(release, force))
         {
             release = await ReadFeedAsync(ReleasesUrl, release, ParseRelease, cancellationToken).ConfigureAwait(false);
@@ -109,6 +119,7 @@ internal sealed class GitHubUpdateChecker
         if (NeedsCheck(manager, force) && !(release.RetryAfterUtc > _timeProvider.GetUtcNow()))
         {
             manager = await ReadFeedAsync(ManagerUrl, manager, ParseManager, cancellationToken).ConfigureAwait(false);
+            managerChecked = true;
             changed = true;
         }
         await _stateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -121,7 +132,7 @@ internal sealed class GitHubUpdateChecker
                 _state = _state with { Manager = manager, Foothold = release };
                 SaveState();
             }
-            return CurrentResult();
+            return CurrentResult() with { ManagerCheckedThisOperation = managerChecked };
         }
         finally { _stateGate.Release(); }
     }
@@ -292,6 +303,8 @@ internal sealed class GitHubUpdateChecker
             Manager = manager with { ETag = ValidETag(manager.ETag) }, Foothold = release with { ETag = ValidETag(release.ETag) },
             AcknowledgedFootholdReleaseId = state.AcknowledgedFootholdReleaseId > 0 ? state.AcknowledgedFootholdReleaseId : null,
             AcknowledgedFootholdTag = state.AcknowledgedFootholdTag is { Length: <= 256 } ? state.AcknowledgedFootholdTag : null,
+            HighestImportedFootholdTag = ManagerBuildInfo.TryParseReleaseVersion(state.HighestImportedFootholdTag?.TrimStart('v', 'V'), out var imported)
+                ? "v" + imported.ToString(imported.Revision == 0 ? 3 : 4) : null,
             SkippedManagerVersion = ManagerBuildInfo.TryParseReleaseVersion(state.SkippedManagerVersion, out var skipped) ? skipped.ToString(4) : null
         };
     }

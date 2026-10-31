@@ -15,11 +15,11 @@ internal sealed partial class SignedReleaseService
         ConfigSearchIndex.cs ControlTreeDisposer.cs DcsWeatherCatalog.cs DebouncedSearchQuery.cs
         DuplicateTableRepair.cs ExperimentBootstrap.cs GitHubUpdateChecker.cs GuiMetadata.cs LoadingScreenController.cs
         LoadingScreenForm.cs LuaSyntaxValidator.cs LuaSyntaxValidatorRegressionSelfTest.cs MainForm.CategoryNavigation.cs
-        MainForm.cs MainForm.DropdownTypography.cs MainForm.InputChrome.cs MainForm.InstanceImports.cs
+        MainForm.cs MainForm.DropdownTypography.cs MainForm.IncrementalRefresh.cs MainForm.InputChrome.cs MainForm.InstanceImports.cs
         MainForm.LinkedTable.cs MainForm.LoadingOperations.cs MainForm.ManagedLists.cs MainForm.NewVisibility.cs
         MainForm.OptionsChanged.cs MainForm.PerformanceProbe.cs MainForm.PopupScrollbars.cs MainForm.PreviewAppearance.cs
         MainForm.PreviewStartup.cs MainForm.RequiredAircraft.cs MainForm.RequiredValues.cs MainForm.Scrollbars.cs
-        MainForm.SignedRelease.cs MainForm.StartupPreparation.cs MainForm.TableSizing.cs MainForm.TemplateWorkspace.cs
+        MainForm.SignedRelease.cs MainForm.ResponsiveLayout.cs MainForm.StartupPreparation.cs MainForm.TableSizing.cs MainForm.TemplateWorkspace.cs
         MainForm.TupleChoices.cs MainForm.Updates.cs MainForm.Weather.cs ManagerBuildInfo.cs ManagerSelfUpdater.cs
         ManagerStartupContext.cs MissionDateTimeSettings.cs MissionOptions.cs MissionWeather.cs PendingNewItemStore.cs
         PresetStore.cs Program.cs RadarLoadingForm.cs RuntimeSettings.cs SingleInstanceCoordinator.cs SplashPictureSequence.cs
@@ -28,7 +28,7 @@ internal sealed partial class SignedReleaseService
         WeatherExportNames.cs WeatherLua.cs WeatherMizService.cs WeatherPreviewControls.cs WeatherProfileStore.cs
         WeatherScrollHost.cs WeatherSettings.cs WeatherWindCoupling.cs WeatherWindDial.cs WeatherWindow.Bindings.cs
         WeatherWindow.Clouds.cs WeatherWindow.Controls.cs WeatherWindow.cs WeatherWindow.Export.cs WeatherWindow.Focus.cs
-        WeatherWindow.MissionOptions.cs WeatherWindow.Options.cs WeatherWindow.Time.cs WeatherWindow.Visuals.cs
+        WeatherWindow.Import.cs WeatherWindow.MissionOptions.cs WeatherWindow.Options.cs WeatherWindow.Time.cs WeatherWindow.Visuals.cs
         WeatherWindow.Zoom.cs WheelSafeControls.cs
         SignedReleaseContracts.cs SignedReleaseCommands.cs SignedReleaseService.cs SignedReleaseSnapshot.cs SignedReleaseMonitor.cs SignedReleaseDialog.cs
         FootholdConfigManager.csproj packages.lock.json MainForm.resx WheelSafeControls.resx ThirdPartyNotices.txt

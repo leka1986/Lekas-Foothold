@@ -98,7 +98,7 @@ internal static class UserExeExporter
 
     internal static string? FindProjectDirectory()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        var dir = new FileInfo(Environment.ProcessPath!).Directory;
         while (dir is not null)
         {
             var candidate = Path.Combine(dir.FullName, "FootholdConfigManager.csproj");

@@ -59,10 +59,29 @@ internal sealed class WeatherInputFrame : Panel
         input.Dock = DockStyle.None;
         input.Margin = Padding.Empty;
         input.MouseEnter += (_, _) => { _hover = true; Invalidate(); };
-        input.MouseLeave += (_, _) => { _hover = false; Invalidate(); };
+        input.MouseLeave += (_, _) => ClearHover();
         input.Enter += (_, _) => Invalidate();
         input.Leave += (_, _) => Invalidate();
         input.EnabledChanged += (_, _) => Invalidate();
+        if (input is ComboBox combo)
+        {
+            combo.ChangeUICues += (_, args) => { if (args.ChangeFocus) Invalidate(); };
+            combo.MouseMove += (_, args) =>
+            {
+                var hover = combo.ClientRectangle.Contains(args.Location);
+                if (_hover == hover) return;
+                _hover = hover; Invalidate();
+            };
+            combo.DropDown += (_, _) => Invalidate();
+            combo.DropDownClosed += (_, _) => { _hover = combo.ClientRectangle.Contains(combo.PointToClient(Control.MousePosition)); Invalidate(); };
+        }
+    }
+
+    internal void ClearHover()
+    {
+        if (!_hover) return;
+        _hover = false;
+        Invalidate();
     }
 
     internal Control Input { get; }
@@ -84,7 +103,8 @@ internal sealed class WeatherInputFrame : Panel
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        var line = Input.Enabled && (Input.ContainsFocus || _hover) ? FocusColor : BorderColor;
+        var focused = Input is ComboBox combo ? MainForm.InputChrome.ShowChoiceFocus(combo) : Input.ContainsFocus;
+        var line = Input.Enabled && (focused || _hover) ? FocusColor : BorderColor;
         MainForm.InputChrome.DrawFrame(e.Graphics, ClientRectangle, BackColor, line, DeviceDpi / 96f);
     }
 }

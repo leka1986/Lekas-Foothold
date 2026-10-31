@@ -22,6 +22,12 @@ internal sealed partial class MainForm
             if (Handle != info.List) { ReleaseHandle(); AssignHandle(info.List); }
         }
 
+        internal static void TrackClientLeave(IntPtr window)
+        {
+            var tracking = new Tracking { Size = (uint)Marshal.SizeOf<Tracking>(), Flags = 2, Window = window };
+            TrackMouseEvent(ref tracking);
+        }
+
         internal void PrepareInstantOpening() => _instantOpening = true;
         internal void CancelInstantOpening() => _instantOpening = false;
 
@@ -88,6 +94,8 @@ internal sealed partial class MainForm
 
         protected override void WndProc(ref Message message)
         {
+            if (message.Msg is 0x0201 or 0x0203 or 0x00A1 or 0x00A3) InputChrome.SetChoiceMouseFocus(_owner, true);
+            else if (message.Msg is 0x0100 or 0x0104) InputChrome.SetChoiceMouseFocus(_owner, false);
             if (message.Msg == 0x0047 && _instantOpening) // WM_WINDOWPOSCHANGED: retain native final placement.
             {
                 base.WndProc(ref message);

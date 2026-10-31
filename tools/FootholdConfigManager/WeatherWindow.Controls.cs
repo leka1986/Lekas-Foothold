@@ -109,16 +109,17 @@ internal sealed partial class WeatherWindow : Form
         viewport.Layout += (_, _) => _root.Height = Math.Max(S(650), viewport.ClientSize.Height);
         Controls.Add(new WeatherScrollHost(viewport) { Dock = DockStyle.Fill });
         _workspaceTabs.ItemSize = new Size(S(142), S(38));
-        var weatherPage = new TabPage("Weather") { Padding = Padding.Empty };
+        var weatherPage = new TabPage("Weather") { Padding = new Padding(0, S(12), 0, 0) };
         var weatherBody = _weatherBody = new TableLayoutPanel { Name = "WeatherBody", Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
         weatherBody.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         weatherBody.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, S(390)));
-        weatherBody.RowStyles.Add(new RowStyle(SizeType.Absolute, S(132)));
+        weatherBody.RowStyles.Add(new RowStyle(SizeType.Absolute, S(148)));
         weatherBody.SizeChanged += (_, _) => LayoutWeatherColumns();
         weatherBody.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         weatherPage.Controls.Add(weatherBody);
         _workspaceTabs.TabPages.Add(weatherPage);
         _workspaceTabs.TabPages.Add(BuildMissionOptionsTab());
+        _workspaceTabs.TabPages.Add(BuildMizImportTab());
         var workspace = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
         workspace.Controls.Add(_workspaceTabs);
         _close = Button("Close", LeaveWeather, "WeatherClose");
@@ -133,10 +134,16 @@ internal sealed partial class WeatherWindow : Form
         var install = new TableLayoutPanel { Name = "WeatherTopFields", Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 4, Margin = new Padding(0, 0, S(16), 0), MaximumSize = new Size(S(680), 0) };
         install.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         install.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        install.RowStyles.Add(new RowStyle(SizeType.Absolute, S(22)));
+        install.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         install.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));
         install.RowStyles.Add(new RowStyle(SizeType.Absolute, S(22)));
         install.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));
+        _installStatus.Margin = new Padding(0, S(2), 0, S(8));
+        install.SizeChanged += (_, _) =>
+        {
+            var width = Math.Max(1, install.ClientSize.Width - install.Padding.Horizontal);
+            if (_installStatus.MaximumSize.Width != width) _installStatus.MaximumSize = new Size(width, 0);
+        };
         install.Controls.Add(_installStatus, 0, 0);
         install.SetColumnSpan(_installStatus, 2);
         _installation.AccessibleName = "DCS installation";

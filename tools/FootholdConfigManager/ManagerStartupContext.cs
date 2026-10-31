@@ -56,6 +56,11 @@ internal sealed class ManagerStartupContext : ApplicationContext
                 _loading.Presentation.Owner = manager;
                 manager.FormClosed += (_, _) => { if (!_disposed) _lifetime.Cancel(); };
                 manager.Show();
+                // Re-register the splash with the shell after attaching its hidden owner.
+                _loading.Presentation.Icon = manager.Icon;
+                _loading.Presentation.Hide();
+                _loading.Presentation.Show();
+                _loading.Presentation.Refresh(); // Paint the photo and child controls before synchronous preparation.
                 await manager.PrepareConfigViewsAsync(progress, cancellationToken);
                 await manager.PrepareMissionSettingsAsync(progress, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();

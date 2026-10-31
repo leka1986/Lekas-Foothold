@@ -115,6 +115,9 @@ internal sealed class RadarLoadingForm : Form
         {
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
             graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            using var faceClip = new GraphicsPath();
+            faceClip.AddEllipse(0, 0, size, size);
+            graphics.SetClip(faceClip, CombineMode.Intersect);
             graphics.DrawImage(_icon, new Rectangle(0, 0, size, size));
             var screen = RadarScreen(size);
             using var background = new SolidBrush(Color.FromArgb(3, 30, 25));

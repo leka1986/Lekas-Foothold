@@ -884,6 +884,17 @@ internal sealed partial class ConfigDocument
 
     public string Path { get; }
     public string NewLine { get; }
+    public string? MissionReleaseTag
+    {
+        get
+        {
+            const string prefix = "-- Foothold release: ";
+            if (_lines.Count == 0 || !_lines[0].StartsWith(prefix, StringComparison.Ordinal)) return null;
+            var tag = _lines[0][prefix.Length..].Trim();
+            return ManagerBuildInfo.TryParseReleaseVersion(tag.TrimStart('v', 'V'), out var version)
+                ? "v" + version.ToString(version.Revision == 0 ? 3 : 4) : null;
+        }
+    }
     public GuiMetadataStore Metadata { get; private set; } = new();
     public List<ConfigEntry> Entries { get; } = new();
     public IReadOnlyDictionary<string, string> GuiTableDisabledWhen => _guiTableDisabledWhen;

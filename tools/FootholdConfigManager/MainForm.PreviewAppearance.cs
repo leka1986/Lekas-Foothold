@@ -16,15 +16,33 @@ internal sealed partial class MainForm
         var missionSettings = _weatherWindow is { Visible: true };
         var wrapped = _previewCommentsButton.Visible && !missionSettings && ClientSize.Width < Zoomed(1070);
         footer.SuspendLayout();
+        var updateWidth = _updatesButton is PreviewButton { HasUpdateNotice: true } notice
+            ? TextRenderer.MeasureText(notice.Text, notice.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width
+              + TextRenderer.MeasureText("NEW", notice.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width
+              + Math.Max(68, Zoomed(68)) + notice.Margin.Horizontal
+            : Zoomed(116);
         var widths = new[] { 190, 0, 180, 42, 130, 60, 116, 0 };
         for (var column = 0; column < widths.Length; column++)
             if (column != 1) SetColumnWidth(footer, column, column == 5
                 ? Math.Max(Zoomed(widths[column]), TextRenderer.MeasureText("About", Font, Size.Empty,
                     TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width + 14 + Zoomed(2) * 2)
                 : widths[column] == 0 ? 0 : Zoomed(widths[column]));
+        SetColumnWidth(footer, 6, updateWidth);
+        var wrapUpdates = _updatesButton is not null && footer.ClientSize.Width > 0 &&
+            footer.ColumnStyles.Cast<ColumnStyle>().Where(style => style.SizeType == SizeType.Absolute).Sum(style => style.Width)
+                + Zoomed(100) > footer.ClientSize.Width;
+        if (wrapUpdates) SetColumnWidth(footer, 6, 0);
+        if (_updatesButton is not null)
+        {
+            footer.SetColumnSpan(_updatesButton, 1);
+            footer.SetCellPosition(_updatesButton, new TableLayoutPanelCellPosition(wrapUpdates ? 2 : 6, wrapUpdates ? 1 : 0));
+            footer.SetColumnSpan(_updatesButton, wrapUpdates ? 5 : 1);
+            _updatesButton.Dock = wrapUpdates ? DockStyle.Right : DockStyle.Fill;
+            _updatesButton.Width = Math.Max(1, updateWidth - _updatesButton.Margin.Horizontal);
+        }
         SetRowHeight(footer, 0, Zoomed(40));
-        SetRowHeight(footer, 1, wrapped ? Zoomed(40) : 0);
-        SetRowHeight(_rootLayout, 2, Zoomed(wrapped ? 80 : 40));
+        SetRowHeight(footer, 1, wrapped || wrapUpdates ? Zoomed(40) : 0);
+        SetRowHeight(_rootLayout, 2, Zoomed(wrapped || wrapUpdates ? 80 : 40));
         footer.SetCellPosition(_previewCommentsButton, new TableLayoutPanelCellPosition(wrapped ? 0 : 7, wrapped ? 1 : 0));
         footer.ResumeLayout();
         ApplyConfigSearchBarSizing();
@@ -71,6 +89,12 @@ internal sealed partial class MainForm
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                 ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         }
+        private bool _hasUpdateNotice;
+        internal bool HasUpdateNotice
+        {
+            get => _hasUpdateNotice;
+            set { if (_hasUpdateNotice != value) { _hasUpdateNotice = value; Invalidate(); } }
+        }
         private bool _hover;
         private bool _pressed;
 
@@ -85,16 +109,34 @@ internal sealed partial class MainForm
             e.Graphics.Clear(Parent?.BackColor ?? MainBackground);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             var primary = Text == "Add row";
-            var fillColor = !Enabled ? BackColor : primary ? PrimaryActionColor
+            var updateNotice = HasUpdateNotice && Enabled;
+            var noticeFill = SystemInformation.HighContrast ? SystemColors.Highlight : IsDarkPalette() ? Color.FromArgb(63, 223, 202) : Color.FromArgb(8, 122, 115);
+            var fillColor = !Enabled ? BackColor : updateNotice ? noticeFill : primary ? PrimaryActionColor
                 : _pressed ? FlatAppearance.MouseDownBackColor : _hover ? FlatAppearance.MouseOverBackColor : BackColor;
-            var textColor = !Enabled ? HelpTextColor : primary ? Color.White : ForeColor;
+            var textColor = !Enabled ? HelpTextColor : updateNotice ? (SystemInformation.HighContrast ? SystemColors.HighlightText : IsDarkPalette() ? Color.FromArgb(7, 46, 42) : Color.White) : primary ? Color.White : ForeColor;
             using var shape = ConfigSearchSurface.RoundedRectangle(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), 5);
             using var fill = new SolidBrush(fillColor);
             e.Graphics.FillPath(fill, shape);
-            if (primary || FlatAppearance.BorderSize > 0)
+            if (primary || updateNotice || FlatAppearance.BorderSize > 0)
             {
-                using var border = new Pen(primary ? PrimaryActionColor : FlatAppearance.BorderColor, primary ? 1 : FlatAppearance.BorderSize);
+                using var border = new Pen(updateNotice ? noticeFill : primary ? PrimaryActionColor : FlatAppearance.BorderColor, primary || updateNotice ? 1 : FlatAppearance.BorderSize);
                 e.Graphics.DrawPath(border, shape);
+            }
+            if (updateNotice)
+            {
+                var badgeSize = TextRenderer.MeasureText("NEW", Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+                var badge = new Rectangle(Width - badgeSize.Width - 21, (Height - Font.Height - 6) / 2, badgeSize.Width + 12, Font.Height + 6);
+                using var badgeBorder = new Pen(textColor);
+                e.Graphics.DrawRectangle(badgeBorder, badge);
+                TextRenderer.DrawText(e.Graphics, "NEW", Font, badge, textColor,
+                    TextFormatFlags.SingleLine | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                var updateIconSize = Math.Min(18, Math.Max(12, Height - 14));
+                DrawToolbarIcon(e.Graphics, ToolbarIconKind.Import, new Rectangle(9, (Height - updateIconSize) / 2, updateIconSize, updateIconSize), textColor);
+                var textLeft = 9 + updateIconSize + 7;
+                TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(textLeft, 0, Math.Max(1, badge.Left - textLeft - 7), Height), textColor,
+                    TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+                if (Focused) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -4, -4), textColor, fillColor);
+                return;
             }
             if (Text is "Dark mode" or "Light mode")
             {

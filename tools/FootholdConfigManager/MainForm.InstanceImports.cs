@@ -48,6 +48,8 @@ internal sealed partial class MainForm
         public ConfigDocument CleanSource => _cleanSource;
         private readonly List<(string Name, string Path)> _targets;
         private List<InstanceImportPlan>? _allPlans;
+        private CancellationTokenSource? _preparationCts;
+        private Task<List<InstanceImportPlan>>? _preparationTask;
         public InstanceImportScope(MainForm owner, InstanceImportPlan current, ConfigDocument cleanSource)
         {
             Current = current; _cleanSource = cleanSource;
@@ -64,29 +66,91 @@ internal sealed partial class MainForm
             {
                 if (!AllInstances) return new List<InstanceImportPlan> { Current };
                 if (_allPlans is not null) return _allPlans;
-                _allPlans = new List<InstanceImportPlan> { Current };
-                foreach (var target in _targets)
-                {
-                    try
-                    {
-                        if (!File.Exists(target.Path))
-                        {
-                            Skipped.Add(target.Name + ": matching config is missing.");
-                            continue;
-                        }
-                        var current = ConfigDocument.Load(target.Path);
-                        var currentErrors = current.ValidateForImport(new List<string>());
-                        if (currentErrors.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, currentErrors.Take(8)));
-                        var plan = PrepareInstanceImport(current, _cleanSource.CreateWorkingCopy(),
-                            TryLoadStoredMizDefaultsForConfig(target.Path), target.Name);
-                        var errors = plan.Output.ValidateForImport(plan.Preview.ImportWarnings);
-                        if (errors.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
-                        _allPlans.Add(plan);
-                    }
-                    catch (Exception ex) { Skipped.Add(target.Name + ": " + ex.Message); }
-                }
-                return _allPlans;
+                if (_preparationTask is not null) return _preparationTask.GetAwaiter().GetResult();
+                return BuildAllPlans(CancellationToken.None);
             }
+        }
+        public Task<List<InstanceImportPlan>> PrepareAllAsync()
+        {
+            if (!AllInstances) return Task.FromResult(new List<InstanceImportPlan> { Current });
+            if (_allPlans is not null) return Task.FromResult(_allPlans);
+            if (_preparationTask is not null) return _preparationTask;
+            _preparationCts = new CancellationTokenSource();
+            var token = _preparationCts.Token;
+            _preparationTask = Task.Run(() => BuildAllPlans(token), token);
+            return _preparationTask;
+        }
+        public void CancelPreparation() => _preparationCts?.Cancel();
+        public async Task CancelAndWaitForPreparationAsync()
+        {
+            var task = _preparationTask;
+            var cancellation = _preparationCts;
+            if (task is null || cancellation is null) return;
+            var token = cancellation.Token;
+            cancellation.Cancel();
+            try { await task; }
+            catch (OperationCanceledException ex) when (token.IsCancellationRequested && ex.CancellationToken == token) { }
+            finally
+            {
+                if (ReferenceEquals(_preparationTask, task))
+                {
+                    _preparationTask = null;
+                    _preparationCts = null;
+                    cancellation.Dispose();
+                }
+            }
+        }
+        private List<InstanceImportPlan> BuildAllPlans(CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            if (_allPlans is not null) return _allPlans;
+            var plans = new List<InstanceImportPlan> { Current };
+            var skipped = new List<string>();
+            List<StoredMizDefaultsInfo>? defaultSources = null;
+            Dictionary<string, ConfigDocument>? successfulDefaults = null;
+            ConfigDocument? LoadPreviousDefaults(string configPath)
+            {
+                defaultSources ??= LoadStoredRestoreDefaultsSources();
+                var source = SelectStoredMizDefaultsForConfig(defaultSources, configPath);
+                if (source is null) return null;
+                string key;
+                try { key = Path.GetFullPath(source.ConfigPath); }
+                catch { return null; }
+                if (successfulDefaults is not null && successfulDefaults.TryGetValue(key, out var cached))
+                    return File.Exists(source.ConfigPath) ? cached : null;
+                var document = TryLoadStoredMizDefaults(source);
+                if (document is not null)
+                    (successfulDefaults ??= new(StringComparer.OrdinalIgnoreCase)).Add(key, document);
+                return document;
+            }
+            foreach (var target in _targets)
+            {
+                token.ThrowIfCancellationRequested();
+                try
+                {
+                    if (!File.Exists(target.Path))
+                    {
+                        skipped.Add(target.Name + ": matching config is missing.");
+                        continue;
+                    }
+                    var current = ConfigDocument.Load(target.Path);
+                    var currentErrors = current.ValidateForImport(new List<string>());
+                    if (currentErrors.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, currentErrors.Take(8)));
+                    token.ThrowIfCancellationRequested();
+                    var plan = PrepareInstanceImport(current, _cleanSource.CreateWorkingCopy(),
+                        LoadPreviousDefaults(target.Path), target.Name);
+                    var errors = plan.Output.ValidateForImport(plan.Preview.ImportWarnings);
+                    if (errors.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Take(8)));
+                    token.ThrowIfCancellationRequested();
+                    plans.Add(plan);
+                }
+                catch (OperationCanceledException ex) when (token.IsCancellationRequested && ex.CancellationToken == token) { throw; }
+                catch (Exception ex) { skipped.Add(target.Name + ": " + ex.Message); }
+            }
+            token.ThrowIfCancellationRequested();
+            Skipped.AddRange(skipped);
+            _allPlans = plans;
+            return plans;
         }
     }
 
@@ -97,21 +161,35 @@ internal sealed partial class MainForm
         public List<string> Failed { get; } = new();
     }
 
-    private InstanceImportResult CommitInstanceImports(InstanceImportScope scope, string sourcePath,
-        ExtractedMizConfig? extracted)
+    private async Task<InstanceImportResult> CommitInstanceImports(InstanceImportScope scope, string sourcePath,
+        ExtractedMizConfig? extracted, IProgress<LoadingProgress>? progress = null)
     {
         var plans = scope.Plans;
         var result = new InstanceImportResult();
+        var instanceNumber = 0;
         foreach (var plan in plans)
         {
+            instanceNumber++;
+            if (progress is not null)
+            {
+                progress.Report(new LoadingProgress($"Validating instance {instanceNumber} of {plans.Count}…", instanceNumber - 1, plans.Count));
+                await Task.Delay(1);
+            }
             ApplyInstanceImportChoices(plan);
             var errors = plan.Output.ValidateForImport(plan.Preview.ImportWarnings);
             if (errors.Count > 0)
                 throw new InvalidOperationException(plan.Name + ": " + string.Join(Environment.NewLine, errors.Take(8)));
         }
 
+        instanceNumber = 0;
         foreach (var plan in plans)
         {
+            instanceNumber++;
+            if (progress is not null)
+            {
+                progress.Report(new LoadingProgress($"Updating instance {instanceNumber} of {plans.Count}: {plan.Name}…", instanceNumber - 1, plans.Count));
+                await Task.Delay(1);
+            }
             try
             {
                 StoreConfigBackup(plan.Current.Path, sourcePath, _settings.ServerProfiles,
@@ -141,8 +219,14 @@ internal sealed partial class MainForm
                     string.Join(", ", plan.Preview.DefaultedPlayerValues.Select(item => item.Key)));
         }
 
+        if (progress is not null)
+        {
+            progress.Report(new LoadingProgress("Finishing instance updates…", plans.Count, plans.Count));
+            await Task.Delay(1);
+        }
         if (result.Updated.Count > 0)
         {
+            RecordImportedMissionRelease(scope.CleanSource);
             try
             {
                 var targets = result.Updated.Select(plan => plan.Current.Path).ToList();
@@ -159,9 +243,10 @@ internal sealed partial class MainForm
         return result;
     }
 
-    private void CompleteInstanceImports(InstanceImportScope scope, string sourcePath, ExtractedMizConfig? extracted)
+    private async Task CompleteInstanceImports(InstanceImportScope scope, string sourcePath, ExtractedMizConfig? extracted,
+        IProgress<LoadingProgress>? progress = null)
     {
-        var result = CommitInstanceImports(scope, sourcePath, extracted);
+        var result = await CommitInstanceImports(scope, sourcePath, extracted, progress);
         if (result.Updated.Contains(scope.Current))
         {
             UpdateSelectedInstanceConfigPath(scope.Current.Current.Path);

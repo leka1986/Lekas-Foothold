@@ -39,7 +39,7 @@ internal sealed class WeatherPreferences
         MissionOptions.Validate();
         DateTime?.Validate();
         foreach (var profile in Profiles) profile.Settings.Validate();
-        if (WorkspaceTab is < 0 or > 1 || WeatherTab is < 0 or > 3 || CloudBaseUnit is < 0 or > 1
+        if (WorkspaceTab is < 0 or > 2 || WeatherTab is < 0 or > 3 || CloudBaseUnit is < 0 or > 1
             || PressureUnit is < 0 or > 2 || WindConvention is < 0 or > 1)
             throw new InvalidDataException("The mission settings file contains an invalid view selection.");
     }

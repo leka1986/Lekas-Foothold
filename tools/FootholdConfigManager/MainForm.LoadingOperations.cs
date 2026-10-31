@@ -10,6 +10,7 @@ internal sealed partial class MainForm
         if (_configLoadingOperation) return;
         var document = _document;
         _configLoadingOperation = true;
+        RefreshManagerUpdateNotice();
         _deferCategoryPresentation = _loadingScreen is not null;
         try
         {
@@ -42,6 +43,7 @@ internal sealed partial class MainForm
             _singleInstance?.SetStartupPresentation(null);
             if (!IsDisposed && !Disposing && _loadingScreen is not null)
                 CompleteCategoryPresentation(GetSelectedCategoryName());
+            RefreshManagerUpdateNotice();
         }
     }
 }

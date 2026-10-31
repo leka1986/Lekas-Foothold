@@ -107,7 +107,7 @@ internal sealed partial class WeatherWindow
         var rowSpan = table?.GetRowSpan(input) ?? 1;
         var index = parent.Controls.GetChildIndex(input);
         parent.Controls.Remove(input);
-        var inputHeight = InputSize(input, input is NumericUpDown ? 40 : 36);
+        var inputHeight = InputSize(input, input is NumericUpDown && input.Name != "MissionBirds" ? 40 : 36);
         var frame = new WeatherInputFrame(input, inputHeight) { Dock = dock, Margin = margin, Width = width, MinimumSize = dock == DockStyle.None ? new Size(width, inputHeight) : Size.Empty, Anchor = anchor, TabIndex = tabIndex };
         if (ReferenceEquals(table, _windLayout) && input is NumericUpDown)
         {

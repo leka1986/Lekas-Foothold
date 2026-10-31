@@ -139,6 +139,11 @@ internal sealed partial class WeatherWindow
     private void RefreshSummary()
     {
         if (_updating || _windSpeed[2] is null || _pressureUnit is null) return;
+        if (_workspaceTabs.SelectedIndex == 2)
+        {
+            _summary.Text = "Import selected settings into the editors; the source MIZ stays unchanged.";
+            return;
+        }
         var timeDescription = _changeTime.Checked
             ? (_changeDate.Checked ? _date.DateDraftSummary : "Keep mission date") + " · " + SelectedStartTime.ToString(@"hh\:mm\:ss")
             : "Keep mission date & time";

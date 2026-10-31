@@ -1472,6 +1472,7 @@ internal sealed partial class MainForm : Form
         };
         Load += (_, _) =>
         {
+            ApplyInitialResponsiveZoom();
             RefreshDcsDesanitizeStatus(updateStatusLine: false);
             LoadDefaultConfig();
             if (!_startupPreparationPending) CompleteStartupPreparation();
@@ -1504,6 +1505,29 @@ internal sealed partial class MainForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         base.OnFormClosing(e); // Includes every existing handler, including late Weather cancellation.
+        if (!e.Cancel && e.CloseReason == CloseReason.UserClosing)
+        {
+            HideCurrentGridSelectionHighlights();
+            foreach (var input in EnumerateChildControls<NumericUpDown>(_formHost))
+            {
+                _ = input.Value;
+            }
+            if (HasChanges())
+            {
+                var answer = MessageBox.Show(this,
+                    "You have unsaved configuration changes. Save them before closing?\n\nYes: save and close.\nNo: close without saving.\nCancel: return to the Manager.",
+                    "Unsaved changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button3);
+                if (answer == DialogResult.Yes)
+                {
+                    SaveConfig();
+                    e.Cancel = !_lastConfigSaveSucceeded || HasChanges();
+                }
+                else
+                {
+                    e.Cancel = answer != DialogResult.No;
+                }
+            }
+        }
         if (!e.Cancel && e.CloseReason != CloseReason.WindowsShutDown) _singleInstance?.BeginClosing();
     }
 
@@ -1574,17 +1598,23 @@ internal sealed partial class MainForm : Form
         LockedTextColor = Color.Firebrick;
     }
 
-    private void ToggleTheme()
+    private async void ToggleTheme()
     {
-        RestoreConfigSearchHighlight();
-        _darkMode = !_darkMode;
-        _settings.DarkMode = _darkMode;
-        _settings.Save();
-        ApplyThemePalette();
-        ApplyThemeToShell();
-        ClearCategoryPanelCache();
-        RefreshCurrentView();
-        SetStatus(_darkMode ? "Dark mode enabled." : "Light mode enabled.");
+        if (_configLoadingOperation) return;
+        await RunConfigLoadingAsync(async (progress, token) =>
+        {
+            RestoreConfigSearchHighlight();
+            _darkMode = !_darkMode;
+            _settings.DarkMode = _darkMode;
+            _settings.Save();
+            ApplyThemePalette();
+            ApplyThemeToShell();
+            ClearCategoryPanelCache();
+            RefreshCurrentView(invalidateCachedPanels: false);
+            await PrepareConfigViewsAsync(progress, token);
+            await PrepareMissionSettingsAsync(progress, token);
+            SetStatus(_darkMode ? "Dark mode enabled." : "Light mode enabled.");
+        }, CancellationToken.None, _darkMode ? "Switching to light mode…" : "Switching to dark mode…");
     }
 
     private void ApplyThemeToShell()
@@ -1637,7 +1667,7 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private static void ApplyThemeToControl(Control control, bool restyleButtons)
+    private static void ApplyThemeToControl(Control control, bool restyleButtons, MainForm? configOwner = null)
     {
         switch (control)
         {
@@ -1650,8 +1680,8 @@ internal sealed partial class MainForm : Form
             case NumericUpDown:
             case ListBox:
                 StyleInput(control);
-                if ((control is ComboBox or NumericUpDown || control is TextBoxBase { ReadOnly: false } && control.Parent is not NumericUpDown && control.Parent is not DataGridView) && control.FindForm() is MainForm owner &&
-                    (owner._formHost.Contains(control) || ReferenceEquals(control, owner._choiceBox) || ReferenceEquals(control, owner._valueBox) ||
+                if ((control is ComboBox or NumericUpDown || control is TextBoxBase { ReadOnly: false } && control.Parent is not NumericUpDown && control.Parent is not DataGridView) && (configOwner ?? (control.FindForm() as MainForm)) is { } owner &&
+                    (configOwner is not null || owner._formHost.Contains(control) || ReferenceEquals(control, owner._choiceBox) || ReferenceEquals(control, owner._valueBox) ||
                      ReferenceEquals(control, owner._redMultiplier) || ReferenceEquals(control, owner._blueMultiplier) || owner._tuplePanel.Contains(control)))
                 {
                     if (control is ComboBox configChoice) owner.StyleConfigDropdown(configChoice);
@@ -1664,7 +1694,7 @@ internal sealed partial class MainForm : Form
                 break;
 
             case DataGridView grid:
-                ApplyGridTheme(grid);
+                ApplyGridTheme(grid, configOwner);
                 break;
 
             case TabControl tabControl:
@@ -1734,7 +1764,7 @@ internal sealed partial class MainForm : Form
 
         foreach (Control child in control.Controls)
         {
-            ApplyThemeToControl(child, restyleButtons);
+            ApplyThemeToControl(child, restyleButtons, configOwner);
         }
     }
 
@@ -2266,15 +2296,49 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private void ZoomOut()
+    private async void ZoomOut()
     {
-        SetUiZoom(_uiZoomPercent - 10, persist: true);
+        await SetUiZoomAsync(_uiZoomPercent - 10);
     }
 
-    private void ZoomIn()
+    private async void ZoomIn()
     {
-        SetUiZoom(_uiZoomPercent + 10, persist: true);
+        await SetUiZoomAsync(_uiZoomPercent + 10);
     }
+
+    private async Task SetUiZoomAsync(int percent)
+    {
+        if (_configLoadingOperation || _weatherWindow is { IsDisposed: false, IsBusy: true }) return;
+        var zoomPercent = Math.Clamp(percent, 80, 130);
+        if (zoomPercent == _uiZoomPercent)
+        {
+            SetUiZoom(zoomPercent, persist: true);
+            return;
+        }
+        await RunConfigLoadingAsync(async (progress, token) =>
+        {
+            token.ThrowIfCancellationRequested();
+            SetUiZoom(zoomPercent, persist: true);
+            var hiddenWorkspace = _configWorkspace is { Visible: false } ? _configWorkspace : null;
+            try
+            {
+                // Prepare native controls under the radar, including when Mission settings covers Config.
+                hiddenWorkspace?.Show();
+                if (_configZoomRefreshPending || IsRawCategorySelected())
+                {
+                    RenderSelectedCategory();
+                    _configZoomRefreshPending = false;
+                }
+                await PrepareConfigViewsAsync(progress, token);
+            }
+            finally
+            {
+                if (hiddenWorkspace is { IsDisposed: false }) hiddenWorkspace.Hide();
+            }
+            await PrepareMissionSettingsAsync(progress, token);
+        }, CancellationToken.None, "Changing zoom…");
+    }
+
 
     private void SetUiZoom(int percent, bool persist)
     {
@@ -2465,12 +2529,7 @@ internal sealed partial class MainForm : Form
 
         StyleToolbarMenus();
 
-        if (_mainSplit is not null)
-        {
-            var desiredWidth = Zoomed(260);
-            var maxWidth = Math.Max(Zoomed(210), ClientSize.Width / 3);
-            _mainSplit.SplitterDistance = Math.Min(desiredWidth, maxWidth);
-        }
+        ApplyCategoryNavigationWidth();
 
         if (_zoomLayout is not null)
         {
@@ -2564,15 +2623,9 @@ internal sealed partial class MainForm : Form
 
     private static Rectangle? FindWorkingAreaForBounds(Rectangle bounds)
     {
-        foreach (var screen in Screen.AllScreens)
-        {
-            if (screen.WorkingArea.IntersectsWith(bounds) || screen.WorkingArea.Contains(bounds.Location))
-            {
-                return screen.WorkingArea;
-            }
-        }
-
-        return null;
+        var screens = Screen.AllScreens;
+        var index = FindWorkingAreaIndexForBounds(bounds, screens.Select(screen => screen.WorkingArea).ToArray());
+        return index >= 0 ? screens[index].WorkingArea : null;
     }
 
     private static Size GetMainMinimumSize(Rectangle workingArea)
@@ -3771,7 +3824,7 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private static void ApplyGridTheme(DataGridView grid)
+    private static void ApplyGridTheme(DataGridView grid, MainForm? configOwner = null)
     {
         grid.BackgroundColor = IsDarkPalette() ? EditorBackground : InputBackground;
         grid.GridColor = BorderColor;
@@ -3815,7 +3868,7 @@ internal sealed partial class MainForm : Form
         grid.Leave -= HideGridSelectionHighlight;
         grid.Leave += HideGridSelectionHighlight;
 
-        var dropdownOwner = grid.FindForm() as MainForm;
+        var dropdownOwner = configOwner ?? (grid.FindForm() as MainForm);
         var valueRowHeight = dropdownOwner?.ConfigCellValueFont.Height + 6 ?? 0;
         if (dropdownOwner is not null)
         {
@@ -4375,6 +4428,7 @@ internal sealed partial class MainForm : Form
         _formHost.MouseDown += HandleBackgroundMouseDown;
         split.Panel2.BackColor = MainBackground;
         split.Panel2.Controls.Add(_formHost);
+        split.SizeChanged += (_, _) => ApplyCategoryNavigationWidth();
         return split;
     }
 
@@ -4486,7 +4540,7 @@ internal sealed partial class MainForm : Form
         foreach (var percent in new[] { 80, 90, 100, 110, 120, 130 })
         {
             var choice = percent;
-            zoomMenu.Items.Add(choice + "%", null, (_, _) => SetUiZoom(choice, persist: true));
+            zoomMenu.Items.Add(choice + "%", null, async (_, _) => await SetUiZoomAsync(choice));
         }
         _zoomLabel.ContextMenuStrip = zoomMenu;
         _zoomLabel.Cursor = Cursors.Hand;
@@ -6229,20 +6283,23 @@ internal sealed partial class MainForm : Form
             RefreshPresetButtonState();
             ClearUndo();
             ApplyTupleChoiceDefaults(null);
-            if (_undoStack.Count > 0)
+            var escortRepairsSaved = _undoStack.Count > 0;
+            if (escortRepairsSaved)
             {
+                _document.SavePrepared();
+                ClearUndo();
                 _optionsViewedCategory = null;
                 _categoryList.Invalidate();
             }
             if (loadWarnings.Count > 0)
             {
                 using var modal = _loadingScreen?.SuspendForModal();
-                SetStatus("Repaired config while loading. Use Save to write the repair.");
+                SetStatus(escortRepairsSaved ? "Repaired and saved config while loading." : "Repaired config while loading. Use Save to write the repair.");
                 MessageBox.Show(
                     this,
                     "The config was repaired while loading:" + Environment.NewLine +
                     string.Join(Environment.NewLine, loadWarnings) + Environment.NewLine + Environment.NewLine +
-                    "Use Save to write the repair to the config file.",
+                    (escortRepairsSaved ? "The repairs have been saved to the config file." : "Use Save to write the repair to the config file."),
                     "Config repaired",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -6398,18 +6455,43 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        if (_instanceBox.SelectedItem is InstanceItem instanceItem)
+        var previousDocument = _document;
+        var instanceItem = _instanceBox.SelectedItem as InstanceItem;
+        var previousProfilePath = instanceItem?.Profile.ConfigPath;
+        try
         {
-            instanceItem.Profile.ConfigPath = targetPath;
-            _settings.Save();
+            await RunConfigLoadingAsync((_, token) =>
+            {
+                token.ThrowIfCancellationRequested();
+                try
+                {
+                    if (instanceItem is not null)
+                    {
+                        instanceItem.Profile.ConfigPath = targetPath;
+                        _settings.Save();
+                    }
+                    LoadConfig(targetPath);
+                }
+                finally
+                {
+                    if (instanceItem is not null && ReferenceEquals(previousDocument, _document) &&
+                        !string.Equals(instanceItem.Profile.ConfigPath, previousProfilePath, StringComparison.Ordinal))
+                    {
+                        instanceItem.Profile.ConfigPath = previousProfilePath!;
+                        _settings.Save();
+                    }
+                }
+                return Task.CompletedTask;
+            }, CancellationToken.None, "Switching configuration…");
         }
-
-        await RunConfigLoadingAsync((_, token) =>
+        finally
         {
-            token.ThrowIfCancellationRequested();
-            LoadConfig(targetPath);
-            return Task.CompletedTask;
-        }, CancellationToken.None, "Switching configuration…");
+            if (!IsDisposed && !Disposing && ReferenceEquals(previousDocument, _document))
+            {
+                RefreshInstanceList();
+                RefreshConfigVariantList();
+            }
+        }
     }
 
     private async void SwitchInstance()
@@ -6437,15 +6519,40 @@ internal sealed partial class MainForm : Form
             var recovery = PromptForMissingInstanceRecovery(item.Profile, targetPath);
             if (recovery.Kind == MissingInstanceRecoveryKind.SelectPath && !string.IsNullOrWhiteSpace(recovery.Path))
             {
-                item.Profile.ConfigPath = Path.GetFullPath(recovery.Path);
-                _settings.Save();
-                var replacementPath = item.Profile.ConfigPath;
-                await RunConfigLoadingAsync((_, token) =>
+                var recoveryDocument = _document;
+                var previousRecoveryPath = item.Profile.ConfigPath;
+                var replacementPath = Path.GetFullPath(recovery.Path);
+                try
                 {
-                    token.ThrowIfCancellationRequested();
-                    LoadConfig(replacementPath);
-                    return Task.CompletedTask;
-                }, CancellationToken.None, "Switching instance…");
+                    await RunConfigLoadingAsync((_, token) =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        try
+                        {
+                            item.Profile.ConfigPath = replacementPath;
+                            _settings.Save();
+                            LoadConfig(replacementPath);
+                        }
+                        finally
+                        {
+                            if (ReferenceEquals(recoveryDocument, _document) &&
+                                !string.Equals(item.Profile.ConfigPath, previousRecoveryPath, StringComparison.Ordinal))
+                            {
+                                item.Profile.ConfigPath = previousRecoveryPath;
+                                _settings.Save();
+                            }
+                        }
+                        return Task.CompletedTask;
+                    }, CancellationToken.None, "Switching instance…");
+                }
+                finally
+                {
+                    if (!IsDisposed && !Disposing && ReferenceEquals(recoveryDocument, _document))
+                    {
+                        RefreshInstanceList();
+                        RefreshConfigVariantList();
+                    }
+                }
                 return;
             }
 
@@ -6458,9 +6565,10 @@ internal sealed partial class MainForm : Form
                     installed = InstallMissingInstanceConfigFromMiz(item.Profile, targetPath, recovery.Path);
                     return Task.CompletedTask;
                 }, CancellationToken.None, "Preparing instance configuration…");
-                if (!installed)
+                if (!installed && !IsDisposed && !Disposing)
                 {
                     RefreshInstanceList();
+                    RefreshConfigVariantList();
                 }
 
                 return;
@@ -6479,12 +6587,24 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        await RunConfigLoadingAsync((_, token) =>
+        var previousDocument = _document;
+        try
         {
-            token.ThrowIfCancellationRequested();
-            LoadConfig(targetPath);
-            return Task.CompletedTask;
-        }, CancellationToken.None, "Switching instance…");
+            await RunConfigLoadingAsync((_, token) =>
+            {
+                token.ThrowIfCancellationRequested();
+                LoadConfig(targetPath);
+                return Task.CompletedTask;
+            }, CancellationToken.None, "Switching instance…");
+        }
+        finally
+        {
+            if (!IsDisposed && !Disposing && ReferenceEquals(previousDocument, _document))
+            {
+                RefreshInstanceList();
+                RefreshConfigVariantList();
+            }
+        }
     }
 
     private MissingInstanceRecovery PromptForMissingInstanceRecovery(ServerProfileSettings profile, string missingPath)
@@ -6667,19 +6787,32 @@ internal sealed partial class MainForm : Form
             var targetPath = Path.GetFullPath(Path.Combine(targetDirectory, extractedConfig.ConfigFileName));
             if (File.Exists(targetPath))
             {
-                profile.ConfigPath = targetPath;
-                _settings.Save();
-                LoadConfig(targetPath);
-                using var modal = _loadingScreen?.SuspendForModal();
-                MessageBox.Show(
-                    this,
-                    "A " + extractedConfig.ConfigFileName + " already exists for this instance. It was opened and no file was overwritten.",
-                    "Install Missing Config",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                return true;
+                var previousDocument = _document;
+                var previousProfilePath = profile.ConfigPath;
+                try
+                {
+                    profile.ConfigPath = targetPath;
+                    _settings.Save();
+                    if (!LoadConfig(targetPath)) return false;
+                    using var modal = _loadingScreen?.SuspendForModal();
+                    MessageBox.Show(
+                        this,
+                        "A " + extractedConfig.ConfigFileName + " already exists for this instance. It was opened and no file was overwritten.",
+                        "Install Missing Config",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return true;
+                }
+                finally
+                {
+                    if (ReferenceEquals(previousDocument, _document) &&
+                        !string.Equals(profile.ConfigPath, previousProfilePath, StringComparison.Ordinal))
+                    {
+                        profile.ConfigPath = previousProfilePath;
+                        _settings.Save();
+                    }
+                }
             }
-
             var newDocument = ConfigDocument.Load(extractedConfig.Path);
             newDocument.RepairStringListSeparators();
             if (!ValidateMergeDocument(newDocument, "Install Missing Config validation failed", "The " + extractedConfig.ConfigFileName + " inside this MIZ"))
@@ -6690,10 +6823,15 @@ internal sealed partial class MainForm : Form
             RefreshStringListCatalogFromDefaults(newDocument);
             Directory.CreateDirectory(targetDirectory);
             newDocument.SaveTo(targetPath);
+            RecordImportedMissionRelease(newDocument);
             var storedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
             profile.ConfigPath = targetPath;
             _settings.Save();
-            LoadConfig(targetPath);
+            if (!LoadConfig(targetPath))
+            {
+                SetStatus("Installed " + extractedConfig.ConfigFileName + " for " + profile.Name + ", but opening it failed. The saved config was kept.");
+                return false;
+            }
             SetStatus("Installed " + extractedConfig.ConfigFileName + " from " + storedDefaults.MizName + " for " + profile.Name + ".");
             return true;
         }
@@ -8820,6 +8958,7 @@ internal sealed partial class MainForm : Form
         }
 
         var updatingSelectionUi = false;
+        TableLayoutPanel? currentDetailPanel = null;
         var targetCheckBoxes = new Dictionary<CopyTargetPlan, CheckBox>();
         var targetSummaryLabels = new Dictionary<CopyTargetPlan, Label>();
         var categoryCheckBoxes = new Dictionary<(CopyTargetPlan Plan, string CategoryName), CheckBox>();
@@ -8830,7 +8969,8 @@ internal sealed partial class MainForm : Form
         void AddRow(Control control)
         {
             rows.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            rows.Controls.Add(control, 0, rows.RowCount);
+            if (ReferenceEquals(control.Parent, rows)) rows.SetRow(control, rows.RowCount);
+            else rows.Controls.Add(control, 0, rows.RowCount);
             rows.RowCount++;
         }
 
@@ -8960,138 +9100,153 @@ internal sealed partial class MainForm : Form
 
         void RebuildRows()
         {
+            var scroll = scrollPanel.AutoScrollPosition;
             rows.SuspendLayout();
             try
             {
-                for (var i = rows.Controls.Count - 1; i >= 0; i--)
+                if (currentDetailPanel is not null)
                 {
-                    ControlTreeDisposer.Dispose(rows.Controls[i], _toolTip);
+                    ControlTreeDisposer.Dispose(currentDetailPanel, _toolTip);
+                    currentDetailPanel = null;
                 }
                 rows.RowStyles.Clear();
                 rows.RowCount = 0;
-                targetCheckBoxes.Clear();
-                targetSummaryLabels.Clear();
                 categoryCheckBoxes.Clear();
                 categorySummaryLabels.Clear();
                 changeCheckBoxes.Clear();
 
                 foreach (var plan in plans)
                 {
-                    var detailsColumnWidth = DialogButtonWidth("Hide details", 128);
-                    var targetRow = new TableLayoutPanel
+                    TableLayoutPanel targetRow;
+                    if (targetCheckBoxes.TryGetValue(plan, out var retainedCheck))
                     {
-                        AutoSize = true,
-                        Dock = DockStyle.Top,
-                        ColumnCount = 4,
-                        Padding = new Padding(0, Zoomed(4), 0, Zoomed(4)),
-                        BackColor = MainBackground
-                    };
-                    targetRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(28)));
-                    targetRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(220)));
-                    targetRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-                    targetRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, detailsColumnWidth));
-
-                    var targetCheck = new CheckBox
+                        targetRow = (TableLayoutPanel)retainedCheck.Parent!;
+                        retainedCheck.CheckState = GetTargetSelectionState(plan);
+                        retainedCheck.Enabled = plan.LoadError is null || plan.CanCreateMissingConfig;
+                        targetSummaryLabels[plan].Text = TargetSummary(plan);
+                        var retainedButton = (Button)targetRow.GetControlFromPosition(3, 0)!;
+                        retainedButton.Text = plan.CanCreateMissingConfig ? "Create config" : plan.IsExpanded ? "Hide details" : "Details";
+                        retainedButton.Enabled = plan.CanCreateMissingConfig || plan.Changes.Count > 0 || plan.LoadError is not null;
+                    }
+                    else
                     {
-                        ThreeState = true,
-                        AutoCheck = false,
-                        CheckState = GetTargetSelectionState(plan),
-                        Enabled = plan.LoadError is null || plan.CanCreateMissingConfig,
-                        Dock = DockStyle.Fill,
-                        Margin = new Padding(0),
-                        BackColor = MainBackground,
-                        ForeColor = PrimaryTextColor
-                    };
-                    targetCheck.Click += (_, _) =>
-                    {
-                        if (updatingSelectionUi)
+                        var detailsColumnWidth = DialogButtonWidth("Hide details", 128);
+                        targetRow = new TableLayoutPanel
                         {
-                            return;
-                        }
+                            AutoSize = true,
+                            Dock = DockStyle.Top,
+                            ColumnCount = 4,
+                            Padding = new Padding(0, Zoomed(4), 0, Zoomed(4)),
+                            BackColor = MainBackground
+                        };
+                        targetRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(28)));
+                        targetRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(220)));
+                        targetRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                        targetRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, detailsColumnWidth));
 
-                        var selectAll = !plan.IsTargetSelected ||
-                                        (!plan.MissingTargetConfig && plan.SelectedChangeCount < plan.Changes.Count);
-                        plan.IsTargetSelected = selectAll;
-                        if (selectAll && !plan.MissingTargetConfig)
+                        var targetCheck = new CheckBox
                         {
-                            plan.SelectedChangeIds.Clear();
-                            foreach (var change in plan.Changes)
+                            ThreeState = true,
+                            AutoCheck = false,
+                            CheckState = GetTargetSelectionState(plan),
+                            Enabled = plan.LoadError is null || plan.CanCreateMissingConfig,
+                            Dock = DockStyle.Fill,
+                            Margin = new Padding(0),
+                            BackColor = MainBackground,
+                            ForeColor = PrimaryTextColor
+                        };
+                        targetCheck.Click += (_, _) =>
+                        {
+                            if (updatingSelectionUi)
                             {
-                                plan.SelectedChangeIds.Add(change.Id);
-                            }
-                        }
-                        else
-                        {
-                            plan.SelectedChangeIds.Clear();
-                        }
-
-                        UpdateSelectionUi(plan);
-                    };
-                    targetCheckBoxes[plan] = targetCheck;
-                    targetRow.Controls.Add(targetCheck, 0, 0);
-
-                    targetRow.Controls.Add(new Label
-                    {
-                        Text = plan.Profile.Name,
-                        Dock = DockStyle.Fill,
-                        TextAlign = ContentAlignment.MiddleLeft,
-                        AutoEllipsis = true,
-                        BackColor = MainBackground,
-                        ForeColor = PrimaryTextColor
-                    }, 1, 0);
-
-                    var targetSummaryLabel = new Label
-                    {
-                        Text = TargetSummary(plan),
-                        Dock = DockStyle.Fill,
-                        TextAlign = ContentAlignment.MiddleLeft,
-                        AutoEllipsis = true,
-                        BackColor = MainBackground,
-                        ForeColor = plan.LoadError is null || plan.MissingTargetConfig ? HelpTextColor : Color.Firebrick
-                    };
-                    targetSummaryLabels[plan] = targetSummaryLabel;
-                    targetRow.Controls.Add(targetSummaryLabel, 2, 0);
-
-                    var targetButtonText = plan.CanCreateMissingConfig ? "Create config" : plan.IsExpanded ? "Hide details" : "Details";
-                    var detailsButton = new Button
-                    {
-                        Text = targetButtonText,
-                        Enabled = plan.CanCreateMissingConfig || plan.Changes.Count > 0 || plan.LoadError is not null,
-                        Dock = DockStyle.Fill,
-                        Margin = new Padding(Zoomed(4), 0, 0, 0),
-                        MinimumSize = new Size(detailsColumnWidth - Zoomed(4), DialogButtonHeight())
-                    };
-                    detailsButton.Click += (_, _) =>
-                    {
-                        if (plan.CanCreateMissingConfig)
-                        {
-                            try
-                            {
-                                ApplyCopyPlan(sourcePath, plan);
-                                plan.MarkCreated();
-                                changeGroupsByPlan.Remove(plan);
-                                SetStatus("Created " + sourceConfigLabel + " config for " + plan.Profile.Name + ".");
-                                RebuildRows();
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show(dialog, plan.Profile.Name + ": " + ex.Message, "Copy To Instances", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
                             }
 
-                            return;
-                        }
+                            var selectAll = !plan.IsTargetSelected ||
+                                            (!plan.MissingTargetConfig && plan.SelectedChangeCount < plan.Changes.Count);
+                            plan.IsTargetSelected = selectAll;
+                            if (selectAll && !plan.MissingTargetConfig)
+                            {
+                                plan.SelectedChangeIds.Clear();
+                                foreach (var change in plan.Changes)
+                                {
+                                    plan.SelectedChangeIds.Add(change.Id);
+                                }
+                            }
+                            else
+                            {
+                                plan.SelectedChangeIds.Clear();
+                            }
 
-                        var wasExpanded = plan.IsExpanded;
-                        foreach (var item in plans)
+                            UpdateSelectionUi(plan);
+                        };
+                        targetCheckBoxes[plan] = targetCheck;
+                        targetRow.Controls.Add(targetCheck, 0, 0);
+
+                        targetRow.Controls.Add(new Label
                         {
-                            item.IsExpanded = false;
-                        }
+                            Text = plan.Profile.Name,
+                            Dock = DockStyle.Fill,
+                            TextAlign = ContentAlignment.MiddleLeft,
+                            AutoEllipsis = true,
+                            BackColor = MainBackground,
+                            ForeColor = PrimaryTextColor
+                        }, 1, 0);
 
-                        plan.IsExpanded = !wasExpanded;
-                        RebuildRows();
-                    };
-                    targetRow.Controls.Add(detailsButton, 3, 0);
+                        var targetSummaryLabel = new Label
+                        {
+                            Text = TargetSummary(plan),
+                            Dock = DockStyle.Fill,
+                            TextAlign = ContentAlignment.MiddleLeft,
+                            AutoEllipsis = true,
+                            BackColor = MainBackground,
+                            ForeColor = plan.LoadError is null || plan.MissingTargetConfig ? HelpTextColor : Color.Firebrick
+                        };
+                        targetSummaryLabels[plan] = targetSummaryLabel;
+                        targetRow.Controls.Add(targetSummaryLabel, 2, 0);
+
+                        var targetButtonText = plan.CanCreateMissingConfig ? "Create config" : plan.IsExpanded ? "Hide details" : "Details";
+                        var detailsButton = new Button
+                        {
+                            Text = targetButtonText,
+                            Enabled = plan.CanCreateMissingConfig || plan.Changes.Count > 0 || plan.LoadError is not null,
+                            Dock = DockStyle.Fill,
+                            Margin = new Padding(Zoomed(4), 0, 0, 0),
+                            MinimumSize = new Size(detailsColumnWidth - Zoomed(4), DialogButtonHeight())
+                        };
+                        detailsButton.Click += (_, _) =>
+                        {
+                            if (plan.CanCreateMissingConfig)
+                            {
+                                try
+                                {
+                                    ApplyCopyPlan(sourcePath, plan);
+                                    plan.MarkCreated();
+                                    changeGroupsByPlan.Remove(plan);
+                                    SetStatus("Created " + sourceConfigLabel + " config for " + plan.Profile.Name + ".");
+                                    RebuildRows();
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show(dialog, plan.Profile.Name + ": " + ex.Message, "Copy To Instances", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                }
+
+                                return;
+                            }
+
+                            var wasExpanded = plan.IsExpanded;
+                            foreach (var item in plans)
+                            {
+                                item.IsExpanded = false;
+                            }
+
+                            plan.IsExpanded = !wasExpanded;
+                            RebuildRows();
+                        };
+                        targetRow.Controls.Add(detailsButton, 3, 0);
+                    }
                     AddRow(targetRow);
+                    if (retainedCheck is null) ApplyThemeToControl(targetRow, restyleButtons: true);
 
                     if (!plan.IsExpanded)
                     {
@@ -9295,6 +9450,8 @@ internal sealed partial class MainForm : Form
                     }
 
                     AddRow(detailPanel);
+                    currentDetailPanel = detailPanel;
+                    ApplyThemeToControl(detailPanel, restyleButtons: true);
                 }
             }
             finally
@@ -9303,7 +9460,7 @@ internal sealed partial class MainForm : Form
             }
 
             UpdateCopyButton();
-            ApplyThemeToControl(dialog, restyleButtons: true);
+            scrollPanel.AutoScrollPosition = new Point(Math.Max(0, -scroll.X), Math.Max(0, -scroll.Y));
         }
 
         try
@@ -9650,6 +9807,7 @@ internal sealed partial class MainForm : Form
             _loadingCategories = false;
         }
 
+        ApplyCategoryNavigationWidth();
         return restoredPreferredSelection;
     }
 
@@ -9682,7 +9840,7 @@ internal sealed partial class MainForm : Form
         return OrderCategoryNames(names);
     }
 
-    private void ReloadCategoriesPreservingSelection(bool refreshSelectedCategory = false, string? knownSelectedCategory = null)
+    private void ReloadCategoriesPreservingSelection(bool refreshSelectedCategory = false, string? knownSelectedCategory = null, bool invalidateCachedPanels = true)
     {
         var selected = knownSelectedCategory ?? GetSelectedCategoryName();
         var names = GetCategoryListNames();
@@ -9699,7 +9857,7 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        MarkAllCategoryPanelsDirty();
+        if (invalidateCachedPanels) MarkAllCategoryPanelsDirty();
         if (SetCategoryListItems(names, selected) && !refreshSelectedCategory)
         {
             WriteAdminUiMapLog("reload-categories");
@@ -10750,45 +10908,7 @@ internal sealed partial class MainForm : Form
             {
                 foreach (var item in items)
                 {
-                    if (item.StringListTable is not null)
-                    {
-                        panel.Controls.Add(RegisterOptionsTarget(panel, BuildStringListEditor(item.StringListTable), item.Key));
-                        continue;
-                    }
-
-                    if (item.StageTable is not null)
-                    {
-                        panel.Controls.Add(RegisterOptionsTarget(panel, BuildStageTableEditor(item.StageTable), item.Key));
-                        continue;
-                    }
-
-                    if (item.IsGroup)
-                    {
-                        var editor = MarkConfigSearchTarget(item.Key.Equals("CallsignOverrides", StringComparison.Ordinal)
-                            ? BuildCallsignOverridesEditor(item.Key, item.Entries)
-                            : BuildLinkedOrStandardTableEditor(item.Key, item.Entries, item.Linked), item.Key);
-                        if (categoryName.Equals("Mission Rules", StringComparison.OrdinalIgnoreCase))
-                            PrepareTemplateEditor(editor, item);
-                        panel.Controls.Add(RegisterOptionsTarget(panel, editor, item.Key));
-                        if (item.Linked is not null)
-                        {
-                            void KeepLinkedTableReachable()
-                            {
-                                var width = editor.MinimumSize.Width + editor.Margin.Horizontal + panel.Padding.Horizontal;
-                                if (panel.MinimumSize.Width < width) panel.MinimumSize = new Size(width, panel.MinimumSize.Height);
-                                if (ReferenceEquals(panel.Parent, _formHost)) _formHost.AutoScrollMinSize = new Size(panel.MinimumSize.Width, 0);
-                            }
-                            editor.SizeChanged += (_, _) => KeepLinkedTableReachable();
-                            KeepLinkedTableReachable();
-                        }
-                        continue;
-                    }
-
-                    var entry = item.Entries.FirstOrDefault();
-                    if (entry is not null)
-                    {
-                        panel.Controls.Add(RegisterOptionsTarget(panel, BuildEntryEditor(entry), item.Key, entry));
-                    }
+                    AddCategoryItemEditor(panel, categoryName, item);
                 }
             }
         }
@@ -11411,14 +11531,39 @@ internal sealed partial class MainForm : Form
         gridRow.Tag = row;
     }
 
-    private static void SyncGridRows<T>(DataGridView grid, IReadOnlyList<T> items, Action<DataGridView, T> addRow, Action<DataGridViewRow, T> updateRow)
+    private static void SyncGridRows<T>(DataGridView grid, IReadOnlyList<T> items, Action<DataGridView, T> addRow, Action<DataGridViewRow, T> updateRow, bool preserveEntryRows = false)
     {
         var firstDisplayedRowIndex = GetFirstDisplayedRowIndex(grid);
+        // Keep the established positional path for inactive native edits; row mutation can steal focus.
+        preserveEntryRows = preserveEntryRows && (!grid.IsCurrentCellInEditMode || grid.ContainsFocus);
         grid.SuspendLayout();
         try
         {
+            Dictionary<object, DataGridViewRow>? rowsByIdentity = null;
             for (var i = 0; i < items.Count; i++)
             {
+                if (preserveEntryRows && i < grid.Rows.Count && !ReferenceEquals(grid.Rows[i].Tag, items[i]))
+                {
+                    // Allocate only when membership/order changes; ordinary value refresh stays positional.
+                    if (rowsByIdentity is null)
+                    {
+                        rowsByIdentity = grid.Rows.Cast<DataGridViewRow>()
+                            .ToDictionary(row => row.Tag!, row => row, ReferenceEqualityComparer.Instance);
+                        var wanted = items.Select(item => (object)item!).ToHashSet(ReferenceEqualityComparer.Instance);
+                        foreach (var previous in rowsByIdentity)
+                            if (!wanted.Contains(previous.Key)) grid.Rows.Remove(previous.Value);
+                    }
+                    if (i >= grid.Rows.Count || !ReferenceEquals(grid.Rows[i].Tag, items[i]))
+                    {
+                        if (!rowsByIdentity.TryGetValue(items[i]!, out var matching))
+                        {
+                            addRow(grid, items[i]);
+                            matching = grid.Rows[grid.Rows.Count - 1];
+                        }
+                        grid.Rows.Remove(matching);
+                        grid.Rows.Insert(i, matching);
+                    }
+                }
                 if (i >= grid.Rows.Count)
                 {
                     addRow(grid, items[i]);
@@ -12074,45 +12219,46 @@ internal sealed partial class MainForm : Form
     private bool RefreshVisibleWhenTargets(ConfigEntry entry, bool deferReload = false)
     {
         using var optionsTransition = BeginOptionsTransition(entry.DisplayName);
-        var affectedCategories = GetCategoriesContainingVisibleWhenSource(entry);
+        var targetKeys = new HashSet<string>(StringComparer.Ordinal);
+        var affectedCategories = GetCategoriesContainingVisibleWhenSource(entry, affectedKeys: targetKeys);
         _optionsAffected!.UnionWith(affectedCategories);
-        if (affectedCategories.Count == 0)
-        {
-            return false;
-        }
+        if (affectedCategories.Count == 0) return false;
 
-        foreach (var categoryName in affectedCategories)
+        void RefreshTargets()
         {
-            MarkCategoryPanelDirty(categoryName);
+            using var transition = BeginOptionsTransition(entry.DisplayName);
+            _optionsAffected!.UnionWith(affectedCategories);
+            foreach (var categoryName in affectedCategories)
+                if (!TryRefreshConditionCategory(categoryName, targetKeys)) MarkCategoryPanelDirty(categoryName);
+            var selectedCategory = GetSelectedCategoryName();
+            var wasDeferred = _deferCategoryPresentation;
+            _deferCategoryPresentation = true;
+            try
+            {
+                ReloadCategoriesPreservingSelection(
+                    affectedCategories.Contains(selectedCategory, StringComparer.OrdinalIgnoreCase) && _dirtyCategoryPanels.Contains(selectedCategory),
+                    selectedCategory, invalidateCachedPanels: false);
+            }
+            finally { _deferCategoryPresentation = wasDeferred; }
         }
 
         if (!deferReload)
         {
-            var selectedCategory = GetSelectedCategoryName();
-            ReloadCategoriesPreservingSelection(
-                affectedCategories.Contains(selectedCategory, StringComparer.OrdinalIgnoreCase), selectedCategory);
+            RefreshTargets();
             return true;
         }
 
-        // A condition edit may originate inside a native control notification.
-        // Rebuild after that notification returns, rather than disposing its sender.
+        // Conditions are resolved after automatic changes and the native notification settle.
         var document = _document;
         BeginInvoke(() =>
         {
-            if (IsDisposed || Disposing || !ReferenceEquals(_document, document))
-            {
-                return;
-            }
-
-            // Navigation may have changed while the refresh was queued.
-            var selectedCategory = GetSelectedCategoryName();
-            ReloadCategoriesPreservingSelection(
-                affectedCategories.Contains(selectedCategory, StringComparer.OrdinalIgnoreCase), selectedCategory);
+            if (IsDisposed || Disposing || !ReferenceEquals(_document, document)) return;
+            RefreshTargets();
         });
         return true;
     }
 
-    private List<string> GetCategoriesContainingVisibleWhenSource(ConfigEntry sourceEntry, Func<string, List<(string SourceKey, List<string> Values)>>? getParsedRules = null)
+    private List<string> GetCategoriesContainingVisibleWhenSource(ConfigEntry sourceEntry, Func<string, List<(string SourceKey, List<string> Values)>>? getParsedRules = null, HashSet<string>? affectedKeys = null)
     {
         if (_document is null)
         {
@@ -12144,6 +12290,8 @@ internal sealed partial class MainForm : Form
                 VisibleWhenDependsOn(entry.ParentGuiVisibleWhen, sourceKeys, getParsedRules, _document))
             {
                 categories.Add(entry.EffectiveCategory);
+                affectedKeys?.Add(entry.DisplayKey);
+                if (!string.IsNullOrWhiteSpace(entry.ParentKey)) affectedKeys?.Add(entry.ParentKey);
             }
         }
 
@@ -12152,6 +12300,7 @@ internal sealed partial class MainForm : Form
             if (VisibleWhenDependsOn(table.GuiVisibleWhen, sourceKeys, getParsedRules, _document))
             {
                 categories.Add(table.Section);
+                affectedKeys?.Add(table.Key);
             }
         }
 
@@ -12160,14 +12309,20 @@ internal sealed partial class MainForm : Form
             if (VisibleWhenDependsOn(table.GuiVisibleWhen, sourceKeys, getParsedRules, _document))
             {
                 categories.Add(table.Section);
+                affectedKeys?.Add(table.Key);
             }
         }
 
         EnsureLinkedTableData();
         foreach (var linked in _linkedDataByKey!.Values)
         {
-            if (linked.Owners.Keys.Any(target => categories.Contains(target.EffectiveCategory)))
+            // Hiding a primary editor can expose its secondary entries in another category.
+            if (linked.Rows.Keys.Any(primary => categories.Contains(primary.EffectiveCategory)) ||
+                linked.Owners.Keys.Any(target => categories.Contains(target.EffectiveCategory)))
+            {
                 foreach (var primary in linked.Rows.Keys) categories.Add(primary.EffectiveCategory);
+                foreach (var target in linked.Owners.Keys) categories.Add(target.EffectiveCategory);
+            }
         }
 
         return categories
@@ -12343,7 +12498,7 @@ internal sealed partial class MainForm : Form
                     () => entry.ValueText = comboBox.Text,
                     () => RefreshControlValue(() =>
                     {
-                        comboBox.Text = entry.ValueText;
+                        RefreshScalarChoiceControl(entry, comboBox, entry.ValueText);
                         RefreshLinkedStageEditors(entry);
                     }), deferVisibilityRefresh: true);
                 RefreshLinkedStageEditors(entry);
@@ -12370,7 +12525,7 @@ internal sealed partial class MainForm : Form
                     entry,
                     "edit " + entry.DisplayName,
                     () => entry.ValueText = ParseBooleanDisplay(comboBox.Text),
-                    () => RefreshControlValue(() => comboBox.Text = FormatBooleanDisplay(entry.ValueText)),
+                    () => RefreshControlValue(() => RefreshScalarChoiceControl(entry, comboBox, FormatBooleanDisplay(entry.ValueText))),
                     deferVisibilityRefresh: true);
             };
             return comboBox;
@@ -12811,6 +12966,29 @@ internal sealed partial class MainForm : Form
             2 => items[0] + " and " + items[1],
             _ => string.Join(", ", items.Take(items.Count - 1)) + ", and " + items[^1]
         };
+    }
+
+    private void RefreshScalarChoiceControl(ConfigEntry entry, ComboBox original, string value)
+    {
+        if (!original.IsDisposed)
+        {
+            original.Text = value;
+            return;
+        }
+
+        // Undo can outlive an editor removed by conditions, theme or zoom.
+        foreach (var panel in _categoryPanelCache.Values)
+        {
+            if (panel.Tag is Dictionary<string, OptionsMarkerTarget> targets &&
+                targets.TryGetValue(entry.DisplayKey, out var target) &&
+                ReferenceEquals(target.Entry, entry) &&
+                target.Editor is TableLayoutPanel { IsDisposed: false } group &&
+                group.GetControlFromPosition(0, 1) is ComboBox { IsDisposed: false } current)
+            {
+                current.Text = value;
+                return;
+            }
+        }
     }
 
     private void RefreshControlValue(Action refresh)
@@ -14328,6 +14506,14 @@ internal sealed partial class MainForm : Form
         }
         var visibleEntries = entries.Where(IsTableRowVisible).ToList();
         var selectedEntry = grid.CurrentRow?.Tag;
+        var selectedCell = grid.CurrentCell;
+        var activeText = grid.IsCurrentCellInEditMode ? grid.EditingControl as DataGridViewTextBoxEditingControl : null;
+        var pendingHadFocus = activeText?.ContainsFocus == true;
+        var pendingText = activeText?.Text;
+        var pendingValue = selectedCell?.Value;
+        var pendingSelection = activeText?.SelectionStart ?? 0;
+        var pendingSelectionLength = activeText?.SelectionLength ?? 0;
+        var pendingDirty = activeText?.EditingControlValueChanged == true;
         RefreshControlValue(() =>
         {
             if (grid.IsCurrentCellInEditMode && grid.CurrentRow is DataGridViewRow editingRow &&
@@ -14339,12 +14525,26 @@ internal sealed partial class MainForm : Form
             {
                 var policy = ReadLinkedDisplayPolicy(linkedBinding);
                 SyncGridRows(grid, visibleEntries, (_, entry) => AddLinkedTableRow(linkedBinding, entry, policy),
-                    (row, entry) => UpdateLinkedTableRow(linkedBinding, row, entry, policy));
+                    (row, entry) => UpdateLinkedTableRow(linkedBinding, row, entry, policy), preserveEntryRows: true);
                 UpdateLinkedSharedNote(linkedBinding);
             }
-            else SyncGridRows(grid, visibleEntries, AddTableRow, UpdateTableGridRow);
-            if (selectedEntry is not null && !ReferenceEquals(grid.CurrentRow?.Tag, selectedEntry))
+            else SyncGridRows(grid, visibleEntries, AddTableRow, UpdateTableGridRow, preserveEntryRows: true);
+            if (selectedCell?.DataGridView == grid && ReferenceEquals(selectedCell.OwningRow.Tag, selectedEntry))
+            {
+                if (!ReferenceEquals(grid.CurrentCell, selectedCell)) grid.CurrentCell = selectedCell;
+            }
+            else if (selectedEntry is not null && !ReferenceEquals(grid.CurrentRow?.Tag, selectedEntry))
                 SelectGridRowByTag(grid, selectedEntry);
+            // Native row insertion can end an unrelated text edit even when that row survives.
+            if (pendingHadFocus && grid.Visible && pendingText is not null && selectedCell?.DataGridView == grid && !grid.IsCurrentCellInEditMode &&
+                Equals(selectedCell.Value, pendingValue) && !grid.ReadOnly && !selectedCell.ReadOnly && !selectedCell.OwningRow.ReadOnly &&
+                grid.BeginEdit(false) && grid.EditingControl is DataGridViewTextBoxEditingControl restoredText)
+            {
+                restoredText.Text = pendingText;
+                restoredText.Select(pendingSelection, pendingSelectionLength);
+                restoredText.EditingControlValueChanged = pendingDirty;
+                grid.NotifyCurrentCellDirty(pendingDirty);
+            }
         });
 
         if (grid.Parent?.Tag is TableEditorBinding binding) UpdateTableRowLockNote(binding);
@@ -15434,7 +15634,7 @@ internal sealed partial class MainForm : Form
         ConfigureTableValueColumn(grid.Columns["value"], mixedValueKinds ? ConfigValueKind.String : firstKind);
     }
 
-    private static void ApplyTableValueCell(DataGridViewRow row, ConfigEntry entry)
+    private void ApplyTableValueCell(DataGridViewRow row, ConfigEntry entry)
     {
         var cell = row.Cells["value"];
         if (entry.Kind == ConfigValueKind.Boolean)
@@ -15459,7 +15659,7 @@ internal sealed partial class MainForm : Form
                 booleanCell.FlatStyle = IsDarkPalette() ? FlatStyle.Flat : FlatStyle.Standard;
                 booleanCell.Style.BackColor = IsDarkPalette() ? EditorBackground : Color.Empty;
                 booleanCell.Style.ForeColor = PrimaryTextColor;
-                if (row.DataGridView?.FindForm() is MainForm owner) StyleConfigChoiceCell(booleanCell, owner);
+                StyleConfigChoiceCell(booleanCell, this);
             }
 
             SetTableCellValue(cell, FormatBooleanDisplay(entry.ValueText));
@@ -18834,6 +19034,7 @@ internal sealed partial class MainForm : Form
                 var installedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
                 var installedWarnings = new List<string>();
                 newDocument.SaveImportedTo(targetPath, installedWarnings);
+                RecordImportedMissionRelease(newDocument);
                 var installedPresetSynced = TrySyncActivePresetFromLive(
                     targetPath,
                     out var installedPresetName,
@@ -18871,28 +19072,37 @@ internal sealed partial class MainForm : Form
                 FindInstanceProfileForConfig(targetPath)?.Name ?? "Current config",
                 currentDocument, newDocument, previousCleanDocument, preview, valueChoices, tableChoices);
             var importScope = new InstanceImportScope(this, currentPlan, cleanSource);
-            if (!ConfirmSelectableValuePreview(
-                    previewText,
-                    "Import MIZ Config Preview",
-                    AppendActivePresetUpdateNotice(
-                        "Tick rows to keep your current values. Untick rows to use the new MIZ defaults." + Environment.NewLine +
-                        "Your current config will be backed up automatically before this update.",
-                        targetPath),
-                    "Import",
-                    "Your current value",
-                    "New MIZ default",
-                    "Keep your current values",
-                    "Use new config value",
-                    choices,
-                    BuildMizInstallInfoTabs(preview),
-                    presetTargets, importScope))
+            bool accepted;
+            try
+            {
+                accepted = ConfirmSelectableValuePreview(
+                        previewText,
+                        "Import MIZ Config Preview",
+                        AppendActivePresetUpdateNotice(
+                            "Tick rows to keep your current values. Untick rows to use the new MIZ defaults." + Environment.NewLine +
+                            "Your current config will be backed up automatically before this update.",
+                            targetPath),
+                        "Import",
+                        "Your current value",
+                        "New MIZ default",
+                        "Keep your current values",
+                        "Use new config value",
+                        choices,
+                        BuildMizInstallInfoTabs(preview),
+                        presetTargets, importScope);
+            }
+            finally
+            {
+                await importScope.CancelAndWaitForPreparationAsync();
+            }
+            if (!accepted)
             {
                 return;
             }
 
             if (importScope.AllInstances)
             {
-                CompleteInstanceImports(importScope, mizPath, extractedConfig);
+                await CompleteInstanceImports(importScope, mizPath, extractedConfig, progress);
                 return;
             }
 
@@ -18908,6 +19118,7 @@ internal sealed partial class MainForm : Form
             var storedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
             BackupCurrentConfigBeforeMizUpdate(currentDocument.Path, mizPath);
             newDocument.SaveImportedTo(targetPath, preview.ImportWarnings);
+            RecordImportedMissionRelease(newDocument);
             var pendingNewItemWarning = PersistImportedBucketNewItems(targetPath, preview);
             var presetSynced = TrySyncActivePresetFromLive(
                 targetPath,
@@ -19014,6 +19225,7 @@ internal sealed partial class MainForm : Form
 
             Directory.CreateDirectory(targetDirectory);
             newDocument.SaveTo(targetPath);
+            RecordImportedMissionRelease(newDocument);
             var storedDefaults = StoreMizDefaults(mizPath, extractedConfig, targetPath);
             AddOrUpdateInstanceProfile(instance.Name, targetPath);
             LoadConfig(targetPath);
@@ -19077,6 +19289,7 @@ internal sealed partial class MainForm : Form
 
             Directory.CreateDirectory(targetDirectory);
             newDocument.SaveTo(targetPath);
+            RecordImportedMissionRelease(newDocument);
             var storedDefaults = StoreConfigDefaults(configPath);
             AddOrUpdateInstanceProfile(instance.Name, targetPath);
             LoadConfig(targetPath);
@@ -19465,7 +19678,11 @@ internal sealed partial class MainForm : Form
 
     private static ConfigDocument? TryLoadStoredMizDefaultsForConfig(string configPath)
     {
-        var source = FindStoredMizDefaultsForConfig(configPath);
+        return TryLoadStoredMizDefaults(FindStoredMizDefaultsForConfig(configPath));
+    }
+
+    private static ConfigDocument? TryLoadStoredMizDefaults(StoredMizDefaultsInfo? source)
+    {
         if (source is null || !File.Exists(source.ConfigPath))
         {
             return null;
@@ -22276,27 +22493,36 @@ internal sealed partial class MainForm : Form
                 FindInstanceProfileForConfig(currentPath)?.Name ?? "Current config",
                 currentDocument, outputDocument, previousCleanDocument, preview, valueChoices, tableChoices);
             var importScope = new InstanceImportScope(this, currentPlan, sourceDocument);
-            if (!ConfirmSelectableValuePreview(
-                    previewText,
-                    "Import Config File Preview",
-                    AppendActivePresetUpdateNotice(
-                        "Tick rows to keep your current values. Untick rows to use the selected config defaults.",
-                        currentPath),
-                    "Import",
-                    "Your current value",
-                    "Selected config default",
-                    "Keep your current values",
-                    "Use selected config value",
-                    choices,
-                    BuildMizInstallInfoTabs(preview),
-                    presetTargets, importScope))
+            bool accepted;
+            try
+            {
+                accepted = ConfirmSelectableValuePreview(
+                        previewText,
+                        "Import Config File Preview",
+                        AppendActivePresetUpdateNotice(
+                            "Tick rows to keep your current values. Untick rows to use the selected config defaults.",
+                            currentPath),
+                        "Import",
+                        "Your current value",
+                        "Selected config default",
+                        "Keep your current values",
+                        "Use selected config value",
+                        choices,
+                        BuildMizInstallInfoTabs(preview),
+                        presetTargets, importScope);
+            }
+            finally
+            {
+                await importScope.CancelAndWaitForPreparationAsync();
+            }
+            if (!accepted)
             {
                 return;
             }
 
             if (importScope.AllInstances)
             {
-                CompleteInstanceImports(importScope, sourcePath, extracted: null);
+                await CompleteInstanceImports(importScope, sourcePath, extracted: null, progress: progress);
                 return;
             }
 
@@ -22311,6 +22537,7 @@ internal sealed partial class MainForm : Form
             var importedNewMarkers = CaptureImportedNewMarkers(preview);
             var storedDefaults = StoreConfigDefaults(sourcePath, new[] { currentPath }, sourceDocument);
             outputDocument.SaveImportedTo(currentPath, preview.ImportWarnings);
+            RecordImportedMissionRelease(sourceDocument);
             var pendingNewItemWarning = PersistImportedBucketNewItems(currentPath, preview);
             var presetSynced = TrySyncActivePresetFromLive(
                 currentPath,
@@ -22444,7 +22671,6 @@ internal sealed partial class MainForm : Form
         IReadOnlyList<PresetUpdateTargetChoice>? presetTargets = null,
         InstanceImportScope? importScope = null)
     {
-        using var modal = _loadingScreen?.SuspendForModal();
         using var dialog = new Form
         {
             Text = title,
@@ -22974,7 +23200,7 @@ internal sealed partial class MainForm : Form
         {
             var activePlans = importScope?.Plans;
             var changeCount = activePlans?.Sum(plan => plan.Choices.Count) ?? choices.Count;
-            var newCount = activePlans?.Sum(plan => GetPlanPreviewInfo(plan).NewCount) ??
+            var newCount = activePlans?.Sum(plan => plan.Preview.NewEntries.Count) ??
                 infoTabs?.Where(tab => tab.Title is "New" or "New Options" or "New Rows").Sum(tab => tab.Rows.Count) ?? 0;
             var parts = new List<string>();
             if (activePlans is not null)
@@ -23101,6 +23327,53 @@ internal sealed partial class MainForm : Form
                 if (importScope is null)
                 {
                     choiceControl = BuildChoiceControl(null);
+                }
+                else if (importScope is { AllInstances: true, TargetCount: > 3 })
+                {
+                    var compactPanel = new TableLayoutPanel
+                    {
+                        Dock = DockStyle.Top,
+                        AutoSize = true,
+                        ColumnCount = 1,
+                        RowCount = 2,
+                        Margin = new Padding(0),
+                        BackColor = MainBackground
+                    };
+                    compactPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                    compactPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                    compactPanel.Controls.Add(new Label
+                    {
+                        Text = "A summary preview is used for this selection. The buttons below apply to every selected instance.",
+                        AutoSize = true,
+                        Dock = DockStyle.Top,
+                        Padding = new Padding(0, Zoomed(8), 0, Zoomed(8)),
+                        BackColor = MainBackground,
+                        ForeColor = PrimaryTextColor
+                    }, 0, 0);
+                    var bulkActions = new FlowLayoutPanel
+                    {
+                        Dock = DockStyle.Top,
+                        AutoSize = true,
+                        Margin = new Padding(0),
+                        BackColor = MainBackground
+                    };
+                    var keepCurrentButton = new Button { Text = selectedActionLabel, Margin = new Padding(Zoomed(2)) };
+                    var useSourceButton = new Button { Text = otherActionLabel, Margin = new Padding(Zoomed(2)) };
+                    SizeDialogButton(keepCurrentButton, 190);
+                    SizeDialogButton(useSourceButton, 170);
+                    void SetAllChoices(bool selected)
+                    {
+                        foreach (var plan in importScope.Plans)
+                            foreach (var choice in plan.Choices)
+                                choice.Selected = selected;
+                        refreshScopeSummary?.Invoke();
+                    }
+                    keepCurrentButton.Click += (_, _) => SetAllChoices(true);
+                    useSourceButton.Click += (_, _) => SetAllChoices(false);
+                    bulkActions.Controls.Add(keepCurrentButton);
+                    bulkActions.Controls.Add(useSourceButton);
+                    compactPanel.Controls.Add(bulkActions, 0, 1);
+                    choiceControl = compactPanel;
                 }
                 else
                 {
@@ -23284,6 +23557,24 @@ internal sealed partial class MainForm : Form
             SizeDialogButton(confirmButton);
             allScopeButton.Text = "All instances (" + (importScope.AllInstances ? plans.Count : importScope.TargetCount) + " " +
                 GetConfigVariantLabel(importScope.Current.Current.Path) + ")";
+            if (importScope is { AllInstances: true, TargetCount: > 3 })
+            {
+                summaryLabel.Text = compactSummary + Environment.NewLine +
+                    "Keep each instance's current values, or use the selected config values for every instance." +
+                    Environment.NewLine + "Each updated config receives its own backup.";
+                if (importScope.Skipped.Count > 0)
+                    summaryLabel.Text += Environment.NewLine + "Skipped: " + Plural(importScope.Skipped.Count, "instance", "instances") + ".";
+                previewFrame.Visible = false;
+                detailsRowStyle.Height = 0;
+                detailsButton.Text = "Show details";
+                detailsButton.Enabled = false;
+                foreach (var button in previewTabText.Keys.ToList()) button.Dispose();
+                previewTabText.Clear();
+                previewTabs.Controls.Clear();
+                previewBox.Clear();
+                return;
+            }
+            detailsButton.Enabled = true;
             var selectedTitle = previewTabText.Keys.FirstOrDefault(button => button.BackColor == SelectionBackground)?.Text ?? "Summary";
             if (rebuildTabs)
             {
@@ -23354,28 +23645,83 @@ internal sealed partial class MainForm : Form
             SelectPreviewTab(previewTabText.Keys.FirstOrDefault(button => button.Text == selectedTitle) ?? summaryButton);
         }
 
-        void ChangeImportScope(bool allInstances)
+        var preparingScope = false;
+        async Task ChangeImportScopeAsync(bool allInstances)
         {
-            importScope!.AllInstances = allInstances;
-            RebuildChoiceControls();
-            if (presetTargetControl is not null)
+            if (preparingScope || dialog.IsDisposed || dialog.Disposing) return;
+            preparingScope = true;
+            var prepared = false;
+            currentScopeButton.Enabled = false;
+            allScopeButton.Enabled = false;
+            confirmButton.Enabled = false;
+            detailsButton.Enabled = false;
+            choiceHost.Enabled = false;
+            previewFrame.Visible = false;
+            detailsRowStyle.Height = 0;
+            detailsButton.Text = "Show details";
+            choiceControl?.Dispose();
+            choiceHost.Controls.Clear();
+            choiceControl = new Label
             {
-                presetTargetControl.Visible = !allInstances;
-                presetTargetControl.Enabled = !allInstances;
-                presetRowStyle.Height = allInstances ? 0 : Zoomed(82);
-            }
-            RefreshScopeText(true);
+                Text = "Preparing instance previews...",
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                Padding = new Padding(0, Zoomed(8), 0, Zoomed(8)),
+                BackColor = MainBackground,
+                ForeColor = PrimaryTextColor
+            };
+            choiceHost.Controls.Add(choiceControl);
+            summaryLabel.Text = "Preparing instance previews...";
             panel.PerformLayout();
+            try
+            {
+                importScope!.AllInstances = allInstances;
+                if (allInstances)
+                {
+                    // Keep the modal responsive while the existing scope loads and validates its cached plans.
+                    await Task.Yield();
+                    if (dialog.IsDisposed || dialog.Disposing || !dialog.Visible || dialog.DialogResult != DialogResult.None) return;
+                    await importScope.PrepareAllAsync();
+                }
+                if (dialog.IsDisposed || dialog.Disposing || !dialog.Visible || dialog.DialogResult != DialogResult.None) return;
+                RebuildChoiceControls();
+                if (presetTargetControl is not null)
+                {
+                    presetTargetControl.Visible = !allInstances;
+                    presetTargetControl.Enabled = !allInstances;
+                    presetRowStyle.Height = allInstances ? 0 : Zoomed(82);
+                }
+                RefreshScopeText(true);
+                panel.PerformLayout();
+                prepared = true;
+            }
+            catch (Exception ex)
+            {
+                if (!dialog.IsDisposed && !dialog.Disposing && dialog.Visible && dialog.DialogResult == DialogResult.None)
+                    summaryLabel.Text = "Could not prepare instance previews: " + ex.Message;
+            }
+            finally
+            {
+                preparingScope = false;
+                if (!dialog.IsDisposed && !dialog.Disposing && dialog.Visible && dialog.DialogResult == DialogResult.None)
+                {
+                    currentScopeButton.Enabled = true;
+                    allScopeButton.Enabled = true;
+                    choiceHost.Enabled = prepared;
+                    confirmButton.Enabled = prepared;
+                    detailsButton.Enabled = prepared && importScope is not { AllInstances: true, TargetCount: > 3 };
+                }
+            }
         }
         if (importScope is not null)
         {
-            currentScopeButton.CheckedChanged += (_, _) =>
+            currentScopeButton.CheckedChanged += async (_, _) =>
             {
-                if (currentScopeButton.Checked) ChangeImportScope(false);
+                if (currentScopeButton.Checked) await ChangeImportScopeAsync(false);
             };
-            allScopeButton.CheckedChanged += (_, _) =>
+            allScopeButton.CheckedChanged += async (_, _) =>
             {
-                if (allScopeButton.Checked) ChangeImportScope(true);
+                if (allScopeButton.Checked) await ChangeImportScopeAsync(true);
             };
             refreshScopeSummary = () => RefreshScopeText();
             RefreshScopeText(true);
@@ -23385,8 +23731,12 @@ internal sealed partial class MainForm : Form
         SelectPreviewTab(summaryButton);
         dialog.AcceptButton = confirmButton;
         dialog.CancelButton = cancelButton;
+        dialog.PerformLayout();
+        _ = dialog.Handle; // Prepare the native preview while the radar still covers the Manager.
+        using var modal = _loadingScreen?.SuspendForModal(dialog);
         if (dialog.ShowDialog(this) != DialogResult.OK)
         {
+            importScope?.CancelPreparation();
             return false;
         }
 

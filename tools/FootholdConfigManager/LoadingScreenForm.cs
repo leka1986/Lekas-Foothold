@@ -5,6 +5,7 @@ namespace FootholdConfigManager;
 internal sealed class LoadingScreenForm : Form
 {
     internal Image LoadingIcon => _icon;
+    private readonly Rectangle _startupWorkingArea;
     private readonly Image _photo;
     private readonly Image _icon;
     private readonly Label _status;
@@ -24,6 +25,15 @@ internal sealed class LoadingScreenForm : Form
         Name = "FootholdLoadingScreen";
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
+        // Match the Manager's saved-monitor choice before its window exists.
+        var settings = RuntimeSettings.Load();
+        var areas = Screen.AllScreens.Select(screen => screen.WorkingArea).ToArray();
+        var monitor = settings.WindowWidth > 0 && settings.WindowHeight > 0
+            && settings.WindowLeft.HasValue && settings.WindowTop.HasValue
+            ? MainForm.FindWorkingAreaIndexForBounds(new Rectangle(settings.WindowLeft.Value, settings.WindowTop.Value,
+                settings.WindowWidth, settings.WindowHeight), areas) : -1;
+        _startupWorkingArea = monitor >= 0 ? areas[monitor]
+            : Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1920, 1080);
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96, 96);
         DoubleBuffered = true;
@@ -70,7 +80,7 @@ internal sealed class LoadingScreenForm : Form
 
     private void FitToWorkArea()
     {
-        var area = Owner is null ? Screen.FromPoint(Cursor.Position).WorkingArea : Screen.FromControl(Owner).WorkingArea;
+        var area = Owner is null ? _startupWorkingArea : Screen.FromControl(Owner).WorkingArea;
         var scale = DeviceDpi / 96f;
         var width = Math.Min((int)(900 * scale), Math.Max(1, area.Width - (int)(40 * scale)));
         var height = Math.Min((int)(650 * scale), Math.Max(1, area.Height - (int)(40 * scale)));

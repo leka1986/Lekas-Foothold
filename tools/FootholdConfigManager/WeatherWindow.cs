@@ -314,8 +314,7 @@ internal sealed partial class WeatherWindow : Form
     private async void BrowseMiz()
     {
         if (_busy) return;
-        using var dialog = new OpenFileDialog { Title = "Apply mission settings to a MIZ", Filter = "DCS mission (*.miz)|*.miz", CheckFileExists = true };
-        if (dialog.ShowDialog(DialogOwner) == DialogResult.OK) await ApplyMizAsync(dialog.FileName);
+        if (SelectMizPath("Apply mission settings to a MIZ") is { } path) await ApplyMizAsync(path);
     }
 
     internal async Task ApplyMizAsync(string path)

@@ -56,6 +56,10 @@ internal sealed partial class MainForm
         {
             var window = new WeatherWindow(_settings.MissionScriptingPath, Font, MakeButton, ApplyDialogChrome, _uiZoomPercent / 100f,
                 () => FindEntry("Era")?.ValueText ?? (GetCurrentConfigFileName(_document) == RuntimeSettings.Ww2ConfigFileName ? "WW2" : null));
+            window.ConfigureMizBrowsing(
+                () => GetExistingInitialDirectory(_settings.LastMizDirectory) ?? (_document is null
+                    ? RuntimeSettings.GetBestInitialDirectory() : Path.GetDirectoryName(_document.Path)!),
+                path => { _settings.LastMizDirectory = Path.GetDirectoryName(path); _settings.Save(); });
             window.EmbedInManager(ShowConfigWorkspace);
             _weatherWindow = window;
             _weatherWorkspace.Controls.Add(window);
