@@ -1081,7 +1081,6 @@ zones.khaimah:addGroups({
 	--GroupCommander:new({name='Khaimah-supply-Khasab', mission='supply', template='PlaneSupplyTemplate', targetzone='Khasab'}),
 	-- Surface missions
 	DirectorCapability:new({name='Khaimah-attack-Al Dahid', mission='attack', template='AttackConvoy', targetzone='Al Dahid', type='surface'}),
-	DirectorCapability:new({name='Khaimah-Supply-BandarAbbas', mission='supply', template='PlaneSupplyTemplate', targetzone='BandarAbbas'}),
 	DirectorCapability:new({name='Khaimah-Supply-Qeshm', mission='supply', template='PlaneSupplyTemplate', targetzone='Qeshm Island'}),
 	DirectorCapability:new({name='Khaimah-Supply-Kish Intl', mission='supply', template='PlaneSupplyTemplate', targetzone='Kish intl'}),
 })
@@ -1200,6 +1199,7 @@ zones.qeshmisland:addGroups({
 	-- Patrol missions
 	DirectorCapability:new({name='qeshm-island-Patrol-Khasab-Cap', mission='patrol',template='CapPlaneTemplate', MissionType='CAP', targetzone='Khasab', Altitude = CapAltitude()}),
 	DirectorCapability:new({name='qeshm-island-Supply-Khasab', mission='supply',template='HeloSupplyTemplate', targetzone='Khasab'}),
+	DirectorCapability:new({name='qeshm-supply-Bandar', mission='supply', template='HeloSupplyTemplate', targetzone='BandarAbbas'}),
 	-- Supply missions
 	DirectorCapability:new({name='qeshm-island-Supply-Bandar-Lengeh', mission='supply',template='HeloSupplyTemplate', targetzone='Bandar Lengeh'}),
 	--GroupCommander:new({name='qeshm-island-Supply-Moradi', mission='supply',template='HeloSupplyTemplate', targetzone='Moradi'}),
@@ -3016,7 +3016,7 @@ if GlobalSettings.pvpEnabled == true then
 	selector.targetzonesideByCoalition = { [1] = 2, [2] = 1 }
 	selector.candidateBucketByCoalition = { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' }
 	selector.refreshTagsByCoalition = { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } }
-	selector.allow = function(zoneObj) return zoneObj.active == true and not zoneObj.suspended end
+	selector.allow = function(zoneObj) return zoneObj.active == true and (not zoneObj.suspended or zoneObj._idleSuspended) end
 end
 end
 
@@ -3117,7 +3117,7 @@ bc.shopItems['dynamicdecoy'].groupZoneSelector = {
 }
 if GlobalSettings.pvpEnabled == true then
 	bc.shopItems['dynamicdecoy'].groupZoneSelector.allow = function(zoneObj)
-		return zoneObj.side == 1 and zoneObj.active == true and not zoneObj.isHidden and not zoneObj.suspended
+		return zoneObj.side == 1 and zoneObj.active == true and not zoneObj.isHidden and (not zoneObj.suspended or zoneObj._idleSuspended)
 	end
 end
 end
@@ -3217,7 +3217,7 @@ if GlobalSettings.pvpEnabled == true then
 	selector.targetzonesideByCoalition = { [1] = 2, [2] = 1 }
 	selector.candidateBucketByCoalition = { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' }
 	selector.refreshTagsByCoalition = { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } }
-	selector.allow = function(zoneObj) return zoneObj.active == true and not zoneObj.suspended end
+	selector.allow = function(zoneObj) return zoneObj.active == true and (not zoneObj.suspended or zoneObj._idleSuspended) end
 end
 end
 
@@ -3374,7 +3374,7 @@ if GlobalSettings.pvpEnabled == true then
 	selector.targetzonesideByCoalition = { [1] = 2, [2] = 1 }
 	selector.candidateBucketByCoalition = { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' }
 	selector.refreshTagsByCoalition = { [1] = { 'friendly_targets' }, [2] = { 'enemy_targets' } }
-	selector.allow = function(zoneObj) return zoneObj.active == true and not zoneObj.suspended end
+	selector.allow = function(zoneObj) return zoneObj.active == true and (not zoneObj.suspended or zoneObj._idleSuspended) end
 end
 end
 
@@ -3796,8 +3796,12 @@ bc.shopItems['supplies'].groupZoneSelector = {
     showUpgradeStatus = true,
     includeSuspended = false,
     extraPredicate = function(zoneObj)
+        local dormant = zoneObj._idleSuspended
+        local demand = dormant and zoneObj._regularSupplyDemandSnapshot
         return zoneObj.active and (zoneObj.side == 2 or (GlobalSettings.pvpEnabled == true and zoneObj.side == 1))
-            and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
+            and (not zoneObj.suspended or zoneObj._idleSuspended)
+            and ((dormant and demand and demand.side == zoneObj.side and demand.demand > 0)
+                or (not dormant and zoneObj._needsSupplyForMenu == true))
     end,
     sortPolicy = 'friendly_frontline',
     emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),

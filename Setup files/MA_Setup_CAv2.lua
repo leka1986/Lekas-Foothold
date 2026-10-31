@@ -3342,7 +3342,7 @@ if GlobalSettings.pvpEnabled == true then
     selector.targetzonesideByCoalition = { [1]=2, [2]=1 }
     selector.candidateBucketByCoalition = { [1]='blue_unsuspended', [2]='enemy_unsuspended' }
     selector.refreshTagsByCoalition = { [1]={ 'friendly_targets' }, [2]={ 'enemy_targets' } }
-    selector.allow = function(zoneObj) return zoneObj.active == true and not zoneObj.suspended end
+    selector.allow = function(zoneObj) return zoneObj.active == true and (not zoneObj.suspended or zoneObj._idleSuspended) end
 end
 
 end
@@ -3491,7 +3491,7 @@ bc.shopItems['dynamicsead'].groupZoneSelector = {
 		}, groupId, groupObj))
 	end,
 	allow = function(zoneObj)
-		return zoneObj.active == true and not zoneObj.isHidden and not zoneObj.suspended
+		return zoneObj.active == true and not zoneObj.isHidden and (not zoneObj.suspended or zoneObj._idleSuspended)
 	end,
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_ENEMY_ZONES"),
 }
@@ -3632,7 +3632,7 @@ if GlobalSettings.pvpEnabled == true then
     selector.targetzonesideByCoalition = {[1]=2,[2]=1}
     selector.candidateBucketByCoalition = {[1]='blue_unsuspended',[2]='enemy_unsuspended'}
     selector.refreshTagsByCoalition = {[1]={'friendly_targets'},[2]={'enemy_targets'}}
-    selector.allow = function(zoneObj) return zoneObj.active == true and not zoneObj.suspended end
+    selector.allow = function(zoneObj) return zoneObj.active == true and (not zoneObj.suspended or zoneObj._idleSuspended) end
 end
 
 end
@@ -4030,8 +4030,12 @@ bc.shopItems['supplies'].groupZoneSelector = {
     showUpgradeStatus = true,
     includeSuspended = false,
     extraPredicate = function(zoneObj)
+        local dormant = zoneObj._idleSuspended
+        local demand = dormant and zoneObj._regularSupplyDemandSnapshot
         return zoneObj.active and (zoneObj.side == 2 or (GlobalSettings.pvpEnabled == true and zoneObj.side == 1))
-            and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
+            and (not zoneObj.suspended or zoneObj._idleSuspended)
+            and ((dormant and demand and demand.side == zoneObj.side and demand.demand > 0)
+                or (not dormant and zoneObj._needsSupplyForMenu == true))
     end,
     sortPolicy = 'friendly_frontline',
     emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),

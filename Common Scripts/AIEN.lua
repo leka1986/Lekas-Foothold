@@ -14177,7 +14177,6 @@ local function update_GROUND()
                         env.info((tostring(ModuleName) .. ", update_GROUND, group name " .. tostring(gData.n) .. " missing. Removing it"))
                     end
                     groundgroupsDb[phase_index] = nil
-                    phase_keys = createIterator(groundgroupsDb)
                 end
                 phase_index = getNextKey(phase_keys, phase_index)
                 scheduleNextPhaseCycle()
@@ -14209,12 +14208,13 @@ function update_ISR() -- basically clean old ISR data
                     local now = timer.getTime()
                     markPhaseActivity()
                     --local remove = false
-                    if not tData.obj or tData.obj:isExist() == false then
+                    if not tData.obj or tData.obj:isExist() == false
+                        or (tData.obj.isActive and tData.obj:isActive() == false)
+                        or (tData.obj:getLife() or 0) <= 0 then
                         if AIEN.config.AIEN_debugProcessDetail then
                             env.info((tostring(ModuleName) .. ", update_ISR, target id " .. tostring(phase_index) .. " missing. Removing it"))
                         end
                         intelDb[phase_index] = nil
-                        phase_keys = createIterator(intelDb) 
                     else
                         if tData.targeted then
                             if type(tData.targeted) == "number" then
@@ -14294,7 +14294,6 @@ local function update_DRONE()
                         env.info((tostring(ModuleName) .. ", update_DRONE, group name " .. tostring(dData.n) .. " missing. Removing it"))
                     end
                     droneunitDb[phase_index] = nil
-                    phase_keys = createIterator(droneunitDb)
                 end
                 phase_index = getNextKey(phase_keys, phase_index)
                 scheduleNextPhaseCycle()
@@ -14365,6 +14364,50 @@ function buildJTACFallbackReport(obj, zone, gData, now, point, life, coa, id)
     end
 end
 
+local function artillerySupportZoneInRange(zone, point, minRangeSq, maxRangeSq)
+    local dx = math.max(zone.minX - point.x, 0, point.x - zone.maxX)
+    local dz = math.max(zone.minZ - point.z, 0, point.z - zone.maxZ)
+    if dx * dx + dz * dz > maxRangeSq then return false end
+    local farX = math.max(math.abs(zone.minX - point.x), math.abs(zone.maxX - point.x))
+    local farZ = math.max(math.abs(zone.minZ - point.z), math.abs(zone.maxZ - point.z))
+    return farX * farX + farZ * farZ >= minRangeSq
+end
+
+local function hasArtillerySupportInRange(gData, now, intelCache, jtacQueueCache, jtac9Cache)
+    local maxRange = gData.threat * 0.85
+    local minRange = gData.threatmin and gData.threatmin * 1.05 or 0
+    local minRangeSq, maxRangeSq = minRange * minRange, maxRange * maxRange
+    for _, observer in ipairs(jtacQueue or {}) do
+        if observer.side == gData.coa and observer.tgtzone then
+            jtacQueueCache[observer.tgtzone.zone] = true
+            if artillerySupportZoneInRange(observer.tgtzone._cz, gData.sa.pos, minRangeSq, maxRangeSq) then
+                return true
+            end
+        end
+    end
+    for zoneName in pairs(intelActiveZones[gData.coa] or {}) do
+        local active = _zoneIntelIsActive(zoneName, gData.coa, now)
+        intelCache[zoneName] = active
+        if active and artillerySupportZoneInRange(getCustomZoneCached(zoneName), gData.sa.pos, minRangeSq, maxRangeSq) then
+            return true
+        end
+    end
+    for zoneName in pairs(jtacZones or {}) do
+        if artillerySupportZoneInRange(getCustomZoneCached(zoneName), gData.sa.pos, minRangeSq, maxRangeSq) then
+            local active = AIEN.JTAC9line_isActive(zoneName, gData.coa)
+            jtac9Cache[zoneName] = active
+            if active then return true end
+        end
+    end
+    for name in pairs(AIEN.scoutGroups or {}) do
+        local group = Group.getByName(name)
+        if group and group:isExist() and group:getCoalition() == gData.coa and group:getUnit(1) then
+            return true
+        end
+    end
+    return false
+end
+
 -- ARTY update, PHASE "D"
     function update_ARTY()
         if PHASE == "D" then -- confirm correct PHASE of performPhaseCycle
@@ -14384,6 +14427,7 @@ end
                             return
                         end
                         local now = timer.getTime()
+                        local needsSupport = gData.coa == 2 or GlobalSettings.pvpEnabled == true
                         local AI_consent = true
                         if gData.coa == 2 and AIEN.config.blueAI == false then
                             AI_consent = false
@@ -14466,6 +14510,7 @@ end
 
                                         local curPri = 0
                                         local scoutCache = {}
+                                        local intelCache = {}
                                         local jtac9Cache = {}
                                         local jtacQueueCache = {}
                                         local queueGroupClassCache = {}
@@ -14514,7 +14559,7 @@ end
                                                             queueCached = false
                                                             if jtacQueue then
                                                                 for _,d in ipairs(jtacQueue) do
-                                                                    if d.tgtzone and d.tgtzone.zone == zTgt.zone then
+                                                                    if (not needsSupport or d.side == gData.coa) and d.tgtzone and d.tgtzone.zone == zTgt.zone then
                                                                         queueCached = true
                                                                         break
                                                                     end
@@ -14543,6 +14588,17 @@ end
                                                     end
                                                     if not jtacOK and jtac9Active then jtacOK = true jtacSrc = "9line" end
                                                     if not jtacOK and scoutActive then jtacOK = true jtacSrc = "scout" end
+                                                    if needsSupport and not jtacOK and zTgt then
+                                                        local intelActive = intelCache[zTgt.zone]
+                                                        if intelActive == nil then
+                                                            intelActive = _zoneIntelIsActive(zTgt.zone, gData.coa, now)
+                                                            intelCache[zTgt.zone] = intelActive
+                                                        end
+                                                        if intelActive then
+                                                            jtacOK = true
+                                                            jtacSrc = "intel"
+                                                        end
+                                                    end
                                                 --end
                                                 if scoutActive and jtacSrc ~= "queue" then
                                                     if report then
@@ -14611,7 +14667,7 @@ end
                                                         env.info("ARTY_JTAC "..gData.n.." seeded ".._obj:getName().." via scout")
                                                     end
                                                 end
-                                                if jtacSrc == "queue" then
+                                                if jtacSrc == "queue" or jtacSrc == "intel" then
                                                     local grp = _obj:getGroup()
                                                     local gName = grp and grp:getName()
                                                     local inBuilt = false
@@ -14624,7 +14680,7 @@ end
                                                         end
                                                     end
                                                     if not inBuilt then
-                                                        intelDb[objId] = nil
+                                                        if jtacSrc == "queue" then intelDb[objId] = nil end
                                                         return
                                                     end
                                                     local cls = queueGroupClassCache[grp.id_]
@@ -14646,7 +14702,7 @@ end
                                                     report.id = objId
                                                     intelDb[objId] = report
                                                 end
-                                                if report and report.targeted == nil and (gData.coa ~= 2 or jtacOK) then
+                                                if report and report.targeted == nil and (not needsSupport or jtacOK) then
                                                     local lastContact = now - (report.record or now)
                                                     if lastContact < AIEN.config.artyFireLastContactThereshold then
                                                         local timeFactor = (AIEN.config.artyFireLastContactThereshold-lastContact)/AIEN.config.artyFireLastContactThereshold
@@ -14676,7 +14732,9 @@ end
                                                 end
                                             end
                                         end
-                                        world.searchObjects(Object.Category.UNIT, _volume, _search)
+                                        if not needsSupport or hasArtillerySupportInRange(gData, now, intelCache, jtacQueueCache, jtac9Cache) then
+                                            world.searchObjects(Object.Category.UNIT, _volume, _search)
+                                        end
                                         local movingSkip = false
                                         local movingReport = nil
                                         local candidatesSorted = false

@@ -3640,7 +3640,11 @@ bc.shopItems['supplies'].groupZoneSelector = {
 	showUpgradeStatus = true,
 	includeSuspended = false,
 	extraPredicate = function(zoneObj)
-		return zoneObj.active and zoneObj.side == 2 and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
+		local dormant = zoneObj._idleSuspended
+		local demand = dormant and zoneObj._regularSupplyDemandSnapshot
+		return zoneObj.active and zoneObj.side == 2 and (not zoneObj.suspended or zoneObj._idleSuspended)
+		    and ((dormant and demand and demand.side == zoneObj.side and demand.demand > 0)
+		        or (not dormant and zoneObj._needsSupplyForMenu == true))
 	end,
 	sortPolicy = 'friendly_frontline',
 	emptyLabel = LTGet("SYRIA_SHOP_NO_VALID_FRIENDLY_ZONES"),

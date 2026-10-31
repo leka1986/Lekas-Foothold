@@ -5684,6 +5684,11 @@ function BuildAFARP(Coordinate, stamp)
   else
     saveSeq = stamp
   end
+  if not pvpEnabled and saveName then
+    saveName = tostring(saveName)
+    if not saveName:find("^CTLD FARP ") then saveName = "CTLD FARP " .. saveName end
+    if builtFarpSupplyRecordsByName[saveName] then return end
+  end
   local isFromSave = (saveSeq ~= nil)
   if isFromSave then
     local skipRestore, nearestEnemyName, nearestEnemyNm
@@ -7331,9 +7336,13 @@ function SaveFARPS()
   if keepMax < 0 then keepMax = 0 end
   local kept = {}
   local keptBySide = pvpEnabled and { [1] = 0, [2] = 0 } or nil
-  for i = 1, math.min(#candidates, keepMax) do
+  local keptNames = { [1] = {}, [2] = {} }
+  for i = 1, #candidates do
+    if #kept >= keepMax then break end
     local record = candidates[i]
-    if not pvpEnabled or keptBySide[record.side] < 3 then
+    local sideNames = keptNames[pvpEnabled and record.side or coalition.side.BLUE]
+    if not sideNames[record.name] and (not pvpEnabled or keptBySide[record.side] < 3) then
+      sideNames[record.name] = true
       kept[#kept + 1] = record
       if pvpEnabled then keptBySide[record.side] = keptBySide[record.side] + 1 end
     end
@@ -7493,8 +7502,17 @@ function LoadFARPS()
     end
 
     local restoredBySide = pvpEnabled and { [1] = 0, [2] = 0 } or nil
-    for i = 1, math.min(#entries, maxToSpawn) do
+    local restoredNames = { [1] = {}, [2] = {} }
+    local uniqueCount = 0
+    for i = 1, #entries do
+      if uniqueCount >= maxToSpawn then break end
       local e = entries[i]
+      if e.name and not e.name:find("^CTLD FARP ") then e.name = "CTLD FARP " .. e.name end
+      local identity = e.name or (tostring(e.x) .. ";" .. tostring(e.y))
+      local sideNames = restoredNames[pvpEnabled and e.ownerSide or coalition.side.BLUE]
+      if not sideNames[identity] then
+        sideNames[identity] = true
+        uniqueCount = uniqueCount + 1
       if not pvpEnabled or restoredBySide[e.ownerSide] < 3 then
         local coord = COORDINATE:NewFromVec2({ x = e.x, y = e.y })
         if pvpEnabled then
@@ -7503,6 +7521,7 @@ function LoadFARPS()
         else
           BuildAFARP(coord, { seq = e.seq, name = e.name, zell = e.zell == true, supplyStock = e.supplyStock })
         end
+      end
       end
     end
   else
@@ -7951,6 +7970,67 @@ zoneSet = SET_ZONE:New()
 for _, zoneObj in ipairs(bc:getZones()) do
   local mooseZone = ZONE:New(zoneObj.zone)
   zoneSet:AddZone(mooseZone)
+end
+
+-- Position facts live only for this synchronous check of one deployed group.
+function zoneSet:_TriggerCheck(fromstart)
+  if fromstart then
+    for _, _object in pairs(self.objectset) do
+      local obj = _object
+      if obj and obj:IsAlive() then
+        local positionRead, position, coordinate = false, nil, nil
+        for _, _zone in pairs(self.Set) do
+          if not obj.TriggerInZone then obj.TriggerInZone = {} end
+          if not positionRead then
+            position = obj:GetVec3()
+            if not position then coordinate = obj:GetCoordinate() end
+            positionRead = true
+          end
+          local inzone
+          if position then inzone = _zone:IsVec3InZone(position)
+          else inzone = _zone:IsCoordinateInZone(coordinate) end
+          if inzone then
+            obj.TriggerInZone[_zone.ZoneName] = true
+          else
+            obj.TriggerInZone[_zone.ZoneName] = false
+          end
+        end
+      end
+    end
+  else
+    for _, _object in pairs(self.objectset) do
+      local obj = _object
+      if obj and obj:IsAlive() then
+        local positionRead, position, coordinate = false, nil, nil
+        for _, _zone in pairs(self.Set) do
+          if not obj.TriggerInZone then obj.TriggerInZone = {} end
+          if not obj.TriggerInZone[_zone.ZoneName] then
+            obj.TriggerInZone[_zone.ZoneName] = false
+          end
+          local inzone
+          if _zone.PartlyInside and obj.ClassName == "GROUP" then
+            inzone = obj:IsAnyInZone(_zone)
+          else
+            if not positionRead then
+              position = obj:GetVec3()
+              if not position then coordinate = obj:GetCoordinate() end
+              positionRead = true
+            end
+            if position then inzone = _zone:IsVec3InZone(position)
+            else inzone = _zone:IsCoordinateInZone(coordinate) end
+          end
+          if inzone and not obj.TriggerInZone[_zone.ZoneName] then
+            self:__EnteredZone(0.5, obj, _zone)
+            obj.TriggerInZone[_zone.ZoneName] = true
+          elseif not inzone and obj.TriggerInZone[_zone.ZoneName] then
+            self:__LeftZone(0.5, obj, _zone)
+            obj.TriggerInZone[_zone.ZoneName] = false
+          end
+        end
+      end
+    end
+  end
+  return self
 end
 
 zoneSet.deployedTroopTriggerInitialized = false

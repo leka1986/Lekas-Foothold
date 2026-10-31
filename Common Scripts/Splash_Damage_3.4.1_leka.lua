@@ -2813,9 +2813,6 @@ function track_wpns()
                 end
                 --Scan potential blast zone in the last frame before impact
                 if splash_damage_options.track_pre_explosion and not skipPreExplosionScan then
-                    local ip = land.getIP(wpnData.pos, wpnData.dir, lookahead(wpnData.speed))
-                    local predictedImpact = ip or wpnData.pos
-
                     local base_explosive, isShapedCharge = getWeaponExplosive(wpnData.name)
                     base_explosive = base_explosive * splash_damage_options.overall_scaling
                     if splash_damage_options.rocket_multiplier and wpnData.cat == Weapon.Category.ROCKET then
@@ -2875,13 +2872,6 @@ function track_wpns()
                     end
                     world.searchObjects({Object.Category.UNIT, Object.Category.STATIC}, volS, function(obj) ifFound(obj, tightTargets, wpnData.pos) end)
                     wpnData.tightTargets = tightTargets --Store for impact
-
-                    --Wider scan for lastKnownTargets
-                    volS.params.point = predictedImpact
-                    volS.params.radius = blastRadius
-                    local foundTargets = {}
-                    world.searchObjects({Object.Category.UNIT, Object.Category.STATIC}, volS, function(obj) ifFound(obj, foundTargets, predictedImpact) end)
-                    wpnData.lastKnownTargets = foundTargets
                 end
                 --Submunition impact handling
                 local weaponData = explTable[wpnData.parent or wpnData.name] or { submunition_name = "unknown" }

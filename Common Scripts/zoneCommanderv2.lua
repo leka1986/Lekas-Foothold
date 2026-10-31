@@ -3073,7 +3073,7 @@ local function newUnitEnvelopeZone(zoneName, trackedUnit, radius, altitudeTolera
 		local trackedUnit = self.ZoneUNIT
 		if not trackedUnit:IsAlive() then return false end
 		local objectPoint = coordinate:GetVec3()
-		local trackedPoint = trackedUnit:GetPointVec3()
+		local trackedPoint = trackedUnit:GetVec3()
 		if not objectPoint or not trackedPoint then return false end
 		if math.abs(objectPoint.y - trackedPoint.y) > altitudeTolerance then return false end
 		local dx = objectPoint.x - trackedPoint.x
@@ -17049,8 +17049,10 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		obj._redDifficultyEligibleBlue = 0
 		obj._redDifficultyDirty = true
 		obj._zoneStatusMenuRefreshPendingGroups = {}
+		obj._zoneStatusMenuStateByGroup = {}
 		obj._zoneStatusMenuRefreshAll = false
 		obj._zoneStatusMenuRefreshScheduler = nil
+		obj._zoneStatusMenuRefreshWork = {queue = {}, head = 1, timer = nil, zoneLists = nil}
 		obj._frontlineRefreshDirty = false
 		obj._frontlineRefreshScheduler = nil
 		obj._fsmCrashLastTickStartAbs = 0
@@ -17073,6 +17075,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		obj.jointGroupByPlayerBySide = obj.jointGroupByPlayerBySide or { [1] = {}, [2] = {} }
 		obj.jointRequests = obj.jointRequests or { [1] = {}, [2] = {} }
 		obj.jointMenusByGroup = obj.jointMenusByGroup or {}
+		obj._jointMenuRefreshWork = { pendingSides = {}, queue = {}, head = 1, timer = nil }
 		obj.jointRejoinPairs = obj.jointRejoinPairs or {}
 		obj.jointPartiesByPlayer = obj.jointPartiesByPlayer or {}
 		obj._jointPartyStateReady = obj._jointPartyStateReady or false
@@ -17108,18 +17111,25 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 
 	function BattleCommander:_flushZoneStatusMenuRefreshQueue()
 		self._zoneStatusMenuRefreshScheduler = nil
+		local work = self._zoneStatusMenuRefreshWork
+		if work.timer then
+			return
+		end
 		local refreshAll = self._zoneStatusMenuRefreshAll
 		local pendingGroups = self._zoneStatusMenuRefreshPendingGroups
 		self._zoneStatusMenuRefreshAll = false
 		self._zoneStatusMenuRefreshPendingGroups = {}
 
-		if refreshAll then
-			self:buildZoneStatusMenuForGroup()
-			return
+		for groupId, root in pairs(self.zoneStatusMenus) do
+			if refreshAll or pendingGroups[groupId] then
+				work.queue[#work.queue + 1] = {groupId = groupId, root = root, state = self._zoneStatusMenuStateByGroup[groupId]}
+			end
 		end
-
-		for groupId in pairs(pendingGroups) do
-			self:buildZoneStatusMenuForGroup(groupId)
+		if #work.queue > 0 then
+			work.zoneLists = {intel = {}, now = timer.getTime()}
+			work.timer = timer.scheduleFunction(function(bcRef)
+				bcRef:_runZoneStatusMenuRefreshTick()
+			end, self, timer.getTime() + 0.1)
 		end
 	end
 
@@ -18214,6 +18224,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 			if memberGroupId then
 				trigger.action.outTextForGroup(memberGroupId, L10N:FormatForGroup(memberGroupId, "JOINT_PLAYER_JOINED", player), 20)
 			end
+			self:_jointRefreshPlayerMenu(side, member)
 		end
 		return true
 	end
@@ -18234,8 +18245,10 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 				if memberGroupId then
 					trigger.action.outTextForGroup(memberGroupId, L10N:FormatForGroup(memberGroupId, "JOINT_PLAYER_LEFT", a), 15)
 				end
+				if owner then self:_jointRefreshPlayerMenu(owner.side, member) end
 			end
 			if owner then
+				self:_jointRefreshPlayerMenu(owner.side, a)
 				self:refreshJointMenusForSide(owner.side)
 			end
 		else
@@ -18583,19 +18596,76 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		self:refreshJointPendingRequestChildrenForGroup(groupid, parent, side)
 	end
 
-	function BattleCommander:refreshJointMenusForSide(side)
-		self:_jointEnsureMenuState()
-		local groupIds = {}
-		for groupid in pairs(self.jointMenuOwnersBySide[side] or {}) do
-			if MissionsRootMenus[groupid] then
-				groupIds[#groupIds + 1] = groupid
+	-- Coalesce side-wide Joint refreshes; render one group every 0.1 seconds.
+	function BattleCommander:_runJointMenuRefreshTick()
+		local work = self._jointMenuRefreshWork
+		work.timer = nil
+
+		if work.head > #work.queue then
+			work.queue = {}
+			work.head = 1
+			for side in pairs(work.pendingSides) do
+				work.pendingSides[side] = nil
+				for groupid in pairs(self.jointMenuOwnersBySide[side] or {}) do
+					local owner = self.jointMenuOwnersByGroup[groupid]
+					local parent = MissionsRootMenus[groupid]
+					if owner and owner.side == side and parent then
+						work.queue[#work.queue + 1] = {
+							groupid = groupid, side = side, owner = owner, parent = parent,
+						}
+					end
+				end
+			end
+			table.sort(work.queue, function(a, b)
+				if a.groupid == b.groupid then return a.side < b.side end
+				return a.groupid < b.groupid
+			end)
+		end
+
+		while work.head <= #work.queue do
+			local entry = work.queue[work.head]
+			work.head = work.head + 1
+			local owner = self.jointMenuOwnersByGroup[entry.groupid]
+			local sideOwners = self.jointMenuOwnersBySide[entry.side]
+			local parent = MissionsRootMenus[entry.groupid]
+			if owner == entry.owner and owner.side == entry.side
+				and sideOwners and sideOwners[entry.groupid] and parent == entry.parent then
+				self:refreshJointMenuForGroup(entry.groupid, parent, entry.side)
+				break
 			end
 		end
-		table.sort(groupIds)
-		for _, groupid in ipairs(groupIds) do
-			self:refreshJointMenuForGroup(groupid, MissionsRootMenus[groupid], side)
+
+		if work.head > #work.queue then
+			work.queue = {}
+			work.head = 1
+		end
+		if not work.timer and (work.head <= #work.queue or next(work.pendingSides)) then
+			work.timer = timer.scheduleFunction(self._runJointMenuRefreshTick, self, timer.getTime() + 0.1)
 		end
 	end
+
+	function BattleCommander:refreshJointMenusForSide(side)
+		if side == nil then return end
+		self:_jointEnsureMenuState()
+		local sideOwners = self.jointMenuOwnersBySide[side]
+		if not sideOwners then return end
+		local work = self._jointMenuRefreshWork
+		if work.pendingSides[side] and work.timer then return end
+		local eligible = false
+		for groupid in pairs(sideOwners) do
+			local owner = self.jointMenuOwnersByGroup[groupid]
+			if owner and owner.side == side and MissionsRootMenus[groupid] then
+				eligible = true
+				break
+			end
+		end
+		if not eligible then return end
+		work.pendingSides[side] = true
+		if not work.timer then
+			work.timer = timer.scheduleFunction(self._runJointMenuRefreshTick, self, timer.getTime() + 0.1)
+		end
+	end
+
 
 	function BattleCommander:_jointRefreshPlayerMenu(side, player)
 		local groupid = self.jointGroupByPlayerBySide and self.jointGroupByPlayerBySide[side] and self.jointGroupByPlayerBySide[side][player] or nil
@@ -18813,6 +18883,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 					trigger.action.outTextForGroup(memberGroupId, L10N:FormatForGroup(memberGroupId, "JOINT_PLAYER_JOINED", joinedPlayer), 20)
 				end
 			end
+			self:_jointRefreshPlayerMenu(side, member)
 		end
 		self:refreshJointMenusForSide(side)
 	end
@@ -21523,7 +21594,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 		if id == 'supplies2' and type(alternateParams) == 'table' then
 			idleShopTarget = alternateParams.targetZone or alternateParams.zone
 			if type(idleShopTarget) == 'string' then idleShopTarget = self.indexedZones[idleShopTarget] end
-			idleStockpilePurchase = GlobalSettings.pvpEnabled == true and idleShopTarget
+			idleStockpilePurchase = idleShopTarget
 				and (idleShopTarget._idleSuspended or idleShopTarget._idleRestorePending)
 				and idleShopTarget.active and not idleShopTarget.isHidden and idleShopTarget.side == coalition
 				and not isCarrierZoneName(idleShopTarget.zone)
@@ -21533,6 +21604,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 				else trigger.action.outTextForCoalition(coalition, L10N:Get('SHOP_NOT_AVAILABLE_NOW'), 10) end
 				return
 			end
+			idleStockpilePurchase = GlobalSettings.pvpEnabled == true and idleStockpilePurchase
 		end
 		if GlobalSettings.idleZoneSuspendEnabled and id ~= 'zwh50' and id ~= 'zsup3' and id ~= 'zlogc' and type(alternateParams) == 'table'
 			and (buyerGroupId or alternateParams.coalition) and not idleStockpilePurchase then
@@ -21659,7 +21731,6 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 			end
 			if GlobalSettings.pvpEnabled == true and id == 'replaceawacs' then
 				if not refreshShopContents then self:refreshShopMenuForAllGroupsInCoalition(coalition) end
-				self:requestStagedSaveToDisk()
 			end
 
 		else
@@ -21739,7 +21810,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 				and (targetzoneside == nil or zoneObj.side == targetzoneside)
 				and allowed
 				and (itemId ~= 'supplies2' or not zoneObj.suspended
-					or (GlobalSettings.pvpEnabled == true and zoneObj._idleSuspended
+					or (zoneObj._idleSuspended
 						and zoneObj.side == coalitionSide and not isCarrierZoneName(zoneObj.zone)))
 				and (includeSuspended or not zoneObj.suspended or zoneObj._idleSuspended)
 				and (itemId ~= 'zpat' or not zoneObj:_hasPatriotUpgrade())
@@ -28539,7 +28610,6 @@ end
 						if pname ~= "" and amount and amount ~= 0 then
 							local before = bc:getPlayerRank(pname)
 							bc:addPlayerRankCredits(pname, amount)
-							bc:saveRanksToDisk()
 							local after = bc:getPlayerRank(pname)
 							local gid = bc.groupByPlayer and bc.groupByPlayer[pname] or nil
 							local gname = bc.groupNameByPlayer and bc.groupNameByPlayer[pname] or nil
@@ -29746,6 +29816,8 @@ end
 				timeout))
 		end
 	end, {}, 60, 60)
+	-- Automatic campaign/rank saves belong to this scheduler: first at 30s, then every saveFrequency (60s).
+	-- Event handlers update memory; do not add event-triggered campaign or rank-file writes.
 	SCHEDULER:New(self,function(o)o:requestStagedSaveToDisk()end,{},30,self.saveFrequency)
 	self:_initSpawnEvalDispatcher()
 	if self.spawnEvalEnabled ~= false then
@@ -30651,14 +30723,12 @@ function BattleCommander:_redReactiveBuildPressureByPlayers()
 			local isCapPlayer = isAirplane and not CapCountIgnoreTypes[unitType]
 			local nearest = {}
 			local farthestIndex
-			local playerPoint = { x = point.x, y = point.z }
 			for _, zoneObj in ipairs(self.zones) do
 				if zoneObj.side == coalition.side.RED and zoneObj.active and not zoneObj.suspended and not zoneObj.isHidden then
 					local customZone = zoneObj._cz or CustomZone:getByName(zoneObj.zone)
-					local distance = UTILS.VecDist2D(
-						playerPoint,
-						{ x = customZone.point.x, y = customZone.point.z }
-					) - (customZone.radius or 0)
+					local dx = customZone.point.x - point.x
+					local dz = customZone.point.z - point.z
+					local distance = math.sqrt(dx * dx + dz * dz) - (customZone.radius or 0)
 					if distance <= maxDistanceMeters then
 						local candidateZone = zoneObj.zone
 						local candidateDistance = math.max(0, distance)
@@ -33681,6 +33751,24 @@ function BattleCommander:_applyZoneShopSelectorDelta(zoneObj, previousState, kno
 end
 
 function BattleCommander:_getZoneSelectorRefreshTags(zoneObj, previousState)
+	if previousState and zoneObj
+		and previousState.active == true and zoneObj.active == true and previousState.side == zoneObj.side
+		and zoneObj.isHidden ~= true and previousState.isHidden == zoneObj.isHidden
+		and (zoneObj.side == coalition.side.RED or zoneObj.side == coalition.side.BLUE)
+		and previousState.NeutralAtStart == zoneObj.NeutralAtStart
+		and previousState.firstCaptureByRed == zoneObj.firstCaptureByRed
+		and previousState.airbaseName == zoneObj.airbaseName and previousState.LogisticCenter == zoneObj.LogisticCenter
+		and ((not previousState.suspended and zoneObj.suspended and zoneObj._idleSuspended)
+			or (previousState.suspended and previousState._idleSuspended and not zoneObj.suspended)) then
+		-- Supply labels, bomber target facts and advance-capture eligibility can change.
+		local tags = { 'strategicbomber' }
+		if zoneObj.side == coalition.side.BLUE or GlobalSettings.pvpEnabled == true then
+			tags[#tags + 1] = 'supplies'
+			tags[#tags + 1] = 'supplies2'
+		end
+		if zoneObj.side == coalition.side.RED then tags[#tags + 1] = 'advance_capture_targets' end
+		return tags
+	end
 	local tags = {}
 
 	local touchesFriendly =
@@ -39645,30 +39733,32 @@ BattleCommander.redSideMenus    = {}
 BattleCommander.blueSideMenus   = {}
 
 do
+	local function sameZoneStatusRows(previous, current)
+		if not previous or #previous ~= #current then return false end
+		for i, row in ipairs(current) do
+			local old = previous[i]
+			if old.zone ~= row.zone or old.handler ~= row.handler or old.label ~= row.label then return false end
+		end
+		return true
+	end
+
 	local function buildZoneStatusMenuForGroup(self, groupId, viewerSide, zoneLists)
 		local T = groupId and L10N:ForGroup(groupId) or L10N
-		if self.redSideMenus[groupId] then
-			missionCommands.removeItemForGroup(groupId, self.redSideMenus[groupId])
-			self.redSideMenus[groupId] = nil
-		end
-		if self.blueSideMenus[groupId] then
-			missionCommands.removeItemForGroup(groupId, self.blueSideMenus[groupId])
-			self.blueSideMenus[groupId] = nil
-		end
+		local cached = self._zoneStatusMenuStateByGroup[groupId]
 		if not self.zoneStatusMenus[groupId] then
 			self.zoneStatusMenus[groupId] = missionCommands.addSubMenuForGroup(groupId, T:Get("MENU_INTEL_ZONE_STATUS"))
 		end
 		viewerSide = viewerSide or mc:getViewerSide(groupId)
 		mc:createIntelMissionSubMenuForGroup(groupId, self.zoneStatusMenus[groupId])
+		if not cached or cached.translator ~= T or cached.locale ~= T.Locale then
+			mc.intelMenuByGroup[groupId].signature = nil
+		end
 		mc.intelMenuByGroup[groupId].viewerSide = viewerSide
 		if zoneLists then
-			mc:_refreshIntelMissionMenuForGroup(groupId, true, viewerSide, zoneLists.intel, zoneLists.now)
+			mc:_refreshIntelMissionMenuForGroup(groupId, false, viewerSide, zoneLists.intel, zoneLists.now)
 		else
-			mc:refreshIntelMissionMenuForGroup(groupId, true, viewerSide)
+			mc:refreshIntelMissionMenuForGroup(groupId, false, viewerSide)
 		end
-		self.redSideMenus[groupId] = missionCommands.addSubMenuForGroup(groupId,T:Get("MENU_RED_SIDE"), self.zoneStatusMenus[groupId])
-		self.blueSideMenus[groupId] = missionCommands.addSubMenuForGroup(groupId,T:Get("MENU_BLUE_SIDE"), self.zoneStatusMenus[groupId])
-		local sub1Red, sub1Blue = nil, nil
 		local function getZoneWaypointNumber(zoneObj)
 			if not zoneObj or not zoneObj.zone then return nil end
 			local wp = WaypointList and WaypointList[zoneObj.zone]
@@ -39709,42 +39799,111 @@ do
 				zoneLists.red, zoneLists.blue = self.redSideZones, self.blueSideZones
 			end
 		end
-		for i,v in ipairs(self.redSideZones) do
-			local zoneLabel = getZoneStatusMenuLabel(v)
-			if i<10 then
-				missionCommands.addCommandForGroup(groupId,zoneLabel,self.redSideMenus[groupId],v.displayStatus,v,groupId,15,false,viewerSide)
-			elseif i==10 then
-				sub1Red=missionCommands.addSubMenuForGroup(groupId,T:Get("MENU_MORE"),self.redSideMenus[groupId])
-				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Red,v.displayStatus,v,groupId,15,false,viewerSide)
-			elseif i%9==1 then
-				sub1Red=missionCommands.addSubMenuForGroup(groupId,T:Get("MENU_MORE"),sub1Red)
-				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Red,v.displayStatus,v,groupId,15,false,viewerSide)
-			else
-				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Red,v.displayStatus,v,groupId,15,false,viewerSide)
+		local redRows = zoneLists and zoneLists.statusRedRows
+		local blueRows = zoneLists and zoneLists.statusBlueRows
+		if not redRows then
+			redRows, blueRows = {}, {}
+			for i, v in ipairs(self.redSideZones) do
+				redRows[i] = {zone = v, handler = v.displayStatus, label = getZoneStatusMenuLabel(v)}
+			end
+			for i, v in ipairs(self.blueSideZones) do
+				blueRows[i] = {zone = v, handler = v.displayStatus, label = getZoneStatusMenuLabel(v)}
+			end
+			if zoneLists then
+				zoneLists.statusRedRows, zoneLists.statusBlueRows = redRows, blueRows
 			end
 		end
-		for i,v in ipairs(self.blueSideZones) do
-			local zoneLabel = getZoneStatusMenuLabel(v)
-			if i<10 then
-				missionCommands.addCommandForGroup(groupId,zoneLabel,self.blueSideMenus[groupId],v.displayStatus,v,groupId,15,false,viewerSide)
-			elseif i==10 then
-				sub1Blue=missionCommands.addSubMenuForGroup(groupId,T:Get("MENU_MORE"),self.blueSideMenus[groupId])
-				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Blue,v.displayStatus,v,groupId,15,false,viewerSide)
-			elseif i%9==1 then
-				sub1Blue=missionCommands.addSubMenuForGroup(groupId,T:Get("MENU_MORE"),sub1Blue)
-				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Blue,v.displayStatus,v,groupId,15,false,viewerSide)
-			else
-				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Blue,v.displayStatus,v,groupId,15,false,viewerSide)
+		local redLabel, blueLabel = T:Get("MENU_RED_SIDE"), T:Get("MENU_BLUE_SIDE")
+		local moreLabel = nil
+		if #redRows >= 10 or #blueRows >= 10 then moreLabel = T:Get("MENU_MORE") end
+		local contextMatches = cached and cached.root == self.zoneStatusMenus[groupId]
+			and cached.viewerSide == viewerSide and cached.translator == T and cached.locale == T.Locale
+		local redChanged = not contextMatches or not self.redSideMenus[groupId]
+			or cached.redHandle ~= self.redSideMenus[groupId] or cached.redLabel ~= redLabel
+			or (#redRows >= 10 and cached.moreLabel ~= moreLabel)
+			or not sameZoneStatusRows(cached.redRows, redRows)
+		local blueChanged = not contextMatches or not self.blueSideMenus[groupId]
+			or cached.blueHandle ~= self.blueSideMenus[groupId] or cached.blueLabel ~= blueLabel
+			or (#blueRows >= 10 and cached.moreLabel ~= moreLabel)
+			or not sameZoneStatusRows(cached.blueRows, blueRows)
+		local sub1Red, sub1Blue = nil, nil
+		if redChanged then
+			if self.redSideMenus[groupId] then
+				missionCommands.removeItemForGroup(groupId, self.redSideMenus[groupId])
 			end
+			self.redSideMenus[groupId] = missionCommands.addSubMenuForGroup(groupId,redLabel, self.zoneStatusMenus[groupId])
+		for i,v in ipairs(self.redSideZones) do
+			local zoneLabel = redRows[i].label
+			if i<10 then
+				missionCommands.addCommandForGroup(groupId,zoneLabel,self.redSideMenus[groupId],redRows[i].handler,v,groupId,15,false,viewerSide)
+			elseif i==10 then
+				sub1Red=missionCommands.addSubMenuForGroup(groupId,moreLabel,self.redSideMenus[groupId])
+				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Red,redRows[i].handler,v,groupId,15,false,viewerSide)
+			elseif i%9==1 then
+				sub1Red=missionCommands.addSubMenuForGroup(groupId,moreLabel,sub1Red)
+				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Red,redRows[i].handler,v,groupId,15,false,viewerSide)
+			else
+				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Red,redRows[i].handler,v,groupId,15,false,viewerSide)
+			end
+		end
+		end
+		if blueChanged then
+			if self.blueSideMenus[groupId] then
+				missionCommands.removeItemForGroup(groupId, self.blueSideMenus[groupId])
+			end
+			self.blueSideMenus[groupId] = missionCommands.addSubMenuForGroup(groupId,blueLabel, self.zoneStatusMenus[groupId])
+		for i,v in ipairs(self.blueSideZones) do
+			local zoneLabel = blueRows[i].label
+			if i<10 then
+				missionCommands.addCommandForGroup(groupId,zoneLabel,self.blueSideMenus[groupId],blueRows[i].handler,v,groupId,15,false,viewerSide)
+			elseif i==10 then
+				sub1Blue=missionCommands.addSubMenuForGroup(groupId,moreLabel,self.blueSideMenus[groupId])
+				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Blue,blueRows[i].handler,v,groupId,15,false,viewerSide)
+			elseif i%9==1 then
+				sub1Blue=missionCommands.addSubMenuForGroup(groupId,moreLabel,sub1Blue)
+				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Blue,blueRows[i].handler,v,groupId,15,false,viewerSide)
+			else
+				missionCommands.addCommandForGroup(groupId,zoneLabel,sub1Blue,blueRows[i].handler,v,groupId,15,false,viewerSide)
+			end
+		end
+		end
+		if redChanged or blueChanged then
+			self._zoneStatusMenuStateByGroup[groupId] = {
+				root = self.zoneStatusMenus[groupId], viewerSide = viewerSide, translator = T, locale = T.Locale,
+				redHandle = self.redSideMenus[groupId], blueHandle = self.blueSideMenus[groupId],
+				redLabel = redLabel, blueLabel = blueLabel, moreLabel = moreLabel,
+				redRows = redRows, blueRows = blueRows,
+			}
+		end
+	end
+
+	function BattleCommander:_runZoneStatusMenuRefreshTick()
+		local work = self._zoneStatusMenuRefreshWork
+		local entry = work.queue[work.head]
+		work.head = work.head + 1
+		if self.zoneStatusMenus[entry.groupId] == entry.root and self._zoneStatusMenuStateByGroup[entry.groupId] == entry.state then
+			work.zoneLists.intel = {}
+			work.zoneLists.now = timer.getTime()
+			buildZoneStatusMenuForGroup(self, entry.groupId, nil, work.zoneLists)
+		end
+		if work.head <= #work.queue then
+			work.timer = timer.scheduleFunction(function(bcRef)
+				bcRef:_runZoneStatusMenuRefreshTick()
+			end, self, timer.getTime() + 0.1)
+			return
+		end
+		work.queue = {}
+		work.head = 1
+		work.timer = nil
+		work.zoneLists = nil
+		if not self._zoneStatusMenuRefreshScheduler and (self._zoneStatusMenuRefreshAll or next(self._zoneStatusMenuRefreshPendingGroups)) then
+			self:_flushZoneStatusMenuRefreshQueue()
 		end
 	end
 
 	function BattleCommander:buildZoneStatusMenuForGroup(groupId, viewerSide)
 		if not groupId then
-			local zoneLists = {intel = {}, now = timer.getTime()}
-			for storedGroupId,_ in pairs(self.zoneStatusMenus) do
-				buildZoneStatusMenuForGroup(self, storedGroupId, nil, zoneLists)
-			end
+			self:requestZoneStatusMenuRefresh()
 			return
 		end
 		buildZoneStatusMenuForGroup(self, groupId, viewerSide)
@@ -41340,7 +41499,6 @@ end
 						local points = math.max(tonumber(stats['Points']) or 0, 0)
 						ctx:addStat(lostPlayer, 'Points', -math.min(amount, points), stats)
 						rankRecord = ctx:addPlayerRankCredits(lostPlayer, -amount, rankRecord) or rankRecord
-						ctx:saveRanksToDisk()
 						trigger.action.outTextForCoalition(lostSide, L10N:Format("PLAYER_AIRCRAFT_LOST_RANK", lostPlayer, amount), 10)
 						local after = ctx:getPlayerRank(lostPlayer, rankRecord)
 						if after < before then
@@ -44746,7 +44904,6 @@ function BattleCommander:loadFromDisk()
 			end
 			
 			if zonePersistance.playerStats then
-				local changed = false
 				local rankSave = self:_ensureRankSave()
 				for _, source in ipairs({{self.playerStatsByUcid,rankSave.players,true},{self.legacyPlayerStats,rankSave.legacyPlayers,false}}) do
 					for key, value in pairs(source[1]) do
@@ -44757,15 +44914,12 @@ function BattleCommander:loadFromDisk()
 							if not rec then
 								rec = {credits=pts,lastSeen=0,name=source[3] and value.name or nil}
 								source[2][key] = rec
-								changed = true
 							elseif rec.credits == nil then
 								rec.credits = pts
-								changed = true
 							end
 						end
 					end
 				end
-				if changed and RankingSystem == true then self:saveRanksToDisk() end
 			end
 			
 			if zonePersistance.customFlags then
@@ -45038,7 +45192,6 @@ do
 
 	function ZoneCommander:_requestSurrenderPersistenceRefresh()
 		local commander = self.battleCommander
-		commander:requestStagedSaveToDisk()
 		local job = commander._persistenceSaveJob
 		if job and job.states.zones[self.zone] then
 			commander:_collectPersistenceZoneState(job.states, self, job.startedAtAbs)
@@ -52874,6 +53027,9 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 				or sourceZone.side ~= permit.side
 				or not targetZone or not targetZone.active or targetZone.suspended
 				or (targetZone.side ~= coalition.side.NEUTRAL and targetZone.side ~= permit.side)
+				or (GlobalSettings.pvpEnabled ~= true and NoAIBlueCapture == true
+					and permit.side == coalition.side.BLUE and targetZone.side == coalition.side.NEUTRAL
+					and groupCommander._shopLaunchRequested ~= true and groupCommander.playerGroundAttack ~= true)
 				or delayedInvalid
 			then
 				release[#release + 1] = groupCommander
@@ -53134,6 +53290,12 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		local targetZone = self:getZoneByName(targetZoneName)
 		if not targetZone or not targetZone.active or targetZone.suspended then return false end
 		if targetZone.side ~= coalition.side.NEUTRAL and targetZone.side ~= groupCommander.side then return false end
+		if GlobalSettings.pvpEnabled ~= true and NoAIBlueCapture == true
+			and groupCommander.side == coalition.side.BLUE and targetZone.side == coalition.side.NEUTRAL
+			and groupCommander._shopLaunchRequested ~= true and groupCommander.playerGroundAttack ~= true
+		then
+			return false
+		end
 		if self:_regularSupplyRouteInfrastructureBlocked(groupCommander) then return false end
 		local regularByTarget = commitmentSnapshot and commitmentSnapshot.regularBySourceTarget[sourceZone.zone]
 		if regularByTarget and (regularByTarget[targetZoneName] or 0) > 0 then return false end
@@ -64589,6 +64751,16 @@ function GroupCommander:_shouldSkipDormantFsmUpdate(now)
 end
 
 function GroupCommander:_consumeShouldSpawnDecision(triggerState, ignore, knownNow)
+	if GlobalSettings.pvpEnabled ~= true and NoAIBlueCapture == true
+		and (self.mission == 'supply' or (self.mission == 'attack' and self.type == 'surface' and self.MissionType ~= 'BATTLESHIP'))
+		and self.zoneCommander.side == coalition.side.BLUE
+		and self._shopLaunchRequested ~= true and self.playerGroundAttack ~= true
+	then
+		local targetZone = self.zoneCommander.battleCommander.indexedZones[self.targetzone]
+		if targetZone and targetZone.side == coalition.side.NEUTRAL then
+			return false, Director.HOLD_REASON
+		end
+	end
 	if GlobalSettings.pvpEnabled and self.mission == 'supply'
 		and not self.zoneCommander.battleCommander:_ordinarySupplyDispatchAllowed(self._shopLaunchRequested == true)
 	then
@@ -64749,6 +64921,13 @@ function GroupCommander:evaluateSpawnEligibility(ignore, knownExcludedAssignment
 		and not (self.mission == 'supply' and self._paidSupplyStockpileDelivery == true
 			and tg.side == self.side and not tg.isHidden and not isCarrierZoneName(tg.zone)))
 		or tg.active == false then return false end
+	if GlobalSettings.pvpEnabled ~= true and NoAIBlueCapture == true
+		and (self.mission == 'supply' or (self.mission == 'attack' and self.type == 'surface' and self.MissionType ~= 'BATTLESHIP'))
+		and self.zoneCommander.side == coalition.side.BLUE and tg.side == coalition.side.NEUTRAL
+		and self._shopLaunchRequested ~= true and self.playerGroundAttack ~= true
+	then
+		return false
+	end
 	if self.MissionType == 'SEAD' and self.dynamicHybrid == true
 		and self.zoneCommander.battleCommander:HasLongRangeSeadTargets(tg.zone, nil, true)
 		and not self.zoneCommander.battleCommander:_retaskDistanceAllowed(self, tg.zone)
@@ -94144,7 +94323,10 @@ do
 		local initialDelaySec = (pvpEnabled or self.side == coalition.side.BLUE) and 5 or self.config.startDelaySec
 		self:_log('scheduler start delay=' .. initialDelaySec .. ' sideTick=' .. self.config.tickSec)
 		timer.scheduleFunction(function(director, scheduleTime)
-			return director:update(scheduleTime)
+			local ok, nextTime = pcall(director.update, director, scheduleTime)
+			if ok then return nextTime end
+			env.error('[Director] side=' .. tostring(director.side) .. ' update failed; retrying next tick: ' .. tostring(nextTime), false)
+			return scheduleTime + director.config.tickSec
 		end, self, timer.getTime() + initialDelaySec)
 	end
 
@@ -96012,6 +96194,7 @@ end
 			bcObj.redSideMenus[groupid] = nil
 			bcObj.blueSideMenus[groupid] = nil
 		end
+		bcObj._zoneStatusMenuStateByGroup[groupid] = nil
 
 		if self.statsMenus[groupid] then
 			missionCommands.removeItemForGroup(groupid, self.statsMenus[groupid])
@@ -99569,6 +99752,7 @@ function LogisticCommander:_handleBirth(event, un, player, unitName, groupObj, g
 				MissionsRootMenus[groupid] = missionsRoot
 				local jointAutoRejoined = bc:_jointTryAutoRejoin(player, groupid, playerCoalition)
 				if jointAutoRejoined and printMissionMenus[groupid] then
+					bc:refreshJointMenuForGroup(groupid, missionsRoot, playerCoalition)
 					bc:refreshJointMenusForSide(playerCoalition)
 				end
 			if not printMissionMenus[groupid] then
@@ -99578,6 +99762,7 @@ function LogisticCommander:_handleBirth(event, un, player, unitName, groupObj, g
 				
 				--SCHEDULER:New(nil, function()
 				if self.groupMenuTokens[groupid] ~= groupMenuToken then return end
+				self.battleCommander:refreshJointMenuForGroup(groupid, missionsRoot, playerCoalition)
 				self.battleCommander:refreshJointMenusForSide(playerCoalition)
 				--end, {}, 1)
 
@@ -102099,6 +102284,7 @@ end
 	if ManualHold == nil then ManualHold = false end
 	function monitorFlagForMission(mission, group, groupID)
 		if mission.MissionType ~= "Escort" then return end
+		if mission._escortTriggerZone then mission._escortTriggerZone:TriggerStop() end
 		mission.lastFlagValue = nil
 		mission.wasStopped = false
 		ManualHold = false
@@ -102108,8 +102294,24 @@ end
 
 		local triggerZone = ZONE_GROUP:New(mission.missionGroup .. "_Zone", missionGroup, mission.radius)
 		local groupSet = SET_GROUP:New():FilterCoalitions("red"):FilterCategories('ground'):FilterAlive():FilterStart()
+		mission._escortTriggerZone = triggerZone
+		triggerZone.OnAfterTriggerStop = function(self)
+			groupSet:FilterStop()
+			if mission._escortTriggerZone == self then
+				mission._escortTriggerZone = nil
+				_DATABASE:DeleteZone(self.ZoneName)
+			end
+		end
+		triggerZone.OnBeforeTriggerRunCheck = function(self)
+			if self:GetState() == 'TriggerStopped' then return false end
+			if mission._escortTriggerZone ~= self or not missionGroup:IsAlive() then
+				self:TriggerStop()
+				return false
+			end
+		end
 		
 		triggerZone.OnAfterEnteredZone = function(self, From, Event, To, triggeringGroup)
+			if mission._escortTriggerZone ~= self then return end
 			if mission.wasStopped then return end
 			mission.wasStopped = true
 			if missionGroup:IsAlive() then
@@ -102155,6 +102357,7 @@ end
 				
 				if not ms or ms <= 1 then
 					timer.scheduleFunction(function()
+						if mission._escortTriggerZone ~= triggerZone then return end
 						if triggeringGroup then
 							local dcsGroup = Group.getByName(triggeringGroup:GetName())
 							if dcsGroup and dcsGroup:isExist() then
@@ -102178,6 +102381,7 @@ end
 			
 		end
 		triggerZone.OnAfterZoneEmpty = function(self, From, Event, To)
+			if mission._escortTriggerZone ~= self then return end
 			if ManualHold then 
 				mission.wasStopped = false
 				env.info('Manual hold is active, not resuming mission.')
@@ -104085,7 +104289,6 @@ function BattleCommander:_handlePvpSupportAircraftLoss(group, lostUnitName)
 		displayName = kind == "arco" and "Arco" or "Texaco"
 	end
 	trigger.action.outTextForCoalition(side, L10N:Format("PVP_SUPPORT_AIRCRAFT_LOST", displayName), 15)
-	self:requestStagedSaveToDisk()
 	return true
 end
 
