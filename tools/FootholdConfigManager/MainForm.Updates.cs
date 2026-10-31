@@ -101,6 +101,11 @@ internal sealed partial class MainForm
     private void ShowUpdatesPanel()
     {
         if (_mainSplit is null) return;
+        if (_updatesPanel is { Visible: true })
+        {
+            LeaveUpdatesPanel();
+            return;
+        }
         if (_weatherWindow is { Visible: true })
         {
             _weatherWindow.LeaveWeather();
@@ -114,6 +119,8 @@ internal sealed partial class MainForm
         RefreshUpdatesPresentation();
         _ = BeginUpdateChecksAsync();
     }
+
+    private void LeaveUpdatesPanel() => _updatesPanel!.Visible = false;
 
     private void BuildUpdatesPanel()
     {
@@ -138,7 +145,7 @@ internal sealed partial class MainForm
             return actions;
         }
         _updatesHeading = TextLabel("Updates");
-        var back = MakeButton("Back to configuration", () => _updatesPanel.Visible = false);
+        var back = MakeButton("Back to configuration", LeaveUpdatesPanel);
         Actions(back);
         TextLabel("Updates are checked quietly after startup. Your mission files and settings stay in place.");
         _updatesManagerTitle = TextLabel("Foothold Config Manager");

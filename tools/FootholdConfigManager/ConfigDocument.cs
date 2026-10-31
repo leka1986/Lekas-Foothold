@@ -3529,7 +3529,12 @@ internal sealed partial class ConfigDocument
         var section = "General";
         var pendingComments = new List<string>();
         var tablePath = new List<TableContext>();
-        var inDoNotTouchBlock = false;
+        var firstDoNotTouchMarker = _lines.FindIndex(line =>
+            line.Contains("DO NOT TOUCH THIS BLOCK", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("End of do not touch", StringComparison.OrdinalIgnoreCase));
+        // A Config without the opening comment still protects its loader before the closing marker.
+        var inDoNotTouchBlock = firstDoNotTouchMarker >= 0 &&
+            _lines[firstDoNotTouchMarker].Contains("End of do not touch", StringComparison.OrdinalIgnoreCase);
 
         for (var i = 0; i < _lines.Count; i++)
         {

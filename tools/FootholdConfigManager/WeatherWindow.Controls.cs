@@ -131,13 +131,14 @@ internal sealed partial class WeatherWindow : Form
         };
         _root.Controls.Add(workspace, 0, 0);
 
-        var install = new TableLayoutPanel { Name = "WeatherTopFields", Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 4, Margin = new Padding(0, 0, S(16), 0), MaximumSize = new Size(S(680), 0) };
+        var install = new TableLayoutPanel { Name = "WeatherTopFields", Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 5, Margin = new Padding(0, 0, S(16), 0), MaximumSize = new Size(S(680), 0) };
         install.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         install.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         install.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         install.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));
         install.RowStyles.Add(new RowStyle(SizeType.Absolute, S(22)));
         install.RowStyles.Add(new RowStyle(SizeType.Absolute, S(40)));
+        install.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         _installStatus.Margin = new Padding(0, S(2), 0, S(8));
         install.SizeChanged += (_, _) =>
         {
@@ -163,7 +164,9 @@ internal sealed partial class WeatherWindow : Form
         _profiles.AccessibleName = "Weather profile";
         _profiles.DropDownWidth = S(400);
         install.Controls.Add(_profiles, 0, 3);
-        install.Controls.Add(Button("Save profile…", SaveProfile), 1, 3);
+        var saveProfile = Button("Save profile…", SaveProfile);
+        saveProfile.Anchor = AnchorStyles.Left;
+        install.Controls.Add(saveProfile, 1, 3);
         _profiles.SelectedIndexChanged += (_, _) =>
         {
             if (!_updating && _profiles.SelectedItem is WeatherNamedProfile profile) ApplySettings(profile.Settings);
@@ -207,27 +210,27 @@ internal sealed partial class WeatherWindow : Form
         _applyMissionOptions.Checked = _preferences.ApplyMissionOptions;
         _applyWeather.CheckedChanged += (_, _) => { RefreshApplyAvailability(); RefreshSummary(); };
         _applyMissionOptions.CheckedChanged += (_, _) => { RefreshApplyAvailability(); RefreshSummary(); };
-        var apply = new TableLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 4, RowCount = 1, Anchor = AnchorStyles.Right, Margin = Padding.Empty };
-        apply.Controls.Add(new Label { Text = "Apply:", AutoSize = true, Anchor = AnchorStyles.Left,
-            TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
-        _applyWeather.Anchor = _changeTime.Anchor = _applyMissionOptions.Anchor = AnchorStyles.Left;
-        apply.Controls.Add(_applyWeather, 1, 0);
-        apply.Controls.Add(_changeTime, 2, 0);
-        apply.Controls.Add(_applyMissionOptions, 3, 0);
-        dropLayout.Controls.Add(apply, 2, 0);
-        dropLayout.SetRowSpan(apply, 2);
         _openOutput = Button("Open output folder", OpenOutputFolder);
         _openOutput.Visible = false;
+        _openOutput.Anchor = AnchorStyles.Right;
+        var apply = new TableLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 5, RowCount = 1, Anchor = AnchorStyles.Right, Margin = Padding.Empty };
+        apply.Controls.Add(_openOutput, 0, 0);
+        apply.Controls.Add(new Label { Text = "Apply:", AutoSize = true, Anchor = AnchorStyles.Left,
+            TextAlign = ContentAlignment.MiddleLeft }, 1, 0);
+        _applyWeather.Anchor = _changeTime.Anchor = _applyMissionOptions.Anchor = AnchorStyles.Left;
+        apply.Controls.Add(_applyWeather, 2, 0);
+        apply.Controls.Add(_changeTime, 3, 0);
+        apply.Controls.Add(_applyMissionOptions, 4, 0);
+        dropLayout.Controls.Add(apply, 2, 0);
+        dropLayout.SetRowSpan(apply, 2);
         var statusArea = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true,
-            ColumnCount = 1, RowCount = 2, Margin = new Padding(S(12), 0, S(12), 0) };
+            ColumnCount = 1, RowCount = 1, Margin = new Padding(S(12), 0, S(12), 0) };
         statusArea.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         statusArea.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        statusArea.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _status.MinimumSize = new Size(0, S(32));
         _status.Margin = Padding.Empty;
         statusArea.Controls.Add(_status, 0, 0);
-        statusArea.Controls.Add(_openOutput, 0, 1);
         dropLayout.Controls.Add(statusArea, 1, 0);
         dropLayout.SetRowSpan(statusArea, 2);
         var stackedStatus = false;
