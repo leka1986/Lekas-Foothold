@@ -340,27 +340,27 @@ local dismountTeamsWest = {
 
 local dismountTeamsEast = { 
     ["rifle"] = {id = "rifle", p = 55, c = {
-        [1] = "Infantry AK ver3",
-        [2] = "Infantry AK ver2",
-        [3] = "Infantry AK ver2",
-        [4] = "Infantry AK ver3",
+        [1] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver3",
+        [2] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver2",
+        [3] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver2",
+        [4] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver3",
     }},
     ["mixed"] = {id = "mixed", p = 20, c = {
-        [1] = "Infantry AK ver2",
+        [1] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver2",
         [2] = "Paratrooper RPG-16",
-        [3] = "Infantry AK ver3",
-        [4] = "Infantry AK ver3",
+        [3] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver3",
+        [4] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver3",
     }},-- mixed is actually 3 rifle and 1 rpg      
     ["RPGs"] = {id = "RPGs", p = 9, c = {
         [1] = "Paratrooper RPG-16",
         [2] = "Paratrooper RPG-16",
-        [3] = "Infantry AK ver2",
-        [4] = "Infantry AK ver3",
+        [3] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver2",
+        [4] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver3",
     }},               
     ["manpads"] = {id = "manpads", p = 3, c = {
-        [1] = "Infantry AK ver3",
-        [2] = "Infantry AK ver3",
-        [3] = "Infantry AK ver3",
+        [1] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver3",
+        [2] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver3",
+        [3] = map == "Normandy" and "soldier_mauser98" or "Infantry AK ver3",
     }},  
 }
 

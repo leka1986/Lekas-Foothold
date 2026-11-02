@@ -407,6 +407,7 @@ local cwSwap = {
 	['Red Armour Group']   = 'Red Armor Group6',
 	['Red Armour Group 2']   = 'Red Armor Group7',
 	['Red Armour Group 3']  = 'Red Armor Group8',
+	['Red Armour Group 4'] = Era == 'Coldwar' and 'Red Armor Group9' or nil,
 	['blueHAWK']  = 'blueHAWK Coldwar',
 	['bluePD']  = 'bluePD_CW',
 	['bluePD 2']  = 'blueHAWK Coldwar',

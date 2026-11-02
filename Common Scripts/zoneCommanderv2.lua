@@ -36149,7 +36149,7 @@ end
 			or text:find('30n6', 1, true) or text:find('5n63', 1, true) then
 			return 'SA-10'
 		end
-		if text:find('sa%-6') or text:find('kub', 1, true)
+		if text:find('sa%-6') or text:find('^kub%s')
 			or text:find('1s91', 1, true) then
 			return 'SA-6'
 		end
@@ -40506,6 +40506,7 @@ if aliasPlayer == "" then aliasPlayer = "PLAYER" end
 local hunterAlias = "HUNTER_" .. aliasPlayer
 local hunter   = SPAWN:NewWithAlias(template, hunterAlias)
   hunter:OnSpawnGroup(function(g)
+    applyAiAircraftCargoWeight(g:GetName())
     Hunt = FLIGHTGROUP:New(g)
     Hunt:SetHomebase(home)
     Intercept = AUFTRAG:NewINTERCEPT(unit:GetGroup())
@@ -41070,7 +41071,7 @@ function BattleCommander:_handleEjectedCrewMember(n, side, groupid, aircraftID, 
 		end
 		return ejectedRecord, carriedAttached
 	end
-	if GlobalSettings.pvpEnabled == true then
+	if GlobalSettings.pvpEnabled == true or (carriedRescuedPilots and not carriedAttached) then
 		ejectedPilotOwnersByAircraft = ejectedPilotOwnersByAircraft or {}
 		ejectedPilotOwnersByAircraft[aircraftID] = ejectedPilotOwnersByAircraft[aircraftID] or {}
 		local ejectedRecord = {lostCredits=0,coalition=side,hasPilotData=false,playerOrigin=true}
@@ -46460,7 +46461,7 @@ do
 		return true
 	end
 
-	local UPGRADE_TEMPLATE_UNIT_CACHE_VERSION = 9
+	local UPGRADE_TEMPLATE_UNIT_CACHE_VERSION = 10
 	if ZoneCommander._upgradeTemplateUnitCacheVersion ~= UPGRADE_TEMPLATE_UNIT_CACHE_VERSION then
 		ZoneCommander._upgradeTemplateUnitCountCache = {}
 		ZoneCommander._upgradeTemplateUnitsCache = {}
@@ -76871,6 +76872,7 @@ do
 			learning = 0,
 			commitment = 0,
 			logistics = 0,
+			unlock = 0,
 			readiness = 0,
 		}
 		local runway = self:_zoneHasCachedRunwayCapability(targetZone)
@@ -76948,6 +76950,13 @@ do
 						components.history = components.history + (30 * ageWeight)
 					end
 				end
+			elseif previous.learningReason == 'not-learned'
+				or (previous.learningReason == 'no-attacking-element'
+					and (previous.result == 'failed' or previous.result == 'contained'))
+				or previous.result == 'aborted' or previous.result == 'redirected'
+				or previous.result == 'redirected-by-reaction'
+				or previous.result == 'preempted-by-surge' then
+				-- Administrative endings and unlaunched attacks do not steer target choice.
 			elseif previous.targetZone == targetZone.zone then
 				if previous.result == 'near-complete' then
 					components.history = components.history + (60 * ageWeight)
@@ -76992,6 +77001,21 @@ do
 		effects[#effects + 1] = targetZone.side == coalition.side.NEUTRAL and 'SECURE' or 'CAPTURE'
 		if runway then effects[#effects + 1] = 'AIRFIELD_CONTROL' end
 		local hasSeadTargets = self:_hasSeadTargets(targetZone.zone)
+		if not pvpEnabled and self.side == coalition.side.RED
+			and targetZone.side == enemySide and hasSeadTargets then
+			local parentName = self.defenceParentByZone[targetZone.zone]
+			local liveGoal = self.operation and self.operation.targetZone
+			local strategicGoal = self.campaignStrategy and self.campaignStrategy.goalZone
+			if parentName and (parentName == liveGoal or parentName == strategicGoal) then
+				local parentZone = self.battleCommander:getZoneByName(parentName)
+				if self:_zoneUsable(parentZone, enemySide) then
+					local supply = self.logisticsIntelligence
+						and self.logisticsIntelligence.byTarget[parentName]
+					components.unlock = (parentName == liveGoal and 80 or 60)
+						+ (supply and supply.readyForExploitation and 20 or 0)
+				end
+			end
+		end
 		if hasSeadTargets then effects[#effects + 1] = 'SEAD' end
 		local groundOpen = false
 		local groundNeighbors = self:_groundNeighbors(targetZone.zone)
@@ -77367,7 +77391,15 @@ do
 				local previousArea = self.areaByZone[previous.targetZone]
 				if previousArea == area then
 					local historyWeight = self.config.historySize - historyIndex + 1
-					if previous.result == 'near-complete' then
+					if self.side == coalition.side.RED and not pvpEnabled
+						and (previous.learningReason == 'not-learned'
+							or (previous.learningReason == 'no-attacking-element'
+								and (previous.result == 'failed' or previous.result == 'contained'))
+							or previous.result == 'aborted' or previous.result == 'redirected'
+							or previous.result == 'redirected-by-reaction'
+							or previous.result == 'preempted-by-surge') then
+						-- Administrative endings and unlaunched attacks do not steer area choice.
+					elseif previous.result == 'near-complete' then
 						facts.components.history = facts.components.history + 25 * historyWeight
 					elseif previous.result == 'partial' then
 						facts.components.history = facts.components.history + 12 * historyWeight
@@ -77410,6 +77442,7 @@ do
 			self.regionObservationInputSignature or 'no-region-facts',
 			currentMain and currentMain.zone or 'none',
 			tostring(self.areaPlanningInventorySnapshot and self.areaPlanningInventorySnapshot.builtAt or 0),
+			tostring(self.areaPlanningInventorySnapshot ~= nil and now - self.areaPlanningInventorySnapshot.builtAt <= 300),
 		}
 
 		for _, previous in ipairs(self.history) do
@@ -77420,6 +77453,12 @@ do
 				previous.doctrine or 'none',
 				previous.result or 'none',
 			}, ':')
+			if self.side == coalition.side.RED and not pvpEnabled then
+				parts[#parts + 1] = (previous.learningReason == 'not-learned'
+					or (previous.learningReason == 'no-attacking-element'
+						and (previous.result == 'failed' or previous.result == 'contained')))
+					and 'not-learned' or 'none'
+			end
 		end
 		for _, infrastructure in ipairs(self.infrastructure) do
 			parts[#parts + 1] = tostring(infrastructure.id) .. ':'
@@ -77464,6 +77503,7 @@ do
 				tostring(math.floor(tonumber(zoneObj._regularSupplyReady) or 0)),
 				tostring(math.floor(tonumber(zoneObj._regularSupplyPendingStock) or 0)),
 				tostring(math.floor((tonumber(zoneObj._regularSupplyEfficiency) or 0) * 10)),
+				shadowEligible and tostring(self:_operationTargetReadiness(zoneObj, true)) or 'irrelevant',
 				shadowEligible and tostring(self:_targetOutcomeBias(zoneObj.zone, now)) or 'irrelevant',
 				recentCapture and 'recent' or 'old',
 				shadowEligible and tostring(self:_hasSeadTargets(zoneObj.zone)) or 'irrelevant',
@@ -77520,7 +77560,9 @@ do
 		else
 			inputSignature = self:_strategicShadowInputSignature(now, liveTarget, pressureSignature, pressureDirector)
 		end
-		if inputSignature == self.strategicShadowInputSignature then return false end
+		if inputSignature == self.strategicShadowInputSignature
+			and (not self.logisticsIntelligence or not next(self.logisticsIntelligence.byTarget)
+				or now - self.logisticsIntelligence.builtAt < 300) then return false end
 
 		local candidates, areaFactsById, areaRanking, runwayDisruption
 		if pvpEnabled then
@@ -83093,6 +83135,7 @@ do
 
 	function Director:_targetScore(targetZone, redNeighbors, now, playerScores, knownReadiness, readinessKnown)
 		local score = 100
+		local redPve = self.side == coalition.side.RED and GlobalSettings.pvpEnabled ~= true
 		local captureNow = timer.getTime()
 		score = score + math.min(40, (targetZone.income or 0) * 2)
 		if targetZone.airbaseName then score = score + 18 end
@@ -83136,7 +83179,14 @@ do
 		end
 		for index, previous in ipairs(self.history) do
 			local ageWeight = self.config.historySize - index + 1
-			if previous.targetZone == targetZone.zone then
+			if redPve and (previous.learningReason == 'not-learned'
+				or (previous.learningReason == 'no-attacking-element'
+					and (previous.result == 'failed' or previous.result == 'contained'))
+				or previous.result == 'aborted' or previous.result == 'redirected'
+				or previous.result == 'redirected-by-reaction'
+				or previous.result == 'preempted-by-surge') then
+				-- Administrative endings and unlaunched attacks do not steer target choice.
+			elseif previous.targetZone == targetZone.zone then
 				if previous.result == 'near-complete' then
 					score = score + 60 * ageWeight
 				elseif previous.result == 'partial' then
@@ -84849,7 +84899,6 @@ do
 		local countsOnly = pvpEnabled and buildAreaPartition and knownCountsOnly == true
 		local inventory = {
 			rows = not countsOnly and {} or nil,
-			rowsByAreaRole = not countsOnly and {} or nil,
 			countsByAreaRole = {},
 			now = timer.getAbsTime(),
 			runwayNow = timer.getTime(),
@@ -84882,11 +84931,6 @@ do
 				local area = self.areaByZone[sourceZone.zone]
 				local areaId = area and area.id or '__unassigned'
 				local areaRole = role or '__unknown'
-				if not countsOnly then
-					inventory.rowsByAreaRole[areaId] = inventory.rowsByAreaRole[areaId] or {}
-					inventory.rowsByAreaRole[areaId][areaRole] = inventory.rowsByAreaRole[areaId][areaRole] or {}
-					inventory.rowsByAreaRole[areaId][areaRole][#inventory.rowsByAreaRole[areaId][areaRole] + 1] = row
-				end
 				inventory.countsByAreaRole[areaId] = inventory.countsByAreaRole[areaId] or {}
 				inventory.countsByAreaRole[areaId][areaRole] = (inventory.countsByAreaRole[areaId][areaRole] or 0) + 1
 			end
@@ -85497,7 +85541,28 @@ do
 		end
 		for index, previous in ipairs(self.history) do
 			if previous.doctrine == doctrine then
-				weight = weight / (1 + self.config.historySize - index + 1)
+				local previousOutcome = previous.learningOutcome
+				if previousOutcome == nil and previous.learningReason == nil then
+					if previous.result == 'captured' then
+						previousOutcome = 'success'
+					elseif previous.result == 'partial' or previous.result == 'near-complete'
+						or previous.result == 'neutralized' then
+						previousOutcome = 'partial'
+					end
+				end
+				local repetitionScale = 1
+				if previous.learningReason == 'not-learned'
+					or previous.result == 'aborted' or previous.result == 'redirected'
+					or previous.result == 'redirected-by-reaction'
+					or previous.result == 'preempted-by-surge' then
+					repetitionScale = 0
+				elseif previousOutcome == 'success' then
+					repetitionScale = 0.25
+				elseif previousOutcome == 'partial'
+					or previous.learningReason == 'no-attacking-element' then
+					repetitionScale = 0.5
+				end
+				weight = weight / (1 + (self.config.historySize - index + 1) * repetitionScale)
 			end
 		end
 		return weight
@@ -86250,11 +86315,20 @@ do
 			)
 			local roleWeights = self.RED_PACKAGE_ROLE_WEIGHTS[operation.doctrine]
 				or self.RED_PACKAGE_ROLE_WEIGHTS.probe
+			local ordinaryPackage = GlobalSettings.pvpEnabled ~= true
+				and (operation.reactionAllowance or 0) == 0 and operation.doctrine ~= 'counterattack'
+			local mainAttackerAssigned = false
 			local selectedByKey = {}
 			local selectedSeadForRunway = 0
 			for _, assignment in ipairs(operation.assignments or {}) do
 				if assignment.phase ~= 'feint' and assignment.cancelled ~= true then
 					local role = assignment.capacityRole or assignment.role
+					if ordinaryPackage and role ~= 'CAP' and role ~= 'SUPPLY'
+						and assignment.targetZone == operation.targetZone
+						and assignment.completed ~= true and assignment.detached ~= true
+						and assignment.reserveHeld ~= true then
+						mainAttackerAssigned = true
+					end
 					local key = role
 					if role == 'CAS' then
 						key = assignment.unitCategory == Unit.Category.HELICOPTER and 'CAS_HELO' or 'CAS_PLANE'
@@ -86299,6 +86373,7 @@ do
 			local unavailable = {}
 			operation.capCoverageDesired = self:_effectiveRoleLimit('CAP', operation) > 0
 			if operation.capCoverageDesired and remaining > 0
+				and (not ordinaryPackage or remaining > 1 or mainAttackerAssigned)
 				and (selectedByKey.CAP or 0) == 0 then
 				local capAssignment = take('CAP', 'shape')
 				operation.capFirstDecision = capAssignment and 'assigned' or 'mechanically-unavailable'
@@ -86324,6 +86399,7 @@ do
 			while true do
 				local choices = {}
 				local totalWeight = 0
+				local deferredCapChoice = nil
 				for _, definition in ipairs(self.RED_PACKAGE_ROLE_CHOICES) do
 					local selectedCount = selectedByKey[definition.key] or 0
 					local independentAirRole = definition.role == 'ANTISHIP'
@@ -86372,9 +86448,18 @@ do
 							definition.unitCategory
 						) and weight > 0
 					then
-						choices[#choices + 1] = { definition = definition, weight = weight }
-						totalWeight = totalWeight + weight
+						if ordinaryPackage and remaining == 1 and not mainAttackerAssigned
+							and definition.role == 'CAP' then
+							deferredCapChoice = { definition = definition, weight = weight }
+						else
+							choices[#choices + 1] = { definition = definition, weight = weight }
+							totalWeight = totalWeight + weight
+						end
 					end
+				end
+				if totalWeight <= 0 and deferredCapChoice then
+					choices[1] = deferredCapChoice
+					totalWeight = deferredCapChoice.weight
 				end
 				if totalWeight <= 0 then break end
 				local roll = math.random() * totalWeight
@@ -86388,6 +86473,7 @@ do
 				end
 				local definition = selected.definition
 				if take(definition.role, definition.phase, definition.unitCategory) then
+					if ordinaryPackage and definition.role ~= 'CAP' then mainAttackerAssigned = true end
 					selectedByKey[definition.key] = (selectedByKey[definition.key] or 0) + 1
 					if definition.role == 'SEAD' then
 						selectedSeadForRunway = selectedSeadForRunway + 1
@@ -86587,13 +86673,27 @@ do
 		return nil
 	end
 
-	function Director:_configureConditionalReserve(operation, reactionRequest)
+	function Director:_configureConditionalReserve(operation, reactionRequest, ordinaryPackage, mainAttackerCount)
 		if reactionRequest or operation.doctrine == 'probe' then return false end
+		if ordinaryPackage == nil then
+			ordinaryPackage = self.side == coalition.side.RED and GlobalSettings.pvpEnabled ~= true
+				and operation.doctrine ~= 'counterattack'
+		end
 		local packageCount = 0
+		local countMainAttackers = ordinaryPackage and mainAttackerCount == nil
+		mainAttackerCount = mainAttackerCount or 0
 		local candidates = {}
 		for _, assignment in ipairs(operation.assignments) do
+			local role = assignment.capacityRole or assignment.role
+			if countMainAttackers and role ~= 'CAP' and role ~= 'SUPPLY'
+				and assignment.phase ~= 'feint' and assignment.cancelled ~= true
+				and assignment.completed ~= true and assignment.detached ~= true
+				and assignment.reserveHeld ~= true and assignment.targetZone == operation.targetZone
+			then
+				mainAttackerCount = mainAttackerCount + 1
+			end
 			if assignment.phase ~= 'feint'
-				and self:_roleUsesAirPackage(assignment.capacityRole or assignment.role)
+				and self:_roleUsesAirPackage(role)
 				and assignment.cancelled ~= true
 			then
 				packageCount = packageCount + 1
@@ -86604,7 +86704,9 @@ do
 				end
 			end
 		end
-		if packageCount < 3 or #candidates == 0 or math.random(1, 100) > 35 then return false end
+		if packageCount < 3 or #candidates == 0
+			or (ordinaryPackage and mainAttackerCount < 2)
+			or math.random(1, 100) > 35 then return false end
 
 		local assignment = candidates[math.random(1, #candidates)]
 		local earliestDelaySec = math.random(120, 240)
@@ -86676,7 +86778,13 @@ do
 	end
 
 	function Director:_resetOperationRoleEvidence(operation, targetZone, now, readiness, targetFacts)
-		if readiness == nil then readiness = self:_operationTargetReadiness(targetZone, true) end
+		if readiness == nil then
+			if targetFacts then
+				readiness = targetFacts.rawReadiness
+			else
+				readiness = self:_operationTargetReadiness(targetZone, true)
+			end
+		end
 		operation.roleEvidenceInitialReadiness = readiness
 		operation.roleEvidenceMinimumReadiness = readiness
 		local hasSeadTargets = nil
@@ -86694,9 +86802,9 @@ do
 		operation.roleEvidenceRunwayEverBlocked = runwayBlocked
 	end
 
-	function Director:_updateOperationRoleEvidence(operation, targetZone, now, readiness, forceFreshSead)
+	function Director:_updateOperationRoleEvidence(operation, targetZone, now, readiness, forceFreshSead, readinessKnown)
 		if not operation or not targetZone then return end
-		if readiness == nil then readiness = self:_operationTargetReadiness(targetZone, true) end
+		if readiness == nil and readinessKnown ~= true then readiness = self:_operationTargetReadiness(targetZone, true) end
 		if readiness ~= nil and (operation.roleEvidenceMinimumReadiness == nil
 			or readiness < operation.roleEvidenceMinimumReadiness) then
 			operation.roleEvidenceMinimumReadiness = readiness
@@ -87326,9 +87434,16 @@ do
 	end
 
 	function Director:_seadIngressCapGateBlocksAssignment(operation, assignment)
+		if self.side ~= coalition.side.RED
+			or (self.state ~= 'shaping' and self.state ~= 'assault')
+			or assignment.phase == 'feint' or assignment.seadIngressUnsupported == true
+		then
+			return false
+		end
 		local support = operation and operation.seadIngressCapSupport or nil
-		return support ~= nil and support.blocked == true
-			and support.seadAssignmentName == assignment.name
+		return support == nil or support.seadAssignmentName ~= assignment.name
+			or support.targetZone ~= assignment.targetZone
+			or support.state ~= 'ready' or support.blocked == true
 	end
 
 	function Director:_updateSeadIngressCapGate(operation, now)
@@ -87376,7 +87491,7 @@ do
 			operation.seadIngressCapSupport = support
 		end
 
-		if support.state == 'ready' or support.state == 'unsupported' then
+		if support.state == 'unsupported' then
 			support.blocked = false
 			return false, support.state
 		end
@@ -87384,11 +87499,13 @@ do
 		support.nextCheckAt = now + self.SEAD_INGRESS_CAP_RECHECK_SEC
 
 		local supportCap = self:_seadIngressSupportCap(operation, support)
+		local wasReady = support.state == 'ready'
+		local coveredBy, coverageChecked
 		if support.method == 'spawn' and supportCap then
 			local supportAssignment = support.capAssignmentName
 				and operation.assignmentsByName[support.capAssignmentName] or nil
 			if supportAssignment and supportAssignment.launched == true
-				and support.releaseAt == nil
+				and support.releaseAt == nil and not wasReady
 			then
 				self:_activateSpawnedSeadIngressCap(operation, support, supportCap, now)
 			end
@@ -87407,8 +87524,8 @@ do
 			if supportUnavailable then
 				self:_resetSeadIngressCapChoice(operation, support)
 			elseif supportAssignment and supportAssignment.launched == true
-				and supportAssignment.completed ~= true and support.releaseAt
-				and now >= support.releaseAt
+				and supportAssignment.completed ~= true
+				and (wasReady or (support.releaseAt and now >= support.releaseAt))
 			then
 				support.state = 'ready'
 				support.blocked = false
@@ -87434,12 +87551,20 @@ do
 			else
 				self:_resetSeadIngressCapChoice(operation, support)
 			end
+		elseif wasReady and (support.method == 'existing' or support.method == 'existing-other') then
+			coveredBy = self:_findIngressCapCoverage(support.ingressPoint)
+			coverageChecked = true
+			if coveredBy then
+				support.blocked = false
+				return false, 'ready'
+			end
+			self:_resetSeadIngressCapChoice(operation, support)
 		elseif support.method then
 			self:_resetSeadIngressCapChoice(operation, support)
 		end
 
 		if not support.method then
-			local coveredBy = self:_findIngressCapCoverage(support.ingressPoint)
+			if not coverageChecked then coveredBy = self:_findIngressCapCoverage(support.ingressPoint) end
 			if coveredBy then
 				support.method = 'existing'
 				support.state = 'ready'
@@ -87573,6 +87698,7 @@ do
 			mainUnlaunched = 0,
 			redirectable = 0,
 			effectorsLaunched = 0,
+			mainAttackersRemaining = 0,
 			secondaryLaunched = 0,
 			secondaryLive = 0,
 			secondaryLost = 0,
@@ -87698,6 +87824,7 @@ do
 						facts.live = facts.live + 1
 						if mainAssignment then
 							roleFacts.live = roleFacts.live + 1
+							if role ~= 'CAP' then facts.mainAttackersRemaining = facts.mainAttackersRemaining + 1 end
 							if methodFacts then methodFacts.live = methodFacts.live + 1 end
 						end
 						if not mainAssignment then
@@ -87709,7 +87836,10 @@ do
 					end
 				elseif assignment.completed ~= true then
 					facts.unlaunched = facts.unlaunched + 1
-					if mainAssignment then facts.mainUnlaunched = facts.mainUnlaunched + 1 end
+					if mainAssignment then
+						facts.mainUnlaunched = facts.mainUnlaunched + 1
+						if role ~= 'CAP' then facts.mainAttackersRemaining = facts.mainAttackersRemaining + 1 end
+					end
 					local groupCommander = assignment.groupRef
 					if groupCommander and self:_groupIsDormant(groupCommander)
 						and self:_canRetaskAirRole(role)
@@ -87885,7 +88015,7 @@ do
 
 	function Director:_buildOperationReassessment(operation, targetZone, now)
 		local readiness, builtCount, upgradeTotal = self:_operationTargetReadiness(targetZone)
-		self:_updateOperationRoleEvidence(operation, targetZone, now, readiness, false)
+		self:_updateOperationRoleEvidence(operation, targetZone, now, readiness, false, true)
 		if operation.reassessmentBaselineStrength == nil and readiness ~= nil then
 			operation.reassessmentBaselineStrength = readiness
 		end
@@ -87935,8 +88065,15 @@ do
 			or (currentCandidate and currentCandidate.runway == true)
 			or (currentCandidate and math.max(0, tonumber(currentCandidate.income) or 0) > 0)
 		local package = self:_operationPackageFacts(operation)
+		local reactionOperation = math.max(0, tonumber(operation.reactionAllowance) or 0) > 0
+		local ordinaryPackage = self.side == coalition.side.RED and GlobalSettings.pvpEnabled ~= true
+			and not reactionOperation and operation.doctrine ~= 'counterattack'
+		local launched = ordinaryPackage and package.mainLaunched or package.launched
+		local lossRatio = ordinaryPackage and package.mainLossRatio or package.lossRatio
 		local lossThreshold = currentImportant and 0.75 or 0.60
-		local badFight = package.launched >= 2 and package.lossRatio >= lossThreshold and not weakening
+		local badFight = launched >= 2 and lossRatio >= lossThreshold and not weakening
+		local mainAttackExhausted = ordinaryPackage and package.effectorsLaunched > 0
+			and package.mainAttackersRemaining == 0 and not package.madeProgress and not weakening
 		local alternateAdvantage = alternateCandidate ~= nil and (
 			alternateScore >= currentScore + self.OPERATION_REDIRECT_SCORE_MARGIN
 			or alternateScore >= math.max(1, currentScore) * self.OPERATION_REDIRECT_SCORE_RATIO
@@ -87951,10 +88088,10 @@ do
 		)
 
 		local reserveAction = 'hold'
-		if badFight or (strengthening and package.lost > 0) then
+		if mainAttackExhausted or badFight or (strengthening and package.lost > 0) then
 			reserveAction = 'conserve'
 		elseif (weakening and package.live + package.unlaunched > 0)
-			or (currentPlayer >= 100 and package.lossRatio < 0.50)
+			or (currentPlayer >= 100 and lossRatio < 0.50)
 		then
 			reserveAction = 'release'
 		end
@@ -88009,9 +88146,12 @@ do
 			playerShift = playerShift,
 			redirectEvidence = redirectEvidence,
 			badFight = badFight,
+			mainAttackExhausted = mainAttackExhausted,
 			package = package,
+			lossRatio = lossRatio,
+			reactionOperation = reactionOperation,
 			reserveAction = reserveAction,
-			reserveFallbackAllowed = not badFight and not strengthening and package.lossRatio < 0.50,
+			reserveFallbackAllowed = not mainAttackExhausted and not badFight and not strengthening and lossRatio < 0.50,
 			secondaryAxis = secondaryAxis,
 			decision = 'continue',
 		}
@@ -88123,14 +88263,19 @@ do
 
 	function Director:_redirectOperationUnlaunched(operation, targetZone, now, reason)
 		local oldTargetZone = operation.targetZone
-		self:_clearSeadIngressCapSupport(operation)
 		local redirected = 0
 		local redirectedSourceZone = nil
 		local redirectedCapCoverage = false
+		local ingressSupport = operation.seadIngressCapSupport
+		local supportAssignment = ingressSupport and ingressSupport.capAssignmentName
+			and operation.assignmentsByName[ingressSupport.capAssignmentName] or nil
+		local pendingExtraSupport = supportAssignment and supportAssignment.seadIngressCapExtra == true
+			and supportAssignment.launched ~= true and supportAssignment.completed ~= true
+			and supportAssignment or nil
 		local compatible = 0
 		for _, assignment in ipairs(operation.assignments) do
 			local role = assignment.capacityRole or assignment.role
-			if assignment.completed ~= true
+			if assignment.completed ~= true and assignment ~= pendingExtraSupport
 				and assignment.phase ~= 'feint' and role ~= 'SUPPLY'
 				and self:_operationAssignmentCanRetask(assignment, targetZone)
 			then
@@ -88138,8 +88283,9 @@ do
 			end
 		end
 		if compatible <= 0 then return 0 end
+		local incompatibleAssignments = {}
 		for _, assignment in ipairs(operation.assignments) do
-			if assignment.completed ~= true then
+			if assignment.completed ~= true and assignment ~= pendingExtraSupport then
 				local role = assignment.capacityRole or assignment.role
 				if assignment.launched ~= true
 					and assignment.phase == 'feint'
@@ -88200,17 +88346,38 @@ do
 						redirectedSourceZone = redirectedSourceZone or assignment.sourceZone
 					end
 				elseif assignment.launched ~= true then
-					self:_cancelUnlaunchedAssignment(operation, assignment, 'reassessment-redirect-incompatible')
+					local groupCommander = assignment.groupRef
+					local assignmentTarget = redirected <= 0
+						and self.battleCommander:getZoneByName(assignment.targetZone) or nil
+					if redirected > 0 or (groupCommander
+						and groupCommander._dynamicHybridRetired ~= true
+						and groupCommander.side == self.side
+						and groupCommander.targetzone == assignment.targetZone
+						and self:_sourceZoneUsable(groupCommander.zoneCommander, role ~= 'SUPPLY')
+						and self:_zoneUsable(assignmentTarget,
+							(GlobalSettings.pvpEnabled == true and (3 - self.side) or coalition.side.BLUE)))
+					then
+						incompatibleAssignments[assignment] = true
+					else
+						self:_cancelUnlaunchedAssignment(operation, assignment, 'reassessment-redirect-incompatible')
+					end
 				end
 			end
 		end
-		if operation.reserve and not self:_conditionalReserveAssignment(operation) then
-			operation.reserve = nil
-			operation.reserveTrigger = 'conserved-redirect-incompatible'
+		if operation.reserve then
+			local reserveAssignment = self:_conditionalReserveAssignment(operation)
+			if not reserveAssignment or (redirected > 0 and incompatibleAssignments[reserveAssignment]) then
+				operation.reserve = nil
+				operation.reserveTrigger = 'conserved-redirect-incompatible'
+			end
 		end
 		if redirected <= 0 then return 0 end
+		self:_clearSeadIngressCapSupport(operation)
 
 		for _, assignment in ipairs(operation.assignments) do
+			if incompatibleAssignments[assignment] then
+				self:_cancelUnlaunchedAssignment(operation, assignment, 'reassessment-redirect-incompatible')
+			end
 			local role = assignment.capacityRole or assignment.role
 			if assignment.launched == true and role ~= 'SUPPLY' and assignment.detached ~= true
 				and assignment.airborneRedirectedAt ~= now
@@ -88251,7 +88418,7 @@ do
 		if self.state == 'shaping' then
 			operation.phaseDeadline = math.min(operationDeadline, now + self.config.shapingMaxSec)
 		elseif self.state == 'assault' then
-			operation.phaseDeadline = math.min(operationDeadline, now + self.config.assaultMaxSec)
+			operation.phaseDeadline = self:_assaultPhaseDeadline(operation, now)
 		end
 		operation.capacitySignature = nil
 		self.strategicShadowNextAt = 0
@@ -88309,8 +88476,9 @@ do
 			assessment.secondaryAxisDecision = operation.secondaryAxisReserveDecision
 		end
 
-		local reactionOperation = math.max(0, tonumber(operation.reactionAllowance) or 0) > 0
-		local canRedirect = not reactionOperation and math.max(0, tonumber(operation.redirectCount) or 0) < 1
+		local reactionOperation = assessment.reactionOperation
+		local canRedirect = not reactionOperation and not assessment.mainAttackExhausted
+			and math.max(0, tonumber(operation.redirectCount) or 0) < 1
 		if canRedirect and assessment.redirectEvidence then
 			if operation.reassessmentCandidate == assessment.alternateZone then
 				operation.reassessmentCandidateCount = math.max(0, tonumber(operation.reassessmentCandidateCount) or 0) + 1
@@ -88341,11 +88509,13 @@ do
 			end
 		end
 
-		if not reactionOperation and assessment.badFight
-			and (not assessment.redirectEvidence or not canRedirect or redirectAttempted)
+		if not reactionOperation and (assessment.mainAttackExhausted
+			or (assessment.badFight and (not assessment.redirectEvidence or not canRedirect or redirectAttempted)))
 		then
 			assessment.decision = 'contain'
-			self:_containOperation(operation, now, 'loss-ratio-' .. string.format('%.2f', assessment.package.lossRatio))
+			local reason = assessment.mainAttackExhausted and 'main-attack-force-exhausted'
+				or ('loss-ratio-' .. string.format('%.2f', assessment.lossRatio))
+			self:_containOperation(operation, now, reason)
 			return assessment
 		end
 		return assessment
@@ -88542,17 +88712,27 @@ do
 		operation.capCoverageDecisionMade = true
 
 		local attackCount = 0
+		local ordinaryPackage = self.side == coalition.side.RED and GlobalSettings.pvpEnabled ~= true
+			and reactionRequest == nil and operation.doctrine ~= 'counterattack'
+		local mainAttackerCount = 0
 		for _, assignment in ipairs(operation.assignments) do
 			if assignment.role ~= 'SUPPLY' and assignment.phase ~= 'feint'
 				and assignment.completed ~= true and assignment.cancelled ~= true
 			then
 				attackCount = attackCount + 1
+				if ordinaryPackage and assignment.targetZone == targetZoneName
+					and assignment.detached ~= true
+					and (assignment.capacityRole or assignment.role) ~= 'CAP' then
+					mainAttackerCount = mainAttackerCount + 1
+				end
 			end
 		end
 		if attackCount == 0 then
 			self:_releaseOperationGroups(operation)
 			return nil
 		end
+
+		if ordinaryPackage and mainAttackerCount == 0 then operation.doctrine = 'probe' end
 
 		operation.mainAuthorizeAt = operation.mainAuthorizeAt or now
 		local reactionAccepted = 0
@@ -88561,7 +88741,7 @@ do
 			operation.reactionAllowance = reactionAccepted
 			operation.reactionCapAllowance = math.min(requestedCapAllowance, reactionAccepted)
 		end
-		self:_configureConditionalReserve(operation, reactionRequest)
+		self:_configureConditionalReserve(operation, reactionRequest, ordinaryPackage, mainAttackerCount)
 		operation.capacitySignature = self:_capacitySignature(playerCount)
 		return operation, reactionAccepted
 	end
@@ -88630,7 +88810,7 @@ do
 		local operation = self.operation
 		if not operation or self.state == 'surge' then return end
 		self:_reconcileTacticalStrikeTransfers(operation)
-		local capacitySignature = self:_capacitySignature(playerCount)
+		local capacitySignature = self.capacitySignature
 		local capacityChanged = operation.capacitySignature ~= capacitySignature
 		local currentGroups = self:_combatAssignmentCount(operation)
 
@@ -90415,12 +90595,37 @@ do
 		return found
 	end
 
+	function Director:_assaultPhaseDeadline(operation, now)
+		local allowance = 0
+		if self.side == coalition.side.RED and GlobalSettings.pvpEnabled ~= true then
+			for _, assignment in ipairs(operation.assignments) do
+				local category = assignment.unitCategory
+				if (assignment.capacityRole or assignment.role) == 'CAS'
+					and assignment.targetZone == operation.targetZone
+					and assignment.phase ~= 'feint' and assignment.launched ~= true
+					and assignment.reserveHeld ~= true and assignment.completed ~= true
+					and assignment.cancelled ~= true and assignment.detached ~= true
+					and (category == Unit.Category.HELICOPTER or category == Unit.Category.AIRPLANE)
+				then
+					local distances = ZONE_DISTANCES[assignment.sourceZone]
+					local meters = distances and distances[operation.targetZone]
+					if meters and meters >= 0 and meters < math.huge then
+						local knots = category == Unit.Category.HELICOPTER and 120 or 350
+						allowance = math.max(allowance, meters / 1852 / knots * 3600)
+					end
+				end
+			end
+		end
+		return math.min(operation.startedAt + self.config.operationMaxSec,
+			now + self.config.assaultMaxSec + math.min(self.config.assaultMaxSec, allowance))
+	end
+
 	function Director:_beginAssault(now)
 		self:_closePhase('feint')
 		self:_closePhase('shape')
 		self.state = 'assault'
 		self.operation.phaseStartedAt = now
-		self.operation.phaseDeadline = now + self.config.assaultMaxSec
+		self.operation.phaseDeadline = self:_assaultPhaseDeadline(self.operation, now)
 		self:_armConditionalReserve(self.operation, now)
 		self:_log('operation=' .. self.operation.id .. ' phase=assault target=' .. self.operation.targetZone)
 	end
@@ -90438,13 +90643,14 @@ do
 		if not operation then return end
 		local targetZone = self.battleCommander:getZoneByName(operation.targetZone)
 		result = self:_operationStrengthResult(operation, result, targetZone)
+		local outcomeField, outcomeReason
 		if self.side == coalition.side.RED and GlobalSettings.pvpEnabled ~= true then
 			if targetZone then
 				self:_updateOperationRoleEvidence(operation, targetZone, now, nil, true)
 			end
 			self:_recordSecondaryAxisOutcome(operation, result, now)
 			local packageFacts = self:_operationPackageFacts(operation)
-			local outcomeField, outcomeReason = self:_operationLearningOutcome(
+			outcomeField, outcomeReason = self:_operationLearningOutcome(
 				operation,
 				result,
 				packageFacts
@@ -90503,6 +90709,8 @@ do
 			sourceZone = operation.sourceZone,
 			doctrine = operation.doctrine,
 			result = result,
+			learningOutcome = outcomeField,
+			learningReason = outcomeReason,
 		})
 		while #self.history > self.config.historySize do table.remove(self.history) end
 		self:_releaseOperationGroups(operation)
@@ -91103,6 +91311,8 @@ do
 				sourceZone = previous.sourceZone,
 				doctrine = previous.doctrine,
 				result = previous.result,
+				learningOutcome = previous.learningOutcome,
+				learningReason = previous.learningReason,
 			}
 		end
 		for _, previous in ipairs(self.groundHistory or {}) do
@@ -91687,6 +91897,8 @@ do
 					sourceZone = previous.sourceZone,
 					doctrine = previous.doctrine,
 					result = previous.result,
+					learningOutcome = previous.learningOutcome,
+					learningReason = previous.learningReason,
 				}
 				if #self.history >= self.config.historySize then break end
 			end
@@ -92978,8 +93190,10 @@ do
 		local candidates = self:_collectTargetCandidates(now)
 		local preferred, orderedCandidates, selectedAreaId = self:_areaFirstCandidateOrder(candidates)
 		local planningInventory = nil
+		local planningInventoryGeneration = nil
 		if preferred then
 			planningInventory = self:_buildPlanningGroupInventory(nil, nil)
+			planningInventoryGeneration = self.battleCommander._reindexCombatFilterGeneration
 		end
 		if preferred then
 			local proposal = self:_campaignActionProposal(
@@ -93015,6 +93229,10 @@ do
 				local admitted, actionDecision = self:_campaignActionAdmission(
 					proposal, now, self.airPostureFacts)
 				if admitted then
+					if planningInventory and planningInventoryGeneration ~= self.battleCommander._reindexCombatFilterGeneration then
+						planningInventory = self:_buildPlanningGroupInventory(nil, nil)
+						planningInventoryGeneration = self.battleCommander._reindexCombatFilterGeneration
+					end
 					local operation = self:_buildOperation(candidate, candidates, playerCount, now,
 						nil, planningInventory, normalMaximum)
 					if operation then
@@ -94616,6 +94834,7 @@ do
 			local support = operation and operation.seadIngressCapSupport or nil
 			if support and assignment.seadIngressCapSupport == true
 				and support.capAssignmentName == assignment.name and support.releaseAt == nil
+				and support.state ~= 'ready'
 			then
 				self:_activateSpawnedSeadIngressCap(operation, support, groupCommander, now)
 			end
@@ -100090,7 +100309,7 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 			local list = aircraftID and ejectedPilotOwnersByAircraft[aircraftID]
 			local pilotData = list and table.remove(list,1) or nil
 			local hadOwnerRecord = pilotData ~= nil
-			if pvpEnabled and pilotData then carriedRescuedPilots = pilotData.carriedRescuedPilots end
+			if pilotData then carriedRescuedPilots = pilotData.carriedRescuedPilots end
 			if list and #list == 0 then ejectedPilotOwnersByAircraft[aircraftID] = nil end
 
 			self.csarPilotProcessedByAircraft = self.csarPilotProcessedByAircraft or {}
@@ -100201,14 +100420,14 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 				end
 				landedPilotOwners[pilotObjectID]=nil
 				pilot:destroy()
-				if pvpEnabled and carriedRescuedPilots and #carriedRescuedPilots > 0 then
+				if carriedRescuedPilots and #carriedRescuedPilots > 0 then
 					skipMainPilot = true
 				else
 					return
 				end
 			end
 
-			if not skipMainPilot and (not pilotData or (pvpEnabled and pilotData.hasPilotData == false)) then
+			if not skipMainPilot and (not pilotData or pilotData.hasPilotData == false) then
 				local spawnChance = LogisticCommander.CsarPilotSpawnWithoutCreditsChance or 50
 				if spawnChance < 0 then spawnChance = 0 end
 				if spawnChance > 100 then spawnChance = 100 end
@@ -100217,7 +100436,7 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 					if pilot and pilot:isExist() then
 						pilot:destroy()
 					end
-					if pvpEnabled and carriedRescuedPilots and #carriedRescuedPilots > 0 then
+					if carriedRescuedPilots and #carriedRescuedPilots > 0 then
 						skipMainPilot = true
 					else
 						return
@@ -100225,7 +100444,7 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 				end
 			end
 			local downedCoalition = (pilotData and pilotData.coalition) or coalitionSide
-			if not skipMainPilot and (not zoneSide) and downedCoalition then
+			if map ~= "Normandy" and not skipMainPilot and (not zoneSide) and downedCoalition then
 				local templateKey = nil
 				if LogisticCommander.csarHostileInfantryDistanceByTemplate then
 					local n = 0
@@ -100364,12 +100583,12 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 			self.csarPilotByAircraft = self.csarPilotByAircraft or {}
 			local existingPilot = aircraftID and self.csarPilotByAircraft[aircraftID]
 			local isPlayerAircraft = aircraftID and self.csarPlayerAircraftByAircraft and self.csarPlayerAircraftByAircraft[aircraftID]
-			if (not pilotData or (pvpEnabled and pilotData.hasPilotData == false)) and not isPlayerAircraft and existingPilot and existingPilot:isExist() then
+			if (not pilotData or pilotData.hasPilotData == false) and not isPlayerAircraft and existingPilot and existingPilot:isExist() then
 				landedPilotOwners[pilotObjectID]=nil
 				if pilot and pilot:isExist() then
 					pilot:destroy()
 				end
-				if pvpEnabled and carriedRescuedPilots and #carriedRescuedPilots > 0 then
+				if carriedRescuedPilots and #carriedRescuedPilots > 0 then
 					skipMainPilot = true
 				else
 					return
@@ -100436,7 +100655,6 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 			if skipMainPilot then pilotObj = nil end
 			local newObjectID = pilotObj and pilotObj:getObjectID()
 			self:_bindCsarHostilesToPilot(newObjectID, pilotData, hostileSpawnedGroupNames)
-			if not pvpEnabled then carriedRescuedPilots = pilotData and pilotData.carriedRescuedPilots or nil end
 			if pilotData then
 				pilotData.carriedRescuedPilots = nil
 			end
@@ -100470,9 +100688,9 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 			end
 
 
-			if aircraftID and (not pilotData or (pvpEnabled and pilotData.hasPilotData == false)) and not skipMainPilot then
+			if aircraftID and (not pilotData or pilotData.hasPilotData == false) and not skipMainPilot then
 				self.csarPilotByAircraft[aircraftID] = pilotObj
-				if not pvpEnabled or not hadOwnerRecord then processed = processed + 1 end
+				if not hadOwnerRecord then processed = processed + 1 end
 				self.csarPilotProcessedByAircraft[aircraftID] = processed
 			end
 
@@ -100481,7 +100699,7 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 				self:_startCsarHomeForPilot(pilotObj, pilotData, zoneSide, zoneName)
 			end
 			local mainPilotAlive = carriedRescuedPilots and #carriedRescuedPilots > 0 and pilotObj and pilotObj:isExist()
-			if carriedRescuedPilots and #carriedRescuedPilots > 0 and (mainPilotAlive or pvpEnabled) then
+			if carriedRescuedPilots and #carriedRescuedPilots > 0 and (mainPilotAlive or skipMainPilot or pvpEnabled) then
 				local mainPilotPoint = mainPilotAlive and pilotObj:getPoint() or mainSpawnPoint
 				if mainPilotPoint then
 					local mainPilotCoord = COORDINATE:NewFromVec3(mainPilotPoint)
@@ -109067,11 +109285,32 @@ function spawnRedInterceptorFor(blueBomberGroup, targetZoneName)
 	end
 
 	local targetCoord = targetZone:GetCoordinate()
-	local homebase, distance = targetCoord:GetClosestAirbase(0, 1)
+	local targetPoint = targetCoord:GetVec3()
+	local homebase, distanceSquared
+	local playerPoints
+	local now = timer.getTime()
+	for _, zone in ipairs(bc.zones) do
+		local airbase = DynamicBomber.ResolveSpawnAirbase(zone, coalition.side.RED)
+		if airbase and not bc:isRunwayPlaneSpawnBlocked(zone.zone, now) then
+			local spawnCoord = airbase:GetCoordinate()
+			local spawnPoint = spawnCoord:GetVec3()
+			local dx = spawnPoint.x - targetPoint.x
+			local dz = spawnPoint.z - targetPoint.z
+			local candidateDistanceSquared = dx * dx + dz * dz
+			if not distanceSquared or candidateDistanceSquared < distanceSquared then
+				playerPoints = playerPoints or DynamicBomber.PlayerPoints()
+				local playerDistanceNm = DynamicBomber.NearestPlayerDistanceNm(spawnCoord, nil, playerPoints, spawnPoint)
+				if not playerDistanceNm or playerDistanceNm >= WW2_BOMBER_MIN_PLAYER_SPAWN_NM then
+					homebase, distanceSquared = airbase, candidateDistanceSquared
+				end
+			end
+		end
+	end
 	if not homebase then
-		env.info("[BLUE_BOMBER_LOG] ABORT: No RED airbase found")
+		env.info("[BLUE_BOMBER_LOG] ABORT: No eligible RED zone airbase with a clear runway and safe player distance")
 		return false
 	end
+	local distance = math.sqrt(distanceSquared)
 
 	blueBomberLog(string.format("[BLUE_BOMBER_LOG] Interceptor homebase: %s (Distance: %.1f NM)",
 		homebase:GetName(), UTILS.MetersToNM(distance)))
@@ -110076,6 +110315,7 @@ do
 			if st and st.SetItem then
 				WEAPONSLIST.ClearWeaponsInStorage(st)
 				for name, qty in pairs(items) do
+					if (Era == "Coldwar" or Era == "Vietnam") and WEAPONSLIST.IsRestricted(name) then qty = 0 end
 					st:SetItem(_getWarehouseItemKey(name), tonumber(qty) or 0)
 				end
 					for _, forbiddenWeapon in ipairs(ForbiddWeaponsInAllEra or {}) do

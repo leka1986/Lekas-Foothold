@@ -85,6 +85,9 @@ function dispatchCommand(Event)
     elseif text:find("-destroy3") then handleDestroyVehicleRequest(text, coord)
     elseif text:find("-destroy4") then handleClearRequest(text, coord)
     elseif text:find("-explode")  then handleExplodeRequest(text, coord)
+    elseif text == "-illuminate" then
+        coord.y = coord.y + 1000
+        coord:IlluminationBomb(700000)
     elseif text:find("-smoke")    then handleSmokeRequest(text, coord)
     else return end
     trigger.action.removeMark(Event.idx)
