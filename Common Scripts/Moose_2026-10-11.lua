@@ -6769,8 +6769,7 @@ if not self.Scheduler then
 self.Scheduler=SCHEDULER:New(self)
 end
 local ScheduleID=self.Scheduler:Schedule(nil,SchedulerFunction,{...},Start)
-self._.Schedules[#self._.Schedules+1]=ScheduleID
-return self._.Schedules[#self._.Schedules]
+return ScheduleID
 end
 function BASE:ScheduleRepeat(Start,Repeat,RandomizeFactor,Stop,SchedulerFunction,...)
 self:F2({Start})
@@ -6791,8 +6790,7 @@ RandomizeFactor,
 Stop,
 4
 )
-self._.Schedules[#self._.Schedules+1]=ScheduleID
-return self._.Schedules[#self._.Schedules]
+return ScheduleID
 end
 function BASE:ScheduleStop(SchedulerID)
 self:F3({"ScheduleStop:"})
@@ -7913,7 +7911,6 @@ Stop,
 TraceLevel or 3,
 Fsm
 )
-self.Schedules[#self.Schedules+1]=ScheduleID
 return ScheduleID
 end
 function SCHEDULER:Start(ScheduleID)
@@ -7963,6 +7960,8 @@ self.PersistentSchedulers=self.PersistentSchedulers or{}
 self.ObjectSchedulers=self.ObjectSchedulers or setmetatable({},{__mode="v"})
 if Scheduler.MasterObject then
 self.ObjectSchedulers[CallID]=Scheduler
+self.KeepAlive=self.KeepAlive or{}
+self.KeepAlive[Scheduler]=true
 self:F3({CallID=CallID,ObjectScheduler=tostring(self.ObjectSchedulers[CallID]),MasterObject=tostring(Scheduler.MasterObject)})
 else
 self.PersistentSchedulers[CallID]=Scheduler
@@ -8006,9 +8005,10 @@ local Scheduler=self.ObjectSchedulers[CallID]
 if not Scheduler then
 Scheduler=self.PersistentSchedulers[CallID]
 end
-if Scheduler then
+local Schedules=Scheduler and self.Schedule and self.Schedule[Scheduler]
+local Schedule=Schedules and Schedules[CallID]
+if Scheduler and Schedule then
 local MasterObject=tostring(Scheduler.MasterObject)
-local Schedule=self.Schedule[Scheduler][CallID]
 local SchedulerObject=Scheduler.MasterObject
 local ShowTrace=Scheduler.ShowTrace
 local ScheduleFunction=Schedule.Function
@@ -8044,9 +8044,13 @@ if Status and((Result==nil)or(Result and Result~=false))then
 if Repeat~=0 and((Stop==0)or(Stop~=0 and CurrentTime<=StartTime+Stop))then
 local ScheduleTime=CurrentTime+Repeat+math.random(-(Randomize*Repeat/2),(Randomize*Repeat/2))+0.0001
 return ScheduleTime
+elseif Repeat==0 then
+self:_Reclaim(Scheduler,CallID)
 else
 self:Stop(Scheduler,CallID)
 end
+elseif Repeat==0 then
+self:_Reclaim(Scheduler,CallID)
 else
 self:Stop(Scheduler,CallID)
 end
@@ -8061,30 +8065,31 @@ end
 function SCHEDULEDISPATCHER:RemoveSchedule(Scheduler,CallID)
 self:F2({Remove=CallID,Scheduler=Scheduler})
 if CallID then
-self:Stop(Scheduler,CallID)
-self.Schedule[Scheduler][CallID]=nil
+self:_Reclaim(Scheduler,CallID)
 end
 end
 function SCHEDULEDISPATCHER:Start(Scheduler,CallID,Info)
 self:F2({Start=CallID,Scheduler=Scheduler})
+local Schedules=self.Schedule and self.Schedule[Scheduler]
 if CallID then
-local Schedule=self.Schedule[Scheduler][CallID]
-if not Schedule.ScheduleID then
+local Schedule=Schedules and Schedules[CallID]
+if Schedule and not Schedule.ScheduleID then
 local Tnow=timer.getTime()
 Schedule.StartTime=Tnow
 Schedule.ScheduleID=timer.scheduleFunction(Schedule.CallHandler,{CallID=CallID,Info=Info},Tnow+Schedule.Start)
 self:T(string.format("Starting SCHEDULEDISPATCHER Call ID=%s ==> Schedule ID=%s",tostring(CallID),tostring(Schedule.ScheduleID)))
 end
 else
-for CallID,Schedule in pairs(self.Schedule[Scheduler]or{})do
+for CallID,Schedule in pairs(Schedules or{})do
 self:Start(Scheduler,CallID,Info)
 end
 end
 end
 function SCHEDULEDISPATCHER:Stop(Scheduler,CallID)
 self:F2({Stop=CallID,Scheduler=Scheduler})
+local Schedules=self.Schedule and self.Schedule[Scheduler]
 if CallID then
-local Schedule=self.Schedule[Scheduler][CallID]
+local Schedule=Schedules and Schedules[CallID]
 if Schedule and Schedule.ScheduleID then
 self:T(string.format("SCHEDULEDISPATCHER stopping scheduler CallID=%s, ScheduleID=%s",tostring(CallID),tostring(Schedule.ScheduleID)))
 timer.removeFunction(Schedule.ScheduleID)
@@ -8093,15 +8098,21 @@ else
 self:T(string.format("Error no ScheduleID for CallID=%s",tostring(CallID)))
 end
 else
-for CallID,Schedule in pairs(self.Schedule[Scheduler]or{})do
+for CallID,Schedule in pairs(Schedules or{})do
 self:Stop(Scheduler,CallID)
 end
 end
 end
 function SCHEDULEDISPATCHER:Clear(Scheduler)
 self:F2({Scheduler=Scheduler})
-for CallID,Schedule in pairs(self.Schedule[Scheduler]or{})do
-self:Stop(Scheduler,CallID)
+local Schedules=self.Schedule and self.Schedule[Scheduler]
+if Schedules then
+for CallID,Schedule in pairs(Schedules)do
+self:_Reclaim(Scheduler,CallID)
+end
+end
+if self.KeepAlive then
+self.KeepAlive[Scheduler]=nil
 end
 end
 function SCHEDULEDISPATCHER:ShowTrace(Scheduler)
@@ -8114,9 +8125,26 @@ Scheduler.ShowTrace=false
 end
 function SCHEDULEDISPATCHER:_Reclaim(Scheduler,CallID)
 self:Stop(Scheduler,CallID)
-if self.Schedule[Scheduler]then self.Schedule[Scheduler][CallID]=nil end
+local Schedules=self.Schedule and self.Schedule[Scheduler]
+if Schedules then
+Schedules[CallID]=nil
+if next(Schedules)==nil then
+self.Schedule[Scheduler]=nil
+local master=self.KeepAlive and self.KeepAlive[Scheduler]and Scheduler.MasterObject
+if master and type(master.Is)=="function"then
+local ok,stopped=pcall(master.Is,master,"Stopped")
+if ok and stopped then
+self.KeepAlive[Scheduler]=nil
+end
+end
+end
+end
+if self.ObjectSchedulers then
 self.ObjectSchedulers[CallID]=nil
+end
+if self.PersistentSchedulers then
 self.PersistentSchedulers[CallID]=nil
+end
 end
 EVENT={
 ClassName="EVENT",
@@ -8991,8 +9019,8 @@ end
 end
 if Event.weapon and type(Event.weapon)=="table"and Event.weapon.isExist and Event.weapon:isExist()then
 Event.Weapon=Event.weapon
-if Event.weapon_name=="ZELL Booster"then
-Event.WeaponName="ZELL Booster"
+if Event.weapon_name=="ZELL Booster"or Event.weapon_name=="SPRD-99"then
+Event.WeaponName=Event.weapon_name
 else
 Event.WeaponName=Event.weapon:isExist()and Event.weapon.getTypeName and Event.weapon:getTypeName()or"Unknown Weapon"
 end
@@ -107044,6 +107072,7 @@ return self
 end
 function INTEL:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK,DetectedObjects)
 local reccename=Unit:GetName()
+local reccecoord,blurSnapshot
 local detectedtargets=Unit:GetDetectedTargets(DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)
 for DetectionObjectID,Detection in pairs(detectedtargets or{})do
 local DetectedObject=Detection.object
@@ -107057,23 +107086,38 @@ if status then
 local unit=UNIT:FindByName(name)
 if unit and unit:IsAlive()then
 local DetectionAccepted=true
+local pairCoord,pairDistance
+local playerRow
+if self.RadarBlur and self.RadarBlurPlayersOnly==true then
+if not blurSnapshot then
+local opposing=self.coalition==coalition.side.BLUE and coalition.side.RED or coalition.side.BLUE
+blurSnapshot=self.AccousticPlayerSnapshotProvider(opposing)
+end
+local row=blurSnapshot.byUnitId[DetectedObject.id_]
+if row and(row.isAirplane or row.isHelicopter)and row.unit:isExist()and DetectedObject:getPlayerName()then playerRow=row end
+end
 if self.RadarAcceptRange then
-local reccecoord=Unit:GetCoord()
+reccecoord=reccecoord or Unit:GetCoord()
 local coord=unit:GetCoord()
 local dist=math.floor(coord:Get2DDistance(reccecoord)/1000)
+pairCoord,pairDistance=coord,dist
 if dist>self.RadarAcceptRangeKilometers then DetectionAccepted=false end
 end
-if self.RadarBlur then
-local reccecoord=Unit:GetCoord()
-local coord=unit:GetCoord()
-local dist=math.floor(coord:Get2DDistance(reccecoord)/1000)
-local AGL=unit:GetAltitude(true)
+if self.RadarBlur and(self.RadarBlurPlayersOnly~=true or playerRow)then
+reccecoord=reccecoord or Unit:GetCoord()
+local coord=pairCoord or(playerRow and playerRow.point)or unit:GetCoord()
+local dist=pairDistance
+if not dist then
+local dx,dz=coord.x-reccecoord.x,coord.z-reccecoord.z
+dist=math.floor(math.sqrt(dx*dx+dz*dz)/1000)
+end
+local AGL=coord.y-(land.getHeight({x=coord.x,y=coord.z})or 0)
 local minheight=self.RadarBlurMinHeight or 250
 local thresheight=self.RadarBlurThresHeight or 90
 local thresblur=self.RadarBlurThresBlur or 85
 if dist<=self.RadarBlurClosing then
 thresheight=(((dist*dist)/self.RadarBlurClosingSquare)*thresheight)
-thresblur=(((dist*dist)/self.RadarBlurClosingSquare)*thresblur)
+thresblur=100-(((dist*dist)/self.RadarBlurClosingSquare)*(100-thresblur))
 end
 local fheight=math.floor(math.random(1,10000)/100)
 local fblur=math.floor(math.random(1,10000)/100)

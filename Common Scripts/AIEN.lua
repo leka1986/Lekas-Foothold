@@ -9743,10 +9743,10 @@ local function getGroupClass(group, units)
 	end
 end
 
-local function getUnitClass(unit) 
+local function getUnitClass(unit, knownCoalition) 
 
 	if unit and unit:isExist() == true then     
-		local coa = unit:getCoalition()
+		local coa = knownCoalition or unit:getCoalition()
 		local cls = "none"
 
 		if coa then
@@ -10309,7 +10309,7 @@ local function getSA(group, units, dbEntry) -- built a situational awareness che
                                         local speed = (v and v.x and v.y and v.z) and vecmag(v) or 0
                                         local t_id = tgt:getID()
                                         local desc = tgt:getDesc()
-                                        intelDb[t_id] = {obj = tgt,pos = pos,coa = coa,life = tgt:getLife(),record = _now,speed = speed,type = (tgt.type and tgt:getTypeName() or "unknown"),ucat = tgt:getCategory(),scat = nil,attr = (desc and desc.attributes or nil),cls = getUnitClass(tgt),identifier = sa.cls}
+                                        intelDb[t_id] = {obj = tgt,pos = pos,coa = coa,life = tgt:getLife(),record = _now,speed = speed,type = (tgt.type and tgt:getTypeName() or "unknown"),ucat = tgt:getCategory(),scat = nil,attr = (desc and desc.attributes or nil),cls = getUnitClass(tgt, coa),identifier = sa.cls}
                                     end
                                 end
                             --end)

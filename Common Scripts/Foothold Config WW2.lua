@@ -47,6 +47,7 @@ FootholdConfigTrackedTableNames = {
 }
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
+    "MaxRedGroundGroupsPerZone",
     "AdminCommands",
     "ewrs_enabled",
     "PlayerZoneSuppliesConsumeStock",
@@ -128,7 +129,7 @@ end
 -- End of do not touch
 --
 -- ============================================================================
--- Mission Rules
+-- Mission options
 -- ============================================================================
 
 -- Global language use for Foothold.
@@ -203,8 +204,18 @@ GlobalSettings = GlobalSettings or {}
 -- @gui label="AI Spawn Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05"
 GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
 
--- @gui label="Red AI Plane Skill" validValues="Average=Average | Good=Good | High=High | Excellent=Excellent | Random=Random"
-AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
+
+
+
+RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
+
+-- ============================================================================
+-- Ground Units
+-- ============================================================================
+-- Sets the maximum number of Red ground groups per zone in a fresh Normandy campaign.
+-- Choose 3 to 6. Each zone still rolls within its own range, so some get fewer groups.
+-- @gui label="Ground Units Max Groups at Each Zone" validValues="3=3 | 4=4 | 5=5 | 6=6"
+MaxRedGroundGroupsPerZone = 6
 
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
 RedAiGroundSkill        = "Excellent" -- AI skill used for spawned RED zone ground defenses (MOOSE SPAWN:InitSkill).
@@ -212,15 +223,22 @@ RedAiGroundSkill        = "Excellent" -- AI skill used for spawned RED zone grou
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
 BlueAiGroundSkill       = "Excellent" -- AI skill used for spawned BLUE zone ground defenses (MOOSE SPAWN:InitSkill).
 
+-- ============================================================================
+-- AI Flights
+-- ============================================================================
+
+-- @gui label="Red AI Plane Skill" validValues="Average=Average | Good=Good | High=High | Excellent=Excellent | Random=Random"
+AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
+
 -- Valid values: "easy" | "medium" | "hard"
 -- Here, you can adjust how many cap should spawn. medium, is the default (Balanaced)
 CapDifficulty           = "medium" -- RED CAP amount.  This can be further custommized in the advance section.
 CasDifficulty           = "medium" -- RED CAS amount.  This can be further custommized in the advance section.
 
+RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
+
 FriendlyCapSupport      = "medium" -- BLUE CAP support limit. This can be further custommized in the advance section.
 FriendlyCasSupport      = "medium" -- BLUE CAS support limit.  This can be further custommized in the advance section.
-RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
-RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 
 -- ============================================================================
 -- Difficulty advanced
@@ -838,7 +856,7 @@ AIEN.config.initiative			= true -- set to false if you want to disable the initi
 
 -- Increase these only if you have performance issues (start with Active, then Idle).
 phaseCycleTimerMin = 0.2       -- Affects initialization only. Raise to 0.3-0.5 if init is spiking.
-phaseCycleTimerActive = 0.04   -- Main runtime cadence when work is pending. Try 0.06-0.08.
+phaseCycleTimerActive = 0.08   -- Main runtime cadence when work is pending. Try 0.06-0.08.
 phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if needed.
 
 

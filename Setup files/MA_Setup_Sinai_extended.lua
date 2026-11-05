@@ -4241,8 +4241,8 @@ if Era ~= 'Vietnam' then
 	bc:addCarrierNavigationSuspendConnection("CVN72_AREA_RED_CARRIER", "Al Mansurah",true)
 end
 
-GlobalSettings.autoSuspendNmBlue = 50   		-- suspend blue zones deeper than this nm
-GlobalSettings.autoSuspendNmRed = 80   		-- suspend red zones deeper than this nm
+GlobalSettings.autoSuspendNmBlue = 120   		-- suspend blue zones deeper than this nm
+GlobalSettings.autoSuspendNmRed = 120   		-- suspend red zones deeper than this nm
 
 evc = EventCommander:new({ decissionFrequency=30*60, decissionVariance=30*60, skipChance = 10, strikeFrequency=5*60})
 evc:init()

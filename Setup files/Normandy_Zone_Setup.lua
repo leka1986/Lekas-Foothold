@@ -308,9 +308,9 @@ RandomUpgradeTemplates = {
 }
 
 RandomUpgradeTemplatesBlue = {
-	small = { ground = {1,1}, aaa = {2,3}, armor = {0,1}, arty = {0,1}, total = {5,6} },
-	medium = { ground = {1,1}, aaa = {2,3}, armor = {1,1}, arty = {0,1}, total = {5,6} },
-	big = { ground = {0,1}, aaa = {2,3}, armor = {0,1}, arty = {0,1}, total = {3,5} },
+	small = { ground = {1,1}, aaa = {2,3}, armor = {0,1}, arty = {0,1}, total = 2 },
+	medium = { ground = {1,1}, aaa = {2,3}, armor = {1,1}, arty = {0,1}, total = {2,3} },
+	big = { ground = {0,1}, aaa = {2,3}, armor = {0,1}, arty = {0,1}, total = {3,4} },
 }
 
 

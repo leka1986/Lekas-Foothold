@@ -74,6 +74,7 @@ FootholdConfigTrackedTableNames = {
 }
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
+    "MaxRedGroundGroupsPerZone",
     "AdminCommands",
     "PvPSeparateAircraftLists",
     "ewrs_enabled",
@@ -85,6 +86,9 @@ FootholdConfigTrackedScalarNames = {
     "WarehouseSupplyCapacity",
     "CTLDSupplyCapacity",
     "ExtraRedRepairTimeLowPlayerCountPercent",
+    "NightRewardPercent",
+    "NightMantisInterval",
+    "NightRadarBlur",
 }
 
 local function applyExternalConfigWithFallbackWarning()
@@ -182,7 +186,7 @@ end
 -- End of do not touch
 --
 -- ============================================================================
--- Mission Rules
+-- Mission options
 -- ============================================================================
 
 -- "Modern", "Coldwar", "Gulfwar" (Iraq Coldwar name), or "Vietnam".
@@ -192,6 +196,102 @@ Era = "Modern"
 -- Supported maps: Caucasus, Syria and Persian Gulf. Available in Modern, Coldwar and Vietnam.
 -- @gui label="PvP"
 PvP = false
+
+--
+
+-- Global language use for Foothold.
+-- This does not set the menu's language as it can be changed in the players radio menu.
+-- This will be the language used for on screen messages and other global text.
+-- Set FootholdLocale to one of:
+--   "EN"    English
+--   "DE"    German / Deutsch
+--   "FR"    French / Français
+--   "ES"    Spanish / Español
+--   "RU"    Russian / Русский
+--   "PT-BR" Brazilian Portuguese / Português (Brasil)
+--   "TR"    Turkish / Türkçe
+--   "IT"    Italian / Italiano
+--   "zh-CN" Simplified Chinese (Mainland China) / 简体中文
+--   "zh-TW" Traditional Chinese (Taiwan) / 繁體中文
+FootholdLocale = "EN"
+if FootholdLocalization then
+    FootholdLocalization:SetLocale(FootholdLocale)
+end
+
+-- ONLY VALID ON CAUCASUS, PERSIAN GULF, SYRIA AND AFGHANISTAN.
+-- if false, the mission will start from the other end. Carrier zone will be disabled.
+StartNormal = true
+
+-- SYRIA ONLY.
+-- If true while StartNormal is true, the campaign starts from Incirlik instead of Akrotiri.
+-- PvE only. PvP always uses Incirlik and Palmyra; StartNormal swaps their coalitions.
+-- @gui label="Start From Incirlik" visibleWhen="StartNormal:true" disabledWhen="PvP:true"
+StartFromIncirlik = false
+
+-- SYRIA ONLY.
+-- If true, removes the southern Syria zones from the campaign.
+-- Current campaign progress is kept. If later set to false, the southern zones return using their default setup state.
+-- In PvP, selects the reduced mainland layout; false selects the full mainland layout. Cyprus is excluded in both.
+-- @gui label="Remove Southern Syria"
+RemoveSouthSyria = false
+ 
+-- When the mission is completed, if you want the server to restart automatically and reset everything, then set this to true.
+-- If false, you will have a menu where you can choose to restart the mission. 
+AutoRestart = false
+
+
+
+-- PVE_Only is a flag where you can decide if you want to disable players from spawning in red zones.
+-- This is when the player chooses Red coalition.
+-- @gui disabledWhen="PvP:true"
+PVE_Only = false -- If true, players can not spawn in red coalition zones.
+
+-- If true, supports filling modded weapons via WarehouseLogistics
+-- (not compatible with Coldwar/Gulfwar).
+-- Keep in mind, adding mods midsession, while there is a save file, those weapons will not be added to current saved airbases.
+-- this will be filled through time, from the AutoFillResources.
+AllowMods = false -- Should NOT be used with the Coldwar or Gulfwar era.
+
+-- If true, when players die their coalition loses 100 credits per death.
+CreditLosewhenKilled = false
+
+-- If you want to change the amount, you can do it here.
+CreditLosewhenKilledAmount = 100
+
+-- If true, when players die they lose 100 rank credits (only if RankingSystem == true).
+RankLoseWhenKilled = true
+
+-- If you want to change the amount, you can do it here.
+RankLoseWhenKilledAmount = 100
+
+-- If true, loads enhanced bomb blast effects (may cause stutters).
+SplashDamage = false
+
+ShowKills = false -- If true, show Foothold kill messages.
+
+-- If true, limit shop purchases by personal credits earned (rank gates):
+--   >  250 cost requires   100 earned
+--   > 1000 cost requires  1000 earned
+--   > 2000 cost requires  2000 earned
+--   > 3000 cost requires  3000 earned
+StoreLimit = false
+
+-- If false, everyone can access the full shop.
+RankingSystem = true
+
+-- friendly fire ranking penalty
+FriendlyFireRankPenalty = 500
+
+-- Some missions have carriers and those can be controlled to move to another place. 
+-- If RankingSystem is true, then you can choose what level is required.
+CarrierRankRequirement = 5
+
+-- Works ONLY on Caucasus, Persian Gulf and Syria maps.
+-- If true, blue players can move Tarawa with map marker commands.
+-- tarawahere / tarawahereandstop sends Tarawa to the marker and stops there.
+-- tarawahere1 followed by tarawahere2 creates a racetrack between the two marker positions.
+-- tarawahelp displays the commands, or reports that Tarawa marker movement is disabled.
+AllowTarawaToMoveFreely = false
 
 -- ============================================================================
 -- PvP settings
@@ -221,11 +321,6 @@ pvp_supplies = true
 -- @gui label="PvP Escorts" visibleWhen="PvP:true"
 PvPEscorts = false
 
--- Chance in percent that AI air missions on either coalition may also engage enemy helicopters in PvP.
--- 0 disables helicopter targeting, 100 always allows it; InvisibleA10 takes precedence.
--- @gui label="PvP Chance AI Attack Helo" visibleWhen="PvP:true" disabledWhen="InvisibleA10:true"
-PvPChanceAiAttackHelo = 0
-
 -- Disable ordinary automatic combat flights for both coalitions. Paid support and supplies keep their own settings.
 -- @gui label="Disable Automatic Combat AI" visibleWhen="PvP:true"
 PvPDisableCombatAI = false
@@ -237,8 +332,128 @@ PvPDisableCombatAI = false
 PvPCombatAIGroupLimit = 10
 
 -- ============================================================================
--- Mission Rules
+-- Frequencies
 -- ============================================================================
+
+-- AWACS radio frequencies in MHz AM. Both Blue slots apply to every era.
+-- Red radio overrides apply only in PvP; the existing PvE Red AWACS keeps its default.
+-- Changes take effect when the mission is restarted. Aircraft presets are unchanged.
+-- @gui label="AWACS frequencies (MHz AM)" installPolicy="mergeRows"
+AWACSRadioFrequencies = {
+    ["Blue AWACS 1"] = 251,
+    ["Blue AWACS 2"] = 251.5,
+    -- @gui visibleWhen="PvP:true"
+    ["Red AWACS 1"] = 252,
+    -- @gui visibleWhen="PvP:true"
+    ["Red AWACS 2"] = 252.5,
+}
+
+-- Tanker frequencies in MHz AM and TACAN channels (1-126, Y band).
+-- Tanker Help, approaching and on-station messages use these same settings.
+-- BTN 14/20 is shown only while Arco/Texaco keeps its default 260/266 MHz frequency.
+-- Red radio overrides apply only in PvP. Shell is the Blue carrier recovery tanker.
+-- Changes take effect when the mission is restarted. Aircraft presets are unchanged.
+-- @gui label="Tanker radios" editor="fieldTable" fields="frequencyMHz:Frequency MHz:number|tacanChannel:TACAN (Y):number" installPolicy="mergeRows"
+TankerRadioSettings = {
+    ["Blue Arco"] = { frequencyMHz = 260, tacanChannel = 101 },
+    ["Blue Texaco"] = { frequencyMHz = 266, tacanChannel = 102 },
+    ["Shell"] = { frequencyMHz = 253, tacanChannel = 103 },
+    -- @gui visibleWhen="PvP:true"
+    ["Red Arco"] = { frequencyMHz = 260, tacanChannel = 104 },
+    -- @gui visibleWhen="PvP:true"
+    ["Red Texaco"] = { frequencyMHz = 266, tacanChannel = 105 },
+}
+
+
+-- Radio settings apply only to CarrierNavigation's CVN-72, CVN-74 and Tarawa.
+-- ATC is in MHz AM. TACAN channel is 1-126; Y band unchecked means X, checked means Y.
+-- ICLS is a channel (1-20), not a frequency. Set ICLS or Link 4 to 0 to leave it off.
+-- Changes take effect when the mission is restarted. Aircraft radio presets are unchanged.
+-- Unsupported systems are absent from the linked tables and show read-only dashes.
+-- @gui label="Carrier radios" editor="linkedTable" fields="self.tacanChannel:TACAN:number|self.tacanY:Y band:boolean|self.atcMHz:ATC MHz:number|CarrierNavigationICLS:ICLS:number|CarrierNavigationLink4:Link 4 MHz:number" installPolicy="mergeRows"
+CarrierNavigationRadios = {
+    ["CVN-72"] = { tacanChannel = 72, tacanY = false, atcMHz = 272 },
+    ["CVN-74"] = { tacanChannel = 74, tacanY = false, atcMHz = 274 },
+    ["Tarawa"] = { tacanChannel = 1, tacanY = false, atcMHz = 271.5 },
+}
+
+-- ICLS channels for equipped carriers. Use 0 to switch ICLS off.
+-- @gui label="Carrier ICLS channels" installPolicy="mergeRows"
+CarrierNavigationICLS = {
+    ["CVN-72"] = 12,
+    ["CVN-74"] = 14,
+}
+
+-- Link 4 frequencies in MHz for equipped carriers. Use 0 to switch Link 4 off.
+-- @gui label="Carrier Link 4 frequencies" installPolicy="mergeRows"
+CarrierNavigationLink4 = {
+    ["CVN-72"] = 372,
+    ["CVN-74"] = 374,
+}
+
+-- ============================================================================
+-- F10 Map
+-- ============================================================================
+-- Controls how supply connections are drawn on the F10 map.
+-- "arrow" keeps the current arrow display. "line" draws dashed lines instead.
+-- @gui label="Connection Display" validValues="Arrows=arrow | Lines=line"
+ConnectionMapStyle = "line"
+
+-- Controls the connection display color on the F10 map.
+-- "dynamic" uses BLUE, RED, and neutral colors based on zone ownership.
+-- "white" draws all connections white.
+-- @gui label="Connection Color" validValues="Dynamic=dynamic | White=white"
+ConnectionMapColor = "dynamic"
+
+-- ============================================================================
+-- Difficulty
+-- ============================================================================
+GlobalSettings = GlobalSettings or {}
+-- Foothold non-supply spawn/respawn speed scaling.
+-- This multiplier affects AI attack and patrol mission timers.
+-- 1.0 = normal speed
+-- 0.5 = twice as fast
+-- 1.5 = 50% slower
+-- @gui label="AI Spawn Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05"
+GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
+
+
+
+
+-- Lets the Director remember recent RED sortie and regular-supply outcomes and use them as soft planning influences.
+-- This does not add groups, force launches, bypass cooldowns, or block a route.
+-- @gui label="Director Battlefield Intelligence"
+GlobalSettings.directorBattlefieldIntelligenceEnabled = true
+
+-- Lets the Director remember recent air-combat results and use them as a small influence when redirecting an existing RED CAP.
+-- This does not add aircraft or bypass normal CAP limits, cooldowns, or safety checks.
+-- @gui label="Director Air-Combat Intelligence"
+GlobalSettings.directorAirCombatIntelligenceEnabled = true
+
+RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
+
+
+
+-- ============================================================================
+-- Ground Units
+-- ============================================================================
+-- Limits how many Red ground groups can be generated per zone in a fresh PvE campaign.
+-- Each zone keeps its own range; raising this limit does not add groups.
+-- Highest ranges currently used by each map (groups per zone):
+-- Afghanistan: 10
+-- Caucasus: 10
+-- Germany Cold War: 12
+-- Iraq: 12
+-- Kola: 12
+-- Persian Gulf: 12
+-- Sinai Extended: 10
+-- Sinai North: 10
+-- Syria Extended: 9
+-- Example: Syria already tops out at 9. Setting 12 does not increase it; setting 8 caps it at 8.
+-- Existing campaigns and PvP are not changed by this setting.
+-- @gui label="Ground Units Max Groups at Each Zone" validValues="6=6 | 7=7 | 8=8 | 9=9 | 10=10 | 11=11 | 12=12"
+MaxRedGroundGroupsPerZone = 12
+
 -- Choose which RED SAM templates are allowed when the mission replaces or randomizes SAM groups.
 -- Untick a SAM type to prevent that template from being used.
 -- @gui label="RED SAM templates" editor="checkboxTable" rowLabel="comment" confirmSetRowsByEra="Select RED SAM templates based on Era?" installPolicy="replaceTable"
@@ -259,6 +474,42 @@ RedTemplateEnabled = {
     ["Pantsir S1"] = true, -- eras=Modern; Pantsir S1 [Modern]
 	["MANPAD"] = true, -- eras=Modern|Coldwar; MANPAD [Modern/CW]
 }
+
+-- Turn this on to disable the system that coordinates when air-defense radars switch on.
+-- @gui label="Disable Coordinated Air Defenses (MANTIS)"
+DisableMantis = false
+
+-- Adds fixed targets such as command centers, fuel tanks and factories to some zones.
+-- @gui label="Static Ground Targets"
+UseStatics = true
+
+-- Controls whether SAM groups are hidden on MFDs.
+-- Valid values only: false | true | "random"
+-- false    = always shown on MFD
+-- true     = always hidden on MFD (default)
+-- "random" = 50% chance hidden on each spawn
+HideSAMOnMFD = "random" -- if random, use "random" (string)
+
+-- Time between AI air defense decisions at night. Higher values mean slower reactions.
+-- Normally 15 seconds. Changes when a player takes off; a daytime takeoff restores 15 seconds.
+-- Set to 0 to keep the normal reaction time.
+-- @gui label="Night Air Defense Reaction Time" validValues="Disabled=0 | 15 seconds=15 | 25 seconds=25 | 30 seconds=30 | 45 seconds=45 | 60 seconds=60"
+NightMantisInterval = 30
+
+-- Makes low-flying player aircraft harder for enemy air defenses to detect at night.
+-- Starts after a nighttime player takeoff. Normal detection returns after a daytime player takeoff.
+-- @gui label="Harder to Detect at Night"
+NightRadarBlur = true
+
+-- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
+RedAiGroundSkill        = "Excellent" -- AI skill used for spawned RED zone ground defenses (MOOSE SPAWN:InitSkill).
+
+-- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
+BlueAiGroundSkill       = "Excellent" -- AI skill used for spawned BLUE zone ground defenses (MOOSE SPAWN:InitSkill).
+
+-- ============================================================================
+-- AI Flights
+-- ============================================================================
 
 -- AI aircraft templates used by missions that support config-driven template selection.
 -- Rows with a checkmark are available for AI spawning.
@@ -356,9 +607,9 @@ RedCasPlaneEnabled = {
     -- @gui requiredValues="Su-25T"
     ["RED_SU25T_CAS_VIKHRx2_FAB500M62x2_KH29Tx2_2SHIP"] = true, -- eras=Modern; 2x Su-25T CAS [Modern]
     -- @gui requiredValues="MiG-21Bis"
-    ["RED_MIG21BIS_CAS_RBK250x2_UB32x2_1SHIP"] = true, -- eras=Modern; MiG-21bis CAS [Modern]
+    ["RED_MIG21BIS_CAS_RBK250x2_UB32x2_1SHIP"] = true, -- eras=Modern|Coldwar; MiG-21bis CAS [Modern/CW]
     -- @gui requiredValues="MiG-21Bis"
-    ["RED_MIG21BIS_CAS_RBK250x2_UB32x2_2SHIP"] = true, -- eras=Modern; 2x MiG-21bis CAS [Modern]
+    ["RED_MIG21BIS_CAS_RBK250x2_UB32x2_2SHIP"] = true, -- eras=Modern|Coldwar; 2x MiG-21bis CAS [Modern/CW]
     -- @gui requiredValues="Su-25"
     ["RED_SU25_CAS_KH25ML_S25Lx2_FAB500M62x2_B8x2_SPPU_1SHIP"] = false, -- eras=Coldwar; Su-25 CAS [CW]
     -- @gui requiredValues="Su-25"
@@ -552,215 +803,13 @@ BlueSupplyHeloEnabled = {
 	["BLUE_CH47_SUPPLY_M60Dx3"] = true, -- eras=Modern|Coldwar|Vietnam; CH-47 Supply [All]
 }
 
--- ============================================================================
--- Mission options
--- ============================================================================
---
-
--- Global language use for Foothold.
--- This does not set the menu's language as it can be changed in the players radio menu.
--- This will be the language used for on screen messages and other global text.
--- Set FootholdLocale to one of:
---   "EN"    English
---   "DE"    German / Deutsch
---   "FR"    French / Français
---   "ES"    Spanish / Español
---   "RU"    Russian / Русский
---   "PT-BR" Brazilian Portuguese / Português (Brasil)
---   "TR"    Turkish / Türkçe
---   "IT"    Italian / Italiano
---   "zh-CN" Simplified Chinese (Mainland China) / 简体中文
---   "zh-TW" Traditional Chinese (Taiwan) / 繁體中文
-FootholdLocale = "EN"
-if FootholdLocalization then
-    FootholdLocalization:SetLocale(FootholdLocale)
-end
-
--- ONLY VALID ON CAUCASUS, PERSIAN GULF, SYRIA AND AFGHANISTAN.
--- if false, the mission will start from the other end. Carrier zone will be disabled.
-StartNormal = true
-
--- SYRIA ONLY.
--- If true while StartNormal is true, the campaign starts from Incirlik instead of Akrotiri.
--- PvE only. PvP always uses Incirlik and Palmyra; StartNormal swaps their coalitions.
--- @gui label="Start From Incirlik" visibleWhen="StartNormal:true" disabledWhen="PvP:true"
-StartFromIncirlik = false
-
--- SYRIA ONLY.
--- If true, removes the southern Syria zones from the campaign.
--- Current campaign progress is kept. If later set to false, the southern zones return using their default setup state.
--- In PvP, selects the reduced mainland layout; false selects the full mainland layout. Cyprus is excluded in both.
--- @gui label="Remove Southern Syria"
-RemoveSouthSyria = false
- 
--- When the mission is completed, if you want the server to restart automatically and reset everything, then set this to true.
--- If false, you will have a menu where you can choose to restart the mission. 
-AutoRestart = false
-
--- Modular, Automatic and Network capable Targeting and Interception System for Air Defenses. (MANTIS)
--- Once the player is within, the sam system will turn on. If you fire HARP, Talds or Jsaw, they will turn off and move.
--- Their movement depends if they are able to move, like the SA-6 and SA-11.
-DisableMantis = false -- MANTIS is based on Early warning radars (EWR) for detectiion. they will be off until players are detected by the EWR.
-
--- ammo depots, fuel tanks, factories).
-UseStatics = true -- If true, include some static target types at certain zones (command centers,
-
--- PVE_Only is a flag where you can decide if you want to disable players from spawning in red zones.
--- This is when the player chooses Red coalition.
--- @gui disabledWhen="PvP:true"
-PVE_Only = false -- If true, players can not spawn in red coalition zones.
-
--- If true, supports filling modded weapons via WarehouseLogistics
--- (not compatible with Coldwar/Gulfwar).
--- Keep in mind, adding mods midsession, while there is a save file, those weapons will not be added to current saved airbases.
--- this will be filled through time, from the AutoFillResources.
-AllowMods = false -- Should NOT be used with the Coldwar or Gulfwar era.
-
--- If true, when players die their coalition loses 100 credits per death.
-CreditLosewhenKilled = false
-
--- If you want to change the amount, you can do it here.
-CreditLosewhenKilledAmount = 100
-
--- If true, when players die they lose 100 rank credits (only if RankingSystem == true).
-RankLoseWhenKilled = true
-
--- If you want to change the amount, you can do it here.
-RankLoseWhenKilledAmount = 100
-
--- If true, loads enhanced bomb blast effects (may cause stutters).
-SplashDamage = false
-
-ShowKills = false -- If true, show Foothold kill messages.
-
--- If true, limit shop purchases by personal credits earned (rank gates):
---   >  250 cost requires   100 earned
---   > 1000 cost requires  1000 earned
---   > 2000 cost requires  2000 earned
---   > 3000 cost requires  3000 earned
-StoreLimit = false
-
--- If false, everyone can access the full shop.
-RankingSystem = true
-
--- friendly fire ranking penalty
-FriendlyFireRankPenalty = 500
+-- Chance in percent that AI air missions on either coalition may also engage enemy helicopters in PvP.
+-- 0 disables helicopter targeting, 100 always allows it; InvisibleA10 takes precedence.
+-- @gui label="PvP Chance AI Attack Helo" visibleWhen="PvP:true" disabledWhen="InvisibleA10:true"
+PvPChanceAiAttackHelo = 0
 
 -- If true, A-10 is invisible to RED enemy planes.
 InvisibleA10 = false
-
--- Some missions have carriers and those can be controlled to move to another place. 
--- If RankingSystem is true, then you can choose what level is required.
-CarrierRankRequirement = 5
-
--- Works ONLY on Caucasus, Persian Gulf and Syria maps.
--- If true, blue players can move Tarawa with map marker commands.
--- tarawahere / tarawahereandstop sends Tarawa to the marker and stops there.
--- tarawahere1 followed by tarawahere2 creates a racetrack between the two marker positions.
--- tarawahelp displays the commands, or reports that Tarawa marker movement is disabled.
-AllowTarawaToMoveFreely = false
-
--- ============================================================================
--- Frequencies
--- ============================================================================
-
--- AWACS radio frequencies in MHz AM. Both Blue slots apply to every era.
--- Red radio overrides apply only in PvP; the existing PvE Red AWACS keeps its default.
--- Changes take effect when the mission is restarted. Aircraft presets are unchanged.
--- @gui label="AWACS frequencies (MHz AM)" installPolicy="mergeRows"
-AWACSRadioFrequencies = {
-    ["Blue AWACS 1"] = 251,
-    ["Blue AWACS 2"] = 251.5,
-    -- @gui visibleWhen="PvP:true"
-    ["Red AWACS 1"] = 252,
-    -- @gui visibleWhen="PvP:true"
-    ["Red AWACS 2"] = 252.5,
-}
-
--- Tanker frequencies in MHz AM and TACAN channels (1-126, Y band).
--- Tanker Help, approaching and on-station messages use these same settings.
--- BTN 14/20 is shown only while Arco/Texaco keeps its default 260/266 MHz frequency.
--- Red radio overrides apply only in PvP. Shell is the Blue carrier recovery tanker.
--- Changes take effect when the mission is restarted. Aircraft presets are unchanged.
--- @gui label="Tanker radios" editor="fieldTable" fields="frequencyMHz:Frequency MHz:number|tacanChannel:TACAN (Y):number" installPolicy="mergeRows"
-TankerRadioSettings = {
-    ["Blue Arco"] = { frequencyMHz = 260, tacanChannel = 101 },
-    ["Blue Texaco"] = { frequencyMHz = 266, tacanChannel = 102 },
-    ["Shell"] = { frequencyMHz = 253, tacanChannel = 103 },
-    -- @gui visibleWhen="PvP:true"
-    ["Red Arco"] = { frequencyMHz = 260, tacanChannel = 104 },
-    -- @gui visibleWhen="PvP:true"
-    ["Red Texaco"] = { frequencyMHz = 266, tacanChannel = 105 },
-}
-
-
--- Radio settings apply only to CarrierNavigation's CVN-72, CVN-74 and Tarawa.
--- ATC is in MHz AM. TACAN channel is 1-126; Y band unchecked means X, checked means Y.
--- ICLS is a channel (1-20), not a frequency. Set ICLS or Link 4 to 0 to leave it off.
--- Changes take effect when the mission is restarted. Aircraft radio presets are unchanged.
--- Unsupported systems are absent from the linked tables and show read-only dashes.
--- @gui label="Carrier radios" editor="linkedTable" fields="self.tacanChannel:TACAN:number|self.tacanY:Y band:boolean|self.atcMHz:ATC MHz:number|CarrierNavigationICLS:ICLS:number|CarrierNavigationLink4:Link 4 MHz:number" installPolicy="mergeRows"
-CarrierNavigationRadios = {
-    ["CVN-72"] = { tacanChannel = 72, tacanY = false, atcMHz = 262 },
-    ["CVN-74"] = { tacanChannel = 74, tacanY = false, atcMHz = 254 },
-    ["Tarawa"] = { tacanChannel = 1, tacanY = false, atcMHz = 271.5 },
-}
-
--- ICLS channels for equipped carriers. Use 0 to switch ICLS off.
--- @gui label="Carrier ICLS channels" installPolicy="mergeRows"
-CarrierNavigationICLS = {
-    ["CVN-72"] = 12,
-    ["CVN-74"] = 14,
-}
-
--- Link 4 frequencies in MHz for equipped carriers. Use 0 to switch Link 4 off.
--- @gui label="Carrier Link 4 frequencies" installPolicy="mergeRows"
-CarrierNavigationLink4 = {
-    ["CVN-72"] = 372,
-    ["CVN-74"] = 374,
-}
-
--- ============================================================================
--- F10 Map
--- ============================================================================
--- Controls how supply connections are drawn on the F10 map.
--- "arrow" keeps the current arrow display. "line" draws dashed lines instead.
--- @gui label="Connection Display" validValues="Arrows=arrow | Lines=line"
-ConnectionMapStyle = "line"
-
--- Controls the connection display color on the F10 map.
--- "dynamic" uses BLUE, RED, and neutral colors based on zone ownership.
--- "white" draws all connections white.
--- @gui label="Connection Color" validValues="Dynamic=dynamic | White=white"
-ConnectionMapColor = "dynamic"
-
--- ============================================================================
--- Difficulty
--- ============================================================================
-GlobalSettings = GlobalSettings or {}
--- Foothold non-supply spawn/respawn speed scaling.
--- This multiplier affects AI attack and patrol mission timers.
--- 1.0 = normal speed
--- 0.5 = twice as fast
--- 1.5 = 50% slower
--- @gui label="AI Spawn Speed Scaling" editor="sideMultiplier" min="0.10" max="5.00" step="0.05"
-GlobalSettings.difficultyScaling = { [1]=1.0, [2]=1.0 }
-
--- @gui label="Red AI Plane Skill" validValues="Average=Average | Good=Good | High=High | Excellent=Excellent | Random=Random"
-AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
-
--- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
-RedAiGroundSkill        = "Excellent" -- AI skill used for spawned RED zone ground defenses (MOOSE SPAWN:InitSkill).
-
--- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
-BlueAiGroundSkill       = "Excellent" -- AI skill used for spawned BLUE zone ground defenses (MOOSE SPAWN:InitSkill).
-
--- Controls whether SAM groups are hidden on MFDs.
--- Valid values only: false | true | "random"
--- false    = always shown on MFD
--- true     = always hidden on MFD (default)
--- "random" = 50% chance hidden on each spawn
-HideSAMOnMFD = "random" -- if random, use "random" (string)
 
 -- Chance in percent that RED AI air missions may also engage helicopters in PvE.
 -- 0 disables helicopter targeting, 100 always allows it.
@@ -772,15 +821,8 @@ ChanceAiAttackHelo = 0
 -- @gui disabledWhen="PvP:true"
 EnableHunter = true
 
--- Lets the Director remember recent RED sortie and regular-supply outcomes and use them as soft planning influences.
--- This does not add groups, force launches, bypass cooldowns, or block a route.
--- @gui label="Director Battlefield Intelligence"
-GlobalSettings.directorBattlefieldIntelligenceEnabled = true
-
--- Lets the Director remember recent air-combat results and use them as a small influence when redirecting an existing RED CAP.
--- This does not add aircraft or bypass normal CAP limits, cooldowns, or safety checks.
--- @gui label="Director Air-Combat Intelligence"
-GlobalSettings.directorAirCombatIntelligenceEnabled = true
+-- @gui label="Red AI Plane Skill" validValues="Average=Average | Good=Good | High=High | Excellent=Excellent | Random=Random"
+AiPlaneSkill            = "Random" -- AI skill used for spawned airplanes Red only (MOOSE SPAWN:InitSkill).
 
 -- Valid values: "easy" | "medium" | "hard"
 -- Here, you can adjust how many cap should spawn. medium, is the default (Balanaced)
@@ -788,19 +830,20 @@ GlobalSettings.directorAirCombatIntelligenceEnabled = true
 CapDifficulty           = "medium" -- RED CAP amount.  This can be further custommized in the advance section.
 -- @gui disabledWhen="PvP:true"
 CasDifficulty           = "medium" -- RED CAS amount.  This can be further custommized in the advance section.
+
 -- @gui disabledWhen="PvP:true"
 SeadDifficulty          = "medium" -- RED SEAD amount.  This can be further custommized in the advance section.
+
 -- @gui disabledWhen="PvP:true"
 RunwayStrikeDifficulty  = "medium" -- RED RUNWAYSTRIKE amount.  This can be further custommized in the advance section.
-RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 
 -- @gui disabledWhen="PvP:true"
 FriendlyCapSupport      = "medium" -- BLUE CAP support limit. This can be further custommized in the advance section.
 -- @gui disabledWhen="PvP:true"
 FriendlyCasSupport      = "medium" -- BLUE CAS support limit.  This can be further custommized in the advance section.
+
 -- @gui disabledWhen="PvP:true"
 FriendlySeadSupport     = "medium" -- BLUE SEAD support limit.  This can be further custommized in the advance section.
-
 
 -- ============================================================================
 -- Difficulty advanced
@@ -1082,7 +1125,7 @@ https://discord.gg/your-link
 Please join us.]],
 }
 -- ============================================================================
--- Welcome Message Callsigns
+-- Callsigns
 -- ============================================================================
 -- Below, you can change the callsigns in the welcome message and their IFF codes.
 -- The IFF codes are only functional if you use LotATC and configure the same numbers there.
@@ -1355,6 +1398,13 @@ WarehouseWeaponCaps = {
 -- Percentage of extra credits. 0 disables the reward, 10 is the default, and 50 is the maximum.
 -- @gui label="Same Aircraft Extra Reward %" validValues="Disabled=0 | 5%=5 | 10%=10 | 15%=15 | 20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50"
 TurnaroundRewardPercent = 10
+
+-- Extra landing reward for flights that take off at night and last at least 5 minutes.
+-- For example, 10 gives 10% extra. Set to 0 to turn off. Maximum: 50%.
+-- @gui label="Night Flight Bonus (%)" validValues="Disabled=0 | 5%=5 | 10%=10 | 15%=15 | 20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50"
+NightRewardPercent = 10
+
+
 
 -- Advance Capture becomes available when an enemy zone has this percent or less of its upgrade groups remaining.
 -- Percent of upgrade groups remaining before Advance Capture appears.
@@ -2135,7 +2185,7 @@ AIEN.config.initiative			= true -- set to false if you want to disable the initi
 
 -- Increase these only if you have performance issues (start with Active, then Idle).
 phaseCycleTimerMin = 0.2       -- Affects initialization only. Raise to 0.3-0.5 if init is spiking.
-phaseCycleTimerActive = 0.04   -- Main runtime cadence when work is pending. Try 0.06-0.08.
+phaseCycleTimerActive = 0.08   -- Main runtime cadence when work is pending. Try 0.06-0.08.
 phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if needed.
 
 -- ============================================================================
@@ -2944,6 +2994,7 @@ restrictedWeapons = {
     "weapons.containers.ah-64d_radar",
     -- Missiles
     "weapons.missiles.F16V_GBU53",
+    "weapons.missiles.F16V_GBU39",
     "weapons.missiles.AIM_120C",
     "weapons.missiles.AIM_120",
     "weapons.missiles.AGM_154",
