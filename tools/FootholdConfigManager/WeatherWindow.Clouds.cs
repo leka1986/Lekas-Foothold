@@ -7,6 +7,8 @@ internal sealed partial class WeatherWindow
         public override string ToString() => Preset?.Name ?? (Mode == "clear" ? "No clouds" : "Custom / legacy clouds");
     }
 
+    internal string? CachedCloudPresetName(string? id) => _catalog?.CloudPresets.FirstOrDefault(preset => preset.Id == id)?.Name;
+
     private readonly ComboBox _cloudPreset = new WeatherChoiceBox() { Name = "WeatherCloudPreset", DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Top };
     private ComboBox _baseUnit = null!;
     private NumericUpDown _base = null!;
@@ -15,7 +17,7 @@ internal sealed partial class WeatherWindow
     private readonly Label _selectedCloud = new() { AutoSize = true };
     private readonly Label _baseRange = new() { AutoSize = true };
     private readonly FlowLayoutPanel _gallery = new() { Name = "WeatherCloudGallery", Dock = DockStyle.Fill, AutoScroll = true, WrapContents = true };
-    private readonly Dictionary<string, Image> _images = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Image?> _images = new(StringComparer.OrdinalIgnoreCase);
     private NumericUpDown _thickness = null!;
     private NumericUpDown _density = null!;
     private ComboBox _precipitation = null!;
@@ -124,7 +126,7 @@ internal sealed partial class WeatherWindow
             _preview.Image = null;
             foreach (Control control in _gallery.Controls.Cast<Control>().ToArray()) control.Dispose();
             _gallery.Controls.Clear();
-            foreach (var image in _images.Values) image.Dispose();
+            foreach (var image in _images.Values) image?.Dispose();
             _images.Clear();
             _cloudPreset.Items.Clear();
             _cloudPreset.Items.Add(new CloudChoice("clear", null));
@@ -139,7 +141,7 @@ internal sealed partial class WeatherWindow
                     Text = preset.Name, Tag = preset.Id, Width = W(178), Height = W(125),
                     Margin = new Padding(W(4)), TextAlign = ContentAlignment.BottomCenter,
                     ImageAlign = ContentAlignment.TopCenter, TextImageRelation = TextImageRelation.ImageAboveText,
-                    FlatStyle = FlatStyle.Flat, Image = GetImage(preset.ThumbnailPath, thumbnail: true),
+                    FlatStyle = FlatStyle.Flat, Image = GetImage(preset.ThumbnailPath, thumbnail: true, preset.ClientThumbnailPath, preset.EmbeddedThumbnailName),
                     UseVisualStyleBackColor = false
                 };
                 button.Click += (_, _) => _cloudPreset.SelectedItem = choice;
@@ -177,7 +179,7 @@ internal sealed partial class WeatherWindow
     {
         if (_cloudPreset.SelectedItem is not CloudChoice choice) return;
         _selectedCloud.Text = choice.ToString();
-        _preview.Image = GetImage(choice.Preset?.ThumbnailPath, thumbnail: false);
+        _preview.Image = GetImage(choice.Preset?.ThumbnailPath, thumbnail: false, choice.Preset?.ClientThumbnailPath, choice.Preset?.EmbeddedThumbnailName);
         _preview.Visible = _preview.Image is not null;
         _legacyFields.Visible = choice.Mode == "custom";
         _cloudLayout.RowStyles[1].Height = choice.Mode == "custom" ? W(220) : 0;
@@ -225,22 +227,30 @@ internal sealed partial class WeatherWindow
         finally { _updating = wasUpdating; }
     }
 
-    private Image? GetImage(string? path, bool thumbnail)
+    private Image? GetImage(string? path, bool thumbnail, string? clientPath = null, string? embeddedName = null)
     {
-        if (path is null) return null;
-        var key = path; // Gallery and preview share the original; paint scales it for the current zoom.
-        if (_images.TryGetValue(key, out var cached)) return cached;
-        try
+        return Cached(path) ?? Cached(clientPath) ?? Cached(embeddedName, resource: true);
+
+        Image? Cached(string? origin, bool resource = false)
         {
-            using var stream = new MemoryStream(File.ReadAllBytes(path));
-            using var source = Image.FromStream(stream);
-            var image = new Bitmap(source);
-            _images.Add(key, image);
-            return image;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
-        {
-            return null;
+            if (origin is null) return null;
+            var key = resource ? "resource:" + origin : origin;
+            // Gallery and preview share the original; paint scales it for the current zoom.
+            if (_images.TryGetValue(key, out var cached)) return cached;
+            try
+            {
+                using var stream = resource ? CloudPreviewResources.TryOpen(origin) : new MemoryStream(File.ReadAllBytes(origin));
+                if (stream is null) { _images.Add(key, null); return null; }
+                using var source = Image.FromStream(stream);
+                var image = new Bitmap(source);
+                _images.Add(key, image);
+                return image;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                _images.Add(key, null);
+                return null;
+            }
         }
     }
 }

@@ -30,7 +30,7 @@ internal sealed partial class WeatherWindow
             DustEnabled = _dust.Checked, DustVisibilityMeters = (double)_dustVisibility.Value,
             HaloMode = (_haloMode.SelectedItem as DcsHaloPreset)?.Id ?? "auto",
             HaloCrystalPreset = (_crystals.SelectedItem as DcsHaloPreset)?.Id,
-            ChangeDateTime = _changeTime.Checked, ChangeMissionDate = _changeDate.Checked, MissionDate = _date.Value.Date,
+            ChangeDateTime = _changeTime.Checked || _changeDate.Checked, ChangeStartTime = _changeTime.Checked, ChangeMissionDate = _changeDate.Checked, MissionDate = _date.Value.Date,
             StartTimeSeconds = SelectedStartTime.TotalSeconds
         };
         if (settings.FogMode == "manual")
@@ -93,7 +93,7 @@ internal sealed partial class WeatherWindow
             if (_crystals.SelectedIndex < 0 && _crystals.Items.Count > 0) _crystals.SelectedIndex = 0;
             _dust.Checked = settings.DustEnabled;
             Set(_dustVisibility, settings.DustVisibilityMeters);
-            _changeTime.Checked = settings.ChangeDateTime;
+            _changeTime.Checked = settings.ChangeDateTime && settings.ChangeStartTime != false;
             _changeDate.Checked = settings.ChangeDateTime && settings.ChangeMissionDate;
             _date.SetDateValue(settings.MissionDate.Date < _date.MinDate ? _date.MinDate
                 : settings.MissionDate.Date > _date.MaxDate ? _date.MaxDate : settings.MissionDate.Date);
@@ -144,12 +144,12 @@ internal sealed partial class WeatherWindow
             _summary.Text = "Import selected settings into the editors; the source MIZ stays unchanged.";
             return;
         }
-        var timeDescription = _changeTime.Checked
-            ? (_changeDate.Checked ? _date.DateDraftSummary : "Keep mission date") + " · " + SelectedStartTime.ToString(@"hh\:mm\:ss")
+        var timeDescription = _changeTime.Checked || _changeDate.Checked
+            ? (_changeDate.Checked ? _date.DateDraftSummary : "Keep mission date") + " · " + (_changeTime.Checked ? SelectedStartTime.ToString(@"hh\:mm\:ss") : "Keep mission time")
             : "Keep mission date & time";
         if (!_applyWeather.Checked)
         {
-            _summary.Text = _changeTime.Checked ? timeDescription + (_applyMissionOptions.Checked ? " · Mission options included" : "")
+            _summary.Text = _changeTime.Checked || _changeDate.Checked ? timeDescription + (_applyMissionOptions.Checked ? " · Mission options included" : "")
                 : _applyMissionOptions.Checked ? "Mission options will be applied on drop." : "Select settings to apply.";
             return;
         }

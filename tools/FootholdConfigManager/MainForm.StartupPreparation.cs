@@ -6,11 +6,37 @@ internal sealed partial class MainForm
     private readonly HashSet<string> _preparedUnviewedCategories = new(StringComparer.OrdinalIgnoreCase);
     private LoadingScreenController? _loadingScreen;
     private bool _startupPreparationPending;
+    private bool _startupPresentationHeld;
 
     internal void ConfigureStartupPreparation(LoadingScreenController loading)
     {
         _loadingScreen = loading;
         _startupPreparationPending = true;
+        HoldStartupPresentation();
+    }
+
+    internal void HoldStartupPresentation()
+    {
+        // Retain managed visibility for HWND warming without exposing the native startup window.
+        _startupPresentationHeld = true;
+        if (IsHandleCreated) SendZoomRedrawMessage(Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    internal void ReleaseStartupPresentation()
+    {
+        _startupPresentationHeld = false;
+        if (IsHandleCreated)
+        {
+            SendZoomRedrawMessage(Handle, 0x000B, new IntPtr(1), IntPtr.Zero);
+            Invalidate(true);
+        }
+    }
+
+    protected override void WndProc(ref Message message)
+    {
+        base.WndProc(ref message);
+        if (_startupPresentationHeld && message.Msg == 0x0047) // WM_WINDOWPOSCHANGED after native Show/handle recreation.
+            HoldStartupPresentation();
     }
 
     internal void CompleteStartupPreparation()
@@ -43,6 +69,7 @@ internal sealed partial class MainForm
         var version = _configPreparationVersion;
         var categories = _categoryList.Items.Cast<object>().Select(GetCategoryItemName).ToArray();
         _categoryPanelRecency.EnsureCapacityAtLeast(Math.Max(1, categories.Length));
+        if (_startupPreparationPending) RenderSelectedCategory();
         var rendered = _renderedCategoryName;
         var viewed = _optionsViewedCategory;
         var activeCategory = _activeImportedNewCategoryName;
@@ -59,7 +86,7 @@ internal sealed partial class MainForm
                 var category = categories[index];
                 progress.Report(new LoadingProgress("Preparing " + GetCategoryDisplayName(category) + "…", index, categories.Length));
                 RenderCategory(category, force: false, preparing: true);
-                _formHost.PerformLayout();
+                EditorSection.RunLayoutPass(_formHost.PerformLayout);
                 _formHost.Update();
                 await Task.Yield();
             }

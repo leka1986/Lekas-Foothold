@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Globalization;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Windows.Forms;
@@ -180,7 +181,8 @@ internal sealed partial class MainForm : Form
         Restore,
         Undo,
         Save,
-        Weather
+        Weather,
+        Instance
     }
 
     private sealed class ToolbarIconButton : Control
@@ -299,7 +301,9 @@ internal sealed partial class MainForm : Form
                 : Math.Min(17, Math.Max(13, bounds.Height - 16));
             var textGap = undoIcon ? Math.Max(7, bounds.Height / 5) : 5;
             var textPadding = undoIcon ? Math.Max(7, bounds.Height / 5) : 14;
-            var measuredText = TextRenderer.MeasureText(Text, Font, new Size(int.MaxValue, bounds.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+            var menuArrow = IconKind is ToolbarIconKind.Open or ToolbarIconKind.Instance && Text.EndsWith(" ▼", StringComparison.Ordinal);
+            var label = menuArrow ? Text[..^2] : Text;
+            var measuredText = TextRenderer.MeasureText(label, Font, new Size(int.MaxValue, bounds.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
             var contentWidth = iconSize + textGap + measuredText.Width;
             var iconX = undoIcon
                 ? bounds.X + Math.Max(textPadding, (bounds.Width - contentWidth) / 2)
@@ -309,7 +313,7 @@ internal sealed partial class MainForm : Form
             DrawToolbarIcon(e.Graphics, IconKind, iconBounds, textColor);
 
             var textX = iconX + iconSize + textGap;
-            var rightPadding = undoIcon ? textPadding : 14;
+            var rightPadding = menuArrow ? 19 : undoIcon ? textPadding : 14;
             var textBounds = new Rectangle(
                 textX,
                 bounds.Y,
@@ -317,7 +321,7 @@ internal sealed partial class MainForm : Form
                 bounds.Height);
             TextRenderer.DrawText(
                 e.Graphics,
-                Text,
+                label,
                 Font,
                 textBounds,
                 textColor,
@@ -326,6 +330,12 @@ internal sealed partial class MainForm : Form
                 TextFormatFlags.EndEllipsis |
                 TextFormatFlags.NoPadding |
                 TextFormatFlags.NoPrefix);
+            if (menuArrow)
+            {
+                var arrowBounds = new Rectangle(bounds.Right - 16, bounds.Y, 10, bounds.Height);
+                TextRenderer.DrawText(e.Graphics, "▼", Font, arrowBounds, textColor,
+                    TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+            }
         }
     }
 
@@ -361,6 +371,9 @@ internal sealed partial class MainForm : Form
 
     internal sealed partial class SmoothDataGridView : DataGridView
     {
+        internal event EventHandler? ColumnWidthPreferencesReset;
+        internal void OnColumnWidthPreferencesReset() => ColumnWidthPreferencesReset?.Invoke(this, EventArgs.Empty);
+
         public SmoothDataGridView()
         {
             DoubleBuffered = true;
@@ -1372,6 +1385,10 @@ internal sealed partial class MainForm : Form
     private Button? _dcsDesanitizeButton;
     private Button? _themeModeButton;
     private Button? _presetsButton;
+    private ToolbarIconButton? _fileMenuButton;
+    private ToolbarIconButton? _instanceMenuButton;
+    private Label? _contextPresetLabel;
+    private Label? _contextPresetName;
     private ToolbarIconButton? _undoButton;
     private ToolbarIconButton? _saveButton;
     private readonly List<Control> _topToolbarButtons = new();
@@ -1466,6 +1483,10 @@ internal sealed partial class MainForm : Form
         };
         Disposed += (_, _) =>
         {
+            ClearCategoryPanelCache();
+            if (_rawEditorRoot is { IsDisposed: false } rawEditor) ControlTreeDisposer.Dispose(rawEditor, _toolTip);
+            _rawEditorRoot = null;
+            _designerSaveAction = null;
             DisposeUpdates();
             _releaseManagedNewReview?.Invoke();
             foreach (var font in _configDropdownFonts.Values) font.Dispose();
@@ -1492,8 +1513,16 @@ internal sealed partial class MainForm : Form
 
     protected override void OnHandleCreated(EventArgs e)
     {
+        if (_startupPresentationHeld) HoldStartupPresentation();
         base.OnHandleCreated(e);
+        ApplyTitleBarPalette();
         _singleInstance?.PresentationChanged();
+    }
+
+    protected override void OnLayout(LayoutEventArgs levent)
+    {
+        if (WindowState == FormWindowState.Minimized) return;
+        base.OnLayout(levent);
     }
 
     protected override void OnShown(EventArgs e)
@@ -1557,15 +1586,15 @@ internal sealed partial class MainForm : Form
     {
         if (_darkMode)
         {
-            MainBackground = Color.FromArgb(20, 26, 35);
-            EditorBackground = Color.FromArgb(24, 32, 43);
-            InputBackground = Color.FromArgb(30, 40, 53);
-            PrimaryTextColor = Color.FromArgb(230, 237, 246);
-            HelpTextColor = Color.FromArgb(165, 182, 202);
-            BorderColor = Color.FromArgb(57, 72, 91);
-            ButtonBackground = Color.FromArgb(30, 40, 53);
-            HeaderBackground = Color.FromArgb(35, 46, 61);
-            SelectionBackground = Color.FromArgb(39, 67, 101);
+            MainBackground = Color.FromArgb(0x14, 0x1A, 0x22);
+            EditorBackground = Color.FromArgb(0x19, 0x23, 0x2E);
+            InputBackground = Color.FromArgb(0x20, 0x2D, 0x3C);
+            PrimaryTextColor = Color.FromArgb(0xED, 0xF4, 0xFC);
+            HelpTextColor = Color.FromArgb(0xAF, 0xC1, 0xD5);
+            BorderColor = Color.FromArgb(0x36, 0x49, 0x5E);
+            ButtonBackground = InputBackground;
+            HeaderBackground = InputBackground;
+            SelectionBackground = Color.FromArgb(0x25, 0x44, 0x64);
             SelectionText = Color.White;
             UndoBackground = Color.FromArgb(79, 63, 28);
             UndoMutedBorder = Color.FromArgb(126, 95, 45);
@@ -1578,16 +1607,16 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        MainBackground = Color.FromArgb(230, 236, 242);
-        EditorBackground = Color.FromArgb(211, 221, 231);
-        InputBackground = Color.FromArgb(248, 250, 252);
-        PrimaryTextColor = Color.FromArgb(31, 45, 61);
-        HelpTextColor = Color.FromArgb(70, 90, 109);
-        BorderColor = Color.FromArgb(183, 196, 209);
-        ButtonBackground = Color.FromArgb(248, 250, 252);
-        HeaderBackground = Color.FromArgb(220, 228, 237);
-        SelectionBackground = Color.FromArgb(199, 221, 238);
-        SelectionText = Color.FromArgb(31, 45, 61);
+        MainBackground = Color.FromArgb(0xF5, 0xF8, 0xFB);
+        EditorBackground = Color.White;
+        InputBackground = Color.FromArgb(0xF0, 0xF5, 0xFB);
+        PrimaryTextColor = Color.FromArgb(0x18, 0x2B, 0x41);
+        HelpTextColor = Color.FromArgb(0x41, 0x59, 0x72);
+        BorderColor = Color.FromArgb(0xC8, 0xD4, 0xE1);
+        ButtonBackground = InputBackground;
+        HeaderBackground = InputBackground;
+        SelectionBackground = Color.FromArgb(0xD7, 0xE8, 0xFA);
+        SelectionText = PrimaryTextColor;
         UndoBackground = Color.FromArgb(244, 232, 203);
         UndoMutedBorder = Color.FromArgb(176, 128, 48);
         UndoMutedText = Color.FromArgb(102, 75, 30);
@@ -1622,6 +1651,24 @@ internal sealed partial class MainForm : Form
         BackColor = MainBackground;
         ForeColor = PrimaryTextColor;
         ApplyThemeToControl(this, restyleButtons: true);
+        ApplyTitleBarPalette();
+        if (_toolbarLayout is not null)
+        {
+            _toolbarLayout.BackColor = EditorBackground;
+            foreach (Control group in _toolbarLayout.Controls)
+                group.BackColor = EditorBackground;
+        }
+        if (_contextPresetName is not null)
+            _contextPresetName.BackColor = EditorBackground;
+        if (_darkMode && _instanceLayout is not null)
+        {
+            _instanceLayout.BackColor = EditorBackground;
+            foreach (var label in _instanceLayout.Controls.OfType<Label>())
+                label.BackColor = EditorBackground;
+        }
+        if (_darkMode && _topAreaLayout is not null)
+            _topAreaLayout.BackColor = EditorBackground;
+        _topAreaLayout?.Invalidate();
         _categoryList.Invalidate();
         ApplyOptionsMarkers();
         RestyleStageDifficultyButtons(this);
@@ -1633,13 +1680,29 @@ internal sealed partial class MainForm : Form
         {
             _leftToolsPanel.BackColor = EditorBackground;
         }
-
         UpdateFooterLabels();
         UpdateThemeButtonState();
         UpdateDcsDesanitizeButtonState();
         UpdateEditActionButtonStates();
         StyleToolbarMenus();
         if (_weatherWindow is { IsDisposed: false }) _weatherWindow.RefreshOwnerTheme();
+    }
+
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    private static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);
+
+    private void ApplyTitleBarPalette()
+    {
+        if (!IsHandleCreated || !OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+            return;
+
+        const int captionColorAttribute = 35;
+        const int textColorAttribute = 36;
+        const int systemDefault = -1;
+        var caption = SystemInformation.HighContrast ? systemDefault : ColorTranslator.ToWin32(EditorBackground);
+        var text = SystemInformation.HighContrast ? systemDefault : ColorTranslator.ToWin32(PrimaryTextColor);
+        DwmSetWindowAttribute(Handle, captionColorAttribute, ref caption, sizeof(int));
+        DwmSetWindowAttribute(Handle, textColorAttribute, ref text, sizeof(int));
     }
 
     private void StyleToolbarMenus()
@@ -1686,6 +1749,13 @@ internal sealed partial class MainForm : Form
                 {
                     if (control is ComboBox configChoice) owner.StyleConfigDropdown(configChoice);
                     else control.Font = control is NumericUpDown ? owner.ConfigDropdownFont : owner.ConfigCellValueFont;
+                    var scalar = control.Parent is TableLayoutPanel { ColumnCount: 2 } direct && direct.Name.StartsWith("ConfigSearchTarget:", StringComparison.Ordinal)
+                        ? direct : control.Parent?.Parent is TableLayoutPanel { ColumnCount: 2 } nested && nested.Name.StartsWith("ConfigSearchTarget:", StringComparison.Ordinal) ? nested : null;
+                    if (scalar is not null)
+                    {
+                        control.Font = owner.GetConfigValueFont(2.1f);
+                        if (control is ComboBox alignedChoice) alignedChoice.ItemHeight = control.Font.Height + 4;
+                    }
                 }
                 break;
 
@@ -1766,6 +1836,9 @@ internal sealed partial class MainForm : Form
         {
             ApplyThemeToControl(child, restyleButtons, configOwner);
         }
+        if (control is EditorSection section) section.ApplySectionPalette();
+        if (control is Panel { Name: "MissionDownloadsPanel" } && control.FindForm() is MainForm downloadOwner)
+            downloadOwner.LayoutMissionDownloads();
     }
 
     private void UpdateThemeButtonState()
@@ -1780,7 +1853,7 @@ internal sealed partial class MainForm : Form
 
         if (_themeModeButton is not null)
         {
-            _themeModeButton.Text = _darkMode ? "Dark mode" : "Light mode";
+            _themeModeButton.Invalidate();
             _toolTip.SetToolTip(_themeModeButton, _darkMode ? "Switch to light mode." : "Switch to dark mode.");
         }
     }
@@ -1876,21 +1949,22 @@ internal sealed partial class MainForm : Form
     {
         var panel = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 2,
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2,
             Margin = new Padding(0), Padding = new Padding(0), BackColor = MainBackground
         };
         _topAreaLayout = panel;
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(88)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(40)));
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
-        var toolbar = BuildToolbar();
-        var fileButton = _topToolbarButtons.First(button => button.Text == "File ▼");
-        panel.Controls.Add(fileButton, 0, 0);
-        panel.Controls.Add(BuildInstanceBar(), 1, 0);
-        panel.Controls.Add(toolbar, 2, 0);
-        SizeChanged += (_, _) => { LayoutPreviewHeader(); LayoutPreviewFooter(); };
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, Zoomed(40)));
+        panel.Controls.Add(BuildToolbar(), 0, 0);
+        panel.Controls.Add(BuildInstanceBar(), 0, 1);
+        panel.CellPaint += (_, e) =>
+        {
+            using var divider = new Pen(BorderColor);
+            var bottom = e.CellBounds.Bottom - 1;
+            e.Graphics.DrawLine(divider, e.CellBounds.Left, bottom, e.CellBounds.Right, bottom);
+        };
+        SizeChanged += (_, _) => { if (WindowState == FormWindowState.Minimized) return; LayoutPreviewHeader(); LayoutPreviewFooter(); };
         return panel;
     }
 
@@ -1934,10 +2008,11 @@ internal sealed partial class MainForm : Form
 
     private Control BuildToolbar()
     {
-        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 2, BackColor = MainBackground };
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 3, BackColor = MainBackground };
         _toolbarLayout = panel;
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
         var actions = new FlowLayoutPanel
         {
@@ -1947,6 +2022,14 @@ internal sealed partial class MainForm : Form
             FlowDirection = FlowDirection.LeftToRight,
             Margin = new Padding(0),
             Padding = new Padding(0),
+            BackColor = MainBackground
+        };
+        var statusActions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            WrapContents = false,
+            Margin = new Padding(0),
             BackColor = MainBackground
         };
         _topToolbarButtons.Clear();
@@ -1959,7 +2042,14 @@ internal sealed partial class MainForm : Form
             () => _fileMenu.Show(fileButton, new Point(0, fileButton.Height)),
             "Open, reload, or restore a config.", ToolbarIconKind.Open);
         fileButton.ContextMenuStrip = _fileMenu;
+        _fileMenuButton = fileButton;
         actions.Controls.Add(fileButton);
+        _updatesButton = MakeLeftToolButton("Updates", ShowUpdatesPanel, "Check Manager updates and Foothold mission releases.");
+        _updatesButton.Name = "UpdatesButton";
+        _updatesButton.Dock = DockStyle.None;
+        SizeTopToolbarButton(_updatesButton, 60);
+        _topToolbarButtons.Add(_updatesButton);
+        statusActions.Controls.Add(_updatesButton);
         actions.Controls.Add(MakeToolbarButton("Mission settings", ShowWeatherWindow, "Choose mission settings, then drop a MIZ. Click again to return to Config.", ToolbarIconKind.Weather));
         _updateConfigMenu?.Dispose();
         _updateConfigMenu = new ContextMenuStrip
@@ -1978,14 +2068,14 @@ internal sealed partial class MainForm : Form
             ToolbarIconKind.Import);
         updateConfigButton.ContextMenuStrip = _updateConfigMenu;
         actions.Controls.Add(updateConfigButton);
-        actions.Controls.Add(MakeToolbarSeparator());
+        statusActions.Controls.Add(MakeToolbarSeparator());
         _undoButton = MakeToolbarButton("Undo", UndoLastChange, "Revert the last unsaved edit, add, or remove action.", ToolbarIconKind.Undo);
-        actions.Controls.Add(_undoButton);
+        statusActions.Controls.Add(_undoButton);
         _saveButton = MakeToolbarButton("Save", SaveConfig, "Write pending changes to the current config.", ToolbarIconKind.Save);
-        actions.Controls.Add(_saveButton);
+        statusActions.Controls.Add(_saveButton);
         UpdateEditActionButtonStates();
-        actions.Controls.Add(MakeToolbarSeparator());
         panel.Controls.Add(actions, 0, 0);
+        panel.Controls.Add(statusActions, 2, 0);
 
         _pathBox.Dock = DockStyle.Fill;
         _pathBox.ReadOnly = true;
@@ -2000,27 +2090,42 @@ internal sealed partial class MainForm : Form
         if (_topAreaLayout is null || _instanceLayout is null || _toolbarLayout is null || _rootLayout is null)
             return;
 
-        var wrapped = ClientSize.Width < Zoomed(1250);
-        var fileButton = _topAreaLayout.GetControlFromPosition(0, 0)!;
-        var fileWidth = ToolbarIconButtonWidth(fileButton.Text, 88, fileButton.Font) + fileButton.Margin.Horizontal;
+        if (_updatesButton is not null) SizeTopToolbarButton(_updatesButton, 60);
+        _topAreaLayout.SuspendLayout();
+        _toolbarLayout.Padding = new Padding(Zoomed(6), Zoomed(4), Zoomed(6), 0);
+        _toolbarLayout.Margin = new Padding(0, 0, 0, 1);
+        _instanceLayout.Margin = new Padding(0, 0, 0, 1);
+        _instanceLayout.Padding = new Padding(Zoomed(6), Zoomed(3), Zoomed(6), 0);
+        if (_fileMenuButton is { } file && _instanceMenuButton is { } instance)
+        {
+            instance.Margin = new Padding(file.Margin.Left, 0, file.Margin.Right, 0);
+            instance.Height = _instanceBox.PreferredHeight;
+            file.Width = ToolbarIconButtonWidth(instance.Text, 105, instance.Font);
+            SetColumnWidth(_instanceLayout, 0, file.Width + instance.Margin.Horizontal);
+        }
+        if (_presetsButton is { } presets)
+            presets.Height = _instanceBox.PreferredHeight;
         var toolbarSize = _toolbarLayout.GetPreferredSize(Size.Empty);
+        var presetLabelWidth = string.IsNullOrWhiteSpace(_contextPresetName?.Text)
+            ? 0 : LabelColumnWidth("Preset", 55);
+        var fixedWidth = _instanceLayout.ColumnStyles[0].Width + _instanceLayout.ColumnStyles[2].Width
+            + _instanceLayout.ColumnStyles[3].Width + _instanceLayout.ColumnStyles[4].Width
+            + _instanceLayout.ColumnStyles[7].Width + presetLabelWidth;
+        var remainingWidth = _topAreaLayout.ClientSize.Width - _instanceLayout.Margin.Horizontal
+            - _instanceLayout.Padding.Horizontal - (int)fixedWidth;
+        var instanceWidth = Math.Clamp(remainingWidth - (presetLabelWidth > 0 ? Zoomed(140) : 0),
+            Zoomed(60), Zoomed(340));
         var instanceHeight = _instanceLayout.GetPreferredSize(Size.Empty).Height + _instanceLayout.Margin.Vertical;
         var toolbarHeight = toolbarSize.Height + _toolbarLayout.Margin.Vertical;
-        var firstRowHeight = Math.Max(Zoomed(40), Math.Max(instanceHeight, wrapped ? 0 : toolbarHeight));
-        var secondRowHeight = wrapped ? Math.Max(Zoomed(36), toolbarHeight) : 0;
-        _topAreaLayout.SuspendLayout();
-        _topAreaLayout.SetColumnSpan(_instanceLayout, wrapped ? 2 : 1);
-        _topAreaLayout.SetCellPosition(_toolbarLayout, new TableLayoutPanelCellPosition(2, wrapped ? 1 : 0));
+        var firstRowHeight = Math.Max(Zoomed(50), toolbarHeight + Zoomed(4));
+        var secondRowHeight = Math.Max(Zoomed(49), instanceHeight + Zoomed(4));
         SetRowHeight(_topAreaLayout, 0, firstRowHeight);
         SetRowHeight(_topAreaLayout, 1, secondRowHeight);
-        SetRowHeight(_rootLayout, 0, Math.Max(Zoomed(wrapped ? 80 : 44), firstRowHeight + secondRowHeight + Zoomed(4)));
-        SetColumnWidth(_topAreaLayout, 0, fileWidth);
-        var availableWidth = _topAreaLayout.ClientSize.Width - fileWidth -
-            (wrapped ? 0 : toolbarSize.Width) - Zoomed(12);
-        var fixedWidth = _instanceLayout.ColumnStyles.Cast<ColumnStyle>()
-            .Where((_, index) => index != 1 && index != 8).Sum(style => style.Width);
-        SetColumnWidth(_instanceLayout, 1, Math.Max(Zoomed(60),
-            Math.Min(Zoomed(200), (int)(availableWidth - fixedWidth))));
+        SetRowHeight(_rootLayout, 0, firstRowHeight + secondRowHeight + Zoomed(4));
+        SetColumnWidth(_instanceLayout, 1, instanceWidth);
+        SetColumnWidth(_instanceLayout, 5, presetLabelWidth);
+        SetColumnWidth(_instanceLayout, 6, presetLabelWidth == 0 ? 0 :
+            Math.Clamp(remainingWidth - instanceWidth, 0, Zoomed(380)));
         _topAreaLayout.ResumeLayout();
     }
 
@@ -2055,10 +2160,14 @@ internal sealed partial class MainForm : Form
     private void SizeTopToolbarButton(Control button, int minimumWidth)
     {
         ApplyTopToolbarFont(button);
-        button.Width = button is ToolbarIconButton
-            ? ToolbarIconButtonWidth(button.Text, minimumWidth, button.Font)
-            : TopToolbarButtonWidth(button.Text, minimumWidth, button.Font);
-        button.Height = Math.Max(Zoomed(32), button.Font.Height + Zoomed(10));
+        button.Width = button is PreviewButton { HasUpdateNotice: true }
+            ? TextRenderer.MeasureText(button.Text, button.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width
+              + TextRenderer.MeasureText("NEW", button.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width
+              + Math.Max(68, Zoomed(68))
+            : button is ToolbarIconButton
+                ? ToolbarIconButtonWidth(button.Text, minimumWidth, button.Font)
+                : TopToolbarButtonWidth(button.Text, minimumWidth, button.Font);
+        button.Height = Math.Max(Zoomed(40), button.Font.Height + Zoomed(14));
         button.Margin = new Padding(Zoomed(3), Zoomed(2), Zoomed(3), 0);
         if (button is Button b)
             b.TextAlign = ContentAlignment.MiddleCenter;
@@ -2124,18 +2233,18 @@ internal sealed partial class MainForm : Form
     {
         var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 9, BackColor = MainBackground };
         _instanceLayout = panel;
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth("Instance", 70)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Instance ▼", 105)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(200)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth("Config", 55)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Normal", 95)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Advanced", 105)));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Presets...", 110)));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Manage ▼", 105)));
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ToolbarButtonWidth("Copy To...", 110)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        panel.Controls.Add(MakeLabel("Instance"), 0, 0);
-        _instanceBox.Dock = DockStyle.Fill;
+        _instanceBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        _instanceBox.AccessibleName = "Selected instance";
         _instanceBox.DropDownStyle = ComboBoxStyle.DropDownList;
         StyleInput(_instanceBox);
         _instanceBox.SelectedIndexChanged += (_, _) => SwitchInstance();
@@ -2143,7 +2252,8 @@ internal sealed partial class MainForm : Form
         _instanceBox.DropDown += (_, _) => _instanceBox.DropDownWidth = GetComboBoxDropDownWidth(_instanceBox);
         panel.Controls.Add(_instanceBox, 1, 0);
         panel.Controls.Add(MakeLabel("Config"), 2, 0);
-        _configVariantBox.Dock = DockStyle.Fill;
+        _configVariantBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        _configVariantBox.AccessibleName = "Config";
         _configVariantBox.DropDownStyle = ComboBoxStyle.DropDownList;
         StyleInput(_configVariantBox);
         _configVariantBox.SelectedIndexChanged += (_, _) => SwitchConfigVariant();
@@ -2157,7 +2267,17 @@ internal sealed partial class MainForm : Form
             "Presets...",
             OpenPresetsDialog,
             "Store, switch, rename, update, or delete presets for the selected instance and config type.");
-        panel.Controls.Add(_presetsButton, 5, 0);
+        _presetsButton.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        panel.Controls.Add(_presetsButton, 7, 0);
+        _contextPresetLabel = MakeLabel("Preset");
+        _contextPresetName = MakeLabel("");
+        _contextPresetName.AutoEllipsis = true;
+        _contextPresetName.Padding = new Padding(8, 0, 8, 0);
+        _contextPresetName.Margin = new Padding(3, 5, 5, 5);
+        _contextPresetName.BorderStyle = BorderStyle.FixedSingle;
+        _contextPresetName.AccessibleName = "Applied preset";
+        panel.Controls.Add(_contextPresetLabel, 5, 0);
+        panel.Controls.Add(_contextPresetName, 6, 0);
 
         _manageInstanceMenu?.Dispose();
         _manageInstanceMenu = new ContextMenuStrip
@@ -2170,6 +2290,7 @@ internal sealed partial class MainForm : Form
         var removeInstanceItem = _manageInstanceMenu.Items.Add("Remove selected instance", null, (_, _) => RemoveInstance());
         _manageInstanceMenu.Items.Add(new ToolStripSeparator());
         var openLocationItem = _manageInstanceMenu.Items.Add("Open file location", null, (_, _) => OpenCurrentConfigLocation());
+        _manageInstanceMenu.Items.Add("Copy To…", null, (_, _) => CopyCurrentConfigToInstances());
         _manageInstanceMenu.Opening += (_, _) =>
         {
             var hasSelectedInstance = _instanceBox.SelectedItem is InstanceItem;
@@ -2179,14 +2300,15 @@ internal sealed partial class MainForm : Form
         };
         StyleToolbarMenus();
 
-        Button manageInstanceButton = null!;
-        manageInstanceButton = MakeInstanceToolbarButton(
-            "Manage ▼",
+        ToolbarIconButton manageInstanceButton = null!;
+        manageInstanceButton = MakeToolbarButton(
+            "Instance ▼",
             () => _manageInstanceMenu.Show(manageInstanceButton, new Point(0, manageInstanceButton.Height)),
-            "Add, rename, remove, or open Foothold config instances.");
+            "Add, rename, remove, open, or copy Foothold config instances.", ToolbarIconKind.Instance);
         manageInstanceButton.ContextMenuStrip = _manageInstanceMenu;
-        panel.Controls.Add(manageInstanceButton, 6, 0);
-        panel.Controls.Add(MakeInstanceToolbarButton("Copy To...", CopyCurrentConfigToInstances, "Replace selected instance configs with the currently open saved config. No backup is created."), 7, 0);
+        manageInstanceButton.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        _instanceMenuButton = manageInstanceButton;
+        panel.Controls.Add(manageInstanceButton, 0, 0);
         RefreshInstanceList();
         RefreshConfigVariantList();
         RefreshPresetButtonState();
@@ -2346,7 +2468,7 @@ internal sealed partial class MainForm : Form
         var zoomChanged = zoomPercent != _uiZoomPercent;
         if (zoomChanged && _weatherWindow is { IsDisposed: false, IsBusy: true }) return;
         var layouts = new Control?[] { this, _rootLayout, _topAreaLayout, _toolbarLayout, _instanceLayout, _mainSplit, _statusPanel, _weatherWindow };
-        var deferPainting = zoomChanged && IsHandleCreated && Visible;
+        var deferPainting = zoomChanged && IsHandleCreated && Visible && !_startupPresentationHeld;
         if (deferPainting) SendZoomRedrawMessage(Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);
         if (zoomChanged) foreach (var layout in layouts) layout?.SuspendLayout();
         try
@@ -2495,13 +2617,6 @@ internal sealed partial class MainForm : Form
 
         if (_toolbarLayout is not null)
         {
-            if (_toolbarLayout.ColumnStyles.Count >= 2)
-            {
-                _toolbarLayout.ColumnStyles[0].SizeType = SizeType.AutoSize;
-                _toolbarLayout.ColumnStyles[1].SizeType = SizeType.Absolute;
-                _toolbarLayout.ColumnStyles[1].Width = 0;
-            }
-
             foreach (var button in _topToolbarButtons)
             {
                 SizeTopToolbarButton(button, GetTopToolbarButtonMinimum(button.Text));
@@ -2519,11 +2634,12 @@ internal sealed partial class MainForm : Form
 
         if (_instanceLayout is not null)
         {
-            SetColumnWidth(_instanceLayout, 0, LabelColumnWidth("Instance", 70));
+            ApplyTopToolbarFont(_instanceBox);
+            ApplyTopToolbarFont(_configVariantBox);
+            foreach (Button button in _instanceLayout.Controls.OfType<Button>())
+                ApplyTopToolbarFont(button);
             SetColumnWidth(_instanceLayout, 4, ShouldShowAdvancedToggle() ? ToolbarButtonWidth("Advanced", 105) : 0);
-            SetColumnWidth(_instanceLayout, 5, ToolbarButtonWidth("Presets...", 110));
-            SetColumnWidth(_instanceLayout, 6, ToolbarButtonWidth("Manage ▼", 105));
-            SetColumnWidth(_instanceLayout, 7, ToolbarButtonWidth("Copy To...", 110));
+            SetColumnWidth(_instanceLayout, 7, ToolbarButtonWidth("Presets...", 110));
             ApplyConfigVariantSelectorVisibility(_configVariantBox.Items.Count > 1);
         }
 
@@ -2713,7 +2829,7 @@ internal sealed partial class MainForm : Form
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(190)));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        foreach (var width in new[] { 180, 42, 130, 60, 116, 0 })
+        foreach (var width in new[] { 180, 42, 130, 60, 0, 0 })
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(width)));
         var fileLabel = new Label { Dock = DockStyle.Fill, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft };
         void UpdateFileLabel()
@@ -2735,9 +2851,6 @@ internal sealed partial class MainForm : Form
         _previewCommentsButton = MakeLeftToolButton("Comments", ShowPreviewComments, "Read the comments for the selected table or category.");
         _previewCommentsButton.Visible = false;
         panel.Controls.Add(_previewCommentsButton, 7, 0);
-        _updatesButton = MakeLeftToolButton("Updates", ShowUpdatesPanel, "Check Manager updates and Foothold mission releases.");
-        _updatesButton.Name = "UpdatesButton";
-        panel.Controls.Add(_updatesButton, 6, 0);
         LayoutPreviewFooter();
         return panel;
     }
@@ -3503,6 +3616,11 @@ internal sealed partial class MainForm : Form
 
     private static void DrawToolbarIcon(Graphics graphics, ToolbarIconKind iconKind, Rectangle bounds, Color color)
     {
+        if (iconKind == ToolbarIconKind.Instance)
+        {
+            DrawCategoryIcon(graphics, "Mission options", bounds, color);
+            return;
+        }
         var sx = bounds.Width / 18F;
         var sy = bounds.Height / 18F;
         PointF Point(float x, float y) => new(bounds.Left + (x * sx), bounds.Top + (y * sy));
@@ -3756,7 +3874,8 @@ internal sealed partial class MainForm : Form
 
     private static void StyleInput(Control control)
     {
-        control.BackColor = control is ListBox ? EditorBackground : InputBackground;
+        control.BackColor = control is ListBox || IsDarkPalette() && control is ServerMessageTextBox
+            ? EditorBackground : InputBackground;
         control.ForeColor = PrimaryTextColor;
         InputChrome.Apply(control);
         if (control is ComboBox comboBox)
@@ -3826,7 +3945,8 @@ internal sealed partial class MainForm : Form
 
     private static void ApplyGridTheme(DataGridView grid, MainForm? configOwner = null)
     {
-        grid.BackgroundColor = IsDarkPalette() ? EditorBackground : InputBackground;
+        var sectionGrid = ContainingEditorSection(grid) is not null;
+        grid.BackgroundColor = sectionGrid ? MainBackground : IsDarkPalette() ? EditorBackground : InputBackground;
         grid.GridColor = BorderColor;
         grid.BorderStyle = grid.RowHeadersVisible ? BorderStyle.None : BorderStyle.FixedSingle;
         grid.AllowUserToResizeRows = false;
@@ -3835,11 +3955,11 @@ internal sealed partial class MainForm : Form
         grid.EnableHeadersVisualStyles = false;
         if (grid is SmoothDataGridView smoothGrid) smoothGrid.RefreshScrollbarTheme();
         grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-        grid.DefaultCellStyle.BackColor = IsDarkPalette() ? EditorBackground : InputBackground;
+        grid.DefaultCellStyle.BackColor = sectionGrid ? MainBackground : IsDarkPalette() ? EditorBackground : InputBackground;
         grid.DefaultCellStyle.ForeColor = PrimaryTextColor;
         grid.DefaultCellStyle.SelectionBackColor = SelectionBackground;
         grid.DefaultCellStyle.SelectionForeColor = SelectionText;
-        grid.AlternatingRowsDefaultCellStyle.BackColor = IsDarkPalette() ? EditorBackground : MainBackground;
+        grid.AlternatingRowsDefaultCellStyle.BackColor = sectionGrid ? MainBackground : IsDarkPalette() ? EditorBackground : MainBackground;
         grid.AlternatingRowsDefaultCellStyle.ForeColor = PrimaryTextColor;
         grid.ColumnHeadersDefaultCellStyle.BackColor = HeaderBackground;
         grid.ColumnHeadersDefaultCellStyle.ForeColor = PrimaryTextColor;
@@ -3869,20 +3989,34 @@ internal sealed partial class MainForm : Form
         grid.Leave += HideGridSelectionHighlight;
 
         var dropdownOwner = configOwner ?? (grid.FindForm() as MainForm);
-        var valueRowHeight = dropdownOwner?.ConfigCellValueFont.Height + 6 ?? 0;
+        var valueFont = dropdownOwner is null ? null : sectionGrid ? dropdownOwner.GetConfigValueFont(1.35f) : dropdownOwner.ConfigCellValueFont;
+        var valueRowHeight = valueFont?.Height + 6 ?? 0;
         if (dropdownOwner is not null)
         {
-            grid.DefaultCellStyle.Font = dropdownOwner.ConfigCellValueFont;
+            if (IsDarkPalette() || sectionGrid)
+            {
+                grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+                grid.ColumnHeadersDefaultCellStyle.Font = sectionGrid ? dropdownOwner.GetConfigValueFont(1.35f, FontStyle.Bold) : dropdownOwner.ConfigGridHeaderFont;
+                grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(3, 2, 3, 2);
+            }
+            else
+            {
+                grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Raised;
+                grid.ColumnHeadersDefaultCellStyle.Font = null;
+                grid.ColumnHeadersDefaultCellStyle.Padding = Padding.Empty;
+            }
+            grid.DefaultCellStyle.Font = valueFont;
             grid.RowTemplate.MinimumHeight = Math.Max(grid.RowTemplate.MinimumHeight, valueRowHeight);
         }
-        var dropdownRowHeight = dropdownOwner?.ConfigDropdownFont.Height + 6 ?? 0;
+        var dropdownFont = dropdownOwner?.ConfigDropdownFont;
+        var dropdownRowHeight = dropdownFont?.Height + 6 ?? 0;
         var hasDropdownColumn = false;
         foreach (DataGridViewColumn column in grid.Columns)
         {
             ApplyGridColumnTheme(column);
             if (dropdownOwner is not null && column is DataGridViewComboBoxColumn)
             {
-                column.DefaultCellStyle.Font = dropdownOwner.ConfigDropdownFont;
+                column.DefaultCellStyle.Font = sectionGrid ? valueFont : dropdownFont;
                 hasDropdownColumn = true;
                 grid.RowTemplate.MinimumHeight = Math.Max(grid.RowTemplate.MinimumHeight, dropdownRowHeight);
             }
@@ -3893,9 +4027,12 @@ internal sealed partial class MainForm : Form
             row.Resizable = DataGridViewTriState.False;
             row.MinimumHeight = Math.Max(row.MinimumHeight, hasDropdownColumn ? dropdownRowHeight : valueRowHeight);
             if (dropdownOwner is not null && grid.Columns.Contains("value") && row.Cells["value"] is DataGridViewComboBoxCell choiceCell)
-                StyleConfigChoiceCell(choiceCell, dropdownOwner);
+            {
+                StyleConfigChoiceCell(choiceCell, dropdownOwner, sectionGrid ? valueFont : dropdownFont);
+            }
         }
 
+        dropdownOwner?.ApplySavedEditorGridWidths(grid);
         SetGridSelectionHighlight(grid, grid.Focused);
     }
 
@@ -4059,7 +4196,7 @@ internal sealed partial class MainForm : Form
 
     private static void ApplyGridColumnTheme(DataGridViewColumn column)
     {
-        column.DefaultCellStyle.BackColor = IsDarkPalette() ? EditorBackground : Color.Empty;
+        column.DefaultCellStyle.BackColor = IsDarkPalette() && ContainingEditorSection(column.DataGridView!) is null ? EditorBackground : Color.Empty;
         column.DefaultCellStyle.ForeColor = PrimaryTextColor;
         column.DefaultCellStyle.SelectionBackColor = SelectionBackground;
         column.DefaultCellStyle.SelectionForeColor = SelectionText;
@@ -4426,8 +4563,15 @@ internal sealed partial class MainForm : Form
         _formHost.AutoScroll = true;
         _formHost.BackColor = MainBackground;
         _formHost.MouseDown += HandleBackgroundMouseDown;
+        _formHost.Layout += (_, _) =>
+        {
+            if (_formHost.Controls.Count == 1 && _formHost.Controls[0] is TableLayoutPanel { Name: "EditorContent" } content)
+                LayoutEditorContent(content);
+            else if (_editorWidthGrip is not null) _editorWidthGrip.Visible = false;
+        };
         split.Panel2.BackColor = MainBackground;
-        split.Panel2.Controls.Add(_formHost);
+        split.Panel2.Controls.Add(new WeatherScrollHost(_formHost) { Name = "EditorScrollHost", Dock = DockStyle.Fill });
+        InitializeEditorWidthGrip();
         split.SizeChanged += (_, _) => ApplyCategoryNavigationWidth();
         return split;
     }
@@ -4501,7 +4645,7 @@ internal sealed partial class MainForm : Form
         };
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-        _themeModeButton = MakeLeftToolButton(_darkMode ? "Dark mode" : "Light mode", ToggleTheme, _darkMode ? "Switch to light mode." : "Switch to dark mode.");
+        _themeModeButton = MakeLeftToolButton("Theme", ToggleTheme, _darkMode ? "Switch to light mode." : "Switch to dark mode.");
         row.Controls.Add(_themeModeButton, 0, 0);
         return row;
     }
@@ -4577,7 +4721,7 @@ internal sealed partial class MainForm : Form
 
     private void ApplyCategoryListSizing()
     {
-        var targetSize = BaseFontSize * _uiZoomPercent / UiZoomBaselinePercent;
+        var targetSize = (BaseFontSize + EditorFontIncreasePoints - 1f) * _uiZoomPercent / 100F;
         if (Math.Abs(_categoryList.Font.Size - targetSize) > 0.05F)
         {
             _categoryList.Font = new Font("Segoe UI", targetSize);
@@ -5210,13 +5354,15 @@ internal sealed partial class MainForm : Form
             return;
         }
 
+        var scrollTarget = RevealEditorSection(target);
         _formHost.PerformLayout();
         SelectConfigSearchTableRow(target, result.RowKey);
-        var targetLocation = _formHost.PointToClient(target.PointToScreen(Point.Empty));
+        var targetLocation = _formHost.PointToClient(scrollTarget.PointToScreen(Point.Empty));
         var currentScroll = new Point(-_formHost.AutoScrollPosition.X, -_formHost.AutoScrollPosition.Y);
         var targetScrollY = Math.Max(0, currentScroll.Y + targetLocation.Y - Zoomed(12));
         _formHost.AutoScrollPosition = new Point(currentScroll.X, targetScrollY);
-        HighlightConfigSearchTarget(target);
+        WeatherScrollHost.SynchronizeParent(_formHost);
+        HighlightConfigSearchTarget(scrollTarget);
         SetStatus("Located " + result.DisplayName + " in " + result.CategoryLabel + ".");
     }
 
@@ -5278,7 +5424,7 @@ internal sealed partial class MainForm : Form
     {
         RestoreConfigSearchHighlight();
 
-        var header = target.Controls.OfType<FlowLayoutPanel>().FirstOrDefault() ??
+        var header = (target as EditorSection)?.EditorHeader ?? target.Controls.OfType<FlowLayoutPanel>().FirstOrDefault() ??
                      EnumerateChildControls<FlowLayoutPanel>(target).FirstOrDefault();
         var title = header?.Controls.OfType<Label>().FirstOrDefault();
         var highlightControl = (Control?)title ?? header ?? target;
@@ -6268,7 +6414,7 @@ internal sealed partial class MainForm : Form
             LoadSections();
             ApplyAdvancedToggleVisibility();
             UpdateFooterLabels();
-            LoadCategories();
+            LoadCategories(renderSelection: !_startupPreparationPending);
             try
             {
                 _settings.RememberConfig(path);
@@ -6362,12 +6508,16 @@ internal sealed partial class MainForm : Form
         try
         {
             var currentPath = _document is null ? "" : Path.GetFullPath(_document.Path);
+            var currentProfile = FindCurrentInstanceProfile();
             _instanceBox.Items.Clear();
             var selectedIndex = -1;
+            var familyIndex = -1;
             foreach (var profile in _settings.ServerProfiles.OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase))
             {
                 var item = new InstanceItem(profile);
                 var index = _instanceBox.Items.Add(item);
+                if (ReferenceEquals(profile, currentProfile))
+                    familyIndex = index;
                 if (!string.IsNullOrWhiteSpace(currentPath) &&
                     Path.GetFullPath(profile.ConfigPath).Equals(currentPath, StringComparison.OrdinalIgnoreCase))
                 {
@@ -6375,12 +6525,17 @@ internal sealed partial class MainForm : Form
                 }
             }
 
+            if (selectedIndex < 0)
+                selectedIndex = familyIndex;
+            if (selectedIndex < 0)
+                selectedIndex = _instanceBox.Items.Add("No saved instance selected");
             _instanceBox.SelectedIndex = selectedIndex;
         }
         finally
         {
             _loadingInstances = false;
         }
+        RefreshCachedMissionInstances();
     }
 
     private void RefreshConfigVariantList()
@@ -7443,35 +7598,41 @@ internal sealed partial class MainForm : Form
         }
 
         var profile = FindCurrentInstanceProfile();
-        _presetsButton.Enabled = profile is not null && _document is not null;
-        _presetsButton.ForeColor = _presetsButton.Enabled ? PrimaryTextColor : HelpTextColor;
         if (profile is null || _document is null)
         {
-            SetToolbarHelp(_presetsButton, "Select a saved instance to manage its presets.");
+            SetToolbarHelp(_presetsButton, _document is null
+                ? "Open a config first."
+                : "Add or select an instance before storing presets.");
+            ShowContextPreset(null);
             return;
         }
 
         var configFileName = GetCurrentConfigFileName(_document);
         var presets = PresetStore.List(EnsureInstanceId(profile), configFileName);
         var active = GetActivePreset(profile, configFileName, presets);
-        RefreshPresetButtonState(profile, configFileName, active);
+        RefreshPresetButtonState(configFileName, active);
     }
 
-    private void RefreshPresetButtonState(ServerProfileSettings profile, string configFileName, StoredConfigPreset? active)
+    private void RefreshPresetButtonState(string configFileName, StoredConfigPreset? active)
     {
-        _presetsButton!.Enabled = profile is not null && _document is not null;
-        _presetsButton.ForeColor = _presetsButton.Enabled ? PrimaryTextColor : HelpTextColor;
-        if (profile is null || _document is null)
-        {
-            SetToolbarHelp(_presetsButton, "Select a saved instance to manage its presets.");
-            return;
-        }
-
+        ShowContextPreset(active?.Name);
         SetToolbarHelp(
-            _presetsButton,
+            _presetsButton!,
             active is null
                 ? "Store the current " + GetConfigVariantLabel(configFileName) + " config as a preset."
                 : "Active " + GetConfigVariantLabel(configFileName) + " preset: " + active.Name);
+    }
+
+    private void ShowContextPreset(string? name)
+    {
+        if (_contextPresetLabel is null || _contextPresetName is null)
+            return;
+
+        var visible = !string.IsNullOrWhiteSpace(name);
+        _contextPresetName.Text = name ?? "";
+        _contextPresetName.Visible = _contextPresetLabel.Visible = visible;
+        SetToolbarHelp(_contextPresetName, _contextPresetName.Text);
+        LayoutPreviewHeader();
     }
 
     private bool SwitchToPreset(ServerProfileSettings profile, StoredConfigPreset preset)
@@ -7683,7 +7844,8 @@ internal sealed partial class MainForm : Form
         string sourceKind,
         IReadOnlyList<PresetUpdateTargetChoice> targets,
         IReadOnlyDictionary<string, bool> decisions,
-        ConfigDocument? previousCleanDocument)
+        ConfigDocument? previousCleanDocument,
+        ConfigDocument? cleanSourceDocument = null)
     {
         var result = new PresetBatchUpdateResult();
         foreach (var target in targets.Where(target => target.Selected))
@@ -7691,8 +7853,8 @@ internal sealed partial class MainForm : Form
             try
             {
                 var currentPresetDocument = ConfigDocument.Load(target.Preset.ConfigPath);
-                var outputDocument = ConfigDocument.Load(sourceConfigPath);
-                outputDocument.RepairStringListSeparators();
+                var outputDocument = cleanSourceDocument?.CreateWorkingCopy() ?? ConfigDocument.Load(sourceConfigPath);
+                if (cleanSourceDocument is null) outputDocument.RepairStringListSeparators();
                 var preview = MergeCurrentConfigIntoNewConfig(
                     currentPresetDocument,
                     outputDocument,
@@ -7725,7 +7887,7 @@ internal sealed partial class MainForm : Form
                     }
                 }
 
-                ApplyKeptTableChoices(outputDocument, preview, tableChoices);
+                ApplyKeptTableChoices(outputDocument, preview, tableChoices, cleanSourceDocument);
                 ApplyKeptValueChoices(outputDocument, preview, valueChoices);
                 var validationErrors = outputDocument.ValidateForImport(preview.ImportWarnings);
                 if (validationErrors.Count > 0)
@@ -8110,7 +8272,7 @@ internal sealed partial class MainForm : Form
             importLegacyButton.Enabled =
                 importLegacyButton.Visible && presets.Count < PresetStore.MaximumPresetsPerConfig;
             RefreshActionStates();
-            RefreshPresetButtonState(profile, configFileName, active);
+            RefreshPresetButtonState(configFileName, active);
         }
 
         void RefreshActionStates()
@@ -10568,7 +10730,10 @@ internal sealed partial class MainForm : Form
 
         SaveRenderedCategoryScroll();
         var viewGeneration = _uiViewGeneration.Next();
-        panel.SuspendLayout();
+        var layouts = EnumerateChildControls<Panel>(panel).Cast<Control>().Prepend(panel).ToArray();
+        foreach (var layout in layouts) layout.SuspendLayout();
+        var deferPainting = !preparing && !_startupPresentationHeld && _formHost.IsHandleCreated;
+        if (deferPainting) SendZoomRedrawMessage(_formHost.Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);
         try
         {
             _loadingForm = true;
@@ -10585,7 +10750,7 @@ internal sealed partial class MainForm : Form
                 }
                 finally
                 {
-                    _formHost.ResumeLayout();
+                    EditorSection.RunLayoutPass(() => _formHost.ResumeLayout());
                 }
             }
             finally
@@ -10601,7 +10766,19 @@ internal sealed partial class MainForm : Form
         }
         finally
         {
-            panel.ResumeLayout(ReferenceEquals(panel.Parent, _formHost));
+            try
+            {
+                foreach (var layout in layouts.Reverse()) layout.ResumeLayout(false);
+                if (ReferenceEquals(panel.Parent, _formHost)) EditorSection.RunLayoutPass(panel.PerformLayout);
+            }
+            finally
+            {
+                if (deferPainting && _formHost.IsHandleCreated)
+                {
+                    SendZoomRedrawMessage(_formHost.Handle, 0x000B, new IntPtr(1), IntPtr.Zero);
+                    _formHost.Invalidate(true);
+                }
+            }
         }
         return true;
     }
@@ -10617,14 +10794,15 @@ internal sealed partial class MainForm : Form
             {
                 if (suspendCachedPanels && isCachedPanel)
                 {
-                    control.SuspendLayout();
+                    var layouts = EnumerateChildControls<Panel>(control).Cast<Control>().Prepend(control).ToArray();
+                    foreach (var layout in layouts) layout.SuspendLayout();
                     try
                     {
                         control.Parent = null;
                     }
                     finally
                     {
-                        control.ResumeLayout(false);
+                        foreach (var layout in layouts.Reverse()) layout.ResumeLayout(false);
                     }
                 }
                 else
@@ -10788,6 +10966,7 @@ internal sealed partial class MainForm : Form
             }
 
             _formHost.AutoScrollPosition = position;
+            WeatherScrollHost.SynchronizeParent(_formHost);
         });
     }
 
@@ -10868,7 +11047,7 @@ internal sealed partial class MainForm : Form
                 ? categoryName : null;
         }
         else PrepareImportedNewMarkersForCategory(categoryName);
-        var panel = new TableLayoutPanel
+        var panel = new EditorLayoutPanel
         {
             Dock = DockStyle.Top,
             AutoSize = true,
@@ -10878,6 +11057,7 @@ internal sealed partial class MainForm : Form
         };
         // Retain the effective font after native DPI initialization for cached detaches.
         panel.HandleCreated += (_, _) => panel.Font = panel.Font;
+        panel.Name = "EditorContent";
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         panel.SuspendLayout();
         try
@@ -10887,7 +11067,7 @@ internal sealed partial class MainForm : Form
                 Text = GetCategoryDisplayName(categoryName),
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                Font = new Font(Font.FontFamily, 19F * _uiZoomPercent / UiZoomBaselinePercent, FontStyle.Bold),
+                Font = new Font(Font.FontFamily, (15.75F + EditorFontIncreasePoints) * _uiZoomPercent / 100F, FontStyle.Bold),
                 Padding = new Padding(0, 0, 0, Zoomed(20))
             };
             panel.Controls.Add(title);
@@ -10910,6 +11090,7 @@ internal sealed partial class MainForm : Form
                 {
                     AddCategoryItemEditor(panel, categoryName, item);
                 }
+                ArrangeEditorSections(panel, categoryName, items);
             }
         }
         catch
@@ -10927,6 +11108,8 @@ internal sealed partial class MainForm : Form
             }
         }
 
+        ConfigureEditorGridPreferences(panel);
+
         _formHost.SuspendLayout();
         try
         {
@@ -10936,7 +11119,7 @@ internal sealed partial class MainForm : Form
         }
         finally
         {
-            _formHost.ResumeLayout(performLayout: true);
+            EditorSection.RunLayoutPass(() => _formHost.ResumeLayout(performLayout: true));
         }
 
         var themeLayouts = EnumerateChildControls<Panel>(_formHost).Prepend(_formHost).ToArray();
@@ -10948,7 +11131,7 @@ internal sealed partial class MainForm : Form
         finally
         {
             foreach (var layout in themeLayouts.Reverse()) layout.ResumeLayout(false);
-            _formHost.PerformLayout();
+            EditorSection.RunLayoutPass(_formHost.PerformLayout);
         }
         if (preparing)
         {
@@ -11070,7 +11253,12 @@ internal sealed partial class MainForm : Form
             }
             if (selector.SelectedItem is StageTableItem item)
             {
-                host.Controls.Add(BuildStageTableEditor(item.Table));
+                var editor = BuildStageTableEditor(item.Table);
+                var header = (FlowLayoutPanel)((TableLayoutPanel)editor).GetControlFromPosition(0, 0)!;
+                var section = new EditorSection(item.Table.Key, header.Controls.OfType<Label>().First().Text,
+                    true, Zoomed(12), null);
+                section.AttachEditor(editor, header);
+                host.Controls.Add(section);
                 ApplyThemeToControl(host, restyleButtons: true);
                 RestyleStageDifficultyButtons(host);
             }
@@ -11200,6 +11388,10 @@ internal sealed partial class MainForm : Form
         {
             var display = GetStageDifficultyButtonText(table, difficulty);
             var button = MakeDesignerButton(display, () => RenderDifficulty(difficulty), 90);
+            ((PreviewButton)button).TextAccentOnly = true;
+            button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            button.MinimumSize = new Size(0, Zoomed(34));
+            button.Padding = new Padding(Zoomed(10), 0, Zoomed(10), 0);
             button.Tag = new StageDifficultyButtonTag(table.Key, difficulty);
             difficultyButtons[difficulty] = button;
             buttonRow.Controls.Add(button);
@@ -11243,28 +11435,24 @@ internal sealed partial class MainForm : Form
     private void ApplyStageDifficultyButtonStyle(Button button, ConfigStageTable table, string difficulty, string viewedDifficulty)
     {
         button.Text = GetStageDifficultyButtonText(table, difficulty);
+        button.Font = GetConfigValueFont(2.1f);
         StyleButton(button);
         button.FlatAppearance.BorderSize = 1;
 
-        if (!difficulty.Equals(viewedDifficulty, StringComparison.OrdinalIgnoreCase))
+        button.AccessibleDescription = difficulty.Equals(viewedDifficulty, StringComparison.OrdinalIgnoreCase)
+            ? "Currently viewing these difficulty settings." : "View these difficulty settings.";
+        if (!difficulty.Equals("easy", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
         if (IsDarkPalette())
         {
-            button.BackColor = SelectionBackground;
-            button.ForeColor = SelectionText;
-            button.FlatAppearance.BorderColor = SelectionBackground;
+            button.ForeColor = Color.FromArgb(0x8B, 0xC4, 0xFF);
             return;
         }
 
-        button.BackColor = HeaderBackground;
-        button.ForeColor = PrimaryTextColor;
-        button.FlatAppearance.BorderColor = SelectionBackground;
-        button.FlatAppearance.BorderSize = 2;
-        button.FlatAppearance.MouseOverBackColor = HeaderBackground;
-        button.FlatAppearance.MouseDownBackColor = HeaderBackground;
+        button.ForeColor = Color.FromArgb(7, 90, 169);
     }
 
     private void RestyleStageDifficultyButtons(Control root)
@@ -11306,12 +11494,14 @@ internal sealed partial class MainForm : Form
         {
             AutoSize = true,
             Dock = DockStyle.Top,
-            ColumnCount = 2,
-            RowCount = 1,
-            Padding = new Padding(8)
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = Padding.Empty,
+            MinimumSize = new Size(GetStageGridWidth(), 0)
         };
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, GetStageGridWidth() + 6));
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         var playerColumnWidth = GetStagePlayerColumnWidth();
         var amountColumnWidth = GetStageAmountColumnWidth();
@@ -11335,27 +11525,16 @@ internal sealed partial class MainForm : Form
         grid.Columns.Add("player", "Up to players");
         grid.Columns.Add("amount", "Amount");
         ConfigureLockedStageColumn(grid.Columns["player"], playerColumnWidth);
+        grid.Columns["player"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
         ConfigureLockedStageColumn(grid.Columns["amount"], amountColumnWidth);
         grid.ScrollBars = ScrollBars.Vertical;
-        group.Controls.Add(grid, 0, 0);
-        var scrollbar = grid.Controls.OfType<VScrollBar>().Single();
-        void SizeGridWidth()
-        {
-            var width = grid.Columns.GetColumnsWidth(DataGridViewElementStates.Visible) + 4 +
-                (scrollbar.Visible ? scrollbar.Width : 0) + grid.Margin.Horizontal;
-            if (group.ColumnStyles[0].Width != width) group.ColumnStyles[0].Width = width;
-        }
-        scrollbar.VisibleChanged += (_, _) => SizeGridWidth();
-        grid.Layout += (_, _) => SizeGridWidth();
-        SizeGridWidth();
+        group.Controls.Add(grid, 0, 1);
 
         RefreshStageGrid(grid, table, difficulty);
-        var actions = MakeTableActionPanel(
+        var actions = MakeTableActionPanel(true,
             MakeDesignerButton("Add row", () => AddStageRow(table, getDifficulty(), grid), TableActionButtonWidth),
-            MakeDesignerButton("Remove selected", () => RemoveStageRow(table, grid), TableActionButtonWidth),
-            MakeDesignerButton("Move up", () => MoveStageRow(table, grid, -1), TableActionButtonWidth),
-            MakeDesignerButton("Move down", () => MoveStageRow(table, grid, 1), TableActionButtonWidth));
-        group.Controls.Add(actions, 1, 0);
+            MakeDesignerButton("Remove selected", () => RemoveStageRow(table, grid), TableActionButtonWidth));
+        group.Controls.Add(actions, 0, 0);
         var binding = new StageEditorBinding(table.Key, grid, actions, lockNote, lockedPrefix, getDifficulty);
         group.Tag = binding;
         ApplyStageEditorLockState(binding);
@@ -11507,7 +11686,7 @@ internal sealed partial class MainForm : Form
                 var height = GetStageGridHeight(smoothGrid);
                 if (grid.Height != height) grid.Height = height;
             });
-            grid.ScrollBars = ScrollBars.Vertical;
+            grid.ScrollBars = grid.AllowUserToResizeColumns ? ScrollBars.Both : ScrollBars.Vertical;
             if (grid.Parent!.Tag is StageEditorBinding binding) ApplyStageEditorLockState(binding);
         }
         finally
@@ -11782,7 +11961,7 @@ internal sealed partial class MainForm : Form
     {
         var isNewImportEntry = IsImportedNewEntryHighlighted(entry);
         var headerBackColor = isNewImportEntry ? GetNewHighlightBackColor() : MainBackground;
-        var group = new TableLayoutPanel
+        var group = new EditorLayoutPanel
         {
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -11822,21 +12001,97 @@ internal sealed partial class MainForm : Form
         }
 
         var description = EntryDescription(entry);
+        var isServerMessage = entry.DisplayKey.Equals("MessageOfTheDay.text", StringComparison.Ordinal);
+        Label? inlineMessageHelp = null;
         if (!string.IsNullOrWhiteSpace(description))
         {
-            var helpButton = MakeHelpButton(entry.DisplayName, description, entry.DisplayKey);
+            var helpButton = MakeHelpButton(entry.DisplayName, description, isServerMessage ? null : entry.DisplayKey);
+            if (isServerMessage)
+            {
+                label.Text = "Server message";
+                inlineMessageHelp = MakeLabel("Players see this message in the mission. Use a blank line to separate paragraphs.");
+                inlineMessageHelp.Visible = false;
+                helpButton.AccessibleName = "Help for server message";
+                helpButton.Click += (_, _) => inlineMessageHelp.Visible = !inlineMessageHelp.Visible;
+            }
             header.Controls.Add(helpButton);
         }
 
         group.Controls.Add(header);
 
         var editor = BuildFriendlyControl(entry);
-        if (entry.DisplayKey.Equals("MessageOfTheDay.text", StringComparison.Ordinal))
+        var aligned = editor is ComboBox or CheckBox or TextBox { Multiline: false } ||
+            editor is TableLayoutPanel number && number.Controls.OfType<NumericUpDown>().Count() == 1;
+        if (aligned)
         {
-            editor.MinimumSize = new Size(0, editor.Height);
-            editor.MaximumSize = new Size(Zoomed(GetTextEditorWidth(entry)), editor.Height);
+            group.ColumnCount = 2;
+            group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(175)));
+            group.Padding = new Padding(Zoomed(15), Zoomed(10), Zoomed(15), Zoomed(10));
+            header.Padding = Padding.Empty;
+            label.Margin = new Padding(0, 0, Zoomed(5), 0);
+            editor.Dock = DockStyle.None;
+            editor.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            editor.Margin = new Padding(Zoomed(12), 0, 0, 0);
+            editor.MaximumSize = Size.Empty;
+            if (editor is TableLayoutPanel numeric)
+            {
+                numeric.ColumnStyles[0].SizeType = SizeType.Percent;
+                numeric.ColumnStyles[0].Width = 100;
+                numeric.ColumnStyles[1].SizeType = SizeType.AutoSize;
+                group.ColumnStyles[1].Width = Math.Max(group.ColumnStyles[1].Width,
+                    numeric.MinimumSize.Width + editor.Margin.Horizontal);
+            }
         }
-        group.Controls.Add(editor);
+        if (isServerMessage && editor is TextBox messageBox)
+        {
+            messageBox.AccessibleName = "Server message";
+            messageBox.BorderStyle = BorderStyle.FixedSingle;
+            messageBox.MinimumSize = new Size(0, Zoomed(110));
+            messageBox.MaximumSize = new Size(Zoomed(720), Zoomed(420));
+            messageBox.Height = Zoomed(195);
+        }
+        if (aligned)
+        {
+            group.Controls.Add(editor, 1, 0);
+            group.SetRowSpan(editor, 2);
+        }
+        else group.Controls.Add(editor);
+        if (isServerMessage && editor is TextBox serverMessage)
+        {
+            if (inlineMessageHelp is not null)
+            {
+                group.Controls.Add(inlineMessageHelp);
+                ConfigureHelpSizing(group, inlineMessageHelp);
+            }
+            var resize = MakeButton("↕ Resize editor", () => { });
+            resize.AccessibleDescription = "Drag vertically or use the Up and Down arrow keys to resize the server message editor.";
+            resize.Dock = DockStyle.Left;
+            resize.Cursor = Cursors.SizeNS;
+            resize.Size = new Size(Zoomed(125), Zoomed(27));
+            var dragStart = 0;
+            var originalHeight = 0;
+            void ResizeMessage(int height) => serverMessage.Height = Math.Clamp(height,
+                serverMessage.MinimumSize.Height, serverMessage.MaximumSize.Height);
+            resize.MouseDown += (_, args) =>
+            {
+                if (args.Button != MouseButtons.Left) return;
+                dragStart = resize.PointToScreen(args.Location).Y;
+                originalHeight = serverMessage.Height;
+            };
+            resize.MouseMove += (_, args) =>
+            {
+                if (resize.Capture && args.Button == MouseButtons.Left)
+                    ResizeMessage(originalHeight + resize.PointToScreen(args.Location).Y - dragStart);
+            };
+            resize.PreviewKeyDown += (_, args) => args.IsInputKey = args.KeyCode is Keys.Up or Keys.Down;
+            resize.KeyDown += (_, args) =>
+            {
+                if (args.KeyCode is not (Keys.Up or Keys.Down)) return;
+                ResizeMessage(serverMessage.Height + Zoomed(args.KeyCode == Keys.Down ? 16 : -16));
+                args.Handled = true;
+            };
+            group.Controls.Add(resize);
+        }
         if (entry.GuiExampleFormat is { } exampleFormat && editor is TextBox textBox)
         {
             var example = new Label
@@ -11848,15 +12103,22 @@ internal sealed partial class MainForm : Form
                 Padding = new Padding(0, Zoomed(4), 0, 0)
             };
             textBox.TextChanged += (_, _) => example.Text = exampleFormat.Replace("{value}", textBox.Text, StringComparison.Ordinal);
-            group.Controls.Add(example);
+            if (aligned)
+            {
+                group.Controls.Add(example, 0, 2);
+                group.SetColumnSpan(example, 2);
+            }
+            else group.Controls.Add(example);
             group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             ConfigureHelpSizing(group, example);
+            example.Name = "SectionExample";
+            example.Font = GetConfigValueFont(.6f);
         }
 
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        if (editor is ComboBox)
+        if (!aligned && editor is ComboBox)
         {
             var editorRow = group.RowStyles[1];
             editorRow.SizeType = SizeType.Absolute;
@@ -11869,7 +12131,7 @@ internal sealed partial class MainForm : Form
             editor.MarginChanged += (_, _) => SizeEditorRow();
             SizeEditorRow();
         }
-        ConfigureTableHeaderSizing(group, header);
+        ConfigureTableHeaderSizing(group, header, GetConfigValueFont(2.1f, FontStyle.Bold));
 
         if (!CanEntryEditorBeLocked(entry))
         {
@@ -11886,8 +12148,11 @@ internal sealed partial class MainForm : Form
             };
             SetHelp(help, entry);
             ConfigureEditableHelpControl(help, entry.DisplayKey, entry.DisplayName, description);
-            group.Controls.Add(help);
+            if (aligned) group.Controls.Add(help, 0, 1);
+            else group.Controls.Add(help);
             ConfigureHelpSizing(group, help);
+            help.Name = "SectionDescription";
+            help.Font = GetConfigValueFont(.6f);
             return group;
         }
 
@@ -11929,8 +12194,11 @@ internal sealed partial class MainForm : Form
         SetHelp(helpText, entry);
         ConfigureEditableHelpControl(helpText, entry.DisplayKey, entry.DisplayName, description);
         helpRow.Controls.Add(helpText, 1, 0);
-        group.Controls.Add(helpRow);
+        if (aligned) group.Controls.Add(helpRow, 0, 1);
+        else group.Controls.Add(helpRow);
         ConfigureHelpSizing(group, helpText, lockedPrefix);
+        helpText.Name = "SectionDescription";
+        helpText.Font = GetConfigValueFont(.6f);
 
         var binding = new EntryEditorBinding(entry, editor, lockedPrefix, helpText, description);
         group.Tag = binding;
@@ -11959,8 +12227,8 @@ internal sealed partial class MainForm : Form
             group.BeginInvoke((Action)(() =>
             {
                 layoutPending = false;
-                if (!group.IsDisposed)
-                    group.Parent?.PerformLayout(group, nameof(Control.PreferredSize));
+                if (!group.IsDisposed && group.FindForm() is not null)
+                    EditorSection.RunLayoutPass(() => group.Parent?.PerformLayout(group, nameof(Control.PreferredSize)));
             }));
         };
         if (prefix is not null) prefix.VisibleChanged += (_, _) => ResizeHelp();
@@ -12395,19 +12663,69 @@ internal sealed partial class MainForm : Form
         }
     }
 
+    private sealed class ServerMessageTextBox : TextBox
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        private struct EditRectangle
+        {
+            internal int Left, Top, Right, Bottom;
+        }
+
+        [DllImport("user32.dll", EntryPoint = "SendMessageW")]
+        private static extern IntPtr SetEditRectangle(IntPtr window, uint message, IntPtr wParam, ref EditRectangle bounds);
+
+        [DllImport("user32.dll", EntryPoint = "SendMessageW")]
+        private static extern IntPtr SendEditMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            ApplyTextInset();
+        }
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            ApplyTextInset();
+        }
+
+        private void ApplyTextInset()
+        {
+            if (!IsHandleCreated) return;
+            var inset = Math.Max(6, Font.Height / 2);
+            if (ClientSize.Width <= inset * 2 || ClientSize.Height <= inset * 2) return;
+            var bounds = new EditRectangle { Left = inset, Top = inset,
+                Right = ClientSize.Width - inset, Bottom = ClientSize.Height - inset };
+            SetEditRectangle(Handle, 0x00B3, IntPtr.Zero, ref bounds); // EM_SETRECT
+        }
+
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            var visibleLines = Math.Max(1, (ClientSize.Height - Math.Max(12, Font.Height)) / Font.Height);
+            var scrollLines = SystemInformation.MouseWheelScrollLines;
+            if (e is HandledMouseEventArgs handled && !handled.Handled && scrollLines != 0
+                && GetLineFromCharIndex(TextLength) >= visibleLines)
+            {
+                var lines = scrollLines < 0 ? visibleLines : scrollLines;
+                SendEditMessage(Handle, 0x00B6, IntPtr.Zero, (IntPtr)(-Math.Sign(e.Delta) * lines)); // EM_LINESCROLL
+                handled.Handled = true;
+            }
+            base.OnMouseWheel(e);
+        }
+    }
+
     private Control BuildFriendlyControl(ConfigEntry entry)
     {
         var isFieldsEntry = string.Equals(entry.ParentGuiLayout, "fields", StringComparison.OrdinalIgnoreCase);
-        if (string.Equals(entry.ControlTypeOverride, "multiline", StringComparison.OrdinalIgnoreCase))
+        var isServerMessage = entry.DisplayKey.Equals("MessageOfTheDay.text", StringComparison.Ordinal);
+        if (isServerMessage || string.Equals(entry.ControlTypeOverride, "multiline", StringComparison.OrdinalIgnoreCase))
         {
-            var multilineBox = new TextBox
-            {
-                Dock = DockStyle.Top,
-                Height = 140,
-                Multiline = true,
-                ScrollBars = ScrollBars.Vertical,
-                Text = entry.ValueText
-            };
+            TextBox multilineBox = isServerMessage ? new ServerMessageTextBox() : new TextBox();
+            multilineBox.Dock = DockStyle.Top;
+            multilineBox.Height = 140;
+            multilineBox.Multiline = true;
+            multilineBox.ScrollBars = isServerMessage ? ScrollBars.None : ScrollBars.Vertical;
+            multilineBox.Text = entry.ValueText;
             multilineBox.TextChanged += (_, _) =>
             {
                 if (isFieldsEntry && !multilineBox.Enabled)
@@ -12427,7 +12745,10 @@ internal sealed partial class MainForm : Form
                             if (GetSelectedCategoryName().Equals(entry.EffectiveCategory, StringComparison.OrdinalIgnoreCase))
                                 RenderSelectedCategory(false);
                         }
-                        else RefreshControlValue(() => multilineBox.Text = entry.ValueText);
+                        else RefreshControlValue(() =>
+                        {
+                            if (FindCurrentFriendlyControl(entry, multilineBox) is TextBox current) current.Text = entry.ValueText;
+                        });
                     });
             };
             return multilineBox;
@@ -12462,7 +12783,10 @@ internal sealed partial class MainForm : Form
                             if (GetSelectedCategoryName().Equals(entry.EffectiveCategory, StringComparison.OrdinalIgnoreCase))
                                 RenderSelectedCategory(false);
                         }
-                        else RefreshControlValue(() => textBox.Text = entry.ValueText);
+                        else RefreshControlValue(() =>
+                        {
+                            if (FindCurrentFriendlyControl(entry, textBox) is TextBox current) current.Text = entry.ValueText;
+                        });
                     });
             };
             return textBox;
@@ -12563,7 +12887,10 @@ internal sealed partial class MainForm : Form
                         if (GetSelectedCategoryName().Equals(entry.EffectiveCategory, StringComparison.OrdinalIgnoreCase))
                             RenderSelectedCategory(false);
                     }
-                    else RefreshControlValue(() => plainTextBox.Text = entry.ValueText);
+                    else RefreshControlValue(() =>
+                    {
+                        if (FindCurrentFriendlyControl(entry, plainTextBox) is TextBox current) current.Text = entry.ValueText;
+                    });
                 });
         };
         return plainTextBox;
@@ -12970,11 +13297,12 @@ internal sealed partial class MainForm : Form
 
     private void RefreshScalarChoiceControl(ConfigEntry entry, ComboBox original, string value)
     {
-        if (!original.IsDisposed)
-        {
-            original.Text = value;
-            return;
-        }
+        if (FindCurrentFriendlyControl(entry, original) is ComboBox current) current.Text = value;
+    }
+
+    private Control? FindCurrentFriendlyControl(ConfigEntry entry, Control original)
+    {
+        if (!original.IsDisposed) return original;
 
         // Undo can outlive an editor removed by conditions, theme or zoom.
         foreach (var panel in _categoryPanelCache.Values)
@@ -12983,12 +13311,13 @@ internal sealed partial class MainForm : Form
                 targets.TryGetValue(entry.DisplayKey, out var target) &&
                 ReferenceEquals(target.Entry, entry) &&
                 target.Editor is TableLayoutPanel { IsDisposed: false } group &&
-                group.GetControlFromPosition(0, 1) is ComboBox { IsDisposed: false } current)
+                (group.Tag is EntryEditorBinding binding ? binding.Editor :
+                    group.GetControlFromPosition(group.ColumnCount == 2 ? 1 : 0, group.ColumnCount == 2 ? 0 : 1)) is { IsDisposed: false } current)
             {
-                current.Text = value;
-                return;
+                return current;
             }
         }
+        return null;
     }
 
     private void RefreshControlValue(Action refresh)
@@ -13057,37 +13386,31 @@ internal sealed partial class MainForm : Form
         redText.Tag = new SideMultiplierPreviewBinding(entry, redInput, IsRed: true);
         blueText.Tag = new SideMultiplierPreviewBinding(entry, blueInput, IsRed: false);
 
+        void RefreshInputs()
+        {
+            if (!entry.TryGetSideMultipliers(out var restoredRed, out var restoredBlue) ||
+                FindCurrentFriendlyControl(entry, panel) is not TableLayoutPanel current) return;
+            var currentRed = (NumericUpDown)current.GetControlFromPosition(1, 0)!;
+            var currentBlue = (NumericUpDown)current.GetControlFromPosition(1, 1)!;
+            currentRed.Value = ClampMultiplier(entry, restoredRed);
+            currentBlue.Value = ClampMultiplier(entry, restoredBlue);
+            ((Label)current.GetControlFromPosition(2, 0)!).Text = GetSideMultiplierHint(entry, currentRed.Value, isRed: true);
+            ((Label)current.GetControlFromPosition(2, 1)!).Text = GetSideMultiplierHint(entry, currentBlue.Value, isRed: false);
+        }
+
         redInput.ValueChanged += (_, _) =>
         {
             redText.Text = GetSideMultiplierHint(entry, redInput.Value, isRed: true);
             ChangeEntryValue(entry, "edit " + entry.DisplayName, () =>
                 entry.SetSideMultipliers(redInput.Value, blueInput.Value),
-                () => RefreshControlValue(() =>
-                {
-                    if (entry.TryGetSideMultipliers(out var restoredRed, out var restoredBlue))
-                    {
-                        redInput.Value = ClampMultiplier(entry, restoredRed);
-                        blueInput.Value = ClampMultiplier(entry, restoredBlue);
-                        redText.Text = GetSideMultiplierHint(entry, redInput.Value, isRed: true);
-                        blueText.Text = GetSideMultiplierHint(entry, blueInput.Value, isRed: false);
-                    }
-                }));
+                () => RefreshControlValue(RefreshInputs));
         };
         blueInput.ValueChanged += (_, _) =>
         {
             blueText.Text = GetSideMultiplierHint(entry, blueInput.Value, isRed: false);
             ChangeEntryValue(entry, "edit " + entry.DisplayName, () =>
                 entry.SetSideMultipliers(redInput.Value, blueInput.Value),
-                () => RefreshControlValue(() =>
-                {
-                    if (entry.TryGetSideMultipliers(out var restoredRed, out var restoredBlue))
-                    {
-                        redInput.Value = ClampMultiplier(entry, restoredRed);
-                        blueInput.Value = ClampMultiplier(entry, restoredBlue);
-                        redText.Text = GetSideMultiplierHint(entry, redInput.Value, isRed: true);
-                        blueText.Text = GetSideMultiplierHint(entry, blueInput.Value, isRed: false);
-                    }
-                }));
+                () => RefreshControlValue(RefreshInputs));
         };
 
         panel.Controls.Add(redLabel, 0, 0);
@@ -13177,6 +13500,10 @@ internal sealed partial class MainForm : Form
             Maximum = GetNumberMaximum(entry),
             Increment = entry.ValueText.Contains('.', StringComparison.Ordinal) ? 0.05m : 1m
         };
+        input.Font = GetConfigValueFont(2.1f);
+        var stepperWidth = input.Controls.Cast<Control>().Single(child => child is not TextBox).Width;
+        input.MinimumSize = new Size(Math.Max(Zoomed(90),
+            TextRenderer.MeasureText(entry.ValueText, input.Font).Width + stepperWidth + Zoomed(14)), 0);
         if (decimal.TryParse(entry.ValueText, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
         {
             input.Value = Math.Max(input.Minimum, Math.Min(input.Maximum, value));
@@ -13186,11 +13513,22 @@ internal sealed partial class MainForm : Form
         {
             ChangeEntryValue(entry, "edit " + entry.DisplayName, () =>
                 entry.ValueText = input.Value.ToString(input.DecimalPlaces == 0 ? "0" : "0.##", CultureInfo.InvariantCulture),
-                () => RefreshControlValue(() => SetNumericInputValue(input, entry)));
+                () => RefreshControlValue(() =>
+                {
+                    if (FindCurrentFriendlyControl(entry, panel) is TableLayoutPanel current &&
+                        current.GetControlFromPosition(0, 0) is NumericUpDown currentInput)
+                        SetNumericInputValue(currentInput, entry);
+                }));
         };
 
+        var unit = MakeValueHint(GetUnitHint(entry));
+        unit.AutoSize = true;
+        unit.Dock = DockStyle.None;
+        unit.Anchor = AnchorStyles.Left;
+        unit.Font = GetConfigValueFont(.6f);
+        panel.MinimumSize = new Size(input.MinimumSize.Width + unit.PreferredSize.Width + unit.Margin.Horizontal + input.Margin.Horizontal, 0);
         panel.Controls.Add(input, 0, 0);
-        panel.Controls.Add(MakeValueHint(GetUnitHint(entry)), 1, 0);
+        panel.Controls.Add(unit, 1, 0);
         return panel;
     }
 
@@ -13317,14 +13655,14 @@ internal sealed partial class MainForm : Form
             Anchor = AnchorStyles.Top | AnchorStyles.Left,
             Height = Math.Min(640, Math.Max(220, table.Items.Count * 26 + 76)),
             Width = GetStringListBucketEditorWidth(),
-            ColumnCount = 4,
-            RowCount = 2,
+            ColumnCount = 3,
+            RowCount = 3,
             Padding = new Padding(0, 0, 0, 8)
         };
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Zoomed(54)));
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
+        group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -13349,7 +13687,7 @@ internal sealed partial class MainForm : Form
         }
         group.Controls.Add(header, 0, 0);
 
-        group.Controls.Add(MakeStringListBucketHeader("Not active"), 2, 0);
+        group.SetColumnSpan(header, 3);
 
         activeGrid = MakeStringListBucketGrid(table.Key, "Active", showNewStatus: false);
         if (table.RequiredValueRules.Count > 0) AddRequiredStatusColumn(activeGrid);
@@ -13365,16 +13703,18 @@ internal sealed partial class MainForm : Form
             deactivateButton,
             MakeDesignerButton("<", () => ActivateStringListItemRow(table, activeGrid, inactiveGrid), Zoomed(42)));
         _toolTip.SetToolTip(movePanel, "Move selected items between active and commented.");
-        group.Controls.Add(activeGrid, 0, 1);
-        group.Controls.Add(movePanel, 1, 1);
-        group.Controls.Add(inactiveGrid, 2, 1);
+        group.Controls.Add(activeGrid, 0, 2);
+        group.Controls.Add(movePanel, 1, 2);
+        group.Controls.Add(inactiveGrid, 2, 2);
         var removeButton = MakeDesignerButton("Remove selected", () => RemoveStringListItemRow(table, activeGrid, inactiveGrid, selectedBucketGrid), TableActionButtonWidth);
-        group.Controls.Add(MakeTableActionPanel(
-            MakeDesignerButton("Add item", () => AddStringListItemRow(table, activeGrid, inactiveGrid), TableActionButtonWidth), removeButton), 3, 1);
+        var actions = MakeTableActionPanel(true,
+            MakeDesignerButton("Add item", () => AddStringListItemRow(table, activeGrid, inactiveGrid), TableActionButtonWidth), removeButton);
+        group.Controls.Add(actions, 0, 1);
+        group.SetColumnSpan(actions, 3);
         if (table.RequiredValueRules.Count > 0)
         {
             var reasons = new FlowLayoutPanel { Name = "RequiredValueReasons:" + table.Key, Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0, Zoomed(6), 0, 0) };
-            group.RowCount = 3; group.RowStyles.Add(new RowStyle(SizeType.AutoSize)); group.Controls.Add(reasons, 0, 2); group.SetColumnSpan(reasons, 4);
+            group.RowCount = 4; group.RowStyles.Add(new RowStyle(SizeType.AutoSize)); group.Controls.Add(reasons, 0, 3); group.SetColumnSpan(reasons, 3);
             var binding = new StringListRequirementBinding(table, activeGrid, inactiveGrid, deactivateButton, removeButton, reasons);
             group.Tag = binding;
             binding.Selected = activeGrid;
@@ -13389,7 +13729,7 @@ internal sealed partial class MainForm : Form
         ((SmoothDataGridView)activeGrid).ConfigureCompactHeightLayout(group, () =>
         {
             var height = Math.Max(GetTableActionMinimumHeight(group),
-                GetStringListBucketHeight(activeGrid, inactiveGrid, 220, 640, GetTableHeightPadding(76)));
+                GetStringListBucketHeight(activeGrid, inactiveGrid, 220, 640, GetTableHeightPadding(118)));
             height += group.Tag is StringListRequirementBinding requirements ? requirements.Reasons.PreferredSize.Height : 0;
             if (group.Height != height) group.Height = height;
         });
@@ -13406,14 +13746,14 @@ internal sealed partial class MainForm : Form
         DataGridView? grid = null;
         var group = new TableLayoutPanel
         {
-            Anchor = AnchorStyles.Top | AnchorStyles.Left,
+            Dock = DockStyle.Top,
             Height = Math.Min(640, Math.Max(220, table.Items.Count * 26 + 76)),
-            ColumnCount = 2,
-            RowCount = 2,
+            ColumnCount = 1,
+            RowCount = 3,
             Padding = new Padding(0, 0, 0, 8)
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -13453,10 +13793,10 @@ internal sealed partial class MainForm : Form
         grid.Columns.Add("value", "Value");
         ConfigureFillColumn(grid.Columns["value"], 540);
         ApplyCompactTableLayout(group, grid);
-        group.Controls.Add(grid, 0, 1);
-        group.Controls.Add(MakeTableActionPanel(
+        group.Controls.Add(grid, 0, 2);
+        group.Controls.Add(MakeTableActionPanel(true,
             MakeDesignerButton("Add item", () => AddSimpleStringListItemRow(table, grid), TableActionButtonWidth),
-            MakeDesignerButton("Remove selected", () => RemoveSimpleStringListItemRow(table, grid), TableActionButtonWidth)), 1, 1);
+            MakeDesignerButton("Remove selected", () => RemoveSimpleStringListItemRow(table, grid), TableActionButtonWidth)), 0, 1);
 
         BindManagedStringListRefresh(table, group, values => RefreshSimpleStringListGrid(grid, table, values));
         RefreshSimpleStringListGrid(grid, table);
@@ -13497,8 +13837,8 @@ internal sealed partial class MainForm : Form
         if (showNewStatus)
         {
             grid.Columns.Add("status", "Status");
-            grid.Columns["status"].Width = Zoomed(58);
-            grid.Columns["status"].MinimumWidth = Zoomed(48);
+            grid.Columns["status"].Width = Zoomed(88);
+            grid.Columns["status"].MinimumWidth = Zoomed(88);
             grid.Columns["status"].DisplayIndex = 1;
             grid.Columns["status"].SortMode = DataGridViewColumnSortMode.NotSortable;
             grid.Columns["status"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -13513,8 +13853,11 @@ internal sealed partial class MainForm : Form
         return panel;
     }
 
-    private int GetStringListBucketEditorWidth()
+    private int GetStringListBucketEditorWidth(Control? editor = null)
     {
+        if (editor?.Parent is { } parent && ContainingEditorSection(editor) is not null)
+            return Math.Max(editor.MinimumSize.Width,
+                parent.ClientSize.Width - parent.Padding.Horizontal - editor.Margin.Horizontal);
         var availableWidth = _formHost.ClientSize.Width > 0
             ? _formHost.ClientSize.Width - 48
             : ClientSize.Width - 320;
@@ -13523,10 +13866,10 @@ internal sealed partial class MainForm : Form
 
     private void ApplyStringListBucketLayout(TableLayoutPanel group, DataGridView activeGrid, DataGridView inactiveGrid)
     {
-        group.Width = GetStringListBucketEditorWidth();
+        group.Width = GetStringListBucketEditorWidth(group);
         group.Height = Math.Max(
             GetTableActionMinimumHeight(group),
-            GetStringListBucketHeight(activeGrid, inactiveGrid, 220, 640, GetTableHeightPadding(76)));
+            GetStringListBucketHeight(activeGrid, inactiveGrid, 220, 640, GetTableHeightPadding(118)));
         if (group.Tag is StringListRequirementBinding requirements) group.Height += requirements.Reasons.PreferredSize.Height;
         inactiveGrid.Height = activeGrid.Height;
     }
@@ -13538,27 +13881,43 @@ internal sealed partial class MainForm : Form
             GetConfiguredTableHeight(inactiveGrid, minimumHeight, maximumHeight, heightPadding));
     }
 
-    private FlowLayoutPanel MakeTableActionPanel(params Button[] buttons) => MakeTableActionPanel(null, buttons);
+    private FlowLayoutPanel MakeTableActionPanel(params Button[] buttons) => MakeTableActionPanel(null, false, buttons);
 
-    private FlowLayoutPanel MakeTableActionPanel(int? actionColumn, params Button[] buttons)
+    private FlowLayoutPanel MakeTableActionPanel(bool horizontal, params Button[] buttons) => MakeTableActionPanel(null, horizontal, buttons);
+
+    private FlowLayoutPanel MakeTableActionPanel(int? actionColumn, params Button[] buttons) => MakeTableActionPanel(actionColumn, false, buttons);
+
+    private FlowLayoutPanel MakeTableActionPanel(int? actionColumn, bool horizontal, params Button[] buttons)
     {
         var panel = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Padding = new Padding(8, 0, 0, 0)
+            Dock = horizontal ? DockStyle.Top : DockStyle.Fill,
+            AutoSize = horizontal,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = horizontal ? FlowDirection.LeftToRight : FlowDirection.TopDown,
+            WrapContents = horizontal,
+            Padding = horizontal ? Padding.Empty : new Padding(8, 0, 0, 0),
+            Margin = horizontal ? new Padding(0, 0, 0, Zoomed(8)) : new Padding(3)
         };
 
         foreach (var button in buttons)
         {
-            button.Margin = new Padding(0, 0, 0, 8);
-            button.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            button.Margin = horizontal ? new Padding(0, 0, Zoomed(6), 0) : new Padding(0, 0, 0, 8);
+            button.Anchor = horizontal ? AnchorStyles.Top | AnchorStyles.Left : AnchorStyles.Left | AnchorStyles.Right;
+            if (horizontal)
+            {
+                ((PreviewButton)button).TextAccentOnly = true;
+                button.Font = GetConfigValueFont(2.1f);
+                button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+                button.MinimumSize = new Size(0, Zoomed(34));
+                button.Size = button.PreferredSize;
+            }
             panel.Controls.Add(button);
         }
 
         void SizeActionColumn()
         {
+            if (horizontal) return;
             if (panel.Parent is not TableLayoutPanel group) return;
             var column = actionColumn ?? group.ColumnCount - 1;
             var header = group.RowCount > 1 ? group.GetControlFromPosition(0, 0) : null;
@@ -13744,7 +14103,9 @@ internal sealed partial class MainForm : Form
                 binding.BlockedValue = bucket.Value;
                 binding.ExpandedValue = bucket.Value;
                 RefreshRequiredValueBinding(binding, facts: required);
+                RevealEditorSection(binding.Reasons);
                 _formHost.ScrollControlIntoView(binding.Reasons.Controls[0]);
+                WeatherScrollHost.SynchronizeParent(_formHost);
             }
             SetStatus(required.RemovalMessage(bucket.Value)); return;
         }
@@ -13955,14 +14316,14 @@ internal sealed partial class MainForm : Form
         var useCheckboxValueColumn = IsCheckboxTableEditor(metadata, entries);
         var group = new TableLayoutPanel
         {
-            Anchor = AnchorStyles.Top | AnchorStyles.Left,
+            Dock = DockStyle.Top,
             Height = Math.Min(520, Math.Max(170, entries.Count * 26 + 70)),
-            ColumnCount = 2,
-            RowCount = 2,
+            ColumnCount = 1,
+            RowCount = 3,
             Padding = new Padding(0, 0, 0, 8)
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -14005,7 +14366,7 @@ internal sealed partial class MainForm : Form
         lockHelpRow.Controls.Add(rowLockNote, 1, 0);
         header.Controls.Add(lockHelpRow);
         group.Controls.Add(header, 0, 0);
-        group.SetColumnSpan(header, 2);
+        group.SetColumnSpan(header, 1);
         void ResizeLockHelpRow() => lockHelpRow.Width = Math.Max(Zoomed(180), header.ClientSize.Width - header.Padding.Horizontal);
         header.SizeChanged += (_, _) => ResizeLockHelpRow();
         ResizeLockHelpRow();
@@ -14023,7 +14384,7 @@ internal sealed partial class MainForm : Form
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
         };
         grid.DataError += (_, args) => HandleTableChoiceDataError(grid, args);
-        group.Controls.Add(grid, 0, 1);
+        group.Controls.Add(grid, 0, 2);
         var initialTupleChoices = linked is null ? GetTupleChoiceSnapshot(key) : null;
         if (linked is not null) BuildLinkedTableColumns(grid, linked);
         else
@@ -14072,7 +14433,7 @@ internal sealed partial class MainForm : Form
         ApplyCompactTableLayout(group, grid);
         var addButton = MakeDesignerButton("Add row", () => AddTableEntryRow(key, entries, grid), TableActionButtonWidth);
         var removeButton = MakeDesignerButton("Remove selected", () => RemoveTableEntryRow(entries, grid), TableActionButtonWidth);
-        group.Controls.Add(MakeTableActionPanel(addButton, removeButton), 1, 1);
+        group.Controls.Add(MakeTableActionPanel(true, addButton, removeButton), 0, 1);
         var binding = new TableEditorBinding(key, title, helpText, header, grid, addButton, removeButton, rowLockNote, lockedPrefix);
         binding.Linked = linked;
         binding.Entries = entries;
@@ -14873,14 +15234,15 @@ internal sealed partial class MainForm : Form
             : entries.FirstOrDefault(entry => !string.IsNullOrWhiteSpace(entry.ParentDescription))?.ParentDescription ?? "";
         var group = new TableLayoutPanel
         {
-            Anchor = AnchorStyles.Top | AnchorStyles.Left,
+            Dock = DockStyle.Top,
             Height = Math.Min(680, Math.Max(220, entries.Count * 26 + 76)),
-            ColumnCount = 2,
+            ColumnCount = 1,
+            RowCount = 3,
             Padding = new Padding(0, 0, 0, 8)
         };
         group.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        group.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, TableActionColumnWidth));
         group.RowStyles.Add(new RowStyle(SizeType.Absolute, GetTableHeaderRowHeight()));
+        group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         var header = new FlowLayoutPanel
@@ -14926,10 +15288,10 @@ internal sealed partial class MainForm : Form
         ConfigureFixedColumn(grid.Columns["iff3"], 70);
         ConfigureFixedColumn(grid.Columns["iff4"], 70);
         ApplyCompactTableLayout(group, grid);
-        group.Controls.Add(grid, 0, 1);
-        group.Controls.Add(MakeTableActionPanel(
+        group.Controls.Add(grid, 0, 2);
+        group.Controls.Add(MakeTableActionPanel(true,
             MakeDesignerButton("Add row", () => AddCallsignOverrideRow(key, entries, grid), TableActionButtonWidth),
-            MakeDesignerButton("Remove selected", () => RemoveCallsignOverrideRow(entries, grid), TableActionButtonWidth)), 1, 1);
+            MakeDesignerButton("Remove selected", () => RemoveCallsignOverrideRow(entries, grid), TableActionButtonWidth)), 0, 1);
 
         RefreshCallsignGrid(grid, entries);
 
@@ -15231,7 +15593,7 @@ internal sealed partial class MainForm : Form
         var grid = column.DataGridView!;
         void SizeFlexibleColumn()
         {
-            if (!column.Visible) return;
+            if (!column.Visible || column.AutoSizeMode != DataGridViewAutoSizeColumnMode.Fill) return;
             var preferredMinimumWidth = column.Tag is int preferredWidth ? preferredWidth : minimumWidth;
             var columns = grid.Columns.Cast<DataGridViewColumn>().Where(item => item.Visible).ToArray();
             var fillWeight = columns.Where(item => item.AutoSizeMode == DataGridViewAutoSizeColumnMode.Fill)
@@ -15348,13 +15710,13 @@ internal sealed partial class MainForm : Form
             desiredWidth += (int)Math.Ceiling(group.ColumnStyles[group.ColumnCount - 1].Width);
         }
 
-        var availableWidth = _formHost.ClientSize.Width > 0
-            ? _formHost.ClientSize.Width - 48
-            : ClientSize.Width - 280;
+        var availableWidth = group.Parent is { } parent && ContainingEditorSection(group) is not null
+            ? parent.ClientSize.Width - parent.Padding.Horizontal - group.Margin.Horizontal
+            : _formHost.ClientSize.Width > 0 ? _formHost.ClientSize.Width - 48 : ClientSize.Width - 280;
         // Linked fields must remain reachable; the existing host scrolls when a narrow window cannot fit them.
         var minimumWidth = group.Tag is TableEditorBinding { Linked: not null } ? desiredWidth : 320;
         group.MinimumSize = new Size(minimumWidth, group.MinimumSize.Height);
-        group.Width = Math.Max(minimumWidth, Math.Min(desiredWidth, Math.Max(minimumWidth, availableWidth)));
+        group.Width = Math.Max(minimumWidth, group.ColumnCount == 1 || group.Dock == DockStyle.Top ? availableWidth : Math.Min(desiredWidth, Math.Max(minimumWidth, availableWidth)));
     }
 
     private void ApplyCompactTableLayout(TableLayoutPanel group, DataGridView grid, int minimumHeight, int maximumHeight, int heightPadding)
@@ -15364,8 +15726,10 @@ internal sealed partial class MainForm : Form
         var smoothGrid = (SmoothDataGridView)grid;
         smoothGrid.ConfigureCompactHeightLayout(group, () =>
         {
-            var headerHeight = header.Height + header.Margin.Vertical;
-            var containerChrome = headerHeight + group.Padding.Vertical + grid.Margin.Vertical;
+            var headerHeight = header is not null && ReferenceEquals(header.Parent, group) ? header.Height + header.Margin.Vertical : 0;
+            var toolbar = group.ColumnCount == 1 ? group.GetControlFromPosition(0, 1) as FlowLayoutPanel : null;
+            var toolbarHeight = toolbar is null ? 0 : toolbar.Height + toolbar.Margin.Vertical;
+            var containerChrome = headerHeight + toolbarHeight + group.Padding.Vertical + grid.Margin.Vertical;
             var gridChrome = GetTableGridChromeHeight(smoothGrid);
             var firstRowHeight = GetTableRowsHeight(grid, 1);
             var gridHeight = GetConfiguredTableHeight(grid, 0, Math.Max(gridChrome, maximumHeight - containerChrome), gridChrome,
@@ -15408,6 +15772,8 @@ internal sealed partial class MainForm : Form
         var actionHeight = 0;
         foreach (Control control in group.Controls)
         {
+            if (group.GetColumn(control) == 0 && group.GetRow(control) == 1 && control is FlowLayoutPanel { FlowDirection: FlowDirection.LeftToRight })
+                actionHeight = Math.Max(actionHeight, control.Height + control.Margin.Vertical);
             if (group.GetColumn(control) == 1 && group.GetRow(control) == 1)
             {
                 actionHeight = Math.Max(actionHeight, GetControlStackMinimumHeight(control));
@@ -15803,7 +16169,7 @@ internal sealed partial class MainForm : Form
     {
         row.DefaultCellStyle.BackColor = IsImportedNewEntryHighlighted(entry)
             ? GetNewHighlightBackColor()
-            : IsDarkPalette() ? EditorBackground : Color.Empty;
+            : Color.Empty;
         row.DefaultCellStyle.ForeColor = PrimaryTextColor;
         ApplyTableRowLockState(row, entry, tupleValues: tupleValues);
     }
@@ -17137,10 +17503,13 @@ internal sealed partial class MainForm : Form
     private Button MakeHelpButton(string title, string helpText, string? metadataKey = null)
     {
         var fullHelp = title + Environment.NewLine + Environment.NewLine + helpText;
-        var buttonSize = Math.Max(Zoomed(22), Font.Height + Zoomed(4));
-        var button = new Button
+        var glyph = TextRenderer.MeasureText("?", Font);
+        var buttonSize = Math.Max(Zoomed(24), Math.Max(glyph.Width, glyph.Height) + Zoomed(8));
+        var button = new PreviewButton
         {
             Text = "?",
+            Font = Font,
+            Padding = Padding.Empty,
             Width = buttonSize,
             Height = buttonSize,
             MinimumSize = new Size(buttonSize, buttonSize),
@@ -19138,7 +19507,8 @@ internal sealed partial class MainForm : Form
                     "miz-preset-update",
                     presetTargets,
                     decisions,
-                    previousCleanDocument);
+                    previousCleanDocument,
+                    cleanSource);
             UpdateSelectedInstanceConfigPath(targetPath);
             LoadConfig(targetPath);
             ApplyImportedNewMarkers(importedNewMarkers);
@@ -22357,9 +22727,10 @@ internal sealed partial class MainForm : Form
     private static void ApplyKeptTableChoices(
         ConfigDocument targetDocument,
         MizMergePreview preview,
-        IReadOnlyList<SelectableValueChoice> tableChoices)
+        IReadOnlyList<SelectableValueChoice> tableChoices,
+        ConfigDocument? cleanSourceDocument = null)
     {
-        ConfigDocument? defaultDocument = null;
+        ConfigDocument? defaultDocument = cleanSourceDocument;
         for (var i = 0; i < tableChoices.Count; i++)
         {
             if (tableChoices[i].Selected)
@@ -22368,7 +22739,7 @@ internal sealed partial class MainForm : Form
             }
 
             defaultDocument ??= ConfigDocument.Load(targetDocument.Path);
-            defaultDocument.RepairStringListSeparators();
+            if (cleanSourceDocument is null) defaultDocument.RepairStringListSeparators();
             var table = preview.KeptTableBlocks[i];
             if (!targetDocument.ReplaceTableBodyFrom(defaultDocument, table.Key))
             {
@@ -23521,6 +23892,7 @@ internal sealed partial class MainForm : Form
             Text = "Cancel",
             DialogResult = DialogResult.Cancel
         };
+        var detailsDirty = false;
         var detailsButton = new Button
         {
             Text = "Show details"
@@ -23528,6 +23900,7 @@ internal sealed partial class MainForm : Form
         detailsButton.Click += (_, _) =>
         {
             previewFrame.Visible = !previewFrame.Visible;
+            if (previewFrame.Visible && detailsDirty) refreshScopeSummary?.Invoke();
             detailsRowStyle.Height = previewFrame.Visible ? Math.Min(Zoomed(220), Math.Max(Zoomed(100), panel.ClientSize.Height / 3)) : 0;
             detailsButton.Text = previewFrame.Visible ? "Hide details" : "Show details";
             panel.PerformLayout();
@@ -23575,6 +23948,11 @@ internal sealed partial class MainForm : Form
                 return;
             }
             detailsButton.Enabled = true;
+            if (!rebuildTabs && !previewFrame.Visible)
+            {
+                detailsDirty = true;
+                return;
+            }
             var selectedTitle = previewTabText.Keys.FirstOrDefault(button => button.BackColor == SelectionBackground)?.Text ?? "Summary";
             if (rebuildTabs)
             {
@@ -23643,6 +24021,7 @@ internal sealed partial class MainForm : Form
                     previewTabText[choicesButton] = string.Join(Environment.NewLine, detailGroups["Choices"]);
             }
             SelectPreviewTab(previewTabText.Keys.FirstOrDefault(button => button.Text == selectedTitle) ?? summaryButton);
+            detailsDirty = false;
         }
 
         var preparingScope = false;

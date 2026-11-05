@@ -183,7 +183,7 @@ internal sealed partial class MainForm
     {
         row.Tag = primary;
         row.Cells["name"].Value = GetTableRowDisplayName(primary);
-        row.DefaultCellStyle.BackColor = IsImportedNewEntryHighlighted(primary) ? GetNewHighlightBackColor() : IsDarkPalette() ? EditorBackground : System.Drawing.Color.Empty;
+        row.DefaultCellStyle.BackColor = IsImportedNewEntryHighlighted(primary) ? GetNewHighlightBackColor() : System.Drawing.Color.Empty;
         var targets = binding.Linked!.Rows[primary];
         for (var i = 0; i < targets.Length; i++) row.Cells[i + 1].Tag = targets[i]?.Entry;
         ApplyLinkedRowPolicy(binding, row, primary, policy, targets);

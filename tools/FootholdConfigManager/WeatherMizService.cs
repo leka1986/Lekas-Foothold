@@ -6,13 +6,31 @@ using System.Text;
 namespace FootholdConfigManager;
 
 internal sealed record WeatherMizResult(string OutputPath, string? BackupPath);
-internal sealed record WeatherMizNamingContext(string InputPath, double? SourceStartTimeSeconds);
+internal sealed record WeatherMizExportChoice(string FileName, string Directory, bool KeepBoth);
+internal sealed record WeatherMizNamingContext(string InputPath, double? SourceStartTimeSeconds)
+{
+    public WeatherMizExportChoice? ExistingChoice { get; init; }
+}
 internal sealed record MissionSettingsImport(WeatherSettings? Weather, MissionDateTimeSettings? DateTime, MissionOptionsSettings? Options);
+internal sealed record PreparedMissionInput(string Text, CompilationUnitSyntax Root, bool HasBom);
 
 internal static class WeatherMizService
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private sealed record Member(string Name, long Length, byte[] Hash);
+
+    internal static PreparedMissionInput GetPreparedMissionInput(PreparedMissionTemplate template,
+        Dictionary<PreparedMissionTemplate, PreparedMissionInput> inputs)
+    {
+        if (inputs.TryGetValue(template, out var input)) return input;
+        var bytes = template.MissionBytes;
+        var hasBom = bytes.AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF });
+        var offset = hasBom ? 3 : 0;
+        var text = Utf8.GetString(bytes, offset, bytes.Length - offset);
+        input = new PreparedMissionInput(text, WeatherLua.Parse(text), hasBom);
+        inputs.Add(template, input);
+        return input;
+    }
 
     internal static MissionSettingsImport ReadSettings(string mizPath, bool includeWeatherAndTime, bool includeMissionOptions)
     {
@@ -268,14 +286,49 @@ internal static class WeatherMizService
         MissionDateTimeSettings? dateTime)
         => ApplySettingsCore(mizPath, settings, options, true, null, keepBackup: false, dateTime, independentTime: true)!;
 
+    internal static WeatherMizResult? ApplySettingsToDestination(string mizPath, WeatherSettings? settings, MissionOptionsSettings? options,
+        MissionDateTimeSettings? dateTime, Func<WeatherMizNamingContext, WeatherMizExportChoice?> chooseExport) =>
+        ApplySettingsCore(mizPath, settings, options, false, null, keepBackup: false, dateTime, independentTime: true, chooseExport);
+
+    internal static string ApplyPrepared(PreparedMissionTemplate template, WeatherSettings? weather, MissionOptionsSettings? options,
+        IReadOnlyDictionary<string, byte[]> configMembers, string outputPath, bool replaceExisting, CancellationToken token,
+        MissionPathIdentity? reviewedIdentity = null)
+        => ApplyPreparedWarehouse(template, weather, options, configMembers, outputPath, replaceExisting, token, reviewedIdentity, null);
+
+    internal static string ApplyPreparedWarehouse(PreparedMissionTemplate template, WeatherSettings? weather, MissionOptionsSettings? options,
+        IReadOnlyDictionary<string, byte[]> configMembers, string outputPath, bool replaceExisting, CancellationToken token,
+        MissionPathIdentity? reviewedIdentity, MissionWarehouseCopy? warehouseCopy, PreparedMissionInput? preparedInput = null)
+    {
+        token.ThrowIfCancellationRequested();
+        var warehouseOnly = weather is null && options is null && warehouseCopy is not null;
+        if (warehouseOnly && configMembers.Count != 0) throw new InvalidDataException("Warehouse-only copying must preserve the release Config members.");
+        if (warehouseCopy is not null && Convert.ToHexString(SHA256.HashData(warehouseCopy.Bytes)) != warehouseCopy.Sha256)
+            throw new InvalidDataException("The reviewed warehouse snapshot changed. Prepare and review again.");
+        if (!warehouseOnly && (template.ConfigMembers.Count == 0 || configMembers.Count != template.ConfigMembers.Count
+            || template.ConfigMembers.Any(member => !configMembers.ContainsKey(member.Name))
+            || configMembers.Keys.Any(name => !template.ConfigMembers.Any(member => member.Name == name))))
+            throw new InvalidDataException("A matching destination Config snapshot is required for every Config member in this generated mission.");
+        if (!Path.IsPathFullyQualified(outputPath) || !Directory.Exists(Path.GetDirectoryName(outputPath)))
+            throw new DirectoryNotFoundException("The reviewed mission destination folder is unavailable.");
+        var directory = Path.GetDirectoryName(Path.GetFullPath(outputPath))!;
+        outputPath = Path.Combine(directory, WeatherExportNames.Normalize(Path.GetFileName(outputPath), template.SourcePath, directory, false));
+        return ApplySettingsCore(template.SourcePath, weather, options, false, null, keepBackup: false,
+            prepared: template, configMembers: warehouseOnly ? null : configMembers, preparedOutputPath: outputPath,
+            replacePreparedOutput: replaceExisting, cancellationToken: token, reviewedIdentity: reviewedIdentity, warehouseCopy: warehouseCopy, preparedInput: preparedInput)!.OutputPath;
+    }
     private static WeatherMizResult? ApplySettingsCore(string mizPath, WeatherSettings? settings, MissionOptionsSettings? options,
         bool replaceOriginal, Func<WeatherMizNamingContext, string?>? chooseExportName, bool keepBackup,
-        MissionDateTimeSettings? dateTime = null, bool independentTime = false)
+        MissionDateTimeSettings? dateTime = null, bool independentTime = false,
+        Func<WeatherMizNamingContext, WeatherMizExportChoice?>? chooseDestination = null,
+        PreparedMissionTemplate? prepared = null, IReadOnlyDictionary<string, byte[]>? configMembers = null,
+        string? preparedOutputPath = null, bool replacePreparedOutput = false, CancellationToken cancellationToken = default,
+        MissionPathIdentity? reviewedIdentity = null, MissionWarehouseCopy? warehouseCopy = null, PreparedMissionInput? preparedInput = null)
     {
         mizPath = Path.GetFullPath(mizPath);
         if (!Path.GetExtension(mizPath).Equals(".miz", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Choose a .miz mission file.");
-        if (settings is null && options is null && dateTime is null) throw new InvalidDataException("Choose Weather, Date & time, Mission options, or a combination to apply.");
+        if (settings is null && options is null && dateTime is null && warehouseCopy is null) throw new InvalidDataException("Choose Weather, Date & time, Mission options, or a combination to apply.");
+        var warehouseOnly = warehouseCopy is not null && settings is null && options is null && dateTime is null;
         settings?.Validate();
         options?.Validate();
         dateTime?.Validate();
@@ -296,18 +349,22 @@ internal static class WeatherMizService
             var missions = source.Entries.Where(entry => entry.FullName == "mission").ToArray();
             if (missions.Length != 1) throw new InvalidDataException("The MIZ must contain exactly one root mission entry.");
             var entry = missions[0];
-            var bytes = ReadBytes(entry);
-            var hasBom = bytes.AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF });
-            var offset = hasBom ? 3 : 0;
-            var original = Utf8.GetString(bytes, offset, bytes.Length - offset);
-            Loretta.CodeAnalysis.Lua.Syntax.CompilationUnitSyntax? validatedWeather = null;
-            var edited = settings is null && dateTime is null ? original
-                : independentTime ? MissionWeather.ApplyParsed(original, settings, dateTime, out sourceStartTime, out validatedWeather)
-                : MissionWeather.ApplyParsed(original, settings!, out sourceStartTime, out validatedWeather);
-            if (options is not null) edited = validatedWeather is null
-                ? MissionOptions.Apply(edited, options) : MissionOptions.ApplyParsed(edited, options, validatedWeather);
-            var payload = Utf8.GetBytes(edited);
-            newMission = hasBom ? new byte[] { 0xEF, 0xBB, 0xBF }.Concat(payload).ToArray() : payload;
+            var bytes = prepared?.MissionBytes ?? ReadBytes(entry);
+            if (warehouseOnly) newMission = bytes;
+            else
+            {
+                var hasBom = preparedInput?.HasBom ?? bytes.AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF });
+                var offset = hasBom ? 3 : 0;
+                var original = preparedInput?.Text ?? Utf8.GetString(bytes, offset, bytes.Length - offset);
+                Loretta.CodeAnalysis.Lua.Syntax.CompilationUnitSyntax? validatedWeather = null;
+                var edited = settings is null && dateTime is null ? original
+                    : independentTime ? MissionWeather.ApplyParsed(original, settings, dateTime, out sourceStartTime, out validatedWeather, preparedInput?.Root)
+                    : MissionWeather.ApplyParsed(original, settings!, out sourceStartTime, out validatedWeather, preparedInput?.Root);
+                if (options is not null) edited = validatedWeather is null
+                    ? MissionOptions.ApplyParsed(edited, options, preparedInput?.Root) : MissionOptions.ApplyParsed(edited, options, validatedWeather);
+                var payload = Utf8.GetBytes(edited);
+                newMission = hasBom ? new byte[] { 0xEF, 0xBB, 0xBF }.Concat(payload).ToArray() : payload;
+            }
             missionTimestamp = entry.LastWriteTime;
             missionAttributes = entry.ExternalAttributes;
             if (options?.Labels.Enforce == true)
@@ -315,7 +372,8 @@ internal static class WeatherMizService
                 var optionEntries = source.Entries.Where(item => item.FullName == "options").ToArray();
                 if (optionEntries.Length > 1) throw new InvalidDataException("The MIZ contains duplicate root options entries.");
                 var optionEntry = optionEntries.SingleOrDefault();
-                var optionBytes = optionEntry is null ? Array.Empty<byte>() : ReadBytes(optionEntry);
+                var optionBytes = prepared is not null ? prepared.OptionsBytes ?? Array.Empty<byte>()
+                    : optionEntry is null ? Array.Empty<byte>() : ReadBytes(optionEntry);
                 var optionBom = optionBytes.AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF });
                 string optionText;
                 try { optionText = optionEntry is null ? "options = {}" : Utf8.GetString(optionBytes, optionBom ? 3 : 0, optionBytes.Length - (optionBom ? 3 : 0)); }
@@ -329,7 +387,10 @@ internal static class WeatherMizService
                     optionsAttributes = optionEntry?.ExternalAttributes ?? missionAttributes;
                 }
             }
-            unchanged = source.Entries.Where(item => item.FullName != "mission" && (newOptions is null || item.FullName != "options")).Select(Fingerprint).ToList();
+            unchanged = prepared is null
+                ? source.Entries.Where(item => IsUnchanged(item.FullName)).Select(Fingerprint).ToList()
+                : prepared.Members.Where(item => IsUnchanged(item.Name))
+                    .Select(item => new Member(item.Name, item.Length, Convert.FromHexString(item.Sha256))).ToList();
         }
 
         var directory = Path.GetDirectoryName(mizPath)!;
@@ -341,26 +402,54 @@ internal static class WeatherMizService
             selectedName = WeatherExportNames.Normalize(selectedName, mizPath);
         }
         string? backupPath = null;
-        var outputPath = mizPath;
+        var outputPath = preparedOutputPath ?? mizPath;
         FileStream? reservation = null;
         var committed = false;
         try
         {
-            if (!replaceOriginal)
+            if (!replaceOriginal && preparedOutputPath is null)
             {
-                var fileName = selectedName ?? Path.GetFileNameWithoutExtension(mizPath) + (settings is null ? " - Options.miz" : " - Weather.miz");
-                for (var number = 1; ; number++)
+                WeatherMizExportChoice? choice = null;
+                while (reservation is null)
                 {
-                    var candidate = Path.Combine(directory, WeatherExportNames.NumberedName(fileName, number));
-                    try
+                    if (chooseDestination is not null)
                     {
-                        reservation = new FileStream(candidate, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read | FileShare.Delete);
-                        outputPath = candidate;
-                        break;
+                        choice = chooseDestination(new WeatherMizNamingContext(mizPath, sourceStartTime) { ExistingChoice = choice });
+                        if (choice is null) return null;
+                        if (!Path.IsPathFullyQualified(choice.Directory)) throw new InvalidDataException("Choose a full mission destination folder.");
+                        directory = Path.GetFullPath(choice.Directory);
+                        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("The selected mission destination folder is unavailable: " + directory);
+                        selectedName = WeatherExportNames.Normalize(choice.FileName, mizPath, directory, choice.KeepBoth);
                     }
-                    catch (IOException) when (File.Exists(candidate)) { }
+                    var fileName = selectedName ?? Path.GetFileNameWithoutExtension(mizPath) + (settings is null ? " - Options.miz" : " - Weather.miz");
+                    for (var number = 1; ; number++)
+                    {
+                        var candidate = Path.Combine(directory, WeatherExportNames.NumberedName(fileName, number));
+                        if (chooseDestination is not null && candidate.Equals(mizPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (choice!.KeepBoth) continue;
+                            throw new InvalidDataException("Choose a different output path to keep the original MIZ unchanged.");
+                        }
+                        try
+                        {
+                            reservation = new FileStream(candidate, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read | FileShare.Delete);
+                            outputPath = candidate;
+                            break;
+                        }
+                        catch (IOException) when (File.Exists(candidate))
+                        {
+                            // A typed choice requires explicit Keep both, including a collision after the dialog closed.
+                            if (chooseDestination is not null && choice!.KeepBoth == false) break;
+                        }
+                    }
                 }
             }
+            reviewedIdentity?.RequireUnchanged();
+            if (preparedOutputPath is not null && !replacePreparedOutput)
+                reservation = new FileStream(outputPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read | FileShare.Delete);
+            var publicationIdentity = reviewedIdentity is { Exists: false } && reservation is not null
+                ? MissionPathIdentity.Capture(outputPath, []) : reviewedIdentity;
+            cancellationToken.ThrowIfCancellationRequested();
             AtomicFile.WriteStaged(outputPath, temporaryPath =>
             {
                 sourceFile.Position = 0;
@@ -368,12 +457,15 @@ internal static class WeatherMizService
                     sourceFile.CopyTo(copy);
                 using (var staged = ZipFile.Open(temporaryPath, ZipArchiveMode.Update))
                 {
-                    var previous = staged.GetEntry("mission")!;
-                    previous.Delete();
-                    var mission = staged.CreateEntry("mission", CompressionLevel.Optimal);
-                    mission.LastWriteTime = missionTimestamp;
-                    mission.ExternalAttributes = missionAttributes;
-                    using (var stream = mission.Open()) stream.Write(newMission);
+                    if (!warehouseOnly)
+                    {
+                        var previous = staged.GetEntry("mission")!;
+                        previous.Delete();
+                        var mission = staged.CreateEntry("mission", CompressionLevel.Optimal);
+                        mission.LastWriteTime = missionTimestamp;
+                        mission.ExternalAttributes = missionAttributes;
+                        using (var stream = mission.Open()) stream.Write(newMission);
+                    }
                     if (newOptions is not null)
                     {
                         staged.GetEntry("options")?.Delete();
@@ -383,19 +475,64 @@ internal static class WeatherMizService
                         using var optionStream = companion.Open();
                         optionStream.Write(newOptions);
                     }
+                    if (configMembers is not null)
+                        foreach (var replacement in configMembers)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            var oldConfig = staged.GetEntry(replacement.Key)
+                                ?? throw new InvalidDataException("The prepared Config member is missing: " + replacement.Key);
+                            var timestamp = oldConfig.LastWriteTime;
+                            var attributes = oldConfig.ExternalAttributes;
+                            oldConfig.Delete();
+                            var config = staged.CreateEntry(replacement.Key, CompressionLevel.Optimal);
+                            config.LastWriteTime = timestamp;
+                            config.ExternalAttributes = attributes;
+                            using var stream = config.Open();
+                            stream.Write(replacement.Value);
+                        }
+                    if (warehouseCopy is not null)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var oldWarehouses = staged.GetEntry("warehouses")
+                            ?? throw new InvalidDataException("The new mission is missing its root warehouses member.");
+                        var timestamp = oldWarehouses.LastWriteTime;
+                        var attributes = oldWarehouses.ExternalAttributes;
+                        oldWarehouses.Delete();
+                        var warehouses = staged.CreateEntry("warehouses", CompressionLevel.Optimal);
+                        warehouses.LastWriteTime = timestamp;
+                        warehouses.ExternalAttributes = attributes;
+                        using var stream = warehouses.Open();
+                        stream.Write(warehouseCopy.Bytes);
+                    }
                 }
                 using (var check = ZipFile.OpenRead(temporaryPath))
                 {
-                    var mission = check.Entries.Where(item => item.FullName == "mission").ToArray();
-                    if (mission.Length != 1 || !ReadBytes(mission[0]).SequenceEqual(newMission))
-                        throw new InvalidDataException("The staged mission failed verification.");
+                    if (!warehouseOnly)
+                    {
+                        var mission = check.Entries.Where(item => item.FullName == "mission").ToArray();
+                        if (mission.Length != 1 || !ReadBytes(mission[0]).SequenceEqual(newMission))
+                            throw new InvalidDataException("The staged mission failed verification.");
+                    }
                     if (newOptions is not null)
                     {
                         var companion = check.Entries.Where(item => item.FullName == "options").ToArray();
                         if (companion.Length != 1 || !ReadBytes(companion[0]).SequenceEqual(newOptions))
                             throw new InvalidDataException("The staged mission options failed verification.");
                     }
-                    var actual = check.Entries.Where(item => item.FullName != "mission" && (newOptions is null || item.FullName != "options")).Select(Fingerprint).ToArray();
+                    if (configMembers is not null)
+                        foreach (var replacement in configMembers)
+                        {
+                            var configs = check.Entries.Where(item => item.FullName == replacement.Key).ToArray();
+                            if (configs.Length != 1 || !ReadBytes(configs[0]).SequenceEqual(replacement.Value))
+                                throw new InvalidDataException("The staged Config failed verification: " + replacement.Key);
+                        }
+                    if (warehouseCopy is not null)
+                    {
+                        var warehouses = check.Entries.Where(item => item.FullName == "warehouses").ToArray();
+                        if (warehouses.Length != 1 || !ReadBytes(warehouses[0]).SequenceEqual(warehouseCopy.Bytes))
+                            throw new InvalidDataException("The staged warehouses failed verification.");
+                    }
+                    var actual = check.Entries.Where(item => IsUnchanged(item.FullName)).Select(Fingerprint).ToArray();
                     if (actual.Length != unchanged.Count)
                         throw new InvalidDataException("The staged MIZ changed its member list.");
                     for (var i = 0; i < actual.Length; i++)
@@ -403,22 +540,30 @@ internal static class WeatherMizService
                             || !actual[i].Hash.SequenceEqual(unchanged[i].Hash))
                             throw new InvalidDataException("The staged MIZ changed an unrelated entry: " + unchanged[i].Name);
                 }
-                if (replaceOriginal && keepBackup)
+                cancellationToken.ThrowIfCancellationRequested();
+                publicationIdentity?.RequireUnchanged(reservation);
+                if (replaceOriginal && keepBackup || preparedOutputPath is not null && replacePreparedOutput && File.Exists(outputPath))
                 {
-                    backupPath = Path.Combine(directory, Path.GetFileNameWithoutExtension(mizPath)
+                    var backupSource = preparedOutputPath ?? mizPath;
+                    backupPath = Path.Combine(Path.GetDirectoryName(backupSource)!, Path.GetFileNameWithoutExtension(backupSource)
                         + ".weather-backup-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")
                         + "-" + Guid.NewGuid().ToString("N")[..8] + ".miz");
-                    AtomicFile.Copy(mizPath, backupPath);
+                    AtomicFile.Copy(backupSource, backupPath);
                 }
+                cancellationToken.ThrowIfCancellationRequested();
             });
             committed = true;
             return new WeatherMizResult(outputPath, backupPath);
         }
         finally
         {
-            if (!committed && reservation is not null && File.Exists(outputPath)) File.Delete(outputPath);
+            if (!committed && reservation is not null && File.Exists(outputPath)
+                && (preparedOutputPath is null || new FileInfo(outputPath).Length == 0)) File.Delete(outputPath);
             reservation?.Dispose();
         }
+        bool IsUnchanged(string name) => (warehouseOnly || name != "mission") && (newOptions is null || name != "options")
+            && (configMembers is null || !configMembers.ContainsKey(name))
+            && (warehouseCopy is null || name != "warehouses");
     }
 
     private static byte[] ReadBytes(ZipArchiveEntry entry)

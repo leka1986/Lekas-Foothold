@@ -32,7 +32,8 @@ internal sealed partial class MainForm
             {
                 void KeepLinkedTableReachable()
                 {
-                    var width = editor.MinimumSize.Width + editor.Margin.Horizontal + panel.Padding.Horizontal;
+                    var width = editor.MinimumSize.Width + editor.Margin.Horizontal + panel.Padding.Horizontal +
+                        (ContainingEditorSection(editor)?.Body.Padding.Horizontal ?? 0);
                     if (panel.MinimumSize.Width < width) panel.MinimumSize = new Size(width, panel.MinimumSize.Height);
                     if (ReferenceEquals(panel.Parent, _formHost)) _formHost.AutoScrollMinSize = new Size(panel.MinimumSize.Width, 0);
                 }
@@ -83,7 +84,7 @@ internal sealed partial class MainForm
                     membershipChanged = true;
                     var obsolete = targets[key].Editor;
                     targets.Remove(key);
-                    panel.Controls.Remove(obsolete);
+                    obsolete.Parent!.Controls.Remove(obsolete);
                     ControlTreeDisposer.Dispose(obsolete, _toolTip);
                 }
 
@@ -115,17 +116,10 @@ internal sealed partial class MainForm
                     ApplyTableEditorLockState(table);
                     RefreshTableGrid(table.Grid, entries);
                 }
-                panel.SetRow(target.Editor, index + 1);
-                panel.Controls.SetChildIndex(target.Editor, index + 1);
             }
-            panel.RowCount = items.Count + 1;
             if (membershipChanged)
             {
-                var width = targets?.Values.Where(target => target.Editor.Tag is TableEditorBinding { Linked: not null })
-                    .Select(target => target.Editor.MinimumSize.Width + target.Editor.Margin.Horizontal + panel.Padding.Horizontal)
-                    .DefaultIfEmpty(0).Max() ?? 0;
-                panel.MinimumSize = new Size(width, panel.MinimumSize.Height);
-                if (isDisplayed) _formHost.AutoScrollMinSize = new Size(width, 0);
+                ArrangeEditorSections(panel, categoryName, items, applyPalette: true);
             }
             if (HasUnseenImportedNewEntries(categoryName)) _preparedUnviewedCategories.Add(categoryName);
             ApplyOptionsMarkers(new[] { categoryName });
@@ -143,7 +137,11 @@ internal sealed partial class MainForm
             _activeImportedNewEntryKeys.UnionWith(activeKeys);
             _activeImportedNewCategoryName = activeCategory;
             panel.ResumeLayout(performLayout: isDisplayed);
-            if (isDisplayed) _formHost.AutoScrollPosition = new Point(-scroll.X, -scroll.Y);
+            if (isDisplayed)
+            {
+                _formHost.AutoScrollPosition = new Point(-scroll.X, -scroll.Y);
+                WeatherScrollHost.SynchronizeParent(_formHost);
+            }
         }
         return true;
     }

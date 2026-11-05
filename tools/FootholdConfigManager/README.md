@@ -17,6 +17,8 @@ dotnet publish tools/FootholdConfigManager/FootholdConfigManager.csproj -c Relea
 
 The published executable requires the .NET 8 Windows Desktop Runtime. Normal source builds include the administrative tools. To create a player distribution with selected GUI settings, use Export User EXE in the Manager's designer. Exports compile from a temporary copy of this source tree and do not overwrite the source build's metadata.
 
+The current source includes full mission downloads and files-only updates for compatible missions, mission-source folders, optional remembered output folders, and warehouse transfer during full downloads. The editor includes grouped/collapsible settings, responsive content width and remembered grid-column widths. Files-only availability depends on the compatibility assets supplied with a mission release.
+
 Validation commands:
 
 ```powershell

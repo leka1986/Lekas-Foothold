@@ -32,7 +32,8 @@ internal sealed partial class MainForm
             var root = _rootLayout!;
             _configWorkspace = root.GetControlFromPosition(0, 1)!;
             _weatherWorkspace = new Panel { Name = "ManagerWorkspace", Dock = DockStyle.Fill, Margin = _configWorkspace.Margin };
-            _configWorkspace.SuspendLayout();
+            var configLayouts = EnumerateChildControls<Panel>(_configWorkspace).Cast<Control>().Prepend(_configWorkspace).ToArray();
+            foreach (var layout in configLayouts) layout.SuspendLayout();
             root.SuspendLayout();
             _weatherWorkspace.SuspendLayout();
             try
@@ -44,8 +45,12 @@ internal sealed partial class MainForm
             finally
             {
                 _weatherWorkspace.ResumeLayout(false);
-                root.ResumeLayout();
-                _configWorkspace.ResumeLayout(ReferenceEquals(_configWorkspace.Parent, _weatherWorkspace));
+                foreach (var layout in configLayouts.Reverse()) layout.ResumeLayout(false);
+                EditorSection.RunLayoutPass(() =>
+                {
+                    root.ResumeLayout();
+                    if (ReferenceEquals(_configWorkspace.Parent, _weatherWorkspace)) _configWorkspace.PerformLayout();
+                });
             }
             FormClosing += (_, args) =>
             {
@@ -60,8 +65,11 @@ internal sealed partial class MainForm
                 () => GetExistingInitialDirectory(_settings.LastMizDirectory) ?? (_document is null
                     ? RuntimeSettings.GetBestInitialDirectory() : Path.GetDirectoryName(_document.Path)!),
                 path => { _settings.LastMizDirectory = Path.GetDirectoryName(path); _settings.Save(); });
+            window.ConfigureExportDestination(() => FindCurrentInstanceProfile() is { } profile
+                ? RuntimeSettings.ResolveMissionsDirectory(profile) : null);
             window.EmbedInManager(ShowConfigWorkspace);
             _weatherWindow = window;
+            window.NamedProfilesChanged += RefreshCachedMissionProfiles;
             _weatherWorkspace.Controls.Add(window);
         }
     }

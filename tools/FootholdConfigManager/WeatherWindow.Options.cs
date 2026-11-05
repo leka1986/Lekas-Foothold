@@ -28,7 +28,7 @@ internal sealed partial class WeatherWindow
     private readonly CheckBox _dust = new WeatherCheckBox() { Name = "WeatherDust", Text = "Enable dust storm", AutoSize = true };
     private NumericUpDown _dustVisibility = null!;
     private Control _dustFields = null!;
-    private readonly CheckBox _changeTime = new WeatherCheckBox() { Name = "WeatherChangeTime", Text = "Date & time", UseMnemonic = false, AutoSize = true };
+    private readonly CheckBox _changeTime = new WeatherCheckBox() { Name = "WeatherChangeTime", Text = "Start time", UseMnemonic = false, AutoSize = true };
     private readonly CheckBox _changeDate = new WeatherCheckBox() { Name = "WeatherChangeDate", Text = "Change mission date", AutoSize = true };
     private readonly WeatherDateTimeInput _date = new() { Name = "WeatherDate", Format = DateTimePickerFormat.Custom, CustomFormat = "yyyy-MM-dd", Dock = DockStyle.Top, DirectDateTextEntry = true, TabStop = false };
     private TableLayoutPanel _time = null!;
@@ -290,8 +290,8 @@ internal sealed partial class WeatherWindow
         _dustFields.Visible = _dust.Checked;
         _dust.Enabled = _dust.Checked || _fogMode.SelectedIndex == 0;
         _fogMode.Enabled = !_dust.Checked || _fogMode.SelectedIndex != 0;
-        _changeDate.Enabled = _timeHours.Enabled = _timeMinutes.Enabled = _changeTime.Checked;
-        _date.Enabled = _changeTime.Checked && _changeDate.Checked;
+        _changeDate.Enabled = _timeHours.Enabled = _timeMinutes.Enabled = true;
+        _date.Enabled = _changeDate.Checked;
         RefreshApplyAvailability();
     }
 }

@@ -5,7 +5,7 @@ internal sealed partial class WeatherWindow
     private NumericUpDown _timeHours = null!;
     private NumericUpDown _timeMinutes = null!;
 
-    private bool IsMissionDateSelected => _changeTime.Checked && _changeDate.Checked;
+    private bool IsMissionDateSelected => _changeDate.Checked;
 
     private void CommitSelectedMissionDate()
     {

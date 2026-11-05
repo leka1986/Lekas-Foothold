@@ -12,6 +12,12 @@
           "Tsu": "2.2.2"
         }
       },
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[8.0.18, )",
+        "resolved": "8.0.18",
+        "contentHash": "OiXqr2YIBEV9dsAWEtasK470ALyJ0VxJ9k4MotOxlWV6HeEgrJKYMW4HHj1OCCXvqE0/A25wEKPkpfiBARgDZA=="
+      },
       "Loretta.CodeAnalysis.Common": {
         "type": "Transitive",
         "resolved": "0.2.13",
@@ -22,6 +28,7 @@
         "resolved": "2.2.2",
         "contentHash": "l6svA84RD5MYyZgLFOI0Tj1ssEkcNUi0Q13wfH7VBJxd17o+YL1sgdLEyu3kkBBjvJIgOgszZUPR0vCrZOgBKg=="
       }
-    }
+    },
+    "net8.0-windows7.0/win-x64": {}
   }
 }

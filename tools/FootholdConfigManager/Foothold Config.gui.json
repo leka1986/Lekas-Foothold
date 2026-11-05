@@ -252,217 +252,18 @@
       "IsEmpty": false
     }
   },
-  "CategoryLayouts": {
-    "CTLD": {
-      "Items": [
-        "CTLDCost",
-        "CTLDPrices",
-        "MAX_AT_SPAWN",
-        "CaptureZoneWithEngineer",
-        "MAX_SAVED_FARPS",
-        "IRIS_RESTORE_UNIT_HEALTH_ON_MERGE",
-        "CTLDUnitCapabilities"
-      ]
-    },
-    "Difficulty": {
-      "Items": [
-        "GlobalSettings.difficultyScaling",
-        "GlobalSettings.supplyDifficultyScaling",
-        "ChanceAiAttackHelo",
-        "EnableHunter",
-        "AiPlaneSkill",
-        "AiGroundSkill",
-        "HideSAMOnMFD",
-        "CapDifficulty",
-        "CasDifficulty",
-        "SeadDifficulty",
-        "FriendlyCapSupport",
-        "FriendlyCasSupport",
-        "FriendlySeadSupport",
-        "RunwayStrikeDifficulty"
-      ]
-    },
-    "Shop / Rewards": {
-      "Items": [
-        "ShopPrices",
-        "ShopRankRequirements",
-        "RewardContribution",
-        "RefuelReward",
-        "AIAttackTakeoffFromGround",
-        "AIAttackTakeoffFromGroundExtraNM",
-        "AllowAdminBuy",
-        "AllowScriptedSupplies"
-      ]
-    },
-    "EWRS": {
-      "Items": [
-        "ewrs_maxRangeKm",
-        "ewrs_maxRangeNm",
-        "ewrs_defaultAircraftRangeLimit",
-        "ewrs_defaultHelicopterRangeLimit",
-        "ewrs_messageUpdateInterval",
-        "ewrs_messageDisplayTime",
-        "ewrs_restrictToOneReference",
-        "ewrs_defaultReference",
-        "ewrs_defaultMeasurements",
-        "ewrs_defaultShowTankers",
-        "ewrs_enableRedTeam",
-        "ewrs_enableBlueTeam",
-        "ewrs_disableMessageWhenNoThreats",
-        "ewrs_onDemand",
-        "ewrs_maxThreatDisplay",
-        "ewrs_allowBogeyDope",
-        "ewrs_allowFriendlyPicture",
-        "ewrs_maxFriendlyDisplay",
-        "ewrs_showType",
-        "ewrs_specialPlaneTypes"
-      ]
-    },
-    "Difficulty advanced": {
-      "Items": [
-        "CapLimitStages",
-        "RedCasLimitStages",
-        "RedSeadLimitStages",
-        "RedRunwayStrikeLimitStages",
-        "BlueCapSupportStages",
-        "BlueCasSupportStages",
-        "BlueSeadSupportStages",
-        "CapCountIgnoreTypes",
-        "RedCasCountIgnoreTypes",
-        "BlueCasCountIgnoreTypes"
-      ]
-    },
-    "RED Reactive Counterpressure": {
-      "Items": [
-        "RedReactiveDifficulty",
-        "RedReactiveConfig.easy",
-        "RedReactiveConfig.medium",
-        "RedReactiveConfig.hard"
-      ]
-    },
-    "Message Of The Day": {
-      "Items": [
-        "MessageOfTheDay.enabled",
-        "MessageOfTheDay.durationSec",
-        "MessageOfTheDay.intervalSec",
-        "MessageOfTheDay.text"
-      ]
-    },
-    "Welcome Message Callsigns": {
-      "Items": [
-        "CallsignOverrides"
-      ]
-    },
-    "Escort": {
-      "Items": [
-        "EscortTypeByPlayerType",
-        "EscortTakeoffFromGround"
-      ]
-    },
-    "Logistics / Warehouse": {
-      "Items": [
-        "WarehouseLogistics",
-        "UseC130LoadAndUnload",
-        "AIDeliveryamount",
-        "SuppliesCargoTransport",
-        "StrictSmartWeaponsInventory",
-        "WarehouseWeaponCaps",
-        "AutoFillResources",
-        "NoAIBlueSupplies",
-        "AllowedToCarrySupplies",
-        "WarningNoSupplies",
-        "ZoneSupplyTakeoffWarningTypes"
-      ]
-    },
-    "Mission Rules": {
-      "Items": [
-        "FootholdLocale",
-        "Era",
-        "RedSamTemplateEnabled",
-        "StartNormal",
-        "AutoRestart",
-        "NoSA10AndSA11",
-        "NoTorM2AndPantsir",
-        "NoSA15",
-        "DisableMantis",
-        "UseStatics",
-        "PVE_Only",
-        "Allow_Red_CTLD",
-        "AllowMods",
-        "CreditLosewhenKilled",
-        "CreditLosewhenKilledAmount",
-        "RankLoseWhenKilled",
-        "RankLoseWhenKilledAmount",
-        "SplashDamage",
-        "ShowKills",
-        "StoreLimit",
-        "RankingSystem",
-        "FriendlyFireRankPenalty",
-        "InvisibleA10",
-        "CarrierRankRequirement",
-        "AllowTarawaToMoveFreely",
-        "DisableFriendlyEscortMeMission"
-      ]
-    },
-    "CSAR": {
-      "Items": [
-        "AllowedCsar",
-        "CsarPilotSpawnWithoutCreditsChance",
-        "Max_CSAR_At_Once",
-        "Max_CSAR_AT_Mission_Restart",
-        "PilotWeight",
-        "CsarHoverDistance",
-        "CsarGuidanceDistance",
-        "CsarHoverHeight",
-        "CsarHoverSeconds",
-        "CsarHostileInfantryChance"
-      ]
-    },
-    "Flight Time": {
-      "Items": [
-        "RewardFlightTime",
-        "FlightTimeRewardPerMinute",
-        "RewardAllAircraft",
-        "AllowedFlightTimeReward"
-      ]
-    },
-    "Tankers": {
-      "Items": [
-        "TexacoSpeed",
-        "ArcoSpeed"
-      ]
-    },
-    "AIEN": {
-      "Items": [
-        "AIEN.config.dontInitialize",
-        "AIEN.config.blueAI",
-        "AIEN.config.redAI",
-        "AIEN.config.dismount",
-        "AIEN.config.message_feed",
-        "AIEN.config.initiative"
-      ]
-    },
-    "Aircraft / Weapons": {
-      "Items": [
-        "allowedPlanes",
-        "allowedPlanesRed",
-        "restockAircraft",
-        "restrictedWeapons",
-        "ForbiddWeaponsInAllEra"
-      ]
-    }
-  },
+  "CategoryLayouts": {},
   "CategoryLabels": {
     "Welcome Message settings": "Welcome Message Callsigns"
   },
   "CategoryOrder": [
-    "Mission Rules",
     "Mission options",
+    "Ground Units",
+    "AI Flights",
     "Difficulty",
     "Difficulty advanced",
-    "RED Reactive Counterpressure",
     "Message Of The Day",
-    "Welcome Message Callsigns",
+    "Callsigns",
     "Escort",
     "Logistics / Warehouse",
     "Shop / Rewards",
@@ -473,10 +274,14 @@
     "EWRS",
     "AIEN",
     "Aircraft / Weapons",
-    "F10 Map"
+    "F10 Map",
+    "PvP settings",
+    "Frequencies",
+    "Testing",
+    "Admin Commands"
   ],
   "HiddenCategories": [],
   "AdvancedToggleVisible": true,
   "RawValuesVisible": false,
-  "FooterVersion": "V 1.9.3"
+  "FooterVersion": "2.3.2"
 }

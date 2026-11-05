@@ -50,6 +50,7 @@ internal sealed class WeatherSettings
     public int DynamicType { get; set; }
     public List<WeatherPressureSystem> PressureSystems { get; set; } = new() { new() };
     public bool ChangeDateTime { get; set; }
+    public bool? ChangeStartTime { get; set; }
     public bool ChangeMissionDate { get; set; } = true;
     public DateTime MissionDate { get; set; } = DateTime.Today;
     public double StartTimeSeconds { get; set; } = 8 * 3600 + 45 * 60;
@@ -122,7 +123,7 @@ internal sealed class WeatherSettings
                 InRange(system.RotationRadians, -100, 100, "Pressure system rotation");
             }
         }
-        if (ChangeDateTime) InRange(StartTimeSeconds, 0, 86399, "Mission start time");
+        if (ChangeDateTime && ChangeStartTime != false) InRange(StartTimeSeconds, 0, 86399, "Mission start time");
     }
 
     private static void InRange(double value, double minimum, double maximum, string label)

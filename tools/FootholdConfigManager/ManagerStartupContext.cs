@@ -56,6 +56,9 @@ internal sealed class ManagerStartupContext : ApplicationContext
                 _loading.Presentation.Owner = manager;
                 manager.FormClosed += (_, _) => { if (!_disposed) _lifetime.Cancel(); };
                 manager.Show();
+                manager.HoldStartupPresentation(); // Show can restore native visibility after handle creation.
+                manager.ShowInTaskbar = true; // Finish handle recreation before warming cached views.
+                manager.HoldStartupPresentation();
                 // Re-register the splash with the shell after attaching its hidden owner.
                 _loading.Presentation.Icon = manager.Icon;
                 _loading.Presentation.Hide();
@@ -70,7 +73,7 @@ internal sealed class ManagerStartupContext : ApplicationContext
             _owner.SetStartupPresentation(null);
             _manager!.CompleteStartupPreparation();
             _manager.Enabled = true;
-            _manager.ShowInTaskbar = true;
+            _manager.ReleaseStartupPresentation();
             _manager.Opacity = 1;
             _manager.Update();
             _manager.Activate();

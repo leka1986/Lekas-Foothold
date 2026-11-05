@@ -132,8 +132,6 @@ internal sealed partial class WeatherWindow
         var cloud = _cloudPreset.Items.Cast<CloudChoice>().SingleOrDefault(item => item.Mode == weather.CloudMode
             && (item.Preset is null || item.Preset.Id == weather.CloudPreset));
         if (cloud is null) throw new InvalidDataException("This DCS installation does not contain cloud preset " + weather.CloudPreset + ".");
-        if (cloud.Preset is { } preset && (weather.CloudBaseMeters < preset.MinimumBaseMeters || weather.CloudBaseMeters > preset.MaximumBaseMeters))
-            throw new InvalidDataException("The imported cloud base is outside the supported range for " + preset.Name + ".");
         Check(_thickness, weather.CloudThicknessMeters, "Cloud thickness");
         Check(_density, weather.CloudDensity, "Cloud density");
         if (weather.Precipitation < 0 || weather.Precipitation >= _precipitation.Items.Count)

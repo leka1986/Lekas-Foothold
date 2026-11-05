@@ -5,7 +5,7 @@ namespace FootholdConfigManager;
 
 internal sealed partial class MainForm
 {
-    private void ConfigureTableHeaderSizing(TableLayoutPanel group, FlowLayoutPanel header)
+    private void ConfigureTableHeaderSizing(TableLayoutPanel group, FlowLayoutPanel header, Font? headingFont = null)
     {
         if (group.RowStyles.Count == 0) group.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         group.RowStyles[0].SizeType = SizeType.Absolute;
@@ -13,23 +13,24 @@ internal sealed partial class MainForm
         header.AutoSize = false;
         header.WrapContents = true;
         var heading = header.Controls.OfType<Label>().First();
-        heading.Font = new Font(Font.FontFamily, 15F * _uiZoomPercent / UiZoomBaselinePercent, FontStyle.Bold);
+        heading.Font = headingFont ?? GetConfigValueFont(2.85f, FontStyle.Bold);
         void SizeHeaderRow()
         {
+            if (!ReferenceEquals(header.Parent, group)) return;
             var height = header.GetPreferredSize(new Size(header.ClientSize.Width, 0)).Height +
                 header.Margin.Vertical;
             if (Math.Abs(group.RowStyles[0].Height - height) >= 1)
             {
                 group.RowStyles[0].Height = height;
-                group.PerformLayout();
+                EditorSection.RunLayoutPass(group.PerformLayout);
                 if (group.IsHandleCreated)
-                    group.BeginInvoke((Action)(() => { if (!group.IsDisposed) group.PerformLayout(); }));
+                    group.BeginInvoke((Action)(() => { if (!group.IsDisposed && group.FindForm() is not null) EditorSection.RunLayoutPass(group.PerformLayout); }));
             }
         }
         SizeHeaderRow();
         group.HandleCreated += (_, _) => group.BeginInvoke((Action)(() =>
         {
-            if (!group.IsDisposed) group.PerformLayout();
+            if (!group.IsDisposed && group.FindForm() is not null) EditorSection.RunLayoutPass(group.PerformLayout);
         }));
         void SizeHeading()
         {
@@ -58,7 +59,7 @@ internal sealed partial class MainForm
         ApplyTemplateAppearance(editor, item);
         if (editor is TableLayoutPanel group && group.Tag is TableEditorBinding binding)
         {
-            group.SetColumnSpan(binding.Header, 2);
+            group.SetColumnSpan(binding.Header, group.ColumnCount);
         }
     }
 }

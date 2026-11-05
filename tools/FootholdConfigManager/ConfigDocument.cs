@@ -56,6 +56,7 @@ internal sealed class ConfigStringListItem
     public required int StartIndex { get; set; }
     public required int Length { get; set; }
     public bool IsCommented { get; set; }
+    internal string? CommentedPrefix { get; set; }
 }
 
 internal sealed class ConfigStringListTable
@@ -884,16 +885,14 @@ internal sealed partial class ConfigDocument
 
     public string Path { get; }
     public string NewLine { get; }
-    public string? MissionReleaseTag
+    public string? MissionReleaseTag => _lines.Count == 0 ? null : ParseMissionReleaseTag(_lines[0]);
+    internal static string? ParseMissionReleaseTag(string firstLine)
     {
-        get
-        {
-            const string prefix = "-- Foothold release: ";
-            if (_lines.Count == 0 || !_lines[0].StartsWith(prefix, StringComparison.Ordinal)) return null;
-            var tag = _lines[0][prefix.Length..].Trim();
-            return ManagerBuildInfo.TryParseReleaseVersion(tag.TrimStart('v', 'V'), out var version)
-                ? "v" + version.ToString(version.Revision == 0 ? 3 : 4) : null;
-        }
+        const string prefix = "-- Foothold release: ";
+        if (!firstLine.StartsWith(prefix, StringComparison.Ordinal)) return null;
+        var tag = firstLine[prefix.Length..].Trim();
+        return ManagerBuildInfo.TryParseReleaseVersion(tag.TrimStart('v', 'V'), out var version)
+            ? "v" + version.ToString(version.Revision == 0 ? 3 : 4) : null;
     }
     public GuiMetadataStore Metadata { get; private set; } = new();
     public List<ConfigEntry> Entries { get; } = new();
@@ -1685,6 +1684,24 @@ internal sealed partial class ConfigDocument
             .FirstOrDefault(item => item.Value.Equals(value, StringComparison.Ordinal));
         if (commented is not null)
         {
+            var line = _lines[commented.LineIndex];
+            var uncommentedLine = line.Remove(FindCommentIndex(line), 2);
+            var valueStart = commented.StartIndex - 2;
+            var suffix = uncommentedLine[(valueStart + commented.Length)..GetCodeEndIndex(uncommentedLine)].Trim();
+            if (string.IsNullOrWhiteSpace(uncommentedLine[..valueStart]) && (suffix is "" or "," or ";"))
+            {
+                EnsureStringListSeparatorBeforeInsert(table, commented.LineIndex);
+                _lines[commented.LineIndex] = uncommentedLine;
+                commented.CommentedPrefix = line[..commented.StartIndex];
+                commented.StartIndex = valueStart;
+                commented.IsCommented = false;
+                table.CommentedItems.Remove(commented);
+                table.Items.Add(commented);
+                _hasStructuralChanges = true;
+                table.OnValuesChanged();
+                return commented;
+            }
+
             var insertLine = commented.LineIndex;
             RemoveCommentedStringListItemCore(table, commented);
             return AddStringListItem(table, value, insertLine);
@@ -1697,6 +1714,23 @@ internal sealed partial class ConfigDocument
         DeactivateStringListItem(table, item, ResolveRequiredValues(table));
     internal ConfigStringListItem DeactivateStringListItem(ConfigStringListTable table, ConfigStringListItem item, RequiredValueResolution required)
     {
+        var line = _lines[item.LineIndex];
+        var prefix = line[..item.StartIndex];
+        var suffix = line[(item.StartIndex + item.Length)..GetCodeEndIndex(line)].Trim();
+        if (string.IsNullOrWhiteSpace(prefix) && (suffix is "" or "," or ";"))
+        {
+            if (required.IsRequired(item.Value)) throw new InvalidOperationException(required.RemovalMessage(item.Value));
+            var commentedPrefix = item.CommentedPrefix ?? prefix + "--";
+            _lines[item.LineIndex] = commentedPrefix + line[item.StartIndex..];
+            item.StartIndex = commentedPrefix.Length;
+            item.IsCommented = true;
+            table.Items.Remove(item);
+            table.CommentedItems.Add(item);
+            _hasStructuralChanges = true;
+            table.OnValuesChanged();
+            return item;
+        }
+
         var value = item.Value;
         var insertLine = item.LineIndex;
         RemoveStringListItem(table, item, required);
@@ -4158,7 +4192,8 @@ internal sealed partial class ConfigDocument
             return new List<(string Text, int StartIndex, int Length)>();
         }
 
-        return ReadQuotedStringTokens(line, commentIndex + 2, line.Length);
+        var start = commentIndex + 2;
+        return ReadQuotedStringTokens(line, start, start + GetCodeEndIndex(line[start..]));
     }
 
     private static List<(string Text, int StartIndex, int Length)> ReadQuotedStringTokens(string line, int startIndex, int limit)

@@ -16,33 +16,17 @@ internal sealed partial class MainForm
         var missionSettings = _weatherWindow is { Visible: true };
         var wrapped = _previewCommentsButton.Visible && !missionSettings && ClientSize.Width < Zoomed(1070);
         footer.SuspendLayout();
-        var updateWidth = _updatesButton is PreviewButton { HasUpdateNotice: true } notice
-            ? TextRenderer.MeasureText(notice.Text, notice.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width
-              + TextRenderer.MeasureText("NEW", notice.Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width
-              + Math.Max(68, Zoomed(68)) + notice.Margin.Horizontal
-            : Zoomed(116);
-        var widths = new[] { 190, 0, 180, 42, 130, 60, 116, 0 };
+        var widths = new[] { 190, 0, 180, 42, 130, 60, 0, 0 };
         for (var column = 0; column < widths.Length; column++)
-            if (column != 1) SetColumnWidth(footer, column, column == 5
+            if (column != 1) SetColumnWidth(footer, column, column == 3
+                ? Zoomed(40) + TextRenderer.MeasureText("Theme", _themeModeButton?.Font ?? Font).Width + Zoomed(12)
+                : column == 5
                 ? Math.Max(Zoomed(widths[column]), TextRenderer.MeasureText("About", Font, Size.Empty,
                     TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width + 14 + Zoomed(2) * 2)
                 : widths[column] == 0 ? 0 : Zoomed(widths[column]));
-        SetColumnWidth(footer, 6, updateWidth);
-        var wrapUpdates = _updatesButton is not null && footer.ClientSize.Width > 0 &&
-            footer.ColumnStyles.Cast<ColumnStyle>().Where(style => style.SizeType == SizeType.Absolute).Sum(style => style.Width)
-                + Zoomed(100) > footer.ClientSize.Width;
-        if (wrapUpdates) SetColumnWidth(footer, 6, 0);
-        if (_updatesButton is not null)
-        {
-            footer.SetColumnSpan(_updatesButton, 1);
-            footer.SetCellPosition(_updatesButton, new TableLayoutPanelCellPosition(wrapUpdates ? 2 : 6, wrapUpdates ? 1 : 0));
-            footer.SetColumnSpan(_updatesButton, wrapUpdates ? 5 : 1);
-            _updatesButton.Dock = wrapUpdates ? DockStyle.Right : DockStyle.Fill;
-            _updatesButton.Width = Math.Max(1, updateWidth - _updatesButton.Margin.Horizontal);
-        }
         SetRowHeight(footer, 0, Zoomed(40));
-        SetRowHeight(footer, 1, wrapped || wrapUpdates ? Zoomed(40) : 0);
-        SetRowHeight(_rootLayout, 2, Zoomed(wrapped || wrapUpdates ? 80 : 40));
+        SetRowHeight(footer, 1, wrapped ? Zoomed(40) : 0);
+        SetRowHeight(_rootLayout, 2, Zoomed(wrapped ? 80 : 40));
         footer.SetCellPosition(_previewCommentsButton, new TableLayoutPanelCellPosition(wrapped ? 0 : 7, wrapped ? 1 : 0));
         footer.ResumeLayout();
         ApplyConfigSearchBarSizing();
@@ -89,6 +73,11 @@ internal sealed partial class MainForm
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                 ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         }
+        internal bool KeyboardFocusOnly { get; set; } = true;
+        internal bool AccentOutline { get; set; }
+        internal bool TextAccentOnly { get; set; }
+        private bool _actionEmphasis;
+        internal bool ActionEmphasis { get => _actionEmphasis; set { if (_actionEmphasis != value) { _actionEmphasis = value; Invalidate(); } } }
         private bool _hasUpdateNotice;
         internal bool HasUpdateNotice
         {
@@ -102,64 +91,88 @@ internal sealed partial class MainForm
         protected override void OnMouseLeave(EventArgs e) { _hover = _pressed = false; Invalidate(); base.OnMouseLeave(e); }
         protected override void OnMouseDown(MouseEventArgs e) { _pressed = e.Button == MouseButtons.Left; Invalidate(); base.OnMouseDown(e); }
         protected override void OnMouseUp(MouseEventArgs e) { _pressed = false; Invalidate(); base.OnMouseUp(e); }
+        protected override void OnMouseCaptureChanged(EventArgs e) { if (!Capture) _pressed = false; Invalidate(); base.OnMouseCaptureChanged(e); }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             if (Width < 2 || Height < 2) return;
             e.Graphics.Clear(Parent?.BackColor ?? MainBackground);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            var primary = Text == "Add row";
+            var drawFocusCue = Focused && (!KeyboardFocusOnly || InputChrome.KeyboardInputActive);
+            var primary = Text == "Add row" && !TextAccentOnly;
             var updateNotice = HasUpdateNotice && Enabled;
+            var highContrast = SystemInformation.HighContrast;
+            var outlined = (updateNotice || AccentOutline && Enabled) && !highContrast;
+            var emphasized = !outlined && (HasUpdateNotice || ActionEmphasis || AccentOutline) && Enabled;
             var noticeFill = SystemInformation.HighContrast ? SystemColors.Highlight : IsDarkPalette() ? Color.FromArgb(63, 223, 202) : Color.FromArgb(8, 122, 115);
-            var fillColor = !Enabled ? BackColor : updateNotice ? noticeFill : primary ? PrimaryActionColor
+            var noticeText = highContrast ? SystemColors.HighlightText : IsDarkPalette() ? Color.FromArgb(7, 46, 42) : Color.White;
+            var fillColor = !Enabled ? BackColor : emphasized ? noticeFill : primary ? PrimaryActionColor
                 : _pressed ? FlatAppearance.MouseDownBackColor : _hover ? FlatAppearance.MouseOverBackColor : BackColor;
-            var textColor = !Enabled ? HelpTextColor : updateNotice ? (SystemInformation.HighContrast ? SystemColors.HighlightText : IsDarkPalette() ? Color.FromArgb(7, 46, 42) : Color.White) : primary ? Color.White : ForeColor;
+            var textColor = !Enabled ? HelpTextColor : TextAccentOnly && Text is "Add row" or "Easy"
+                ? highContrast ? SystemColors.ControlText : IsDarkPalette() ? Color.FromArgb(0x8B, 0xC4, 0xFF) : Color.FromArgb(7, 90, 169)
+                : outlined ? noticeFill : emphasized ? noticeText : primary ? Color.White : ForeColor;
             using var shape = ConfigSearchSurface.RoundedRectangle(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), 5);
             using var fill = new SolidBrush(fillColor);
             e.Graphics.FillPath(fill, shape);
-            if (primary || updateNotice || FlatAppearance.BorderSize > 0)
+            if (primary || emphasized || outlined || FlatAppearance.BorderSize > 0)
             {
-                using var border = new Pen(updateNotice ? noticeFill : primary ? PrimaryActionColor : FlatAppearance.BorderColor, primary || updateNotice ? 1 : FlatAppearance.BorderSize);
+                var borderColor = outlined ? Color.FromArgb((noticeFill.R + BorderColor.R) / 2,
+                    (noticeFill.G + BorderColor.G) / 2, (noticeFill.B + BorderColor.B) / 2)
+                    : emphasized ? noticeFill : primary ? PrimaryActionColor : FlatAppearance.BorderColor;
+                using var border = new Pen(borderColor, primary || emphasized || outlined ? 1 : FlatAppearance.BorderSize);
                 e.Graphics.DrawPath(border, shape);
             }
             if (updateNotice)
             {
                 var badgeSize = TextRenderer.MeasureText("NEW", Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
                 var badge = new Rectangle(Width - badgeSize.Width - 21, (Height - Font.Height - 6) / 2, badgeSize.Width + 12, Font.Height + 6);
-                using var badgeBorder = new Pen(textColor);
-                e.Graphics.DrawRectangle(badgeBorder, badge);
-                TextRenderer.DrawText(e.Graphics, "NEW", Font, badge, textColor,
+                using var badgeFill = new SolidBrush(noticeFill);
+                e.Graphics.FillRectangle(badgeFill, badge);
+                if (highContrast) e.Graphics.DrawRectangle(SystemPens.HighlightText, badge);
+                TextRenderer.DrawText(e.Graphics, "NEW", Font, badge, noticeText,
                     TextFormatFlags.SingleLine | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
                 var updateIconSize = Math.Min(18, Math.Max(12, Height - 14));
                 DrawToolbarIcon(e.Graphics, ToolbarIconKind.Import, new Rectangle(9, (Height - updateIconSize) / 2, updateIconSize, updateIconSize), textColor);
                 var textLeft = 9 + updateIconSize + 7;
                 TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(textLeft, 0, Math.Max(1, badge.Left - textLeft - 7), Height), textColor,
                     TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
-                if (Focused) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -4, -4), textColor, fillColor);
+                if (drawFocusCue) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -4, -4), textColor, fillColor);
+                return;
+            }
+            if (Text is "?" or "▾" or "▸")
+            {
+                TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, textColor,
+                    TextFormatFlags.SingleLine | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.NoPadding);
+                if (drawFocusCue) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -3, -3), textColor, fillColor);
                 return;
             }
             if (Text is "Dark mode" or "Light mode")
             {
                 DrawCategoryIcon(e.Graphics, Text == "Dark mode" ? "Moon" : "Sun",
                     new Rectangle((Width - 18) / 2, (Height - 18) / 2, 18, 18), textColor);
-                if (Focused) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -5, -5), textColor, fillColor);
+                if (drawFocusCue) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -5, -5), textColor, fillColor);
                 return;
             }
             var iconName = Text switch
             {
+                "Theme" => IsDarkPalette() ? "Moon" : "Sun",
                 "Add row" => "Add", "Remove selected" => "Remove", "Presets..." => "Presets",
-                "Manage ▼" => "Mission options", "Copy To..." => "Copy", "Comments" => "Message Of The Day",
+                "Refresh release" or "Refreshing…" => "Reload",
+                "Instance ▼" => "Mission options", "Copy To..." => "Copy", "Comments" => "Message Of The Day",
                 _ => ""
             };
             var iconSize = Math.Min(18, Math.Max(12, Height - 14));
             var textSize = TextRenderer.MeasureText(Text, Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
             var gap = iconName.Length == 0 ? 0 : iconSize + 7;
             var left = Math.Max(7, (Width - textSize.Width - gap) / 2);
-            if (gap > 0) DrawCategoryIcon(e.Graphics, iconName,
+            if (iconName == "Reload") DrawToolbarIcon(e.Graphics, ToolbarIconKind.Reload,
+                new Rectangle(left, (Height - iconSize) / 2, iconSize, iconSize), textColor);
+            else if (gap > 0) DrawCategoryIcon(e.Graphics, iconName,
                 new Rectangle(left, (Height - iconSize) / 2, iconSize, iconSize), textColor);
             TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(left + gap, 0, Math.Max(0, Width - left - gap - 7), Height),
                 textColor, TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
-            if (Focused) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -5, -5), textColor, fillColor);
+            if (drawFocusCue) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -5, -5), textColor, fillColor);
         }
     }
 
@@ -234,6 +247,16 @@ internal sealed partial class MainForm
                 Lines(new(3, 3), new(17, 3), new(17, 14), new(8, 14), new(3, 18), new(3, 3)); break;
             case "Welcome Message Callsigns":
                 graphics.DrawEllipse(pen, 7, 2, 6, 6); graphics.DrawArc(pen, 3, 10, 14, 14, 180, 180); graphics.DrawLine(pen, 3, 17, 17, 17); break;
+            case "AI Flights":
+                Lines(new(6, 2), new(10, 11), new(6, 9), new(2, 11), new(6, 2));
+                Lines(new(14, 8), new(18, 17), new(14, 15), new(10, 17), new(14, 8)); break;
+            case "Ground Units":
+            case "Ground Units / Air Defenses":
+                Lines(new(3, 11), new(17, 11), new(19, 14), new(17, 17), new(3, 17), new(1, 14), new(3, 11));
+                Lines(new(5, 11), new(7, 7), new(12, 7), new(14, 11));
+                graphics.DrawLine(pen, 12, 8, 18, 5);
+                graphics.DrawEllipse(pen, 5, 13, 2, 2); graphics.DrawEllipse(pen, 9, 13, 2, 2);
+                graphics.DrawEllipse(pen, 13, 13, 2, 2); break;
             case "Escort":
             case "Aircraft / Weapons":
                 Lines(new(10, 2), new(12, 8), new(18, 12), new(18, 14), new(12, 12), new(12, 16), new(14, 18), new(10, 17),

@@ -14,6 +14,7 @@ internal sealed partial class MainForm
         private static readonly ConditionalWeakTable<DataGridView, StrongBox<Point>> GridHover = new();
         internal static Color HoverSurface => HeaderBackground;
         internal static Color PressedSurface => SelectionBackground;
+        internal static bool KeyboardInputActive => _choiceInputMode is { MouseInput: false };
         private readonly Control _target;
         private readonly Control _input;
         private readonly bool _weatherSlider;
@@ -35,7 +36,6 @@ internal sealed partial class MainForm
                 target.MouseLeave += (_, _) => { _hover = _pressed = false; target.Invalidate(); };
                 target.MouseMove += (_, e) =>
                 {
-                    if (input is NumericUpDown && (_pointerY < target.Height / 2) != (e.Y < target.Height / 2)) target.Invalidate();
                     if (input is ComboBox && UpdateChoiceHover(e.Location)) target.Invalidate();
                     _pointerY = e.Y;
                 };
@@ -156,7 +156,10 @@ internal sealed partial class MainForm
             if (_input is ComboBox combo)
             {
                 var framed = combo.Parent?.Parent is WeatherInputFrame;
-                DrawChoice(graphics, bounds, combo.Text, combo.Font, combo.BackColor, combo.ForeColor,
+                // Native selection can outlive the managed list briefly during repopulation.
+                var index = combo.SelectedIndex;
+                var text = index >= 0 && index < combo.Items.Count ? combo.GetItemText(combo.Items[index]) ?? "" : "";
+                DrawChoice(graphics, bounds, text, combo.Font, combo.BackColor, combo.ForeColor,
                     combo.Enabled, _hover, ShowChoiceFocus(combo), !framed, combo.DeviceDpi / 96f);
             }
             else if (_input is TrackBar slider) DrawSlider(graphics,slider);

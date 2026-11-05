@@ -38,6 +38,11 @@ internal sealed class RadarLoadingForm : Form
             var client = manager.PointToScreen(Point.Empty);
             client.Offset(-manager.Left, -manager.Top);
             backdrop = window.Clone(new Rectangle(client, manager.ClientSize), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            if (manager is MainForm main && main.LoadingForegroundSurface is { } foreground)
+            {
+                var location = manager.PointToClient(foreground.PointToScreen(Point.Empty));
+                foreground.DrawToBitmap(backdrop, new Rectangle(location, foreground.Size));
+            }
         }
         var iconCopy = new Bitmap(icon);
         var bounds = manager.RectangleToScreen(manager.ClientRectangle);

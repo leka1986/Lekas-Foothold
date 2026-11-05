@@ -169,7 +169,9 @@ internal sealed class WeatherCheckBox : CheckBox
             if (selected)
             {
                 using var tick = new Pen(c.BackColor, Math.Max(1.6f, size / 8f)) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
-                graphics.DrawLines(tick, new[] { new PointF(box.Left + size * .24f, box.Top + size * .51f), new PointF(box.Left + size * .43f, box.Top + size * .72f), new PointF(box.Left + size * .79f, box.Top + size * .27f) });
+                if (c is CheckBox { ThreeState: true, CheckState: CheckState.Indeterminate })
+                    graphics.DrawLine(tick, box.Left + size * .25f, box.Top + size * .5f, box.Left + size * .75f, box.Top + size * .5f);
+                else graphics.DrawLines(tick, new[] { new PointF(box.Left + size * .24f, box.Top + size * .51f), new PointF(box.Left + size * .43f, box.Top + size * .72f), new PointF(box.Left + size * .79f, box.Top + size * .27f) });
             }
         }
         var textBounds = new Rectangle(right ? 0 : box.Right + 6, 0, Math.Max(0, c.Width - size - 7), c.Height);

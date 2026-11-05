@@ -92,11 +92,17 @@ internal sealed partial class MainForm
             if (_updatingCompactHeight) return;
             _updatingCompactHeight = true;
             _compactHeightDirty = false;
+            var layoutOwner = _compactHeightGroup!.Parent ?? _compactHeightGroup;
+            layoutOwner.SuspendLayout();
             try { _compactHeightLayout!(); }
             finally
             {
-                _updatingCompactHeight = false;
-                if (_compactHeightDirty) RequestCompactHeightLayout();
+                try { EditorSection.RunLayoutPass(() => layoutOwner.ResumeLayout(true)); }
+                finally
+                {
+                    _updatingCompactHeight = false;
+                    if (_compactHeightDirty) RequestCompactHeightLayout();
+                }
             }
         }
     }

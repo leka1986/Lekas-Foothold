@@ -5,7 +5,7 @@ namespace FootholdConfigManager;
 internal static class WeatherExportNames
 {
     private static readonly Regex EraAndLanguage = new(
-        @"(^|[_\s-]+)(?:multi[_\s-]*(?:language|lang)|cold[_\s-]*war|modern|vietnam|gulfwar|ww2|wwii)(?=$|[_\s-])",
+        @"(^|[_\s-]+)(?:multi[_\s-]*(?:language|lang)|cold[_\s-]*war|modern|vietnam|gulfwar|ww2|wwii(?!_Normandy_Foothold_))(?=$|[_\s-])",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public static string Suggest(string sourceFileName, string? era, string? cloudName,
@@ -13,7 +13,7 @@ internal static class WeatherExportNames
     {
         var parts = BaseParts(sourceFileName, era);
         parts.Add(WeatherTag(cloudName, settings));
-        var time = settings.ChangeDateTime ? settings.StartTimeSeconds : sourceStartTimeSeconds;
+        var time = settings.ChangeDateTime && settings.ChangeStartTime != false ? settings.StartTimeSeconds : sourceStartTimeSeconds;
         if (time is >= 0 && double.IsFinite(time.Value))
         {
             var hour = time.Value % 86400 / 3600;
@@ -22,13 +22,23 @@ internal static class WeatherExportNames
         return string.Join("_", parts) + ".miz";
     }
 
+    internal static string DownloadProfileSuffix(string? cloudName, WeatherSettings settings)
+    {
+        var tag = WeatherTag(cloudName, settings);
+        if (settings.ChangeDateTime && settings.ChangeStartTime != false && settings.StartTimeSeconds is >= 0 && double.IsFinite(settings.StartTimeSeconds))
+        {
+            var hour = settings.StartTimeSeconds % 86400 / 3600;
+            tag += "_" + (hour < 6 || hour >= 18 ? "Night" : "Day");
+        }
+        return tag;
+    }
     public static string SuggestOptions(string sourceFileName, string? era) =>
         SuggestOptions(sourceFileName, era, null, true);
 
     internal static string SuggestOptions(string sourceFileName, string? era, double? startTimeSeconds, bool includeOptions)
     {
         var parts = BaseParts(sourceFileName, era);
-        parts.Add(includeOptions ? "Options" : "Time");
+        if (!includeOptions || startTimeSeconds is not null) parts.Add(includeOptions ? "Options" : "Time");
         if (startTimeSeconds is >= 0 && double.IsFinite(startTimeSeconds.Value))
         {
             var clock = TimeSpan.FromSeconds(startTimeSeconds.Value % 86400);
@@ -50,7 +60,10 @@ internal static class WeatherExportNames
         return parts;
     }
 
-    public static string Normalize(string fileName, string sourcePath)
+    public static string Normalize(string fileName, string sourcePath) =>
+        Normalize(fileName, sourcePath, Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, false);
+
+    public static string Normalize(string fileName, string sourcePath, string destinationDirectory, bool keepBoth)
     {
         fileName = fileName.Trim();
         if (fileName.Length == 0 || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
@@ -61,8 +74,9 @@ internal static class WeatherExportNames
         if (stem.Length == 0 || Regex.IsMatch(stem, @"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)",
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
             throw new InvalidDataException("Choose a valid Windows mission filename.");
-        var candidate = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, fileName));
-        if (candidate.Equals(Path.GetFullPath(sourcePath), StringComparison.OrdinalIgnoreCase))
+        if (!Path.IsPathFullyQualified(destinationDirectory)) throw new InvalidDataException("Choose a full mission destination folder.");
+        var candidate = Path.GetFullPath(Path.Combine(destinationDirectory, fileName));
+        if (!keepBoth && candidate.Equals(Path.GetFullPath(sourcePath), StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Choose a different filename to keep the original MIZ unchanged.");
         return fileName;
     }

@@ -4,19 +4,25 @@ namespace FootholdConfigManager;
 
 internal sealed partial class MainForm
 {
-    // Native list selection and wheel/keyboard scrolling stay with the combo.
+    // Native list selection and wheel/keyboard scrolling stay with the owner.
     // Its non-client bar uses the same geometry and paint as the manager's bars.
     internal sealed class PopupScrollbarWindow : NativeWindow, IDisposable
     {
-        private readonly ComboBox _owner;
+        private readonly Control _owner;
         private bool _hover, _dragging;
         private bool _instantOpening;
         private int _grabOffset;
         private IntPtr _previousCapture;
 
         internal PopupScrollbarWindow(ComboBox owner) => _owner = owner;
+        internal PopupScrollbarWindow(ListBox owner) => _owner = owner;
         internal void Attach()
         {
+            if (_owner is ListBox)
+            {
+                if (Handle != _owner.Handle) { ReleaseHandle(); AssignHandle(_owner.Handle); }
+                return;
+            }
             var info = new ComboInfo { Size = Marshal.SizeOf<ComboInfo>() };
             if (!GetComboBoxInfo(_owner.Handle, ref info) || info.List == IntPtr.Zero) return;
             if (Handle != info.List) { ReleaseHandle(); AssignHandle(info.List); }
@@ -57,7 +63,7 @@ internal sealed partial class MainForm
                 using var buffer = BufferedGraphicsManager.Current.Allocate(graphics, bar);
                 SlimScrollbarWindow.DrawPresentation(buffer.Graphics, bar, thumb, _hover || _dragging);
                 buffer.Render(graphics);
-                if (GetWindowRect(Handle, out var window))
+                if (_owner is ComboBox && GetWindowRect(Handle, out var window))
                 {
                     using var border = new Pen(ControlBorderColor);
                     graphics.DrawRectangle(border, 0, 0, window.Right - window.Left - 1, window.Bottom - window.Top - 1);
@@ -87,20 +93,25 @@ internal sealed partial class MainForm
             _dragging = false;
             if (GetCapture() == Handle && _previousCapture != Handle)
             {
-                if (_owner.DroppedDown && _previousCapture != IntPtr.Zero) SetCapture(_previousCapture);
+                if (_owner is ComboBox { DroppedDown: true } && _previousCapture != IntPtr.Zero) SetCapture(_previousCapture);
                 else ReleaseCapture();
             }
         }
 
         protected override void WndProc(ref Message message)
         {
-            if (message.Msg is 0x0201 or 0x0203 or 0x00A1 or 0x00A3) InputChrome.SetChoiceMouseFocus(_owner, true);
-            else if (message.Msg is 0x0100 or 0x0104) InputChrome.SetChoiceMouseFocus(_owner, false);
-            if (message.Msg == 0x0047 && _instantOpening) // WM_WINDOWPOSCHANGED: retain native final placement.
+            if (_owner is ComboBox combo)
             {
-                base.WndProc(ref message);
+                if (message.Msg is 0x0201 or 0x0203 or 0x00A1 or 0x00A3) InputChrome.SetChoiceMouseFocus(combo, true);
+                else if (message.Msg is 0x0100 or 0x0104) InputChrome.SetChoiceMouseFocus(combo, false);
+            }
+            if (message.Msg == 0x0046 && _instantOpening) // WM_WINDOWPOSCHANGING: show at native final placement, before animation.
+            {
                 _instantOpening = false;
-                if (!IsWindowVisible(Handle)) ShowWindow(Handle, 4); // Skip the slide by showing without activation.
+                var position = Marshal.PtrToStructure<WindowPosition>(message.LParam);
+                position.Flags |= 0x0050; // SWP_SHOWWINDOW | SWP_NOACTIVATE, including unchanged placement on repeat opens.
+                Marshal.StructureToPtr(position, message.LParam, false);
+                base.WndProc(ref message);
                 return;
             }
             if (SystemInformation.HighContrast) { base.WndProc(ref message); return; }
@@ -163,10 +174,12 @@ internal sealed partial class MainForm
             }
             base.WndProc(ref message);
             if (message.Msg is 0x000F or 0x0115 or 0x020A or 0x0100 or 0x0005) Draw();
+            if (_owner is ListBox && message.Msg is 0x0197 or 0x0186 or 0x0180 or 0x0182 or 0x0184) Draw();
             if (message.Msg == 0x0317 && message.WParam != IntPtr.Zero && ((long)message.LParam & 2) != 0) Draw(message.WParam);
         }
 
         public void Dispose() { CancelInstantOpening(); EndDrag(); ReleaseHandle(); }
+        [StructLayout(LayoutKind.Sequential)] private struct WindowPosition { public IntPtr Window, InsertAfter; public int X, Y, Width, Height; public uint Flags; }
         [StructLayout(LayoutKind.Sequential)] private struct NativeRect { public int Left, Top, Right, Bottom; }
         [StructLayout(LayoutKind.Sequential)] private struct NativePoint { public int X, Y; }
         [StructLayout(LayoutKind.Sequential)] private struct ComboInfo { public int Size; public NativeRect Item, Button; public int State; public IntPtr Combo, Edit, List; }

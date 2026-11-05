@@ -4,6 +4,8 @@ internal sealed partial class MainForm
 {
     private sealed class InstanceImportPlan
     {
+        public bool CreateMissing { get; set; }
+        public MissionPathIdentity? ReviewedIdentity { get; set; }
         public string Name { get; }
         public ConfigDocument Current { get; }
         public ConfigDocument Output { get; }
@@ -156,6 +158,7 @@ internal sealed partial class MainForm
 
     private sealed class InstanceImportResult
     {
+        public bool Cancelled { get; set; }
         public List<InstanceImportPlan> Updated { get; } = new();
         public List<string> Warnings { get; } = new();
         public List<string> Failed { get; } = new();
@@ -164,11 +167,18 @@ internal sealed partial class MainForm
     private async Task<InstanceImportResult> CommitInstanceImports(InstanceImportScope scope, string sourcePath,
         ExtractedMizConfig? extracted, IProgress<LoadingProgress>? progress = null)
     {
-        var plans = scope.Plans;
+        return await CommitInstanceImportPlans(scope.Plans, scope.CleanSource, sourcePath, extracted, progress);
+    }
+
+    private async Task<InstanceImportResult> CommitInstanceImportPlans(IReadOnlyList<InstanceImportPlan> plans,
+        ConfigDocument cleanSource, string sourcePath, ExtractedMizConfig? extracted,
+        IProgress<LoadingProgress>? progress = null, CancellationToken token = default, bool recordRelease = true)
+    {
         var result = new InstanceImportResult();
         var instanceNumber = 0;
         foreach (var plan in plans)
         {
+            token.ThrowIfCancellationRequested();
             instanceNumber++;
             if (progress is not null)
             {
@@ -190,18 +200,45 @@ internal sealed partial class MainForm
                 progress.Report(new LoadingProgress($"Updating instance {instanceNumber} of {plans.Count}: {plan.Name}…", instanceNumber - 1, plans.Count));
                 await Task.Delay(1);
             }
+            if (token.IsCancellationRequested)
+            {
+                if (result.Updated.Count == 0) token.ThrowIfCancellationRequested();
+                result.Cancelled = true;
+                break;
+            }
+            FileStream? newConfigReservation = null;
             try
             {
-                StoreConfigBackup(plan.Current.Path, sourcePath, _settings.ServerProfiles,
-                    ConfigBackupsDirectory, ConfigBackupsIndexPath, extracted is null ? "config" : "miz");
+                plan.ReviewedIdentity?.RequireUnchanged();
+                if (plan.CreateMissing)
+                {
+                    if (!Directory.Exists(Path.GetDirectoryName(plan.Current.Path)))
+                        throw new DirectoryNotFoundException("The reviewed Config folder is unavailable.");
+                    newConfigReservation = new FileStream(plan.Current.Path, FileMode.CreateNew,
+                        FileAccess.ReadWrite, FileShare.Read | FileShare.Delete);
+                }
+                else
+                    StoreConfigBackup(plan.Current.Path, sourcePath, _settings.ServerProfiles,
+                        ConfigBackupsDirectory, ConfigBackupsIndexPath, extracted is null ? "config" : "miz");
                 plan.Output.SaveImportedTo(plan.Current.Path, plan.Preview.ImportWarnings);
             }
             catch (Exception ex)
             {
+                try
+                {
+                    if (newConfigReservation is not null && File.Exists(plan.Current.Path) && new FileInfo(plan.Current.Path).Length == 0)
+                        File.Delete(plan.Current.Path);
+                }
+                catch (Exception cleanupError) when (cleanupError is IOException or UnauthorizedAccessException)
+                {
+                    result.Warnings.Add(plan.Name + ": could not remove the empty Config reservation at " + plan.Current.Path + ": " + cleanupError.Message);
+                }
                 result.Failed.Add(plan.Name + ": " + ex.Message);
                 continue;
             }
+            finally { newConfigReservation?.Dispose(); }
             result.Updated.Add(plan);
+            InvalidateMissionConfigHeaders(new[] { plan.Current.Path });
             result.Warnings.AddRange(plan.Preview.ImportWarnings.Select(warning => plan.Name + ": " + warning));
             try
             {
@@ -226,14 +263,14 @@ internal sealed partial class MainForm
         }
         if (result.Updated.Count > 0)
         {
-            RecordImportedMissionRelease(scope.CleanSource);
+            if (recordRelease) RecordImportedMissionRelease(cleanSource);
             try
             {
                 var targets = result.Updated.Select(plan => plan.Current.Path).ToList();
                 if (extracted is not null)
                     StoreMizDefaults(sourcePath, extracted, targetConfigPaths: targets);
                 else
-                    StoreConfigDefaults(sourcePath, targets, scope.CleanSource);
+                    StoreConfigDefaults(sourcePath, targets, cleanSource);
             }
             catch (Exception ex)
             {

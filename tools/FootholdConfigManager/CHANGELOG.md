@@ -1,6 +1,35 @@
 # Foothold Config Manager changes
 
-Today's section describes work completed against the Current Manager earlier today. The catch-up section covers other differences from the Manager source previously present in this repository. Existing released executables are separate artifacts.
+Source changes are listed below. Existing versioned executables are separate artifacts.
+
+**2026-11-05 — Changes since the version included with Foothold v5.4.4**
+
+**Added**
+
+- Added mission downloads directly in the Manager, with map selection and installation to your chosen instance.
+- Added files-only updates for compatible missions, keeping everything the same except the updated script files.
+- Added compatibility checks across your instances, with options to add other mission folders, select individual MIZ files and rescan.
+- Added selection of multiple mission variants, so day, night and other customised copies can be updated together.
+- Added support for updating missions from DCSServerBot backups.
+- Added an optional Custom Folder for downloads and updated missions. Your folder is remembered, and you can choose each new mission's filename before saving.
+- Added warehouse transfer during full mission downloads, including modded items.
+- Added options to apply saved weather and time profiles to downloaded missions, and update the selected instances' Configs while keeping their settings.
+- Added an adjustable editor width, shared across categories and remembered between sessions.
+- Added remembered widths for manually resized grid columns, with an option to restore their default widths.
+
+**Changed**
+
+- Changed the main editor with clearer setting groups, rounded sections, larger text and collapsible tables.
+- Changed the editor layout to adapt to the window size while keeping comfortable spacing around the content.
+- Changed tables, scrollbars and text editors for a more consistent appearance in dark and light mode.
+- Changed grid sizing to keep column headings readable and give long dropdown options more room.
+- Changed the Aircraft / Weapons lists with wider grids, buttons above the lists and a fully visible Status column.
+- Changed Warehouse Weapon Caps and other simple lists to place Add item and Remove selected above the grid, leaving more room for the list.
+- Changed the Updates page to clearly separate files-only updates from full mission downloads and explain what each option preserves.
+
+**Fixed**
+
+- Fixed list transfers losing Config comments. Moving an item back or using Undo now restores its original text and clears the Save highlight when no other changes remain.
 
 **2026-10-25 — Escort template choices**
 

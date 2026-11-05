@@ -32,6 +32,8 @@ internal sealed class RuntimeSettings
     public string? MissionScriptingPath { get; set; }
     public List<string> DeployTargetFolders { get; set; } = new();
     public int UiZoomPercent { get; set; } = 100;
+    public int EditorContentWidth { get; set; }
+    public Dictionary<string, Dictionary<string, int>> EditorGridColumnWidths { get; set; } = new();
     public int? WindowLeft { get; set; }
     public int? WindowTop { get; set; }
     public int WindowWidth { get; set; }
@@ -64,6 +66,8 @@ internal sealed class RuntimeSettings
             loaded.DeployTargetFolders = NormalizePaths(loaded.DeployTargetFolders);
             loaded.ServerProfiles = NormalizeServerProfiles(loaded.ServerProfiles);
             loaded.UiZoomPercent = Math.Clamp(loaded.UiZoomPercent, 80, 130);
+            loaded.EditorContentWidth = loaded.EditorContentWidth > 0 ? Math.Clamp(loaded.EditorContentWidth, 1075, 4500) : 0;
+            loaded.EditorGridColumnWidths ??= new();
             loaded.WindowWidth = Math.Max(0, loaded.WindowWidth);
             loaded.WindowHeight = Math.Max(0, loaded.WindowHeight);
             return loaded;
@@ -166,6 +170,24 @@ internal sealed class RuntimeSettings
             .ToList();
     }
 
+    public static string? ResolveMissionsDirectory(ServerProfileSettings profile)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(profile.MissionDirectory))
+                return System.IO.Path.IsPathFullyQualified(profile.MissionDirectory)
+                    ? System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(profile.MissionDirectory)) : null;
+            if (string.IsNullOrWhiteSpace(profile.ConfigPath) || !System.IO.Path.IsPathFullyQualified(profile.ConfigPath)) return null;
+            for (var directory = System.IO.Directory.GetParent(System.IO.Path.GetFullPath(profile.ConfigPath)); directory is not null; directory = directory.Parent)
+                if (directory.Name.Equals("Missions", StringComparison.OrdinalIgnoreCase)) return directory.FullName;
+            return null;
+        }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException or System.IO.PathTooLongException)
+        {
+            return null; // A remembered external path must be chosen again rather than guessed.
+        }
+    }
+
     public static string GetBestInitialDirectory()
     {
         if (ExperimentBootstrap.IsIsolated) return SettingsDirectory;
@@ -197,6 +219,7 @@ internal sealed class RuntimeSettings
                 Name = profile.Name.Trim(),
                 ConfigPath = System.IO.Path.GetFullPath(profile.ConfigPath),
                 DeployTarget = profile.DeployTarget,
+                MissionDirectory = profile.MissionDirectory,
                 ActivePresetIds = NormalizeActivePresetIds(profile.ActivePresetIds)
             })
             .GroupBy(profile => GetProfileConfigFamilyKey(profile.ConfigPath), StringComparer.OrdinalIgnoreCase)
@@ -275,5 +298,6 @@ internal sealed class ServerProfileSettings
     public string Name { get; set; } = "";
     public string ConfigPath { get; set; } = "";
     public bool DeployTarget { get; set; }
+    public string? MissionDirectory { get; set; }
     public Dictionary<string, string> ActivePresetIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

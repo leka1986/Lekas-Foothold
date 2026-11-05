@@ -164,12 +164,19 @@ internal sealed partial class WeatherWindow : Form
         _profiles.AccessibleName = "Weather profile";
         _profiles.DropDownWidth = S(400);
         install.Controls.Add(_profiles, 0, 3);
-        var saveProfile = Button("Save profile…", SaveProfile);
-        saveProfile.Anchor = AnchorStyles.Left;
-        install.Controls.Add(saveProfile, 1, 3);
+        var saveProfile = Button("Save profile…", SaveProfile, "WeatherSaveProfile");
+        _deleteProfile = Button("Delete profile", DeleteProfile, "WeatherDeleteProfile");
+        saveProfile.Anchor = _deleteProfile.Anchor = AnchorStyles.Left;
+        var profileActions = Row(saveProfile, _deleteProfile);
+        profileActions.Name = "WeatherProfileActions";
+        profileActions.WrapContents = false;
+        profileActions.Dock = DockStyle.None;
+        profileActions.Anchor = AnchorStyles.Left;
+        install.Controls.Add(profileActions, 1, 3);
         _profiles.SelectedIndexChanged += (_, _) =>
         {
             if (!_updating && _profiles.SelectedItem is WeatherNamedProfile profile) ApplySettings(profile.Settings);
+            RefreshApplyAvailability();
         };
 
         weatherBody.Controls.Add(BuildClouds(), 0, 1);

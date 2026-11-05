@@ -340,7 +340,7 @@ internal sealed partial class MainForm
 
     private void PaintOptionsRails(object? sender, PaintEventArgs args)
     {
-        if (sender is not TableLayoutPanel { Tag: Dictionary<string, OptionsMarkerTarget> targets }) return;
+        if (sender is not TableLayoutPanel { Tag: Dictionary<string, OptionsMarkerTarget> targets } owner) return;
         var state = args.Graphics.Save();
         args.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         try
@@ -349,17 +349,25 @@ internal sealed partial class MainForm
             var textColor = IsDarkPalette() ? MainBackground : Color.White;
             foreach (var target in targets.Values)
             {
-                if (target.Entry is { } entry && IsRequiredUseHighlighted(entry))
+                var requiredUseHighlighted = target.Entry is { } entry && IsRequiredUseHighlighted(entry);
+                if (!requiredUseHighlighted && (target.Number == 0 || !target.Marker.Visible)) continue;
+                var editorBounds = new Rectangle(owner.PointToClient(target.Editor.PointToScreen(Point.Empty)), target.Editor.Size);
+                var railLeft = editorBounds.Left;
+                if (ContainingEditorSection(target.Editor) is { } containing)
+                    railLeft = owner.PointToClient(containing.PointToScreen(Point.Empty)).X;
+                if (ContainingEditorSection(target.Editor) is { Collapsible: true, Expanded: false } section)
+                    editorBounds = new Rectangle(owner.PointToClient(section.PointToScreen(Point.Empty)), section.Size);
+                if (requiredUseHighlighted)
                 {
                     using var sourcePen = new Pen(BrandColor, Math.Max(2, Zoomed(3)));
-                    args.Graphics.DrawLine(sourcePen, target.Editor.Left - Zoomed(5), target.Editor.Top,
-                        target.Editor.Left - Zoomed(5), target.Editor.Bottom);
+                    args.Graphics.DrawLine(sourcePen, railLeft - Zoomed(5), editorBounds.Top,
+                        railLeft - Zoomed(5), editorBounds.Bottom);
                 }
                 if (target.Number == 0 || !target.Marker.Visible) continue;
-                var centerX = target.Editor.Left - Zoomed(12);
-                var centerY = target.Editor.Top + target.Header.Top + target.Title.Top + target.Title.Font.Height / 2;
+                var centerX = railLeft - Zoomed(12);
+                var centerY = owner.PointToClient(target.Title.PointToScreen(Point.Empty)).Y + target.Title.Font.Height / 2;
                 var circle = new Rectangle(centerX - radius, centerY - radius, radius * 2, radius * 2);
-                var bottom = Math.Max(centerY + radius, target.Editor.Bottom - target.Editor.Padding.Bottom);
+                var bottom = Math.Max(centerY + radius, editorBounds.Bottom - target.Editor.Padding.Bottom);
                 if (!args.ClipRectangle.IntersectsWith(Rectangle.FromLTRB(circle.Left, circle.Top, circle.Right, bottom))) continue;
                 var accent = target.Marker.Text == "Locked" ? LockedTextColor : BrandColor;
                 using var brush = new SolidBrush(accent);

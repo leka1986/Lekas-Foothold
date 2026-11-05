@@ -7,6 +7,8 @@ namespace FootholdConfigManager;
 internal sealed record DcsCloudPreset(string Id, string Name, string? ThumbnailPath,
     double MinimumBaseMeters, double MaximumBaseMeters, double DefaultBaseMeters)
 {
+    public string? EmbeddedThumbnailName { get; init; }
+    public string? ClientThumbnailPath { get; init; }
     public override string ToString() => Name;
 }
 internal sealed record DcsHaloPreset(string Id, string Name, string? ThumbnailPath)
@@ -55,8 +57,12 @@ internal sealed class DcsWeatherCatalog
                 ? Number(layer, "altitudeMin", Math.Max(0, min)) : Math.Max(0, min);
             if (min < 0 || max < 0) min = max = initial;
             if (max < min || min < 0 || max > 30000) throw new InvalidDataException("Invalid cloud base limits for " + id + ".");
-            clouds.Add(new DcsCloudPreset(id, name, AssetPath(root, Text(Value(definition, "thumbnailName"))),
-                min, max, Math.Clamp(initial, min, max)));
+            var thumbnail = Text(Value(definition, "thumbnailName"));
+            var path = AssetPath(root, thumbnail, out var clientThumbnail);
+            clouds.Add(new DcsCloudPreset(id, name, path, min, max, Math.Clamp(initial, min, max))
+            {
+                EmbeddedThumbnailName = Path.GetFileName(thumbnail), ClientThumbnailPath = clientThumbnail
+            });
         }
         if (clouds.Count == 0) throw new InvalidDataException("No visible cloud presets were found in this installation.");
         if (clouds.Select(p => p.Id).Distinct(StringComparer.Ordinal).Count() != clouds.Count)
@@ -183,16 +189,20 @@ internal sealed class DcsWeatherCatalog
         return null;
     }
 
-    private static string? AssetPath(string root, string? relative)
+    private static string? AssetPath(string root, string? relative) => AssetPath(root, relative, out _);
+
+    private static string? AssetPath(string root, string? relative, out string? clientThumbnail)
     {
+        clientThumbnail = null;
         if (string.IsNullOrWhiteSpace(relative)) return null;
-        var full = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
+        var normalized = relative.Replace('/', Path.DirectorySeparatorChar);
+        var full = Path.GetFullPath(Path.Combine(root, normalized));
         if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("A DCS thumbnail path leaves its installation folder.");
-        if (File.Exists(full)) return full;
         const string client = @"C:\Games\Eagle Dynamics\DCS World";
-        var fallback = Path.GetFullPath(Path.Combine(client, relative.Replace('/', Path.DirectorySeparatorChar)));
-        return fallback.StartsWith(client + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            && File.Exists(fallback) ? fallback : null;
+        var fallback = Path.GetFullPath(Path.Combine(client, normalized));
+        if (fallback.StartsWith(client + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) clientThumbnail = fallback;
+        if (File.Exists(full)) return full;
+        return clientThumbnail is not null && File.Exists(clientThumbnail) ? clientThumbnail : null;
     }
 }

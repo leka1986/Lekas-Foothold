@@ -30,6 +30,7 @@ internal sealed partial class WeatherWindow
                     control is TabControl tabs ? tabs.ItemSize : Size.Empty,
                     control is TableLayoutPanel table ? table.ColumnStyles.Cast<ColumnStyle>().Select(s => s.SizeType == SizeType.Absolute ? s.Width : -1).ToArray() : Array.Empty<float>(),
                     control is TableLayoutPanel rows ? rows.RowStyles.Cast<RowStyle>().Select(s => s.SizeType == SizeType.Absolute ? s.Height : -1).ToArray() : Array.Empty<float>()));
+                control.Disposed += (_, _) => _zoomGeometry.Remove(control);
             }
             control.SuspendLayout();
         }

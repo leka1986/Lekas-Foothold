@@ -11,12 +11,70 @@ internal sealed partial class MainForm
     private Label? _updatesHeading, _updatesManagerTitle, _updatesManagerDetail, _updatesFootholdTitle, _updatesFootholdDetail, _updatesStatus;
     private Button? _updatesManagerAction, _updatesSkip, _updatesReleaseAction, _updatesDismiss, _updatesCheck;
     private CheckBox? _updatesAutomatic;
+    private Button? _updatesDownloadAction;
     private readonly CancellationTokenSource _updatesLifetime = new();
     private GitHubUpdateChecker? _updateChecker;
     private UpdateCheckResult? _updatesResult;
     private Task? _updatesStartupTask;
-    private bool _updatesBusy, _updatesRendering, _updatesInstalling, _updatesDisposed;
+    private bool _updatesBusy, _updatesRendering, _updatesInstalling, _updatesDisposed, _updatesPreparingReveal;
     private string? _updatesError;
+    private MissionConfigHeaderInput[] _missionConfigHeaderInputs = [];
+    private IReadOnlyList<MissionConfigHeaderFact> _missionConfigHeaderFacts = [];
+    private long _missionConfigHeaderGeneration;
+
+    private MissionConfigHeaderInput[] CaptureMissionConfigHeaderInputs()
+    {
+        IReadOnlyList<ServerProfileSettings> profiles = _settings.ServerProfiles.Count == 0
+            ? new[] { GetMissionDownloadFallback() } : _settings.ServerProfiles;
+        return profiles.Where(profile => profile.ConfigPath.Length > 0).Select(profile =>
+        {
+            var current = _document is not null && PathsEqual(profile.ConfigPath, _document.Path);
+            return new MissionConfigHeaderInput(profile.Id, profile.Name, profile.ConfigPath, current,
+                current ? _document!.MissionReleaseTag : null);
+        }).ToArray();
+    }
+    private void ReconcileMissionConfigHeaderInputs()
+    {
+        var inputs = CaptureMissionConfigHeaderInputs();
+        if (_missionConfigHeaderInputs.SequenceEqual(inputs)) return;
+        var previous = _missionConfigHeaderInputs;
+        _missionConfigHeaderInputs = inputs;
+        _missionConfigHeaderGeneration++;
+        _missionConfigHeaderFacts = _missionConfigHeaderFacts.Where(fact => inputs.Any(input =>
+            input.Id == fact.Id && PathsEqual(input.ConfigPath,fact.ConfigPath)
+            && previous.Any(old => old.Id == input.Id && PathsEqual(old.ConfigPath,input.ConfigPath)
+                && old.IsCurrent == input.IsCurrent && old.CurrentReleaseTag == input.CurrentReleaseTag))).ToArray();
+        RefreshUpdatesPresentation();
+    }
+    private void InvalidateMissionConfigHeaders(IEnumerable<string> paths)
+    {
+        var changed = paths.ToArray();
+        _missionConfigHeaderGeneration++;
+        _missionConfigHeaderFacts = _missionConfigHeaderFacts.Where(fact => !changed.Any(path => PathsEqual(path,fact.ConfigPath))).ToArray();
+    }
+    private static string MissionFilesScanStatus(string groupId, MissionFilesPreparation? preparation)
+    {
+        if (preparation is null) return "Missions not scanned";
+        var rows = preparation.Rows.Where(row => row.GroupId == groupId).ToArray();
+        var status = "Last scan: " + rows.Length + " MIZs, "
+            + rows.Count(row => preparation.Compatible.ContainsKey(row.Path)) + " compatible";
+        var group = preparation.Groups.FirstOrDefault(group => group.Id == groupId);
+        if (group is not null && group.Status != "No MIZ files" && !group.Status.EndsWith(" MIZ files", StringComparison.Ordinal))
+            status += " · " + group.Status;
+        return status;
+    }
+    private async Task ReadMissionConfigHeadersAsync(UpdateCheckResult result, CancellationToken token)
+    {
+        ReconcileMissionConfigHeaderInputs();
+        var generation = _missionConfigHeaderGeneration;
+        var inputs = _missionConfigHeaderInputs;
+        if (!result.FilesEnvelopeAvailable || result.FilesEnvelope.Data is not { } envelope) return;
+        var facts = await Task.Run(() => MissionConfigHeaders.Read(inputs,envelope.SupportedReleaseTags,token),token);
+        if (IsDisposed || Disposing || generation != _missionConfigHeaderGeneration
+            || !inputs.SequenceEqual(CaptureMissionConfigHeaderInputs())) return;
+        _missionConfigHeaderFacts = facts;
+    }
+
     private Form? _managerUpdateNotice;
     private Form? _managerNoticeModal;
     private Version? _managerNoticePendingVersion;
@@ -39,7 +97,7 @@ internal sealed partial class MainForm
         try
         {
             _updateChecker ??= new GitHubUpdateChecker(ManagerBuildInfo.ReleaseVersion);
-            PresentUpdateResult(await _updateChecker.GetCurrentAsync(token));
+            PresentUpdateResult(await _updateChecker.BeginInteractiveLaunchAsync(token));
             if (!IsDisposed && !Disposing && _updatesResult?.AutomaticChecksEnabled == true)
                 await CheckForUpdatesAsync(force: true);
         }
@@ -53,18 +111,32 @@ internal sealed partial class MainForm
         var token = _updatesLifetime.Token;
         _updatesBusy = true;
         _updatesError = null;
+        RefreshMissionDownloadSelection();
+        if (_missionFilesPanel is not null) RefreshMissionFilesSelection();
         RefreshUpdatesPresentation();
+        UpdateCheckResult? completed = null;
         try
         {
             var result = await _updateChecker.CheckAsync(force, token);
-            PresentUpdateResult(result);
+            result = (await _updateChecker.GetCurrentAsync(token)) with { ManagerCheckedThisOperation = result.ManagerCheckedThisOperation };
+            completed = result;
             if (!IsDisposed && !Disposing && result.AutomaticChecksEnabled && result.ManagerUpdateAvailable &&
                 result.ManagerCheckedThisOperation && result.Manager.Status == UpdateFeedStatus.Fresh)
                 _managerNoticePendingVersion = result.Manager.Data!.Version;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { if (!IsDisposed && !Disposing) _updatesError = error.Message; }
-        finally { if (!IsDisposed && !Disposing) { _updatesBusy = false; RefreshUpdatesPresentation(); } }
+        finally
+        {
+            if (!IsDisposed && !Disposing)
+            {
+                _updatesBusy = false;
+                if (completed is not null) PresentUpdateResult(completed);
+                else RefreshUpdatesPresentation();
+                RefreshMissionDownloadSelection();
+                if (_missionFilesPanel is not null) RefreshMissionFilesSelection();
+            }
+        }
     }
 
     private void PresentUpdateResult(UpdateCheckResult result)
@@ -81,7 +153,7 @@ internal sealed partial class MainForm
     {
         if (_updateChecker is null || IsDisposed || Disposing) return;
         var token = _updatesLifetime.Token;
-        try { PresentUpdateResult(await action(_updateChecker, token)); }
+        try { var result = await action(_updateChecker, token); _updatesError = null; PresentUpdateResult(result); }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { if (!IsDisposed && !Disposing) { _updatesError = error.Message; RefreshUpdatesPresentation(); } }
     }
@@ -98,7 +170,7 @@ internal sealed partial class MainForm
         catch (OperationCanceledException) when (_updatesLifetime.IsCancellationRequested) { }
         catch (Exception error) { _updatesError = error.Message; RefreshUpdatesPresentation(); }
     }
-    private void ShowUpdatesPanel()
+    private async void ShowUpdatesPanel()
     {
         if (_mainSplit is null) return;
         if (_updatesPanel is { Visible: true })
@@ -112,72 +184,79 @@ internal sealed partial class MainForm
             if (_weatherWindow.Visible) return;
         }
         if (_updatesPanel is null) BuildUpdatesPanel();
+        ReconcileMissionConfigHeaderInputs();
+        PrepareUpdatesReveal();
         _updatesPanel!.Visible = true;
         _updatesPanel.BringToFront();
         _updatesPanel.SelectNextControl(null, true, true, true, true);
-        LayoutUpdatesPanel();
-        RefreshUpdatesPresentation();
-        _ = BeginUpdateChecksAsync();
+        await BeginUpdateChecksAsync();
+        if (IsDisposed || Disposing || _updatesPanel is not { Visible: true } || _updatesContent is not { Visible: true }
+            || _missionDownloadBusy || _configLoadingOperation || _updatesInstalling || _updatesBusy
+            || _updatesResult is not { FilesEnvelopeAvailable: true }
+            || (CaptureMissionFilesRoots().Length == 0 && CaptureMissionFilesExternalPaths().Length == 0)) return;
+        _missionDownloadJob = OpenMissionFilesAsync(refreshInventory: true, showUpdater: false);
+        await _missionDownloadJob;
     }
 
-    private void LeaveUpdatesPanel() => _updatesPanel!.Visible = false;
+    private void PrepareUpdatesReveal()
+    {
+        _updatesPreparingReveal = true;
+        try { RefreshUpdatesPresentation(); }
+        finally { _updatesPreparingReveal = false; }
+    }
+
+    private void LeaveUpdatesPanel()
+    {
+        _missionReleaseRefreshContext = null;
+        _updatesPanel!.Visible = false;
+    }
 
     private void BuildUpdatesPanel()
     {
-        _updatesPanel = new Panel { Name = "UpdatesPanel", Dock = DockStyle.Fill, AutoScroll = true, BackColor = MainBackground };
-        _updatesContent = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1 };
-        _updatesContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        _updatesPanel.Controls.Add(_updatesContent);
+        EnsureMissionDownloadLifetime();
+        _updatesPanel = new Panel { Name = "UpdatesPanel", Dock = DockStyle.Fill, AutoScroll = true, BackColor = MainBackground, Visible = false };
         _updatesPanel.SizeChanged += (_, _) => LayoutUpdatesPanel();
         _mainSplit!.Panel2.Controls.Add(_updatesPanel);
-        Label TextLabel(string text)
+        MissionFilesOpenRequested += () => _missionDownloadJob = OpenMissionFilesAsync();
+        BuildMissionFilesUpdatesView(() => MissionFilesOpenRequested?.Invoke(), async () =>
         {
-            var label = new Label { Text = text, AutoSize = true, Margin = new Padding(0, Zoomed(6), 0, Zoomed(8)) };
-            _updatesContent.Controls.Add(label);
-            return label;
-        }
-        FlowLayoutPanel Actions(params Control[] controls)
-        {
-            var actions = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Dock = DockStyle.Top, Margin = new Padding(0, 0, 0, Zoomed(20)) };
-            foreach (var control in controls) control.Dock = DockStyle.None;
-            actions.Controls.AddRange(controls);
-            _updatesContent.Controls.Add(actions);
-            return actions;
-        }
-        _updatesHeading = TextLabel("Updates");
-        var back = MakeButton("Back to configuration", LeaveUpdatesPanel);
-        Actions(back);
-        TextLabel("Updates are checked quietly after startup. Your mission files and settings stay in place.");
-        _updatesManagerTitle = TextLabel("Foothold Config Manager");
-        _updatesManagerDetail = TextLabel("Update information has not been checked yet.");
-        _updatesManagerAction = MakeButton("View download", () => _ = UpdateManagerFromNoticeAsync());
-        _updatesSkip = MakeButton("Skip this version", () =>
+            if (_updatesResult?.Foothold.Data is { AssetMetadataLoaded: true, Assets.Count: > 0 } release)
+                await OpenMissionDownloadsAsync(release);
+        }, () => _ = OpenFootholdReleaseAsync(), LeaveUpdatesPanel, () => _ = CheckForUpdatesAsync(force: true));
+        _updatesContent = _missionFilesUpdatesView!;
+        _updatesPanel.Controls.Add(_updatesContent);
+        _updatesHeading = EnumerateChildControls<Label>(_updatesContent).First(label => label.Text == "Updates");
+        _updatesManagerTitle = EnumerateChildControls<Label>(_updatesContent).First(label => label.Text == "Foothold Config Manager");
+        _updatesManagerDetail = _missionFilesManagerText;
+        _updatesFootholdTitle = _missionFilesReleaseTitle;
+        _updatesFootholdDetail = _missionFilesReleaseDetail;
+        _updatesManagerAction = MissionFilesButton("FilesUpdatesManagerAction", AppMode.IsExportedUserBuild ? "Update Manager" : "View download", () => _ = UpdateManagerFromNoticeAsync());
+        _updatesSkip = MissionFilesButton("FilesUpdatesSkip", "Skip this version", () =>
         {
             if (_updatesResult?.Manager.Data is { } displayed)
                 _ = RunUpdateActionAsync((checker, token) => checker.SkipManagerAsync(displayed.Version, token));
         });
-        Actions(_updatesManagerAction, _updatesSkip);
-        _updatesFootholdTitle = TextLabel("Foothold mission releases");
-        _updatesFootholdDetail = TextLabel("Release information has not been checked yet.");
-        _updatesReleaseAction = MakeButton("View release", () => _ = OpenFootholdReleaseAsync());
-        _updatesDismiss = MakeButton("Dismiss this release", () =>
+        _missionFilesManagerActions!.Controls.AddRange([_updatesManagerAction, _updatesSkip]);
+        _updatesDismiss = MissionFilesButton("FilesUpdatesDismiss", "Dismiss this release", () =>
         {
             if (_updatesResult?.Foothold.Data is { } displayed)
                 _ = RunUpdateActionAsync((checker, token) => checker.AcknowledgeFootholdAsync(displayed.Id, displayed.Tag, token));
         });
-        Actions(_updatesReleaseAction, _updatesDismiss);
-        _updatesAutomatic = new CheckBox { Text = "Check for updates on every startup", AutoSize = true, Margin = new Padding(0, Zoomed(10), 0, Zoomed(8)) };
+        _missionFilesReleaseActions!.Controls.Add(_updatesDismiss);
+        _updatesReleaseAction = EnumerateChildControls<Button>(_updatesContent).Single(button => button.Name == "FilesUpdatesNotes");
+        _updatesDownloadAction = EnumerateChildControls<Button>(_updatesContent).Single(button => button.Name == "FilesUpdatesDownload");
+        _updatesDownloadAction.Name = "DownloadMissionsAction";
+        ((PreviewButton)_updatesDownloadAction).AccentOutline = true;
+        _updatesAutomatic = EnumerateChildControls<CheckBox>(_updatesContent).Single(check => check.Name == "FilesUpdatesAutomatic");
         _updatesAutomatic.CheckedChanged += (_, _) =>
         {
             if (_updatesRendering) return;
             var enabled = _updatesAutomatic.Checked;
             _ = RunUpdateActionAsync((checker, token) => checker.SetAutomaticChecksAsync(enabled, token));
         };
-        _updatesContent.Controls.Add(_updatesAutomatic);
-        _updatesCheck = MakeButton("Check again", () => _ = CheckForUpdatesAsync(force: true));
-        Actions(_updatesCheck);
-        _updatesStatus = TextLabel("");
-        ApplyThemeToControl(_updatesPanel, restyleButtons: true);
+        _updatesCheck = EnumerateChildControls<Button>(_updatesContent).Single(button => button.Name == "FilesUpdatesCheck");
+        _updatesStatus = MissionFilesLabel("");
+        AddMissionFilesControl(_updatesContent, _updatesStatus);
         LayoutUpdatesPanel();
     }
 
@@ -192,30 +271,19 @@ internal sealed partial class MainForm
             _updatesHeadingFont = new Font(Font.FontFamily, Font.Size * 1.55F, FontStyle.Bold);
             _updatesSectionFont = new Font(Font, FontStyle.Bold);
         }
-        if (_updatesHeading is not null) _updatesHeading.Font = _updatesHeadingFont!;
-        if (_updatesManagerTitle is not null) _updatesManagerTitle.Font = _updatesSectionFont!;
-        if (_updatesFootholdTitle is not null) _updatesFootholdTitle.Font = _updatesSectionFont!;
-        if (changedFont) { oldHeading?.Dispose(); oldSection?.Dispose(); }
+        // The retained Task1 component owns its cached presentation fonts.
+        if (changedFont) { LayoutMissionDownloads(); oldHeading?.Dispose(); oldSection?.Dispose(); }
+        if (!_updatesPreparingReveal && (!_updatesPanel.Visible || !_updatesContent.Visible)) return;
         _updatesContent.Padding = new Padding(Zoomed(24));
         var width = Math.Max(1, _updatesPanel.ClientSize.Width - _updatesContent.Padding.Horizontal - Zoomed(18));
-        foreach (var label in _updatesContent.Controls.OfType<Label>()) label.MaximumSize = new Size(width, 0);
-        foreach (var action in _updatesContent.Controls.OfType<FlowLayoutPanel>())
-        {
-            action.MaximumSize = new Size(width, 0);
-            foreach (var button in action.Controls.OfType<Button>())
-            {
-                button.Dock = DockStyle.None;
-                button.Font = Font;
-                button.Width = Math.Max(Zoomed(110), TextRenderer.MeasureText(button.Text, Font).Width + Zoomed(28));
-                button.Height = Zoomed(34);
-                button.Margin = new Padding(0, Zoomed(4), Zoomed(10), Zoomed(4));
-            }
-        }
+        foreach (var label in EnumerateChildControls<Label>(_updatesContent)) label.MaximumSize = new Size(width, 0);
+        foreach (var action in _updatesContent.Controls.OfType<FlowLayoutPanel>()) action.MaximumSize = new Size(width, 0);
     }
 
     private void RefreshUpdatesPresentation()
     {
         if (IsDisposed || Disposing) return;
+        if (_updateChecker is { } checker && _updatesResult is { } retained) _updatesResult = checker.AgeSnapshot(retained);
         var result = _updatesResult;
         var managerNotice = result?.ManagerUpdateAvailable == true;
         var missionNotice = result?.FootholdUpdateAvailable == true;
@@ -230,17 +298,29 @@ internal sealed partial class MainForm
             updateButton.AccessibleName = caption;
             if (changed)
             {
-                LayoutPreviewFooter();
+                LayoutPreviewHeader();
                 updateButton.Update(); // Flush the invalidation raised by the text/notice change without waiting for hover.
             }
         }
         RefreshManagerUpdateNotice();
-        if (_updatesPanel is null) return;
+        RefreshMissionReleaseActions();
+        if (_updatesPanel is null || _updatesContent is null
+            || !_updatesPreparingReveal && (!_updatesPanel.Visible || !_updatesContent.Visible)) return;
+        var layouts = new Control?[] { _updatesPanel, _updatesContent, _missionFilesUpdatesDetails, _missionFilesUpdateInstances }
+            .Concat(_missionFilesUpdateInstanceRows.Values.Select(row => (Control?)row.Row)).ToArray();
+        foreach (var control in layouts) control?.SuspendLayout();
+        try
+        {
         if (result is null)
         {
+            _missionFilesUpdatesDetails!.Visible = false;
             _updatesStatus!.Text = _updatesError ?? (_updatesBusy ? "Checking GitHub…" : "Loading saved update information…");
             _updatesManagerAction!.Visible = _updatesSkip!.Visible = _updatesReleaseAction!.Visible = _updatesDismiss!.Visible = false;
+            _missionFilesDownloadsSection!.Visible = false;
+            _updatesDownloadAction!.Visible = false;
             _updatesAutomatic!.Enabled = false;
+            PresentMissionFilesUpdates(new(false,"Update information has not been checked yet.","Foothold mission releases",false,[]));
+            LayoutUpdatesPanel();
             return;
         }
         _updatesAutomatic!.Enabled = true;
@@ -248,23 +328,63 @@ internal sealed partial class MainForm
         try
         {
             var manager = result.Manager.Data;
-            _updatesManagerTitle!.Text = result.ManagerUpdateAvailable ? "Manager " + manager!.Version.ToString(manager.Version.Revision == 0 ? 3 : 4) + " is available" : "Foothold Config Manager " + ManagerBuildInfo.VersionText;
+            _updatesManagerTitle!.Text = "Foothold Config Manager";
             _updatesManagerDetail!.Text = FeedDetail(result.Manager, manager is null ? "No published Manager version was found." : "Running " + ManagerBuildInfo.VersionText + " · GitHub " + manager.Version.ToString(manager.Version.Revision == 0 ? 3 : 4));
             _updatesManagerAction!.Text = AppMode.IsExportedUserBuild ? "Update Manager" : "View download";
-            _updatesManagerAction.Visible = _updatesSkip!.Visible = result.ManagerUpdateAvailable;
-            _updatesManagerAction.Enabled = !_updatesInstalling;
+            _updatesManagerAction.Visible = result.ManagerUpdateDownloadAvailable;
+            _updatesSkip!.Visible = result.ManagerUpdateAvailable;
+            _updatesManagerAction.Enabled = !_updatesInstalling && !_missionDownloadBusy;
             _updatesSkip.Enabled = !_updatesInstalling;
             var release = result.Foothold.Data;
             _updatesFootholdTitle!.Text = release is null ? "Foothold mission releases" : release.Title + (result.FootholdUpdateAvailable ? " is available" : "");
-            _updatesFootholdDetail!.Text = FeedDetail(result.Foothold, release is null ? "No release information is available." : result.FootholdUpdateAvailable ? "View the release notes and download the maps you use." : result.ImportedFootholdVersion is null ? "Mission notifications start after importing a release-tagged MIZ or config. You can view the latest release here." : result.FootholdReleaseImported ? "This release has already been imported. All map downloads remain available on GitHub." : "You have already seen this release. All map downloads remain available on GitHub.");
+            _updatesFootholdDetail!.Text = FeedDetail(result.Foothold, release is null ? "No release information is available." : result.FootholdUpdateAvailable ? "View the release notes and download the maps you use." : result.ImportedFootholdVersion is null && !result.FootholdReleaseAcknowledged ? "No mission version has been recorded yet. You can view the latest release here." : result.FootholdReleaseImported ? "This release has already been imported. All map downloads remain available on GitHub." : "You have already seen this release. All map downloads remain available on GitHub.");
+            if (result.FilesEnvelope.Error is { } filesError) _updatesFootholdDetail.Text += " Files-only update check: " + filesError;
+            else if (release?.FilesEnvelopeAsset is not null && result.FilesEnvelope.Status != UpdateFeedStatus.Fresh)
+                _updatesFootholdDetail.Text += " Files-only: " + FeedDetail(result.FilesEnvelope,"Ready to check mission files.");
+            _updatesDownloadAction!.Visible = release is not null;
+            _missionFilesDownloadsSection!.Visible = release is not null;
+            _updatesDownloadAction.Enabled = release is { AssetMetadataLoaded: true, Assets.Count: > 0 } && !_missionDownloadBusy && !_updatesInstalling;
+            _updatesDownloadAction.Text = release?.AssetMetadataLoaded == false ? "Check again to load maps" : "Download missions";
             _updatesReleaseAction!.Visible = release is not null;
             _updatesDismiss!.Visible = result.FootholdUpdateAvailable;
             _updatesAutomatic!.Checked = result.AutomaticChecksEnabled;
             _updatesCheck!.Enabled = !_updatesBusy && !_updatesInstalling;
             _updatesStatus!.Text = _updatesInstalling ? "Preparing the Manager update…" : _updatesBusy ? "Checking GitHub…" : _updatesError ?? result.PersistenceError ?? (result.AutomaticChecksEnabled ? "Checks GitHub on every startup. Check again refreshes now." : "Automatic checks are off. Use Check again to check GitHub.");
+            var filesAvailable = result.FilesEnvelopeAvailable;
+            var roots = CaptureMissionFilesRoots();
+            var externalPaths = CaptureMissionFilesExternalPaths();
+            var preparation = HasCurrentMissionFilesPreparation(result, roots, externalPaths) ? _missionFilesPreparation : null;
+            var compatibleCount = preparation?.Compatible.Count ?? 0;
+            var compatibleGroups = preparation?.Rows
+                .Where(row => preparation.Compatible.ContainsKey(row.Path))
+                .Select(row => row.GroupId).ToHashSet(StringComparer.Ordinal);
+            var sourceRows = roots.Where(root => compatibleGroups?.Contains(root.Id) == true)
+                .Select(root => (root.Id, root.Name, MissionFilesScanStatus(root.Id, preparation))).ToList();
+            if (compatibleGroups?.Contains("external") == true)
+                sourceRows.Add(("external", "Added missions", MissionFilesScanStatus("external", preparation)));
+            _missionFilesUpdatesDetails!.Visible = filesAvailable;
+            _missionFilesUpdatesScanStatus!.Text = preparation is null
+                ? roots.Length == 0 && externalPaths.Length == 0 ? "No mission folders found. Add a mission folder to check."
+                    : "Check your mission folders for compatible MIZs."
+                : compatibleCount == 0 ? "No compatible missions found in the folders checked."
+                : compatibleCount == 1 ? "1 compatible mission found" : $"{compatibleCount} compatible missions found";
+            _missionFilesPreservationCallout!.Visible = compatibleCount > 0;
+            var canOpenFiles = filesAvailable && MissionFilesOpenRequested is not null
+                && !_updatesBusy && !_missionDownloadBusy && !_updatesInstalling && !_configLoadingOperation;
+            _missionFilesUpdatesOpen!.Visible = compatibleCount > 0;
+            _missionFilesUpdatesOpen.Enabled = _missionFilesUpdatesAddFolder!.Enabled = _missionFilesUpdatesAddMiz!.Enabled = canOpenFiles;
+            _missionFilesUpdatesCheckMissions!.Enabled = canOpenFiles && (roots.Length > 0 || externalPaths.Length > 0);
+            var managerText = _updatesBusy ? "Checking GitHub…" : result.Manager.Status == UpdateFeedStatus.Fresh && manager is not null && result.ManagerUpdateDownloadAvailable
+                ? "Manager " + manager.Version.ToString(manager.Version.Revision == 0 ? 3 : 4) + (result.ManagerUpdateAvailable ? " is available" : " · reminder skipped")
+                : _updatesManagerDetail.Text;
+            PresentMissionFilesUpdates(new(!_updatesBusy && result.ManagerVerifiedCurrent, managerText, _updatesFootholdTitle.Text, compatibleCount > 0,
+                sourceRows.ToArray()));
+
         }
         finally { _updatesRendering = false; }
         LayoutUpdatesPanel();
+        }
+        finally { foreach (var control in layouts.Reverse()) if (control is { IsDisposed: false }) control.ResumeLayout(true); }
     }
 
     private static string FeedDetail<T>(UpdateFeedResult<T> feed, string good) where T : class => feed.Status switch
@@ -283,16 +403,19 @@ internal sealed partial class MainForm
         Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
     }
 
-    private async Task OpenFootholdReleaseAsync()
+    private Task OpenFootholdReleaseAsync() => _updatesResult?.Foothold.Data is { } release
+        ? OpenFootholdReleaseAsync(release) : Task.CompletedTask;
+
+    private async Task OpenFootholdReleaseAsync(FootholdReleaseInfo release)
     {
-        if (_updatesResult?.Foothold.Data is not { } release) return;
         try { OpenUpdatePage(release.HtmlUrl); await RunUpdateActionAsync((checker, token) => checker.AcknowledgeFootholdAsync(release.Id, release.Tag, token)); }
         catch (Exception error) { if (!IsDisposed && !Disposing) { _updatesError = error.Message; RefreshUpdatesPresentation(); } }
     }
 
     private async Task UpdateManagerFromNoticeAsync()
     {
-        if (_updatesResult?.Manager.Data is not { } manager || !_updatesResult.ManagerUpdateAvailable || _updatesInstalling) return;
+        if (_updatesResult is not { ManagerUpdateDownloadAvailable: true } result
+            || result.Manager.Data is not { } manager || _updatesInstalling || _missionDownloadBusy) return;
         try
         {
             if (!AppMode.IsExportedUserBuild) { OpenUpdatePage(manager.HtmlUrl); return; }
@@ -484,6 +607,7 @@ internal sealed partial class MainForm
         _managerNoticePendingVersion = null;
         _managerUpdateNotice?.Dispose();
         _managerUpdateNotice = null;
+        DisposeMissionDownloadState();
         _updatesLifetime.Cancel();
         _updatesLifetime.Dispose();
         _updatesHeadingFont?.Dispose();

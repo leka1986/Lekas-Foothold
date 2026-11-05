@@ -23,7 +23,7 @@ internal sealed partial class MainForm
     // Keep native ListBox selection, scrolling and DrawItem callbacks; compose its client frame off-screen.
     private sealed class CategoryNavigationListBox : ListBox
     {
-
+        private readonly PopupScrollbarWindow _scrollbar;
         private readonly System.Windows.Forms.Timer _hoverTimer = new() { Interval = 16 };
         private int _hoverIndex = -1;
         private Point _pointer;
@@ -38,7 +38,14 @@ internal sealed partial class MainForm
 
         public CategoryNavigationListBox()
         {
+            _scrollbar = new PopupScrollbarWindow(this);
             _hoverTimer.Tick += (_, _) => AdvanceHover();
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            _scrollbar.Attach();
         }
 
         [DllImport("user32.dll")]
@@ -122,12 +129,18 @@ internal sealed partial class MainForm
         protected override void OnHandleDestroyed(EventArgs e)
         {
             ResetHover();
+            _scrollbar.EndDrag();
+            _scrollbar.ReleaseHandle();
             base.OnHandleDestroyed(e);
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) _hoverTimer.Dispose();
+            if (disposing)
+            {
+                _scrollbar.Dispose();
+                _hoverTimer.Dispose();
+            }
             base.Dispose(disposing);
         }
 

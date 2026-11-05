@@ -4,7 +4,7 @@ internal sealed partial class WeatherWindow
 {
     private Font _bodyFont;
     private Font _captionFont;
-    private void ApplyWeatherChrome(Control target)
+    internal void ApplyWeatherChrome(Control target)
     {
         var dark = BackColor.GetBrightness() < .5f;
         var line = dark ? Color.FromArgb(57, 72, 91) : Color.FromArgb(134, 151, 166);

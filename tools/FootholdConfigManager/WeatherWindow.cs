@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace FootholdConfigManager;
 
@@ -20,7 +21,11 @@ internal sealed partial class WeatherWindow : Form
     private DcsWeatherCatalog? _catalog;
     private string? _lastOutput;
     private string? _startupWarning;
+    private Button _deleteProfile = null!;
     private Action? _backToConfig;
+    private Func<string?>? _exportDestinationProvider;
+    internal void ConfigureExportDestination(Func<string?> selectedInstanceMissionsDirectory) =>
+        _exportDestinationProvider = selectedInstanceMissionsDirectory;
     private readonly Panel[] _tabLayoutOwners;
     private Task? _initializationTask;
     private IWin32Window DialogOwner => TopLevel ? this : TopLevelControl ?? this;
@@ -66,14 +71,14 @@ internal sealed partial class WeatherWindow : Form
                 ?? _profiles.Items[0];
         ApplySettings(_preferences.Current);
         _updating = true;
-        _changeTime.Checked = _preferences.ApplyDateTime ?? _preferences.Current.ChangeDateTime;
-        _changeDate.Checked = _preferences.ApplyDateTime.HasValue ? _preferences.Current.ChangeMissionDate : _preferences.Current.ChangeDateTime && _preferences.Current.ChangeMissionDate;
+        var applyDateTime = _preferences.ApplyDateTime ?? _preferences.Current.ChangeDateTime;
+        _changeTime.Checked = applyDateTime && (_preferences.DateTime is { } savedTime ? savedTime.ChangeStartTime != false : _preferences.Current.ChangeStartTime != false);
+        _changeDate.Checked = applyDateTime && (_preferences.DateTime?.ChangeDate ?? _preferences.Current.ChangeMissionDate);
         if (_preferences.DateTime is { } rememberedTime)
         {
-            _changeDate.Checked = rememberedTime.ChangeDate;
             _date.SetDateValue(rememberedTime.MissionDate.Date < _date.MinDate ? _date.MinDate
                 : rememberedTime.MissionDate.Date > _date.MaxDate ? _date.MaxDate : rememberedTime.MissionDate.Date);
-            SelectedStartTime = TimeSpan.FromSeconds(rememberedTime.StartTimeSeconds);
+            SelectedStartTime = TimeSpan.FromSeconds(Math.Clamp(rememberedTime.StartTimeSeconds, 0, 86399));
         }
         _updating = false;
         _style(this);
@@ -328,7 +333,7 @@ internal sealed partial class WeatherWindow : Form
             CommitSelectedMissionDate();
             settings = _applyWeather.Checked ? ReadSettings() : null;
             options = _applyMissionOptions.Checked ? ReadMissionOptions() : null;
-            dateTime = _changeTime.Checked ? new MissionDateTimeSettings { ChangeDate = _changeDate.Checked, MissionDate = _date.Value.Date, StartTimeSeconds = SelectedStartTime.TotalSeconds } : null;
+            dateTime = _changeTime.Checked || _changeDate.Checked ? new MissionDateTimeSettings { ChangeStartTime = _changeTime.Checked, ChangeDate = _changeDate.Checked, MissionDate = _date.Value.Date, StartTimeSeconds = SelectedStartTime.TotalSeconds } : null;
             dateTime?.Validate();
             if (settings is null && options is null && dateTime is null) throw new InvalidDataException("Choose Weather, Date & time, Mission options, or a combination to apply.");
         }
@@ -347,8 +352,8 @@ internal sealed partial class WeatherWindow : Form
             }
             var era = _eraProvider?.Invoke();
             var cloudName = _cloudPreset.SelectedItem?.ToString();
-            var result = await Task.Run(() => WeatherMizService.ApplySettings(path, settings, options, dateTime,
-                context => (string?)Invoke(new Func<string?>(() => PromptExportName(context, settings, era, cloudName, dateTime, options is not null)))));
+            var result = await Task.Run(() => WeatherMizService.ApplySettingsToDestination(path, settings, options, dateTime,
+                context => (WeatherMizExportChoice?)Invoke(new Func<WeatherMizExportChoice?>(() => PromptExportName(context, settings, era, cloudName, dateTime, options is not null)))));
             if (result is null) { if (!IsDisposed) SetStatus("Export cancelled. Original mission unchanged."); return; }
             if (IsDisposed) return;
             _lastOutput = result.OutputPath;
@@ -363,11 +368,13 @@ internal sealed partial class WeatherWindow : Form
         finally { if (!IsDisposed) SetBusy(false); }
     }
 
-    private bool CanApplySelection => (!IsMissionDateSelected || _date.HasValidDateDraft) && (_applyWeather.Checked ? _catalog is not null && _legacyDynamicSettings is null : _applyMissionOptions.Checked || _changeTime.Checked);
+    private bool CanApplySelection => (!IsMissionDateSelected || _date.HasValidDateDraft) && (_applyWeather.Checked ? _catalog is not null && _legacyDynamicSettings is null : _applyMissionOptions.Checked || _changeTime.Checked || _changeDate.Checked);
 
     private void RefreshApplyAvailability()
     {
         _browse.Enabled = !_busy && CanApplySelection;
+        _deleteProfile.Enabled = !_busy && _profileStorageAvailable && _profiles.SelectedItem is WeatherNamedProfile selected
+            && _preferences.Profiles.Contains(selected);
         var weatherAvailable = _catalog is not null && _legacyDynamicSettings is null;
         _cloudLayout.Enabled = _cloudWeatherSection.Enabled = _atmosphereSection.Enabled = weatherAvailable;
     }
@@ -394,17 +401,18 @@ internal sealed partial class WeatherWindow : Form
             : System.Text.Json.JsonSerializer.Deserialize<WeatherSettings>(System.Text.Json.JsonSerializer.Serialize(settings ?? _preferences.Current))!;
         _preferences.DateTime = new MissionDateTimeSettings
         {
-            ChangeDate = _changeDate.Checked, MissionDate = _date.Value.Date,
+            ChangeStartTime = _changeTime.Checked, ChangeDate = _changeDate.Checked, MissionDate = _date.Value.Date,
             StartTimeSeconds = SelectedStartTime.TotalSeconds
         };
         if (_legacyDynamicSettings is null)
         {
-            _preferences.Current.ChangeDateTime = _changeTime.Checked;
+            _preferences.Current.ChangeDateTime = _changeTime.Checked || _changeDate.Checked;
+            _preferences.Current.ChangeStartTime = _changeTime.Checked;
             _preferences.Current.ChangeMissionDate = _changeDate.Checked;
             _preferences.Current.MissionDate = _date.Value.Date;
             _preferences.Current.StartTimeSeconds = SelectedStartTime.TotalSeconds;
         }
-        _preferences.ApplyDateTime = _changeTime.Checked;
+        _preferences.ApplyDateTime = _changeTime.Checked || _changeDate.Checked;
         _preferences.MissionOptions = options ?? ReadMissionOptions();
         _preferences.ApplyWeather = _applyWeather.Checked;
         _preferences.ApplyMissionOptions = _applyMissionOptions.Checked;
@@ -418,8 +426,20 @@ internal sealed partial class WeatherWindow : Form
         _store.Save(_preferences);
     }
 
+    internal int NamedProfilesRevision { get; private set; }
+    internal event Action? NamedProfilesChanged;
+
+    internal IReadOnlyList<WeatherNamedProfile> CaptureNamedProfiles() => _profiles.Items.OfType<WeatherNamedProfile>()
+        .Select(profile =>
+        {
+            var settings = JsonSerializer.Deserialize<WeatherSettings>(JsonSerializer.Serialize(profile.Settings))!;
+            settings.Validate();
+            return new WeatherNamedProfile { Name = profile.Name, Settings = settings };
+        }).ToArray();
+
     private void PopulateProfiles()
     {
+        NamedProfilesRevision++;
         _updating = true;
         _profiles.Items.Clear();
         _profiles.Items.Add("Custom weather");
@@ -438,6 +458,7 @@ internal sealed partial class WeatherWindow : Form
         foreach (var profile in _preferences.Profiles) _profiles.Items.Add(profile);
         _profiles.SelectedIndex = 0;
         _updating = false;
+        NamedProfilesChanged?.Invoke();
     }
 
     private void SaveProfile()
@@ -447,14 +468,23 @@ internal sealed partial class WeatherWindow : Form
             if (!_profileStorageAvailable) throw new InvalidDataException(_startupWarning ?? "Weather profile storage is unavailable.");
             var settings = ReadSettings();
             using var dialog = new Form { Text = "Save weather profile", StartPosition = FormStartPosition.CenterParent,
-                ClientSize = new Size(S(420), S(150)), Font = Font, MinimizeBox = false, MaximizeBox = false };
-            var name = new TextBox { Dock = DockStyle.Top, Margin = new Padding(0, 8, 0, 12) };
-            var body = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(S(14)), ColumnCount = 1, RowCount = 3 };
+                ClientSize = new Size(S(420), S(150)), MinimumSize = new Size(S(420), 0), AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, Font = Font, MinimizeBox = false, MaximizeBox = false };
+            var name = new TextBox { Name = "WeatherProfileSaveName", Dock = DockStyle.Top, Margin = new Padding(0, 8, 0, 12) };
+            var includeTime = new WeatherCheckBox { Name = "WeatherProfileIncludeTime", AutoSize = true,
+                Text = "Include start time · " + SelectedStartTime.ToString(@"hh\:mm"), Checked = settings.ChangeDateTime && settings.ChangeStartTime != false, Margin = new Padding(0, 0, 0, S(8)) };
+            var includeDate = new WeatherCheckBox { Name = "WeatherProfileIncludeDate", AutoSize = true,
+                Text = "Include mission date · " + _date.DateDraftSummary, Checked = _changeDate.Checked, Margin = new Padding(0, 0, 0, S(8)) };
+            var body = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(S(14)), ColumnCount = 1, RowCount = 5 };
+            body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             body.Controls.Add(new Label { Text = "Profile name", AutoSize = true }, 0, 0);
             body.Controls.Add(name, 0, 1);
-            var save = Button("Save", () => { if (!string.IsNullOrWhiteSpace(name.Text)) dialog.DialogResult = DialogResult.OK; });
-            var cancel = Button("Cancel", () => dialog.DialogResult = DialogResult.Cancel);
-            body.Controls.Add(Row(save, cancel), 0, 2);
+            body.Controls.Add(includeTime, 0, 2);
+            body.Controls.Add(includeDate, 0, 3);
+            var save = Button("Save", () => { if (!string.IsNullOrWhiteSpace(name.Text)) dialog.DialogResult = DialogResult.OK; }, "WeatherProfileSave");
+            var cancel = Button("Cancel", () => dialog.DialogResult = DialogResult.Cancel, "WeatherProfileCancel");
+            body.Controls.Add(Row(save, cancel), 0, 4);
             dialog.Controls.Add(body);
             dialog.AcceptButton = save;
             dialog.CancelButton = cancel;
@@ -467,12 +497,58 @@ internal sealed partial class WeatherWindow : Form
             var profile = _preferences.Profiles.FirstOrDefault(item => item.Name.Equals(label, StringComparison.OrdinalIgnoreCase));
             if (profile?.Settings.DynamicWeather == true)
                 throw new InvalidDataException("That name belongs to an unsupported dynamic profile. Choose a new name to keep the original profile.");
+            settings.ChangeDateTime = includeTime.Checked || includeDate.Checked;
+            settings.ChangeStartTime = includeTime.Checked;
+            settings.ChangeMissionDate = includeDate.Checked;
+            if (settings.ChangeMissionDate)
+            {
+                _date.CommitDateText();
+                settings.MissionDate = _date.Value.Date;
+            }
+            settings.Validate();
+            var added = profile is null;
+            var previousSettings = profile?.Settings;
             if (profile is null) { profile = new WeatherNamedProfile { Name = label }; _preferences.Profiles.Add(profile); }
             profile.Settings = settings;
-            SavePreferences(settings);
+            try { SavePreferences(JsonSerializer.Deserialize<WeatherSettings>(JsonSerializer.Serialize(settings))!); }
+            catch
+            {
+                if (added) _preferences.Profiles.Remove(profile);
+                else profile.Settings = previousSettings!;
+                throw;
+            }
             PopulateProfiles();
-            _profiles.SelectedItem = profile;
+            _updating = true;
+            try { _profiles.SelectedItem = profile; }
+            finally { _updating = false; }
             SetStatus("Saved weather profile: " + label);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException or ArgumentException)
+        { SetStatus(ex.Message, true); }
+    }
+
+    private void DeleteProfile()
+    {
+        if (_busy || !_profileStorageAvailable || _profiles.SelectedItem is not WeatherNamedProfile profile
+            || !_preferences.Profiles.Contains(profile)) return;
+        if (MessageBox.Show(DialogOwner, "Delete the saved weather profile \"" + profile.Name + "\"?", "Delete weather profile",
+            MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+        try
+        {
+            var index = _preferences.Profiles.IndexOf(profile);
+            var selectedName = _preferences.WeatherProfileName;
+            _preferences.Profiles.RemoveAt(index);
+            if (string.Equals(selectedName, profile.Name, StringComparison.OrdinalIgnoreCase)) _preferences.WeatherProfileName = null;
+            try { _store.Save(_preferences); }
+            catch
+            {
+                _preferences.Profiles.Insert(index, profile);
+                _preferences.WeatherProfileName = selectedName;
+                throw;
+            }
+            PopulateProfiles();
+            RefreshApplyAvailability();
+            SetStatus("Deleted weather profile: " + profile.Name);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException or ArgumentException)
         { SetStatus(ex.Message, true); }
@@ -489,7 +565,7 @@ internal sealed partial class WeatherWindow : Form
         if (disposing)
         {
             _preview.Image = null;
-            foreach (var image in _images.Values) image.Dispose();
+            foreach (var image in _images.Values) image?.Dispose();
             _images.Clear();
             foreach (var font in _zoomFontCache.Values.Concat(new[] { _bodyFont, _captionFont, _boldFont }).Distinct()) font.Dispose();
             _zoomGeometry.Clear();

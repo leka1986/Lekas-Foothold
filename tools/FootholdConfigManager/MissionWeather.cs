@@ -10,18 +10,18 @@ internal static class MissionWeather
         => ApplyParsed(missionText, settings, out sourceStartTimeSeconds, out _);
 
     internal static string ApplyParsed(string missionText, WeatherSettings settings, out double? sourceStartTimeSeconds,
-        out CompilationUnitSyntax validatedOutput)
+        out CompilationUnitSyntax validatedOutput, CompilationUnitSyntax? knownRoot = null)
         => ApplyParsed(missionText, settings, settings.ChangeDateTime ? new MissionDateTimeSettings
-        { ChangeDate = settings.ChangeMissionDate, MissionDate = settings.MissionDate, StartTimeSeconds = settings.StartTimeSeconds } : null,
-            out sourceStartTimeSeconds, out validatedOutput);
+        { ChangeDate = settings.ChangeMissionDate, ChangeStartTime = settings.ChangeStartTime, MissionDate = settings.MissionDate, StartTimeSeconds = settings.StartTimeSeconds } : null,
+            out sourceStartTimeSeconds, out validatedOutput, knownRoot);
 
     internal static string ApplyParsed(string missionText, WeatherSettings? settings, MissionDateTimeSettings? dateTime,
-        out double? sourceStartTimeSeconds, out CompilationUnitSyntax validatedOutput)
+        out double? sourceStartTimeSeconds, out CompilationUnitSyntax validatedOutput, CompilationUnitSyntax? knownRoot = null)
     {
         sourceStartTimeSeconds = null;
         settings?.Validate();
         dateTime?.Validate();
-        var root = WeatherLua.Parse(missionText);
+        var root = knownRoot ?? WeatherLua.Parse(missionText);
         var assignments = root.Statements.Statements.OfType<AssignmentStatementSyntax>()
             .Where(statement => statement.Variables.Count == 1
                 && statement.Variables[0] is IdentifierNameSyntax name && name.Identifier.Text == "mission").ToArray();
@@ -61,7 +61,7 @@ internal static class MissionWeather
                 date.Set("Day", (double)dateTime.MissionDate.Day);
                 ChangeRootField("date", date, dateFields);
             }
-            ChangeRootField("start_time", dateTime.StartTimeSeconds);
+            if (dateTime.ChangeStartTime != false) ChangeRootField("start_time", dateTime.StartTimeSeconds);
         }
         if (additions.Count > 0)
         {
