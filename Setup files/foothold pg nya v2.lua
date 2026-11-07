@@ -1392,9 +1392,12 @@ function SpawnFriendlyAssets(changedZone)
 			if airbase then
 				if airbase:autoCaptureIsOn() then airbase:autoCapture(false) end
 				local side = service.zone.side
-				if airbase:getCoalition() ~= side then
+				local ownershipChanged = airbase:getCoalition() ~= side
+				if ownershipChanged then
 					airbase:setCoalition(side)
-					if side ~= 0 then checkWeaponsList(service.name,nil,side) end
+				end
+				if side ~= 0 and (changedZone == nil or ownershipChanged) then
+					checkWeaponsList(service.name,nil,side)
 				end
 			end
 		end
