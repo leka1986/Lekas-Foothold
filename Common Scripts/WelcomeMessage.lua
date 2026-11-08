@@ -1312,6 +1312,44 @@ function SetupATISMenu(client, knownGroup, knownTranslator, knownEntries, knownS
     end
 end
 
+local captureATISRefresh
+
+local function refreshCaptureATISMenus(refresh, time)
+    local groupName = refresh.groups[refresh.nextIndex]
+    local preferredClientName = refresh.pending[groupName]
+    refresh.pending[groupName] = nil
+    refresh.nextIndex = refresh.nextIndex + 1
+
+    local group = GROUP:FindByName(groupName)
+    local clients = group and group:GetPlayerUnits()
+    local selectedClient
+    if clients then
+        for _, client in ipairs(clients) do
+            if client:IsAlive() and client:GetUnitCategory() == Unit.Category.AIRPLANE then
+                selectedClient = selectedClient or client
+                if client:GetName() == preferredClientName then
+                    selectedClient = client
+                    break
+                end
+            end
+        end
+    end
+    if selectedClient then
+        local playerSide = selectedClient:GetCoalition()
+        if playerSide == coalition.side.BLUE or playerSide == coalition.side.RED then
+            local entries = refresh.entries[playerSide]
+            if not entries then
+                entries = getATISMenuEntries(playerSide)
+                refresh.entries[playerSide] = entries
+            end
+            SetupATISMenu(selectedClient, group, nil, entries, playerSide)
+        end
+    end
+
+    if refresh.nextIndex <= #refresh.groups then return time + 0.1 end
+    captureATISRefresh = nil
+end
+
 function static:onBaseCapture(_event)
     local event = _event -- Core.Event#EVENTDATA
     if event.id == EVENTS.BaseCaptured and event.Place then
@@ -1321,16 +1359,24 @@ function static:onBaseCapture(_event)
         if coalitionSide == coalition.side.BLUE or coalitionSide == coalition.side.RED then
             local zname = atisZoneByAirbaseName[capturedBaseName]
             if zname then
+                local refresh = captureATISRefresh
+                if refresh then refresh.entries = {} end
                 local ownerCoalitionName = coalitionSide == coalition.side.RED and "red" or "blue"
                 for _, coalitionName in ipairs({ "blue", "red" }) do
                     local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCoalitions(coalitionName):FilterAlive():FilterOnce()
-                    local entries
-                    local playerSide = coalitionName == "blue" and coalition.side.BLUE or coalition.side.RED
                     clientSet:ForEachClient(function(client)
                         local group = client:GetGroup()
                         if group then
-                            entries = entries or getATISMenuEntries(playerSide)
-                            SetupATISMenu(client, group, nil, entries, playerSide)
+                            if not refresh then
+                                refresh = { groups = {}, pending = {}, entries = {}, nextIndex = 1 }
+                                captureATISRefresh = refresh
+                                timer.scheduleFunction(refreshCaptureATISMenus, refresh, timer.getTime() + 0.1)
+                            end
+                            local groupName = group:GetName()
+                            if not refresh.pending[groupName] then
+                                refresh.groups[#refresh.groups + 1] = groupName
+                            end
+                            refresh.pending[groupName] = client:GetName()
                         end
                         if coalitionName ~= ownerCoalitionName then return end
                         SCHEDULER:New(nil, function()

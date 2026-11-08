@@ -173,7 +173,7 @@ Foothold_ctld.returntroopstobase = false
 -- Config flag (default in Foothold Config.lua): false = engineers cannot capture/upgrade zones.
 CaptureZoneWithEngineer = CaptureZoneWithEngineer or false
 
-Foothold_ctld:__Start(2)
+Foothold_ctld:__Start(1)
 
 ---------------------------------------------------------------------------
 -- CTLD: Pricing
@@ -5540,8 +5540,12 @@ local function fillFarpZellWarehouse(zellName, isFromSave, expectedRecord, known
       return
     end
   else
-    bc:CopyWarehouse(zellName, isFromSave)
-    storage = STORAGE:FindByName(zellName) or STORAGE:New(zellName)
+    if knownStore ~= nil then
+      storage = knownStore
+    else
+      bc:CopyWarehouse(zellName, isFromSave, nil, nil, fillFarpZellWarehouse)
+      return
+    end
   end
   if not storage or not storage.warehouse then
     BASE:E("[FARP ZELL] storage not available for " .. tostring(zellName))
@@ -5571,6 +5575,7 @@ local function spawnFarpZell(FName, coord, isFromSave, expectedRecord, knownNati
     else
       SCHEDULER:New(nil, function() fillFarpZellWarehouse(zellName, isFromSave) end, {}, 1)
     end
+    if isFromSave then WarehousePersistence.RegisterExtraAirbase(zellName) end
     return zellName
   end
 
@@ -5646,6 +5651,7 @@ local function spawnFarpZell(FName, coord, isFromSave, expectedRecord, knownNati
   else
     SCHEDULER:New(nil, function() fillFarpZellWarehouse(zellName, isFromSave) end, {}, 1)
   end
+  if isFromSave then WarehousePersistence.RegisterExtraAirbase(zellName) end
   return zellName
 end
 
@@ -5845,7 +5851,11 @@ end
   SCHEDULER:New(nil, function()
     if pvpEnabled then
       local currentNative = bc:getDynamicFarpAirbase(farpRecord)
-      if not currentNative then return end
+      if not currentNative then
+        local startup = WarehousePersistence._startupFarpRestore
+        if isFromSave and startup then WarehousePersistence.CompleteFarpStartupRestore(startup, FName, false) end
+        return
+      end
       bc:CopyWarehouse(FName, isFromSave, farpRecord, currentNative)
     else
       bc:CopyWarehouse(FName, isFromSave)
@@ -7403,6 +7413,8 @@ end
 function LoadFARPS()
   local pvpEnabled = GlobalSettings.pvpEnabled == true
   if pvpEnabled and bc._persistenceResetPending then return end
+  local startup = WarehousePersistence._startupFarpRestore
+  if startup then startup.collecting = true end
   local path = Foothold_ctld.filepath
   local filename = FarpFileName
   local okay,data = UTILS.LoadFromFile(path,filename)
@@ -7526,6 +7538,10 @@ function LoadFARPS()
     end
   else
     BASE:E("***** ERROR Loading FARP Positions!")
+  end
+  if startup then
+    startup.collecting, startup.finished = false, true
+    WarehousePersistence.CompleteFarpStartupRestore(startup)
   end
 end
 
@@ -7780,8 +7796,9 @@ RunIrisOnePassStandaloneMerge = function(self)
   return merged > 0
 end
 
+WarehousePersistence.BeginFarpStartupRestore()
 local LoadFARPTimer = TIMER:New(LoadFARPS)
-LoadFARPTimer:Start(5)
+LoadFARPTimer:Start(1)
 
 local SaveFARPTimer = TIMER:New(SaveFARPS)
 SaveFARPTimer:Start(30,300)
@@ -7795,6 +7812,7 @@ Foothold_ctld.useprecisecoordloads = true -- Instead if slightly varyiing the gr
 
 
 function resetSaveFileAndFarp()
+  WarehousePersistence.CancelFarpStartupRestore()
   if GlobalSettings.pvpEnabled == true then
     bc._persistenceResetPending = true
     Foothold_ctld.enableLoadSave = false
@@ -7841,7 +7859,7 @@ end
 -- CTLD: Persistence Load Hook
 ---------------------------------------------------------------------------
 
-Foothold_ctld:__Load(10)
+Foothold_ctld:__Load(1)
 
 function Foothold_ctld:OnAfterLoaded(From, Event, To, LoadedGroups)
   self:I("***** Groups Loaded! *****")

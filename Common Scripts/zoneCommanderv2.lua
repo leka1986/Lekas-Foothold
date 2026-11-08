@@ -7069,8 +7069,75 @@ do
 	
 	Utils.canAccessFS = true
 	Utils.zonePersistenceWriteGeneration = Utils.zonePersistenceWriteGeneration or 0
-	function Utils.saveTable(filename, variablename, data)
-		if variablename == 'zonePersistance' then
+	function Utils.cancelStagedSave(job)
+		if job.outputFile then job.outputFile:close(); job.outputFile = nil end
+		if job.tempPath then os.remove(job.tempPath); job.tempPath = nil end
+	end
+
+	function Utils.persistencePairs(data)
+		local entries = {}
+		for key, value in pairs(data) do
+			entries[#entries + 1] = key
+			entries[#entries + 1] = value
+		end
+		local index = 0
+		return function()
+			index = index + 2
+			return entries[index - 1], entries[index]
+		end
+	end
+
+	function Utils.writeStagedParts(filename, parts, job)
+		job.tempPath = filename .. '.staged'
+		while true do
+			local zones = job.zoneParts
+			if zones then
+				while next(zones.dirty) do
+					local name = next(zones.dirty)
+					zones.dirty[name] = nil
+					parts[zones.indices[name]] = zones.prefix..'['..Utils.serializeValue(name)..'] = '..Utils.serializeValue(zones.rows[name])
+					job.checkpoint(#parts[zones.indices[name]])
+				end
+			end
+			local file, openError = io.open(job.tempPath, 'wb')
+			if not file then job.tempPath = nil; return nil, openError end
+			job.outputFile = file
+			local restart = false
+			for _, part in ipairs(parts) do
+				for offset = 1, #part, 32768 do
+					local chunk = part:sub(offset, offset + 32767)
+					local written, writeError = file:write(chunk)
+					if written == false or writeError ~= nil then Utils.cancelStagedSave(job); return nil, writeError end
+					job.checkpoint(#chunk)
+					if zones and next(zones.dirty) then restart = true; break end
+				end
+				if restart then break end
+			end
+			local closed, closeError = file:close()
+			job.outputFile = nil
+			if closed == false or closeError ~= nil then Utils.cancelStagedSave(job); return nil, closeError end
+			if not restart then break end
+		end
+		local backup = filename .. '.staged-backup'
+		local hadOriginal = lfs.attributes(filename) ~= nil
+		if hadOriginal then
+			os.remove(backup)
+			local moved, moveError = os.rename(filename, backup)
+			if not moved then Utils.cancelStagedSave(job); return nil, moveError end
+		end
+		local committed, commitError = os.rename(job.tempPath, filename)
+		if not committed then
+			if hadOriginal then assert(os.rename(backup, filename)) end
+			Utils.cancelStagedSave(job)
+			return nil, commitError
+		end
+		job.tempPath = nil
+		if hadOriginal then os.remove(backup) end
+		return true
+	end
+
+	function Utils.saveTable(filename, variablename, data, saveJob)
+		if variablename == 'zonePersistance' and not saveJob then
 			Utils.zonePersistenceWriteGeneration = Utils.zonePersistenceWriteGeneration + 1
 		end
 		if not Utils.canAccessFS then 
@@ -7087,15 +7154,20 @@ do
 		for i,v in pairs(data) do
 			if i == 'zones' and type(v) == 'table' then
 				local zonePrefix = '\n'..variablename..'['..string.format('%q', i)..']'
+				if saveJob then saveJob.zoneParts = { rows = v, prefix = zonePrefix, indices = {}, dirty = {} } end
 				parts[#parts + 1] = zonePrefix..' = {}'
 				for zoneName, zoneState in pairs(v) do
 					parts[#parts + 1] = zonePrefix..'['..string.format('%q', zoneName)..'] = '..Utils.serializeValue(zoneState)
+					if saveJob then
+						saveJob.zoneParts.indices[zoneName] = #parts
+						saveJob.checkpoint(#parts[#parts])
+					end
 				end
 			elseif variablename == 'RankSave' and i == 'players' then
 				-- Keep player identity and rank fields first without changing the saved table structure.
 				local firstFields = {'name', 'lastSeen', 'credits'}
 				parts[#parts + 1] = '\n'..variablename..'['..string.format('%q', i)..'] = {\n'
-				for ucid, record in pairs(v) do
+				for ucid, record in (saveJob and Utils.persistencePairs or pairs)(v) do
 					parts[#parts + 1] = '  ['..string.format('%q', ucid)..']={\n'
 					for _, field in ipairs(firstFields) do
 						local value = record[field]
@@ -7109,11 +7181,28 @@ do
 						end
 					end
 					parts[#parts + 1] = '  },\n'
+					if saveJob then saveJob.checkpoint() end
 				end
 				parts[#parts + 1] = '}'
+			elseif saveJob and type(v) == 'table' then
+				local prefix = '\n'..variablename..'['..Utils.serializeValue(i)..']'
+				parts[#parts + 1] = prefix..' = {}'
+				for key, record in Utils.persistencePairs(v) do
+					parts[#parts + 1] = prefix..'['..Utils.serializeValue(key)..'] = '..Utils.serializeValue(record)
+					saveJob.checkpoint(#parts[#parts])
+				end
 			else
 				parts[#parts + 1] = '\n'..variablename..'['..string.format('%q', i)..'] = '..Utils.serializeValue(v)
+				if saveJob then saveJob.checkpoint(#parts[#parts]) end
 			end
+		end
+		if saveJob then
+			local written, writeError = Utils.writeStagedParts(filename, parts, saveJob)
+			if written and variablename == 'zonePersistance' then
+				Utils.zonePersistenceWriteGeneration = Utils.zonePersistenceWriteGeneration + 1
+				saveJob.writeGeneration = Utils.zonePersistenceWriteGeneration
+			end
+			return written, writeError
 		end
 	
 		local str = table.concat(parts)
@@ -7170,7 +7259,10 @@ do
 			trigger.action.outText(L10N:Get("PERSISTENCE_SAVE_DESANITIZE"), 600)
 			return
 		end
-		if not lfs.attributes(filename) then return end
+		if not lfs.attributes(filename) then
+			if not lfs.attributes(filename .. '.staged-backup') then return end
+			assert(os.rename(filename .. '.staged-backup', filename))
+		end
 
 		local chunk = loadfile(filename)
 		if chunk then chunk(); return end
@@ -7822,7 +7914,7 @@ end
 				end
 				
                 if #viabletgts > 0 then
-                    if self.sortByThreat then viabletgts = self:sortByThreat(viabletgts) end
+                    if self.sortByThreat and (not printKill or viabletgts == self.tgtzone._jtacTargetSnapshot) then viabletgts = self:sortByThreat(viabletgts) end
                     if printKill then
                         trigger.action.outTextForCoalition(self.side,L10N:Get("JTAC_KILL_CONFIRMED"),4)
                         self._holdUntil = timer.getTime() + 5
@@ -7882,7 +7974,7 @@ end
 			end
 	
         else
-            self:searchTarget(true)
+            self:searchTarget(true, gr)
         end
 	end
 	
@@ -16966,6 +17058,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		obj.difficulty = difficulty
 		obj.updateFrequency = updateFrequency
 		obj.saveFrequency = saveFrequency
+		obj._zoneWakeQueue, obj._zoneWakeHead, obj._zoneWakeTail = {}, 1, 0
 		obj.persistenceSaveBatchSize = 8
 		obj.persistenceSaveBatchInterval = 0.1
 		obj.persistenceSaveWorkerStaleSeconds = 5
@@ -19763,21 +19856,41 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 	end
 
 	function BattleCommander:CopyWarehouse(FName, fromSave, expectedRecord, knownNative, readyConsumer)
-		if not FName then return end
+		if not FName or (fromSave and WarehousePersistence._startupFarpRestoreCancelled) then return end
+		local startup = WarehousePersistence._startupFarpRestore
+		local startupStore = fromSave and startup and startup.pending[FName]
 		local pvpOwned = GlobalSettings.pvpEnabled == true and expectedRecord ~= nil
 		local targetNative
 		if pvpOwned then
-			if expectedRecord == false or knownNative == false then return end
+			if expectedRecord == false or knownNative == false then
+				if startupStore then WarehousePersistence.CompleteFarpStartupRestore(startup, FName, false) end
+				return
+			end
 			if FName == expectedRecord.name then
 				targetNative = self:getDynamicFarpAirbase(expectedRecord, knownNative)
-				if not targetNative then return end
+				if not targetNative then
+					if startupStore then WarehousePersistence.CompleteFarpStartupRestore(startup, FName, false) end
+					return
+				end
 			elseif FName == expectedRecord.zellName and expectedRecord.zellNativeId ~= nil then
-				if not self:getDynamicFarpAirbase(expectedRecord) then return end
+				if not self:getDynamicFarpAirbase(expectedRecord) then
+					if startupStore then WarehousePersistence.CompleteFarpStartupRestore(startup, FName, false) end
+					return
+				end
 				targetNative = knownNative
 				if targetNative == nil then targetNative = Airbase.getByName(FName) end
-				if not targetNative or targetNative:getID() ~= expectedRecord.zellNativeId or targetNative:getCoalition() ~= expectedRecord.side then return end
+				if not targetNative or targetNative:getID() ~= expectedRecord.zellNativeId or targetNative:getCoalition() ~= expectedRecord.side then
+					if startupStore then WarehousePersistence.CompleteFarpStartupRestore(startup, FName, false) end
+					return
+				end
 			else
+				if startupStore then WarehousePersistence.CompleteFarpStartupRestore(startup, FName, false) end
 				return
+			end
+			if startupStore then
+				startupStore.record = expectedRecord
+				startupStore.nativeId = FName == expectedRecord.name and expectedRecord.nativeId or expectedRecord.zellNativeId
+				startupStore.side = expectedRecord.side
 			end
 		end
 		self._copiedWarehouseZones = self._copiedWarehouseZones or {}
@@ -19829,10 +19942,12 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 						end
 					end, { self, FName, fromSave, expectedRecord, readyConsumer }, 2, 0)
 				else
-					SCHEDULER:New(nil, function(context, warehouseName, saved)
-						context:CopyWarehouse(warehouseName, saved)
-					end, { self, FName, fromSave }, 2, 0)
+					SCHEDULER:New(nil, function(context, warehouseName, saved, record, ready)
+						context:CopyWarehouse(warehouseName, saved, record, nil, ready)
+					end, { self, FName, fromSave, expectedRecord, readyConsumer }, 2, 0)
 				end
+			elseif startupStore then
+				WarehousePersistence.CompleteFarpStartupRestore(startup, FName, false)
 			end
 			return
 		end
@@ -19896,16 +20011,15 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 		for _, planeName in ipairs(unlimitedPlanes or {}) do
 			safeSet(planeName, 1073741823)
 		end
-		if WarehouseLogistics == true and fromSave == true then
+		if WarehouseLogistics == true and fromSave == true and not startupStore then
 			local opts = { airbases = { FName } }
 			if FootholdSavePath then opts.path = FootholdSavePath end
 			WarehousePersistence.Load({}, opts)
 		end
 		BattleCommander.stockAIOnlyAircraft(dstStore)
-		if pvpOwned then
-			if readyConsumer then readyConsumer(FName, fromSave, expectedRecord, dstStore) end
-			return dstStore
-		end
+		if readyConsumer then readyConsumer(FName, fromSave, expectedRecord, dstStore) end
+		if startupStore then WarehousePersistence.CompleteFarpStartupRestore(startup, FName, true) end
+		if pvpOwned then return dstStore end
 	end
 
 
@@ -22693,7 +22807,7 @@ function BattleCommander:_selectShopSupplyCommander(targetZone, opts, allowParal
 			and ((GlobalSettings.pvpEnabled == true and bestCommander.side == knownOwnerSide)
 				or (GlobalSettings.pvpEnabled ~= true and bestCommander.side == 2))
 			and bestCommander.ShopLaunchOnly == true
-		if dynamicChoice and (not advanceCapture or dynamicChoice.kind == 'farp')
+		if dynamicChoice
 			and ((dynamicIsPreferredWarehouse and not existingIsPreferredWarehouse)
 				or (dynamicIsPreferredWarehouse == existingIsPreferredWarehouse
 					and self:_isDynamicShopSupplyMeaningfullyCloser(dynamicChoice.distMeters, existingDist)))
@@ -25118,9 +25232,9 @@ end
 					if groupExists and groupSize > 0 then
 						local lead = gr:getUnit(1)
 						if lead and lead:isExist() then
-							local pos = lead:getPoint()
-							local headingDeg = 0
 							local upos = lead:getPosition()
+							local pos = (upos and upos.p) or lead:getPoint()
+							local headingDeg = 0
 							if upos and upos.x then
 								headingDeg = math.deg(math.atan2(upos.x.z, upos.x.x))
 								if headingDeg < 0 then headingDeg = headingDeg + 360 end
@@ -25196,9 +25310,9 @@ end
 				if groupExists and groupSize > 0 then
 					local lead = gr:getUnit(1)
 					if lead and lead:isExist() then
-						local pos = lead:getPoint()
-						local headingDeg = 0
 						local upos = lead:getPosition()
+						local pos = (upos and upos.p) or lead:getPoint()
+						local headingDeg = 0
 						if upos and upos.x then
 							headingDeg = math.deg(math.atan2(upos.x.z, upos.x.x))
 							if headingDeg < 0 then headingDeg = headingDeg + 360 end
@@ -25261,7 +25375,7 @@ end
 		return self:_finalizePersistenceState(states)
 	end
 
-	function BattleCommander:_finalizePersistenceState(states)
+	function BattleCommander:_finalizePersistenceState(states, saveJob)
 	assert(not self._playerPersistenceLoadFailed, "Player persistence did not load successfully")
 	self:_ensureRankSave()
     states.accounts = self.accounts
@@ -25276,6 +25390,7 @@ end
         end
     end
     states.shops = shopState
+	if saveJob then saveJob.checkpoint(0, true) end
 
     states.playerStatsIdentityVersion = 1
     states.playerStats = self.playerStatsByUcid or {}
@@ -25306,6 +25421,7 @@ end
         end
     end
     states.zonesDetails = self.zonesDetails_cache or {}
+	if saveJob then saveJob.checkpoint(0, true) end
 
     -- Add active missions
     states.missions = {}
@@ -25334,6 +25450,7 @@ end
         end
     end
     states.connections = self.connections_cache or {}
+	if saveJob then saveJob.checkpoint(0, true) end
 
     -- Add players positions
     states.players = {}
@@ -25400,6 +25517,7 @@ end
 		states.carrierNavigation = carrierNavigation
 	end
 	states.runwayPlaneSpawnBlocks = self:_exportRunwayPlaneSpawnBlocks(timer.getTime())
+	if saveJob then saveJob.checkpoint(0, true) end
 	local redMassAttackMission = self:_exportRedMassAttackMissionPersistence()
 	if redMassAttackMission then
 		states.redMassAttackMission = redMassAttackMission
@@ -29105,12 +29223,15 @@ end
 			end
 		end
 		self._airAiRestoreDeferCount = nil
+		local deferTakeoffForWarehouse = hasTakeoff and WarehouseLogistics == true
+			and WarehousePersistence._startupLoadComplete ~= true
+		if deferTakeoffForWarehouse and not hasInAir then return end
 
 		local byName = self:_buildGroupCommanderIndex()
 		local now = timer.getAbsTime()
-		local used = {}
+		local used = pending._restoredCommanderNames or {}
 
-		if hasTakeoff then
+		if hasTakeoff and not deferTakeoffForWarehouse then
 			for _, takeoffEntry in ipairs(pending.spawnNowTakeoff) do
 				local saved = (type(takeoffEntry) == "table") and takeoffEntry or { groupName = takeoffEntry }
 				local savedSide = tonumber(saved.side)
@@ -29378,12 +29499,18 @@ end
 			end
 		end
 
-		self._pendingAirAiPersistence = nil
-		for _, saved in ipairs(pending.spawnNowTakeoff or {}) do
-			self:_retryDirectorSavedInstanceDisposal(saved)
+		if not deferTakeoffForWarehouse then
+			self._pendingAirAiPersistence = nil
+			for _, saved in ipairs(pending.spawnNowTakeoff or {}) do
+				self:_retryDirectorSavedInstanceDisposal(saved)
+			end
 		end
 		for _, saved in pairs(pending.inair or {}) do
 			self:_retryDirectorSavedInstanceDisposal(saved)
+		end
+		if deferTakeoffForWarehouse then
+			pending.inair = nil
+			pending._restoredCommanderNames = used
 		end
 	end
 
@@ -32626,14 +32753,14 @@ function BattleCommander:_dynamicHybridBuildPressureByPlayers()
 	return pressureByZone
 end
 
-function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
+function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities(coverageOnly)
 	local coverage = {}
-	local capsByOrigin = {}
+	local capsByOrigin = coverageOnly ~= true and {} or nil
 
 	for _, origin in ipairs(self.zones) do
 		if origin.active and not origin.isHidden
 			and not self:_dynamicHybridIsCarrierZoneName(origin.zone) then
-			local caps = {
+			local caps = capsByOrigin and {
 				hasCap = false,
 				hasPatrolAny = false,
 				hasCas = false,
@@ -32652,7 +32779,7 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 				runwayTemplate = nil,
 				convoyTemplate = nil,
 			}
-			capsByOrigin[origin.zone] = caps
+			if caps then capsByOrigin[origin.zone] = caps end
 			coverage[origin.zone] = coverage[origin.zone] or {}
 
 			for _, gc in ipairs(origin.groups or {}) do
@@ -32662,25 +32789,28 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 				local missionType = gc.MissionType
 				local template = gc.template
 				local gcType = gc.type
-				local templateLower = string.lower(tostring(template or ""))
-				local isHeloTemplate = string.find(templateLower, "helo", 1, true) ~= nil
+				local isHeloTemplate = false
+				if caps or (mission == 'attack' and missionType == 'CAS' and targetZone) then
+					local templateLower = string.lower(tostring(template or ""))
+					isHeloTemplate = string.find(templateLower, "helo", 1, true) ~= nil
+				end
 
-				if isHeloTemplate then
+				if caps and isHeloTemplate then
 					caps.hasCas = true
 					caps.hasCasHelo = true
 					if not caps.casHeloTemplate then caps.casHeloTemplate = "CasHeloTemplate" end
 				end
 
-				if missionType == 'CAP' and (mission == 'patrol' or mission == 'attack') and (gcType == 'air' or gcType == 'carrier_air') then
+				if caps and missionType == 'CAP' and (mission == 'patrol' or mission == 'attack') and (gcType == 'air' or gcType == 'carrier_air') then
 					caps.hasCap = true
 					if not caps.capTemplate then caps.capTemplate = template end
 					if mission == 'patrol' and not caps.capPatrolTemplate then caps.capPatrolTemplate = template end
 					if mission == 'attack' and not caps.capAttackTemplate then caps.capAttackTemplate = template end
 				end
-				if mission == 'patrol' and missionType == 'CAP' and targetZone then
+				if caps and mission == 'patrol' and missionType == 'CAP' and targetZone then
 					caps.hasPatrolAny = true
 				end
-				if mission == 'attack' and missionType == 'CAS' and (gcType == 'air' or gcType == 'carrier_air') then
+				if caps and mission == 'attack' and missionType == 'CAS' and (gcType == 'air' or gcType == 'carrier_air') then
 					caps.hasCas = true
 					if isHeloTemplate then
 						caps.hasCasHelo = true
@@ -32691,15 +32821,15 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 					end
 					if not caps.casTemplate then caps.casTemplate = template end
 				end
-				if mission == 'attack' and missionType == 'SEAD' and (gcType == 'air' or gcType == 'carrier_air') then
+				if caps and mission == 'attack' and missionType == 'SEAD' and (gcType == 'air' or gcType == 'carrier_air') then
 					caps.hasSead = true
 					if not caps.seadTemplate then caps.seadTemplate = template end
 				end
-				if mission == 'attack' and missionType == 'RUNWAYSTRIKE' and (gcType == 'air' or gcType == 'carrier_air') then
+				if caps and mission == 'attack' and missionType == 'RUNWAYSTRIKE' and (gcType == 'air' or gcType == 'carrier_air') then
 					caps.hasRunway = true
 					if not caps.runwayTemplate then caps.runwayTemplate = template end
 				end
-				if (gcType == 'surface') then
+				if caps and (gcType == 'surface') then
 					caps.hasConvoy = true
 
 					if mission == 'attack' and missionType ~= 'ARTY' and template ~= "SupplyConvoy" then
@@ -32740,7 +32870,7 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 				end
 			end
 
-			local forcedCaps = self.dynamicHybrid and self.dynamicHybrid.config and self.dynamicHybrid.config.forcedZoneCapabilities
+			local forcedCaps = caps and self.dynamicHybrid and self.dynamicHybrid.config and self.dynamicHybrid.config.forcedZoneCapabilities
 			local forced = forcedCaps and forcedCaps[origin.zone]
 			if forced then
 				if forced.groundAttack == true or forced.groundattack == true then
@@ -32754,21 +32884,23 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 				end
 			end
 
-			if not caps.capTemplate then caps.capTemplate = "CapPlaneTemplate" end
-			if not caps.capPatrolTemplate then caps.capPatrolTemplate = caps.capTemplate end
-			if not caps.capAttackTemplate then caps.capAttackTemplate = caps.capTemplate end
-			if not caps.casTemplate then caps.casTemplate = "CasPlaneTemplate" end
-			if not caps.casPlaneTemplate then caps.casPlaneTemplate = "CasPlaneTemplate" end
-			if not caps.casHeloTemplate then caps.casHeloTemplate = "CasHeloTemplate" end
-			if not caps.seadTemplate then caps.seadTemplate = "SeadPlaneTemplate" end
-			if not caps.runwayTemplate then caps.runwayTemplate = "RunwayStrikePlaneTemplate" end
-			if not caps.convoyTemplate then caps.convoyTemplate = "AttackConvoy" end
+			if caps then
+				if not caps.capTemplate then caps.capTemplate = "CapPlaneTemplate" end
+				if not caps.capPatrolTemplate then caps.capPatrolTemplate = caps.capTemplate end
+				if not caps.capAttackTemplate then caps.capAttackTemplate = caps.capTemplate end
+				if not caps.casTemplate then caps.casTemplate = "CasPlaneTemplate" end
+				if not caps.casPlaneTemplate then caps.casPlaneTemplate = "CasPlaneTemplate" end
+				if not caps.casHeloTemplate then caps.casHeloTemplate = "CasHeloTemplate" end
+				if not caps.seadTemplate then caps.seadTemplate = "SeadPlaneTemplate" end
+				if not caps.runwayTemplate then caps.runwayTemplate = "RunwayStrikePlaneTemplate" end
+				if not caps.convoyTemplate then caps.convoyTemplate = "AttackConvoy" end
+			end
 		end
 	end
 
 	for _, origin in ipairs(self.zones) do
-		local caps = capsByOrigin[origin.zone]
-		if caps then
+		local caps = capsByOrigin and capsByOrigin[origin.zone]
+		if coverage[origin.zone] then
 			for _, capability in ipairs(self.directorCapabilitiesByOrigin[origin.zone] or {}) do
 				local facts = self.directorCapabilityFactsById[capability.id]
 				local view = facts.view
@@ -32779,7 +32911,7 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 				local gcType = capability.type
 				local isHelo = view.unitCategory == Unit.Category.HELICOPTER
 
-				if missionType == 'CAP' and (mission == 'patrol' or mission == 'attack')
+				if caps and missionType == 'CAP' and (mission == 'patrol' or mission == 'attack')
 					and (gcType == 'air' or gcType == 'carrier_air') then
 					caps.hasCap = true
 					if not caps.capTemplate or caps.capTemplate == 'CapPlaneTemplate' then caps.capTemplate = template end
@@ -32790,8 +32922,8 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 						caps.capAttackTemplate = template
 					end
 				end
-				if mission == 'patrol' and missionType == 'CAP' and targetZone then caps.hasPatrolAny = true end
-				if mission == 'attack' and missionType == 'CAS'
+				if caps and mission == 'patrol' and missionType == 'CAP' and targetZone then caps.hasPatrolAny = true end
+				if caps and mission == 'attack' and missionType == 'CAS'
 					and (gcType == 'air' or gcType == 'carrier_air') then
 					caps.hasCas = true
 					if isHelo then
@@ -32803,17 +32935,17 @@ function BattleCommander:_dynamicHybridCollectCoverageAndCapabilities()
 					end
 					if not caps.casTemplate or caps.casTemplate == 'CasPlaneTemplate' then caps.casTemplate = template end
 				end
-				if mission == 'attack' and missionType == 'SEAD'
+				if caps and mission == 'attack' and missionType == 'SEAD'
 					and (gcType == 'air' or gcType == 'carrier_air') then
 					caps.hasSead = true
 					if not caps.seadTemplate or caps.seadTemplate == 'SeadPlaneTemplate' then caps.seadTemplate = template end
 				end
-				if mission == 'attack' and missionType == 'RUNWAYSTRIKE'
+				if caps and mission == 'attack' and missionType == 'RUNWAYSTRIKE'
 					and (gcType == 'air' or gcType == 'carrier_air') then
 					caps.hasRunway = true
 					if not caps.runwayTemplate or caps.runwayTemplate == 'RunwayStrikePlaneTemplate' then caps.runwayTemplate = template end
 				end
-				if gcType == 'surface' then
+				if caps and gcType == 'surface' then
 					caps.hasConvoy = true
 					if mission == 'attack' and missionType ~= 'ARTY' and template ~= 'SupplyConvoy'
 						and (not caps.convoyTemplate or caps.convoyTemplate == 'AttackConvoy') then
@@ -33104,7 +33236,7 @@ function BattleCommander:_dynamicHybridBuildMissingCandidates(affectedZoneName)
 	local dedupe = {}
 	local eligibleZoneNames = {}
 	local pressureByZone = self:_dynamicHybridBuildPressureByPlayers()
-	local coverage = self:_dynamicHybridCollectCoverageAndCapabilities()
+	local coverage = self:_dynamicHybridCollectCoverageAndCapabilities(true)
 	local capsByOrigin, seedStats = self:_dynamicHybridCollectSeedCapabilities()
 	local affectedAnchors = nil
 	if affectedZoneName then
@@ -34759,10 +34891,14 @@ function BattleCommander:buildSeadIngressPlan(tgtzone, startPos, attackingSide)
 					then
 						local unitName = unit:getName()
 						viable[#viable + 1] = unitName
-						firstTargetPoint = firstTargetPoint or unit:getPoint()
+						local unitPoint
+						if not firstTargetPoint then
+							unitPoint = unit:getPoint()
+							firstTargetPoint = unitPoint
+						end
 						if not longRangeTargetName and unit:hasAttribute('LR SAM') then
 							longRangeTargetName = unitName
-							longRangeTargetPoint = unit:getPoint()
+							longRangeTargetPoint = unitPoint or unit:getPoint()
 						end
 					end
 				end
@@ -36636,10 +36772,10 @@ end
 						end
 					end
 
-					if redZone and nearBlock and z.active and not z.isHidden and not z.suspended and ZONE_CONNECTED_TO_BLUE[z.zone] then
+					if redZone and nearBlock and z.active and not z.isHidden and (not z.suspended or z._resuming) and ZONE_CONNECTED_TO_BLUE[z.zone] then
 						z.BlueIsNear = true
 					end
-					if redZone and nearPlaneBlock and z.active and not z.isHidden and not z.suspended and ZONE_CONNECTED_TO_BLUE[z.zone] then
+					if redZone and nearPlaneBlock and z.active and not z.isHidden and (not z.suspended or z._resuming) and ZONE_CONNECTED_TO_BLUE[z.zone] then
 						z.BluePlaneIsNear = true
 					end
 				end
@@ -37025,7 +37161,8 @@ end
 		end
 		local function activeListEnemyDistance(zoneObj)
 			local indexedDistance = reindexEnemyDistanceByZone[zoneObj.zone]
-			if indexedDistance ~= nil and indexedDistance ~= false then
+			if indexedDistance ~= nil then
+				if indexedDistance == false then return nil end
 				return indexedDistance
 			end
 			local best = math.huge
@@ -37403,7 +37540,7 @@ end
 			end
 		end
 		for _,zz in ipairs(finalSuspend) do
-			if not zz.suspended then
+			if not zz.suspended or zz._resuming then
 				zz:suspend(idleSuspendSet[zz] == true)
 				changed = true
 				toUpdate[#toUpdate+1]=zz
@@ -43789,7 +43926,7 @@ end
 		end
 	end
 
-	function BattleCommander:saveRanksToDisk()
+	function BattleCommander:saveRanksToDisk(saveJob)
 		if RankingSystem == true and self.rankFile and RankSave then
 			assert(not self._playerPersistenceLoadFailed, "Player persistence did not load successfully")
 			self:_ensureRankSave()
@@ -43808,7 +43945,7 @@ end
 			saved.legacyPlayers = next(saved.legacyPlayers) and saved.legacyPlayers or nil
 			saved.legacyEwrs = saved.legacyEwrs and next(saved.legacyEwrs) and saved.legacyEwrs or nil
 			saved.legacySelfJtac = saved.legacySelfJtac and next(saved.legacySelfJtac) and saved.legacySelfJtac or nil
-			return Utils.saveTable(self.rankFile,'RankSave',saved)
+			return Utils.saveTable(self.rankFile,'RankSave',saved,saveJob)
 		end
 	end
 
@@ -43856,6 +43993,7 @@ end
 			if self._persistenceSaveWorkerScheduler then
 				self._persistenceSaveWorkerScheduler:Stop()
 			end
+			Utils.cancelStagedSave(activeJob)
 			self._persistenceSaveWorkerScheduler = nil
 			self._persistenceSaveJob = nil
 			env.info("[Persistence] Replacing stale staged save job")
@@ -43866,14 +44004,16 @@ end
 		end
 		self:flushActiveCareerFlights()
 		local interval = math.max(0.01, tonumber(self.persistenceSaveBatchInterval) or 0.1)
+		local rankOnly = self._persistenceResetPending == true
 		self._persistenceSaveJob = {
-			states = self:_newPersistenceState(),
+			states = not rankOnly and self:_newPersistenceState() or nil,
 			nextZoneIndex = 1,
 			zoneCount = #self.zones,
 			writeGeneration = Utils.zonePersistenceWriteGeneration,
 			startedAtAbs = now,
 			lastTickAbs = now,
 			phase = 'collect',
+			rankOnly = rankOnly,
 		}
 		self._persistenceSaveWorkerScheduler = SCHEDULER:New(self, function(commander)
 			return commander:_runStagedSaveWorkerTick()
@@ -43888,14 +44028,15 @@ end
 		end
 
 		job.lastTickAbs = timer.getAbsTime()
-		if job.writeGeneration ~= Utils.zonePersistenceWriteGeneration then
+		if job.writeGeneration ~= Utils.zonePersistenceWriteGeneration or (self._persistenceResetPending and not job.rankOnly) then
+			Utils.cancelStagedSave(job)
 			self._persistenceSaveJob = nil
 			self._persistenceSaveWorkerScheduler = nil
 			env.info("[Persistence] Cancelled staged save after a newer campaign-file write")
 			return false
 		end
 
-		if job.phase == 'collect' then
+		if job.phase == 'collect' and not job.rankOnly then
 			local batchSize = math.max(1, math.floor(tonumber(self.persistenceSaveBatchSize) or 8))
 			local lastZoneIndex = math.min(job.zoneCount, job.nextZoneIndex + batchSize - 1)
 			for zoneIndex = job.nextZoneIndex, lastZoneIndex do
@@ -43911,25 +44052,40 @@ end
 			return nil
 		end
 
-		local expectedGeneration = job.writeGeneration
-		local states = job.states
-		self._persistenceSaveJob = nil
-		self._persistenceSaveWorkerScheduler = nil
-
-		states = self:_finalizePersistenceState(states)
-		if expectedGeneration ~= Utils.zonePersistenceWriteGeneration then
-			env.info("[Persistence] Cancelled staged save before final write after a newer campaign-file write")
-			return false
+		if not job.thread then
+			local work, bytes = 0, 0
+			job.checkpoint = function(size, force)
+				work, bytes = work + 1, bytes + (size or 0)
+				if force or work >= 8 or bytes >= 32768 then
+					work, bytes = 0, 0
+					coroutine.yield()
+				end
+			end
+			job.thread = coroutine.create(function()
+				if job.rankOnly then
+					if RankingSystem == true then self:saveRanksToDisk(job) end
+				else
+					local states = self:_finalizePersistenceState(job.states, job)
+					self:_writePersistenceState(states, job)
+				end
+			end)
 		end
-		self:_writePersistenceState(states)
+		local ok, err = coroutine.resume(job.thread)
+		if not ok then
+			Utils.cancelStagedSave(job)
+			self._persistenceSaveJob, self._persistenceSaveWorkerScheduler = nil, nil
+			error(err)
+		end
+		if coroutine.status(job.thread) ~= 'dead' then return nil end
+		self._persistenceSaveJob, self._persistenceSaveWorkerScheduler = nil, nil
 		return false
 	end
 
-	function BattleCommander:_writePersistenceState(statedata)
+	function BattleCommander:_writePersistenceState(statedata, saveJob)
 		statedata.customFlags       = CustomFlags
 		statedata.globalExtraUnlock = self.globalExtraUnlock
 		if RankingSystem == true then
-			local rankSaved = self:saveRanksToDisk()
+			local rankSaved = self:saveRanksToDisk(saveJob)
 			if rankSaved then
 				statedata.ucidToName, statedata.playerAliases = nil, nil
 				if self._rankEwrsMissionCovered and tonumber(RankSave.ewrsVersion) == self.EWRS_RANK_VERSION then
@@ -43945,7 +44101,8 @@ end
 			end
 		end
 		if not self._persistenceResetPending then
-			Utils.saveTable(self.saveFile,'zonePersistance',statedata)
+			local written, writeError = Utils.saveTable(self.saveFile,'zonePersistance',statedata,saveJob)
+			if saveJob and not written then env.info('[Persistence] Campaign write failed: ' .. tostring(writeError)) end
 		end
 		if WarehouseLogistics == false then
 			WarehousePersistence.Save(self, {force = true, warehouseOnly = true, path = FootholdSavePath})
@@ -45373,8 +45530,10 @@ do
 	function ZoneCommander:_requestSurrenderPersistenceRefresh()
 		local commander = self.battleCommander
 		local job = commander._persistenceSaveJob
-		if job and job.states.zones[self.zone] then
+		if job and not job.rankOnly and job.states.zones[self.zone] then
 			commander:_collectPersistenceZoneState(job.states, self, job.startedAtAbs)
+			local serializedZones = job.zoneParts
+			if serializedZones and serializedZones.indices[self.zone] then serializedZones.dirty[self.zone] = true end
 		end
 	end
 
@@ -47006,9 +47165,9 @@ do
 			if IsBlueGciTemplateName(templateName) then
 				local builtName = self.built and self.built[builtIndex] or nil
 				local group = builtName and Group.getByName(builtName) or nil
-				if not group or not group:isExist() or group:getSize() <= 0
-					or group:getSize() < group:getInitialSize()
-				then
+				if not group or not group:isExist() then return true end
+				local liveCount = group:getSize()
+				if liveCount <= 0 or liveCount < group:getInitialSize() then
 					return true
 				end
 			end
@@ -47114,7 +47273,7 @@ function ZoneCommander:suspend(idle)
 				self:_activateFsmGroup(gc)
 			end
 		end
-		self._idleRestorePending = nil
+		self._idleRestorePending, self._resuming = nil, nil
 		self._idleSuspended = idle == true or nil
 		if self._idleSuspended then self._preserveSuspendedLosses = true end
 		self.suspended = true
@@ -47127,6 +47286,9 @@ function ZoneCommander:suspend(idle)
 		self.battleCommander:_refreshPassiveCapBucketsForZone(self)
 		env.info("[SUSPEND] "..self.zone)
 		self._hibernated = self._hibernated or {}
+		if self._persistedHibernatedSlots then
+			for _, gName in pairs(self._persistedHibernatedSlots) do self._hibernated[gName] = true end
+		end
 		self._persistedHibernated = nil
 		self._persistedHibernatedSlots = nil
 		if not self.remainingUnitsSnapshot then
@@ -47172,9 +47334,13 @@ function ZoneCommander:suspend(idle)
 			end
 		end
 		if self._idleSuspended then self:_publishIdleDefenseFacts() end
+		local filteredUpgrades
 		for builtIndex, gName in pairs(self.built) do
 			local g = Group.getByName(gName)
-			local keepBlueGci = IsSuspensionPersistentRadarTemplateName(self:_resolveBuiltTemplateName(builtIndex, gName))
+			if UseStatics == true and filteredUpgrades == nil then
+				filteredUpgrades = self:getFilteredUpgrades()
+			end
+			local keepBlueGci = IsSuspensionPersistentRadarTemplateName(self:_resolveBuiltTemplateName(builtIndex, gName, filteredUpgrades))
 			if keepBlueGci then
 				self._hibernated[gName] = nil
 			elseif g and g:isExist() and g:getSize() > 0 then
@@ -47190,7 +47356,57 @@ function ZoneCommander:suspend(idle)
 		end
 	end
 
+	function BattleCommander:_queueZoneWake(job)
+		self._zoneWakeTail = self._zoneWakeTail + 1
+		self._zoneWakeQueue[self._zoneWakeTail] = job
+		if self._zoneWakeWorkerActive then return end
+		self._zoneWakeWorkerActive = true
+		local function tick(_, now)
+			local head = self._zoneWakeHead
+			local current = self._zoneWakeQueue[head]
+			self._zoneWakeQueue[head] = nil
+			self._zoneWakeHead = head + 1
+			local z = current.zone
+			if z._resuming == current and z.side == current.side and z.active and z.suspended then
+				if current.started and current.persistedSlots ~= z._persistedHibernatedSlots then
+					current.retry = true
+					current.thread = coroutine.create(function() z:resume(current) end)
+				end
+				local ok, err = coroutine.resume(current.thread)
+				if not ok then
+					z._resuming = nil
+					if self._zoneWakeHead <= self._zoneWakeTail then
+						timer.scheduleFunction(tick, nil, now + 0.1)
+					else
+						self._zoneWakeHead, self._zoneWakeTail = 1, 0
+						self._zoneWakeWorkerActive = nil
+					end
+					error(err)
+				end
+				if coroutine.status(current.thread) ~= 'dead' and z._resuming == current then
+					self._zoneWakeTail = self._zoneWakeTail + 1
+					self._zoneWakeQueue[self._zoneWakeTail] = current
+				end
+			elseif z._resuming == current then
+				z._resuming = nil
+			end
+			if self._zoneWakeHead <= self._zoneWakeTail then return now + 0.1 end
+			self._zoneWakeHead, self._zoneWakeTail = 1, 0
+			self._zoneWakeWorkerActive = nil
+		end
+		timer.scheduleFunction(tick, nil, timer.getTime() + 0.1)
+	end
+
 	function ZoneCommander:resume(internal)
+		if not internal then
+			if self._resuming or not self.active or not self.suspended or self.side == 0 then return end
+			local job = { zone = self, side = self.side }
+			self._resuming = job
+			job.thread = coroutine.create(function() self:resume(job) end)
+			self.battleCommander:_queueZoneWake(job)
+			return
+		end
+		if self._resuming ~= internal or self.side ~= internal.side or not self.active or not self.suspended then return end
 		local previousState = {
 			active = self.active,
 			suspended = self.suspended,
@@ -47203,23 +47419,26 @@ function ZoneCommander:suspend(idle)
 			LogisticCenter = self.LogisticCenter,
 			advanceCaptureEligible = self._advanceCaptureEligibleForMenu,
 		}
-		if self._resuming and not internal then return end
 		local wasSuspended = self.suspended == true
 		if (self._idleSuspended or (wasSuspended and self._preserveSuspendedLosses)) and not self._idleRestorePending then
 			self._idleRestorePending = { side = self.side, remainingUnits = self.remainingUnitsSnapshot, startedAt = timer.getAbsTime() }
 		end
-		self._resuming = true
 		local cz = CustomZone:getByName(self.zone)
 		if cz then
 			cz:clearUsedSpawnZones(self.zone)
 			self:_reserveBlueGciSpawnPlacement(cz)
 		end
+		local hibernated = self._hibernated or {}
 		local pending = {}
-		local pendingPersistedSlots = {}
-		for builtIndex,gName in pairs(self._persistedHibernatedSlots or {}) do
+		for gName in pairs(hibernated) do pending[gName] = true end
+		self._hibernated = pending
+		local pendingPersistedSlots = self._persistedHibernatedSlots or {}
+		internal.persistedSlots, internal.started = self._persistedHibernatedSlots, true
+		for builtIndex,gName in pairs(pendingPersistedSlots) do
 			local ok = false
 			local spawnedName = nil
-			if cz and cz.spawnGroup then
+			if cz and cz.spawnGroup and self._resuming == internal and self.side == internal.side and self.active
+				and self._persistedHibernatedSlots == pendingPersistedSlots and self.built[builtIndex] == gName then
 				local r = self:_spawnBuiltGroup(cz, builtIndex, gName)
 				if r and r.name then
 					spawnedName = r.name
@@ -47227,24 +47446,28 @@ function ZoneCommander:suspend(idle)
 					if restoredGroup and (not self._idleRestorePending or (restoredGroup:isExist() and restoredGroup:getSize() > 0)) then ok = true end
 				end
 			end
+			pendingPersistedSlots[builtIndex] = nil
 			if not ok then
 				env.info("Spawn failed: "..gName.." in zone "..self.zone)
-				if self._idleRestorePending and spawnedName then
+				if spawnedName then
 					pending[spawnedName] = true
 				else
 					pendingPersistedSlots[builtIndex] = gName
 				end
 			end
+			coroutine.yield()
 		end
 		if next(pendingPersistedSlots) then
 			self._persistedHibernatedSlots = pendingPersistedSlots
 		else
 			self._persistedHibernatedSlots = nil
 		end
-		for gName,_ in pairs(self._hibernated or {}) do
+		internal.persistedSlots = self._persistedHibernatedSlots
+		for gName,_ in pairs(hibernated) do
+			pending[gName] = nil
 			local liveGroup = Group.getByName(gName)
 			if liveGroup then
-				if not self:_builtHas(gName) or (self._idleRestorePending and (not internal or not liveGroup:isExist() or liveGroup:getSize() == 0)) then
+				if not self:_builtHas(gName) or (self._idleRestorePending and (not internal.retry or not liveGroup:isExist() or liveGroup:getSize() == 0)) then
 					pending[gName] = true
 				end
 			else
@@ -47254,16 +47477,18 @@ function ZoneCommander:suspend(idle)
 				for i,v in pairs(self.built) do
 					if v == gName then builtIndex = i; break end
 				end
-				if builtIndex and cz and cz.spawnGroup then
+				if builtIndex and cz and cz.spawnGroup and self._resuming == internal
+					and self.side == internal.side and self.active and hibernated[gName] then
 					local r = self:_spawnBuiltGroup(cz, builtIndex, gName)
 					if r and r.name then
-						if self._idleRestorePending then pendingName = r.name end
+						pendingName = r.name
 						local restoredGroup = Group.getByName(r.name)
 						if restoredGroup and (not self._idleRestorePending or (restoredGroup:isExist() and restoredGroup:getSize() > 0)) then ok = true end
 					end
 				end
 				if not ok then env.info("Spawn failed: "..gName.." in zone "..self.zone); pending[pendingName] = true end
 			end
+			coroutine.yield()
 		end
 		self._hibernated = pending
 		if next(self._hibernated) or self._persistedHibernatedSlots then
@@ -47273,12 +47498,20 @@ function ZoneCommander:suspend(idle)
 				env.info('[IDLE-WAKE] restoration timed out zone=' .. self.zone)
 			else
 				SCHEDULER:New(nil, function(z)
-					if not idleRestore or (z._idleRestorePending == idleRestore and z.side == idleRestore.side and z.active) then z:resume(true) end
+					if z._resuming == internal and z.side == internal.side and z.active and z.suspended
+						and (not idleRestore or z._idleRestorePending == idleRestore) then
+						internal.retry = true
+						internal.thread = coroutine.create(function() z:resume(internal) end)
+						z.battleCommander:_queueZoneWake(internal)
+					end
 				end, {self}, 2, 0)
 			end
 		else
 			self.suspended = false
 			self._idleSuspended = nil
+			self.battleCommander:markFsmGroupFilterDirty()
+			self.battleCommander:markReindexCombatFilterDirty()
+			self.battleCommander:requestZoneStatusMenuRefresh()
 			if wasSuspended then
 				env.info("[RESUME] "..self.zone)
 				self.battleCommander:markCapTargetStateDirty()
@@ -47304,6 +47537,8 @@ function ZoneCommander:suspend(idle)
 						z._seadThreatSnapshot.expireAt = timer.getAbsTime() + 120
 						z.remainingUnitsSnapshot, z.remainingUnitNamesSnapshot = nil, nil
 						z._idleRestorePending = nil
+						z.battleCommander:markCapTargetStateDirty()
+						z.battleCommander:requestZoneStatusMenuRefresh()
 						z._nextBuiltMaintenanceAt = 0
 					end or nil,
 				})
@@ -66609,7 +66844,13 @@ end
 				targetZoneResolved = true
 			end
 			local tg = targetZone
-			if tg and gr and Utils.someOfGroupInZone(gr, tg.zone) then
+			local inTarget
+			if tg and gr then
+				local _, observedUnits
+				inTarget, _, _, observedUnits = Utils.someOfGroupInZone(gr, tg.zone, nil, true)
+				if units == nil then units = observedUnits end
+			end
+			if inTarget then
 				local transportIntel = GlobalSettings.pvpEnabled == true and self.mission == 'supply' and (self.type == 'air' or self.type == 'carrier_air')
 				local intelReport = self._surfaceIntelMovement
 				if not transportIntel or type(intelReport) == 'table' and intelReport.group == gr
@@ -68031,51 +68272,42 @@ end
 
 		local startIndex = (#points >= 2) and 2 or 1
 		local bestDistSq = math.huge
-		for i = 2, #points do
-			local wp = points[i]
-			local wx = wp and tonumber(wp.x)
-			local wy = wp and tonumber(wp.y)
-			if wx and wy then
-				local dx = wx - savedX
-				local dy = wy - savedZ
-				local distSq = dx * dx + dy * dy
-				if distSq < bestDistSq then
-					bestDistSq = distSq
-					startIndex = i
-				end
-			end
-		end
-
 		local hasRoadPhase = false
 		local roadContinueIndex = nil
 		local lastRoadIndex = nil
+		local bestOffroadDistSq = math.huge
+		local bestOffroadIndex = nil
 		for i = 1, #points do
-			local action = points[i] and points[i].action or nil
-			if action == "On Road" or action == "on_road" then
+			local wp = points[i]
+			local action = wp and wp.action or nil
+			local onRoad = action == "On Road" or action == "on_road"
+			if onRoad then
 				hasRoadPhase = true
 				lastRoadIndex = i
-				if i > 1 and not roadContinueIndex then
-					roadContinueIndex = i
-				end
+				if i > 1 and not roadContinueIndex then roadContinueIndex = i end
+				bestOffroadDistSq = math.huge
+				bestOffroadIndex = nil
 			end
-		end
-		if self._passedRoadExit == true and lastRoadIndex and (lastRoadIndex + 1) <= #points then
-			local offroadStartIndex = lastRoadIndex + 1
-			local bestOffroadDistSq = math.huge
-			for i = offroadStartIndex, #points do
-				local wp = points[i]
+			if i >= 2 then
 				local wx = wp and tonumber(wp.x)
 				local wy = wp and tonumber(wp.y)
 				if wx and wy then
 					local dx = wx - savedX
 					local dy = wy - savedZ
 					local distSq = dx * dx + dy * dy
-					if distSq < bestOffroadDistSq then
-						bestOffroadDistSq = distSq
+					if distSq < bestDistSq then
+						bestDistSq = distSq
 						startIndex = i
+					end
+					if self._passedRoadExit == true and lastRoadIndex and not onRoad and distSq < bestOffroadDistSq then
+						bestOffroadDistSq = distSq
+						bestOffroadIndex = i
 					end
 				end
 			end
+		end
+		if self._passedRoadExit == true and lastRoadIndex and (lastRoadIndex + 1) <= #points then
+			startIndex = bestOffroadIndex or startIndex
 			bestDistSq = bestOffroadDistSq
 		end
 		if self._passedRoadExit ~= true and hasRoadPhase and lastRoadIndex and startIndex == (lastRoadIndex + 1) then
@@ -89804,11 +90036,12 @@ do
 			operation,
 			feasibility.protectedPools or pools,
 			now,
-			feasibility
+			feasibility,
+			true
 		)
 	end
 
-	function Director:_redApplyPackageCapProtection(operation, pools, now, feasibility)
+	function Director:_redApplyPackageCapProtection(operation, pools, now, feasibility, knownAirborneSelection)
 		if not self:_redPackageNeedsCap(operation, now) then return false end
 		if operation.capCoverageDesired ~= true then
 			self:_redCancelUnprotectedFixedWing(operation)
@@ -89864,8 +90097,12 @@ do
 			end
 		end
 
-		local airborne, needsRetask, routeDetails =
-			self:_redPackageAirborneAttackCap(operation, now)
+		local airborne, needsRetask, routeDetails
+		if knownAirborneSelection == true and feasibility and feasibility.airborne then
+			airborne, needsRetask, routeDetails = feasibility.airborne, feasibility.needsRetask, feasibility.routeDetails
+		else
+			airborne, needsRetask, routeDetails = self:_redPackageAirborneAttackCap(operation, now)
+		end
 		if airborne and needsRetask
 			and not self:_redRoutePackageAttackCap(airborne, operation, routeDetails)
 		then
@@ -94871,10 +95108,7 @@ do
 		local initialDelaySec = (pvpEnabled or self.side == coalition.side.BLUE) and 5 or self.config.startDelaySec
 		self:_log('scheduler start delay=' .. initialDelaySec .. ' sideTick=' .. self.config.tickSec)
 		timer.scheduleFunction(function(director, scheduleTime)
-			local ok, nextTime = pcall(director.update, director, scheduleTime)
-			if ok then return nextTime end
-			env.error('[Director] side=' .. tostring(director.side) .. ' update failed; retrying next tick: ' .. tostring(nextTime), false)
-			return scheduleTime + director.config.tickSec
+			return director:update(scheduleTime)
 		end, self, timer.getTime() + initialDelaySec)
 	end
 
@@ -96376,8 +96610,9 @@ function SelfJtac:printTarget(makeitlast)
 		for _,obj in ipairs(self.targetList) do
 			local meta = self:getTargetMeta(obj)
 			if meta and (not obj.isActive or obj:isActive()) and not (self.ignoreStructures and meta.category==Object.Category.STATIC) then
-				validTargets[#validTargets + 1] = {obj = obj, meta = meta}
-				validNames[#validNames + 1] = obj:getName()
+				local targetName = obj:getName()
+				validTargets[#validTargets + 1] = {obj = obj, meta = meta, name = targetName}
+				validNames[#validNames + 1] = targetName
 			end
 		end
 		self._targetMenuTarget = self.target
@@ -96399,11 +96634,11 @@ function SelfJtac:printTarget(makeitlast)
 				shown = shown + 1
 				local label
 				if meta.category==Object.Category.STATIC then
-					label='('..shown..') '..(obj:getName() or 'Unknown')
+					label='('..shown..') '..(entry.name or 'Unknown')
 				else
 					label='('..shown..') '..meta.displayType
 				end
-				if isLasing and self.target==obj:getName() then label=label..T:Get("JTAC_MENU_LASING_SUFFIX") end
+				if isLasing and self.target==entry.name then label=label..T:Get("JTAC_MENU_LASING_SUFFIX") end
 				local cb=function()
 					self:setTarget(obj)
 					self:printTarget(true)
@@ -98003,7 +98238,7 @@ end
 		return self:_printPilotInfoResolved(pilotObj, groupid, referenceUnit, duration, short, objectID, pilotData, pnt, referencePoint)
 	end
 
-	function LogisticCommander:_printPilotInfoResolved(pilotObj, groupid, referenceUnit, duration, short, objectID, pilotData, pnt, referencePoint, knownDistance, ownerSide)
+	function LogisticCommander:_printPilotInfoResolved(pilotObj, groupid, referenceUnit, duration, short, objectID, pilotData, pnt, referencePoint, knownDistance, ownerSide, knownPilotObservations)
 		local T = L10N:ForGroup(groupid)
 		local enemySide = 1
 		if GlobalSettings.pvpEnabled == true then
@@ -98028,9 +98263,19 @@ end
 			if self.ejectedPilots then
 				for _, other in ipairs(self.ejectedPilots) do
 					if other and other:isExist() and other ~= pilotObj then
-						local otherId = self.ejectedPilotPidByObj[other]
-						local otherData = landedPilotOwners[otherId] or self.csarPilotDataByObject[otherId] or ejectedPilotOwners[otherId]
-						local op = not (otherData and otherData.coalition == enemySide) and other:getPoint()
+						local observation = knownPilotObservations and knownPilotObservations[other]
+						local otherData
+						if observation then
+							otherData = observation.data
+						else
+							local otherId = self.ejectedPilotPidByObj[other]
+							otherData = landedPilotOwners[otherId] or self.csarPilotDataByObject[otherId] or ejectedPilotOwners[otherId]
+						end
+						local op
+						if not (otherData and otherData.coalition == enemySide) then
+							if observation then op = observation.point
+							else op = other:getPoint() end
+						end
 						if op then
 							local dx = op.x - pnt.x
 							local dz = op.z - pnt.z
@@ -99443,7 +99688,7 @@ end
 			env.info("CSAR: RouteToVec2 "..grp:GetName().." -> "..heliUnit:getName())
 		end
 
-		local function approachMessage(pid, heliUnit, pilotObj, gid, pilotData, p, hp, knownDistance, ownerSide)
+		local function approachMessage(pid, heliUnit, pilotObj, gid, pilotData, p, hp, knownDistance, ownerSide, knownPilotObservations)
 			local enemy = pilotData ~= nil and pilotData.coalition == 1
 			if pvpEnabled then enemy = pilotData.coalition ~= ownerSide end
 			local shown = self.csarVisibleMsg[pid]
@@ -99470,7 +99715,9 @@ end
 				if p then
 					self.csarApproachClusterMsg[gid] = { t = now, x = p.x, z = p.z, enemy = enemy }
 				end
-				if pvpEnabled then
+				if knownPilotObservations then
+					self:_printPilotInfoResolved(pilotObj, gid, heliUnit, 15, true, pid, pilotData, p, hp, knownDistance, ownerSide, knownPilotObservations)
+				elseif pvpEnabled then
 					self:_printPilotInfoResolved(pilotObj, gid, heliUnit, 15, true, pid, pilotData, p, hp, knownDistance, ownerSide)
 				else
 					self:_printPilotInfoResolved(pilotObj, gid, heliUnit, 15, true, pid, pilotData, p, hp, knownDistance)
@@ -99770,9 +100017,9 @@ end
 						if not skip and not skipRunnerContact then
 							if dist < self.csarApproachNear and not runnerStopped then
 								if pvpEnabled then
-									approachMessage(pid, un, pilotObj, groupid, pilotData, pilotPoint, heliPoint, dist, entry.side)
+									approachMessage(pid, un, pilotObj, groupid, pilotData, pilotPoint, heliPoint, dist, entry.side, pilotObservations)
 								else
-									approachMessage(pid, un, pilotObj, groupid, pilotData, pilotPoint, heliPoint, dist)
+									approachMessage(pid, un, pilotObj, groupid, pilotData, pilotPoint, heliPoint, dist, nil, pilotObservations)
 								end
 							end							
 							if dist < self.csarExtractDistance and not runnerStopped then
@@ -100708,12 +100955,13 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 				return object
 			end
 
-			local function pointInActiveZone(obj)
-				if not obj then return nil end
+			local function pointInActiveZone(point)
+				if not point then return nil end
 				local bc = self.battleCommander
 				for _, z in ipairs(bc.zones) do
 					if z.active and z.side and z.side ~= 0 and z.zone then
-						if Utils.isInZone(obj, z.zone) then
+						local zone = CustomZone:getByName(z.zone)
+						if zone and zone:isInside(point) then
 							return z.side, z.zone
 						end
 					end
@@ -100743,7 +100991,7 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 				return
 			end
 
-			local zoneSide, zoneName = pointInActiveZone(pilot)
+			local zoneSide, zoneName = pointInActiveZone(pilotPoint)
 			if zoneSide and pilotData and pilotData.player and pilotData.player ~= '' and pilotData.coalition and zoneSide ~= pilotData.coalition then
 				pilotData.hostileZoneName = zoneName
 				pilotData.hostileGraceUntil = timer.getTime() + 60
@@ -102425,7 +102673,7 @@ do
 					if not slot.targetZone then return false end
 					local zone = commander:getZoneByName(slot.targetZone)
 					local active = zone and zone.side == 1 and not zone.suspended
-						and not commander:HasSeadTargets(slot.targetZone)
+						and not commander:HasSeadTargets(slot.targetZone, nil, nil, zone)
 					-- Unstarted records never reach endAction in the existing tracker.
 					if not active and not mission.isRunning then slot.targetZone = nil end
 					return active
@@ -110162,6 +110410,11 @@ do
 
 	function WarehousePersistence.RegisterExtraAirbase(name)
 		if _shouldSkip(name) then return false end
+		local startup = WarehousePersistence._startupFarpRestore
+		if startup and startup.collecting and not startup.pending[name] then
+			startup.pending[name] = {}
+			startup.remaining = startup.remaining + 1
+		end
 		WarehouseExtraAirbases = WarehouseExtraAirbases or {}
 		if WarehouseExtraAirbases[name] then
 			return false
@@ -110199,6 +110452,49 @@ do
         table.sort(names)
         return names
     end
+
+	function WarehousePersistence.BeginFarpStartupRestore()
+		if WarehousePersistence._startupLoadComplete or WarehouseLogistics ~= true then return end
+		local startup = WarehousePersistence._startupFarpRestore
+		if not startup then
+			startup = { pending = {}, remaining = 0, collecting = false, finished = false }
+			WarehousePersistence._startupFarpRestore = startup
+		end
+		return startup
+	end
+
+	function WarehousePersistence.CancelFarpStartupRestore()
+		WarehousePersistence._startupFarpRestoreCancelled = true
+		WarehousePersistence._startupFarpRestore = nil
+		WarehousePersistence._startupLoadComplete = true
+	end
+
+	function WarehousePersistence.CompleteFarpStartupRestore(startup, name, ready)
+		if startup ~= WarehousePersistence._startupFarpRestore then return end
+		if name then
+			local store = startup.pending[name]
+			if store and store.ready == nil then
+				store.ready = ready
+				startup.remaining = startup.remaining - 1
+			end
+		end
+		if not startup.requested or startup.collecting or not startup.finished or startup.remaining > 0 then return end
+		if bc._persistenceResetPending then
+			WarehousePersistence.CancelFarpStartupRestore()
+			return
+		end
+		startup.opts.startupFarps = startup.pending
+		WarehousePersistence.Load(startup.zones, startup.opts)
+		startup.opts.startupFarps = nil
+		WarehousePersistence._startupFarpRestore = nil
+		WarehousePersistence._startupLoadComplete = true
+		bc:_schedulePendingAirAiRestore(0)
+		WarehousePersistence.StartHealthScanner(startup.zones, {
+			healthDelay = math.max(0, startup.healthAt - timer.getTime()),
+			healthStepDelay = startup.opts.healthStepDelay,
+		})
+		if startup.savePending then WarehousePersistence.Save(startup.zones, startup.opts) end
+	end
 
 	local WAREHOUSE_HEALTH_EMPTY_LEVEL = 5
 	local WAREHOUSE_HEALTH_LOW_LEVEL = 50
@@ -110626,7 +110922,14 @@ do
 		end
 		local allowed = {}
 		for _, ab in ipairs(opts.airbases or _airbases(zonesTbl, true, opts.warehouseOnly)) do
-			if not logistic[ab] and not _shouldSkip(ab) then
+			local restored = opts.startupFarps and opts.startupFarps[ab]
+			local ready = not restored or restored.ready == true
+			if ready and restored and restored.record then
+				local native = bc:getDynamicFarpAirbase(restored.record)
+				if native and ab ~= restored.record.name then native = Airbase.getByName(ab) end
+				ready = native and native:getID() == restored.nativeId and native:getCoalition() == restored.side
+			end
+			if ready and not logistic[ab] and not _shouldSkip(ab) then
 				allowed[ab] = true
 			end
 		end
@@ -110717,10 +111020,28 @@ return loaded > 0 or repaired > 0
 		local loadDelay = tonumber(opts.loadDelay) or 15
 		local saveDelay = tonumber(opts.saveDelay) or 30
 		local interval = tonumber(opts.interval) or 300
+		if opts.healthDelay == nil then opts.healthDelay = loadDelay >= 0 and loadDelay + 2 or 2 end
+		local healthAt = timer.getTime() + opts.healthDelay
 		local function _load()
-			WarehousePersistence.Load(zonesTbl or zones, opts)
+			if WarehousePersistence._startupFarpRestoreCancelled then return end
+			local startup = WarehousePersistence._startupFarpRestore
+			if startup then
+				startup.zones, startup.opts, startup.healthAt = zonesTbl or zones, opts, healthAt
+				startup.requested = true
+				WarehousePersistence.CompleteFarpStartupRestore(startup)
+			else
+				WarehousePersistence.Load(zonesTbl or zones, opts)
+				WarehousePersistence._startupLoadComplete = true
+				bc:_schedulePendingAirAiRestore(0)
+				WarehousePersistence.StartHealthScanner(zonesTbl or zones, {
+					healthDelay = math.max(0, healthAt - timer.getTime()),
+					healthStepDelay = opts.healthStepDelay,
+				})
+			end
 		end
 		local function _save()
+			local startup = WarehousePersistence._startupFarpRestore
+			if startup then startup.savePending = true; return end
 			WarehousePersistence.Save(zonesTbl or zones, opts)
 		end
 		if loadDelay >= 0 then
@@ -110739,13 +111060,11 @@ return loaded > 0 or repaired > 0
 				SCHEDULER:New(nil, _save, {}, saveDelay, interval)
 			end
 		end
-		if opts.healthDelay == nil then opts.healthDelay = loadDelay >= 0 and loadDelay + 2 or 2 end
-		WarehousePersistence.StartHealthScanner(zonesTbl or zones, opts)
 		return true
 	end
 end
 function startWarehousePersistence()
-		local opts = { loadDelay = 2, healthDelay = 12, saveDelay = 30, interval = 300 }
+		local opts = { loadDelay = 5, healthDelay = 12, saveDelay = 30, interval = 300 }
 		if FootholdSavePath then opts.path = FootholdSavePath end
 		if FootholdSaveBaseName and tostring(FootholdSaveBaseName) ~= "" then
 			opts.filename = tostring(FootholdSaveBaseName) .. "_storage.csv"
@@ -113212,7 +113531,7 @@ end
 function WEAPONSLIST.ClearWeaponsInStorage(storage)
 	if not storage then return false end
 	for _, itemName in ipairs(WEAPONSLIST._allItemsCache or WEAPONSLIST.GetAllItems() or {}) do
-		pcall(function() storage:SetItem(_getWarehouseItemKey(itemName), 0) end)
+		storage:SetItem(_getWarehouseItemKey(itemName), 0)
 	end
 	for _, itemName in ipairs(WEAPONSLIST_MODS_ITEMS or {}) do
 		storage:SetItem(_getWarehouseItemKey(itemName), 0)
@@ -113391,8 +113710,8 @@ local function checkUnlimitedPlanesForAirbase(airbaseName)
 		break
 	end
 	if samplePlane then
-		local ok, isUnlimited = pcall(storage.IsUnlimited, storage, samplePlane)
-		if ok and isUnlimited then
+		local isUnlimited = storage:IsUnlimited(samplePlane)
+		if isUnlimited then
 			trigger.action.outText(L10N:Format("WAREHOUSE_UNLIMITED_AIRCRAFT_DETECTED", tostring(airbaseName)),15)
 		end
 	end
@@ -113488,16 +113807,16 @@ function checkWeaponsList(airbase, knownZone, knownSide)
 			local finiteWarehouse = targetZone and targetZone.warehouseFacility and targetZone:_hasFiniteWarehouseStock()
 			for _, name in ipairs(not finiteWarehouse and allWeapons or {}) do
 				local key = _getWarehouseItemKey(name)
-				local okAmt, amt = pcall(storage.GetItemAmount, storage, key)
-				if (not okAmt) or (amt == nil) or (amt == 0) or (amt >= 0 and amt < 10000000) then
-					pcall(storage.SetItem, storage, key, 1073741823)
+				local amt = storage:GetItemAmount(key)
+				if (amt == nil) or (amt == 0) or (amt >= 0 and amt < 10000000) then
+					storage:SetItem(key, 1073741823)
 				end
 			end
 
 			for _, acName in ipairs(restockAircraft) do
-				local okAmt, amt = pcall(storage.GetItemAmount, storage, acName)
-				if (not okAmt) or (amt == nil) or (amt >= 0 and amt < 10000000) then
-					pcall(storage.SetItem, storage, acName, 1073741823)
+				local amt = storage:GetItemAmount(acName)
+				if (amt == nil) or (amt >= 0 and amt < 10000000) then
+					storage:SetItem(acName, 1073741823)
 				end
 			end
 			for _, forbiddenWeapon in ipairs(ForbiddWeaponsInAllEra or {}) do
@@ -113637,16 +113956,16 @@ function checkWeaponsList(airbase, knownZone, knownSide)
 
             for _, name in ipairs(not finiteAirbases[airbaseName] and allWeapons or {}) do
                 local key = _getWarehouseItemKey(name)
-                local okAmt, amt = pcall(storage.GetItemAmount, storage, key)
-                if (not okAmt) or (amt == nil) or (amt == 0) or (amt >= 0 and amt < 10000000) then
-                    pcall(storage.SetItem, storage, key, 1073741823)
+                local  amt = storage:GetItemAmount(key)
+                if (amt == nil) or (amt == 0) or (amt >= 0 and amt < 10000000) then
+                    storage:SetItem(key, 1073741823)
                 end
             end
 
             for _, acName in ipairs(restockAircraft) do
-                local okAmt, amt = pcall(storage.GetItemAmount, storage, acName)
-                if (not okAmt) or (amt == nil) or (amt >= 0 and amt < 10000000) then
-                    pcall(storage.SetItem, storage, acName, 1073741823)
+                local amt = storage:GetItemAmount(acName)
+                if (amt == nil) or (amt >= 0 and amt < 10000000) then
+                    storage:SetItem(acName, 1073741823)
                 end
             end
 			for _, forbiddenWeapon in ipairs(ForbiddWeaponsInAllEra or {}) do

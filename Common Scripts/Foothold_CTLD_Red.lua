@@ -85,7 +85,7 @@ Foothold_redCtld.VehicleMoveFormation = { AI.Task.VehicleFormation.VEE, AI.Task.
 Foothold_redCtld.UseC130LoadAndUnload = true
 Foothold_redCtld.returntroopstobase = false
 
-Foothold_redCtld:__Start(4)
+Foothold_redCtld:__Start(1)
 
 ---------------------------------------------------------------------------
 -- Red CTLD: Pricing
@@ -2315,7 +2315,7 @@ if pvpEnabled then
     Foothold_redCtld.PlayerCtldStatOverrides = Foothold_ctld.PlayerCtldStatOverrides
 end
 
-Foothold_redCtld:__Load(10)
+Foothold_redCtld:__Load(1)
 
 function Foothold_redCtld:OnAfterLoaded(From, Event, To, LoadedGroups)
     self:I("***** Red CTLD Groups Loaded! *****")

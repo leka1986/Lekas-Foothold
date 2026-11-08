@@ -35708,12 +35708,12 @@ end
 return self
 end
 function STORAGE:AddItem(Name,Amount)
-self:T(self.lid..string.format("Adding %d items of %s",Amount,UTILS.OneLineSerialize(Name)))
+if BASE.Debug and _TraceOnOff==true then self:T(self.lid..string.format("Adding %d items of %s",Amount,UTILS.OneLineSerialize(Name))) end
 self.warehouse:addItem(Name,Amount)
 return self
 end
 function STORAGE:SetItem(Name,Amount)
-self:T(self.lid..string.format("Setting item %s to N=%d",UTILS.OneLineSerialize(Name),Amount))
+if BASE.Debug and _TraceOnOff==true then self:T(self.lid..string.format("Setting item %s to N=%d",UTILS.OneLineSerialize(Name),Amount)) end
 self.warehouse:setItem(Name,Amount)
 return self
 end
@@ -38346,6 +38346,7 @@ end
 local padding=Padding or 10
 if padding<10 then padding=10 end
 self.Padding=padding
+self._filterOnceCache={}
 self.UseEmissionsOnOff=true
 self.debug=false
 self.CallBack=nil
@@ -38429,6 +38430,54 @@ self:E({_point1,_point2})
 return-1
 end
 end
+function SEAD:_FilterOnceCached(Set)
+local filter=Set.Filter
+local prefixes=filter.GroupPrefixes
+if not prefixes or filter.Alive or filter.Active~=false or filter.Coalitions or filter.Categories or filter.Countries or filter.Functions or next(Set.Set)then
+return Set:FilterOnce()
+end
+local cache=self._filterOnceCache
+local changed=not cache.prefixes or cache.noRegex~=Set.filterNoRegex or cache.replaceDash~=Set.filterReplaceDash
+if not changed then
+for key,prefix in pairs(prefixes)do
+if cache.prefixes[key]~=prefix then changed=true break end
+end
+end
+if not changed then
+for key,prefix in pairs(cache.prefixes)do
+if prefixes[key]~=prefix then changed=true break end
+end
+end
+if changed then
+cache.prefixes={}
+for key,prefix in pairs(prefixes)do cache.prefixes[key]=prefix end
+cache.matches={}
+cache.noRegex=Set.filterNoRegex
+cache.replaceDash=Set.filterReplaceDash
+end
+for ObjectName,Object in pairs(Set.Database)do
+local name=Object:GetName()
+local matched=cache.matches[name]
+if matched==nil then
+matched=false
+for _,prefix in pairs(prefixes)do
+if Set:_SearchPattern(name,prefix,Set.filterNoRegex,Set.filterReplaceDash)then matched=true end
+end
+cache.matches[name]=matched
+end
+if matched then
+local include=true
+if filter.Zones then
+include=false
+for _,zone in pairs(filter.Zones)do
+if Object:IsInZone(zone)then include=true end
+end
+end
+if include then Set:Add(ObjectName,Object)end
+end
+end
+return Set
+end
 function SEAD:onafterCalculateHitZone(From,Event,To,SEADWeapon,pos0,height,SEADGroup,SEADWeaponName)
 self:T("**** Calculating hit zone for "..(SEADWeaponName or"None"))
 if SEADWeapon and SEADWeapon:isExist()then
@@ -38467,7 +38516,7 @@ if self.debug then
 predpos:MarkToAll(string.format("height=%dm | heading=%d | velocity=%ddeg | Ropt=%dm",mheight,wph,mveloc,Ropt),false)
 targetzone:DrawZone(coalition.side.BLUE,{0,0,1},0.2,nil,nil,3,true)
 end
-local seadset=SET_GROUP:New():FilterPrefixes(self.SEADGroupPrefixes):FilterZones({targetzone}):FilterOnce()
+local seadset=self:_FilterOnceCached(SET_GROUP:New():FilterPrefixes(self.SEADGroupPrefixes):FilterZones({targetzone}))
 local tgtgrp=seadset:GetRandom()
 local _targetgroup=nil
 local _targetgroupname="none"
@@ -38629,7 +38678,7 @@ _targetskill=_targetUnit:GetSkill()
 end
 elseif targetcat==Object.Category.STATIC then
 self:T("*** Target Category STATIC")
-local seadset=SET_GROUP:New():FilterPrefixes(self.SEADGroupPrefixes):FilterOnce()
+local seadset=self:_FilterOnceCached(SET_GROUP:New():FilterPrefixes(self.SEADGroupPrefixes))
 local targetpoint=_target:getPoint()or{x=0,y=0,z=0}
 local tgtcoord=COORDINATE:NewFromVec3(targetpoint)
 local tgtgrp=seadset:FindNearestGroupFromPointVec2(tgtcoord)
@@ -57338,7 +57387,7 @@ end
 return inzone
 end
 function MANTIS:_PreFilterHeight(height,SamCoordinate,contactSnapshot)
-self:T(self.lid.."_PreFilterHeight")
+if BASE.Debug and _TraceOnOff==true then self:T(self.lid.."_PreFilterHeight") end
 local set={}
 for _,contact in pairs(contactSnapshot)do
 local grp=contact.group
@@ -57365,7 +57414,7 @@ end
 return set
 end
 function MANTIS:_CheckObjectInZone(dectset,samcoordinate,radius,height,dlink,contactSnapshot,closeRadius,zoneResults)
-self:T(self.lid.."_CheckObjectInZone")
+if BASE.Debug and _TraceOnOff==true then self:T(self.lid.."_CheckObjectInZone") end
 local rad=radius or self.checkradius
 local set=dectset
 if dlink then
@@ -57383,7 +57432,7 @@ if not targetdistance then
 targetdistance=samcoordinate:Get2DDistance(coord)
 end
 local zonecheck=true
-self:T("self.usezones = "..tostring(self.usezones))
+if BASE.Debug and _TraceOnOff==true then self:T("self.usezones = "..tostring(self.usezones)) end
 if self.usezones then
 if zoneResults then
 zonecheck=zoneResults[coord]
@@ -78736,12 +78785,21 @@ end
 text:Add("------------------------------------------------------------")
 self:_SendMessage(text:Text(),30,true,_group,true)
 local done={}
+local refreshBatch={}
 for _,e in pairs(crates)do
 local n=e:GetName()or"none"
 if not done[n]then
 local object=self:_FindCratesCargoObject(n)
-if object then self:_RefreshCrateQuantityMenus(_group,_unit,object)end
+if object then self:_RefreshCrateQuantityMenus(_group,_unit,object,refreshBatch)end
 done[n]=true
+end
+end
+if refreshBatch.refreshTroops then
+if not _group.CTLD_CrateMenus then
+self:_RefreshQuantityMenusForGroup(_group,_unit)
+else
+if refreshBatch.stockCleanupChanged then self:_RefreshCrateQuantityMenus(_group,_unit,nil,refreshBatch)end
+self:_RefreshTroopQuantityMenus(_group,_unit,nil,refreshBatch.menuCapacity)
 end
 end
 self:_CleanupTrackedCrates(removedIDs)
@@ -79991,12 +80049,21 @@ end
 text:Add("------------------------------------------------------------")
 self:_SendMessage(text:Text(),30,true,Group,true)
 local done={}
+local refreshBatch={}
 for _,e in pairs(crates)do
 local n=e:GetName()or"none"
 if not done[n]then
 local object=self:_FindCratesCargoObject(n)
-if object then self:_RefreshCrateQuantityMenus(Group,Unit,object)end
+if object then self:_RefreshCrateQuantityMenus(Group,Unit,object,refreshBatch)end
 done[n]=true
+end
+end
+if refreshBatch.refreshTroops then
+if not Group.CTLD_CrateMenus then
+self:_RefreshQuantityMenusForGroup(Group,Unit)
+else
+if refreshBatch.stockCleanupChanged then self:_RefreshCrateQuantityMenus(Group,Unit,nil,refreshBatch)end
+self:_RefreshTroopQuantityMenus(Group,Unit,nil,refreshBatch.menuCapacity)
 end
 end
 self:_CleanupTrackedCrates(removedIDs)
@@ -80402,10 +80469,11 @@ else
 return string.format("[%d]",rounded)
 end
 end
-function CTLD:_RefreshCrateQuantityMenus(Group,Unit,CargoObj)
-local menuCapacity
+function CTLD:_RefreshCrateQuantityMenus(Group,Unit,CargoObj,refreshBatch)
+if refreshBatch and refreshBatch.stockCleanupChanged then refreshBatch.cratesRefreshed=nil end
+local menuCapacity=refreshBatch and refreshBatch.menuCapacity
 if not Group and Unit then Group=Unit:GetGroup()end
-if Group and Unit then
+if Group and Unit and(not refreshBatch or not refreshBatch.cratesRefreshed)then
 local uname=Unit:GetName()or"none"
 self._qtySnap=self._qtySnap or{}
 self._qtySnap[uname]=self._qtySnap[uname]or{}
@@ -80417,7 +80485,14 @@ if string.sub(key,1,2)=="C:"and not present[key]then
 self._qtySnap[uname][key]=nil
 end
 end
-local stockSummary=self.showstockinmenuitems and self:_CountStockPlusInHeloPlusAliveGroups(false)or nil
+local cleanupChanges=refreshBatch and{}or nil
+local stockSummary=self.showstockinmenuitems and self:_CountStockPlusInHeloPlusAliveGroups(false,nil,cleanupChanges)or nil
+if refreshBatch then
+refreshBatch.stockCleanupChanged=nil
+for name in pairs(cleanupChanges)do
+if Group.CTLD_CrateMenus[name]then refreshBatch.stockCleanupChanged=true;break end
+end
+end
 for item,menu in pairs(Group.CTLD_CrateMenus)do
 menu:RemoveSubMenus()
 local obj=self:_FindCratesCargoObject(item)
@@ -80428,9 +80503,15 @@ end
 end
 end
 end
+if refreshBatch then
+refreshBatch.cratesRefreshed=true
+refreshBatch.menuCapacity=menuCapacity or{}
+menuCapacity=refreshBatch.menuCapacity
+end
 if CargoObj and Group and Unit then
 local uname=Unit:GetName()or"none"
 local capabilities=menuCapacity and menuCapacity.capabilities or self:_GetUnitCapabilities(Unit)
+if refreshBatch then menuCapacity.capabilities=capabilities end
 local cap=(capabilities.cratelimit or 0)
 local loaded=(self.Loaded_Cargo[uname]and self.Loaded_Cargo[uname].Cratesloaded)or 0
 local avail=math.max(0,cap-loaded)
@@ -80445,14 +80526,14 @@ local snap=tostring(type(s)=="number"and s or-1)..":"..tostring(unitAvail)
 if self._qtySnap[uname][k]~=snap then
 self._qtySnap[uname][k]=snap
 if type(s)=="number"and s>=0 and s<unitAvail then
-self:_RefreshQuantityMenusForGroup(Group,Unit)
+if refreshBatch then refreshBatch.refreshTroops=true else self:_RefreshQuantityMenusForGroup(Group,Unit)end
 end
 end
 end
 return self
 end
-function CTLD:_RefreshTroopQuantityMenus(Group,Unit,CargoObj)
-local menuCapacity
+function CTLD:_RefreshTroopQuantityMenus(Group,Unit,CargoObj,knownMenuCapacity)
+local menuCapacity=knownMenuCapacity
 if not Group and Unit then Group=Unit:GetGroup()end
 if Group and Unit then
 local uname=Unit:GetName()or"none"
@@ -80669,6 +80750,9 @@ self:T(self.lid.."Unit and Group exist")
 local capabilities=self:_GetUnitCapabilities(_unit)
 local cantroops=capabilities.troops
 local cancrates=capabilities.crates
+local quantityMenusBuilt=firstBuild and not self.showstockinmenuitems
+local menuCapacity
+if quantityMenusBuilt and((not cantroops and _group.CTLD_TroopMenus)or((not cancrates or not self.onestepmenu)and _group.CTLD_CrateMenus))then quantityMenusBuilt=false end
 local unittype=_unit:GetTypeName()
 local isHook=self:IsHook(_unit)
 local nohookswitch=true
@@ -80716,7 +80800,9 @@ parent=subcatmenus[cargoObj.Subcategory]
 end
 local mSet=MENU_GROUP:New(_group,menutext,parent)
 _group.CTLD_TroopMenus[cargoObj.Name]=mSet
-self:_AddTroopQuantityMenus(_group,_unit,mSet,cargoObj)
+if quantityMenusBuilt and(not self._troopsByName or self._troopsByName[cargoObj.Name]~=cargoObj)then quantityMenusBuilt=false end
+menuCapacity=menuCapacity or{capabilities=capabilities}
+self:_AddTroopQuantityMenus(_group,_unit,mSet,cargoObj,menuCapacity)
 end
 end
 else
@@ -80725,7 +80811,9 @@ if not cargoObj.DontShowInMenu then
 local menutext=self:_FormatCargoDisplayText(cargoObj.Name,cargoObj,_group)
 local mSet=MENU_GROUP:New(_group,menutext,troopsmenu)
 _group.CTLD_TroopMenus[cargoObj.Name]=mSet
-self:_AddTroopQuantityMenus(_group,_unit,mSet,cargoObj)
+if quantityMenusBuilt and(not self._troopsByName or self._troopsByName[cargoObj.Name]~=cargoObj)then quantityMenusBuilt=false end
+menuCapacity=menuCapacity or{capabilities=capabilities}
+self:_AddTroopQuantityMenus(_group,_unit,mSet,cargoObj,menuCapacity)
 end
 end
 end
@@ -80794,7 +80882,9 @@ if suffix then txt=txt..suffix end
 end
 local mSet=MENU_GROUP:New(_group,txt,parent)
 _group.CTLD_CrateMenus[cargoObj.Name]=mSet
-self:_AddCrateQuantityMenus(_group,_unit,mSet,cargoObj,crateStockSummary)
+if quantityMenusBuilt and(not self._crateOrStaticByName or self._crateOrStaticByName[cargoObj.Name]~=cargoObj)then quantityMenusBuilt=false end
+menuCapacity=menuCapacity or{capabilities=capabilities}
+self:_AddCrateQuantityMenus(_group,_unit,mSet,cargoObj,crateStockSummary,menuCapacity)
 end
 if self.usesubcats then
 local subcatmenus={}
@@ -80998,7 +81088,7 @@ self:_RefreshLoadCratesMenu(_group,_unit)
 self:_RefreshPackMenus(_group,_unit)
 self:_RefreshDropCratesMenu(_group,_unit)
 if firstBuild then menucount=menucount+1 end
-if firstBuild and not self.showstockinmenuitems then self:_RefreshQuantityMenusForGroup(_group,_unit)end
+if firstBuild and not self.showstockinmenuitems and not quantityMenusBuilt then self:_RefreshQuantityMenusForGroup(_group,_unit)end
 end
 end
 else
@@ -82721,7 +82811,7 @@ end
 self.EngineersInField=engtable
 return self
 end
-function CTLD:_CountStockPlusInHeloPlusAliveGroups(Restock,Threshold)
+function CTLD:_CountStockPlusInHeloPlusAliveGroups(Restock,Threshold,cleanupChanges)
 local Troopstable={}
 for _id,_cargo in pairs(self.Cargo_Crates)do
 local generic=_cargo
@@ -82871,6 +82961,7 @@ if Troopstable[genname].Inhelo==0 and Troopstable[genname].CratesInfield<1 then
 Troopstable[genname].CratesInfield=0
 Troopstable[genname].Sum=Troopstable[genname].Stock
 cargo:GetPositionable():Destroy(false)
+if cleanupChanges then cleanupChanges[genname]=true end
 table.remove(self.Spawned_Cargo,i)
 local leftover=Troopstable[genname].Stock0-(Troopstable[genname].Infield+Troopstable[genname].Inhelo+Troopstable[genname].CratesInfield)
 if leftover<Troopstable[genname].Stock then

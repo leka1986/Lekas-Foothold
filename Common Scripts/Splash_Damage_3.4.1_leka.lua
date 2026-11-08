@@ -711,7 +711,8 @@ explTable = {
     --*** GLIDE BOMBS (JSOW) ***
     ["AGM_154A"] = { explosive = 0, cluster = true, submunition_count = 145, submunition_explosive = 2, submunition_name = "BLU-97/B" }, --JSOW-A, confirmed 145 BLU-97 bomblets from datamine
     ["AGM_154C"] = { explosive = 305 },
-    ["F16V_GBU53"] = { explosive = 50 },
+    ["F16V_GBU53"] = { explosive = 25 },
+    ["F16V_GBU39"] = { explosive = 25 },
     ["AGM_154"] = { explosive = 305 },
     ["BK90_MJ1"] = { explosive = 0 },
     ["BK90_MJ1_MJ2"] = { explosive = 0 },
@@ -1049,6 +1050,7 @@ WpnHandler = {}
 local tracked_target_position = nil --Store the last known position of TargetUnit for giant explosion
 local tracked_weapons = {}
 local trackedGroundOrdnanceCount = 0
+local reportedMissingWeapons = {}
 local processedUnitsGlobal = {}
 local GUProcessedUnits = {}
 local napalmCounter = 1
@@ -1305,6 +1307,7 @@ local function getFootholdRewardDataForObject(object, objectName)
     end
 
     local rewardData = safeGet(function()
+        if object:getCoalition() ~= coalition.side.RED then return nil end
         local points, _, statName = bc:objectToRewardPoints2(object, objectName)
         return {
             statName = statName,
@@ -1399,6 +1402,10 @@ local function pruneProcessedStateTables(_, currentTime)
         if currentTime - entryTime > PROCESSED_STATE_RETENTION_SECONDS then
             processedCookoffs[unitId] = nil
         end
+    end
+
+    for unitId, expiresAt in pairs(processedSmoke) do
+        if currentTime > expiresAt then processedSmoke[unitId] = nil end
     end
 
     prunePendingStateTable(CargoCookoffPendingTable, currentTime)
@@ -2055,7 +2062,7 @@ end
 --Schedule advanced sequence cargo effects
 local function scheduleAdvancedEffectSequence(unitID, coords, effectData, fromDeadEvent)
     local function triggerEffects(pos)
-        processedSmoke[unitID] = true --Ensure unit is marked as processed
+        processedSmoke[unitID] = timer.getTime() + PROCESSED_STATE_RETENTION_SECONDS --Retain until the effect sequence ends
         local effectOrder = splash_damage_options.allunits_advanced_effect_order
         local effectTiming = splash_damage_options.allunits_advanced_effect_timing
         local cumulativeTime = 0
@@ -2108,6 +2115,8 @@ local function scheduleAdvancedEffectSequence(unitID, coords, effectData, fromDe
             end, {flameSize = tonumber(effectOrder[i]), duration = duration, effectId = effectId}, timer.getTime() + cumulativeTime)
             cumulativeTime = cumulativeTime + duration
         end
+
+        processedSmoke[unitID] = processedSmoke[unitID] + math.max(cumulativeTime, effectData.cookOff and effectData.cookOffCount > 0 and (effectData.cookOffDuration + 0.2) or 0.1)
 
         if effectData.cookOff and effectData.cookOffCount > 0 then
             if splash_damage_options.allunits_advanced_effect_cookoff_flares_enabled then
@@ -2371,7 +2380,8 @@ local function scheduleCargoEffects(unitType, unitName, unitID, effectIndex, fro
         local adjustedCoords = {x = effect.coords.x, y = terrainHeight + 2, z = effect.coords.z}
         if fromDeadEvent then
             --For DEAD events, spawn smoke immediately without movement tracking
-            processedSmoke[unitID] = true
+            local smokeStopAt = timer.getTime() + (effect.flameDuration or splash_damage_options.allunits_default_flame_duration)
+            processedSmoke[unitID] = smokeStopAt + PROCESSED_STATE_RETENTION_SECONDS
             if not effect.cookOff and splash_damage_options.allunits_explode_on_smoke_only then
                 trigger.action.explosion(adjustedCoords, splash_damage_options.allunits_explode_power)
             end
@@ -2379,7 +2389,7 @@ local function scheduleCargoEffects(unitType, unitName, unitID, effectIndex, fro
             effectSmokeId = effectSmokeId + 1
             timer.scheduleFunction(function(id)
                 trigger.action.effectSmokeStop(id)
-            end, effectSmokeId - 1, timer.getTime() + (effect.flameDuration or splash_damage_options.allunits_default_flame_duration))
+            end, effectSmokeId - 1, smokeStopAt)
         else
             --For HIT/KILL events, track movement until stationary
             local function checkMovement(params)
@@ -2405,7 +2415,8 @@ local function scheduleCargoEffects(unitType, unitName, unitID, effectIndex, fro
                                    math.abs(newPos.y - entry.prevCoords.y) < 0.1 and
                                    math.abs(newPos.z - entry.prevCoords.z) < 0.1
                 if hasStopped then
-                    processedSmoke[params.unitID] = true
+                    local smokeStopAt = timer.getTime() + (params.flameDuration or splash_damage_options.allunits_default_flame_duration)
+                    processedSmoke[params.unitID] = smokeStopAt + PROCESSED_STATE_RETENTION_SECONDS
                     entry.coords = newPos
                     local terrainHeight = land.getHeight({x = newPos.x, y = newPos.z})
                     local adjustedCoords = {x = newPos.x, y = terrainHeight + 2, z = newPos.z}
@@ -2416,7 +2427,7 @@ local function scheduleCargoEffects(unitType, unitName, unitID, effectIndex, fro
                     effectSmokeId = effectSmokeId + 1
                     timer.scheduleFunction(function(id)
                         trigger.action.effectSmokeStop(id)
-                    end, effectSmokeId - 1, timer.getTime() + (params.flameDuration or splash_damage_options.allunits_default_flame_duration))
+                    end, effectSmokeId - 1, smokeStopAt)
                     return
                 end
                 entry.prevCoords = newPos
@@ -3137,6 +3148,8 @@ function track_wpns()
                                         local playerName = innerArgs[6]
                                         --Scan all units in wider radius
                                         local postExplosionTargets = {}
+                                        local postTargetsById = {}
+                                        local preTargetsById = {}
                                         local volS = {
                                             id = world.VolumeType.SPHERE,
                                             params = {
@@ -3152,7 +3165,7 @@ function track_wpns()
                                                    category == Object.Category.STATIC then
                                                     local position = foundObject:getPoint()
                                                     local distance = getDistance(impactPoint, position)
-                                                    table.insert(postExplosionTargets, {
+                                                    local target = {
                                                         name = foundObject:getTypeName(),
                                                         health = foundObject:getLife() or 0,
                                                         position = position,
@@ -3161,7 +3174,9 @@ function track_wpns()
                                                         id = foundObject:getID(),
                                                         unitName = foundObject:getName() or "Unknown",
                                                         unit = foundObject
-                                                    })
+                                                    }
+                                                    postExplosionTargets[#postExplosionTargets + 1] = target
+                                                    postTargetsById[target.id] = target
                                                 end
                                             end
                                             return true
@@ -3178,17 +3193,16 @@ function track_wpns()
                                             local postUnit = nil
                                             local postId = nil
                                             local postUnitName = nil
-                                            for _, postTarget in ipairs(postExplosionTargets) do
-                                                if preTarget.name == postTarget.name and getDistance(preTarget.position, postTarget.position) < 1 then
-                                                    found = true
-                                                    postHealth = postTarget.health
-                                                    postPosition = postTarget.position
-                                                    postDistance = postTarget.distance
-                                                    postUnit = postTarget.unit
-                                                    postId = postTarget.id
-                                                    postUnitName = postTarget.unitName
-                                                    break
-                                                end
+                                            preTargetsById[preTarget.id] = true
+                                            local postTarget = postTargetsById[preTarget.id]
+                                            if postTarget then
+                                                found = true
+                                                postHealth = postTarget.health
+                                                postPosition = postTarget.position
+                                                postDistance = postTarget.distance
+                                                postUnit = postTarget.unit
+                                                postId = postTarget.id
+                                                postUnitName = postTarget.unitName
                                             end
                                             local healthPercent = preTarget.maxHealth > 0 and (postHealth / preTarget.maxHealth * 100) or 0
                                             local wasFullyDestroyed = not found or postHealth <= 0
@@ -3231,13 +3245,7 @@ function track_wpns()
                                         end
                                         --Check for additional units
                                         for _, postTarget in ipairs(postExplosionTargets) do
-                                            local isPreDetected = false
-                                            for _, preTarget in ipairs(preExplosionTargets) do
-                                                if preTarget.name == postTarget.name and getDistance(preTarget.position, postTarget.position) < 1 then
-                                                    isPreDetected = true
-                                                    break
-                                                end
-                                            end
+                                            local isPreDetected = preTargetsById[postTarget.id] == true
                                             if not isPreDetected then
                                                 local healthPercent = postTarget.maxHealth > 0 and (postTarget.health / postTarget.maxHealth * 100) or 0
                                                local status = postTarget.health <= 0 and "WAS FULLY DESTROYED" or 
@@ -3297,12 +3305,22 @@ end
 
 function onWpnEvent(event)
     if event.id == world.event.S_EVENT_SHOT then
+        -- Booster shot objects do not support normal weapon descriptor APIs.
+        local weaponName = event.weapon_name
+        if weaponName == "ZELL Booster" or weaponName == "SPRD-99" then return end
         if event.weapon then
             local ordnance = event.weapon
+            if splash_damage_options.only_players_weapons and not event.initiator then return end
+            if not ordnance:isExist() then return end
+            local playerName
+            if splash_damage_options.only_players_weapons then
+                playerName = resolvePlayerName(event.initiator)
+                if playerName == "Unknown" and not splash_damage_options.CBU_Bomblet_Hit_Explosion then return end
+            end
             --verify isExist and getDesc
             local isValid = false
             --local status, desc = pcall(function() return ordnance:isExist() and ordnance:getDesc() end)
-            local desc = ordnance:isExist() and ordnance:getDesc()
+            local desc = ordnance:getDesc()
             if desc then
                 isValid = true
             end
@@ -3324,9 +3342,9 @@ function onWpnEvent(event)
                 end
             end
 
-            local playerName = "Unknown"
-            if event.initiator then
-                playerName = resolvePlayerName(event.initiator)
+            if playerName == nil then
+                playerName = "Unknown"
+                if event.initiator then playerName = resolvePlayerName(event.initiator) end
             end
             --Skip non-player weapons if only_players_weapons is enabled
             if splash_damage_options.only_players_weapons and playerName == "Unknown" then
@@ -3349,7 +3367,7 @@ function onWpnEvent(event)
 				dir = ordnance:getPosition().x, 
 				name = typeName, 
 				speed = ordnance:getVelocity(), 
-				cat = ordnance:getCategory()
+				cat = desc.category
 			}
 			return
 		end
@@ -3367,7 +3385,7 @@ function onWpnEvent(event)
                         dir = ordnance:getPosition().x, 
                         name = typeName, 
                         speed = ordnance:getVelocity(), 
-                        cat = ordnance:getCategory(),
+                        cat = desc.category,
                         isGroundUnitOrdnance = true --Flag for ground ordnance
                     }
                     trackedGroundOrdnanceCount = trackedGroundOrdnanceCount + 1
@@ -3386,7 +3404,7 @@ function onWpnEvent(event)
                                 dir = ordnance:getPosition().x, 
                                 name = typeName, 
                                 speed = ordnance:getVelocity(), 
-                                cat = ordnance:getCategory() 
+                                cat = desc.category 
                             }
                         end
                     else --Rockets, bombs, etc.
@@ -3397,7 +3415,7 @@ function onWpnEvent(event)
                             dir = ordnance:getPosition().x, 
                             name = typeName, 
                             speed = ordnance:getVelocity(), 
-                            cat = ordnance:getCategory() 
+                            cat = desc.category 
                         }
                     end
                 end
@@ -3409,7 +3427,10 @@ function onWpnEvent(event)
                 end
 
             --Log missing weapons
-            env.info("SplashDamage: " .. typeName .. " missing from script (" .. (event.initiator and event.initiator:getTypeName() or "no initiator") .. ")")
+            if not reportedMissingWeapons[typeName] then
+                reportedMissingWeapons[typeName] = true
+                env.info("SplashDamage: " .. typeName .. " missing from script (" .. (event.initiator and event.initiator:getTypeName() or "no initiator") .. ")")
+            end
                 end
             end
         end
@@ -3963,6 +3984,8 @@ function logEvent(eventName, eventData)
         end
     end
 
+    local eventPosition, eventPositionText
+
     --Process GiantExplosionTarget units if enabled
     if splash_damage_options.giant_explosion_enabled then
         local checkName = (eventName == "HIT" or eventName == "KILL") and eventData.target and safeGet(function() return eventData.target:getName() end, "unknown") or
@@ -3976,27 +3999,27 @@ function logEvent(eventName, eventData)
                     unitID = safeGet(function() return tgt:getID() end, "unavailable")
                     unitName = safeGet(function() return tgt:getName() end, "unknown")
                     unitType = safeGet(function() return tgt:getTypeName() end, "unknown")
-                    unitPosition = safeGet(function()
-                        local pos = tgt:getPosition().p
-                        return string.format("x=%.0f, y=%.0f, z=%.0f", pos.x, pos.y, pos.z)
-                    end, "unavailable")
-                    rawCoords = safeGet(function()
-                        local pos = tgt:getPosition().p
-                        return {x = pos.x, y = pos.y, z = pos.z}
-                    end, {x = 0, y = 0, z = 0})
+                    if eventPosition == nil then
+                        eventPosition = safeGet(function() return tgt:getPosition().p end, false) or false
+                    end
+                    if eventPositionText == nil then
+                        eventPositionText = eventPosition and string.format("x=%.0f, y=%.0f, z=%.0f", eventPosition.x, eventPosition.y, eventPosition.z) or "unavailable"
+                    end
+                    unitPosition = eventPositionText
+                    rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
                     unitLife = safeGet(function() return tgt:getLife() end, "Alive")
                 elseif eventName == "DEAD" then
                     unitID = safeGet(function() return eventData.initiator:getID() end, "unavailable")
                     unitName = safeGet(function() return eventData.initiator:getName() end, "unknown")
                     unitType = safeGet(function() return eventData.initiator:getTypeName() end, "unknown")
-                    unitPosition = safeGet(function()
-                        local pos = eventData.initiator:getPosition().p
-                        return string.format("x=%.0f, y=%.0f, z=%.0f", pos.x, pos.y, pos.z)
-                    end, "unavailable")
-                    rawCoords = safeGet(function()
-                        local pos = eventData.initiator:getPosition().p
-                        return {x = pos.x, y = pos.y, z = pos.z}
-                    end, {x = 0, y = 0, z = 0})
+                    if eventPosition == nil then
+                        eventPosition = safeGet(function() return eventData.initiator:getPosition().p end, false) or false
+                    end
+                    if eventPositionText == nil then
+                        eventPositionText = eventPosition and string.format("x=%.0f, y=%.0f, z=%.0f", eventPosition.x, eventPosition.y, eventPosition.z) or "unavailable"
+                    end
+                    unitPosition = eventPositionText
+                    rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
                     unitLife = safeGet(function() return eventData.initiator:getLife() end, 0)
                 end
             --end)
@@ -4047,14 +4070,14 @@ function logEvent(eventName, eventData)
             unitID = safeGet(function() return tgt:getID() end, "unavailable")
             unitName = safeGet(function() return tgt:getName() end, "unknown")
             unitType = safeGet(function() return tgt:getTypeName() end, "unknown")
-            unitPosition = safeGet(function()
-                local pos = tgt:getPosition().p
-                return string.format("x=%.0f, y=%.0f, z=%.0f", pos.x, pos.y, pos.z)
-            end, "unavailable")
-            rawCoords = safeGet(function()
-                local pos = tgt:getPosition().p
-                return {x = pos.x, y = pos.y, z = pos.z}
-            end, {x = 0, y = 0, z = 0})
+            if eventPosition == nil then
+                eventPosition = safeGet(function() return tgt:getPosition().p end, false) or false
+            end
+            if eventPositionText == nil then
+                eventPositionText = eventPosition and string.format("x=%.0f, y=%.0f, z=%.0f", eventPosition.x, eventPosition.y, eventPosition.z) or "unavailable"
+            end
+            unitPosition = eventPositionText
+            rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
             unitLife = safeGet(function() return tgt:getLife() end, "Alive")
         --end)
         end
@@ -4066,6 +4089,7 @@ function logEvent(eventName, eventData)
             }
             if coords.x and coords.y and coords.z then
                 A10MurderMode(coords)
+                eventPosition, eventPositionText = nil, nil
             end
         end
     end
@@ -4081,14 +4105,14 @@ function logEvent(eventName, eventData)
             unitID = safeGet(function() return tgt:getID() end, "unavailable")
             unitName = safeGet(function() return tgt:getName() end, "unknown")
             unitType = safeGet(function() return tgt:getTypeName() end, "unknown")
-            unitPosition = safeGet(function()
-                local pos = tgt:getPosition().p
-                return string.format("x=%.0f, y=%.0f, z=%.0f", pos.x, pos.y, pos.z)
-            end, "unavailable")
-            rawCoords = safeGet(function()
-                local pos = tgt:getPosition().p
-                return {x = pos.x, y = pos.y, z = pos.z}
-            end, {x = 0, y = 0, z = 0})
+            if eventPosition == nil then
+                eventPosition = safeGet(function() return tgt:getPosition().p end, false) or false
+            end
+            if eventPositionText == nil then
+                eventPositionText = eventPosition and string.format("x=%.0f, y=%.0f, z=%.0f", eventPosition.x, eventPosition.y, eventPosition.z) or "unavailable"
+            end
+            unitPosition = eventPositionText
+            rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
             unitLife = safeGet(function() return tgt:getLife() end, "Alive")
         --end)
         end
@@ -4100,6 +4124,7 @@ function logEvent(eventName, eventData)
             }
             if coords.x and coords.y and coords.z then
                 NamedUnitMurderMode(coords)
+                eventPosition, eventPositionText = nil, nil
             end
         end
     end
@@ -4115,14 +4140,14 @@ function logEvent(eventName, eventData)
 				unitID = safeGet(function() return tgt:getID() end, "unavailable")
 				unitName = safeGet(function() return tgt:getName() end, "unknown")
 				unitType = safeGet(function() return tgt:getTypeName() end, "unknown")
-				unitPosition = safeGet(function()
-					local pos = tgt:getPosition().p
-					return string.format("x=%.0f, y=%.0f, z=%.0f", pos.x, pos.y, pos.z)
-				end, "unavailable")
-				rawCoords = safeGet(function()
-					local pos = tgt:getPosition().p
-					return {x = pos.x, y = pos.y, z = pos.z}
-				end, {x = 0, y = 0, z = 0})
+				if eventPosition == nil then
+				    eventPosition = safeGet(function() return tgt:getPosition().p end, false) or false
+				end
+				if eventPositionText == nil then
+				    eventPositionText = eventPosition and string.format("x=%.0f, y=%.0f, z=%.0f", eventPosition.x, eventPosition.y, eventPosition.z) or "unavailable"
+				end
+				unitPosition = eventPositionText
+				rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
 				weaponName = safeGet(function()
 					local fullName = eventData.weapon:getTypeName()
 					return fullName:match(".*%.(.*)") or fullName
@@ -4149,6 +4174,7 @@ function logEvent(eventName, eventData)
 							}
 							if coords.x and coords.y and coords.z then
 								CriticalComponent(coords, weaponName, eventData.initiator, unitName, unitID, unitType)
+								eventPosition, eventPositionText = nil, nil
 							end
 						end
 					else
@@ -4159,6 +4185,7 @@ function logEvent(eventName, eventData)
 						}
 						if coords.x and coords.y and coords.z then
 							CriticalComponent(coords, weaponName, eventData.initiator, unitName, unitID, unitType)
+							eventPosition, eventPositionText = nil, nil
 						end
 					end
 				end
@@ -4167,23 +4194,24 @@ function logEvent(eventName, eventData)
 		
 		
 		--Process GU_Explode_on_Death for ground units
-		if splash_damage_options.GU_Explode_on_Death then
+		if splash_damage_options.GU_Explode_on_Death and (eventName == "HIT" or eventName == "DEAD") then
 			local unit, unitID, unitName, unitType, unitPosition, rawCoords, unitCategory
+			unit = eventName == "DEAD" and eventData.initiator or eventData.target
+			unitCategory = safeGet(function() return unit:getDesc().category end, "unknown")
+			if unitCategory == Unit.Category.GROUND_UNIT then
 			--local status, err = pcall(function()
 			do
-				unit = eventName == "DEAD" and eventData.initiator or eventData.target
 				unitID = safeGet(function() return unit:getID() end, "unavailable")
 				unitName = safeGet(function() return unit:getName() end, "unknown")
 				unitType = safeGet(function() return unit:getTypeName() end, "unknown")
-				unitCategory = safeGet(function() return unit:getDesc().category end, "unknown")
-				unitPosition = safeGet(function()
-					local pos = unit:getPosition().p
-					return string.format("x=%.0f, y=%.0f, z=%.0f", pos.x, pos.y, pos.z)
-				end, "unavailable")
-				rawCoords = safeGet(function()
-					local pos = unit:getPosition().p
-					return {x = pos.x, y = pos.y, z = pos.z}
-				end, {x = 0, y = 0, z = 0})
+				if eventPosition == nil then
+				    eventPosition = safeGet(function() return unit:getPosition().p end, false) or false
+				end
+				if eventPositionText == nil then
+				    eventPositionText = eventPosition and string.format("x=%.0f, y=%.0f, z=%.0f", eventPosition.x, eventPosition.y, eventPosition.z) or "unavailable"
+				end
+				unitPosition = eventPositionText
+				rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
 				--Fallback to CargoCookoffPendingTable coords if available for DEAD event
 				if eventName == "DEAD" and (rawCoords.x == 0 and rawCoords.y == 0 and rawCoords.z == 0) then
 					local pendingEntry = CargoCookoffPendingTable[unitID]
@@ -4195,7 +4223,7 @@ function logEvent(eventName, eventData)
 			--end)
 			end
 			local isInfantry = safeGet(function() return unit:hasAttribute("Infantry") end, false)
-			if unitID ~= "unavailable" and type(unitName) == "string" and unitCategory == Unit.Category.GROUND_UNIT and (not splash_damage_options.GU_Explode_Exclude_Infantry or not isInfantry) then
+			if unitID ~= "unavailable" and type(unitName) == "string" and (not splash_damage_options.GU_Explode_Exclude_Infantry or not isInfantry) then
         if GUProcessedUnits[unitID] then
 				else
 					local function checkUnitStatus(params)
@@ -4226,6 +4254,7 @@ function logEvent(eventName, eventData)
 									time = timer.getTime()
                         }
 									trigger.action.explosion(explosionCoords, splash_damage_options.GU_Explode_on_Death_Explosion_Power)
+									eventPosition, eventPositionText = nil, nil
 								else
 								end
 							end
@@ -4251,6 +4280,7 @@ function logEvent(eventName, eventData)
 					end
 				end
 			end
+			end
 		end
 
 
@@ -4262,7 +4292,10 @@ function logEvent(eventName, eventData)
             local unitName = safeGet(function() return eventData.target:getName() end, "unknown")
             local weaponName = safeGet(function() return eventData.weapon:getTypeName():match(".*%.(.*)") or eventData.weapon:getTypeName() end, "unknown")
             local weaponID = safeGet(function() return eventData.weapon:getID() end, "unknown")
-            local rawCoords = safeGet(function() return eventData.target:getPosition().p end, {x = 0, y = 0, z = 0})
+            if eventPosition == nil then
+                eventPosition = safeGet(function() return eventData.target:getPosition().p end, false) or false
+            end
+            local rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
             local initiator = eventData.initiator
         --If initiator is a submunition, try to find the parent unit
         if clusterSubMunTable[weaponName] then
@@ -4308,14 +4341,14 @@ function logEvent(eventName, eventData)
 					unitID = safeGet(function() return unit:getID() end, "unavailable")
 					unitName = safeGet(function() return unit:getName() end, "unknown")
 					unitType = safeGet(function() return unit:getTypeName() end, "unknown")
-					unitPosition = safeGet(function()
-						local pos = unit:getPosition().p
-						return string.format("x=%.0f, y=%.0f, z=%.0f", pos.x, pos.y, pos.z)
-					end, "unavailable")
-					rawCoords = safeGet(function()
-						local pos = unit:getPosition().p
-						return {x = pos.x, y = pos.y, z = pos.z}
-					end, {x = 0, y = 0, z = 0})
+					if eventPosition == nil then
+					    eventPosition = safeGet(function() return unit:getPosition().p end, false) or false
+					end
+					if eventPositionText == nil then
+					    eventPositionText = eventPosition and string.format("x=%.0f, y=%.0f, z=%.0f", eventPosition.x, eventPosition.y, eventPosition.z) or "unavailable"
+					end
+					unitPosition = eventPositionText
+					rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
 					unitLife = safeGet(function() return unit:getLife() end, 0)
 					maxHealth = safeGet(function() return unit:getDesc().life end, 1)
 				elseif eventName == "DEAD" then
@@ -4323,14 +4356,14 @@ function logEvent(eventName, eventData)
 					unitID = safeGet(function() return unit:getID() end, "unavailable")
 					unitName = safeGet(function() return unit:getName() end, "unknown")
 					unitType = safeGet(function() return unit:getTypeName() end, "unknown")
-					unitPosition = safeGet(function()
-						local pos = unit:getPosition().p
-						return string.format("x=%.0f, y=%.0f, z=%.0f", pos.x, pos.y, pos.z)
-					end, "unavailable")
-					rawCoords = safeGet(function()
-						local pos = unit:getPosition().p
-						return {x = pos.x, y = pos.y, z = pos.z}
-					end, {x = 0, y = 0, z = 0})
+					if eventPosition == nil then
+					    eventPosition = safeGet(function() return unit:getPosition().p end, false) or false
+					end
+					if eventPositionText == nil then
+					    eventPositionText = eventPosition and string.format("x=%.0f, y=%.0f, z=%.0f", eventPosition.x, eventPosition.y, eventPosition.z) or "unavailable"
+					end
+					unitPosition = eventPositionText
+					rawCoords = eventPosition and {x = eventPosition.x, y = eventPosition.y, z = eventPosition.z} or {x = 0, y = 0, z = 0}
 					--Fallback to CargoCookoffPendingTable coords if available
 					if rawCoords.x == 0 and rawCoords.y == 0 and rawCoords.z == 0 then
 						local pendingEntry = CargoCookoffPendingTable[unitID]

@@ -8914,7 +8914,7 @@ MGRS: 38 T MP 68815 48119
 	SYRIA_SHOP_SUPPLY_STOCK_ADDED      = "%d единиц снабжения добавлено в зону %s (%d/%d готово).",
 	SYRIA_SHOP_FARP_SUPPLY_STOCK_ADDED = "%d единиц снабжения добавлено в зону %s ([SUP] %d).",
 	SYRIA_SHOP_ITEM_WAREHOUSE_50       = "Пополнить склад на 50",
-	SYRIA_SHOP_ITEM_UPGRADE_ARMOR      = "Armor",
+	SYRIA_SHOP_ITEM_UPGRADE_ARMOR      = "Бронетехника",
 	SYRIA_SHOP_ITEM_UPGRADE_PATRIOT    = "Patriot",
 	SYRIA_SHOP_ITEM_UPGRADE_GCI        = "GCI",
 	SYRIA_SHOP_LABEL_GCI               = "Станция GCI",
@@ -20994,6 +20994,7 @@ function FL:FormatForGroup(groupID, key, ...)
 end
 
 function FL:ForLocale(locale)
+	if locale == nil then locale = self.Locale end
 	local localeKey = resolveLocale(locale)
 	local view = self.LocaleViews[localeKey]
 	if view then return view end

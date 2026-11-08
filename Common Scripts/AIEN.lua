@@ -14993,6 +14993,7 @@ local function update_INITIATIVE()
                                                                 gData.tasked = true
                                                                 gData.taskTime = timer.getTime()
                                                                 moveToPoint(gData.group, vec3, 300, 100, false, "cone", true, false, false, nil, nil, "update_INITIATIVE_engage")
+                                                                movingGroups = movingGroups + 1
                                                             
                                                                 local originPos = { x = gData.sa.pos.x, y = gData.sa.pos.y, z = gData.sa.pos.z }
                                                                 local function funcReturnToPost()

@@ -248,6 +248,20 @@ local function ewrsReportingNameOverride(typeName)
   return nil
 end
 
+-- Default names are stable per type; custom overrides remain live.
+local ewrsReportingNameCache = {}
+
+local function ewrsReportingNameFor(typeName)
+  local override = ewrsReportingNameOverride(typeName)
+  if override then return override end
+  local name = ewrsReportingNameCache[typeName]
+  if name == nil then
+    name = UTILS.GetReportingName(typeName)
+    ewrsReportingNameCache[typeName] = name
+  end
+  return name
+end
+
 local function ewrsContactUnitTypeLabel(contact, translator)
   local T = translator or L10N
   if not ewrs.showType then return T:Get("EWRS_UNKNOWN") end
@@ -265,6 +279,7 @@ function ewrs.resetRuntimeCache()
   ewrs.runtimeCache.friendlyGroups = {}
   ewrs.runtimeCache.friendlyAirUnits = {}
   ewrs.runtimeCache.groupSettings = {}
+  ewrs.runtimeCache.reportContacts = nil
 end
 
 function ewrs.getCachedUnitByName(name)
@@ -296,12 +311,15 @@ function ewrs.getCachedFriendlyAirUnits(coalitionId)
   local friendlyUnits = {}
   local groups = ewrs.getCachedCoalitionGroups(coalitionId)
   for _,grp in ipairs(groups) do
-    local gname=grp:getName()
-    if gname~="Arco" and gname~="Texaco" then
-      local units=grp:getUnits() or{}
-      for _,u in ipairs(units) do
-        if u and u:isExist() and u:isActive() and u:inAir() and u:getLife()>0 then
-          friendlyUnits[#friendlyUnits+1]=u
+    local category=grp:getCategory()
+    if category==Group.Category.AIRPLANE or category==Group.Category.HELICOPTER then
+      local gname=grp:getName()
+      if gname~="Arco" and gname~="Texaco" then
+        local units=grp:getUnits() or{}
+        for _,u in ipairs(units) do
+          if u and u:isExist() and u:isActive() and u:inAir() and u:getLife()>0 then
+            friendlyUnits[#friendlyUnits+1]=u
+          end
         end
       end
     end
@@ -687,6 +705,8 @@ function ewrs.getAspect(bearing, heading)
 end
 
 function ewrs.buildThreatTable(activePlayer,bogeyDope)
+  local reportContacts=ewrs.runtimeCache.reportContacts
+  ewrs.runtimeCache.reportContacts=nil
   local function sortRanges(v1,v2) if v1.isFriendly and not v2.isFriendly then return false end if v2.isFriendly and not v1.isFriendly then return true end return v1.range<v2.range end
   local targets={}
   if activePlayer.side==2 then targets=ewrs.currentlyDetectedRedUnits else targets=ewrs.currentlyDetectedBlueUnits end
@@ -709,7 +729,12 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
   local rangeLimit=groupSettings.rangeLimit or 0
   local threatTable={}
   for _,obj in pairs(targets) do
-    local bogeypos=obj:getPosition()
+    local facts=reportContacts and reportContacts[obj]
+    local bogeypos=facts and facts.position or obj:getPosition()
+    if reportContacts and not facts then
+      facts={position=bogeypos}
+      reportContacts[obj]=facts
+    end
     local range=ewrs.getDistance(referenceX,referenceZ,bogeypos.p.x,bogeypos.p.z)
     local rawRangeNm=UTILS.MetersToNM(range)
     if useMetric then
@@ -720,18 +745,29 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
       if nm>=60 then range=UTILS.Round(nm,-1) elseif nm>=20 then range=UTILS.Round(nm/5,0)*5 else range=UTILS.Round(nm,0) end
     end
     if rangeLimit==0 or range<=rangeLimit then
-      local velocity=obj:getVelocity()
-      local bogeyType=nil
-      local dcsTypeName=ewrsGetUnitTypeName(obj)
-      local unit=UNIT:Find(obj) if unit and dcsTypeName then bogeyType=ewrsReportingNameOverride(dcsTypeName) or UTILS.GetReportingName(dcsTypeName) end
-      if not bogeyType then bogeyType = "Unknown" end
+      local velocity
+      local bogeyType=facts and facts.unitType
+      local dcsTypeName=facts and facts.typeName
+      if not bogeyType then
+        velocity=obj:getVelocity()
+        dcsTypeName=ewrsGetUnitTypeName(obj)
+        local unit=UNIT:Find(obj) if unit and dcsTypeName then bogeyType=ewrsReportingNameFor(dcsTypeName) end
+        if not bogeyType then bogeyType = "Unknown" end
+      end
       local bearing = (math.floor((ewrs.getBearing(referenceX,referenceZ,bogeypos.p.x,bogeypos.p.z)+2.5)/5)*5) % 360
       if bearing == 0 then bearing = 360 end
-      local heading=ewrs.getHeading(velocity)
+      local heading=facts and facts.heading or ewrs.getHeading(velocity)
       local aspect=ewrs.getAspect(bearing,heading)
       local altitude=bogeypos.p.y
-      local altitudeFeet=UTILS.MetersToFeet(altitude)
-      local speed=ewrs.getSpeed(velocity)
+      local altitudeFeet=facts and facts.altitudeFeet or UTILS.MetersToFeet(altitude)
+      local speed=facts and facts.speed or ewrs.getSpeed(velocity)
+      if facts and not facts.unitType then
+        facts.heading=heading
+        facts.altitudeFeet=altitudeFeet
+        facts.speed=speed
+        facts.typeName=dcsTypeName
+        facts.unitType=bogeyType
+      end
       if useMetric then
         speed=UTILS.Round(UTILS.MpsToKmph(speed),-1)
         altitude=UTILS.Round(altitude,-1)
@@ -800,10 +836,21 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
   end
   if groupSettings.showFriendlies and not bogeyDope then
     local units=ewrs.getCachedFriendlyAirUnits(activePlayer.side)
+    local friendlyFacts=reportContacts and reportContacts.friendlies
+    if reportContacts and not friendlyFacts then
+      friendlyFacts={}
+      reportContacts.friendlies=friendlyFacts
+    end
     for _,u in ipairs(units) do
-      local unitName=u:getName()
+      local facts=friendlyFacts and friendlyFacts[u]
+      local unitName=facts and facts.name or u:getName()
+      if friendlyFacts and not facts then
+        facts={name=unitName}
+        friendlyFacts[u]=facts
+      end
       if unitName~=activePlayer.unitname then
-        local tp=u:getPosition()
+        local tp=facts and facts.position or u:getPosition()
+        if facts then facts.position=tp end
         local range=ewrs.getDistance(referenceX,referenceZ,tp.p.x,tp.p.z)
         if useMetric then
           local km=range/1000
@@ -813,13 +860,18 @@ function ewrs.buildThreatTable(activePlayer,bogeyDope)
           if nm>=60 then range=UTILS.Round(nm,-1) elseif nm>=20 then range=UTILS.Round(nm/5,0)*5 else range=UTILS.Round(nm,0) end
         end
         if rangeLimit==0 or range<=rangeLimit then
-          local unit=UNIT:FindByName(unitName)
-          local bogeyType=nil
-          local dcsTypeName=ewrsGetUnitTypeName(u)
-          if unit and dcsTypeName then bogeyType=ewrsReportingNameOverride(dcsTypeName) or UTILS.GetReportingName(dcsTypeName) end
-          if not bogeyType then bogeyType="Unknown" end
+          local bogeyType=facts and facts.unitType
+          local dcsTypeName=facts and facts.typeName
+          if not bogeyType then
+            local unit=UNIT:FindByName(unitName)
+            dcsTypeName=ewrsGetUnitTypeName(u)
+            if unit and dcsTypeName then bogeyType=ewrsReportingNameFor(dcsTypeName) end
+            if not bogeyType then bogeyType="Unknown" end
+            if facts then facts.unitType=bogeyType;facts.typeName=dcsTypeName end
+          end
           if not ewrs.shouldHideFriendlyReportingName(bogeyType) then
-            local vel=u:getVelocity()
+            local vel=facts and facts.velocity or u:getVelocity()
+            if facts then facts.velocity=vel end
             local bearing=(math.floor((ewrs.getBearing(referenceX,referenceZ,tp.p.x,tp.p.z)+2.5)/5)*5)%360
             if bearing==0 then bearing=360 end
             local heading=ewrs.getHeading(vel)
@@ -1030,13 +1082,27 @@ end
 
 
 
+local function ewrsRefreshDetectedTargets(playerSide)
+  if playerSide==2 then
+    if ewrs.enableBlueTeam then ewrs.currentlyDetectedRedUnits=ewrs.findDetectedTargets("red") end
+  elseif ewrs.enableRedTeam then
+    ewrs.currentlyDetectedBlueUnits=ewrs.findDetectedTargets("blue")
+  end
+end
+
 function ewrs.onDemandMessage(args)
   local status, result = pcall(function()
     ewrs.runtimeCache.friendlyAirUnits = {}
-    ewrs.getDetectedTargets()
+    local redReady, blueReady
     for i = 1, #ewrs.activePlayers do
-      if ewrs.activePlayers[i].groupID == args[1] then
-        ewrs.outText(ewrs.activePlayers[i], ewrs.buildThreatTable(ewrs.activePlayers[i],args[2]),args[2])
+      local player=ewrs.activePlayers[i]
+      if player.groupID == args[1] then
+        if player.side==2 then
+          if not redReady then ewrsRefreshDetectedTargets(player.side); redReady=true end
+        elseif not blueReady then
+          ewrsRefreshDetectedTargets(player.side); blueReady=true
+        end
+        ewrs.outText(player, ewrs.buildThreatTable(player,args[2]),args[2])
       end
     end
   end)
@@ -1071,7 +1137,7 @@ function ewrs.buildFriendlyTable(friendlyNames,activePlayer)
       if unit then                                        -- << guard >>
         local bogeyType=nil
         local dcsTypeName=ewrsGetUnitTypeName(v)
-        if dcsTypeName then bogeyType=ewrsReportingNameOverride(dcsTypeName) or UTILS.GetReportingName(dcsTypeName) end
+        if dcsTypeName then bogeyType=ewrsReportingNameFor(dcsTypeName) end
         if not bogeyType then bogeyType = "Unknown" end
         if not ewrs.shouldHideFriendlyReportingName(bogeyType) and pos.p.x~=selfpos.p.x and pos.p.z~=selfpos.p.z then
         local bearing=ewrs.getBearing(referenceX,referenceZ,pos.p.x,pos.p.z)
@@ -1267,12 +1333,8 @@ end
 
 
 function ewrs.getDetectedTargets()
-  if ewrs.enableBlueTeam then
-    ewrs.currentlyDetectedRedUnits  = ewrs.findDetectedTargets("red")
-  end
-  if ewrs.enableRedTeam then
-    ewrs.currentlyDetectedBlueUnits = ewrs.findDetectedTargets("blue")
-  end
+  ewrsRefreshDetectedTargets(2)
+  ewrsRefreshDetectedTargets(1)
 end
 
 function ewrs.closeRadarRegistry()
@@ -1335,6 +1397,7 @@ end
     if not ewrs.radarRegistry then ewrs.radarRegistry = ewrsNewRadarRegistry() end
     local registry = ewrs.radarRegistry
     local dets = {}
+    local checked = {}
     local tgtCoal = side == "red" and 2 or 1
 
     for name, row in pairs(registry.rows[tgtCoal]) do
@@ -1342,10 +1405,16 @@ end
         if u:isExist() then
           for _, d in ipairs(u:getController():getDetectedTargets(Controller.Detection.RADAR)) do
             local obj = d.object
-            if obj and obj:isExist() and obj:inAir()
-              and (obj:hasAttribute("Planes") or obj:hasAttribute("Helicopters")) 
-            then
-              dets[obj:getName()] = obj
+            if obj then
+              local key=obj.id_ or obj
+              local name=checked[key]
+              if name==nil then
+                name=obj:isExist() and obj:inAir()
+                  and (obj:hasAttribute("Planes") or obj:hasAttribute("Helicopters"))
+                  and obj:getName() or false
+                checked[key]=name
+              end
+              if name then dets[name]=obj end
             end
           end
         else
@@ -1650,11 +1719,20 @@ ewrs.update()
 if not ewrs.onDemand then
   timer.scheduleFunction(function(param, time)
   ewrs.resetRuntimeCache()
-  if #ewrs.activePlayers>0 then ewrs.getDetectedTargets() end
+  local redReady, blueReady
   ewrs.inAuto=true
+  local contactFacts
   for i = 1, #ewrs.activePlayers do
     local p = ewrs.activePlayers[i]
-    if ewrs.groupSettings[tostring(p.groupID)].messages then
+    local settings=ewrs.groupSettings[tostring(p.groupID)]
+    if settings.messages then
+      if p.side==2 then
+        if not redReady then ewrsRefreshDetectedTargets(p.side); redReady=true end
+      elseif not blueReady then
+        ewrsRefreshDetectedTargets(p.side); blueReady=true
+      end
+      if #ewrs.activePlayers>1 and not contactFacts and (#(p.side==2 and ewrs.currentlyDetectedRedUnits or ewrs.currentlyDetectedBlueUnits)>0 or settings.showFriendlies) then contactFacts={} end
+      ewrs.runtimeCache.reportContacts=contactFacts
       ewrs.outText(p, ewrs.buildThreatTable(p))
     end
   end
