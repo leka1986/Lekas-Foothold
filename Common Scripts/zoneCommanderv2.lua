@@ -16099,6 +16099,11 @@ do
 		end
 		for gid, _ in pairs(self.groupCarrierNavigationMenus) do
 			if not seen[gid] then
+				local owner = self.jointMenuOwnersByGroup[gid]
+				local groupObj = owner and Group.getByName(owner.groupName) or nil
+				if not groupObj or not groupObj:isExist() or groupObj:getID() ~= gid then
+					self.groupCarrierNavigationMenus[gid] = nil
+				end
 				self:_removeCarrierNavigationMenuForGroup(gid)
 			end
 		end
@@ -16110,7 +16115,9 @@ do
 		local logistics = self.logisticCommander
 		local statsMenu = logistics and logistics.statsMenus and logistics.statsMenus[groupId] or nil
 		if not statsMenu then return end
-		if not groupObj or not groupObj.isExist or not groupObj:isExist() or groupObj:getCoalition() ~= 2 then
+		local groupExists = groupObj and groupObj:isExist() and groupObj:getID() == groupId
+		if not groupExists or groupObj:getCoalition() ~= 2 then
+			if not groupExists then self.groupCarrierNavigationMenus[groupId] = nil end
 			self:_removeCarrierNavigationMenuForGroup(groupId)
 			return
 		end
@@ -16164,7 +16171,9 @@ do
 		end
 		for gid, _ in pairs(self.groupDynamicMenus) do
 			if not seen[gid] then
-				self:_removeDynamicControlMenuForGroup(gid)
+				local owner = self.jointMenuOwnersByGroup[gid]
+				local groupObj = owner and Group.getByName(owner.groupName) or nil
+				self:refreshDynamicControlMenuForGroup(gid, groupObj, false)
 			end
 		end
 	end
@@ -16174,7 +16183,9 @@ do
 		self.groupDynamicSignatures = self.groupDynamicSignatures or {}
 
 		if knownExists == nil then knownExists = groupObj and groupObj.isExist and groupObj:isExist() end
-		if not knownExists then
+		if not knownExists or groupObj:getID() ~= groupId then
+			if self.groupTankerMenus then self.groupTankerMenus[groupId] = nil end
+			self.groupDynamicMenus[groupId] = nil
 			self:_removeDynamicControlMenuForGroup(groupId)
 			return
 		end
@@ -17337,7 +17348,9 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 			end
 			for groupId in pairs(self.groupDynamicMenus or {}) do
 				if not seen[groupId] then
-					self:_removeDynamicControlMenuForGroup(groupId)
+					local owner = self.jointMenuOwnersByGroup[groupId]
+					local groupObj = owner and Group.getByName(owner.groupName) or nil
+					self:refreshDynamicControlMenuForGroup(groupId, groupObj, false)
 				end
 			end
 
@@ -18329,6 +18342,15 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		local state = self.jointMenusByGroup[groupid]
 		if state then
 			local handle = type(state) == "table" and state.root or state
+			if type(state) == "table" and state.root then
+				self:_jointClearTrackedMenuItems(groupid, state.requestItems)
+				self:_jointClearTrackedMenuItems(groupid, state.pendingItems)
+				if state.requestMenu then missionCommands.removeItemForGroup(groupid, state.requestMenu) end
+				if state.pendingMenu then missionCommands.removeItemForGroup(groupid, state.pendingMenu) end
+				if state.leaveItem then missionCommands.removeItemForGroup(groupid, state.leaveItem) end
+				if state.statusItem then missionCommands.removeItemForGroup(groupid, state.statusItem) end
+				if state.helpItem then missionCommands.removeItemForGroup(groupid, state.helpItem) end
+			end
 			if handle then
 				missionCommands.removeItemForGroup(groupid, handle)
 			end
@@ -18337,7 +18359,8 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 	end
 
 	function BattleCommander:_jointClearTrackedMenuItems(groupid, items)
-		for _, handle in ipairs(items or {}) do
+		for i = #(items or {}), 1, -1 do
+			local handle = items[i]
 			missionCommands.removeItemForGroup(groupid, handle)
 		end
 	end
@@ -18690,8 +18713,11 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 			local parent = MissionsRootMenus[entry.groupid]
 			if owner == entry.owner and owner.side == entry.side
 				and sideOwners and sideOwners[entry.groupid] and parent == entry.parent then
-				self:refreshJointMenuForGroup(entry.groupid, parent, entry.side)
-				break
+				local groupObj = Group.getByName(owner.groupName)
+				if groupObj and groupObj:isExist() and groupObj:getID() == entry.groupid then
+					self:refreshJointMenuForGroup(entry.groupid, parent, entry.side)
+					break
+				end
 			end
 		end
 
@@ -40008,7 +40034,10 @@ do
 		local work = self._zoneStatusMenuRefreshWork
 		local entry = work.queue[work.head]
 		work.head = work.head + 1
-		if self.zoneStatusMenus[entry.groupId] == entry.root and self._zoneStatusMenuStateByGroup[entry.groupId] == entry.state then
+		local owner = self.jointMenuOwnersByGroup[entry.groupId]
+		local groupObj = owner and Group.getByName(owner.groupName) or nil
+		if groupObj and groupObj:isExist() and groupObj:getID() == entry.groupId
+			and self.zoneStatusMenus[entry.groupId] == entry.root and self._zoneStatusMenuStateByGroup[entry.groupId] == entry.state then
 			work.zoneLists.intel = {}
 			work.zoneLists.now = timer.getTime()
 			buildZoneStatusMenuForGroup(self, entry.groupId, nil, work.zoneLists)
@@ -96888,14 +96917,23 @@ end
 
 	function LogisticCommander:pruneGroupMenus(groupid, groupname)
 		self:_bumpGroupMenuToken(groupid)
+		local bcObj = self.battleCommander
+		local playerName = bcObj.playerNames and bcObj.playerNames[groupid] or nil
+		groupname = groupname or self.groupIdToName[groupid] or (playerName and bcObj.groupNameByPlayer[playerName])
 		local escortState = groupname and spawnedGroups[groupname]
 		if escortState and escortState.escortReplacementTimer then
 			timer.removeFunction(escortState.escortReplacementTimer)
 			escortState.escortReplacementTimer = nil
 		end
 		self.activeAircraftGroupsById[groupid] = nil
-		local bcObj = self.battleCommander
-		local playerName = bcObj.playerNames and bcObj.playerNames[groupid] or nil
+		local mooseGroup = groupname and GROUP:FindByName(groupname) or nil
+		local nativeGroup = mooseGroup and mooseGroup:GetDCSObject() or nil
+		local groupAlive = nativeGroup and mooseGroup:IsAlive(nativeGroup) or false
+		local nativeId = groupAlive and nativeGroup:getID() or nil
+		local removeNativeMenus = groupAlive and nativeId == groupid
+		local pruneLog = "[MENU_PRUNE] group=" .. tostring(groupid) .. " name=" .. tostring(groupname)
+			.. " native=" .. tostring(nativeId) .. " remove=" .. tostring(removeNativeMenus) .. " "
+		env.info(pruneLog .. "phase=begin")
 		if playerName then
 			bcObj.turnaroundRewardStateByPlayer[playerName] = nil
 			local flight = bcObj.flightTimeTakeoffByPlayer and bcObj.flightTimeTakeoffByPlayer[playerName]
@@ -96911,8 +96949,7 @@ end
 			end
 		end
 
-		local mooseGroup = groupname and GROUP:FindByName(groupname) or nil
-		if mooseGroup then
+		if mooseGroup and (not nativeId or nativeId == groupid) then
 			mooseGroup.CTLDTopmenu = nil
 			mooseGroup.MyLoadCratesMenu = nil
 			mooseGroup.MyTopCratesMenu = nil
@@ -96921,55 +96958,90 @@ end
 			mooseGroup.CTLD_TroopMenus = nil
 		end
 
+		-- Retire native handles without touching DCS when this group is no longer available.
+		if not removeNativeMenus then
+			bcObj.jointMenusByGroup[groupid] = nil
+			if bcObj.groupTankerMenus then bcObj.groupTankerMenus[groupid] = nil end
+			if bcObj.groupDynamicMenus then bcObj.groupDynamicMenus[groupid] = nil end
+			if bcObj.groupCarrierNavigationMenus then bcObj.groupCarrierNavigationMenus[groupid] = nil end
+			if ewrs and ewrs.builtF10Menus then ewrs.builtF10Menus[tostring(groupid)] = nil end
+			missionMenus[groupid] = nil
+		end
+		env.info(pruneLog .. "phase=joint")
 		local jointSide = bcObj:_jointPruneGroup(groupid)
+		env.info(pruneLog .. "phase=shop")
 		if bcObj.groupSupportMenus[groupid] then
 			local supportState = bcObj.groupSupportMenus[groupid]
 			local items = supportState.items or {}
-			for i = #items, 1, -1 do
-				missionCommands.removeItemForGroup(groupid, items[i])
+			if removeNativeMenus then
+				for i = #items, 1, -1 do
+					missionCommands.removeItemForGroup(groupid, items[i])
+				end
 			end
-			if supportState.menu then
+			if removeNativeMenus and supportState.menu then
 				missionCommands.removeItemForGroup(groupid, supportState.menu)
 			end
 			bcObj.groupSupportMenus[groupid] = nil
 		end
 
+		env.info(pruneLog .. "phase=control")
 		bcObj:_removeDynamicControlMenuForGroup(groupid)
 		bcObj:_removeCarrierNavigationMenuForGroup(groupid)
 
-		if bcObj.zoneStatusMenus[groupid] then
-			missionCommands.removeItemForGroup(groupid, bcObj.zoneStatusMenus[groupid])
-			bcObj.zoneStatusMenus[groupid] = nil
-			bcObj.redSideMenus[groupid] = nil
-			bcObj.blueSideMenus[groupid] = nil
+		env.info(pruneLog .. "phase=zone-status")
+		local intelState = mc.intelMenuByGroup[groupid]
+		if removeNativeMenus then
+			if intelState and intelState.root then
+				for i = #(intelState.items or {}), 1, -1 do
+					missionCommands.removeItemForGroup(groupid, intelState.items[i])
+				end
+				missionCommands.removeItemForGroup(groupid, intelState.root)
+			end
+			if bcObj.redSideMenus[groupid] then missionCommands.removeItemForGroup(groupid, bcObj.redSideMenus[groupid]) end
+			if bcObj.blueSideMenus[groupid] then missionCommands.removeItemForGroup(groupid, bcObj.blueSideMenus[groupid]) end
 		end
+		mc.intelMenuByGroup[groupid] = nil
+		if bcObj.zoneStatusMenus[groupid] then
+			if removeNativeMenus then missionCommands.removeItemForGroup(groupid, bcObj.zoneStatusMenus[groupid]) end
+			bcObj.zoneStatusMenus[groupid] = nil
+		end
+		bcObj.redSideMenus[groupid] = nil
+		bcObj.blueSideMenus[groupid] = nil
 		bcObj._zoneStatusMenuStateByGroup[groupid] = nil
 
+		env.info(pruneLog .. "phase=ewrs")
 		if ewrs and ewrs.pruneGroup then
 			ewrs.pruneGroup(groupid)
 		elseif ewrs and ewrs.removeGroupF10Menu then
 			ewrs.removeGroupF10Menu(groupid)
 		end
 
+		env.info(pruneLog .. "phase=stats")
+		if removeNativeMenus then
+			if self.languageMenus[groupid] then missionCommands.removeItemForGroup(groupid, self.languageMenus[groupid]) end
+			if self.aiLogisticsMenus[groupid] then missionCommands.removeItemForGroup(groupid, self.aiLogisticsMenus[groupid]) end
+		end
 		if self.statsMenus[groupid] then
-			missionCommands.removeItemForGroup(groupid, self.statsMenus[groupid])
+			if removeNativeMenus then missionCommands.removeItemForGroup(groupid, self.statsMenus[groupid]) end
 			self.statsMenus[groupid] = nil
 		end
 		self.languageMenus[groupid] = nil
 		self.aiLogisticsMenus[groupid] = nil
 
+		env.info(pruneLog .. "phase=csar")
 		if self.csarGroupMenus[groupid] then
-			if self.csarGroupMenus[groupid] ~= true then
+			if removeNativeMenus and self.csarGroupMenus[groupid] ~= true then
 				missionCommands.removeItemForGroup(groupid, self.csarGroupMenus[groupid])
 			end
 			self.csarGroupMenus[groupid] = nil
 		end
 
+		env.info(pruneLog .. "phase=logistics")
 		local mooseMenu = LogisticCommander.mooseLogisticsMenus[groupid]
 		if mooseMenu then
-			mooseMenu:Remove()
+			if removeNativeMenus then mooseMenu:Remove() end
 			LogisticCommander.mooseLogisticsMenus[groupid] = nil
-		elseif self.groupMenus[groupid] then
+		elseif removeNativeMenus and self.groupMenus[groupid] then
 			missionCommands.removeItemForGroup(groupid, self.groupMenus[groupid])
 		end
 		self.groupMenus[groupid] = nil
@@ -96982,31 +97054,46 @@ end
 			Foothold_redCtld:ClearZoneSupplyOnboardForGroup(groupid)
 		end
 
+		env.info(pruneLog .. "phase=missions")
+		local strikeState = mc.strikeMenuByGroup[groupid]
+		if removeNativeMenus then
+			if strikeState and strikeState.root then
+				for i = #(strikeState.items or {}), 1, -1 do
+					missionCommands.removeItemForGroup(groupid, strikeState.items[i])
+				end
+				missionCommands.removeItemForGroup(groupid, strikeState.root)
+			end
+			if printMissionMenus[groupid] then missionCommands.removeItemForGroup(groupid, printMissionMenus[groupid]) end
+		end
 		if MissionsRootMenus[groupid] then
-			missionCommands.removeItemForGroup(groupid, MissionsRootMenus[groupid])
+			if removeNativeMenus then missionCommands.removeItemForGroup(groupid, MissionsRootMenus[groupid]) end
 			MissionsRootMenus[groupid] = nil
 		end
 		printMissionMenus[groupid] = nil
 		removeMenusForGroupID(groupid)
 		mc.strikeMenuByGroup[groupid] = nil
-		mc.intelMenuByGroup[groupid] = nil
 
+		env.info(pruneLog .. "phase=self-jtac")
 		if SelfJtac.jtacs[groupid] then
 			local oldjtac = SelfJtac.jtacs[groupid]
 			if oldjtac.autoTimer then
 				timer.removeFunction(oldjtac.autoTimer)
 				oldjtac.autoTimer = nil
 			end
+			local jtacMenu = oldjtac.jtacMenu
+			oldjtac.jtacMenu = nil
 			oldjtac:clearTarget()
-			if oldjtac.jtacMenu then
-				missionCommands.removeItemForGroup(groupid, oldjtac.jtacMenu)
+			if removeNativeMenus and jtacMenu then
+				missionCommands.removeItemForGroup(groupid, jtacMenu)
 			end
 			SelfJtac.jtacs[groupid] = nil
 		end
 
+		env.info(pruneLog .. "phase=remaining-groups")
 		if jointSide then
 			bcObj:refreshJointMenusForSide(jointSide)
 		end
+		env.info(pruneLog .. "phase=complete")
 	end
 
 
@@ -100187,6 +100274,12 @@ function LogisticCommander:_registerSpawnPlayerGroup(groupid, groupname, groupOb
 end
 
 function LogisticCommander:_refreshAiLogisticsMenuForGroup(groupid)
+	local owner = self.battleCommander.jointMenuOwnersByGroup[groupid]
+	local groupObj = owner and Group.getByName(owner.groupName) or nil
+	if not groupObj or not groupObj:isExist() or groupObj:getID() ~= groupid then
+		self.aiLogisticsMenus[groupid] = nil
+		return
+	end
 	local existing = self.aiLogisticsMenus[groupid]
 	if existing then
 		missionCommands.removeItemForGroup(groupid, existing)
@@ -100195,7 +100288,6 @@ function LogisticCommander:_refreshAiLogisticsMenuForGroup(groupid)
 	if GlobalSettings.pvpEnabled == true then return end
 	if RadioMenuStopSupplies ~= true or NoAIBlueSupplies == true then return end
 	local statsMenu = self.statsMenus[groupid]
-	local owner = self.battleCommander.jointMenuOwnersByGroup[groupid]
 	if not statsMenu or not owner or owner.side ~= coalition.side.BLUE then return end
 
 	local T = L10N:ForGroup(groupid)
@@ -100302,8 +100394,12 @@ function LogisticCommander:_refreshSelfJtacForSpawn(groupid, groupname, player, 
 		if SelfJtac.jtacs[groupid] then
 			local oldjtac = SelfJtac.jtacs[groupid]
 			oldjtac:stopAutoSearchTimer()
+			local jtacMenu = oldjtac.jtacMenu
+			oldjtac.jtacMenu = nil
 			oldjtac:clearTarget()
-			missionCommands.removeItemForGroup(groupid, oldjtac.jtacMenu)
+			if jtacMenu then
+				missionCommands.removeItemForGroup(groupid, jtacMenu)
+			end
 			SelfJtac.jtacs[groupid] = nil
 		end
 
