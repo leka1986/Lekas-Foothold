@@ -11957,7 +11957,7 @@ do
 	BattleCommander.difficultyModifier = 0
 	BattleCommander.lastDiffChange = 0
 	BattleCommander.shopSelectorRefreshBudget = 1
-	BattleCommander.shopSelectorRefreshInterval = 0.2
+	BattleCommander.shopSelectorRefreshInterval = 0.25
 	BattleCommander.CAREER_RANK_VERSION = 2
 	BattleCommander.EWRS_RANK_VERSION = 1
 	BattleCommander.SELF_JTAC_RANK_VERSION = 1
@@ -13097,6 +13097,7 @@ do
 			local handle = handles[i]
 			if handle then
 				removed[handle] = true
+				env.info("[MENU_REMOVE] kind=shop-selector group=" .. tostring(groupId) .. " state=" .. tostring(state) .. " index=" .. tostring(i) .. " handle=" .. tostring(handle) .. " path=" .. table.concat(handle, " > "))
 				missionCommands.removeItemForGroup(groupId, handle)
 			end
 		end
@@ -13271,9 +13272,11 @@ do
 			return
 		end
 
+		env.info("[MENU_TRACE] phase=selector-begin group=" .. tostring(groupId) .. " item=" .. tostring(itemId) .. " state=" .. tostring(state) .. " children=" .. tostring(node.children))
 		self:_removeTrackedShopHandlesForGroup(groupId, node.children or {})
 		node.children = {}
 		self:_populateShopSelectorMenuForGroup(groupId, groupObj, coalition, { id = itemId, data = itemData }, selectorSpec, node.menu, node.children)
+		env.info("[MENU_TRACE] phase=selector-complete group=" .. tostring(groupId) .. " item=" .. tostring(itemId))
 	end
 
 	function BattleCommander:_getGroupRank(groupId, groupObj, knownExists, firstUnit, firstName)
@@ -17526,7 +17529,9 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 				if self._shopSelectorRefreshWorkSeen then
 					self._shopSelectorRefreshWorkSeen[job.workKey] = nil
 				end
+				env.info("[MENU_TRACE] phase=shop-job-begin key=" .. tostring(job.workKey) .. " queueIndex=" .. tostring(head - 1) .. " queueCount=" .. tostring(queueCount))
 				self:refreshShopSelectorItemForGroup(job.groupId, job.groupObj, job.itemId)
+				env.info("[MENU_TRACE] phase=shop-job-complete key=" .. tostring(job.workKey))
 			end
 		end
 
@@ -18345,13 +18350,29 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 			if type(state) == "table" and state.root then
 				self:_jointClearTrackedMenuItems(groupid, state.requestItems)
 				self:_jointClearTrackedMenuItems(groupid, state.pendingItems)
-				if state.requestMenu then missionCommands.removeItemForGroup(groupid, state.requestMenu) end
-				if state.pendingMenu then missionCommands.removeItemForGroup(groupid, state.pendingMenu) end
-				if state.leaveItem then missionCommands.removeItemForGroup(groupid, state.leaveItem) end
-				if state.statusItem then missionCommands.removeItemForGroup(groupid, state.statusItem) end
-				if state.helpItem then missionCommands.removeItemForGroup(groupid, state.helpItem) end
+				if state.requestMenu then
+					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.requestMenu) .. " path=" .. table.concat(state.requestMenu, " > "))
+					missionCommands.removeItemForGroup(groupid, state.requestMenu)
+				end
+				if state.pendingMenu then
+					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.pendingMenu) .. " path=" .. table.concat(state.pendingMenu, " > "))
+					missionCommands.removeItemForGroup(groupid, state.pendingMenu)
+				end
+				if state.leaveItem then
+					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.leaveItem) .. " path=" .. table.concat(state.leaveItem, " > "))
+					missionCommands.removeItemForGroup(groupid, state.leaveItem)
+				end
+				if state.statusItem then
+					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.statusItem) .. " path=" .. table.concat(state.statusItem, " > "))
+					missionCommands.removeItemForGroup(groupid, state.statusItem)
+				end
+				if state.helpItem then
+					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.helpItem) .. " path=" .. table.concat(state.helpItem, " > "))
+					missionCommands.removeItemForGroup(groupid, state.helpItem)
+				end
 			end
 			if handle then
+				env.info("[MENU_REMOVE] kind=joint-root group=" .. tostring(groupid) .. " handle=" .. tostring(handle) .. " path=" .. table.concat(handle, " > "))
 				missionCommands.removeItemForGroup(groupid, handle)
 			end
 		end
@@ -18361,6 +18382,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 	function BattleCommander:_jointClearTrackedMenuItems(groupid, items)
 		for i = #(items or {}), 1, -1 do
 			local handle = items[i]
+			env.info("[MENU_REMOVE] kind=joint-tracked group=" .. tostring(groupid) .. " handle=" .. tostring(handle) .. " path=" .. table.concat(handle, " > "))
 			missionCommands.removeItemForGroup(groupid, handle)
 		end
 	end
@@ -18675,6 +18697,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 	end
 
 	function BattleCommander:refreshJointMenuForGroup(groupid, parent, side)
+		env.info("[MENU_TRACE] phase=joint-refresh-begin group=" .. tostring(groupid))
 		self:refreshJointRequestPlayerChildrenForGroup(groupid, parent, side)
 		self:refreshJointPendingRequestChildrenForGroup(groupid, parent, side)
 	end
@@ -22030,10 +22053,13 @@ function BattleCommander:refreshShopMenuForGroup(groupId, groupObj, knownSide, k
 	end
 	local groupState = self.groupSupportMenus[groupId]
 	local parent = groupState.menu
+	env.info("[MENU_TRACE] phase=shop-full-begin group=" .. tostring(groupId) .. " state=" .. tostring(groupState) .. " items=" .. tostring(groupState.items))
 	local oldItems = groupState.items or {}
 	for i = #oldItems, 1, -1 do
+		env.info("[MENU_REMOVE] kind=shop-full group=" .. tostring(groupId) .. " state=" .. tostring(groupState) .. " index=" .. tostring(i) .. " handle=" .. tostring(oldItems[i]) .. " path=" .. table.concat(oldItems[i], " > "))
 		missionCommands.removeItemForGroup(groupId, oldItems[i])
 	end
+	env.info("[MENU_TRACE] phase=shop-full-clear-complete group=" .. tostring(groupId))
 	groupState.items = {}
 	groupState.selectorNodes = {}
 	local function addBudgetOverview()
@@ -39896,6 +39922,7 @@ do
 	end
 
 	local function buildZoneStatusMenuForGroup(self, groupId, viewerSide, zoneLists)
+		env.info("[MENU_TRACE] phase=zone-status-begin group=" .. tostring(groupId))
 		local T = groupId and L10N:ForGroup(groupId) or L10N
 		local cached = self._zoneStatusMenuStateByGroup[groupId]
 		if not self.zoneStatusMenus[groupId] then
@@ -39982,6 +40009,7 @@ do
 		local sub1Red, sub1Blue = nil, nil
 		if redChanged then
 			if self.redSideMenus[groupId] then
+				env.info("[MENU_REMOVE] kind=zone-status-red group=" .. tostring(groupId) .. " handle=" .. tostring(self.redSideMenus[groupId]) .. " path=" .. table.concat(self.redSideMenus[groupId], " > "))
 				missionCommands.removeItemForGroup(groupId, self.redSideMenus[groupId])
 			end
 			self.redSideMenus[groupId] = missionCommands.addSubMenuForGroup(groupId,redLabel, self.zoneStatusMenus[groupId])
@@ -40002,6 +40030,7 @@ do
 		end
 		if blueChanged then
 			if self.blueSideMenus[groupId] then
+				env.info("[MENU_REMOVE] kind=zone-status-blue group=" .. tostring(groupId) .. " handle=" .. tostring(self.blueSideMenus[groupId]) .. " path=" .. table.concat(self.blueSideMenus[groupId], " > "))
 				missionCommands.removeItemForGroup(groupId, self.blueSideMenus[groupId])
 			end
 			self.blueSideMenus[groupId] = missionCommands.addSubMenuForGroup(groupId,blueLabel, self.zoneStatusMenus[groupId])
@@ -47374,7 +47403,19 @@ function ZoneCommander:suspend(idle)
 					end
 					error(err)
 				end
-				if coroutine.status(current.thread) ~= 'dead' and z._resuming == current then
+				if coroutine.status(current.thread) == 'dead' and current.complete then
+					local complete = current.complete
+					current.complete = nil
+					-- Continue other wake jobs even if completion fails loudly.
+					if self._zoneWakeHead <= self._zoneWakeTail then
+						timer.scheduleFunction(tick, nil, now + 0.1)
+					else
+						self._zoneWakeHead, self._zoneWakeTail = 1, 0
+						self._zoneWakeWorkerActive = nil
+					end
+					complete()
+					return
+				elseif coroutine.status(current.thread) ~= 'dead' and z._resuming == current then
 					self._zoneWakeTail = self._zoneWakeTail + 1
 					self._zoneWakeQueue[self._zoneWakeTail] = current
 				end
@@ -47481,77 +47522,80 @@ function ZoneCommander:suspend(idle)
 			end
 			coroutine.yield()
 		end
-		self._hibernated = pending
-		if next(self._hibernated) or self._persistedHibernatedSlots then
-			local idleRestore = self._idleRestorePending
-			if idleRestore and timer.getAbsTime() - idleRestore.startedAt >= GlobalSettings.idleZoneWakeHoldSec then
-				self._idleRestorePending, self._resuming = nil, nil
-				env.info('[IDLE-WAKE] restoration timed out zone=' .. self.zone)
+		-- Native scheduling must run after returning to the wake worker.
+		internal.complete = function()
+			self._hibernated = pending
+			if next(self._hibernated) or self._persistedHibernatedSlots then
+				local idleRestore = self._idleRestorePending
+				if idleRestore and timer.getAbsTime() - idleRestore.startedAt >= GlobalSettings.idleZoneWakeHoldSec then
+					self._idleRestorePending, self._resuming = nil, nil
+					env.info('[IDLE-WAKE] restoration timed out zone=' .. self.zone)
+				else
+					SCHEDULER:New(nil, function(z)
+						if z._resuming == internal and z.side == internal.side and z.active and z.suspended
+							and (not idleRestore or z._idleRestorePending == idleRestore) then
+							internal.retry = true
+							internal.thread = coroutine.create(function() z:resume(internal) end)
+							z.battleCommander:_queueZoneWake(internal)
+						end
+					end, {self}, 2, 0)
+				end
 			else
-				SCHEDULER:New(nil, function(z)
-					if z._resuming == internal and z.side == internal.side and z.active and z.suspended
-						and (not idleRestore or z._idleRestorePending == idleRestore) then
-						internal.retry = true
-						internal.thread = coroutine.create(function() z:resume(internal) end)
-						z.battleCommander:_queueZoneWake(internal)
-					end
-				end, {self}, 2, 0)
-			end
-		else
-			self.suspended = false
-			self._idleSuspended = nil
-			self.battleCommander:markFsmGroupFilterDirty()
-			self.battleCommander:markReindexCombatFilterDirty()
-			self.battleCommander:requestZoneStatusMenuRefresh()
-			if wasSuspended then
-				env.info("[RESUME] "..self.zone)
-				self.battleCommander:markCapTargetStateDirty()
-				self.battleCommander:_refreshPassiveCapBucketsForZone(self)
-				self:_markRegularSupplyEfficiencyDirty(true)
-				self:_resetSurrenderRuntimeObservation()
-				self._combatEffectivenessMarkupState = nil
-				self._nextBuiltMaintenanceAt = 0
-			end
-			self._suspendedLiveFsm = nil
-			self.battleCommander:markRedDifficultyDirty()
-			local idleRestore = self._idleRestorePending
-			if self.remainingUnitsSnapshot then
-				self:weedOutRemainingUnits({
-					remainingUnits = self.remainingUnitsSnapshot,
-					remainingUnitNames = self.remainingUnitNamesSnapshot,
-					skipDestroyUnspawnedGroups = true,
-					idleRestoreToken = idleRestore,
-					onTrimComplete = idleRestore and function(z)
-						if z._idleRestorePending ~= idleRestore or z.side ~= idleRestore.side or z.suspended then return end
-						z:_publishIdleDefenseFacts()
-						z._seadThreatSnapshot.dormant = nil
-						z._seadThreatSnapshot.expireAt = timer.getAbsTime() + 120
-						z.remainingUnitsSnapshot, z.remainingUnitNamesSnapshot = nil, nil
-						z._idleRestorePending = nil
-						z.battleCommander:markCapTargetStateDirty()
-						z.battleCommander:requestZoneStatusMenuRefresh()
-						z._nextBuiltMaintenanceAt = 0
-					end or nil,
-				})
-			elseif idleRestore then
-				self._idleRestorePending = nil
-			end
-			if not self._idleRestorePending then
-				self.remainingUnitsSnapshot = nil
-				self.remainingUnitNamesSnapshot = nil
-			end
-			self._persistedHibernated = nil
-			self._persistedHibernatedSlots = nil
-			self._resuming = nil
-			self.battleCommander:_applyZoneShopSelectorDelta(self, previousState)
-			local selectorRefreshTags = self.battleCommander:_getZoneSelectorRefreshTags(self, previousState)
-			if #selectorRefreshTags > 0 then
-				self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.BLUE, selectorRefreshTags)
-				self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.RED, selectorRefreshTags)
-			end
-			self:updateLabel()
-			if wasSuspended then
-				self.battleCommander:_dynamicHybridCompileForResumedZone(self.zone)
+				self.suspended = false
+				self._idleSuspended = nil
+				self.battleCommander:markFsmGroupFilterDirty()
+				self.battleCommander:markReindexCombatFilterDirty()
+				self.battleCommander:requestZoneStatusMenuRefresh()
+				if wasSuspended then
+					env.info("[RESUME] "..self.zone)
+					self.battleCommander:markCapTargetStateDirty()
+					self.battleCommander:_refreshPassiveCapBucketsForZone(self)
+					self:_markRegularSupplyEfficiencyDirty(true)
+					self:_resetSurrenderRuntimeObservation()
+					self._combatEffectivenessMarkupState = nil
+					self._nextBuiltMaintenanceAt = 0
+				end
+				self._suspendedLiveFsm = nil
+				self.battleCommander:markRedDifficultyDirty()
+				local idleRestore = self._idleRestorePending
+				if self.remainingUnitsSnapshot then
+					self:weedOutRemainingUnits({
+						remainingUnits = self.remainingUnitsSnapshot,
+						remainingUnitNames = self.remainingUnitNamesSnapshot,
+						skipDestroyUnspawnedGroups = true,
+						idleRestoreToken = idleRestore,
+						onTrimComplete = idleRestore and function(z)
+							if z._idleRestorePending ~= idleRestore or z.side ~= idleRestore.side or z.suspended then return end
+							z:_publishIdleDefenseFacts()
+							z._seadThreatSnapshot.dormant = nil
+							z._seadThreatSnapshot.expireAt = timer.getAbsTime() + 120
+							z.remainingUnitsSnapshot, z.remainingUnitNamesSnapshot = nil, nil
+							z._idleRestorePending = nil
+							z.battleCommander:markCapTargetStateDirty()
+							z.battleCommander:requestZoneStatusMenuRefresh()
+							z._nextBuiltMaintenanceAt = 0
+						end or nil,
+					})
+				elseif idleRestore then
+					self._idleRestorePending = nil
+				end
+				if not self._idleRestorePending then
+					self.remainingUnitsSnapshot = nil
+					self.remainingUnitNamesSnapshot = nil
+				end
+				self._persistedHibernated = nil
+				self._persistedHibernatedSlots = nil
+				self._resuming = nil
+				self.battleCommander:_applyZoneShopSelectorDelta(self, previousState)
+				local selectorRefreshTags = self.battleCommander:_getZoneSelectorRefreshTags(self, previousState)
+				if #selectorRefreshTags > 0 then
+					self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.BLUE, selectorRefreshTags)
+					self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.RED, selectorRefreshTags)
+				end
+				self:updateLabel()
+				if wasSuspended then
+					self.battleCommander:_dynamicHybridCompileForResumedZone(self.zone)
+				end
 			end
 		end
 	end
@@ -96975,10 +97019,12 @@ end
 			local items = supportState.items or {}
 			if removeNativeMenus then
 				for i = #items, 1, -1 do
+					env.info("[MENU_REMOVE] kind=shop-prune group=" .. tostring(groupid) .. " state=" .. tostring(supportState) .. " index=" .. tostring(i) .. " handle=" .. tostring(items[i]) .. " path=" .. table.concat(items[i], " > "))
 					missionCommands.removeItemForGroup(groupid, items[i])
 				end
 			end
 			if removeNativeMenus and supportState.menu then
+				env.info("[MENU_REMOVE] kind=shop-prune-root group=" .. tostring(groupid) .. " handle=" .. tostring(supportState.menu) .. " path=" .. table.concat(supportState.menu, " > "))
 				missionCommands.removeItemForGroup(groupid, supportState.menu)
 			end
 			bcObj.groupSupportMenus[groupid] = nil
@@ -96993,16 +97039,27 @@ end
 		if removeNativeMenus then
 			if intelState and intelState.root then
 				for i = #(intelState.items or {}), 1, -1 do
+					env.info("[MENU_REMOVE] kind=intel-prune-item group=" .. tostring(groupid) .. " handle=" .. tostring(intelState.items[i]) .. " path=" .. table.concat(intelState.items[i], " > "))
 					missionCommands.removeItemForGroup(groupid, intelState.items[i])
 				end
+				env.info("[MENU_REMOVE] kind=intel-prune-root group=" .. tostring(groupid) .. " handle=" .. tostring(intelState.root) .. " path=" .. table.concat(intelState.root, " > "))
 				missionCommands.removeItemForGroup(groupid, intelState.root)
 			end
-			if bcObj.redSideMenus[groupid] then missionCommands.removeItemForGroup(groupid, bcObj.redSideMenus[groupid]) end
-			if bcObj.blueSideMenus[groupid] then missionCommands.removeItemForGroup(groupid, bcObj.blueSideMenus[groupid]) end
+			if bcObj.redSideMenus[groupid] then
+				env.info("[MENU_REMOVE] kind=zone-status-prune-red group=" .. tostring(groupid) .. " handle=" .. tostring(bcObj.redSideMenus[groupid]) .. " path=" .. table.concat(bcObj.redSideMenus[groupid], " > "))
+				missionCommands.removeItemForGroup(groupid, bcObj.redSideMenus[groupid])
+			end
+			if bcObj.blueSideMenus[groupid] then
+				env.info("[MENU_REMOVE] kind=zone-status-prune-blue group=" .. tostring(groupid) .. " handle=" .. tostring(bcObj.blueSideMenus[groupid]) .. " path=" .. table.concat(bcObj.blueSideMenus[groupid], " > "))
+				missionCommands.removeItemForGroup(groupid, bcObj.blueSideMenus[groupid])
+			end
 		end
 		mc.intelMenuByGroup[groupid] = nil
 		if bcObj.zoneStatusMenus[groupid] then
-			if removeNativeMenus then missionCommands.removeItemForGroup(groupid, bcObj.zoneStatusMenus[groupid]) end
+			if removeNativeMenus then
+				env.info("[MENU_REMOVE] kind=zone-status-prune-root group=" .. tostring(groupid) .. " handle=" .. tostring(bcObj.zoneStatusMenus[groupid]) .. " path=" .. table.concat(bcObj.zoneStatusMenus[groupid], " > "))
+				missionCommands.removeItemForGroup(groupid, bcObj.zoneStatusMenus[groupid])
+			end
 			bcObj.zoneStatusMenus[groupid] = nil
 		end
 		bcObj.redSideMenus[groupid] = nil
@@ -102492,8 +102549,10 @@ do
 			return
 		end
 
+		env.info("[MENU_TRACE] phase=intel-refresh-begin group=" .. tostring(groupId) .. " state=" .. tostring(state) .. " signature=" .. tostring(signature))
 		if state.items then
 			for _, item in ipairs(state.items) do
+				env.info("[MENU_REMOVE] kind=intel-refresh group=" .. tostring(groupId) .. " handle=" .. tostring(item) .. " path=" .. table.concat(item, " > "))
 				missionCommands.removeItemForGroup(groupId, item)
 			end
 		end
@@ -111783,6 +111842,7 @@ WEAPONSLIST.Items = {
 		{4,15,46,3109},
 		{4,15,47,3095},
         -- Hercules baseline equipment and cargo
+		"weapons.containers.AN_AAQ16D",
 		"weapons.containers.F16V_aaq13_pod_5L",
 		"weapons.containers.Hercules_Battle_Station_TGP",
 		"weapons.containers.{Herc_GAU_23A_Chain_Gun}",
