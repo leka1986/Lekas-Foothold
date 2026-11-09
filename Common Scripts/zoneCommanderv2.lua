@@ -7559,7 +7559,7 @@ do
 
 
 			self.smokeMenu = missionCommands.addSubMenuForCoalition(self.side, L10N:Get("JTAC_MENU_CHANGE_SMOKE_COLOR"), self.jtacMenu)
-			self._smokeCmds = self._smokeCmds or {}
+			self._smokeCmds = {}
 			for i=0,4 do
 				local label = L10N:Get(JTAC.smokeColorKeys[i]) .. ((self.smokeColor == i) and L10N:Get("JTAC_MENU_CURRENT_SUFFIX") or '')
 				local h = missionCommands.addCommandForCoalition(self.side, label, self.smokeMenu, function(dr, c)
@@ -7827,7 +7827,9 @@ end
 		if gr then
 			gr:destroy()
 		end
-		missionCommands.removeItemForCoalition(self.side, self.jtacMenu)
+		if self.jtacMenu then
+			missionCommands.removeItemForCoalition(self.side, self.jtacMenu)
+		end
 		self.jtacMenu = nil
 		for i,v in ipairs(jtacQueue) do
 			if v == self then table.remove(jtacQueue,i) break end
@@ -13091,7 +13093,8 @@ do
 		end
 
 		local removed = {}
-		for _, handle in ipairs(handles) do
+		for i = #handles, 1, -1 do
+			local handle = handles[i]
 			if handle then
 				removed[handle] = true
 				missionCommands.removeItemForGroup(groupId, handle)
@@ -17319,6 +17322,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 	end
 
 	function BattleCommander:_runDelayedTankerMenuRefreshForBlue(time)
+		local groupMenuTokens = self.logisticCommander.groupMenuTokens
 		if not self._tankerMenuRefreshGroups then
 			local groups = self:_getLivePlayerGroupsForCoalition(2)
 			if GlobalSettings.pvpEnabled == true then
@@ -17328,6 +17332,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 			end
 			local seen = {}
 			for _, entry in ipairs(groups) do
+				entry.menuToken = groupMenuTokens[entry.groupId]
 				seen[entry.groupId] = true
 			end
 			for groupId in pairs(self.groupDynamicMenus or {}) do
@@ -17347,10 +17352,12 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		local index = self._tankerMenuRefreshIndex
 		local entry = groups[index]
 		if entry then
-			if self._tankerMenuRefreshBatchNeedsShop then
-				self:refreshShopMenuForGroup(entry.groupId, entry.groupObj)
-			else
-				self:refreshDynamicControlMenuForGroup(entry.groupId, entry.groupObj, false)
+			if entry.menuToken == groupMenuTokens[entry.groupId] then
+				if self._tankerMenuRefreshBatchNeedsShop then
+					self:refreshShopMenuForGroup(entry.groupId, entry.groupObj)
+				else
+					self:refreshDynamicControlMenuForGroup(entry.groupId, entry.groupObj, false)
+				end
 			end
 			index = index + 1
 			self._tankerMenuRefreshIndex = index
@@ -21998,8 +22005,8 @@ function BattleCommander:refreshShopMenuForGroup(groupId, groupObj, knownSide, k
 	local groupState = self.groupSupportMenus[groupId]
 	local parent = groupState.menu
 	local oldItems = groupState.items or {}
-	for _, handle in ipairs(oldItems) do
-		missionCommands.removeItemForGroup(groupId, handle)
+	for i = #oldItems, 1, -1 do
+		missionCommands.removeItemForGroup(groupId, oldItems[i])
 	end
 	groupState.items = {}
 	groupState.selectorNodes = {}
@@ -96574,7 +96581,7 @@ function SelfJtac:printTarget(makeitlast)
 		self._targetMenuLasing = isLasing
 		self._targetMenuNames = validNames
 		for _,id in ipairs(self._cmdIds) do missionCommands.removeItemForGroup(self.groupID,id) end
-		for _,m in ipairs(self._moreMenus) do missionCommands.removeItemForGroup(self.groupID,m) end
+		for i=#self._moreMenus,1,-1 do missionCommands.removeItemForGroup(self.groupID,self._moreMenus[i]) end
 		self._cmdIds = {}
 		self._moreMenus = {}
 		if #validTargets == 0 then
@@ -96917,8 +96924,9 @@ end
 		local jointSide = bcObj:_jointPruneGroup(groupid)
 		if bcObj.groupSupportMenus[groupid] then
 			local supportState = bcObj.groupSupportMenus[groupid]
-			for _, handle in ipairs(supportState.items or {}) do
-				missionCommands.removeItemForGroup(groupid, handle)
+			local items = supportState.items or {}
+			for i = #items, 1, -1 do
+				missionCommands.removeItemForGroup(groupid, items[i])
 			end
 			if supportState.menu then
 				missionCommands.removeItemForGroup(groupid, supportState.menu)
@@ -96936,6 +96944,12 @@ end
 			bcObj.blueSideMenus[groupid] = nil
 		end
 		bcObj._zoneStatusMenuStateByGroup[groupid] = nil
+
+		if ewrs and ewrs.pruneGroup then
+			ewrs.pruneGroup(groupid)
+		elseif ewrs and ewrs.removeGroupF10Menu then
+			ewrs.removeGroupF10Menu(groupid)
+		end
 
 		if self.statsMenus[groupid] then
 			missionCommands.removeItemForGroup(groupid, self.statsMenus[groupid])
@@ -96966,11 +96980,6 @@ end
 		end
 		if Foothold_redCtld and Foothold_redCtld.ClearZoneSupplyOnboardForGroup then
 			Foothold_redCtld:ClearZoneSupplyOnboardForGroup(groupid)
-		end
-		if ewrs and ewrs.pruneGroup then
-			ewrs.pruneGroup(groupid)
-		elseif ewrs and ewrs.removeGroupF10Menu then
-			ewrs.removeGroupF10Menu(groupid)
 		end
 
 		if MissionsRootMenus[groupid] then
@@ -103599,6 +103608,9 @@ function createControlMenuForGroup(group, mission, groupID)
 
     missionCommands.addCommandForGroup(groupID, T:Get("COMMON_NO"), restartMenu, function()
         missionCommands.removeItemForGroup(groupID, restartMenu)
+        if missionMenus[groupID] and missionMenus[groupID].restartMenu == restartMenu then
+            missionMenus[groupID].restartMenu = nil
+        end
         trigger.action.outTextForGroup(groupID, T:Get("ESCORT_RESTART_CANCELED"), 10)
     end)
     return missionMenus[groupID]
