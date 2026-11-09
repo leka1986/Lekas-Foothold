@@ -47382,49 +47382,43 @@ function ZoneCommander:suspend(idle)
 		if self._zoneWakeWorkerActive then return end
 		self._zoneWakeWorkerActive = true
 		local function tick(_, now)
+			-- A failed native step leaves this marker for the next worker turn.
+			local failed = self._zoneWakeCurrent
+			if failed then
+				if failed.zone._resuming == failed then failed.zone._resuming = nil end
+				self._zoneWakeCurrent = nil
+			end
 			local head = self._zoneWakeHead
 			local current = self._zoneWakeQueue[head]
+			if not current then
+				self._zoneWakeHead, self._zoneWakeTail = 1, 0
+				self._zoneWakeWorkerActive = nil
+				return
+			end
 			self._zoneWakeQueue[head] = nil
 			self._zoneWakeHead = head + 1
 			local z = current.zone
+			self._zoneWakeCurrent = current
+			-- Arm the same cadence before native work so a visible error cannot strand the queue.
+			timer.scheduleFunction(tick, nil, now + 0.1)
 			if z._resuming == current and z.side == current.side and z.active and z.suspended then
 				if current.started and current.persistedSlots ~= z._persistedHibernatedSlots then
 					current.retry = true
-					current.thread = coroutine.create(function() z:resume(current) end)
+					current.step = nil
 				end
-				local ok, err = coroutine.resume(current.thread)
-				if not ok then
-					z._resuming = nil
-					if self._zoneWakeHead <= self._zoneWakeTail then
-						timer.scheduleFunction(tick, nil, now + 0.1)
-					else
-						self._zoneWakeHead, self._zoneWakeTail = 1, 0
-						self._zoneWakeWorkerActive = nil
-					end
-					error(err)
-				end
-				if coroutine.status(current.thread) == 'dead' and current.complete then
+				z:resume(current)
+				if current.complete then
 					local complete = current.complete
 					current.complete = nil
-					-- Continue other wake jobs even if completion fails loudly.
-					if self._zoneWakeHead <= self._zoneWakeTail then
-						timer.scheduleFunction(tick, nil, now + 0.1)
-					else
-						self._zoneWakeHead, self._zoneWakeTail = 1, 0
-						self._zoneWakeWorkerActive = nil
-					end
 					complete()
-					return
-				elseif coroutine.status(current.thread) ~= 'dead' and z._resuming == current then
+				elseif current.step and z._resuming == current then
 					self._zoneWakeTail = self._zoneWakeTail + 1
 					self._zoneWakeQueue[self._zoneWakeTail] = current
 				end
 			elseif z._resuming == current then
 				z._resuming = nil
 			end
-			if self._zoneWakeHead <= self._zoneWakeTail then return now + 0.1 end
-			self._zoneWakeHead, self._zoneWakeTail = 1, 0
-			self._zoneWakeWorkerActive = nil
+			self._zoneWakeCurrent = nil
 		end
 		timer.scheduleFunction(tick, nil, timer.getTime() + 0.1)
 	end
@@ -47434,11 +47428,11 @@ function ZoneCommander:suspend(idle)
 			if self._resuming or not self.active or not self.suspended or self.side == 0 then return end
 			local job = { zone = self, side = self.side }
 			self._resuming = job
-			job.thread = coroutine.create(function() self:resume(job) end)
 			self.battleCommander:_queueZoneWake(job)
 			return
 		end
 		if self._resuming ~= internal or self.side ~= internal.side or not self.active or not self.suspended then return end
+		if internal.step then return internal.step() end
 		local previousState = {
 			active = self.active,
 			suspended = self.suspended,
@@ -47466,138 +47460,152 @@ function ZoneCommander:suspend(idle)
 		self._hibernated = pending
 		local pendingPersistedSlots = self._persistedHibernatedSlots or {}
 		internal.persistedSlots, internal.started = self._persistedHibernatedSlots, true
-		for builtIndex,gName in pairs(pendingPersistedSlots) do
-			local ok = false
-			local spawnedName = nil
-			if cz and cz.spawnGroup and self._resuming == internal and self.side == internal.side and self.active
-				and self._persistedHibernatedSlots == pendingPersistedSlots and self.built[builtIndex] == gName then
-				local r = self:_spawnBuiltGroup(cz, builtIndex, gName)
-				if r and r.name then
-					spawnedName = r.name
-					local restoredGroup = Group.getByName(r.name)
-					if restoredGroup and (not self._idleRestorePending or (restoredGroup:isExist() and restoredGroup:getSize() > 0)) then ok = true end
+		local persistedNext, persistedState, persistedKey = pairs(pendingPersistedSlots)
+		local hibernatedNext, hibernatedState, hibernatedKey = pairs(hibernated)
+		local persistedDone = false
+		internal.step = function()
+			if not persistedDone then
+				local builtIndex, gName = persistedNext(persistedState, persistedKey)
+				persistedKey = builtIndex
+				if builtIndex ~= nil then
+					local ok = false
+					local spawnedName = nil
+					if cz and cz.spawnGroup and self._resuming == internal and self.side == internal.side and self.active
+						and self._persistedHibernatedSlots == pendingPersistedSlots and self.built[builtIndex] == gName then
+						local r = self:_spawnBuiltGroup(cz, builtIndex, gName)
+						if r and r.name then
+							spawnedName = r.name
+							local restoredGroup = Group.getByName(r.name)
+							if restoredGroup and (not self._idleRestorePending or (restoredGroup:isExist() and restoredGroup:getSize() > 0)) then ok = true end
+						end
+					end
+					pendingPersistedSlots[builtIndex] = nil
+					if not ok then
+						env.info("Spawn failed: "..gName.." in zone "..self.zone)
+						if spawnedName then
+							pending[spawnedName] = true
+						else
+							pendingPersistedSlots[builtIndex] = gName
+						end
+					end
+					return
 				end
-			end
-			pendingPersistedSlots[builtIndex] = nil
-			if not ok then
-				env.info("Spawn failed: "..gName.." in zone "..self.zone)
-				if spawnedName then
-					pending[spawnedName] = true
+				if next(pendingPersistedSlots) then
+					self._persistedHibernatedSlots = pendingPersistedSlots
 				else
-					pendingPersistedSlots[builtIndex] = gName
+					self._persistedHibernatedSlots = nil
 				end
+				internal.persistedSlots = self._persistedHibernatedSlots
+				persistedDone = true
 			end
-			coroutine.yield()
-		end
-		if next(pendingPersistedSlots) then
-			self._persistedHibernatedSlots = pendingPersistedSlots
-		else
-			self._persistedHibernatedSlots = nil
-		end
-		internal.persistedSlots = self._persistedHibernatedSlots
-		for gName,_ in pairs(hibernated) do
-			pending[gName] = nil
-			local liveGroup = Group.getByName(gName)
-			if liveGroup then
-				if not self:_builtHas(gName) or (self._idleRestorePending and (not internal.retry or not liveGroup:isExist() or liveGroup:getSize() == 0)) then
-					pending[gName] = true
+			local gName = hibernatedNext(hibernatedState, hibernatedKey)
+			hibernatedKey = gName
+			if gName ~= nil then
+				pending[gName] = nil
+				local liveGroup = Group.getByName(gName)
+				if liveGroup then
+					if not self:_builtHas(gName) or (self._idleRestorePending and (not internal.retry or not liveGroup:isExist() or liveGroup:getSize() == 0)) then
+						pending[gName] = true
+					end
+				else
+					local ok = false
+					local pendingName = gName
+					local builtIndex = nil
+					for i,v in pairs(self.built) do
+						if v == gName then builtIndex = i; break end
+					end
+					if builtIndex and cz and cz.spawnGroup and self._resuming == internal
+						and self.side == internal.side and self.active and hibernated[gName] then
+						local r = self:_spawnBuiltGroup(cz, builtIndex, gName)
+						if r and r.name then
+							pendingName = r.name
+							local restoredGroup = Group.getByName(r.name)
+							if restoredGroup and (not self._idleRestorePending or (restoredGroup:isExist() and restoredGroup:getSize() > 0)) then ok = true end
+						end
+					end
+					if not ok then env.info("Spawn failed: "..gName.." in zone "..self.zone); pending[pendingName] = true end
 				end
-			else
-				local ok = false
-				local pendingName = gName
-				local builtIndex = nil
-				for i,v in pairs(self.built) do
-					if v == gName then builtIndex = i; break end
-				end
-				if builtIndex and cz and cz.spawnGroup and self._resuming == internal
-					and self.side == internal.side and self.active and hibernated[gName] then
-					local r = self:_spawnBuiltGroup(cz, builtIndex, gName)
-					if r and r.name then
-						pendingName = r.name
-						local restoredGroup = Group.getByName(r.name)
-						if restoredGroup and (not self._idleRestorePending or (restoredGroup:isExist() and restoredGroup:getSize() > 0)) then ok = true end
+				return
+			end
+			internal.step = nil
+			-- Native scheduling must run after returning to the wake worker.
+			internal.complete = function()
+				self._hibernated = pending
+				if next(self._hibernated) or self._persistedHibernatedSlots then
+					local idleRestore = self._idleRestorePending
+					if idleRestore and timer.getAbsTime() - idleRestore.startedAt >= GlobalSettings.idleZoneWakeHoldSec then
+						self._idleRestorePending, self._resuming = nil, nil
+						env.info('[IDLE-WAKE] restoration timed out zone=' .. self.zone)
+					else
+						SCHEDULER:New(nil, function(z)
+							if z._resuming == internal and z.side == internal.side and z.active and z.suspended
+								and (not idleRestore or z._idleRestorePending == idleRestore) then
+								internal.retry = true
+								internal.step = nil
+								z.battleCommander:_queueZoneWake(internal)
+							end
+						end, {self}, 2, 0)
+					end
+				else
+					self.suspended = false
+					self._idleSuspended = nil
+					self.battleCommander:markFsmGroupFilterDirty()
+					self.battleCommander:markReindexCombatFilterDirty()
+					self.battleCommander:requestZoneStatusMenuRefresh()
+					if wasSuspended then
+						env.info("[RESUME] "..self.zone)
+						self.battleCommander:markCapTargetStateDirty()
+						self.battleCommander:_refreshPassiveCapBucketsForZone(self)
+						self:_markRegularSupplyEfficiencyDirty(true)
+						self:_resetSurrenderRuntimeObservation()
+						self._combatEffectivenessMarkupState = nil
+						self._nextBuiltMaintenanceAt = 0
+					end
+					self._suspendedLiveFsm = nil
+					self.battleCommander:markRedDifficultyDirty()
+					local idleRestore = self._idleRestorePending
+					if self.remainingUnitsSnapshot then
+						self:weedOutRemainingUnits({
+							remainingUnits = self.remainingUnitsSnapshot,
+							remainingUnitNames = self.remainingUnitNamesSnapshot,
+							skipDestroyUnspawnedGroups = true,
+							idleRestoreToken = idleRestore,
+							onTrimComplete = idleRestore and function(z)
+								if z._idleRestorePending ~= idleRestore or z.side ~= idleRestore.side or z.suspended then return end
+								z:_publishIdleDefenseFacts()
+								z._seadThreatSnapshot.dormant = nil
+								z._seadThreatSnapshot.expireAt = timer.getAbsTime() + 120
+								z.remainingUnitsSnapshot, z.remainingUnitNamesSnapshot = nil, nil
+								z._idleRestorePending = nil
+								z.battleCommander:markCapTargetStateDirty()
+								z.battleCommander:requestZoneStatusMenuRefresh()
+								z._nextBuiltMaintenanceAt = 0
+							end or nil,
+						})
+					elseif idleRestore then
+						self._idleRestorePending = nil
+					end
+					if not self._idleRestorePending then
+						self.remainingUnitsSnapshot = nil
+						self.remainingUnitNamesSnapshot = nil
+					end
+					self._persistedHibernated = nil
+					self._persistedHibernatedSlots = nil
+					self._resuming = nil
+					self.battleCommander:_applyZoneShopSelectorDelta(self, previousState)
+					local selectorRefreshTags = self.battleCommander:_getZoneSelectorRefreshTags(self, previousState)
+					if #selectorRefreshTags > 0 then
+						self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.BLUE, selectorRefreshTags)
+						self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.RED, selectorRefreshTags)
+					end
+					self:updateLabel()
+					if wasSuspended then
+						self.battleCommander:_dynamicHybridCompileForResumedZone(self.zone)
 					end
 				end
-				if not ok then env.info("Spawn failed: "..gName.." in zone "..self.zone); pending[pendingName] = true end
-			end
-			coroutine.yield()
-		end
-		-- Native scheduling must run after returning to the wake worker.
-		internal.complete = function()
-			self._hibernated = pending
-			if next(self._hibernated) or self._persistedHibernatedSlots then
-				local idleRestore = self._idleRestorePending
-				if idleRestore and timer.getAbsTime() - idleRestore.startedAt >= GlobalSettings.idleZoneWakeHoldSec then
-					self._idleRestorePending, self._resuming = nil, nil
-					env.info('[IDLE-WAKE] restoration timed out zone=' .. self.zone)
-				else
-					SCHEDULER:New(nil, function(z)
-						if z._resuming == internal and z.side == internal.side and z.active and z.suspended
-							and (not idleRestore or z._idleRestorePending == idleRestore) then
-							internal.retry = true
-							internal.thread = coroutine.create(function() z:resume(internal) end)
-							z.battleCommander:_queueZoneWake(internal)
-						end
-					end, {self}, 2, 0)
-				end
-			else
-				self.suspended = false
-				self._idleSuspended = nil
-				self.battleCommander:markFsmGroupFilterDirty()
-				self.battleCommander:markReindexCombatFilterDirty()
-				self.battleCommander:requestZoneStatusMenuRefresh()
-				if wasSuspended then
-					env.info("[RESUME] "..self.zone)
-					self.battleCommander:markCapTargetStateDirty()
-					self.battleCommander:_refreshPassiveCapBucketsForZone(self)
-					self:_markRegularSupplyEfficiencyDirty(true)
-					self:_resetSurrenderRuntimeObservation()
-					self._combatEffectivenessMarkupState = nil
-					self._nextBuiltMaintenanceAt = 0
-				end
-				self._suspendedLiveFsm = nil
-				self.battleCommander:markRedDifficultyDirty()
-				local idleRestore = self._idleRestorePending
-				if self.remainingUnitsSnapshot then
-					self:weedOutRemainingUnits({
-						remainingUnits = self.remainingUnitsSnapshot,
-						remainingUnitNames = self.remainingUnitNamesSnapshot,
-						skipDestroyUnspawnedGroups = true,
-						idleRestoreToken = idleRestore,
-						onTrimComplete = idleRestore and function(z)
-							if z._idleRestorePending ~= idleRestore or z.side ~= idleRestore.side or z.suspended then return end
-							z:_publishIdleDefenseFacts()
-							z._seadThreatSnapshot.dormant = nil
-							z._seadThreatSnapshot.expireAt = timer.getAbsTime() + 120
-							z.remainingUnitsSnapshot, z.remainingUnitNamesSnapshot = nil, nil
-							z._idleRestorePending = nil
-							z.battleCommander:markCapTargetStateDirty()
-							z.battleCommander:requestZoneStatusMenuRefresh()
-							z._nextBuiltMaintenanceAt = 0
-						end or nil,
-					})
-				elseif idleRestore then
-					self._idleRestorePending = nil
-				end
-				if not self._idleRestorePending then
-					self.remainingUnitsSnapshot = nil
-					self.remainingUnitNamesSnapshot = nil
-				end
-				self._persistedHibernated = nil
-				self._persistedHibernatedSlots = nil
-				self._resuming = nil
-				self.battleCommander:_applyZoneShopSelectorDelta(self, previousState)
-				local selectorRefreshTags = self.battleCommander:_getZoneSelectorRefreshTags(self, previousState)
-				if #selectorRefreshTags > 0 then
-					self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.BLUE, selectorRefreshTags)
-					self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.RED, selectorRefreshTags)
-				end
-				self:updateLabel()
-				if wasSuspended then
-					self.battleCommander:_dynamicHybridCompileForResumedZone(self.zone)
-				end
 			end
 		end
+		return internal.step()
 	end
 
 	
