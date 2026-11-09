@@ -44097,7 +44097,10 @@ end
 			error(err)
 		end
 		if coroutine.status(job.thread) ~= 'dead' then return nil end
+		local complete = job.complete
+		job.complete = nil
 		self._persistenceSaveJob, self._persistenceSaveWorkerScheduler = nil, nil
+		if complete then complete() end
 		return false
 	end
 
@@ -44124,21 +44127,28 @@ end
 			local written, writeError = Utils.saveTable(self.saveFile,'zonePersistance',statedata,saveJob)
 			if saveJob and not written then env.info('[Persistence] Campaign write failed: ' .. tostring(writeError)) end
 		end
-		if WarehouseLogistics == false then
-			WarehousePersistence.Save(self, {force = true, warehouseOnly = true, path = FootholdSavePath})
-		end
-		
-		-- Create SITAC status file for external tools
-		if lfs and io then
-			if self.saveFile then
-				local sitac_filename = lfs.writedir() .. [[Missions/Saves/foothold.status]]
-				local result = writeToFile(sitac_filename, self.saveFile .. "\n")
-				if result then
-					--env.info("Created SITAC file in " .. sitac_filename)
-				end
-			else
-				env.info("Skipping SITAC file creation: persistence filename unavailable")
+		local function complete()
+			if WarehouseLogistics == false then
+				WarehousePersistence.Save(self, {force = true, warehouseOnly = true, path = FootholdSavePath})
 			end
+		
+			-- Create SITAC status file for external tools
+			if lfs and io then
+				if self.saveFile then
+					local sitac_filename = lfs.writedir() .. [[Missions/Saves/foothold.status]]
+					local result = writeToFile(sitac_filename, self.saveFile .. "\n")
+					if result then
+						--env.info("Created SITAC file in " .. sitac_filename)
+					end
+				else
+					env.info("Skipping SITAC file creation: persistence filename unavailable")
+				end
+			end
+		end
+		if saveJob then
+			saveJob.complete = complete
+		else
+			complete()
 		end
 	end
 
