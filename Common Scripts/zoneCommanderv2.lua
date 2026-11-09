@@ -7071,7 +7071,7 @@ do
 	Utils.zonePersistenceWriteGeneration = Utils.zonePersistenceWriteGeneration or 0
 	function Utils.cancelStagedSave(job)
 		if job.outputFile then job.outputFile:close(); job.outputFile = nil end
-		if job.tempPath then os.remove(job.tempPath); job.tempPath = nil end
+		job.tempPath = nil
 	end
 
 	function Utils.persistencePairs(data)
@@ -7085,55 +7085,6 @@ do
 			index = index + 2
 			return entries[index - 1], entries[index]
 		end
-	end
-
-	function Utils.writeStagedParts(filename, parts, job)
-		job.tempPath = filename .. '.staged'
-		while true do
-			local zones = job.zoneParts
-			if zones then
-				while next(zones.dirty) do
-					local name = next(zones.dirty)
-					zones.dirty[name] = nil
-					parts[zones.indices[name]] = zones.prefix..'['..Utils.serializeValue(name)..'] = '..Utils.serializeValue(zones.rows[name])
-					job.checkpoint(#parts[zones.indices[name]])
-				end
-			end
-			local file, openError = io.open(job.tempPath, 'wb')
-			if not file then job.tempPath = nil; return nil, openError end
-			job.outputFile = file
-			local restart = false
-			for _, part in ipairs(parts) do
-				for offset = 1, #part, 32768 do
-					local chunk = part:sub(offset, offset + 32767)
-					local written, writeError = file:write(chunk)
-					if written == false or writeError ~= nil then Utils.cancelStagedSave(job); return nil, writeError end
-					job.checkpoint(#chunk)
-					if zones and next(zones.dirty) then restart = true; break end
-				end
-				if restart then break end
-			end
-			local closed, closeError = file:close()
-			job.outputFile = nil
-			if closed == false or closeError ~= nil then Utils.cancelStagedSave(job); return nil, closeError end
-			if not restart then break end
-		end
-		local backup = filename .. '.staged-backup'
-		local hadOriginal = lfs.attributes(filename) ~= nil
-		if hadOriginal then
-			os.remove(backup)
-			local moved, moveError = os.rename(filename, backup)
-			if not moved then Utils.cancelStagedSave(job); return nil, moveError end
-		end
-		local committed, commitError = os.rename(job.tempPath, filename)
-		if not committed then
-			if hadOriginal then assert(os.rename(backup, filename)) end
-			Utils.cancelStagedSave(job)
-			return nil, commitError
-		end
-		job.tempPath = nil
-		if hadOriginal then os.remove(backup) end
-		return true
 	end
 
 	function Utils.saveTable(filename, variablename, data, saveJob)
@@ -7196,22 +7147,29 @@ do
 				if saveJob then saveJob.checkpoint(#parts[#parts]) end
 			end
 		end
-		if saveJob then
-			local written, writeError = Utils.writeStagedParts(filename, parts, saveJob)
-			if written and variablename == 'zonePersistance' then
-				Utils.zonePersistenceWriteGeneration = Utils.zonePersistenceWriteGeneration + 1
-				saveJob.writeGeneration = Utils.zonePersistenceWriteGeneration
+		if saveJob and saveJob.zoneParts then
+			local zones = saveJob.zoneParts
+			for name in pairs(zones.dirty) do
+				parts[zones.indices[name]] = zones.prefix..'['..Utils.serializeValue(name)..'] = '..Utils.serializeValue(zones.rows[name])
+				zones.dirty[name] = nil
 			end
-			return written, writeError
 		end
-	
+
 		local str = table.concat(parts)
 		local openError
 		File, openError = io.open(filename, "w")
 		if not File then return nil, openError end
 		local written, writeError = File:write(str)
 		local closed, closeError = File:close()
-		return written ~= false and writeError == nil and closed ~= false and closeError == nil
+		local saved = written ~= false and writeError == nil and closed ~= false and closeError == nil
+		if saveJob then
+			if saved and variablename == 'zonePersistance' then
+				Utils.zonePersistenceWriteGeneration = Utils.zonePersistenceWriteGeneration + 1
+				saveJob.writeGeneration = Utils.zonePersistenceWriteGeneration
+			end
+			return saved, writeError or closeError
+		end
+		return saved
 	end
 
 	
@@ -7259,10 +7217,7 @@ do
 			trigger.action.outText(L10N:Get("PERSISTENCE_SAVE_DESANITIZE"), 600)
 			return
 		end
-		if not lfs.attributes(filename) then
-			if not lfs.attributes(filename .. '.staged-backup') then return end
-			assert(os.rename(filename .. '.staged-backup', filename))
-		end
+		if not lfs.attributes(filename) then return end
 
 		local chunk = loadfile(filename)
 		if chunk then chunk(); return end
