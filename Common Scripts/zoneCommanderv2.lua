@@ -2069,7 +2069,7 @@ function DynamicBomber.AssignEscortTask(bomberGroupName, escortGroupName, knownB
 					id = 'Follow',
 					params = {
 						groupId = bgr:getID(),
-						pos = { x = -20, y = UTILS.FeetToMeters(2000), z = 50 },
+						pos = { x = bgr:getCoalition() == 1 and 15*NM or -20, y = UTILS.FeetToMeters(2000), z = 50 },
 						lastWptIndexFlag = false,
 					}
 				},
@@ -3673,12 +3673,20 @@ function StrategicBomber.SpawnEscortLater(side, selection, knownConfig, knownToI
 				or target.isHidden or (target.suspended and not target._idleSuspended) then return nil end
 		else bomber = Group.getByName(args.bomberGroupName) end
 		if bomber then
+			local spawnCoord, heading = args.spawnCoord, args.heading
+			if args.side == 1 then
+				local lead = bomber:getUnit(1)
+				if not lead or not lead:isExist() then return nil end
+				local position = lead:getPosition()
+				heading = UTILS.VecHdg(position.x)
+				spawnCoord = UTILS.VecTranslate(position.p, 15*NM, heading)
+			end
 			local speed = args.speed
 			local escortGroup
 			if args.state then
-				escortGroup = Respawn.SpawnAtPoint(args.escortTemplate, args.spawnCoord, args.heading, 5, args.altitudeFt, speed, nil, args.escortGroupName, speed, altitudeMeters, args.templateRow.CountryID, args.templateRow)
+				escortGroup = Respawn.SpawnAtPoint(args.escortTemplate, spawnCoord, heading, 5, args.altitudeFt, speed, nil, args.escortGroupName, speed, altitudeMeters, args.templateRow.CountryID, args.templateRow)
 			else
-			escortGroup = Respawn.SpawnAtPoint(args.escortTemplate, args.spawnCoord, args.heading, 5, args.altitudeFt, speed, nil, args.escortGroupName, speed, altitudeMeters)
+			escortGroup = Respawn.SpawnAtPoint(args.escortTemplate, spawnCoord, heading, 5, args.altitudeFt, speed, nil, args.escortGroupName, speed, altitudeMeters)
 			end
 			if escortGroup then
 				if args.state then
@@ -4151,6 +4159,7 @@ function StrategicBomber.LaunchRed(params)
 		if bomber then
 			StartBomberAuftrag(args.missionId, args.bomberGroupName, args.targetZoneName, args.escortGroupName, nil, {
 				bomberGroup = bomber,
+				escortAlreadyAssigned = true, -- SpawnEscortLater owns the escort task.
 				targetSide = 2,
 				routeAltitudeFt = args.routeAltitudeFt,
 				attackAltitudeFt = args.attackAltitudeFt,
@@ -13078,7 +13087,7 @@ do
 		local groups = self:_getLivePlayerGroupsForCoalition(coal)
 		if #groups == 0 then return end
 		for _, entry in ipairs(groups) do
-			self:refreshShopMenuForGroup(entry.groupId, entry.groupObj)
+			self:refreshShopMenuForGroup(entry.groupId, entry.groupObj, entry.knownSide, nil, entry.knownExists, entry.ownerName, entry.firstUnit, entry.firstName)
 		end
 	end
 
@@ -16088,7 +16097,7 @@ do
 
 	function BattleCommander:_refreshCarrierAndDynamicControlMenusForBlue(force)
 		local groups = self:_getLivePlayerGroupsForCoalition(2)
-		self:refreshDynamicControlMenusForBlue(force, groups)
+		self:refreshDynamicControlMenusForBlue(false, groups)
 		self:refreshCarrierNavigationMenusForBlue(force, groups)
 	end
 
@@ -16300,7 +16309,7 @@ do
 		elseif menuFacts then
 			if not menuFacts.signature then
 				menuFacts.signature = table.concat({
-					tostring(capActive), tostring(casActive), tostring(seadActive),
+					tostring(capActive), tostring(casActive), tostring(seadActive), tostring(seadPushMode), tostring(seadReady),
 					tostring(decoyActive), tostring(decoyPushMode), tostring(decoyReady), tostring(bomberActive), tostring(StructureActive),
 					tostring(navyArtyActive),
 					StrategicBomber and StrategicBomber.GetBlueControlSignature and StrategicBomber.GetBlueControlSignature(strategicBomberActive == false) or "strategicbomber:false",
@@ -16311,7 +16320,7 @@ do
 				tostring(reqArco), tostring(reqTexaco), tostring(hasEligibleTankerController)}, "|")
 		else
 			signature = table.concat({
-				tostring(capActive), tostring(casActive), tostring(seadActive),
+				tostring(capActive), tostring(casActive), tostring(seadActive), tostring(seadPushMode), tostring(seadReady),
 				tostring(decoyActive), tostring(decoyPushMode), tostring(decoyReady), tostring(bomberActive), tostring(StructureActive),
 				tostring(navyArtyActive),
 				StrategicBomber and StrategicBomber.GetBlueControlSignature and StrategicBomber.GetBlueControlSignature(strategicBomberActive == false) or "strategicbomber:false",
@@ -25438,16 +25447,18 @@ end
 	if saveJob then saveJob.checkpoint(0, true) end
 
     -- Add active missions
-    states.missions = {}
-    for _, mission in pairs(mc.missions) do
-        if mission.isRunning or mission:isActive() then
-            local missionInfo = {
-                title = mc:decodeMessage(mission.title),
-                description = mc:decodeMessage(mission.description),
-                isRunning = mission.isRunning,
-                isEscortMission = mission.isEscortMission or false
-            }
-            table.insert(states.missions, missionInfo)
+    if states.missions == nil then
+        states.missions = {}
+        for _, mission in pairs(mc.missions) do
+            if mission.isRunning or mission:isActive() then
+                local missionInfo = {
+                    title = mc:decodeMessage(mission.title),
+                    description = mc:decodeMessage(mission.description),
+                    isRunning = mission.isRunning,
+                    isEscortMission = mission.isEscortMission or false
+                }
+                table.insert(states.missions, missionInfo)
+            end
         end
     end
 
@@ -29547,7 +29558,7 @@ end
 		if self._airAiRestoreScheduled then return end
 		self._airAiRestoreScheduled = true
 		local delay = tonumber(delaySec) or 5
-		if delay < 0 then delay = 0 end
+		if delay <= 0 then delay = 0.1 end
 		timer.scheduleFunction(function(param, time)
 			param._airAiRestoreScheduled = false
 			if param and param._runPendingAirAiRestore then
@@ -44073,6 +44084,22 @@ end
 		end
 
 		if not job.thread then
+			-- Mission callbacks may refresh menus; collect once before entering the save coroutine.
+			if not job.rankOnly then
+				local states = job.states
+				states.missions = {}
+				for _, mission in pairs(mc.missions) do
+				    if mission.isRunning or mission:isActive() then
+				        local missionInfo = {
+				            title = mc:decodeMessage(mission.title),
+				            description = mc:decodeMessage(mission.description),
+				            isRunning = mission.isRunning,
+				            isEscortMission = mission.isEscortMission or false
+				        }
+				        table.insert(states.missions, missionInfo)
+				    end
+				end
+			end
 			local work, bytes = 0, 0
 			job.checkpoint = function(size, force)
 				work, bytes = work + 1, bytes + (size or 0)
