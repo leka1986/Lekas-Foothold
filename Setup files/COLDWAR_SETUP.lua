@@ -1866,104 +1866,104 @@ zones.samalpha:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamalpha')
+end, 'disablesamalpha', nil, {disablesZone = true})
 
 
 zones.sambravo:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesambravo')
+end, 'disablesambravo', nil, {disablesZone = true})
 
 zones.samcharlie:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamcharlie')
+end, 'disablesamcharlie', nil, {disablesZone = true})
 
 zones.samdelta:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamdelta')
+end, 'disablesamdelta', nil, {disablesZone = true})
 
 zones.samecho:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamecho')
+end, 'disablesamecho', nil, {disablesZone = true})
 
 zones.samfoxtrot:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamfoxtrot')
+end, 'disablesamfoxtrot', nil, {disablesZone = true})
 
 zones.samgolf:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamgolf')
+end, 'disablesamgolf', nil, {disablesZone = true})
 
 zones.samhotel:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamhotel')
+end, 'disablesamhotel', nil, {disablesZone = true})
 
 zones.samindia:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamindia')
+end, 'disablesamindia', nil, {disablesZone = true})
 
 zones.samjuliett:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamjuliett')
+end, 'disablesamjuliett', nil, {disablesZone = true})
 
 zones.samkilo:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamkilo')
+end, 'disablesamkilo', nil, {disablesZone = true})
 
 zones.samlima:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesamlima')
+end, 'disablesamlima', nil, {disablesZone = true})
 
 zones.sammike:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SAM_DESTROYED"),20)
-end, 'disablesammike')
+end, 'disablesammike', nil, {disablesZone = true})
 
 zones.sheizefactory:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_SCHEISSE_FACTORY_DESTROYED"),20)
-end, 'disablesheizefactory')
+end, 'disablesheizefactory', nil, {disablesZone = true})
 
 zones.chemicalfactory:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_CHEMICAL_FACTORY_DESTROYED"),20)
-end, 'disableschemicalfactory')
+end, 'disableschemicalfactory', nil, {disablesZone = true})
 
 zones.redarmycamp:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_RED_ARMY_CAMP_DESTROYED"),20)
-end, 'disablesredarmycamp')
+end, 'disablesredarmycamp', nil, {disablesZone = true})
 
 zones.insurgencycamp:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("COLDWAR_EVENT_RED_ARMY_CAMP_DESTROYED"),20)
-end, 'disablesredarmycamp')
+end, 'disablesredarmycamp', nil, {disablesZone = true})
 
 ------------------------------ capture attack events ------------------------------
 
@@ -2417,7 +2417,7 @@ SCHEDULER:New(nil,function()
     	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
     	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
     end
-    bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+    if not DisableZonePatrol then bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
 end,{},5,0)
 
 local SHOP_PRICE_DEFAULTS = {

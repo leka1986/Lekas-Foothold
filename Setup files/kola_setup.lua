@@ -2456,14 +2456,14 @@ end
 timer.scheduleFunction(function()
 	checkMissionComplete(nil, nil)
 	if GlobalSettings.pvpEnabled == true then
-		bc:roamGroupsToLocalSubZone({
+		if not DisableZonePatrol then bc:roamGroupsToLocalSubZone({
 			"^Blue Armor Modern #",
 			"^Blue Armor Coldwar #",
 			"^Blue Armor Vietnam #",
 			"^Blue SAM AAA Gepard #",
 			"^Blue SAM AAA Vulcan #",
 			"^Blue SAM SHORAD Avenger #",
-		}, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+		}, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
 	end
 end, {}, timer.getTime() +10)
 

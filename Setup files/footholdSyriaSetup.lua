@@ -2651,7 +2651,7 @@ SCHEDULER:New(nil,function()
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Roland #"
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Pantsir #"
 	end
-	bc:roamGroupsToLocalSubZone(roamPrefixes, 30, { "Dam" }, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+	if not DisableZonePatrol then bc:roamGroupsToLocalSubZone(roamPrefixes, 30, { "Dam" }, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
 	bc:roamGroupsToLocalSubZone({
 		"Molniya #",
 		"Rezky #",
@@ -2667,21 +2667,21 @@ zones.charlie:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_SETUP_EWR_DESTROYED"),20)
-end, 'disablecharlie')
+end, 'disablecharlie', nil, {disablesZone = true})
 
 zones.redcarrier:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
-end, 'disableredcarrier')
+end, 'disableredcarrier', nil, {disablesZone = true})
 
 zones.kilo:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_SETUP_EWR_DESTROYED"),20)
-end, 'disablekilo')
+end, 'disablekilo', nil, {disablesZone = true})
 
 zones.substationnorth:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disablesubn1')
+end, 'disablesubn1', nil, {disablesZone = true})
 
 zones.substationnorth:registerTrigger('destroyed', function(event, sender)
 	bc:addFunds(2,500)
@@ -2690,7 +2690,7 @@ end, 'disablesubn2')
 
 zones.tv:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disabletv1')
+end, 'disabletv1', nil, {disablesZone = true})
 
 zones.tv:registerTrigger('destroyed', function(event, sender)
 	bc:addFunds(2,500)
@@ -2699,7 +2699,7 @@ end, 'disabletv2')
 
 zones.substationwest:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disablesubw1')
+end, 'disablesubw1', nil, {disablesZone = true})
 
 zones.substationwest:registerTrigger('destroyed', function(event, sender)
 	bc:addFunds(2,500)
@@ -2708,7 +2708,7 @@ end, 'disablesubw2')
 
 zones.radio:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disableradio1')
+end, 'disableradio1', nil, {disablesZone = true})
 
 zones.radio:registerTrigger('destroyed', function(event, sender)
 	bc:addFunds(2,500)
@@ -2717,7 +2717,7 @@ end, 'disableradio2')
 
 zones.sierra:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disableradar1')
+end, 'disableradar1', nil, {disablesZone = true})
 
 zones.sierra:registerTrigger('destroyed', function(event, sender)
 	bc:addFunds(2,500)
@@ -2726,7 +2726,7 @@ end, 'disableradar2')
 
 zones.tango:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disableins1')
+end, 'disableins1', nil, {disablesZone = true})
 
 zones.tango:registerTrigger('destroyed', function(event, sender)
 	bc:addFunds(2,1000)
@@ -2735,7 +2735,7 @@ end, 'disableins2')
 
 zones.uniform:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disableins3')
+end, 'disableins3', nil, {disablesZone = true})
 
 zones.uniform:registerTrigger('destroyed', function(event, sender)
 	bc:addFunds(2,1000)
@@ -2744,7 +2744,7 @@ end, 'disableins4')
 
 zones.victor:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disableins5')
+end, 'disableins5', nil, {disablesZone = true})
 
 zones.victor:registerTrigger('destroyed', function(event, sender)
 	bc:addFunds(2,500)
@@ -2757,31 +2757,31 @@ zones.benguriondefence:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SETUP_DEFENCES_DESTROYED", "Ben Gurion"),20)
-end, 'disablebenguriondefence')
+end, 'disablebenguriondefence', nil, {disablesZone = true})
 
 zones.ramatdaviddefence:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SETUP_DEFENCES_DESTROYED", "Ramat David"),20)
-end, 'disableramatdaviddefence')
+end, 'disableramatdaviddefence', nil, {disablesZone = true})
 
 zones.jordandefence:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SETUP_DEFENCES_DESTROYED", "Jordan"),20)
-end, 'disablejordandefence')
+end, 'disablejordandefence', nil, {disablesZone = true})
 
 zones.incirlikdefence:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SETUP_DEFENCES_DESTROYED", "Incirlik"),20)
-end, 'disableincirlikdefence')
+end, 'disableincirlikdefence', nil, {disablesZone = true})
 
 zones.silkworm:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("SYRIA_SETUP_SILKWORM_DESTROYED"),20)
-end, 'disablesilkworm')
+end, 'disablesilkworm', nil, {disablesZone = true})
 end
 
 

@@ -1284,17 +1284,17 @@ zones.PointeDesGroins:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,1000)
 	trigger.action.outTextForCoalition(2,L10N:Format("NORMANDY_RADAR_CLEARED", "Pointe Des Groins", 1000),20)
-end, 'disablePointeDesGroins')
+end, 'disablePointeDesGroins', nil, {disablesZone = true})
 zones.PointeDuHoc:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,1000)
 	trigger.action.outTextForCoalition(2,L10N:Format("NORMANDY_RADAR_CLEARED", "Pointe Du Hoc", 1000),20)
-end, 'disablePointeDuHoc')
+end, 'disablePointeDuHoc', nil, {disablesZone = true})
 zones.CapGrisNez:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,1000)
 	trigger.action.outTextForCoalition(2,L10N:Format("NORMANDY_RADAR_CLEARED", "Cap Gris Nez", 1000),20)
-end, 'disableCapGrisNez')
+end, 'disableCapGrisNez', nil, {disablesZone = true})
 --[[
 zones.AxeCarrierGroup:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
@@ -1467,7 +1467,7 @@ SCHEDULER:New(nil,function()
     	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
     	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
     end
-    bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+    if not DisableZonePatrol then bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
 end,{},5,0)
 
 -- SCHEDULER:New(nil,function()

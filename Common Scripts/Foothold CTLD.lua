@@ -4184,14 +4184,14 @@ local function zoneSupplyC130OneShotConfirm(arg, time)
   -- Leave delivery to the shared ready queue so simultaneous drops are staggered.
 end
 
-local function tickZoneSupply()
-  if next(c130AutoBuildSets) then
+local function tickZoneSupply(c130Only)
+  if c130Only ~= false and next(c130AutoBuildSets) then
     processC130AutoBuild()
   end
   if not next(zoneSupplyCrates) then
     return
   end
-  local ready = processZoneSupplyDeliveries()
+  local ready = processZoneSupplyDeliveries(c130Only)
   if ready and ready > 0 then
     zoneSupplyProcessReadyQueue()
   end
@@ -4556,12 +4556,27 @@ end
 
 bc:registerPendingCaptureHandler("blue_ctld_capture_delivery", completePendingBlueCtldSupply)
 
-processZoneSupplyDeliveries = function()
+do
+local function nextZoneSupplyEntryForCarrier(c130Only, previousKey)
+  local key, entry = next(zoneSupplyCrates, previousKey)
+  while entry and (entry._isC130 == true) ~= c130Only do
+    key, entry = next(zoneSupplyCrates, key)
+  end
+  return key, entry
+end
+
+processZoneSupplyDeliveries = function(c130Only)
   if not next(zoneSupplyCrates) then return 0 end
   local now = timer.getTime()
   local pvpEnabled = GlobalSettings.pvpEnabled == true
   local readyCount = 0
-  for key, entry in pairs(zoneSupplyCrates) do
+  local processed = false
+  local nextEntry, entries = next, zoneSupplyCrates
+  if c130Only ~= nil then
+    nextEntry, entries = nextZoneSupplyEntryForCarrier, c130Only
+  end
+  for key, entry in nextEntry, entries do
+    processed = true
     entry._ready = false
     local cargo = entry.cargo
     local staticObj = (cargo and cargo.GetPositionable and cargo:GetPositionable()) or entry.static
@@ -4984,8 +4999,9 @@ processZoneSupplyDeliveries = function()
         end
       end
     end
-  rebuildZoneSupplyOnboardCache()
+  if processed then rebuildZoneSupplyOnboardCache() end
   return readyCount
+end
 end
 
 zoneSupplyApplyOne = function(key)
@@ -7995,7 +8011,7 @@ function zoneSet:_TriggerCheck(fromstart)
   if fromstart then
     for _, _object in pairs(self.objectset) do
       local obj = _object
-      if obj and obj:IsAlive() then
+      if obj and not obj._footholdZoneEntryComplete and obj:IsAlive() then
         local positionRead, position, coordinate = false, nil, nil
         for _, _zone in pairs(self.Set) do
           if not obj.TriggerInZone then obj.TriggerInZone = {} end
@@ -8018,7 +8034,7 @@ function zoneSet:_TriggerCheck(fromstart)
   else
     for _, _object in pairs(self.objectset) do
       local obj = _object
-      if obj and obj:IsAlive() then
+      if obj and not obj._footholdZoneEntryComplete and obj:IsAlive() then
         local positionRead, position, coordinate = false, nil, nil
         for _, _zone in pairs(self.Set) do
           if not obj.TriggerInZone then obj.TriggerInZone = {} end
@@ -8265,6 +8281,7 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
             self:_recordCareerAction(careerPlayerName, Unit, bc.CAREER_STAT.TroopDrops, bc.CAREER_AIRCRAFT_METRIC.TroopDrops, 1, careerAircraftId)
         end
         
+        troopGroup._footholdZoneEntryComplete = nil
         deployedTroops[troopGroupName] = troopGroup
         deployedTroopsSet:AddGroup(troopGroup)
         zoneSet:StartDeployedTroopTrigger()
@@ -8501,19 +8518,23 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
                         return
                     end
                     zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, ownerSide = pvpEnabled and ownerSide or nil, canCaptureZone = canCaptureZone, pickupZoneName = pickupZoneName, careerPlayerName = careerPlayerName, careerAircraftId = careerAircraftId }
+                    troopGroup._footholdZoneEntryComplete = canCaptureZone
                     if canCaptureZone then recordAcceptedCareerDrop() end
                     CaptureZoneIfNeutral()
                     return
                 end
                 if currentZone.side == 3 - ownerSide then
                     zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, ownerSide = pvpEnabled and ownerSide or nil, canCaptureZone = canCaptureZone, pickupZoneName = pickupZoneName, careerPlayerName = careerPlayerName, careerAircraftId = careerAircraftId }
+                    troopGroup._footholdZoneEntryComplete = canCaptureZone
                     recordAcceptedCareerDrop()
                     return
                 end
                 if currentZone.side == 0 then
                     zoneCaptureInfo[troopGroupName] = { troopGroup = troopGroup, zoneName = zoneName, deployer = Group, cargoName = cargoName, cargoType = cargoType, ownerSide = pvpEnabled and ownerSide or nil, canCaptureZone = canCaptureZone, pickupZoneName = pickupZoneName, careerPlayerName = careerPlayerName, careerAircraftId = careerAircraftId }
+                    troopGroup._footholdZoneEntryComplete = canCaptureZone
                     recordAcceptedCareerDrop()
                     CaptureZoneIfNeutral()
+                    if canCaptureZone then return end
                 end
             end
         else
@@ -8524,7 +8545,7 @@ function Foothold_ctld:OnAfterTroopsDeployed(From, Event, To, Group, Unit, Troop
 end
 function zoneSet:OnAfterEnteredZone(From, Event, To, EnteredGroup, Zone)
     local troopGroup = EnteredGroup
-    if troopGroup and troopGroup:IsAlive() then
+    if troopGroup and not troopGroup._footholdZoneEntryComplete and troopGroup:IsAlive() then
         local troopGroupName = troopGroup:GetName()
         local zoneName       = Zone:GetName()
         local currentZone    = bc:getZoneByName(zoneName)
@@ -8610,14 +8631,14 @@ function zoneSet:OnAfterEnteredZone(From, Event, To, EnteredGroup, Zone)
             return
         end
 
-        if zoneCaptureInfo[troopGroupName].canCaptureZone and currentZone and (currentZone.side == ownerSide or currentZone.side == 0) then
-            timer.scheduleFunction(function() CaptureZoneIfNeutral() end, {}, timer.getTime() + 10)
+        if zoneCaptureInfo[troopGroupName].canCaptureZone and currentZone then
+            troopGroup._footholdZoneEntryComplete = true
+            if currentZone.side == ownerSide or currentZone.side == 0 then
+                timer.scheduleFunction(function() CaptureZoneIfNeutral() end, {}, timer.getTime() + 10)
+            end
         end
     end
 end
-
-local captureRunning = false
-local captureQueued  = false
 
 function completePendingBlueCtldTroop(zoneObj, payload, succeeded)
     local troopGroupName = payload.groupName
@@ -8659,20 +8680,37 @@ end
 bc:registerPendingCaptureHandler("blue_ctld_troop_capture", completePendingBlueCtldTroop)
 
 
-function CaptureZoneIfNeutral()
-    local pvpEnabled = GlobalSettings.pvpEnabled == true
-    if captureRunning then
-        captureQueued = true
+do
+(function()
+local captureRunning = false
+local captureQueued
+
+local function queueCaptureZones(zones)
+    -- A full request covers every queued zone.
+    if captureQueued == true then return end
+    if zones == true or not captureQueued then
+        captureQueued = zones
         return
     end
-    if next(zoneCaptureInfo) == nil then return end
-    captureRunning = true
-    captureQueued = false
+    for name, zone in pairs(zones) do
+        captureQueued[name] = zone
+    end
+end
+
+local function processQueuedCaptures()
+    if captureRunning or not captureQueued then return end
+    local requestedZones = captureQueued
+    captureQueued = nil
 
     local troopGroupNames = {}
-    for name in pairs(zoneCaptureInfo) do
-        troopGroupNames[#troopGroupNames + 1] = name
+    for name, data in pairs(zoneCaptureInfo) do
+        if requestedZones == true or requestedZones[data.zoneName] then
+            troopGroupNames[#troopGroupNames + 1] = name
+        end
     end
+    if #troopGroupNames == 0 then return end
+    captureRunning = true
+    local pvpEnabled = GlobalSettings.pvpEnabled == true
 
     local zoneEvents   = {}
     local totalReward  = pvpEnabled and { [1] = 0, [2] = 0 } or 0
@@ -8792,11 +8830,8 @@ function CaptureZoneIfNeutral()
             end
 
             captureRunning = false
-            local hasPending = next(zoneCaptureInfo) ~= nil
-            if hasPending and (captureQueued or retrigger) then
-                captureQueued = false
-                CaptureZoneIfNeutral()
-            end
+            if retrigger and next(zoneCaptureInfo) then queueCaptureZones(requestedZones) end
+            processQueuedCaptures()
             return
         end
 
@@ -8814,7 +8849,8 @@ function CaptureZoneIfNeutral()
             timer.scheduleFunction(function() processNextGroup(index + 1) end, {}, timer.getTime() + wait)
         end
 
-        if not data then
+        local scopedZone = data and requestedZones ~= true and requestedZones[data.zoneName]
+        if not data or (requestedZones ~= true and not scopedZone) then
             scheduleNext(0)
             return
         end
@@ -8847,7 +8883,7 @@ function CaptureZoneIfNeutral()
             return
         end
 
-        local currentZone = bc:getZoneByName(zoneName)
+        local currentZone = scopedZone or bc:getZoneByName(zoneName)
         if not currentZone then
             scheduleNext(5)
             return
@@ -8880,6 +8916,14 @@ function CaptureZoneIfNeutral()
             end
             scheduleNext(5)
             return
+        end
+        local sameZone = data.pickupZoneName and zoneName and data.pickupZoneName == zoneName
+        if troopGroup._footholdZoneEntryComplete and (currentZone.side == ownerSide or sameZone or not currentZone.active) then
+            local zone = getSupplyZoneWrapper(zoneName)
+            if not zone or not troopGroup:IsPartlyOrCompletelyInZone(zone) then
+                scheduleNext(0)
+                return
+            end
         end
         if not data.pickupZoneName and currentZone.side == ownerSide then
             if pvpEnabled then refundOrReturnRejectedTroops(data.deployer, data.cargoName, data.canCaptureZone, ownerSide)
@@ -8914,7 +8958,6 @@ function CaptureZoneIfNeutral()
             return
         end
 
-        local sameZone = data.pickupZoneName and zoneName and data.pickupZoneName == zoneName
         if sameZone then
             if pvpEnabled then refundOrReturnRejectedTroops(data.deployer, data.cargoName, data.canCaptureZone, ownerSide)
             else refundOrReturnRejectedTroops(data.deployer, data.cargoName, data.canCaptureZone) end
@@ -8993,6 +9036,13 @@ function CaptureZoneIfNeutral()
 
     processNextGroup(1)
 
+end
+
+function CaptureZoneIfNeutral(knownZone)
+    queueCaptureZones(knownZone and { [knownZone.zone] = knownZone } or true)
+    processQueuedCaptures()
+end
+end)()
 end
 
 local function RefillMissingWithCountTable()
@@ -9082,7 +9132,27 @@ end
 TIMER:New(RefillMissingWithCountTable):Start(60, 60)
 
 
-TIMER:New(tickZoneSupply):Start(15, 3)
+do
+  (function(interval)
+    if interval == 3 then
+      TIMER:New(tickZoneSupply):Start(15, 3)
+    else
+      -- Run both schedules from one timer. A nil filter checks both cargo types.
+      local firstCheck = timer.getTime() + 15
+      timer.scheduleFunction(function(schedule, time)
+        local ordinaryDue = time >= schedule.ordinary
+        local c130Due = time >= schedule.c130
+        if ordinaryDue then schedule.ordinary = time + interval end
+        if c130Due then schedule.c130 = time + 3 end
+
+        local c130Only
+        if ordinaryDue ~= c130Due then c130Only = c130Due end
+        tickZoneSupply(c130Only)
+        return math.min(schedule.ordinary, schedule.c130)
+      end, { ordinary = firstCheck, c130 = firstCheck }, firstCheck)
+    end
+  end)(math.max(3, math.min(6, math.floor(tonumber(CTLDCargoTrackingInterval) or 3))))
+end
 
 
 BASE:I("CTLD script initialized")

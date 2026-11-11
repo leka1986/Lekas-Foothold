@@ -1800,61 +1800,61 @@ zones.tankfactory:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_TANK_FACTORY_CLEARED"),20)
-end, 'disabletankfactory')
+end, 'disabletankfactory', nil, {disablesZone = true})
 
 zones.fueldepo:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_FUEL_DEPOT_DISABLED"),20)
-end, 'disablefueldepo')
+end, 'disablefueldepo', nil, {disablesZone = true})
 
 
 zones.miningfacility:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_MINING_FACILITY_CLEARED"),20)
-end, 'disableminingfacility')
+end, 'disableminingfacility', nil, {disablesZone = true})
 
 
 zones.ammonitiondepo:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_AMMUNITION_DEPOT_CLEARED"),20)
-end, 'disableammonitiondepo')
+end, 'disableammonitiondepo', nil, {disablesZone = true})
 
 zones.insurgentcamp:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_INSURGENT_CAMP_DESTROYED"),20)
-end, 'disableinsurgentcamp')
+end, 'disableinsurgentcamp', nil, {disablesZone = true})
 
 
 zones.chemsite:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_CHEMICAL_SITE_DESTROYED"),20)
-end, 'disablechemsite')
+end, 'disablechemsite', nil, {disablesZone = true})
 
 zones.redcarrier:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
-end, 'disableredcarrier')
+end, 'disableredcarrier', nil, {disablesZone = true})
 
 zones.missilefactory:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_MISSILE_FACTORY_DESTROYED"),20)
-end, 'disablemissilefactory')
+end, 'disablemissilefactory', nil, {disablesZone = true})
 
 zones.borjoil:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_BORJ_OIL_DESTROYED"),20)
-end, 'disablemborjoil')
+end, 'disablemborjoil', nil, {disablesZone = true})
 zones.artilleryfactory:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_ARTILLERY_FACTORY_DISABLED"),20)
-end, 'disableartilleryfactory')
+end, 'disableartilleryfactory', nil, {disablesZone = true})
 
 
 local missionCompleted = false
@@ -1941,7 +1941,7 @@ timer.scheduleFunction(function()
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
 	end
-	bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+	if not DisableZonePatrol then bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
 end, {}, timer.getTime() + 30)
 
 

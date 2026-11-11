@@ -75,6 +75,8 @@ FootholdConfigTrackedTableNames = {
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
     "MaxRedGroundGroupsPerZone",
+    "MaxBlueGroundGroupsPerZone",
+    "DisableZonePatrol",
     "AdminCommands",
     "PvPSeparateAircraftLists",
     "ewrs_enabled",
@@ -85,6 +87,7 @@ FootholdConfigTrackedScalarNames = {
     "NormalSupplyCapacity",
     "WarehouseSupplyCapacity",
     "CTLDSupplyCapacity",
+    "CTLDCargoTrackingInterval",
     "ExtraRedRepairTimeLowPlayerCountPercent",
     "NightRewardPercent",
     "NightMantisInterval",
@@ -448,11 +451,35 @@ RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 -- Persian Gulf: 12
 -- Sinai Extended: 10
 -- Sinai North: 10
+-- South Atlantic: 10
 -- Syria Extended: 9
 -- Example: Syria already tops out at 9. Setting 12 does not increase it; setting 8 caps it at 8.
 -- Existing campaigns and PvP are not changed by this setting.
 -- @gui label="Ground Units Max Groups at Each Zone" validValues="6=6 | 7=7 | 8=8 | 9=9 | 10=10 | 11=11 | 12=12"
 MaxRedGroundGroupsPerZone = 12
+
+-- Limits the randomized Blue garrison total per zone when new PvE garrisons are generated.
+-- Each zone keeps its own range. Raising the limit does not add groups.
+-- Highest totals currently used by map (groups per zone)
+-- Afghanistan: 4
+-- Caucasus: 4
+-- Germany Cold War: 4
+-- Iraq: 4
+-- Kola: 4
+-- Persian Gulf: 4
+-- Sinai Extended: 4
+-- Sinai North: 4
+-- South Atlantic: 4
+-- Syria Extended: 4
+-- Selecting 3 caps zones that can generate 4 groups at 3.
+-- Existing saved garrisons, fixed defenses, static structures, paid upgrades and PvP are unchanged.
+-- @gui label="Blue Ground Units Max Groups at Each Zone" validValues="1=1 | 2=2 | 3=3 | 4=4"
+MaxBlueGroundGroupsPerZone = 4
+
+-- If true, disables ground-group patrol movement started by the setup in each zone.
+-- Naval roaming and mission-completion checks are unchanged. Applies to PvE and PvP on mission start.
+-- @gui label="Disable ground patrolling groups in zone"
+DisableZonePatrol = false
 
 -- Choose which RED SAM templates are allowed when the mission replaces or randomizes SAM groups.
 -- Untick a SAM type to prevent that template from being used.
@@ -498,7 +525,7 @@ NightMantisInterval = 30
 
 -- Makes low-flying player aircraft harder for enemy air defenses to detect at night.
 -- Starts after a nighttime player takeoff. Normal detection returns after a daytime player takeoff.
--- @gui label="Harder to Detect at Night"
+-- @gui label="Harder to Detect at Night" disabledWhen="DisableMantis:true" disabledValue="false"
 NightRadarBlur = true
 
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
@@ -1776,6 +1803,10 @@ Allow_Red_CTLD = false
 -- Maximum distance in meters that unloaded CTLD troops can run toward a zone.
 -- Use a value between 2000 and 15000.
 MaxTroopsRunDistanceTowardZone = 5000
+
+-- Time between checks for ordinary CTLD supply and warehouse cargo. C-130 checks run every 3 seconds.
+-- @gui label="Cargo Tracking Interval" validValues="3 seconds=3 | 4 seconds=4 | 5 seconds=5 | 6 seconds=6"
+CTLDCargoTrackingInterval = 3
 
 -- This is the prices for each CTLD unit and their required rank. Rank 1 is the lowest.
 -- @gui label="CTLD Items" editor="linkedTable" fields="self.available:Available:boolean:true|self.price:Price:number:0|self.reqRank:Rank:number:0|MAX_AT_SPAWN:Max saved:number" installPolicy="mergeRows" rowLabel="comment"

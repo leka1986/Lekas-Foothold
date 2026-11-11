@@ -750,12 +750,14 @@ function sendDetailedMessageToPlayer(playerUnitID, message, playerGroupID, unitN
         trigger.action.outSoundForGroup(playerGroupID, "admin.wav")
     end
 end
+local function readAltimeterPressure()
+    local coord = COORDINATE:NewFromVec3({x = 0, y = 0, z = 0})
+    return coord:GetPressure(0) * 0.0295300
+end
+
 local function getAltimeter(translator)
     local T = translator or L10N
-    local coord = COORDINATE:NewFromVec3({x = 0, y = 0, z = 0})
-    local pressure_hPa = coord:GetPressure(0)  
-    local pressureInHg = pressure_hPa * 0.0295300
-    return T:Format("WELCOME_ALTIMETER", pressureInHg)
+    return T:Format("WELCOME_ALTIMETER", readAltimeterPressure())
 end
 
 local WelcomeCarrierInfo = {
@@ -999,40 +1001,28 @@ function getCarrierInfo()
     end
 end
 
+local function readAirbaseWind(airbase, knownCoordinate)
+    local coord = knownCoordinate or airbase:GetCoordinate()
+    local direction, speed = coord:GetWind(10)
+    if direction and speed then
+        return (direction + 360) % 360, math.floor(speed * 1.94384)
+    end
+end
+
 local function getAirbaseWind(airbaseName, translator, knownAirbase, knownCoordinate)
     local T = translator or L10N
     local airbase = knownAirbase
     if airbase == nil then airbase = GetAirbaseByNameCached(airbaseName) end
-    if airbase then
-        local airbaseCoord = knownCoordinate or airbase:GetCoordinate()
-        local windDirection, windSpeed = airbaseCoord:GetWind(10)
-        if windDirection and windSpeed then
-            local windSpeedKnots = math.floor(windSpeed * 1.94384)
-            windDirection = (windDirection + 360) % 360
-            return T:Format("WELCOME_WIND_AT", windDirection, windSpeedKnots), windDirection
-        else
-            return T:Get("WELCOME_WIND_UNAVAILABLE"), nil
-        end
-    else
-        return T:Get("WELCOME_AIRBASE_NOT_FOUND"), nil
-    end
+    if not airbase then return T:Get("WELCOME_AIRBASE_NOT_FOUND"), nil end
+    local direction, speed = readAirbaseWind(airbase, knownCoordinate)
+    if not direction then return T:Get("WELCOME_WIND_UNAVAILABLE"), nil end
+    return T:Format("WELCOME_WIND_AT", direction, speed), direction
 end
 
-local function fetchActiveRunway(zoneName, translator, includeCourse, knownAirbase)
-    local T = translator or L10N
-    local zoneData = atisZones[zoneName]
-    if not zoneData or not zoneData.airbaseName then
-        return T:Get("WELCOME_AIRBASE_DATA_UNAVAILABLE")
-    end
-    local airbase = knownAirbase
-    if airbase == nil then airbase = GetAirbaseByNameCached(zoneData.airbaseName) end
-    if not airbase then
-        trigger.action.outText(L10N:Format("WELCOME_AIRBASE_CONFLICT", zoneData.airbaseName), 10)
-        return T:Get("WELCOME_AIRBASE_DATA_UNAVAILABLE")
-    end
+local function readActiveRunway(airbase, includeCourse)
     local landingRunway, takeoffRunway = airbase:GetActiveRunway()
     if not landingRunway and not takeoffRunway then
-        return T:Get("WELCOME_NO_ACTIVE_RUNWAY")
+        return "WELCOME_NO_ACTIVE_RUNWAY"
     end
     local function runwayLabel(runway)
         if not runway then return nil end
@@ -1056,17 +1046,36 @@ local function fetchActiveRunway(zoneName, translator, includeCourse, knownAirba
     end
     if landingRunwayName and takeoffRunwayName then
         if landingRunwayName == takeoffRunwayName then
-            return T:Format("WELCOME_ACTIVE_RUNWAY", landingRunwayName)
-        else
-            return T:Format("WELCOME_ACTIVE_RUNWAY_LANDING_TAKEOFF", landingRunwayName, takeoffRunwayName)
+            return "WELCOME_ACTIVE_RUNWAY", landingRunwayName
         end
+        return "WELCOME_ACTIVE_RUNWAY_LANDING_TAKEOFF", landingRunwayName, takeoffRunwayName
     elseif landingRunwayName then
-        return T:Format("WELCOME_ACTIVE_RUNWAY_LANDING", landingRunwayName)
+        return "WELCOME_ACTIVE_RUNWAY_LANDING", landingRunwayName
     elseif takeoffRunwayName then
-        return T:Format("WELCOME_ACTIVE_RUNWAY_TAKEOFF", takeoffRunwayName)
-    else
-        return T:Get("WELCOME_NO_ACTIVE_RUNWAY")
+        return "WELCOME_ACTIVE_RUNWAY_TAKEOFF", takeoffRunwayName
     end
+    return "WELCOME_NO_ACTIVE_RUNWAY"
+end
+
+local function formatActiveRunway(T, key, first, second)
+    if second then return T:Format(key, first, second) end
+    if first then return T:Format(key, first) end
+    return T:Get(key)
+end
+
+local function fetchActiveRunway(zoneName, translator, includeCourse, knownAirbase)
+    local T = translator or L10N
+    local zoneData = atisZones[zoneName]
+    if not zoneData or not zoneData.airbaseName then
+        return T:Get("WELCOME_AIRBASE_DATA_UNAVAILABLE")
+    end
+    local airbase = knownAirbase
+    if airbase == nil then airbase = GetAirbaseByNameCached(zoneData.airbaseName) end
+    if not airbase then
+        trigger.action.outText(L10N:Format("WELCOME_AIRBASE_CONFLICT", zoneData.airbaseName), 10)
+        return T:Get("WELCOME_AIRBASE_DATA_UNAVAILABLE")
+    end
+    return formatActiveRunway(T, readActiveRunway(airbase, includeCourse))
 end
 
 local function getPlayerWind(playerCoord, translator)
@@ -1098,10 +1107,32 @@ end
 
 -- ATIS MENU --
 
-local function sendATISInformation(client, group, zoneName)
+local function readAirbaseATIS(zoneName)
+    local airbase = GetAirbaseByNameCached(atisZones[zoneName].airbaseName)
+    if not airbase then return { windError = "WELCOME_AIRBASE_NOT_FOUND" } end
+    local windDirection, windSpeed = readAirbaseWind(airbase)
+    if not windDirection then return { windError = "WELCOME_WIND_UNAVAILABLE" } end
+    local runwayKey, runwayFirst, runwaySecond = readActiveRunway(airbase, true)
+    return {
+        windDirection = windDirection, windSpeed = windSpeed, pressure = readAltimeterPressure(),
+        runwayKey = runwayKey, runwayFirst = runwayFirst, runwaySecond = runwaySecond,
+    }
+end
+
+local function formatAirbaseATIS(zoneName, data, T)
+    if data.windError then
+        return { text = T:Format("WELCOME_ATIS_FOR_SIMPLE", zoneName, T:Get(data.windError)), duration = 15 }
+    end
+    local wind = T:Format("WELCOME_WIND_AT", data.windDirection, data.windSpeed)
+    local runway = formatActiveRunway(T, data.runwayKey, data.runwayFirst, data.runwaySecond) or T:Get("WELCOME_RUNWAY_INFO_UNAVAILABLE")
+    local altimeter = T:Format("WELCOME_ALTIMETER", data.pressure)
+    return { text = T:Format("WELCOME_ATIS_FOR_FULL_PERIOD", zoneName, wind, altimeter, runway), duration = 20 }
+end
+
+local function sendATISInformation(client, group, zoneName, knownAirbaseATIS, reportsByLocale)
     if not client then return end
     local T = getMooseUnitTranslator(client)
-    if isCarrierZoneName(zoneName) then
+    if not knownAirbaseATIS and isCarrierZoneName(zoneName) then
         if client:GetCoalition() ~= coalition.side.BLUE then return end
         local altimeter = getAltimeter(T)
         local lines = {}
@@ -1123,15 +1154,12 @@ local function sendATISInformation(client, group, zoneName)
 
         MESSAGE:New(table.concat(lines,"\n------------------------------------------------\n"),15,""):ToUnit(client)
     else
-        local wind,dir = getAirbaseWind(atisZones[zoneName].airbaseName, T)
-        if wind==T:Get("WELCOME_WIND_UNAVAILABLE") or wind==T:Get("WELCOME_AIRBASE_NOT_FOUND") then
-            MESSAGE:New(T:Format("WELCOME_ATIS_FOR_SIMPLE",zoneName,wind),15,""):ToUnit(client)
-        else
-            local run = fetchActiveRunway(zoneName, T, true) or T:Get("WELCOME_RUNWAY_INFO_UNAVAILABLE")
-            local altimeter = getAltimeter(T)
-            local msg = T:Format("WELCOME_ATIS_FOR_FULL_PERIOD",zoneName,wind,altimeter,run)
-            MESSAGE:New(msg,20,""):ToUnit(client)
+        local report = reportsByLocale and reportsByLocale[T.Locale]
+        if not report then
+            report = formatAirbaseATIS(zoneName, knownAirbaseATIS or readAirbaseATIS(zoneName), T)
+            if reportsByLocale then reportsByLocale[T.Locale] = report end
         end
+        MESSAGE:New(report.text, report.duration, ""):ToUnit(client)
     end
 end
 
@@ -1362,6 +1390,7 @@ function static:onBaseCapture(_event)
                 local refresh = captureATISRefresh
                 if refresh then refresh.entries = {} end
                 local ownerCoalitionName = coalitionSide == coalition.side.RED and "red" or "blue"
+                local announcementClients
                 for _, coalitionName in ipairs({ "blue", "red" }) do
                     local clientSet = SET_CLIENT:New():FilterCategories("plane"):FilterCoalitions(coalitionName):FilterAlive():FilterOnce()
                     clientSet:ForEachClient(function(client)
@@ -1378,11 +1407,23 @@ function static:onBaseCapture(_event)
                             end
                             refresh.pending[groupName] = client:GetName()
                         end
-                        if coalitionName ~= ownerCoalitionName then return end
-                        SCHEDULER:New(nil, function()
-                            sendATISInformation(client,nil,zname)
-                        end, {}, 10)
+                        if coalitionName == ownerCoalitionName then
+                            announcementClients = announcementClients or {}
+                            announcementClients[#announcementClients + 1] = client
+                        end
                     end)
+                end
+                if announcementClients then
+                    SCHEDULER:New(nil, function()
+                        local airbaseATIS, reportsByLocale
+                        if not isCarrierZoneName(zname) then
+                            airbaseATIS = readAirbaseATIS(zname)
+                            reportsByLocale = {}
+                        end
+                        for _, client in ipairs(announcementClients) do
+                            sendATISInformation(client, nil, zname, airbaseATIS, reportsByLocale)
+                        end
+                    end, {}, 10)
                 end
             end
         end  

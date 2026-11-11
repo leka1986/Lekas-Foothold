@@ -13106,7 +13106,6 @@ do
 			local handle = handles[i]
 			if handle then
 				removed[handle] = true
-				env.info("[MENU_REMOVE] kind=shop-selector group=" .. tostring(groupId) .. " state=" .. tostring(state) .. " index=" .. tostring(i) .. " handle=" .. tostring(handle) .. " path=" .. table.concat(handle, " > "))
 				missionCommands.removeItemForGroup(groupId, handle)
 			end
 		end
@@ -13281,11 +13280,9 @@ do
 			return
 		end
 
-		env.info("[MENU_TRACE] phase=selector-begin group=" .. tostring(groupId) .. " item=" .. tostring(itemId) .. " state=" .. tostring(state) .. " children=" .. tostring(node.children))
 		self:_removeTrackedShopHandlesForGroup(groupId, node.children or {})
 		node.children = {}
 		self:_populateShopSelectorMenuForGroup(groupId, groupObj, coalition, { id = itemId, data = itemData }, selectorSpec, node.menu, node.children)
-		env.info("[MENU_TRACE] phase=selector-complete group=" .. tostring(groupId) .. " item=" .. tostring(itemId))
 	end
 
 	function BattleCommander:_getGroupRank(groupId, groupObj, knownExists, firstUnit, firstName)
@@ -16357,15 +16354,19 @@ do
 
 
 		if capControlActive then
+			local function isEligibleCapZone(v)
+				return v.active
+					and (v.side == (pvpEnabled and ownerSide or 2)
+						or (v.side == 0 and (not v.NeutralAtStart or v.firstCaptureByRed)))
+					and not v.isHidden and (not v.suspended or v._idleSuspended)
+			end
+
 			local function orderedCapZonesForGroup()
 				if menuFacts and menuFacts.capZones then return menuFacts.capZones end
 				local zones = (self.getZones and self:getZones()) or {}
 				local c = {}
 				for _, v in ipairs(zones) do
-					if v.active
-					and ((v.side == (pvpEnabled and ownerSide or 2)) or (v.side == 0 and (not v.NeutralAtStart or v.firstCaptureByRed)))
-					and (not v.isHidden)
-					and (not v.suspended or v._idleSuspended) then
+					if isEligibleCapZone(v) then
 						local suf = WaypointList and WaypointList[v.zone]
 						local wp = suf and tonumber(tostring(suf):match("%d+"))
 						c[#c+1] = { z = v, wp = wp, disp = (wp and (v.zone .. suf) or v.zone) }
@@ -16419,6 +16420,7 @@ do
 					local headingLabel = headingLabels[headingName]
 					if headingName == "Orbit" then
 						missionCommands.addCommandForGroup(groupId, headingLabel, zoneSubMenu, function()
+							if not pvpEnabled and not isEligibleCapZone(v) then return end
 							local zone = ZONE:FindByName(v.zone)
 							if not zone then return end
 							local coord = zone:GetCoordinate()
@@ -16437,6 +16439,7 @@ do
 							local legVal = capLegs[legName]
 							local legLabel = legLabels[legName]
 							missionCommands.addCommandForGroup(groupId, legLabel, headingMenu, function()
+								if not pvpEnabled and not isEligibleCapZone(v) then return end
 								local zone = ZONE:FindByName(v.zone)
 								if not zone then return end
 								local coord = zone:GetCoordinate()
@@ -16719,6 +16722,10 @@ do
 
 		local orbitAndHeadings, legs, headingLabels, legLabels
 
+		local function isEligibleTankerZone(v)
+			return v.active and v.side == ownerSide and not v.isHidden
+		end
+
 		local tankerZones
 		local function orderedBlueZones()
 			if menuFacts and menuFacts.tankerZones then return menuFacts.tankerZones end
@@ -16726,7 +16733,7 @@ do
 			local zones = self:getZones() or {}
 			local c = {}
 			for _, v in ipairs(zones) do
-				if v.active and v.side == ownerSide and (not v.isHidden) then
+				if isEligibleTankerZone(v) then
 					local suf = WaypointList and WaypointList[v.zone]
 					local wp = suf and tonumber(tostring(suf):match("%d+"))
 					c[#c+1] = { z = v, wp = wp, disp = (wp and (v.zone .. suf) or v.zone) }
@@ -16788,11 +16795,10 @@ do
 					local headingLabel = headingLabels[headingName]
 					if headingName == "Orbit" then
 						missionCommands.addCommandForGroup(groupId, headingLabel, zoneSubMenu, function()
-							if pvpEnabled then
-								if self.dynamicTankersBySide[ownerSide][kind] ~= runtime or runtime.group ~= nativeGroup or not runtime.active then return end
-								local currentZone = self:getZoneByName(zoneName)
-								if currentZone ~= v or currentZone.side ~= ownerSide or not currentZone.active or currentZone.isHidden then return end
-							end
+							if pvpEnabled and (self.dynamicTankersBySide[ownerSide][kind] ~= runtime
+								or runtime.group ~= nativeGroup or not runtime.active) then return end
+							local currentZone = self:getZoneByName(zoneName)
+							if currentZone ~= v or not isEligibleTankerZone(currentZone) then return end
 							local zone = ZONE:FindByName(zoneName)
 							if not zone then return end
 							local coord = zone:GetCoordinate()
@@ -16809,12 +16815,11 @@ do
 							local legVal = capLegs[legName]
 							local legLabel = legLabels[legName]
 							missionCommands.addCommandForGroup(groupId, legLabel, headingMenu, function()
-								if pvpEnabled then
-								if self.dynamicTankersBySide[ownerSide][kind] ~= runtime or runtime.group ~= nativeGroup or not runtime.active then return end
+								if pvpEnabled and (self.dynamicTankersBySide[ownerSide][kind] ~= runtime
+									or runtime.group ~= nativeGroup or not runtime.active) then return end
 								local currentZone = self:getZoneByName(zoneName)
-								if currentZone ~= v or currentZone.side ~= ownerSide or not currentZone.active or currentZone.isHidden then return end
-							end
-							local zone = ZONE:FindByName(zoneName)
+								if currentZone ~= v or not isEligibleTankerZone(currentZone) then return end
+								local zone = ZONE:FindByName(zoneName)
 								if not zone then return end
 								local coord = zone:GetCoordinate()
 								local accepted
@@ -17232,6 +17237,9 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		self._shopSelectorRefreshScheduler = nil
 		local pending = self._shopSelectorRefreshPendingByCoalition or {}
 		self._shopSelectorRefreshPendingByCoalition = {}
+		local refreshDynamic = self._dynamicControlMenuRefreshRequested
+		self._dynamicControlMenuRefreshRequested = nil
+		local groupsByCoalition = refreshDynamic and {} or nil
 
 		for coalitionSide, tokens in pairs(pending) do
 			local itemIds, itemIdSet = self:_resolveShopSelectorItemIds(coalitionSide, tokens, true)
@@ -17262,7 +17270,12 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 			end
 			local queuedRefresh = false
 			if #itemIds > 0 then
-				queuedRefresh = self:_queueShopSelectorRefreshItemsForCoalition(coalitionSide, itemIds, priorityItemId)
+				local groups
+				if groupsByCoalition then
+					groups = self:_getLivePlayerGroupsForCoalition(coalitionSide)
+					groupsByCoalition[coalitionSide] = groups
+				end
+				queuedRefresh = self:_queueShopSelectorRefreshItemsForCoalition(coalitionSide, itemIds, priorityItemId, groups)
 			end
 			if tokens and tokens.advance_capture_targets == true then
 				if advanceCaptureRefreshItemAvailable and queuedRefresh and self._advanceCaptureAvailableRefreshPending then
@@ -17274,7 +17287,25 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 				self._advanceCaptureAvailableRefreshPending = nil
 			end
 		end
+		if refreshDynamic then
+			self:_queueDynamicControlMenuRefresh(groupsByCoalition[2] or self:_getLivePlayerGroupsForCoalition(2))
+			if GlobalSettings.pvpEnabled == true then
+				self:_queueDynamicControlMenuRefresh(groupsByCoalition[1] or self:_getLivePlayerGroupsForCoalition(1))
+			end
+		end
 		self:_startShopSelectorRefreshWorker()
+	end
+
+	function BattleCommander:_scheduleShopSelectorRefreshFlush()
+		if self._shopSelectorRefreshScheduler then return end
+		self._shopSelectorRefreshScheduler = SCHEDULER:New(nil, function(bcRef)
+			bcRef:_flushShopSelectorRefreshQueue()
+		end, {self}, 0.15, 0)
+	end
+
+	function BattleCommander:requestDynamicControlMenuRefresh()
+		self._dynamicControlMenuRefreshRequested = true
+		self:_scheduleShopSelectorRefreshFlush()
 	end
 
 	function BattleCommander:requestShopSelectorRefreshForCoalition(coalitionSide, tagsOrItemIds)
@@ -17299,13 +17330,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 				end
 			end
 		end
-		if self._shopSelectorRefreshScheduler then
-			return
-		end
-
-		self._shopSelectorRefreshScheduler = SCHEDULER:New(nil, function(bcRef)
-			bcRef:_flushShopSelectorRefreshQueue()
-		end, {self}, 0.15, 0)
+		self:_scheduleShopSelectorRefreshFlush()
 	end
 
 	function BattleCommander:requestDelayedSupplyMenuRefresh()
@@ -17402,7 +17427,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		return nil
 	end
 
-	function BattleCommander:_queueShopSelectorRefreshItemsForCoalition(coalitionSide, itemIds, priorityItemId)
+	function BattleCommander:_queueShopSelectorRefreshItemsForCoalition(coalitionSide, itemIds, priorityItemId, groups)
 		if not itemIds or #itemIds == 0 then
 			return false
 		end
@@ -17411,7 +17436,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		self._shopSelectorRefreshWorkSeen = self._shopSelectorRefreshWorkSeen or {}
 		self._shopSelectorRefreshWorkHead = self._shopSelectorRefreshWorkHead or 1
 
-		local groups = self:_getLivePlayerGroupsForCoalition(coalitionSide)
+		groups = groups or self:_getLivePlayerGroupsForCoalition(coalitionSide)
 		if #groups == 0 then
 			return false
 		end
@@ -17463,6 +17488,7 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 								workKey = workKey,
 							}
 						end
+						job.priority = true
 						priorityJobs = priorityJobs or {}
 						priorityJobs[#priorityJobs + 1] = job
 					elseif not seen[workKey] then
@@ -17488,10 +17514,25 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 		return queuedRefresh
 	end
 
+	function BattleCommander:_queueDynamicControlMenuRefresh(groups)
+		if #groups == 0 then return end
+		local work = self._dynamicControlMenuRefreshWork
+		if not work then
+			work = { queue = {}, indexByGroup = {}, head = 1, shopTurns = 0 }
+			self._dynamicControlMenuRefreshWork = work
+		end
+		for _, entry in ipairs(groups) do
+			local groupId = entry.groupId
+			local index = work.indexByGroup[groupId] or (#work.queue + 1)
+			work.queue[index] = entry
+			work.indexByGroup[groupId] = index
+		end
+	end
+
 	function BattleCommander:_startShopSelectorRefreshWorker()
-		local queue = self._shopSelectorRefreshWorkQueue or {}
+		local queue = self._shopSelectorRefreshWorkQueue
 		local head = self._shopSelectorRefreshWorkHead or 1
-		if head > #queue then
+		if (not queue or head > #queue) and not self._dynamicControlMenuRefreshWork then
 			return
 		end
 		if self._shopSelectorRefreshWorkerScheduler then
@@ -17524,35 +17565,50 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 
 	function BattleCommander:_runShopSelectorRefreshWorkerTick()
 		self._shopSelectorRefreshWorkerScheduler = nil
-		local queue = self._shopSelectorRefreshWorkQueue or {}
+		local queue = self._shopSelectorRefreshWorkQueue
 		local head = self._shopSelectorRefreshWorkHead or 1
-		local queueCount = #queue
-		local budget = self.shopSelectorRefreshBudget or 8
-		local processed = 0
-		while processed < budget and head <= queueCount do
-			local job = queue[head]
-			head = head + 1
-			processed = processed + 1
+		local queueCount = queue and #queue or 0
+		local nextShopJob = queue and queue[head]
+		local dynamic = self._dynamicControlMenuRefreshWork
+		-- Reserve every fourth ordinary tick for Dynamic Control while both queues have work.
+		if dynamic and (not nextShopJob or (not nextShopJob.priority and dynamic.shopTurns >= 3)) then
+			local entry = dynamic.queue[dynamic.head]
+			dynamic.head = dynamic.head + 1
+			dynamic.indexByGroup[entry.groupId] = nil
+			dynamic.shopTurns = 0
+			if dynamic.head > #dynamic.queue then self._dynamicControlMenuRefreshWork = nil end
 
-			if job then
-				if self._shopSelectorRefreshWorkSeen then
-					self._shopSelectorRefreshWorkSeen[job.workKey] = nil
+			local groupObj = entry.groupObj
+			if groupObj:isExist() and groupObj:getID() == entry.groupId then
+				self:refreshDynamicControlMenuForGroup(entry.groupId, groupObj, true, nil, nil, true)
+			end
+		else
+			local budget = dynamic and 1 or (self.shopSelectorRefreshBudget or 8)
+			local processed = 0
+			while processed < budget and head <= queueCount do
+				local job = queue[head]
+				head = head + 1
+				processed = processed + 1
+
+				if job then
+					if self._shopSelectorRefreshWorkSeen then
+						self._shopSelectorRefreshWorkSeen[job.workKey] = nil
+					end
+					if dynamic and not job.priority then dynamic.shopTurns = dynamic.shopTurns + 1 end
+					self:refreshShopSelectorItemForGroup(job.groupId, job.groupObj, job.itemId)
 				end
-				env.info("[MENU_TRACE] phase=shop-job-begin key=" .. tostring(job.workKey) .. " queueIndex=" .. tostring(head - 1) .. " queueCount=" .. tostring(queueCount))
-				self:refreshShopSelectorItemForGroup(job.groupId, job.groupObj, job.itemId)
-				env.info("[MENU_TRACE] phase=shop-job-complete key=" .. tostring(job.workKey))
 			end
 		end
 
-		if head > queueCount then
+		if queueCount > 0 and head > queueCount then
 			self._shopSelectorRefreshWorkQueue = {}
 			self._shopSelectorRefreshWorkHead = 1
 			self._shopSelectorRefreshWorkSeen = {}
 			self:_flushAdvanceCaptureAvailableMessages()
-		else
+		elseif head <= queueCount then
 			self._shopSelectorRefreshWorkHead = head
-			self:_startShopSelectorRefreshWorker()
 		end
+		self:_startShopSelectorRefreshWorker()
 	end
 
 	function BattleCommander:_flushFrontlineRefresh()
@@ -18360,28 +18416,22 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 				self:_jointClearTrackedMenuItems(groupid, state.requestItems)
 				self:_jointClearTrackedMenuItems(groupid, state.pendingItems)
 				if state.requestMenu then
-					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.requestMenu) .. " path=" .. table.concat(state.requestMenu, " > "))
 					missionCommands.removeItemForGroup(groupid, state.requestMenu)
 				end
 				if state.pendingMenu then
-					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.pendingMenu) .. " path=" .. table.concat(state.pendingMenu, " > "))
 					missionCommands.removeItemForGroup(groupid, state.pendingMenu)
 				end
 				if state.leaveItem then
-					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.leaveItem) .. " path=" .. table.concat(state.leaveItem, " > "))
 					missionCommands.removeItemForGroup(groupid, state.leaveItem)
 				end
 				if state.statusItem then
-					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.statusItem) .. " path=" .. table.concat(state.statusItem, " > "))
 					missionCommands.removeItemForGroup(groupid, state.statusItem)
 				end
 				if state.helpItem then
-					env.info("[MENU_REMOVE] kind=joint-fixed group=" .. tostring(groupid) .. " handle=" .. tostring(state.helpItem) .. " path=" .. table.concat(state.helpItem, " > "))
 					missionCommands.removeItemForGroup(groupid, state.helpItem)
 				end
 			end
 			if handle then
-				env.info("[MENU_REMOVE] kind=joint-root group=" .. tostring(groupid) .. " handle=" .. tostring(handle) .. " path=" .. table.concat(handle, " > "))
 				missionCommands.removeItemForGroup(groupid, handle)
 			end
 		end
@@ -18391,7 +18441,6 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 	function BattleCommander:_jointClearTrackedMenuItems(groupid, items)
 		for i = #(items or {}), 1, -1 do
 			local handle = items[i]
-			env.info("[MENU_REMOVE] kind=joint-tracked group=" .. tostring(groupid) .. " handle=" .. tostring(handle) .. " path=" .. table.concat(handle, " > "))
 			missionCommands.removeItemForGroup(groupid, handle)
 		end
 	end
@@ -18706,7 +18755,6 @@ function BattleCommander:new(savepath, updateFrequency, saveFrequency, difficult
 	end
 
 	function BattleCommander:refreshJointMenuForGroup(groupid, parent, side)
-		env.info("[MENU_TRACE] phase=joint-refresh-begin group=" .. tostring(groupid))
 		self:refreshJointRequestPlayerChildrenForGroup(groupid, parent, side)
 		self:refreshJointPendingRequestChildrenForGroup(groupid, parent, side)
 	end
@@ -22062,13 +22110,10 @@ function BattleCommander:refreshShopMenuForGroup(groupId, groupObj, knownSide, k
 	end
 	local groupState = self.groupSupportMenus[groupId]
 	local parent = groupState.menu
-	env.info("[MENU_TRACE] phase=shop-full-begin group=" .. tostring(groupId) .. " state=" .. tostring(groupState) .. " items=" .. tostring(groupState.items))
 	local oldItems = groupState.items or {}
 	for i = #oldItems, 1, -1 do
-		env.info("[MENU_REMOVE] kind=shop-full group=" .. tostring(groupId) .. " state=" .. tostring(groupState) .. " index=" .. tostring(i) .. " handle=" .. tostring(oldItems[i]) .. " path=" .. table.concat(oldItems[i], " > "))
 		missionCommands.removeItemForGroup(groupId, oldItems[i])
 	end
-	env.info("[MENU_TRACE] phase=shop-full-clear-complete group=" .. tostring(groupId))
 	groupState.items = {}
 	groupState.selectorNodes = {}
 	local function addBudgetOverview()
@@ -27308,6 +27353,7 @@ end
 		["Rezky #"] = true,
 		["SpeedBoats #"] = true,
 		["MissileBoat #"] = true,
+		["FacLa #"] = true,
 	}
 	function BattleCommander:isNavalRoamGroup(name)
 		for navalPrefix in pairs(self.navalRoamPrefixes) do
@@ -34689,7 +34735,8 @@ end, {}, 0.1)
 function BattleCommander:_isAutoSuspendEnemyReference(zoneObj, otherZone)
 	return not (zoneObj.side == coalition.side.BLUE
 		and otherZone.side == coalition.side.RED
-		and otherZone.Popup == true)
+		and (otherZone.Popup == true
+			or (GlobalSettings.pvpEnabled ~= true and otherZone._ignoreAsAutoSuspendEnemy == true)))
 end
 
 
@@ -37094,6 +37141,23 @@ end
 	end
 
 	function BattleCommander:_autoZoneSuspend()
+		if self._initialAutoSuspendComplete ~= true and GlobalSettings.pvpEnabled ~= true then
+			local config = self.dynamicHybrid and self.dynamicHybrid.config
+			local forcedCapabilities = config and config.forcedZoneCapabilities
+			for _, zone in ipairs(self.zones) do
+				if zone._disablesOnLoss then
+					local facility = zone.facility
+					local helicopterLaunch = zone.isHeloSpawn
+						and (facility == 'airbase' or facility == 'farp' or facility == 'carrier')
+					local forced = forcedCapabilities and forcedCapabilities[zone.zone]
+					local forcedGroundAttack = forced and (forced.groundAttack == true or forced.groundattack == true)
+					zone._ignoreAsAutoSuspendEnemy = not next(zone.groups)
+						and not self.directorCapabilitiesByOrigin[zone.zone]
+						and not helicopterLaunch and not self:_zoneSupportsPlaneSpawn(zone)
+						and not forcedGroundAttack
+				end
+			end
+		end
 		local reindexEnemyDistanceByZone, committedTargets = self:reindexCombatZones(false, true)
 		reindexEnemyDistanceByZone = reindexEnemyDistanceByZone or {}
 		committedTargets = committedTargets or {}
@@ -37115,6 +37179,8 @@ end
 		local activeNeutralZones = {}
 		local idleCandidates = {}
 		local idleEnabled = GlobalSettings.idleZoneSuspendEnabled == true
+		local blueDirector = idleEnabled and GlobalSettings.pvpEnabled ~= true and Director:getForSide(2)
+		local noBlueCombatAir = blueDirector and blueDirector:_configuredAirCapacity() == 0
 		local pendingRestore = self._pendingAirAiPersistence or self._pendingSurfaceAiPersistence
 		-- Saved idle policy applies immediately; startup readiness defers only new idle sleep.
 		local idleNewSuspendReady = self._initialAutoSuspendComplete == true and not pendingRestore
@@ -37298,13 +37364,19 @@ end
 			if not cached then
 				local hasOppositeNeighbor = false
 				local hasNeutralNeighbor = false
+				local checkNeutralPastOpposite = noBlueCombatAir and zoneObj.side == 1
 				local nbrs = connectionMap[zoneName]
 				if nbrs then
 					for n,_ in pairs(nbrs) do
 						local nz = self:getZoneByName(n)
 						if nz and nz.active and not nz.isHidden and self:_isAutoSuspendEnemyReference(zoneObj, nz) then
-							if nz.side ~= 0 and nz.side ~= zoneObj.side then hasOppositeNeighbor = true break end
-							if nz.side == 0 and (not nz.NeutralAtStart or zoneObj.side ~= 1) then hasNeutralNeighbor = true end
+							if nz.side ~= 0 and nz.side ~= zoneObj.side then
+								hasOppositeNeighbor = true
+								if not checkNeutralPastOpposite or hasNeutralNeighbor then break end
+							elseif nz.side == 0 and (not nz.NeutralAtStart or zoneObj.side ~= 1) then
+								hasNeutralNeighbor = true
+								if hasOppositeNeighbor then break end
+							end
 						end
 					end
 				end
@@ -37431,25 +37503,28 @@ end
 						local threatFacts = idleEnabled and z._seadThreatSnapshot
 						local sa5Hold = threatFacts and threatFacts.side == z.side and threatFacts.complete
 							and threatFacts.aiTrackingThreatFamilies and not not threatFacts.aiTrackingThreatFamilies['SA-5']
+						local idleFrontier = noBlueCombatAir and z.side == 1
+						local idleOppositeNeighborHold = hasOppositeNeighbor and not idleFrontier
+						local idleLimit = idleEnabled and limit * GlobalSettings.idleZoneSuspendFactor
 						idleCandidates[z] = idleEnabled and not noIdleSuspend and not z._idleRestorePending
 							and not farpHold and not proximityHold and not jtacHold and not carrierConnection
-							and not hasOppositeNeighbor and (GlobalSettings.pvpEnabled == true or (not hasNeutralNeighbor and not neutralHalfWake))
+							and not idleOppositeNeighborHold and (GlobalSettings.pvpEnabled == true or (not hasNeutralNeighbor and not neutralHalfWake))
 							and not committedTargets[z.zone] and not incomingActiveSupply[z.zone]
 							and not ActiveCurrentMission[z.zone]
 							and not canReceive and not damagedBlueGci[z]
 							and not criticalObjectHold and not redReactivePressure and not sa5Hold
-							and dist and dist > limit * GlobalSettings.idleZoneSuspendFactor
+							and dist and (idleFrontier or dist > idleLimit)
 						if idleEnabled then
 							local decision = z._idleSuspendDecision or {}
 							z._idleSuspendDecision = decision
 							decision.updatedAt, decision.distanceNm = now, dist
-							decision.fullLimitNm, decision.idleLimitNm = limit, limit * GlobalSettings.idleZoneSuspendFactor
+							decision.fullLimitNm, decision.idleLimitNm = limit, idleFrontier and 0 or idleLimit
 							decision.idleCandidate, decision.committed = idleCandidates[z], committedTargets[z.zone]
 							decision.playerObjective, decision.incomingSupply = ActiveCurrentMission[z.zone] ~= nil, incomingActiveSupply[z.zone]
 							decision.canReceive, decision.supplierHold = canReceive, false
 							decision.playerHold, decision.jtacHold = proximityHold, jtacHold
 							decision.farpHold, decision.carrierHold = farpHold, carrierConnection
-							decision.neighborHold = hasOppositeNeighbor or hasNeutralNeighbor or neutralHalfWake
+							decision.neighborHold = idleOppositeNeighborHold or hasNeutralNeighbor or neutralHalfWake
 							decision.criticalHold, decision.reactiveHold = criticalObjectHold, redReactivePressure
 							decision.startupRestore = pendingRestore ~= nil
 							decision.sa5Hold = sa5Hold == true
@@ -39933,7 +40008,6 @@ do
 	end
 
 	local function buildZoneStatusMenuForGroup(self, groupId, viewerSide, zoneLists)
-		env.info("[MENU_TRACE] phase=zone-status-begin group=" .. tostring(groupId))
 		local T = groupId and L10N:ForGroup(groupId) or L10N
 		local cached = self._zoneStatusMenuStateByGroup[groupId]
 		if not self.zoneStatusMenus[groupId] then
@@ -40020,7 +40094,6 @@ do
 		local sub1Red, sub1Blue = nil, nil
 		if redChanged then
 			if self.redSideMenus[groupId] then
-				env.info("[MENU_REMOVE] kind=zone-status-red group=" .. tostring(groupId) .. " handle=" .. tostring(self.redSideMenus[groupId]) .. " path=" .. table.concat(self.redSideMenus[groupId], " > "))
 				missionCommands.removeItemForGroup(groupId, self.redSideMenus[groupId])
 			end
 			self.redSideMenus[groupId] = missionCommands.addSubMenuForGroup(groupId,redLabel, self.zoneStatusMenus[groupId])
@@ -40041,7 +40114,6 @@ do
 		end
 		if blueChanged then
 			if self.blueSideMenus[groupId] then
-				env.info("[MENU_REMOVE] kind=zone-status-blue group=" .. tostring(groupId) .. " handle=" .. tostring(self.blueSideMenus[groupId]) .. " path=" .. table.concat(self.blueSideMenus[groupId], " > "))
 				missionCommands.removeItemForGroup(groupId, self.blueSideMenus[groupId])
 			end
 			self.blueSideMenus[groupId] = missionCommands.addSubMenuForGroup(groupId,blueLabel, self.zoneStatusMenus[groupId])
@@ -48832,6 +48904,11 @@ function buildRandomBlueUpgrades(zoneObj, actualOwner)
 		targetTotal = (template.sam or 0) + (template.shorad or 0) + (template.ground or 0) + (template.aaa or 0) + (template.armor or 0) + (template.arty or 0)
 	end
 
+	if GlobalSettings.pvpEnabled ~= true then
+		local maxGroups = math.max(1, math.min(4, math.floor(tonumber(MaxBlueGroundGroupsPerZone) or 4)))
+		targetTotal = math.min(targetTotal, maxGroups)
+	end
+
 	local source = zoneObj.upgrades.blue
 	local baseEnd
 	local materialized
@@ -49505,10 +49582,13 @@ end
 	
 	--zone triggers 
 	-- trigger types= captured, upgraded, repaired, lost, destroyed
-	function ZoneCommander:registerTrigger(eventType, action, id, timesToRun)
+	function ZoneCommander:registerTrigger(eventType, action, id, timesToRun, options)
 		table.insert(self.triggers, {eventType = eventType, action = action, id = id, timesToRun = timesToRun, hasRun=0})
 		if id ~= 'missioncompleted' and (eventType == 'lost' or eventType == 'destroyed') then
 			self._hasLostOrDestroyedTriggerCached = true
+			if eventType == 'lost' and options and options.disablesZone == true then
+				self._disablesOnLoss = true
+			end
 		end
 	end
 	
@@ -54604,7 +54684,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		end
 		self:runTriggers('lost')
 		bc:buildConnectionMap(self.zone, previousSide)
-		buildCapControlMenu()
+		bc:requestDynamicControlMenuRefresh()
 		bc.huntBases = nil
 		bc:_buildHunterBaseList()
 		self.battleCommander:requestZoneStatusMenuRefresh()
@@ -54682,7 +54762,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 		end
 
 		if CaptureZoneIfNeutral then
-			CaptureZoneIfNeutral()
+			CaptureZoneIfNeutral(self)
 		end
 		if CheckJtacStatus then
 			CheckJtacStatus()
@@ -55362,6 +55442,7 @@ if SuppliesCargoTransport == nil then SuppliesCargoTransport = true end
 			trigger.action.setMarkupText(labelId, "")
 			return
 		end
+		if labelSide == 1 and PVE_Only and GlobalSettings.pvpEnabled ~= true then return end
 		local waypointLabel = (self.active and WaypointList and WaypointList[self.zone]) or ""
 		local msg = " " .. self.zone .. "" .. waypointLabel
 		local intelActive = _zoneIntelIsActive(self.zone, labelSide)
@@ -55975,7 +56056,7 @@ function ZoneCommander:capture(newside,silent)
 			if newside == coalition.side.BLUE then
 				Director:getForSide(coalition.side.RED):considerCapturedZoneCasDiversion(self, timer.getAbsTime())
 			end
-			if CaptureZoneIfNeutral then CaptureZoneIfNeutral() end
+			if CaptureZoneIfNeutral then CaptureZoneIfNeutral(self) end
 		end
 		if previousSide == 0 and newside == 2 then
 			SCHEDULER:New(nil, function(zoneObj)
@@ -56051,9 +56132,7 @@ function ZoneCommander:capture(newside,silent)
 			end
 		end
 		bc:buildCapSpawnBuckets()
-		if buildCapControlMenu then
-			buildCapControlMenu()
-		end
+		bc:requestDynamicControlMenuRefresh()
 
         if self.battleCommander.difficulty and newside == self.battleCommander.difficulty.coalition then
             self.battleCommander:decreaseDifficulty()
@@ -96147,6 +96226,10 @@ do
 		-- Only immediate successful search/reacquire observations belong to this target and frame.
 		local observation = targetObservation and targetObservation.unit == unit
 			and targetObservation.tracking == tracking and targetObservation or nil
+		if (observation and observation.coalition or unit:getCoalition()) ~= 3 - tracking.playerCoalition then
+			self:clearTarget()
+			return
+		end
 		local pnt = observation and observation.point or unit:getPoint()
 		local playerPnt = tracking.playerPnt
 		local targetName = unit:getName()
@@ -96348,6 +96431,7 @@ function SelfJtac:printTarget(makeitlast)
 		local stats = self.stats
 		local playerPnt = tracking.playerPnt
 		local playerCoalition = tracking.playerCoalition
+		local enemyCoalition = 3 - playerCoalition
 		local maxDistance = stats.minDist * 1000
 		local unitheading = tracking.unitheading
 		local from = tracking.from
@@ -96366,7 +96450,7 @@ function SelfJtac:printTarget(makeitlast)
 				if objName ~= self.target then checked = checked + 1 end
 				if objName ~= self.target and meta and (not obj.isActive or obj:isActive())
 					and not (self.ignoreStructures and meta.category==Object.Category.STATIC)
-					and obj:getCoalition() ~= playerCoalition
+					and obj:getCoalition() == enemyCoalition
 				then
 					local targetPoint = obj:getPoint()
 					local unitDistance = SelfJtac.getDist(playerPnt, targetPoint)
@@ -96377,7 +96461,7 @@ function SelfJtac:printTarget(makeitlast)
 							local to = { x = targetPoint.x, y = targetPoint.y + 1.5, z = targetPoint.z }
 							if land.isVisible(from, to) then
 								self._reacquireCursor = cursor
-								self:setTarget(obj, player, meta, tracking, { unit = obj, point = targetPoint, tracking = tracking })
+								self:setTarget(obj, player, meta, tracking, { unit = obj, point = targetPoint, tracking = tracking, coalition = enemyCoalition })
 								return
 							end
 						end
@@ -96520,6 +96604,7 @@ function SelfJtac:printTarget(makeitlast)
 			local ppos = tracking.playerPnt
 			local playerUnitName = un:getName()
 			local playerCoalition = tracking.playerCoalition
+			local enemyCoalition = 3 - playerCoalition
 			local maxDistance = stats.minDist * 1000
 			local unitheading = tracking.unitheading
 			local from = tracking.from
@@ -96535,7 +96620,7 @@ function SelfJtac:printTarget(makeitlast)
 			local targetPoints = not self.target and {} or nil
 			local seenTargets = {}
             world.searchObjects({Object.Category.UNIT, Object.Category.STATIC}, volume, function(unit, collection)
-                if unit and unit:isExist() and (not unit.isActive or unit:isActive()) then
+                if unit and unit:isExist() and unit:getCoalition() == enemyCoalition and (not unit.isActive or unit:isActive()) then
 					local name = unit:getName()
 					seenTargets[name] = true
                     collection[name] = unit
@@ -96547,7 +96632,7 @@ function SelfJtac:printTarget(makeitlast)
             local viabletgts = {}
             for i, v in pairs(targets) do
 				local meta = self:getTargetMeta(v)
-				if meta and i ~= playerUnitName and not (self.ignoreStructures and meta.category==Object.Category.STATIC) and v:getCoalition() ~= playerCoalition then
+				if meta and i ~= playerUnitName and not (self.ignoreStructures and meta.category==Object.Category.STATIC) then
 					local targetPoint = v:getPoint()
 					local bearing = SelfJtac.getBearing(ppos, targetPoint)
                     local deviation = math.abs(SelfJtac.getHeadingDiff(unitheading, bearing))
@@ -96621,7 +96706,7 @@ function SelfJtac:printTarget(makeitlast)
 					end
 					selectedTarget = sameGroupTarget or nearestTarget or selectedTarget
 				end
-				self:setTarget(selectedTarget, gr, nil, tracking, { unit = selectedTarget, point = targetPoints[selectedTarget], tracking = tracking })
+				self:setTarget(selectedTarget, gr, nil, tracking, { unit = selectedTarget, point = targetPoints[selectedTarget], tracking = tracking, coalition = enemyCoalition })
 				if not suppressReport then
 					self:printTarget(true)
 				end
@@ -97020,9 +97105,6 @@ end
 		local groupAlive = nativeGroup and mooseGroup:IsAlive(nativeGroup) or false
 		local nativeId = groupAlive and nativeGroup:getID() or nil
 		local removeNativeMenus = groupAlive and nativeId == groupid
-		local pruneLog = "[MENU_PRUNE] group=" .. tostring(groupid) .. " name=" .. tostring(groupname)
-			.. " native=" .. tostring(nativeId) .. " remove=" .. tostring(removeNativeMenus) .. " "
-		env.info(pruneLog .. "phase=begin")
 		if playerName then
 			bcObj.turnaroundRewardStateByPlayer[playerName] = nil
 			local flight = bcObj.flightTimeTakeoffByPlayer and bcObj.flightTimeTakeoffByPlayer[playerName]
@@ -97056,53 +97138,42 @@ end
 			if ewrs and ewrs.builtF10Menus then ewrs.builtF10Menus[tostring(groupid)] = nil end
 			missionMenus[groupid] = nil
 		end
-		env.info(pruneLog .. "phase=joint")
 		local jointSide = bcObj:_jointPruneGroup(groupid)
-		env.info(pruneLog .. "phase=shop")
 		if bcObj.groupSupportMenus[groupid] then
 			local supportState = bcObj.groupSupportMenus[groupid]
 			local items = supportState.items or {}
 			if removeNativeMenus then
 				for i = #items, 1, -1 do
-					env.info("[MENU_REMOVE] kind=shop-prune group=" .. tostring(groupid) .. " state=" .. tostring(supportState) .. " index=" .. tostring(i) .. " handle=" .. tostring(items[i]) .. " path=" .. table.concat(items[i], " > "))
 					missionCommands.removeItemForGroup(groupid, items[i])
 				end
 			end
 			if removeNativeMenus and supportState.menu then
-				env.info("[MENU_REMOVE] kind=shop-prune-root group=" .. tostring(groupid) .. " handle=" .. tostring(supportState.menu) .. " path=" .. table.concat(supportState.menu, " > "))
 				missionCommands.removeItemForGroup(groupid, supportState.menu)
 			end
 			bcObj.groupSupportMenus[groupid] = nil
 		end
 
-		env.info(pruneLog .. "phase=control")
 		bcObj:_removeDynamicControlMenuForGroup(groupid)
 		bcObj:_removeCarrierNavigationMenuForGroup(groupid)
 
-		env.info(pruneLog .. "phase=zone-status")
 		local intelState = mc.intelMenuByGroup[groupid]
 		if removeNativeMenus then
 			if intelState and intelState.root then
 				for i = #(intelState.items or {}), 1, -1 do
-					env.info("[MENU_REMOVE] kind=intel-prune-item group=" .. tostring(groupid) .. " handle=" .. tostring(intelState.items[i]) .. " path=" .. table.concat(intelState.items[i], " > "))
 					missionCommands.removeItemForGroup(groupid, intelState.items[i])
 				end
-				env.info("[MENU_REMOVE] kind=intel-prune-root group=" .. tostring(groupid) .. " handle=" .. tostring(intelState.root) .. " path=" .. table.concat(intelState.root, " > "))
 				missionCommands.removeItemForGroup(groupid, intelState.root)
 			end
 			if bcObj.redSideMenus[groupid] then
-				env.info("[MENU_REMOVE] kind=zone-status-prune-red group=" .. tostring(groupid) .. " handle=" .. tostring(bcObj.redSideMenus[groupid]) .. " path=" .. table.concat(bcObj.redSideMenus[groupid], " > "))
 				missionCommands.removeItemForGroup(groupid, bcObj.redSideMenus[groupid])
 			end
 			if bcObj.blueSideMenus[groupid] then
-				env.info("[MENU_REMOVE] kind=zone-status-prune-blue group=" .. tostring(groupid) .. " handle=" .. tostring(bcObj.blueSideMenus[groupid]) .. " path=" .. table.concat(bcObj.blueSideMenus[groupid], " > "))
 				missionCommands.removeItemForGroup(groupid, bcObj.blueSideMenus[groupid])
 			end
 		end
 		mc.intelMenuByGroup[groupid] = nil
 		if bcObj.zoneStatusMenus[groupid] then
 			if removeNativeMenus then
-				env.info("[MENU_REMOVE] kind=zone-status-prune-root group=" .. tostring(groupid) .. " handle=" .. tostring(bcObj.zoneStatusMenus[groupid]) .. " path=" .. table.concat(bcObj.zoneStatusMenus[groupid], " > "))
 				missionCommands.removeItemForGroup(groupid, bcObj.zoneStatusMenus[groupid])
 			end
 			bcObj.zoneStatusMenus[groupid] = nil
@@ -97111,14 +97182,12 @@ end
 		bcObj.blueSideMenus[groupid] = nil
 		bcObj._zoneStatusMenuStateByGroup[groupid] = nil
 
-		env.info(pruneLog .. "phase=ewrs")
 		if ewrs and ewrs.pruneGroup then
 			ewrs.pruneGroup(groupid)
 		elseif ewrs and ewrs.removeGroupF10Menu then
 			ewrs.removeGroupF10Menu(groupid)
 		end
 
-		env.info(pruneLog .. "phase=stats")
 		if removeNativeMenus then
 			if self.languageMenus[groupid] then missionCommands.removeItemForGroup(groupid, self.languageMenus[groupid]) end
 			if self.aiLogisticsMenus[groupid] then missionCommands.removeItemForGroup(groupid, self.aiLogisticsMenus[groupid]) end
@@ -97130,7 +97199,6 @@ end
 		self.languageMenus[groupid] = nil
 		self.aiLogisticsMenus[groupid] = nil
 
-		env.info(pruneLog .. "phase=csar")
 		if self.csarGroupMenus[groupid] then
 			if removeNativeMenus and self.csarGroupMenus[groupid] ~= true then
 				missionCommands.removeItemForGroup(groupid, self.csarGroupMenus[groupid])
@@ -97138,7 +97206,6 @@ end
 			self.csarGroupMenus[groupid] = nil
 		end
 
-		env.info(pruneLog .. "phase=logistics")
 		local mooseMenu = LogisticCommander.mooseLogisticsMenus[groupid]
 		if mooseMenu then
 			if removeNativeMenus then mooseMenu:Remove() end
@@ -97156,7 +97223,6 @@ end
 			Foothold_redCtld:ClearZoneSupplyOnboardForGroup(groupid)
 		end
 
-		env.info(pruneLog .. "phase=missions")
 		local strikeState = mc.strikeMenuByGroup[groupid]
 		if removeNativeMenus then
 			if strikeState and strikeState.root then
@@ -97175,7 +97241,6 @@ end
 		removeMenusForGroupID(groupid)
 		mc.strikeMenuByGroup[groupid] = nil
 
-		env.info(pruneLog .. "phase=self-jtac")
 		if SelfJtac.jtacs[groupid] then
 			local oldjtac = SelfJtac.jtacs[groupid]
 			if oldjtac.autoTimer then
@@ -97191,11 +97256,9 @@ end
 			SelfJtac.jtacs[groupid] = nil
 		end
 
-		env.info(pruneLog .. "phase=remaining-groups")
 		if jointSide then
 			bcObj:refreshJointMenusForSide(jointSide)
 		end
-		env.info(pruneLog .. "phase=complete")
 	end
 
 
@@ -98580,27 +98643,33 @@ end
 		if not p then return end
 		self.csarPilotMarks = self.csarPilotMarks or {}
 		local entry = self.csarPilotMarks[pid]
-		if entry and entry.id then
-			trigger.action.removeMark(entry.id)
-		end
-		if GlobalSettings.pvpEnabled == true and entry and entry.redId then trigger.action.removeMark(entry.redId) end
-		if GlobalSettings.pvpEnabled == true then
-			local blueLabel = self:_csarMarkerLabelResolved(pid, pilotData, 2)
-			local redLabel = self:_csarMarkerLabelResolved(pid, pilotData, 1)
+		local oldPoint = entry and entry.point
+		local samePosition = oldPoint and oldPoint.x == p.x and oldPoint.y == p.y and oldPoint.z == p.z
+		local pvpEnabled = GlobalSettings.pvpEnabled == true
+		local blueLabel = self:_csarMarkerLabelResolved(pid, pilotData, pvpEnabled and 2 or nil)
+		local id = entry and entry.id
+		local redId, redLabel
+		if not (id and samePosition and entry.label == blueLabel) then
+			if id then trigger.action.removeMark(id) end
 			missionMarkId = missionMarkId + 1
-			local id = missionMarkId
+			id = missionMarkId
 			trigger.action.markToCoalition(id, blueLabel, p, 2, true, false)
-			missionMarkId = missionMarkId + 1
-			local redId = missionMarkId
-			trigger.action.markToCoalition(redId, redLabel, p, 1, true, false)
-			self.csarPilotMarks[pid] = {id=id,redId=redId,label=blueLabel,point={x=p.x,y=p.y,z=p.z}}
-			return
 		end
-		local label = self:_csarMarkerLabelResolved(pid, pilotData)
-		missionMarkId = missionMarkId + 1
-		local id = missionMarkId
-		trigger.action.markToCoalition(id, label, p, 2, true, false)
-		self.csarPilotMarks[pid] = { id = id, label = label, point = { x = p.x, y = p.y, z = p.z } }
+		if pvpEnabled then
+			redLabel = self:_csarMarkerLabelResolved(pid, pilotData, 1)
+			redId = entry and entry.redId
+			if not (redId and samePosition and entry.redLabel == redLabel) then
+				if redId then trigger.action.removeMark(redId) end
+				missionMarkId = missionMarkId + 1
+				redId = missionMarkId
+				trigger.action.markToCoalition(redId, redLabel, p, 1, true, false)
+			end
+		end
+		if entry and entry.id == id and entry.redId == redId then return end
+		self.csarPilotMarks[pid] = {
+			id = id, redId = redId, label = blueLabel, redLabel = redLabel,
+			point = { x = p.x, y = p.y, z = p.z },
+		}
 	end
 
 	function LogisticCommander:removeCsarMarker(pilotOrId)
@@ -99189,6 +99258,7 @@ end
 			self.csarBeaconName[pid]=nil
 			self.csarBeaconFreq[pid]=nil
 			self.csarBeaconNext[pid]=nil
+			if self.csarBeaconPoint then self.csarBeaconPoint[pid] = nil end
 			self:removeCsarMarker(pid)
 		end
 		if pilot and pilot:isExist() then
@@ -99826,8 +99896,15 @@ end
 			end
 			local nextT = self.csarBeaconNext[pid] or 0
 			if now >= nextT then
+				local lastPoint = self.csarBeaconPoint and self.csarBeaconPoint[pid]
+				if lastPoint and lastPoint.x == point.x and lastPoint.y == point.y and lastPoint.z == point.z then
+					self.csarBeaconNext[pid] = now + 25
+					return
+				end
 				trigger.action.stopRadioTransmission(bname)
 				trigger.action.radioTransmission("l10n/DEFAULT/beacon.ogg", point, 0, true, freq, 1000, bname)
+				self.csarBeaconPoint = self.csarBeaconPoint or {}
+				self.csarBeaconPoint[pid] = { x = point.x, y = point.y, z = point.z }
 				self.csarBeaconNext[pid] = now + 25
 				return point
 			end
@@ -102594,10 +102671,8 @@ do
 			return
 		end
 
-		env.info("[MENU_TRACE] phase=intel-refresh-begin group=" .. tostring(groupId) .. " state=" .. tostring(state) .. " signature=" .. tostring(signature))
 		if state.items then
 			for _, item in ipairs(state.items) do
-				env.info("[MENU_REMOVE] kind=intel-refresh group=" .. tostring(groupId) .. " handle=" .. tostring(item) .. " path=" .. table.concat(item, " > "))
 				missionCommands.removeItemForGroup(groupId, item)
 			end
 		end
@@ -111889,6 +111964,8 @@ WEAPONSLIST.Items = {
         -- Hercules baseline equipment and cargo
 		"weapons.containers.AN_AAQ16D",
 		"weapons.containers.F16V_aaq13_pod_5L",
+		"weapons.containers.F16V_aux_pod",
+		"weapons.containers.F16V_pids_plus_POBIT_F16V_PIDS_FIT_0001",
 		"weapons.containers.Hercules_Battle_Station_TGP",
 		"weapons.containers.{Herc_GAU_23A_Chain_Gun}",
 		"weapons.containers.{Herc_M61_Vulcan_Rotary_Cannon}",

@@ -1567,63 +1567,63 @@ end, 'melezcaptured')
 
 zones.tankfactory:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disabletankfactory2')
+end, 'disabletankfactory2', nil, {disablesZone = true})
 
 zones.fueldepo:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disablefueldepo1')
+end, 'disablefueldepo1', nil, {disablesZone = true})
 
 zones.portsaid:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disableportsaid')
+end, 'disableportsaid', nil, {disablesZone = true})
 
 zones.redcarrier:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
-end, 'disableredcarrier')
+end, 'disableredcarrier', nil, {disablesZone = true})
 
 zones.secrettechfacility:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disablesecrettechfacility1')
+end, 'disablesecrettechfacility1', nil, {disablesZone = true})
 
 zones.artilleryfactory:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_ARTILLERY_FACTORY_DISABLED"),20)
-end, 'disableartilleryfactory')
+end, 'disableartilleryfactory', nil, {disablesZone = true})
 
 zones.miningfacility:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_MINING_FACILITY_CLEARED"),20)
-end, 'disableminingfacility')
+end, 'disableminingfacility', nil, {disablesZone = true})
 
 
 zones.ammonitiondepo:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disableammonitiondepo2')
+end, 'disableammonitiondepo2', nil, {disablesZone = true})
 
 zones.insurgentcamp:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_INSURGENT_CAMP_DESTROYED"),20)
-end, 'disableinsurgentcamp')
+end, 'disableinsurgentcamp', nil, {disablesZone = true})
 
 
 zones.chemsite:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disablechemsite1')
+end, 'disablechemsite1', nil, {disablesZone = true})
 
 zones.missilefactory:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_MISSILE_FACTORY_DESTROYED"),20)
-end, 'disablemissilefactory')
+end, 'disablemissilefactory', nil, {disablesZone = true})
 
 zones.borjoil:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_BORJ_OIL_DESTROYED"),20)
-end, 'disablemborjoil')
+end, 'disablemborjoil', nil, {disablesZone = true})
 
 ------------------------------------------ SAM DISABLE --------------------------------------------
 
@@ -1631,14 +1631,14 @@ zones.samhotel:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_SAM_HOTEL_DESTROYED"),20)
-end, 'disablesamhotel')
+end, 'disablesamhotel', nil, {disablesZone = true})
 
 
 zones.samindia:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("SINAI_SETUP_SAM_INDIA_DESTROYED"),20)
-end, 'disablesamindia')
+end, 'disablesamindia', nil, {disablesZone = true})
 
 ------------------------------------------ SAM DISABLE --------------------------------------------
 
@@ -1725,7 +1725,7 @@ timer.scheduleFunction(function()
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
 	end
-	bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+	if not DisableZonePatrol then bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
 end, {}, timer.getTime() + 30)
 
 local SHOP_PRICE_DEFAULTS = {

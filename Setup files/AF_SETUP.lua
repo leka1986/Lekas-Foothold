@@ -2009,7 +2009,7 @@ SCHEDULER:New(nil,function()
     	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
     	roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
     end
-    bc:roamGroupsToLocalSubZone(roamPrefixes, 50, nil, { groupMin = 30, groupMax = 90, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+    if not DisableZonePatrol then bc:roamGroupsToLocalSubZone(roamPrefixes, 50, nil, { groupMin = 30, groupMax = 90, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
 end,{},5,0)
 
 -- SHOP --
@@ -4075,90 +4075,90 @@ zones.insurgentqalat:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Qalat"),20)
-end, 'disablesinsurgentqalat')
+end, 'disablesinsurgentqalat', nil, {disablesZone = true})
 
 
 zones.insurgentdelaram:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Delaram"),20)
-end, 'disablesinsurgentdelaram')
+end, 'disablesinsurgentdelaram', nil, {disablesZone = true})
 
 
 zones.insurgentchimozay:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Chimozay"),20)
-end, 'disableinsurgentchimozay')
+end, 'disableinsurgentchimozay', nil, {disablesZone = true})
 
 
 zones.insurgentnili:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Nili"),20)
-end, 'disableinsurgentnili')
+end, 'disableinsurgentnili', nil, {disablesZone = true})
 
 
 zones.insurgentalpha:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Alpha"),20)
-end, 'disableinsurgentalpha')
+end, 'disableinsurgentalpha', nil, {disablesZone = true})
 
 
 zones.insurgentqarabagh:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Qarabagh"),20)
-end, 'disableinsurgentqarabagh')
+end, 'disableinsurgentqarabagh', nil, {disablesZone = true})
 
 
 zones.insurgentasadabad:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Asadabad"),20)
-end, 'disableinsurgentasadabad')
+end, 'disableinsurgentasadabad', nil, {disablesZone = true})
 
 
 zones.insurgentkunar:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Kunar"),20)
-end, 'disableinsurgentkunar')
+end, 'disableinsurgentkunar', nil, {disablesZone = true})
 
 
 zones.insurgentsarobi:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Sarobi"),20)
-end, 'disableinsurgentsarobi')
+end, 'disableinsurgentsarobi', nil, {disablesZone = true})
 
 
 zones.insurgentmountain:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "Insurgent Mountain"),20)
-end, 'disableinsurgentmountain')
+end, 'disableinsurgentmountain', nil, {disablesZone = true})
 zones.samalpha:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "SAM Alpha"),20)
-end, 'disablesamalpha')
+end, 'disablesamalpha', nil, {disablesZone = true})
 zones.sambravo:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "SAM Bravo"),20)
-end, 'disablesambravo')
+end, 'disablesambravo', nil, {disablesZone = true})
 zones.samcharlie:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "SAM Charlie Mountain"),20)
-end, 'disablesamcharlie')
+end, 'disablesamcharlie', nil, {disablesZone = true})
 zones.samjamsheed:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("AF_SETUP_ENEMIES_DEFEATED_500", "SAM Jamsheed"),20)
-end, 'disablesamjamsheed')
+end, 'disablesamjamsheed', nil, {disablesZone = true})
 
 lc = LogisticCommander:new({battleCommander = bc, supplyZones = supplyZones})
 bc:initRunwayMissions()

@@ -48,6 +48,8 @@ FootholdConfigTrackedTableNames = {
 -- Add new top-level scalar settings here so an omitted external setting triggers the warning.
 FootholdConfigTrackedScalarNames = {
     "MaxRedGroundGroupsPerZone",
+    "MaxBlueGroundGroupsPerZone",
+    "DisableZonePatrol",
     "AdminCommands",
     "ewrs_enabled",
     "PlayerZoneSuppliesConsumeStock",
@@ -216,6 +218,20 @@ RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 -- Choose 3 to 6. Each zone still rolls within its own range, so some get fewer groups.
 -- @gui label="Ground Units Max Groups at Each Zone" validValues="3=3 | 4=4 | 5=5 | 6=6"
 MaxRedGroundGroupsPerZone = 6
+
+-- Limits the randomized Blue garrison total per zone when new PvE garrisons are generated.
+-- Each zone keeps its own range. Raising the limit does not add groups.
+-- Highest totals currently used by map (groups per zone)
+-- Normandy: 4
+-- Selecting 3 caps zones that can generate 4 groups at 3.
+-- Existing saved garrisons, fixed defenses, static structures, paid upgrades and PvP are unchanged.
+-- @gui label="Blue Ground Units Max Groups at Each Zone" validValues="1=1 | 2=2 | 3=3 | 4=4"
+MaxBlueGroundGroupsPerZone = 4
+
+-- If true, disables ground-group patrol movement started by the setup in each zone.
+-- Naval roaming and mission-completion checks are unchanged. Applies to PvE and PvP on mission start.
+-- @gui label="Disable ground patrolling groups in zone"
+DisableZonePatrol = false
 
 -- Valid: "Average", "Good", "High", "Excellent", "Random" (case-insensitive). Unknown values become "High".
 RedAiGroundSkill        = "Excellent" -- AI skill used for spawned RED zone ground defenses (MOOSE SPAWN:InitSkill).

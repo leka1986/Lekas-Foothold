@@ -2582,7 +2582,7 @@ zones.samindia:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamindia')
+end, 'disablesamindia', nil, {disablesZone = true})
 
 
 zones.samgolf:registerTrigger('lost', function(event, sender)
@@ -2590,84 +2590,84 @@ zones.samgolf:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamgolf')
+end, 'disablesamgolf', nil, {disablesZone = true})
 
 zones.samhotel:registerTrigger('lost', function(event, sender)
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamhotel')
+end, 'disablesamhotel', nil, {disablesZone = true})
 
 zones.samfoxtrot:registerTrigger('lost', function(event, sender)
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamfoxtrot')
+end, 'disablesamfoxtrot', nil, {disablesZone = true})
 
 zones.samecho:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamecho')
+end, 'disablesamecho', nil, {disablesZone = true})
 
 zones.sambravo:registerTrigger('lost', function(event, sender)
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesambravo')
+end, 'disablesambravo', nil, {disablesZone = true})
 
 zones.samalpha:registerTrigger('lost', function(event, sender)
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamalpha')
+end, 'disablesamalpha', nil, {disablesZone = true})
 
 zones.samcharlie:registerTrigger('lost', function(event, sender)
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamcharlie')
+end, 'disablesamcharlie', nil, {disablesZone = true})
 
 zones.samdelta:registerTrigger('lost', function(event, sender)
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamdelta')
+end, 'disablesamdelta', nil, {disablesZone = true})
 
 zones.samjuliett:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamjuliett')
+end, 'disablesamjuliett', nil, {disablesZone = true})
 
 zones.samkilo:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamkilo')
+end, 'disablesamkilo', nil, {disablesZone = true})
 
 zones.samlima:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesamlima')
+end, 'disablesamlima', nil, {disablesZone = true})
 
 zones.sammike:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled then return end
 	sender:disableZone(true)
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_ENEMY_SAM_DESTROYED", 200),20)
-end, 'disablesammike')
+end, 'disablesammike', nil, {disablesZone = true})
 
 
 zones.miningfacility:registerTrigger('lost', function(event, sender) 
@@ -2675,58 +2675,58 @@ zones.miningfacility:registerTrigger('lost', function(event, sender)
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_MINING_FACILITY_DESTROYED"),20)
-end, 'disableminingfacility')
+end, 'disableminingfacility', nil, {disablesZone = true})
 
 zones.insurgentcamp:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled == true then return end
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_INSURGENT_CAMP_DESTROYED"),20)
-end, 'disableinsurgentcamp')
+end, 'disableinsurgentcamp', nil, {disablesZone = true})
 
 zones.ammonitiondepo:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled == true then return end
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_AMMUNITION_DEPO_DESTROYED"),20)
-end, 'disableammonitiondepo')
+end, 'disableammonitiondepo', nil, {disablesZone = true})
 
 zones.secrettechfacility:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled == true then return end
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_SECRET_TECH_FACILITY_DESTROYED"),20)
-end, 'disablesecrettechfacility')
+end, 'disablesecrettechfacility', nil, {disablesZone = true})
 
 zones.tankfactory:registerTrigger('lost', function(event, sender) 
 	if GlobalSettings.pvpEnabled == true then return end
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("CA_SETUP_TANK_FACTORY_DESTROYED"),20)
-end, 'disabletankfactory')
+end, 'disabletankfactory', nil, {disablesZone = true})
 
 zones.insurgencygriddl22:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_INSURGENCY_GRID_DESTROYED", "DL22"),20)
-end, 'disableinsurgencygriddl22')
+end, 'disableinsurgencygriddl22', nil, {disablesZone = true})
 
 zones.insurgencygridmn47:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_INSURGENCY_GRID_DESTROYED", "MN47"),20)
-end, 'disableinsurgencygridmn47')
+end, 'disableinsurgencygridmn47', nil, {disablesZone = true})
 
 zones.insurgencygridfj98:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_INSURGENCY_GRID_DESTROYED", "FJ98"),20)
-end, 'disableinsurgencygridfj98')
+end, 'disableinsurgencygridfj98', nil, {disablesZone = true})
 zones.insurgencygridel70:registerTrigger('lost', function(event, sender) 
 	sender:disableZone(true)
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Format("CA_SETUP_INSURGENCY_GRID_DESTROYED", "EL70"),20)
-end, 'disableinsurgencygridel70')
+end, 'disableinsurgencygridel70', nil, {disablesZone = true})
 
 
 local missionCompleted = false
@@ -2866,7 +2866,7 @@ timer.scheduleFunction(function()
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Roland #"
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Pantsir #"
 	end
-    bc:roamGroupsToLocalSubZone(roamPrefixes, 50, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+    if not DisableZonePatrol then bc:roamGroupsToLocalSubZone(roamPrefixes, 50, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
     bc:roamGroupsToLocalSubZone({
 		'Moskva #',
 		'Rezky #',

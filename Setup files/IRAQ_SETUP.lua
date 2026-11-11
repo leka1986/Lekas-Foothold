@@ -1425,7 +1425,7 @@ SCHEDULER:New(nil,checkAndDisableFriendlyZones,{},3,0)
 
 zones.chemsite:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disablechemsite1')
+end, 'disablechemsite1', nil, {disablesZone = true})
 
 
 zones.chemsite:registerTrigger('destroyed', function(event, sender) 
@@ -1438,12 +1438,12 @@ zones.miningfacility:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_MINING_FACILITY_CLEARED"),20)
-end, 'disableminingfacility')
+end, 'disableminingfacility', nil, {disablesZone = true})
 
 
 zones.secrettechfacility:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
-end, 'disablesecrettechfacility1')
+end, 'disablesecrettechfacility1', nil, {disablesZone = true})
 
 zones.secrettechfacility:registerTrigger('destroyed', function(event, sender) 
 	bc:addFunds(2,500)
@@ -1469,49 +1469,49 @@ zones.insurgentcamp:registerTrigger('lost', function(event, sender)
 	sender:disableZone()
 	bc:addFunds(2,500)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_INSURGENT_CAMP_DESTROYED"),20)
-end, 'disableinsurgentcamp')
+end, 'disableinsurgentcamp', nil, {disablesZone = true})
 
 zones.erbildefence:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_ENEMY_SAM_DESTROYED"),20)
-end, 'disableerbildefencesambravo')
+end, 'disableerbildefencesambravo', nil, {disablesZone = true})
 
 zones.sameast:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_ENEMY_SAM_DESTROYED"),20)
-end, 'disablesameastsamcharlie')
+end, 'disablesameastsamcharlie', nil, {disablesZone = true})
 
 zones.samwest:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_ENEMY_SAM_DESTROYED"),20)
-end, 'disablesamwestsamdelta')
+end, 'disablesamwestsamdelta', nil, {disablesZone = true})
 
 zones.samsouth:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_ENEMY_SAM_DESTROYED"),20)
-end, 'disablesamsouthsamecho')
+end, 'disablesamsouthsamecho', nil, {disablesZone = true})
 
 zones.ramadisam:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_ENEMY_SAM_DESTROYED"),20)
-end, 'disabledisableramadisam')
+end, 'disabledisableramadisam', nil, {disablesZone = true})
 
 zones.sahradefence:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_ENEMY_SAM_DESTROYED"),20)
-end, 'disablesahradefence')
+end, 'disablesahradefence', nil, {disablesZone = true})
 
 zones.baladdefence:registerTrigger('lost', function(event, sender) 
 	sender:disableZone()
 	bc:addFunds(2,200)
 	trigger.action.outTextForCoalition(2,L10N:Get("IRAQ_EVENT_ENEMY_SAM_DESTROYED"),20)
-end, 'disablebaladdefence')
+end, 'disablebaladdefence', nil, {disablesZone = true})
 
 
 local missionCompleted = false
@@ -1592,7 +1592,7 @@ SCHEDULER:New(nil,function()
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM AAA Vulcan #"
 		roamPrefixes[#roamPrefixes + 1] = "^Blue SAM SHORAD Avenger #"
 	end
-	bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 })
+	if not DisableZonePatrol then bc:roamGroupsToLocalSubZone(roamPrefixes, 30, nil, { groupMin = 10, groupMax = 45, zoneMin = 120, zoneMax = 360, cycleMin = 420, cycleMax = 720 }) end
 end,{},30,0)
 
 -----------------------------------------------DYNAMIC SHOP ------------------------------------------
