@@ -295,6 +295,7 @@ internal sealed partial class MainForm
             && _missionFilesPresentedPreparation?.Rows.Any(row => row.State == FileUpdateInspectionState.Compatible) == true
             && HasCurrentMissionFilesPreparation(result, CaptureMissionRoots(scanSourcesOnly: true), CaptureMissionFilesExternalPaths());
         var missionNotice = result?.FootholdUpdateAvailable == true || compatibleMissionNotice;
+        if (_updatesDismiss is { } dismiss) dismiss.Visible = missionNotice;
         var hasNotice = managerNotice || missionNotice;
         var caption = managerNotice && missionNotice ? "New updates available"
             : managerNotice ? "Manager update available" : compatibleMissionNotice ? "Mission update available" : missionNotice ? "New mission release" : "Updates";
@@ -331,7 +332,7 @@ internal sealed partial class MainForm
             _missionFilesUpdatesCheckMissions!.Enabled = _missionFilesUpdatesOpen!.Enabled = false;
             _missionFilesUpdatesAddFolder!.Enabled = _missionFilesUpdatesAddMiz!.Enabled = _missionFilesUpdatesAutoScan!.Enabled;
             _updatesStatus!.Text = _updatesError ?? (_updatesBusy ? "Checking GitHub…" : "Loading saved update information…");
-            _updatesManagerAction!.Visible = _updatesSkip!.Visible = _updatesReleaseAction!.Visible = _updatesDismiss!.Visible = false;
+            _updatesManagerAction!.Visible = _updatesSkip!.Visible = _updatesReleaseAction!.Visible = false;
             _missionFilesDownloadsSection!.Visible = false;
             _updatesDownloadAction!.Visible = false;
             _updatesAutomatic!.Enabled = false;
@@ -362,7 +363,6 @@ internal sealed partial class MainForm
             _updatesDownloadAction.Enabled = release is { AssetMetadataLoaded: true, Assets.Count: > 0 } && !_missionDownloadBusy && !_updatesInstalling;
             _updatesDownloadAction.Text = release?.AssetMetadataLoaded == false ? "Check again to load maps" : "Download missions";
             _updatesReleaseAction!.Visible = release is not null;
-            _updatesDismiss!.Visible = result.FootholdUpdateAvailable;
             _updatesAutomatic!.Checked = result.AutomaticChecksEnabled;
             _updatesCheck!.Enabled = !_updatesBusy && !_updatesInstalling;
             _updatesStatus!.Text = _updatesInstalling ? "Preparing the Manager update…" : _updatesBusy ? "Checking GitHub…" : _updatesError ?? result.PersistenceError ?? (result.AutomaticChecksEnabled ? "Checks GitHub for Manager and mission releases on startup. Check again refreshes both." : "Startup release checks are off. Check again checks Manager and mission releases.");
