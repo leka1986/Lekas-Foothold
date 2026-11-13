@@ -77310,6 +77310,7 @@ self:T(self.lid.."GC New Event "..event.IniDynamicCargoName)
 self.DynamicCargo[event.IniDynamicCargoName]=event.IniDynamicCargo
 elseif event.id==EVENTS.DynamicCargoLoaded then
 self:T(self.lid.."GC Loaded Event "..event.IniDynamicCargoName)
+if self._updateManagedWarehouseDynamicCargo then self:_updateManagedWarehouseDynamicCargo(event,"loaded")end
 if self.UseC130LoadAndUnload and self.UseC130DynamicCargoAutoBuild then
 local handled=self:_C130DcAutoOnDynamicLoaded(event)
 if handled then
@@ -77342,6 +77343,7 @@ self:_RefreshCrateQuantityMenus(Group,client,nil)
 end
 elseif event.id==EVENTS.DynamicCargoUnloaded then
 self:T(self.lid.."GC Unload Event "..event.IniDynamicCargoName)
+if self._updateManagedWarehouseDynamicCargo then self:_updateManagedWarehouseDynamicCargo(event,"unloaded")end
 if self.UseC130LoadAndUnload and self.UseC130DynamicCargoAutoBuild then
 local handled=self:_C130DcAutoOnDynamicUnloaded(event)
 if handled then
@@ -77388,6 +77390,7 @@ self:_RefreshCrateQuantityMenus(Group,client,nil)
 end
 elseif event.id==EVENTS.DynamicCargoRemoved then
 self:T(self.lid.."GC Remove Event "..event.IniDynamicCargoName)
+if self._updateManagedWarehouseDynamicCargo then self:_updateManagedWarehouseDynamicCargo(event,"removed")end
 if self.UseC130LoadAndUnload and self.UseC130DynamicCargoAutoBuild then
 self:_C130DcAutoOnDynamicRemoved(event)
 end
@@ -78227,7 +78230,7 @@ end
 function CTLD:CanGetCrates(Group,Unit,Cargo,number,drop,pack,quiet,suppressGetEvent)
 return true
 end
-function CTLD:_GetCrates(Group,Unit,Cargo,number,drop,pack,quiet,suppressGetEvent)
+function CTLD:_GetCrates(Group,Unit,Cargo,number,drop,pack,quiet,suppressGetEvent,warehouseRequest,warehouseDropList)
 self:T(self.lid.." _GetCrates")
 local perSet=Cargo:GetCratesNeeded()or 1
 if perSet<1 then perSet=1 end
@@ -78250,7 +78253,7 @@ self:_SendMessage(msg,10,false,Group)
 return false
 end
 -- leka custom
-if CTLDCost==true then
+if CTLDCost==true and not warehouseRequest then
 local price=nil
 if self.GetCargoPrice and type(self.GetCargoPrice)=="function"then
 price=self:GetCargoPrice(cgoname,Cargo)
@@ -78287,11 +78290,13 @@ local inzone=false
 local drop=drop or false
 local suppressGetEvent=suppressGetEvent or false
 local ship=nil
+local pickupZoneName=nil
+local managedDrop=drop and (warehouseDropList or Cargo._warehouseManaged)
 local width=20
 local distance=nil
 local zone=nil
 if not drop and not pack then
-inzone=self:IsUnitInZone(Unit,CTLD.CargoZoneType.LOAD)
+inzone,pickupZoneName=self:IsUnitInZone(Unit,CTLD.CargoZoneType.LOAD)
 if not inzone then
 inzone,ship,zone,distance,width=self:IsUnitInZone(Unit,CTLD.CargoZoneType.SHIP)
 end
@@ -78329,7 +78334,9 @@ local msg=self:_GetEntryForGroup("ENOUGH_CRATES_NEARBY",Group)
 self:_SendMessage(msg,10,false,Group)
 return false
 end
-if not drop and not self:CanGetCrates(Group,Unit,Cargo,requestNumber,drop,pack,quiet,suppressGetEvent)then
+if warehouseRequest then
+if not self:_prepareManagedWarehousePickup(warehouseRequest,Group,Unit,Cargo,pickupZoneName,ship,requestNumber,requestedSets,perSet)then return false end
+elseif not drop and not self:CanGetCrates(Group,Unit,Cargo,requestNumber,drop,pack,quiet,suppressGetEvent)then
 return false
 end
 local IsHerc=self:IsFixedWing(Unit)
@@ -78549,6 +78556,8 @@ spawnstatic.TemplateStaticUnit.resourcePayload=map
 end
 self.Spawned_Crates[self.CrateCounter]=spawnstatic:Spawn(crateSpawnHeading,cratealias)
 end
+local spawned=self.Spawned_Crates[self.CrateCounter]
+if not (warehouseRequest or managedDrop) or (spawned and spawned:IsAlive())then
 local templ=cargotype:GetTemplates()
 local sorte=cargotype:GetType()
 local subcat=cargotype.Subcategory
@@ -78563,6 +78572,12 @@ local CCat3,CType3,CShape3=cargotype:GetStaticTypeAndShape()
 realcargo:SetStaticTypeAndShape(CCat3,CType3,CShape3)
 if cargotype.TypeNames then
 realcargo.TypeNames=UTILS.DeepCopy(cargotype.TypeNames)
+end
+if managedDrop then
+local original=warehouseDropList and warehouseDropList[i] or Cargo
+self:_bindManagedWarehouseDrop(original,realcargo,Group,Unit)
+original:SetWasDropped(true)
+original:SetHasMoved(true)
 end
 table.insert(droppedcargo,realcargo)
 else
@@ -78586,6 +78601,17 @@ self:_C130DcAutoRegisterDynamicCargo(realcargo:GetPositionable())
 self:_C130DcAutoRegisterEntry(c130DcAutoSetId,realcargo)
 end
 table.insert(self.Spawned_Cargo,realcargo)
+else
+self.Spawned_Crates[self.CrateCounter]=nil
+end
+end
+if warehouseRequest then
+requestedSets=self:_completeManagedWarehousePickup(warehouseRequest,obtainedcargo)
+if requestedSets==0 then return false end
+number=#obtainedcargo
+elseif managedDrop then
+number=#droppedcargo
+if number==0 then return false end
 end
 if(IsHerc or IsHelo)and fwBatchState and fwBatchKey and not drop then
 local maxBatches=#FW_BATCH_ANGLE_PATTERN
@@ -78610,6 +78636,7 @@ end
 end
 self:_RefreshLoadCratesMenu(Group,Unit)
 self:_RefreshPackMenus(Group,Unit)
+if managedDrop then return true,number end
 return true
 end
 function CTLD:InjectStatics(Zone,Cargo,RandomCoord,FromLoad)
@@ -79472,17 +79499,23 @@ local loadedcargo=self.Loaded_Cargo[unitname]or{}
 local cargotable=loadedcargo.Cargo
 local droppedCount={}
 local neededMap={}
+local failedWarehouseDrops
 for _,_cargo in pairs(cargotable)do
 local cargo=_cargo
 local type=cargo:GetType()
 if type~=CTLD_CARGO.Enum.TROOPS and type~=CTLD_CARGO.Enum.ENGINEERS and type~=CTLD_CARGO.Enum.GCLOADABLE and(not cargo:WasDropped()or self.allowcratepickupagain)then
-self:_GetCrates(Group,Unit,cargo,1,true)
+local result=self:_GetCrates(Group,Unit,cargo,1,true)
+if cargo._warehouseManaged and result~=true then
+failedWarehouseDrops=failedWarehouseDrops or{}
+failedWarehouseDrops[cargo]=true
+else
 cargo:SetWasDropped(true)
 cargo:SetHasMoved(true)
 local cname=cargo:GetName()or"Unknown"
 droppedCount[cname]=(droppedCount[cname]or 0)+1
 if not neededMap[cname]then
 neededMap[cname]=cargo:GetCratesNeeded()or 1
+end
 end
 end
 end
@@ -79523,7 +79556,7 @@ if type==CTLD_CARGO.Enum.TROOPS or type==CTLD_CARGO.Enum.ENGINEERS then
 table.insert(loaded.Cargo,_cargo)
 loaded.Troopsloaded=loaded.Troopsloaded+size
 end
-if type==CTLD_CARGO.Enum.GCLOADABLE and not cargo:WasDropped()then
+if (type==CTLD_CARGO.Enum.GCLOADABLE and not cargo:WasDropped()) or (failedWarehouseDrops and failedWarehouseDrops[cargo])then
 table.insert(loaded.Cargo,_cargo)
 loaded.Cratesloaded=loaded.Cratesloaded+size
 end
@@ -81370,6 +81403,13 @@ return self
 end
 local needed=crateObj:GetCratesNeeded()or 1
 local pvpDrop=GlobalSettings and GlobalSettings.pvpEnabled==true
+local managedWarehouseDrop=self._bindManagedWarehouseDrop and WarehouseWeaponLocationPolicy.active and crateObj.Subcategory=="Warehouse"
+local droppedCount=#chunk
+if managedWarehouseDrop then
+local ok,count=self:_GetCrates(Group,Unit,crateObj,#chunk,true,nil,nil,nil,chunk)
+if ok~=true then return self end
+droppedCount=count
+else
 if not pvpDrop then
 self:_GetCrates(Group,Unit,crateObj,#chunk,true)
 end
@@ -81380,9 +81420,10 @@ end
 cObj:SetWasDropped(true)
 cObj:SetHasMoved(true)
 end
+end
 local cname=crateObj:GetName()or"Unknown"
 local cDisplay=self:_GetCargoDisplayNameForGroup(cname,Group)
-local count=#chunk
+local count=droppedCount
 if needed>1 then
 if count==needed then
 local msg=self:_GetEntryForGroup("DROPPED_FULL",Group)

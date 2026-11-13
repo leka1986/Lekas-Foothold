@@ -2522,6 +2522,7 @@ if GlobalSettings.pvpEnabled == true then
 	L10N:Register("EN", { PVP_MISSION_WINNER = "%s coalition wins!" })
 end
 local missionCompleted = false
+local missionCheckReady = false
 local checkMissionComplete = function(event, sender)
 	if missionCompleted then return end
 	if GlobalSettings.pvpEnabled == true then
@@ -2570,22 +2571,29 @@ local checkMissionComplete = function(event, sender)
 		end
 		return
 	end
+	-- The scheduled startup check runs after saved ownership is restored.
+	if event == nil then missionCheckReady = true end
+	local missionFailed = missionCheckReady and GlobalSettings.pvpEnabled ~= true
 	local done = true
-	for i, v in ipairs(bc:getZones()) do
-		if not v.zone:lower():find("hidden") and v.side == 1 then
-			done = false
-			break
+	for _, v in ipairs(bc:getZones()) do
+		local side = v.side
+		if (done and side == 1 or missionFailed and side == 2) and not v.zone:lower():find("hidden") then
+			if side == 1 then done = false else missionFailed = false end
+			if not done and not missionFailed then return end
 		end
 	end
-	if done then
+	if missionFailed and trigger.misc.getUserFlag(180) ~= 0 then return end
+	if done or missionFailed then
 		missionCompleted = true
 		trigger.action.setUserFlag(180, true)
 
-		timer.scheduleFunction(function()
-			trigger.action.outSoundForCoalition(2, "BH.ogg")
-		end, {}, timer.getTime() + 2)
-		if AutoRestart then
-			trigger.action.outText(L10N:Get("SYRIA_SETUP_MISSION_COMPLETE_RESTART"), 120)
+		if not missionFailed then
+			timer.scheduleFunction(function()
+				trigger.action.outSoundForCoalition(2, "BH.ogg")
+			end, {}, timer.getTime() + 2)
+		end
+		if missionFailed or AutoRestart then
+			trigger.action.outText(missionFailed and "Mission failed, Server restarting..." or L10N:Get("SYRIA_SETUP_MISSION_COMPLETE_RESTART"), 120)
 			bc._persistenceResetPending = true
 			Utils.saveTable(bc.saveFile, 'zonePersistance', {})
 			if resetSaveFileAndFarp then

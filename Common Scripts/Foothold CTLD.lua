@@ -3156,6 +3156,9 @@ local function removeTrackedZoneSupply(Key)
   local Entry = zoneSupplyCrates[Key]
   local GroupId = resolveTrackedZoneSupplyGroupId(Entry)
   zoneSupplyCrates[Key] = nil
+  if Entry and Entry.cargo and Entry.cargo._warehouseManaged then
+    Foothold_ctld:_forgetManagedWarehouseCargo(Entry.cargo)
+  end
   if GroupId then
     Foothold_ctld:RefreshZoneSupplyOnboardForGroup(GroupId)
   end
@@ -3339,7 +3342,7 @@ local function getZoneSupplyCargoTrackingKey(CargoItem)
 end
 
 local function RegisterTrackedSupplyCargo(CargoItem, PickupZoneName, GroupName, GroupId, PlayerName, UnitName, CargoName, DeliveryType, WarehouseMeta, CarrierUnitObject)
-  local warehouse = GlobalSettings.pvpEnabled == true and DeliveryType == "warehouse"
+  local warehouse = DeliveryType == "warehouse" and (GlobalSettings.pvpEnabled == true or WarehouseWeaponLocationPolicy.active)
   if warehouse then
     if not CargoItem._warehouseDebitItems or CargoItem._warehouseSettlementStatus
       or CargoItem._warehouseSourceSide ~= Foothold_ctld.coalition then return end
@@ -3852,14 +3855,15 @@ local function simulateLandingForEntryIfOnGround(entry, zoneName)
   }
 end
 
-local function getZoneStorageHandle(zoneName)
+local function getZoneStorageHandle(zoneName, fresh, knownZone)
   if not WarehouseLogistics then return nil, nil end
   if not zoneName then return nil, nil end
-  local cached = zoneStorageHandleCache[zoneName]
+  local cached = not fresh and zoneStorageHandleCache[zoneName]
   if cached and cached.storage then
     return cached.storage, cached.abName
   end
-  local zoneObj = bc:getZoneByName(zoneName)
+  local zoneObj = knownZone
+  if zoneObj == nil then zoneObj = bc:getZoneByName(zoneName) end
   local abName = zoneObj and (zoneObj.airbaseName or zoneObj.baseName) or zoneName
   local storage = STORAGE:FindByName(abName)
   if not storage then
@@ -5010,7 +5014,8 @@ zoneSupplyApplyOne = function(key)
 
   local pvpWarehouse = GlobalSettings.pvpEnabled == true and entry.deliveryType == "warehouse"
   local cargo = entry.cargo
-  if pvpWarehouse and (not cargo or not cargo._warehouseDebitItems or cargo._warehouseSettlementStatus
+  local managedWarehouse = entry.deliveryType == "warehouse" and WarehouseWeaponLocationPolicy.active
+  if (pvpWarehouse or managedWarehouse) and (not cargo or not cargo._warehouseDebitItems or cargo._warehouseSettlementStatus
     or cargo._warehouseSourceSide ~= Foothold_ctld.coalition) then
     if cargo then cargo._warehouseSettlementStatus = cargo._warehouseSettlementStatus or "discarded" end
     zoneSupplyDestroyNow(key, entry, entry._zoneName or entry.pickupZone, "not available")
@@ -5112,6 +5117,15 @@ zoneSupplyApplyOne = function(key)
           zoneSupplyDestroyNow(key, entry, zoneName, "no applicable inventory")
           return
         end
+      elseif managedWarehouse then
+        local storage, airbaseName = getZoneStorageHandle(zoneName, true, zoneContainer)
+        if not storage or airbaseName ~= cargo._warehouseSourceAirbase or not storage.airbase:isExist()
+          or storage.airbase:getID() ~= cargo._warehouseSourceNativeId
+          or storage.airbase:getCoalition() ~= cargo._warehouseSourceSide
+          or not Foothold_ctld.ApplyWarehouseDebitItems(storage, cargo, zoneName, "return") then
+          zoneSupplyDestroyNow(key, entry, zoneName, "no applicable inventory")
+          return
+        end
       else
         if type(baseAmount) == "number" and baseAmount > 0 then
           local okAdj, adjMsg = adjustWarehouseStockAtZone(zoneName, baseAmount, meta.categories)
@@ -5136,7 +5150,7 @@ zoneSupplyApplyOne = function(key)
   local isCtldZone = false
   local zoneObj = bc and bc:getZoneByName(zoneName) or nil
   local farpSupplyRecord = nil
-  local farpWarehouseStorage
+  local farpWarehouseStorage, managedDestination, managedDestinationName
   if zoneObj then
     if not zoneObj.active then
       return
@@ -5170,10 +5184,11 @@ zoneSupplyApplyOne = function(key)
       if WarehouseLogistics ~= true then
         return
       end
-      local storage = getZoneStorageHandle(zoneName)
+      local storage, airbaseName = getZoneStorageHandle(zoneName, managedWarehouse, false)
       if not storage then
         return
       end
+      if managedWarehouse then managedDestination, managedDestinationName = storage, airbaseName end
       isCtldZone = true
     end
   end
@@ -5247,6 +5262,10 @@ zoneSupplyApplyOne = function(key)
       abName = zoneObj.airbaseName or zoneObj.baseName or zoneName
       storage = STORAGE:FindByName(abName)
       if not storage and abName ~= zoneName then storage = STORAGE:FindByName(zoneName) end
+    elseif managedWarehouse then
+      storage, abName = managedDestination, managedDestinationName
+      if not storage then storage, abName = getZoneStorageHandle(zoneName, true, zoneObj) end
+      if storage and (not storage.airbase:isExist() or storage.airbase:getCoalition() ~= cargo._warehouseSourceSide) then storage = nil end
     else
       storage, abName = getZoneStorageHandle(zoneName)
     end
@@ -5257,7 +5276,7 @@ zoneSupplyApplyOne = function(key)
     end
     local meta = entry.warehouseMeta
     local okAdj, adjMsg
-    if pvpWarehouse then
+    if pvpWarehouse or managedWarehouse then
       okAdj = Foothold_ctld.ApplyWarehouseDebitItems(storage, cargo, zoneName, "delivery")
     else
       okAdj, adjMsg = adjustWarehouseStockAtZone(zoneName, meta.amount, meta.categories)
@@ -5569,7 +5588,8 @@ local function fillFarpZellWarehouse(zellName, isFromSave, expectedRecord, known
   end
 
   if GlobalSettings.pvpEnabled ~= true or PvPSeparateAircraftLists ~= true then
-  storage:SetItem(FARP_ZELL_AIRCRAFT, FARP_ZELL_AIRCRAFT_AMOUNT)
+    storage:SetItem(FARP_ZELL_AIRCRAFT, FARP_ZELL_AIRCRAFT_AMOUNT)
+    storage:SetItem("F-104G", FARP_ZELL_AIRCRAFT_AMOUNT)
   end
   storage:SetLiquid(STORAGE.Liquid.JETFUEL, FARP_ZELL_LIQUID_AMOUNT)
   storage:SetLiquid(STORAGE.Liquid.GASOLINE, FARP_ZELL_LIQUID_AMOUNT)
@@ -6293,6 +6313,8 @@ adjustWarehouseStockAtZone = function(zoneName, deltaPerItem, categories, knownS
     cats = WEAPONSLIST.CategoryOrder or {}
   end
 
+  local policy = WarehouseWeaponLocationPolicy.active
+  if policy and not abName then abName = storage.airbase:getName() end
   local adjusted = 0
   local skippedLow = 0
   local captureDebit = capturePhysicalCount and GlobalSettings.pvpEnabled == true
@@ -6312,7 +6334,8 @@ adjustWarehouseStockAtZone = function(zoneName, deltaPerItem, categories, knownS
     for j = 1, #items do
       local itemName = items[j]
       if itemName then
-        if not forbiddenWeaponsInAllEraSet[itemName] then
+        if not forbiddenWeaponsInAllEraSet[itemName]
+          and (not policy or not WarehouseWeaponLocationPolicy.IsDenied(policy, abName, itemName)) then
           local current = storage:GetItemAmount(itemName) or 0
 
           if delta < 0 then
@@ -6367,6 +6390,7 @@ end
 
 if GlobalSettings.pvpEnabled == true then
   Foothold_ctld.AdjustWarehouseStockAtZone = adjustWarehouseStockAtZone
+end
 
   function Foothold_ctld.ApplyWarehouseDebitItems(knownStorage, cargo, knownZoneName, kind)
     if cargo._warehouseSettlementStatus or not cargo._warehouseDebitItems then return false end
@@ -6380,12 +6404,15 @@ if GlobalSettings.pvpEnabled == true then
     while itemName do
       cargo._warehouseSettlementZone = knownZoneName
       cargo._warehouseSettlementKind = kind
-      if not forbidden[itemName]
-        and not (kind == "delivery" and Era == "Coldwar" and WEAPONSLIST.IsRestricted(itemName))
+      local name = cargo._warehouseManaged and amount.item or itemName
+      if not forbidden[name]
+        and not (kind == "delivery" and Era == "Coldwar" and WEAPONSLIST.IsRestricted(name))
       then
-        local delta = kind == "delivery" and getStrictSmartWarehouseDelta(itemName, amount) or amount
+        local delta = cargo._warehouseManaged and amount.amount or (kind == "delivery" and getStrictSmartWarehouseDelta(itemName, amount) or amount)
         if delta > 0 then
-          knownStorage:AddItem(itemName, delta)
+          if not cargo._warehouseManaged or knownStorage:GetItemAmount(itemName) ~= 1073741823 then
+            knownStorage:AddItem(itemName, delta)
+          end
           cargo._warehouseSettlementWritten = true
         end
       end
@@ -6395,6 +6422,215 @@ if GlobalSettings.pvpEnabled == true then
     cargo._warehouseSettlementStatus = cargo._warehouseSettlementWritten and "applied" or "discarded"
     return cargo._warehouseSettlementWritten == true
   end
+
+
+function Foothold_ctld:_prepareManagedWarehousePickup(request, Group, Unit, Cargo, loadZone, ship, count, sets, perSet)
+  local origin = ship or loadZone
+  local knownZone
+  if ship then knownZone = false end
+  local storage, airbaseName = getZoneStorageHandle(origin, true, knownZone)
+  local side = Group:GetCoalition()
+  local meta = request._warehouseMeta
+  local required = meta.amount * sets
+  local missing, seen, rows = {}, {}, {}
+  local policy = WarehouseWeaponLocationPolicy.active
+  if not storage or not storage.airbase:isExist() or storage.airbase:getCoalition() ~= side then
+    missing[1] = ctldReasonToken("CTLD_REASON_NO_ITEMS", origin or "warehouse")
+  else
+    for categoryIndex, category in ipairs(meta.categories) do
+      local items = getWarehouseItemsForCategory(category)
+      local expected, available = false, 0
+      local limit = required * (WAREHOUSE_CATEGORY_MULTIPLIER[category] or 1)
+      for _, item in ipairs(items) do
+        local identity = WarehouseWeaponLocationPolicy.GetItemIdentity(policy, item)
+        local row = seen[identity.id]
+        if not row then
+          local rule = identity.rule
+          local optional = rule and not rule.allowed[airbaseName]
+          local eligible = not policy.forbidden[identity.id] and not (Era == "Coldwar" and WEAPONSLIST.IsRestricted(item))
+          local stock = eligible and (storage:GetItemAmount(identity.key) or 0) or 0
+          row = {key = identity.key, item = item, stock = stock, optional = optional, take = 0}
+          seen[identity.id] = row
+        end
+        if row.category ~= categoryIndex then
+          row.category = categoryIndex
+          if not row.optional then
+            expected = true
+            available = available + math.max(0, row.stock)
+          end
+          local take = row.optional and math.min(limit, math.max(0, row.stock))
+            or (row.stock >= limit and limit or 0)
+          if take > row.take then
+            if row.take == 0 then rows[#rows + 1] = row end
+            row.take = take
+          end
+        end
+      end
+      if #items == 0 then
+        missing[#missing + 1] = ctldReasonToken("CTLD_REASON_NO_ITEMS", category)
+      elseif expected and available < required then
+        missing[#missing + 1] = ctldReasonToken("CTLD_REASON_INSUFFICIENT_STOCK", category)
+      end
+    end
+  end
+
+  if #missing > 0 or #rows == 0 then
+    local T = getCtldGroupTranslator(Group)
+    local label = ctldLocalizedCargoLabel(T, meta.label or request.cargoName)
+    local reason = ctldReasonListText(T, #missing > 0 and missing or "not available")
+    sendCtldToGroupOrCoalition(Group, "CTLD_WAREHOUSE_NOT_AVAILABLE", 12, label, airbaseName or origin or "warehouse", reason)
+    return false
+  end
+
+  request.storage, request.origin, request.airbaseName = storage, origin, airbaseName
+  request.rows, request.count, request.sets, request.perSet = rows, count, sets, perSet
+  request.side, request.paid = side, 0
+  request.nativeId = storage.airbase:getID()
+  if CTLDCost == true then
+    local price = self.GetCargoPrice and self:GetCargoPrice(request.cargoName, Cargo)
+    if type(price) ~= "number" then price = priceOf(request.cargoName) or CTLD_DEFAULT_PRICE or 0 end
+    if price > 0 then
+      local rank = self.GetCargoReqRank and self:GetCargoReqRank(request.cargoName, Cargo)
+      if type(rank) ~= "number" then rank = reqRankOf(request.cargoName) or 0 end
+      local dcs = Group:GetDCSObject()
+      local gid = dcs:getID()
+      local charge = price * sets
+      if not bc:debit(request.side, charge, gid, dcs, string.format("%dx %s", sets, request.cargoName), rank) then return false end
+      request.group, request.groupId = dcs, gid
+      request.buyerName = (bc.playerNames and bc.playerNames[gid]) or dcs:getName()
+      request.paid = charge
+    end
+  end
+  return true
+end
+
+function Foothold_ctld:_indexManagedWarehouseCargo(cargo)
+  local name = cargo:GetPositionable():GetName()
+  local indexed = self._managedWarehouseCargoByStatic
+  if not indexed then
+    indexed = {}
+    self._managedWarehouseCargoByStatic = indexed
+  end
+  cargo._warehousePhysicalName = name
+  indexed[name] = cargo
+end
+
+function Foothold_ctld:_completeManagedWarehousePickup(request, crates)
+  local spawned = #crates
+  local sets = math.ceil(spawned / request.perSet)
+  local refund = request.paid - (request.paid / request.sets) * sets
+  if refund > 0 then
+    bc:credit(request.side, refund, request.groupId, request.group, "warehouse crate spawn", request.buyerName)
+  end
+  if spawned == 0 then return 0 end
+
+  local paid = request.paid - refund
+  for index, cargo in ipairs(crates) do
+    cargo._warehouseManaged = true
+    cargo._warehouseSourceZone = request.origin
+    cargo._warehouseSourceAirbase = request.airbaseName
+    cargo._warehouseSourceNativeId = request.nativeId
+    cargo._warehouseSourceSide = request.side
+    cargo._warehouseDebitItems = {}
+    cargo._warehousePaidAmount = math.floor(paid / spawned) + (index <= paid % spawned and 1 or 0)
+    cargo._warehousePaidSide = request.side
+    cargo._warehousePaidBuyerName = request.buyerName
+    self:_indexManagedWarehouseCargo(cargo)
+  end
+
+  for _, row in ipairs(request.rows) do
+    local perCrate = math.floor(row.take / request.count)
+    local extra = row.take % request.count
+    local take = perCrate * spawned + math.min(spawned, extra)
+    if take > 0 then
+      if row.stock ~= 1073741823 then request.storage:SetItem(row.key, row.stock - take) end
+      for index, cargo in ipairs(crates) do
+        local amount = perCrate + (index <= extra and 1 or 0)
+        if amount > 0 then cargo._warehouseDebitItems[row.key] = {item = row.item, amount = amount} end
+      end
+    end
+  end
+  return sets
+end
+
+function Foothold_ctld:_bindManagedWarehouseDrop(original, replacement, Group, Unit)
+  replacement._warehouseManaged = true
+  replacement._warehouseDebitItems = original._warehouseDebitItems
+  replacement._warehouseSourceZone = original._warehouseSourceZone
+  replacement._warehouseSourceAirbase = original._warehouseSourceAirbase
+  replacement._warehouseSourceNativeId = original._warehouseSourceNativeId
+  replacement._warehouseSourceSide = original._warehouseSourceSide
+  replacement._warehousePaidAmount = original._warehousePaidAmount
+  replacement._warehousePaidSide = original._warehousePaidSide
+  replacement._warehousePaidBuyerName = original._warehousePaidBuyerName
+  replacement._warehouseSettlementZone = original._warehouseSettlementZone
+  replacement._warehouseSettlementKind = original._warehouseSettlementKind
+  replacement._warehouseSettlementKey = original._warehouseSettlementKey
+  replacement._warehouseSettlementWritten = original._warehouseSettlementWritten
+  replacement._warehouseSettlementStatus = original._warehouseSettlementStatus
+  original._warehouseDebitItems = nil
+  original._warehouseSettlementStatus = "discarded"
+
+  local oldKey = getZoneSupplyCargoTrackingKey(original)
+  local entry = zoneSupplyCrates[oldKey]
+  self:_forgetManagedWarehouseCargo(original)
+  if not replacement._warehouseDebitItems or replacement._warehouseSettlementStatus then return end
+  self:_indexManagedWarehouseCargo(replacement)
+  if entry then
+    zoneSupplyCrates[oldKey] = nil
+    entry.cargo, entry.static = replacement, replacement:GetPositionable()
+    zoneSupplyCrates[getZoneSupplyCargoTrackingKey(replacement)] = entry
+  else
+    local name = replacement:GetName()
+    entry = RegisterTrackedSupplyCargo(replacement, replacement._warehouseSourceZone,
+      Group:GetName(), Group:GetID(), Unit:GetPlayerName(), Unit:GetName(), name,
+      "warehouse", WAREHOUSE_SUPPLY_TYPES[name], Unit:GetDCSObject())
+  end
+  if entry then
+    entry.wasAirborne, entry._wasUnloaded, entry.detached, entry.attached = true, true, true, false
+    entry._lastVec3, entry._ready, entry._zoneName = nil, nil, nil
+    entry._deleteName, entry._deleteKey = nil, nil
+    refreshZoneSupplyOnboardForEntry(entry)
+  end
+end
+
+function Foothold_ctld:_forgetManagedWarehouseCargo(cargo)
+  local index = self._managedWarehouseCargoByStatic
+  local name = cargo._warehousePhysicalName
+  if index and name and index[name] == cargo then index[name] = nil end
+end
+
+function Foothold_ctld:_updateManagedWarehouseDynamicCargo(event, action)
+  local index = self._managedWarehouseCargoByStatic
+  local cargo = index and index[event.IniDynamicCargoName]
+  if not cargo or not cargo._warehouseDebitItems or cargo._warehouseSettlementStatus then return end
+  local dynamic = event.IniDynamicCargo
+  if not dynamic or (cargo._warehouseDynamic and cargo._warehouseDynamic ~= dynamic) then return end
+  local key = getZoneSupplyCargoTrackingKey(cargo)
+  local entry = zoneSupplyCrates[key]
+  if action == "removed" then
+    self:_forgetManagedWarehouseCargo(cargo)
+    cargo._warehouseSettlementStatus = "discarded"
+    if entry then removeTrackedZoneSupply(key) end
+    return
+  end
+  if action == "loaded" then cargo._warehouseDynamic = dynamic end
+  if cargo._warehouseDynamic ~= dynamic then return end
+  if not entry then
+    local unit = CLIENT:FindByPlayerName(dynamic.Owner)
+    if not unit or not unit:IsAlive() then return end
+    local group = unit:GetGroup()
+    local name = cargo:GetName()
+    entry = RegisterTrackedSupplyCargo(cargo, cargo._warehouseSourceZone, group:GetName(), group:GetID(),
+      unit:GetPlayerName(), unit:GetName(), name, "warehouse", WAREHOUSE_SUPPLY_TYPES[name], unit:GetDCSObject())
+    if not entry then return end
+  end
+  local unloaded = action == "unloaded"
+  cargo.Positionable, entry.static = dynamic, dynamic
+  entry.wasAirborne, entry._wasUnloaded, entry.detached, entry.attached = true, unloaded, unloaded, not unloaded
+  entry._ready, entry._zoneName, entry._lastVec3 = nil, nil, nil
+  entry._deleteName, entry._deleteKey = nil, nil
+  refreshZoneSupplyOnboardForEntry(entry)
 end
 
 function Foothold_ctld:CanGetUnits(Group, Unit, Config, quantity, quiet)
@@ -6726,22 +6962,49 @@ end
 end
 
 function Foothold_ctld:OnAfterRemoveCratesNearby(From, Event, To, Group, Unit, Cargotable)
-  local inzone = self:IsUnitInZone(Unit,CTLD.CargoZoneType.LOAD)
+  local managed = WarehouseWeaponLocationPolicy.active
+  local inzone, loadZone = self:IsUnitInZone(Unit,CTLD.CargoZoneType.LOAD)
+  if not inzone and managed then inzone, loadZone = self:IsUnitInZone(Unit,CTLD.CargoZoneType.SHIP) end
   if not inzone then return end
 
- local zoneName = updateLastPickupZone(Group, Unit)
+  local zoneName = managed and loadZone or updateLastPickupZone(Group, Unit)
 
   local byName = {}
   local pvpEnabled = GlobalSettings.pvpEnabled == true
   local warehouseChecked, warehouseStorage, warehouseFarp, warehouseNativeId
   local warehouseGroupId, warehouseGroupObject
+  local managedAirbaseName
   for _,_cargo in pairs(Cargotable or {}) do
     local cargo = _cargo
     local warehouse = pvpEnabled and cargo.Subcategory == "Warehouse"
-    if not warehouse then refundPlayerZoneSupplyStock(cargo) end
     local name = cargo.GetName and cargo:GetName() or cargo.name or "none"
+    local managedWarehouse = managed and (cargo.Subcategory == "Warehouse" or WAREHOUSE_SUPPLY_TYPES[name])
+    if not warehouse and not managedWarehouse then refundPlayerZoneSupplyStock(cargo) end
     warehouse = warehouse or (pvpEnabled and WAREHOUSE_SUPPLY_TYPES[name] ~= nil)
-    if warehouse then
+    if managedWarehouse then
+      if cargo._warehouseDebitItems and not cargo._warehouseSettlementStatus then
+        if not warehouseChecked then
+          warehouseChecked = true
+          warehouseStorage, managedAirbaseName = getZoneStorageHandle(zoneName, true)
+        end
+        if warehouseStorage and managedAirbaseName == cargo._warehouseSourceAirbase and warehouseStorage.airbase:isExist()
+          and warehouseStorage.airbase:getID() == cargo._warehouseSourceNativeId
+          and warehouseStorage.airbase:getCoalition() == cargo._warehouseSourceSide
+          and Foothold_ctld.ApplyWarehouseDebitItems(warehouseStorage, cargo, zoneName, "return") then
+          if (cargo._warehousePaidAmount or 0) > 0 then
+            if not warehouseGroupObject then
+              warehouseGroupObject = Group:GetDCSObject()
+              warehouseGroupId = warehouseGroupObject:getID()
+            end
+            bc:credit(cargo._warehousePaidSide, cargo._warehousePaidAmount, warehouseGroupId,
+              warehouseGroupObject, "remove: 1x " .. name, cargo._warehousePaidBuyerName)
+            cargo._warehousePaidAmount = 0
+          end
+        end
+      end
+      cargo._warehouseSettlementStatus = cargo._warehouseSettlementStatus or "discarded"
+      self:_forgetManagedWarehouseCargo(cargo)
+    elseif warehouse then
       if cargo._warehouseDebitItems and not cargo._warehouseSettlementStatus
         and cargo._warehouseSourceZone == zoneName and cargo._warehouseSourceSide == self.coalition
         and WarehouseLogistics == true
@@ -6788,7 +7051,7 @@ function Foothold_ctld:OnAfterRemoveCratesNearby(From, Event, To, Group, Unit, C
       byName[name] = (byName[name] or 0) + 1
     end
   end
-  if pvpEnabled and next(byName) == nil then return end -- Warehouse payment is bound separately.
+  if (pvpEnabled or managed) and next(byName) == nil then return end -- Warehouse payment is bound separately.
 
   local coal = Group:GetCoalition()
   local dcs = Group:GetDCSObject()
@@ -6847,7 +7110,19 @@ function Foothold_ctld:OnAfterGetCrates(From, Event, To, Group, Unit, Cargo)
     return
   end
 
-  local pickupZone = updateLastPickupZone(Group, Unit)
+  local firstCargo = cargoItems[1]
+  local managed = WarehouseWeaponLocationPolicy.active and firstCargo._warehouseManaged
+  local pickupZone
+  if managed then
+    pickupZone = firstCargo._warehouseSourceZone
+    for index = 2, #cargoItems do
+      if not cargoItems[index]._warehouseManaged then
+        managed = false
+        break
+      end
+    end
+  end
+  if not managed then pickupZone = updateLastPickupZone(Group, Unit) end
   if not pickupZone and supplyZones and ZONE and COORDINATE then
     local coordSource = nil
     if Unit and Unit.GetCoordinate then
@@ -7068,7 +7343,7 @@ if GlobalSettings.pvpEnabled == true then
     end
   end
 end
-function Foothold_ctld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+function Foothold_ctld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent, warehouseDropList)
   if not drop and not pack then
     if Cargo.Name == "Tor M2" or (Cargo.Name == "Pantsir S1"
       and (GlobalSettings.pvpEnabled ~= true or Era ~= "Modern")) then
@@ -7076,6 +7351,12 @@ function Foothold_ctld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet,
     end
     local available = self:_readCargoPolicy(Cargo.Name)
     if not available then return false end
+  end
+  local warehouseRequest
+  if WarehouseLogistics == true and WarehouseWeaponLocationPolicy.active and not drop and not pack
+    and Cargo.Subcategory == "Warehouse" then
+    local meta = WAREHOUSE_SUPPLY_TYPES[Cargo.Name]
+    if meta then warehouseRequest = {cargoName = Cargo.Name, _warehouseMeta = meta} end
   end
   local beforeCount = #(self.Spawned_Cargo or {})
   local c130Entry = GlobalSettings.pvpEnabled == true and drop and c130AutoBuildCrates[Cargo] or nil
@@ -7117,7 +7398,8 @@ function Foothold_ctld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet,
       request._warehouseQuotePhase = CTLDCost == true and "awaiting" or "free"
     end
   end
-  local result = FootholdOriginalGetCrates(self, Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+  local result, droppedCount = FootholdOriginalGetCrates(self, Group, Unit, Cargo, number, drop, pack, quiet,
+    suppressGetEvent, warehouseRequest, warehouseDropList)
   if request then
     request._pickupUnit, request._pickupRecord, request._pickupNative = nil, nil, nil
     request._pickupZone, request._pickupRequestNumber = nil, nil
@@ -7231,6 +7513,7 @@ function Foothold_ctld:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet,
     end
     if obtainedCargo then self:OnAfterGetCrates(nil, nil, nil, Group, Unit, obtainedCargo) end
   end
+  if droppedCount ~= nil then return result, droppedCount end
   return result
 end
 

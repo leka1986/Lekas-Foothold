@@ -43,6 +43,7 @@ FootholdConfigTrackedTableNames = {
     "CallsignOverrides",
     "EscortTypeByPlayerType",
     "WarehouseWeaponCaps",
+    "WarehouseWeaponsAllowedAtAirbases",
     "AllowedToCarrySupplies",
     "ZoneSupplyTakeoffWarningTypes",
     "AvailableShopItems",
@@ -441,7 +442,9 @@ RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 -- Ground Units
 -- ============================================================================
 -- Limits how many Red ground groups can be generated per zone in a fresh PvE campaign.
--- Each zone keeps its own range; raising this limit does not add groups.
+-- Below the map's normal maximum, small, medium and big zones also get smaller ranges.
+-- At 5 or 6, randomized single-unit AAA and SHORAD use half the budget of a regular group in small and medium zones.
+-- The limit on the actual number of groups still applies.
 -- Highest ranges currently used by each map (groups per zone):
 -- Afghanistan: 10
 -- Caucasus: 10
@@ -453,9 +456,9 @@ RedReactiveDifficulty   = "medium" -- RED reactive counterpressure difficulty.
 -- Sinai North: 10
 -- South Atlantic: 10
 -- Syria Extended: 9
--- Example: Syria already tops out at 9. Setting 12 does not increase it; setting 8 caps it at 8.
+-- Example: Syria uses its normal ranges at 9 or higher. Setting 8 reduces them.
 -- Existing campaigns and PvP are not changed by this setting.
--- @gui label="Ground Units Max Groups at Each Zone" validValues="6=6 | 7=7 | 8=8 | 9=9 | 10=10 | 11=11 | 12=12"
+-- @gui label="Ground Units Max Groups at Each Zone" validValues="5=5 | 6=6 | 7=7 | 8=8 | 9=9 | 10=10 | 11=11 | 12=12"
 MaxRedGroundGroupsPerZone = 12
 
 -- Limits the randomized Blue garrison total per zone when new PvE garrisons are generated.
@@ -516,6 +519,11 @@ UseStatics = true
 -- true     = always hidden on MFD (default)
 -- "random" = 50% chance hidden on each spawn
 HideSAMOnMFD = "random" -- if random, use "random" (string)
+
+-- In PvE, reveal a SAM on its next spawn after MANTIS activates it or Intel identifies it.
+-- The reveal is saved for that SAM site until the zone changes hands or the SAM is replaced.
+-- @gui label="Reveal SAM on MFD after radar activation or Intel" category="Ground Units" visibleWhen="PvP:false" disabledWhen="HideSAMOnMFD:false|random" disabledValue="false"
+RevealSamOnMfdAfterDetection = false
 
 -- Time between AI air defense decisions at night. Higher values mean slower reactions.
 -- Normally 15 seconds. Changes when a player takes off; a daytime takeoff restores 15 seconds.
@@ -1417,9 +1425,162 @@ StrictSmartWeaponsInventory = false
 WarehouseWeaponCaps = {
 }
 
+-- PvE only. For a listed weapon, Foothold stocks it only at the named warehouses on that mission.
+-- Use exact DCS weapon IDs and warehouse names. An empty list or a removed weapon entry restores normal stocking.
+-- Example: ["Syria Extended"] = { ["weapons.missiles.AIM_54C_Mk60"] = { "CVN-72", "CVN-74" } },
+-- @gui installPolicy="replaceTable"
+WarehouseWeaponsAllowedAtAirbases = {
+}
+
+-- Warehouse names from the mission setups, for the Manager picker.
+WarehouseWeaponLocationAirbases = {
+    ["Afghanistan"] = {
+        "Bagram", "Bamyan", "Bost", "Camp Bastion",
+        "Chaghcharan", "Checkpoint Alpha", "Checkpoint Bravo", "Checkpoint Charlie",
+        "Checkpoint Delta", "Checkpoint Kabul E", "Checkpoint Kabul S", "Checkpoint Kabul W",
+        "Dwyer", "Farah", "FOB Kunar", "FOB-Ahmad Shah Massoud",
+        "FOB-Bostick", "FOB-Delaram", "FOB-Farid Basharat", "FOB-Fenty",
+        "FOB-Hamid Karzai", "FOB-Ismail Khan", "FOB-Jamsheed", "FOB-Javid Basharat",
+        "FOB-Lagman", "FOB-Shank", "Gardez", "Ghazni Heliport",
+        "Herat", "Jalalabad", "Kabul", "Kandahar",
+        "Khost", "Maymana Zahiraddin Faryabi", "Nimroz", "Qala i Naw",
+        "Sharana", "Shindand", "Tarinkot", "Urgoon Heliport",
+    },
+    ["Caucasus"] = {
+        "Alpha", "Ambrolauri", "Anapa-Vityazevo", "Anastasia",
+        "Batumi", "Beslan", "Bravo", "Charlie",
+        "Chiora", "Chukuli", "CVN-72", "CVN-74",
+        "Delta", "Digora", "Echo", "Foxtrot",
+        "Gelendzhik", "Golf", "Gudauta", "Guso",
+        "Hady", "Holmskiy", "Hotel", "Hurzuk",
+        "India", "Isunderi", "Juliett", "Karaleti",
+        "Khashuri", "Kilo", "Kobuleti", "Krasnodar-Center",
+        "Krasnodar-Pashkovsky", "Krymsk", "Kutaisi", "Kvomo",
+        "Lima", "Luna", "Maykop-Khanskaya", "Mezmay",
+        "Mineralnye Vody", "Mozdok", "Nalchik", "Novopavlo",
+        "Novorossiysk", "Revari", "RiverSide", "Sachhere",
+        "Senaki-Kolkhi", "Sochi-Adler", "Soganlug", "Sukhumi-Babushara",
+        "Tarawa", "Tbilisi-Lochini", "Terek", "Tyra",
+        "Tyrini", "Vaziani", "ZHemtala",
+    },
+    ["Germany Cold War"] = {
+        "Airracing Frankfurt", "Altes Lager", "Bad Durkheim", "Bindersleben",
+        "Bitburg", "Bornholm", "Braunschweig", "Bremen",
+        "Briest", "CVN-72", "Fassberg", "Frankfurt",
+        "Fritzlar", "Fulda", "Garz", "Gelnhausen",
+        "Giebelstadt", "H FRG 17", "H FRG 34", "H FRG 38",
+        "H FRG 40", "H FRG 47", "H FRG 51", "H GDR 24",
+        "H GDR 25", "H Med GDR 14", "Hahn", "Hamburg",
+        "Hannover", "Kastrup", "Laage", "Larz",
+        "Lubeck", "Mahlwinkel", "Mendig", "Neubrandenburg",
+        "Neuruppin", "Parchim", "Peenemunde", "Ramstein",
+        "Schkeuditz", "Spangdahlem", "Sturup", "Tarawa",
+        "Tegel", "Templin", "Tutow", "Walldorf",
+        "Werneuchen", "Wismar", "Zerbst",
+    },
+    ["Iraq"] = {
+        "Al Abbasi", "Al-Asad Airbase", "Al-Sahra Airport", "Al-Salam Airbase",
+        "Balad Airbase", "Barzan", "Bashur Airport", "Chamanki",
+        "Duhok City", "Dukan", "Erbil International Airport", "FOB Samarra",
+        "FOB Therethar", "Khormato", "Kirkuk International Airport", "Koya",
+        "Maydan", "Mosul International Airport", "OutPost", "Qayyarah Airfield West",
+        "Ramadi", "Said Sadiq", "Sarqala", "Sulaimaniyah International Airport",
+        "Tal Afar",
+    },
+    ["Kola"] = {
+        "Abisko", "Alakurtti", "Alta", "Andoya",
+        "Apatity", "Arvidsjaur", "Banak", "Bardufoss",
+        "BergsBasen", "Boden Heli Base", "Bodo", "Buolbmat",
+        "CVN-72", "Enontekio", "Evenes", "Gallivare",
+        "Guovdageaidnu", "Hemavan", "Inari", "Ivalo",
+        "Ivalontie", "Jokkmokk", "Kalix", "Kalixfors",
+        "Kallax", "Karasjok", "Kelloselka", "Kemi Tornio",
+        "Kirkenes", "Kiruna", "Kittila", "Kovdor",
+        "Kuusamo", "Kvikkjokk", "Luspa", "Maaninkavaara",
+        "Maze", "Monchegorsk", "Murmansk International", "Olenya",
+        "Rovaniemi", "Savukoski", "Severomorsk-1", "Severomorsk-3",
+        "Silsand", "Skogsbasen", "SkogsFARP1", "SkogsFARP2",
+        "SkogsFARP3", "SkogsFARP4", "Sodankyla", "Soppero",
+        "Storsand", "Tervola", "Tore", "Tromso",
+        "Vidsel", "Vuojarvi", "Zapolyarnyy",
+    },
+    ["Persian Gulf"] = {
+        "Abu Musa Island", "Al Ain Intl", "Al Dahid", "Al Dhafra AFB",
+        "Al Huti", "Al Khatim", "Al Minhad AFB", "Alpha",
+        "Bandar Abbas Intl", "Bandar Lengeh", "Charlie", "CVN-72",
+        "CVN-73", "CVN-74", "Factory", "FARP Delta",
+        "FARP Echo", "FARP Golf", "FARP Khamets", "FARP Sunny",
+        "Foxtrot", "Fujairah Intl", "Khasab", "Kish Intl",
+        "Lar", "Lavan Island", "Moradi", "Paregaan",
+        "Qeshm Island", "Radio Tower", "Ramp-Kongo", "Ras Al Khaimah Intl",
+        "Samathe", "Sharjah Intl", "Sirri Island", "Tarawa",
+        "Tunb Island AFB",
+    },
+    ["Sinai Extended"] = {
+        "Abu Rudeis", "Abu Suwayr", "Al Ismailiyah", "Al Mansurah",
+        "As Salihiyah", "AzZaqaziq", "Baluza", "Ben-Gurion",
+        "Beni Suef", "Bilbeis Air Base", "Bir Hasanah", "Birma Air Base",
+        "Cairo International Airport", "Cairo West", "CVN-72", "CVN-74",
+        "Difarsuwar Airfield", "El Arish", "El Gora", "FARP Alpha",
+        "FARP Bravo", "FARP Charlie", "FARP Delta", "FARP Echo",
+        "FARP Foxtrot", "FARP Golf", "FARP Hotel", "FARP India",
+        "FARP Juliett", "FARP Kilo", "FARP Lima", "FARP Mike",
+        "Fayed", "Hatzerim", "Hatzor", "Hurghada International Airport",
+        "Inshas Airbase", "Kibrit Air Base", "Kom Awshim", "Melez",
+        "Nevatim", "Ovda", "Quwaysina", "Ramon Airbase",
+        "Sharm El Sheikh International Airport", "St Catherine", "Tarawa", "Tel Nof",
+        "Wadi al Jandali",
+    },
+    ["Sinai North"] = {
+        "Al Ismailiyah", "Al Mansurah", "As Salihiyah", "AzZaqaziq",
+        "Baluza", "Ben-Gurion", "Beni Suef", "Bir Hasanah",
+        "Birma Air Base", "Borg El Arab International Airport", "Cairo International Airport", "Cairo West",
+        "CVN-72", "CVN-74", "El Arish", "El Gora",
+        "FARP Alpha", "FARP Bravo", "FARP Charlie", "Gebel El Basur Air Base",
+        "Hatzerim", "Hatzor", "Inshas Airbase", "Jiyanklis Air Base",
+        "Kibrit Air Base", "Kom Awshim", "Melez", "Nevatim",
+        "Ovda", "Ramon Airbase", "Tarawa", "Tel Nof",
+        "Wadi al Jandali",
+    },
+    ["South Atlantic"] = {
+        "Almirante Schroeders", "Comandante Luis Piedrabuena", "CVN-72", "El Calafate",
+        "FARP Calfucura", "FARP Caupolican", "FARP Drake", "FARP Galvarino",
+        "FARP Guemes", "FARP Inacayal", "FARP Lautaro", "FARP Magellan",
+        "FARP Roca", "FARP Sayhueque", "Franco Bianco", "Gobernador Gregores",
+        "Goose Green", "Gull Point", "Hipico Flying Club", "Mount Pleasant",
+        "O", "Pampa Guanaco", "Port Stanley", "Porvenir",
+        "Puerto Natales", "Puerto Santa Cruz", "Puerto Williams", "Punta Arenas",
+        "Rio Chico", "Rio Gallegos", "Rio Grande", "Rio Turbio",
+        "San Carlos FOB", "San Julian", "Tolhuin", "Ushuaia",
+    },
+    ["Syria Extended"] = {
+        "Abu al-Duhur", "Akrotiri", "Aleppo", "An Nasiriyah",
+        "Bassel Al-Assad", "Beirut-Rafic Hariri", "Ben Gurion", "CVN-72",
+        "CVN-74", "Damascus", "Ercan", "FOB FOXTROT",
+        "FOB HOTEL", "FOB INDIA", "FOB JULIETT", "FOB KARAVOSTASI",
+        "FOB LIMA", "FOB MIKE", "FOB Military Base", "FOB POLIS",
+        "Gecitkale", "Hama", "Hatay", "HS05",
+        "Incirlik", "Jirah", "King Hussein Air College", "Larnaca",
+        "Marka", "Minakh", "Muwaffaq Salti", "Palmyra",
+        "Paphos", "Pinarbashi", "Prince Hassan", "Ramat David",
+        "Rayak", "Rene Mouawad", "Rosh Pina", "Shayrat",
+        "Tabqa", "Taftanaz", "Tarawa", "Tha",
+        "Tiyas",
+    },
+}
+
 -- ============================================================================
 -- Shop / Rewards
 -- ============================================================================
+
+-- Allow players to authorize automatic CAP purchases after their flight is destroyed.
+-- Replacements use coalition credits and are available for the current PvE mission only.
+-- @gui label="Allow CAP Auto-buy After Loss" category="Shop / Rewards" visibleWhen="PvP:false"
+AllowCapAutoBuyAfterLoss = false
+
+-- Maximum replacements a player may authorize when buying a CAP flight.
+-- @gui label="Maximum Automatic CAP Replacements" category="Shop / Rewards" visibleWhen="AllowCapAutoBuyAfterLoss:true;PvP:false" validValues="1=1 | 2=2 | 3=3 | 4=4 | 5=5"
+MaxCapAutoBuys = 1
 
 -- Get extra reward if player keeps the same aircraft after a successful credits redeem and then another sortie with another credits redeem.
 -- Percentage of extra credits. 0 disables the reward, 10 is the default, and 50 is the maximum.

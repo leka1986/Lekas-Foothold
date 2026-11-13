@@ -605,6 +605,15 @@ AllowedToCarrySupplies = {
 -- Shop / Rewards
 -- ============================================================================
 
+-- Allow players to authorize automatic CAP purchases after their flight is destroyed.
+-- Replacements use coalition credits and are available for the current PvE mission only.
+-- @gui label="Allow CAP Auto-buy After Loss" category="Shop / Rewards"
+AllowCapAutoBuyAfterLoss = false
+
+-- Maximum replacements a player may authorize when buying a CAP flight.
+-- @gui label="Maximum Automatic CAP Replacements" category="Shop / Rewards" visibleWhen="AllowCapAutoBuyAfterLoss:true" validValues="1=1 | 2=2 | 3=3 | 4=4 | 5=5"
+MaxCapAutoBuys = 1
+
 -- Get extra reward if player keeps the same aircraft after a successful credits redeem and then another sortie with another credits redeem.
 -- Percentage of extra credits. 0 disables the reward, 10 is the default, and 50 is the maximum.
 -- @gui label="Same Aircraft Extra Reward %" validValues="Disabled=0 | 5%=5 | 10%=10 | 15%=15 | 20%=20 | 25%=25 | 30%=30 | 35%=35 | 40%=40 | 45%=45 | 50%=50"
