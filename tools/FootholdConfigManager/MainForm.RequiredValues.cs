@@ -3,12 +3,12 @@ using System.Windows.Forms;
 namespace FootholdConfigManager;
 internal sealed partial class MainForm
 {
-    private sealed class StringListRequirementBinding(ConfigStringListTable table, DataGridView active, DataGridView inactive, Button deactivate, Button remove, FlowLayoutPanel reasons)
+    private sealed class StringListRequirementBinding(ConfigStringListTable table, DataGridView active, DataGridView inactive, Button? deactivate, Button remove, FlowLayoutPanel reasons)
     {
         internal ConfigStringListTable Table { get; } = table;
         internal DataGridView Active { get; } = active;
         internal DataGridView Inactive { get; } = inactive;
-        internal Button Deactivate { get; } = deactivate;
+        internal Button? Deactivate { get; } = deactivate;
         internal Button Remove { get; } = remove;
         internal FlowLayoutPanel Reasons { get; } = reasons;
         internal RequiredValueResolution Facts { get; set; } = RequiredValueResolution.Empty;
@@ -59,6 +59,14 @@ internal sealed partial class MainForm
     {
         if (_document is null || binding.Active.IsDisposed) return;
         binding.Facts = facts ?? _document.ResolveRequiredValues(binding.Table, sources);
+        if (EquipmentChecklists.TryGetValue(binding.Active, out _))
+        {
+            binding.Active.Invalidate();
+            binding.Inactive.Invalidate();
+            ShowRequiredValueReasons(binding, binding.Selected ?? binding.Active);
+            return;
+        }
+
         var automatic = AutomaticAircraftHighlights(binding.Table);
         foreach (DataGridViewRow row in binding.Active.Rows)
             if (row.Tag is StringListBucketItem item)
@@ -74,8 +82,9 @@ internal sealed partial class MainForm
     private void ShowRequiredValueReasons(StringListRequirementBinding binding, DataGridView selected)
     {
         binding.Selected = selected;
-        binding.Deactivate.Enabled = binding.Active.CurrentRow?.Tag is StringListBucketItem;
-        var item = selected.CurrentRow?.Tag as StringListBucketItem;
+        if (binding.Deactivate is { } deactivate)
+            deactivate.Enabled = GetBucketItem(binding.Active, binding.Active.CurrentCellAddress.Y) is { IsActive: true };
+        var item = GetBucketItem(selected, selected.CurrentCellAddress.Y);
         binding.Remove.Enabled = item is not null && !binding.Facts.IsRequired(item.Value);
         var value = item?.Value;
         if (binding.Presentation is { } previous && (previous.Value != value || !ReferenceEquals(previous.Selected, selected)))
@@ -112,7 +121,10 @@ internal sealed partial class MainForm
             heading.Disposed += (_, _) => headingFont.Dispose();
             notice.Controls.Add(heading);
             notice.Controls.Add(new Label { AutoSize = true, MaximumSize = heading.MaximumSize, ForeColor = PrimaryTextColor,
-                Text = "Change or disable its AI uses before moving it to Not active.", Margin = new Padding(0, Zoomed(4), 0, Zoomed(8)) });
+                Text = binding.Deactivate is null
+                    ? "Change or disable its AI uses before unchecking it."
+                    : "Change or disable its AI uses before moving it to Not active.",
+                Margin = new Padding(0, Zoomed(4), 0, Zoomed(8)) });
             var review = new LinkLabel { Name = "RequiredAircraftReviewAll", AutoSize = true, Text = "Review all uses",
                 LinkColor = BrandColor, ActiveLinkColor = BrandColor, VisitedLinkColor = BrandColor, LinkBehavior = LinkBehavior.AlwaysUnderline };
             review.LinkClicked += (_, _) =>

@@ -52,17 +52,13 @@ internal sealed class ManagerStartupContext : ApplicationContext
                 manager.Enabled = false;
                 manager.AttachSingleInstance(_owner);
                 _owner.SetStartupPresentation(_loading.Presentation);
-                // Common dialogs remain owned by the real manager and can rise above its splash.
-                _loading.Presentation.Owner = manager;
                 manager.FormClosed += (_, _) => { if (!_disposed) _lifetime.Cancel(); };
                 manager.Show();
                 manager.HoldStartupPresentation(); // Show can restore native visibility after handle creation.
                 manager.ShowInTaskbar = true; // Finish handle recreation before warming cached views.
                 manager.HoldStartupPresentation();
-                // Re-register the splash with the shell after attaching its hidden owner.
-                _loading.Presentation.Icon = manager.Icon;
-                _loading.Presentation.Hide();
-                _loading.Presentation.Show();
+                // Keep the splash unowned so its existing taskbar button survives hidden-manager preparation.
+                // LoadingScreenController yields it explicitly whenever a modal dialog is needed.
                 _loading.Presentation.Refresh(); // Paint the photo and child controls before synchronous preparation.
                 await manager.PrepareConfigViewsAsync(progress, cancellationToken);
                 await manager.PrepareMissionSettingsAsync(progress, cancellationToken);
@@ -77,6 +73,8 @@ internal sealed class ManagerStartupContext : ApplicationContext
             _manager.Opacity = 1;
             _manager.Update();
             _manager.Activate();
+            await ManagerSelfUpdater.CompleteStartupAsync();
+            _ = _manager.BeginDedicatedCapabilityCaptureAsync();
             _ = _manager.BeginUpdateChecksAsync();
         }
         finally { _owner.SetStartupPresentation(null); }

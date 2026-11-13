@@ -64,6 +64,20 @@ internal sealed partial class MainForm
         dialog.ShowDialog(this);
     }
 
+    internal static void SizeNavigationButton(Button button, Font font, float scale)
+    {
+        int S(int value) => Math.Max(1, (int)Math.Ceiling(value * scale));
+        StyleButton(button);
+        button.MinimumSize = Size.Empty;
+        button.Padding = new Padding(S(14), S(7), S(14), S(7));
+        button.Font = font;
+        var caption = button.Name == "MissionDownloadRefreshRelease" ? "Refresh release" : button.Text;
+        button.Size = new Size(TextRenderer.MeasureText(caption, font).Width + Math.Max(14, font.Height) + button.Padding.Horizontal + button.Padding.Top,
+            Math.Max(S(40), font.Height + S(16)));
+        button.FlatAppearance.BorderSize = 1;
+        button.TextAlign = ContentAlignment.MiddleCenter;
+    }
+
     // Keep Button's keyboard, accessibility and click contracts; only paint the preview surface.
     private sealed class PreviewButton : Button
     {
@@ -76,6 +90,8 @@ internal sealed partial class MainForm
         internal bool KeyboardFocusOnly { get; set; } = true;
         internal bool AccentOutline { get; set; }
         internal bool TextAccentOnly { get; set; }
+        private bool _selectionEmphasis;
+        internal bool SelectionEmphasis { get => _selectionEmphasis; set { if (_selectionEmphasis != value) { _selectionEmphasis = value; Invalidate(); } } }
         private bool _actionEmphasis;
         internal bool ActionEmphasis { get => _actionEmphasis; set { if (_actionEmphasis != value) { _actionEmphasis = value; Invalidate(); } } }
         private bool _hasUpdateNotice;
@@ -99,18 +115,32 @@ internal sealed partial class MainForm
             e.Graphics.Clear(Parent?.BackColor ?? MainBackground);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             var drawFocusCue = Focused && (!KeyboardFocusOnly || InputChrome.KeyboardInputActive);
-            var primary = Text == "Add row" && !TextAccentOnly;
+            var warehouseApply = Name == "ApplyWarehouseWeaponRules";
+            var primary = (Text == "Add row" || warehouseApply) && !TextAccentOnly;
+            var primaryFill = warehouseApply && IsDarkPalette() ? Color.FromArgb(39, 98, 152) : PrimaryActionColor;
             var updateNotice = HasUpdateNotice && Enabled;
             var highContrast = SystemInformation.HighContrast;
+            var backNavigation = Text == "Back" || Text.StartsWith("Back to ", StringComparison.Ordinal);
+            var pageNavigation = backNavigation || Name is "MissionDownloadRefreshRelease" or "MissionDownloadChangelog" or "FilesUpdatesManagerAction";
             var outlined = (updateNotice || AccentOutline && Enabled) && !highContrast;
-            var emphasized = !outlined && (HasUpdateNotice || ActionEmphasis || AccentOutline) && Enabled;
-            var noticeFill = SystemInformation.HighContrast ? SystemColors.Highlight : IsDarkPalette() ? Color.FromArgb(63, 223, 202) : Color.FromArgb(8, 122, 115);
-            var noticeText = highContrast ? SystemColors.HighlightText : IsDarkPalette() ? Color.FromArgb(7, 46, 42) : Color.White;
-            var fillColor = !Enabled ? BackColor : emphasized ? noticeFill : primary ? PrimaryActionColor
+            var emphasized = !outlined && (HasUpdateNotice || ActionEmphasis || AccentOutline || SelectionEmphasis) && Enabled;
+            var noticeFill = highContrast ? SystemColors.Highlight : SelectionEmphasis
+                ? IsDarkPalette() ? Color.FromArgb(32, 57, 76) : Color.FromArgb(221, 235, 249)
+                : Name == "FilesUpdatesCheckMissions" ? IsDarkPalette() ? Color.FromArgb(70, 212, 203) : Color.FromArgb(7, 95, 92)
+                : IsDarkPalette() ? Color.FromArgb(63, 223, 202) : Color.FromArgb(8, 122, 115);
+            var noticeText = highContrast ? SystemColors.HighlightText : SelectionEmphasis
+                ? IsDarkPalette() ? Color.FromArgb(155, 205, 255) : Color.FromArgb(24, 82, 137)
+                : IsDarkPalette() ? Color.FromArgb(7, 46, 42) : Color.White;
+            var fillColor = !Enabled ? BackColor : emphasized ? noticeFill : primary ? primaryFill
                 : _pressed ? FlatAppearance.MouseDownBackColor : _hover ? FlatAppearance.MouseOverBackColor : BackColor;
+            if (pageNavigation && Enabled && !highContrast && (_hover || _pressed))
+                fillColor = _pressed ? IsDarkPalette() ? Color.FromArgb(32, 57, 76) : Color.FromArgb(221, 235, 249)
+                    : IsDarkPalette() ? Color.FromArgb(41, 64, 86) : Color.FromArgb(221, 234, 245);
             var textColor = !Enabled ? HelpTextColor : TextAccentOnly && Text is "Add row" or "Easy"
                 ? highContrast ? SystemColors.ControlText : IsDarkPalette() ? Color.FromArgb(0x8B, 0xC4, 0xFF) : Color.FromArgb(7, 90, 169)
                 : outlined ? noticeFill : emphasized ? noticeText : primary ? Color.White : ForeColor;
+            if (pageNavigation && Enabled && _hover && !highContrast)
+                textColor = IsDarkPalette() ? Color.FromArgb(234, 243, 255) : Color.FromArgb(16, 54, 84);
             using var shape = ConfigSearchSurface.RoundedRectangle(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), 5);
             using var fill = new SolidBrush(fillColor);
             e.Graphics.FillPath(fill, shape);
@@ -118,8 +148,14 @@ internal sealed partial class MainForm
             {
                 var borderColor = outlined ? Color.FromArgb((noticeFill.R + BorderColor.R) / 2,
                     (noticeFill.G + BorderColor.G) / 2, (noticeFill.B + BorderColor.B) / 2)
-                    : emphasized ? noticeFill : primary ? PrimaryActionColor : FlatAppearance.BorderColor;
-                using var border = new Pen(borderColor, primary || emphasized || outlined ? 1 : FlatAppearance.BorderSize);
+                    : emphasized ? noticeFill : primary ? primaryFill : FlatAppearance.BorderColor;
+                if (!highContrast && Name == "FilesUpdatesCheckMissions" && outlined) borderColor = IsDarkPalette() ? Color.FromArgb(56, 135, 141) : Color.FromArgb(75, 139, 136);
+                else if (!highContrast && SelectionEmphasis && emphasized) borderColor = IsDarkPalette() ? Color.FromArgb(69, 99, 125) : Color.FromArgb(95, 135, 171);
+                if (pageNavigation && Enabled && !highContrast) borderColor = _hover || drawFocusCue
+                    ? IsDarkPalette() ? Color.FromArgb(116, 160, 199) : Color.FromArgb(83, 123, 155)
+                    : IsDarkPalette() ? Color.FromArgb(69, 96, 120) : ControlBorderColor;
+                using var border = new Pen(borderColor, pageNavigation && drawFocusCue && Enabled && !highContrast ? 2
+                    : primary || emphasized || outlined ? 1 : FlatAppearance.BorderSize);
                 e.Graphics.DrawPath(border, shape);
             }
             if (updateNotice)
@@ -154,19 +190,27 @@ internal sealed partial class MainForm
                 if (drawFocusCue) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -5, -5), textColor, fillColor);
                 return;
             }
-            var iconName = Text switch
+            var scanToolbar = Name is "FilesUpdatesCheckMissions" or "FilesUpdatesAutoScan" or "FilesUpdatesSourcesToggle";
+            var iconName = backNavigation ? "Back" : Name switch
+            {
+                "FilesUpdatesCheckMissions" => "Scan", "FilesUpdatesAutoScan" => SelectionEmphasis ? "Check" : "Auto scan", "FilesUpdatesSourcesToggle" => "Scan options",
+                "MissionDownloadChangelog" => "Document",
+                "MissionFilesDelete" => "Remove",
+                "WeatherExportUseOriginalName" => "Undo",
+                _ => Text switch
             {
                 "Theme" => IsDarkPalette() ? "Moon" : "Sun",
                 "Add row" => "Add", "Remove selected" => "Remove", "Presets..." => "Presets",
                 "Refresh release" or "Refreshing…" => "Reload",
                 "Instance ▼" => "Mission options", "Copy To..." => "Copy", "Comments" => "Message Of The Day",
                 _ => ""
+                }
             };
-            var iconSize = Math.Min(18, Math.Max(12, Height - 14));
+            var iconSize = scanToolbar || pageNavigation ? Math.Max(14, Font.Height) : Math.Min(18, Math.Max(12, Height - 14));
             var textSize = TextRenderer.MeasureText(Text, Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
-            var gap = iconName.Length == 0 ? 0 : iconSize + 7;
+            var gap = iconName.Length == 0 ? 0 : iconSize + (scanToolbar || pageNavigation ? Padding.Top : 7);
             var left = Math.Max(7, (Width - textSize.Width - gap) / 2);
-            if (iconName == "Reload") DrawToolbarIcon(e.Graphics, ToolbarIconKind.Reload,
+            if (iconName is "Reload" or "Undo") DrawToolbarIcon(e.Graphics, iconName == "Undo" ? ToolbarIconKind.Undo : ToolbarIconKind.Reload,
                 new Rectangle(left, (Height - iconSize) / 2, iconSize, iconSize), textColor);
             else if (gap > 0) DrawCategoryIcon(e.Graphics, iconName,
                 new Rectangle(left, (Height - iconSize) / 2, iconSize, iconSize), textColor);
@@ -218,6 +262,22 @@ internal sealed partial class MainForm
         void Lines(params PointF[] points) => graphics.DrawLines(pen, points);
         switch (name)
         {
+            case "Back":
+                graphics.DrawLine(pen, 3, 10, 17, 10); Lines(new(9, 4), new(3, 10), new(9, 16)); break;
+            case "Check":
+                Lines(new(4, 10), new(8, 14), new(16, 6)); break;
+            case "Scan":
+                graphics.DrawLine(pen, 3, 7, 3, 3); graphics.DrawLine(pen, 3, 3, 7, 3);
+                graphics.DrawLine(pen, 13, 3, 17, 3); graphics.DrawLine(pen, 17, 3, 17, 7);
+                graphics.DrawLine(pen, 17, 13, 17, 17); graphics.DrawLine(pen, 17, 17, 13, 17);
+                graphics.DrawLine(pen, 7, 17, 3, 17); graphics.DrawLine(pen, 3, 17, 3, 13);
+                graphics.DrawLine(pen, 7, 10, 13, 10); break;
+            case "Auto scan":
+                graphics.DrawArc(pen, 3, 3, 14, 14, 180, 165); graphics.DrawArc(pen, 3, 3, 14, 14, 0, 165);
+                Lines(new(17, 3), new(17, 8), new(12, 8)); Lines(new(3, 17), new(3, 12), new(8, 12)); break;
+            case "Scan options":
+                for (var i = 0; i < 3; i++) { var y = 4 + i * 6; var x = i == 1 ? 6 : 13;
+                    graphics.DrawLine(pen, 2, y, 18, y); graphics.DrawLine(pen, x, y - 2, x, y + 2); } break;
             case "Moon":
                 graphics.DrawArc(pen, 3, 3, 14, 14, 35, 280);
                 graphics.DrawArc(pen, 7, 0, 13, 13, 83, 204); break;

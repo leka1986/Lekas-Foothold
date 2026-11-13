@@ -204,8 +204,8 @@ internal sealed partial class WeatherWindow : Form
         dropLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         dropLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         dropLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        var dropTitle = new Label { Text = "Choose settings, then drop a .miz", AutoSize = true, Font = _boldFont, Margin = Padding.Empty };
-        var dropHelp = new Label { Text = "New MIZ · original unchanged", AutoSize = true, Margin = Padding.Empty };
+        var dropTitle = new Label { Text = "Drop a .miz or .miz.orig", AutoSize = true, Font = _boldFont, Margin = Padding.Empty };
+        var dropHelp = new Label { Text = "Choose settings, then Browse or drop", AutoSize = true, Margin = Padding.Empty };
         dropLayout.Controls.Add(dropTitle, 0, 0);
         dropLayout.Controls.Add(dropHelp, 0, 1);
         _browse = Button("Browse…", BrowseMiz, "WeatherBrowse");
@@ -279,7 +279,7 @@ internal sealed partial class WeatherWindow : Form
 
     internal DragDropEffects WeatherDropEffect(DragEventArgs args) =>
         !_busy && CanApplySelection && args.Data?.GetData(DataFormats.FileDrop) is string[] paths
-            && paths.Length == 1 && Path.GetExtension(paths[0]).Equals(".miz", StringComparison.OrdinalIgnoreCase)
+            && paths.Length == 1 && WeatherMizService.IsMissionInputPath(paths[0])
             ? DragDropEffects.Copy : DragDropEffects.None;
 
     internal Task ApplyDroppedMizAsync(DragEventArgs args) => WeatherDropEffect(args) == DragDropEffects.Copy

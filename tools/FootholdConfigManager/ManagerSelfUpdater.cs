@@ -46,17 +46,7 @@ internal static partial class ManagerSelfUpdater
                 var payload = Path.Combine(stage, "manager-update.exe");
                 var downloadSha256 = await DownloadVerifiedAsync(Client, candidate, payload, cancellationToken).ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                var originalSha256 = FileSha256(target);
-                var helper = Path.Combine(stage, "update-helper.exe");
-                AtomicFile.Copy(target, helper);
-                if (FileSha256(helper) != originalSha256)
-                    throw new InvalidDataException("The private update helper did not match the running Manager.");
-                using var current = Process.GetCurrentProcess();
-                var manifest = new ManagerUpdateManifest(stageId, target, current.Id, current.StartTime.ToUniversalTime().Ticks,
-                    Path.GetFullPath(Environment.CurrentDirectory), ApprovedRestartArguments(Environment.GetCommandLineArgs().Skip(1)),
-                    originalSha256, originalSha256, downloadSha256, candidate.GitBlobSha.ToLowerInvariant(), candidate.Size, 120, 120);
-                AtomicFile.WriteUtf8Text(Path.Combine(stage, "update.json"), JsonSerializer.Serialize(manifest));
-                return new PreparedManagerUpdate(stage, manifest);
+                return PrepareVerifiedHandoff(stage, target, candidate, downloadSha256);
             }
             catch
             {
@@ -244,9 +234,19 @@ internal static partial class ManagerSelfUpdater
 }
 internal sealed record ManagerUpdateManifest(string StageId, string TargetPath, int ParentProcessId, long ParentStartUtcTicks,
     string WorkingDirectory, string[] RestartArguments, string OriginalSha256, string HelperSha256, string DownloadSha256,
-    string GitBlobSha, long DownloadSize, int AuthorizationTimeoutSeconds, int ParentExitTimeoutSeconds);
+    string GitBlobSha, long DownloadSize, int AuthorizationTimeoutSeconds, int ParentExitTimeoutSeconds)
+{
+    public string? DownloadFileName { get; init; }
+    public bool RequireStartupReady { get; init; }
+    public string? LegacyRecoveryStage { get; init; }
+    public int StartupTimeoutSeconds { get; init; } = 120;
+}
 
-internal sealed record ManagerUpdateRecoveryResult(bool Success, bool Cancelled, string Message, string TargetPath, string BackupPath);
+internal sealed record ManagerUpdateRecoveryResult(bool Success, bool Cancelled, string Message, string TargetPath, string BackupPath)
+{
+    public int HelperProcessId { get; init; }
+    public long HelperStartUtcTicks { get; init; }
+}
 
 internal static partial class ManagerSelfUpdater
 {
@@ -259,7 +259,7 @@ internal static partial class ManagerSelfUpdater
         ManagerUpdateRecoveryResult result;
         try { result = RunHelperCore(args[1]); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or
-            InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException or WaitHandleCannotBeOpenedException)
+            InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException or System.Runtime.InteropServices.COMException or WaitHandleCannotBeOpenedException)
         {
             result = new(false, false, "The Manager update was not installed. " + error.Message, "", "");
         }
@@ -277,6 +277,10 @@ internal static partial class ManagerSelfUpdater
         var backup = Path.Combine(stage, "previous-manager.exe");
         ManagerUpdateRecoveryResult result;
         var replaced = false;
+        InstalledManagerUpdate? installed = null;
+        Process? restarted = null;
+        using var started = manifest.RequireStartupReady ? PreparedManagerUpdate.CreateSignal(manifest.StageId, "started") : null;
+        using var finished = manifest.RequireStartupReady ? PreparedManagerUpdate.CreateSignal(manifest.StageId, "finished") : null;
         try
         {
             using var parent = Process.GetProcessById(manifest.ParentProcessId);
@@ -309,37 +313,55 @@ internal static partial class ManagerSelfUpdater
                 VerifyStagedPayload(Path.Combine(stage, "manager-update.exe"), manifest);
                 File.Replace(Path.Combine(stage, "manager-update.exe"), manifest.TargetPath, backup, ignoreMetadataErrors: true);
                 replaced = true;
-                using var restartReadLock = new FileStream(manifest.TargetPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                VerifyStagedPayload(manifest.TargetPath, manifest);
-                var start = new ProcessStartInfo(manifest.TargetPath) { UseShellExecute = false, WorkingDirectory = manifest.WorkingDirectory };
-                foreach (var argument in manifest.RestartArguments) start.ArgumentList.Add(argument);
-                using var restarted = Process.Start(start) ?? throw new IOException("Windows did not start the updated Manager.");
-                result = new(true, false, "The Manager was updated at its existing path. The prior executable is retained at " + backup,
-                    manifest.TargetPath, backup);
+                if (manifest.DownloadFileName is not null) installed = FinalizeInstalledUpdate(stage, manifest);
+                var restartPath = installed?.InstalledPath ?? manifest.TargetPath;
+                using (var restartReadLock = new FileStream(restartPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    VerifyStagedPayload(restartPath, manifest);
+                    var start = new ProcessStartInfo(restartPath) { UseShellExecute = false, WorkingDirectory = manifest.WorkingDirectory };
+                    foreach (var argument in manifest.RestartArguments) start.ArgumentList.Add(argument);
+                    if (manifest.RequireStartupReady) { start.ArgumentList.Add(CompletionArgument); start.ArgumentList.Add(manifestPath); }
+                    restarted = Process.Start(start) ?? throw new IOException("Windows did not start the updated Manager.");
+                }
+                if (manifest.RequireStartupReady) WaitForConfirmedStartup(restarted, started!, stage, manifest, restartPath);
+                result = new(true, false, "The updated Manager opened successfully at " + restartPath, restartPath, backup);
             }
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or
-            InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException or WaitHandleCannotBeOpenedException)
+            InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException or System.Runtime.InteropServices.COMException or WaitHandleCannotBeOpenedException)
         {
-            var recovery = replaced || File.Exists(backup) ? RestorePreviousExecutable(manifest, backup) : "The original executable was kept.";
+            var completionRecovery = "";
+            try
+            {
+                if (restarted is { HasExited: false }) { restarted.Kill(); if (!restarted.WaitForExit(5000)) throw new IOException("The updated process did not stop for recovery."); }
+                installed?.Rollback();
+            }
+            catch (Exception recoveryError) when (recoveryError is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+            { completionRecovery = " Filename/shortcut recovery needs attention: " + recoveryError.Message; }
+            var recovery = (replaced || File.Exists(backup) ? RestorePreviousExecutable(manifest, backup) : "The original executable was kept.") + completionRecovery;
             result = new(false, false, "The Manager update failed. " + error.Message + Environment.NewLine + recovery +
                 Environment.NewLine + "Recovery files: " + stage, manifest.TargetPath, backup);
         }
+        finally { restarted?.Dispose(); }
+        using (var self = Process.GetCurrentProcess()) result = result with { HelperProcessId = self.Id, HelperStartUtcTicks = self.StartTime.ToUniversalTime().Ticks };
         AtomicFile.WriteUtf8Text(Path.Combine(stage, "recovery-result.json"), JsonSerializer.Serialize(result));
+        finished?.Set();
         return result;
     }
 
-    internal static ManagerUpdateManifest ReadHelperManifest(string manifestPath, out string stage)
+    internal static ManagerUpdateManifest ReadHelperManifest(string manifestPath, out string stage) => ReadUpdateManifest(manifestPath, out stage, completing: false);
+
+    private static ManagerUpdateManifest ReadUpdateManifest(string manifestPath, out string stage, bool completing)
     {
         var fullPath = Path.GetFullPath(manifestPath);
         stage = Path.GetDirectoryName(fullPath) ?? throw new InvalidDataException("The update stage is missing.");
         var name = Path.GetFileName(stage);
         if (!name.StartsWith(StagePrefix, StringComparison.Ordinal) || !Guid.TryParseExact(name[StagePrefix.Length..], "N", out _) ||
             !SamePath(fullPath, Path.Combine(stage, "update.json")) ||
-            !SamePath(Environment.ProcessPath!, Path.Combine(stage, "update-helper.exe")) ||
+            !completing && !SamePath(Environment.ProcessPath!, Path.Combine(stage, "update-helper.exe")) ||
             (File.GetAttributes(stage) & FileAttributes.ReparsePoint) != 0 || new FileInfo(fullPath).Length > 64 * 1024)
             throw new InvalidDataException("The helper was not started from its private update stage.");
-        foreach (var file in new[] { fullPath, Path.Combine(stage, "update-helper.exe"), Path.Combine(stage, "manager-update.exe") })
+        foreach (var file in completing ? new[] { fullPath, Path.Combine(stage, "update-helper.exe") } : new[] { fullPath, Path.Combine(stage, "update-helper.exe"), Path.Combine(stage, "manager-update.exe") })
             if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
                 throw new InvalidDataException("Update files cannot be links.");
         ManagerUpdateManifest manifest;
@@ -355,8 +377,15 @@ internal static partial class ManagerSelfUpdater
             !IsSha256(manifest.OriginalSha256) || !IsSha256(manifest.HelperSha256) || !IsSha256(manifest.DownloadSha256) ||
             !Regex.IsMatch(manifest.GitBlobSha ?? "", @"\A[0-9a-f]{40}\z", RegexOptions.CultureInvariant) ||
             manifest.DownloadSize < 128 || manifest.DownloadSize > MaximumExecutableSize ||
-            manifest.AuthorizationTimeoutSeconds is < 1 or > 120 || manifest.ParentExitTimeoutSeconds is < 1 or > 120)
+            manifest.AuthorizationTimeoutSeconds is < 1 or > 120 || manifest.ParentExitTimeoutSeconds is < 1 or > 120 ||
+            manifest.StartupTimeoutSeconds is < 1 or > 120 || manifest.RequireStartupReady && manifest.DownloadFileName is null)
             throw new InvalidDataException("The update manifest does not identify an approved same-path player update.");
+        if (manifest.DownloadFileName is not null)
+        {
+            var install = GetInstallPath(manifest.TargetPath, DownloadCandidate(manifest));
+            if (completing && !SamePath(Environment.ProcessPath!, install)) throw new InvalidDataException("Startup completion came from the wrong executable.");
+        }
+        if (manifest.LegacyRecoveryStage is not null) ReadLegacyRecovery(manifest.LegacyRecoveryStage, manifest.TargetPath, manifest.OriginalSha256);
         return manifest;
     }
 
@@ -382,11 +411,20 @@ internal static partial class ManagerSelfUpdater
     {
         try
         {
-            if (FileSha256(backup) != manifest.OriginalSha256)
+            var restoreSha256 = manifest.OriginalSha256;
+            if (manifest.LegacyRecoveryStage is not null)
+            {
+                var legacy = ReadLegacyRecovery(manifest.LegacyRecoveryStage, manifest.TargetPath, manifest.OriginalSha256);
+                var originalBackup = Path.Combine(manifest.LegacyRecoveryStage, "previous-manager.exe");
+                backup = Path.Combine(Path.GetDirectoryName(backup)!, "recovery-original-manager.exe");
+                AtomicFile.Copy(originalBackup, backup);
+                restoreSha256 = legacy.OriginalSha256;
+            }
+            if (FileSha256(backup) != restoreSha256)
                 return "Automatic recovery was refused because the backup identity changed. Recovery backup: " + backup;
             if (File.Exists(manifest.TargetPath)) File.Replace(backup, manifest.TargetPath, destinationBackupFileName: null, ignoreMetadataErrors: true);
             else File.Move(backup, manifest.TargetPath);
-            return FileSha256(manifest.TargetPath) == manifest.OriginalSha256
+            return FileSha256(manifest.TargetPath) == restoreSha256
                 ? "The previous executable was restored. Start it again at " + manifest.TargetPath
                 : "Recovery could not be verified. Recovery backup: " + backup;
         }
@@ -468,7 +506,11 @@ internal sealed class PreparedManagerUpdate : IDisposable
     }
 
     // The owner must call this only from the actual, uncancelled FormClosed event.
-    public void AuthorizeAfterFormClosed()
+    public void AuthorizeAfterFormClosed() => AuthorizeExit();
+
+    internal void AuthorizeStartupMigrationExit() => AuthorizeExit();
+
+    private void AuthorizeExit()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_helper is null || _helper.HasExited || !_ready.WaitOne(0))
@@ -497,7 +539,7 @@ internal sealed class PreparedManagerUpdate : IDisposable
         if (!_authorized) ManagerSelfUpdater.DeleteOwnedStage(StagingDirectory);
     }
 
-    private static EventWaitHandle CreateSignal(string stageId, string purpose)
+    internal static EventWaitHandle CreateSignal(string stageId, string purpose)
     {
         var signal = new EventWaitHandle(false, EventResetMode.ManualReset, ManagerSelfUpdater.EventName(stageId, purpose), out var createdNew);
         if (createdNew) return signal;

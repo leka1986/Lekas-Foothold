@@ -57,7 +57,7 @@ internal sealed partial class MainForm
         if (preparation is null) return "Missions not scanned";
         var rows = preparation.Rows.Where(row => row.GroupId == groupId).ToArray();
         var status = "Last scan: " + rows.Length + " MIZs, "
-            + rows.Count(row => preparation.Compatible.ContainsKey(row.Path)) + " compatible";
+            + rows.Count(row => row.State == FileUpdateInspectionState.Compatible) + " compatible";
         var group = preparation.Groups.FirstOrDefault(group => group.Id == groupId);
         if (group is not null && group.Status != "No MIZ files" && !group.Status.EndsWith(" MIZ files", StringComparison.Ordinal))
             status += " · " + group.Status;
@@ -100,6 +100,7 @@ internal sealed partial class MainForm
             PresentUpdateResult(await _updateChecker.BeginInteractiveLaunchAsync(token));
             if (!IsDisposed && !Disposing && _updatesResult?.AutomaticChecksEnabled == true)
                 await CheckForUpdatesAsync(force: true);
+            BeginSilentMissionScan();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { if (!IsDisposed && !Disposing) { _updatesError = error.Message; RefreshUpdatesPresentation(); } }
@@ -192,9 +193,9 @@ internal sealed partial class MainForm
         await BeginUpdateChecksAsync();
         if (IsDisposed || Disposing || _updatesPanel is not { Visible: true } || _updatesContent is not { Visible: true }
             || _missionDownloadBusy || _configLoadingOperation || _updatesInstalling || _updatesBusy
-            || _updatesResult is not { FilesEnvelopeAvailable: true }
-            || (CaptureMissionFilesRoots().Length == 0 && CaptureMissionFilesExternalPaths().Length == 0)) return;
-        _missionDownloadJob = OpenMissionFilesAsync(refreshInventory: true, showUpdater: false);
+            || _updatesResult is not { FilesEnvelopeAvailable: true } || !_settings.AutomaticMissionScan
+            || (CaptureMissionRoots(scanSourcesOnly: true).Length == 0 && CaptureMissionFilesExternalPaths().Length == 0)) return;
+        _missionDownloadJob = OpenMissionFilesAsync(showUpdater: false);
         await _missionDownloadJob;
     }
 
@@ -224,6 +225,9 @@ internal sealed partial class MainForm
                 await OpenMissionDownloadsAsync(release);
         }, () => _ = OpenFootholdReleaseAsync(), LeaveUpdatesPanel, () => _ = CheckForUpdatesAsync(force: true));
         _updatesContent = _missionFilesUpdatesView!;
+        _updatesContent.AutoSize = false;
+        _updatesContent.Dock = DockStyle.None;
+        _updatesContent.VisibleChanged += (_, _) => { if (_updatesContent.Visible) LayoutUpdatesPanel(); };
         _updatesPanel.Controls.Add(_updatesContent);
         _updatesHeading = EnumerateChildControls<Label>(_updatesContent).First(label => label.Text == "Updates");
         _updatesManagerTitle = EnumerateChildControls<Label>(_updatesContent).First(label => label.Text == "Foothold Config Manager");
@@ -231,6 +235,7 @@ internal sealed partial class MainForm
         _updatesFootholdTitle = _missionFilesReleaseTitle;
         _updatesFootholdDetail = _missionFilesReleaseDetail;
         _updatesManagerAction = MissionFilesButton("FilesUpdatesManagerAction", AppMode.IsExportedUserBuild ? "Update Manager" : "View download", () => _ = UpdateManagerFromNoticeAsync());
+        ((PreviewButton)_updatesManagerAction).AccentOutline = true;
         _updatesSkip = MissionFilesButton("FilesUpdatesSkip", "Skip this version", () =>
         {
             if (_updatesResult?.Manager.Data is { } displayed)
@@ -274,22 +279,25 @@ internal sealed partial class MainForm
         // The retained Task1 component owns its cached presentation fonts.
         if (changedFont) { LayoutMissionDownloads(); oldHeading?.Dispose(); oldSection?.Dispose(); }
         if (!_updatesPreparingReveal && (!_updatesPanel.Visible || !_updatesContent.Visible)) return;
+        // Reserve the scrollbar gutter, so expanding sources cannot change the page width.
+        _updatesContent.Width = Math.Max(1, _updatesPanel.Width - SystemInformation.VerticalScrollBarWidth);
         _updatesContent.Padding = new Padding(Zoomed(24));
-        var width = Math.Max(1, _updatesPanel.ClientSize.Width - _updatesContent.Padding.Horizontal - Zoomed(18));
+        var width = Math.Max(1, _updatesContent.Width - _updatesContent.Padding.Horizontal - Zoomed(18));
         foreach (var label in EnumerateChildControls<Label>(_updatesContent)) label.MaximumSize = new Size(width, 0);
         foreach (var action in _updatesContent.Controls.OfType<FlowLayoutPanel>()) action.MaximumSize = new Size(width, 0);
+        SizeMissionFilesUpdatesView();
     }
 
-    private void RefreshUpdatesPresentation()
+    private void RefreshUpdatesButtonPresentation(UpdateCheckResult? result)
     {
-        if (IsDisposed || Disposing) return;
-        if (_updateChecker is { } checker && _updatesResult is { } retained) _updatesResult = checker.AgeSnapshot(retained);
-        var result = _updatesResult;
         var managerNotice = result?.ManagerUpdateAvailable == true;
-        var missionNotice = result?.FootholdUpdateAvailable == true;
+        var compatibleMissionNotice = result is { FilesEnvelopeAvailable: true, FootholdReleaseAcknowledged: false }
+            && _missionFilesPresentedPreparation?.Rows.Any(row => row.State == FileUpdateInspectionState.Compatible) == true
+            && HasCurrentMissionFilesPreparation(result, CaptureMissionRoots(scanSourcesOnly: true), CaptureMissionFilesExternalPaths());
+        var missionNotice = result?.FootholdUpdateAvailable == true || compatibleMissionNotice;
         var hasNotice = managerNotice || missionNotice;
         var caption = managerNotice && missionNotice ? "New updates available"
-            : managerNotice ? "Manager update available" : missionNotice ? "New mission release" : "Updates";
+            : managerNotice ? "Manager update available" : compatibleMissionNotice ? "Mission update available" : missionNotice ? "New mission release" : "Updates";
         if (_updatesButton is PreviewButton updateButton)
         {
             var changed = updateButton.Text != caption || updateButton.HasUpdateNotice != hasNotice;
@@ -302,18 +310,26 @@ internal sealed partial class MainForm
                 updateButton.Update(); // Flush the invalidation raised by the text/notice change without waiting for hover.
             }
         }
+    }
+
+    private void RefreshUpdatesPresentation()
+    {
+        if (IsDisposed || Disposing) return;
+        if (_updateChecker is { } checker && _updatesResult is { } retained) _updatesResult = checker.AgeSnapshot(retained);
+        var result = _updatesResult;
+        RefreshUpdatesButtonPresentation(result);
         RefreshManagerUpdateNotice();
         RefreshMissionReleaseActions();
         if (_updatesPanel is null || _updatesContent is null
             || !_updatesPreparingReveal && (!_updatesPanel.Visible || !_updatesContent.Visible)) return;
-        var layouts = new Control?[] { _updatesPanel, _updatesContent, _missionFilesUpdatesDetails, _missionFilesUpdateInstances }
-            .Concat(_missionFilesUpdateInstanceRows.Values.Select(row => (Control?)row.Row)).ToArray();
-        foreach (var control in layouts) control?.SuspendLayout();
-        try
-        {
+        UpdateMissionFilesUpdatesLayout(() => {
+        PresentMissionScanPreferences();
         if (result is null)
         {
-            _missionFilesUpdatesDetails!.Visible = false;
+            _missionFilesUpdatesDetails!.Visible = true;
+            _missionFilesPreservationCallout!.Visible = false;
+            _missionFilesUpdatesCheckMissions!.Enabled = _missionFilesUpdatesOpen!.Enabled = false;
+            _missionFilesUpdatesAddFolder!.Enabled = _missionFilesUpdatesAddMiz!.Enabled = _missionFilesUpdatesAutoScan!.Enabled;
             _updatesStatus!.Text = _updatesError ?? (_updatesBusy ? "Checking GitHub…" : "Loading saved update information…");
             _updatesManagerAction!.Visible = _updatesSkip!.Visible = _updatesReleaseAction!.Visible = _updatesDismiss!.Visible = false;
             _missionFilesDownloadsSection!.Visible = false;
@@ -349,42 +365,55 @@ internal sealed partial class MainForm
             _updatesDismiss!.Visible = result.FootholdUpdateAvailable;
             _updatesAutomatic!.Checked = result.AutomaticChecksEnabled;
             _updatesCheck!.Enabled = !_updatesBusy && !_updatesInstalling;
-            _updatesStatus!.Text = _updatesInstalling ? "Preparing the Manager update…" : _updatesBusy ? "Checking GitHub…" : _updatesError ?? result.PersistenceError ?? (result.AutomaticChecksEnabled ? "Checks GitHub on every startup. Check again refreshes now." : "Automatic checks are off. Use Check again to check GitHub.");
-            var filesAvailable = result.FilesEnvelopeAvailable;
-            var roots = CaptureMissionFilesRoots();
-            var externalPaths = CaptureMissionFilesExternalPaths();
-            var preparation = HasCurrentMissionFilesPreparation(result, roots, externalPaths) ? _missionFilesPreparation : null;
-            var compatibleCount = preparation?.Compatible.Count ?? 0;
-            var compatibleGroups = preparation?.Rows
-                .Where(row => preparation.Compatible.ContainsKey(row.Path))
-                .Select(row => row.GroupId).ToHashSet(StringComparer.Ordinal);
-            var sourceRows = roots.Where(root => compatibleGroups?.Contains(root.Id) == true)
-                .Select(root => (root.Id, root.Name, MissionFilesScanStatus(root.Id, preparation))).ToList();
-            if (compatibleGroups?.Contains("external") == true)
-                sourceRows.Add(("external", "Added missions", MissionFilesScanStatus("external", preparation)));
-            _missionFilesUpdatesDetails!.Visible = filesAvailable;
-            _missionFilesUpdatesScanStatus!.Text = preparation is null
-                ? roots.Length == 0 && externalPaths.Length == 0 ? "No mission folders found. Add a mission folder to check."
-                    : "Check your mission folders for compatible MIZs."
-                : compatibleCount == 0 ? "No compatible missions found in the folders checked."
-                : compatibleCount == 1 ? "1 compatible mission found" : $"{compatibleCount} compatible missions found";
-            _missionFilesPreservationCallout!.Visible = compatibleCount > 0;
-            var canOpenFiles = filesAvailable && MissionFilesOpenRequested is not null
-                && !_updatesBusy && !_missionDownloadBusy && !_updatesInstalling && !_configLoadingOperation;
-            _missionFilesUpdatesOpen!.Visible = compatibleCount > 0;
-            _missionFilesUpdatesOpen.Enabled = _missionFilesUpdatesAddFolder!.Enabled = _missionFilesUpdatesAddMiz!.Enabled = canOpenFiles;
-            _missionFilesUpdatesCheckMissions!.Enabled = canOpenFiles && (roots.Length > 0 || externalPaths.Length > 0);
+            _updatesStatus!.Text = _updatesInstalling ? "Preparing the Manager update…" : _updatesBusy ? "Checking GitHub…" : _updatesError ?? result.PersistenceError ?? (result.AutomaticChecksEnabled ? "Checks GitHub for Manager and mission releases on startup. Check again refreshes both." : "Startup release checks are off. Check again checks Manager and mission releases.");
             var managerText = _updatesBusy ? "Checking GitHub…" : result.Manager.Status == UpdateFeedStatus.Fresh && manager is not null && result.ManagerUpdateDownloadAvailable
                 ? "Manager " + manager.Version.ToString(manager.Version.Revision == 0 ? 3 : 4) + (result.ManagerUpdateAvailable ? " is available" : " · reminder skipped")
                 : _updatesManagerDetail.Text;
-            PresentMissionFilesUpdates(new(!_updatesBusy && result.ManagerVerifiedCurrent, managerText, _updatesFootholdTitle.Text, compatibleCount > 0,
-                sourceRows.ToArray()));
+            RefreshMissionScanPresentation(result, !_updatesBusy && result.ManagerVerifiedCurrent, managerText);
 
         }
         finally { _updatesRendering = false; }
         LayoutUpdatesPanel();
+        });
+    }
+
+    private void RefreshMissionScanPresentation(UpdateCheckResult result, bool managerVerifiedCurrent, string managerText)
+    {
+        var filesAvailable = result.FilesEnvelopeAvailable;
+        var roots = CaptureMissionRoots(scanSourcesOnly: true);
+        var externalPaths = CaptureMissionFilesExternalPaths();
+        var preparation = HasCurrentMissionFilesPreparation(result, roots, externalPaths) ? _missionFilesPresentedPreparation : null;
+        var compatibleCount = preparation?.Rows.Count(row => row.State == FileUpdateInspectionState.Compatible) ?? 0;
+        var installedCount = preparation?.Rows.Count(row => row.IsCurrentVersion) ?? 0;
+        var sourceRows = roots.Where(root => !_settings.MissionScanCustomSourcesOnly && !root.Id.StartsWith("source-folder:", StringComparison.Ordinal))
+            .Select(root => (root.Id, root.Name, MissionFilesScanStatus(root.Id, preparation))).ToList();
+        foreach (var folder in _missionSourceFolders)
+        {
+            var id = "source-folder:" + folder.ToUpperInvariant();
+            var scannedId = roots.FirstOrDefault(root => PathsEqual(root.MissionsDirectory, folder))?.Id ?? id;
+            sourceRows.Add((id, folder, MissionFilesScanStatus(scannedId, preparation)));
         }
-        finally { foreach (var control in layouts.Reverse()) if (control is { IsDisposed: false }) control.ResumeLayout(true); }
+        foreach (var path in externalPaths)
+            sourceRows.Add(("source-file:" + path.ToUpperInvariant(), path, preparation is null ? "Missions not scanned"
+                : preparation.Rows.FirstOrDefault(row => PathsEqual(row.Path, path)) is { } row ? row.State.ToString() : "Not found in last scan"));
+        _missionFilesUpdatesDetails!.Visible = true;
+        _missionFilesUpdatesScanStatus!.Text = preparation is null
+            ? roots.Length == 0 && externalPaths.Length == 0 ? "No mission folders found. Add a mission folder to check."
+                : "Choose Scan now to check your sources."
+            : compatibleCount == 0 ? installedCount > 0 ? installedCount + " currently installed; no older missions need updating."
+                : "No compatible missions found in the folders checked."
+            : compatibleCount == 1 ? "1 compatible mission found" : $"{compatibleCount} compatible missions found";
+        if (!string.IsNullOrEmpty(_missionUnresolvedFolders)) _missionFilesUpdatesScanStatus.Text += Environment.NewLine + _missionUnresolvedFolders;
+        _missionFilesPreservationCallout!.Visible = filesAvailable;
+        var canOpenFiles = filesAvailable && MissionFilesOpenRequested is not null
+            && !_updatesBusy && !_missionDownloadBusy && !_updatesInstalling && !_configLoadingOperation;
+        _missionFilesUpdatesOpen!.Visible = true;
+        _missionFilesUpdatesOpen.Enabled = canOpenFiles && (compatibleCount > 0 || installedCount > 0);
+        ((PreviewButton)_missionFilesUpdatesOpen).AccentOutline = compatibleCount > 0;
+        _missionFilesUpdatesAddFolder!.Enabled = _missionFilesUpdatesAddMiz!.Enabled = _missionFilesUpdatesAutoScan!.Enabled;
+        _missionFilesUpdatesCheckMissions!.Enabled = canOpenFiles && (roots.Length > 0 || externalPaths.Length > 0);
+        PresentMissionFilesUpdates(new(managerVerifiedCurrent, managerText, _updatesFootholdTitle!.Text, compatibleCount > 0,
+            sourceRows.ToArray()));
     }
 
     private static string FeedDetail<T>(UpdateFeedResult<T> feed, string good) where T : class => feed.Status switch
@@ -419,7 +448,7 @@ internal sealed partial class MainForm
         try
         {
             if (!AppMode.IsExportedUserBuild) { OpenUpdatePage(manager.HtmlUrl); return; }
-            if (MessageBox.Show(this, "Download and install Manager " + manager.Version.ToString(manager.Version.Revision == 0 ? 3 : 4) + "? The Manager will save your changes, close and restart at its current location.",
+            if (MessageBox.Show(this, "Download and install Manager " + manager.Version.ToString(manager.Version.Revision == 0 ? 3 : 4) + "? The Manager will save your changes, close and restart using the new versioned filename. Matching shortcuts will be updated.",
                 "Update Manager", MessageBoxButtons.OKCancel, MessageBoxIcon.Information) != DialogResult.OK) return;
             _updatesInstalling = true;
             _updatesError = null;
@@ -432,6 +461,8 @@ internal sealed partial class MainForm
                     MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
             if (_document is not null) SaveConfig();
             if (!_lastConfigSaveSucceeded && _document is not null || HasChanges()) { _updatesError = "The configuration or its preset was not saved. The Manager was kept open."; return; }
+            await SettleMissionScanBeforeManagerUpdateAsync(token);
+            if (IsDisposed || Disposing) return;
             await prepared.StartHelperAsync(token);
             if (IsDisposed || Disposing) return;
             var closed = false;
@@ -456,6 +487,14 @@ internal sealed partial class MainForm
         catch (OperationCanceledException) { if (!IsDisposed && !Disposing) _updatesError = "The update was cancelled. Your original Manager was kept."; }
         catch (Exception error) { if (!IsDisposed && !Disposing) _updatesError = error.Message; }
         finally { if (!IsDisposed && !Disposing) { _updatesInstalling = false; RefreshUpdatesPresentation(); } }
+    }
+
+    private async Task SettleMissionScanBeforeManagerUpdateAsync(CancellationToken token)
+    {
+        if (_missionFilesBackgroundTask is not { IsCompleted: false } scan) return;
+        _missionFilesScan?.Cancellation.Cancel();
+        await scan; // Keep the prepared helper alive until shared scan cleanup has finished.
+        token.ThrowIfCancellationRequested();
     }
 
     private sealed class ManagerUpdateNoticeForm : Form
@@ -554,6 +593,8 @@ internal sealed partial class MainForm
             notice.Close();
             _ = UpdateManagerFromNoticeAsync(); // The existing action owns confirmation, Save and updater authorization.
         });
+        update.Name = "FilesUpdatesManagerAction";
+        ((PreviewButton)update).AccentOutline = true;
         var later = MakeButton("Later", () => notice.Close());
         actions.Controls.Add(update);
         actions.Controls.Add(later);

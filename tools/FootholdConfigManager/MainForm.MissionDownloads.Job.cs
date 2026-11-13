@@ -15,6 +15,7 @@ internal sealed partial class MainForm
         var assets = _missionAssetChecks.Values.Where(check => check.Checked).Select(check => (MissionReleaseAsset)check.Tag!).ToArray();
         if (assets.Length == 0) return;
         var zipOnly = _missionZipOnly!.Checked;
+        var registerServer = !zipOnly && CanOfferDownloadServerRegistration && _missionDownloadRegisterServer?.Checked == true;
         var destination = (_missionDestination!.SelectedItem as InstanceItem)?.Profile;
         if (!zipOnly && destination is null) return;
         var instances = SelectedMissionConfigTargets.Select(item => item.Profile).ToArray();
@@ -49,6 +50,7 @@ internal sealed partial class MainForm
                 ConfigPath = destination.ConfigPath, MissionDirectory = missionDirectory };
         try { if (!zipOnly) missionDirectory = CaptureCustomMissionOutputDirectory() ?? missionDirectory; }
         catch (InvalidDataException error) { _missionDownloadSummary!.Text = error.Message; return; }
+        var registrationTargets = registerServer ? CaptureDownloadServerRegistrationTargets() : [];
         _missionDownloadBusy = true;
         _missionDownloadsPanel!.Enabled = false;
         _missionDownloadResultDetails!.Hide();
@@ -60,6 +62,7 @@ internal sealed partial class MainForm
         RefreshUpdatesPresentation();
         ReviewedMissionDownload? reviewed = null;
         MissionDownloadResult? result = null;
+        IReadOnlyList<DcsServerActionOutcome> serverOutcomes = [];
         try
         {
             _missionDownloadService ??= new MissionDownloadService();
@@ -146,6 +149,17 @@ internal sealed partial class MainForm
                 await RunConfigLoadingAsync(async (progress, token) =>
                 {
                     result = await ExecuteMissionDownloadAsync(reviewed, progress, token);
+                    try
+                    {
+                        if (registerServer && !result.Cancelled && !token.IsCancellationRequested)
+                            serverOutcomes = await RegisterCreatedMissionsAsync(result.Installed, registrationTargets, progress, token);
+                    }
+                    finally
+                    {
+                        try { await RefreshMissionFilesAfterFullInstallAsync(result.Installed); }
+                        catch (OperationCanceledException) when (_updatesLifetime.IsCancellationRequested || _missionCloseRequested) { }
+                        catch (Exception error) { result.Warnings.Add("Could not refresh mission update status: " + error.Message); }
+                    }
                 }, cancellation.Token, "Installing missions…", finishCommittedPreparation: true, errorTitle: "Download missions");
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
@@ -162,6 +176,17 @@ internal sealed partial class MainForm
             {
                 _missionDownloadsPanel.Enabled = true;
                 if (result is not null && result.Installed.Count > 0) RecordInstalledMissionWarehouseSources(result.Installed);
+                if (result is not null && reviewed is not null && !zipOnly)
+                {
+                    _missionDownloadsRendering = true;
+                    try
+                    {
+                        foreach (var group in reviewed.Outputs.GroupBy(output => output.Template.Asset.Id))
+                            if (group.All(output => result.Installed.Contains(output.OutputPath, StringComparer.OrdinalIgnoreCase))
+                                && _missionAssetChecks.TryGetValue(group.Key, out var check)) check.Checked = false;
+                    }
+                    finally { _missionDownloadsRendering = false; }
+                }
                 RefreshMissionDownloadSelection();
                 if (result is null) _missionDownloadSummary!.Text = "No installation started. Your prepared downloads remain available to try again.";
                 else
@@ -174,7 +199,8 @@ internal sealed partial class MainForm
                         .Concat(result.Skipped.Select(path => "Skipped: " + path))
                         .Concat(result.Failed.Select(path => "Not installed: " + path))
                         .Concat(result.FailedConfigs.Select(path => "Config not updated: " + path))
-                        .Concat(result.Warnings.Select(warning => "Warning: " + warning));
+                        .Concat(result.Warnings.Select(warning => "Warning: " + warning))
+                        .Concat(serverOutcomes.Select(FormatServerRegistrationOutcome));
                     _missionDownloadResultDetails.Text = string.Join(Environment.NewLine, lines);
                     _missionDownloadResultsToggle!.Show();
                 }
@@ -221,7 +247,8 @@ internal sealed partial class MainForm
     }
     private void OnMissionDownloadClosing(object? sender, FormClosingEventArgs e)
     {
-        if (!_missionDownloadBusy) return;
+        if (!_missionDownloadBusy && _missionFilesBackgroundTask is not { IsCompleted: false }) return;
+        _missionFilesScan?.Cancellation.Cancel();
         if (e.CloseReason == CloseReason.WindowsShutDown) { _missionDownloadCancellation?.Cancel(); return; }
         e.Cancel = true;
         _missionCloseRequested = true;
@@ -231,7 +258,8 @@ internal sealed partial class MainForm
     private void DisposeMissionDownloadState()
     {
         _missionDownloadCancellation?.Cancel();
-        if (_missionDownloadBusy) return; // The job's finally disposes only after its work has settled.
+        _missionFilesScan?.Cancellation.Cancel();
+        if (_missionDownloadBusy || _missionFilesScan is not null) return; // Settle shared scan work before disposing its service.
         _missionDownloadService?.Dispose();
         _missionDownloadService = null;
         _missionFilesService?.Dispose();

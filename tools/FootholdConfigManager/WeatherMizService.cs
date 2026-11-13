@@ -6,7 +6,12 @@ using System.Text;
 namespace FootholdConfigManager;
 
 internal sealed record WeatherMizResult(string OutputPath, string? BackupPath);
-internal sealed record WeatherMizExportChoice(string FileName, string Directory, bool KeepBoth);
+internal sealed record WeatherMizExportChoice(string FileName, string Directory, bool KeepBoth)
+{
+    public bool SaveAsOriginal { get; init; }
+    public string? OriginalMissionsDirectory { get; init; }
+    public MissionPathIdentity? ReplacementIdentity { get; init; }
+}
 internal sealed record WeatherMizNamingContext(string InputPath, double? SourceStartTimeSeconds)
 {
     public WeatherMizExportChoice? ExistingChoice { get; init; }
@@ -18,6 +23,26 @@ internal static class WeatherMizService
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private sealed record Member(string Name, long Length, byte[] Hash);
+
+    internal static bool IsMissionInputPath(string path) => path.EndsWith(".miz", StringComparison.OrdinalIgnoreCase)
+        || path.EndsWith(".miz.orig", StringComparison.OrdinalIgnoreCase);
+
+    internal static bool BotOriginalsAvailable(string inputPath, string? missionsDirectory)
+    {
+        return HasOriginals(Path.GetDirectoryName(Path.GetFullPath(inputPath))) || HasOriginals(missionsDirectory);
+        static bool HasOriginals(string? directory)
+        {
+            if (directory is null) return false;
+            if (Directory.Exists(Path.Combine(directory, ".dcssb"))) return true;
+            for (var current = new DirectoryInfo(directory); current is not null; current = current.Parent)
+            {
+                if (current.Name.Equals(".dcssb", StringComparison.OrdinalIgnoreCase)) return current.Exists;
+                if (current.Name.Equals("Missions", StringComparison.OrdinalIgnoreCase))
+                    return Directory.Exists(Path.Combine(current.FullName, ".dcssb"));
+            }
+            return false;
+        }
+    }
 
     internal static PreparedMissionInput GetPreparedMissionInput(PreparedMissionTemplate template,
         Dictionary<PreparedMissionTemplate, PreparedMissionInput> inputs)
@@ -37,8 +62,8 @@ internal static class WeatherMizService
         if (!includeWeatherAndTime && !includeMissionOptions)
             throw new InvalidDataException("Choose Weather + date & time, Mission options, or both to import.");
         mizPath = Path.GetFullPath(mizPath);
-        if (!Path.GetExtension(mizPath).Equals(".miz", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Choose a .miz mission file.");
+        if (!IsMissionInputPath(mizPath))
+            throw new InvalidDataException("Choose a .miz or .miz.orig mission file.");
         using var sourceFile = new FileStream(mizPath, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
         using var source = new ZipArchive(sourceFile, ZipArchiveMode.Read);
         var missions = source.Entries.Where(entry => entry.FullName == "mission").ToArray();
@@ -325,8 +350,8 @@ internal static class WeatherMizService
         MissionPathIdentity? reviewedIdentity = null, MissionWarehouseCopy? warehouseCopy = null, PreparedMissionInput? preparedInput = null)
     {
         mizPath = Path.GetFullPath(mizPath);
-        if (!Path.GetExtension(mizPath).Equals(".miz", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Choose a .miz mission file.");
+        if (!IsMissionInputPath(mizPath))
+            throw new InvalidDataException("Choose a .miz or .miz.orig mission file.");
         if (settings is null && options is null && dateTime is null && warehouseCopy is null) throw new InvalidDataException("Choose Weather, Date & time, Mission options, or a combination to apply.");
         var warehouseOnly = warehouseCopy is not null && settings is null && options is null && dateTime is null;
         settings?.Validate();
@@ -419,9 +444,31 @@ internal static class WeatherMizService
                         if (!Path.IsPathFullyQualified(choice.Directory)) throw new InvalidDataException("Choose a full mission destination folder.");
                         directory = Path.GetFullPath(choice.Directory);
                         if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("The selected mission destination folder is unavailable: " + directory);
-                        selectedName = WeatherExportNames.Normalize(choice.FileName, mizPath, directory, choice.KeepBoth);
+                        if (choice.SaveAsOriginal && !BotOriginalsAvailable(mizPath, choice.OriginalMissionsDirectory ?? directory))
+                            throw new InvalidDataException("DCSServerBot originals are available only for a detected bot mission folder.");
+                        selectedName = WeatherExportNames.Normalize(choice.FileName, mizPath, directory,
+                            choice.KeepBoth || choice.ReplacementIdentity is not null, choice.SaveAsOriginal);
+                        if (choice.ReplacementIdentity is { } replacement)
+                        {
+                            var candidate = Path.GetFullPath(Path.Combine(directory, selectedName));
+                            if (!choice.SaveAsOriginal || choice.KeepBoth || !replacement.Exists
+                                || !candidate.Equals(replacement.Path, StringComparison.OrdinalIgnoreCase))
+                                throw new InvalidDataException("Only a confirmed DCSServerBot original can be replaced here.");
+                            replacement.RequireUnchanged();
+                            if (candidate.Equals(mizPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                sourceFile.Position = 0;
+                                if (sourceFile.Length != replacement.Length
+                                    || !Convert.ToHexString(SHA256.HashData(sourceFile)).Equals(replacement.Sha256, StringComparison.OrdinalIgnoreCase))
+                                    throw new InvalidDataException("The source original changed while settings were being prepared. Choose it again.");
+                            }
+                            reviewedIdentity = replacement;
+                            preparedOutputPath = outputPath = candidate;
+                            replacePreparedOutput = true;
+                            break;
+                        }
                     }
-                    var fileName = selectedName ?? Path.GetFileNameWithoutExtension(mizPath) + (settings is null ? " - Options.miz" : " - Weather.miz");
+                    var fileName = selectedName ?? WeatherExportNames.MissionStem(mizPath) + (settings is null ? " - Options.miz" : " - Weather.miz");
                     for (var number = 1; ; number++)
                     {
                         var candidate = Path.Combine(directory, WeatherExportNames.NumberedName(fileName, number));

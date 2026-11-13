@@ -48,9 +48,22 @@ internal static class WeatherExportNames
         return string.Join("_", parts) + ".miz";
     }
 
+    internal static string MissionStem(string fileName) => Path.GetFileNameWithoutExtension(
+        fileName.EndsWith(".miz.orig", StringComparison.OrdinalIgnoreCase) ? fileName[..^5] : fileName);
+
+    internal static string WithMissionExtension(string fileName, bool original)
+    {
+        fileName = fileName.Trim();
+        var suffix = original ? ".miz.orig" : ".miz";
+        if (fileName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) return fileName;
+        var length = fileName.EndsWith(".miz.orig", StringComparison.OrdinalIgnoreCase) ? 9
+            : fileName.EndsWith(".miz", StringComparison.OrdinalIgnoreCase) ? 4 : 0;
+        return fileName[..(fileName.Length - length)] + suffix;
+    }
+
     private static List<string> BaseParts(string sourceFileName, string? era)
     {
-        var stem = EraAndLanguage.Replace(Path.GetFileNameWithoutExtension(sourceFileName), "").Trim('_', '-', ' ');
+        var stem = EraAndLanguage.Replace(MissionStem(sourceFileName), "").Trim('_', '-', ' ');
         var parts = new List<string> { stem.Length == 0 ? "Mission" : stem };
         if (!string.IsNullOrWhiteSpace(era))
         {
@@ -63,14 +76,14 @@ internal static class WeatherExportNames
     public static string Normalize(string fileName, string sourcePath) =>
         Normalize(fileName, sourcePath, Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, false);
 
-    public static string Normalize(string fileName, string sourcePath, string destinationDirectory, bool keepBoth)
+    public static string Normalize(string fileName, string sourcePath, string destinationDirectory, bool keepBoth, bool original = false)
     {
         fileName = fileName.Trim();
         if (fileName.Length == 0 || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
             || !string.Equals(Path.GetFileName(fileName), fileName, StringComparison.Ordinal))
             throw new InvalidDataException("Enter a filename only, without folders or invalid filename characters.");
-        if (!fileName.EndsWith(".miz", StringComparison.OrdinalIgnoreCase)) fileName += ".miz";
-        var stem = Path.GetFileNameWithoutExtension(fileName).TrimEnd(' ', '.');
+        fileName = WithMissionExtension(fileName, original);
+        var stem = MissionStem(fileName).TrimEnd(' ', '.');
         if (stem.Length == 0 || Regex.IsMatch(stem, @"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)",
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
             throw new InvalidDataException("Choose a valid Windows mission filename.");
@@ -82,7 +95,7 @@ internal static class WeatherExportNames
     }
 
     public static string NumberedName(string fileName, int number) => number == 1 ? fileName
-        : Path.GetFileNameWithoutExtension(fileName) + " (" + number + ")" + Path.GetExtension(fileName);
+        : MissionStem(fileName) + " (" + number + ")" + (fileName.EndsWith(".miz.orig", StringComparison.OrdinalIgnoreCase) ? ".miz.orig" : Path.GetExtension(fileName));
 
     public static string AvailableName(string directory, string fileName)
     {

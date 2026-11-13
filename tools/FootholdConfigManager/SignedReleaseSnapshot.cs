@@ -11,16 +11,16 @@ internal sealed partial class SignedReleaseService
     private static readonly string[] SourceInputs = """
         AppMode.cs AtomicFile.cs BoundedLruSet.cs ConfigConditions.cs ConfigDocument.cs
         ConfigDocument.GuiCommentFacts.cs ConfigDocument.ManagedLists.cs ConfigDocument.RequiredConditions.cs
-        ConfigDocument.RequiredValues.cs ConfigDocument.TupleChoices.cs ConfigLoadCandidateSelector.cs
+        ConfigDocument.RequiredValues.cs ConfigDocument.TupleChoices.cs ConfigDocument.WarehouseWeaponLocations.cs ConfigLoadCandidateSelector.cs
         ConfigSearchIndex.cs ControlTreeDisposer.cs DcsWeatherCatalog.cs DebouncedSearchQuery.cs
         DuplicateTableRepair.cs ExperimentBootstrap.cs GitHubUpdateChecker.cs GuiMetadata.cs LoadingScreenController.cs
         LoadingScreenForm.cs LuaSyntaxValidator.cs LuaSyntaxValidatorRegressionSelfTest.cs MainForm.CategoryNavigation.cs
-        MainForm.cs MainForm.DropdownTypography.cs MainForm.IncrementalRefresh.cs MainForm.InputChrome.cs MainForm.InstanceImports.cs
+        MainForm.cs MainForm.DropdownTypography.cs MainForm.EquipmentAccessibility.cs MainForm.IncrementalRefresh.cs MainForm.InputChrome.cs MainForm.InstanceImports.cs
         MainForm.LinkedTable.cs MainForm.LoadingOperations.cs MainForm.ManagedLists.cs MainForm.NewVisibility.cs
         MainForm.OptionsChanged.cs MainForm.PerformanceProbe.cs MainForm.PopupScrollbars.cs MainForm.PreviewAppearance.cs
         MainForm.PreviewStartup.cs MainForm.RequiredAircraft.cs MainForm.RequiredValues.cs MainForm.Scrollbars.cs
         MainForm.SignedRelease.cs MainForm.ResponsiveLayout.cs MainForm.StartupPreparation.cs MainForm.TableSizing.cs MainForm.TemplateWorkspace.cs
-        MainForm.TupleChoices.cs MainForm.Updates.cs MainForm.Weather.cs MainForm.EditorSections.cs ManagerBuildInfo.cs ManagerSelfUpdater.cs
+        MainForm.TupleChoices.cs MainForm.Updates.cs MainForm.Weather.cs MainForm.EditorSections.cs ManagerBuildInfo.cs ManagerSelfUpdater.cs ManagerSelfUpdater.Completion.cs
         ManagerStartupContext.cs MissionDateTimeSettings.cs MissionOptions.cs MissionOutputFolderStore.cs MissionSourceFolderStore.cs MissionWeather.cs PendingNewItemStore.cs
         PresetStore.cs Program.cs RadarLoadingForm.cs RuntimeSettings.cs SingleInstanceCoordinator.cs SplashPictureSequence.cs
         StabilityRegressionSelfTest.cs StringListCatalogStore.cs UiViewGeneration.cs UpdateNotificationStore.cs UserExeExporter.cs
@@ -30,14 +30,16 @@ internal sealed partial class SignedReleaseService
         WeatherWindow.Clouds.cs WeatherWindow.Controls.cs WeatherWindow.cs WeatherWindow.Export.cs WeatherWindow.Focus.cs
         WeatherWindow.Import.cs WeatherWindow.MissionOptions.cs WeatherWindow.Options.cs WeatherWindow.Time.cs WeatherWindow.Visuals.cs
         WeatherWindow.Zoom.cs WheelSafeControls.cs
+        MainForm.WarehouseWeaponLocations.cs WarehouseWeaponLocations.cs WarehouseWeaponIds.txt WarehouseWeaponAircraft.txt ReleaseWeaponCatalog.cs WarehouseLayoutProbe.cs
         SignedReleaseContracts.cs SignedReleaseCommands.cs SignedReleaseService.cs SignedReleaseSnapshot.cs SignedReleaseMonitor.cs SignedReleaseDialog.cs
         FootholdConfigManager.csproj packages.lock.json MainForm.resx WheelSafeControls.resx ThirdPartyNotices.txt
         FootholdConfigManager.ico foothold-manager-icon.png FootholdConfigManager-icon.png apache-sunset-source.jpg
         apache-action-source.png carrier-launch-source.jpg BuildSignedRelease.ps1
         CloudPreviewResources.cs CloudPreviewManifest.txt MissionDownloadModels.cs
-        MissionFileUpdateService.cs MainForm.MissionDownloads.Files.cs MissionScriptReferenceFacts.cs
-        MissionDownloadService.cs MissionVariantService.cs MissionWarehouseService.cs MainForm.MissionDownloads.cs MainForm.MissionDownloads.Warehouses.cs
-        MainForm.MissionDownloads.Execution.cs MainForm.MissionDownloads.Job.cs MainForm.MissionDownloads.Review.cs
+        MissionFileUpdateService.cs MainForm.MissionDownloads.Files.cs MissionScriptReferenceFacts.cs MissionRecycleBin.cs MainForm.MissionDownloads.Delete.cs
+        MissionDownloadService.cs MissionVariantService.cs MissionVersionStamp.cs MissionWarehouseService.cs MainForm.MissionDownloads.cs MainForm.MissionDownloads.Warehouses.cs
+        MissionUpdateProgress.cs MainForm.MissionDownloads.Progress.cs
+        MainForm.MissionDownloads.Execution.cs MainForm.MissionDownloads.Job.cs DcsDedicatedServer.cs DcsDedicatedServer.Platform.cs DcsDedicatedServer.Offline.cs DcsWebGuiClient.cs MainForm.DedicatedServer.cs MainForm.MissionDownloads.Review.cs
         altocumulus1.png altocumulus2.png altocumulus3.png altocumulus4.png altostratus1.png altostratus2.png altostratus3.png altostratus4.png
         atmosx_default_thumb.png cirrocumulus1.png cirrocumulus2.png cirrocumulus3.png cirrostratus1.png cirrostratus2.png cirrostratus3.png cirrostratus4.png
         cirrostratus5.png cloud_1.png cloud_10.png cloud_11.png cloud_12.png cloud_13.png cloud_14.png cloud_15.png

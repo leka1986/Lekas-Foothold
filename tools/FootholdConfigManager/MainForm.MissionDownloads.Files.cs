@@ -45,6 +45,7 @@ internal sealed partial class MainForm
         var results = new List<MissionFilesInstancePlan>();
         var previousSources = LoadStoredRestoreDefaultsSources();
         var incoming = new Dictionary<string, ConfigDocument>(StringComparer.Ordinal);
+        var genericDefaults = new Dictionary<string, byte[]>(StringComparer.Ordinal);
         foreach (var group in targets.GroupBy(t => Path.GetFullPath(t.Target.Path), StringComparer.OrdinalIgnoreCase))
         {
             token.ThrowIfCancellationRequested();
@@ -55,7 +56,12 @@ internal sealed partial class MainForm
                 var candidates = paths.Select(path => preparation.Compatible.TryGetValue(path, out var row)
                     ? row.Target.Replacements.Single(r => r.ConfigVariant == variant).BlobId
                     : throw new InvalidDataException("Optional Config source is not an admitted selected mission."))
-                    .Select(id => payload[id]).DistinctBy(bytes => FilePatchEnvelope.Digest(bytes)).ToArray();
+                    .Select(id =>
+                    {
+                        if (!genericDefaults.TryGetValue(id, out var bytes))
+                            genericDefaults.Add(id, bytes = MissionVersionStamp.Remove(payload[id]));
+                        return bytes;
+                    }).DistinctBy(bytes => FilePatchEnvelope.Digest(bytes)).ToArray();
                 if (candidates.Length != 1) throw new InvalidDataException("Conflicting incoming defaults for this instance Config.");
                 var identity = MissionPathIdentity.Capture(group.Key);
                 if (!identity.Exists) throw new InvalidDataException("The optional instance Config is unavailable.");
@@ -86,6 +92,7 @@ internal sealed partial class MainForm
     }
     private MissionFileUpdateService? _missionFilesService;
     private MissionFilesPreparation? _missionFilesPreparation;
+    private MissionFilesPreparation? _missionFilesPresentedPreparation;
     private FootholdReleaseInfo? _missionFilesPreparedRelease;
     private string? _missionFilesPreparedEnvelope;
     private MissionFilesRoot[] _missionFilesPreparedRoots = [];
@@ -99,6 +106,121 @@ internal sealed partial class MainForm
     private FlowLayoutPanel? _missionFilesResultRow;
     private ManagerVerifiedGlyph? _missionFilesResultGlyph;
     private long _missionFilesOperationGeneration;
+
+    private sealed class MissionFilesScanJob(FootholdReleaseInfo release, FilePatchEnvelope envelope,
+        MissionFilesRoot[] roots, string[] external, CancellationToken lifetime)
+    {
+        internal readonly FootholdReleaseInfo Release = release;
+        internal readonly FilePatchEnvelope Envelope = envelope;
+        internal readonly MissionFilesRoot[] Roots = roots;
+        internal readonly string[] External = external;
+        internal readonly CancellationTokenSource Cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime);
+        internal Task<MissionFilesPreparation> Work = null!;
+        internal FileUpdateInspection? Latest;
+        internal IProgress<FileUpdateInspection>? Observer;
+        internal int Waiters;
+        internal bool Matches(FootholdReleaseInfo next, FilePatchEnvelope contract, MissionFilesRoot[] folders, string[] paths) =>
+            SameMissionFilesRelease(Release, next) && Envelope.RawJson == contract.RawJson
+            && Roots.SequenceEqual(folders) && External.SequenceEqual(paths, StringComparer.OrdinalIgnoreCase);
+    }
+    private MissionFilesScanJob? _missionFilesScan;
+    private Task? _missionFilesBackgroundTask;
+
+    private void BeginSilentMissionScan()
+    {
+        if (_updatesDisposed || IsDisposed || Disposing || !_settings.AutomaticMissionScan
+            || _missionFilesBackgroundTask is { IsCompleted: false } || _missionDownloadBusy || _configLoadingOperation || _updatesInstalling
+            || _updatesResult is not { FilesEnvelopeAvailable: true } result) return;
+        EnsureMissionDownloadLifetime();
+        var roots = CaptureMissionRoots(scanSourcesOnly: true);
+        var external = CaptureMissionFilesExternalPaths();
+        if ((roots.Length == 0 && external.Length == 0) || HasCurrentMissionFilesPreparation(result, roots, external)) return;
+        _missionFilesBackgroundTask = ScanSilentlyAsync(result, roots, external);
+    }
+    private async Task ScanSilentlyAsync(UpdateCheckResult result, MissionFilesRoot[] roots, string[] external)
+    {
+        try
+        {
+            var release = result.Foothold.Data!;
+            var envelope = result.FilesEnvelope.Data!;
+            var prepared = await PrepareMissionFilesSharedAsync(release, envelope, roots, external, null, _updatesLifetime.Token, false);
+            if (TryAdoptMissionFilesPreparation(release, envelope, roots, external, prepared))
+            {
+                RefreshMissionCompletionState();
+                RefreshMissionFilesCompletionRows();
+                RefreshUpdatesPresentation();
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error)
+        {
+            if (!_updatesDisposed && !IsDisposed && !Disposing)
+            { _updatesError = "Could not check missions: " + error.Message; RefreshUpdatesPresentation(); }
+        }
+        finally
+        {
+            _missionFilesBackgroundTask = null;
+            if (_updatesDisposed) DisposeMissionDownloadState();
+            if (_missionCloseRequested && !_missionDownloadBusy && !IsDisposed && !Disposing)
+            { _missionCloseRequested = false; Close(); }
+        }
+    }
+    private async Task<MissionFilesPreparation> PrepareMissionFilesSharedAsync(FootholdReleaseInfo release, FilePatchEnvelope envelope,
+        MissionFilesRoot[] roots, string[] external, IProgress<FileUpdateInspection>? progress, CancellationToken token, bool refreshInventory)
+    {
+        if (_missionFilesScan is { } previous && !previous.Matches(release, envelope, roots, external))
+        {
+            previous.Cancellation.Cancel();
+            try { await previous.Work; }
+            catch (OperationCanceledException) { }
+            token.ThrowIfCancellationRequested();
+        }
+        if (_missionFilesScan is null || !_missionFilesScan.Matches(release, envelope, roots, external))
+        {
+            var created = new MissionFilesScanJob(release, envelope, roots, external, _updatesLifetime.Token);
+            _missionFilesScan = created;
+            _missionFilesService ??= new MissionFileUpdateService();
+            created.Work = _missionFilesService.PrepareAsync(release, envelope, roots,
+                new Progress<FileUpdateInspection>(row => { created.Latest = row; created.Observer?.Report(row); }),
+                created.Cancellation.Token, refreshInventory, external);
+        }
+        var scan = _missionFilesScan;
+        scan.Waiters++;
+        if (progress is not null) { scan.Observer = progress; if (scan.Latest is not null) progress.Report(scan.Latest); }
+        using var cancellation = token.Register(() => scan.Cancellation.Cancel());
+        try { return await scan.Work.WaitAsync(token); }
+        finally
+        {
+            cancellation.Dispose();
+            if (ReferenceEquals(scan.Observer, progress)) scan.Observer = null;
+            if (--scan.Waiters == 0)
+            {
+                if (!scan.Work.IsCompleted)
+                {
+                    scan.Cancellation.Cancel();
+                    try { await scan.Work; } catch (Exception) { } // Settle abandoned work before the service can be reused/disposed.
+                }
+                if (ReferenceEquals(_missionFilesScan, scan)) _missionFilesScan = null;
+                scan.Cancellation.Dispose();
+            }
+        }
+    }
+    private bool TryAdoptMissionFilesPreparation(FootholdReleaseInfo release, FilePatchEnvelope envelope,
+        MissionFilesRoot[] roots, string[] external, MissionFilesPreparation prepared)
+    {
+        if (_updatesDisposed || IsDisposed || Disposing || _updatesResult is not { FilesEnvelopeAvailable: true } current
+            || !SameMissionFilesRelease(release, current.Foothold.Data) || current.FilesEnvelope.Data!.RawJson != envelope.RawJson
+            || !roots.SequenceEqual(CaptureMissionRoots(scanSourcesOnly: true))
+            || !external.SequenceEqual(CaptureMissionFilesExternalPaths(), StringComparer.OrdinalIgnoreCase)
+            || !ReferenceEquals(_missionFilesService?.Prepared, prepared)) return false;
+        if (!ReferenceEquals(_missionFilesPreparation, prepared)) _missionMapUpdateRevision++;
+        _missionFilesPreparation = prepared;
+        _missionFilesPreparedRelease = release;
+        _missionFilesPreparedEnvelope = envelope.RawJson;
+        _missionFilesPreparedRoots = roots;
+        _missionFilesPreparedExternalPaths = external;
+        return true;
+    }
 
     private void LoadMissionSourceFolders()
     {
@@ -114,16 +236,83 @@ internal sealed partial class MainForm
         ReconcileMissionSourceFolders();
         RefreshUpdatesPresentation();
     }
-    private MissionFilesRoot[] CaptureMissionFilesRoots()
+    private void ApplyMissionScanPreferences(bool? automaticScan = null)
+    {
+        if (_updatesRendering || _missionDownloadBusy || _configLoadingOperation || _updatesInstalling || _updatesBusy) return;
+        var custom = _missionFilesUpdatesCustomSources!.Checked;
+        var automatic = automaticScan ?? _settings.AutomaticMissionScan;
+        var previous = (_settings.MissionScanCustomSourcesOnly, _settings.AutomaticMissionScan);
+        if (previous == (custom, automatic)) return;
+        _settings.MissionScanCustomSourcesOnly = custom;
+        _settings.AutomaticMissionScan = automatic;
+        var aged = false;
+        if (_updateChecker is { } checker && _updatesResult is { } retained)
+        {
+            _updatesResult = checker.AgeSnapshot(retained);
+            aged = _updatesResult.State != retained.State;
+        }
+        if (_updatesError is not null || aged) RefreshUpdatesPresentation();
+        else UpdateMissionFilesUpdatesLayout(() => {
+            PresentMissionScanPreferences();
+            if (_settings.MissionScanCustomSourcesOnly != previous.MissionScanCustomSourcesOnly && _updatesResult is { } result)
+            {
+                RefreshUpdatesButtonPresentation(result);
+                RefreshMissionScanPresentation(result, _missionFilesManagerGlyph!.Visible, _missionFilesManagerText!.Text);
+            }
+        }, _settings.MissionScanCustomSourcesOnly != previous.MissionScanCustomSourcesOnly
+            ? [_missionFilesUpdatesAllSources!, _missionFilesUpdatesCustomSources!, _missionFilesUpdatesScopeHint!,
+                _missionFilesUpdateInstances!, _missionFilesUpdatesScanStatus!, _missionFilesBadge!,
+                _missionFilesUpdatesCheckMissions!, _missionFilesUpdatesOpen!]
+            : [_missionFilesUpdatesAutoScan!, _missionFilesUpdatesAutoHint!]);
+        try { _settings.Save(); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            (_settings.MissionScanCustomSourcesOnly, _settings.AutomaticMissionScan) = previous;
+            _updatesError = "Could not save mission scan choices: " + error.Message;
+            RefreshUpdatesPresentation();
+        }
+    }
+    private void PresentMissionScanPreferences()
+    {
+        var rendering = _updatesRendering;
+        _updatesRendering = true;
+        try
+        {
+            _missionFilesUpdatesAllSources!.Checked = !_settings.MissionScanCustomSourcesOnly;
+            _missionFilesUpdatesCustomSources!.Checked = _settings.MissionScanCustomSourcesOnly;
+            _missionFilesUpdatesAutoScan!.Text = _settings.AutomaticMissionScan ? "Auto scan: On" : "Auto scan: Off";
+            ((PreviewButton)_missionFilesUpdatesAutoScan).SelectionEmphasis = _settings.AutomaticMissionScan;
+            _missionFilesUpdatesAutoScan.AccessibleDescription = _settings.AutomaticMissionScan
+                ? "On. Scan missions silently after startup. Updates reuses the results. This choice is remembered."
+                : "Off. Scan only when you choose Scan now. This choice is remembered.";
+            _missionFilesUpdatesScopeHint!.Text = _settings.MissionScanCustomSourcesOnly
+                ? "Default instance folders will not be scanned. Add the folders or MIZ files you want to check."
+                : "Scan all detected instance Missions folders, plus the custom sources below.";
+            _missionFilesUpdatesAutoHint!.Text = _settings.AutomaticMissionScan
+                ? "Scans silently after startup; Updates reuses the results." : "Scan only when you choose Scan now.";
+            var available = !_updatesBusy && !_missionDownloadBusy && !_configLoadingOperation && !_updatesInstalling;
+            _missionFilesUpdatesSourcesBody!.Enabled = _missionFilesUpdatesAutoScan.Enabled = available;
+        }
+        finally { _updatesRendering = rendering; }
+    }
+    private string? _missionUnresolvedFolders;
+    private MissionFilesRoot[] CaptureMissionFilesRoots() => CaptureMissionRoots(scanSourcesOnly: false);
+    private MissionFilesRoot[] CaptureMissionRoots(bool scanSourcesOnly)
     {
         IReadOnlyList<ServerProfileSettings> profiles = _settings.ServerProfiles.Count == 0
             ? new[] { GetMissionDownloadFallback() } : _settings.ServerProfiles;
         if (_settings.ServerProfiles.Count > 0 && _document is not null && FindCurrentInstanceProfile() is null)
             profiles = profiles.Append(GetMissionDownloadFallback()).ToArray();
-        return profiles.Select(profile => (Profile: profile, Directory: RuntimeSettings.ResolveMissionsDirectory(profile)))
-            .Where(item => item.Directory is not null)
+        var resolved = profiles.Select(profile => (Profile: profile, Directory: RuntimeSettings.ResolveInstanceMissionsDirectory(profile))).ToArray();
+        var customOnly = scanSourcesOnly && _settings.MissionScanCustomSourcesOnly;
+        _missionUnresolvedFolders = string.Join(Environment.NewLine, resolved.Where(item => !customOnly && item.Directory is null)
+            .Select(item => item.Profile.Name + ": Missions folder could not be determined. Add its mission folder to include it in this check."));
+        return resolved.Where(item => !customOnly && item.Directory is not null)
             .Select(item => new MissionFilesRoot(item.Profile.Id, item.Profile.Name, item.Directory!))
-            .Concat(_missionSourceFolders.Select(folder => new MissionFilesRoot("source-folder:" + folder.ToUpperInvariant(), folder, folder)))
+            .Concat(_missionSourceFolders.Select(folder => {
+                var owner = resolved.FirstOrDefault(item => item.Directory is not null && PathsEqual(item.Directory, folder)).Profile;
+                return new MissionFilesRoot(owner?.Id ?? "source-folder:" + folder.ToUpperInvariant(), owner?.Name ?? folder, folder);
+            }))
             .DistinctBy(root => Path.TrimEndingDirectorySeparator(Path.GetFullPath(root.MissionsDirectory)), StringComparer.OrdinalIgnoreCase)
             .Select(root => root with { IncludeDcsServerBotOriginals = _missionFilesIncludeDcsServerBotOriginals }).ToArray();
     }
@@ -142,14 +331,19 @@ internal sealed partial class MainForm
         if (_updatesDisposed || _missionDownloadBusy || _configLoadingOperation || _updatesInstalling || _updatesBusy
             || _updatesResult is not { FilesEnvelopeAvailable: true } result) return;
         EnsureMissionDownloadLifetime();
+        await RefreshDedicatedRegistrationTargetsAsync();
+        if (_updatesDisposed || IsDisposed || Disposing || _configLoadingOperation || _missionDownloadBusy || _updatesInstalling || _updatesBusy) return;
         if (_missionFilesPanel is null) MissionFilesAddRequested += () => _missionDownloadJob = AddMissionFilesAsync();
         BuildMissionFilesView(() => _missionDownloadJob = CreateMissionFilesAsync());
         if (showUpdater) ShowMissionFilesView();
         var release = result.Foothold.Data!;
         var envelope = result.FilesEnvelope.Data!;
-        var roots = CaptureMissionFilesRoots();
+        var roots = CaptureMissionRoots(scanSourcesOnly: true);
+        ReconcileMissionSourceFolders();
         var externalPaths = CaptureMissionFilesExternalPaths();
-        if (!refreshInventory && HasCurrentMissionFilesPreparation(result, roots, externalPaths)) return;
+        RefreshMissionCompletionState();
+        if (!refreshInventory && HasCurrentMissionFilesPreparation(result, roots, externalPaths))
+        { RefreshMissionFilesCompletionRows(); return; }
         _missionFilesPreparation = null;
         _missionFilesApplied = null;
         _missionFilesResultGlyph!.Visible = false;
@@ -164,42 +358,23 @@ internal sealed partial class MainForm
         _missionFilesResult!.Text = "Checking your missions…";
         try
         {
-            _missionFilesService ??= new MissionFileUpdateService();
             await RunConfigLoadingAsync(async (progress, token) =>
             {
                 try
                 {
-                    var prepared = await _missionFilesService.PrepareAsync(release, envelope, roots,
+                    var prepared = await PrepareMissionFilesSharedAsync(release, envelope, roots, externalPaths,
                         new Progress<FileUpdateInspection>(row => {
                             if (!_updatesDisposed && generation == _missionFilesOperationGeneration)
                                 progress.Report(new LoadingProgress("Checking " + row.FriendlyName + "…"));
-                        }), token, refreshInventory, externalPaths);
+                        }), token, refreshInventory);
                     token.ThrowIfCancellationRequested();
                     if (_updatesDisposed || generation != _missionFilesOperationGeneration) return;
-                    if (_updatesResult is not { FilesEnvelopeAvailable: true } current || !SameMissionFilesRelease(release, current.Foothold.Data)
-                        || current.FilesEnvelope.Data!.RawJson != envelope.RawJson || !roots.SequenceEqual(CaptureMissionFilesRoots())
-                        || !externalPaths.SequenceEqual(CaptureMissionFilesExternalPaths(), StringComparer.OrdinalIgnoreCase)
-                        || !ReferenceEquals(_missionFilesService.Prepared, prepared))
+                    if (!TryAdoptMissionFilesPreparation(release, envelope, roots, externalPaths, prepared))
                     { _missionFilesResult.Text = "The release or instances changed. Return to Updates to check again."; return; }
-                    _missionFilesPreparation = prepared;
-                    _missionFilesPreparedRelease = release;
-                    _missionFilesPreparedEnvelope = envelope.RawJson;
-                    _missionFilesPreparedRoots = roots;
-                    _missionFilesPreparedExternalPaths = externalPaths;
-                    // One instance checkbox still owns all its eligible paths; family facts only supply its summary.
-                    var summaries = prepared.Rows.GroupBy(row => row.GroupId).ToDictionary(group => group.Key, group =>
-                        string.Join(Environment.NewLine, group.Where(row => prepared.Compatible.ContainsKey(Path.GetFullPath(row.Path))).Select(row => {
-                            var facts = prepared.Compatible[Path.GetFullPath(row.Path)];
-                            var versions = facts.SourceScriptVersions;
-                            var version = versions.Count == 1 ? versions[0] : "Supported versions";
-                            return (MissionWarehouseService.GetMapVariant(row.Path) ?? facts.Target.Theatre)
-                                + " • " + version + " → " + facts.Target.TargetScriptVersion;
-                        }).Distinct(StringComparer.Ordinal)));
-                    ReconcileMissionFileRows(prepared.Rows.Select(row => row with {
-                        GroupSummary = summaries[row.GroupId].Length == 0 ? "Missions needing attention" : summaries[row.GroupId] }).ToArray(), generation);
+                    RefreshMissionFilesCompletionRows();
                     PresentMissionFilesRelease(release.Tag.TrimStart('v', 'V'));
                     _missionFilesResult.Text = prepared.Rows.Count == 0 ? "No MIZ files found. Add MIZ files to check another folder."
-                        : prepared.Compatible.Count + " compatible mission(s).";
+                        : _missionFilesState.Candidates.Values.Count(row => row.State == FileUpdateInspectionState.Compatible) + " compatible mission(s).";
                     var unavailable = prepared.Groups.Where(group => group.Status != "No MIZ files" && !group.Status.EndsWith(" MIZ files", StringComparison.Ordinal));
                     foreach (var group in unavailable) _missionFilesResult.Text += Environment.NewLine + group.Name + ": " + group.Status;
                 }
@@ -228,6 +403,49 @@ internal sealed partial class MainForm
     private MissionFilesApplyResult? _missionFilesApplied;
     private Button? _missionFilesOpenFolder, _missionFilesDetailsToggle;
     private Label? _missionFilesDetails;
+    private async Task RefreshMissionFilesAfterFullInstallAsync(IReadOnlyList<string> installed)
+    {
+        if (installed.Count == 0 || _updatesDisposed || IsDisposed || Disposing) return;
+
+        // Reproject the admitted results immediately, including stock copies installed under their suggested names.
+        RefreshMissionFilesCompletionRows();
+        RefreshUpdatesPresentation();
+        if (_missionFilesBackgroundTask is { IsCompleted: false } background) await background;
+        if (_updatesDisposed || _missionCloseRequested || IsDisposed || Disposing ||
+            _missionFilesPreparation is null || _updatesResult is not { FilesEnvelopeAvailable: true } current) return;
+
+        var roots = CaptureMissionRoots(scanSourcesOnly: true);
+        var externalPaths = CaptureMissionFilesExternalPaths();
+        if (!installed.Any(path => externalPaths.Any(external => PathsEqual(external, path))
+            || roots.Any(root => PathsEqual(root.MissionsDirectory, Path.GetDirectoryName(path)!)))) return;
+
+        // Reuse the release payload and unchanged archive inspections, including for custom output names and replacements.
+        var release = current.Foothold.Data!;
+        var envelope = current.FilesEnvelope.Data!;
+        var refreshed = await PrepareMissionFilesSharedAsync(release, envelope, roots, externalPaths,
+            null, _updatesLifetime.Token, refreshInventory: true);
+        if (!TryAdoptMissionFilesPreparation(release, envelope, roots, externalPaths, refreshed)) return;
+        RefreshMissionFilesCompletionRows();
+        RefreshUpdatesPresentation();
+    }
+
+    private void RefreshMissionFilesCompletionRows()
+    {
+        if (_missionFilesPreparation is not { } prepared) return;
+        var projected = MissionUpdateProgress.Project(prepared, _missionAvailableMapUpdates, _missionFilesPreparedRelease!.Tag);
+        var summaries = projected.GroupBy(row => row.GroupId).ToDictionary(group => group.Key, group =>
+            string.Join(Environment.NewLine, group.Where(row => row.State == FileUpdateInspectionState.Compatible).Select(row => {
+                var facts = prepared.Compatible[Path.GetFullPath(row.Path)];
+                var versions = facts.SourceScriptVersions;
+                var version = versions.Count == 1 ? versions[0] : "Supported versions";
+                return (row.ObservedMap ?? MissionWarehouseService.GetMapVariant(facts.Target) ?? facts.Target.Theatre)
+                    + " • " + version + " → " + facts.Target.TargetScriptVersion;
+            }).Distinct(StringComparer.Ordinal)));
+        _missionFilesPresentedPreparation = prepared with { Rows = projected.Select(row => row with {
+            GroupSummary = row.IsCurrentVersion ? row.ObservedMap + " • " + row.ObservedMissionVersion
+                : summaries[row.GroupId].Length == 0 ? "Other missions" : summaries[row.GroupId] }).ToArray() };
+        if (_missionFilesPanel is not null) ReconcileMissionFileRows(_missionFilesPresentedPreparation.Rows, _missionFilesOperationGeneration);
+    }
     private async Task AddMissionFilesAsync(bool showUpdater = true)
     {
         if (_missionDownloadBusy || _configLoadingOperation || _updatesDisposed) return;
@@ -235,7 +453,8 @@ internal sealed partial class MainForm
         if (picker.ShowDialog(this) != DialogResult.OK) return;
         _missionFilesExternalPaths = _missionFilesExternalPaths.Concat(picker.FileNames.Select(Path.GetFullPath))
             .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        await OpenMissionFilesAsync(refreshInventory: true, showUpdater: showUpdater);
+        if (!showUpdater && !_settings.AutomaticMissionScan) { RefreshUpdatesPresentation(); return; }
+        await OpenMissionFilesAsync(showUpdater: showUpdater);
     }
     private async Task AddMissionSourceFolderAsync(bool showUpdater = true)
     {
@@ -249,9 +468,10 @@ internal sealed partial class MainForm
             _missionSourceFoldersError = "Could not remember mission source folders: " + error.Message;
             ReconcileMissionSourceFolders(); return;
         }
-        await OpenMissionFilesAsync(refreshInventory: true, showUpdater: showUpdater);
+        if (!showUpdater && !_settings.AutomaticMissionScan) { RefreshUpdatesPresentation(); return; }
+        await OpenMissionFilesAsync(showUpdater: showUpdater);
     }
-    private async Task RemoveMissionSourceFolderAsync(string folder)
+    private async Task RemoveMissionSourceFolderAsync(string folder, bool showUpdater = true)
     {
         if (_missionDownloadBusy || _configLoadingOperation || _updatesDisposed) return;
         try { ApplyMissionSourceFolders(_missionSourceFolders.Where(path => !PathsEqual(path, folder)).ToArray()); }
@@ -260,29 +480,40 @@ internal sealed partial class MainForm
             _missionSourceFoldersError = "Could not remember mission source folders: " + error.Message;
             ReconcileMissionSourceFolders(); return;
         }
-        await OpenMissionFilesAsync(refreshInventory: true);
+        if (!showUpdater && !_settings.AutomaticMissionScan) { RefreshUpdatesPresentation(); return; }
+        await OpenMissionFilesAsync(showUpdater: showUpdater);
     }
     private async Task CreateMissionFilesAsync()
     {
         if (_updatesDisposed || _missionDownloadBusy || _configLoadingOperation || _updatesInstalling
             || _missionFilesPreparation is not { } preparation || _missionFilesPreparedRelease is not { } release) return;
         var paths = SelectedMissionFilePaths;
-        if (paths.Count == 0) return;
+        var registerServer = CanOfferFilesServerRegistration && _missionFilesRegisterServer?.Checked == true;
+        if (paths.Count == 0 || paths.Any(path => !preparation.Compatible.ContainsKey(path))) return;
         _missionFilesResultGlyph!.Visible = false;
-        if (_updatesResult is not { } current || !HasCurrentMissionFilesPreparation(current, CaptureMissionFilesRoots(), CaptureMissionFilesExternalPaths()))
+        var roots = CaptureMissionRoots(scanSourcesOnly: true);
+        if (_updatesResult is not { } current || !HasCurrentMissionFilesPreparation(current, roots, CaptureMissionFilesExternalPaths()))
         { _missionFilesResult!.Text = "The release or instances changed. Return to Updates and check these missions again."; return; }
         string? outputDirectory;
         try { outputDirectory = CaptureCustomMissionOutputDirectory(); }
         catch (InvalidDataException error) { _missionFilesResult!.Text = error.Message; return; }
+        var reinstallPaths = paths.Where(path => preparation.Compatible[path].IsCurrentVersion).ToArray();
+        var allowReinstallation = reinstallPaths.Length > 0;
+        if (reinstallPaths.Length > 0 && outputDirectory is null && MessageBox.Show(this,
+            "Reinstall release script files in these currently installed missions?\n\n" + string.Join("\n", reinstallPaths)
+            + "\n\nThese files will be replaced. Everything except the managed script files and embedded Config update stays the same.",
+            "Reinstall current scripts?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
         var targets = new List<(string SourcePath, MissionConfigTarget Target)>();
         var outcomes = new List<string>();
+        var registrationTargets = registerServer ? CaptureFilesServerRegistrationTargets() : [];
+        MissionFilesApplyResult? committedMissions = null;
         var configOutcomes = new Dictionary<string, (string State, string Reason)>(StringComparer.OrdinalIgnoreCase);
         string? configPreparationError = null;
         if (_missionFilesState.UpdateInstanceConfigs)
         {
             IReadOnlyList<ServerProfileSettings> profiles = _settings.ServerProfiles.Count == 0
                 ? new[] { GetMissionDownloadFallback() } : _settings.ServerProfiles;
-            var instanceOwners = profiles.Select(profile => (Profile: profile, Directory: RuntimeSettings.ResolveMissionsDirectory(profile)))
+            var instanceOwners = profiles.Select(profile => (Profile: profile, Directory: RuntimeSettings.ResolveInstanceMissionsDirectory(profile)))
                 .Where(item => item.Directory is not null).ToArray();
             foreach (var path in paths)
             {
@@ -331,6 +562,8 @@ internal sealed partial class MainForm
                     {
                         token.ThrowIfCancellationRequested();
                         var row = preparation.Rows.Single(row => PathsEqual(row.Path, path));
+                        if (row.IsCurrentVersion && outputDirectory is null)
+                        { outputNames.Add(path, Path.GetFileName(path)); continue; }
                         var directory = outputDirectory ?? preparation.Compatible[path].DefaultOutputDirectory ?? Path.GetDirectoryName(path)!;
                         using var dialog = CreateMissionFileNameDialog(path, Path.Combine(directory, row.ProposedOutputName!), reservedPaths);
                         using var modal = _loadingScreen?.SuspendForModal(dialog);
@@ -356,8 +589,13 @@ internal sealed partial class MainForm
                         new Progress<MissionFilesApplyItem>(item => {
                             if (!_updatesDisposed && generation == _missionFilesOperationGeneration)
                                 progress.Report(new LoadingProgress("Creating " + Path.GetFileName(item.SourcePath) + "…"));
-                        }), token, outputDirectory, outputNames);
+                        }), token, outputDirectory, outputNames, allowCurrentReinstallation: allowReinstallation);
                     _missionFilesApplied = applied;
+                    committedMissions = applied;
+                    RecordInstalledMissionWarehouseSources(applied.Items.Where(item => item.OutputPath is not null && item.Error is null)
+                        .Select(item => item.OutputPath!).ToArray());
+                    if (RememberMissionMapUpdates(MissionUpdateProgress.FilesOnly(preparation, roots, release.Tag, applied)) is { } progressWarning)
+                        outcomes.Add(progressWarning);
                     cancelled = applied.Cancelled;
                     var successes = applied.Items.Where(item => item.OutputPath is not null).Select(item => item.SourcePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     foreach (var plan in plans)
@@ -403,6 +641,20 @@ internal sealed partial class MainForm
                         catch (Exception error) { outcomes.Add("Mission copies were created, but release history could not be saved: " + error.Message); }
                     }
                 }
+                if (registerServer && !cancelled && committedMissions is { Cancelled: false } completed
+                    && !token.IsCancellationRequested && generation == _missionFilesOperationGeneration)
+                    outcomes.AddRange((await RegisterCreatedMissionsAsync(completed.Items.Where(item => item.OutputPath is not null
+                        && preparation.Rows.Any(row => row.Path.Equals(item.SourcePath, StringComparison.OrdinalIgnoreCase)
+                            && registrationTargets.Any(target => target.Id == row.GroupId)))
+                        .Select(item => item.OutputPath!).ToArray(), registrationTargets, progress, token)).Select(FormatServerRegistrationOutcome));
+                if (committedMissions?.Items.Any(item => item.OutputPath is not null && PathsEqual(item.SourcePath, item.OutputPath)) == true
+                    && !token.IsCancellationRequested && !_updatesDisposed)
+                {
+                    // Reinspect changed paths once after commit; unchanged archives and the payload stay cached.
+                    var refreshed = await PrepareMissionFilesSharedAsync(release, current.FilesEnvelope.Data!, roots,
+                        CaptureMissionFilesExternalPaths(), null, token, refreshInventory: true);
+                    TryAdoptMissionFilesPreparation(release, current.FilesEnvelope.Data!, roots, CaptureMissionFilesExternalPaths(), refreshed);
+                }
             }, cancellation.Token, "Creating updated mission copies…", finishCommittedPreparation: true, errorTitle: "Update existing missions");
         }
         finally
@@ -415,6 +667,8 @@ internal sealed partial class MainForm
                 var items = _missionFilesApplied?.Items ?? [];
                 var count = items.Count(item => item.OutputPath is not null);
                 PresentMissionFilesOutcomes(paths, configOutcomes, outcomes, cancelled, configPreparationError);
+                RefreshMissionCompletionState();
+                RefreshMissionFilesCompletionRows();
                 var failed = items.Where(item => item.Error is not null).ToDictionary(item => item.SourcePath, StringComparer.OrdinalIgnoreCase);
                 if (failed.Count > 0)
                     ReconcileMissionFileRows(_missionFilesState.Candidates.Values.Select(row => failed.TryGetValue(row.Path, out var item)
@@ -425,7 +679,8 @@ internal sealed partial class MainForm
                     resultPanel.ScrollControlIntoView(_missionFilesResultRow!);
                     _missionFilesState.ScrollPosition = resultPanel.AutoScrollPosition;
                 }
-                SetStatus((cancelled ? "Cancelled · " : "") + count + " updated mission copies created.");
+                SetStatus((cancelled ? "Cancelled · " : "") + count + (items.Any(item => item.OutputPath is not null && PathsEqual(item.SourcePath, item.OutputPath))
+                    ? " mission script operations completed." : " updated mission copies created."));
             }
             if (_updatesDisposed) DisposeMissionDownloadState();
             if (_missionCloseRequested && !IsDisposed && !Disposing) { _missionCloseRequested = false; Close(); }
@@ -438,12 +693,12 @@ internal sealed partial class MainForm
     {
         var items = (_missionFilesApplied?.Items ?? []).ToDictionary(item => item.SourcePath, StringComparer.OrdinalIgnoreCase);
         var details = new List<string>();
-        var created = 0; var failed = 0; var cancelledCount = 0; var skipped = 0;
+        var created = 0; var reinstalled = 0; var failed = 0; var cancelledCount = 0; var skipped = 0;
         foreach (var path in paths)
         {
             if (items.TryGetValue(path, out var item))
             {
-                if (item.OutputPath is not null) { created++; details.Add("Created: " + path + " → " + item.OutputPath); }
+                if (item.OutputPath is not null) { created++; if (PathsEqual(path, item.OutputPath)) reinstalled++; details.Add((PathsEqual(path, item.OutputPath) ? "Reinstalled: " : "Created: ") + path + " → " + item.OutputPath); }
                 else { failed++; details.Add("MIZ failed: " + path + " — " + item.Error); }
             }
             else if (cancelled) { cancelledCount++; details.Add("MIZ cancelled: " + path + " — Operation cancelled before this copy was committed."); }
@@ -466,8 +721,9 @@ internal sealed partial class MainForm
             }
             details.Add("Config " + state + ": " + path + " — " + reason);
         }
-        _missionFilesResult!.Text = (cancelled ? "Cancelled · " : "") + created + " updated copies created; "
-            + failed + " failed; " + cancelledCount + " cancelled; " + skipped + " skipped. Your original missions were kept."
+        _missionFilesResult!.Text = (cancelled ? "Cancelled · " : "") + (created - reinstalled) + " updated copies created; "
+            + (reinstalled > 0 ? reinstalled + " missions reinstalled; " : "")
+            + failed + " failed; " + cancelledCount + " cancelled; " + skipped + " skipped." + (reinstalled == 0 ? " Your original missions were kept." : "")
             + (configOutcomes.Count == 0 ? "" : " Instance Configs: " + configUpdated + " updated; " + configFailed
                 + " failed; " + configCancelled + " cancelled; " + configSkipped + " skipped.");
         _missionFilesDetails!.Text = string.Join(Environment.NewLine, details.Concat(outcomes));
@@ -477,7 +733,7 @@ internal sealed partial class MainForm
         _missionFilesOpenFolder!.Visible = created > 0;
     }
     private Panel? _missionFilesPanel;
-    private TableLayoutPanel? _missionFilesPage, _missionFilesColumns, _missionFilesLeft, _missionFilesCard, _missionFilesGroups;
+    private TableLayoutPanel? _missionFilesPage, _missionFilesColumns, _missionFilesLeft, _missionFilesRight, _missionFilesCard, _missionFilesGroups, _missionFilesInstalledGroups;
     private TableLayoutPanel? _missionFilesAction;
     private FlowLayoutPanel? _missionFilesSourcesActions;
     private TableLayoutPanel? _missionFilesSourceFolders;
@@ -486,6 +742,8 @@ internal sealed partial class MainForm
     private Panel? _missionFilesSummaryArea;
     private Label? _missionFilesSubtitle, _missionFilesSummary, _missionFilesOutput;
     private Button? _missionFilesCreate, _missionFilesOtherToggle;
+    private Button? _missionFilesInstalledToggle;
+    private Label? _missionFilesOriginalsHint;
     private readonly MissionFilesViewState _missionFilesState = new();
     private readonly Dictionary<string, MissionFileRow> _missionFileRows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, MissionFileGroup> _missionFileGroups = new(StringComparer.Ordinal);
@@ -501,6 +759,7 @@ internal sealed partial class MainForm
         internal readonly HashSet<string> Selected = new(StringComparer.OrdinalIgnoreCase);
         internal readonly HashSet<string> Collapsed = new(StringComparer.Ordinal);
         internal bool ShowOtherMissions;
+        internal bool ShowInstalled;
         internal bool UpdateInstanceConfigs;
         internal Point ScrollPosition;
     }
@@ -508,10 +767,11 @@ internal sealed partial class MainForm
     private sealed record MissionFileGroup(TableLayoutPanel Surface, TableLayoutPanel Rows, WeatherCheckBox Check,
         Button Disclosure, Label Summary, Label Name);
 
-    private static TableLayoutPanel MissionFilesColumn(string name)
+    private static TableLayoutPanel MissionFilesColumn(string name, bool cacheMeasurements = false)
     {
-        var column = new TableLayoutPanel { Name = name, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 1, RowCount = 0, Margin = Padding.Empty, Dock = DockStyle.Top };
+        TableLayoutPanel column = cacheMeasurements ? new EditorLayoutPanel() : new TableLayoutPanel();
+        column.Name = name; column.AutoSize = true; column.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        column.ColumnCount = 1; column.RowCount = 0; column.Margin = Padding.Empty; column.Dock = DockStyle.Top;
         column.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         return column;
     }
@@ -538,8 +798,9 @@ internal sealed partial class MainForm
         if (_missionFilesSourceFolders is null) return;
         var removed = _missionSourceFolderRows.Keys.Where(path => !_missionSourceFolders.Contains(path, StringComparer.OrdinalIgnoreCase)).ToArray();
         var added = _missionSourceFolders.Where(path => !_missionSourceFolderRows.ContainsKey(path)).ToArray();
-        _missionFilesSourceError!.Text = _missionSourceFoldersError ?? "";
-        _missionFilesSourceError.Visible = _missionSourceFoldersError is not null;
+        _missionFilesSourceError!.Text = string.Join(Environment.NewLine,
+            new[] { _missionSourceFoldersError, _missionUnresolvedFolders }.Where(text => !string.IsNullOrEmpty(text)));
+        _missionFilesSourceError.Visible = _missionFilesSourceError.Text.Length > 0;
         if (removed.Length == 0 && added.Length == 0) return;
         var layouts = new List<Control> { _missionFilesPanel!, _missionFilesPage!, _missionFilesColumns!, _missionFilesLeft!, _missionFilesSourceFolders };
         layouts.AddRange(_missionSourceFolderRows.Values.Select(row => (Control)row.Surface));
@@ -582,27 +843,31 @@ internal sealed partial class MainForm
         if (_updatesPanel is null) BuildUpdatesPanel();
         _missionFilesPanel = new MissionDownloadSurface { Name = "MissionFilesPanel", Dock = DockStyle.Fill, AutoScroll = true, Visible = false };
         _updatesPanel!.Controls.Add(_missionFilesPanel);
-        _missionFilesPage = MissionFilesColumn("MissionFilesPage");
+        _missionFilesPage = MissionFilesColumn("MissionFilesPage", cacheMeasurements: true);
         _missionFilesPage.SuspendLayout();
         _missionFilesPage.Dock = DockStyle.None;
         _missionFilesPanel.Controls.Add(_missionFilesPage);
-        var header = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2, Margin = Padding.Empty };
+        var header = new TableLayoutPanel { Name = "MissionFilesHeader", AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2, RowCount = 3, Margin = Padding.Empty };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        header.Controls.Add(MissionFilesLabel("Update existing missions", 1.6f, FontStyle.Bold), 0, 0);
+        var title = MissionFilesLabel("Update existing missions", 1.6f, FontStyle.Bold);
+        header.Controls.Add(title, 0, 0);
+        header.SetColumnSpan(title, 2);
         header.Controls.Add(MissionFilesButton("MissionFilesBack", "Back to Updates", () => {
             _missionFilesState.ScrollPosition = _missionFilesPanel.AutoScrollPosition;
             PrepareUpdatesReveal();
             _missionFilesPanel.Hide(); _updatesContent!.Show(); _updatesPanel!.AutoScroll = true; LayoutUpdatesPanel();
-        }), 1, 0);
+        }), 1, 2);
+        header.GetControlFromPosition(1, 2)!.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         AddMissionFilesControl(_missionFilesPage, header);
         _missionFilesSubtitle = MissionFilesLabel("Files-only update", 1.2f, FontStyle.Bold);
 
-        _missionFilesColumns = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2, Margin = Padding.Empty };
+        _missionFilesColumns = new EditorLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2, Margin = Padding.Empty };
         _missionFilesColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 61));
         _missionFilesColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 39));
-        _missionFilesLeft = MissionFilesColumn("MissionFilesLeft");
-        _missionFilesCard = MissionFilesColumn("MissionFilesCard");
+        _missionFilesLeft = MissionFilesColumn("MissionFilesLeft", cacheMeasurements: true);
+        _missionFilesRight = MissionFilesColumn("MissionFilesRight", cacheMeasurements: true);
+        _missionFilesCard = MissionFilesColumn("MissionFilesCard", cacheMeasurements: true);
         _missionFilesCard.Paint += (_, e) => {
             using var pen = new Pen(BorderColor);
             using var shape = ConfigSearchSurface.RoundedRectangle(new RectangleF(.5f, .5f, Math.Max(1, _missionFilesCard.Width - 1), Math.Max(1, _missionFilesCard.Height - 1)), 5);
@@ -610,10 +875,12 @@ internal sealed partial class MainForm
             foreach (var label in _missionFilesCard.Controls.OfType<Label>().Where(label => label.Text is "What will change" or "Kept from your missions" or "Original MIZs stay untouched."))
                 e.Graphics.DrawLine(pen, _missionFilesCard.Padding.Left, label.Top - Zoomed(3), _missionFilesCard.Width - _missionFilesCard.Padding.Right, label.Top - Zoomed(3));
         };
-        _missionFilesColumns.Controls.Add(_missionFilesLeft, 0, 0); _missionFilesColumns.Controls.Add(_missionFilesCard, 1, 0);
+        AddMissionFilesControl(_missionFilesRight, _missionFilesCard);
+        _missionFilesColumns.Controls.Add(_missionFilesLeft, 0, 0); _missionFilesColumns.Controls.Add(_missionFilesRight, 1, 0);
         AddMissionFilesControl(_missionFilesPage, _missionFilesColumns);
-        AddMissionFilesControl(_missionFilesLeft, _missionFilesSubtitle);
-        AddMissionFilesControl(_missionFilesLeft, MissionFilesLabel("Select your missions. New copies keep your existing mission setup."));
+        header.Controls.Add(_missionFilesSubtitle, 0, 1);
+        header.SetColumnSpan(_missionFilesSubtitle, 2);
+        header.Controls.Add(MissionFilesLabel("Select your missions. New copies keep your existing mission setup."), 0, 2);
         var selection = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 3, Margin = Padding.Empty };
         selection.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         selection.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); selection.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -639,12 +906,19 @@ internal sealed partial class MainForm
         _missionFilesOtherToggle = MissionFilesButton("MissionFilesOtherToggle", "› Show other missions (0)", () => {
             _missionFilesState.ShowOtherMissions = !_missionFilesState.ShowOtherMissions;
             RefreshMissionFilesSelection();
-            LayoutMissionFiles(force: true);
         });
         _missionFilesOtherToggle.Visible = false;
         AddMissionFilesControl(_missionFilesLeft, _missionFilesOtherToggle);
-        _missionFilesGroups = MissionFilesColumn("MissionFilesGroups");
+        _missionFilesGroups = MissionFilesColumn("MissionFilesGroups", cacheMeasurements: true);
         AddMissionFilesControl(_missionFilesLeft, _missionFilesGroups);
+        _missionFilesInstalledToggle = MissionFilesButton("MissionFilesInstalledToggle", "› Show currently installed (0)", () => {
+            _missionFilesState.ShowInstalled = !_missionFilesState.ShowInstalled;
+            RefreshMissionFilesSelection();
+        });
+        _missionFilesInstalledToggle.Visible = false;
+        AddMissionFilesControl(_missionFilesLeft, _missionFilesInstalledToggle);
+        _missionFilesInstalledGroups = MissionFilesColumn("MissionFilesInstalledGroups", cacheMeasurements: true);
+        AddMissionFilesControl(_missionFilesLeft, _missionFilesInstalledGroups);
         _missionFilesSourcesActions = new FlowLayoutPanel { Name = "MissionFilesSourcesActions", AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink, Dock = DockStyle.Top, Margin = Padding.Empty, WrapContents = true };
         _missionFilesSourcesActions.Controls.Add(MissionFilesButton("MissionFilesAdd", "Add MIZ files…", () => MissionFilesAddRequested?.Invoke()));
@@ -653,12 +927,26 @@ internal sealed partial class MainForm
         _missionFilesSourcesActions.Controls.Add(MissionFilesButton("MissionFilesRefreshMissions", "Refresh missions",
             () => _missionDownloadJob = OpenMissionFilesAsync(refreshInventory: true)));
         AddMissionFilesControl(_missionFilesLeft, _missionFilesSourcesActions);
+        _missionFilesDeleteDivider = new Panel { Name = "MissionFilesDeleteDivider", Height = 1, Dock = DockStyle.Top, Margin = new Padding(0, Zoomed(12), 0, 0) };
+        AddMissionFilesControl(_missionFilesLeft, _missionFilesDeleteDivider);
+        _missionFilesDeleteRow = new TableLayoutPanel { Name = "MissionFilesDeleteRow", AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2, Margin = Padding.Empty };
+        _missionFilesDeleteRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        _missionFilesDeleteRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _missionFilesDeleteCount = MissionFilesLabel("No missions selected", .92f);
+        _missionFilesDelete = MissionFilesButton("MissionFilesDelete", "Delete selected…", () => _missionDownloadJob = DeleteSelectedMissionFilesAsync());
+        _missionFilesDelete.Enabled = false;
+        _missionFilesDelete.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        _missionFilesDelete.AccessibleDescription = "Move selected source missions to the Recycle Bin after confirmation. Refuses deletion if recycling is unavailable.";
+        _missionFilesDeleteRow.Controls.Add(_missionFilesDeleteCount, 0, 0);
+        _missionFilesDeleteRow.Controls.Add(_missionFilesDelete, 1, 0);
+        AddMissionFilesControl(_missionFilesLeft, _missionFilesDeleteRow);
+        AddMissionFilesControl(_missionFilesLeft, MissionFilesLabel("Moves selected source files to the Recycle Bin after confirmation.", .92f));
         _missionFilesSourceFolders = MissionFilesColumn("MissionFilesSourceFolders");
         AddMissionFilesControl(_missionFilesLeft, _missionFilesSourceFolders);
         _missionFilesSourceError = MissionFilesLabel("", .92f);
         _missionFilesSourceError.Visible = false;
         AddMissionFilesControl(_missionFilesLeft, _missionFilesSourceError);
-        AddMissionFilesControl(_missionFilesLeft, MissionFilesLabel("Only missions verified for this update can be selected.", .92f));
+        AddMissionFilesControl(_missionFilesLeft, MissionFilesLabel("Other missions can be selected for deletion, but cannot receive script updates.", .92f));
         AddMissionFilesControl(_missionFilesCard, MissionFilesLabel("Create updated copies", 1.2f, FontStyle.Bold));
         AddMissionFilesControl(_missionFilesCard, MissionFilesLabel("Output location", 1, FontStyle.Bold));
         AddMissionFilesControl(_missionFilesCard, MissionFilesLabel("Beside each original mission\nEach instance keeps its own Missions folder."));
@@ -670,7 +958,13 @@ internal sealed partial class MainForm
         _missionFilesCustomOutputPath.Name = "MissionFilesCustomOutputPath";
         AddMissionFilesControl(_missionFilesCard, _missionFilesCustomOutputPath);
         _missionFilesChooseOutputFolder = MissionFilesButton("MissionFilesChooseOutputFolder", "Choose Folder…", ChooseCustomMissionOutputFolder);
+        _missionFilesChooseOutputFolder.Click += async (_, _) => await RefreshDedicatedRegistrationTargetsAsync();
         AddMissionFilesControl(_missionFilesCard, _missionFilesChooseOutputFolder);
+        _missionFilesRegisterServer = CreateServerRegistrationChoice("MissionFilesRegisterServer");
+        AddMissionFilesControl(_missionFilesCard, _missionFilesRegisterServer);
+        _missionFilesServerHint = MissionFilesLabel("", .92f);
+        _missionFilesServerHint.Name = "MissionFilesServerHint";
+        AddMissionFilesControl(_missionFilesCard, _missionFilesServerHint);
         AddMissionFilesControl(_missionFilesCard, MissionFilesLabel("What will change", 1, FontStyle.Bold));
         AddMissionFilesControl(_missionFilesCard, MissionFilesLabel("•  Common and map setup scripts\n•  Embedded Config updated; current values kept\n•  Release version in the new filename"));
         var configs = new WeatherCheckBox { Name = "MissionFilesUpdateConfigs", Text = "Also update instance Configs", AutoSize = true, Dock = DockStyle.Top };
@@ -681,9 +975,10 @@ internal sealed partial class MainForm
         var keptMissionDetails = MissionFilesLabel("•  Units • weather • date & time\n•  Mission options • warehouses");
         keptMissionDetails.UseMnemonic = false;
         AddMissionFilesControl(_missionFilesCard, keptMissionDetails);
-        AddMissionFilesControl(_missionFilesCard, MissionFilesLabel("Original MIZs stay untouched."));
-        var action = _missionFilesAction = new TableLayoutPanel { Name = "MissionFilesAction", AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2 };
-        action.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); action.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _missionFilesOriginalsHint = MissionFilesLabel("Original MIZs stay untouched.");
+        AddMissionFilesControl(_missionFilesCard, _missionFilesOriginalsHint);
+        var action = _missionFilesAction = new TableLayoutPanel { Name = "MissionFilesAction", AutoSize = true, Dock = DockStyle.Top, ColumnCount = 1 };
+        action.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         var summary = _missionFilesSummaryArea = new Panel { Name = "MissionFilesSummaryArea", Dock = DockStyle.Top };
         _missionFilesSummary = MissionFilesLabel("0 new mission copies", 1.05f, FontStyle.Bold);
         _missionFilesOutput = MissionFilesLabel("");
@@ -694,9 +989,11 @@ internal sealed partial class MainForm
             if (_missionFilesState.Selected.Count > 0) createCopies();
         }, true);
         _missionFilesCreate.Enabled = false;
+        _missionFilesCreate.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        AddMissionFilesControl(_missionFilesRight, _missionFilesCreate);
         action.Padding = new Padding(0, Zoomed(10), 0, 0);
         action.Paint += (_, e) => { using var pen = new Pen(BorderColor); e.Graphics.DrawLine(pen, 0, 0, action.Width, 0); };
-        action.Controls.Add(summary, 0, 0); action.Controls.Add(_missionFilesCreate, 1, 0);
+        action.Controls.Add(summary, 0, 0);
         AddMissionFilesControl(_missionFilesPage, action);
         _missionFilesResult = MissionFilesLabel("", .92f);
         _missionFilesResult.Name = "MissionFilesResult";
@@ -785,13 +1082,13 @@ internal sealed partial class MainForm
         if (removed.Length == 0 && changed.Length == 0) { LayoutMissionFiles(); return; }
         var geometryChanged = removed.Length > 0 || changed.Any(pair =>
             !_missionFilesState.Candidates.TryGetValue(pair.Key, out var previous) || previous.GroupId != pair.Value.GroupId
-            || previous.GroupName != pair.Value.GroupName || previous.GroupSummary != pair.Value.GroupSummary || previous.FriendlyName != pair.Value.FriendlyName
+            || previous.GroupName != pair.Value.GroupName || previous.GroupSummary != pair.Value.GroupSummary || previous.FriendlyName != pair.Value.FriendlyName || previous.IsCurrentVersion != pair.Value.IsCurrentVersion
             || (!_missionFilesState.ShowOtherMissions && ((previous is { State: FileUpdateInspectionState.Compatible, ProposedOutputName: not null })
                 != (pair.Value is { State: FileUpdateInspectionState.Compatible, ProposedOutputName: not null }))));
         List<Control>? layouts = null;
         if (geometryChanged)
         {
-            layouts = [_missionFilesPanel!, _missionFilesPage!, _missionFilesColumns!, _missionFilesLeft!, _missionFilesGroups!];
+            layouts = [_missionFilesPanel!, _missionFilesPage!, _missionFilesColumns!, _missionFilesLeft!, _missionFilesGroups!, _missionFilesInstalledGroups!];
             foreach (var group in _missionFileGroups.Values) { layouts.Add(group.Surface); layouts.Add(group.Rows); }
             foreach (var control in layouts) control.SuspendLayout();
         }
@@ -806,14 +1103,15 @@ internal sealed partial class MainForm
         foreach (var (path, candidate) in changed)
         {
             _missionFilesState.Candidates[path] = candidate;
-            if (!_missionFileGroups.TryGetValue(candidate.GroupId, out var group))
+            var presentationGroup = candidate.IsCurrentVersion ? "installed:" + candidate.GroupId : candidate.GroupId;
+            if (!_missionFileGroups.TryGetValue(presentationGroup, out var group))
             {
-                var surface = MissionFilesColumn("MissionFilesInstance-" + candidate.GroupId);
+                var surface = MissionFilesColumn("MissionFilesInstance-" + presentationGroup, cacheMeasurements: true);
                 var header = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 3, Margin = Padding.Empty };
                 header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
                 header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-                var groupId = candidate.GroupId;
-                var body = MissionFilesColumn("MissionFilesChildren-" + groupId);
+                var groupId = presentationGroup;
+                var body = MissionFilesColumn("MissionFilesChildren-" + groupId, cacheMeasurements: true);
                 if (layouts is not null)
                 {
                     surface.SuspendLayout(); body.SuspendLayout(); layouts.Add(surface); layouts.Add(body);
@@ -834,7 +1132,7 @@ internal sealed partial class MainForm
                 header.Controls.Add(disclosure, 0, 0); header.Controls.Add(check, 1, 0); header.Controls.Add(heading, 2, 0);
                 AddMissionFilesControl(surface, header); AddMissionFilesControl(surface, body);
                 group = new MissionFileGroup(surface, body, check, disclosure, detail, groupName);
-                _missionFileGroups.Add(groupId, group); AddMissionFilesControl(_missionFilesGroups!, surface);
+                _missionFileGroups.Add(groupId, group); AddMissionFilesControl(candidate.IsCurrentVersion ? _missionFilesInstalledGroups! : _missionFilesGroups!, surface);
             }
             group.Name.Text = candidate.GroupName; group.Summary.Text = candidate.GroupSummary;
             if (!_missionFileRows.TryGetValue(path, out var row))
@@ -867,20 +1165,21 @@ internal sealed partial class MainForm
             row.Surface.SuspendLayout();
             try
             {
-                row.Name.Text = candidate.FriendlyName; row.File.Text = Path.GetFileName(path); row.Status.Text = candidate.State.ToString();
+                row.Name.Text = candidate.FriendlyName; row.File.Text = Path.GetFileName(path); row.Status.Text = candidate.IsCurrentVersion ? "Currently installed" : candidate.State == FileUpdateInspectionState.Updated ? "Already updated" : candidate.State.ToString();
                 _toolTip.SetToolTip(row.Status, candidate.Reason);
-                row.Check.Enabled = candidate.State == FileUpdateInspectionState.Compatible && candidate.ProposedOutputName is not null;
+                row.Check.Enabled = candidate.SourceIdentity is not null
+                    || candidate.ProposedOutputName is not null && (candidate.IsCurrentVersion || candidate.State == FileUpdateInspectionState.Compatible);
                 if (!row.Check.Enabled) _missionFilesState.Selected.Remove(path);
             }
             finally { row.Surface.ResumeLayout(false); }
         }
-        foreach (var id in _missionFileGroups.Keys.Where(id => !incoming.Values.Any(row => row.GroupId == id)).ToArray())
+        foreach (var id in _missionFileGroups.Keys.Where(id => !incoming.Values.Any(row => (row.IsCurrentVersion ? "installed:" + row.GroupId : row.GroupId) == id)).ToArray())
         {
             var group = _missionFileGroups[id];
             foreach (var label in EnumerateChildControls<Control>(group.Surface).OfType<Label>()) _missionFilesLabels.Remove(label);
             group.Surface.Dispose(); _missionFileGroups.Remove(id); _missionFilesState.Collapsed.Remove(id);
         }
-        foreach (var table in _missionFileGroups.Values.Select(group => group.Rows).Append(_missionFilesGroups!))
+        foreach (var table in _missionFileGroups.Values.Select(group => group.Rows).Append(_missionFilesGroups!).Append(_missionFilesInstalledGroups!))
         {
             var children = table.Controls.Cast<Control>().OrderBy(control => table.GetRow(control)).ToArray();
             if (table.RowStyles.Count == children.Length && children.Select((child, index) => table.GetRow(child) == index).All(position => position)) continue;
@@ -902,8 +1201,10 @@ internal sealed partial class MainForm
     {
         foreach (var (path, candidate) in _missionFilesState.Candidates)
         {
-            if (groupId is not null && candidate.GroupId != groupId) continue;
-            if (selected && candidate.State == FileUpdateInspectionState.Compatible && candidate.ProposedOutputName is not null)
+            if (groupId is not null && (candidate.IsCurrentVersion ? "installed:" + candidate.GroupId : candidate.GroupId) != groupId) continue;
+            if (selected && (candidate.ProposedOutputName is not null && (candidate.IsCurrentVersion
+                ? _missionFilesState.ShowInstalled : candidate.State == FileUpdateInspectionState.Compatible)
+                || _missionFilesState.ShowOtherMissions && !candidate.IsCurrentVersion && candidate.SourceIdentity is not null))
                 _missionFilesState.Selected.Add(path);
             else _missionFilesState.Selected.Remove(path);
         }
@@ -911,8 +1212,12 @@ internal sealed partial class MainForm
     }
     private void RefreshMissionFilesSelection()
     {
+        RefreshServerRegistrationChoices();
         _missionFilesRendering = true;
-        _missionFilesPage!.SuspendLayout(); _missionFilesAction!.SuspendLayout(); _missionFilesSummaryArea!.SuspendLayout();
+        var layouts = new Control[] { _updatesPanel!, _missionFilesPanel!, _missionFilesPage!, _missionFilesColumns!, _missionFilesLeft!,
+            _missionFilesRight!, _missionFilesGroups!, _missionFilesInstalledGroups!, _missionFilesAction!, _missionFilesSummaryArea! }
+            .Concat(_missionFileGroups.Values.SelectMany(group => new Control[] { group.Surface, group.Rows })).ToArray();
+        foreach (var control in layouts) control.SuspendLayout();
         try
         {
             var originalsAvailable = _missionFilesPreparation?.Groups.Any(group => group.HasDcsServerBotFolder) == true;
@@ -920,13 +1225,17 @@ internal sealed partial class MainForm
             _missionFilesDcsServerBotOriginals.Visible = originalsAvailable;
             _missionFilesDcsServerBotOriginals.Enabled = originalsAvailable && !_updatesDisposed && !_missionDownloadBusy
                 && !_configLoadingOperation && !_updatesBusy && !_updatesInstalling && _updatesResult?.FilesEnvelopeAvailable == true;
-            var otherCount = 0;
+            var otherCount = 0; var installedCount = 0;
             foreach (var (path, row) in _missionFileRows)
             {
+                var currentVersion = _missionFilesState.Candidates[path].IsCurrentVersion;
                 var compatible = _missionFilesState.Candidates[path] is { State: FileUpdateInspectionState.Compatible, ProposedOutputName: not null };
-                if (!compatible) otherCount++;
-                row.Surface.Visible = compatible || _missionFilesState.ShowOtherMissions;
-                row.Status.ForeColor = compatible ? (_darkMode ? Color.FromArgb(91, 230, 90) : Color.FromArgb(30, 119, 44)) : HelpTextColor;
+                if (currentVersion) installedCount++; else if (!compatible) otherCount++;
+                row.Surface.Visible = currentVersion ? _missionFilesState.ShowInstalled : compatible || _missionFilesState.ShowOtherMissions;
+                row.Check.Enabled = !_missionDownloadBusy && !_configLoadingOperation
+                    && (currentVersion || compatible || _missionFilesState.Candidates[path].SourceIdentity is not null);
+                if (!row.Check.Enabled && !_missionDownloadBusy && !_configLoadingOperation) _missionFilesState.Selected.Remove(path);
+                row.Status.ForeColor = currentVersion ? BrandColor : compatible ? (_darkMode ? Color.FromArgb(91, 230, 90) : Color.FromArgb(30, 119, 44)) : HelpTextColor;
                 var selected = _missionFilesState.Selected.Contains(path);
                 if (row.Check.Checked != selected || row.Surface.BackColor != (selected ? (_darkMode ? Color.FromArgb(26, 45, 61) : SelectionBackground) : MainBackground))
                 {
@@ -938,11 +1247,13 @@ internal sealed partial class MainForm
             }
             foreach (var (id, group) in _missionFileGroups)
             {
-                var eligible = _missionFilesState.Candidates.Where(pair => pair.Value.GroupId == id
-                    && pair.Value is { State: FileUpdateInspectionState.Compatible, ProposedOutputName: not null }).Select(pair => pair.Key).ToArray();
-                group.Surface.Visible = eligible.Length > 0 || _missionFilesState.ShowOtherMissions;
+                var installedGroup = id.StartsWith("installed:", StringComparison.Ordinal);
+                var eligible = _missionFilesState.Candidates.Where(pair => (pair.Value.IsCurrentVersion ? "installed:" + pair.Value.GroupId : pair.Value.GroupId) == id
+                    && (pair.Value.ProposedOutputName is not null && (installedGroup || pair.Value.State == FileUpdateInspectionState.Compatible)
+                        || _missionFilesState.ShowOtherMissions && !pair.Value.IsCurrentVersion && pair.Value.SourceIdentity is not null)).Select(pair => pair.Key).ToArray();
+                group.Surface.Visible = installedGroup ? _missionFilesState.ShowInstalled : eligible.Length > 0 || _missionFilesState.ShowOtherMissions;
                 var count = eligible.Count(_missionFilesState.Selected.Contains);
-                group.Check.Enabled = eligible.Length > 0;
+                group.Check.Enabled = eligible.Length > 0 && !_missionDownloadBusy && !_configLoadingOperation;
                 var state = count == 0 ? CheckState.Unchecked : count == eligible.Length ? CheckState.Checked : CheckState.Indeterminate;
                 if (group.Check.CheckState != state) group.Check.CheckState = state;
             }
@@ -955,12 +1266,34 @@ internal sealed partial class MainForm
                     TextRenderer.MeasureText("› Show other missions (" + otherCount + ")", _missionFilesOtherToggle.Font).Width,
                     TextRenderer.MeasureText("⌄ Hide other missions (" + otherCount + ")", _missionFilesOtherToggle.Font).Width) + Zoomed(28);
             }
-            _missionFilesSummary!.Text = _missionFilesState.Selected.Count + " new mission copies";
-            _missionFilesOutput!.Text = _missionFilesState.Selected.Select(path => _missionFilesState.Candidates[path].ProposedOutputName).FirstOrDefault() ?? "";
-            _missionFilesCreate!.Enabled = _missionFilesState.Selected.Count > 0;
+            _missionFilesInstalledToggle!.Visible = installedCount > 0;
+            var installedCaption = (_missionFilesState.ShowInstalled ? "⌄ Hide" : "› Show") + " currently installed (" + installedCount + ")";
+            if (_missionFilesInstalledToggle.Text != installedCaption)
+            {
+                _missionFilesInstalledToggle.Text = installedCaption;
+                _missionFilesInstalledToggle.Width = TextRenderer.MeasureText("› Show currently installed (" + installedCount + ")", _missionFilesInstalledToggle.Font).Width + Zoomed(28);
+            }
+            var updatePaths = _missionFilesState.Selected.Where(path => _missionFilesState.Candidates[path] is { ProposedOutputName: not null } candidate
+                && (candidate.IsCurrentVersion || candidate.State == FileUpdateInspectionState.Compatible)).ToArray();
+            var reinstalls = updatePaths.Count(path => _missionFilesState.Candidates[path].IsCurrentVersion);
+            _missionFilesOriginalsHint!.Text = reinstalls > 0 ? "Reinstallation asks before replacing a current mission." : "Original MIZs stay untouched.";
+            _missionFilesSummary!.Text = reinstalls > 0 ? updatePaths.Length + " selected · " + reinstalls + " to reinstall" : updatePaths.Length + " new mission copies";
+            _missionFilesCreate!.Text = reinstalls > 0 ? "Apply selected scripts" : "Create updated copies";
+            _missionFilesOutput!.Text = updatePaths.Select(path => _missionFilesState.Candidates[path].ProposedOutputName).FirstOrDefault() ?? "";
+            _missionFilesCreate!.Enabled = updatePaths.Length > 0 && updatePaths.Length == _missionFilesState.Selected.Count
+                && !_missionDownloadBusy && !_configLoadingOperation;
+            _missionFilesDeleteCount!.Text = _missionFilesState.Selected.Count == 0 ? "No missions selected"
+                : _missionFilesState.Selected.Count + (_missionFilesState.Selected.Count == 1 ? " mission selected" : " missions selected");
+            _missionFilesDelete!.Enabled = _missionFilesState.Selected.Count > 0 && CanDeleteMissionFiles;
             _missionFilesSourcesActions!.Enabled = _missionFilesSourceFolders!.Enabled = !_missionDownloadBusy && !_configLoadingOperation;
         }
-        finally { _missionFilesSummaryArea!.ResumeLayout(false); _missionFilesAction!.ResumeLayout(false); _missionFilesPage!.ResumeLayout(false); _missionFilesRendering = false; }
+        finally
+        {
+            EditorSection.RunLayoutPass(() => {
+                for (var index = layouts.Length - 1; index >= 0; index--) layouts[index].ResumeLayout(true);
+            });
+            _missionFilesRendering = false;
+        }
     }
     private void LayoutMissionFiles(bool force = false)
     {
@@ -983,7 +1316,9 @@ internal sealed partial class MainForm
             var configChoice = _missionFilesCard!.Controls.OfType<WeatherCheckBox>().Single(check => check.Name == "MissionFilesUpdateConfigs");
             configChoice.Font = MissionPresentationFont(1f, FontStyle.Regular);
             _missionFilesCard.Padding = new Padding(Zoomed(16));
-            var minimumCardWidth = configChoice.GetPreferredSize(Size.Empty).Width + _missionFilesCard.Padding.Horizontal + configChoice.Margin.Horizontal;
+            if (_missionFilesRegisterServer is not null) _missionFilesRegisterServer.Font = configChoice.Font;
+            var minimumCardWidth = Math.Max(configChoice.GetPreferredSize(Size.Empty).Width,
+                (CanOfferFilesServerRegistration ? _missionFilesRegisterServer?.GetPreferredSize(Size.Empty).Width ?? 0 : 0)) + _missionFilesCard.Padding.Horizontal + configChoice.Margin.Horizontal;
             var narrow = width < Zoomed(860) || width * 39 / 100 < minimumCardWidth;
             _missionFilesColumns!.SuspendLayout();
             _missionFilesColumns.Width = width;
@@ -994,12 +1329,13 @@ internal sealed partial class MainForm
             _missionFilesColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, narrow ? 100 : 61));
             if (!narrow) _missionFilesColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 39));
             _missionFilesColumns.SetCellPosition(_missionFilesLeft!, new TableLayoutPanelCellPosition(0, 0));
-            _missionFilesColumns.SetCellPosition(_missionFilesCard!, new TableLayoutPanelCellPosition(narrow ? 0 : 1, narrow ? 1 : 0));
+            _missionFilesColumns.SetCellPosition(_missionFilesRight!, new TableLayoutPanelCellPosition(narrow ? 0 : 1, narrow ? 1 : 0));
             var leftWidth = narrow ? width : width * 61 / 100 - Zoomed(18);
             var rightWidth = narrow ? width : width * 39 / 100;
             _missionFilesLeft!.Margin = new Padding(0, 0, narrow ? 0 : Zoomed(18), Zoomed(18));
             _missionFilesLeft.MinimumSize = new Size(leftWidth, 0); _missionFilesLeft.MaximumSize = new Size(leftWidth, 0);
             _missionFilesCard.MinimumSize = new Size(rightWidth, 0); _missionFilesCard.MaximumSize = new Size(rightWidth, 0);
+            _missionFilesRight!.MinimumSize = new Size(rightWidth, 0); _missionFilesRight.MaximumSize = new Size(rightWidth, 0);
             foreach (var label in EnumerateChildControls<Label>(_missionFilesPage))
             {
                 var appearance = _missionFilesLabels[label];
@@ -1014,8 +1350,16 @@ internal sealed partial class MainForm
                 button.Size = new Size(TextRenderer.MeasureText(button.Text, button.Font).Width + Zoomed(26),
                     Math.Max(Zoomed(34), button.Font.Height + Zoomed(10)));
                 button.Margin = new Padding(0, Zoomed(4), Zoomed(8), Zoomed(6));
-                if (button.Name == "MissionFilesBack") SizeMissionBackButton(button);
-                else if (button.Name is "MissionFilesSelectAll" or "MissionFilesClear" or "MissionFilesOtherToggle" or "MissionFilesOpenFolder" || button.Name.StartsWith("MissionFilesGroupToggle-", StringComparison.Ordinal))
+                if (button.Name == "MissionFilesDelete")
+                {
+                    button.Width += Zoomed(22);
+                    button.ForeColor = SystemInformation.HighContrast ? SystemColors.ControlText
+                        : _darkMode ? Color.FromArgb(243, 160, 167) : Color.FromArgb(165, 45, 53);
+                    button.FlatAppearance.BorderColor = SystemInformation.HighContrast ? SystemColors.ControlText
+                        : _darkMode ? Color.FromArgb(126, 82, 92) : Color.FromArgb(184, 118, 125);
+                }
+                else if (button.Name == "MissionFilesBack") SizeMissionBackButton(button);
+                else if (button.Name is "MissionFilesSelectAll" or "MissionFilesClear" or "MissionFilesOtherToggle" or "MissionFilesInstalledToggle" or "MissionFilesOpenFolder" || button.Name.StartsWith("MissionFilesGroupToggle-", StringComparison.Ordinal))
                 { button.FlatAppearance.BorderSize = 0; button.BackColor = MainBackground; button.ForeColor = BrandColor;
                     if (!button.Name.StartsWith("MissionFilesGroupToggle-", StringComparison.Ordinal)) button.Font = MissionPresentationFont(1f, FontStyle.Underline); }
             }
@@ -1024,6 +1368,10 @@ internal sealed partial class MainForm
             _missionFilesResultGlyph.Margin = new Padding(0, Zoomed(3), Zoomed(6), 0);
             _missionFilesSourcesActions!.MaximumSize = new Size(leftWidth, 0);
             _missionFilesSourceFolders!.MaximumSize = new Size(leftWidth, 0);
+            _missionFilesDeleteDivider!.BackColor = BorderColor;
+            _missionFilesDeleteRow!.MinimumSize = _missionFilesDeleteRow.MaximumSize = new Size(leftWidth, 0);
+            _missionFilesDeleteRow.Padding = new Padding(0, Zoomed(12), 0, 0);
+            _missionFilesDeleteCount!.MaximumSize = new Size(Math.Max(50, leftWidth - _missionFilesDelete!.Width - Zoomed(20)), 0);
             foreach (var row in _missionSourceFolderRows.Values)
             {
                 row.Surface.MinimumSize = row.Surface.MaximumSize = new Size(leftWidth, 0);
@@ -1049,7 +1397,7 @@ internal sealed partial class MainForm
             }
             _missionFilesPage.BackColor = _missionFilesPanel.BackColor = MainBackground;
             _missionFilesAction!.MinimumSize = new Size(width, 0); _missionFilesAction.MaximumSize = new Size(width, 0);
-            var summaryWidth = Math.Max(50, width - _missionFilesCreate!.Width - _missionFilesCreate.Margin.Horizontal - _missionFilesSummaryArea!.Margin.Horizontal);
+            var summaryWidth = Math.Max(50, width - _missionFilesSummaryArea!.Margin.Horizontal);
             _missionFilesSummary!.MaximumSize = _missionFilesOutput!.MaximumSize = new Size(summaryWidth, 0);
             var summaryHeight = Math.Max(Zoomed(34), _missionFilesSummary.GetPreferredSize(new Size(summaryWidth, 0)).Height);
             _missionFilesSummaryArea!.AutoSize = false;
@@ -1078,17 +1426,119 @@ internal sealed partial class MainForm
     private TableLayoutPanel? _missionFilesDownloadsSection;
     private Label? _missionFilesUpdatesScanStatus;
     private TableLayoutPanel? _missionFilesPreservationCallout;
+    private TableLayoutPanel? _missionFilesUpdatesSourcesBody;
+    private Button? _missionFilesUpdatesSourcesToggle;
+    private bool _missionFilesUpdatesSourcesExpanded;
     private Button? _missionFilesUpdatesCheckMissions, _missionFilesUpdatesAddFolder, _missionFilesUpdatesOpen;
     private Button? _missionFilesUpdatesAddMiz;
+    private RadioButton? _missionFilesUpdatesAllSources, _missionFilesUpdatesCustomSources;
+    private Button? _missionFilesUpdatesAutoScan;
+    private Label? _missionFilesUpdatesScopeHint, _missionFilesUpdatesAutoHint;
     private event Action? MissionFilesOpenRequested;
     private readonly Dictionary<string, (TableLayoutPanel Row, Label Name, Label Provenance, RowStyle Style)> _missionFilesUpdateInstanceRows = new(StringComparer.Ordinal);
     private string[] _missionFilesUpdateInstanceOrder = [];
     private (int Width, int Zoom, bool Dark)? _missionFilesUpdatesAppearance;
+    private (int Width, int Zoom)? _missionFilesUpdatesRowMeasurements;
+    private Control[]? _missionFilesUpdatesLayouts;
+    private Control[] MissionFilesUpdatesLayouts => _missionFilesUpdatesLayouts ??=
+        EnumerateChildControls<Control>(_missionFilesUpdatesView!)
+            .Prepend(_missionFilesUpdatesView!).Prepend(_updatesPanel!).ToArray();
+    private void UpdateMissionFilesUpdatesLayout(Action change, params Control[] repaint)
+    {
+        var host = _updatesPanel!;
+        var view = _missionFilesUpdatesView!;
+        var layouts = MissionFilesUpdatesLayouts;
+        var bounds = repaint.Length == 0 ? [] : layouts.Select(control => control.Bounds).ToArray();
+        var deferPainting = host.IsHandleCreated && host.Visible;
+        var deferPagePainting = deferPainting && repaint.Length > 0 && view.IsHandleCreated;
+        if (deferPagePainting) SendZoomRedrawMessage(view.Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);
+        if (deferPainting) SendZoomRedrawMessage(host.Handle, 0x000B, IntPtr.Zero, IntPtr.Zero);
+        try
+        {
+        EditorSection.RunLayoutPass(() =>
+        {
+            foreach (var control in layouts) if (control is ScrollableControl) control.SuspendLayout();
+            try { change(); }
+            finally
+            {
+                // A child settles while every ancestor is still suspended, ending at the host.
+                foreach (var control in layouts.Reverse())
+                    if (control is ScrollableControl && control != view && control != host && !control.IsDisposed) control.ResumeLayout(true);
+                if (bounds.Length > 0 && view.Visible && view.Width == bounds[1].Width)
+                {
+                    // Local scan choices change only this retained section; the other page rows are unchanged.
+                    var details = _missionFilesUpdatesDetails!;
+                    var delta = details.GetPreferredSize(new Size(details.Width, 0)).Height - details.Height;
+                    view.Height += delta;
+                    view.ResumeLayout(delta != 0);
+                }
+                else if (!view.IsDisposed) view.ResumeLayout(true);
+                if (!host.IsDisposed) host.ResumeLayout(true);
+                SizeMissionFilesUpdatesView();
+            }
+        });
+        }
+        finally
+        {
+            if (deferPainting && host.IsHandleCreated && !host.IsDisposed)
+            {
+                if (deferPagePainting && view.IsHandleCreated && !view.IsDisposed)
+                    SendZoomRedrawMessage(view.Handle, 0x000B, new IntPtr(1), IntPtr.Zero);
+                SendZoomRedrawMessage(host.Handle, 0x000B, new IntPtr(1), IntPtr.Zero);
+                if (repaint.Length == 0 || view.Location != bounds[1].Location || view.Width != bounds[1].Width)
+                    host.Invalidate(true);
+                else
+                {
+                    if (view.Height < bounds[1].Height)
+                        host.Invalidate(new Rectangle(view.Left, view.Bottom, view.Width, bounds[1].Height - view.Height));
+                    if (view.Height > bounds[1].Height)
+                        view.Invalidate(new Rectangle(0, bounds[1].Height, view.Width, view.Height - bounds[1].Height));
+                }
+                for (var index = 2; index < bounds.Length; index++)
+                    if (!layouts[index].IsDisposed && layouts[index].Bounds != bounds[index])
+                    {
+                        var previous = bounds[index];
+                        var current = layouts[index].Bounds;
+                        if (previous.X == current.X && previous.Width == current.Width)
+                        {
+                            if (current.Top > previous.Top)
+                                layouts[index].Parent!.Invalidate(new Rectangle(previous.X, previous.Y, previous.Width, Math.Min(previous.Height, current.Top - previous.Top)));
+                            if (current.Bottom < previous.Bottom)
+                                layouts[index].Parent!.Invalidate(new Rectangle(previous.X, Math.Max(previous.Top, current.Bottom), previous.Width, previous.Bottom - Math.Max(previous.Top, current.Bottom)));
+                        }
+                        else layouts[index].Parent!.Invalidate(previous);
+                        layouts[index].Invalidate(layouts[index].Location != bounds[index].Location || layouts[index].Width != bounds[index].Width);
+                    }
+                foreach (var control in repaint) { control.Invalidate(true); control.Update(); }
+                host.Update();
+            }
+        }
+    }
+    private void SizeMissionFilesUpdatesView()
+    {
+        var view = _missionFilesUpdatesView!;
+        if (!view.Visible) return;
+        var rows = _missionFilesUpdateInstances!;
+        var measurements = (rows.ClientSize.Width, _uiZoomPercent);
+        if (_missionFilesUpdatesRowMeasurements != measurements)
+        {
+            rows.SuspendLayout();
+            try
+            {
+                foreach (var item in _missionFilesUpdateInstanceRows.Values)
+                    item.Row.Height = item.Row.GetPreferredSize(new Size(Math.Max(1, measurements.Width - item.Row.Margin.Horizontal), 0)).Height;
+                _missionFilesUpdatesRowMeasurements = measurements;
+            }
+            finally { rows.ResumeLayout(true); }
+        }
+        view.Height = view.Controls.Cast<Control>().Where(control => control.Visible)
+            .Select(control => control.Bottom + control.Margin.Bottom).DefaultIfEmpty(view.Padding.Top).Max() + view.Padding.Bottom;
+    }
     private void BuildMissionFilesUpdatesView(Action openFiles, Action download, Action notes, Action back, Action checkAgain)
     {
         if (_missionFilesUpdatesView is not null) return;
         EnsureMissionFilesFontLifetime();
-        _missionFilesUpdatesView = MissionFilesColumn("MissionFilesUpdatesView");
+        _missionFilesUpdatesView = MissionFilesColumn("MissionFilesUpdatesView", cacheMeasurements: true);
         _missionFilesUpdatesView.Padding = new Padding(Zoomed(24));
         var header = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2 };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -1109,40 +1559,93 @@ internal sealed partial class MainForm
         _missionFilesBadge = MissionFilesLabel("FILES-ONLY UPDATE", .9f, FontStyle.Bold);
         _missionFilesBadge.Padding = new Padding(Zoomed(8), Zoomed(4), Zoomed(8), Zoomed(4));
         _missionFilesBadge.Dock = DockStyle.None; _missionFilesBadge.Anchor = AnchorStyles.Left;
-        release.Controls.AddRange([_missionFilesReleaseTitle, _missionFilesBadge]);
+        release.Controls.Add(_missionFilesReleaseTitle);
         AddMissionFilesControl(_missionFilesUpdatesView, release);
         _missionFilesReleaseDetail = MissionFilesLabel("");
         AddMissionFilesControl(_missionFilesUpdatesView, _missionFilesReleaseDetail);
         _missionFilesReleaseActions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top };
         AddMissionFilesControl(_missionFilesUpdatesView, _missionFilesReleaseActions);
-        _missionFilesUpdatesDetails = MissionFilesColumn("MissionFilesUpdatesDetails");
+        _missionFilesUpdatesDetails = MissionFilesColumn("MissionFilesUpdatesDetails", cacheMeasurements: true);
         _missionFilesUpdatesDetails.Visible = false;
         AddMissionFilesControl(_missionFilesUpdatesView, _missionFilesUpdatesDetails);
-        AddMissionFilesControl(_missionFilesUpdatesDetails, MissionFilesLabel("Update your current missions", 1.2f, FontStyle.Bold));
+        _missionFilesPreservationCallout = MissionFilesColumn("MissionFilesUpdateActionCard", cacheMeasurements: true);
+        _missionFilesPreservationCallout.Margin = new Padding(0, Zoomed(14), 0, Zoomed(10));
+        _missionFilesPreservationCallout.Padding = new Padding(Zoomed(18));
+        _missionFilesPreservationCallout.Paint += (_, e) => {
+            using var pen = new Pen(BorderColor);
+            using var shape = ConfigSearchSurface.RoundedRectangle(new RectangleF(.5f, .5f,
+                Math.Max(1, _missionFilesPreservationCallout.Width - 1), Math.Max(1, _missionFilesPreservationCallout.Height - 1)), 5);
+            e.Graphics.DrawPath(pen, shape);
+        };
+        var methodHeading = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top };
+        var methodTitle = MissionFilesLabel("Keep your mission setup", 1.2f, FontStyle.Bold);
+        methodTitle.Dock = DockStyle.None; methodTitle.Anchor = AnchorStyles.Left;
+        methodHeading.Controls.AddRange([methodTitle, _missionFilesBadge]);
+        AddMissionFilesControl(_missionFilesPreservationCallout, methodHeading);
+        AddMissionFilesControl(_missionFilesPreservationCallout,
+            MissionFilesLabel("Update the script files while keeping everything else the same."));
+        var actions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0, Zoomed(6), 0, 0) };
+        _missionFilesUpdatesOpen = MissionFilesButton("FilesUpdatesOpen", "Update existing missions", openFiles);
+        ((PreviewButton)_missionFilesUpdatesOpen).AccentOutline = true;
         _missionFilesUpdatesScanStatus = MissionFilesLabel("");
-        AddMissionFilesControl(_missionFilesUpdatesDetails, _missionFilesUpdatesScanStatus);
-        _missionFilesUpdateInstances = MissionFilesColumn("MissionFilesUpdateInstances");
-        AddMissionFilesControl(_missionFilesUpdatesDetails, _missionFilesUpdateInstances);
-        AddMissionFilesControl(_missionFilesUpdatesDetails, MissionFilesLabel(
-            "Folder scans look for Foothold in the filename. Add another folder or select renamed MIZ files directly."));
+        _missionFilesUpdatesScanStatus.Dock = DockStyle.None; _missionFilesUpdatesScanStatus.Anchor = AnchorStyles.Left;
+        _missionFilesUpdatesScanStatus.Margin = new Padding(Zoomed(12), Zoomed(8), 0, Zoomed(5));
+        actions.Controls.AddRange([_missionFilesUpdatesOpen, _missionFilesUpdatesScanStatus]);
+        AddMissionFilesControl(_missionFilesPreservationCallout, actions);
+        _missionFilesUpdatesSourcesBody = MissionFilesColumn("MissionFilesUpdatesSourcesBody", cacheMeasurements: true);
+        _missionFilesUpdatesSourcesBody.Visible = _missionFilesUpdatesSourcesExpanded;
+        _missionFilesUpdatesSourcesToggle = MissionFilesButton("FilesUpdatesSourcesToggle", "Scan options ▾", () => {
+            UpdateMissionFilesUpdatesLayout(() => {
+                _missionFilesUpdatesSourcesExpanded = !_missionFilesUpdatesSourcesExpanded;
+                _missionFilesUpdatesSourcesBody.Visible = _missionFilesUpdatesSourcesExpanded;
+                _missionFilesUpdatesSourcesToggle!.Text = _missionFilesUpdatesSourcesExpanded ? "Scan options ▴" : "Scan options ▾";
+            }, _missionFilesUpdatesSourcesToggle!, _missionFilesUpdatesSourcesBody!);
+        });
+        _missionFilesUpdatesSourcesToggle.AccessibleName = "Scan options";
+        _missionFilesUpdatesSourcesToggle.AccessibleDescription = "Show or hide the retained mission scan details.";
+        AddMissionFilesControl(_missionFilesUpdatesDetails, MissionFilesLabel("Mission sources", 1f, FontStyle.Bold));
+        var scanToolbar = new TableLayoutPanel { Name = "FilesUpdatesScanToolbar", AutoSize = true, Dock = DockStyle.Top, ColumnCount = 3, Margin = Padding.Empty };
+        scanToolbar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        scanToolbar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); scanToolbar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        _missionFilesUpdatesCheckMissions = MissionFilesButton("FilesUpdatesCheckMissions", "Scan now",
+            () => _missionDownloadJob = OpenMissionFilesAsync(refreshInventory: true, showUpdater: false));
+        ((PreviewButton)_missionFilesUpdatesCheckMissions).AccentOutline = true;
+        _missionFilesUpdatesAutoScan = MissionFilesButton("FilesUpdatesAutoScan", "Auto scan: On",
+            () => ApplyMissionScanPreferences(!_settings.AutomaticMissionScan));
+        _missionFilesUpdatesAutoScan.AccessibleName = "Scan missions automatically when opening Updates";
+        scanToolbar.Controls.Add(_missionFilesUpdatesCheckMissions, 0, 0);
+        scanToolbar.Controls.Add(_missionFilesUpdatesAutoScan, 1, 0); scanToolbar.Controls.Add(_missionFilesUpdatesSourcesToggle, 2, 0);
+        AddMissionFilesControl(_missionFilesUpdatesDetails, scanToolbar);
+        _missionFilesUpdatesAutoHint = MissionFilesLabel("", .92f);
+        AddMissionFilesControl(_missionFilesUpdatesDetails, _missionFilesUpdatesAutoHint);
+        AddMissionFilesControl(_missionFilesUpdatesSourcesBody, MissionFilesLabel("Where to scan", 1f, FontStyle.Bold));
+        var scope = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top };
+        _missionFilesUpdatesAllSources = new WeatherRadioButton { Name = "FilesUpdatesAllSources", Text = "Instance Missions folders and custom sources", AutoSize = true,
+            Checked = !_settings.MissionScanCustomSourcesOnly };
+        _missionFilesUpdatesCustomSources = new WeatherRadioButton { Name = "FilesUpdatesCustomSources", Text = "Custom sources only", AutoSize = true,
+            Checked = _settings.MissionScanCustomSourcesOnly };
+        scope.Controls.AddRange([_missionFilesUpdatesAllSources, _missionFilesUpdatesCustomSources]);
+        AddMissionFilesControl(_missionFilesUpdatesSourcesBody, scope);
+        _missionFilesUpdatesScopeHint = MissionFilesLabel("", .92f);
+        AddMissionFilesControl(_missionFilesUpdatesSourcesBody, _missionFilesUpdatesScopeHint);
+        AddMissionFilesControl(_missionFilesUpdatesSourcesBody, MissionFilesLabel(
+            "Keep missions elsewhere? Add a mission folder or choose MIZ files to include them.", .92f));
         var sourceActions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top };
         _missionFilesUpdatesAddFolder = MissionFilesButton("FilesUpdatesAddFolder", "Add mission folder…",
             () => _missionDownloadJob = AddMissionSourceFolderAsync(showUpdater: false));
-        _missionFilesUpdatesCheckMissions = MissionFilesButton("FilesUpdatesCheckMissions", "Rescan missions",
-            () => _missionDownloadJob = OpenMissionFilesAsync(refreshInventory: true, showUpdater: false));
         _missionFilesUpdatesAddMiz = MissionFilesButton("FilesUpdatesAddMiz", "Add MIZ files…",
             () => _missionDownloadJob = AddMissionFilesAsync(showUpdater: false));
-        sourceActions.Controls.AddRange([_missionFilesUpdatesAddFolder, _missionFilesUpdatesAddMiz, _missionFilesUpdatesCheckMissions]);
-        AddMissionFilesControl(_missionFilesUpdatesDetails, sourceActions);
-        _missionFilesPreservationCallout = BuildMissionUpdatesCallout("Keep your mission setup",
-            "Create an updated copy that keeps your units, weather, mission time, and warehouses.");
+        sourceActions.Controls.AddRange([_missionFilesUpdatesAddFolder, _missionFilesUpdatesAddMiz]);
+        AddMissionFilesControl(_missionFilesUpdatesSourcesBody, sourceActions);
+        _missionFilesUpdateInstances = MissionFilesColumn("MissionFilesUpdateInstances", cacheMeasurements: true);
+        AddMissionFilesControl(_missionFilesUpdatesSourcesBody, _missionFilesUpdateInstances);
+        AddMissionFilesControl(_missionFilesUpdatesSourcesBody, MissionFilesLabel(
+            "Folder scans look for Foothold in the filename. Select renamed MIZ files directly.", .92f));
+        AddMissionFilesControl(_missionFilesUpdatesDetails, _missionFilesUpdatesSourcesBody);
+        _missionFilesUpdatesAllSources.CheckedChanged += (_, _) => { if (_missionFilesUpdatesAllSources.Checked) ApplyMissionScanPreferences(); };
+        _missionFilesUpdatesCustomSources.CheckedChanged += (_, _) => { if (_missionFilesUpdatesCustomSources.Checked) ApplyMissionScanPreferences(); };
         AddMissionFilesControl(_missionFilesUpdatesDetails, _missionFilesPreservationCallout);
-        var actions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top };
-        _missionFilesUpdatesOpen = MissionFilesButton("FilesUpdatesOpen", "Update existing missions", openFiles);
-        ((PreviewButton)_missionFilesUpdatesOpen).AccentOutline = true;
-        actions.Controls.Add(_missionFilesUpdatesOpen);
-        AddMissionFilesControl(_missionFilesUpdatesDetails, actions);
-        _missionFilesDownloadsSection = MissionFilesColumn("MissionFilesDownloadsSection");
+        _missionFilesDownloadsSection = MissionFilesColumn("MissionFilesDownloadsSection", cacheMeasurements: true);
         AddMissionFilesControl(_missionFilesDownloadsSection, new Panel { Name = "FilesUpdatesDownloadsDivider",
             Height = 1, Dock = DockStyle.Top, Margin = new Padding(0, Zoomed(12), 0, Zoomed(10)) });
         AddMissionFilesControl(_missionFilesDownloadsSection, MissionFilesLabel("Update by downloading a full mission", 1.2f, FontStyle.Bold));
@@ -1157,13 +1660,13 @@ internal sealed partial class MainForm
         AddMissionFilesControl(_missionFilesUpdatesView, new Panel { Name = "FilesUpdatesFooterDivider", Height = 1, Dock = DockStyle.Top, Margin = new Padding(0, 0, 0, Zoomed(12)) });
         var footer = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top };
         // MainForm.Updates binds this retained preference to the existing checker/store.
-        footer.Controls.Add(new WeatherCheckBox { Name = "FilesUpdatesAutomatic", Text = "Check for updates on every startup", AutoSize = true });
+        footer.Controls.Add(new WeatherCheckBox { Name = "FilesUpdatesAutomatic", Text = "Check for Manager updates on every startup", AutoSize = true });
         footer.Controls.Add(MissionFilesButton("FilesUpdatesCheck", "Check again", checkAgain));
         AddMissionFilesControl(_missionFilesUpdatesView, footer);
     }
     private TableLayoutPanel BuildMissionUpdatesCallout(string title, string detail)
     {
-        var callout = MissionFilesColumn("FilesUpdatesCallout");
+        var callout = MissionFilesColumn("FilesUpdatesCallout", cacheMeasurements: true);
         callout.Margin = new Padding(0, Zoomed(6), 0, Zoomed(6));
         callout.Padding = new Padding(Zoomed(12), Zoomed(5), Zoomed(12), Zoomed(5));
         callout.Paint += (_, e) =>
@@ -1181,30 +1684,57 @@ internal sealed partial class MainForm
         _missionFilesManagerText!.Text = presentation.ManagerVerifiedCurrent ? "Your Manager is up to date" : presentation.ManagerStatus;
         _missionFilesReleaseTitle!.Text = presentation.ReleaseTitle;
         _missionFilesBadge!.Visible = presentation.FilesOnlyAvailable;
+        _missionFilesUpdatesScanStatus!.ForeColor = presentation.FilesOnlyAvailable && !SystemInformation.HighContrast
+            ? _darkMode ? Color.FromArgb(148, 213, 180) : Color.FromArgb(25, 113, 77) : PrimaryTextColor;
         var incoming = presentation.Instances.ToDictionary(instance => instance.Id, StringComparer.Ordinal);
+        if (incoming.Count == 0) _missionFilesUpdateInstances!.Hide();
+        var retained = _settings.ServerProfiles.Select(profile => profile.Id).Append(GetMissionDownloadFallback().Id)
+            .Concat(_missionSourceFolders.Select(folder => "source-folder:" + folder.ToUpperInvariant()))
+            .Concat(_missionFilesExternalPaths.Select(path => "source-file:" + path.ToUpperInvariant())).ToHashSet(StringComparer.Ordinal);
         foreach (var id in _missionFilesUpdateInstanceRows.Keys.Where(id => !incoming.ContainsKey(id)).ToArray())
         {
             var removed = _missionFilesUpdateInstanceRows[id];
+            if (retained.Contains(id)) { if (incoming.Count > 0) removed.Row.Visible = false; continue; }
             _missionFilesLabels.Remove(removed.Name); _missionFilesLabels.Remove(removed.Provenance);
             removed.Row.Dispose(); _missionFilesUpdateInstanceRows.Remove(id);
+            _missionFilesUpdatesLayouts = null;
         }
         var created = false;
         foreach (var (id, name, provenance) in presentation.Instances)
         {
             if (!_missionFilesUpdateInstanceRows.TryGetValue(id, out var item))
             {
-                var row = new TableLayoutPanel { Name = "MissionFilesUpdateInstance-" + id, AutoSize = true, Dock = DockStyle.Top, ColumnCount = 2 };
+                var removable = id.StartsWith("source-folder:", StringComparison.Ordinal) || id.StartsWith("source-file:", StringComparison.Ordinal);
+                var row = new TableLayoutPanel { Name = "MissionFilesUpdateInstance-" + id, AutoSize = false, Dock = DockStyle.Top, ColumnCount = removable ? 3 : 2 };
                 row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65)); row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
+                if (removable) row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
                 var nameLabel = MissionFilesLabel(name); var provenanceLabel = MissionFilesLabel(provenance);
                 row.Controls.Add(nameLabel, 0, 0); row.Controls.Add(provenanceLabel, 1, 0);
+                if (removable)
+                    row.Controls.Add(MissionFilesButton("FilesUpdatesRemoveSource-" + id, "Remove", () => {
+                        if (id.StartsWith("source-folder:", StringComparison.Ordinal))
+                            _missionDownloadJob = RemoveMissionSourceFolderAsync(name, showUpdater: false);
+                        else
+                        {
+                            _missionFilesExternalPaths = _missionFilesExternalPaths.Where(path => !PathsEqual(path, name)).ToArray();
+                            RefreshUpdatesPresentation();
+                        }
+                    }), 2, 0);
                 row.Paint += (_, e) => { using var pen = new Pen(BorderColor); e.Graphics.DrawLine(pen, 0, row.Height - 1, row.Width, row.Height - 1); };
                 item = (row, nameLabel, provenanceLabel, new RowStyle(SizeType.AutoSize));
                 _missionFilesUpdateInstanceRows.Add(id, item); created = true;
+                _missionFilesUpdatesLayouts = null;
+                _missionFilesUpdatesRowMeasurements = null;
             }
-            if (item.Name.Text != name) item.Name.Text = name;
-            if (item.Provenance.Text != provenance) item.Provenance.Text = provenance;
+            if (item.Name.Text != name) { item.Name.Text = name; _missionFilesUpdatesRowMeasurements = null; }
+            if (item.Provenance.Text != provenance) { item.Provenance.Text = provenance; _missionFilesUpdatesRowMeasurements = null; }
+            item.Row.Visible = true;
         }
-        var order = presentation.Instances.Select(instance => instance.Id).ToArray();
+        _missionFilesUpdateInstances!.Visible = incoming.Count > 0;
+        var incomingOrder = presentation.Instances.Select(instance => instance.Id).ToArray();
+        var order = _missionFilesUpdateInstanceOrder.Where(incoming.ContainsKey).SequenceEqual(incomingOrder)
+            ? _missionFilesUpdateInstanceOrder.Where(_missionFilesUpdateInstanceRows.ContainsKey).ToArray()
+            : incomingOrder.Concat(_missionFilesUpdateInstanceRows.Keys.Where(id => !incoming.ContainsKey(id))).ToArray();
         if (!_missionFilesUpdateInstanceOrder.SequenceEqual(order))
         {
             _missionFilesUpdateInstances!.SuspendLayout(); _missionFilesUpdateInstances.RowStyles.Clear();
@@ -1221,6 +1751,7 @@ internal sealed partial class MainForm
         var updatesAppearance = (_missionFilesUpdatesView!.Width, _uiZoomPercent, _darkMode);
         if (!created && _missionFilesUpdatesAppearance == updatesAppearance) return;
         _missionFilesUpdatesAppearance = updatesAppearance;
+        _missionFilesUpdatesRowMeasurements = null;
         _missionFilesUpdatesView!.BackColor = MainBackground;
         foreach (var label in EnumerateChildControls<Label>(_missionFilesUpdatesView))
         {
@@ -1229,6 +1760,11 @@ internal sealed partial class MainForm
             label.ForeColor = PrimaryTextColor;
             label.MaximumSize = new Size(Math.Max(100, _missionFilesUpdatesView.Width - Zoomed(60)), 0);
         }
+        _missionFilesPreservationCallout!.BackColor = EditorBackground;
+        foreach (var label in EnumerateChildControls<Label>(_missionFilesPreservationCallout)) label.BackColor = EditorBackground;
+        foreach (var row in EnumerateChildControls<FlowLayoutPanel>(_missionFilesPreservationCallout)) row.BackColor = EditorBackground;
+        _missionFilesUpdatesScanStatus.ForeColor = presentation.FilesOnlyAvailable && !SystemInformation.HighContrast
+            ? _darkMode ? Color.FromArgb(148, 213, 180) : Color.FromArgb(25, 113, 77) : PrimaryTextColor;
         _missionFilesBadge.BackColor = _darkMode ? Color.FromArgb(63, 223, 202) : Color.FromArgb(8, 122, 115);
         _missionFilesBadge.ForeColor = _darkMode ? Color.FromArgb(7, 46, 42) : Color.White;
         foreach (var button in EnumerateChildControls<Button>(_missionFilesUpdatesView))
@@ -1237,7 +1773,29 @@ internal sealed partial class MainForm
             StyleButton(button);
             button.Size = new Size(TextRenderer.MeasureText(button.Text, button.Font).Width + Zoomed(26),
                 Math.Max(Zoomed(34), button.Font.Height + Zoomed(10)));
-            if (button.Name == "FilesUpdatesBack")
+            if (button.Name is "FilesUpdatesCheckMissions" or "FilesUpdatesAutoScan" or "FilesUpdatesSourcesToggle")
+            {
+                button.Padding = new Padding(Zoomed(14), Zoomed(7), Zoomed(14), Zoomed(7));
+                var caption = button.Name == "FilesUpdatesAutoScan" ? "Auto scan: Off" : button.Text;
+                button.Size = new Size(TextRenderer.MeasureText(caption, button.Font).Width + Math.Max(14, button.Font.Height) + button.Padding.Horizontal + button.Padding.Top,
+                    Math.Max(Zoomed(40), button.Font.Height + Zoomed(16)));
+                if (_darkMode)
+                {
+                    button.BackColor = Color.FromArgb(32, 46, 60); button.ForeColor = Color.FromArgb(216, 231, 247);
+                    button.FlatAppearance.MouseOverBackColor = Color.FromArgb(43, 64, 83);
+                }
+                else
+                {
+                    button.BackColor = Color.FromArgb(232, 240, 246);
+                    button.FlatAppearance.MouseOverBackColor = Color.FromArgb(217, 231, 242);
+                    if (button.Name == "FilesUpdatesCheckMissions")
+                    {
+                        button.BackColor = Color.FromArgb(234, 244, 244);
+                        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(219, 236, 235);
+                    }
+                }
+            }
+            else if (button.Name == "FilesUpdatesBack")
             {
                 SizeMissionBackButton(button);
             }
@@ -1256,6 +1814,13 @@ internal sealed partial class MainForm
         foreach (var divider in EnumerateChildControls<Panel>(_missionFilesUpdatesView).Where(panel => panel.Name.EndsWith("Divider", StringComparison.Ordinal))) divider.BackColor = BorderColor;
         foreach (var check in EnumerateChildControls<WeatherCheckBox>(_missionFilesUpdatesView))
         { check.Font = MissionPresentationFont(1f, FontStyle.Regular); check.ForeColor = PrimaryTextColor; check.BackColor = MainBackground; }
+        foreach (var radio in EnumerateChildControls<RadioButton>(_missionFilesUpdatesView))
+        {
+            radio.Font = MissionPresentationFont(1f, FontStyle.Regular); radio.ForeColor = PrimaryTextColor; radio.BackColor = MainBackground;
+            radio.AutoSize = false;
+            radio.Size = new Size(TextRenderer.MeasureText(radio.Text, radio.Font).Width + Math.Max(Zoomed(14), radio.Font.Height - 1) + Zoomed(10),
+                Math.Max(Zoomed(24), radio.Font.Height + Zoomed(4)));
+        }
     }
     private sealed class ManagerVerifiedGlyph : Control
     {

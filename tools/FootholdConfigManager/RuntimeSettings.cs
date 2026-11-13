@@ -28,12 +28,18 @@ internal sealed class RuntimeSettings
     public string? LastImportConfigDirectory { get; set; }
     public List<string> RecentConfigPaths { get; set; } = new();
     public List<ServerProfileSettings> ServerProfiles { get; set; } = new();
+    public List<MissionMapUpdate> MissionMapUpdates { get; set; } = new();
+    public bool MissionScanCustomSourcesOnly { get; set; }
+    public bool AutomaticMissionScan { get; set; } = true;
     public string? MasterConfigPath { get; set; }
     public string? MissionScriptingPath { get; set; }
     public List<string> DeployTargetFolders { get; set; } = new();
     public int UiZoomPercent { get; set; } = 100;
+    public bool? UiZoomUserSelected { get; set; }
     public int EditorContentWidth { get; set; }
+    public int CategoryNavigationWidth { get; set; }
     public Dictionary<string, Dictionary<string, int>> EditorGridColumnWidths { get; set; } = new();
+    public Dictionary<string, int> EquipmentListRows { get; set; } = new();
     public int? WindowLeft { get; set; }
     public int? WindowTop { get; set; }
     public int WindowWidth { get; set; }
@@ -65,9 +71,13 @@ internal sealed class RuntimeSettings
             loaded.RecentConfigPaths = NormalizePaths(loaded.RecentConfigPaths);
             loaded.DeployTargetFolders = NormalizePaths(loaded.DeployTargetFolders);
             loaded.ServerProfiles = NormalizeServerProfiles(loaded.ServerProfiles);
+            loaded.MissionMapUpdates ??= new();
             loaded.UiZoomPercent = Math.Clamp(loaded.UiZoomPercent, 80, 130);
+            loaded.UiZoomUserSelected ??= true; // Legacy settings already contain a saved preferred zoom.
             loaded.EditorContentWidth = loaded.EditorContentWidth > 0 ? Math.Clamp(loaded.EditorContentWidth, 1075, 4500) : 0;
             loaded.EditorGridColumnWidths ??= new();
+            loaded.EquipmentListRows ??= new();
+            loaded.CategoryNavigationWidth = Math.Max(0, loaded.CategoryNavigationWidth);
             loaded.WindowWidth = Math.Max(0, loaded.WindowWidth);
             loaded.WindowHeight = Math.Max(0, loaded.WindowHeight);
             return loaded;
@@ -85,6 +95,7 @@ internal sealed class RuntimeSettings
 
     internal void SaveTo(string path)
     {
+        UiZoomUserSelected ??= false; // An ordinary first save must preserve automatic startup sizing.
         AtomicFile.WriteUtf8Text(path, JsonSerializer.Serialize(this, JsonOptions));
     }
 
@@ -177,6 +188,19 @@ internal sealed class RuntimeSettings
             if (!string.IsNullOrWhiteSpace(profile.MissionDirectory))
                 return System.IO.Path.IsPathFullyQualified(profile.MissionDirectory)
                     ? System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(profile.MissionDirectory)) : null;
+            return ResolveInstanceMissionsDirectory(profile);
+        }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException or System.IO.PathTooLongException)
+        {
+            return null; // A remembered external path must be chosen again rather than guessed.
+        }
+    }
+
+    // A chosen output folder does not change which Missions folder owns the Config.
+    public static string? ResolveInstanceMissionsDirectory(ServerProfileSettings profile)
+    {
+        try
+        {
             if (string.IsNullOrWhiteSpace(profile.ConfigPath) || !System.IO.Path.IsPathFullyQualified(profile.ConfigPath)) return null;
             for (var directory = System.IO.Directory.GetParent(System.IO.Path.GetFullPath(profile.ConfigPath)); directory is not null; directory = directory.Parent)
                 if (directory.Name.Equals("Missions", StringComparison.OrdinalIgnoreCase)) return directory.FullName;
@@ -184,7 +208,7 @@ internal sealed class RuntimeSettings
         }
         catch (Exception error) when (error is ArgumentException or NotSupportedException or System.IO.PathTooLongException)
         {
-            return null; // A remembered external path must be chosen again rather than guessed.
+            return null;
         }
     }
 

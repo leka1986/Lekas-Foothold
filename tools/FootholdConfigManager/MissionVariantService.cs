@@ -73,8 +73,12 @@ internal static class MissionVariantService
         if (plan.Mode == MissionOutputMode.Original && plan.WarehouseCopy is null) return CopyOriginal(plan.Template, plan.OutputPath, replaceExisting, token, plan.ReviewedIdentity);
         if (plan.ApplyCurrentMissionOptions && currentOptions is null) throw new InvalidDataException("The reviewed Mission options snapshot is missing.");
         if (plan.Mode == MissionOutputMode.Profile && plan.Profile is null) throw new InvalidDataException("The reviewed weather profile is missing.");
+        var stampedConfigs = new Dictionary<string, byte[]>(configMembers, StringComparer.Ordinal);
+        foreach (var member in plan.Template.ConfigMembers)
+            if (stampedConfigs.TryGetValue(member.Name, out var bytes) && MissionVersionStamp.Read(member.Bytes) is { } identity)
+                stampedConfigs[member.Name] = MissionVersionStamp.Write(bytes, identity.Version, identity.Map);
         return WeatherMizService.ApplyPreparedWarehouse(plan.Template, plan.Profile?.Settings,
-            plan.ApplyCurrentMissionOptions ? currentOptions : null, configMembers, plan.OutputPath, replaceExisting, token, plan.ReviewedIdentity, plan.WarehouseCopy, preparedInput);
+            plan.ApplyCurrentMissionOptions ? currentOptions : null, stampedConfigs, plan.OutputPath, replaceExisting, token, plan.ReviewedIdentity, plan.WarehouseCopy, preparedInput);
     }
 
     private static string CopyOriginal(PreparedMissionTemplate template, string outputPath, bool replaceExisting, CancellationToken token, MissionPathIdentity? reviewedIdentity)

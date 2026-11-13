@@ -26,6 +26,7 @@ internal sealed class GitHubUpdateChecker
     private bool _hadValidStoredState;
     private bool _interactiveLaunchRegistered;
     private bool _allowUnknownMissionNotice;
+    private string? _checkedWeaponCatalogIdentity;
 
     public GitHubUpdateChecker(Version? localVersion, HttpClient? client = null, TimeProvider? timeProvider = null,
         UpdateNotificationStore? store = null, UpdateNotificationState? initialState = null)
@@ -151,7 +152,7 @@ internal sealed class GitHubUpdateChecker
         if (NeedsCheck(release, force))
         {
             // Legacy caches did not discover the JSON asset: fetch that metadata once, then resume conditional checks.
-            var requestCache = release.Data is { } old && (!old.AssetMetadataLoaded || !old.FilesEnvelopeMetadataLoaded) ? release with { ETag = null } : release;
+            var requestCache = release.Data is { } old && (!old.AssetMetadataLoaded || !old.FilesEnvelopeMetadataLoaded || !old.WeaponCatalogMetadataLoaded) ? release with { ETag = null } : release;
             release = await ReadFeedAsync(ReleasesUrl, requestCache, ParseRelease, cancellationToken).ConfigureAwait(false);
             changed = true;
         }
@@ -181,6 +182,9 @@ internal sealed class GitHubUpdateChecker
                 changed = true;
             }
         }
+        if (release.Status == UpdateFeedStatus.Fresh && release.Data is { } catalogRelease)
+            await CacheWeaponCatalogAsync(catalogRelease, cancellationToken).ConfigureAwait(false);
+
         await _stateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -194,6 +198,40 @@ internal sealed class GitHubUpdateChecker
             return CurrentResult() with { ManagerCheckedThisOperation = managerChecked };
         }
         finally { _stateGate.Release(); }
+    }
+
+    private async Task CacheWeaponCatalogAsync(FootholdReleaseInfo release, CancellationToken token)
+    {
+        if (release.WeaponCatalogAsset is not { Sha256: { } digest } asset) return;
+        var identity = FilesAssetIdentity(release, asset);
+        if (_checkedWeaponCatalogIdentity == identity) return;
+        var path = Path.Combine(Path.GetDirectoryName(_store.Path)!, ReleaseWeaponCatalog.CacheName);
+        try
+        {
+            if (new FileInfo(path) is { Exists: true } info && info.Length == asset.Size &&
+                FilePatchEnvelope.Digest(await File.ReadAllBytesAsync(path, token).ConfigureAwait(false)) == digest)
+            {
+                _checkedWeaponCatalogIdentity = identity;
+                return;
+            }
+
+            string? verifiedJson = null;
+            var result = await ReadFeedAsync<ReleaseWeaponCatalog>(asset.DownloadUri.AbsoluteUri, new(), _ => null, token,
+                ReleaseWeaponCatalog.MaximumBytes, digest, asset.Size, bytes =>
+                {
+                    var parsed = ReleaseWeaponCatalog.Parse(bytes, release.Tag);
+                    verifiedJson = System.Text.Encoding.UTF8.GetString(bytes.Span);
+                    return parsed;
+                }).ConfigureAwait(false);
+            if (result.Data is null || verifiedJson is null) return;
+            token.ThrowIfCancellationRequested();
+            AtomicFile.WriteUtf8Text(path, verifiedJson);
+            _checkedWeaponCatalogIdentity = identity;
+        }
+        catch (Exception exception) when (IsStorageError(exception))
+        {
+            System.Diagnostics.Trace.TraceWarning("Could not cache the Foothold weapon catalog: " + exception.Message);
+        }
     }
 
     private bool NeedsCheck<T>(UpdateFeedResult<T> feed, bool force) where T : class =>
@@ -339,6 +377,8 @@ internal sealed class GitHubUpdateChecker
         var assets = new List<MissionReleaseAsset>();
         MissionReleaseAsset? envelopeAsset = null;
         string? envelopeError = null;
+        MissionReleaseAsset? weaponCatalogAsset = null;
+        var weaponCatalogInvalid = false;
         var ids = new HashSet<long>();
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in entries.EnumerateArray())
@@ -346,8 +386,10 @@ internal sealed class GitHubUpdateChecker
             if (entry.ValueKind != JsonValueKind.Object) throw new InvalidDataException("GitHub returned an invalid release asset.");
             var name = ReadString(entry, "name", false);
             var isEnvelope = name.Equals("foothold-files.json", StringComparison.Ordinal);
-            if (ReadString(entry, "state", false) != "uploaded" || !isEnvelope && !name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
-            if (!isEnvelope && IsReservedFilesAsset(name)) continue;
+            var isWeaponCatalog = name.Equals(ReleaseWeaponCatalog.AssetName, StringComparison.Ordinal);
+            if (ReadString(entry, "state", false) != "uploaded" ||
+                !isEnvelope && !isWeaponCatalog && !name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!isEnvelope && !isWeaponCatalog && IsReservedFilesAsset(name)) continue;
             try
             {
                 if (!entry.TryGetProperty("id", out var assetId) || assetId.ValueKind != JsonValueKind.Number || !assetId.TryGetInt64(out var numericId)
@@ -363,9 +405,22 @@ internal sealed class GitHubUpdateChecker
                     digest = advertised[7..].ToLowerInvariant();
                 }
                 var asset = new MissionReleaseAsset(numericId, name, bytes, url, digest);
+                if (isWeaponCatalog)
+                {
+                    if (weaponCatalogInvalid || weaponCatalogAsset is not null || !IsValidWeaponCatalogAsset(asset, tag))
+                        throw new InvalidDataException("GitHub returned an invalid or duplicate weapon catalog.");
+                    weaponCatalogAsset = asset;
+                    continue;
+                }
+
                 if (!(isEnvelope ? IsValidEnvelopeAsset(asset, tag) : IsValidReleaseAsset(asset, tag)) || !ids.Add(asset.Id) || !names.Add(asset.Name))
                     throw new InvalidDataException("GitHub returned an invalid or duplicate ZIP asset.");
                 if (isEnvelope) { if (envelopeError is null) envelopeAsset = asset; } else assets.Add(asset);
+            }
+            catch (InvalidDataException) when (isWeaponCatalog)
+            {
+                weaponCatalogAsset = null;
+                weaponCatalogInvalid = true;
             }
             catch (InvalidDataException error) when (isEnvelope)
             {
@@ -373,7 +428,13 @@ internal sealed class GitHubUpdateChecker
                 envelopeError = "Files-only metadata: " + error.Message;
             }
         }
-        return release with { Assets = assets.ToArray(), AssetMetadataLoaded = true, FilesEnvelopeMetadataLoaded = true, FilesEnvelopeAsset = envelopeAsset, FilesEnvelopeError = envelopeError };
+        if (weaponCatalogAsset is not null && ids.Contains(weaponCatalogAsset.Id)) weaponCatalogAsset = null;
+        return release with
+        {
+            Assets = assets.ToArray(), AssetMetadataLoaded = true, FilesEnvelopeMetadataLoaded = true,
+            FilesEnvelopeAsset = envelopeAsset, FilesEnvelopeError = envelopeError,
+            WeaponCatalogMetadataLoaded = true, WeaponCatalogAsset = weaponCatalogAsset
+        };
     }
 
     internal static ManagerUpdateInfo? ParseManager(JsonElement element)
@@ -426,6 +487,12 @@ internal sealed class GitHubUpdateChecker
         || name.StartsWith("Foothold-files-", StringComparison.OrdinalIgnoreCase);
     private static string FilesAssetIdentity(FootholdReleaseInfo release, MissionReleaseAsset asset) =>
         release.Id + "|" + release.Tag + "|" + asset.Id + "|" + asset.Name + "|" + asset.Size + "|" + asset.Sha256;
+    private static bool IsValidWeaponCatalogAsset(MissionReleaseAsset asset, string tag) => asset.Id > 0
+        && asset.Name == ReleaseWeaponCatalog.AssetName && asset.Size is > 0 and <= ReleaseWeaponCatalog.MaximumBytes
+        && ValidUrl(asset.DownloadUri?.AbsoluteUri, "github.com",
+            "/leka1986/Lekas-Foothold/releases/download/" + tag + "/" + ReleaseWeaponCatalog.AssetName)
+        && asset.Sha256 is { } digest && Regex.IsMatch(digest, @"\A[0-9a-f]{64}\z", RegexOptions.CultureInvariant);
+
     private static bool IsValidEnvelopeAsset(MissionReleaseAsset asset, string tag) => asset.Id > 0
         && asset.Name == "foothold-files.json" && asset.Size is > 0 and <= FilePatchEnvelope.MaximumBytes
         && ValidUrl(asset.DownloadUri?.AbsoluteUri, "github.com", "/leka1986/Lekas-Foothold/releases/download/" + tag + "/foothold-files.json")
@@ -456,6 +523,10 @@ internal sealed class GitHubUpdateChecker
         if (release.Data is { Assets: { } cachedAssets } cached && cachedAssets.Any(asset => asset is not null && IsReservedFilesAsset(asset.Name)))
             release = release with { Data = cached with { Assets = Array.AsReadOnly(cachedAssets.Where(asset => asset is null || !IsReservedFilesAsset(asset.Name)).ToArray()) } };
         if (release.Data is { } releaseData && !IsValidRelease(releaseData)) release = new();
+        else if (release.Data is { WeaponCatalogAsset: { } catalogAsset } catalogRelease &&
+            (!IsValidWeaponCatalogAsset(catalogAsset, catalogRelease.Tag) ||
+             catalogRelease.Assets.Any(asset => asset.Id == catalogAsset.Id) || catalogRelease.FilesEnvelopeAsset?.Id == catalogAsset.Id))
+            release = release with { Data = catalogRelease with { WeaponCatalogAsset = null } };
         var files = state.FilesEnvelope ?? new();
         var identity = release.Data?.FilesEnvelopeAsset is { Sha256: not null } asset ? FilesAssetIdentity(release.Data, asset) : null;
         var discardedFiles = identity is null || identity != state.FilesEnvelopeAssetIdentity || files.Data is { } envelope

@@ -3,13 +3,13 @@ namespace FootholdConfigManager;
 internal sealed partial class MainForm
 {
     private Panel? _missionDownloadsPanel;
-    private TableLayoutPanel? _missionDownloadLayout, _missionDownloadLeft, _missionDownloadRight, _missionProfileRows;
+    private TableLayoutPanel? _missionDownloadLayout, _missionDownloadLeft, _missionDownloadRight, _missionDownloadRightColumn, _missionProfileRows;
     private ComboBox? _missionDestination, _missionCollision;
     private Label? _missionDirectory, _missionDownloadSummary, _missionZipNames;
     private TableLayoutPanel? _missionAssetRows, _missionDownloadPage, _missionFileOptions, _missionDownloadAction;
     private Label? _missionDownloadSubtitle, _missionDownloadSelectionCount;
     private Label? _missionProfileHint;
-    private Button? _missionChooseTargets, _missionFileOptionsToggle;
+    private Button? _missionChooseTargets, _missionFileOptionsToggle, _missionDownloadOpenFolder;
     private bool _missionTargetsExpanded, _missionFileOptionsExpanded = true;
     private bool _missionTargetsManual;
     private Button? _missionZipToggle;
@@ -87,6 +87,7 @@ internal sealed partial class MainForm
         if (_missionCustomFolderEnabled == enabled) return;
         if (!_missionDownloadBusy) _missionCustomFolderEnabled = enabled;
         RefreshCustomMissionOutputControls();
+        RefreshServerRegistrationChoices();
     }
 
     private void RefreshCustomMissionOutputControls()
@@ -125,21 +126,15 @@ internal sealed partial class MainForm
         return font;
     }
 
-    private void SizeMissionBackButton(Button button)
-    {
-        var toolbarButton = _topToolbarButtons.First(control => control.Text == "Mission settings");
-        StyleButton(button);
-        button.MinimumSize = Size.Empty;
-        button.Padding = Padding.Empty;
-        button.Font = toolbarButton.Font;
-        button.Size = new Size(TopToolbarButtonWidth("Back to configuration", 60, button.Font), toolbarButton.Height);
-        button.FlatAppearance.BorderSize = IsDarkPalette() ? 0 : 1;
-        button.TextAlign = ContentAlignment.MiddleCenter;
-    }
+    private void SizeMissionBackButton(Button button) =>
+        SizeNavigationButton(button, MissionPresentationFont(1f, FontStyle.Regular), _uiZoomPercent / 100f);
 
     private async Task OpenMissionDownloadsAsync(FootholdReleaseInfo release)
     {
+        RefreshMissionCompletionState();
         if (_configLoadingOperation || _missionDownloadBusy || _updatesInstalling) return;
+        await RefreshDedicatedRegistrationTargetsAsync();
+        if (_updatesDisposed || IsDisposed || Disposing || _configLoadingOperation || _missionDownloadBusy || _updatesInstalling) return;
         if (_missionDownloadsPanel is not null)
         {
             ShowMissionDownloads(release);
@@ -174,7 +169,10 @@ internal sealed partial class MainForm
                 || _updatesBusy || _missionDownloadBusy || _updatesInstalling || _configLoadingOperation || !page.Visible
                 || _updatesContent?.Visible != false) return;
             if (_updatesResult?.Foothold.Data is { AssetMetadataLoaded: true, Assets.Count: > 0 } release)
+            {
                 ShowMissionDownloads(release);
+                await EnsureMissionWarehouseSourcesAsync();
+            }
         }
         finally
         {
@@ -199,7 +197,7 @@ internal sealed partial class MainForm
         _missionPresentationUpdating = true;
         var host = _updatesPanel!;
         var layouts = new Control?[] { host, _missionDownloadsPanel, _missionDownloadPage,
-            _missionDownloadLayout, _missionDownloadLeft, _missionAssetRows, _missionDownloadRight,
+            _missionDownloadLayout, _missionDownloadLeft, _missionAssetRows, _missionDownloadRightColumn, _missionDownloadRight,
             _missionProfileRows, _missionTargets,
             _missionWarehouseRows?.Parent, _missionWarehouseRows }.Concat(_missionWarehouseSourceRows.Values).ToArray();
         var downloadVisible = _missionDownloadsPanel?.Visible == true;
@@ -224,7 +222,7 @@ internal sealed partial class MainForm
                     if (downloadVisible && _missionDownloadsPanel!.Visible
                         && scrollPosition == _missionDownloadsPanel.AutoScrollPosition && appearance == _missionDownloadAppearance)
                     {
-                        host.Invalidate();
+                        host.Invalidate(true);
                         var currentCardBounds = _missionDownloadsPanel.RectangleToClient(
                             _missionDownloadRight!.RectangleToScreen(_missionDownloadRight.ClientRectangle));
                         if (currentCardBounds != previousCardBounds) _missionDownloadRight.Invalidate(true);
@@ -290,6 +288,7 @@ internal sealed partial class MainForm
                     _missionAssetRows!.RowStyles.Clear();
                     _missionAssetRows.RowCount = 0;
                     _missionDownloadRelease = release with { Assets = Array.AsReadOnly(release.Assets.ToArray()) };
+                    _missionMapProgressContext = null;
                     _missionDownloadSubtitle!.Text = "Full mission download • Foothold " + release.Tag.TrimStart('v', 'V');
                     foreach (var asset in _missionDownloadRelease.Assets)
                     {
@@ -442,6 +441,7 @@ internal sealed partial class MainForm
     {
         internal string Eras { get; init; } = "";
         internal string SizeText { get; init; } = "";
+        internal string CompletionText { get; set; } = "";
         internal Font? TitleFont { get; set; }
         internal Font? DetailFont { get; set; }
 
@@ -465,12 +465,16 @@ internal sealed partial class MainForm
             var sizeWidth = TextRenderer.MeasureText(SizeText, detailFont).Width + padding;
             var x = padding * 2 + glyph.Width;
             var textWidth = Math.Max(1, Width - x - sizeWidth - padding);
-            var top = Math.Max(0, (Height - titleFont.Height - detailFont.Height - 2) / 2);
+            var top = Math.Max(0, (Height - titleFont.Height - detailFont.Height * (CompletionText.Length == 0 ? 1 : 2) - 2) / 2);
             var textColor = Checked ? SelectionText : PrimaryTextColor;
             TextRenderer.DrawText(e.Graphics, Text, titleFont, new Rectangle(x, top, textWidth, titleFont.Height),
                 textColor, TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
             TextRenderer.DrawText(e.Graphics, Eras, detailFont, new Rectangle(x, top + titleFont.Height + 2, textWidth, detailFont.Height),
                 Checked ? SelectionText : HelpTextColor, TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            if (CompletionText.Length > 0)
+                TextRenderer.DrawText(e.Graphics, "✓ " + CompletionText, detailFont,
+                    new Rectangle(x, top + titleFont.Height + detailFont.Height + 4, textWidth, detailFont.Height),
+                    SystemInformation.HighContrast ? textColor : IsDarkPalette() ? Color.FromArgb(148, 213, 180) : Color.FromArgb(25, 113, 77), TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
             TextRenderer.DrawText(e.Graphics, SizeText, detailFont, new Rectangle(Width - sizeWidth - padding, 0, sizeWidth, Height),
                 Checked ? SelectionText : HelpTextColor, TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
             using var border = new Pen(BorderColor);
@@ -531,8 +535,11 @@ internal sealed partial class MainForm
             using var border = new Pen(BorderColor);
             e.Graphics.DrawRectangle(border, 0, 0, _missionDownloadRight.Width - 1, _missionDownloadRight.Height - 1);
         };
+        _missionDownloadRightColumn = Column();
+        _missionDownloadRightColumn.Name = "MissionDownloadDestinationColumn";
+        Add(_missionDownloadRightColumn, _missionDownloadRight);
         _missionDownloadLayout.Controls.Add(_missionDownloadLeft, 0, 0);
-        _missionDownloadLayout.Controls.Add(_missionDownloadRight, 1, 0);
+        _missionDownloadLayout.Controls.Add(_missionDownloadRightColumn, 1, 0);
         _missionDownloadPage = Column();
         _missionDownloadPage.Dock = DockStyle.None;
         _missionDownloadPage.Name = "MissionDownloadPage";
@@ -556,10 +563,11 @@ internal sealed partial class MainForm
         _missionDownloadsPanel.BackColorChanged += (_, _) => LayoutMissionDownloads();
         var title = Heading("Download missions");
         title.Name = "MissionDownloadTitle";
-        var header = new TableLayoutPanel { Name = "MissionDownloadHeader", Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 1 };
+        var header = new TableLayoutPanel { Name = "MissionDownloadHeader", Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 3 };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         header.Controls.Add(title, 0, 0);
+        header.SetColumnSpan(title, 2);
         var back = MakeButton("Back to Updates", () =>
         {
             UpdateMissionDownloadPresentation(() =>
@@ -573,12 +581,14 @@ internal sealed partial class MainForm
         });
         back.Name = "MissionDownloadBack";
         back.Dock = DockStyle.None;
-        header.Controls.Add(back, 1, 0);
+        back.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        header.Controls.Add(back, 1, 2);
         Add(_missionDownloadPage, header);
         _missionDownloadSubtitle = Heading("Full mission download");
         _missionDownloadSubtitle.Name = "MissionDownloadSubtitle";
-        Add(_missionDownloadPage, _missionDownloadSubtitle);
-        Add(_missionDownloadPage, Text("Choose your maps and where they should be installed."));
+        header.Controls.Add(_missionDownloadSubtitle, 0, 1);
+        header.SetColumnSpan(_missionDownloadSubtitle, 2);
+        header.Controls.Add(Text("Choose your maps and where they should be installed."), 0, 2);
         Add(_missionDownloadPage, _missionDownloadLayout);
         Add(_missionDownloadLeft, Heading("Maps in this release"));
         Add(_missionDownloadLeft, Text("From the ZIPs attached to the GitHub release"));
@@ -588,6 +598,9 @@ internal sealed partial class MainForm
         _missionSelectionActions.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _missionSelectionActions.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _missionSelectionLinks = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false };
+        var remaining = MakeButton("Select remaining", SelectRemainingMissionMaps);
+        remaining.Name = "MissionDownloadSelectRemaining";
+        _missionSelectionLinks.Controls.Add(remaining);
         _missionSelectionLinks.Controls.Add(MakeButton("Select all", () => SelectMissionMaps(true)));
         _missionSelectionLinks.Controls.Add(MakeButton("Clear", () => SelectMissionMaps(false)));
         _missionReleaseActions = new FlowLayoutPanel { Name = "MissionDownloadReleaseActions", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -604,7 +617,21 @@ internal sealed partial class MainForm
         _missionReleaseStatus = Text("");
         _missionReleaseStatus.Name = "MissionDownloadReleaseStatus";
         Add(_missionDownloadLeft, _missionReleaseStatus);
+        _missionMapProgressSummary = Text("");
+        _missionMapProgressSummary.Name = "MissionDownloadMapProgress";
+        Add(_missionDownloadLeft, _missionMapProgressSummary);
         _missionAssetRows = Column();
+        _missionRemainingMaps = Heading("Remaining to update");
+        _missionRemainingMaps.Name = "MissionDownloadRemainingMaps";
+        _missionCompletedMaps = Heading("Already updated");
+        _missionCompletedMaps.Name = "MissionDownloadCompletedMaps";
+        _missionCompletedMaps.Visible = false;
+        _missionCompletedHint = Text("Current-release copies were found or created for this instance. You can still download the full mission.");
+        _missionCompletedHint.Name = "MissionDownloadCompletedHint";
+        _missionCompletedHint.Visible = false;
+        Add(_missionAssetRows, _missionRemainingMaps);
+        Add(_missionAssetRows, _missionCompletedMaps);
+        Add(_missionAssetRows, _missionCompletedHint);
         Add(_missionDownloadLeft, _missionAssetRows);
         _missionZipNames = Text("");
         _missionZipNames.Name = "MissionDownloadZipNames";
@@ -621,7 +648,7 @@ internal sealed partial class MainForm
         Add(_missionDownloadRight, Heading("Destination"));
         Add(_missionDownloadRight, Text("Install to instance"));
         _missionDestination = Choice("MissionDownloadInstance");
-        _missionDestination.SelectedIndexChanged += (_, _) =>
+        _missionDestination.SelectedIndexChanged += async (_, _) =>
         {
             if (_missionDownloadsRendering) return;
             _missionDownloadsRendering = true;
@@ -632,6 +659,8 @@ internal sealed partial class MainForm
             }
             finally { _missionDownloadsRendering = false; }
             RefreshMissionDownloadSelection();
+            await RefreshDedicatedRegistrationTargetsAsync();
+            await EnsureMissionWarehouseSourcesAsync();
         };
         Add(_missionDownloadRight, _missionDestination);
         var folder = Column();
@@ -652,10 +681,20 @@ internal sealed partial class MainForm
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
             ApplyMissionDownloadFolder(destination, dialog.SelectedPath);
         });
-        change.Click += async (_, _) => await EnsureMissionWarehouseSourcesAsync();
+        change.Click += async (_, _) => { await RefreshDedicatedRegistrationTargetsAsync(); await EnsureMissionWarehouseSourcesAsync(); };
         change.Name = "MissionDownloadChangeFolder";
         change.Dock = DockStyle.None;
-        Add(folder, change);
+        var folderActions = new FlowLayoutPanel { Name = "MissionDownloadFolderActions", AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink, Dock = DockStyle.Top, WrapContents = true };
+        folderActions.Controls.Add(change);
+        _missionDownloadOpenFolder = MakeButton("Open folder", () =>
+        {
+            if (_missionDownloadOpenFolder!.Tag is string directory) OpenMissionDownloadFolder(directory);
+        });
+        _missionDownloadOpenFolder.Name = "MissionDownloadOpenFolder";
+        _missionDownloadOpenFolder.Enabled = false;
+        folderActions.Controls.Add(_missionDownloadOpenFolder);
+        Add(folder, folderActions);
         _missionDownloadCustomFolder = new WeatherCheckBox { Name = "MissionDownloadCustomFolder", Text = "Custom Folder",
             AutoSize = true, Dock = DockStyle.Top, DisabledTextColor = HelpTextColor };
         _missionDownloadCustomFolder.CheckedChanged += (_, _) => SetCustomMissionOutputMode(_missionDownloadCustomFolder!.Checked);
@@ -665,6 +704,7 @@ internal sealed partial class MainForm
         Add(folder, _missionDownloadCustomOutputPath);
         _missionDownloadChooseOutputFolder = MakeButton("Choose Folder…", ChooseCustomMissionOutputFolder);
         _missionDownloadChooseOutputFolder.Name = "MissionDownloadChooseOutputFolder";
+        _missionDownloadChooseOutputFolder.Click += async (_, _) => await RefreshDedicatedRegistrationTargetsAsync();
         _missionDownloadChooseOutputFolder.Dock = DockStyle.None;
         Add(folder, _missionDownloadChooseOutputFolder);
         Add(_missionDownloadRight, Separator());
@@ -700,6 +740,11 @@ internal sealed partial class MainForm
         _missionTargets.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         Add(changes, _missionTargets);
         BuildMissionWarehouseControls(changes, Add);
+        _missionDownloadRegisterServer = CreateServerRegistrationChoice("MissionDownloadRegisterServer");
+        Add(changes, _missionDownloadRegisterServer);
+        _missionDownloadServerHint = Text("");
+        _missionDownloadServerHint.Name = "MissionDownloadServerHint";
+        Add(changes, _missionDownloadServerHint);
         _missionFileOptionsToggle = null;
         _missionFileOptions = Column();
         Add(_missionDownloadRight, _missionFileOptions);
@@ -714,9 +759,8 @@ internal sealed partial class MainForm
         Add(_missionDownloadRight, changes);
         Add(_missionDownloadPage, Separator());
         _missionDownloadAction = new TableLayoutPanel { Name = "MissionDownloadAction", AutoSize = true,
-            Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1 };
         _missionDownloadAction.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        _missionDownloadAction.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         var selectionSummary = Column();
         _missionDownloadSelectionCount = Heading("0 missions selected");
         _missionDownloadSelectionCount.Name = "MissionDownloadSelectionCount";
@@ -729,7 +773,8 @@ internal sealed partial class MainForm
         _missionPrepare.Enabled = false;
         _missionPrepare.AutoSize = false;
         ((PreviewButton)_missionPrepare).ActionEmphasis = true;
-        _missionDownloadAction.Controls.Add(_missionPrepare, 1, 0);
+        Add(_missionDownloadRightColumn, _missionPrepare);
+        _missionPrepare.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         Add(_missionDownloadPage, _missionDownloadAction);
         _missionDownloadAction.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
         _missionDownloadResultsToggle = MakeButton("Show installed files", () => UpdateMissionDownloadPresentation(() =>
@@ -928,6 +973,13 @@ internal sealed partial class MainForm
                 ? _missionCustomOutputFolder is not null && _missionCustomOutputError is null : missionDirectory is not null);
             _missionDirectory.Text = destination is null ? "Choose a destination instance." :
                 missionDirectory ?? "Choose the Missions folder for this instance.";
+            if (_missionDownloadOpenFolder is not null)
+            {
+                _missionDownloadOpenFolder.Tag = hasMissionOutput ? _missionCustomFolderEnabled ? _missionCustomOutputFolder : missionDirectory : null;
+                _missionDownloadOpenFolder.Enabled = hasMissionOutput;
+            }
+            RefreshMissionDownloadProgress(destination);
+            RefreshServerRegistrationChoices();
             var zipOnly = _missionZipOnly?.Checked == true;
             var hasConfig = !string.IsNullOrWhiteSpace(destination?.ConfigPath ?? _document?.Path);
             if (!zipOnly && !hasConfig)
@@ -1034,15 +1086,19 @@ internal sealed partial class MainForm
             var contentWidth = Math.Max(1, width - _missionDownloadPage.Padding.Horizontal);
             _missionDownloadLayout.Padding = Padding.Empty;
             _missionDownloadLayout.Margin = Padding.Empty;
-            var narrow = contentWidth < Zoomed(860);
+            if (_missionDownloadRegisterServer is not null) _missionDownloadRegisterServer.Font = MissionPresentationFont(1f, FontStyle.Regular);
+            var serverChoiceWidth = CanOfferDownloadServerRegistration ? (_missionDownloadRegisterServer?.GetPreferredSize(Size.Empty).Width ?? 0) + Zoomed(40) : 0;
+            var narrow = contentWidth < Zoomed(860) || contentWidth * 40 / 100 < serverChoiceWidth;
             _missionDownloadLayout.ColumnCount = narrow ? 1 : 2;
             _missionDownloadLayout.RowCount = narrow ? 2 : 1;
             _missionDownloadLayout.ColumnStyles.Clear();
             _missionDownloadLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, narrow ? 100 : 60));
             if (!narrow) _missionDownloadLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
-            _missionDownloadLayout.SetCellPosition(_missionDownloadRight!, new TableLayoutPanelCellPosition(narrow ? 0 : 1, narrow ? 1 : 0));
+            _missionDownloadLayout.SetCellPosition(_missionDownloadRightColumn!, new TableLayoutPanelCellPosition(narrow ? 0 : 1, narrow ? 1 : 0));
             var leftWidth = Math.Max(120, contentWidth * (narrow ? 100 : 60) / 100 - (narrow ? 0 : Zoomed(24)));
             var rightWidth = Math.Max(120, contentWidth * (narrow ? 100 : 40) / 100);
+            _missionDownloadRightColumn!.MinimumSize = new Size(rightWidth, 0);
+            _missionDownloadRightColumn.MaximumSize = new Size(rightWidth, 0);
             _missionDownloadRight!.Padding = new Padding(Zoomed(20));
             var inputAppearance = (_uiZoomPercent, _darkMode);
             if (_missionInputAppearance != inputAppearance)
@@ -1060,6 +1116,7 @@ internal sealed partial class MainForm
             {
                 var inCard = ReferenceEquals(control, _missionDownloadRight) || _missionDownloadRight.Contains(control);
                 var columnWidth = inCard ? Math.Max(1, rightWidth - _missionDownloadRight.Padding.Horizontal) : leftWidth;
+                if (ReferenceEquals(control.Parent, _missionDownloadRightColumn)) columnWidth = rightWidth;
                 if (ReferenceEquals(control.Parent, _missionDownloadPage) || control.Parent?.Name == "MissionDownloadHeader") columnWidth = contentWidth;
                 if (control is TableLayoutPanel profileRow && profileRow.Name.StartsWith("MissionProfileRow-", StringComparison.Ordinal))
                 {
@@ -1068,7 +1125,7 @@ internal sealed partial class MainForm
                 }
                 if (control.Parent is TableLayoutPanel rowParent && rowParent.Name.StartsWith("MissionProfileRow-", StringComparison.Ordinal)) continue;
                 control.Margin = control is TableLayoutPanel or FlowLayoutPanel ? Padding.Empty : new Padding(0, 0, 0, Zoomed(12));
-                var link = control is Button action && (action.Text is "Select all" or "Clear"
+                var link = control is Button action && (action.Text is "Select remaining" or "Select all" or "Clear"
                     || action.Name is "MissionDownloadZipToggle" or "MissionDownloadChooseTargets" or "MissionDownloadFileOptionsToggle" or "MissionDownloadResultsToggle" or "MissionDownloadOpenLocation");
                 if (control is not ComboBox and not TextBoxBase and not ListBox)
                     control.BackColor = control.Name == "MissionDownloadDirectory" ? InputBackground : inCard ? EditorBackground : MainBackground;
@@ -1077,13 +1134,13 @@ internal sealed partial class MainForm
                 if (control is Label text)
                     text.Font = text.Name == "MissionDownloadTitle" ? titleFont : text.Name == "MissionDownloadDirectory" ? bodyFont
                         : Equals(text.Tag, "MissionDownloadHeading") ? sectionFont : Equals(text.Tag, "MissionDownloadMuted") ? smallFont : bodyFont;
-                else if (control is Button actionButton) actionButton.Font = actionButton.Text is "Select all" or "Clear" ? linkFont : bodyFont;
+                else if (control is Button actionButton) actionButton.Font = actionButton.Text is "Select remaining" or "Select all" or "Clear" ? linkFont : bodyFont;
                 else if (control is CheckBox or TableLayoutPanel or FlowLayoutPanel) control.Font = bodyFont;
                 if (control is WeatherCheckBox themedCheck)
                 {
                     themedCheck.DisabledTextColor = HelpTextColor;
                 }
-                if (control.Name is "MissionDownloadResultActions" or "MissionDownloadSelectionActions" or "MissionDownloadWarehouseOption")
+                if (control.Name is "MissionDownloadResultActions" or "MissionDownloadSelectionActions" or "MissionDownloadWarehouseOption" or "MissionDownloadFolderActions")
                 {
                     control.MaximumSize = new Size(columnWidth, 0);
                     control.Width = columnWidth;
@@ -1106,7 +1163,8 @@ internal sealed partial class MainForm
                     map.Font = bodyFont;
                     map.DetailFont = smallFont;
                     map.TitleFont = nameFont;
-                    map.MinimumSize = new Size(0, Math.Max(Zoomed(50), map.Font.Height + map.DetailFont.Height + Zoomed(14)));
+                    map.MinimumSize = new Size(0, Math.Max(Zoomed(50), map.Font.Height + map.DetailFont.Height + Zoomed(14))
+                        + (map.CompletionText.Length == 0 ? 0 : map.DetailFont.Height + 2));
                     map.Height = map.MinimumSize.Height;
                     map.Margin = Padding.Empty;
                     map.MaximumSize = Size.Empty;
@@ -1144,17 +1202,11 @@ internal sealed partial class MainForm
                     }
                     else if (button.Name is "MissionDownloadRefreshRelease" or "MissionDownloadChangelog")
                     {
-                        StyleButton(button);
-                        button.FlatAppearance.BorderSize = 1;
-                        button.TextAlign = ContentAlignment.MiddleCenter;
-                        button.Padding = new Padding(Zoomed(12), 0, Zoomed(12), 0);
-                        button.MinimumSize = Size.Empty;
-                        var preferred = button.GetPreferredSize(Size.Empty);
-                        var height = Math.Max(button.Height, preferred.Height);
-                        var iconWidth = button.Name == "MissionDownloadRefreshRelease" ? Math.Min(18, Math.Max(12, height - 14)) + 7 : 0;
-                        button.Size = new Size(Math.Max(button.Width, preferred.Width) + iconWidth, height);
+                        SizeMissionBackButton(button);
                         button.Margin = new Padding(Zoomed(6), 0, 0, Zoomed(12));
                     }
+                    if (button.Parent?.Name == "MissionDownloadFolderActions")
+                        button.Margin = new Padding(0, 0, Zoomed(8), Zoomed(12));
                     if (link)
                     {
                         if (button is PreviewButton disclosure) disclosure.KeyboardFocusOnly = true;
@@ -1176,7 +1228,7 @@ internal sealed partial class MainForm
             _missionSelectionActions.SetColumnSpan(_missionReleaseActions, stackActions ? 2 : 1);
             _missionSelectionActions.SetCellPosition(_missionReleaseActions, new TableLayoutPanelCellPosition(stackActions ? 0 : 1, stackActions ? 1 : 0));
             _missionSelectionActions.PerformLayout();
-            var summaryWidth = Math.Max(1, contentWidth - _missionPrepare!.Width - _missionPrepare.Margin.Horizontal - Zoomed(12));
+            var summaryWidth = contentWidth;
             _missionDownloadSelectionCount!.MaximumSize = new Size(summaryWidth, 0);
             _missionDownloadSummary!.MaximumSize = new Size(summaryWidth, 0);
             LayoutMissionWarehouseRows(Math.Max(1, rightWidth - _missionDownloadRight.Padding.Horizontal));

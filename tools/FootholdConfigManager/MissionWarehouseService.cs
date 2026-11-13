@@ -34,6 +34,17 @@ internal static class MissionWarehouseService
             ?? MapAliases.FirstOrDefault(map => fileName.StartsWith(map.Prefix, StringComparison.OrdinalIgnoreCase)).Name;
     }
 
+    internal static string? GetMapVariant(FilePatchTarget target)
+    {
+        var maps = Maps.Where(map => map.Theatre == target.Theatre).ToArray();
+        return maps.Length == 1 ? maps[0].Name : target.FamilyId switch
+        {
+            "SinaiNorth-normal" => "Sinai North",
+            "SinaiExtended-normal" => "Sinai Extended",
+            _ => null
+        };
+    }
+
     private static bool MatchesSourceVariant(string path, string variant)
     {
         var sourceVariant = GetMapVariant(path);

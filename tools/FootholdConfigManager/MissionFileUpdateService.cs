@@ -1,9 +1,16 @@
 namespace FootholdConfigManager;
 
 // Presentation facts are separate from the retained inspection and verified writer below.
-internal enum FileUpdateInspectionState { Checking, Compatible, Incompatible, Unknown, Error, Stale }
+internal enum FileUpdateInspectionState { Checking, Compatible, Incompatible, Unknown, Error, Stale, Updated }
 internal sealed record FileUpdateInspection(string Path, string GroupId, string GroupName, string GroupSummary,
-    string FriendlyName, FileUpdateInspectionState State, string Reason, string? ProposedOutputName);
+    string FriendlyName, FileUpdateInspectionState State, string Reason, string? ProposedOutputName)
+{
+    public string? ObservedMap { get; init; }
+    public string? ObservedMissionVersion { get; init; }
+    public bool IdentityOverridesName { get; init; }
+    public bool IsCurrentVersion { get; init; }
+    public MissionPathIdentity? SourceIdentity { get; init; }
+}
 internal sealed record MissionFilesUpdatesPresentation(bool ManagerVerifiedCurrent, string ManagerStatus,
     string ReleaseTitle, bool FilesOnlyAvailable, IReadOnlyList<(string Id, string Name, string Provenance)> Instances);
 
@@ -39,7 +46,7 @@ internal static class MissionConfigHeaders
         }
         return facts.AsReadOnly();
     }
-    private static string? ReadFirstLine(string path, Func<string, Stream>? open)
+    internal static string? ReadFirstLine(string path, Func<string, Stream>? open)
     {
         using var stream = open is null ? File.OpenRead(path) : open(path);
         var bytes = new byte[MaximumHeaderBytes];
@@ -254,6 +261,9 @@ internal sealed record MissionFilesPreparedRow(MissionPathIdentity Identity, Dat
 {
     public IReadOnlyList<string> SourceScriptVersions { get; init; } = [];
     public string? DefaultOutputDirectory { get; init; }
+    public string? CompletionName { get; init; }
+    public string? ContentSha256 { get; init; }
+    public bool IsCurrentVersion { get; init; }
 }
 internal sealed record MissionFilesPreparation(IReadOnlyList<FileUpdateInspection> Rows,
     IReadOnlyList<MissionFilesGroup> Groups, IReadOnlyDictionary<string, MissionFilesPreparedRow> Compatible);
@@ -268,6 +278,7 @@ internal sealed class MissionFileUpdateService : IDisposable
     private PreparedMissionDownload? _quota;
     private (long Id, string Tag, string Payload, string Contract)? _key;
     private string? _inventoryKey;
+    private MissionFilesRoot[] _inventoryRoots = [];
     private string? _admittedEnvelope;
     private MissionReleaseAsset? _admittedAsset;
     private readonly Dictionary<string, (long Length, DateTime Time, FileUpdateInspection View, MissionFilesPreparedRow? Facts)> _rows = new(StringComparer.OrdinalIgnoreCase);
@@ -315,6 +326,8 @@ internal sealed class MissionFileUpdateService : IDisposable
         if (envelope.ReleaseTag != release.Tag || asset.DownloadUri != canonical || asset.Name != "foothold-files.json"
             || asset.Size != envelopeBytes.LongLength || asset.Sha256 != FilePatchEnvelope.Digest(envelopeBytes))
             throw new InvalidDataException("The envelope differs from its admitted release identity.");
+        var previous = !refreshInventory && _key == key && _admittedEnvelope == envelope.RawJson && _admittedAsset == asset ? Prepared : null;
+        var previousRoots = _inventoryRoots;
         Prepared = null; _inventoryKey = null;
         _busy = true;
         try
@@ -337,9 +350,10 @@ internal sealed class MissionFileUpdateService : IDisposable
                 }
                 catch { Clear(); throw; }
             }
-            var result = await Task.Run(() => Inventory(inputs, external, progress, token), token).ConfigureAwait(false);
+            var result = await Task.Run(() => Inventory(inputs, external, progress, token, previous, previousRoots), token).ConfigureAwait(false);
             Prepared = result;
             _inventoryKey = inventoryKey;
+            _inventoryRoots = inputs;
             _admittedEnvelope = envelope.RawJson; _admittedAsset = asset;
             return result;
         }
@@ -360,7 +374,7 @@ internal sealed class MissionFileUpdateService : IDisposable
     internal async Task<MissionFilesApplyResult> ApplyWithOutputNamesAsync(MissionFilesPreparation preparation,
         IReadOnlyList<string> selectedPaths, Func<PreparedConfigMember, byte[], string, byte[]> merge,
         IProgress<MissionFilesApplyItem> progress, CancellationToken token, string? outputDirectory,
-        IReadOnlyDictionary<string, string>? outputNames)
+        IReadOnlyDictionary<string, string>? outputNames, bool allowCurrentReinstallation = false)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_busy) throw new InvalidOperationException("A files-only operation is already running.");
@@ -369,6 +383,8 @@ internal sealed class MissionFileUpdateService : IDisposable
         {
             if (!preparation.Compatible.TryGetValue(path, out var row) || !_rows.TryGetValue(path, out var cached)
                 || !ReferenceEquals(row, cached.Facts)) throw new InvalidDataException("The selected row is not owned by this preparation: " + path);
+            if (row.IsCurrentVersion && !allowCurrentReinstallation)
+                throw new InvalidDataException("Allow script reinstallation before selecting a currently installed mission.");
             return row;
         }).ToArray();
         string? directory = null;
@@ -392,8 +408,10 @@ internal sealed class MissionFileUpdateService : IDisposable
             {
                 if (!outputNames.TryGetValue(row.Identity.Path, out var requested))
                     throw new InvalidDataException("Choose an output filename for each selected mission.");
-                var name = WeatherExportNames.Normalize(requested, row.Identity.Path,
+                var name = row.IsCurrentVersion && directory is null ? Path.GetFileName(row.Identity.Path) : WeatherExportNames.Normalize(requested, row.Identity.Path,
                     directory ?? row.DefaultOutputDirectory ?? Path.GetDirectoryName(row.Identity.Path)!, keepBoth: false);
+                if (row.IsCurrentVersion && directory is null && name != requested)
+                    throw new InvalidDataException("Reinstallation keeps the current mission filename.");
                 if (name.Length > 255) throw new InvalidDataException("The mission filename is too long. Choose a shorter name.");
                 names.Add(row.Identity.Path, name);
             }
@@ -409,11 +427,13 @@ internal sealed class MissionFileUpdateService : IDisposable
                 {
                     if (token.IsCancellationRequested) { cancelled = true; break; }
                     MissionFilesApplyItem item;
-                    try { item = WriteCopy(row, merge, token, directory ?? row.DefaultOutputDirectory ?? Path.GetDirectoryName(row.Identity.Path)!, names?[row.Identity.Path]); }
+                    try { item = WriteCopy(row, merge, token, directory ?? (row.IsCurrentVersion ? Path.GetDirectoryName(row.Identity.Path)! : row.DefaultOutputDirectory ?? Path.GetDirectoryName(row.Identity.Path)!), names?[row.Identity.Path], row.IsCurrentVersion && directory is null); }
                     catch (OperationCanceledException) when (token.IsCancellationRequested) { cancelled = true; break; }
                     catch (Exception error) when (error is InvalidDataException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or System.Text.DecoderFallbackException)
                     { item = new(row.Identity.Path, null, null, error.Message); }
                     results.Add(item);
+                    if (row.IsCurrentVersion && directory is null && item.OutputPath is not null)
+                    { Evict(row.Identity.Path); Prepared = null; }
                     // Move is the commit point. Report it before observing subsequent cancellation.
                     progress.Report(item);
                 }
@@ -424,9 +444,9 @@ internal sealed class MissionFileUpdateService : IDisposable
     }
 
     private MissionFilesApplyItem WriteCopy(MissionFilesPreparedRow row,
-        Func<PreparedConfigMember, byte[], string, byte[]> merge, CancellationToken token, string outputDirectory, string? outputName)
+        Func<PreparedConfigMember, byte[], string, byte[]> merge, CancellationToken token, string outputDirectory, string? outputName, bool replaceCurrent = false)
     {
-        using var source = new FileStream(row.Identity.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var source = new FileStream(row.Identity.Path, FileMode.Open, FileAccess.Read, replaceCurrent ? FileShare.Read | FileShare.Delete : FileShare.Read);
         try { row.Identity.RequireUnchanged(); }
         catch (InvalidDataException) { Evict(row.Identity.Path); Prepared = null; throw; }
         var expected = new Dictionary<string, byte[]>(StringComparer.Ordinal);
@@ -463,6 +483,9 @@ internal sealed class MissionFileUpdateService : IDisposable
                         try { if (scratchOwned && File.Exists(scratch)) File.Delete(scratch); scratchOwned = false; }
                         finally { _quota.StagedBytes -= _limits.MemberBytes; }
                     }
+                    bytes = MissionVersionStamp.Write(bytes, row.Target.TargetScriptVersion,
+                        MissionWarehouseService.GetMapVariant(row.Target) ?? throw new InvalidDataException("Unknown target mission map."));
+                    if (bytes.LongLength > _limits.MemberBytes) throw new InvalidDataException("The stamped Config exceeds its limit.");
                     var configText = new System.Text.UTF8Encoding(false, true).GetString(bytes);
                     if (ConfigDocument.ParseMissionReleaseTag(configText.Split('\n', 2)[0].TrimEnd('\r')) != ConfigDocument.ParseMissionReleaseTag("-- Foothold release: " + _key!.Value.Tag))
                         throw new InvalidDataException("The merged Config has the wrong global release stamp.");
@@ -533,14 +556,20 @@ internal sealed class MissionFileUpdateService : IDisposable
                     throw new InvalidDataException("Member attributes changed: " + member.Name);
             }
             // The source handle still denies writes/deletion; unchanged PLAYER root/map fingerprints carry the admitted proof.
-            var name = outputName ?? ProposeOutputName(row.Identity.Path, row.Target.TargetScriptVersion);
+            var name = outputName ?? (row.IsCurrentVersion ? Path.GetFileName(row.Identity.Path) : ProposeOutputName(row.Identity.Path, row.Target.TargetScriptVersion));
             for (var number = 1; ; number++)
             {
                 token.ThrowIfCancellationRequested();
-                var final = Path.Combine(outputDirectory, WeatherExportNames.NumberedName(name, number));
+                var final = replaceCurrent ? row.Identity.Path : Path.Combine(outputDirectory, WeatherExportNames.NumberedName(name, number));
                 try
                 {
-                    File.Move(stage!, final, overwrite: false);
+                    if (replaceCurrent)
+                    {
+                        row.Identity.RequireUnchanged();
+                        token.ThrowIfCancellationRequested();
+                        File.Replace(stage!, final, null, ignoreMetadataErrors: true);
+                    }
+                    else File.Move(stage!, final, overwrite: false);
                     stage = null;
                     return new(row.Identity.Path, final, verified.Sha256, null)
                     {
@@ -548,7 +577,7 @@ internal sealed class MissionFileUpdateService : IDisposable
                             .ToDictionary(r => r.ConfigVariant!, r => expectedHashes[r.MemberPath], StringComparer.Ordinal), StringComparer.Ordinal)
                     };
                 }
-                catch (IOException) when (File.Exists(final)) { } // Retry this SAME verified stage only.
+                catch (IOException) when (!replaceCurrent && File.Exists(final)) { } // Retry this SAME verified stage only.
             }
         }
         finally
@@ -615,7 +644,7 @@ internal sealed class MissionFileUpdateService : IDisposable
     }
 
     private MissionFilesPreparation Inventory(MissionFilesRoot[] roots, string[] external,
-        IProgress<FileUpdateInspection> progress, CancellationToken token)
+        IProgress<FileUpdateInspection> progress, CancellationToken token, MissionFilesPreparation? previous, MissionFilesRoot[] previousRoots)
     {
         var groups = new List<MissionFilesGroup>();
         var views = new List<FileUpdateInspection>();
@@ -628,6 +657,14 @@ internal sealed class MissionFileUpdateService : IDisposable
         {
             token.ThrowIfCancellationRequested();
             if (!directories.Add(Path.TrimEndingDirectorySeparator(root.MissionsDirectory))) continue;
+            // Additions extend the admitted inventory. Only explicit Rescan revisits unchanged roots.
+            if (previous is not null && previousRoots.Contains(root))
+            {
+                groups.AddRange(previous.Groups.Where(group => group.Id == root.Id));
+                foreach (var row in previous.Rows.Where(row => row.GroupId == root.Id && IsCandidate(row.Path)))
+                    if (paths.Add(row.Path)) views.Add(row);
+                continue;
+            }
             var botFolder = Path.Combine(root.MissionsDirectory, ".dcssb");
             var hasBotFolder = false;
             try
@@ -668,6 +705,7 @@ internal sealed class MissionFileUpdateService : IDisposable
         foreach (var path in external)
         {
             token.ThrowIfCancellationRequested();
+            if (paths.Contains(path)) continue;
             if (path.EndsWith(".orig", StringComparison.OrdinalIgnoreCase))
             {
                 if (!paths.Add(path)) continue;
@@ -677,10 +715,18 @@ internal sealed class MissionFileUpdateService : IDisposable
                 continue;
             }
             var info = new FileInfo(path);
-            try { Add(new(path, info.LastWriteTimeUtc, info.Length), "external", "Added missions", "No instance Config owner"); }
+            var owner = roots.FirstOrDefault(root => string.Equals(Path.GetDirectoryName(path),
+                Path.TrimEndingDirectorySeparator(root.MissionsDirectory), StringComparison.OrdinalIgnoreCase));
+            try { Add(new(path, info.LastWriteTimeUtc, info.Length), owner?.Id ?? "external", owner?.Name ?? "Added missions", owner?.MissionsDirectory ?? "No instance Config owner"); }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             { views.Add(new(path, "external", "Added missions", "No instance Config owner", Path.GetFileName(path), FileUpdateInspectionState.Error, error.Message, null)); }
         }
+        for (var index = 0; index < groups.Count; index++)
+            if (groups[index].Status == "No MIZ files" || groups[index].Status.EndsWith(" MIZ files", StringComparison.Ordinal))
+            {
+                var count = views.Count(row => row.GroupId == groups[index].Id);
+                groups[index] = groups[index] with { Status = count == 0 ? "No MIZ files" : count + " MIZ files" };
+            }
         foreach (var path in _rows.Keys.Where(p => !paths.Contains(p)).ToArray()) Evict(path);
         var compatible = _rows.Where(p => paths.Contains(p.Key) && p.Value.Facts is not null).ToDictionary(p => p.Key, p => p.Value.Facts!, StringComparer.OrdinalIgnoreCase);
         return new(views.AsReadOnly(), groups.AsReadOnly(), System.Collections.Frozen.FrozenDictionary.ToFrozenDictionary(compatible, StringComparer.OrdinalIgnoreCase));
@@ -710,30 +756,96 @@ internal sealed class MissionFileUpdateService : IDisposable
             try
             {
                 _archives++;
-                var archive = _transport.InspectArchive(source.Path, _quota, n => n is "mission" or "l10n/DEFAULT/mapResource" || IsConfig(n), true, token);
+                var archive = _transport.InspectArchive(source.Path, _quota, n => n is "mission" or "l10n/DEFAULT/mapResource" || IsConfig(n) || n == ReceiptPath, true, token);
+                checking = checking with { SourceIdentity = new(source.Path, true, archive.Length, archive.Sha256) };
                 foreach (var member in archive.Members) MissionScriptReferenceFacts.SafePath(member.Name);
                 if (!archive.Captures.TryGetValue("l10n/DEFAULT/mapResource", out var map)) throw new InvalidDataException("Missing resource map.");
                 var members = archive.Members.ToDictionary(m => m.Name, StringComparer.Ordinal);
+                checking = checking with { IdentityOverridesName = true }; // A failed identity read must not fall back to the filename.
+                var configIdentities = archive.Captures.Where(pair => IsConfig(pair.Key)).Select(pair => MissionVersionStamp.Read(pair.Value)).ToArray();
+                var identities = configIdentities.Where(identity => identity is not null).Distinct().ToArray();
+                if (identities.Length > 1 || identities.Length == 1 && configIdentities.Any(identity => identity is null))
+                    throw new InvalidDataException("Embedded Config mission identities disagree.");
+                var identity = identities.SingleOrDefault();
+                checking = checking with { IdentityOverridesName = identity is not null,
+                    ObservedMap = identity?.Map, ObservedMissionVersion = identity?.Version };
                 var (theatre, facts, execution) = ReadProof(archive.Captures["mission"], map, members.Keys.ToHashSet(StringComparer.Ordinal));
-                var matches = _proofs.Select(p => (Proof: p, Sources: p.Target.Theatre == theatre
-                    ? p.Target.SupportedSources.Where(s => s.ScriptMembers.All(m => members.TryGetValue(m.MemberPath, out var actual)
-                        && actual.Length == m.Length && actual.Sha256.Equals(m.Sha256, StringComparison.OrdinalIgnoreCase))).ToArray() : []))
-                    .Where(p => p.Sources.Length > 0 && SameFacts(p.Proof.ExecutionFacts, execution)
-                        && p.Proof.Bindings.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(facts.BindingsByMember.Keys)).ToArray();
-                if (matches.Length != 1) throw new InvalidDataException(matches.Length == 0 ? "No certified complete script cohort and owned-reference match." : "Ambiguous family/target proof.");
-                var target = matches[0].Proof.Target;
+                var bindingPaths = facts.BindingsByMember.Keys.ToHashSet(StringComparer.Ordinal);
+                var referenceProofs = _proofs.Where(p => p.Target.Theatre == theatre && bindingPaths.SetEquals(p.Bindings.Keys)
+                    && SameFacts(p.ExecutionFacts, execution)).ToArray();
+                if (identity is not null)
+                {
+                    referenceProofs = referenceProofs.Where(proof => MissionWarehouseService.GetMapVariant(proof.Target) == identity.Map).ToArray();
+                    if (referenceProofs.Length == 0) throw new InvalidDataException("Mission map stamp does not match its certified Setup/reference identity.");
+                    if (referenceProofs.All(proof => System.Version.Parse(identity.Version) > System.Version.Parse(proof.Target.TargetScriptVersion)))
+                    {
+                        view = checking with { State = FileUpdateInspectionState.Incompatible, Reason = "Newer mission version " + identity.Version + "; no downgrade offered." };
+                        _rows[source.Path] = (source.Length, source.LastWriteTimeUtc, view, null);
+                        views.Add(view); progress.Report(view); return;
+                    }
+                }
+                var matches = referenceProofs.Select(p => (Proof: p, Sources: p.Target.SupportedSources
+                    .Where(s => (identity is null || MissionVersionStamp.NormalizeVersion(s.ScriptVersion) == identity.Version)
+                        && s.ScriptMembers.All(m => members.TryGetValue(m.MemberPath, out var actual)
+                        && actual.Length == m.Length && actual.Sha256.Equals(m.Sha256, StringComparison.OrdinalIgnoreCase))).ToArray()))
+                    .Where(p => p.Sources.Length > 0).ToArray();
+                // A stamped current revision still needs its certified family/reference proof; legacy inputs also need exact managed hashes.
+                // Legacy MIZs without stamps use this same content proof, without requiring a Manager receipt.
+                var current = referenceProofs.Where(proof => (identity is not null || !matches.Any(match => ReferenceEquals(match.Proof, proof)))
+                    && (identity is null
+                    || MissionVersionStamp.NormalizeVersion(proof.Target.TargetScriptVersion) == identity.Version)
+                    && proof.Target.Replacements.Where(replacement => replacement.ConfigVariant is null).All(replacement =>
+                    {
+                        var declared = _contract!.Blobs.Single(blob => blob.Id == replacement.BlobId);
+                        return members.TryGetValue(replacement.MemberPath, out var actual) && (identity is not null
+                            || actual.Length == declared.Length && actual.Sha256.Equals(declared.Sha256, StringComparison.OrdinalIgnoreCase));
+                    })).ToArray();
+                if (current.Length > 1) throw new InvalidDataException("Ambiguous current mission identity.");
+                var isCurrent = current.Length == 1;
+                if (!isCurrent && identity is not null && referenceProofs.All(proof => MissionVersionStamp.NormalizeVersion(proof.Target.TargetScriptVersion) == identity.Version))
+                    throw new InvalidDataException("Current mission version is stamped, but its managed scripts differ. No older-source update is offered.");
+                var customised = !isCurrent && matches.Length == 0;
+                if (customised && referenceProofs.Length > 0)
+                {
+                    // A declared embedded release only qualifies together with the certified family/reference proof.
+                    var headers = new Dictionary<string, string?>(StringComparer.Ordinal);
+                    matches = referenceProofs.Select(p => {
+                        var replacedPaths = p.Target.Replacements.Select(r => r.MemberPath).ToHashSet(StringComparer.Ordinal);
+                        var tags = p.Target.Replacements.Where(r => r.ConfigVariant is not null).Select(r => {
+                            if (!headers.TryGetValue(r.MemberPath, out var tag))
+                            {
+                                tag = archive.Captures.TryGetValue(r.MemberPath, out var configBytes)
+                                    ? MissionConfigHeaders.ReadFirstLine(r.MemberPath, _ => new MemoryStream(configBytes, writable: false)) : null;
+                                headers.Add(r.MemberPath, tag);
+                            }
+                            return tag;
+                        }).Distinct(StringComparer.Ordinal).ToArray();
+                        var sources = identity is not null || tags.Length == 1 && tags[0] is not null
+                            ? p.Target.SupportedSources.Where(s => (identity is not null ? MissionVersionStamp.NormalizeVersion(s.ScriptVersion) == identity.Version
+                                : ConfigDocument.ParseMissionReleaseTag("-- Foothold release: " + s.SourceReleaseTag) == tags[0])
+                                && s.ScriptMembers.All(m => members.TryGetValue(m.MemberPath, out var actual)
+                                    && (replacedPaths.Contains(m.MemberPath) || actual.Length == m.Length
+                                        && actual.Sha256.Equals(m.Sha256, StringComparison.OrdinalIgnoreCase)))).ToArray() : [];
+                        return (Proof: p, Sources: sources);
+                    }).Where(p => p.Sources.Length > 0).ToArray();
+                }
+                if (!isCurrent && matches.Length != 1) throw new InvalidDataException(matches.Length == 0 ? "No certified source release and owned-reference match." : "Ambiguous family/target proof.");
+                var target = isCurrent ? current[0].Target : matches[0].Proof.Target;
                 if (target.Replacements.Any(r => !members.ContainsKey(r.MemberPath))) throw new InvalidDataException("Missing replacement member.");
-                var outputName = ProposeOutputName(source.Path, target.TargetScriptVersion);
+                var outputName = isCurrent ? Path.GetFileName(source.Path) : ProposeOutputName(source.Path, target.TargetScriptVersion);
                 var configs = archive.Captures.Where(p => IsConfig(p.Key)).Select(p => new PreparedConfigMember(p.Key,
                     RuntimeSettings.SupportedConfigFileNames.First(n => Path.GetFileName(p.Key).Equals(n, StringComparison.OrdinalIgnoreCase)), p.Value, members[p.Key].Sha256)).ToArray();
                 var after = new FileInfo(source.Path);
                 if (archive.Length != source.Length || after.Length != source.Length || after.LastWriteTimeUtc != source.LastWriteTimeUtc)
                     throw new InvalidDataException("Mission changed during inspection; refresh this path.");
                 row = new(new(source.Path, true, archive.Length, archive.Sha256), source.LastWriteTimeUtc, target, archive.Members, Array.AsReadOnly(configs), facts.BindingsByMember)
-                { SourceScriptVersions = Array.AsReadOnly(matches[0].Sources.Select(source => source.ScriptVersion).Distinct(StringComparer.Ordinal).ToArray()),
-                    DefaultOutputDirectory = defaultOutputDirectory };
-                view = checking with { State = FileUpdateInspectionState.Compatible, Reason = target.FamilyId + " · certified script content → " + target.TargetScriptVersion,
+                { IsCurrentVersion = isCurrent, SourceScriptVersions = isCurrent ? [target.TargetScriptVersion] : Array.AsReadOnly(matches[0].Sources.Select(source => source.ScriptVersion).Distinct(StringComparer.Ordinal).ToArray()),
+                    DefaultOutputDirectory = defaultOutputDirectory, CompletionName = MissionUpdateProgress.CompletionName(source.Path, target, configs),
+                    ContentSha256 = MissionUpdateProgress.ContentIdentity(archive.Members) };
+                view = checking with { IsCurrentVersion = isCurrent, State = isCurrent ? FileUpdateInspectionState.Updated : FileUpdateInspectionState.Compatible, ObservedMap = MissionWarehouseService.GetMapVariant(target),
+                    ObservedMissionVersion = identity?.Version ?? (row.SourceScriptVersions.Count == 1 ? row.SourceScriptVersions[0] : null), Reason = target.FamilyId + (customised ? " · certified release/reference match → " + target.TargetScriptVersion + "; customised scripts will be replaced." : " · certified script content → " + target.TargetScriptVersion),
                     ProposedOutputName = outputName };
+                if (isCurrent) view = view with { Reason = "Currently installed · " + target.TargetScriptVersion + ". Script reinstallation is optional." };
             }
             catch (Exception error) when (error is InvalidDataException or IOException or UnauthorizedAccessException or ArgumentException or System.Text.DecoderFallbackException)
             { view = checking with { State = error is IOException or UnauthorizedAccessException ? FileUpdateInspectionState.Error : FileUpdateInspectionState.Unknown, Reason = error.Message }; }
@@ -822,9 +934,22 @@ internal sealed class MissionFileUpdateService : IDisposable
     {
         if (_rows.Remove(path, out var row) && row.Facts is not null) _quota!.ReleaseCapturedBytes(row.Facts.ConfigMembers.Sum(c => (long)c.Bytes.Length));
     }
+    internal MissionFilesPreparation ForgetRecycledSources(IReadOnlySet<string> paths)
+    {
+        if (_busy || Prepared is null) throw new InvalidOperationException("Finish checking missions before recycling sources.");
+        foreach (var path in paths) Evict(path);
+        var affected = Prepared.Rows.Where(row => paths.Contains(row.Path)).Select(row => row.GroupId).ToHashSet(StringComparer.Ordinal);
+        var rows = Prepared.Rows.Where(row => !paths.Contains(row.Path)).ToArray();
+        Prepared = Prepared with { Rows = rows,
+            Compatible = Prepared.Compatible.Where(pair => !paths.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase),
+            Groups = Prepared.Groups.Select(group => affected.Contains(group.Id)
+                ? group with { Status = rows.Count(row => row.GroupId == group.Id) + " MIZ files" } : group).ToArray() };
+        return Prepared;
+    }
+
     private void Clear()
     {
-        Prepared = null; _inventoryKey = null; _key = null; _contract = null; _admittedEnvelope = null; _admittedAsset = null; _rows.Clear(); _proofs = []; _payload = new Dictionary<string, byte[]>();
+        Prepared = null; _inventoryKey = null; _inventoryRoots = []; _key = null; _contract = null; _admittedEnvelope = null; _admittedAsset = null; _rows.Clear(); _proofs = []; _payload = new Dictionary<string, byte[]>();
         if (_quota is null) return;
         _quota.ReleaseCapturedBytes(_quota.CapturedBytes);
         _quota.Dispose();

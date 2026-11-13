@@ -19,6 +19,8 @@ internal sealed class LoadingScreenForm : Form
         if (pictureIndex is < 0 or > 2) throw new ArgumentOutOfRangeException(nameof(pictureIndex));
         _photo = LoadAsset(names[pictureIndex]);
         _icon = LoadAsset("foothold-manager-icon.png");
+        var windowIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+        Icon = windowIcon;
         var cropTop = pictureIndex == 0 ? 90 : pictureIndex == 1 ? 135 : 0;
         PhotoSourceBounds = new Rectangle(0, cropTop, _photo.Width, _photo.Height - cropTop);
         Text = "Loading · Foothold Config Manager";
@@ -66,7 +68,7 @@ internal sealed class LoadingScreenForm : Form
         Shown += (_, _) => FitToWorkArea();
         DpiChanged += (_, _) => FitToWorkArea();
         FormClosing += (_, args) => { args.Cancel = true; CancelRequested?.Invoke(this, EventArgs.Empty); };
-        Disposed += (_, _) => { _photo.Dispose(); _icon.Dispose(); };
+        Disposed += (_, _) => { _photo.Dispose(); _icon.Dispose(); windowIcon?.Dispose(); };
         FitToWorkArea();
     }
 

@@ -183,7 +183,8 @@ internal sealed partial class WeatherWindow : Form
         Margin = Padding.Empty;
         _zoomGeometry.Remove(this);
         _close.Text = "Back to Config";
-        _close.Width = TextRenderer.MeasureText(_close.Text, Font).Width + S(36);
+        MainForm.SizeNavigationButton(_close, Font, _uiScale);
+        _workspaceTabs.ItemSize = new Size(_workspaceTabs.ItemSize.Width, _close.Height + S(6));
         _zoomGeometry.Remove(_close);
     }
 

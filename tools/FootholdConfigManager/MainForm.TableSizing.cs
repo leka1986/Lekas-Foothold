@@ -44,12 +44,14 @@ internal sealed partial class MainForm
         protected override void OnFontChanged(EventArgs args)
         {
             base.OnFontChanged(args);
+            if (VirtualMode) return;
             foreach (DataGridViewRow row in Rows) SizeContentRow(row);
         }
 
         protected override void OnRowsAdded(DataGridViewRowsAddedEventArgs args)
         {
             base.OnRowsAdded(args);
+            if (VirtualMode) return;
             for (var index = args.RowIndex; index < args.RowIndex + args.RowCount; index++)
                 SizeContentRow(Rows[index]);
         }

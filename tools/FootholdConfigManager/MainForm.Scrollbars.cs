@@ -101,6 +101,7 @@ internal sealed partial class MainForm
 
         private void Draw(IntPtr hdc)
         {
+            WarehouseLayoutProbe.Count(WarehouseLayoutProbe.Counter.ScrollbarPaint);
             using var frame = BufferedGraphicsManager.Current.Allocate(hdc, ScrollBar.ClientRectangle);
             var graphics = frame.Graphics;
             DrawPresentation(graphics, ScrollBar.ClientRectangle, ThumbBounds, _hover || _dragging);
@@ -121,6 +122,8 @@ internal sealed partial class MainForm
 
         private void RequestScroll(ScrollEventType type, int value)
         {
+            if (type == ScrollEventType.ThumbTrack)
+                WarehouseLayoutProbe.Count(WarehouseLayoutProbe.Counter.ScrollbarDrag);
             var args = new ScrollEventArgs(type, ScrollBar.Value, Math.Clamp(value, ScrollBar.Minimum, MaximumValue),
                 _vertical ? ScrollOrientation.VerticalScroll : ScrollOrientation.HorizontalScroll);
             // Reuse the existing Scroll handlers, including their adjusted row limits.

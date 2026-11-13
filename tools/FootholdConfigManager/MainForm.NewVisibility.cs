@@ -45,6 +45,10 @@ internal sealed partial class MainForm
         {
             if (_unseenImportedNewEntryKeysByCategory.Values.Any(keys => keys.Contains(key))) visibleKeys.Add(key);
         }
+        if (category == WarehouseWeaponCategory &&
+            _unseenImportedNewEntryKeysByCategory.TryGetValue(category, out var warehouseMarkers) &&
+            warehouseMarkers.Contains(WarehouseWeaponEditorName))
+            visibleKeys.Add(WarehouseWeaponEditorName);
         foreach (var item in items)
         {
             Admit(item.Key);

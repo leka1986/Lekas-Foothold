@@ -110,6 +110,11 @@ internal sealed partial class WeatherWindow
         if (!_zooming) return;
         try
         {
+            if (_backToConfig is not null)
+            {
+                MainForm.SizeNavigationButton(_close, Font, _uiScale);
+                _workspaceTabs.ItemSize = new Size(_workspaceTabs.ItemSize.Width, _close.Height + S(6));
+            }
             LayoutWeatherColumns();
             _zooming = false;
             LayoutWindColumns();

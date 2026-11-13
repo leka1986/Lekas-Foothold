@@ -281,7 +281,17 @@ internal static class MissionScriptReferenceFacts
                     // Only these established generated callbacks are proven here. Unknown callbacks
                     // remain usable with stable keys, but cannot certify a resource-key rename.
                     if (id.Identifier.Text is not ("a_do_script_file" or "a_out_sound_s" or "a_end_mission"
+                        or "a_remove_scene_objects" or "a_out_sound_g"
                         or "c_time_after" or "c_flag_is_true" or "getValueDictByKey" or "getValueResourceByKey")) unresolved = true;
+                    if (id.Identifier.Text == "a_remove_scene_objects"
+                        && (call.Argument is not ExpressionListFunctionArgumentSyntax sceneryArgs || sceneryArgs.Expressions.Count != 2
+                            || sceneryArgs.Expressions.Any(argument => argument is not LiteralExpressionSyntax { Token.Value: double }))) unresolved = true;
+                    if (id.Identifier.Text == "a_out_sound_g"
+                        && (call.Argument is not ExpressionListFunctionArgumentSyntax soundArgs || soundArgs.Expressions.Count != 3
+                            || soundArgs.Expressions[0] is not LiteralExpressionSyntax { Token.Value: double }
+                            || soundArgs.Expressions[1] is not FunctionCallExpressionSyntax soundLookup
+                            || soundLookup.Expression is not IdentifierNameSyntax soundId || soundId.Identifier.Text != "getValueResourceByKey"
+                            || soundArgs.Expressions[2] is not LiteralExpressionSyntax { Token.Value: double })) unresolved = true;
                     if (id.Identifier.Text == "getValueResourceByKey")
                     {
                         directLookupNames.Add(id.Identifier.Span.Start);

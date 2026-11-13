@@ -874,6 +874,7 @@ internal sealed partial class ConfigDocument
     private readonly Dictionary<string, string> _guiTableDisabledWhen = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _guiInstallPolicies = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _topLevelGuiInstallPolicies = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<string>?> _savedStringListValues = new(StringComparer.Ordinal);
     private string _savedSnapshot = "";
     private bool _hasStructuralChanges;
 
@@ -965,7 +966,26 @@ internal sealed partial class ConfigDocument
             doc._savedSnapshot = doc.RenderCurrentText();
         }
 
+        doc.CaptureSavedStringListValues();
         return doc;
+    }
+
+    internal bool? WasStringListValueActive(string key, string value) =>
+        _savedStringListValues.TryGetValue(key, out var values) ? values?.Contains(value) : false;
+
+    private void CaptureSavedStringListValues()
+    {
+        _savedStringListValues.Clear();
+        foreach (var table in StringListTables)
+        {
+            if (_savedStringListValues.ContainsKey(table.Key))
+            {
+                // A repeated key has no single saved list to compare against until it is repaired.
+                _savedStringListValues[table.Key] = null;
+                continue;
+            }
+            _savedStringListValues.Add(table.Key, table.Items.Select(item => item.Value).ToHashSet(StringComparer.Ordinal));
+        }
     }
 
     public string? GetGuiLabel(string key)
@@ -1041,6 +1061,11 @@ internal sealed partial class ConfigDocument
 
     public bool ReplaceTableBodyFrom(ConfigDocument sourceDocument, string key)
     {
+        if (key == WarehouseWeaponLocations.RulesKey)
+        {
+            return sourceDocument.TryGetTableBlockText(key, out var rules) && SetWarehouseWeaponRulesText(rules);
+        }
+
         if (!sourceDocument.TryFindTableBlock(key, out var sourceStart, out var sourceEnd) ||
             !TryFindTableBlock(key, out var targetStart, out var targetEnd) ||
             sourceEnd <= sourceStart ||
@@ -1387,6 +1412,7 @@ internal sealed partial class ConfigDocument
 
         _savedSnapshot = savedText;
         _hasStructuralChanges = false;
+        CaptureSavedStringListValues();
         return targetPath;
     }
 
@@ -3644,6 +3670,22 @@ internal sealed partial class ConfigDocument
             var isTableStart = IsTableStart(value);
             var guiComments = new GuiCommentFacts(pendingComments);
 
+            if (tablePath.Count == 0 && value.StartsWith("{", StringComparison.Ordinal) &&
+                (lhs == WarehouseWeaponLocations.RulesKey || lhs == WarehouseWeaponLocations.CatalogKey))
+            {
+                var end = FindTableEndLine(i);
+                if (end >= i)
+                {
+                    // Preserve player rules during updates. Use the incoming Config's picker catalog.
+                    var policy = lhs == WarehouseWeaponLocations.RulesKey ? "keepTable" : "replaceTable";
+                    _guiInstallPolicies[lhs] = policy;
+                    _topLevelGuiInstallPolicies[lhs] = policy;
+                    pendingComments.Clear();
+                    i = end;
+                    continue;
+                }
+            }
+
             if (isTableStart)
             {
                 var key = NormalizeKey(lhs);
@@ -3846,7 +3888,8 @@ internal sealed partial class ConfigDocument
             }
 
             var value = SplitValueAndSuffix(match.Groups["rest"].Value).value.TrimEnd();
-            if (!IsTableStart(value))
+            var isWarehouseTable = key is WarehouseWeaponLocations.RulesKey or WarehouseWeaponLocations.CatalogKey;
+            if (!IsTableStart(value) && !(isWarehouseTable && value.StartsWith("{", StringComparison.Ordinal)))
             {
                 continue;
             }
@@ -3888,7 +3931,7 @@ internal sealed partial class ConfigDocument
         table = new ConfigStringListTable
         {
             Key = key,
-            Section = section,
+            Section = key == "WarehouseWeaponCaps" ? "Aircraft / Weapons" : section,
             Description = description,
             GuiLabel = guiLabel,
             GuiEditor = guiEditor,

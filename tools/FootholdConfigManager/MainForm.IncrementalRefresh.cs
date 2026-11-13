@@ -10,7 +10,7 @@ internal sealed partial class MainForm
     {
         if (item.StringListTable is not null)
         {
-            panel.Controls.Add(RegisterOptionsTarget(panel, BuildStringListEditor(item.StringListTable), item.Key));
+            panel.Controls.Add(RegisterOptionsTarget(panel, BuildStringListEditor(item.StringListTable, categoryName), item.Key));
             return;
         }
 

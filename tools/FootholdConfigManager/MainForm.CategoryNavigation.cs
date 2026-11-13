@@ -187,6 +187,13 @@ internal sealed partial class MainForm
         }
         protected override void WndProc(ref Message message)
         {
+            // Ignore empty client space before native focus and nearest-row selection.
+            if (message.Msg is 0x0201 or 0x0203) // WM_LBUTTONDOWN / WM_LBUTTONDBLCLK
+            {
+                var position = message.LParam.ToInt64();
+                var point = new Point(unchecked((short)(position & 0xffff)), unchecked((short)((position >> 16) & 0xffff)));
+                if (IndexFromPoint(point) == NoMatches) return;
+            }
             if (SystemInformation.HighContrast)
             {
                 base.WndProc(ref message);

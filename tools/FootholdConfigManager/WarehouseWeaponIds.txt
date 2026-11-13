@@ -1,0 +1,1311 @@
+weapons.adapters.
+weapons.adapters.A4E_SUU-7
+weapons.adapters.ACH_47F_GL
+weapons.adapters.aero-3b
+weapons.adapters.apu_470
+weapons.adapters.apu_60
+weapons.adapters.apu-73
+weapons.adapters.B-8V20A
+weapons.adapters.bdz_umk2b
+weapons.adapters.BRU_42A
+weapons.adapters.CHAP_AIM92LN
+weapons.adapters.CHAP_FZ225
+weapons.adapters.CHAP_HOT3LN
+weapons.adapters.F16V_gbu_sdb_BRU61
+weapons.adapters.GD_F100_SUU-13
+weapons.adapters.HB_F-4E_LAU-34
+weapons.adapters.kmgu-2
+weapons.adapters.KMGU-2
+weapons.adapters.Lau_33_A
+weapons.adapters.LAU-10
+weapons.adapters.LAU-3
+weapons.adapters.LAU-61
+weapons.adapters.LAU-68
+weapons.adapters.lau-88
+weapons.adapters.M260
+weapons.adapters.M299
+weapons.adapters.M299_AGM114
+weapons.adapters.MBD-3-LAU-61
+weapons.adapters.mbdz_u2t
+weapons.adapters.mer_a4e
+weapons.adapters.OH-58D_Gorgona
+weapons.adapters.OH-6_XM158
+weapons.adapters.SidewinderPylon
+weapons.adapters.XM158
+weapons.bombs.250-2
+weapons.bombs.250-3
+weapons.bombs.AAA Vulcan M163 Air [21666lb]
+weapons.bombs.AAA Vulcan M163 Skid [21577lb]
+weapons.bombs.AAA ZSU-23-4 Shilka [32912lb]
+weapons.bombs.AB_250_2_SD_10A
+weapons.bombs.AB_250_2_SD_2
+weapons.bombs.AB_500_1_SD_10A
+weapons.bombs.AGM_62
+weapons.bombs.AGM_62_I
+weapons.bombs.AH6_SMOKE_BLUE
+weapons.bombs.AH6_SMOKE_GREEN
+weapons.bombs.AH6_SMOKE_RED
+weapons.bombs.AH6_SMOKE_YELLOW
+weapons.bombs.AN_M30A1
+weapons.bombs.AN_M57
+weapons.bombs.AN_M64
+weapons.bombs.AN_M65
+weapons.bombs.AN_M66
+weapons.bombs.AN-M66A2
+weapons.bombs.AN-M81
+weapons.bombs.AN-M88
+weapons.bombs.AO_25SL
+weapons.bombs.APC BTR-80 Air [23936lb]
+weapons.bombs.APC BTR-80 Skid [23826lb]
+weapons.bombs.APC BTR-82A Air [24998lb]
+weapons.bombs.APC BTR-82A Skid [24888lb]
+weapons.bombs.APC Cobra Air [10912lb]
+weapons.bombs.APC LAV-25 Air [22520lb]
+weapons.bombs.APC M1043 HMMWV Armament Air [7023lb]
+weapons.bombs.APC M1043 HMMWV Armament Skid [6912lb]
+weapons.bombs.APC M113 Air [21624lb]
+weapons.bombs.APC MTLB Air [26400lb]
+weapons.bombs.APC MTLB Skid [26290lb]
+weapons.bombs.ART 2S9 NONA Air [19140lb]
+weapons.bombs.ART 2S9 NONA Skid [19030lb]
+weapons.bombs.ART GVOZDIKA [34720lb]
+weapons.bombs.ARV BRDM-2 Air [12320lb]
+weapons.bombs.ARV BRDM-2 Skid [12210lb]
+weapons.bombs.ATGM M1045 HMMWV TOW Air [7183lb]
+weapons.bombs.ATGM M1045 HMMWV TOW Skid [7073lb]
+weapons.bombs.ATGM M1134 Stryker [30337lb]
+weapons.bombs.BAP_100
+weapons.bombs.BAP-100
+weapons.bombs.BAT-120
+weapons.bombs.BDU_33
+weapons.bombs.BDU_45
+weapons.bombs.BDU_45B
+weapons.bombs.BDU_45LGB	BDU-45 Laser-Guided Practice Bomb	laser	laser guided
+weapons.bombs.BDU_50HD
+weapons.bombs.BDU_50LD
+weapons.bombs.BDU_50LGB	BDU-50LGB Laser-Guided Practice Bomb	laser	laser guided
+weapons.bombs.BEER_BOMB
+weapons.bombs.BetAB_500
+weapons.bombs.BetAB_500ShP
+weapons.bombs.BETAB-500M
+weapons.bombs.BETAB-500S
+weapons.bombs.BIN_200
+weapons.bombs.BKF_AO2_5RT
+weapons.bombs.BKF_PTAB2_5KO
+weapons.bombs.BL_755
+weapons.bombs.BLG66
+weapons.bombs.BLG66_BELOUGA
+weapons.bombs.BLG66_EG
+weapons.bombs.BLU-18/B_GROUP
+weapons.bombs.BLU-3_GROUP
+weapons.bombs.BLU-3_R_GROUP_R
+weapons.bombs.BLU-3B_GROUP
+weapons.bombs.BLU-3B_R_GROUP_R
+weapons.bombs.BLU-49/B
+weapons.bombs.BLU-4B_GROUP
+weapons.bombs.BLU-4B_R_GROUP_R
+weapons.bombs.BOLT-117
+weapons.bombs.BR_250
+weapons.bombs.BR_500
+weapons.bombs.British_GP_250LB_Bomb_Mk1
+weapons.bombs.British_GP_250LB_Bomb_Mk4
+weapons.bombs.British_GP_250LB_Bomb_Mk5
+weapons.bombs.British_GP_500LB_Bomb_Mk1
+weapons.bombs.British_GP_500LB_Bomb_Mk4
+weapons.bombs.British_GP_500LB_Bomb_Mk4_Short
+weapons.bombs.British_GP_500LB_Bomb_Mk5
+weapons.bombs.British_MC_250LB_Bomb_Mk1
+weapons.bombs.British_MC_250LB_Bomb_Mk2
+weapons.bombs.British_MC_500LB_Bomb_Mk1_Short
+weapons.bombs.British_MC_500LB_Bomb_Mk2
+weapons.bombs.British_SAP_250LB_Bomb_Mk5
+weapons.bombs.British_SAP_500LB_Bomb_Mk5
+weapons.bombs.CBU_103	CBU-103 WCMD	INS	inertial guided
+weapons.bombs.CBU_105	CBU-105 WCMD	INS	inertial guided
+weapons.bombs.CBU_52B
+weapons.bombs.CBU_87
+weapons.bombs.CBU_97
+weapons.bombs.CBU_99
+weapons.bombs.Durandal
+weapons.bombs.EWR SBORKA Air [21624lb]
+weapons.bombs.EWR SBORKA Skid [21624lb]
+weapons.bombs.FAB_100
+weapons.bombs.FAB_100M
+weapons.bombs.FAB_100SV
+weapons.bombs.FAB_1500
+weapons.bombs.FAB_250
+weapons.bombs.FAB_50
+weapons.bombs.FAB_500
+weapons.bombs.FAB-250-M62
+weapons.bombs.FAB-250M54
+weapons.bombs.FAB-250M54TU
+weapons.bombs.FAB-500M54
+weapons.bombs.FAB-500M54TU
+weapons.bombs.FAB-500SL
+weapons.bombs.FAB-500TA
+weapons.bombs.GBU_10	GBU-10 Paveway II	laser	laser guided
+weapons.bombs.GBU_12	GBU-12 Paveway II	laser	laser guided
+weapons.bombs.GBU_15_V_1_B
+weapons.bombs.GBU_15_V_31_B
+weapons.bombs.GBU_16	GBU-16 Paveway II	laser	laser guided
+weapons.bombs.GBU_24	GBU-24 Paveway III	laser	laser guided
+weapons.bombs.GBU_24E	GBU-24E/B Enhanced Paveway III	laser	laser guided	GPS	GPS guided	GPS/INS
+weapons.bombs.GBU_27	GBU-27 Paveway III	laser	laser guided
+weapons.bombs.GBU_28	GBU-28 Paveway III	laser	laser guided
+weapons.bombs.GBU_31	GBU-31(V)1/B JDAM	GPS	GPS guided
+weapons.bombs.GBU_31_V_2B	GBU-31(V)2/B JDAM	GPS	GPS guided
+weapons.bombs.GBU_31_V_3B	GBU-31(V)3/B JDAM	GPS	GPS guided
+weapons.bombs.GBU_31_V_4B	GBU-31(V)4/B JDAM	GPS	GPS guided
+weapons.bombs.GBU_32_V_2B	GBU-32(V)2/B JDAM	GPS	GPS guided
+weapons.bombs.GBU_38	GBU-38(V)1/B JDAM	GPS	GPS guided
+weapons.bombs.GBU_39	GBU-39/B Small Diameter Bomb	SDB	GPS	GPS guided	GPS/INS
+weapons.bombs.GBU_43	GBU-43/B MOAB	GPS	GPS guided	GPS/INS
+weapons.bombs.GBU_54_V_1B	GBU-54(V)1/B Laser JDAM	LJDAM	GPS	GPS guided	laser guided
+weapons.bombs.GBU_8_B
+weapons.bombs.Generic Crate [20000lb]
+weapons.bombs.HB_F4E_GBU15V1
+weapons.bombs.HEBOMB
+weapons.bombs.HEBOMBD
+weapons.bombs.HEMTT TFFT [34400lb]
+weapons.bombs.IAB-500
+weapons.bombs.IFV BMD-1 Air [18040lb]
+weapons.bombs.IFV BMD-1 Skid [17930lb]
+weapons.bombs.IFV BMP-1 [23232lb]
+weapons.bombs.IFV BMP-2 [25168lb]
+weapons.bombs.IFV BTR-D Air [18040lb]
+weapons.bombs.IFV BTR-D Skid [17930lb]
+weapons.bombs.IFV M2A2 Bradley [34720lb]
+weapons.bombs.IFV MARDER [34720lb]
+weapons.bombs.IFV MCV-80 [34720lb]
+weapons.bombs.IFV TPZ FUCH [33440lb]
+weapons.bombs.KAB_1500Kr
+weapons.bombs.KAB_1500LG	KAB-1500LG	laser	laser guided
+weapons.bombs.KAB_1500T
+weapons.bombs.KAB_500
+weapons.bombs.KAB_500Kr
+weapons.bombs.KAB_500KrOD
+weapons.bombs.KAB_500S	KAB-500S	GPS	GPS guided
+weapons.bombs.LS_6_100	LS-6-100 Laser JDAM	laser	laser guided	GPS	GPS guided	GPS/INS
+weapons.bombs.LUU_2B
+weapons.bombs.LYSBOMB 11086
+weapons.bombs.LYSBOMB 11087
+weapons.bombs.LYSBOMB 11088
+weapons.bombs.LYSBOMB 11089
+weapons.bombs.M_117
+weapons.bombs.M1025 HMMWV Air [6160lb]
+weapons.bombs.M1025 HMMWV Skid [6050lb]
+weapons.bombs.Mk_81
+weapons.bombs.Mk_82
+weapons.bombs.MK_82AIR
+weapons.bombs.MK_82SNAKEYE
+weapons.bombs.Mk_82Y
+weapons.bombs.Mk_83
+weapons.bombs.Mk_83AIR
+weapons.bombs.Mk_83CT
+weapons.bombs.Mk_84
+weapons.bombs.Mk_84AIR_GP
+weapons.bombs.Mk_84AIR_TP
+weapons.bombs.MK-81SE
+weapons.bombs.MK106
+weapons.bombs.MK76
+weapons.bombs.MK77mod0-WPN
+weapons.bombs.MK77mod1-WPN
+weapons.bombs.ODAB-500PM
+weapons.bombs.OFAB-100 Jupiter
+weapons.bombs.OFAB-100-120TU
+weapons.bombs.OH58D_Blue_Smoke_Grenade
+weapons.bombs.OH58D_Green_Smoke_Grenade
+weapons.bombs.OH58D_Red_Smoke_Grenade
+weapons.bombs.OH58D_Violet_Smoke_Grenade
+weapons.bombs.OH58D_White_Smoke_Grenade
+weapons.bombs.OH58D_Yellow_Smoke_Grenade
+weapons.bombs.OH6_FRAG
+weapons.bombs.OH6_SMOKE_BLUE
+weapons.bombs.OH6_SMOKE_GREEN
+weapons.bombs.OH6_SMOKE_RED
+weapons.bombs.OH6_SMOKE_YELLOW
+weapons.bombs.P-50T
+weapons.bombs.PTAB_2_5KO
+weapons.bombs.RBK_250
+weapons.bombs.RBK_250_275_AO_1SCH
+weapons.bombs.RBK_500AO
+weapons.bombs.RBK_500U
+weapons.bombs.RBK_500U_OAB_2_5RT
+weapons.bombs.RN-24
+weapons.bombs.RN-28
+weapons.bombs.ROCKEYE
+weapons.bombs.SAB_100MN
+weapons.bombs.SAB_250_200
+weapons.bombs.SAM Avenger M1097 Air [7200lb]
+weapons.bombs.SAM Avenger M1097 Skid [7090lb]
+weapons.bombs.SAM CHAPARRAL Air [21624lb]
+weapons.bombs.SAM CHAPARRAL Skid [21516lb]
+weapons.bombs.SAM LINEBACKER [34720lb]
+weapons.bombs.SAM ROLAND ADS [34720lb]
+weapons.bombs.SAM ROLAND LN [34720b]
+weapons.bombs.SAM SA-13 STRELA [21624lb]
+weapons.bombs.SAM SA-19 Tunguska 2S6 [34720lb]
+weapons.bombs.SAMP125LD
+weapons.bombs.SAMP250HD
+weapons.bombs.SAMP250LD
+weapons.bombs.SAMP400HD
+weapons.bombs.SAMP400LD
+weapons.bombs.SC_250_T1_L2
+weapons.bombs.SC_250_T3_J
+weapons.bombs.SC_50
+weapons.bombs.SC_500_J
+weapons.bombs.SC_500_L2
+weapons.bombs.SD_250_Stg
+weapons.bombs.SD_500_A
+weapons.bombs.SONOBUOY
+weapons.bombs.SPG M1128 Stryker MGS [33036lb]
+weapons.bombs.Squad 30 x Soldier [7950lb]
+weapons.bombs.Tanker M978 HEMTT [34000lb]
+weapons.bombs.Transport M818 [16000lb]
+weapons.bombs.Transport Tigr Air [15900lb]
+weapons.bombs.Transport Tigr Skid [15730lb]
+weapons.bombs.Transport UAZ-469 Air [3747lb]
+weapons.bombs.Transport URAL-375 [14815lb]
+weapons.bombs.Type_200A
+weapons.containers.
+weapons.containers.{05544F1A-C39C-466b-BC37-5BD1D52E57BB}
+weapons.containers.{5d5aa063-a002-4de8-8a89-6eda1e80ee7b}
+weapons.containers.{ACH_47_M230_Combat_Mix}
+weapons.containers.{ACH_47_M230_NoTracers}
+weapons.containers.{ADEN_GUNPOD}
+weapons.containers.{AH-6_Door}
+weapons.containers.{AH-6_DOORS}
+weapons.containers.{AH-6_FN_HMP400}
+weapons.containers.{AH-6_Gunners}
+weapons.containers.{AH6_M134L}
+weapons.containers.{AH6_M134R}
+weapons.containers.{AKAN_NO_TRC}
+weapons.containers.{AKAN}
+weapons.containers.{AN-M3}
+weapons.containers.{C_A4E_CBU-1A}
+weapons.containers.{C_A4E_CBU-2A}
+weapons.containers.{C_A4E_CBU-2BA}
+weapons.containers.{C-101-DEFA553}
+weapons.containers.{C130-Cargo-Bay-M4}
+weapons.containers.{C130-M18-Sidearm}
+weapons.containers.{CC420_GUN_POD}
+weapons.containers.{CE2_SMOKE_WHITE}
+weapons.containers.{CH47_AFT_M240H}
+weapons.containers.{CH47_AFT_M3M}
+weapons.containers.{CH47_AFT_M60D}
+weapons.containers.{CH47_PORT_M134D}
+weapons.containers.{CH47_PORT_M240H}
+weapons.containers.{CH47_PORT_M60D}
+weapons.containers.{CH47_STBD_M134D}
+weapons.containers.{CH47_STBD_M240H}
+weapons.containers.{CH47_STBD_M60D}
+weapons.containers.{CHAP_HMP400LC}
+weapons.containers.{E92CBFE5-C153-11d8-9897-000476191836}
+weapons.containers.{Eclair}
+weapons.containers.{EclairM_06}
+weapons.containers.{EclairM_15}
+weapons.containers.{EclairM_24}
+weapons.containers.{EclairM_33}
+weapons.containers.{EclairM_42}
+weapons.containers.{EclairM_51}
+weapons.containers.{EclairM_60}
+weapons.containers.{ECM_POD_L_175V}
+weapons.containers.{F14-LANTIRN-TP}
+weapons.containers.{F4U1D_SMOKE_WHITE}
+weapons.containers.{FN_HMP400_100}
+weapons.containers.{FN_HMP400_200}
+weapons.containers.{FN_HMP400}
+weapons.containers.{GAU_12_Equalizer_AP}
+weapons.containers.{GAU_12_Equalizer_HE}
+weapons.containers.{GAU_12_Equalizer}
+weapons.containers.{GIAT_M621_AP}
+weapons.containers.{GIAT_M621_APHE}
+weapons.containers.{GIAT_M621_HE}
+weapons.containers.{GIAT_M621_HEAP}
+weapons.containers.{GIAT_M621_SAPHEI}
+weapons.containers.{GPU_5_POD}
+weapons.containers.{Herc_GAU_23A_Chain_Gun}
+weapons.containers.{Herc_M61_Vulcan_Rotary_Cannon}
+weapons.containers.{INV-SMOKE-BLUE}
+weapons.containers.{INV-SMOKE-GREEN}
+weapons.containers.{INV-SMOKE-ORANGE}
+weapons.containers.{INV-SMOKE-WHITE}
+weapons.containers.{INV-SMOKE-YELLOW}
+weapons.containers.{M2KC_AAF}
+weapons.containers.{M2KC_AGF}
+weapons.containers.{MB339_ANM3_L}
+weapons.containers.{MB339_ANM3_R}
+weapons.containers.{MB339_DEFA553_L}
+weapons.containers.{MB339_DEFA553_R}
+weapons.containers.{MH60_GAU-21}
+weapons.containers.{MH60_M240}
+weapons.containers.{MIG21_SMOKE_RED}
+weapons.containers.{MIG21_SMOKE_WHITE}
+weapons.containers.{Mk4 HIPEG}
+weapons.containers.{MK4_Mod0_OV10}
+weapons.containers.{OH-6_M134_Door}
+weapons.containers.{OH-6_M134_Minigun1}
+weapons.containers.{OH-6_M134_Minigun10}
+weapons.containers.{OH-6_M134_Minigun11}
+weapons.containers.{OH-6_M134_Minigun12}
+weapons.containers.{OH-6_M134_Minigun13}
+weapons.containers.{OH-6_M134_Minigun14}
+weapons.containers.{OH-6_M134_Minigun2}
+weapons.containers.{OH-6_M134_Minigun3}
+weapons.containers.{OH-6_M134_Minigun4}
+weapons.containers.{OH-6_M134_Minigun5}
+weapons.containers.{OH-6_M134_Minigun6}
+weapons.containers.{OH-6_M134_Minigun7}
+weapons.containers.{OH-6_M134_Minigun8}
+weapons.containers.{OH-6_M134_Minigun9}
+weapons.containers.{OH-6_M60_Door}
+weapons.containers.{OV10_SMOKE}
+weapons.containers.{PK-3}
+weapons.containers.{RKL609_L}
+weapons.containers.{RKL609_R}
+weapons.containers.{SA342_M134_SIDE_R}
+weapons.containers.{SMOKE_WHITE}
+weapons.containers.{SUU_23_POD_Centerline}
+weapons.containers.{SUU_23_POD_Wing}
+weapons.containers.{SUU_23_POD}
+weapons.containers.{UH60_GAU19_LEFT}
+weapons.containers.{UH60_GAU19_RIGHT}
+weapons.containers.{UH60_M134_LEFT}
+weapons.containers.{UH60_M134_RIGHT}
+weapons.containers.{UH60_M230_LEFT}
+weapons.containers.{UH60_M230_RIGHT}
+weapons.containers.{UH60L_M134_GUNNER}
+weapons.containers.{UH60L_M2_GUNNER}
+weapons.containers.{UH60L_M60_GUNNER}
+weapons.containers.{US_M10_SMOKE_TANK_BLUE}
+weapons.containers.{US_M10_SMOKE_TANK_GREEN}
+weapons.containers.{US_M10_SMOKE_TANK_ORANGE}
+weapons.containers.{US_M10_SMOKE_TANK_RED}
+weapons.containers.{US_M10_SMOKE_TANK_WHITE}
+weapons.containers.{US_M10_SMOKE_TANK_YELLOW}
+weapons.containers.16c_hts_pod
+weapons.containers.A4E_SUU-7
+weapons.containers.AAQ-28_LITENING	AN/AAQ-28 LITENING - Targeting Pod	Lightning	Lightning pod	Litening pod
+weapons.containers.aaq-28LEFT litening	AN/AAQ-28 LITENING - Targeting Pod (left)	Lightning	Lightning pod	Litening pod
+weapons.containers.ACH_47F_GL
+weapons.containers.ACH_47F_Left
+weapons.containers.ACH_47F_Right
+weapons.containers.aero-3b
+weapons.containers.ah-64d_radar
+weapons.containers.AIM-9S
+weapons.containers.ais-pod-t50
+weapons.containers.ALQ-131
+weapons.containers.ALQ-184	AN/ALQ-184 - ECM Pod	jammer	radar jammer
+weapons.containers.alq-184long	AN/ALQ-184 Long - ECM Pod	jammer	radar jammer
+weapons.containers.AN_AAQ_33	AN/AAQ-33 Sniper - Advanced Targeting Pod (F-16)	Sniper	Sniper pod	Sniper XR
+weapons.containers.AN_AAQ16D
+weapons.containers.AN_ASQ_228	AN/ASQ-228 ATFLIR - Targeting Pod	ATFLIR pod
+weapons.containers.ANAWW_13
+weapons.containers.APK-9
+weapons.containers.apu-73
+weapons.containers.ASO-2
+weapons.containers.AV8BNA_ALQ164
+weapons.containers.BARAX
+weapons.containers.BMP-3
+weapons.containers.BOZ-100
+weapons.containers.BRD-4-250
+weapons.containers.BRU_42A
+weapons.containers.BRU-42_LS
+weapons.containers.dlpod_akg
+weapons.containers.ETHER
+weapons.containers.F-15E_AAQ-13_LANTIRN
+weapons.containers.F-15E_AAQ-14_LANTIRN
+weapons.containers.F-15E_AAQ-28_LITENING	AN/AAQ-28 LITENING AT	Lightning	Lightning pod	Litening pod
+weapons.containers.F-15E_AAQ-33_XR_ATP-SE	AN/AAQ-33 Sniper - Advanced Targeting Pod (F-15E)	Sniper pod	Sniper XR
+weapons.containers.F-15E_AXQ-14_DATALINK
+weapons.containers.F-18-FLIR-POD
+weapons.containers.F-18-LDT-POD
+weapons.containers.F100_CAMERA_KA71A
+weapons.containers.F100_CAMERA_P2
+weapons.containers.F16V_aaq13_pod_5L
+weapons.containers.F16V_aux_pod
+weapons.containers.F16V_cft_aux_aux_02
+weapons.containers.F16V_pids_plus_POBIT_F16V_PIDS_FIT_0001
+weapons.containers.F4-PILON
+weapons.containers.Fantasm
+weapons.containers.FAS
+weapons.containers.fullCargoSeats
+weapons.containers.GD_F100_STRIKE_CAMERA
+weapons.containers.GD_F100_SUU-13
+weapons.containers.Gepard
+weapons.containers.GUV_VOG
+weapons.containers.GUV_YakB_GSHP
+weapons.containers.HB_ALE_40_0_0
+weapons.containers.HB_ALE_40_0_120
+weapons.containers.HB_ALE_40_15_90
+weapons.containers.HB_ALE_40_30_0
+weapons.containers.HB_ALE_40_30_60
+weapons.containers.HB_F-4E_BRU-42
+weapons.containers.HB_F14_EXT_AN_APQ-167
+weapons.containers.HB_F14_EXT_BRU34
+weapons.containers.HB_F14_EXT_ECA
+weapons.containers.HB_F14_EXT_LAU-7
+weapons.containers.HB_F14_EXT_TARPS
+weapons.containers.HB_ORD_MER
+weapons.containers.HB_ORD_Missile_Well_Adapter
+weapons.containers.HB_ORD_Pave_Spike
+weapons.containers.HB_ORD_Pave_Spike_Fast
+weapons.containers.HB_ORD_SUU_7
+weapons.containers.Hercules_Battle_Station_TGP
+weapons.containers.HVAR_rocket
+weapons.containers.hvar_SmokeGenerator
+weapons.containers.IRDeflector
+weapons.containers.KBpod
+weapons.containers.kg600
+weapons.containers.KINGAL
+weapons.containers.KORD_12_7
+weapons.containers.KORD_12_7_MI24_L
+weapons.containers.KORD_12_7_MI24_R
+weapons.containers.LANTIRN
+weapons.containers.LANTIRN-F14-TARGET
+weapons.containers.lau-105
+weapons.containers.lav-25
+weapons.containers.leftSeat
+weapons.containers.m-113
+weapons.containers.M1126
+weapons.containers.M134_L
+weapons.containers.M134_R
+weapons.containers.M134_SIDE_L
+weapons.containers.M134_SIDE_R
+weapons.containers.M60_SIDE_L
+weapons.containers.M60_SIDE_R
+weapons.containers.MATRA-PHIMAT
+weapons.containers.MB339_SMOKE-POD
+weapons.containers.MB339_TravelPod
+weapons.containers.MB339_Vinten
+weapons.containers.MPS-410
+weapons.containers.MXU-648
+weapons.containers.oh-58-brauning
+weapons.containers.OH58D_M3P_L100
+weapons.containers.OH58D_M3P_L200
+weapons.containers.OH58D_M3P_L300
+weapons.containers.OH58D_M3P_L400
+weapons.containers.OH58D_M3P_L500
+weapons.containers.Otokar_Cobra
+weapons.containers.OV-10A_Paratrooper
+weapons.containers.PAVETACK
+weapons.containers.PKT_7_62
+weapons.containers.R-73U
+weapons.containers.rearCargoSeats
+weapons.containers.rightSeat
+weapons.containers.sa342_dipole_antenna
+weapons.containers.SHPIL
+weapons.containers.SKY_SHADOW
+weapons.containers.smoke_pod
+weapons.containers.SORBCIJA_L
+weapons.containers.SORBCIJA_R
+weapons.containers.Spear
+weapons.containers.SPRD-99
+weapons.containers.SPS-141
+weapons.containers.SPS-141-100
+weapons.containers.TANGAZH
+weapons.containers.U22
+weapons.containers.U22A
+weapons.containers.uaz-469
+weapons.containers.wmd7
+weapons.containers.ZellRocket
+weapons.droptanks.{IAFS_ComboPak_100}
+weapons.droptanks.1100L Tank
+weapons.droptanks.1100L Tank Empty
+weapons.droptanks.800L Tank
+weapons.droptanks.800L Tank Empty
+weapons.droptanks.ah6_auxtank
+weapons.droptanks.AV8BNA_AERO1D
+weapons.droptanks.AV8BNA_AERO1D_EMPTY
+weapons.droptanks.Bidon
+weapons.droptanks.C130J_Ext_Tank_L
+weapons.droptanks.C130J_Ext_Tank_R
+weapons.droptanks.CHAP_TigerUHT_fueltank
+weapons.droptanks.DFT_150_GAL_A4E
+weapons.droptanks.DFT_300_GAL_A4E
+weapons.droptanks.DFT_300_GAL_A4E_LR
+weapons.droptanks.DFT_400_GAL_A4E
+weapons.droptanks.Drop tank 75gal
+weapons.droptanks.Drop_Tank_300_Liter
+weapons.droptanks.droptank_108_gal
+weapons.droptanks.droptank_110_gal
+weapons.droptanks.droptank_150_gal
+weapons.droptanks.F-15E_Drop_Tank
+weapons.droptanks.F-15E_Drop_Tank_Empty
+weapons.droptanks.F-16-PTB-N2
+weapons.droptanks.f-18c-ptb
+weapons.droptanks.F15-PTB
+weapons.droptanks.F16V_cft_aux_cft_03
+weapons.droptanks.F4-BAK-C
+weapons.droptanks.F4-BAK-L
+weapons.droptanks.F4U-1D_Drop_Tank_Aux
+weapons.droptanks.F4U-1D_Drop_Tank_Mk5
+weapons.droptanks.F4U-1D_Drop_Tank_Mk6
+weapons.droptanks.FPU_8A
+weapons.droptanks.FT600
+weapons.droptanks.fuel_tank_230
+weapons.droptanks.fuel_tank_300gal
+weapons.droptanks.fuel_tank_370gal
+weapons.droptanks.FuelTank_150L
+weapons.droptanks.FuelTank_350L
+weapons.droptanks.fueltank200
+weapons.droptanks.fueltank230
+weapons.droptanks.fueltank450
+weapons.droptanks.FW-190_Fuel-Tank
+weapons.droptanks.GD_F100_TANK_200
+weapons.droptanks.GD_F100_TANK_275_L
+weapons.droptanks.GD_F100_TANK_275_R
+weapons.droptanks.GD_F100_TANK_335_L
+weapons.droptanks.GD_F100_TANK_335_R
+weapons.droptanks.GD_F100_TANK_450
+weapons.droptanks.HB_A6E_AERO1D
+weapons.droptanks.HB_A6E_AERO1D_EMPTY
+weapons.droptanks.HB_A6E_D704
+weapons.droptanks.HB_F-4E_EXT_Center_Fuel_Tank
+weapons.droptanks.HB_F-4E_EXT_Center_Fuel_Tank_EMPTY
+weapons.droptanks.HB_F-4E_EXT_WingTank
+weapons.droptanks.HB_F-4E_EXT_WingTank_EMPTY
+weapons.droptanks.HB_F-4E_EXT_WingTank_R
+weapons.droptanks.HB_F-4E_EXT_WingTank_R_EMPTY
+weapons.droptanks.HB_F14_EXT_DROPTANK
+weapons.droptanks.HB_F14_EXT_DROPTANK_EMPTY
+weapons.droptanks.HB_HIGH_PERFORMANCE_CENTERLINE_600_GAL
+weapons.droptanks.i16_eft
+weapons.droptanks.LNS_VIG_XTANK
+weapons.droptanks.M2000-PTB
+weapons.droptanks.M2KC_02_RPL541
+weapons.droptanks.M2KC_02_RPL541_EMPTY
+weapons.droptanks.M2KC_08_RPL541
+weapons.droptanks.M2KC_08_RPL541_EMPTY
+weapons.droptanks.M2KC_RPL_522
+weapons.droptanks.M2KC_RPL_522_EMPTY
+weapons.droptanks.MB339_FT330
+weapons.droptanks.MB339_TT320_L
+weapons.droptanks.MB339_TT320_R
+weapons.droptanks.MB339_TT500_L
+weapons.droptanks.MB339_TT500_R
+weapons.droptanks.mh_tank
+weapons.droptanks.MIG-23-PTB
+weapons.droptanks.MIG-25-PTB
+weapons.droptanks.Mosquito_Drop_Tank_100gal
+weapons.droptanks.Mosquito_Drop_Tank_50gal
+weapons.droptanks.oiltank
+weapons.droptanks.PTB_120_F86F35
+weapons.droptanks.PTB_1200_F1
+weapons.droptanks.PTB_1500_MIG29A
+weapons.droptanks.PTB_200_F86F35
+weapons.droptanks.PTB_580G_F1
+weapons.droptanks.PTB-1150
+weapons.droptanks.PTB-1150-29
+weapons.droptanks.PTB-150
+weapons.droptanks.PTB-1500
+weapons.droptanks.PTB-2000
+weapons.droptanks.PTB-275
+weapons.droptanks.PTB-3000
+weapons.droptanks.PTB-450
+weapons.droptanks.PTB-490-MIG21
+weapons.droptanks.PTB-490C-MIG21
+weapons.droptanks.PTB-800
+weapons.droptanks.PTB-800-MIG21
+weapons.droptanks.PTB300_MIG15
+weapons.droptanks.PTB400_MIG15
+weapons.droptanks.PTB400_MIG19
+weapons.droptanks.PTB600_MIG15
+weapons.droptanks.PTB760_MIG19
+weapons.droptanks.S-3-PTB
+weapons.droptanks.Spitfire_slipper_tank
+weapons.droptanks.Spitfire_tank_1
+weapons.droptanks.T-PTB
+weapons.droptanks.uh60l_iafts
+weapons.gunmounts.{ACH_47_M230_Combat_Mix}
+weapons.gunmounts.{ACH_47_M230_NoTracers}
+weapons.gunmounts.{ADEN_GUNPOD}
+weapons.gunmounts.{AKAN_NO_TRC}
+weapons.gunmounts.{AKAN}
+weapons.gunmounts.{AN-M3}
+weapons.gunmounts.{C-101-DEFA553}
+weapons.gunmounts.{C130-Cargo-Bay-M4}
+weapons.gunmounts.{C130-M18-Sidearm}
+weapons.gunmounts.{CC420_GUN_POD}
+weapons.gunmounts.{CH47_AFT_M240H}
+weapons.gunmounts.{CH47_AFT_M3M}
+weapons.gunmounts.{CH47_AFT_M60D}
+weapons.gunmounts.{CH47_PORT_M134D}
+weapons.gunmounts.{CH47_PORT_M240H}
+weapons.gunmounts.{CH47_PORT_M60D}
+weapons.gunmounts.{CH47_STBD_M134D}
+weapons.gunmounts.{CH47_STBD_M240H}
+weapons.gunmounts.{CH47_STBD_M60D}
+weapons.gunmounts.{FN_HMP400_100}
+weapons.gunmounts.{FN_HMP400_200}
+weapons.gunmounts.{FN_HMP400}
+weapons.gunmounts.{GAU_12_Equalizer_AP}
+weapons.gunmounts.{GAU_12_Equalizer_HE}
+weapons.gunmounts.{GAU_12_Equalizer}
+weapons.gunmounts.{GIAT_M621_AP}
+weapons.gunmounts.{GIAT_M621_APHE}
+weapons.gunmounts.{GIAT_M621_HE}
+weapons.gunmounts.{GIAT_M621_HEAP}
+weapons.gunmounts.{GIAT_M621_SAPHEI}
+weapons.gunmounts.{MB339_ANM3_L}
+weapons.gunmounts.{MB339_ANM3_R}
+weapons.gunmounts.{MB339_DEFA553_L}
+weapons.gunmounts.{MB339_DEFA553_R}
+weapons.gunmounts.{MK4_Mod0_OV10}
+weapons.gunmounts.{OH-6_M134_Door}
+weapons.gunmounts.{OH-6_M134_Minigun1}
+weapons.gunmounts.{OH-6_M134_Minigun10}
+weapons.gunmounts.{OH-6_M134_Minigun11}
+weapons.gunmounts.{OH-6_M134_Minigun12}
+weapons.gunmounts.{OH-6_M134_Minigun13}
+weapons.gunmounts.{OH-6_M134_Minigun14}
+weapons.gunmounts.{OH-6_M134_Minigun2}
+weapons.gunmounts.{OH-6_M134_Minigun3}
+weapons.gunmounts.{OH-6_M134_Minigun4}
+weapons.gunmounts.{OH-6_M134_Minigun5}
+weapons.gunmounts.{OH-6_M134_Minigun6}
+weapons.gunmounts.{OH-6_M134_Minigun7}
+weapons.gunmounts.{OH-6_M134_Minigun8}
+weapons.gunmounts.{OH-6_M134_Minigun9}
+weapons.gunmounts.{OH-6_M60_Door}
+weapons.gunmounts.{PK-3}
+weapons.gunmounts.{SA342_M134_SIDE_R}
+weapons.gunmounts.{SUU_23_POD}
+weapons.gunmounts.{UH60_GAU19_LEFT}
+weapons.gunmounts.{UH60_GAU19_RIGHT}
+weapons.gunmounts.{UH60_M134_LEFT}
+weapons.gunmounts.{UH60_M134_RIGHT}
+weapons.gunmounts.{UH60_M230_LEFT}
+weapons.gunmounts.{UH60_M230_RIGHT}
+weapons.gunmounts.{UH60L_M134_GUNNER}
+weapons.gunmounts.{UH60L_M2_GUNNER}
+weapons.gunmounts.{UH60L_M60_GUNNER}
+weapons.gunmounts.A20_TopTurret_M2_L
+weapons.gunmounts.A20_TopTurret_M2_R
+weapons.gunmounts.ACH_47_M230
+weapons.gunmounts.ACH_47_M230_NT
+weapons.gunmounts.AKAN
+weapons.gunmounts.AKAN_NO_TRC
+weapons.gunmounts.B17_BallTurret_M2_L
+weapons.gunmounts.B17_BallTurret_M2_R
+weapons.gunmounts.B17_ChinTurret_M2_L
+weapons.gunmounts.B17_ChinTurret_M2_R
+weapons.gunmounts.B17_Left_Nose_M2
+weapons.gunmounts.B17_Right_Nose_M2
+weapons.gunmounts.B17_TailTurret_M2_L
+weapons.gunmounts.B17_TailTurret_M2_R
+weapons.gunmounts.B17_TopTurret_M2_L
+weapons.gunmounts.B17_TopTurret_M2_R
+weapons.gunmounts.B17_Waist_Left_M2
+weapons.gunmounts.B17_Waist_Right_M2
+weapons.gunmounts.Browning303MkII
+weapons.gunmounts.BrowningM2
+weapons.gunmounts.C130_M18_Sidearm
+weapons.gunmounts.C130_M4_Rifle
+weapons.gunmounts.CPG_M4
+weapons.gunmounts.DEFA 554
+weapons.gunmounts.defa_553
+weapons.gunmounts.DEFA_553
+weapons.gunmounts.GAU_12
+weapons.gunmounts.GIAT_M261
+weapons.gunmounts.GSH_23
+weapons.gunmounts.GSh-23-2 tail defense
+weapons.gunmounts.GUV_VOG
+weapons.gunmounts.GUV_YakB_GSHP
+weapons.gunmounts.HispanoMkII
+weapons.gunmounts.HMP400
+weapons.gunmounts.Ju88_Turret_ahead_MG_81
+weapons.gunmounts.Ju88_Turret_Bottom_MG_81_L
+weapons.gunmounts.Ju88_Turret_Bottom_MG_81_R
+weapons.gunmounts.Ju88_Turret_Top_Left_MG_81
+weapons.gunmounts.Ju88_Turret_Top_Right_MG_81
+weapons.gunmounts.KORD_12_7
+weapons.gunmounts.KORD_12_7_MI24_L
+weapons.gunmounts.KORD_12_7_MI24_R
+weapons.gunmounts.M_60
+weapons.gunmounts.M-61
+weapons.gunmounts.M-61A1
+weapons.gunmounts.M134_L
+weapons.gunmounts.M134_R
+weapons.gunmounts.M134_SIDE_L
+weapons.gunmounts.M134_SIDE_R
+weapons.gunmounts.M230
+weapons.gunmounts.m3_browning
+weapons.gunmounts.M60_SIDE_L
+weapons.gunmounts.M60_SIDE_R
+weapons.gunmounts.MG_131
+weapons.gunmounts.MG_151_20
+weapons.gunmounts.MINIGUN
+weapons.gunmounts.MK_108
+weapons.gunmounts.Mk11mod0
+weapons.gunmounts.N-37
+weapons.gunmounts.NR-23
+weapons.gunmounts.NR-30
+weapons.gunmounts.OH_58_BRAUNING
+weapons.gunmounts.OH-6_M134
+weapons.gunmounts.OH-6_M134_Door
+weapons.gunmounts.OH-6_M60_Door
+weapons.gunmounts.OH58D_M3P
+weapons.gunmounts.OH58D_M3P_L100
+weapons.gunmounts.OH58D_M3P_L200
+weapons.gunmounts.OH58D_M3P_L300
+weapons.gunmounts.OH58D_M3P_L400
+weapons.gunmounts.OH58D_M3P_L500
+weapons.gunmounts.PKT_7_62
+weapons.gunmounts.SHKAS_GUN
+weapons.gunmounts.SPPU_22
+weapons.gunmounts.UH-60L GAU-19
+weapons.gunmounts.UH60_M134
+weapons.gunmounts.UH60L_M134
+weapons.gunmounts.UPK_23_25
+weapons.missiles.ADM_141A
+weapons.missiles.ADM_141B
+weapons.missiles.AGM_114	AGM-114L Longbow Hellfire
+weapons.missiles.AGM_114K	AGM-114K Hellfire	laser	laser guided
+weapons.missiles.AGM_114N	AGM-114N Hellfire
+weapons.missiles.AGM_119	AGM-119 Penguin	ASM
+weapons.missiles.AGM_122	AGM-122A Sidearm	ARM
+weapons.missiles.AGM_12A
+weapons.missiles.AGM_12B
+weapons.missiles.AGM_12C_ED
+weapons.missiles.AGM_130
+weapons.missiles.AGM_154	AGM-154C JSOW	GPS	GPS guided	GPS/INS
+weapons.missiles.AGM_154A	AGM-154A JSOW	GPS	GPS guided	GPS/INS
+weapons.missiles.AGM_154B	AGM-154B JSOW	GPS	GPS guided	GPS/INS
+weapons.missiles.AGM_45A	AGM-45A Shrike	ARM
+weapons.missiles.AGM_45B	AGM-45B Shrike	ARM
+weapons.missiles.AGM_65A
+weapons.missiles.AGM_65B
+weapons.missiles.AGM_65D
+weapons.missiles.AGM_65E	AGM-65E Maverick	laser	laser guided
+weapons.missiles.AGM_65F	AGM-65F Maverick	infrared	IIR	ASM
+weapons.missiles.AGM_65G
+weapons.missiles.AGM_65H
+weapons.missiles.AGM_65K
+weapons.missiles.AGM_65L	AGM-65E2/L Maverick	AGM-65L	laser	laser guided
+weapons.missiles.AGM_78A	AGM-78A Standard ARM	ARM
+weapons.missiles.AGM_78B	AGM-78B Standard ARM	ARM
+weapons.missiles.AGM_84A	AGM-84A Harpoon	ASM
+weapons.missiles.AGM_84D	AGM-84D Harpoon	ASM
+weapons.missiles.AGM_84E	AGM-84E SLAM	GPS	GPS/INS	infrared	IIR
+weapons.missiles.AGM_84H	AGM-84H SLAM-ER	GPS	GPS/INS	infrared	IIR
+weapons.missiles.AGM_86
+weapons.missiles.AGM_86C
+weapons.missiles.AGM_88	AGM-88C HARM	ARM
+weapons.missiles.AGR_20_M282	AGR-20 APKWS (M282)	laser	laser guided
+weapons.missiles.AGR_20A	AGR-20A APKWS	laser	laser guided
+weapons.missiles.AIM_120	AIM-120B AMRAAM	AIM-120
+weapons.missiles.AIM_120C	AIM-120C AMRAAM
+weapons.missiles.AIM_54
+weapons.missiles.AIM_54A_Mk47
+weapons.missiles.AIM_54A_Mk60
+weapons.missiles.AIM_54C_Mk47
+weapons.missiles.AIM_54C_Mk60
+weapons.missiles.AIM_7
+weapons.missiles.AIM_9
+weapons.missiles.AIM_9X
+weapons.missiles.AIM-7E
+weapons.missiles.AIM-7E-2
+weapons.missiles.AIM-7F
+weapons.missiles.AIM-7MH
+weapons.missiles.AIM-7P
+weapons.missiles.AIM-9E
+weapons.missiles.AIM-9J
+weapons.missiles.AIM-9JULI
+weapons.missiles.AIM-9L
+weapons.missiles.AIM-9P
+weapons.missiles.AIM-9P3
+weapons.missiles.AIM-9P5
+weapons.missiles.AKD-10
+weapons.missiles.ALARM	ALARM	ARM
+weapons.missiles.AM39	AM39 Exocet	ASM
+weapons.missiles.ASM_N_2	ASM-N-2 Bat	ASM
+weapons.missiles.AT_6
+weapons.missiles.Ataka_9M120	9M120 Ataka (AT-9 Spiral-2)	Attacka
+weapons.missiles.Ataka_9M120F	9M120F Ataka (AT-9 Spiral-2)	Attacka
+weapons.missiles.Ataka_9M220	9M220O Ataka (AT-9 Spiral-2)	Attacka
+weapons.missiles.BK90_MJ1
+weapons.missiles.BK90_MJ1_MJ2
+weapons.missiles.BK90_MJ2
+weapons.missiles.BRM-1_90MM	BRM-1 90 mm Rocket	laser	laser guided
+weapons.missiles.C_701IR
+weapons.missiles.C_701T
+weapons.missiles.C_802AK	C-802AK	ASM
+weapons.missiles.CATM_65K
+weapons.missiles.CATM_9M
+weapons.missiles.CHAP_AIM92
+weapons.missiles.CM_802AKG	CM-802AKG (ED variant)	ASM
+weapons.missiles.CM-400AKG
+weapons.missiles.CM-802AKG	CM-802AKG	ASM
+weapons.missiles.DWS39_MJ1
+weapons.missiles.DWS39_MJ1_MJ2
+weapons.missiles.DWS39_MJ2
+weapons.missiles.F16V_GBU39	GBU-39/B SDB (F-16V mod)	GPS	GPS guided	GPS/INS
+weapons.missiles.F16V_GBU53
+weapons.missiles.GAR-8
+weapons.missiles.GB-6	GB-6	GPS	GPS guided	GPS/INS
+weapons.missiles.GB-6-HE	GB-6-HE	GPS	GPS guided	GPS/INS
+weapons.missiles.GB-6-SFW	GB-6-SFW	GPS	GPS guided	GPS/INS
+weapons.missiles.HB_AGM_78	AGM-78 Standard ARM (Heatblur)	ARM
+weapons.missiles.HB-AIM-7E
+weapons.missiles.HB-AIM-7E-2
+weapons.missiles.HJ-12
+weapons.missiles.HOT3_MBDA
+weapons.missiles.Igla_1E
+weapons.missiles.KD_20
+weapons.missiles.KD_63
+weapons.missiles.KD_63B
+weapons.missiles.Kh-66_Grom
+weapons.missiles.Kh25MP_PRGS1VP	Kh-25MP (PRGS-1VP)	ARM
+weapons.missiles.Kormoran	AS.34 Kormoran	ASM
+weapons.missiles.LD-10	LD-10	ARM
+weapons.missiles.LS_6	LS-6-250	GPS	GPS guided	GPS/INS
+weapons.missiles.LS_6_500	LS-6-500	GPS	GPS guided	GPS/INS
+weapons.missiles.Matra Super 530D
+weapons.missiles.MICA_R
+weapons.missiles.MICA_T
+weapons.missiles.Mistral
+weapons.missiles.MMagicII
+weapons.missiles.OH_6_FIM_92
+weapons.missiles.OH58D_FIM_92
+weapons.missiles.P_24R
+weapons.missiles.P_24T
+weapons.missiles.P_27P
+weapons.missiles.P_27PE
+weapons.missiles.P_27T
+weapons.missiles.P_27TE
+weapons.missiles.P_33E
+weapons.missiles.P_40R
+weapons.missiles.P_40T
+weapons.missiles.P_60
+weapons.missiles.P_73
+weapons.missiles.P_77
+weapons.missiles.PL-12
+weapons.missiles.PL-5EII
+weapons.missiles.PL-8A
+weapons.missiles.PL-8B
+weapons.missiles.R_530F_EM
+weapons.missiles.R_530F_IR
+weapons.missiles.R_550
+weapons.missiles.R_550_M1
+weapons.missiles.R-13M
+weapons.missiles.R-13M1
+weapons.missiles.R-3R
+weapons.missiles.R-3S
+weapons.missiles.R-55
+weapons.missiles.R-60
+weapons.missiles.Rb 04E	Rb 04E	ASM
+weapons.missiles.Rb 04E (for A.I.)	Rb 04E (AI)	ASM
+weapons.missiles.Rb 05A
+weapons.missiles.Rb 15F	Rb 15F	ASM
+weapons.missiles.Rb 15F (for A.I.)	Rb 15F (AI)	ASM
+weapons.missiles.Rb 24
+weapons.missiles.Rb 24J
+weapons.missiles.Rb 74
+weapons.missiles.Rb_04	Rb 04	ASM
+weapons.missiles.RB75
+weapons.missiles.RB75B
+weapons.missiles.RB75T
+weapons.missiles.RS2US
+weapons.missiles.S_25L	S-25L	laser	laser guided
+weapons.missiles.SD-10
+weapons.missiles.Sea_Eagle	Sea Eagle	ASM
+weapons.missiles.SPIKE_ER
+weapons.missiles.SPIKE_ER2
+weapons.missiles.Super_530D
+weapons.missiles.Super_530F
+weapons.missiles.TGM_65D
+weapons.missiles.TGM_65G
+weapons.missiles.TGM_65H
+weapons.missiles.TOW
+weapons.missiles.V-1
+weapons.missiles.Vikhr_M	9M127 Vikhr	laser	laser beam-riding
+weapons.missiles.X_101
+weapons.missiles.X_22	Kh-22 Burya	ASM
+weapons.missiles.X_25ML	Kh-25ML	laser	laser guided
+weapons.missiles.X_25MP	Kh-25MP	ARM
+weapons.missiles.X_25MR
+weapons.missiles.X_28	Kh-28	ARM
+weapons.missiles.X_29L	Kh-29L	laser	laser guided
+weapons.missiles.X_29T
+weapons.missiles.X_31A	Kh-31A	ASM
+weapons.missiles.X_31P	Kh-31P	ARM
+weapons.missiles.X_35	Kh-35	ASM
+weapons.missiles.X_41	Kh-41	ASM
+weapons.missiles.X_555
+weapons.missiles.X_58	Kh-58	ARM
+weapons.missiles.X_59M
+weapons.missiles.X_65
+weapons.missiles.YJ-12	YJ-12	ASM
+weapons.missiles.YJ-83K	YJ-83K	ASM
+weapons.nurs.ARAKM70BAP
+weapons.nurs.ARAKM70BAPPX
+weapons.nurs.ARAKM70BHE
+weapons.nurs.ARF8M3API
+weapons.nurs.ARF8M3HEI
+weapons.nurs.ARF8M3TPSM
+weapons.nurs.British_AP_25LBNo1_3INCHNo1
+weapons.nurs.British_HE_60LBFNo1_3INCHNo1
+weapons.nurs.British_HE_60LBSAPNo2_3INCHNo1
+weapons.nurs.C_13
+weapons.nurs.C_24
+weapons.nurs.C_25
+weapons.nurs.C_5
+weapons.nurs.C_8
+weapons.nurs.C_8CM
+weapons.nurs.C_8CM_BU
+weapons.nurs.C_8CM_GN
+weapons.nurs.C_8CM_RD
+weapons.nurs.C_8CM_VT
+weapons.nurs.C_8CM_WH
+weapons.nurs.C_8CM_YE
+weapons.nurs.C_8OFP2
+weapons.nurs.C_8OM
+weapons.nurs.FFAR M156 WP
+weapons.nurs.FFAR Mk1 HE
+weapons.nurs.FFAR Mk5 HEAT
+weapons.nurs.FFAR_Mk61
+weapons.nurs.HVAR
+weapons.nurs.HVAR USN Mk28 Mod4
+weapons.nurs.HYDRA_70_M151
+weapons.nurs.HYDRA_70_M151_M433
+weapons.nurs.HYDRA_70_M156
+weapons.nurs.HYDRA_70_M229
+weapons.nurs.HYDRA_70_M257
+weapons.nurs.HYDRA_70_M259
+weapons.nurs.HYDRA_70_M274
+weapons.nurs.HYDRA_70_M282
+weapons.nurs.HYDRA_70_MK1
+weapons.nurs.HYDRA_70_MK5
+weapons.nurs.HYDRA_70_MK61
+weapons.nurs.HYDRA_70_WTU1B
+weapons.nurs.M8rocket
+weapons.nurs.Mi28NE_BL13L
+weapons.nurs.OH6Rocket FFAR
+weapons.nurs.R4M
+weapons.nurs.Rkt_90-1_HE
+weapons.nurs.RS-82
+weapons.nurs.S_5KP
+weapons.nurs.S_5M
+weapons.nurs.S-24A
+weapons.nurs.S-24B
+weapons.nurs.S-25-O
+weapons.nurs.S-5M
+weapons.nurs.S5M1_HEFRAG_FFAR
+weapons.nurs.S5MO_HEFRAG_FFAR
+weapons.nurs.SNEB_TYPE250_F1B
+weapons.nurs.SNEB_TYPE251_F1B
+weapons.nurs.SNEB_TYPE251_H1
+weapons.nurs.SNEB_TYPE252_F1B
+weapons.nurs.SNEB_TYPE252_H1
+weapons.nurs.SNEB_TYPE253_F1B
+weapons.nurs.SNEB_TYPE253_H1
+weapons.nurs.SNEB_TYPE254_F1B_GREEN
+weapons.nurs.SNEB_TYPE254_F1B_RED
+weapons.nurs.SNEB_TYPE254_F1B_YELLOW
+weapons.nurs.SNEB_TYPE254_H1_GREEN
+weapons.nurs.SNEB_TYPE254_H1_RED
+weapons.nurs.SNEB_TYPE254_H1_YELLOW
+weapons.nurs.SNEB_TYPE256_F1B
+weapons.nurs.SNEB_TYPE256_H1
+weapons.nurs.SNEB_TYPE257_F1B
+weapons.nurs.SNEB_TYPE257_H1
+weapons.nurs.SNEB_TYPE259E_F1B
+weapons.nurs.SNEB_TYPE259E_H1
+weapons.nurs.Tiny Tim
+weapons.nurs.WGr21
+weapons.nurs.Zuni_127
+weapons.shells.120_EXPL_F1_120mm_HE
+weapons.shells.20mm_M220_Tracer
+weapons.shells.20MM_M242_HEI-T
+weapons.shells.20mm_M53_API
+weapons.shells.20mm_M56_HEI
+weapons.shells.20mm_M70LD_SAPHEI
+weapons.shells.20x110mm AP-I
+weapons.shells.20x110mm AP-T
+weapons.shells.20x110mm HE-I
+weapons.shells.20x138B_AP
+weapons.shells.20x138B_HE
+weapons.shells.25mm_AA_JAP
+weapons.shells.2A18_122
+weapons.shells.2A20_115mm_AP
+weapons.shells.2A20_115mm_HE
+weapons.shells.2A28_73
+weapons.shells.2A33_152
+weapons.shells.2A38_30_AP
+weapons.shells.2A38_30_HE
+weapons.shells.2A42_30_AP
+weapons.shells.2A42_30_HE
+weapons.shells.2A46M_125_AP
+weapons.shells.2A46M_125_HE
+weapons.shells.2A60_120
+weapons.shells.2A64_152
+weapons.shells.2A7_23_AP
+weapons.shells.2A7_23_HE
+weapons.shells.37mm_Type_100_JAP
+weapons.shells.37x263_AP
+weapons.shells.37x263_HE
+weapons.shells.3BM59_125_AP
+weapons.shells.3UBM11_100mm_AP
+weapons.shells.5_45x39
+weapons.shells.5_45x39_NOtr
+weapons.shells.5_56x45
+weapons.shells.5_56x45_NOtr
+weapons.shells.50Browning_AP_M2
+weapons.shells.50Browning_AP_M2_Corsair
+weapons.shells.50Browning_API_M8
+weapons.shells.50Browning_API_M8_Corsair
+weapons.shells.50Browning_APIT_M20
+weapons.shells.50Browning_APIT_M20_Corsair
+weapons.shells.50Browning_Ball_M2
+weapons.shells.50Browning_Ball_M2_Corsair
+weapons.shells.50Browning_I_M1
+weapons.shells.50Browning_T_M1
+weapons.shells.53-UBR-281U
+weapons.shells.53-UOR-281U
+weapons.shells.57mm_Type_90_JAP
+weapons.shells.6_5mm_Type_91_JAP
+weapons.shells.7_62x39
+weapons.shells.7_62x51
+weapons.shells.7_62x51tr
+weapons.shells.7_62x54
+weapons.shells.7_62x54_NOTRACER
+weapons.shells.7_7mm_Type_97_JAP
+weapons.shells.7_92x57_Smkl
+weapons.shells.7_92x57sS
+weapons.shells.7.62x51mm
+weapons.shells.75mm_AA_JAP
+weapons.shells.76mm_AA_JAP
+weapons.shells.9x19_m882
+weapons.shells.A222_130
+weapons.shells.AK100_100
+weapons.shells.AK176_76
+weapons.shells.AK630_30_AP
+weapons.shells.AK630_30_HE
+weapons.shells.AP_T_MkI_40mm
+weapons.shells.APCBC
+weapons.shells.Besa7_92x57
+weapons.shells.Besa7_92x57T
+weapons.shells.BK_27
+weapons.shells.Bofors_40mm_Essex
+weapons.shells.Bofors_40mm_HE
+weapons.shells.BR_354N
+weapons.shells.Br303
+weapons.shells.Br303_tr
+weapons.shells.British303_B_Mk4z
+weapons.shells.British303_B_Mk6z
+weapons.shells.British303_Ball_Mk1c
+weapons.shells.British303_Ball_Mk6
+weapons.shells.British303_Ball_Mk7
+weapons.shells.British303_Ball_Mk8
+weapons.shells.British303_G_Mk1
+weapons.shells.British303_G_Mk2
+weapons.shells.British303_G_Mk3
+weapons.shells.British303_G_Mk4
+weapons.shells.British303_G_Mk5
+weapons.shells.British303_G_Mk6z
+weapons.shells.British303_O_Mk1
+weapons.shells.British303_W_Mk1z
+weapons.shells.CHAP_125_3BM69_APFSDS_T
+weapons.shells.CHAP_76_HE_T
+weapons.shells.CHAP_76_HESH_T
+weapons.shells.CHAP_76_PFHE
+weapons.shells.CL3143_120_AP
+weapons.shells.DANA_152
+weapons.shells.DEFA552_30
+weapons.shells.DEFA553_30AP
+weapons.shells.DEFA553_30APIT
+weapons.shells.DEFA553_30HE
+weapons.shells.DEFA554_30_HE
+weapons.shells.DEFA554_30_HE_TRACERS
+weapons.shells.DM12_120mm_HEAT_MP_T
+weapons.shells.DM12_L55_120mm_HEAT_MP_T
+weapons.shells.DM23_105_AP
+weapons.shells.DM33_120_AP
+weapons.shells.DM53_120_AP
+weapons.shells.Flak18_Sprgr_39
+weapons.shells.Flak41_Sprgr_39
+weapons.shells.GAU8_30_AP
+weapons.shells.GAU8_30_HE
+weapons.shells.GAU8_30_TP
+weapons.shells.GSH_23_AP
+weapons.shells.GSH_23_HE
+weapons.shells.GSh_30_2K_AP
+weapons.shells.GSh_30_2K_AP_Tr
+weapons.shells.GSh_30_2K_HE
+weapons.shells.GSh_30_2K_HE_Tr
+weapons.shells.GSH23_23_AP
+weapons.shells.GSH23_23_HE
+weapons.shells.GSH23_23_HE_T
+weapons.shells.GSH301_30_AP
+weapons.shells.GSH301_30_HE
+weapons.shells.HE_M1_Shell
+weapons.shells.HE_T_MkII_40mm
+weapons.shells.HEDPM430
+weapons.shells.HESH_105
+weapons.shells.Hispano_Mk_II_AP/T
+weapons.shells.Hispano_Mk_II_Mk_Z_Ball
+weapons.shells.Hispano_Mk_II_MKI_HE/I
+weapons.shells.Hispano_Mk_II_MKIIZ_AP
+weapons.shells.Hispano_Mk_II_SAP/I
+weapons.shells.Hispano_Mk_II_Tracer_G
+weapons.shells.HP30_30_AP
+weapons.shells.HP30_30_HE
+weapons.shells.I_Gr_33
+weapons.shells.K307_155HE
+weapons.shells.KDA_35_AP
+weapons.shells.KDA_35_FAPDS
+weapons.shells.KDA_35_HE
+weapons.shells.KPVT_14_5
+weapons.shells.KPVT_14_5_T
+weapons.shells.KS19_100AP
+weapons.shells.KS19_100HE
+weapons.shells.L14A2_30_APDS
+weapons.shells.L21A1_30_HE
+weapons.shells.L23_120_AP
+weapons.shells.L23A1_APFSDS
+weapons.shells.L31_120mm_HESH
+weapons.shells.L31A7_HESH
+weapons.shells.leFH18_105HE
+weapons.shells.M1_37mm_37AP-T
+weapons.shells.M1_37mm_HE-T
+weapons.shells.M101
+weapons.shells.M134_7_62_T
+weapons.shells.M185_155
+weapons.shells.M197_20
+weapons.shells.M2_12_7
+weapons.shells.M2_12_7_T
+weapons.shells.M2_12_7_TG
+weapons.shells.M2_50_aero_AP
+weapons.shells.M20_50_aero_APIT
+weapons.shells.M230_30
+weapons.shells.M230_ADEM/DEFA
+weapons.shells.M230_HEDP M789
+weapons.shells.M230_HEI M799
+weapons.shells.M230_TP M788
+weapons.shells.M242_25_AP_M791
+weapons.shells.M242_25_AP_M919
+weapons.shells.M242_25_HE_M792
+weapons.shells.M246_20_HE_gr
+weapons.shells.M256_120_AP
+weapons.shells.M256_120_AP_L55
+weapons.shells.M256_120_HE
+weapons.shells.M256_120_HE_L55
+weapons.shells.M322_120_AP
+weapons.shells.M339_120mm_HEAT_MP_T
+weapons.shells.M383
+weapons.shells.M39_20_API
+weapons.shells.M39_20_HEI
+weapons.shells.M39_20_HEI_T
+weapons.shells.M39_20_TP
+weapons.shells.M393A3_105_HE
+weapons.shells.M42A1_HE
+weapons.shells.M46
+weapons.shells.M485_155_IL
+weapons.shells.M51_37AP
+weapons.shells.M53_AP_RED
+weapons.shells.M53_APT_RED
+weapons.shells.M55A2_TP_RED
+weapons.shells.M56A3_HE_RED
+weapons.shells.M61
+weapons.shells.M61_20_AP
+weapons.shells.M61_20_AP_gr
+weapons.shells.M61_20_HE
+weapons.shells.M61_20_HE_gr
+weapons.shells.M61_20_HE_INVIS
+weapons.shells.M61_20_HEIT_RED
+weapons.shells.M61_20_PGU27
+weapons.shells.M61_20_PGU28
+weapons.shells.M61_20_PGU30
+weapons.shells.M61_20_TP
+weapons.shells.M61_20_TP_T
+weapons.shells.M62_APC
+weapons.shells.M63_37HE
+weapons.shells.M68_105_AP
+weapons.shells.M68_105_HE
+weapons.shells.M825A1_155_SM
+weapons.shells.Mauser7.92x57_B.
+weapons.shells.Mauser7.92x57_P.m.K.
+weapons.shells.Mauser7.92x57_S.m.K.
+weapons.shells.Mauser7.92x57_S.m.K._Ub.m.Zerl.
+weapons.shells.Mauser7.92x57_S.m.K.H.
+weapons.shells.MAUZER30_30
+weapons.shells.MG_13x64_API
+weapons.shells.MG_13x64_APT
+weapons.shells.MG_13x64_HE
+weapons.shells.MG_13x64_HEI_T
+weapons.shells.MG_13x64_I
+weapons.shells.MG_13x64_I_T
+weapons.shells.MG_20x82_API
+weapons.shells.MG_20x82_HEI_T
+weapons.shells.MG_20x82_MGsch
+weapons.shells.MINGR55
+weapons.shells.MINGR55_NO_TRC
+weapons.shells.MK_108_HEI
+weapons.shells.MK_108_MGsch
+weapons.shells.MK_108_MGsch_T
+weapons.shells.Mk_12_HE_shell
+weapons.shells.Mk_20_HE_shell
+weapons.shells.MK45_127
+weapons.shells.MK45_127mm_AP_Essex
+weapons.shells.MK45_127mm_Essex
+weapons.shells.MK75_76
+weapons.shells.N37_37x155_API_T
+weapons.shells.N37_37x155_HEI_T
+weapons.shells.NR23_23x115_API
+weapons.shells.NR23_23x115_HEI_T
+weapons.shells.NR30_30x155_APHE
+weapons.shells.NR30_30x155_APT
+weapons.shells.NR30_30x155_HEI_T
+weapons.shells.Oerlikon_20mm_Essex
+weapons.shells.Oerlikon_20mm_HE
+weapons.shells.OF_350
+weapons.shells.OFL_120F2_AP
+weapons.shells.OH-6 7.62x51mm HE-I
+weapons.shells.OH-6 7.62x51mm M61
+weapons.shells.OH-6 7.62x51mm M62
+weapons.shells.OH-6 7.62x51mm M80
+weapons.shells.PGU32_SAPHEI_T
+weapons.shells.PINK_PROJECTILE
+weapons.shells.PJ26_76_PFHE
+weapons.shells.PJ87_100_PFHE
+weapons.shells.PKT_7_62
+weapons.shells.PKT_7_62_T
+weapons.shells.PLZ_155_HE
+weapons.shells.Pzgr_39
+weapons.shells.Pzgr_39_5cm
+weapons.shells.Pzgr_39/40
+weapons.shells.Pzgr_39/42
+weapons.shells.Pzgr_39/43
+weapons.shells.QF17_HE
+weapons.shells.QF94_AA_HE
+weapons.shells.QF95_206R_fixed
+weapons.shells.Rh202_20_AP
+weapons.shells.Rh202_20_HE
+weapons.shells.RM_15cm_HE
+weapons.shells.ship_Bofors_40mm_HE
+weapons.shells.Sprgr_34_L48
+weapons.shells.Sprgr_34_L70
+weapons.shells.Sprgr_38
+weapons.shells.Sprgr_39
+weapons.shells.Sprgr_43_L71
+weapons.shells.UBR_365_85AP
+weapons.shells.UO_365K_85HE
+weapons.shells.UOF_17_100HE
+weapons.shells.UOF412_100HE
+weapons.shells.Utes_12_7x108
+weapons.shells.Utes_12_7x108_T
+weapons.shells.VOG17
+weapons.shells.YakB_12_7
+weapons.shells.YakB_12_7_T
+weapons.shells.ZTZ_125_AP
+weapons.shells.ZTZ_125_HE
+weapons.shells.ZTZ_14_5
+weapons.shells.ZTZ_7_62
+weapons.torpedoes.G7A_T1
+weapons.torpedoes.LTF_5B
+weapons.torpedoes.Mark_46
+weapons.torpedoes.mk46torp_name
+weapons.torpedoes.MK54 REXTORP
+weapons.torpedoes.MK54 Torpedo
+weapons.torpedoes.YU-6

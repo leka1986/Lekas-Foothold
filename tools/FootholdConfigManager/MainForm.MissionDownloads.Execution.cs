@@ -66,6 +66,7 @@ internal sealed partial class MainForm
             }
         }, token);
         var result = new MissionDownloadResult();
+        var mapUpdates = new List<MissionMapUpdate>();
         var updated = new List<InstanceImportPlan>();
         var failedConfigs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var activePath = _document?.Path;
@@ -136,6 +137,8 @@ internal sealed partial class MainForm
                             output.CollisionPolicy == MissionCollisionPolicy.AskReplace && output.ReviewedIdentity?.Exists == true, token, input);
                     }, token);
                     result.Installed.Add(installed);
+                    if (MissionUpdateProgress.FullMission(reviewed.Selection.Destination.Id, reviewed.Selection.Release.Tag,
+                        output.Template.Asset, reviewed.Selection.ZipOnly) is { } update) mapUpdates.Add(update);
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
                 catch (Exception error) { result.Failed.Add(output.OutputPath + ": " + error.Message); }
@@ -162,6 +165,7 @@ internal sealed partial class MainForm
         catch (Exception error) { result.Warnings.Add("Stopped before the remaining files: " + error.Message); }
         finally
         {
+            if (RememberMissionMapUpdates(mapUpdates) is { } progressWarning) result.Warnings.Add(progressWarning);
             var active = activePath is null ? null : updated.FirstOrDefault(plan => PathsEqual(plan.Current.Path, activePath));
             if (active is not null && !IsDisposed && !Disposing)
             {
@@ -209,7 +213,10 @@ internal sealed partial class MainForm
             if (decision is null) return false;
             var choice = decision.Value;
             var directory = Path.GetDirectoryName(output.OutputPath)!;
-            var name = WeatherExportNames.Normalize(Path.GetFileName(choice.OutputPath), output.Template.SourcePath, directory, keepBoth: false);
+            var original = choice.OutputPath.EndsWith(".miz.orig", StringComparison.OrdinalIgnoreCase);
+            if (original && !WeatherMizService.BotOriginalsAvailable(output.OutputPath, null))
+                throw new InvalidDataException("DCSServerBot originals were not detected for the selected output folder.");
+            var name = WeatherExportNames.Normalize(Path.GetFileName(choice.OutputPath), output.Template.SourcePath, directory, keepBoth: false, original: original);
             var path = Path.GetFullPath(Path.Combine(directory, name));
             if (name.Length > 255 || !PathsEqual(path, choice.OutputPath) || !PathsEqual(path, choice.Identity.Path))
                 throw new InvalidDataException("Choose a valid mission filename in the selected mission folder.");
@@ -323,7 +330,8 @@ internal sealed partial class MainForm
                         File.WriteAllBytes(sourcePath, source.Member.Bytes);
                     }
                     identities[sourcePath] = MissionPathIdentity.Capture(sourcePath, source.Member.Bytes);
-                    var clean = ConfigDocument.LoadText(sourcePath, Decode(source.Member.Bytes));
+                    var genericBytes = MissionVersionStamp.Remove(source.Member.Bytes);
+                    var clean = ConfigDocument.LoadText(sourcePath, Decode(genericBytes));
                     clean.RepairStringListSeparators();
                     clean.PrepareTupleChoiceMigration();
                     RequireValid(clean, variant, new List<string>());
@@ -340,7 +348,7 @@ internal sealed partial class MainForm
                         if (missing)
                         {
                             identities[target.Path] = MissionPathIdentity.Capture(target.Path);
-                            current = ConfigDocument.LoadText(target.Path, Decode(source.Member.Bytes));
+                            current = ConfigDocument.LoadText(target.Path, Decode(genericBytes));
                         }
                         else current = LoadCurrent(target.Path).Document;
                         ConfigDocument? previous = null;

@@ -9,15 +9,17 @@ internal sealed partial class MainForm
     {
         // Load runs after the restored target HWND has its monitor DPI, before startup view preparation.
         var workingArea = Screen.FromControl(this).WorkingArea;
-        SetUiZoom(ResolveStartupZoomPercent(_settings.UiZoomPercent, workingArea, DeviceDpi), persist: false);
+        SetUiZoom(ResolveStartupZoomPercent(_settings.UiZoomUserSelected == true ? _settings.UiZoomPercent : 0, workingArea, DeviceDpi), persist: false);
         ApplyCategoryNavigationWidth();
     }
 
     internal static int ResolveStartupZoomPercent(int preferredZoomPercent, Rectangle workingArea, int monitorDpi)
     {
+        if (preferredZoomPercent > 0) return Math.Clamp(preferredZoomPercent, 80, 130);
+        // Zero requests automatic sizing; a manual choice always wins, including on a small monitor.
         // PerMonitorV2 work-area coordinates are pixels; compare their available height at 96 DPI.
         var logicalHeight = workingArea.Height * 96d / monitorDpi;
-        return logicalHeight <= 1080 ? 80 : Math.Clamp(preferredZoomPercent, 80, 130);
+        return logicalHeight <= 1080 ? 80 : 100;
     }
 
     internal static int FindWorkingAreaIndexForBounds(Rectangle bounds, IReadOnlyList<Rectangle> workingAreas)
@@ -35,14 +37,42 @@ internal sealed partial class MainForm
         return selected;
     }
 
+    private bool _categoryNavigationWidthMoving;
+
+    private void InitializeCategoryNavigationWidth(SplitContainer split)
+    {
+        split.SplitterMoving += (_, _) => _categoryNavigationWidthMoving = true;
+        split.SplitterMoved += (_, _) =>
+        {
+            if (!_categoryNavigationWidthMoving || IsDisposed || Disposing) return;
+            _categoryNavigationWidthMoving = false;
+            var width = Math.Max(1, (int)Math.Round(split.SplitterDistance * UiZoomBaselinePercent / (double)_uiZoomPercent));
+            if (_settings.CategoryNavigationWidth == width) return;
+            _settings.CategoryNavigationWidth = width;
+            SaveEditorLayoutPreferences();
+        };
+        split.KeyDown += (_, e) => { if (e.KeyCode == Keys.Escape) _categoryNavigationWidthMoving = false; };
+        split.MouseCaptureChanged += (_, _) =>
+        {
+            if (!_categoryNavigationWidthMoving || split.Capture || !split.IsHandleCreated) return;
+            // Mouse-up may release capture before SplitterMoved; clear a cancelled drag after that handoff.
+            split.BeginInvoke((Action)(() => _categoryNavigationWidthMoving = false));
+        };
+    }
+
     private void ApplyCategoryNavigationWidth()
     {
         if (_mainSplit is null || _mainSplit.ClientSize.Width <
             _mainSplit.Panel1MinSize + _mainSplit.Panel2MinSize + _mainSplit.SplitterWidth) return;
-        // Preserve the original sidebar sizing, with only a small increase on 1080p displays.
-        var desiredWidth = Zoomed(Screen.FromControl(this).Bounds.Height == 1080 ? 280 : 260);
-        var maxWidth = Math.Max(Zoomed(210), ClientSize.Width / 3);
-        var width = Math.Min(desiredWidth, maxWidth);
+        _categoryNavigationWidthMoving = false;
+        // No saved preference keeps the original automatic sidebar sizing.
+        var desiredWidth = Zoomed(_settings.CategoryNavigationWidth > 0 ? _settings.CategoryNavigationWidth
+            : Screen.FromControl(this).Bounds.Height == 1080 ? 280 : 260);
+        var maxWidth = _settings.CategoryNavigationWidth > 0
+            ? _mainSplit.ClientSize.Width - _mainSplit.Panel2MinSize - _mainSplit.SplitterWidth
+            : Math.Min(Math.Max(Zoomed(210), ClientSize.Width / 3),
+                _mainSplit.ClientSize.Width - _mainSplit.Panel2MinSize - _mainSplit.SplitterWidth);
+        var width = Math.Max(_mainSplit.Panel1MinSize, Math.Min(desiredWidth, maxWidth));
         if (_mainSplit.SplitterDistance != width) _mainSplit.SplitterDistance = width;
     }
 }

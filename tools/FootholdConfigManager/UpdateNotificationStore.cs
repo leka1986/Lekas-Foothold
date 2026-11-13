@@ -21,6 +21,8 @@ internal sealed record FootholdReleaseInfo(long Id, string Tag, string Title, st
     public bool FilesEnvelopeMetadataLoaded { get; init; }
     public MissionReleaseAsset? FilesEnvelopeAsset { get; init; }
     public string? FilesEnvelopeError { get; init; }
+    public bool WeaponCatalogMetadataLoaded { get; init; }
+    public MissionReleaseAsset? WeaponCatalogAsset { get; init; }
 }
 
 internal sealed record UpdateNotificationState

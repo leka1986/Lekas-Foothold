@@ -38,6 +38,16 @@ internal sealed partial class MainForm
         Func<Form, DialogResult>? showConflict = null)
     {
         MissionPathIdentity? captured = null;
+        string? originalName = null;
+        if (reviewed.Selection.CopyWarehouses && reviewed.Selection.Profiles.Count == 0 && output.WarehouseCopy is { } warehouse)
+        {
+            var versions = Path.GetFileNameWithoutExtension(output.Template.Name).Split('_')
+                .Select(part => part.TrimStart('v', 'V'))
+                .Where(part => ManagerBuildInfo.TryParseReleaseVersion(part, out _)).ToArray();
+            if (versions.Length == 1)
+                try { originalName = MissionFileUpdateService.ProposeOutputName(warehouse.SourceIdentity.Path, versions[0]); }
+                catch (InvalidDataException) { } // Ambiguous source names remain editable without a guessed replacement.
+        }
         return CreateMissionNameDialog(output.Template.SourcePath, output.OutputPath, (dialog, path) =>
         {
             if (reviewed.Outputs.Any(plan => !ReferenceEquals(plan, output) && PathsEqual(plan.OutputPath, path))
@@ -57,7 +67,7 @@ internal sealed partial class MainForm
             captured.RequireUnchanged();
             dialog.Tag = (path, captured.Exists ? MissionCollisionPolicy.AskReplace : MissionCollisionPolicy.KeepBoth, captured);
             dialog.DialogResult = DialogResult.OK;
-        });
+        }, originalName: originalName, allowOriginal: WeatherMizService.BotOriginalsAvailable(output.OutputPath, null));
     }
 
     private Form CreateMissionFileNameDialog(string sourcePath, string outputPath, IReadOnlyCollection<string> reservedPaths)
@@ -80,13 +90,16 @@ internal sealed partial class MainForm
         }, sourceContext: sourcePath);
     }
 
-    private Form CreateMissionNameDialog(string sourcePath, string outputPath, Action<Form, string> approve, string? sourceContext = null)
+    private Form CreateMissionNameDialog(string sourcePath, string outputPath, Action<Form, string> approve, string? sourceContext = null,
+        string? originalName = null, bool allowOriginal = false)
     {
         var scale = _uiZoomPercent / 100f;
         var directory = Path.GetDirectoryName(outputPath)!;
-        var body = new TableLayoutPanel { ColumnCount = 1, RowCount = 4, AutoScroll = true };
+        var originalRow = originalName is null ? 2 : 3;
+        var previewRow = originalRow + (allowOriginal ? 1 : 0);
+        var body = new TableLayoutPanel { ColumnCount = 1, RowCount = previewRow + 2, AutoScroll = true };
         body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        for (var row = 0; row < 4; row++) body.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        for (var row = 0; row < body.RowCount; row++) body.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         var heading = new Label { Text = "Name your mission", AutoSize = true, Dock = DockStyle.Top };
         body.Controls.Add(heading, 0, 0);
         var name = new TextBox { Name = "MissionDownloadNameInput", Text = Path.GetFileName(outputPath), Dock = DockStyle.Fill,
@@ -94,7 +107,7 @@ internal sealed partial class MainForm
         var preview = new Label { Name = "MissionDownloadNamePreview", AutoSize = true, MaximumSize = new Size((int)Math.Round(620 * scale), 0) };
         var error = new Label { Name = "MissionDownloadNameError", AutoSize = true, MaximumSize = preview.MaximumSize,
             ForeColor = IsDarkPalette() ? Color.FromArgb(255, 135, 135) : Color.Firebrick, Margin = new Padding(0, (int)Math.Round(8 * scale), 0, (int)Math.Round(8 * scale)) };
-        body.Controls.Add(name, 0, 1); body.Controls.Add(preview, 0, 2); body.Controls.Add(error, 0, 3);
+        body.Controls.Add(name, 0, 1); body.Controls.Add(preview, 0, previewRow); body.Controls.Add(error, 0, previewRow + 1);
         var dialog = CreateMissionDownloadDialog("Name mission", "OK", body, out var confirm);
         dialog.Name = "MissionDownloadName";
         dialog.Font = _weatherWindow!.Font;
@@ -117,6 +130,21 @@ internal sealed partial class MainForm
             button.Size = new Size(Math.Max((int)Math.Round(80 * scale), TextRenderer.MeasureText(button.Text, dialog.Font).Width + (int)Math.Round(36 * scale)), (int)Math.Round(32 * scale));
             button.Margin = new Padding((int)Math.Round(4 * scale), 0, 0, 0);
         }
+        if (originalName is not null)
+        {
+            var original = MakeButton("Use original mission name", () => { name.Text = originalName; name.Focus(); });
+            original.Name = "MissionDownloadUseOriginalName";
+            original.Font = dialog.Font; original.Dock = DockStyle.None;
+            original.Size = new Size(TextRenderer.MeasureText(original.Text, dialog.Font).Width + (int)Math.Round(36 * scale), (int)Math.Round(32 * scale));
+            original.Margin = new Padding(0, 0, 0, (int)Math.Round(12 * scale));
+            body.Controls.Add(original, 0, 2);
+        }
+        var saveOriginal = new WeatherCheckBox { Name = "MissionDownloadSaveOriginal",
+            Text = "Save as DCSServerBot original (.miz.orig)", AutoSize = true,
+            Checked = allowOriginal && Path.GetFileName(Path.TrimEndingDirectorySeparator(directory)).Equals(".dcssb", StringComparison.OrdinalIgnoreCase),
+            Margin = new Padding(0, 0, 0, (int)Math.Round(12 * scale)) };
+        if (allowOriginal) body.Controls.Add(saveOriginal, 0, originalRow);
+        else saveOriginal.Dispose();
         _weatherWindow.ApplyWeatherChrome(dialog);
         error.ForeColor = IsDarkPalette() ? Color.FromArgb(255, 135, 135) : Color.Firebrick;
         void FitHeight()
@@ -129,18 +157,22 @@ internal sealed partial class MainForm
         var sourcePrefix = sourceContext is null ? "" : "Source: " + sourceContext + Environment.NewLine;
         string Normalize()
         {
-            var normalized = WeatherExportNames.Normalize(name.Text, sourcePath, directory, keepBoth: false);
+            var normalized = WeatherExportNames.Normalize(name.Text, sourcePath, directory, keepBoth: false,
+                original: allowOriginal && saveOriginal.Checked);
             if (normalized.Length > 255) throw new InvalidDataException("The mission filename is too long. Choose a shorter name.");
             return normalized;
         }
         void RefreshPreview()
         {
             dialog.Tag = null;
-            try { preview.Text = sourcePrefix + "Install to: " + Path.Combine(directory, Normalize()); error.Text = ""; confirm.Enabled = true; }
+            try { preview.Text = sourcePrefix + "Install to: " + Path.Combine(directory, Normalize()); error.Text = ""; confirm.Enabled = true;
+                confirm.Text = allowOriginal && saveOriginal.Checked ? "Save original…" : "OK";
+                confirm.Width = Math.Max((int)Math.Round(80 * scale), TextRenderer.MeasureText(confirm.Text, dialog.Font).Width + (int)Math.Round(36 * scale)); }
             catch (Exception failure) when (failure is InvalidDataException or ArgumentException or NotSupportedException or PathTooLongException)
             { preview.Text = sourcePrefix + "Choose a valid mission filename."; error.Text = failure.Message; confirm.Enabled = false; }
         }
         name.TextChanged += (_, _) => RefreshPreview();
+        saveOriginal.CheckedChanged += (_, _) => { name.Text = WeatherExportNames.WithMissionExtension(name.Text, saveOriginal.Checked); RefreshPreview(); FitHeight(); };
         confirm.Click += (_, _) =>
         {
             try
@@ -155,6 +187,7 @@ internal sealed partial class MainForm
         };
         name.TextChanged += (_, _) => FitHeight();
         error.TextChanged += (_, _) => FitHeight();
+        if (allowOriginal) name.Text = WeatherExportNames.WithMissionExtension(name.Text, saveOriginal.Checked);
         RefreshPreview();
         FitHeight();
         dialog.Shown += (_, _) => { name.Focus(); name.Select(0, Path.GetFileNameWithoutExtension(name.Text).Length); };

@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Globalization;
 using System.IO.Compression;
+using System.IO.Enumeration;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Text.Json;
@@ -10,8 +11,6 @@ namespace FootholdConfigManager;
 
 internal sealed partial class MainForm : Form
 {
-    private const string AdminPassword = "configfoothold";
-    private const string TestingPassword = "testing";
     private const string DiscordInviteUrl = "https://discord.gg/cshgmgXuxE";
     private const string GitHubRepositoryUrl = "https://github.com/leka1986/Lekas-Foothold";
     private const int TableActionColumnWidth = 168;
@@ -393,6 +392,7 @@ internal sealed partial class MainForm : Form
     private sealed class ConfigSearchSurface : Panel
     {
         private readonly TextBox _input;
+        private readonly bool _isSearch;
         private bool _hover;
         private bool _clearHover;
         private bool _clearPressed;
@@ -407,9 +407,10 @@ internal sealed partial class MainForm : Form
         private Color _iconColor;
         private Color _hoverColor;
 
-        public ConfigSearchSurface(TextBox input)
+        public ConfigSearchSurface(TextBox input, bool isSearch = true)
         {
             _input = input;
+            _isSearch = isSearch;
             TabStop = false;
             SetStyle(
                 ControlStyles.UserPaint |
@@ -419,6 +420,7 @@ internal sealed partial class MainForm : Form
                 true);
 
             _input.BorderStyle = BorderStyle.None;
+            _input.Dock = DockStyle.None;
             _input.Margin = new Padding(0);
             Controls.Add(_input);
             _input.TextChanged += (_, _) =>
@@ -426,6 +428,7 @@ internal sealed partial class MainForm : Form
                 PerformLayout();
                 Invalidate();
             };
+            _input.FontChanged += (_, _) => PerformLayout();
             _input.GotFocus += (_, _) => Invalidate();
             _input.LostFocus += (_, _) => Invalidate();
         }
@@ -457,8 +460,8 @@ internal sealed partial class MainForm : Form
         protected override void OnLayout(LayoutEventArgs levent)
         {
             base.OnLayout(levent);
-            var textLeft = _horizontalPadding + _iconSize + _iconGap;
-            var textRight = _input.TextLength > 0
+            var textLeft = _horizontalPadding + (_isSearch ? _iconSize + _iconGap : 0);
+            var textRight = _isSearch && _input.TextLength > 0
                 ? Width - _clearWidth - _horizontalPadding
                 : Width - _horizontalPadding;
             var textHeight = _input.PreferredHeight;
@@ -550,8 +553,8 @@ internal sealed partial class MainForm : Form
             using var border = new Pen(borderColor, focused ? 1.8F : 1F);
             e.Graphics.DrawPath(border, path);
 
-            DrawSearchIcon(e.Graphics, focused ? _focusColor : _iconColor);
-            if (_input.TextLength > 0)
+            if (_isSearch) DrawSearchIcon(e.Graphics, focused ? _focusColor : _iconColor);
+            if (_isSearch && _input.TextLength > 0)
             {
                 DrawClearIcon(e.Graphics);
             }
@@ -559,14 +562,14 @@ internal sealed partial class MainForm : Form
 
         private Rectangle ClearBounds()
         {
-            return new Rectangle(Math.Max(0, Width - _clearWidth), 0, _clearWidth, Height);
+            return _isSearch ? new Rectangle(Math.Max(0, Width - _clearWidth), 0, _clearWidth, Height) : Rectangle.Empty;
         }
 
         private void DrawSearchIcon(Graphics graphics, Color color)
         {
             var size = Math.Max(8, _iconSize);
             var left = _horizontalPadding;
-            var top = Math.Max(0, (Height - size) / 2);
+            var top = Math.Max(0f, (Height - (size - 1f)) / 2f);
             var lensSize = Math.Max(6, (int)Math.Round(size * 0.68));
             using var pen = new Pen(color, Math.Max(1.4F, size / 10F))
             {
@@ -626,7 +629,7 @@ internal sealed partial class MainForm : Form
             return path;
         }
 
-        private static Color ColorBlend(Color from, Color to, float amount)
+        internal static Color ColorBlend(Color from, Color to, float amount)
         {
             amount = Math.Clamp(amount, 0F, 1F);
             return Color.FromArgb(
@@ -1072,6 +1075,7 @@ internal sealed partial class MainForm : Form
         public bool MissingTargetConfig { get; private set; }
         public bool CanCreateMissingConfig { get; private set; }
         public bool IsTargetSelected { get; set; }
+        public bool CopyWholeConfig { get; set; } = true;
         public bool IsExpanded { get; set; }
 
         public int SelectedChangeCount => Changes.Count(change => SelectedChangeIds.Contains(change.Id));
@@ -1260,7 +1264,6 @@ internal sealed partial class MainForm : Form
             "AIDeliveryamount",
             "SuppliesCargoTransport",
             "StrictSmartWeaponsInventory",
-            "WarehouseWeaponCaps",
             "AutoFillResources",
             "NoAIBlueSupplies",
             "WarningNoSupplies"),
@@ -1334,6 +1337,7 @@ internal sealed partial class MainForm : Form
             "allowedPlanesRed",
             "restockAircraft",
             "restrictedWeapons",
+            "WarehouseWeaponCaps",
             "ForbiddWeaponsInAllEra"),
         new CategorySpec("Admin Designer"),
         new CategorySpec("Raw Values")
@@ -1365,7 +1369,7 @@ internal sealed partial class MainForm : Form
     private readonly ListBox _searchResultsList = new();
     private ConfigSearchSurface? _configSearchSurface;
     private readonly Panel _formHost = new BackgroundFocusPanel();
-    private readonly ToolTip _toolTip = new()
+    private readonly EditorHelpToolTip _toolTip = new()
     {
         AutoPopDelay = 30000,
         InitialDelay = 0,
@@ -1723,10 +1727,38 @@ internal sealed partial class MainForm : Form
         menu.Font = Font;
         menu.BackColor = ButtonBackground;
         menu.ForeColor = PrimaryTextColor;
+        if (menu.Renderer is not ToolbarMenuRenderer)
+            menu.Renderer = new ToolbarMenuRenderer();
         foreach (ToolStripItem item in menu.Items)
         {
             item.BackColor = ButtonBackground;
             item.ForeColor = PrimaryTextColor;
+        }
+    }
+
+    private sealed class ToolbarMenuRenderer : ToolStripSystemRenderer
+    {
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            if (!e.Item.Enabled || !e.Item.Selected)
+            {
+                base.OnRenderMenuItemBackground(e);
+                return;
+            }
+
+            var bounds = new Rectangle(Point.Empty, e.Item.Size);
+            using var fill = new SolidBrush(SelectionBackground);
+            e.Graphics.FillRectangle(fill, bounds);
+            bounds.Inflate(-1, -1);
+            using var edge = new Pen(LockedTextColor) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot };
+            e.Graphics.DrawRectangle(edge, bounds);
+        }
+
+        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+        {
+            if (e.Item is ToolStripMenuItem { Enabled: true, Selected: true })
+                e.TextColor = SelectionText;
+            base.OnRenderItemText(e);
         }
     }
 
@@ -1761,6 +1793,11 @@ internal sealed partial class MainForm : Form
 
             case ListView listView:
                 StyleListView(listView);
+                break;
+
+            case SmoothDataGridView picker when picker.Parent is WarehouseCard:
+                picker.RefreshScrollbarTheme();
+                picker.Invalidate();
                 break;
 
             case DataGridView grid:
@@ -1837,6 +1874,7 @@ internal sealed partial class MainForm : Form
             ApplyThemeToControl(child, restyleButtons, configOwner);
         }
         if (control is EditorSection section) section.ApplySectionPalette();
+        if (control is WarehouseCard card) card.ApplyWarehousePalette();
         if (control is Panel { Name: "MissionDownloadsPanel" } && control.FindForm() is MainForm downloadOwner)
             downloadOwner.LayoutMissionDownloads();
     }
@@ -2290,7 +2328,7 @@ internal sealed partial class MainForm : Form
         var removeInstanceItem = _manageInstanceMenu.Items.Add("Remove selected instance", null, (_, _) => RemoveInstance());
         _manageInstanceMenu.Items.Add(new ToolStripSeparator());
         var openLocationItem = _manageInstanceMenu.Items.Add("Open file location", null, (_, _) => OpenCurrentConfigLocation());
-        _manageInstanceMenu.Items.Add("Copy To…", null, (_, _) => CopyCurrentConfigToInstances());
+        _manageInstanceMenu.Items.Add("Copy To…", null, async (_, _) => await CopyCurrentConfigToInstances());
         _manageInstanceMenu.Opening += (_, _) =>
         {
             var hasSelectedInstance = _instanceBox.SelectedItem is InstanceItem;
@@ -2483,6 +2521,7 @@ internal sealed partial class MainForm : Form
             if (persist)
             {
                 _settings.UiZoomPercent = _uiZoomPercent;
+                _settings.UiZoomUserSelected = true;
                 _settings.Save();
             }
             if (!zoomChanged) return;
@@ -4352,7 +4391,8 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        if (password.Equals(TestingPassword, StringComparison.Ordinal))
+        var testingPassword = Environment.GetEnvironmentVariable("FOOTHOLD_CONFIG_MANAGER_TESTING_PASSWORD");
+        if (!string.IsNullOrEmpty(testingPassword) && password.Equals(testingPassword, StringComparison.Ordinal))
         {
             _testingUnlocked = true;
             MarkAllCategoryPanelsDirty();
@@ -4368,7 +4408,8 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        if (!password.Equals(AdminPassword, StringComparison.Ordinal))
+        var adminPassword = Environment.GetEnvironmentVariable("FOOTHOLD_CONFIG_MANAGER_ADMIN_PASSWORD");
+        if (string.IsNullOrEmpty(adminPassword) || !password.Equals(adminPassword, StringComparison.Ordinal))
         {
             MessageBox.Show(this, "Wrong admin password.", "Admin Designer", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
@@ -4572,6 +4613,7 @@ internal sealed partial class MainForm : Form
         split.Panel2.BackColor = MainBackground;
         split.Panel2.Controls.Add(new WeatherScrollHost(_formHost) { Name = "EditorScrollHost", Dock = DockStyle.Fill });
         InitializeEditorWidthGrip();
+        InitializeCategoryNavigationWidth(split);
         split.SizeChanged += (_, _) => ApplyCategoryNavigationWidth();
         return split;
     }
@@ -4754,18 +4796,16 @@ internal sealed partial class MainForm : Form
         }
 
         _configSearchSurface.Margin = new Padding(Zoomed(3), Zoomed(3), Zoomed(3), Zoomed(3));
-        _configSearchSurface.ApplyMetrics(
-            Zoomed(9),
-            Zoomed(15),
-            Zoomed(7),
-            Zoomed(30),
-            Zoomed(6));
+        ApplyConfigInputMetrics(_configSearchSurface);
 
         if (_leftRailLayout is not null)
         {
             SetRowHeight(_leftRailLayout, 0, ConfigSearchRowHeight());
         }
     }
+
+    private void ApplyConfigInputMetrics(ConfigSearchSurface surface) =>
+        surface.ApplyMetrics(Zoomed(9), Zoomed(15), Zoomed(7), Zoomed(30), Zoomed(6));
 
     private void DrawCategoryListItem(object? sender, DrawItemEventArgs args)
     {
@@ -5797,9 +5837,10 @@ internal sealed partial class MainForm : Form
             AutoScroll = true
         };
 
-        var setupButtonHeight = Math.Max(Zoomed(34), dialog.Font.Height + Zoomed(14));
+        var setupButtonHeight = Math.Max(Zoomed(40), dialog.Font.Height + Zoomed(16));
         void SizeSetupButton(Button button, int minimumWidth = 108)
         {
+            if (button.Text == "Back") { SizeNavigationButton(button, dialog.Font, _uiZoomPercent / 100f); return; }
             button.Font = dialog.Font;
             button.Width = Math.Max(Zoomed(minimumWidth), TextRenderer.MeasureText(button.Text, dialog.Font).Width + Zoomed(44));
             button.Height = setupButtonHeight;
@@ -5936,7 +5977,7 @@ internal sealed partial class MainForm : Form
             Text = "Next",
             Enabled = false
         };
-        var backButton = new Button
+        var backButton = new PreviewButton
         {
             Text = "Back",
             Visible = false
@@ -6032,6 +6073,7 @@ internal sealed partial class MainForm : Form
                 FileName = "*.miz",
                 InitialDirectory = GetExistingInitialDirectory(selectedSourcePath) ??
                                    GetExistingInitialDirectory((mizCandidates ??= FindFirstRunMizCandidates()).FirstOrDefault(candidate => !candidate.IsConfigFile)?.Path) ??
+                                   instanceCandidates.Select(candidate => Path.Combine(candidate.ProfilePath, "Missions")).FirstOrDefault(Directory.Exists) ??
                                    RuntimeSettings.GetBestInitialDirectory()
             };
             if (fileDialog.ShowDialog(dialog) != DialogResult.OK)
@@ -8473,8 +8515,9 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private void CopyCurrentConfigToInstances()
+    private async Task CopyCurrentConfigToInstances()
     {
+        if (_configLoadingOperation) return;
         if (_document is null)
         {
             MessageBox.Show(this, "Open the source config first.", "Copy To Instances", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -8487,8 +8530,9 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        var sourcePath = Path.GetFullPath(_document.Path);
-        var sourceConfigFileName = GetCurrentConfigFileName(_document);
+        var sourceDocument = _document;
+        var sourcePath = Path.GetFullPath(sourceDocument.Path);
+        var sourceConfigFileName = GetCurrentConfigFileName(sourceDocument);
         var targets = _settings.ServerProfiles
             .Where(profile => !ResolveMatchingCopyTargetPath(profile.ConfigPath, sourceConfigFileName).Equals(sourcePath, StringComparison.OrdinalIgnoreCase))
             .OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase)
@@ -8499,7 +8543,21 @@ internal sealed partial class MainForm : Form
             return;
         }
 
-        var plans = targets.Select(target => BuildCopyTargetPlan(_document, target, sourceConfigFileName)).ToList();
+        List<CopyTargetPlan>? plans = null;
+        await RunConfigLoadingAsync(async (progress, token) =>
+        {
+            var prepared = new List<CopyTargetPlan>();
+            foreach (var target in targets)
+            {
+                progress.Report(new LoadingProgress("Comparing " + target.Name + "…"));
+                await Task.Yield();
+                token.ThrowIfCancellationRequested();
+                prepared.Add(BuildCopyTargetPlan(sourceDocument, target, sourceConfigFileName));
+            }
+            token.ThrowIfCancellationRequested();
+            plans = prepared;
+        }, CancellationToken.None, "Preparing Copy To…", errorTitle: "Copy To Instances");
+        if (plans is null || IsDisposed || Disposing) return;
         var selectedPlans = PromptForCopyTargets(plans, sourcePath, GetConfigVariantLabel(sourceConfigFileName));
         if (selectedPlans is null || selectedPlans.Count == 0)
         {
@@ -8508,18 +8566,28 @@ internal sealed partial class MainForm : Form
 
         var copied = new List<string>();
         var failed = new List<string>();
-        foreach (var plan in selectedPlans.Where(CanApplyCopyPlan))
+        var finishedCopying = false;
+        await RunConfigLoadingAsync(async (progress, token) =>
         {
-            try
+            foreach (var plan in selectedPlans.Where(CanApplyCopyPlan))
             {
-                ApplyCopyPlan(sourcePath, plan);
-                copied.Add(plan.Profile.Name);
+                progress.Report(new LoadingProgress("Copying configuration to " + plan.Profile.Name + "…"));
+                await Task.Yield();
+                token.ThrowIfCancellationRequested();
+                try
+                {
+                    // Complete each individual file before checking cancellation for the next target.
+                    ApplyCopyPlan(sourcePath, plan);
+                    copied.Add(plan.Profile.Name);
+                }
+                catch (Exception ex)
+                {
+                    failed.Add(plan.Profile.Name + ": " + ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                failed.Add(plan.Profile.Name + ": " + ex.Message);
-            }
-        }
+            finishedCopying = true;
+        }, CancellationToken.None, "Copying configuration…", errorTitle: "Copy To Instances");
+        if (IsDisposed || Disposing) return;
 
         if (failed.Count > 0)
         {
@@ -8534,7 +8602,8 @@ internal sealed partial class MainForm : Form
                 MessageBoxIcon.Warning);
         }
 
-        SetStatus("Copied selected config to " + copied.Count.ToString(CultureInfo.InvariantCulture) + " instance(s). No backup created.");
+        SetStatus((finishedCopying ? "" : "Copy cancelled. ") + "Copied selected config to " + copied.Count.ToString(CultureInfo.InvariantCulture) + " instance(s)." +
+            (failed.Count > 0 ? " Failed: " + failed.Count.ToString(CultureInfo.InvariantCulture) + "." : "") + " No backup created.");
     }
 
     private static string ResolveMatchingCopyTargetPath(string profileConfigPath, string sourceConfigFileName)
@@ -8898,20 +8967,13 @@ internal sealed partial class MainForm : Form
         }
 
         var selectedChanges = plan.Changes.Where(change => plan.SelectedChangeIds.Contains(change.Id)).ToList();
-        if (plan.Changes.Count == 0)
+        if (plan.CopyWholeConfig && selectedChanges.Count == plan.Changes.Count)
         {
             CopyValidatedConfigFile(sourcePath, plan.TargetPath);
             return;
         }
-
         if (selectedChanges.Count == 0)
         {
-            return;
-        }
-
-        if (selectedChanges.Count == plan.Changes.Count)
-        {
-            CopyValidatedConfigFile(sourcePath, plan.TargetPath);
             return;
         }
 
@@ -9327,6 +9389,7 @@ internal sealed partial class MainForm : Form
                             var selectAll = !plan.IsTargetSelected ||
                                             (!plan.MissingTargetConfig && plan.SelectedChangeCount < plan.Changes.Count);
                             plan.IsTargetSelected = selectAll;
+                            plan.CopyWholeConfig = selectAll;
                             if (selectAll && !plan.MissingTargetConfig)
                             {
                                 plan.SelectedChangeIds.Clear();
@@ -9376,21 +9439,40 @@ internal sealed partial class MainForm : Form
                             Margin = new Padding(Zoomed(4), 0, 0, 0),
                             MinimumSize = new Size(detailsColumnWidth - Zoomed(4), DialogButtonHeight())
                         };
-                        detailsButton.Click += (_, _) =>
+                        detailsButton.Click += async (_, _) =>
                         {
                             if (plan.CanCreateMissingConfig)
                             {
+                                var created = false;
                                 try
                                 {
-                                    ApplyCopyPlan(sourcePath, plan);
+                                    if (_loadingScreen is null)
+                                    {
+                                        ApplyCopyPlan(sourcePath, plan);
+                                        created = true;
+                                    }
+                                    else
+                                    {
+                                        await _loadingScreen.RunAsync(dialog, "Creating config for " + plan.Profile.Name + "…", async (_, token) =>
+                                        {
+                                            await Task.Yield();
+                                            token.ThrowIfCancellationRequested();
+                                            ApplyCopyPlan(sourcePath, plan);
+                                            created = true;
+                                        }, CancellationToken.None);
+                                    }
+                                }
+                                catch (OperationCanceledException) { }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show(dialog, plan.Profile.Name + ": " + ex.Message, "Copy To Instances", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                }
+                                if (created)
+                                {
                                     plan.MarkCreated();
                                     changeGroupsByPlan.Remove(plan);
                                     SetStatus("Created " + sourceConfigLabel + " config for " + plan.Profile.Name + ".");
                                     RebuildRows();
-                                }
-                                catch (Exception ex)
-                                {
-                                    MessageBox.Show(dialog, plan.Profile.Name + ": " + ex.Message, "Copy To Instances", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 }
 
                                 return;
@@ -9459,6 +9541,7 @@ internal sealed partial class MainForm : Form
                             categoryCheck.Click += (_, _) =>
                             {
                                 var selectAll = groupChanges.Any(change => !plan.SelectedChangeIds.Contains(change.Id));
+                                plan.CopyWholeConfig = false;
                                 foreach (var change in groupChanges)
                                 {
                                     if (selectAll)
@@ -9541,6 +9624,7 @@ internal sealed partial class MainForm : Form
                                         return;
                                     }
 
+                                    plan.CopyWholeConfig = false;
                                     if (changeCheck.Checked)
                                     {
                                         plan.SelectedChangeIds.Add(change.Id);
@@ -9739,13 +9823,21 @@ internal sealed partial class MainForm : Form
 
         try
         {
-            foreach (var path in Directory.EnumerateFiles(directory, "*.miz", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
+            for (var current = new DirectoryInfo(directory); current is not null; current = current.Parent)
             {
-                if (Path.GetFileNameWithoutExtension(path).Contains("Foothold", StringComparison.OrdinalIgnoreCase))
-                {
-                    paths.Add(Path.GetFullPath(path));
-                }
+                if (current.Name.Equals(".dcssb", StringComparison.OrdinalIgnoreCase)) return;
             }
+
+            var candidates = new FileSystemEnumerable<string>(directory,
+                static (ref FileSystemEntry entry) => entry.ToFullPath(),
+                new EnumerationOptions { RecurseSubdirectories = recursive, AttributesToSkip = 0, IgnoreInaccessible = false })
+            {
+                ShouldRecursePredicate = static (ref FileSystemEntry entry) => !entry.FileName.Equals(".dcssb", StringComparison.OrdinalIgnoreCase),
+                ShouldIncludePredicate = static (ref FileSystemEntry entry) => !entry.IsDirectory &&
+                    Path.GetExtension(entry.FileName).Equals(".miz", StringComparison.OrdinalIgnoreCase) &&
+                    Path.GetFileNameWithoutExtension(entry.FileName).Contains("Foothold", StringComparison.OrdinalIgnoreCase)
+            };
+            foreach (var path in candidates) paths.Add(Path.GetFullPath(path));
         }
         catch
         {
@@ -9928,16 +10020,20 @@ internal sealed partial class MainForm : Form
     private bool SetCategoryListItems(IReadOnlyList<string> names, string? preferredSelection)
     {
         var restoredPreferredSelection = false;
+        var replaceItems = !CategoryListMatches(names);
         _loadingCategories = true;
         try
         {
-            _categoryList.BeginUpdate();
+            if (replaceItems) _categoryList.BeginUpdate();
             try
             {
-                _categoryList.Items.Clear();
-                foreach (var name in names)
+                if (replaceItems)
                 {
-                    _categoryList.Items.Add(new CategoryListItem(name, GetCategoryDisplayName(name)));
+                    _categoryList.Items.Clear();
+                    foreach (var name in names)
+                    {
+                        _categoryList.Items.Add(new CategoryListItem(name, GetCategoryDisplayName(name)));
+                    }
                 }
 
                 var selectedIndex = names.Count > 0 ? 0 : -1;
@@ -9957,11 +10053,17 @@ internal sealed partial class MainForm : Form
                     }
                 }
 
+                if (!replaceItems && names.Count > 0)
+                {
+                    // Match a fresh list's scroll/selection behavior without replacing its items.
+                    if (_categoryList.TopIndex != 0) _categoryList.TopIndex = 0;
+                    if (selectedIndex > 0 && _categoryList.SelectedIndex == selectedIndex) _categoryList.SelectedIndex = -1;
+                }
                 _categoryList.SelectedIndex = selectedIndex;
             }
             finally
             {
-                _categoryList.EndUpdate();
+                if (replaceItems) _categoryList.EndUpdate();
             }
         }
         finally
@@ -10982,6 +11084,9 @@ internal sealed partial class MainForm : Form
 
     private void RenderCategory(string categoryName, bool force, bool preparing)
     {
+        using var probe = categoryName == WarehouseWeaponCategory && WarehouseLayoutProbe.Enabled
+            ? WarehouseLayoutProbe.Enter("open aircraft-weapons", $"force={force} preparing={preparing} host={_formHost.Width}x{_formHost.Height} zoom={_uiZoomPercent}")
+            : null;
         if (!force &&
             string.Equals(_renderedCategoryName, categoryName, StringComparison.Ordinal) &&
             !_dirtyCategoryPanels.Contains(categoryName))
@@ -11009,6 +11114,7 @@ internal sealed partial class MainForm : Form
 
         void FinishRender()
         {
+            using var presentation = categoryName == WarehouseWeaponCategory ? WarehouseLayoutProbe.Enter("apply aircraft-weapons theme") : null;
             _loadingForm = false;
             ApplyThemeToControl(_formHost, restyleButtons: false);
             WireBackgroundDehighlightHandlers(_formHost);
@@ -11086,10 +11192,17 @@ internal sealed partial class MainForm : Form
             }
             else
             {
+                if (categoryName == WarehouseWeaponCategory &&
+                    BuildWarehouseWeaponLocationsEditor() is { } warehouseLocations)
+                {
+                    warehouseLocations.Name = WarehouseWeaponEditorName;
+                    panel.Controls.Add(warehouseLocations, 0, 1);
+                }
                 foreach (var item in items)
                 {
                     AddCategoryItemEditor(panel, categoryName, item);
                 }
+                using var sections = categoryName == WarehouseWeaponCategory ? WarehouseLayoutProbe.Enter("arrange aircraft-weapons sections") : null;
                 ArrangeEditorSections(panel, categoryName, items);
             }
         }
@@ -11119,6 +11232,7 @@ internal sealed partial class MainForm : Form
         }
         finally
         {
+            using var attach = categoryName == WarehouseWeaponCategory ? WarehouseLayoutProbe.Enter("attach aircraft-weapons page") : null;
             EditorSection.RunLayoutPass(() => _formHost.ResumeLayout(performLayout: true));
         }
 
@@ -11131,6 +11245,7 @@ internal sealed partial class MainForm : Form
         finally
         {
             foreach (var layout in themeLayouts.Reverse()) layout.ResumeLayout(false);
+            using var finishLayout = categoryName == WarehouseWeaponCategory ? WarehouseLayoutProbe.Enter("finish aircraft-weapons layout") : null;
             EditorSection.RunLayoutPass(_formHost.PerformLayout);
         }
         if (preparing)
@@ -11960,7 +12075,6 @@ internal sealed partial class MainForm : Form
     private Control BuildEntryEditor(ConfigEntry entry)
     {
         var isNewImportEntry = IsImportedNewEntryHighlighted(entry);
-        var headerBackColor = isNewImportEntry ? GetNewHighlightBackColor() : MainBackground;
         var group = new EditorLayoutPanel
         {
             AutoSize = true,
@@ -11979,8 +12093,7 @@ internal sealed partial class MainForm : Form
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = true,
             Padding = GetTableHeaderPadding(),
-            BackColor = headerBackColor,
-            Tag = isNewImportEntry ? ImportedNewHighlightTag : null
+            BackColor = MainBackground
         };
 
         var label = new Label
@@ -11990,8 +12103,7 @@ internal sealed partial class MainForm : Form
             TextAlign = ContentAlignment.MiddleLeft,
             Margin = GetTableHeaderLabelMargin(),
             ForeColor = PrimaryTextColor,
-            BackColor = headerBackColor,
-            Tag = isNewImportEntry ? ImportedNewHighlightTag : null
+            BackColor = MainBackground
         };
         SetHelp(label, entry);
         header.Controls.Add(label);
@@ -13113,6 +13225,7 @@ internal sealed partial class MainForm : Form
             item.Entry.ValueText = item.NewValue;
         }
 
+        var entries = changedRows.Select(item => item.Entry).ToArray();
         SetUndoAction(
             "update Era template rows for " + selectedEra,
             () =>
@@ -13122,17 +13235,21 @@ internal sealed partial class MainForm : Form
                     item.Entry.ValueText = item.OldValue;
                 }
             },
-            () =>
-            {
-                RefreshVisibleTableRows(changedRows.Select(item => item.Entry));
-                RefreshDependentEditorEntries(changedRows.Select(item => item.Entry));
-            });
-        RefreshVisibleTableRows(changedRows.Select(item => item.Entry));
-        RefreshDependentEditorEntries(changedRows.Select(item => item.Entry));
+            () => RefreshEraTemplateRows(entries, sourceEntry.DisplayName));
+        RefreshEraTemplateRows(entries, sourceEntry.DisplayName);
 
-        var rowCount = changedRows.Select(item => item.Entry.DisplayKey).Distinct(StringComparer.Ordinal).Count();
+        var rowCount = entries.Select(entry => entry.DisplayKey).Distinct(StringComparer.Ordinal).Count();
         return rowCount.ToString(CultureInfo.InvariantCulture) + " Era template row" +
                (rowCount == 1 ? " updated." : "s updated.");
+    }
+
+    private void RefreshEraTemplateRows(IReadOnlyList<ConfigEntry> rows, string cause)
+    {
+        using var transition = BeginOptionsTransition(cause);
+        _optionsEraTemplateRows.UnionWith(rows);
+        _optionsAffected!.UnionWith(rows.Select(row => row.EffectiveCategory));
+        RefreshVisibleTableRows(rows);
+        RefreshDependentEditorEntries(rows);
     }
 
     private bool PromptForUntickRows(string prompt, IReadOnlyList<(ConfigEntry Entry, string OldValue)> rows)
@@ -13624,8 +13741,9 @@ internal sealed partial class MainForm : Form
         };
     }
 
-    private Control BuildStringListEditor(ConfigStringListTable table)
+    private Control BuildStringListEditor(ConfigStringListTable table, string categoryName)
     {
+        if (IsEquipmentList(table.Key)) return BuildEquipmentChecklist(table, categoryName);
         return IsBucketStringListEditor(table)
             ? BuildStringListBucketEditor(table)
             : BuildSimpleStringListEditor(table);
@@ -13794,9 +13912,10 @@ internal sealed partial class MainForm : Form
         ConfigureFillColumn(grid.Columns["value"], 540);
         ApplyCompactTableLayout(group, grid);
         group.Controls.Add(grid, 0, 2);
-        group.Controls.Add(MakeTableActionPanel(true,
+        var actions = MakeTableActionPanel(true,
             MakeDesignerButton("Add item", () => AddSimpleStringListItemRow(table, grid), TableActionButtonWidth),
-            MakeDesignerButton("Remove selected", () => RemoveSimpleStringListItemRow(table, grid), TableActionButtonWidth)), 0, 1);
+            MakeDesignerButton("Remove selected", () => RemoveSimpleStringListItemRow(table, grid), TableActionButtonWidth));
+        group.Controls.Add(actions, 0, 1);
 
         BindManagedStringListRefresh(table, group, values => RefreshSimpleStringListGrid(grid, table, values));
         RefreshSimpleStringListGrid(grid, table);
@@ -13866,6 +13985,7 @@ internal sealed partial class MainForm : Form
 
     private void ApplyStringListBucketLayout(TableLayoutPanel group, DataGridView activeGrid, DataGridView inactiveGrid)
     {
+        if (EquipmentChecklists.TryGetValue(activeGrid, out _)) return;
         group.Width = GetStringListBucketEditorWidth(group);
         group.Height = Math.Max(
             GetTableActionMinimumHeight(group),
@@ -14015,14 +14135,14 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private void AddStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid)
+    private void AddStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid, string? suppliedValue = null)
     {
         if (_document is null || activeGrid is null || inactiveGrid is null)
         {
             return;
         }
 
-        var value = PromptForText("Add list item", "Value");
+        var value = suppliedValue ?? PromptForText("Add list item", "Value");
         if (string.IsNullOrWhiteSpace(value))
         {
             return;
@@ -14087,8 +14207,7 @@ internal sealed partial class MainForm : Form
         if (_document is null ||
             activeGrid is null ||
             inactiveGrid is null ||
-            activeGrid.CurrentRow?.Tag is not StringListBucketItem bucket ||
-            bucket.Item is null)
+            GetBucketItem(activeGrid, activeGrid.CurrentCellAddress.Y) is not { IsActive: true, Item: not null } bucket)
         {
             return;
         }
@@ -14149,7 +14268,7 @@ internal sealed partial class MainForm : Form
         if (_document is null ||
             activeGrid is null ||
             inactiveGrid is null ||
-            inactiveGrid.CurrentRow?.Tag is not StringListBucketItem bucket)
+            GetBucketItem(inactiveGrid, inactiveGrid.CurrentCellAddress.Y) is not { IsActive: false } bucket)
         {
             return;
         }
@@ -14218,9 +14337,10 @@ internal sealed partial class MainForm : Form
         }
 
         var removeInactive = ReferenceEquals(selectedGrid, inactiveGrid) || inactiveGrid.ContainsFocus;
+        var inactiveItem = GetBucketItem(inactiveGrid, inactiveGrid.CurrentCellAddress.Y);
         var bucket = removeInactive
-            ? inactiveGrid.CurrentRow?.Tag as StringListBucketItem
-            : (activeGrid.CurrentRow?.Tag as StringListBucketItem) ?? inactiveGrid.CurrentRow?.Tag as StringListBucketItem;
+            ? inactiveItem
+            : GetBucketItem(activeGrid, activeGrid.CurrentCellAddress.Y) ?? inactiveItem;
         if (bucket is null)
         {
             return;
@@ -14710,8 +14830,15 @@ internal sealed partial class MainForm : Form
             .ToList();
         var inactiveItems = GetInactiveStringListBucketItems(table, managed);
 
-        SyncGridRows(activeGrid, activeItems, AddStringListBucketGridRow, UpdateStringListBucketGridRow);
-        SyncGridRows(inactiveGrid, inactiveItems, AddStringListBucketGridRow, UpdateStringListBucketGridRow);
+        if (EquipmentChecklists.TryGetValue(activeGrid, out var checklist))
+        {
+            checklist.SetItems(activeItems.Concat(inactiveItems));
+        }
+        else
+        {
+            SyncGridRows(activeGrid, activeItems, AddStringListBucketGridRow, UpdateStringListBucketGridRow);
+            SyncGridRows(inactiveGrid, inactiveItems, AddStringListBucketGridRow, UpdateStringListBucketGridRow);
+        }
 
         if (activeGrid.Parent?.Tag is StringListRequirementBinding requirements) RefreshRequiredValueBinding(requirements, facts: preparedFacts);
 
@@ -14841,15 +14968,13 @@ internal sealed partial class MainForm : Form
 
     private static void SelectBucketRowByValue(DataGridView grid, string value)
     {
-        foreach (DataGridViewRow row in grid.Rows)
+        for (var index = 0; index < grid.RowCount; index++)
         {
-            if (row.Tag is StringListBucketItem item && item.Value.Equals(value, StringComparison.Ordinal))
-            {
-                grid.ClearSelection();
-                row.Selected = true;
-                grid.CurrentCell = row.Cells[0];
-                return;
-            }
+            if (!string.Equals(GetBucketItem(grid, index)?.Value, value, StringComparison.Ordinal)) continue;
+            grid.ClearSelection();
+            grid.CurrentCell = grid.Rows[index].Cells[0];
+            grid.Rows[index].Selected = true;
+            return;
         }
     }
 
@@ -15860,6 +15985,8 @@ internal sealed partial class MainForm : Form
             return 0;
         }
 
+        if (grid.VirtualMode) return rowCount * Math.Max(1, grid.RowTemplate.Height);
+
         var rows = grid.Rows
             .Cast<DataGridViewRow>()
             .Where(row => row.Visible)
@@ -15878,6 +16005,8 @@ internal sealed partial class MainForm : Form
 
     private static int GetAverageRowHeight(DataGridView grid)
     {
+        if (grid.VirtualMode) return Math.Max(1, grid.RowTemplate.Height);
+
         var rows = grid.Rows
             .Cast<DataGridViewRow>()
             .Where(row => row.Visible)
@@ -17520,13 +17649,13 @@ internal sealed partial class MainForm : Form
         };
         button.FlatAppearance.BorderColor = BorderColor;
         _toolTip.SetToolTip(button, fullHelp);
-        button.MouseEnter += (_, _) => _toolTip.Show(fullHelp, button, button.Width + 6, 0, 30000);
-        button.MouseLeave += (_, _) => _toolTip.Hide(button);
+        button.MouseEnter += (_, _) => _toolTip.ShowFor(button, fullHelp);
+        button.MouseLeave += (_, _) => _toolTip.HideFor(button);
         if (!string.IsNullOrWhiteSpace(metadataKey) && _adminUnlocked && !AppMode.IsExportedUserBuild)
         {
             button.Click += (_, _) =>
             {
-                _toolTip.Hide(button);
+                _toolTip.HideFor(button);
                 EditHelpMetadata(metadataKey, title, helpText);
             };
         }
@@ -22225,6 +22354,8 @@ internal sealed partial class MainForm : Form
         if (currentDocument.StringListTables.Any(table => table.Key == "AIOnlyAircraft" && table.ManagedTargetKeys.Length == 0))
             newDocument.AppendTableBlockFrom(currentDocument, "AIOnlyAircraft");
         var preview = new MizMergePreview();
+        if (newDocument.HasWarehouseWeaponLocationTables() && !currentDocument.HasWarehouseWeaponLocationTables())
+            preview.NewEditorMarkers.Add(WarehouseWeaponEditorName, new(WarehouseWeaponCategory, WarehouseWeaponEditorName));
         ApplyStringListInstallPolicies(currentDocument, newDocument, previousCleanDocument, preview);
         ApplyNonStringKeepTableInstallPolicies(currentDocument, newDocument, preview);
 
@@ -24679,6 +24810,10 @@ internal sealed partial class MainForm : Form
             if (duplicateRepair is null)
             {
                 RefreshCurrentView(invalidateCachedPanels: false);
+                foreach (var grid in EnumerateChildControls<SmoothDataGridView>(_formHost))
+                {
+                    if (grid.EquipmentRowChange is not null) grid.Invalidate();
+                }
             }
             else
             {

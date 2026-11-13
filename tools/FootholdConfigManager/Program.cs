@@ -6,6 +6,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         if (ManagerSelfUpdater.TryRunHelper(args, out var updateExitCode)) return updateExitCode;
+        if (ManagerSelfUpdater.TryCompleteLegacyHandoff(args, out var migrationExitCode)) return migrationExitCode;
         try
         {
             ExperimentBootstrap.Initialize(args.Any(arg => arg.Equals("--normal-data", StringComparison.OrdinalIgnoreCase)));
@@ -108,6 +109,7 @@ internal static class Program
             }
             InstallCrashLogging();
             ApplicationConfiguration.Initialize();
+            using var warehouseProbe = WarehouseLayoutProbe.StartIfEnabled();
             var picture = SplashPictureSequence.SelectAndAdvance(Path.Combine(RuntimeSettings.SettingsDirectory, "splash-next.txt"));
             using var loading = new LoadingScreenController(picture);
             using var startup = new ManagerStartupContext(instance, loading, requestAdminOnLoad);

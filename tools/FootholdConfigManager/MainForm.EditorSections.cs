@@ -107,8 +107,11 @@ internal sealed partial class MainForm
 
         var gap = Zoomed(15);
         var minimum = Math.Max(0, panel.MinimumSize.Width - panel.Padding.Horizontal);
+        // Keep the editor width fixed while the clipped native scrollbar appears or disappears.
+        var scrollInset = ReferenceEquals(panel.Parent, _formHost) && _formHost.Parent is WeatherScrollHost scrollHost
+            ? _formHost.ClientSize.Width - scrollHost.ClientSize.Width : 0;
         var viewport = ReferenceEquals(panel.Parent, _formHost)
-            ? _formHost.ClientSize.Width - _formHost.Padding.Horizontal : panel.ClientSize.Width;
+            ? _formHost.ClientSize.Width - _formHost.Padding.Horizontal - scrollInset : panel.ClientSize.Width;
         var inset = Math.Max(Zoomed(60), (int)Math.Round(viewport * 0.12));
         var available = Math.Max(0, viewport - inset * 2);
         if (_settings.EditorContentWidth > 0)
@@ -119,9 +122,10 @@ internal sealed partial class MainForm
         // Keep the accepted reference size per column; extra room changes layout, not typography.
         var columns = Math.Clamp((available + gap) / (Zoomed(1150) + gap), 1, 3);
         var padding = new Padding(inset, panel.Padding.Top, inset, panel.Padding.Bottom);
+        var maximum = new Size(Math.Max(minimum + padding.Horizontal, viewport), 0);
         if (!force && panel.ColumnCount == columns)
         {
-            if (panel.Padding != padding)
+            if (panel.Padding != padding || panel.MaximumSize != maximum)
             {
                 EditorSection.RunLayoutPass(() =>
                 {
@@ -131,6 +135,7 @@ internal sealed partial class MainForm
                     panel.SuspendLayout();
                     try
                     {
+                        panel.MaximumSize = maximum;
                         panel.Padding = padding;
                         panel.MinimumSize = new Size(minimum + padding.Horizontal, panel.MinimumSize.Height);
                         if (ReferenceEquals(owner, _formHost))
@@ -151,13 +156,14 @@ internal sealed partial class MainForm
                 });
             }
             PositionEditorWidthGrip(panel);
-            ReconcileEditorViewportAfterLayout(panel, viewport);
+            ReconcileEditorViewportAfterLayout(panel, viewport + scrollInset);
             return;
         }
         _layingOutEditorContent = true;
         panel.SuspendLayout();
         try
         {
+            panel.MaximumSize = maximum;
             panel.Padding = padding;
             panel.MinimumSize = new Size(minimum + padding.Horizontal, panel.MinimumSize.Height);
             panel.ColumnCount = columns;
@@ -165,34 +171,47 @@ internal sealed partial class MainForm
             for (var column = 0; column < columns; column++)
                 panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / columns));
             var row = 0;
-            foreach (var child in panel.Controls.Cast<Control>().Where(child => child is not EditorSection))
+            var warehouse = panel.Controls[WarehouseWeaponEditorName];
+            foreach (var child in panel.Controls.Cast<Control>().Where(child => child is not EditorSection && child != warehouse))
             {
                 panel.SetCellPosition(child, new TableLayoutPanelCellPosition(0, row++));
                 panel.SetColumnSpan(child, columns);
             }
             var sections = panel.Controls.OfType<EditorSection>().ToArray();
+            var warehouseAfter = warehouse is null ? null :
+                sections.FirstOrDefault(section => section.Key == "ForbiddWeaponsInAllEra");
+            var tabIndex = 0;
             bool CanShareRow(EditorSection section)
             {
-                if (!section.Collapsible || section.Body.MinimumSize.Width > available / columns) return false;
+                if (ReferenceEquals(section, warehouseAfter) || !section.Collapsible ||
+                    section.Body.MinimumSize.Width > available / columns) return false;
                 var grids = EnumerateChildControls<DataGridView>(section.Body).Take(2).ToArray();
                 return grids.Length == 1 && grids[0].Columns.GetColumnCount(DataGridViewElementStates.Visible) <= 2;
             }
             void Place(EditorSection section, int column, int span)
             {
+                section.TabIndex = tabIndex++;
                 panel.SetCellPosition(section, new TableLayoutPanelCellPosition(column, row));
                 panel.SetColumnSpan(section, span);
                 section.Margin = new Padding(0, 0, column + span < columns ? gap : 0, gap);
             }
+            void PlaceWarehouse()
+            {
+                if (warehouse is null) return;
+                warehouse.TabIndex = tabIndex++;
+                panel.SetCellPosition(warehouse, new TableLayoutPanelCellPosition(0, row++));
+                panel.SetColumnSpan(warehouse, columns);
+            }
             for (var index = 0; index < sections.Length;)
             {
                 var section = sections[index];
-                section.TabIndex = index;
                 if (columns == 1 || !CanShareRow(section))
                 {
                     Place(section, 0, columns);
                     if (!section.Collapsible) section.ArrangeSettingsColumns(columns);
                     index++;
                     row++;
+                    if (ReferenceEquals(section, warehouseAfter)) PlaceWarehouse();
                     continue;
                 }
                 var end = index + 1;
@@ -204,13 +223,13 @@ internal sealed partial class MainForm
                     for (var slot = 0; slot < count; slot++)
                     {
                         var span = (columns - column) / (count - slot);
-                        sections[index].TabIndex = index;
                         Place(sections[index++], column, span);
                         column += span;
                     }
                     row++;
                 }
             }
+            if (warehouseAfter is null) PlaceWarehouse();
             panel.RowCount = row;
             if (ReferenceEquals(panel.Parent, _formHost))
                 _formHost.AutoScrollMinSize = new Size(panel.MinimumSize.Width, 0);
@@ -221,7 +240,7 @@ internal sealed partial class MainForm
             finally { _layingOutEditorContent = false; }
         }
         PositionEditorWidthGrip(panel);
-        ReconcileEditorViewportAfterLayout(panel, viewport);
+        ReconcileEditorViewportAfterLayout(panel, viewport + scrollInset);
     }
     private void ReconcileEditorViewportAfterLayout(TableLayoutPanel panel, int viewport)
     {
@@ -277,7 +296,7 @@ internal sealed partial class MainForm
     {
         foreach (var grid in EnumerateChildControls<DataGridView>(panel).Cast<SmoothDataGridView>())
         {
-            var key = (string)grid.Tag!;
+            if (grid.Tag is not string key) continue;
             var defaults = grid.Columns.Cast<DataGridViewColumn>()
                 .ToDictionary(column => column.Name, column => (column.AutoSizeMode, column.Width, column.FillWeight), StringComparer.Ordinal);
             var choices = grid.Columns.OfType<DataGridViewComboBoxColumn>().ToArray();
@@ -395,7 +414,12 @@ internal sealed partial class MainForm
     private sealed class EditorLayoutPanel : TableLayoutPanel
     {
         private int _layoutGeneration;
-        protected override void OnLayout(LayoutEventArgs e) { _layoutGeneration++; base.OnLayout(e); }
+        protected override void OnLayout(LayoutEventArgs e)
+        {
+            WarehouseLayoutProbe.Count(WarehouseLayoutProbe.Counter.EditorLayout);
+            _layoutGeneration++;
+            base.OnLayout(e);
+        }
         protected override void OnSizeChanged(EventArgs e) { _layoutGeneration++; base.OnSizeChanged(e); }
         protected override void OnFontChanged(EventArgs e) { _layoutGeneration++; base.OnFontChanged(e); }
         protected override void OnPaddingChanged(EventArgs e) { _layoutGeneration++; base.OnPaddingChanged(e); }
@@ -403,6 +427,7 @@ internal sealed partial class MainForm
         protected override void OnControlRemoved(ControlEventArgs e) { _layoutGeneration++; base.OnControlRemoved(e); }
         public override Size GetPreferredSize(Size proposedSize)
         {
+            WarehouseLayoutProbe.Count(WarehouseLayoutProbe.Counter.EditorMeasure);
             var measurements = EditorSection._expansionMeasurements;
             var generation = _layoutGeneration;
             var key = ((TableLayoutPanel)this, proposedSize, ClientSize.Width, false, generation, MinimumSize, MaximumSize);
@@ -613,6 +638,7 @@ internal sealed partial class MainForm
 
         public override Size GetPreferredSize(Size proposedSize)
         {
+            WarehouseLayoutProbe.Count(WarehouseLayoutProbe.Counter.SectionMeasure);
             var measurements = _expansionMeasurements;
             var key = ((TableLayoutPanel)this, proposedSize, ClientSize.Width, _expanded, 0, MinimumSize, MaximumSize);
             if (measurements is not null && measurements.TryGetValue(key, out var previous)) return previous;
@@ -664,6 +690,7 @@ internal sealed partial class MainForm
         if (panel.Tag is not Dictionary<string, OptionsMarkerTarget> targets) return;
         var existing = panel.Controls.OfType<EditorSection>().ToDictionary(section => section.Key, StringComparer.Ordinal);
         var retained = new List<EditorSection>();
+        var firstSectionRow = panel.Controls[WarehouseWeaponEditorName] is null ? 1 : 2;
         EditorSection? scalarSection = null;
         var scalarRow = 0;
         var revealNewItems = HasUnseenImportedNewEntries(category);
@@ -682,6 +709,7 @@ internal sealed partial class MainForm
             var key = grid ? item.Key : scalarSection?.Key ?? "settings:" + item.Key;
             if (grid || scalarSection is null)
             {
+                var emptyWeaponCaps = item.StringListTable is { Key: "WarehouseWeaponCaps", Items.Count: 0 };
                 if (!existing.TryGetValue(key, out var section))
                 {
                     var title = grid ? target.Title.Text : missionHeading ?? (category.Equals("CSAR", StringComparison.OrdinalIgnoreCase) ? "Rescue settings"
@@ -690,17 +718,18 @@ internal sealed partial class MainForm
                         : retained.Count == 0 ? "General settings" : "Additional settings");
                     section = new EditorSection(key, title, grid, Zoomed(15), grid ? null :
                         new Font(Font.FontFamily, (11.25F + EditorFontIncreasePoints) * _uiZoomPercent / 100F, FontStyle.Bold));
+                    if (emptyWeaponCaps) section.Expanded = false;
                 }
                 panel.Controls.Add(section);
-                panel.SetRow(section, retained.Count + 1);
-                panel.Controls.SetChildIndex(section, retained.Count + 1);
+                panel.SetRow(section, retained.Count + firstSectionRow);
+                panel.Controls.SetChildIndex(section, retained.Count + firstSectionRow);
                 retained.Add(section);
                 scalarSection = grid ? null : section;
                 scalarRow = 0;
                 if (grid)
                 {
                     section.AttachEditor(target.Editor, target.Header);
-                    if (revealNewItems) section.Expanded = true;
+                    if (revealNewItems && !emptyWeaponCaps) section.Expanded = true;
                     continue;
                 }
             }
@@ -713,7 +742,7 @@ internal sealed partial class MainForm
         }
         foreach (var section in existing.Values.Where(section => !retained.Contains(section)))
             ControlTreeDisposer.Dispose(section, _toolTip);
-        panel.RowCount = retained.Count + 1;
+        panel.RowCount = retained.Count + firstSectionRow;
         var minimum = retained.Select(section => section.Body.MinimumSize.Width + panel.Padding.Horizontal).DefaultIfEmpty(0).Max();
         panel.MinimumSize = new Size(minimum, 0);
         if (ReferenceEquals(panel.Parent, _formHost)) _formHost.AutoScrollMinSize = new Size(minimum, 0);

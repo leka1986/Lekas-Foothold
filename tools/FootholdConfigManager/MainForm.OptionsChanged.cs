@@ -7,7 +7,7 @@ namespace FootholdConfigManager;
 internal sealed partial class MainForm
 {
     // Review state belongs to the open document, never to cached/disposable controls.
-    private sealed record OptionRowState(bool Visible, string Policy);
+    private sealed record OptionRowState(bool Visible, string Policy, bool? EraTemplateEnabled = null);
     private sealed record OptionBlockState(string Key, string Label, bool Locked, string Reason,
         Dictionary<ConfigEntry, OptionRowState> Rows, Dictionary<string, AutomaticAircraftChange>? Aircraft = null);
     private sealed record OptionNotice(OptionBlockState Block, string Status, Dictionary<string, string> Causes,
@@ -28,6 +28,7 @@ internal sealed partial class MainForm
     private readonly Dictionary<string, Dictionary<string, OptionBlockState>> _optionsCurrent = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<OptionNotice>> _optionsPending = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<ConfigEntry> _optionsKnownEntries = new();
+    private readonly HashSet<ConfigEntry> _optionsEraTemplateRows = new();
     private string? _optionsViewedCategory;
     private string _optionsCause = "Config conditions changed";
     private int _optionsTransitionDepth;
@@ -134,6 +135,7 @@ internal sealed partial class MainForm
         _optionsPending.Clear();
         _tableChoiceAttention.Clear();
         _optionsKnownEntries.Clear();
+        _optionsEraTemplateRows.Clear();
         _automaticAircraftChanges.Clear();
         _requiredUseReview = null;
         _optionsViewedCategory = null;
@@ -181,7 +183,11 @@ internal sealed partial class MainForm
                             target is null || !IsLinkedTargetVisible(target) ? "hidden" :
                             ShouldLockTableEditor(target.ParentKey, out _) || ShouldLockEntryEditor(target, out _) ? "locked" : "editable"));
                     }
-                    rows[entry] = new(visible, policy);
+                    bool? eraTemplateEnabled = entry.Kind == ConfigValueKind.Boolean &&
+                        !string.IsNullOrWhiteSpace(entry.ParentGuiConfirmSetRowsByEra)
+                        ? entry.ValueText.Equals("true", StringComparison.OrdinalIgnoreCase)
+                        : null;
+                    rows[entry] = new(visible, policy, eraTemplateEnabled);
                 }
             }
             blocks[item.Key] = new(item.Key, item.Label, locked, reason, rows, ReadAutomaticAircraftValues(item.StringListTable));
@@ -235,6 +241,12 @@ internal sealed partial class MainForm
                     {
                         if (!_optionsKnownEntries.Contains(row.Key)) { before.Rows[row.Key] = row.Value; continue; }
                         oldRow = new(false, "");
+                    }
+                    if (_optionsEraTemplateRows.Contains(row.Key) && row.Value.EraTemplateEnabled != oldRow.EraTemplateEnabled)
+                    {
+                        changedRows.Add(row.Key);
+                        RememberCause(row.Key.DisplayKey + "@era", oldNotice?.Block.Rows.GetValueOrDefault(row.Key)?.EraTemplateEnabled
+                            == row.Value.EraTemplateEnabled);
                     }
                     if (!row.Value.Visible)
                     {
@@ -296,6 +308,7 @@ internal sealed partial class MainForm
         {
             if (_optionsCurrent.TryGetValue(previous, out var current)) _optionsReviewed[previous] = current;
             _optionsPending.Remove(previous);
+            _optionsEraTemplateRows.RemoveWhere(entry => string.Equals(entry.EffectiveCategory, previous, StringComparison.OrdinalIgnoreCase));
         }
         _optionsViewedCategory = category;
         _categoryList.Invalidate();
@@ -438,7 +451,7 @@ internal sealed partial class MainForm
     private void PaintOptionsRowMarker(object? sender, DataGridViewRowPostPaintEventArgs args)
     {
         if (sender is not DataGridView grid) return;
-        if (grid.Parent?.Tag is StringListRequirementBinding aircraft && grid.Rows[args.RowIndex].Tag is StringListBucketItem item)
+        if (grid.Parent?.Tag is StringListRequirementBinding aircraft && GetBucketItem(grid, args.RowIndex) is { IsActive: true } item)
         {
             if (AutomaticAircraftHighlights(aircraft.Table)?.ContainsKey(item.Value) != true) return;
             using var accent = new SolidBrush(BrandColor);

@@ -21,7 +21,7 @@ internal sealed partial class WeatherWindow
     {
         using var dialog = new OpenFileDialog
         {
-            Title = title, Filter = "DCS mission (*.miz)|*.miz", CheckFileExists = true,
+            Title = title, Filter = "DCS missions and originals (*.miz;*.miz.orig)|*.miz;*.miz.orig", CheckFileExists = true,
             InitialDirectory = _mizInitialDirectory?.Invoke() ?? RuntimeSettings.GetBestInitialDirectory()
         };
         if (dialog.ShowDialog(DialogOwner) != DialogResult.OK) return null;

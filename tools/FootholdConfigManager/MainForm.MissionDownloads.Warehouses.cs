@@ -10,6 +10,7 @@ internal sealed partial class MainForm
     private readonly Dictionary<long, Label> _missionWarehouseSourceDetails = new();
     private readonly Dictionary<long, string> _missionWarehousePopulatedFolders = new();
     private readonly Dictionary<string, IReadOnlyList<MissionWarehouseSource>> _missionWarehouseCatalogs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTime> _missionWarehouseCatalogTimes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, IReadOnlyList<MissionWarehouseSource>>> _missionWarehouseMatches = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<long, string?>> _missionWarehouseSelections = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<MissionWarehouseSource> _missionWarehouseCatalog = [];
@@ -24,7 +25,7 @@ internal sealed partial class MainForm
         var help = MakeHelpButton(_missionCopyWarehouses.Text, warehouseHelp);
         help.Name = "MissionDownloadWarehouseHelp";
         help.AccessibleName = "Help for copying warehouses";
-        help.Click += (_, _) => _toolTip.Show(warehouseHelp, help, help.Width + 6, 0, 30000);
+        help.Click += (_, _) => _toolTip.ShowFor(help, warehouseHelp);
         var option = new FlowLayoutPanel { Name = "MissionDownloadWarehouseOption", AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink, Dock = DockStyle.Top };
         option.Controls.AddRange([_missionCopyWarehouses, help]);
@@ -66,20 +67,28 @@ internal sealed partial class MainForm
 
     private Task EnsureMissionWarehouseSourcesAsync()
     {
-        if (_missionCopyWarehouses?.Checked != true || _missionZipOnly?.Checked == true
+        if (_missionDownloadRelease is null || _missionZipOnly?.Checked == true
             || _missionDownloadsRendering || IsDisposed || Disposing) return Task.CompletedTask;
         if (_missionWarehouseDiscovery is { IsCompleted: false }) return AwaitDiscoveryAsync(_missionWarehouseDiscovery);
         var profile = (_missionDestination?.SelectedItem as InstanceItem)?.Profile;
         var folder = profile is null ? null : RuntimeSettings.ResolveMissionsDirectory(profile);
         if (folder is null) { RefreshMissionDownloadSelection(); return Task.CompletedTask; }
         folder = Path.GetFullPath(folder);
-        if (_missionWarehouseCatalogs.TryGetValue(folder, out var cached))
+        if (_missionWarehouseCatalogs.TryGetValue(folder, out var cached)
+            && _missionWarehouseCatalogTimes.TryGetValue(folder, out var stamp))
         {
-            if (!string.Equals(_missionWarehouseFolder, folder, StringComparison.OrdinalIgnoreCase))
-                UseMissionWarehouseCatalog(folder, cached);
-            return Task.CompletedTask;
+            var fresh = false;
+            try { fresh = stamp == Directory.GetLastWriteTimeUtc(folder); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+            if (fresh)
+            {
+                if (!string.Equals(_missionWarehouseFolder, folder, StringComparison.OrdinalIgnoreCase))
+                    UseMissionWarehouseCatalog(folder, cached);
+                return Task.CompletedTask;
+            }
         }
         if (_configLoadingOperation || _missionDownloadBusy || _updatesInstalling) return Task.CompletedTask;
+        ForgetMissionWarehouseCatalog(folder);
         _missionWarehouseDiscovery = DiscoverAsync(folder);
         return _missionWarehouseDiscovery;
 
@@ -93,15 +102,19 @@ internal sealed partial class MainForm
         {
             await RunConfigLoadingAsync(async (progress, token) =>
             {
-                progress.Report(new LoadingProgress("Scanning older missions…"));
-                var catalog = await Task.Run(() => MissionWarehouseService.DiscoverSources(requestedFolder, token), token);
+                progress.Report(new LoadingProgress("Scanning mission folder…"));
+                var captured = await Task.Run(() => (Stamp: Directory.GetLastWriteTimeUtc(requestedFolder),
+                    Sources: MissionWarehouseService.DiscoverSources(requestedFolder, token)), token);
+                var catalog = captured.Sources;
                 token.ThrowIfCancellationRequested();
                 _missionWarehouseCatalogs[requestedFolder] = catalog;
+                _missionWarehouseCatalogTimes[requestedFolder] = captured.Stamp;
+                _missionMapUpdateRevision++;
                 if (IsDisposed || Disposing) return;
                 var current = (_missionDestination?.SelectedItem as InstanceItem)?.Profile;
                 if (current is not null && PathsEqual(RuntimeSettings.ResolveMissionsDirectory(current) ?? "", requestedFolder))
                     UseMissionWarehouseCatalog(requestedFolder, catalog);
-            }, _updatesLifetime.Token, "Scanning older missions…", errorTitle: "Warehouse sources");
+            }, _updatesLifetime.Token, "Scanning mission folder…", errorTitle: "Mission folder");
             if (!IsDisposed && !Disposing) RefreshMissionDownloadSelection();
         }
     }
@@ -110,6 +123,8 @@ internal sealed partial class MainForm
     {
         folder = Path.GetFullPath(folder);
         _missionWarehouseCatalogs.Remove(folder);
+        _missionWarehouseCatalogTimes.Remove(folder);
+        _missionMapUpdateRevision++;
         _missionWarehouseMatches.Remove(folder);
         foreach (var id in _missionWarehousePopulatedFolders.Where(pair => PathsEqual(pair.Value, folder)).Select(pair => pair.Key).ToArray())
             _missionWarehousePopulatedFolders.Remove(id);
@@ -126,6 +141,7 @@ internal sealed partial class MainForm
         {
             if (!_missionWarehouseCatalogs.TryGetValue(group.Key, out var catalog)) continue;
             var updated = catalog.ToDictionary(source => source.Path, StringComparer.OrdinalIgnoreCase);
+            DateTime folderStamp;
             try
             {
                 foreach (var path in group)
@@ -133,6 +149,7 @@ internal sealed partial class MainForm
                     var file = new FileInfo(path);
                     updated[path] = new MissionWarehouseSource(file.FullName, file.LastWriteTimeUtc, file.Length);
                 }
+                folderStamp = Directory.GetLastWriteTimeUtc(group.Key);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             {
@@ -143,6 +160,7 @@ internal sealed partial class MainForm
             ForgetMissionWarehouseCatalog(group.Key);
             var sources = Array.AsReadOnly(updated.Values.ToArray());
             _missionWarehouseCatalogs[group.Key] = sources;
+            _missionWarehouseCatalogTimes[group.Key] = folderStamp;
             if (active)
             {
                 _missionWarehouseFolder = group.Key;
@@ -181,7 +199,7 @@ internal sealed partial class MainForm
         var ready = folder is not null && string.Equals(_missionWarehouseFolder, folder, StringComparison.OrdinalIgnoreCase);
         var hint = ready
             ? "Older MIZs in this folder, matched by map and variant. Most recently modified match suggested. Compatibility is checked before installation."
-            : folder is null ? "Choose a mission folder to find older matching missions." : "Scanning older missions…";
+            : folder is null ? "Choose a mission folder to find older matching missions." : "Scanning mission folder…";
         if (_missionWarehouseHint.Text != hint) _missionWarehouseHint.Text = hint;
         if (!ready) { foreach (var row in _missionWarehouseSourceRows.Values) row.Visible = false; return; }
 

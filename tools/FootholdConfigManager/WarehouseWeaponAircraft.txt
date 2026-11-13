@@ -1,0 +1,172 @@
+weapons.bombs.AGM_62	F-4E-45MC	FA-18C_hornet
+weapons.bombs.AGM_62_I	F-4E-45MC
+weapons.bombs.AN_M30A1	F4U-1D
+weapons.bombs.AN_M57	F4U-1D
+weapons.bombs.AN_M65	F4U-1D	F4U-1D_CW
+weapons.bombs.BAP-100	MB-339A
+weapons.bombs.BAT-120	MB-339A
+weapons.bombs.BDU_45	FA-18C_hornet
+weapons.bombs.BDU_45B	FA-18C_hornet
+weapons.bombs.BDU_45LGB	FA-18C_hornet
+weapons.bombs.BIN_200	C-101CC
+weapons.bombs.BKF_AO2_5RT	Ka-50	Mi-24P	Su-25T	Su-27
+weapons.bombs.BKF_PTAB2_5KO	Ka-50	Mi-24P	Su-25T	Su-27
+weapons.bombs.BLG66	C-101CC
+weapons.bombs.BR_250	C-101CC
+weapons.bombs.BR_500	C-101CC
+weapons.bombs.CBU_103	A-10C	A-10C_2	F-16C_50
+weapons.bombs.CBU_105	A-10C	A-10C_2	F-16C_50
+weapons.bombs.CBU_99	AV8BNA	FA-18C_hornet
+weapons.bombs.Durandal	MB-339A	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.bombs.FAB-250-M62	Mi-24P
+weapons.bombs.FAB_100M	MiG-15bis	MiG-15bis_FC	MiG-19P
+weapons.bombs.FAB_50	MiG-15bis	MiG-15bis_FC	MiG-19P
+weapons.bombs.GBU_24	FA-18C_hornet
+weapons.bombs.GBU_31	A-10C	A-10C_2	F-15ESE	F-16C_50	FA-18C_hornet
+weapons.bombs.GBU_31_V_2B	FA-18C_hornet
+weapons.bombs.GBU_31_V_3B	A-10C	A-10C_2	F-15ESE	F-16C_50	FA-18C_hornet
+weapons.bombs.GBU_31_V_4B	FA-18C_hornet
+weapons.bombs.GBU_32_V_2B	AV8BNA	FA-18C_hornet
+weapons.bombs.GBU_38	A-10C	A-10C_2	AV8BNA	F-15ESE	F-16C_50	FA-18C_hornet
+weapons.bombs.GBU_54_V_1B	A-10C_2	AV8BNA	F-15ESE
+weapons.bombs.GBU_8_B	F-4E-45MC
+weapons.bombs.LUU_2B	A-10A	A-10C	A-10C_2	AV8BNA	F-5E-3
+weapons.bombs.MK106	MB-339A
+weapons.bombs.MK76	MB-339A
+weapons.bombs.Mk_82Y	FA-18C_hornet
+weapons.bombs.Mk_83AIR	FA-18C_hornet
+weapons.bombs.Mk_84AIR_GP	F-15ESE	F-16C_50
+weapons.bombs.Mk_84AIR_TP	F-15ESE	F-16C_50
+weapons.bombs.OH58D_Blue_Smoke_Grenade	OH58D
+weapons.bombs.OH58D_Green_Smoke_Grenade	OH58D
+weapons.bombs.OH58D_Red_Smoke_Grenade	OH58D
+weapons.bombs.OH58D_Violet_Smoke_Grenade	OH58D
+weapons.bombs.OH58D_White_Smoke_Grenade	OH58D
+weapons.bombs.OH58D_Yellow_Smoke_Grenade	OH58D
+weapons.bombs.RBK_250_275_AO_1SCH	J-11A	Mi-24P
+weapons.bombs.RBK_500U_OAB_2_5RT	Mi-24P
+weapons.bombs.RN-24	MiG-21Bis
+weapons.bombs.RN-28	MiG-21Bis
+weapons.bombs.SAB_100MN	L-39C	L-39ZA	MiG-21Bis	Su-25	Su-25T
+weapons.bombs.SAMP250HD	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.bombs.SAMP400HD	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.bombs.SAMP400LD	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.containers.AAQ-28_LITENING	A-10C	A-10C_2	AV8BNA	F-16C_50	FA-18C_hornet
+weapons.containers.ALQ-131	A-10A	A-10C	A-10C_2	F-16C_50
+weapons.containers.ALQ-184	A-10A	A-10C	A-10C_2	F-16C_50
+weapons.containers.AN_AAQ_33	F-16C_50
+weapons.containers.AN_ASQ_228	FA-18C_hornet
+weapons.containers.ASO-2	MiG-21Bis
+weapons.containers.BRU-42_LS	A-10C	A-10C_2
+weapons.containers.F-15E_AAQ-13_LANTIRN	F-15ESE
+weapons.containers.F-15E_AAQ-14_LANTIRN	F-15ESE
+weapons.containers.FAS	SA342L	SA342M	SA342Minigun
+weapons.containers.Fantasm	Su-25T
+weapons.containers.GD_F100_STRIKE_CAMERA	F-100D
+weapons.containers.HB_ALE_40_0_0	F-4E-45MC
+weapons.containers.HB_ALE_40_30_60	F-4E-45MC
+weapons.containers.KINGAL	Su-25T
+weapons.containers.MPS-410	Su-25T
+weapons.containers.SORBCIJA_L	Su-27	Su-33
+weapons.containers.SORBCIJA_R	Su-27	Su-33
+weapons.containers.SPS-141-100	MiG-21Bis
+weapons.containers.U22	AJS37
+weapons.containers.U22A	AJS37
+weapons.containers.ah-64d_radar	AH-64D_BLK_II
+weapons.containers.alq-184long	A-10C	A-10C_2	F-16C_50
+weapons.droptanks.AV8BNA_AERO1D	AV8BNA
+weapons.droptanks.AV8BNA_AERO1D_EMPTY	AV8BNA
+weapons.droptanks.C130J_Ext_Tank_L	C-130J-30
+weapons.droptanks.C130J_Ext_Tank_R	C-130J-30
+weapons.droptanks.M2KC_02_RPL541	M-2000C
+weapons.droptanks.M2KC_02_RPL541_EMPTY	M-2000C
+weapons.droptanks.M2KC_08_RPL541	M-2000C
+weapons.droptanks.M2KC_08_RPL541_EMPTY	M-2000C
+weapons.droptanks.M2KC_RPL_522	M-2000C
+weapons.droptanks.PTB300_MIG15	MiG-15bis	MiG-15bis_FC
+weapons.droptanks.PTB400_MIG15	MiG-15bis	MiG-15bis_FC
+weapons.droptanks.PTB600_MIG15	MiG-15bis	MiG-15bis_FC
+weapons.droptanks.PTB760_MIG19	MiG-19P
+weapons.droptanks.PTB_120_F86F35	F-86F Sabre	F-86F_FC
+weapons.droptanks.PTB_1500_MIG29A	MiG-29 Fulcrum
+weapons.droptanks.PTB_200_F86F35	F-86F Sabre	F-86F_FC
+weapons.gunmounts.AKAN	AJS37
+weapons.gunmounts.AKAN_NO_TRC	AJS37
+weapons.missiles.ADM_141A	FA-18C_hornet
+weapons.missiles.AGM_114	AH-64D_BLK_II
+weapons.missiles.AGM_114K	AH-64D_BLK_II
+weapons.missiles.AGM_12A	F-4E-45MC
+weapons.missiles.AGM_12B	F-4E-45MC
+weapons.missiles.AGM_154A	F-15ESE	F-16C_50	FA-18C_hornet
+weapons.missiles.AGM_84D	FA-18C_hornet
+weapons.missiles.AGM_84H	FA-18C_hornet
+weapons.missiles.AGR_20A	A-10C_2	AV8BNA	OH58D
+weapons.missiles.AGR_20_M282	A-10C_2	AV8BNA
+weapons.missiles.AIM-7F	F-15ESE	FA-18C_hornet
+weapons.missiles.AIM-7P	FA-18C_hornet
+weapons.missiles.AIM-9J	F-15ESE	F-4E-45MC	F-5E-3	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.missiles.AIM-9JULI	F-4E-45MC	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.missiles.AIM-9L	A-10A	A-10C	A-10C_2	F-15ESE	F-16C_50	F-4E-45MC	FA-18C_hornet
+weapons.missiles.AIM-9P	A-10A	C-101CC	F-15ESE	F-16C_50	F-4E-45MC	F-5E-3	F-5E-3_FC
+weapons.missiles.AIM-9P3	F-16C_50	F-5E-3
+weapons.missiles.AIM-9P5	A-10A	F-16C_50	F-5E-3	F-5E-3_FC
+weapons.missiles.AIM_120	F-15C	F-15ESE	F-16C_50	FA-18C_hornet
+weapons.missiles.AIM_120C	F-15C	F-15ESE	F-16C_50	FA-18C_hornet
+weapons.missiles.AIM_54A_Mk47	F-14A-135-GR	F-14A-135-GR-Early	F-14A-95-GR	F-14B
+weapons.missiles.AIM_54A_Mk60	F-14A-135-GR	F-14A-135-GR-Early	F-14A-95-GR	F-14B
+weapons.missiles.AIM_54C_Mk47	F-14A-135-GR	F-14A-135-GR-Early	F-14B	F-14BU
+weapons.missiles.AIM_54C_Mk60	F-14B
+weapons.missiles.AIM_9	A-10A	A-10C	A-10C_2	AV8BNA	C-101CC	F-14A-135-GR	F-14A-135-GR-Early	F-14B	F-15C	F-15ESE	F-16C_50	FA-18C_hornet
+weapons.missiles.AIM_9X	F-16C_50	FA-18C_hornet
+weapons.missiles.ASM_N_2	F4U-1D	F4U-1D_CW
+weapons.missiles.AT_6	Mi-24P
+weapons.missiles.Ataka_9M120	Mi-24P
+weapons.missiles.Ataka_9M120F	Mi-24P
+weapons.missiles.Ataka_9M220	Mi-24P
+weapons.missiles.CATM_9M	A-10C	A-10C_2	AV8BNA	F-15ESE	F-16C_50	F-4E-45MC	F-5E-3	FA-18C_hornet
+weapons.missiles.GAR-8	F-4E-45MC	F-5E-3	F-5E-3_FC	F-86F Sabre	F-86F_FC
+weapons.missiles.Kh-66_Grom	MiG-21Bis
+weapons.missiles.MMagicII	M-2000C
+weapons.missiles.R-3R	MiG-21Bis
+weapons.missiles.R-3S	L-39C	L-39ZA	MiG-21Bis
+weapons.missiles.RB75	AJS37
+weapons.missiles.RB75B	AJS37
+weapons.missiles.RB75T	AJS37
+weapons.missiles.Vikhr_M	Ka-50	Ka-50_3	Su-25T
+weapons.nurs.ARAKM70BAP	AJS37
+weapons.nurs.ARAKM70BAPPX	AJS37
+weapons.nurs.ARAKM70BHE	AJS37
+weapons.nurs.ARF8M3API	MB-339A
+weapons.nurs.ARF8M3HEI	MB-339A
+weapons.nurs.ARF8M3TPSM	MB-339A
+weapons.nurs.C_13	Ka-50	Ka-50_3	Mi-24P	Su-25	Su-25T	Su-27	Su-33
+weapons.nurs.C_24	Mi-24P	MiG-29A	MiG-29S
+weapons.nurs.C_25	Su-25	Su-25T	Su-27	Su-33
+weapons.nurs.C_5	L-39C	L-39ZA	Mi-24P	Su-25T
+weapons.nurs.C_8	Ka-50	Ka-50_3	Mi-24P	Mi-8MT	MiG-29A	MiG-29S	Su-25	Su-25T	Su-27	Su-33
+weapons.nurs.C_8CM	Ka-50	Ka-50_3	Mi-24P	Su-25
+weapons.nurs.C_8OFP2	Ka-50_3	Mi-24P	Su-27	Su-33
+weapons.nurs.C_8OM	Ka-50_3	Mi-24P
+weapons.nurs.FFAR M156 WP	F-4E-45MC	F-5E-3
+weapons.nurs.FFAR Mk1 HE	F-5E-3
+weapons.nurs.FFAR Mk5 HEAT	F-4E-45MC	F-5E-3
+weapons.nurs.HYDRA_70_M151	A-10A	A-10C	A-10C_2	AH-64D_BLK_II	AV8BNA	C-101CC	F-16C_50	F-5E-3	F-5E-3_FC	FA-18C_hornet	MB-339A	OH58D
+weapons.nurs.HYDRA_70_M151_M433	AH-64D_BLK_II
+weapons.nurs.HYDRA_70_M156	A-10A	A-10C	A-10C_2	AV8BNA	C-101CC	F-16C_50	F-5E-3	MB-339A	OH58D
+weapons.nurs.HYDRA_70_M229	AH-64D_BLK_II	OH58D
+weapons.nurs.HYDRA_70_M257	A-10A	A-10C	A-10C_2	AH-64D_BLK_II	AV8BNA	C-101CC	F-5E-3	OH58D
+weapons.nurs.HYDRA_70_M259	OH58D
+weapons.nurs.HYDRA_70_M274	A-10A	A-10C	A-10C_2	AH-64D_BLK_II	AV8BNA	C-101CC	F-5E-3	OH58D
+weapons.nurs.HYDRA_70_MK1	A-10A	A-10C	A-10C_2	F-5E-3
+weapons.nurs.HYDRA_70_MK5	A-10A	A-10C	A-10C_2	AV8BNA	F-16C_50	F-5E-3	F-5E-3_FC	FA-18C_hornet	UH-1H
+weapons.nurs.HYDRA_70_MK61	A-10A	A-10C	A-10C_2	F-16C_50	F-5E-3
+weapons.nurs.HYDRA_70_WTU1B	A-10A	A-10C	A-10C_2	AV8BNA	F-16C_50	F-5E-3	MB-339A
+weapons.nurs.S-24A	MiG-21Bis
+weapons.nurs.S-24B	MiG-21Bis
+weapons.nurs.SNEB_TYPE251_F1B	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.nurs.SNEB_TYPE251_H1	SA342L
+weapons.nurs.SNEB_TYPE253_F1B	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.nurs.SNEB_TYPE256_F1B	Mirage-F1BE	Mirage-F1CE	Mirage-F1EE
+weapons.nurs.S_5KP	Mi-24P
+weapons.nurs.S_5M	Mi-24P
+weapons.nurs.Zuni_127	AV8BNA	FA-18C_hornet	MB-339A
