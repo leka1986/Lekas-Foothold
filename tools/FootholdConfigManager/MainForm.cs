@@ -1337,7 +1337,6 @@ internal sealed partial class MainForm : Form
             "allowedPlanesRed",
             "restockAircraft",
             "restrictedWeapons",
-            "WarehouseWeaponCaps",
             "ForbiddWeaponsInAllEra"),
         new CategorySpec("Admin Designer"),
         new CategorySpec("Raw Values")
@@ -2623,7 +2622,7 @@ internal sealed partial class MainForm : Form
         var width = comboBox.Width;
         foreach (var item in comboBox.Items)
         {
-            width = Math.Max(width, TextRenderer.MeasureText(item?.ToString() ?? "", comboBox.Font).Width + SystemInformation.VerticalScrollBarWidth + 24);
+            width = Math.Max(width, TextRenderer.MeasureText(comboBox.GetItemText(item), comboBox.Font).Width + SystemInformation.VerticalScrollBarWidth + 24);
         }
 
         return width;
@@ -11196,7 +11195,7 @@ internal sealed partial class MainForm : Form
                     BuildWarehouseWeaponLocationsEditor() is { } warehouseLocations)
                 {
                     warehouseLocations.Name = WarehouseWeaponEditorName;
-                    panel.Controls.Add(warehouseLocations, 0, 1);
+                    panel.Controls.Add(warehouseLocations);
                 }
                 foreach (var item in items)
                 {
@@ -12520,6 +12519,7 @@ internal sealed partial class MainForm : Form
     {
         var changed = entries.ToList();
         using var optionsTransition = BeginOptionsTransition(changed.FirstOrDefault()?.DisplayName ?? "Options");
+        if (changed.Any(IsEraSourceEntry)) WarehouseRestrictionEraChanged?.Invoke();
         RequiredValueSources? requirementSources = prepared?.Sources;
         RequiredValueSources GetRequiredSources() => requirementSources ??= new RequiredValueSources(_document!.Entries);
         var targetKeys = prepared?.TargetKeys ?? changed.SelectMany(entry => GetDependentEditorTargetKeysCore(entry, GetRequiredSources)).Distinct(StringComparer.Ordinal).ToList();
@@ -14202,12 +14202,12 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private void DeactivateStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid)
+    private void DeactivateStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid,
+        StringListBucketItem? bucket = null)
     {
-        if (_document is null ||
-            activeGrid is null ||
-            inactiveGrid is null ||
-            GetBucketItem(activeGrid, activeGrid.CurrentCellAddress.Y) is not { IsActive: true, Item: not null } bucket)
+        if (_document is null || activeGrid is null || inactiveGrid is null) return;
+        bucket ??= GetBucketItem(activeGrid, activeGrid.CurrentCellAddress.Y);
+        if (bucket is not { IsActive: true, Item: not null })
         {
             return;
         }
@@ -14263,12 +14263,12 @@ internal sealed partial class MainForm : Form
         }
     }
 
-    private void ActivateStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid)
+    private void ActivateStringListItemRow(ConfigStringListTable table, DataGridView? activeGrid, DataGridView? inactiveGrid,
+        StringListBucketItem? bucket = null)
     {
-        if (_document is null ||
-            activeGrid is null ||
-            inactiveGrid is null ||
-            GetBucketItem(inactiveGrid, inactiveGrid.CurrentCellAddress.Y) is not { IsActive: false } bucket)
+        if (_document is null || activeGrid is null || inactiveGrid is null) return;
+        bucket ??= GetBucketItem(inactiveGrid, inactiveGrid.CurrentCellAddress.Y);
+        if (bucket is not { IsActive: false })
         {
             return;
         }

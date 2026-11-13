@@ -690,7 +690,7 @@ internal sealed partial class MainForm
         if (panel.Tag is not Dictionary<string, OptionsMarkerTarget> targets) return;
         var existing = panel.Controls.OfType<EditorSection>().ToDictionary(section => section.Key, StringComparer.Ordinal);
         var retained = new List<EditorSection>();
-        var firstSectionRow = panel.Controls[WarehouseWeaponEditorName] is null ? 1 : 2;
+        var warehouseLocations = panel.Controls[WarehouseWeaponEditorName];
         EditorSection? scalarSection = null;
         var scalarRow = 0;
         var revealNewItems = HasUnseenImportedNewEntries(category);
@@ -709,7 +709,7 @@ internal sealed partial class MainForm
             var key = grid ? item.Key : scalarSection?.Key ?? "settings:" + item.Key;
             if (grid || scalarSection is null)
             {
-                var emptyWeaponCaps = item.StringListTable is { Key: "WarehouseWeaponCaps", Items.Count: 0 };
+                var collapseEmpty = item.StringListTable is { Key: "WarehouseWeaponCaps" or "ForbiddWeaponsInAllEra", Items.Count: 0 };
                 if (!existing.TryGetValue(key, out var section))
                 {
                     var title = grid ? target.Title.Text : missionHeading ?? (category.Equals("CSAR", StringComparison.OrdinalIgnoreCase) ? "Rescue settings"
@@ -718,18 +718,25 @@ internal sealed partial class MainForm
                         : retained.Count == 0 ? "General settings" : "Additional settings");
                     section = new EditorSection(key, title, grid, Zoomed(15), grid ? null :
                         new Font(Font.FontFamily, (11.25F + EditorFontIncreasePoints) * _uiZoomPercent / 100F, FontStyle.Bold));
-                    if (emptyWeaponCaps) section.Expanded = false;
+                    if (collapseEmpty ||
+                        item.StringListTable is { } aircraft && IsEquipmentList(aircraft.Key) && !IsWeaponList(aircraft.Key) &&
+                        target.Editor.Controls.Find("EquipmentChoices:" + aircraft.Key, searchAllChildren: true)
+                            .FirstOrDefault() is DataGridView { RowCount: 0 })
+                    {
+                        section.Expanded = false;
+                        collapseEmpty = true;
+                    }
                 }
                 panel.Controls.Add(section);
-                panel.SetRow(section, retained.Count + firstSectionRow);
-                panel.Controls.SetChildIndex(section, retained.Count + firstSectionRow);
+                panel.SetRow(section, retained.Count + 1);
+                panel.Controls.SetChildIndex(section, retained.Count + 1);
                 retained.Add(section);
                 scalarSection = grid ? null : section;
                 scalarRow = 0;
                 if (grid)
                 {
                     section.AttachEditor(target.Editor, target.Header);
-                    if (revealNewItems && !emptyWeaponCaps) section.Expanded = true;
+                    if (revealNewItems && !collapseEmpty) section.Expanded = true;
                     continue;
                 }
             }
@@ -742,7 +749,12 @@ internal sealed partial class MainForm
         }
         foreach (var section in existing.Values.Where(section => !retained.Contains(section)))
             ControlTreeDisposer.Dispose(section, _toolTip);
-        panel.RowCount = retained.Count + firstSectionRow;
+        panel.RowCount = retained.Count + 1 + (warehouseLocations is null ? 0 : 1);
+        if (warehouseLocations is not null)
+        {
+            panel.SetRow(warehouseLocations, retained.Count + 1);
+            panel.Controls.SetChildIndex(warehouseLocations, retained.Count + 1);
+        }
         var minimum = retained.Select(section => section.Body.MinimumSize.Width + panel.Padding.Horizontal).DefaultIfEmpty(0).Max();
         panel.MinimumSize = new Size(minimum, 0);
         if (ReferenceEquals(panel.Parent, _formHost)) _formHost.AutoScrollMinSize = new Size(minimum, 0);

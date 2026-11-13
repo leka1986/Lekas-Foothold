@@ -8,6 +8,7 @@ internal sealed partial class MainForm
     private const int AircraftWeaponsDefaultRows = 20;
     private const int EquipmentPaneHalfGap = 32;
     private event Action<ConfigDocument, string, Dictionary<string, string[]>?>? WarehouseRulesRestored;
+    private event Action? WarehouseRestrictionEraChanged;
     private static readonly (string Label, string? Prefix)[] WarehouseWeaponTypes =
     [
         ("All types", null),
@@ -69,6 +70,8 @@ internal sealed partial class MainForm
     private static IEnumerable<string> EquipmentWeaponIds(IEnumerable<string> additionalIds) =>
         SharedWeaponIds.Value.Concat(additionalIds).Distinct(StringComparer.Ordinal);
 
+    private sealed record SavedWarehouseRule(string WeaponId, Label Badge, LinkLabel Review);
+
     private Control? BuildWarehouseWeaponLocationsEditor()
     {
         using var probe = WarehouseLayoutProbe.Enter("build warehouse picker");
@@ -85,6 +88,11 @@ internal sealed partial class MainForm
         {
             return new Label { AutoSize = true, Text = "Warehouse Weapon Locations: " + ex.Message };
         }
+
+        var restrictionTables = document.StringListTables.Where(table => IsWarehouseRestrictionList(table.Key))
+            .ToDictionary(table => table.Key, StringComparer.Ordinal);
+        var restrictions = new Dictionary<string, (string Key, string Badge, string Reason)>(StringComparer.Ordinal);
+        string? eraRestrictionKey = null;
 
         var root = new WarehouseCard(Zoomed(5)) { Name = WarehouseWeaponEditorName };
         root.Padding = new Padding(Zoomed(16));
@@ -121,7 +129,15 @@ internal sealed partial class MainForm
             Name = "WarehouseLocationMission", Width = Zoomed(222),
             DropDownStyle = ComboBoxStyle.DropDownList, AccessibleName = "Mission"
         };
+        var savedCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        mission.FormattingEnabled = true;
+        mission.Format += (_, args) =>
+        {
+            if (args.ListItem is not string name || !savedCounts.TryGetValue(name, out var count) || count == 0) return;
+            args.Value = $"{name} ({count} {(count == 1 ? "rule" : "rules")})";
+        };
         StyleConfigDropdown(mission);
+
         mission.Items.AddRange(settings.Catalog.Keys.Cast<object>().ToArray());
         missionField.Controls.Add(mission);
         heading.Controls.Add(missionField, 2, 0);
@@ -275,35 +291,57 @@ internal sealed partial class MainForm
         var summary = Title("");
         var detail = new Label { AutoSize = true, Name = "WarehouseRuleSummaryDetail" };
         summaryText.SizeChanged += (_, _) => detail.MaximumSize = new Size(Math.Max(1, summaryText.Width - Zoomed(6)), 0);
+        summary.Margin = Padding.Empty;
+        detail.Font = GetConfigValueFont(.6f);
+        detail.Margin = Padding.Empty;
         summaryText.Controls.Add(summary);
         summaryText.Controls.Add(detail);
+        var selectionWarning = WarningLabel("");
+        selectionWarning.Visible = false;
+        selectionWarning.Margin = new Padding(0, Zoomed(4), 0, 0);
+        summaryText.Controls.Add(selectionWarning);
+        summaryText.SizeChanged += (_, _) => selectionWarning.MaximumSize = new Size(Math.Max(1, summaryText.Width - Zoomed(6)), 0);
+        var selectionReview = RestrictionLink("Review restriction");
+        selectionReview.Visible = false;
+        summaryText.Controls.Add(selectionReview);
         summaryRow.Controls.Add(summaryText, 0, 0);
-        var apply = ActionButton("Apply rules");
-        apply.Anchor = AnchorStyles.Right;
+        var apply = RuleAction("Apply rules");
+        apply.TextAccentOnly = true;
         apply.Name = "ApplyWarehouseWeaponRules";
         summaryRow.Controls.Add(apply, 1, 0);
         body.Controls.Add(summaryRow);
         var savedHeader = new TableLayoutPanel
         {
             Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 2, Margin = new Padding(0, 0, 0, Zoomed(4))
+            ColumnCount = 2, Margin = new Padding(0, Zoomed(3), 0, Zoomed(7))
         };
         savedHeader.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         savedHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         var savedRows = Column();
         savedRows.Name = "WarehouseSavedRuleRows";
-        var savedViews = new Dictionary<string, TableLayoutPanel>(StringComparer.Ordinal);
-        TableLayoutPanel? activeSavedView = null;
-        var hasFirstMissionRules = settings.Rules.TryGetValue(settings.Catalog.Keys.First(), out var firstRules) &&
-            firstRules.Values.Any(names => names.Length > 0);
+        var noSavedRules = new Label { AutoSize = true, Text = "No custom rules. Standard warehouse settings apply." };
+        savedRows.Controls.Add(noSavedRules, 0, 0);
+        var savedMapRows = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var name in settings.Catalog.Keys.Union(settings.Rules.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal))
+            savedMapRows.Add(name, savedMapRows.Count + 1);
         savedHeader.Controls.Add(Disclosure("saved rules", "ToggleWarehouseSavedRules", savedRows,
-            layoutOwner: body, initiallyExpanded: hasFirstMissionRules), 0, 0);
-        var savedTitle = Title("Saved rules");
+            layoutOwner: body, initiallyExpanded: hasRules), 0, 0);
+        var savedTitle = RuleTitle("Saved rules");
         savedTitle.Anchor = AnchorStyles.Left;
         savedTitle.Margin = Padding.Empty;
         savedHeader.Controls.Add(savedTitle, 1, 0);
         body.Controls.Add(savedHeader);
         body.Controls.Add(savedRows);
+
+        var reviewRows = Column();
+        reviewRows.Name = "WarehouseRestrictionReview";
+        reviewRows.Visible = false;
+        body.Controls.Add(reviewRows);
+        var reviewChecks = new Dictionary<ConfigStringListTable, CheckBox>();
+        string? reviewedWeapon = null;
+
+        Func<Control?>? returnToRule = null;
+        var updatingReview = false;
 
         var matchCount = new Label
         {
@@ -378,14 +416,28 @@ internal sealed partial class MainForm
         });
         WireChoices(locations, selectedLocations, RefreshSummary);
         WireChoices(carriers, selectedLocations, RefreshSummary);
+        var loadingSavedRule = false;
         mission.SelectedIndexChanged += (_, _) =>
         {
+            if (loadingSavedRule) return;
             var clearedLocations = selectedLocations.Count > 0;
             selectedLocations.Clear();
             RefreshMapDetails(clearedLocations);
         };
+        ReadRestrictions();
+        foreach (var table in restrictionTables.Values) table.ManagedValuesChanged += RefreshRestrictions;
+        WarehouseRestrictionEraChanged += RefreshRestrictions;
+        root.Disposed += (_, _) =>
+        {
+            WarehouseRestrictionEraChanged -= RefreshRestrictions;
+            foreach (var table in restrictionTables.Values) table.ManagedValuesChanged -= RefreshRestrictions;
+        };
         WarehouseRulesRestored += RestoreRules;
         root.Disposed += (_, _) => WarehouseRulesRestored -= RestoreRules;
+        savedRows.SuspendLayout();
+        foreach (var name in savedMapRows.Keys) RefreshSavedRules(name);
+        noSavedRules.Visible = !hasRules;
+        savedRows.ResumeLayout(true);
         RefreshWeapons();
         mission.SelectedIndex = 0;
         return root;
@@ -444,21 +496,17 @@ internal sealed partial class MainForm
             showSelected.Text = selectedOnly ? "Show matches" : $"Show selected ({selectedWeapons.Count})";
         }
 
-        void RefreshMapDetails(bool locationChecksChanged = false, string? changedRulesFor = null)
+        void RefreshMapDetails(bool locationChecksChanged = false)
         {
             body.SuspendLayout();
             right.SuspendLayout();
-            savedRows.SuspendLayout();
             try
             {
-                if (changedRulesFor is not null) InvalidateSavedView(changedRulesFor);
                 RefreshLocations(locationChecksChanged);
-                RefreshSavedRules();
                 RefreshSummary();
             }
             finally
             {
-                savedRows.ResumeLayout(true);
                 right.ResumeLayout(true);
                 EditorSection.RunLayoutPass(() => body.ResumeLayout(true));
             }
@@ -466,9 +514,20 @@ internal sealed partial class MainForm
 
         void RefreshChangedRules(string name)
         {
-            RefreshLocationCache(name);
-            if (Equals(mission.SelectedItem, name)) RefreshMapDetails(changedRulesFor: name);
-            else InvalidateSavedView(name);
+            body.SuspendLayout();
+            savedRows.SuspendLayout();
+            try
+            {
+                RefreshSavedRules(name);
+                noSavedRules.Visible = savedRows.Controls.Count == 1;
+                if (locationsByMission.ContainsKey(name)) RefreshLocationCache(name);
+                if (Equals(mission.SelectedItem, name)) RefreshMapDetails();
+            }
+            finally
+            {
+                savedRows.ResumeLayout(true);
+                EditorSection.RunLayoutPass(() => body.ResumeLayout(true));
+            }
         }
 
         void RestoreRules(ConfigDocument changedDocument, string name, Dictionary<string, string[]>? previousRules)
@@ -572,10 +631,32 @@ internal sealed partial class MainForm
             if (add > 0) changes.Add($"Add {add} {(add == 1 ? "rule" : "rules")}");
             if (update > 0) changes.Add($"Update {update} {(update == 1 ? "rule" : "rules")}");
             summary.Text = changes.Count > 0 ? string.Join(" · ", changes) : "No rule changes";
-            detail.Text = $"{selectedWeapons.Count} selected · {selectedLocations.Count} warehouses allowed"
+            detail.Text = $"{selectedWeapons.Count} selected · {selectedLocations.Count} {(selectedLocations.Count == 1 ? "warehouse" : "warehouses")} allowed"
                 + (update > 0 ? ". Updating replaces the existing warehouse list." : "");
             detail.Tag = update > 0;
             detail.ForeColor = update > 0 ? UndoMutedText : HelpTextColor;
+            var restrictedCount = 0;
+            string? firstRestricted = null;
+            foreach (var id in selectedWeapons)
+            {
+                if (!restrictions.ContainsKey(id)) continue;
+                firstRestricted ??= id;
+                restrictedCount++;
+            }
+            var canReview = false;
+            if (firstRestricted is not null)
+            {
+                var restriction = restrictions[firstRestricted];
+                var otherCount = restrictedCount - 1;
+                selectionWarning.Text = $"{WeaponLabel(firstRestricted)} {restriction.Reason}. This location rule has no effect"
+                    + (restriction.Key == "ForbiddWeaponsInAllEra" ? "." : " in this era.")
+                    + (otherCount == 0 ? "" : $" {otherCount} more selected {(otherCount == 1 ? "weapon is" : "weapons are")} also restricted or forbidden.");
+                canReview = CanReviewRestriction(restriction.Key);
+            }
+            summary.Visible = firstRestricted is null;
+            selectionWarning.Visible = firstRestricted is not null;
+            selectionReview.Visible = canReview;
+            selectionReview.Tag = canReview ? (Action)(() => ReviewRestriction(firstRestricted!, () => selectionReview)) : null;
             apply.Enabled = add + update > 0;
             if (!selectedOnly) showSelected.Text = $"Show selected ({selectedWeapons.Count})";
         }
@@ -583,7 +664,7 @@ internal sealed partial class MainForm
         void ApplySelection()
         {
             if (!apply.Enabled || mission.SelectedItem is not string name) return;
-            CommitRules(rules =>
+            CommitRules(name, rules =>
             {
                 var warehouseNames = selectedLocations.Order(StringComparer.Ordinal).ToArray();
                 foreach (var id in selectedWeapons)
@@ -594,93 +675,337 @@ internal sealed partial class MainForm
             });
         }
 
-        void RefreshSavedRules()
+        void RefreshSavedRules(string name)
         {
-            var rules = MissionRules();
-            var empty = rules is null || rules.Values.All(names => names.Length == 0);
-            var key = empty ? "" : (string)mission.SelectedItem!;
-            if (savedViews.TryGetValue(key, out var cached))
+            var mapRow = savedMapRows[name];
+            savedRows.GetControlFromPosition(0, mapRow)?.Dispose();
+            settings.Rules.TryGetValue(name, out var rules);
+            var count = rules?.Values.Count(names => names.Length > 0) ?? 0;
+            if (savedCounts.GetValueOrDefault(name) != count)
             {
-                ShowSavedView(cached);
+                savedCounts[name] = count;
+                mission.Invalidate();
+            }
+            if (count == 0 || rules is null) return;
+
+            var view = RuleCard();
+            var mapHeading = RuleHeading();
+            mapHeading.Controls.Add(RuleTitle(name));
+            view.Controls.Add(mapHeading, 0, 0);
+            foreach (var (id, names) in rules.OrderBy(rule => rule.Key, StringComparer.Ordinal))
+            {
+                if (names.Length == 0) continue;
+                var ruleRow = new TableLayoutPanel
+                {
+                    Name = "WarehouseSavedRule", Dock = DockStyle.Top,
+                    AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 3,
+                    Padding = new Padding(Zoomed(10), Zoomed(8), Zoomed(10), Zoomed(8)), Margin = Padding.Empty
+                };
+                DrawRuleDivider(ruleRow);
+                ruleRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                ruleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                ruleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                var text = Column();
+                var caption = Row();
+                caption.Margin = Padding.Empty;
+                caption.Controls.Add(RuleTitle(WeaponLabel(id)));
+                text.Controls.Add(caption);
+                var warehouseNames = new Label
+                {
+                    Name = "WarehouseRuleLocations", AutoSize = true, Font = GetConfigValueFont(.6f),
+                    Margin = new Padding(0, Zoomed(2), 0, 0), Text = "Allowed warehouses · " + string.Join(", ", names)
+                };
+                text.Controls.Add(warehouseNames);
+                var badge = WarningLabel("");
+                badge.Name = "WarehouseRestrictionBadge";
+                badge.Margin = new Padding(Zoomed(8), 0, 0, 0);
+                badge.Padding = new Padding(Zoomed(6), Zoomed(1), Zoomed(6), Zoomed(1));
+                badge.Anchor = AnchorStyles.Left;
+                badge.SizeChanged += (_, _) => RoundRuleBadge(badge);
+                RoundRuleBadge(badge);
+                caption.Controls.Add(badge);
+                var review = RestrictionLink("Review restriction");
+                review.Tag = (Action)(() => ReviewRestriction(id, () => FindSavedReviewTarget(name, id)));
+                text.Controls.Add(review);
+                var rule = new SavedWarehouseRule(id, badge, review);
+                ruleRow.Tag = rule;
+                UpdateRuleRestriction(rule);
+                text.SizeChanged += (_, _) => warehouseNames.MaximumSize = new Size(Math.Max(1, text.Width - Zoomed(8)), 0);
+                ruleRow.Controls.Add(text, 0, 0);
+                var edit = RuleAction("Edit", () =>
+                {
+                    loadingSavedRule = true;
+                    try { mission.SelectedItem = name; }
+                    finally { loadingSavedRule = false; }
+                    selectedWeapons.Clear();
+                    selectedWeapons.Add(id);
+                    selectedLocations.Clear();
+                    selectedLocations.UnionWith(names);
+                    selectedOnly = true;
+                    RefreshWeapons();
+                    RefreshMapDetails(locationChecksChanged: true);
+                });
+                edit.Enabled = settings.Catalog.ContainsKey(name);
+                ruleRow.Controls.Add(edit, 1, 0);
+                var remove = RuleAction("Remove", () =>
+                {
+                    if (!CommitRules(name, edited => edited.Remove(id)) || !Equals(mission.SelectedItem, name)) return;
+                    selectedWeapons.Remove(id);
+                    RefreshWeapons();
+                    RefreshSummary();
+                });
+                remove.Margin = new Padding(Zoomed(4), 0, 0, 0);
+                ruleRow.Controls.Add(remove, 2, 0);
+                view.Controls.Add(ruleRow);
+            }
+
+            ApplyThemeToControl(view, restyleButtons: false);
+            savedRows.Controls.Add(view, 0, mapRow);
+        }
+
+        void UpdateRuleRestriction(SavedWarehouseRule rule)
+        {
+            var restricted = restrictions.TryGetValue(rule.WeaponId, out var restriction);
+            rule.Badge.Text = restricted ? restriction.Badge : "";
+            rule.Badge.Visible = restricted;
+            rule.Review.Visible = restricted && CanReviewRestriction(restriction.Key);
+        }
+
+        void ReadRestrictions()
+        {
+            restrictions.Clear();
+            var era = ConfigConditions.Normalize(ConfigConditions.FindSource(document, "Era")?.ValueText ?? "");
+            var (key, eraLabel) = era switch
+            {
+                "Coldwar" => ("restrictedWeapons", "Cold War"),
+                "Gulfwar" => ("restrictedWeapons", "Gulf War"),
+                "Vietnam" => (restrictionTables.ContainsKey("restrictedWeaponsVietnam") ? "restrictedWeaponsVietnam" : "restrictedWeapons", "Vietnam"),
+                _ => ("", "")
+            };
+            AddRestrictions("ForbiddWeaponsInAllEra", "Forbidden in all eras", "is forbidden in all eras");
+            eraRestrictionKey = key;
+            AddRestrictions(key, "Inactive in " + eraLabel, "is restricted in " + eraLabel);
+        }
+
+        void AddRestrictions(string key, string badge, string reason)
+        {
+            if (!restrictionTables.TryGetValue(key, out var table)) return;
+            foreach (var item in table.Items)
+                restrictions.TryAdd(item.Value, (key, badge, reason));
+        }
+
+        void RefreshRestrictions()
+        {
+            if (!ReferenceEquals(document, _document)) return;
+            ReadRestrictions();
+            body.SuspendLayout();
+            savedRows.SuspendLayout();
+            summaryText.SuspendLayout();
+            try
+            {
+                foreach (var map in savedRows.Controls.OfType<WarehouseCard>())
+                    foreach (Control row in map.Controls)
+                        if (row.Tag is SavedWarehouseRule rule) UpdateRuleRestriction(rule);
+                RefreshSummary();
+            }
+            finally
+            {
+                summaryText.ResumeLayout(true);
+                savedRows.ResumeLayout(true);
+                EditorSection.RunLayoutPass(() => body.ResumeLayout(true));
+            }
+            RefreshReviewChecks();
+        }
+
+        bool CanReviewRestriction(string key) =>
+            restrictionTables.TryGetValue(key, out var table) &&
+            (!table.GuiTesting || _testingUnlocked) &&
+            (string.IsNullOrWhiteSpace(table.GuiVisibleWhen) || VisibleWhenMatches(document, table.GuiVisibleWhen));
+
+        bool IsCurrentRestriction(string key) => key == "ForbiddWeaponsInAllEra" || key == eraRestrictionKey;
+
+        void ReviewRestriction(string id, Func<Control?> origin)
+        {
+            reviewedWeapon = id;
+            returnToRule = origin;
+            foreach (Control old in reviewRows.Controls.Cast<Control>().ToArray()) old.Dispose();
+            reviewChecks.Clear();
+
+            foreach (var table in restrictionTables.Values
+                         .Where(table => IsCurrentRestriction(table.Key) && CanReviewRestriction(table.Key) &&
+                             FindActiveStringListItem(table, id) is not null)
+                         .OrderBy(table => table.Key == "ForbiddWeaponsInAllEra"))
+            {
+                var view = RuleCard();
+                var header = RuleHeading();
+                header.ColumnCount = 2;
+                header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+                header.Controls.Add(RuleTitle(table.GuiLabel ?? GetConfiguredGroupLabel(table.Key)), 0, 0);
+                var back = RestrictionLink("Back to location rule");
+                back.Name = "WarehouseRestrictionBack:" + table.Key;
+                back.Margin = new Padding(Zoomed(8), 0, 0, 0);
+                back.Anchor = AnchorStyles.Right;
+                back.Tag = (Action)CloseReview;
+                header.Controls.Add(back, 1, 0);
+                view.Controls.Add(header, 0, 0);
+
+                var row = new CheckBox
+                {
+                    Name = "WarehouseReviewedWeapon:" + table.Key,
+                    AccessibleName = WeaponLabel(id), Text = WeaponLabel(id), Checked = true,
+                    AutoSize = true, Dock = DockStyle.Top, Margin = Padding.Empty,
+                    Padding = new Padding(Zoomed(12), Zoomed(9), Zoomed(10), Zoomed(9)),
+                    Font = GetConfigValueFont(1.8f), UseVisualStyleBackColor = false
+                };
+                row.CheckedChanged += (_, _) =>
+                {
+                    if (updatingReview || !ReferenceEquals(document, _document)) return;
+                    var active = FindEquipmentGrid("EquipmentActive:" + table.Key);
+                    var available = FindEquipmentGrid("EquipmentChoices:" + table.Key);
+                    if (row.Checked)
+                    {
+                        var commented = table.CommentedItems.FirstOrDefault(item => item.Value == id);
+                        ActivateStringListItemRow(table, active, available,
+                            new StringListBucketItem(id, commented, IsActive: false, CatalogOnly: commented is null, IsNew: false));
+                    }
+                    else if (FindActiveStringListItem(table, id) is { } item)
+                    {
+                        DeactivateStringListItemRow(table, active, available,
+                            new StringListBucketItem(id, item, IsActive: true, CatalogOnly: false, IsNew: false));
+                    }
+                    if (row.Checked != (FindActiveStringListItem(table, id) is not null)) RefreshReviewChecks();
+                };
+                DrawRuleDivider(row);
+                view.Controls.Add(row, 0, 1);
+                reviewRows.Controls.Add(view);
+                reviewChecks.Add(table, row);
+                ApplyThemeToControl(view, restyleButtons: false);
+            }
+
+            reviewRows.Visible = reviewChecks.Count > 0;
+            if (reviewChecks.Values.FirstOrDefault() is not { } first) return;
+            _formHost.PerformLayout();
+            first.Focus();
+            _formHost.ScrollControlIntoView(reviewRows);
+            WeatherScrollHost.SynchronizeParent(_formHost);
+        }
+
+        DataGridView? FindEquipmentGrid(string name) =>
+            _formHost.Controls.Find(name, true).OfType<DataGridView>().FirstOrDefault();
+
+        Control? FindSavedReviewTarget(string missionName, string id)
+        {
+            var map = savedRows.GetControlFromPosition(0, savedMapRows[missionName]);
+            var row = map?.Controls.Cast<Control>().FirstOrDefault(control =>
+                control.Tag is SavedWarehouseRule rule && rule.WeaponId == id);
+            if (row?.Tag is SavedWarehouseRule savedRule && savedRule.Review.CanFocus) return savedRule.Review;
+            return row?.Controls.OfType<Button>().FirstOrDefault(button => button.Enabled && button.Text == "Edit");
+        }
+
+        void CloseReview()
+        {
+            reviewRows.Visible = false;
+            reviewedWeapon = null;
+            var origin = returnToRule?.Invoke();
+            returnToRule = null;
+            var target = origin is { CanFocus: true } ? origin : savedHeader.Controls[0];
+            _formHost.PerformLayout();
+            _formHost.ScrollControlIntoView(target);
+            target.Focus();
+            WeatherScrollHost.SynchronizeParent(_formHost);
+        }
+
+        void RefreshReviewChecks()
+        {
+            if (reviewedWeapon is not { } id) return;
+            if (reviewChecks.Keys.Any(table => !IsCurrentRestriction(table.Key) || !CanReviewRestriction(table.Key)))
+            {
+                CloseReview();
                 return;
             }
-
-            var view = Column();
-            view.Visible = false;
-            if (empty)
+            var focusWasInReview = reviewRows.ContainsFocus;
+            CheckBox? remaining = null;
+            updatingReview = true;
+            reviewRows.SuspendLayout();
+            try
             {
-                view.Controls.Add(new Label { AutoSize = true, Text = "No custom rules. Standard warehouse settings apply." });
-            }
-            else
-            {
-                foreach (var (id, names) in rules!.OrderBy(rule => rule.Key, StringComparer.Ordinal))
+                foreach (var (table, check) in reviewChecks)
                 {
-                    if (names.Length == 0) continue;
-                    var ruleRow = new TableLayoutPanel
-                    {
-                        Dock = DockStyle.Top, AutoSize = true, ColumnCount = 3,
-                        Padding = new Padding(0, Zoomed(5), 0, Zoomed(5)), Margin = Padding.Empty
-                    };
-                    ruleRow.Paint += (_, e) =>
-                    {
-                        using var border = new Pen(BorderColor);
-                        e.Graphics.DrawLine(border, 0, 0, ruleRow.Width, 0);
-                    };
-                    ruleRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-                    ruleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-                    ruleRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-                    var text = Column();
-                    text.Controls.Add(Title(WeaponLabel(id)));
-                    var warehouseNames = new Label { AutoSize = true, Text = string.Join(", ", names) };
-                    text.Controls.Add(warehouseNames);
-                    text.SizeChanged += (_, _) => warehouseNames.MaximumSize = new Size(Math.Max(1, text.Width - Zoomed(8)), 0);
-                    ruleRow.Controls.Add(text, 0, 0);
-                    ruleRow.Controls.Add(ActionButton("Edit", () =>
-                    {
-                        selectedWeapons.Clear();
-                        selectedWeapons.Add(id);
-                        selectedLocations.Clear();
-                        selectedLocations.UnionWith(names);
-                        selectedOnly = true;
-                        RefreshWeapons();
-                        RefreshLocations(checksChanged: true);
-                        RefreshSummary();
-                    }), 1, 0);
-                    ruleRow.Controls.Add(ActionButton("Remove", () =>
-                    {
-                        if (!CommitRules(edited => edited.Remove(id))) return;
-                        selectedWeapons.Remove(id);
-                        RefreshWeapons();
-                        RefreshSummary();
-                    }), 2, 0);
-                    view.Controls.Add(ruleRow);
+                    var active = FindActiveStringListItem(table, id) is not null;
+                    check.Checked = active;
+                    check.Parent!.Visible = active;
+                    if (active) remaining ??= check;
                 }
             }
-            ApplyThemeToControl(view, restyleButtons: false);
-            savedViews.Add(key, view);
-            savedRows.Controls.Add(view);
-            ShowSavedView(view);
+            finally
+            {
+                reviewRows.ResumeLayout(true);
+                updatingReview = false;
+            }
+            if (remaining is null) CloseReview();
+            else if (focusWasInReview && !reviewRows.ContainsFocus) remaining.Focus();
         }
 
-        void ShowSavedView(TableLayoutPanel view)
+        Label WarningLabel(string value) => new()
         {
-            if (ReferenceEquals(view, activeSavedView)) return;
-            if (activeSavedView is not null) activeSavedView.Visible = false;
-            view.Visible = true;
-            activeSavedView = view;
-        }
+            Name = "WarehouseRestrictionWarning", Text = value, AutoSize = true,
+            Font = GetConfigValueFont(.6f), ForeColor = UndoMutedText, Margin = Padding.Empty
+        };
 
-        void InvalidateSavedView(string name)
+        WarehouseCard RuleCard()
         {
-            if (!savedViews.Remove(name, out var view)) return;
-            if (ReferenceEquals(view, activeSavedView)) activeSavedView = null;
-            view.Dispose();
+            var card = new WarehouseCard(Zoomed(5))
+            {
+                Padding = new Padding(1), Margin = new Padding(0, 0, 0, Zoomed(10))
+            };
+            card.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            return card;
         }
 
-        bool CommitRules(Action<Dictionary<string, string[]>> edit)
+        TableLayoutPanel RuleHeading()
+        {
+            var header = Column();
+            header.Name = "WarehouseRuleHeading";
+            header.Padding = new Padding(Zoomed(10), Zoomed(9), Zoomed(10), Zoomed(9));
+            return header;
+        }
+
+        Label RuleTitle(string text) => new()
+        {
+            AutoSize = true, Text = text, Font = GetConfigValueFont(1.8f, FontStyle.Bold),
+            Anchor = AnchorStyles.Left, Margin = Padding.Empty
+        };
+
+        PreviewButton RuleAction(string text, Action? action = null)
+        {
+            var button = ActionButton(text, action);
+            button.Anchor = AnchorStyles.Right;
+            button.Margin = Padding.Empty;
+            button.Font = GetConfigValueFont(1.8f);
+            button.Padding = new Padding(Zoomed(9), 0, Zoomed(9), 0);
+            button.MinimumSize = new Size(0, Zoomed(34));
+            return button;
+        }
+
+        void RoundRuleBadge(Label badge)
+        {
+            if (badge.Width < Zoomed(6) || badge.Height < Zoomed(6)) return;
+            using var rounded = ConfigSearchSurface.RoundedRectangle(badge.ClientRectangle, Zoomed(3));
+            var previous = badge.Region;
+            badge.Region = new Region(rounded);
+            previous?.Dispose();
+        }
+
+        void DrawRuleDivider(Control row) => row.Paint += (_, e) =>
+        {
+            using var border = new Pen(BorderColor);
+            e.Graphics.DrawLine(border, 0, 0, row.Width, 0);
+        };
+
+
+        bool CommitRules(string name, Action<Dictionary<string, string[]>> edit)
         {
             if (!ReferenceEquals(document, _document) ||
-                mission.SelectedItem is not string name ||
                 !document.TryGetTableBlockText(WarehouseWeaponLocations.RulesKey, out var previous)) return false;
 
             settings.Rules.TryGetValue(name, out var previousRules);
@@ -1208,15 +1533,36 @@ internal sealed partial class MainForm
                             break;
                         case LinkLabel link:
                             link.BackColor = surface;
-                            link.LinkColor = link.ActiveLinkColor = link.VisitedLinkColor = IsDarkPalette()
-                                ? Color.FromArgb(139, 196, 255) : Color.FromArgb(7, 90, 169);
+                            if (link.Name == "WarehouseRestrictionLink" ||
+                                link.Name.StartsWith("WarehouseRestrictionBack:", StringComparison.Ordinal))
+                            {
+                                link.LinkColor = link.VisitedLinkColor = HelpTextColor;
+                                link.ActiveLinkColor = PrimaryTextColor;
+                            }
+                            else
+                                link.LinkColor = link.ActiveLinkColor = link.VisitedLinkColor = IsDarkPalette()
+                                    ? Color.FromArgb(139, 196, 255) : Color.FromArgb(7, 90, 169);
                             break;
-                        case Label label when label.Name is "WarehouseRuleSummaryDetail" or "WarehousePickerSubheading":
+                        case Label badge when badge.Name == "WarehouseRestrictionBadge":
+                            badge.BackColor = IsDarkPalette() ? Color.FromArgb(0x44, 0x33, 0x21) : UndoBackground;
+
+                            badge.ForeColor = IsDarkPalette() ? Color.FromArgb(0xFF, 0xCF, 0x89) : UndoMutedText;
+                            break;
+                        case Label warning when warning.Name == "WarehouseRestrictionWarning":
+                            warning.BackColor = surface;
+                            warning.ForeColor = IsDarkPalette() ? Color.FromArgb(0xFF, 0xCF, 0x89) : UndoMutedText;
+                            break;
+                        case Label label when label.Name is "WarehouseRuleSummaryDetail" or "WarehousePickerSubheading" or "WarehouseRuleLocations":
                             label.BackColor = surface;
                             label.ForeColor = label.Tag is true ? UndoMutedText : HelpTextColor;
                             break;
+                        case CheckBox check when check.Name.StartsWith("WarehouseReviewedWeapon:", StringComparison.Ordinal):
+                            check.BackColor = SystemInformation.HighContrast ? SystemColors.Highlight : SelectionBackground;
+                            check.ForeColor = SystemInformation.HighContrast ? SystemColors.HighlightText : SelectionText;
+                            break;
                         case Label or Panel:
-                            var childSurface = ReferenceEquals(child, SectionHeading) ? EditorBackground : surface;
+                            var childSurface = ReferenceEquals(child, SectionHeading) || child.Name == "WarehouseRuleHeading"
+                                ? EditorBackground : surface;
                             child.BackColor = childSurface;
                             SetSurface(child, childSurface);
                             break;
@@ -1266,8 +1612,22 @@ internal sealed partial class MainForm
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<DataGridView, EquipmentChecklist>
         EquipmentChecklists = new();
 
+    private LinkLabel RestrictionLink(string text)
+    {
+        var link = new LinkLabel
+        {
+            Name = "WarehouseRestrictionLink", Text = text, AutoSize = true, LinkBehavior = LinkBehavior.AlwaysUnderline,
+            Font = GetConfigValueFont(.6f), Margin = new Padding(0, Zoomed(4), 0, 0)
+        };
+        link.LinkClicked += (_, _) => (link.Tag as Action)?.Invoke();
+        return link;
+    }
+
+    private static bool IsWarehouseRestrictionList(string key) =>
+        key is "ForbiddWeaponsInAllEra" or "restrictedWeapons" or "restrictedWeaponsVietnam";
+
     private static bool IsWeaponList(string key) =>
-        key is "ForbiddWeaponsInAllEra" or "restrictedWeapons" or "restrictedWeaponsVietnam" or "WarehouseWeaponCaps";
+        IsWarehouseRestrictionList(key) || key == "WarehouseWeaponCaps";
 
     private static bool IsEquipmentList(string key) =>
         IsWeaponList(key) || key.StartsWith("allowedPlanes", StringComparison.Ordinal) || key == "restockAircraft";
@@ -1300,7 +1660,7 @@ internal sealed partial class MainForm
         ConfigureTableHeaderSizing(group, header);
 
         StringListRequirementBinding? binding = null;
-        var activeLabel = weapons ? "Saved rules" : "Active aircraft";
+        var activeLabel = table.GuiActiveLabel ?? (weapons ? "Saved rules" : "Allowed aircraft");
         var availableLabel = weapons ? "Available weapons" : "Available aircraft";
         var activeCount = MakeCount("EquipmentActiveCount:");
         var count = MakeCount("EquipmentMatchCount:");
@@ -1353,6 +1713,7 @@ internal sealed partial class MainForm
         });
         AddRow(custom);
         custom.Visible = false;
+
         AddRow(searchRow);
 
         var lists = new TableLayoutPanel

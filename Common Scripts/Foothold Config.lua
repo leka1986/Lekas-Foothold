@@ -1417,15 +1417,6 @@ ZoneSupplyTakeoffWarningTypes = {
     ["Hercules"]      = false,  -- should not be set to true if using WarehouseLogistics. can not detect that generic cargo
 }
 
--- If true, smart weapons found in the WarehouseWeaponCaps table at the bottom, will be HALF what we add to the warehouse.
--- This is to make the smart weapons harder to get.
-StrictSmartWeaponsInventory = false
-
--- This table will be used if StrictSmartWeaponsInventory is set to true.
--- Smart weapons in this table will be HALF what we add to the warehouse.
-WarehouseWeaponCaps = {
-}
-
 -- PvE only. For a listed weapon, Foothold stocks it only at the named warehouses on that mission.
 -- Use exact DCS weapon IDs and warehouse names. An empty list or a removed weapon entry restores normal stocking.
 -- Example: ["Syria Extended"] = { ["weapons.missiles.AIM_54C_Mk60"] = { "CVN-72", "CVN-74" } },
@@ -2385,11 +2376,6 @@ phaseCycleTimerIdle = 0.5      -- Relaxed cadence when idle. Raise to 0.8-1.0 if
 -- Aircraft / Weapons
 -- ============================================================================
 
--- Optional national warehouse aircraft lists. Legacy era rules remain when disabled.
--- This controls warehouse aircraft availability, not Mission Editor client slots.
--- @gui label="Different aircraft per coalition (PvP)" visibleWhen="PvP:true"
-PvPSeparateAircraftLists = false
-
 -- Shared aircraft requirements for the Config Manager; Lua ignores these comments.
 -- requiredSet defines reusable rules; requiredEach reads every row of its source table.
 -- $ selects the current row, and {key} keeps the explanation linked to that row.
@@ -2417,7 +2403,7 @@ PvPSeparateAircraftLists = false
 -- @gui requiredSet="AircraftRequirements20" requiredValues="MiG-15bis" requiredWhen="AvailableShopItems.dynamicbomb:true;AIAttackTakeoffFromGround:true" requiredSource="AvailableShopItems.dynamicbomb" requiredReason="Vietnam Bomber flight"
 
 -- Allowed BLUE warehouse aircraft in Modern PvP when separate lists are enabled.
--- @gui label="Modern Allowed BLUE Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui label="Modern Allowed BLUE Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements01" requiredWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesModern = {
     "A-10A",
@@ -2517,7 +2503,7 @@ allowedPlanesModern = {
 }
 
 -- Allowed RED warehouse aircraft in Modern PvP when separate lists are enabled.
--- @gui label="Modern Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui label="Modern Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements06|AircraftRequirements07" requiredWhen="Era:Modern;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesRedModern = {
     "MiG-29A",
@@ -2617,7 +2603,7 @@ allowedPlanesRedModern = {
 }
 
 -- In this list, you can either remove or add what is allowed in the Coldwar or Gulfwar era.
--- @gui label="Allowed Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:false"
+-- @gui label="Allowed Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:false" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements09|AircraftRequirements10|AircraftRequirements12" requiredWhen="Era:Coldwar|Gulfwar;PvP:false"
 allowedPlanes = {
     "A-10A",
@@ -2681,7 +2667,7 @@ allowedPlanes = {
 
 -- Shared Coldwar PvP warehouse aircraft for both coalitions when separate lists are disabled.
 -- Saved independently from PvE; enabled AI services require their aircraft to remain active.
--- @gui label="Coldwar Allowed Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:false"
+-- @gui label="Coldwar Allowed Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:false" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements09|AircraftRequirements10|AircraftRequirements06|AircraftRequirements16" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:false"
 allowedPlanesSharedColdwarPvP = {
     "A-10A",
@@ -2753,7 +2739,7 @@ allowedPlanesSharedColdwarPvP = {
 
 -- BLUE Coldwar/Gulfwar warehouse aircraft when separate PvP lists are enabled.
 -- Legacy aircraft rows remain unchanged; this override also includes enabled AI requirements.
--- @gui label="Coldwar Allowed BLUE Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui label="Coldwar Allowed BLUE Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements09|AircraftRequirements10" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesBlueColdwarPvP = {
     "F-111C",
@@ -2818,7 +2804,7 @@ allowedPlanesBlueColdwarPvP = {
 
 -- In this list, you can either remove or add what is allowed for the (RED SIDE) in the Coldwar or Gulfwar era.
 -- Legacy compatibility values are retained; the Manager uses the dedicated PvP coalition lists.
--- @gui label="Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true;PvP:false"
+-- @gui label="Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true;PvP:false" activeLabel="Allowed aircraft"
 allowedPlanesRed = {
     "A-10A",
     "F-111C",
@@ -2882,7 +2868,7 @@ allowedPlanesRed = {
 
 -- RED Coldwar/Gulfwar warehouse aircraft when separate PvP lists are enabled.
 -- Legacy aircraft rows remain unchanged; this override also includes enabled AI requirements.
--- @gui label="Coldwar Allowed RED Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui label="Coldwar Allowed RED Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements06|AircraftRequirements16" requiredWhen="Era:Coldwar|Gulfwar;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesRedColdwarPvP = {
     "A-10A",
@@ -2951,7 +2937,7 @@ allowedPlanesRedColdwarPvP = {
 }
 
 -- In this list, you can either remove or add what is allowed for BLUE warehouses in the Vietnam era.
--- @gui label="Vietnam Allowed Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam;PvP:false"
+-- @gui label="Vietnam Allowed Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam;PvP:false" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements09|AircraftRequirements18|AircraftRequirements12" requiredWhen="Era:Vietnam;PvP:false"
 allowedPlanesVietnam = {
     "A-4E-C",
@@ -2984,7 +2970,7 @@ allowedPlanesVietnam = {
 
 -- Shared Vietnam PvP warehouse aircraft for both coalitions when separate lists are disabled.
 -- Saved independently from PvE; enabled AI services require their aircraft to remain active.
--- @gui label="Vietnam Allowed Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:false"
+-- @gui label="Vietnam Allowed Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:false" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements09|AircraftRequirements18|AircraftRequirements06|AircraftRequirements20" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:false"
 allowedPlanesSharedVietnamPvP = {
     "A-4E-C",
@@ -3034,7 +3020,7 @@ allowedPlanesSharedVietnamPvP = {
 
 -- BLUE Vietnam warehouse aircraft when separate PvP lists are enabled.
 -- Legacy aircraft rows remain unchanged; this override also includes enabled AI requirements.
--- @gui label="Vietnam Allowed BLUE Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui label="Vietnam Allowed BLUE Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements09|AircraftRequirements18" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesBlueVietnamPvP = {
     "A-4E-C",
@@ -3074,7 +3060,7 @@ allowedPlanesBlueVietnamPvP = {
 
 -- In this list, you can either remove or add what is allowed for RED warehouses in the Vietnam era.
 -- Legacy compatibility values are retained; the Manager uses the dedicated PvP coalition lists.
--- @gui label="Vietnam Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true;PvP:false"
+-- @gui label="Vietnam Allowed RED Aircraft" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true;PvP:false" activeLabel="Allowed aircraft"
 allowedPlanesRedVietnam = {
     "Mi-8MT",
     "MiG-15bis",
@@ -3100,7 +3086,7 @@ allowedPlanesRedVietnam = {
 
 -- RED Vietnam warehouse aircraft when separate PvP lists are enabled.
 -- Legacy aircraft rows remain unchanged; this override also includes enabled AI requirements.
--- @gui label="Vietnam Allowed RED Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
+-- @gui label="Vietnam Allowed RED Aircraft (PvP)" installPolicy="keepTable" editor="bucket" visibleWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true" activeLabel="Allowed aircraft"
 -- @gui requiredSets="AircraftRequirements06|AircraftRequirements20" requiredWhen="Era:Vietnam;PvP:true;PvPSeparateAircraftLists:true"
 allowedPlanesRedVietnamPvP = {
     "Mi-8MT",
@@ -3140,7 +3126,7 @@ allowedPlanesRedVietnamPvP = {
 }
 -- The list is applied if AllowMods are true and on Modern era.
 -- Make sure you have the mods installed on the server and the client.
--- @gui label="Mods aircraft list" installPolicy="mergeRows" editor="bucket" visibleWhen="AllowMods:true;Era:Modern"
+-- @gui label="Mods aircraft list" installPolicy="mergeRows" editor="bucket" visibleWhen="AllowMods:true;Era:Modern" activeLabel="Allowed aircraft"
 restockAircraft = {
     "A-29B",
     "F-111C",
@@ -3179,9 +3165,24 @@ restockAircraft = {
     "T-45",
 }
 
+-- Optional national warehouse aircraft lists. Legacy era rules remain when disabled.
+-- This controls warehouse aircraft availability, not Mission Editor client slots.
+-- @gui label="Different aircraft per coalition (PvP)" visibleWhen="PvP:true"
+PvPSeparateAircraftLists = false
+
+-- If true, smart weapons found in the WarehouseWeaponCaps table are stocked at half the normal amount.
+-- This is to make the smart weapons harder to get.
+StrictSmartWeaponsInventory = false
+
+-- This table will be used if StrictSmartWeaponsInventory is set to true.
+-- Smart weapons in this table will be HALF what we add to the warehouse.
+-- @gui editor="bucket" activeLabel="Capped" visibleWhen="StrictSmartWeaponsInventory:true"
+WarehouseWeaponCaps = {
+}
+
 -- In the Coldwar or Gulfwar era, you can add or remove what to restrict
 -- Add "--" if you want to ALLOW a weapon, otherwise the weapon in the list below are removed from the warehouse.
--- @gui label="Cold War / Gulf War Restricted Weapons" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar"
+-- @gui label="Cold War / Gulf War Restricted Weapons" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Coldwar|Gulfwar" activeLabel="Restricted"
 restrictedWeapons = {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
@@ -3280,7 +3281,7 @@ restrictedWeapons = {
 
 -- In the Vietnam era, you can add or remove what to restrict.
 -- Add "--" if you want to ALLOW a weapon, otherwise weapons in the list below are removed from the warehouse.
--- @gui label="Vietnam Restricted Weapons" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam"
+-- @gui label="Vietnam Restricted Weapons" installPolicy="mergeRows" newItemPolicy="commentWhenVisible" editor="bucket" visibleWhen="Era:Vietnam" activeLabel="Restricted"
 restrictedWeaponsVietnam = {
     -- Guided weapon pods
     --"weapons.containers.HB_ORD_Pave_Spike",
@@ -3361,7 +3362,7 @@ restrictedWeaponsVietnam = {
 
 -- This list can be used to add weapons you want to forbidd, This will forbidd all in the table in Modern era as well.
 -- For Coldwar or Gulfwar, you can still rely on restrictedWeapons.
--- @gui label="Forbidden Weapons All Eras" editor="bucket"
+-- @gui label="Forbidden Weapons All Eras" editor="bucket" activeLabel="Forbidden"
 ForbiddWeaponsInAllEra = {
     "weapons.bombs.RN-24", -- Nukes for the Mig-21
     "weapons.bombs.RN-28", -- Nukes for the Mig-21

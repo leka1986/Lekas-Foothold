@@ -66,6 +66,7 @@ internal sealed class ConfigStringListTable
     public required string Description { get; init; }
     public string? GuiLabel { get; init; }
     public string? GuiEditor { get; init; }
+    public string? GuiActiveLabel { get; set; }
     public string? GuiVisibleWhen { get; init; }
     public bool GuiTesting { get; init; }
     public string? InstallPolicy { get; init; }
@@ -3728,6 +3729,7 @@ internal sealed partial class ConfigDocument
                 var description = BuildDescription(pendingComments, split.inlineComment, CollectFollowingComments(i + 1));
                 if (TryReadStringListTable(i, key, section, description, guiLabel, guiEditor, guiVisibleWhen, guiTesting, installPolicy, newItemPolicy, out var stringListTable))
                 {
+                    stringListTable.GuiActiveLabel = ReadGuiAttribute(guiComments, "activeLabel");
                     stringListTable.RequiredValueRules = ReadRequiredValueRules(guiComments);
                     stringListTable.ManagedTargetKeys = (ReadGuiAttribute(guiComments, "managedTargets") ?? "")
                         .Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
@@ -3931,7 +3933,7 @@ internal sealed partial class ConfigDocument
         table = new ConfigStringListTable
         {
             Key = key,
-            Section = key == "WarehouseWeaponCaps" ? "Aircraft / Weapons" : section,
+            Section = section,
             Description = description,
             GuiLabel = guiLabel,
             GuiEditor = guiEditor,
