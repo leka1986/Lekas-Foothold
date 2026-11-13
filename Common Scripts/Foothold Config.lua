@@ -254,6 +254,7 @@ PVE_Only = false -- If true, players can not spawn in red coalition zones.
 -- (not compatible with Coldwar/Gulfwar).
 -- Keep in mind, adding mods midsession, while there is a save file, those weapons will not be added to current saved airbases.
 -- this will be filled through time, from the AutoFillResources.
+-- @gui disabledWhen="Era:Coldwar|Gulfwar|Vietnam" disabledValue="false"
 AllowMods = false -- Should NOT be used with the Coldwar or Gulfwar era.
 
 -- If true, when players die their coalition loses 100 credits per death.
@@ -3139,7 +3140,7 @@ allowedPlanesRedVietnamPvP = {
 }
 -- The list is applied if AllowMods are true and on Modern era.
 -- Make sure you have the mods installed on the server and the client.
--- @gui label="Mods aircraft list" installPolicy="mergeRows" editor="bucket" visibleWhen="AllowMods:true"
+-- @gui label="Mods aircraft list" installPolicy="mergeRows" editor="bucket" visibleWhen="AllowMods:true;Era:Modern"
 restockAircraft = {
     "A-29B",
     "F-111C",
