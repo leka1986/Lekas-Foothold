@@ -12,6 +12,7 @@ internal static class MissionWarehouseService
         ("Foothold_GCW_", "Germany Cold War", "GermanyCW"), ("Foothold_IRAQ_", "Iraq", "Iraq"),
         ("Foothold_Ko_", "Kola", "Kola"), ("Foothold_PG_", "Persian Gulf", "PersianGulf"),
         ("Foothold_SI_extended_", "Sinai Extended", "SinaiMap"), ("Foothold_SI_North_", "Sinai North", "SinaiMap"),
+        ("Foothold_SA_", "South Atlantic", "Falklands"),
         ("Foothold_SY_extended_", "Syria Extended", "Syria"), ("WWII_Normandy_Foothold_", "Normandy WWII", "Normandy") ];
     private static readonly (string Prefix, string Name)[] MapAliases = [
         ("Foothold_Caucasus_", "Caucasus"), ("Foothold_Afghanistan_", "Afghanistan"),
