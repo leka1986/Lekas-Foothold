@@ -29,7 +29,7 @@ FL.Messages.EN = {
 	-- Common
 	-- ============================================================
 	COMMON_YES                         = "Yes",
-	SHOP_CAP_AUTO_BUY                  = "Auto-buy CAP if destroyed?",
+	SHOP_CAP_BUY_AGAIN_IF_DEAD         = "Yes, Buy again if Dead",
 	SHOP_CAP_AUTO_BUY_STOPPED          = "CAP auto-buy stopped. No replacement was purchased.",
 	DYNAMIC_CAP_STOP_AUTO_BUY          = "Stop CAP auto-buy",
 	DYNAMIC_CAP_AUTO_BUY_CANCELLED     = "CAP auto-buy cancelled. The current flight will continue.",

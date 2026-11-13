@@ -21767,34 +21767,6 @@ function BattleCommander:_isCapAutoBuyStationEligible(order)
 		and (station.side == 2 or station.side == 0 and (not station.NeutralAtStart or station.firstCaptureByRed))
 end
 
-function BattleCommander:_promptCapAutoBuy(groupId, group, side, params, maximum)
-	local state = self.groupSupportMenus[groupId]
-	if not state or not state.menu or not group or not group:isExist() then return false end
-	local buyer = self:_getGroupPlayerName(groupId, group, true)
-	if not buyer then return false end
-	if state.capAutoBuyPrompt then
-		missionCommands.removeItemForGroup(groupId, state.capAutoBuyPrompt)
-	end
-	local T = L10N:ForGroup(groupId)
-	local title = T:Get("SHOP_CAP_AUTO_BUY")
-	if title == "SHOP_CAP_AUTO_BUY" then title = "Auto-buy CAP if destroyed?" end
-	local prompt = missionCommands.addSubMenuForGroup(groupId, title, state.menu)
-	state.capAutoBuyPrompt = prompt
-	local function choose(count)
-		if self.groupSupportMenus[groupId] ~= state or state.capAutoBuyPrompt ~= prompt then return end
-		missionCommands.removeItemForGroup(groupId, prompt)
-		state.capAutoBuyPrompt = nil
-		if not self:_isCapAutoBuyBuyer(buyer, groupId, group) then return end
-		self:buyShopItem(side, "dynamiccap", {zone=params.zone, heading=params.heading, leg=params.leg, capAutoBuys=count}, groupId, group)
-	end
-	missionCommands.addCommandForGroup(groupId, T:Get("COMMON_NO"), prompt, choose, 0)
-	local yes = missionCommands.addSubMenuForGroup(groupId, T:Get("COMMON_YES"), prompt)
-	for count = 1, maximum do
-		missionCommands.addCommandForGroup(groupId, tostring(count), yes, choose, count)
-	end
-	return true
-end
-
 function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,buyerGroupObj)
 			local item   = self.shops[coalition][id]
 			local shop   = self.shops[coalition]
@@ -21888,16 +21860,13 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 			end
 			return false
 		end
-		local managedCap, capOrder
+		local managedCap, capOrder, capAutoBuyLimit
 		if id == "dynamiccap" and coalition == 2 and GlobalSettings.pvpEnabled ~= true
 			and AllowCapAutoBuyAfterLoss == true and buyerGroupId and type(alternateParams) == "table" then
 			local maximum = math.max(1, math.min(5, math.floor(tonumber(MaxCapAutoBuys) or 1)))
 			capOrder = alternateParams._capAutoBuyOrder
-			local count = alternateParams.capAutoBuys
-			if not capOrder and count == nil and alternateParams.zone and alternateParams.heading and alternateParams.leg then
-				if not capActive and self:_promptCapAutoBuy(buyerGroupId, buyerGroupObj, coalition, alternateParams, maximum) then return end
-			end
-			managedCap = capOrder ~= nil or type(count) == "number" and count >= 1 and count <= maximum and count == math.floor(count)
+			managedCap = capOrder ~= nil or alternateParams.capAutoBuy == true
+			if managedCap then capAutoBuyLimit = maximum end
 			if managedCap and (capActive or not self:_isCapAutoBuyBuyer(pname, buyerGroupId, buyerGroupObj)
 				or capOrder and (capOrder.buyer ~= pname or not self:_isCapAutoBuyStationEligible(capOrder))
 				or RankingSystem and item.reqRank and (self:getPlayerRank(pname) or 0) < item.reqRank) then
@@ -22055,7 +22024,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 				return false
 			end
 			local purchase = self:_buildPendingShopPurchase(coalition, id, item, buyerGroupId, buyerGroupObj, itemName, coalitionItemName)
-			local order = capOrder or {buyer=pname, remaining=alternateParams.capAutoBuys, launchZone=target.zone}
+			local order = capOrder or {buyer=pname, remaining=capAutoBuyLimit, launchZone=target.zone}
 			return spawnCapAt(target.zone, alternateParams.heading, alternateParams.leg, nil, purchase, nil, target, order, capOrder ~= nil)
 		end
 		local pendingShopPurchase = nil
@@ -22335,6 +22304,42 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 			return
 		end
 
+		local buildCapPurchaseZoneMenu
+		if itemInfo.id == "dynamiccap" and coalitionSide == 2 and GlobalSettings.pvpEnabled ~= true
+			and AllowCapAutoBuyAfterLoss == true and type(selectorSpec.zoneMenuBuilder) == "function" then
+			local yesLabel = T:Get("SHOP_CAP_BUY_AGAIN_IF_DEAD")
+			if yesLabel == "SHOP_CAP_BUY_AGAIN_IF_DEAD" then yesLabel = "Yes, Buy again if Dead" end
+			local noLabel = T:Get("COMMON_NO")
+			local orbitLabel = localizedDynamicHeadingLabel("Orbit", T)
+			local headings, legs = {}, {}
+			for _, name in ipairs({ "Hot 360", "Hot 045", "Hot 090", "Hot 135", "Hot 180", "Hot 225", "Hot 270", "Hot 315" }) do
+				headings[#headings + 1] = { label = localizedDynamicHeadingLabel(name, T), value = capHeadings[name] }
+			end
+			for _, name in ipairs({ "10 NM Leg", "20 NM Leg", "30 NM Leg", "40 NM Leg", "50 NM Leg" }) do
+				legs[#legs + 1] = { label = localizedDynamicLegLabel(name, T), value = capLegs[name] }
+			end
+			local function buyCap(zone, heading, leg, autoBuy)
+				self:buyShopItem(coalitionSide, itemInfo.id, {
+					zone = zone, heading = heading, leg = leg, capAutoBuy = autoBuy,
+				}, groupId, groupObj)
+			end
+			local function addChoice(parent, label, zone, heading, leg)
+				local choice = rememberHandle(missionCommands.addSubMenuForGroup(groupId, label, parent))
+				rememberHandle(missionCommands.addCommandForGroup(groupId, yesLabel, choice, buyCap, zone, heading, leg, true))
+				rememberHandle(missionCommands.addCommandForGroup(groupId, noLabel, choice, buyCap, zone, heading, leg, false))
+			end
+			buildCapPurchaseZoneMenu = function(parent, label, zone)
+				local zoneMenu = rememberHandle(missionCommands.addSubMenuForGroup(groupId, label, parent))
+				addChoice(zoneMenu, orbitLabel, zone, 45, 0)
+				for _, heading in ipairs(headings) do
+					local headingMenu = rememberHandle(missionCommands.addSubMenuForGroup(groupId, heading.label, zoneMenu))
+					for _, leg in ipairs(legs) do
+						addChoice(headingMenu, leg.label, zone, heading.value, leg.value)
+					end
+				end
+			end
+		end
+
 		local hasFriendlyGroundAttackFarp
 		if GlobalSettings.pvpEnabled == true and itemInfo.id == 'groundattack' then
 			hasFriendlyGroundAttackFarp = false
@@ -22362,7 +22367,9 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 				tgt = subMenu
 			end
 
-			if type(selectorSpec.zoneMenuBuilder) == "function" then
+			if buildCapPurchaseZoneMenu then
+				buildCapPurchaseZoneMenu(tgt, label, wrap.z)
+			elseif type(selectorSpec.zoneMenuBuilder) == "function" then
 				if GlobalSettings.pvpEnabled == true and itemInfo.id == 'groundattack' then
 					selectorSpec.zoneMenuBuilder(self, tgt, label, wrap.z, groupId, groupObj, itemInfo, selectorChildren, rememberHandle, coalitionSide, hasFriendlyGroundAttackFarp)
 				elseif GlobalSettings.pvpEnabled == true and (itemInfo.id == 'capture' or itemInfo.id == 'supplies2' or itemInfo.id == 'dynamicarco' or itemInfo.id == 'dynamictexaco' or itemInfo.id == 'dynamiccap' or itemInfo.id == 'dynamicsead' or itemInfo.id == 'strategicbomber') then
@@ -22395,10 +22402,6 @@ function BattleCommander:refreshShopMenuForGroup(groupId, groupObj, knownSide, k
 	end
 	local groupState = self.groupSupportMenus[groupId]
 	local parent = groupState.menu
-	if groupState.capAutoBuyPrompt then
-		missionCommands.removeItemForGroup(groupId, groupState.capAutoBuyPrompt)
-		groupState.capAutoBuyPrompt = nil
-	end
 	local oldItems = groupState.items or {}
 	for i = #oldItems, 1, -1 do
 		missionCommands.removeItemForGroup(groupId, oldItems[i])
