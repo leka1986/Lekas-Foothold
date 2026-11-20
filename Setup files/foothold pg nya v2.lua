@@ -2822,6 +2822,7 @@ function (sender, params, delayMenuRefresh, ownerSide)
     return
 end)
 bc.shopItems['dynamicarco'].groupZoneSelector = {
+	stablePurchaseOptions = true,
 	targetzoneside = 2,
 	includeSuspended = true,
 	sortPolicy = 'friendly_frontline',
@@ -2914,6 +2915,7 @@ function (sender, params, delayMenuRefresh, ownerSide)
     return
 end)
 bc.shopItems['dynamictexaco'].groupZoneSelector = {
+	stablePurchaseOptions = true,
 	targetzoneside = 2,
 	includeSuspended = true,
 	sortPolicy = 'friendly_frontline',
@@ -3093,6 +3095,7 @@ function(sender, params, ownerSide)
     end
 end, nil, decoyRows and 'DECOY' or nil, decoyRows)
 bc.shopItems['dynamicdecoy'].groupZoneSelector = {
+	stablePurchaseOptions = true,
 	targetzoneside = 1,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
@@ -3190,6 +3193,7 @@ function(sender, params, ownerSide)
     end
 end, nil, seadRows and 'SEAD' or nil, seadRows)
 bc.shopItems['dynamicsead'].groupZoneSelector = {
+	stablePurchaseOptions = true,
 	targetzoneside = 1,
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
@@ -3257,6 +3261,7 @@ function(sender, params)
 	end
 end)
 bc.shopItems['groundattack'].groupZoneSelector = {
+	reuseFriendlyFarp = true,
 	targetzoneside = 1,
 	targetzonesideByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 2, [2] = 1 } or nil,
 	candidateBucketByCoalition = GlobalSettings.pvpEnabled == true and { [1] = 'blue_unsuspended', [2] = 'enemy_unsuspended' } or nil,
@@ -3283,7 +3288,7 @@ bc.shopItems['groundattack'].groupZoneSelector = {
 		local pvpEnabled = GlobalSettings.pvpEnabled == true
 		local purchaseSide = pvpEnabled and ownerSide or 2
 		local hasFriendlyDynamicFarp = false
-		if pvpEnabled then
+		if pvpEnabled or knownFriendlyFarp ~= nil then
 			hasFriendlyDynamicFarp = knownFriendlyFarp
 		else
 		local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[2] or nil
@@ -3513,14 +3518,12 @@ if GlobalSettings.pvpEnabled == true then
         extraPredicate = function(zoneObj)
             local ownerSide = 3-zoneObj.side
             local cfg = StrategicBomber.GetConfig(ownerSide)
-            if not StrategicBomber.BlueTargetAllowed(zoneObj, cfg or false, ownerSide) then return false end
-            for _, originZone in ipairs(bc:getZones()) do
-                if StrategicBomber.BlueOriginAllowed(originZone, zoneObj, cfg or false, ownerSide) then return true end
-            end
-            return false
+            if not cfg or not StrategicBomber.BlueTargetAllowed(zoneObj, cfg, ownerSide) then return false end
+            local origins = StrategicBomber.GetBlueOriginCandidates(zoneObj, ownerSide, cfg)
+            return #origins > 0, origins
         end,
-        zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide)
-            return StrategicBomber.BuildBlueShopMenu(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide)
+        zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide, origins)
+            return StrategicBomber.BuildBlueShopMenu(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide, origins)
         end,
         emptyLabel = LTGet("STRATEGIC_BOMBER_NO_VALID_TARGETS"),
     }
@@ -3569,16 +3572,13 @@ bc.shopItems['strategicbomber'].groupZoneSelector = {
 	includeSuspended = false,
 	sortPolicy = 'enemy_frontline',
 	extraPredicate = function(zoneObj)
-		if not StrategicBomber.BlueTargetAllowed(zoneObj) then return false end
-		for _, originZone in ipairs(bc:getZones()) do
-			if StrategicBomber.BlueOriginAllowed(originZone, zoneObj) then
-				return true
-			end
-		end
-		return false
+		local cfg = StrategicBomber.GetConfig(2)
+		if not cfg or not StrategicBomber.BlueTargetAllowed(zoneObj, cfg) then return false end
+		local origins = StrategicBomber.GetBlueOriginCandidates(zoneObj, nil, cfg)
+		return #origins > 0, origins
 	end,
-	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
-		return StrategicBomber.BuildBlueShopMenu(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle)
+	zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide, origins)
+		return StrategicBomber.BuildBlueShopMenu(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, ownerSide, origins)
 	end,
 	emptyLabel = LTGet("STRATEGIC_BOMBER_NO_VALID_TARGETS"),
 }
@@ -3702,7 +3702,8 @@ bc.shopItems['supplies2'].groupZoneSelector = {
         return zoneObj.active and zoneObj.side == 2 and not zoneObj.suspended and zoneObj._needsSupplyForMenu == true
     end,
     zoneMenuBuilder = function(bcRef, parentMenu, label, zoneObj, groupId, groupObj, itemInfo, track, rememberHandle, knownOwnerSide)
-        local ownerSide = (GlobalSettings.pvpEnabled == true and knownOwnerSide) or 2
+        local pvpEnabled = GlobalSettings.pvpEnabled == true
+        local ownerSide = (pvpEnabled and knownOwnerSide) or 2
         local function remember(handle)
             if rememberHandle then
                 return rememberHandle(handle)
@@ -3715,7 +3716,7 @@ bc.shopItems['supplies2'].groupZoneSelector = {
 
         if not AllowScriptedSupplies and not isCarrierZoneName(zoneObj.zone) then
             local bestCommander
-            if GlobalSettings.pvpEnabled == true then
+            if pvpEnabled then
                 bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj, { ownerSide = ownerSide }))
             else
                 bestCommander = select(1, findNearestAvailableSupplyCommander(zoneObj))
@@ -3724,12 +3725,17 @@ bc.shopItems['supplies2'].groupZoneSelector = {
             local hasFriendlyDynamicFarp = false
             local hasNearbyFriendlyDynamicFarp = false
             local farps = bcRef.dynamicFarpsBySide and bcRef.dynamicFarpsBySide[ownerSide] or nil
-            if farps then
+            local farpDistances
+            if farps and #farps > 0 then
+                if not pvpEnabled and not canUseFarp then farpDistances = {} end
                 for i = 1, #farps do
-                    local farpAb = AIRBASE:FindByName(farps[i].name)
+                    local farp = farps[i]
+                    local farpAb = AIRBASE:FindByName(farp.name)
                     if farpAb and farpAb:GetCoalition() == ownerSide then
                         hasFriendlyDynamicFarp = true
-                        local distMeters = bcRef:_getDynamicFarpZoneDistance(farps[i], zoneObj.zone)
+                        if canUseFarp then break end
+                        local distMeters = bcRef:_getDynamicFarpZoneDistance(farp, zoneObj.zone)
+                        if farpDistances then farpDistances[farp] = distMeters end
                         if distMeters and distMeters <= (30 * 1852) then
                             hasNearbyFriendlyDynamicFarp = true
                         end
@@ -3737,17 +3743,17 @@ bc.shopItems['supplies2'].groupZoneSelector = {
                 end
             end
             local hasFallbackHeloFarp
-            if GlobalSettings.pvpEnabled == true then
+            if pvpEnabled then
                 hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj, ownerSide) ~= nil)
             else
                 hasFallbackHeloFarp = (not bestCommander) and hasNearbyFriendlyDynamicFarp and (findNearestAvailableSupplyHeliCommander(zoneObj) ~= nil)
             end
             local hasFarpOption = (canUseFarp and hasFriendlyDynamicFarp) or hasFallbackHeloFarp
             if not hasFarpOption then
-                if GlobalSettings.pvpEnabled == true then
+                if pvpEnabled then
                     hasFarpOption = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj, ownerSide)
                 else
-                    hasFarpOption = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj)
+                    hasFarpOption = bcRef:_hasDynamicShopSupplyFarpOption(zoneObj, nil, farpDistances)
                 end
             end
             if hasFarpOption then

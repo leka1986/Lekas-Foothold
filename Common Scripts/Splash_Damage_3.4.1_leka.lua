@@ -774,6 +774,8 @@ explTable = {
 	
     --*** ANTI-RADAR MISSILE (ARM) ***
     ["AGM_88C"] = { explosive = 69 },
+    ["POBIT_F16V_AGM88E"] = { explosive = 69 },
+    ["POBIT_F16V_AGM88F"] = { explosive = 69 },
     ["AGM_88"] = { explosive = 69 },
     ["AGM_122"] = { explosive = 12 },
     ["LD-10"] = { explosive = 75 },
@@ -796,6 +798,7 @@ explTable = {
     ["CM-802AKG"] = { explosive = 240 },
     ["AGM_84E"] = { explosive = 360 },
     ["AGM_84H"] = { explosive = 380 },
+    ["POBIT_F16V_AGM158"] = { explosive = 500 },
     ["AGM_86D"] = { explosive = 305 }, --B-52H Cruise Missile
     ["X_59M"] = { explosive = 340 },
     ["X_65"] = { explosive = 545 },

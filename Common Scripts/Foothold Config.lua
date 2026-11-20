@@ -3277,7 +3277,9 @@ restrictedWeapons = {
     -- "weapons.containers.AN_AAQ_33",
     
 	"weapons.missiles.AGR_20A", -- laser rockets
-	"weapons.missiles.AGR_20_M282"} -- laser rockets
+	"weapons.missiles.AGR_20_M282", -- laser rockets
+
+} 
 
 -- In the Vietnam era, you can add or remove what to restrict.
 -- Add "--" if you want to ALLOW a weapon, otherwise weapons in the list below are removed from the warehouse.
@@ -3455,7 +3457,7 @@ ForbiddWeaponsInAllEra = {
     -- "weapons.bombs.LS_6_100",
     -- "weapons.bombs.GBU-43/B(MOAB)",
 	-- "weapons.missiles.AGR_20A", -- laser rockets
-	-- "weapons.missiles.AGR_20_M282" -- laser rockets
+	-- "weapons.missiles.AGR_20_M282", -- laser rockets
 }
 
 -- ============================================================================

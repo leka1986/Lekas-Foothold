@@ -711,7 +711,7 @@ Hunt = true
 zones = {
 	redcarrier = ZoneCommander:new({facility='carrier', isHeloSpawn=Era ~= 'Vietnam' and true or nil, zone='Red Carrier', side=1, level=10, upgrades=upgrades.redships, crates={}, flavorText=flavor.redcarrier}),
 	
-	sdedov = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Sde Dov', side=2, size='smallmedium', level=20, upgrades=upgrades.startbase2, crates={}, flavorText=flavor.sdedov}),
+	sdedov = ZoneCommander:new({facility='airbase', isHeloSpawn=false, zone='Sde Dov', side=2, size='smallmedium', level=20, upgrades=upgrades.startbase2, crates={}, flavorText=flavor.sdedov}),
 	bengurion = ZoneCommander:new({facility='airbase', isPlaneSpawn=true, isHeloSpawn=true, zone='Ben-Gurion', side=2, size='small', level=25, upgrades=upgrades.airfieldBen, crates={}, flavorText=flavor.bengurion}),
 	palmahim = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Palmahim', side=2, size='small', level=25, upgrades=upgrades.startbase, crates={}, flavorText=flavor.palmahim}),
 	telnof = ZoneCommander:new({facility='airbase', isHeloSpawn=true, zone='Tel Nof', side=2, size='small', level=25, upgrades=upgrades.startbase, crates={}, flavorText=flavor.telnof}),
