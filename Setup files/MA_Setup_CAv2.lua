@@ -2900,6 +2900,7 @@ local SHOP_PRICE_DEFAULTS = {
   dynamicdecoy  = 300,
   dynamicsead   = 500,
   dynamicbomb   = 500,
+  dynamicrunway = 500,
   strategicbomber = 1500,
   dynamicstatic = 500,
   cruisemsl     = 800,
@@ -2946,6 +2947,7 @@ local SHOP_RANK_DEFAULTS = {
   dynamiccap     = 2,
   dynamiccas     = 5,
   dynamicbomb    = 4,
+  dynamicrunway  = 2,
   strategicbomber = 6,
   dynamicsead    = 4,
   groundattack   = 5,
@@ -3644,6 +3646,49 @@ if GlobalSettings.pvpEnabled == true then
 end
 
 end
+
+if GlobalSettings.pvpEnabled ~= true then
+	bc:registerShopItem('dynamicrunway', "AI Runway Attack", ShopPrices.dynamicrunway,
+		function()
+			if bomberActive then
+				return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "AI Runway Attack")
+			end
+			return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
+		end,
+		function(_, params)
+			if bomberActive then
+				return LTFormat("SYRIA_SHOP_MISSION_STILL_PROGRESS", "AI Runway Attack")
+			end
+			local target = params and params.zone
+			local airbase = bc:_getShopRunwayTarget(target, true)
+			if not airbase then
+				if target and bc:isRunwayPlaneSpawnBlocked(target.zone) and bc:_getShopRunwayTarget(target) then
+					return string.format("The runway at %s is already closed.", target.zone)
+				end
+				return LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES")
+			end
+
+			local minNM = 25
+			local originName, distance = findClosestBlueZoneOutside(target.zone, minNM)
+			if not originName then
+				return LTFormat("SYRIA_SHOP_NO_FRIENDLY_SPAWN", "AI Runway Attack")
+			end
+			local offset = (distance and distance < minNM) and (minNM - distance) or 0
+			return spawnBomberAt(originName, target.zone, offset, nil, nil, nil, nil, target, airbase)
+		end)
+	bc.shopItems.dynamicrunway.groupZoneSelector = {
+		targetzoneside = 1,
+		includeSuspended = false,
+		sortPolicy = 'enemy_frontline',
+		candidateBucket = 'enemy_unsuspended',
+		refreshTags = { 'enemy_targets' },
+		extraPredicate = function(zone)
+			return bc:_getShopRunwayTarget(zone) ~= nil
+		end,
+		emptyLabel = LTGet("SYRIA_SHOP_NO_ELIGIBLE_AIRBASE_ZONES"),
+	}
+end
+
 Group.getByName('RedBomberEvent'):destroy()
 Group.getByName('RedBomberEvent_CW'):destroy()
 Group.getByName('BlueBomberEvent'):destroy()
@@ -4231,6 +4276,10 @@ bc.shopItems['cadragoon'].groupZoneSelector = {
 }
 end
 
+local function formatVietnamJtac(key, ...)
+	local message = L10N:Get(key):gsub("Tomcat", "F-4E"):gsub("F%-14「雄貓」", "F-4E")
+	return string.format(message, ...)
+end
 local jtacDrones
 local jtacTargetMenu = nil
 for _,n in ipairs({'jtacDroneColdwar1','jtacDroneColdwar2','jtacDrone1','jtacDrone2'}) do
@@ -4238,12 +4287,16 @@ for _,n in ipairs({'jtacDroneColdwar1','jtacDroneColdwar2','jtacDrone1','jtacDro
     if g then g:destroy() end
 end
 if GlobalSettings.pvpEnabled ~= true then
-if ColdWarTechEra then
+if Era == 'Vietnam' then
+	Group.getByName('jtacDroneVietnam1'):destroy()
+	Group.getByName('jtacDroneVietnam2'):destroy()
+	jtacDrones = {JTAC:new({name = 'jtacDroneVietnam1'}), JTAC:new({name = 'jtacDroneVietnam2'})}
+elseif ColdWarTechEra then
 jtacDrones = {JTAC:new({name = 'jtacDroneColdwar1'}),JTAC:new({name = 'jtacDroneColdwar2'})}
 else
 jtacDrones = {JTAC:new({name = 'jtacDrone1'}),JTAC:new({name = 'jtacDrone2'})}
 end
-bc:registerShopItem('jtac',LTGet("SYRIA_SHOP_ITEM_JTAC_MQ9"),ShopPrices.jtac,function(sender)
+bc:registerShopItem('jtac',Era == 'Vietnam' and 'F-4E JTAC' or LTGet("SYRIA_SHOP_ITEM_JTAC_MQ9"),ShopPrices.jtac,function(sender)
 	return LTGet("SYRIA_SHOP_CHOOSE_TARGET_ZONE")
 end,function(sender,params)
 	if params.zone and params.zone.side == 1 and not params.zone.suspended then
@@ -4264,7 +4317,9 @@ end,function(sender,params)
 		dr:deployAtZone(params.zone)
 		dr:showMenu()
 		table.insert(jtacQueue,dr)
-		if ColdWarTechEra then
+		if Era == 'Vietnam' then
+			trigger.action.outTextForCoalition(2,formatVietnamJtac("SYRIA_SHOP_JTAC_TOMCAT_ACTIVE", params.zone.zone, #jtacQueue),15)
+		elseif ColdWarTechEra then
 			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_ACTIVE", params.zone.zone, #jtacQueue),15)
 		else
 			trigger.action.outTextForCoalition(2,L10N:Format("SYRIA_SHOP_JTAC_REAPER_ACTIVE", params.zone.zone, #jtacQueue),15)
@@ -4307,7 +4362,10 @@ if GlobalSettings.pvpEnabled == true and Era ~= 'Vietnam' then
 		[coalition.side.RED] = JTAC9line:new({name = template.name, side = coalition.side.RED}),
 	}
 else
-if ColdWarTechEra then
+if Era == 'Vietnam' then
+	Group.getByName('JTAC9lineamVietnam'):destroy()
+	droneAM = JTAC9line:new({name = 'JTAC9lineamVietnam'})
+elseif ColdWarTechEra then
 droneAM = JTAC9line:new({name = 'JTAC9lineamColdwar'})
 else
 droneAM = JTAC9line:new({name = 'JTAC9lineam'})
@@ -4329,8 +4387,10 @@ function(sender, params, ownerSide)
 	end
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         droneAM:deployAtZone(params.zone)
-        jtacZones[params.zone.zone] = {drone = ColdWarTechEra and 'JTAC9lineamColdwar' or 'JTAC9lineam'}
-		if ColdWarTechEra then
+        jtacZones[params.zone.zone] = {drone = droneAM.name}
+		if Era == 'Vietnam' then
+			trigger.action.outTextForCoalition(2, formatVietnamJtac("SYRIA_SHOP_JTAC_TOMCAT_AM", params.zone.zone), 30)
+		elseif ColdWarTechEra then
 			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_AM", params.zone.zone), 30)
         
     	else
@@ -4365,7 +4425,10 @@ if GlobalSettings.pvpEnabled == true and Era ~= 'Vietnam' then
 		[coalition.side.RED] = JTAC9linefmr:new({name = template.name, side = coalition.side.RED}),
 	}
 else
-if ColdWarTechEra then
+if Era == 'Vietnam' then
+	Group.getByName('JTAC9linefmVietnam'):destroy()
+	droneFM = JTAC9linefmr:new({name = 'JTAC9linefmVietnam'})
+elseif ColdWarTechEra then
 droneFM = JTAC9line:new({name = 'JTAC9linefmColdwar'})
 else
 droneFM = JTAC9line:new({name = 'JTAC9linefm'})
@@ -4387,9 +4450,11 @@ function(sender, params, ownerSide)
 	end
     if params.zone and params.zone.side == 1 and not params.zone.suspended then
         droneFM:deployAtZone(params.zone)
-        jtacZones[params.zone.zone] = {drone = ColdWarTechEra and 'JTAC9linefmColdwar' or 'JTAC9linefm'}
+        jtacZones[params.zone.zone] = {drone = droneFM.name}
 
-		if ColdWarTechEra then
+		if Era == 'Vietnam' then
+			trigger.action.outTextForCoalition(2, formatVietnamJtac("SYRIA_SHOP_JTAC_TOMCAT_FM", params.zone.zone), 30)
+		elseif ColdWarTechEra then
 			trigger.action.outTextForCoalition(2, L10N:Format("SYRIA_SHOP_JTAC_TOMCAT_FM", params.zone.zone), 30)
         
     	else
@@ -5540,6 +5605,9 @@ bc:addShopItem(2, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats
 if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'dynamiccas', -1, 2, ShopRankRequirements.dynamiccas, ShopCats.AIAttack) end
 bc:addShopItem(2, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack) -- Bomber Flight
 if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'dynamicbomb', -1, 3, ShopRankRequirements.dynamicbomb, ShopCats.AIAttack) end
+if GlobalSettings.pvpEnabled ~= true then
+	bc:addShopItem(2, 'dynamicrunway', -1, 3.1, ShopRankRequirements.dynamicrunway, ShopCats.AIAttack)
+end
 bc:addShopItem(2, 'dynamicsead', -1, 4, ShopRankRequirements.dynamicsead, ShopCats.AIAttack) -- SEAD Flight
 if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'dynamicsead', -1, 4, ShopRankRequirements.dynamicsead, ShopCats.AIAttack) end
 if Era ~= 'Vietnam' then
@@ -5683,9 +5751,7 @@ if GlobalSettings.pvpEnabled == true then
 end
 
 -- JTAC & Intel
-if Era ~= 'Vietnam' then
-bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac, ShopCats.JTACIntel) -- MQ-9 Reaper JTAC mission
-end
+bc:addShopItem(2, 'jtac', -1, 1, ShopRankRequirements.jtac, ShopCats.JTACIntel) -- Airborne JTAC mission
 bc:addShopItem(2, 'smoke', -1, 2, ShopRankRequirements.smoke, ShopCats.JTACIntel) -- smoke on target
 if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'smoke', -1, 2, ShopRankRequirements.smoke, ShopCats.JTACIntel) end
 bc:addShopItem(2, 'flare', -1, 3, ShopRankRequirements.flare, ShopCats.JTACIntel) -- flare on target
@@ -5694,7 +5760,7 @@ bc:addShopItem(2, 'illum', -1, 4, ShopRankRequirements.illum, ShopCats.JTACIntel
 if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'illum', -1, 4, ShopRankRequirements.illum, ShopCats.JTACIntel) end
 bc:addShopItem(2, 'intel', -1, 5, ShopRankRequirements.intel, ShopCats.JTACIntel) -- Intel
 if GlobalSettings.pvpEnabled == true then bc:addShopItem(1, 'intel', -1, 5, ShopRankRequirements.intel, ShopCats.JTACIntel) end
-if Era ~= 'Vietnam' then
+if GlobalSettings.pvpEnabled ~= true or Era ~= 'Vietnam' then
 bc:addShopItem(2, '9lineam', -1, 6, ShopRankRequirements['9lineam'], ShopCats.JTACIntel) -- free jtac
 bc:addShopItem(2, '9linefm', -1, 7, ShopRankRequirements['9linefm'], ShopCats.JTACIntel) -- free jtac
 if GlobalSettings.pvpEnabled == true then

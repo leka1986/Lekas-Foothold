@@ -33015,7 +33015,9 @@ AIRBASE.Kola={
 ["Bodo"]="Bodo",
 ["Enontekio"]="Enontekio",
 ["Evenes"]="Evenes",
+["Hasvik"]="Hasvik",
 ["Hemavan"]="Hemavan",
+["Honningsvag"]="Honningsvag",
 ["Hosio"]="Hosio",
 ["Ivalo"]="Ivalo",
 ["Jokkmokk"]="Jokkmokk",
@@ -33038,6 +33040,7 @@ AIRBASE.Kola={
 ["Severomorsk_1"]="Severomorsk-1",
 ["Severomorsk_3"]="Severomorsk-3",
 ["Sodankyla"]="Sodankyla",
+["Vardo"]="Vardo",
 ["Vidsel"]="Vidsel",
 ["Vuojarvi"]="Vuojarvi",
 }
@@ -33094,12 +33097,16 @@ AIRBASE.Iraq={
 }
 AIRBASE.GermanyCW={
 ["Adelsheim"]="Adelsheim",
+["Ahlhorn"]="Ahlhorn",
+["Ahlhorn_Highway_Strip"]="Ahlhorn Highway Strip",
 ["Airracing_Frankfurt"]="Airracing Frankfurt",
 ["Airracing_Koblenz"]="Airracing Koblenz",
 ["Airracing_Luebeck"]="Airracing Lubeck",
 ["Allstedt"]="Allstedt",
 ["Altes_Lager"]="Altes Lager",
+["Avno"]="Avno",
 ["Bad_Duerkheim"]="Bad Durkheim",
+["Baden_Soellingen"]="Baden-Soellingen",
 ["Barth"]="Barth",
 ["Bienenfarm"]="Bienenfarm",
 ["Bindersleben"]="Bindersleben",
@@ -33109,7 +33116,9 @@ AIRBASE.GermanyCW={
 ["Brandis"]="Brandis",
 ["Braunschweig"]="Braunschweig",
 ["Bremen"]="Bremen",
+["Bremerhaven"]="Bremerhaven",
 ["Briest"]="Briest",
+["Bruchsal"]="Bruchsal",
 ["Buechel"]="Buchel",
 ["Bueckeburg"]="Buckeburg",
 ["Celle"]="Celle",
@@ -33123,6 +33132,7 @@ AIRBASE.GermanyCW={
 ["Falkenberg"]="Falkenberg",
 ["Fassberg"]="Fassberg",
 ["Finow"]="Finow",
+["Finsterwalde"]="Finsterwalde",
 ["Frankfurt"]="Frankfurt",
 ["Fritzlar"]="Fritzlar",
 ["Fulda"]="Fulda",
@@ -33257,16 +33267,21 @@ AIRBASE.GermanyCW={
 ["Kammermark"]="Kammermark",
 ["Kastrup"]="Kastrup",
 ["Kiel"]="Kiel",
+["Kluczewo"]="Kluczewo",
 ["Koethen"]="Kothen",
+["Kolobrzeg_Bagicz"]="Kolobrzeg-Bagicz",
 ["Laage"]="Laage",
+["Lahr"]="Lahr",
 ["Landstuhl"]="Landstuhl",
 ["Langenselbold"]="Langenselbold",
 ["Laerz"]="Larz",
 ["Leipzig_Mockau"]="Leipzig Mockau",
+["Lolland_Falster"]="Lolland-Falster",
 ["Luebeck"]="Lubeck",
 ["Lueneburg"]="Luneburg",
 ["Mahlwinkel"]="Mahlwinkel",
 ["Mainz_Finthen"]="Mainz Finthen",
+["Makowice"]="Makowice",
 ["Marxwalde"]="Marxwalde",
 ["Mendig"]="Mendig",
 ["Merseburg"]="Merseburg",
@@ -33277,11 +33292,14 @@ AIRBASE.GermanyCW={
 ["Noervenich"]="Norvenich",
 ["Ober_Moerlen"]="Ober-Morlen",
 ["Obermehler_Schlotheim"]="Obermehler Schlotheim",
+["Oldenburg"]="Oldenburg",
 ["Oranienburg"]="Oranienburg",
 ["Parchim"]="Parchim",
+["Pattonville"]="Pattonville",
 ["Peenemuende"]="Peenemunde",
 ["Perwenitz"]="Perwenitz",
 ["Pferdsfeld"]="Pferdsfeld",
+["Phalsbourg"]="Phalsbourg",
 ["Pinnow"]="Pinnow",
 ["Pottschutthoehe"]="Pottschutthohe",
 ["Ramstein"]="Ramstein",
@@ -33292,11 +33310,15 @@ AIRBASE.GermanyCW={
 ["Schweinfurt"]="Schweinfurt",
 ["Sembach"]="Sembach",
 ["Sittensen"]="Sittensen",
+["Sjobo"]="Sjobo",
+["Sniatowo"]="Sniatowo",
 ["Spangdahlem"]="Spangdahlem",
 ["Sperenberg"]="Sperenberg",
 ["Sprendlingen"]="Sprendlingen",
 ["Stendal"]="Stendal",
+["Strasbourg_Entzeim"]="Strasbourg Entzeim",
 ["Sturup"]="Sturup",
+["Stuttgart"]="Stuttgart",
 ["Szczecin_Goleniow"]="Szczecin-Goleniow",
 ["Tagra"]="Tagra",
 ["Tegel"]="Tegel",
@@ -33307,6 +33329,7 @@ AIRBASE.GermanyCW={
 ["Uelzen"]="Uelzen",
 ["Uetersen"]="Uetersen",
 ["Ummern"]="Ummern",
+["Vaerlose"]="Vaerlose",
 ["Verden_Scharnhorst"]="Verden-Scharnhorst",
 ["Walldorf"]="Walldorf",
 ["Waren_Vielist"]="Waren Vielist",
@@ -59734,22 +59757,17 @@ if targetcat==Object.Category.UNIT then
 targetunit=UNIT:Find(targetdata)
 elseif targetcat==Object.Category.STATIC then
 local tgtcoord=COORDINATE:NewFromVec3(targetdata:getPoint())
-local tgtgrp1=self.Samset:FindNearestGroupFromPointVec2(tgtcoord)
-local tgtcoord1=tgtgrp1:GetCoordinate()
-local tgtgrp2=self.Groupset:FindNearestGroupFromPointVec2(tgtcoord)
-if tgtgrp2 then
-local tgtcoord2=tgtgrp2:GetCoordinate()
-local dist1=tgtcoord:Get2DDistance(tgtcoord1)
-local dist2=tgtcoord:Get2DDistance(tgtcoord2)
-if dist1<dist2 then
-targetunit=tgtgrp1
-targetcat=Object.Category.UNIT
-else
-targetunit=tgtgrp2
-targetcat=Object.Category.UNIT
+local sam=self.Samset:FindNearestGroupFromPointVec2(tgtcoord)
+local shorad=self.Groupset:FindNearestGroupFromPointVec2(tgtcoord)
+targetunit=shorad or sam
+if sam and shorad then
+local samDistance=tgtcoord:Get2DDistance(sam:GetCoordinate())
+local shoradDistance=tgtcoord:Get2DDistance(shorad:GetCoordinate())
+if samDistance<shoradDistance then
+targetunit=sam
 end
-else
-targetunit=tgtgrp1
+end
+if targetunit then
 targetcat=Object.Category.UNIT
 end
 end

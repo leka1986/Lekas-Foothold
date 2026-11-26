@@ -1651,6 +1651,9 @@ AvailableShopItems = {
     -- @gui requiredValues="FA-18C_hornet" requiredWhen="AIAttackTakeoffFromGround:true"
     ["dynamicsead"] = true, -- AI Attack SEAD Flight
     ["dynamicbomb"] = true, -- AI AttackBomber Flight
+    -- @gui disabledWhen="PvP:true" disabledValue="false"
+    -- @gui visibleWhen="PvP:false"
+    ["dynamicrunway"] = true, -- AI Runway Attack
     -- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
     ["strategicbomber"] = true, -- AI Attack Strategic bomber
     ["groundattack"] = true, -- AI Attack Ground attack
@@ -1774,6 +1777,7 @@ ShopPrices = {
 	dynamicsead   = 500,  -- AI Attack SEAD Flight
 	groundattack  = 1000, -- AI Attack Ground attack
 	dynamicbomb   = 500,  -- AI AttackBomber Flight
+	dynamicrunway = 500,  -- AI Runway Attack
 	-- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
 	strategicbomber = 1500, -- AI Attack Strategic bomber
 	-- @gui visibleWhen="PvP:false"
@@ -1840,6 +1844,7 @@ ShopRankRequirements = {
 	dynamiccap     = 2,  -- CAP Flight
 	dynamiccas     = 5,  -- AI Attack CAS Flight
 	dynamicbomb    = 4,  -- AI AttackBomber Flight
+	dynamicrunway  = 2,  -- AI Runway Attack
 	-- @gui visibleWhen="Era:Modern|Coldwar|Gulfwar"
 	strategicbomber = 6, -- AI Attack Strategic bomber
 	dynamicsead    = 4,  -- AI Attack SEAD Flight
@@ -3187,6 +3192,9 @@ restrictedWeapons = {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
     -- Missiles
+    "weapons.missiles.POBIT_F16V_AGM154C",
+    "weapons.missiles.POBIT_F16V_AGM84H",
+    "weapons.missiles.POBIT_F16V_AGM88F",
     "weapons.missiles.F16V_GBU53",
     "weapons.missiles.F16V_GBU39",
     "weapons.missiles.AIM_120C",
@@ -3293,7 +3301,11 @@ restrictedWeaponsVietnam = {
     -- "weapons.containers.HB_ALE_40_15_90",
     -- "weapons.containers.HB_ALE_40_30_0",
     -- "weapons.containers.HB_ALE_40_30_60",
-
+    "weapons.missiles.POBIT_F16V_AGM154C",
+    "weapons.missiles.POBIT_F16V_AGM84H",
+    "weapons.missiles.POBIT_F16V_AGM88F",
+    "weapons.missiles.F16V_GBU53",
+    "weapons.missiles.F16V_GBU39",
 
     -- Modern air-to-air missiles
     "weapons.missiles.AIM-7F",
@@ -3370,6 +3382,11 @@ ForbiddWeaponsInAllEra = {
     "weapons.bombs.RN-28", -- Nukes for the Mig-21
     -- "weapons.containers.ah-64d_radar",
     -- Missiles
+    "weapons.missiles.POBIT_F16V_AGM154C",
+    "weapons.missiles.POBIT_F16V_AGM84H",
+    "weapons.missiles.POBIT_F16V_AGM88F",
+    "weapons.missiles.F16V_GBU53",
+    "weapons.missiles.F16V_GBU39",
     -- "weapons.missiles.P_27TE",
     -- "weapons.missiles.P_27ET",
     -- "weapons.missiles.AIM_120C",

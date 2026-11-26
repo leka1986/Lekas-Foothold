@@ -154,6 +154,8 @@ local mooseZoneCache = {}
 local airbaseCache = {}
 ExternalHeloCargoRoute = ExternalHeloCargoRoute or {}
 ExternalHeloCargoRoute.SupplyTransitRouteCache = {}
+ExternalHeloCargoRoute.SupplyCruiseSpeedMps = 79
+ExternalHeloCargoRoute.DefaultSupplyCruiseAltitudeFeet = 1000
 
 local _pickCachedParkingIds
 local function getAirbaseByName(name)
@@ -1838,10 +1840,47 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 		if not choice and #valid > 0 then choice = valid[math.random(1,#valid)] end
 	end
 	zn = zn or (choice and bc.indexedZones[choice] or nil)
-	local staticAttackAltitudeFt = opts.staticAttackAltitudeFt
-	local staticAttackAltitudeM = staticAttackAltitudeFt and (staticAttackAltitudeFt == routeAltitudeFt and routeAltitudeM
-		or staticAttackAltitudeFt == attackAltitudeFt and attackAltitudeM or UTILS.FeetToMeters(staticAttackAltitudeFt)) or nil
-	local attack, firstpos, hasStaticTargets = DynamicBomber.BuildBombingTaskForZone(choice, weaponExpend, attackAltitudeM, attackQty, opts.staticsLast == true, zn, opts.staticWeaponExpend, staticAttackAltitudeM, opts.altitudeEnabled)
+	local attack, firstpos, hasStaticTargets
+	local runwayAirbase = opts.runwayAirbase
+	if runwayAirbase then
+		if not zn or not zn.active or zn.isHidden then return bomber, nil, choice, false end
+		local runwayId = tonumber(runwayAirbase:getID())
+		firstpos = runwayAirbase:getPoint()
+		if not runwayId or not firstpos then return bomber, nil, choice, false end
+		local runways = runwayAirbase:getRunways()
+		if not runways or #runways == 0 then return bomber, nil, choice, false end
+		local tasks = {}
+		for _, runway in ipairs(runways) do
+			local bearing = -runway.course
+			local dx, dz = math.cos(bearing), math.sin(bearing)
+			local center = runway.position
+			local spacing = runway.length * 0.3
+			for pointIndex = 1, 3 do
+				local offset = (pointIndex - 2 + (math.random() - 0.5) * 0.5) * spacing
+				local x, z = center.x + dx * offset, center.z + dz * offset
+				tasks[#tasks + 1] = {
+					id = 'Bombing',
+					params = {
+						point = { x = x, y = z },
+						x = x,
+						y = z,
+						weaponType = Weapon.flag.AnyBomb,
+						expend = AI.Task.WeaponExpend.TWO,
+						attackQty = 1,
+						groupAttack = false,
+						altitude = attackAltitudeM,
+						altitudeEnabled = true,
+					},
+				}
+			end
+		end
+		attack = { id = 'ComboTask', params = { tasks = tasks } }
+	else
+		local staticAttackAltitudeFt = opts.staticAttackAltitudeFt
+		local staticAttackAltitudeM = staticAttackAltitudeFt and (staticAttackAltitudeFt == routeAltitudeFt and routeAltitudeM
+			or staticAttackAltitudeFt == attackAltitudeFt and attackAltitudeM or UTILS.FeetToMeters(staticAttackAltitudeFt)) or nil
+		attack, firstpos, hasStaticTargets = DynamicBomber.BuildBombingTaskForZone(choice, weaponExpend, attackAltitudeM, attackQty, opts.staticsLast == true, zn, opts.staticWeaponExpend, staticAttackAltitudeM, opts.altitudeEnabled)
+	end
 
 	if opts.requireBombingTargets == true and (#attack.params.tasks == 0 or not firstpos) then
 		return bomber, nil, choice, false, hasStaticTargets
@@ -2022,8 +2061,13 @@ function StartBomberAuftrag(tag, grpName, tgtList, escortGroup, routeSpeedKmh, o
 		if opts.climbDistanceNm and climbDistanceNm > ingressDistanceNm then
 			wp[#wp+1] = COORDINATE:New(climbPos.x, routeAltitudeM, climbPos.z):WaypointAirTurningPoint("BARO", speedKmh, {}, "Climb "..tostring(climbDistanceNm).." NM")
 		end
-		wp[#wp+1] = COORDINATE:New(appPos.x, routeAltitudeM, appPos.z):WaypointAirTurningPoint("BARO", speedKmh, ingressTasks, "Ingress "..tostring(ingressDistanceNm).." NM")
+		local ingressCoordinate = COORDINATE:New(appPos.x, routeAltitudeM, appPos.z)
+		wp[#wp+1] = ingressCoordinate:WaypointAirTurningPoint("BARO", speedKmh, ingressTasks, "Ingress "..tostring(ingressDistanceNm).." NM")
 		if opts.attackWaypointFlyOver then wp[#wp].action = COORDINATE.WaypointAction.FlyoverPoint end
+		if runwayAirbase then
+			idleOwner.runwayEgress = ingressCoordinate
+			wp[#wp+1] = ingressCoordinate:WaypointAirTurningPoint("BARO", afterIngressSpeedKmh, {}, "Egress")
+		end
 	end
 	--wp[#wp+1] = COORDINATE:New(firstpos.x, routeAltitudeM, firstpos.z):WaypointAirTurningPoint("BARO", speedKmh, { attack }, "Attack")
 	if not deferBombingTaskToIngress then
@@ -4647,6 +4691,40 @@ local function randomGroundLayout(count, grname)
 end
 
 
+function CustomZone._newUpgradeSpawner(template, groupName, alias)
+	local spawn = SPAWN:NewFromTemplate(template, groupName, alias, true)
+	if template.CoalitionID ~= coalition.side.BLUE or template.CategoryID ~= Group.Category.GROUND then
+		return spawn
+	end
+
+	local lowerName = groupName:lower()
+	if not lowerName:find("blue sam", 1, true) or lowerName:find("blue sam fixed voujarvi nasams", 1, true) then
+		return spawn
+	end
+
+	-- Set the editor option on MOOSE's private copy before it spawns the group.
+	local waypoint = spawn.SpawnTemplate.route.points[1]
+	waypoint.task = waypoint.task or { id = "ComboTask", params = { tasks = {} } }
+	local tasks = waypoint.task.params.tasks
+	local alarmState = AI.Option.Ground.id.ALARM_STATE
+	local red = AI.Option.Ground.val.ALARM_STATE.RED
+	local hasAlarmState = false
+	for _, task in ipairs(tasks) do
+		local action = task.enabled ~= false and task.id == "WrappedAction" and task.params.action
+		if action and action.id == "Option" and action.params.name == alarmState then
+			action.params.value = red
+			hasAlarmState = true
+		end
+	end
+	if not hasAlarmState then
+		tasks[#tasks + 1] = {
+			enabled = true, auto = false, id = "WrappedAction", number = #tasks + 1,
+			params = { action = { id = "Option", params = { name = alarmState, value = red } } },
+		}
+	end
+	return spawn
+end
+
 function SpawnCustom(grname, zoneName, side, requestedAlias, revealedSam)
 	spawnCounter[grname] = (spawnCounter[grname] or 0) + 1
 	local alias = requestedAlias or string.format("%s # %d", grname, spawnCounter[grname])
@@ -4680,7 +4758,7 @@ function SpawnCustom(grname, zoneName, side, requestedAlias, revealedSam)
 		if CustomZone._isSamMfdHiddenGroup(grname) then
 			tpl.hiddenOnMFD = shouldHideSamOnMFD(revealedSam)
 		end
-		local spawn = SPAWN:NewFromTemplate(tpl, grname, alias, true):InitSkill(GetGroundSkillForSide(side or ResolveTemplateSide(grname)))
+		local spawn = CustomZone._newUpgradeSpawner(tpl, grname, alias):InitSkill(GetGroundSkillForSide(side or ResolveTemplateSide(grname)))
 		if (not grname:find("Red SAM") and not grname:find("Blue SAM")) then
 		spawn = isCarrierZone and spawn:InitRandomizeUnits(true, 1500, 1000) or spawn:InitSetUnitRelativePositions(randomGroundLayout(#tpl.units, grname))
 		end
@@ -5219,7 +5297,7 @@ function SpawnCustom(grname, zoneName, side, requestedAlias, revealedSam)
 		if CustomZone._isSamMfdHiddenGroup(grname) then
 			tpl.hiddenOnMFD = shouldHideSamOnMFD(revealedSam)
 		end
-		local spawn = SPAWN:NewFromTemplate(tpl, grname, alias, true):InitSkill(GetGroundSkillForSide(side or ResolveTemplateSide(grname)))
+		local spawn = CustomZone._newUpgradeSpawner(tpl, grname, alias):InitSkill(GetGroundSkillForSide(side or ResolveTemplateSide(grname)))
 		if grname:find("IsNotShown") or grname:find("Red EWR") then
 			spawn = spawn:InitHiddenOnMap(true)
 		end
@@ -5266,7 +5344,7 @@ function SpawnCustom(grname, zoneName, side, requestedAlias, revealedSam)
 		if CustomZone._isSamMfdHiddenGroup(grname) then
 			tpl.hiddenOnMFD = shouldHideSamOnMFD(revealedSam)
 		end
-		local spawn = SPAWN:NewFromTemplate(tpl, grname, nil, true)
+		local spawn = CustomZone._newUpgradeSpawner(tpl, grname)
 		local g = spawn:Spawn()
 		return g and { name = g:GetName(), group = revealedSam ~= nil and g or nil } or trigger.action.outText(L10N:Format("SPAWN_FAILED_GROUP_IN_ZONE", grname, self.name),10)
 	end
@@ -8456,14 +8534,14 @@ function CustomRespawn(grpName, side, knownGroup, knownDCSGroup, revealedSam)
         local coord     = firstUnit and firstUnit:GetCoordinate()
 
         if coord then
-            local sp = SPAWN:NewFromTemplate(tpl, grpName, nil, true)
+            local sp = CustomZone._newUpgradeSpawner(tpl, grpName)
             sp:InitSkill(spawnSkill)
             if not string.find(grpName, "Fixed") then
                 sp:InitRandomizePosition(true, 75, 30):InitPositionCoordinate(coord)
             end
             return sp:Spawn()
         else
-            local SP2 = SPAWN:NewFromTemplate(tpl, grpName, nil, true)
+            local SP2 = CustomZone._newUpgradeSpawner(tpl, grpName)
             if not string.find(grpName, "Fixed") then
                 SP2:InitRandomizePosition(true, 75, 30)
             end
@@ -8475,7 +8553,7 @@ function CustomRespawn(grpName, side, knownGroup, knownDCSGroup, revealedSam)
             tpl = UTILS.DeepCopy(tpl)
             tpl.hiddenOnMFD = false
         end
-        return SPAWN:NewFromTemplate(tpl, grpName, nil, true):InitSkill(spawnSkill):Spawn()
+        return CustomZone._newUpgradeSpawner(tpl, grpName):InitSkill(spawnSkill):Spawn()
     end
 end
 
@@ -12063,6 +12141,8 @@ do
 		Purchases = 61,
 		DemolitionKills = 62,
 		EnemyPilotCaptures = 63,
+		SurvivalStreakCurrent = 64,
+		SurvivalStreakBest = 65,
 	}
 	BattleCommander.CAREER_AIRCRAFT_METRIC = {
 		FlightSeconds = 1,
@@ -12204,6 +12284,14 @@ do
 			{ threshold = 250, title = "Airbase Anchor" },
 			{ threshold = 500, title = "Runway Overlord" },
 			{ threshold = 750, title = "Lord of the Tarmac" },
+		},
+		[BattleCommander.CAREER_STAT.SurvivalStreakBest] = {
+			{ threshold = 3, title = "Made It Back" },
+			{ threshold = 5, title = "Back for More" },
+			{ threshold = 10, title = "Knows the Way Home" },
+			{ threshold = 15, title = "Still on the Roster" },
+			{ threshold = 20, title = "Home Every Time" },
+			{ threshold = 25, title = "The Long Tour" },
 		},
 		[BattleCommander.CAREER_STAT.CarrierTakeoffs] = {
 			{ threshold = 10, title = "7 NM Out" },
@@ -12950,6 +13038,7 @@ do
 		{ id = BattleCommander.CAREER_STAT.HelicopterSeconds, labelKey = "CAREER_STAT_HELICOPTER_TIME", format = "duration", section = "flight" },
 		{ id = BattleCommander.CAREER_STAT.Takeoffs, labelKey = "CAREER_STAT_TAKEOFFS", section = "flight" },
 		{ id = BattleCommander.CAREER_STAT.Landings, labelKey = "CAREER_STAT_LANDINGS", section = "flight" },
+		{ id = BattleCommander.CAREER_STAT.SurvivalStreakBest, labelKey = "CAREER_STAT_SURVIVAL_STREAK", section = "flight" },
 		{ id = BattleCommander.CAREER_STAT.CarrierTakeoffs, labelKey = "CAREER_STAT_CARRIER_TAKEOFFS", section = "flight" },
 		{ id = BattleCommander.CAREER_STAT.CarrierLandings, labelKey = "CAREER_STAT_SHIP_LANDINGS", section = "flight" },
 		{ id = BattleCommander.CAREER_STAT.ConventionalCarrierTraps, labelKey = "CAREER_STAT_CONVENTIONAL_CARRIER", section = "flight" },
@@ -13432,6 +13521,7 @@ do
 	TarawaCustomRouteMaxDetourNm = TarawaCustomRouteMaxDetourNm or 2
 	local DYNAMIC_CARRIER_NAV_SPEED_KT = 27
 	local DYNAMIC_CARRIER_NAV_CORRIDOR = 1000
+	local DYNAMIC_CARRIER_NAV_MIN_RESTORE_DEPTH = 40
 	local DYNAMIC_CARRIER_NAV_RESTORE_CLEARANCE = 2000
 	local DYNAMIC_CARRIER_NAV_RESTORE_SEARCH_RADIUS = 5000
 	local DYNAMIC_CARRIER_NAV_ZONE_COLOR = {0, 0, 1, 0.3}
@@ -14065,6 +14155,7 @@ do
 		local changed = false
 		for _, state in pairs(tableRef) do
 			if type(state) == "table" and state.area == lostArea.name then
+				state.passageNext = nil
 				state.routeSourceArea = lostArea.name
 				state.area = retreatArea.name
 				state.transitioning = true
@@ -14460,8 +14551,16 @@ do
 		return true
 	end
 
-	function BattleCommander:_carrierNavigationFindSafeRestorePoint(point)
-		if self:_carrierNavigationHasWaterClearance(point, DYNAMIC_CARRIER_NAV_RESTORE_CLEARANCE) then
+	function BattleCommander:_carrierNavigationFindSafeRestorePoint(point, destinationZone)
+		local function hasClearance(candidate)
+			if destinationZone then
+				if not destinationZone:isInside(candidate) then return false end
+				local _, depth = land.getSurfaceHeightWithSeabed({ x = candidate.x, y = candidate.z })
+				if not depth or depth < DYNAMIC_CARRIER_NAV_MIN_RESTORE_DEPTH then return false end
+			end
+			return self:_carrierNavigationHasWaterClearance(candidate, DYNAMIC_CARRIER_NAV_RESTORE_CLEARANCE)
+		end
+		if hasClearance(point) then
 			return { x = point.x, z = point.z }
 		end
 		for radius = 500, DYNAMIC_CARRIER_NAV_RESTORE_SEARCH_RADIUS, 500 do
@@ -14472,7 +14571,7 @@ do
 					x = pointX + math.cos(angle) * radius,
 					z = pointZ + math.sin(angle) * radius,
 				}
-				if self:_carrierNavigationHasWaterClearance(candidate, DYNAMIC_CARRIER_NAV_RESTORE_CLEARANCE) then
+				if hasClearance(candidate) then
 					return candidate
 				end
 			end
@@ -14652,7 +14751,39 @@ do
 		return (d2 < d1) and 2 or 1
 	end
 
-	function BattleCommander:_carrierNavigationGetViaStation(area, lane, startPoint, sourceAreaName)
+	function BattleCommander:setCarrierNavigationPassage(prefix, sides, departureOnly)
+		local lanes = {}
+		for lane, first in pairs({ cvn72 = 1, tarawa = 3, cvn74 = 5 }) do
+			local west = _carrierNavPointFromZone(CustomZone:getByName(prefix.."-"..first))
+			local east = _carrierNavPointFromZone(CustomZone:getByName(prefix.."-"..(first + 1)))
+			if west and east then lanes[lane] = { { west, east }, { east, west } } end
+		end
+		self.carrierNavigationPassage = { sides = sides, lanes = lanes, departureOnly = departureOnly }
+	end
+
+	function BattleCommander:_carrierNavigationGetViaStation(area, lane, startPoint, sourceAreaName, passageNext)
+		local passage = self.carrierNavigationPassage
+		if passage and area.name ~= passage.departureOnly and passage.lanes[lane] then
+			local from = passage.sides[sourceAreaName]
+			local to = passage.sides[area.name]
+			if from and to and from ~= to then
+				local points = passage.lanes[lane][from]
+				if not passageNext then
+					-- Old saves have no marker progress. Use the ship's position once on adoption.
+					local entry, exit = points[1], points[2]
+					local dx, dz = exit.x - entry.x, exit.z - entry.z
+					local along = (startPoint.x - entry.x) * dx + (startPoint.z - entry.z) * dz
+					if area.zone:isInside(startPoint) or along >= dx * dx + dz * dz then
+						passageNext = 3
+					elseif along > 0 then
+						passageNext = 2
+					else
+						passageNext = 1
+					end
+				end
+				return { passagePoints = points, passageNext = passageNext, source = sourceAreaName }
+			end
+		end
 		local viaName = self:_getCarrierNavigationAreaViaName(area)
 		if not viaName then return nil end
 		if area and area.zone and startPoint and area.zone:isInside(startPoint) then
@@ -14697,7 +14828,8 @@ do
 		routePoints[#routePoints + 1] = _carrierNavigationWaypoint(startPoint, speedMps)
 		local currentPoint = startPoint
 
-		local forceAstarPath = type(viaStation) == "table" and #viaStation > 0
+		local passageNext = viaStation and viaStation.passageNext
+		local forceAstarPath = viaStation and (#viaStation > 0 or (passageNext and passageNext <= 2))
 		local function appendPathTo(point)
 			local path = self:_carrierNavigationBuildPath(currentPoint, point, forceAstarPath)
 			if not path then return false end
@@ -14706,6 +14838,15 @@ do
 			end
 			currentPoint = point
 			return true
+		end
+
+		local passageWaypoints
+		if passageNext and passageNext <= 2 then
+			passageWaypoints = {}
+			for step = passageNext, 2 do
+				if not appendPathTo(viaStation.passagePoints[step]) then return nil end
+				passageWaypoints[step] = #routePoints
+			end
 		end
 
 		for _, singleViaStation in ipairs(viaStation or {}) do
@@ -14729,6 +14870,9 @@ do
 		routePoints[finalIndex].task.params.tasks[1] = _carrierNavigationGotoTask(finalIndex, stationStartIndex)
 		return routePoints, {
 			firstWaypointIndex = stationStartIndex,
+			passageWaypoints = passageWaypoints,
+			passageNext = passageNext,
+			passageSource = passageNext and viaStation.source,
 			firstStationIndex = firstIndex,
 			secondWaypointIndex = finalIndex,
 			secondStationIndex = secondIndex,
@@ -14835,6 +14979,7 @@ do
 	function BattleCommander:_carrierNavigationCaptureTarawaCustomState(base, customMode, customPoints, speedKt, routeMeta)
 		local updated = self:_carrierNavigationCaptureGroupState("Tarawa", base)
 		updated.customMode = customMode
+		updated.passageNext = nil
 		updated.customPoints = DeepCopy(customPoints or {})
 		updated.customArrived = routeMeta and routeMeta.customArrived == true or false
 		updated.customFirstPointIndex = routeMeta and routeMeta.customFirstPointIndex or nil
@@ -15006,7 +15151,7 @@ do
 			if not targetIndex then targetIndex = self:_isCarrierNavigationAreaReversed(area) and 2 or 1 end
 		end
 
-		local viaStation = self:_carrierNavigationGetViaStation(area, saved.lane, startPoint, saved.routeSourceArea)
+		local viaStation = self:_carrierNavigationGetViaStation(area, saved.lane, startPoint, saved.routeSourceArea, saved.passageNext)
 		local routePoints, routeMeta = self:_carrierNavigationBuildRoutePoints(startPoint, station, targetIndex, speedKt, viaStation)
 		if not routePoints then
 			env.info("[CarrierNavigation] speed check route failed for "..tostring(groupName).." to "..tostring(saved.area))
@@ -15020,6 +15165,7 @@ do
 			area = saved.area,
 			lane = saved.lane,
 			routeSourceArea = saved.routeSourceArea,
+			passageNext = routeMeta.passageNext,
 			speedKt = speedKt,
 			nextStationIndex = targetIndex,
 			transitioning = forceTransitioning == true or saved.transitioning == true,
@@ -15116,7 +15262,7 @@ do
 		local targetSpeedKt = tonumber(speedKt) or (type(state) == "table" and tonumber(state.speedKt) or nil) or DYNAMIC_CARRIER_NAV_SPEED_KT
 		local startPoint = current
 		local nextIndex = (tonumber(stationIndex or (type(state) == "table" and state.nextStationIndex or nil)) == 2) and 2 or 1
-		local viaStation = self:_carrierNavigationGetViaStation(area, lane, startPoint, state and state.routeSourceArea or nil)
+		local viaStation = self:_carrierNavigationGetViaStation(area, lane, startPoint, state and state.routeSourceArea, state and state.passageNext)
 		local routePoints, routeMeta = self:_carrierNavigationBuildRoutePoints(startPoint, station, nextIndex, targetSpeedKt, viaStation)
 		local distance = _carrierNavigationRouteDistanceToWaypoint(routePoints, routeMeta and routeMeta.firstWaypointIndex or nil)
 		if not distance then return nil end
@@ -15223,10 +15369,23 @@ do
 		end
 	end
 
+	function BattleCommander:_carrierNavigationOnPassageWaypoint(groupName, source, destination, step)
+		local state = self.carrierNavigation[groupName]
+		if state and state.routeSourceArea == source and state.area == destination and state.passageNext == step then
+			state.passageNext = step + 1
+		end
+	end
+
 	function BattleCommander:_carrierNavigationAddRouteTurnScripts(groupName, area, lane, routePoints, routeMeta, speedKt)
 		if not routePoints or not routeMeta then
 			self:_carrierNavigationArmTurnWarningsForEta(groupName, nil)
 			return
+		end
+		if routeMeta.passageWaypoints then
+			for step = routeMeta.passageNext, 2 do
+				_carrierNavigationAppendScriptTask(routePoints, routeMeta.passageWaypoints[step],
+					string.format("bc:_carrierNavigationOnPassageWaypoint(%q, %q, %q, %d)", groupName, routeMeta.passageSource, area.name, step))
+			end
 		end
 		if routeMeta.firstWaypointIndex and routeMeta.firstStationIndex then
 			_carrierNavigationAppendScriptTask(routePoints, routeMeta.firstWaypointIndex, string.format("bc:_carrierNavigationOnTurnWaypoint(%q, %d)", groupName, routeMeta.firstStationIndex))
@@ -15258,7 +15417,9 @@ do
 		state.currentArea = self:_carrierNavigationResolveAreaForPoint(pos)
 		local leadHeadingDeg = _carrierNavigationHeadingFromUnit(lead)
 		state.headingDeg = leadHeadingDeg or state.headingDeg
-		if state.area and state.currentArea == state.area then
+		if state.passageNext and state.passageNext <= 2 then
+			state.transitioning = true
+		elseif state.area and state.currentArea == state.area then
 			state.transitioning = false
 		elseif state.transitioning == true then
 			state.transitioning = true
@@ -15301,13 +15462,14 @@ do
 		return state
 	end
 
-	function BattleCommander:_saveCarrierNavigationState(groupName, area, lane, nextStationIndex, transitioning, routeSourceArea)
+	function BattleCommander:_saveCarrierNavigationState(groupName, area, lane, nextStationIndex, transitioning, routeSourceArea, passageNext)
 		self.carrierNavigation = self.carrierNavigation or {}
 		local state = self:_carrierNavigationCaptureGroupState(groupName, {
 			groupName = groupName,
 			area = area.name,
 			lane = lane,
 			routeSourceArea = routeSourceArea,
+			passageNext = passageNext,
 			speedKt = DYNAMIC_CARRIER_NAV_SPEED_KT,
 			nextStationIndex = nextStationIndex or 1,
 			transitioning = transitioning == true,
@@ -15349,9 +15511,11 @@ do
 				local x = tonumber(entry.x)
 				local z = tonumber(entry.z)
 				if type(groupName) == "string" and groupName ~= "" and type(areaName) == "string" and type(lane) == "string" then
+					local passageNext = tonumber(entry.passageNext)
 					local rec = {
 						groupName = groupName,
 						area = areaName,
+						passageNext = (passageNext == 1 or passageNext == 2 or passageNext == 3) and passageNext or nil,
 						lane = lane,
 						routeSourceArea = (type(entry.routeSourceArea) == "string" and entry.routeSourceArea ~= "" and entry.routeSourceArea) or nil,
 						x = x,
@@ -15420,14 +15584,14 @@ do
 		return area.zone:isInside({ x = x, y = tonumber(saved.y) or 0, z = z })
 	end
 
-	function BattleCommander:_carrierNavigationSnapSavedStateToArea(saved, area)
+	function BattleCommander:_carrierNavigationSnapSavedStateToArea(saved, area, startPoint)
 		if type(saved) ~= "table" or not area or not saved.lane then return false end
 		local station = area[saved.lane]
 		if not station or not station[1] or not station[2] then return false end
 
 		local nextIndex = (tonumber(saved.nextStationIndex) == 2) and 2 or 1
 		local startIndex = (nextIndex == 1) and 2 or 1
-		local startPoint = station[startIndex]
+		startPoint = startPoint or station[startIndex]
 		local nextPoint = station[nextIndex]
 
 		saved.x = startPoint.x
@@ -15435,6 +15599,7 @@ do
 		saved.z = startPoint.z
 		saved.currentArea = area.name
 		saved.routeSourceArea = nil
+		saved.passageNext = nil
 		saved.headingDeg = _carrierNavigationHeadingToPoint(startPoint, nextPoint)
 		saved.transitioning = false
 		saved.units = {}
@@ -15657,7 +15822,7 @@ do
 		return true
 	end
 
-	function BattleCommander:_restoreCarrierNavigationGroup(saved, skipUnlockCheck)
+	function BattleCommander:_restoreCarrierNavigationGroup(saved, skipUnlockCheck, fromSave)
 		if not skipUnlockCheck and not self:_isCarrierNavigationUnlocked() then return true end
 		local groupName = saved.groupName
 		if groupName == "Tarawa" and AllowTarawaToMoveFreely == true and type(saved.customMode) == "string" then
@@ -15685,25 +15850,50 @@ do
 		if not current then return false end
 
 		local restoreSaved = saved
+		local relocatedNextIndex
 		local startPoint = (saved.x and saved.z) and { x = saved.x, z = saved.z } or { x = current.x, z = current.z }
 		if saved.x and saved.z then
-			local safePoint = self:_carrierNavigationFindSafeRestorePoint(startPoint)
-			if not safePoint then
-				env.info("[CarrierNavigation] restore skipped, no point with "..tostring(DYNAMIC_CARRIER_NAV_RESTORE_CLEARANCE).."m water clearance within "..tostring(DYNAMIC_CARRIER_NAV_RESTORE_SEARCH_RADIUS).."m for "..tostring(groupName))
-				return true
+			local savedDepth
+			if fromSave then
+				local _, depth = land.getSurfaceHeightWithSeabed({ x = startPoint.x, y = startPoint.z })
+				savedDepth = depth
 			end
-			if safePoint.x ~= startPoint.x or safePoint.z ~= startPoint.z then
+			if savedDepth and savedDepth < DYNAMIC_CARRIER_NAV_MIN_RESTORE_DEPTH and not self:_carrierNavigationResolveAreaForPoint(startPoint) then
+				local entryIndex = self:_carrierNavigationDestinationEntryIndex(area, station, startPoint)
+				local safePoint = self:_carrierNavigationFindSafeRestorePoint(station[entryIndex], area.zone)
+				if not safePoint then
+					entryIndex = 3 - entryIndex
+					safePoint = self:_carrierNavigationFindSafeRestorePoint(station[entryIndex], area.zone)
+				end
+				if not safePoint then
+					env.info("[CarrierNavigation] restore skipped, no deep-water spawn near destination lane for "..groupName.." in "..area.name)
+					return true
+				end
 				restoreSaved = DeepCopy(saved)
-				restoreSaved.x = safePoint.x
-				restoreSaved.y = 0
-				restoreSaved.z = safePoint.z
-				restoreSaved.currentArea = self:_carrierNavigationResolveAreaForPoint(safePoint)
-				restoreSaved.units = {}
+				relocatedNextIndex = 3 - entryIndex
+				restoreSaved.nextStationIndex = relocatedNextIndex
+				self:_carrierNavigationSnapSavedStateToArea(restoreSaved, area, safePoint)
 				startPoint = safePoint
-				env.info("[CarrierNavigation] restore moved unsafe saved position to clear water group="..tostring(groupName).." clearance="..tostring(DYNAMIC_CARRIER_NAV_RESTORE_CLEARANCE).."m")
+				env.info(string.format("[CarrierNavigation] shallow saved position (%.1f m), restoring %s in %s", savedDepth, groupName, area.name))
+			else
+				local safePoint = self:_carrierNavigationFindSafeRestorePoint(startPoint)
+				if not safePoint then
+					env.info("[CarrierNavigation] restore skipped, no point with "..tostring(DYNAMIC_CARRIER_NAV_RESTORE_CLEARANCE).."m water clearance within "..tostring(DYNAMIC_CARRIER_NAV_RESTORE_SEARCH_RADIUS).."m for "..tostring(groupName))
+					return true
+				end
+				if safePoint.x ~= startPoint.x or safePoint.z ~= startPoint.z then
+					restoreSaved = DeepCopy(saved)
+					restoreSaved.x = safePoint.x
+					restoreSaved.y = 0
+					restoreSaved.z = safePoint.z
+					restoreSaved.currentArea = self:_carrierNavigationResolveAreaForPoint(safePoint)
+					restoreSaved.units = {}
+					startPoint = safePoint
+					env.info("[CarrierNavigation] restore moved unsafe saved position to clear water group="..tostring(groupName).." clearance="..tostring(DYNAMIC_CARRIER_NAV_RESTORE_CLEARANCE).."m")
+				end
 			end
 		end
-		local targetIndex = self:_getCarrierNavigationAreaEntryIndex(area)
+		local targetIndex = relocatedNextIndex or self:_getCarrierNavigationAreaEntryIndex(area)
 		if not targetIndex then
 			if area.zone and area.zone:isInside(startPoint) then
 				targetIndex = self:_carrierNavigationRouteTargetIndex(startPoint, saved.headingDeg, station, saved.nextStationIndex)
@@ -15723,7 +15913,7 @@ do
 				end
 			end
 		end
-		local viaStation = self:_carrierNavigationGetViaStation(area, restoreSaved.lane, startPoint, restoreSaved.routeSourceArea)
+		local viaStation = self:_carrierNavigationGetViaStation(area, restoreSaved.lane, startPoint, restoreSaved.routeSourceArea, restoreSaved.passageNext)
 		local routePoints = self:_carrierNavigationBuildRoutePoints(startPoint, station, targetIndex, restoreSaved.speedKt, viaStation)
 		if not routePoints then
 			env.info("[CarrierNavigation] restore failed, no water route for "..tostring(groupName).." to "..tostring(saved.area))
@@ -15738,6 +15928,7 @@ do
 
 		local beaconResetPending = true
 		local warehouseRefreshPending = WarehouseWeaponLocationPolicy.active and saved.x and saved.z
+		local restoredPassageNext = restoreSaved.passageNext
 		local function applyCarrierNavigationRoute(param, time)
 			local restoredGroup = Group.getByName(param.groupName)
 			if restoredGroup and restoredGroup:isExist() and restoredGroup:getSize() > 0 then
@@ -15747,7 +15938,7 @@ do
 				end
 				local restoredPoint = restoredLead and restoredLead:isExist() and restoredLead:getPoint() or nil
 				local routeStart = restoredPoint or param.startPoint
-				local routeTargetIndex = param.context:_getCarrierNavigationAreaEntryIndex(param.area)
+				local routeTargetIndex = relocatedNextIndex or param.context:_getCarrierNavigationAreaEntryIndex(param.area)
 				if not routeTargetIndex then
 					if param.area.zone and param.area.zone:isInside(routeStart) then
 						routeTargetIndex = param.context:_carrierNavigationRouteTargetIndex(routeStart, param.saved.headingDeg, param.station, param.saved.nextStationIndex)
@@ -15759,7 +15950,12 @@ do
 				if routeDistanceToFirstWaypoint and routeDistanceToFirstWaypoint < 2 * NM then
 					routeTargetIndex = (routeTargetIndex == 1) and 2 or 1
 				end
-				local routeViaStation = param.context:_carrierNavigationGetViaStation(param.area, param.saved.lane, routeStart, param.saved.routeSourceArea)
+				if param.reapply and restoredPassageNext then
+					local active = param.context.carrierNavigation[param.groupName]
+					if not active or active.area ~= param.saved.area or active.routeSourceArea ~= param.saved.routeSourceArea or active.customMode then return nil end
+					restoredPassageNext = active.passageNext
+				end
+				local routeViaStation = param.context:_carrierNavigationGetViaStation(param.area, param.saved.lane, routeStart, param.saved.routeSourceArea, restoredPassageNext)
 				local freshRoutePoints, routeMeta = param.context:_carrierNavigationBuildRoutePoints(routeStart, param.station, routeTargetIndex, param.saved.speedKt, routeViaStation)
 				if not freshRoutePoints then
 					env.info("[CarrierNavigation] restore failed, no water route for "..tostring(param.groupName).." to "..tostring(param.saved.area))
@@ -15770,6 +15966,8 @@ do
 				param.context:_carrierNavigationSetRoute(restoredGroup, freshRoutePoints)
 				if refreshBeacons(param.groupName, restoredLead, beaconResetPending) then beaconResetPending = false end
 				param.context.carrierNavigation = param.context.carrierNavigation or {}
+				restoredPassageNext = routeMeta.passageNext
+				param.saved.passageNext = restoredPassageNext
 				param.context.carrierNavigation[param.groupName] = param.context:_carrierNavigationCaptureGroupState(param.groupName, param.saved, restoredGroup)
 				if param.groupName == "CVN-72" and ShellHaveSpawned ~= true then
 					if param.context:spawnCarrierRecoveryTanker("Shell", "CVN-72", 2) then
@@ -15798,7 +15996,7 @@ do
 		self:_repairCarrierNavigationRestoreStates(pending)
 		local remaining = {}
 		for groupName, saved in pairs(pending) do
-			if not self:_restoreCarrierNavigationGroup(saved, true) then
+			if not self:_restoreCarrierNavigationGroup(saved, true, true) then
 				remaining[groupName] = saved
 			end
 		end
@@ -15979,9 +16177,16 @@ do
 		if not current then return nil, "group" end
 
 		local startPoint = current
-		local routeSourceArea = self:_carrierNavigationResolveAreaForPoint(current)
+		local active = self.carrierNavigation and self.carrierNavigation[groupName]
+		local routeSourceArea, passageNext
+		if active and active.area == area.name and active.lane == lane and active.passageNext and active.passageNext <= 2 then
+			routeSourceArea, passageNext = active.routeSourceArea, active.passageNext
+		else
+			routeSourceArea = self:_carrierNavigationResolveAreaForPoint(current)
+			passageNext = 1
+		end
 		local targetIndex = self:_carrierNavigationDestinationEntryIndex(area, station, startPoint)
-		local viaStation = self:_carrierNavigationGetViaStation(area, lane, startPoint, routeSourceArea)
+		local viaStation = self:_carrierNavigationGetViaStation(area, lane, startPoint, routeSourceArea, passageNext)
 		local routePoints, routeMeta = self:_carrierNavigationBuildRoutePoints(startPoint, station, targetIndex, DYNAMIC_CARRIER_NAV_SPEED_KT, viaStation)
 		if not routePoints then return nil, "route" end
 
@@ -15997,7 +16202,7 @@ do
 	function BattleCommander:_applyCarrierNavigationRouteForGroup(groupName, area, lane, routeData)
 		self:_carrierNavigationAddRouteTurnScripts(groupName, area, lane, routeData.routePoints, routeData.routeMeta, DYNAMIC_CARRIER_NAV_SPEED_KT)
 		self:_carrierNavigationSetRoute(routeData.group, routeData.routePoints)
-		self:_saveCarrierNavigationState(groupName, area, lane, routeData.targetIndex, true, routeData.routeSourceArea)
+		self:_saveCarrierNavigationState(groupName, area, lane, routeData.targetIndex, true, routeData.routeSourceArea, routeData.routeMeta.passageNext)
 		if groupName == "CVN-72" and ShellHaveSpawned ~= true then
 			if self:spawnCarrierRecoveryTanker("Shell", "CVN-72", 2) then
 				ShellHaveSpawned = true
@@ -19959,7 +20164,7 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 		return profile
 	end
 
-	function BattleCommander:_capRetaskCapabilityScore(groupCommander, group, includeFuel)
+	function BattleCommander:_capRetaskCapabilityScore(groupCommander, group, includeFuel, knownUnits)
 		local templateName = groupCommander._lastSpawnTemplate
 			or groupCommander.template or groupCommander.name
 		local profile = self:_getAirTemplateWeaponProfile(templateName)
@@ -19969,7 +20174,7 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 		local airborne = false
 		local score = 0
 		local minimumFuel = 1
-		for _, unit in ipairs(group:getUnits() or {}) do
+		for _, unit in ipairs(knownUnits or group:getUnits() or {}) do
 			if unit and unit:isExist() and unit:getLife() > 0 then
 				foundUnit = true
 				if unit:inAir() then airborne = true end
@@ -19995,8 +20200,8 @@ function BattleCommander:addShopItem(coalition,id,ammount,prio,reqRank,category)
 			includeFuel == true and foundUnit and minimumFuel or nil
 	end
 
-	function BattleCommander:_blueCapRetaskReady(groupCommander, group)
-		local capabilityScore, minimumFuel = self:_capRetaskCapabilityScore(groupCommander, group, true)
+	function BattleCommander:_blueCapRetaskReady(groupCommander, group, knownUnits)
+		local capabilityScore, minimumFuel = self:_capRetaskCapabilityScore(groupCommander, group, true, knownUnits)
 		return capabilityScore > 0 and minimumFuel >= 0.40
 	end
 
@@ -22181,7 +22386,7 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 				and item.category and item.category == ShopCategoryLabels.AIAttack
 				and (coalition ~= 2 or (idleShopTarget.side == 1
 					and id ~= 'dynamiccas' and id ~= 'dynamicsead' and id ~= 'dynamicdecoy'
-					and id ~= 'dynamicbomb' and id ~= 'dynamicstatic' and id ~= 'strategicbomber')) then
+					and id ~= 'dynamicbomb' and id ~= 'dynamicstatic' and id ~= 'dynamicrunway' and id ~= 'strategicbomber')) then
 				idleShopTarget._idleAttackHold = true
 			end
 			local refreshShopContents = false
@@ -22284,6 +22489,24 @@ function BattleCommander:buyShopItem(coalition,id,alternateParams,buyerGroupId,b
 			return selectorSpec.candidatesBuilder(self) or {}
 		end
 		return self:getZones()
+	end
+
+	function BattleCommander:_getShopRunwayTarget(zoneObj, forPurchase)
+		if not zoneObj or self.indexedZones[zoneObj.zone] ~= zoneObj or not zoneObj.active or zoneObj.isHidden
+			or zoneObj.side ~= coalition.side.RED or not zoneObj.isPlaneSpawn or not zoneObj.airbaseName
+			or (zoneObj.suspended and not zoneObj._idleSuspended) then return nil end
+		if forPurchase and (zoneObj.suspended or zoneObj._idleRestorePending
+			or self:isRunwayPlaneSpawnBlocked(zoneObj.zone)) then return nil end
+		self._shopRunwayAirbases = self._shopRunwayAirbases or {}
+		local name = zoneObj.airbaseName
+		local airbase = self._shopRunwayAirbases[name]
+		if airbase == nil then
+			airbase = Airbase.getByName(name)
+			local runways = airbase and airbase:getDesc().category == Airbase.Category.AIRDROME and airbase:getRunways()
+			airbase = runways and next(runways) and airbase or false
+			self._shopRunwayAirbases[name] = airbase
+		end
+		return airbase or nil
 	end
 
 	function BattleCommander:_collectShopItemZoneCandidates(selectorSpec, coalitionSide, itemId)
@@ -25670,11 +25893,13 @@ end
 			rec.capOrbitDistanceNm = tonumber(gc._currentCapOrbitDistanceNm)
 			rec.capBufferNm = tonumber(gc._currentCapBufferNm)
 			rec.capRetaskedTargetzone = gc._capAssistRetaskedTargetzone
+			local pendingCapReturn = gc._restoreCapReturnHome == true and (gc._sortieSide or gc.side) == 2 and GlobalSettings.pvpEnabled ~= true
+			rec.capReturnHome = gc._capReturnHome == true or pendingCapReturn
+			rec.bluePackageCapOperationId = not rec.capReturnHome and gc._bluePackageCapOperationId or nil
 			rec.capRetaskedThisSortie = gc._capAssistRetaskedThisSortie == true
-			rec.capReturnHome = gc._capReturnHome == true
 			rec.capReturnHomeZone = gc._capReturnHomeZone
-			rec.capReturnHomeElapsedSec = gc._capReturnHomeStartedAt
-				and math.max(0, now - gc._capReturnHomeStartedAt) or nil
+			rec.capReturnHomeElapsedSec = pendingCapReturn and not gc._capReturnHome and gc._restoreCapReturnHomeElapsedSec
+				or gc._capReturnHomeStartedAt and math.max(0, now - gc._capReturnHomeStartedAt) or nil
 			rec.capReturnHomeSlotReleased = gc._capReturnHomeSlotReleased == true
 		end
 		if gc._advanceCaptureWaitingForNeutral == true or gc._advanceCaptureReleased == true then
@@ -25824,6 +26049,7 @@ end
 								elseif tracksMissionAmmo and not hasMissionAmmo then
 									if gc.MissionType == 'CAP' then
 										rec.capReturnHome = true
+										rec.bluePackageCapOperationId = nil
 									else
 										rec.airReturnHome = true
 									end
@@ -30008,6 +30234,7 @@ end
 						gc._currentCapOrbitDistanceNm = tonumber(saved.capOrbitDistanceNm)
 						gc._currentCapBufferNm = tonumber(saved.capBufferNm)
 						gc._capAssistRetaskedTargetzone = saved.capRetaskedTargetzone
+						gc._bluePackageCapOperationId = tonumber(saved.bluePackageCapOperationId)
 						gc._capAssistRetaskedThisSortie = saved.capRetaskedThisSortie == true
 						gc._restoreCapReturnHome = saved.capReturnHome == true
 						gc._restoreCapReturnHomeElapsedSec = saved.capReturnHome == true
@@ -30094,6 +30321,7 @@ end
 					gc._currentCapOrbitDistanceNm = tonumber(saved.capOrbitDistanceNm)
 					gc._currentCapBufferNm = tonumber(saved.capBufferNm)
 					gc._capAssistRetaskedTargetzone = saved.capRetaskedTargetzone
+					gc._bluePackageCapOperationId = tonumber(saved.bluePackageCapOperationId)
 					gc._capAssistRetaskedThisSortie = saved.capRetaskedThisSortie == true
 					gc._restoreCapReturnHome = saved.capReturnHome == true
 					gc._restoreCapReturnHomeElapsedSec = saved.capReturnHome == true
@@ -34525,13 +34753,20 @@ function BattleCommander:_applyZoneShopSelectorDelta(zoneObj, previousState, kno
 		return false
 	end
 
-	-- Idle suspension and wake keep an already indexed Blue zone in the same buckets.
 	if not self._shopSelectorBucketsDirty and previousState and knownAdvanceCaptureEligible ~= true
-		and zoneObj.side == 2 and previousState.side == 2 and zoneObj.active == true and previousState.active == true
+		and (zoneObj.side == 1 or zoneObj.side == 2) and previousState.side == zoneObj.side
+		and zoneObj.active == true and previousState.active == true
 		and not zoneObj.isHidden and not previousState.isHidden
 		and zoneObj.airbaseName == previousState.airbaseName and zoneObj.LogisticCenter == previousState.LogisticCenter
 		and ((not previousState.suspended and zoneObj.suspended and zoneObj._idleSuspended)
 			or (previousState.suspended and previousState._idleSuspended and not zoneObj.suspended)) then
+		-- Only the Red Advance Capture bucket can change during an idle transition.
+		if zoneObj.side == 1 then
+			self:_removeZoneFromShopSelectorBucket("advance_capture_targets", zoneObj.zone)
+			if self:_zoneMatchesShopSelectorBucket(zoneObj, "advance_capture_targets", knownAdvanceCaptureEligible) then
+				self:_addZoneToShopSelectorBucket("advance_capture_targets", zoneObj)
+			end
+		end
 		return true
 	end
 
@@ -34578,14 +34813,14 @@ function BattleCommander:_getZoneSelectorRefreshTags(zoneObj, previousState)
 		and previousState.airbaseName == zoneObj.airbaseName and previousState.LogisticCenter == zoneObj.LogisticCenter
 		and ((not previousState.suspended and zoneObj.suspended and zoneObj._idleSuspended)
 			or (previousState.suspended and previousState._idleSuspended and not zoneObj.suspended)) then
-		-- Supply labels, bomber target facts and advance-capture eligibility can change.
-		local tags = { 'strategicbomber' }
-		if zoneObj.side == coalition.side.BLUE or GlobalSettings.pvpEnabled == true then
+		local pvp = GlobalSettings.pvpEnabled == true
+		local tags = {}
+		if zoneObj.side == coalition.side.RED or pvp then tags[#tags + 1] = 'strategicbomber' end
+		if zoneObj.side == coalition.side.BLUE or pvp then
 			tags[#tags + 1] = 'supplies'
 			tags[#tags + 1] = 'supplies2'
 		end
-		if zoneObj.side == coalition.side.RED then tags[#tags + 1] = 'advance_capture_targets' end
-		return tags
+		return tags, not pvp
 	end
 	local tags = {}
 
@@ -35412,17 +35647,23 @@ function BattleCommander:reindexCombatZones(includeSources, useAutoSuspendEnemyR
 						end
 						local returning = gc._airReturnHome or gc._capReturnHome or gc._artilleryReturnHome
 							or gc._restoreAirReturnHome or gc._restoreCapReturnHome
-						local returnFootprint = returning and gc._idleWakeFootprint
-						if idleNow and returnFootprint and returnFootprint.returning
-							and returnFootprint.targetSide == returnFootprint.target.side then
-							self:_wakeIdleMissionZones(gc, returnFootprint.target, nil, nil, idleNow)
+						local footprint = idleNow and gc._idleWakeFootprint
+						if returning and footprint and footprint.returning
+							and footprint.targetSide == footprint.target.side then
+							self:_wakeIdleMissionZones(gc, footprint.target, nil, nil, idleNow)
 						end
-						if sideValid and not returning and (live or directorReserved or (assignment and not assignment.completed
+						if (sideValid or footprint) and not returning and (live or directorReserved or (assignment and not assignment.completed
 							and director.operation and gc._directorOperationId == director.operation.id)) then
-							committedTargets[targetName] = true
-							local footprint = gc._idleWakeFootprint
-							if idleNow and footprint and footprint.target == tz and footprint.targetSide == tz.side then
-								self:_wakeIdleMissionZones(gc, tz, nil, nil, idleNow)
+							if sideValid then committedTargets[targetName] = true end
+							local wakeTarget = footprint and footprint.target
+							if wakeTarget and (
+								(sideValid and wakeTarget == tz and footprint.targetSide == wakeTarget.side)
+								or (gc.state == 'inair' and gc.side == 2 and gc.MissionType == 'CAP'
+									and gc._capAssistRetaskedTargetzone == wakeTarget.zone and GlobalSettings.pvpEnabled ~= true
+									and self.indexedZones[wakeTarget.zone] == wakeTarget
+									and (footprint.targetSide == wakeTarget.side
+										or not gc:_getCapTargetInvalidReason(wakeTarget.zone, wakeTarget)))) then
+								self:_wakeIdleMissionZones(gc, wakeTarget, nil, nil, idleNow)
 							end
 						end
 						if include then
@@ -36056,7 +36297,7 @@ function Frontline.CapSamReturnState(record, now)
 	return points
 end
 
-function Frontline.SetUpCapTask(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side, routeAxis, owner, ordinary, saved, knownController, knownGroupSize)
+function Frontline.SetUpCapTask(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side, routeAxis, owner, ordinary, saved, knownController, knownGroupSize, knownWakeTarget)
 	if not group or not group:isExist() or (knownGroupSize or group:getSize())==0 then return end
 	local unit = group:getUnit(1)
 	if not unit or not unit:isExist() then return end
@@ -36067,6 +36308,7 @@ function Frontline.SetUpCapTask(group, point, altitudeFt, rangeNm, landUnitID, b
 		owner._capRouteVersion = (owner._capRouteVersion or 0) + 1
 		owner._capSamReturn = nil
 		owner._capAssignment = nil
+		owner._bluePackageCapOperationId = nil
 	end
 	local rng = (saved and saved.rangeNm or rangeNm or 25) * NM
 	local altm = saved and saved.altm or (altitudeFt or 15000) * 0.3048
@@ -36226,7 +36468,7 @@ function Frontline.SetUpCapTask(group, point, altitudeFt, rangeNm, landUnitID, b
 		owner._capAssignment = record
 		if adjusted then owner._capSamReturn = record end
 	end
-	Frontline.AssignCapRoute(group, startPos, p1, p2, altm, search, landUnitID, duration, owner, record, knownController, view)
+	Frontline.AssignCapRoute(group, startPos, p1, p2, altm, search, landUnitID, duration, owner, record, knownController, view, knownWakeTarget)
 	return holdingPoint
 end
 
@@ -36234,7 +36476,7 @@ function SetUpCAP(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side,
 	return Frontline.SetUpCapTask(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side, routeAxis)
 end
 
-function Frontline.AssignCapRoute(group, startPos, p1, p2, altm, search, landUnitID, duration, owner, record, knownController, threatView)
+function Frontline.AssignCapRoute(group, startPos, p1, p2, altm, search, landUnitID, duration, owner, record, knownController, threatView, knownWakeTarget)
 	local orbit = {
 		id = 'Orbit',
 		params = {
@@ -36299,7 +36541,8 @@ function Frontline.AssignCapRoute(group, startPos, p1, p2, altm, search, landUni
 	end
 	if GlobalSettings.idleZoneSuspendEnabled == true and owner then
 		local commander = owner.zoneCommander.battleCommander
-		local target = commander.indexedZones[owner.targetzone]
+		local target = knownWakeTarget
+		if target == nil then target = commander.indexedZones[owner.targetzone] end
 		if target then commander:_wakeIdleMissionZones(owner, target, task.params.route.points, threatView) end
 	end
 	local controller = knownController or group:getController()
@@ -42184,6 +42427,18 @@ function BattleCommander:_claimLandingRewards(player, coalitionSide, un, playRan
 			elseif carrierHull == "Tarawa" and aircraftId == 7 then
 				self:recordCareerAircraftStat(n, aircraftId, self.CAREER_AIRCRAFT_METRIC.TarawaLandings, 1, record, playerCoalition, plist, knownPid)
 			end
+			if qualifyingFlight and record then
+				local currentId = self.CAREER_STAT.SurvivalStreakCurrent
+				local bestId = self.CAREER_STAT.SurvivalStreakBest
+				local career = record.career
+				local current = (career[currentId] or 0) + 1
+				local best = career[bestId] or 0
+				career[currentId] = current
+				if current > best then
+					career[bestId] = current
+					self:_checkCareerAchievementThresholds(n, "career", nil, bestId, best, current, playerCoalition, plist, knownPid)
+				end
+			end
 			claimPlayers[n] = record or true
 		end
 	end
@@ -42492,9 +42747,10 @@ end
 			self:markCasMissionPlayerUnavailable(n)
 			self:markSeadMissionPlayerUnavailable(n)
 			local _, _, subslot,resetAllowed = self:_multicrewGetSubSlotByName(n, plist, crewSlots[n])
+			local _, record
 			if subslot == 0 then
 				self:addStat(n,'Deaths',1)
-				aircraftId = self:recordCareerPlayerAircraftStat(n, unit, self.CAREER_STAT.PilotDeaths, self.CAREER_AIRCRAFT_METRIC.PilotDeaths, 1, aircraftId, plist, self.playerIdByName[n] or false)
+				aircraftId, _, record = self:recordCareerPlayerAircraftStat(n, unit, self.CAREER_STAT.PilotDeaths, self.CAREER_AIRCRAFT_METRIC.PilotDeaths, 1, aircraftId, plist, self.playerIdByName[n] or false)
 				self:resetTempStats(n, false, crew, crewSlots[n], resetAllowed)
 				self:clearRefuelRewardState(n, unitName)
 				if GlobalSettings.pvpEnabled then
@@ -42522,8 +42778,9 @@ end
 				self:resetTempStats(n, false, crew, crewSlots[n], resetAllowed)
 				self:clearRefuelRewardState(n, unitName)
 				self:addStat(n,'Deaths',1)
-				aircraftId = self:recordCareerPlayerAircraftStat(n, unit, self.CAREER_STAT.PilotDeaths, self.CAREER_AIRCRAFT_METRIC.PilotDeaths, 1, aircraftId, plist, self.playerIdByName[n] or false)
+				aircraftId, _, record = self:recordCareerPlayerAircraftStat(n, unit, self.CAREER_STAT.PilotDeaths, self.CAREER_AIRCRAFT_METRIC.PilotDeaths, 1, aircraftId, plist, self.playerIdByName[n] or false)
 			end
+			if record then record.career[self.CAREER_STAT.SurvivalStreakCurrent] = nil end
 		end
 	end
 
@@ -43238,6 +43495,10 @@ function BattleCommander:_handleWorldEvent(event)
 			if zone.airbaseName == airbaseName then
 				if not self:isRunwayPlaneSpawnBlocked(zone.zone) then
 					self:blockRunwayPlaneSpawns(zone.zone, 3300, zone)
+				end
+				if BomberGroup then DynamicSupportNative:ReportRunwayDestroyed(zone) end
+				if GlobalSettings.pvpEnabled ~= true and self.runwayMissions and zone.side == coalition.side.RED then
+					self:_scheduleRunwayObjectiveClosure(zone)
 				end
 				if redDirector then redDirector:onRunwayDestroyed(zone) end
 			end
@@ -45004,6 +45265,7 @@ function BattleCommander:loadFromDisk()
 					capOrbitDistanceNm = tonumber(entry.capOrbitDistanceNm),
 					capBufferNm = tonumber(entry.capBufferNm),
 					capRetaskedTargetzone = entry.capRetaskedTargetzone,
+					bluePackageCapOperationId = tonumber(entry.bluePackageCapOperationId),
 					capRetaskedThisSortie = entry.capRetaskedThisSortie == true,
 					capReturnHome = entry.capReturnHome == true,
 					capReturnHomeZone = entry.capReturnHomeZone,
@@ -45257,6 +45519,9 @@ function BattleCommander:loadFromDisk()
 							timestamp = tonumber(entry.timestamp or entry.time) or fallbackTimestamp,
 							hasPilotData = hasPilotData == true,
 							enemyAmbush = type(entry.enemyAmbush) == 'table' and { checked = entry.enemyAmbush.checked == true } or nil,
+							fieldDropped = entry.fieldDropped == true or nil,
+							rescueRewardPaid = entry.fieldDropped == true and entry.rescueRewardPaid == true or nil,
+							rescueCareerRecorded = entry.fieldDropped == true and entry.rescueCareerRecorded == true or nil,
 						}
 					end
 				end
@@ -48188,10 +48453,12 @@ function ZoneCommander:suspend(idle)
 			end
 		end
 		self.battleCommander:_applyZoneShopSelectorDelta(self, previousState)
-		local selectorRefreshTags = self.battleCommander:_getZoneSelectorRefreshTags(self, previousState)
+		local selectorRefreshTags, blueOnly = self.battleCommander:_getZoneSelectorRefreshTags(self, previousState)
 		if #selectorRefreshTags > 0 then
 			self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.BLUE, selectorRefreshTags)
-			self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.RED, selectorRefreshTags)
+			if not blueOnly then
+				self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.RED, selectorRefreshTags)
+			end
 		end
 	end
 
@@ -48412,10 +48679,12 @@ function ZoneCommander:suspend(idle)
 					self._persistedHibernatedSlots = nil
 					self._resuming = nil
 					self.battleCommander:_applyZoneShopSelectorDelta(self, previousState)
-					local selectorRefreshTags = self.battleCommander:_getZoneSelectorRefreshTags(self, previousState)
+					local selectorRefreshTags, blueOnly = self.battleCommander:_getZoneSelectorRefreshTags(self, previousState)
 					if #selectorRefreshTags > 0 then
 						self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.BLUE, selectorRefreshTags)
-						self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.RED, selectorRefreshTags)
+						if not blueOnly then
+							self.battleCommander:requestShopSelectorRefreshForCoalition(coalition.side.RED, selectorRefreshTags)
+						end
 					end
 					self:updateLabel()
 					if wasSuspended then
@@ -57023,6 +57292,7 @@ function ZoneCommander:capture(newside,silent)
 			self.battleCommander.logisticCommander:_processCsarHomeZoneCaptured(self.zone, self)
 		elseif newside == 2 and self.battleCommander.logisticCommander then
 			self.battleCommander.logisticCommander:_processCsarHomeZoneCaptured(self.zone)
+			self.battleCommander.logisticCommander:_captureRedCsarPilotsInZone(self)
 		end
         bc:buildConnectionMap(self.zone, previousSide)
 		if newside == coalition.side.RED then
@@ -58019,6 +58289,7 @@ function GroupCommander:_enterHangar(isInitial)
     self._restoreCapReturnHomeElapsedSec = nil
     self._capAssistRetaskedThisSortie = nil
     self._capAssistRetaskedTargetzone = nil
+    self._bluePackageCapOperationId = nil
     self._capAssistCheckedOnAirborne = nil
 	self:_applyHangarDelay(isInitial)
 	if (hadShopLaunchRequest or hadSuspendedRegularSupplyAuthorization) and bc then
@@ -58487,6 +58758,29 @@ function ExternalHeloCargoRoute.AirWaypoint(x, z, altitudeM, speedKmh, tasks, na
 		tasks or {},
 		name
 	)
+end
+
+function ExternalHeloCargoRoute.BuildSupplyCurrentWaypoint(pos, altitudeM, speedKmh)
+	local waypoint = COORDINATE:New(pos.x, pos.y, pos.z):SetAltitude(altitudeM):WaypointAirTurningPoint("RADIO", speedKmh, {}, "Current")
+	addPreferVerticalOptionToWaypoint(waypoint)
+	return waypoint
+end
+
+function ExternalHeloCargoRoute.AppendCoordinateLandingWaypoints(route, plan, speedKmh, combatLanding, landingCommitTask)
+	local finalDistance = plan.landingApproachM or UTILS.NMToMeters(0.6)
+	local landingX, landingZ = ExternalHeloCargoRoute.PointBefore(plan.destx, plan.desty, plan.apx, plan.apy, finalDistance)
+	if finalDistance > 0 then
+		local approachTasks = {}
+		if landingCommitTask then
+			landingCommitTask.number = 1
+			approachTasks[1] = landingCommitTask
+		end
+		local approachName = plan.routeApproach and "Approach" or "Landing"
+		route[#route+1] = COORDINATE:New(plan.apx, UTILS.FeetToMeters(500), plan.apy):WaypointAirTurningPoint("RADIO", speedKmh, approachTasks, approachName)
+	end
+	local landTask = CONTROLLABLE:TaskLandAtVec2({ x = plan.destx, y = plan.desty }, 60, combatLanding, nil)
+	landTask.number = 1
+	route[#route+1] = COORDINATE:New(landingX, UTILS.FeetToMeters(400), landingZ):WaypointAirTurningPoint("RADIO", 160, { landTask }, "Landing Approach")
 end
 
 function ExternalHeloCargoRoute.GetSupplyTransitRoute(originZoneName, targetZoneName)
@@ -59945,7 +60239,7 @@ function GroupCommander:_adjustWarehouseStock(zoneName, deltaPerItem)
 end
 
 function GroupCommander:_resolveHeloRoutePlan(zoneName, fromX, fromZ, coalitionSide, originZoneName, knownTarget)
-	local plan = { zoneName = zoneName, spd = 79, useAirbase = false, airbase = nil, destx = nil, desty = nil, apx = nil, apy = nil, back = nil }
+	local plan = { zoneName = zoneName, spd = ExternalHeloCargoRoute.SupplyCruiseSpeedMps, useAirbase = false, airbase = nil, destx = nil, desty = nil, apx = nil, apy = nil, back = nil }
 	local destx, desty
 	local useAirbase = false
 
@@ -60268,26 +60562,14 @@ function GroupCommander:_assignHeloRoute(grName, zoneName, supplyDebitOriginZone
         local gmoose = knownMooseGroup or GROUP:FindByName(grName); if not gmoose or not gmoose:IsAlive(gr) then return false end
         local kmh = math.floor((spd or 280) * 3.6)
 		local useBaroAltitude = self.Altitude and self.AltitudeType == "BARO"
-		local alt = UTILS.FeetToMeters(self.Altitude or 1000)
-        local alt2 = UTILS.FeetToMeters(500)
-		local landingApproachAlt = UTILS.FeetToMeters(400)
-		local landingApproachSpeedKmh = 160
-		local landTask = gmoose:TaskLandAtVec2({ x = plan.destx, y = plan.desty }, 60, self.side == 2, nil)
-		local landingApproachX, landingApproachY = ExternalHeloCargoRoute.PointBefore(
-			plan.destx,
-			plan.desty,
-			plan.apx,
-			plan.apy,
-			UTILS.NMToMeters(0.6)
-		)
-
+		local cruiseAltitudeFeet = self.Altitude or ExternalHeloCargoRoute.DefaultSupplyCruiseAltitudeFeet
+		local alt = UTILS.FeetToMeters(cruiseAltitudeFeet)
         local route = {}
 		local currentAltitudeM = alt
 		if useBaroAltitude then
 			currentAltitudeM = math.max(0, pos.y - land.getHeight({ x = pos.x, y = pos.z }))
 		end
-		route[#route + 1] = COORDINATE:New(pos.x, pos.y, pos.z):SetAltitude(currentAltitudeM):WaypointAirTurningPoint("RADIO", kmh, {}, "Current")
-        addPreferVerticalOptionToWaypoint(route[1])
+		route[#route + 1] = ExternalHeloCargoRoute.BuildSupplyCurrentWaypoint(pos, currentAltitudeM, kmh)
 		local transitFromX, transitFromZ = ExternalHeloCargoRoute.AppendSupplyTransitWaypoints(route, {
 			originZoneName = transitOriginZone,
 			targetZoneName = zoneName,
@@ -60297,7 +60579,7 @@ function GroupCommander:_assignHeloRoute(grName, zoneName, supplyDebitOriginZone
 			destinationZ = plan.desty,
 			routeEndX = plan.routeApproach and plan.apx or nil,
 			routeEndZ = plan.routeApproach and plan.apy or nil,
-			altitudeFeet = self.Altitude or 1000,
+			altitudeFeet = cruiseAltitudeFeet,
 			altitudeType = self.AltitudeType,
 			speedKmh = kmh,
 		})
@@ -60319,13 +60601,7 @@ function GroupCommander:_assignHeloRoute(grName, zoneName, supplyDebitOriginZone
 		else
 			route[#route + 1] = COORDINATE:New(plan.apx, alt, plan.apy):WaypointAirTurningPoint("RADIO", kmh)
 		end
-		local approachTasks = {}
-		if landingCommitTask then approachTasks[#approachTasks + 1] = landingCommitTask end
-		for taskIndex, task in ipairs(approachTasks) do task.number = taskIndex end
-		local approachWaypointName = plan.routeApproach and "Approach" or "Landing"
-		route[#route + 1] = COORDINATE:New(plan.apx, alt2, plan.apy):WaypointAirTurningPoint("RADIO", kmh, approachTasks, approachWaypointName)
-		landTask.number = 1
-		route[#route + 1] = COORDINATE:New(landingApproachX, landingApproachAlt, landingApproachY):WaypointAirTurningPoint("RADIO", landingApproachSpeedKmh, { landTask }, "Landing Approach")
+		ExternalHeloCargoRoute.AppendCoordinateLandingWaypoints(route, plan, kmh, self.side == 2, landingCommitTask)
 
         if GlobalSettings.idleZoneSuspendEnabled then
             local bcObj = self.zoneCommander.battleCommander
@@ -61568,6 +61844,12 @@ function BattleCommander:_capAssistIsBlueCapActiveState(groupState)
 	return groupState == 'takeoff' or groupState == 'inair'
 end
 
+function BattleCommander:_capAssistHasReturnOrder(groupCommander, pvpEnabled)
+	return groupCommander._capReturnHome == true
+		or (not pvpEnabled and (groupCommander._airReturnHome
+			or groupCommander._restoreCapReturnHome or groupCommander._restoreAirReturnHome))
+end
+
 function BattleCommander:_capAssistUntrackBluePatrol(groupCommander)
 	local previousTargetzone = groupCommander and groupCommander._capAssistBluePatrolTrackedTargetzone
 	if not previousTargetzone then return end
@@ -61669,7 +61951,8 @@ function BattleCommander:_capAssistBuildBlueAttackStation(originZoneName, target
 end
 
 function BattleCommander:_capAssistHasBluePatrolCoverage(targetZoneName, desiredStationPoint, coverageDistanceNm, knownPatrols)
-	local heldPatrols = GlobalSettings.pvpEnabled == true and knownPatrols or nil
+	local pvpEnabled = GlobalSettings.pvpEnabled == true
+	local heldPatrols = pvpEnabled and knownPatrols or nil
 	local patrolGroups = heldPatrols
 	if not patrolGroups then
 		self:_ensureCapAssistRuntime()
@@ -61681,7 +61964,8 @@ function BattleCommander:_capAssistHasBluePatrolCoverage(targetZoneName, desired
 	local nearestDistanceNm = nil
 	for patrolGroupName, patrolRecord in pairs(patrolGroups) do
 		local patrolCommander = heldPatrols and patrolRecord.groupCommander or patrolRecord
-		if patrolCommander and patrolCommander._capReturnHome ~= true and self:_capAssistIsBlueCapActiveState(patrolCommander.state)
+		if patrolCommander and not self:_capAssistHasReturnOrder(patrolCommander, pvpEnabled)
+			and self:_capAssistIsBlueCapActiveState(patrolCommander.state)
 			and (not heldPatrols or (patrolCommander._capAssistRetaskedTargetzone or patrolCommander.targetzone) == targetZoneName) then
 			local group = heldPatrols and patrolRecord.group or patrolCommander:_getDcsGroupCached()
 			if group and group:isExist() and self:_blueCapRetaskReady(patrolCommander, group) then
@@ -61710,7 +61994,7 @@ function BattleCommander:_capAssistHasBlueAttackCoverage(targetZoneName, coverag
 	local nearestDistanceNm = nil
 	for candidateGroupName, candidateCommander in pairs(self._airborneBlueCapByName) do
 		if candidateCommander
-		and candidateCommander._capReturnHome ~= true
+		and not self:_capAssistHasReturnOrder(candidateCommander)
 		and self:_capAssistIsBlueCapActiveState(candidateCommander.state)
 		and candidateCommander.MissionType == 'CAP'
 		and (candidateCommander.targetzone == targetZoneName or candidateCommander._capAssistRetaskedTargetzone == targetZoneName) then
@@ -61744,7 +62028,7 @@ function BattleCommander:_capAssistSelectBluePatrolCandidate(desiredStationPoint
 	local nearestDistanceNm = nil
 	for candidateGroupName, candidateCommander in pairs(self._airborneBlueCapByName) do
 		if candidateCommander
-		and candidateCommander._capReturnHome ~= true
+		and not self:_capAssistHasReturnOrder(candidateCommander)
 		and self:_capAssistIsBlueCapActiveState(candidateCommander.state)
 		and candidateCommander.MissionType == 'CAP'
 		and candidateCommander._capAssistRetaskedThisSortie ~= true then
@@ -61772,7 +62056,7 @@ function BattleCommander:_capAssistSelectBlueAttackCandidate(targetZoneName)
 	local nearestAttackOffsetNm = nil
 	for candidateGroupName, candidateCommander in pairs(self._airborneBlueCapByName) do
 		if candidateCommander
-		and candidateCommander._capReturnHome ~= true
+		and not self:_capAssistHasReturnOrder(candidateCommander)
 		and self:_capAssistIsBlueCapActiveState(candidateCommander.state)
 		and candidateCommander.MissionType == 'CAP'
 		and candidateCommander._capAssistRetaskedThisSortie ~= true then
@@ -61805,9 +62089,17 @@ function BattleCommander:_capAssistHasActiveRedCapForTargetzone(targetZoneName)
 			and groupCommander.side == 1
 			and groupCommander.MissionType == 'CAP'
 			and groupCommander._capReturnHome ~= true
+			and groupCommander._airReturnHome ~= true
+			and groupCommander._restoreAirReturnHome ~= true
+			and groupCommander._restoreCapReturnHome ~= true
 			and groupCommander.state == 'inair'
-			and groupCommander.targetzone == targetZoneName then
-				return true
+			and (groupCommander._capAssistRetaskedTargetzone or groupCommander.targetzone) == targetZoneName then
+				local group = groupCommander:_getDcsGroupCached()
+				if group then
+					for _, unit in ipairs(group:getUnits()) do
+						if unit:isExist() and Utils.isInAir(unit) then return true end
+					end
+				end
 			end
 		end
 	end
@@ -61822,12 +62114,15 @@ function BattleCommander:_executeBlueCapAssistForTargetzone(targetZoneName, pend
 	if not pendingRecord or pendingRecord.token ~= pendingToken then return end
 	self._capAssistPendingByTargetzone[targetZoneName] = nil
 
+	local target = self:getZoneByName(targetZoneName)
+	if not target or not target.active or target.isHidden or target.side == 0 or (target.suspended and not target._idleSuspended) then return end
+	local assistMode = target.side == coalition.side.BLUE and 'patrol' or 'attack'
+	if pendingRecord.assistMode and pendingRecord.assistMode ~= assistMode then return end
 	local now = timer.getAbsTime()
 	if not self:_capAssistHasActiveRedCapForTargetzone(targetZoneName) then
 		return
 	end
 
-	local assistMode = pendingRecord.assistMode or self:_capAssistResolveBlueRetaskMode(targetZoneName)
 	local coverageDistanceNm = GlobalSettings.capAssistCoverageNm or 30
 	local desiredPatrolStation = nil
 	local desiredPatrolPoint = nil
@@ -61862,7 +62157,8 @@ function BattleCommander:_executeBlueCapAssistForTargetzone(targetZoneName, pend
 	end
 
 	if candidateCommander
-	and (candidateCommander._capReturnHome == true or not self:_capAssistIsBlueCapActiveState(candidateCommander.state) or candidateCommander._capAssistRetaskedThisSortie == true) then
+	and (self:_capAssistHasReturnOrder(candidateCommander) or not self:_capAssistIsBlueCapActiveState(candidateCommander.state)
+		or candidateCommander._capAssistRetaskedThisSortie == true) then
 		candidateCommander = nil
 	end
 	if candidateCommander then
@@ -61911,7 +62207,7 @@ function BattleCommander:_executeBlueCapAssistForTargetzone(targetZoneName, pend
 		return
 	end
 
-	if not self:_capAssistIsBlueCapActiveState(candidateCommander.state) then
+	if self:_capAssistHasReturnOrder(candidateCommander) or not self:_capAssistIsBlueCapActiveState(candidateCommander.state) then
 		self._capAssistCooldownByTargetzone[targetZoneName] = now + 60
 		return
 	end
@@ -61928,7 +62224,10 @@ function BattleCommander:_executeBlueCapAssistForTargetzone(targetZoneName, pend
 
 	local orbitDistanceNm = (assistMode == 'attack') and math.random(35, 40) or math.random(30, 40)
 	local safeNm = candidateBufferNm or ((assistMode == 'attack') and 25 or 30)
-	candidateCommander._currentCapHoldingPoint = candidateCommander:_assignCapTask(candidateGroup, { x = candidateStation.x, z = candidateStation.y }, candidateCommander.Altitude, orbitDistanceNm, candidateCommander._landUnitID, safeNm, 2, nil, false)
+	local holdingPoint = candidateCommander:_assignCapTask(candidateGroup, { x = candidateStation.x, z = candidateStation.y },
+		candidateCommander.Altitude, orbitDistanceNm, candidateCommander._landUnitID, safeNm, 2, nil, false, nil, nil, nil, nil, target)
+	if not holdingPoint then return end
+	candidateCommander._currentCapHoldingPoint = holdingPoint
 	candidateCommander._currentCapOrbitDistanceNm = orbitDistanceNm
 	candidateCommander._currentCapBufferNm = safeNm
 	candidateCommander._capAssistRetaskedThisSortie = true
@@ -62441,6 +62740,32 @@ function BattleCommander:_refreshRunwayMissionHandler()
 	self.runwayMissions.trackerActive = shouldTrack
 end
 
+function BattleCommander:_scheduleRunwayObjectiveClosure(zone)
+	local state = self.runwayMissions
+	local zoneName, airbaseName = zone.zone, zone.airbaseName
+	for slotIndex, slot in ipairs(state.slots) do
+		if slot.active and slot.targetZone == zoneName and slot.target == airbaseName and not slot._runwayClosurePending then
+			slot._runwayClosurePending = true
+			-- Let the player weapon impact callback claim a finishing hit before closing the objective.
+			timer.scheduleFunction(function(_, time)
+				slot._runwayClosurePending = nil
+				if self.runwayMissions ~= state or state.slots[slotIndex] ~= slot or not slot.active
+					or slot.targetZone ~= zoneName or slot.target ~= airbaseName or self.indexedZones[zoneName] ~= zone
+					or zone.side ~= coalition.side.RED or zone.airbaseName ~= airbaseName
+					or not self:isRunwayPlaneSpawnBlocked(zoneName, time) then return nil end
+				if slot.started then
+					slot.completed = true
+					slot.active = false
+					self:_refreshRunwayMissionHandler()
+				else
+					self:resetRunwayMissionSlot(slotIndex)
+				end
+				return nil
+			end, nil, timer.getTime() + 1)
+		end
+	end
+end
+
 function BattleCommander:_registerRunwayMissionImpact(point, pilot, playerUnit, playerGroupID, ownerSide, state, capturedSlots, playerOwner)
 	if GlobalSettings.pvpEnabled then
 		assert(ownerSide == coalition.side.RED or ownerSide == coalition.side.BLUE, "Runway mission requires a RED or BLUE owner")
@@ -62702,6 +63027,7 @@ local thirdAttackRunwayZone = thirdAttackZone
 	and thirdAttackZone.side == enemySide and thirdAttackZone.active
 	and not thirdAttackZone.suspended and not thirdAttackZone.isHidden
 	and ((pvpEnabled and cooldownByTarget or RUNWAY_ZONE_COOLDOWN)[thirdAttackZone.zone] or 0) < now
+	and (pvpEnabled or not bc:isRunwayPlaneSpawnBlocked(thirdAttackZone.zone, now))
 	and blueDirector:_zoneHasCachedBombableRunway(thirdAttackZone)
 	and thirdAttackZone.zone or nil
 local recommendedRunwayZone
@@ -62741,6 +63067,7 @@ end
 			and (packageRunwayZone and z.zone == packageRunwayZone
 				or not packageRunwayZone and (pvpEnabled and connectedToOwner or not pvpEnabled and ZONE_CONNECTED_TO_BLUE[z.zone]))
 			and ((pvpEnabled and cooldownByTarget or RUNWAY_ZONE_COOLDOWN)[z.zone] or 0) < now
+			and (pvpEnabled or not bc:isRunwayPlaneSpawnBlocked(z.zone, now))
 		then
 			local hostile = blueDirector:_zoneHasCachedBombableRunway(z)
 			local capCnt = 0
@@ -62793,7 +63120,8 @@ end
 		and not excludedTargets[z.zone]
 		and not excludedAirbases[z.airbaseName]
 		and (not packageRunwayZone or z.zone==packageRunwayZone) and
-	  ((pvpEnabled and cooldownByTarget or RUNWAY_ZONE_COOLDOWN)[z.zone] or 0) < now then
+	  ((pvpEnabled and cooldownByTarget or RUNWAY_ZONE_COOLDOWN)[z.zone] or 0) < now
+		and (pvpEnabled or not bc:isRunwayPlaneSpawnBlocked(z.zone, now)) then
         local hostile = blueDirector:_zoneHasCachedBombableRunway(z)
         if hostile then
           local bestdist=math.huge
@@ -66437,6 +66765,13 @@ function GroupCommander:_consumeShouldSpawnDecision(triggerState, ignore, knownN
 			if not denialReason and self.MissionType == 'CAP' then
 				denialReason = self:_getCapTargetInvalidReason()
 			end
+			if not denialReason and triggerState == 'preparing' and self._directorGroundPermitId then
+				local permit = director:_groundPermitFor(self)
+				if permit and not director:_groundPermitStillValid(permit) then
+					director:_releaseGroundPermit(permit, 'invalid', knownNow or timer.getAbsTime(), true)
+					return nil, Director.HOLD_REASON
+				end
+			end
 			if denialReason then
 				self._directorSpawnAuthorization = nil
 				director:onManagedSpawnDenied(self, denialReason)
@@ -67167,8 +67502,6 @@ function GroupCommander:_spawnFromGroundAt(resolved, originZone, targetZone, hot
     if not spot then return nil end
     self._lastGroundSpawnSpot = spot
     local sp = SPAWN:NewFromTemplate(tpl, resolved, self:_getSpawnAlias(), true)
-	-- Temporarily use NotCargo for Blue Chinook supplies while DCS internal cargo is broken.
-	if self:_usesInternalHeloCargo(resolved) then self.NotCargo = true end
     if self.mission=='supply' and self.unitCategory==Unit.Category.HELICOPTER then
 		if self._advanceCaptureWaitingForNeutral == true then
         sp = sp:OnSpawnGroup(function(g)timer.scheduleFunction(function()
@@ -67228,8 +67561,7 @@ function GroupCommander:_spawnFromGroundAt(resolved, originZone, targetZone, hot
     elseif self.MissionType=='CAS' and self.unitCategory==Unit.Category.AIRPLANE and self.template then
         sp = sp:OnSpawnGroup(function(g) bc:EngageCasMission(self.targetzone, g:GetName(), nil, nil, self.Altitude or self.AltitudeFt, self._landUnitID, nil, nil, nil, { knownMooseGroup = g, casAltitudeOwner = self }) end)
     end
-	-- Internal cargo temporarily disabled after the DCS update; restore this call when fixed.
-	-- self:_prepareHeloInternalCargoSpawn(sp, resolved, originZone, targetZone, self.side, nil)
+	self:_prepareHeloInternalCargoSpawn(sp, resolved, originZone, targetZone, self.side, nil)
 	local spawned = sp:Spawn()
 	if spawned then
 		self._lastSpawnTemplate = resolved
@@ -67565,7 +67897,7 @@ end
 		return true
 	end
 
-	function GroupCommander:_assignCapTask(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side, routeAxis, ordinary, saved, knownController, knownGroupSize, knownMooseGroup)
+	function GroupCommander:_assignCapTask(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side, routeAxis, ordinary, saved, knownController, knownGroupSize, knownMooseGroup, knownWakeTarget)
 		if ordinary then saved = saved or self._restoreCapSamReturn end
 		if saved and (saved.targetzone ~= self.targetzone or saved.mission ~= self.mission or saved.side ~= side) then saved = nil end
 		if saved and saved.orbitStarted and saved.remainingSec <= 0 then
@@ -67576,8 +67908,13 @@ end
 			self._restoreCapSamReturn = nil
 			return self._currentCapHoldingPoint
 		end
+		local pendingSamReturn = self._restoreCapSamReturn
 		self._restoreCapSamReturn = nil
-		return Frontline.SetUpCapTask(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side, routeAxis, self, ordinary, saved, knownController, knownGroupSize)
+		local holdingPoint = Frontline.SetUpCapTask(group, point, altitudeFt, rangeNm, landUnitID, bufferNm, side, routeAxis, self, ordinary, saved, knownController, knownGroupSize, knownWakeTarget)
+		if not holdingPoint and pendingSamReturn and side == 2 and GlobalSettings.pvpEnabled ~= true then
+			self._restoreCapSamReturn = pendingSamReturn
+		end
+		return holdingPoint
 	end
 
 	function GroupCommander:_capOrbitEvent(groupId, version)
@@ -67595,7 +67932,8 @@ end
 			or (self.mission ~= 'patrol' and self.mission ~= 'attack') then return false end
 		if self._capReturnHome or self._airReturnHome or self._restoreAirReturnHome or self._restoreCapReturnHome
 			or self._pendingInAirRestore or self._restoreSavedSide ~= nil or self._capReturnHomeFailedGeneration ~= nil
-			or self._capAssistRetaskedThisSortie or self._capAssistRetaskedTargetzone ~= nil
+			or self._capAssistRetaskedTargetzone ~= nil
+			or (self._capAssistRetaskedThisSortie and (self.side ~= 2 or GlobalSettings.pvpEnabled == true))
 			or self._directorRetaskOriginalTargetZone ~= nil or self._directorRetaskOriginalMission ~= nil
 			or self._directorOperationId ~= nil or self._directorSeadIngressOperationId ~= nil
 			or self._retasked or self._dynamicHybridRetired then return false end
@@ -67660,8 +67998,14 @@ end
 			return false
 		end
 
+		local returnHomeStartedAt = now
+		if reason == 'restore_return_home' then
+			returnHomeStartedAt = now - math.max(0, tonumber(self._restoreCapReturnHomeElapsedSec) or 0)
+			self._restoreCapReturnHome = nil
+			self._restoreCapReturnHomeElapsedSec = nil
+		end
 		self._capReturnHome = true
-		self._capReturnHomeStartedAt = now
+		self._capReturnHomeStartedAt = returnHomeStartedAt
 		self._capReturnHomeFailedGeneration = nil
 		self._capTargetStateGenerationSeen = bcObj._capTargetStateGeneration or 0
 		bcObj:_syncCapSpawnBucketsForGroup(self)
@@ -67669,15 +68013,22 @@ end
 		return true
 	end
 
-	function GroupCommander:_getCapTargetInvalidReason()
+	function GroupCommander:_getCapTargetInvalidReason(diversionTarget, knownTargetZone)
 		if self.MissionType ~= 'CAP' then return nil end
 		if self.mission ~= 'patrol' and self.mission ~= 'attack' then return nil end
-		local targetName = self.targetzone
+		local targetName = diversionTarget or self.targetzone
 		if not targetName then return "target_missing" end
-		local targetZone = self.zoneCommander.battleCommander:getZoneByName(targetName)
+		local targetZone = knownTargetZone
+		if targetZone == nil then targetZone = self.zoneCommander.battleCommander:getZoneByName(targetName) end
 		if not targetZone then return "target_missing" end
 		if targetZone.active ~= true then return "target_inactive" end
 		if targetZone.suspended == true and not targetZone._idleSuspended then return "target_suspended" end
+		if diversionTarget then
+			if targetZone.isHidden then return "target_hidden" end
+			if targetZone.side == 0 then return "diversion_target_neutral" end
+			if self._bluePackageCapOperationId and targetZone.side == self.side then return "attack_target_friendly" end
+			return nil
+		end
 		if self.mission == 'patrol' then
 			if targetZone.side ~= self.side then return "patrol_target_side_mismatch" end
 			return nil
@@ -67687,6 +68038,58 @@ end
 		return nil
 	end
 
+	function GroupCommander:_releaseBlueCapDiversion(reason, now, group, knownGroupSize, knownMooseGroup, knownMooseAlive, knownUnits)
+		if self._capReturnHome or self._airReturnHome then
+			self._bluePackageCapOperationId = nil
+			return true
+		end
+		if self._restoreCapReturnHome or self._restoreAirReturnHome then return false end
+		local bcObj = self.zoneCommander.battleCommander
+		local previousTarget = self._capAssistRetaskedTargetzone
+		group = group or self:_getDcsGroupCached()
+		local units = knownUnits or (group and group:getUnits())
+		local nominal = bcObj:getZoneByName(self.targetzone)
+		if group and nominal and not nominal.isHidden and not self:_getCapTargetInvalidReason(nil, nominal)
+			and bcObj:_blueCapRetaskReady(self, group, units) then
+			local station, _, bufferNm
+			if self.mission == 'patrol' then
+				station, _, bufferNm = bcObj:_capAssistBuildBluePatrolStation(self.targetzone)
+			else
+				station, _, bufferNm = bcObj:_capAssistBuildBlueAttackStation(self.zoneCommander.zone, self.targetzone)
+			end
+			if station then
+				local orbitNm = self._currentCapOrbitDistanceNm or 35
+				self._restoreCapSamReturn = nil
+				local holdingPoint = self:_assignCapTask(group, { x = station.x, z = station.y }, self.Altitude,
+					orbitNm, self._landUnitID, bufferNm, self.side, nil, true, nil, nil, knownGroupSize, knownMooseGroup, nominal)
+				if holdingPoint then
+					self._currentCapHoldingPoint = holdingPoint
+					self._currentCapOrbitDistanceNm = orbitNm
+					self._currentCapBufferNm = bufferNm
+					self._capAssistRetaskedTargetzone = nil
+					self._bluePackageCapOperationId = nil
+					self._capReturnHomeFailedGeneration = nil
+					if self._capAssistBlueAirborneTracked then bcObj:_capAssistTrackBlueAirborne(self, true) end
+					if previousTarget ~= self.targetzone then
+						local director = Director:getForSide(self.side)
+						if director and director.battleCommander == bcObj then director.routineCapCoverageCache = nil end
+					end
+					return true
+				end
+			end
+		end
+		if units and #units > 0 and Utils.allGroupIsLanded(group, true, units) then
+			self._bluePackageCapOperationId = nil
+			return true
+		end
+		if self:_startCapReturnHome(reason, now, group, knownMooseGroup, knownGroupSize, knownMooseAlive) then
+			self._bluePackageCapOperationId = nil
+			self._capAssistRetaskedTargetzone = nil
+			return true
+		end
+		return false
+	end
+
 	function GroupCommander:_checkCapReturnHome(now, group, knownGroupSize)
 		if self._capReturnHome == true then return end
 		if self.MissionType ~= 'CAP' then return end
@@ -67694,18 +68097,40 @@ end
 		local bcObj = self.zoneCommander.battleCommander
 		group = group or self:_getDcsGroupCached()
 		local units = group and group:getUnits()
+		if (self._restoreCapReturnHome or self._restoreAirReturnHome) and self.side == 2 and GlobalSettings.pvpEnabled ~= true then
+			if group and not self._restoreAirReturnHome then self:_startCapReturnHome('restore_return_home', now, group, nil, knownGroupSize) end
+			return units
+		end
 		if group and not bcObj:_airGroupHasMissionAmmo(group, 'CAP', units) then
 			self:_startCapReturnHome('winchester', now, group, nil, knownGroupSize)
 			return units
 		end
+		if self._bluePackageCapOperationId and GlobalSettings.pvpEnabled ~= true then
+			local operationId = self._bluePackageCapOperationId
+			local director = Director:getForSide(coalition.side.BLUE)
+			local operation = director and director.operation
+			if self._directorOperationId and self._directorOperationId ~= operationId then
+				self._bluePackageCapOperationId = nil
+			elseif not director or not director.config.enabled or (director.ready and (not operation
+				or operation.id ~= operationId or operation.bluePackageCapBorrower ~= self.name)) then
+				self:_releaseBlueCapDiversion('blue-package-ended', now, group, knownGroupSize, nil, nil, units)
+				return units
+			end
+		end
 		local generation = bcObj._capTargetStateGeneration or 0
 		if self._capTargetStateGenerationSeen == generation then return units end
 
-		local reason = self:_getCapTargetInvalidReason()
-		self._capTargetStateGenerationSeen = generation
-		if reason then
-			self:_startCapReturnHome(reason, now, group, nil, knownGroupSize)
+		local diversion = self._capAssistRetaskedTargetzone and self.side == 2 and GlobalSettings.pvpEnabled ~= true
+			and self._capAssistRetaskedTargetzone
+		local reason = self:_getCapTargetInvalidReason(diversion)
+		if reason and diversion then
+			if self:_releaseBlueCapDiversion(reason, now, group, knownGroupSize, nil, nil, units) then
+				self._capTargetStateGenerationSeen = generation
+			end
+			return units
 		end
+		self._capTargetStateGenerationSeen = generation
+		if reason then self:_startCapReturnHome(reason, now, group, nil, knownGroupSize) end
 		return units
 	end
 
@@ -67746,9 +68171,7 @@ end
 
 		if self._restoreCapReturnHome == true and self.MissionType == 'CAP' and (self.mission == 'patrol' or self.mission == 'attack') then
 			local now = timer.getAbsTime()
-			local returnHomeStartedAt = now
-				- math.max(0, tonumber(self._restoreCapReturnHomeElapsedSec) or 0)
-			if self:_startCapReturnHome("restore_return_home", returnHomeStartedAt, gr, gmoose, groupSize, knownMooseAlive) then
+			if self:_startCapReturnHome("restore_return_home", now, gr, gmoose, groupSize, knownMooseAlive) then
 				self._restoreCapReturnHome = nil
 				self._restoreCapReturnHomeElapsedSec = nil
 				return
@@ -67759,33 +68182,49 @@ end
 			self._restoreCapReturnHomeElapsedSec = nil
 		end
 
-		if self.MissionType == 'CAP' and self.mission == 'patrol' then
+		local capMission, capTarget = self.mission, self.targetzone
+		local capWakeTarget
+		local diversion = self._capAssistRetaskedTargetzone and self.MissionType == 'CAP' and side == 2
+			and GlobalSettings.pvpEnabled ~= true and self._capAssistRetaskedTargetzone
+		if diversion then
+			local target = self.zoneCommander.battleCommander:getZoneByName(diversion)
+			local reason = self:_getCapTargetInvalidReason(diversion, target or false)
+			if reason then
+				if self:_releaseBlueCapDiversion(reason, timer.getAbsTime(), gr, groupSize, gmoose, knownMooseAlive) then return end
+				return 'Not available'
+			end
+			capTarget, capWakeTarget = diversion, target
+			capMission = target.side == side and 'patrol' or 'attack'
+		end
+		if self.MissionType == 'CAP' and capMission == 'patrol' then
 			local savedPoint = self._currentCapHoldingPoint
 			local safe = tonumber(self._currentCapBufferNm) or ((side == 1) and 35 or 30)
 			local st = savedPoint and savedPoint.x and (savedPoint.z or savedPoint.y) and { x = savedPoint.x, y = savedPoint.z or savedPoint.y } or nil
 			if not st then
 				local towardEnemyNm = 30
 				local off = (side == 2) and -towardEnemyNm or towardEnemyNm
-				st = Frontline.PickStationNearZone(self.targetzone, side, off, 0, 0, 0, safe)
+				st = Frontline.PickStationNearZone(capTarget, side, off, 0, 0, 0, safe)
 			end
-			if not st then return end
+			if not st then return diversion and 'Not available' or nil end
 			local dist = tonumber(self._currentCapOrbitDistanceNm) or ((side == 1) and math.random(30, 40) or math.random(30, 40))
-			local holdingPoint, status = self:_assignCapTask(gr, { x = st.x, z = st.y }, self.Altitude, dist, self._landUnitID, safe, side, nil, true, nil, nil, groupSize, gmoose)
+			local holdingPoint, status = self:_assignCapTask(gr, { x = st.x, z = st.y }, self.Altitude, dist, self._landUnitID, safe, side, nil, true, nil, nil, groupSize, gmoose, capWakeTarget)
 			if status == 'Not available' then return status end
+			if diversion and not holdingPoint then return 'Not available' end
 			self._currentCapHoldingPoint = holdingPoint
 			self._currentCapOrbitDistanceNm = dist
 			self._currentCapBufferNm = safe
-		elseif self.MissionType == 'CAP' and self.mission == 'attack' then
+		elseif self.MissionType == 'CAP' and capMission == 'attack' then
 			local savedPoint = self._currentCapHoldingPoint
 			local offsetNm = tonumber(self._currentCapBufferNm) or ((side == 1) and 35 or 25)
 			local st = savedPoint and savedPoint.x and (savedPoint.z or savedPoint.y) and { x = savedPoint.x, y = savedPoint.z or savedPoint.y } or nil
 			if not st then
-				st = Frontline.PickCapStationFromOrigin(originZone, self.targetzone, side, 100, offsetNm)
+				st = Frontline.PickCapStationFromOrigin(originZone, capTarget, side, 100, offsetNm)
 			end
-			if not st then return end
+			if not st then return diversion and 'Not available' or nil end
 			local dist = tonumber(self._currentCapOrbitDistanceNm) or ((side == 1) and math.random(35, 45) or math.random(35, 45))
-			local holdingPoint, status = self:_assignCapTask(gr, { x = st.x, z = st.y }, self.Altitude, dist, self._landUnitID, offsetNm, side, nil, true, nil, nil, groupSize, gmoose)
+			local holdingPoint, status = self:_assignCapTask(gr, { x = st.x, z = st.y }, self.Altitude, dist, self._landUnitID, offsetNm, side, nil, true, nil, nil, groupSize, gmoose, capWakeTarget)
 			if status == 'Not available' then return status end
+			if diversion and not holdingPoint then return 'Not available' end
 			self._currentCapHoldingPoint = holdingPoint
 			self._currentCapOrbitDistanceNm = dist
 			self._currentCapBufferNm = offsetNm
@@ -68139,6 +68578,14 @@ end
 		end
 	end
 
+	function GroupCommander:_logAircraftCaptureRejection(target, reason, squadName)
+		local pending = reason == "reserved" and target.pendingCapture
+		env.info("Group [" .. self.name .. "] landed in zone [" .. target.zone .. "], capture was rejected"
+			.. " (side=" .. self.side .. ", reason=" .. reason
+			.. (squadName and ", squad=[" .. squadName .. "]" or "")
+			.. (pending and ", pendingSide=" .. pending.side or "") .. ")")
+	end
+
 	function GroupCommander:_processAirLanded(now, gr, originZone, bcObj, plane, heli, initialGroupSize)
 		self._landedAt = self._landedAt or now
 		if self.mission == 'supply' then
@@ -68199,7 +68646,7 @@ end
 					paidSupplyStockpileDelivery = self._paidSupplyStockpileDelivery == true
 				end
 				local abName = tg.airbaseName
-				local captureAccepted = true
+				local captureAccepted, captureReason, captureSquad = true
 				local captureAttempted = tg.side == coalition.side.NEUTRAL
 				if captureAttempted then
 					local captureDelivery = nil
@@ -68213,7 +68660,7 @@ end
 							},
 						}
 					end
-					captureAccepted = tg:startPendingCaptureFromAircraft(self.side, gr, captureDelivery, initialGroupSize, targetUnits)
+					captureAccepted, captureReason, captureSquad = tg:startPendingCaptureFromAircraft(self.side, gr, captureDelivery, initialGroupSize, targetUnits)
 				end
 				if captureAttempted then
 					bcObj:_recordDirectorRegularSupplyOutcome(self, captureAccepted and 'delivered' or 'aborted', now, tg.zone)
@@ -68228,7 +68675,7 @@ end
 					if captureAccepted then
 						env.info("Group [" .. self.name .. "] landed in zone [" .. tg.zone .. "], started capture for side " .. self.side)
 					else
-						env.info("Group [" .. self.name .. "] landed in zone [" .. tg.zone .. "], capture was rejected")
+						self:_logAircraftCaptureRejection(tg, captureReason, captureSquad)
 					end
 				elseif tg.side == self.side then
 					env.info("Group [" .. self.name .. "] landed in zone [" .. tg.zone .. "], delivered supplies for side " .. self.side)
@@ -68385,10 +68832,41 @@ end
 	function GroupCommander._assignRestoredAirMission(param, time)
 		local gc = param.gc
 		if not gc then return nil end
-		if GlobalSettings.idleZoneSuspendEnabled and not gc._restoreAirReturnHome
+		local rg, groupSize
+		if param.capRouteVersion ~= nil then
+			if gc.state ~= 'inair' or gc.spawnedName ~= param.groupName or gc.lastStateTime ~= param.capStateTime then return nil end
+			rg = Group.getByName(param.groupName)
+			groupSize = rg and rg:isExist() and rg:getSize() or 0
+			if groupSize > 0 then
+				local groupId = rg:getID()
+				if param.capGroupId and groupId ~= param.capGroupId then return nil end
+				param.capGroupId = groupId
+				local newerOrbit = (gc._capRouteVersion or 0) ~= param.capRouteVersion
+				if gc._capReturnHome or gc._airReturnHome or (newerOrbit and not gc._restoreCapReturnHome and not gc._restoreAirReturnHome) then
+					gc._restoreSavedSide = nil
+					gc._restoreCapSamReturn = nil
+					gc._restoreAirReturnHome = nil
+					gc._restoreCapReturnHome = nil
+					gc._restoreCapReturnHomeElapsedSec = nil
+					return nil
+				end
+			else
+				rg = nil
+			end
+		end
+		if groupSize ~= 0 and GlobalSettings.idleZoneSuspendEnabled and not gc._restoreAirReturnHome
 			and not gc._restoreCapReturnHome and not gc._restoreSupplyReturnHome then
 			local bcObj = gc.zoneCommander.battleCommander
 			local target = bcObj.indexedZones[gc.targetzone]
+			local diversion = gc._capAssistRetaskedTargetzone
+			if diversion and gc.side == 2 and GlobalSettings.pvpEnabled ~= true then
+				local divertedZone = bcObj.indexedZones[diversion]
+				if not gc:_getCapTargetInvalidReason(diversion, divertedZone or false) then
+					target = divertedZone
+				elseif not target or target.isHidden or gc:_getCapTargetInvalidReason(nil, target) then
+					target = nil
+				end
+			end
 			if target and not bcObj:_wakeIdleMissionZones(gc, target) then
 				param.wakeStartedAt = param.wakeStartedAt or time
 				if time-param.wakeStartedAt <= GlobalSettings.idleZoneWakeHoldSec then return time+0.5 end
@@ -68399,12 +68877,20 @@ end
 				return nil
 			end
 		end
-		local rg = Group.getByName(param.groupName)
+		if param.capRouteVersion == nil then rg = Group.getByName(param.groupName) end
 		local gmoose = rg and GROUP:FindByName(param.groupName) or nil
-		local groupSize = rg and rg:isExist() and rg:getSize() or 0
+		groupSize = groupSize or (rg and rg:isExist() and rg:getSize() or 0)
 		local unavailable = groupSize == 0 or not gmoose or not gmoose:IsAlive(rg)
+		local savedPackage = gc._bluePackageCapOperationId
+		local savedDiversion = gc._capAssistRetaskedTargetzone
+		local previousRouteVersion = gc._capRouteVersion
 		local result = unavailable and 'Not available'
 			or gc:_assignMissionAfterInAirRestore(param.groupName, param.originZone, rg, gmoose, groupSize, true)
+		if savedPackage and not result and not gc._capReturnHome and gc._currentCapHoldingPoint
+			and gc._capRouteVersion ~= previousRouteVersion
+			and savedDiversion and gc._capAssistRetaskedTargetzone == savedDiversion then
+			gc._bluePackageCapOperationId = savedPackage
+		end
 		if result == 'Not available' and param.attempt < param.maxAttempts then
 			param.attempt = param.attempt + 1
 			return time + 0.5
@@ -68608,12 +69094,17 @@ end
 				self:_scheduleSurfaceIntelRouteReports(nil, gname, dcsGroup or false, restoreData.regularSupplySortieOrigin or false)
 			end
 			local missionAssignDelay = (self.MissionType == 'CAS') and 0.5 or 2.5
+			local blueCap = self.MissionType == 'CAP' and self.side == coalition.side.BLUE and GlobalSettings.pvpEnabled ~= true
+			if blueCap then self._capReturnHome = nil end
 			self._restoreSupplyReturnHome = restoreData.supplyReturnHome == true
 			self._restoreAirReturnHome = restoreData.airReturnHome == true
 			timer.scheduleFunction(GroupCommander._assignRestoredAirMission, {
 				gc = self,
 				groupName = gname,
 				originZone = restoreOriginZone,
+				capRouteVersion = blueCap and (self._capRouteVersion or 0) or nil,
+				capStateTime = blueCap and self.lastStateTime or nil,
+				capGroupId = blueCap and dcsGroup and dcsGroup:isExist() and dcsGroup:getID() or nil,
 				attempt = 1,
 				maxAttempts = 10,
 			}, timer.getTime() + missionAssignDelay)
@@ -68822,6 +69313,25 @@ end
 		local canSpawn, denialReason = self:_consumeShouldSpawnDecision('preparing', false, now)
 		if canSpawn == nil then return end
 		if canSpawn then
+			if self._directorOperationId and self.MissionType == 'CAP' and self.side == coalition.side.BLUE
+				and GlobalSettings.pvpEnabled ~= true then
+				local director = Director:getForSide(self.side)
+				local assignment = director:_assignmentFor(self)
+				if assignment and assignment.bluePackageCapBypass and assignment.launched ~= true
+					and director:_ownsBluePackageCapBypass(director.operation, assignment, self) then
+					local _, target = director:_bluePackageNeedsCap(director.operation, now)
+					if target ~= assignment.targetZone or target ~= self.targetzone then
+						self:_enterHangar(false)
+						for index, member in ipairs(director.operation.assignments) do
+							if member == assignment then
+								director:_blueRemoveAssignment(index, 'package-cap-no-longer-needed', now)
+								break
+							end
+						end
+						return
+					end
+				end
+			end
 			self:_clearAirLimitRetry()
 			local transportIntel = GlobalSettings.pvpEnabled == true and self.mission == 'supply' and (self.type == 'air' or self.type == 'carrier_air')
 			local transportSourceName
@@ -68883,10 +69393,7 @@ end
 						end)
 							local spawnHot = ((self.mission == 'supply' and (self.side == 2 or (GlobalSettings.pvpEnabled == true and self.side == 1))) or self.SpawnHot) and true or false
 							local tk = spawnHot and SPAWN.Takeoff.Hot or SPAWN.Takeoff.Cold
-							-- Temporarily use NotCargo for Blue Chinook supplies while DCS internal cargo is broken.
-							if self:_usesInternalHeloCargo(resolved) then self.NotCargo = true end
-							-- Internal cargo temporarily disabled after the DCS update; restore this call when fixed.
-							-- self:_prepareHeloInternalCargoSpawn(sp, resolved, originZone, self.targetzone, self.side, farpLaunch)
+							self:_prepareHeloInternalCargoSpawn(sp, resolved, originZone, self.targetzone, self.side, farpLaunch)
 							local spawned = nil
 							local farpSpawnFailed = false
 							if farpLaunch then
@@ -70328,8 +70835,16 @@ end
 							}
 						end
 						if deliveryAircraft then
-							captureAccepted = tg:startPendingCaptureFromAircraft(self.side, gr, captureDelivery, observedGroupSize, targetUnits)
-							bcObj:_recordDirectorRegularSupplyOutcome(self, captureAccepted and 'delivered' or 'aborted', now, tg.zone)
+							local captureReason, captureSquad
+							captureAccepted, captureReason, captureSquad = tg:startPendingCaptureFromAircraft(self.side, gr, captureDelivery, observedGroupSize, targetUnits)
+							local outcome
+							if captureAccepted then
+								outcome = 'delivered'
+							else
+								outcome = 'aborted'
+								self:_logAircraftCaptureRejection(tg, captureReason, captureSquad)
+							end
+							bcObj:_recordDirectorRegularSupplyOutcome(self, outcome, now, tg.zone)
 							self:_enterHangar(false)
 							self._supplyReturnHome = nil
 						else
@@ -83250,10 +83765,33 @@ do
 		return true
 	end
 
-	function Director:_releaseOperationGroups(operation)
+	function Director:_releaseBluePackageCapDiversion(operation, now)
+		local name = operation.bluePackageCapBorrower
+		if not name then return end
+		operation.bluePackageCapBorrower = nil
+		local flight = CapRef[name]
+		if flight and flight._bluePackageCapOperationId == operation.id then
+			if flight._directorOperationId and flight._directorOperationId ~= operation.id then
+				flight._bluePackageCapOperationId = nil
+			elseif flight.state == 'inair' and not flight._capReturnHome then
+				flight:_releaseBlueCapDiversion('blue-package-released', now or timer.getAbsTime())
+			end
+		end
+	end
+
+	function Director:_releaseOperationGroups(operation, finishedBlueAt)
 		if not operation then return end
+		if operation.bluePackageCapBorrower then self:_releaseBluePackageCapDiversion(operation) end
 		self:_clearSeadIngressCapSupport(operation)
 		for _, assignment in ipairs(operation.assignments or {}) do
+			if finishedBlueAt and assignment.completed == true and assignment.cancelled ~= true then
+				local groupCommander = assignment.groupRef
+				if groupCommander and groupCommander._directorOperationId == operation.id
+					and operation.assignmentsByName[groupCommander.name] == assignment
+					and (assignment.bluePackageCapBypass ~= true or self:_ownsBluePackageCapBypass(operation, assignment, groupCommander)) then
+					self:_recordBlueRoleReplacement(assignment, groupCommander, assignment.capacityRole or assignment.role, finishedBlueAt)
+				end
+			end
 			self:_releaseAssignment(operation, assignment)
 		end
 	end
@@ -91362,18 +91900,140 @@ do
 		return false
 	end
 
-	function Director:_bluePackageNeedsCap(operation)
-		if (self.side ~= coalition.side.BLUE and GlobalSettings.pvpEnabled ~= true) or not operation then return false end
+	function Director:_bluePackageThreatAt(targetZone, pressure, now)
+		local targetName = targetZone.zone
+		if not pressure.incoming then
+			pressure.incoming, pressure.points = {}, {}
+			local bcObj = self.battleCommander
+			local red = coalition.side.RED
+			local counts = bcObj._capBucketsBuilt and bcObj._activeCapCount[red]
+			if not counts or counts._all > 0 then
+				local function collect(groups)
+					for _, gc in pairs(groups) do
+						if gc.side == red and gc.MissionType == 'CAP' and gc.state == 'inair'
+							and not gc._capReturnHome and not gc._airReturnHome
+							and not gc._restoreAirReturnHome and not gc._restoreCapReturnHome then
+							local group = gc:_getDcsGroupCached()
+							local point, lead = self:_capGroupPoint(group)
+							if group and (not lead or not lead:inAir()) then
+								point = nil
+								for _, unit in ipairs(group:getUnits()) do
+									if unit ~= lead and unit:isExist() and unit:inAir() then point = unit:getPoint(); break end
+								end
+							end
+							if point then
+								local target = gc._capAssistRetaskedTargetzone or gc.targetzone
+								if target then pressure.incoming[target] = true end
+								pressure.points[#pressure.points + 1] = point
+							end
+						end
+					end
+				end
+				local director = Director:getForSide(red)
+				if director and director.battleCommander == bcObj then
+					local coverage = director:_routineCapCoverageSnapshot(now)
+					collect(coverage.attack.groups)
+					collect(coverage.patrol.groups)
+				else
+					collect(CapRef)
+				end
+			end
+		end
+		local threatened = pressure.incoming[targetName]
+		if threatened ~= nil then return threatened end
+		local center = #pressure.points > 0 and getZoneCenter(targetName)
+		local radiusNm = GlobalSettings.capAssistCoverageNm or 30
+		for _, point in ipairs(pressure.points) do
+			local distanceNm = self.battleCommander:_capAssistDistanceNm(point, center)
+			if distanceNm and distanceNm <= radiusNm then
+				pressure.incoming[targetName] = true
+				return true
+			end
+		end
+		pressure.incoming[targetName] = false
+		return false
+	end
+
+	function Director:_ownsBluePackageCapBypass(operation, assignment, groupCommander)
+		return groupCommander ~= nil and assignment.groupRef == groupCommander
+			and groupCommander._directorOperationId == operation.id
+			and operation.assignmentsByName[groupCommander.name] == assignment
+			and CapRef[groupCommander.name] == groupCommander
+	end
+
+	function Director:_hasOwnedBluePackageCapBypass(operation, except)
+		for _, member in pairs(operation.assignmentsByName) do
+			if member ~= except and member.bluePackageCapBypass and not member.completed
+				and not member.cancelled and not member.detached
+				and self:_ownsBluePackageCapBypass(operation, member, member.groupRef) then return true end
+		end
+		return false
+	end
+
+	function Director:_bluePackageCapReady(groupCommander, pressure)
+		if groupCommander.state ~= 'inair' or self.battleCommander:_capAssistHasReturnOrder(
+			groupCommander, GlobalSettings.pvpEnabled == true) then return false end
+		local cache = pressure and pressure.blueCapFacts
+		local facts = cache and cache[groupCommander]
+		if facts == nil then
+			local group = groupCommander:_getDcsGroupCached()
+			local size = group and group:getSize() or 0
+			local controller = size > 0 and group:getController() or nil
+			facts = controller and { group = group, groupSize = size, controller = controller,
+				ready = self:_blueCapRetaskReady(groupCommander, group) } or false
+			if pressure then
+				cache = cache or {}
+				pressure.blueCapFacts = cache
+				cache[groupCommander] = facts
+			end
+		end
+		return facts and facts.ready, facts
+	end
+
+	function Director:_bluePackageNeedsCap(operation, now, pressure)
+		local pvpEnabled = GlobalSettings.pvpEnabled == true
+		if (self.side ~= coalition.side.BLUE and not pvpEnabled) or not operation then return false end
+		local selected, threatened, targets
 		for _, assignment in ipairs(operation.assignments or {}) do
 			local role = assignment.capacityRole or assignment.role
 			if assignment.completed ~= true and assignment.cancelled ~= true
 				and assignment.detached ~= true and assignment.phase ~= 'feint'
-				and (GlobalSettings.pvpEnabled ~= true or assignment.restoredCapacityQueued ~= true)
+				and (not pvpEnabled or assignment.restoredCapacityQueued ~= true)
 				and (role == 'SEAD'
-					or (role == 'CAS' and assignment.unitCategory == Unit.Category.AIRPLANE))
-			then return true end
+					or (role == 'CAS' and assignment.unitCategory == Unit.Category.AIRPLANE)) then
+				if pvpEnabled then return true end
+				threatened = threatened or {}
+				local target = self.battleCommander.indexedZones[assignment.targetZone]
+				if target and target.active and target.side == coalition.side.RED and not target.isHidden
+					and (not target.suspended or target._idleSuspended) then
+					pressure = pressure or {}
+					if self:_bluePackageThreatAt(target, pressure, now) then
+						if selected and not threatened[target.zone] then
+							targets = targets or { selected }
+							targets[#targets + 1] = target.zone
+						end
+						threatened[target.zone] = true
+						if not selected or target.zone == operation.bluePackageCapTarget then selected = target.zone end
+					end
+				end
+			end
 		end
-		return false
+		if targets then
+			local airborne = self.battleCommander._airborneBlueCapByName
+			for name, gc in pairs(airborne) do
+				local target = gc._capAssistRetaskedTargetzone or gc.targetzone
+				if threatened[target] == true and name ~= operation.bluePackageCapBorrower
+					and (gc._capActiveMission or gc.mission) == 'attack' and self:_bluePackageCapReady(gc, pressure) then
+					threatened[target] = name
+				end
+			end
+			if threatened[selected] ~= true then
+				for _, target in ipairs(targets) do
+					if threatened[target] == true then selected = target; break end
+				end
+			end
+		end
+		return selected ~= nil, selected, threatened
 	end
 
 	function Director:_blueCapRetaskReady(groupCommander, group)
@@ -91416,7 +92076,7 @@ do
 		for _, groupCommander in pairs(patrolGroups) do
 			if (not pvpEnabled or (groupCommander.side == self.side and CapRef[groupCommander.name] == groupCommander))
 				and groupCommander.state == 'inair'
-				and groupCommander._capReturnHome ~= true
+				and not self.battleCommander:_capAssistHasReturnOrder(groupCommander, pvpEnabled)
 				and groupCommander.MissionType == 'CAP'
 				and (groupCommander._capActiveMission or groupCommander.mission) == 'patrol'
 			then
@@ -91499,14 +92159,20 @@ do
 		local groupCommander = selected.groupCommander
 		local orbitDistanceNm = tonumber(groupCommander._currentCapOrbitDistanceNm)
 			or math.random(30, 40)
-		groupCommander._currentCapHoldingPoint = groupCommander:_assignCapTask(
+		local wakeTarget
+		if not pvpEnabled and GlobalSettings.idleZoneSuspendEnabled == true then
+			wakeTarget = self.battleCommander.indexedZones[demand.zone] or false
+		end
+		local holdingPoint = groupCommander:_assignCapTask(
 			selected.group,
 			{ x = station.x, z = station.y },
 			groupCommander.Altitude,
 			orbitDistanceNm,
 			groupCommander._landUnitID,
 			safeDistanceNm,
-			pvpEnabled and self.side or coalition.side.BLUE, nil, false, nil, selected.controller, selected.groupSize)
+			pvpEnabled and self.side or coalition.side.BLUE, nil, false, nil, selected.controller, selected.groupSize, nil, wakeTarget)
+		if not pvpEnabled and not holdingPoint then return false end
+		groupCommander._currentCapHoldingPoint = holdingPoint
 		groupCommander._currentCapOrbitDistanceNm = orbitDistanceNm
 		groupCommander._currentCapBufferNm = safeDistanceNm
 		groupCommander._capAssistRetaskedThisSortie = true
@@ -91525,48 +92191,39 @@ do
 		return true
 	end
 
-	function Director:_bluePackageAirborneAttackCap(operation, knownNow)
+	function Director:_bluePackageAirborneAttackCap(operation, knownNow, exactTarget, pressure)
 		local pvpEnabled = GlobalSettings.pvpEnabled == true
+		local targetZoneName = exactTarget or (not pvpEnabled and operation.bluePackageCapTarget) or operation.targetZone
 		local airborne = pvpEnabled and self:_routineCapCoverageSnapshot(knownNow).attack.groups
 			or self.battleCommander._airborneBlueCapByName or {}
 		local preferred = operation.bluePackageCapName
 		local unready = nil
 		local selectedDetails = nil
-		local readinessByGroup = {}
-		local availabilityByGroup = {}
-		local function retaskReady(groupCommander, group)
-			local ready = readinessByGroup[groupCommander]
-			if ready == nil then
-				ready = self:_blueCapRetaskReady(groupCommander, group)
-				readinessByGroup[groupCommander] = ready
-			end
-			return ready
-		end
-		local function availableAttackCap(groupCommander, group)
+		pressure = pressure or {}
+		local function availableAttackCap(groupCommander)
 			if not groupCommander or (pvpEnabled and (groupCommander.side ~= self.side
 				or CapRef[groupCommander.name] ~= groupCommander)) or groupCommander.state ~= 'inair'
 				or groupCommander._capReturnHome == true
 				or groupCommander.MissionType ~= 'CAP'
 				or (groupCommander._capActiveMission or groupCommander.mission) ~= 'attack'
 			then return false end
-			local facts = availabilityByGroup[groupCommander]
-			if facts == nil then
-				group = group or groupCommander:_getDcsGroupCached()
-				local groupSize = group and group:getSize() or 0
-				local controller = groupSize > 0 and group:getController() or nil
-				facts = controller and { group = group, groupSize = groupSize, controller = controller } or false
-				availabilityByGroup[groupCommander] = facts
-			end
+			local currentTarget = groupCommander._capAssistRetaskedTargetzone or groupCommander.targetzone
+			if not pvpEnabled and currentTarget ~= targetZoneName
+				and ((operation.bluePackageThreatenedTargets and operation.bluePackageThreatenedTargets[currentTarget])
+					or (groupCommander._directorOperationId and groupCommander._directorOperationId ~= operation.id)
+					or (groupCommander._capAssistRetaskedThisSortie and groupCommander._bluePackageCapOperationId ~= operation.id))
+			then return false end
+			local _, facts = self:_bluePackageCapReady(groupCommander, pressure)
 			return facts
 		end
 		local function exactAttackCap(groupCommander)
 			if not groupCommander
 				or (groupCommander._capAssistRetaskedTargetzone or groupCommander.targetzone)
-					~= operation.targetZone
+					~= targetZoneName
 			then return false end
 			local facts = availableAttackCap(groupCommander)
 			if not facts then return false end
-			if retaskReady(groupCommander, facts.group) then
+			if facts.ready then
 				selectedDetails = facts
 				return true
 			end
@@ -91582,13 +92239,14 @@ do
 				return groupCommander, false, nil, selectedDetails
 			end
 		end
+		if exactTarget then return nil end
 		local allocation = self.routineCapAllocationState
 		if allocation and (tonumber(allocation.baseLimit) or 0) <= 0 then return nil, false end
 
 		local selected = preferredGroup
 		local preferredDetails = availableAttackCap(selected)
 		if preferredDetails then
-			if retaskReady(selected, preferredDetails.group) then
+			if preferredDetails.ready then
 				return selected, true, nil, preferredDetails
 			end
 			unready = unready or selected
@@ -91598,7 +92256,7 @@ do
 		for _, groupCommander in pairs(airborne) do
 			local facts = availableAttackCap(groupCommander)
 			if facts then
-				local ready = retaskReady(groupCommander, facts.group)
+				local ready = facts.ready
 				if not ready then unready = unready or groupCommander end
 				if ready and (groupCommander == selected
 					or groupCommander._capAssistRetaskedThisSortie ~= true)
@@ -91606,12 +92264,12 @@ do
 				local attackStation, stationPoint, attackOffsetNm
 				if pvpEnabled then
 					attackStation, stationPoint, attackOffsetNm = self.battleCommander:_capAssistBuildBlueAttackStation(
-						groupCommander.zoneCommander.zone, operation.targetZone, self.side)
+						groupCommander.zoneCommander.zone, targetZoneName, self.side)
 				else
 					attackStation, stationPoint, attackOffsetNm =
 						self.battleCommander:_capAssistBuildBlueAttackStation(
 							groupCommander.zoneCommander.zone,
-							operation.targetZone
+							targetZoneName
 						)
 				end
 				local distanceNm = stationPoint and self.battleCommander:_capAssistDistanceNm(
@@ -91635,19 +92293,21 @@ do
 	end
 
 	function Director:_blueRoutePackageAttackCap(groupCommander, operation, routeDetails)
+		local pvpEnabled = GlobalSettings.pvpEnabled == true
+		local targetName = not pvpEnabled and operation.bluePackageCapTarget or operation.targetZone
 		routeDetails = routeDetails or {}
 		local attackStation = routeDetails.attackStation
 		local stationPoint = routeDetails.stationPoint
 		local attackOffsetNm = routeDetails.attackOffsetNm
 		if not attackStation or not stationPoint then
-			if GlobalSettings.pvpEnabled == true then
+			if pvpEnabled then
 				attackStation, stationPoint, attackOffsetNm = self.battleCommander:_capAssistBuildBlueAttackStation(
-					groupCommander.zoneCommander.zone, operation.targetZone, self.side)
+					groupCommander.zoneCommander.zone, targetName, self.side)
 			else
 				attackStation, stationPoint, attackOffsetNm =
 					self.battleCommander:_capAssistBuildBlueAttackStation(
 						groupCommander.zoneCommander.zone,
-						operation.targetZone
+						targetName
 					)
 			end
 		end
@@ -91657,31 +92317,39 @@ do
 		local controller = routeDetails.controller or (groupSize > 0 and group:getController() or nil)
 		if groupSize == 0 or not controller then return false end
 		local orbitDistanceNm = tonumber(groupCommander._currentCapOrbitDistanceNm) or 35
-		groupCommander._currentCapHoldingPoint = groupCommander:_assignCapTask(
+		local wakeTarget
+		if not pvpEnabled and GlobalSettings.idleZoneSuspendEnabled == true then
+			wakeTarget = self.battleCommander.indexedZones[targetName] or false
+		end
+		local holdingPoint = groupCommander:_assignCapTask(
 			group,
 			{ x = attackStation.x, z = attackStation.y },
 			groupCommander.Altitude,
 			orbitDistanceNm,
 			groupCommander._landUnitID,
 			attackOffsetNm,
-			GlobalSettings.pvpEnabled == true and self.side or coalition.side.BLUE, nil, false, nil, controller, groupSize)
+			pvpEnabled and self.side or coalition.side.BLUE, nil, false, nil, controller, groupSize, nil, wakeTarget)
+		if not pvpEnabled and not holdingPoint then return false end
+		groupCommander._currentCapHoldingPoint = holdingPoint
+		if not pvpEnabled then groupCommander._bluePackageCapOperationId = operation.id end
 		groupCommander._currentCapOrbitDistanceNm = orbitDistanceNm
 		groupCommander._currentCapBufferNm = attackOffsetNm
 		groupCommander._capAssistRetaskedThisSortie = true
-		if (groupCommander._capAssistRetaskedTargetzone or groupCommander.targetzone) ~= operation.targetZone then
+		if (groupCommander._capAssistRetaskedTargetzone or groupCommander.targetzone) ~= targetName then
 			self.routineCapCoverageCache = nil
 		end
-		groupCommander._capAssistRetaskedTargetzone = operation.targetZone
+		groupCommander._capAssistRetaskedTargetzone = targetName
 		return true
 	end
 
 	function Director:_bluePackageCapCandidate(operation, now, knownCapacityReplacement)
 		local pvpEnabled = GlobalSettings.pvpEnabled == true
+		local targetZoneName = not pvpEnabled and operation.bluePackageCapTarget or operation.targetZone
 		if pvpEnabled and self.battleCommander.pvpPlayerCohortsBySide[self.side].generation == nil then return nil end
 		local targetSide = pvpEnabled and self.side or coalition.side.BLUE
 		local targetMap = CapTargets[targetSide]
 			and CapTargets[targetSide].attack or nil
-		local context = targetMap and targetMap[operation.targetZone] or nil
+		local context = targetMap and targetMap[targetZoneName] or nil
 		for _, record in ipairs(context and context.candidates or {}) do
 			local groupCommander = self.battleCommander:_capRecordCandidate(record)
 			local knownReclaimablePermit
@@ -91702,10 +92370,10 @@ do
 			if slotAvailable then
 				if pvpEnabled then
 					candidateUsable = self:_capCandidateUsable(
-						groupCommander, 'attack', operation.targetZone, now, nil, false, true, capacityReplacement)
+						groupCommander, 'attack', targetZoneName, now, nil, false, true, capacityReplacement)
 				else
 					candidateUsable = self:_capCandidateUsable(
-						groupCommander, 'attack', operation.targetZone, now, nil, false, true)
+						groupCommander, 'attack', targetZoneName, now, nil, false, true)
 				end
 			end
 			if candidateUsable and self:_blueCanManageGroup(groupCommander) then
@@ -91715,7 +92383,7 @@ do
 				if capabilityBacked then
 					local request = {
 						mission = 'attack',
-						targetZone = operation.targetZone,
+						targetZone = targetZoneName,
 						_directorEligibilityApproved = true,
 					}
 					groupCommander = self.battleCommander:resolveDirectorCandidate(
@@ -91732,10 +92400,26 @@ do
 		return nil
 	end
 
-	function Director:_blueEnsurePackageCap(operation, now, knownConfiguredLimit, knownCapPlayers)
-		if not self:_bluePackageNeedsCap(operation) then return false end
+	function Director:_blueEnsurePackageCap(operation, now, knownConfiguredLimit, knownCapPlayers, pressure)
 		local pvpEnabled = GlobalSettings.pvpEnabled == true
-		local configuredLimit, capPlayers, cohortGeneration, targetZoneName
+		if not pvpEnabled and self.side == coalition.side.BLUE then pressure = pressure or {} end
+		local needsCap, targetZoneName, threatened = self:_bluePackageNeedsCap(operation, now, pressure)
+		if not pvpEnabled and self.side == coalition.side.BLUE and operation then
+			local previousTarget = operation.bluePackageCapTarget
+			operation.bluePackageThreatenedTargets = threatened
+			if operation.bluePackageCoverByTarget then
+				for name in pairs(operation.bluePackageCoverByTarget) do
+					if not threatened or not threatened[name] then operation.bluePackageCoverByTarget[name] = nil end
+				end
+			end
+			if not needsCap or (previousTarget and previousTarget ~= targetZoneName) then
+				self:_releaseBluePackageCapDiversion(operation, now)
+			end
+			if previousTarget and previousTarget ~= targetZoneName then operation.bluePackageCapName = nil end
+			operation.bluePackageCapTarget = targetZoneName
+		end
+		if not needsCap and not threatened then return false end
+		local configuredLimit, capPlayers, cohortGeneration
 		if pvpEnabled then
 			cohortGeneration = self.battleCommander.pvpPlayerCohortsBySide[self.side].generation
 			targetZoneName = operation.targetZone
@@ -91746,13 +92430,14 @@ do
 		end
 		operation.capCoverageRequired = true
 		operation.capCoverageDecisionMade = true
+		if not needsCap then return false end
 
 		local airborne, needsRetask, unready, routeDetails
 		if pvpEnabled then
 			airborne, needsRetask, unready, routeDetails = self:_bluePackageAirborneAttackCap(operation, now)
 		else
 			airborne, needsRetask, unready, routeDetails =
-				self:_bluePackageAirborneAttackCap(operation)
+				self:_bluePackageAirborneAttackCap(operation, now, nil, pressure)
 		end
 		if airborne then
 			if needsRetask and not self:_blueRoutePackageAttackCap(
@@ -91761,9 +92446,19 @@ do
 			end
 		end
 		if airborne then
+			if not pvpEnabled then
+				if operation.bluePackageCapBorrower and operation.bluePackageCapBorrower ~= airborne.name then
+					self:_releaseBluePackageCapDiversion(operation, now)
+				end
+				if airborne._bluePackageCapOperationId then
+					airborne._bluePackageCapOperationId = operation.id
+					operation.bluePackageCapBorrower = airborne.name
+				end
+			end
 			operation.bluePackageCapName = airborne.name
 			return true
 		end
+		if not pvpEnabled then operation.bluePackageCapName = nil end
 		if unready then
 			if unready._capReturnHome ~= true
 				and unready:_startCapReturnHome('blue-package-readiness', now) ~= true
@@ -91801,24 +92496,21 @@ do
 				and (not pvpEnabled or (groupCommander.side == self.side and CapRef[groupCommander.name] == groupCommander))
 				and (groupCommander._capActiveMission or groupCommander.mission) == 'attack'
 				and (groupCommander._capAssistRetaskedTargetzone or groupCommander.targetzone)
-					== operation.targetZone
+					== targetZoneName
 			then
-				if assignment.launched ~= true or groupCommander.state == 'preparing' then
+				local packageTaxiing = not pvpEnabled and groupCommander.state == 'takeoff'
+					and assignment.bluePackageCapBypass and self:_ownsBluePackageCapBypass(operation, assignment, groupCommander)
+					and not self.battleCommander:_capAssistHasReturnOrder(groupCommander, false)
+				if assignment.launched ~= true or groupCommander.state == 'preparing' or packageTaxiing then
 					if pvpEnabled and not self:allowsGroupSpawn(groupCommander) then return false end
 					operation.bluePackageCapName = groupCommander.name
 					return true
 				end
-				local group = groupCommander:_getDcsGroupCached()
-				local ready = groupCommander.state == 'inair'
-					and groupCommander._capReturnHome ~= true
-					and group and group:getSize() > 0 and group:getController()
-					and self:_blueCapRetaskReady(groupCommander, group)
-				if ready then
+				if self:_bluePackageCapReady(groupCommander, pressure) then
 					operation.bluePackageCapName = groupCommander.name
 					return true
 				end
-				if groupCommander._capReturnHome ~= true
-					and groupCommander.state == 'inair'
+				if groupCommander.state == 'inair' and not self.battleCommander:_capAssistHasReturnOrder(groupCommander, pvpEnabled)
 					and groupCommander:_startCapReturnHome('blue-package-readiness', now) ~= true
 				then return false end
 				local slot = self:_capSlotForGroup(groupCommander)
@@ -91835,7 +92527,7 @@ do
 				'blue-package-readiness',
 				now
 			)
-			operation.bluePackageCapBypassUsed = nil
+			if pvpEnabled then operation.bluePackageCapBypassUsed = nil end
 			operation.bluePackageCapName = nil
 		end
 
@@ -91924,8 +92616,9 @@ do
 			groupCommander,
 			'CAP',
 			'support',
-			operation.targetZone
+			targetZoneName
 		)
+		if not pvpEnabled then assignment.bluePackageCapBypass = true end
 		if pvpEnabled then
 			slot = self:_capSlotForGroup(groupCommander)
 			if knownReclaimablePermit and knownReclaimablePermit.groupRef == groupCommander
@@ -91947,13 +92640,15 @@ do
 		self:_activateAuthorizedGroup(groupCommander, now)
 		self:_log('operation=' .. operation.id
 			.. ' blue-package-cap-bypass=' .. groupCommander.name
-			.. ' target=' .. operation.targetZone)
+			.. ' target=' .. targetZoneName)
 		return true
 	end
 
-	function Director:_operationCapCoverageActive(operation)
+	function Director:_operationCapCoverageActive(operation, packageTarget, coverage, pressure, requirePackageReady)
 		if not operation or operation.capCoverageRequired ~= true then return true end
 		local pvpEnabled = GlobalSettings.pvpEnabled == true
+		packageTarget = packageTarget or operation.targetZone
+		coverage = coverage or operation
 		local packageCapName = (pvpEnabled or self.side == coalition.side.BLUE)
 			and operation.bluePackageCapName or operation.redPackageCapName
 		if packageCapName then
@@ -91969,11 +92664,12 @@ do
 			if groupCommander and (not pvpEnabled or groupCommander.side == self.side) and groupCommander.state == 'inair'
 				and groupCommander._capReturnHome ~= true
 				and groupCommander.MissionType == 'CAP' and missionUsable
-				and targetZoneName == operation.targetZone
+				and targetZoneName == packageTarget
+				and (not requirePackageReady or self:_bluePackageCapReady(groupCommander, pressure))
 			then
-				if operation.capCoverageActiveName ~= groupCommander.name then
-					operation.capCoverageActiveName = groupCommander.name
-					operation.capCoverageEstablishedAt = timer.getAbsTime()
+				if coverage.capCoverageActiveName ~= groupCommander.name then
+					coverage.capCoverageActiveName = groupCommander.name
+					coverage.capCoverageEstablishedAt = timer.getAbsTime()
 				end
 				return true
 			end
@@ -91991,8 +92687,9 @@ do
 					local mission = groupCommander._capActiveMission or groupCommander.mission
 					local targetZoneName = groupCommander._capAssistRetaskedTargetzone
 						or groupCommander.targetzone
-					usable = mission == 'attack' and targetZoneName == operation.targetZone
+					usable = mission == 'attack' and targetZoneName == packageTarget
 						and (not pvpEnabled or (groupCommander.side == self.side and CapRef[groupCommander.name] == groupCommander))
+						and (not requirePackageReady or self:_bluePackageCapReady(groupCommander, pressure))
 				elseif operation.redPackageCapProtection == true then
 					local groupCommander = assignment.groupRef
 					local mission = groupCommander._capActiveMission or groupCommander.mission
@@ -92000,23 +92697,39 @@ do
 						or groupCommander.targetzone
 					usable = assignment.redPackageCapSupport == true
 						and groupCommander._capReturnHome ~= true
-						and mission == 'attack' and targetZoneName == operation.targetZone
+						and mission == 'attack' and targetZoneName == packageTarget
 				end
 				if usable then
-					if operation.capCoverageActiveName ~= assignment.name then
-						operation.capCoverageActiveName = assignment.name
-						operation.capCoverageEstablishedAt = timer.getAbsTime()
+					if coverage.capCoverageActiveName ~= assignment.name then
+						coverage.capCoverageActiveName = assignment.name
+						coverage.capCoverageEstablishedAt = timer.getAbsTime()
 					end
 					return true
 				end
 			end
 		end
-		operation.capCoverageActiveName = nil
-		operation.capCoverageEstablishedAt = nil
+		if not pvpEnabled and self.side == coalition.side.BLUE and operation.bluePackageThreatenedTargets
+			and packageTarget == operation.targetZone and packageTarget ~= operation.bluePackageCapTarget then
+			local existing = pressure and pressure.existingMainCap
+			if existing == nil or (existing and (existing.state ~= 'inair' or self.battleCommander:_capAssistHasReturnOrder(existing, false)
+				or self.battleCommander._airborneBlueCapByName[existing.name] ~= existing
+				or (existing._capAssistRetaskedTargetzone or existing.targetzone) ~= packageTarget)) then
+				existing = self:_bluePackageAirborneAttackCap(operation, nil, packageTarget, pressure) or false
+				if pressure then pressure.existingMainCap = existing end
+			end
+			if existing then
+				if coverage.capCoverageActiveName ~= existing.name then
+					coverage.capCoverageActiveName, coverage.capCoverageEstablishedAt = existing.name, timer.getAbsTime()
+				end
+				return true
+			end
+		end
+		coverage.capCoverageActiveName = nil
+		coverage.capCoverageEstablishedAt = nil
 		return false
 	end
 
-	function Director:_operationCapBlocksAssignment(operation, assignment)
+	function Director:_operationCapBlocksAssignment(operation, assignment, pressure)
 		if not operation or operation.capCoverageRequired ~= true
 			or assignment.phase == 'feint' then return false end
 		local role = assignment.capacityRole or assignment.role
@@ -92027,10 +92740,38 @@ do
 		if operation.capCoveragePlayerReleaseAt
 			and assignment.assignedAt
 			and assignment.assignedAt <= operation.capCoveragePlayerReleaseAt then return false end
-		if not self:_operationCapCoverageActive(operation) then return true end
+		local target, coverage = operation.targetZone, operation
+		local requirePackageReady = GlobalSettings.pvpEnabled ~= true and self.side == coalition.side.BLUE
+			and operation.bluePackageThreatenedTargets
+			and (role == 'SEAD' or (role == 'CAS' and assignment.unitCategory == Unit.Category.AIRPLANE))
+		if requirePackageReady then
+			target = assignment.targetZone
+			if not operation.bluePackageThreatenedTargets[target] then return false end
+			if target ~= operation.targetZone then
+				local byTarget = operation.bluePackageCoverByTarget or {}
+				operation.bluePackageCoverByTarget = byTarget
+				coverage = byTarget[target] or {}
+				byTarget[target] = coverage
+			end
+			if target ~= operation.bluePackageCapTarget then
+				local name = operation.bluePackageThreatenedTargets[target]
+				local covering = self.battleCommander._airborneBlueCapByName[name]
+				if not covering or (covering._capAssistRetaskedTargetzone or covering.targetzone) ~= target
+					or not self:_bluePackageCapReady(covering, pressure) then
+					coverage.capCoverageActiveName, coverage.capCoverageEstablishedAt = nil, nil
+					return true
+				end
+				local now = timer.getAbsTime()
+				if coverage.capCoverageActiveName ~= covering.name then
+					coverage.capCoverageActiveName, coverage.capCoverageEstablishedAt = covering.name, now
+				end
+				return role == 'SEAD' and now < coverage.capCoverageEstablishedAt + self.SEAD_INGRESS_CAP_SPAWN_DELAY_SEC
+			end
+		end
+		if not self:_operationCapCoverageActive(operation, target, coverage, pressure, requirePackageReady) then return true end
 		if role == 'SEAD' then
 			return timer.getAbsTime() < (
-				(operation.capCoverageEstablishedAt or timer.getAbsTime())
+				(coverage.capCoverageEstablishedAt or timer.getAbsTime())
 				+ self.SEAD_INGRESS_CAP_SPAWN_DELAY_SEC
 			)
 		end
@@ -92484,7 +93225,7 @@ do
 			learningReason = outcomeReason,
 		})
 		while #self.history > self.config.historySize do table.remove(self.history) end
-		self:_releaseOperationGroups(operation)
+		self:_releaseOperationGroups(operation, self.side == coalition.side.BLUE and GlobalSettings.pvpEnabled ~= true and now or nil)
 		self:_log('operation=' .. operation.id .. ' result=' .. result .. ' target=' .. operation.targetZone)
 		self.operation = nil
 		for _, assignment in ipairs(operation.assignments or {}) do
@@ -93220,6 +93961,8 @@ do
 				capCoveragePlayerReleaseElapsedSec = operation.capCoveragePlayerReleaseAt
 					and math.max(0, clockNow - operation.capCoveragePlayerReleaseAt) or nil,
 				capCoverageDecisionMade = operation.capCoverageDecisionMade == true,
+				bluePackageCapBorrower = operation.bluePackageCapBorrower,
+				bluePackageCapTarget = operation.bluePackageCapTarget,
 				bluePackageCapName = (pvpEnabled or self.side == coalition.side.BLUE)
 					and operation.bluePackageCapName or nil,
 				bluePackageCapBypassUsed = (pvpEnabled or self.side == coalition.side.BLUE)
@@ -93394,6 +94137,7 @@ do
 						seadIngressCapExtra = assignment.seadIngressCapExtra == true,
 						capCoverageExtra = assignment.capCoverageExtra == true,
 						redPackageCapSupport = assignment.redPackageCapSupport == true,
+						bluePackageCapBypass = assignment.bluePackageCapBypass or nil,
 						seadIngressUnsupported = assignment.seadIngressUnsupported == true,
 						detached = assignment.detached == true,
 						detachedTargetZone = assignment.detachedTargetZone,
@@ -94079,6 +94823,8 @@ do
 				and (now - math.max(0,
 					tonumber(source.capCoveragePlayerReleaseElapsedSec) or 0)) or nil,
 			capCoverageDecisionMade = source.capCoverageDecisionMade == true,
+			bluePackageCapBorrower = not pvpEnabled and self.side == coalition.side.BLUE and source.bluePackageCapBorrower or nil,
+			bluePackageCapTarget = not pvpEnabled and self.side == coalition.side.BLUE and source.bluePackageCapTarget or nil,
 			bluePackageCapName = (pvpEnabled or self.side == coalition.side.BLUE)
 				and type(source.bluePackageCapName) == 'string'
 				and source.bluePackageCapName or nil,
@@ -94353,6 +95099,8 @@ do
 						seadIngressCapExtra = sourceAssignment.seadIngressCapExtra == true,
 						capCoverageExtra = sourceAssignment.capCoverageExtra == true,
 						redPackageCapSupport = sourceAssignment.redPackageCapSupport == true,
+						bluePackageCapBypass = not pvpEnabled and self.side == coalition.side.BLUE
+							and sourceAssignment.role == 'CAP' and sourceAssignment.bluePackageCapBypass == true or nil,
 						seadIngressUnsupported = sourceAssignment.seadIngressUnsupported == true,
 						detached = sourceAssignment.detached == true,
 						detachedTargetZone = type(sourceAssignment.detachedTargetZone) == 'string'
@@ -94561,7 +95309,9 @@ do
 				or packageCapAssignment.cancelled == true
 			then
 				operation.bluePackageCapName = nil
-				operation.bluePackageCapBypassUsed = nil
+				if operation.bluePackageCapBypassUsed and (pvpEnabled or not self:_hasOwnedBluePackageCapBypass(operation)) then
+					operation.bluePackageCapBypassUsed = nil
+				end
 			end
 		end
 		if (pvpEnabled or self.side == coalition.side.BLUE) and operation.capCoverageRequired == true
@@ -94718,6 +95468,16 @@ do
 	end
 
 	function Director:_queueReaction(request, restoring, planningInventory)
+		local now = timer.getAbsTime()
+		local pending = self.pendingReaction
+		if pending and pending.expiresAt and now >= pending.expiresAt then
+			self.pendingReaction, pending = nil, nil
+		end
+		if request.expiresAt and now >= request.expiresAt then return 0 end
+		if restoring and request.reactionMode == 'limited' and request.allowance > 1 then
+			request.allowance = 1
+			request.capAllowance = math.min(request.capAllowance or 0, 1)
+		end
 		if not restoring then
 			local available = self:_reactionAvailableCount(request.targetZone, request.allowance, timer.getTime(), request, planningInventory)
 			if available <= 0 then return 0 end
@@ -94727,7 +95487,6 @@ do
 				request.capAllowance = math.min(request.capAllowance or 0, available)
 			end
 		end
-		local pending = self.pendingReaction
 		if not pending then
 			self.pendingReaction = request
 			self:_log('reaction queued reason=' .. request.reason .. ' target=' .. request.targetZone .. ' allowance=' .. request.allowance)
@@ -94736,18 +95495,22 @@ do
 
 		if pending.targetZone == request.targetZone then
 			local previousAllowance = pending.allowance
-			pending.allowance = math.max(pending.allowance, request.allowance)
-			pending.capAllowance = math.max(pending.capAllowance or 0, request.capAllowance or 0)
-			pending.reactionMode = request.reactionMode or pending.reactionMode
-			pending.expiresAt = math.max(tonumber(pending.expiresAt) or 0,
-				tonumber(request.expiresAt) or 0)
-			if request.priority > pending.priority then
-				pending.priority = request.priority
-				pending.reason = request.reason
-				pending.sourceZone = request.sourceZone
-				pending.groupReuseCooldownSec = request.groupReuseCooldownSec
+			if request.reactionMode ~= pending.reactionMode then
+				if request.priority < pending.priority then return 0 end
+				request.nextAttemptAt = pending.nextAttemptAt
+				self.pendingReaction, pending = request, request
+			else
+				pending.allowance = math.max(pending.allowance, request.allowance)
+				pending.capAllowance = math.max(pending.capAllowance or 0, request.capAllowance or 0)
+				pending.expiresAt = math.max(tonumber(pending.expiresAt) or 0, tonumber(request.expiresAt) or 0)
+				if request.priority > pending.priority then
+					pending.priority = request.priority
+					pending.reason = request.reason
+					pending.sourceZone = request.sourceZone
+					pending.groupReuseCooldownSec = request.groupReuseCooldownSec
+				end
 			end
-			local accepted = pending.allowance - previousAllowance
+			local accepted = math.max(0, pending.allowance - previousAllowance)
 			if accepted > 0 then
 				pending.nextAttemptAt = nil
 				self:_log('reaction queue increased target=' .. request.targetZone .. ' allowance=' .. pending.allowance)
@@ -95410,7 +96173,10 @@ do
 			and groupCommander._shopLaunchRequested ~= true and groupCommander.ShopLaunchOnly ~= true
 			and groupCommander.playerGroundAttack ~= true
 			and not groupCommander._pendingInAirRestore and not groupCommander._pendingSurfaceRestore)
-		if pvpEnabled and releaseOwner and groupCommander._directorOnDemand == true then
+		local packageBypass = not pvpEnabled and self.side == coalition.side.BLUE and assignment.bluePackageCapBypass == true
+		if packageBypass then
+			releaseOwner = self:_ownsBluePackageCapBypass(operation, assignment, groupCommander)
+		elseif pvpEnabled and releaseOwner and groupCommander._directorOnDemand == true then
 			local capabilityId = groupCommander._directorCapabilityId
 			local derivativeSlot = groupCommander._directorDerivativeSlot
 			if derivativeSlot then
@@ -95420,8 +96186,54 @@ do
 				releaseOwner = self.battleCommander.directorInstanceByCapabilityId[capabilityId] == groupCommander
 			end
 		end
-		if releaseOwner and (self.side == coalition.side.BLUE or pvpEnabled) and reason == 'completed'
-			and assignment.launched == true and groupCommander
+		if releaseOwner and (self.side == coalition.side.BLUE or pvpEnabled) and reason == 'completed' then
+			self:_recordBlueRoleReplacement(assignment, groupCommander, role, now)
+		end
+		if groupCommander and releaseOwner and reason == 'launch-timeout' then
+			groupCommander._blueDirectorRetryAt = (now or timer.getAbsTime()) + self.config.blueAssignmentRetrySec
+		end
+		local clearsPackageCredit = releaseOwner and role == 'CAP' and operation.bluePackageCapName == assignment.name
+		local unusedBypass = packageBypass and releaseOwner and assignment.launched ~= true
+			and not groupCommander._pendingInAirRestore and not self:_groupIsLive(groupCommander)
+		if clearsPackageCredit then operation.bluePackageCapName = nil end
+		local readinessRemoval = not pvpEnabled and self.side == coalition.side.BLUE and releaseOwner
+			and role == 'CAP' and reason == 'blue-package-readiness'
+		if (clearsPackageCredit or unusedBypass or readinessRemoval) and operation.bluePackageCapBypassUsed
+			and (pvpEnabled or self.side ~= coalition.side.BLUE or not self:_hasOwnedBluePackageCapBypass(operation, assignment)) then
+			operation.bluePackageCapBypassUsed = nil
+		end
+		if pvpEnabled then
+			assignment.authorized = false
+			assignment.cohortGeneration = nil
+			if releaseOwner and groupCommander.state == 'preparing' and not self:_groupIsLive(groupCommander) then
+				assignment.launched = false
+				groupCommander._directorSpawnAuthorization = nil
+				groupCommander:_enterHangar(false)
+			end
+		end
+		if releaseOwner then self:_releaseAssignment(operation, assignment, true) end
+		if (not pvpEnabled and not packageBypass) or operation.assignmentsByName[assignment.name] == assignment then
+			operation.assignmentsByName[assignment.name] = nil
+		end
+		table.remove(operation.assignments, index)
+		if releaseOwner then self.battleCommander:requestDirectorInstanceDisposal(groupCommander) end
+		if role == 'CAP'
+			and assignment.phase ~= 'feint' and reason == 'limit-reduced' then
+			operation.capCoverageRequired = false
+			for _, remaining in ipairs(operation.assignments) do
+				if (remaining.capacityRole or remaining.role) == 'CAP'
+					and remaining.phase ~= 'feint' and remaining.completed ~= true then
+					operation.capCoverageRequired = true
+					break
+				end
+			end
+			operation.capCoverageDecisionMade = true
+		end
+		self:_log('operation=' .. operation.id .. ' assignment=' .. assignment.name .. ' cancelled=' .. tostring(reason))
+	end
+
+	function Director:_recordBlueRoleReplacement(assignment, groupCommander, role, now)
+		if assignment.launched == true and groupCommander
 			and (role == 'CAP' or role == 'CAS' or role == 'SEAD'
 				or role == 'RUNWAYSTRIKE' or role == 'ANTISHIP')
 			and (assignment.completedState == 'dead' or assignment.completedState == 'inhangar')
@@ -95440,41 +96252,6 @@ do
 			readyTimes[#readyTimes + 1] = (assignment.completedAt
 				or now or timer.getAbsTime()) + delaySec
 		end
-		if groupCommander and releaseOwner and reason == 'launch-timeout' then
-			groupCommander._blueDirectorRetryAt = (now or timer.getAbsTime()) + self.config.blueAssignmentRetrySec
-		end
-		if releaseOwner and role == 'CAP' and operation.bluePackageCapName == assignment.name then
-			operation.bluePackageCapName = nil
-			operation.bluePackageCapBypassUsed = nil
-		end
-		if pvpEnabled then
-			assignment.authorized = false
-			assignment.cohortGeneration = nil
-			if releaseOwner and groupCommander.state == 'preparing' and not self:_groupIsLive(groupCommander) then
-				assignment.launched = false
-				groupCommander._directorSpawnAuthorization = nil
-				groupCommander:_enterHangar(false)
-			end
-		end
-		if releaseOwner then self:_releaseAssignment(operation, assignment, true) end
-		if not pvpEnabled or operation.assignmentsByName[assignment.name] == assignment then
-			operation.assignmentsByName[assignment.name] = nil
-		end
-		table.remove(operation.assignments, index)
-		if releaseOwner then self.battleCommander:requestDirectorInstanceDisposal(groupCommander) end
-		if role == 'CAP'
-			and assignment.phase ~= 'feint' and reason == 'limit-reduced' then
-			operation.capCoverageRequired = false
-			for _, remaining in ipairs(operation.assignments) do
-				if (remaining.capacityRole or remaining.role) == 'CAP'
-					and remaining.phase ~= 'feint' and remaining.completed ~= true then
-					operation.capCoverageRequired = true
-					break
-				end
-			end
-			operation.capCoverageDecisionMade = true
-		end
-		self:_log('operation=' .. operation.id .. ' assignment=' .. assignment.name .. ' cancelled=' .. tostring(reason))
 	end
 
 	function Director:_blueReconcileAssignments(now, bluePlayers)
@@ -95606,7 +96383,8 @@ do
 				self:_blueRemoveAssignment(index, 'launch-timeout', now)
 			end
 		end
-		local bluePackageCapManaged = not pvpEnabled and self:_blueEnsurePackageCap(operation, now)
+		local packageThreats = not pvpEnabled and {} or nil
+		local bluePackageCapManaged = not pvpEnabled and self:_blueEnsurePackageCap(operation, now, nil, nil, packageThreats)
 		local humanPlayerCapCover = (requiredCapLost or restoredCapCoverageMissing)
 			and bluePlayers > 0
 		if requiredCapLost then
@@ -95616,14 +96394,21 @@ do
 		for index = not pvpEnabled and #operation.assignments or 0, 1, -1 do
 			local assignment = operation.assignments[index]
 			local groupCommander = assignment.groupRef
-			local invalidOnDemandSource = groupCommander
+			local packageBypass = assignment.bluePackageCapBypass == true
+			local owned = not packageBypass or self:_ownsBluePackageCapBypass(operation, assignment, groupCommander)
+			local invalidOnDemandSource = owned and groupCommander
 				and groupCommander._directorOnDemand == true
 				and assignment.launched ~= true
 				and assignment.completed ~= true
 				and not self:_sourceZoneUsable(groupCommander.zoneCommander, true)
-			if invalidOnDemandSource then
+			if packageBypass and owned and assignment.launched ~= true and not groupCommander._pendingInAirRestore
+				and not self:_groupIsLive(groupCommander) and (assignment.targetZone ~= operation.bluePackageCapTarget
+					or assignment.targetZone ~= groupCommander.targetzone) then
+				if groupCommander.state == 'preparing' then groupCommander:_enterHangar(false) end
+				self:_blueRemoveAssignment(index, 'package-cap-no-longer-needed', now)
+			elseif invalidOnDemandSource then
 				self:_blueRemoveAssignment(index, 'director-origin-unavailable', now)
-			elseif groupCommander and assignment.authorized ~= true
+			elseif owned and groupCommander and assignment.authorized ~= true
 				and assignment.launched ~= true and assignment.completed ~= true
 				and assignment.restoredCapacityQueued ~= true then
 				local role = assignment.capacityRole or assignment.role
@@ -95645,7 +96430,7 @@ do
 							self:_resumeRestoredAssignmentPreparation(assignment, groupCommander, now)
 						end
 					end
-				elseif not self:_operationCapBlocksAssignment(operation, assignment) then
+				elseif not self:_operationCapBlocksAssignment(operation, assignment, packageThreats) then
 					if not self:_onDemandAssignmentEligible(assignment) then
 						if not self:_queueRestoredAssignmentForCapacity(
 							assignment, groupCommander, now)
@@ -96040,7 +96825,7 @@ do
 						if role == 'CAS' or role == 'SEAD' then
 							local packageCapAvailable
 							if pvpEnabled then packageCapAvailable = self:_blueEnsurePackageCap(operation, now, commonLimit, bluePlayers)
-							else packageCapAvailable = self:_blueEnsurePackageCap(operation, now) end
+							else packageCapAvailable = self:_blueEnsurePackageCap(operation, now, nil, nil, packageThreats) end
 							requiredCapAssignmentAvailable = packageCapAvailable or requiredCapAssignmentAvailable
 						end
 						if candidate.retasked == true then
@@ -96053,7 +96838,7 @@ do
 						assignment.lastProgressState = groupCommander.state
 						assignment.lastProgressSpawned = groupCommander.Spawned == true
 						local capBlocked = role ~= 'CAP'
-							and self:_operationCapBlocksAssignment(operation, assignment)
+							and self:_operationCapBlocksAssignment(operation, assignment, packageThreats)
 						assignment.authorized = capBlocked ~= true
 						assignment.authorizedAt = assignment.authorized and now or nil
 						if pvpEnabled then assignment.cohortGeneration = assignment.authorized and cohortGeneration or nil end
@@ -96132,8 +96917,8 @@ do
 				tostring(self.battleCommander._capTargetStateGeneration or 0),
 			}, '|')
 			if self.blueCandidateCapacitySignature ~= candidateCapacitySignature then
+				if self.blueCandidateCapacitySignature ~= nil then self.blueCandidateRetryAt = 0 end
 				self.blueCandidateCapacitySignature = candidateCapacitySignature
-				self.blueCandidateRetryAt = 0
 			end
 		end
 		local allocation = self:_reconcileRoutineCaps(now)
@@ -96147,8 +96932,8 @@ do
 				tostring(self.battleCommander._capTargetStateGeneration or 0),
 			}, '|')
 			if self.blueCandidateCapacitySignature ~= candidateCapacitySignature then
+				if self.blueCandidateCapacitySignature ~= nil then self.blueCandidateRetryAt = 0 end
 				self.blueCandidateCapacitySignature = candidateCapacitySignature
-				self.blueCandidateRetryAt = 0
 			end
 		end
 		self:_observeRegions(now)
@@ -99156,18 +99941,146 @@ end
 		end
 	end
 
-	function LogisticCommander:unloadPilot(groupname)
-			local gr=Group.getByName(groupname)
-			if gr then
-				local groupid=gr:getID()
-				local un=gr:getUnit(1)
-				if (self.carriedPilots[groupid] or 0)==0 then
-					trigger.action.outTextForGroup(groupid,L10N:ForGroup(groupid):Get("CSAR_NO_ONE_ONBOARD"),15)
-					return
+	function LogisticCommander:unloadPilot(groupname, menuGroupId, menuRoot)
+		local gr = Group.getByName(groupname)
+		if not gr or not gr:isExist() then return end
+		local groupid = gr:getID()
+		if menuGroupId and (groupid ~= menuGroupId or self.csarGroupMenus[groupid] ~= menuRoot) then return end
+		local entry = self.activeAircraftGroupsById[groupid]
+		if not entry or self.groupMenuTokens[groupid] ~= entry.token then return end
+
+		local T = L10N:ForGroup(groupid)
+		local carried = self.carriedPilots[groupid] or 0
+		if carried == 0 then
+			trigger.action.outTextForGroup(groupid, T:Get("CSAR_NO_ONE_ONBOARD"), 15)
+			return
+		end
+
+		local un = gr:getUnit(1)
+		local manifest = self.carriedPilotData[groupid]
+		if not un or not un:isExist() or un:getLife() <= 0 or not un:getPlayerName()
+			or not manifest or manifest.transportObjectId ~= un.id_ then return end
+
+		local bc = self.battleCommander
+		local origin = un:getPoint()
+		if not Utils.isLanded(un, false) or bc:getZoneOfPoint(origin) then
+			trigger.action.outTextForGroup(groupid, T:Get("CSAR_UNLOAD_FIELD_REQUIRED"), 10)
+			return
+		end
+
+		local pvpEnabled = GlobalSettings.pvpEnabled == true
+		local friendlyLimit, enemyLimit = self:_csarGroundPilotLimits(pvpEnabled)
+		local slots = { [coalition.side.BLUE] = friendlyLimit, [coalition.side.RED] = enemyLimit }
+		for _, pilot in ipairs(self.ejectedPilots) do
+			local data = self:_getCsarPilotData(self.ejectedPilotPidByObj[pilot])
+			local side = data and data.coalition == coalition.side.RED and coalition.side.RED or coalition.side.BLUE
+			slots[side] = slots[side] - 1
+		end
+
+		local clearance = 20
+		local box = un:getDesc().box
+		if box then
+			local x = math.max(math.abs(box.min.x), math.abs(box.max.x))
+			local z = math.max(math.abs(box.min.z), math.abs(box.max.z))
+			clearance = math.max(clearance, math.sqrt(x * x + z * z) + 2)
+		end
+		local facing = un:getPosition().x
+		local bearing = math.deg(math.atan2(facing.z, facing.x))
+		local coord = COORDINATE:NewFromVec3(origin)
+		local anchors = {
+			coord:Translate(clearance + 6, (bearing + 90) % 360, true),
+			coord:Translate(clearance + 6, (bearing + 270) % 360, true),
+		}
+		local droppedPoints = {}
+		local function isSafe(point)
+			if not point then return false end
+			local dx, dz = point.x - origin.x, point.z - origin.z
+			if dx * dx + dz * dz < clearance * clearance then return false end
+			local surface = land.getSurfaceType({ x = point.x, y = point.z })
+			if surface ~= land.SurfaceType.LAND and surface ~= land.SurfaceType.ROAD
+				and surface ~= land.SurfaceType.RUNWAY then return false end
+			if bc:getZoneOfPoint(point) then return false end
+			for _, placed in ipairs(droppedPoints) do
+				local px, pz = point.x - placed.x, point.z - placed.z
+				if px * px + pz * pz < 4 then return false end
+			end
+			return true
+		end
+
+		self._csarFieldDropSerial = (self._csarFieldDropSerial or 0) + 1
+		local alias = "FOOTHOLD_CSAR_DROP_" .. self._csarFieldDropSerial .. "_"
+		local kept = { transportObjectId = un.id_ }
+		local transportSide = un:getCoalition()
+		local remaining = carried
+		for i = 1, carried do
+			local original = manifest[i]
+			local side = original and original.coalition or transportSide
+			local dropped
+			if slots[side] > 0 then
+				for _, anchor in ipairs(anchors) do
+					local point = self:_csarPassengerPoint(anchor, bearing, i, carried)
+					if isSafe(point) then
+						point.y = land.getHeight({ x = point.x, y = point.z })
+						local object, actualPoint, spawned = self:_spawnCsarGroundPilot(point, alias .. i, side)
+						if object and object:isExist() and object:getLife() > 0 and isSafe(actualPoint)
+							and self.carriedPilotData[groupid] == manifest then
+							local data = {}
+							for key, value in pairs(original or {}) do data[key] = value end
+							data.coalition = side
+							data.hasPilotData = original ~= nil and original.hasPilotData
+							data.fieldDropped = true
+							data._fieldDropTransportId = un.id_
+							data.csarHostileGroups = nil
+							data.hostileZoneName = nil
+							data.hostileGraceUntil = nil
+							data.hostileEnemyMessageAt = nil
+							data._groundSaveRow = nil
+							local pid = object:getObjectID()
+							self:_bindPilotDataToObject(pid, data)
+							self:_enqueueCsarPilotResolved(object, data.timestamp, pid, data, actualPoint)
+							if self.ejectedPilotPidByObj[object] == pid then
+								self:_recordCsarGroundSaveRow(data, data.timestamp, actualPoint, pvpEnabled)
+								if original and original.csarHostileGroups then
+									local groupNames = self.carriedPilotHostileGroups[groupid]
+									if groupNames then
+										for j = #groupNames, 1, -1 do
+											for _, name in ipairs(original.csarHostileGroups) do
+												if groupNames[j] == name then table.remove(groupNames, j); break end
+											end
+										end
+										if #groupNames == 0 then self.carriedPilotHostileGroups[groupid] = nil end
+									end
+									self:_bindCsarHostilesToPilot(pid, data, original.csarHostileGroups)
+								end
+								dropped = true
+								droppedPoints[#droppedPoints + 1] = actualPoint
+								slots[side] = slots[side] - 1
+							end
+						elseif spawned then
+							spawned:Destroy()
+						end
+						break
+					end
 				end
-				return self:_unloadPilotsResolved(un, groupid, un:getPlayerName(), un:getCoalition())
+			end
+			if dropped then
+				remaining = remaining - 1
+			elseif original then
+				kept[#kept + 1] = original
 			end
 		end
+
+		if self.carriedPilotData[groupid] ~= manifest then return end
+		if remaining < carried then
+			self.carriedPilots[groupid] = remaining
+			self.carriedPilotData[groupid] = remaining > 0 and kept or nil
+			trigger.action.setUnitInternalCargo(un:getName(), remaining * (LogisticCommander.PilotWeight or 80))
+			trigger.action.outTextForGroup(groupid, T:Get("CSAR_PILOTS_DROPPED_OFF"), 10)
+		end
+		if remaining > 0 then
+			trigger.action.outTextForGroup(groupid, T:Get("CSAR_UNLOAD_STILL_ONBOARD"), 10)
+		end
+	end
 
 	function LogisticCommander:_deliverEnemyPilotsAtPoint(unit, playerName, groupid, side, point)
 		if GlobalSettings.pvpEnabled ~= true and side ~= 2 then return 0 end
@@ -100367,6 +101280,19 @@ end
 		end
 	end
 
+	function LogisticCommander:_captureRedCsarPilotsInZone(zone)
+		for index = #self.ejectedPilots, 1, -1 do
+			local pilot = self.ejectedPilots[index]
+			local pilotData = self:_getCsarPilotData(self.ejectedPilotPidByObj[pilot])
+			if pilotData and pilotData.coalition == coalition.side.RED and pilot:isExist()
+				and pilot:getLife() > 0 and zone._cz:isInside(pilot:getPoint()) then
+				self:_cleanupCsarPilotAtIndex(index, true)
+				trigger.action.outTextForCoalition(2, L10N:Format("CSAR_ENEMY_CAPTURED_IN_ZONE", zone.zone), 10)
+				SCHEDULER:New(nil, BattleCommander._debriefEnemyPilots, {self.battleCommander, 1}, math.random(10, 60), 0)
+			end
+		end
+	end
+
 	function LogisticCommander:_cleanupCsarPilotAtIndex(index, suppressMessage)
 		local pilot = self.ejectedPilots[index]
 		self.ejectedPilotPidByObj = self.ejectedPilotPidByObj or {}
@@ -100375,6 +101301,13 @@ end
 			pid = pilot:getObjectID() or pid
 		end
 		local pilotData = pid and (landedPilotOwners[pid] or self.csarPilotDataByObject[pid] or ejectedPilotOwners[pid]) or nil
+		local sourceAircraftId = pilotData and pilotData._redCsarSourceAircraftId
+		if sourceAircraftId then
+			if self.csarPilotByAircraft[sourceAircraftId] == pilot then
+				self.csarPilotByAircraft[sourceAircraftId] = nil
+			end
+			pilotData._redCsarSourceAircraftId = nil
+		end
 		if self.redCsar and pid then self:_removeRedCsarPilot(pid) end
 		if pilotData and pilotData._groundSaveRow then
 			pilotData._groundSaveRow._retired = true
@@ -100451,9 +101384,7 @@ end
 
 	function LogisticCommander:_enforceCsarPilotLimit()
 		local pvpEnabled = GlobalSettings.pvpEnabled == true
-		local maxPilots = tonumber(LogisticCommander.csarMaxAtSpawn) or 10
-		if maxPilots < 0 then maxPilots = 0 end
-		local maxEnemyPilots = pvpEnabled and maxPilots or 10
+		local maxPilots, maxEnemyPilots = self:_csarGroundPilotLimits(pvpEnabled)
 		local rescuePoints
 		while #self.ejectedPilots > math.min(maxPilots, maxEnemyPilots) do
 			local friendlyCount, enemyCount = 0, 0
@@ -100543,6 +101474,11 @@ end
 			self:_cleanupCsarPilotAtIndex(oldestIndex, true)
 			if friendlyCount <= maxPilots and enemyCount <= maxEnemyPilots then break end
 		end
+	end
+
+	function LogisticCommander:_csarGroundPilotLimits(pvpEnabled)
+		local friendly = math.max(0, tonumber(LogisticCommander.csarMaxAtSpawn) or 10)
+		return friendly, pvpEnabled and friendly or 10
 	end
 
 	function LogisticCommander:_addPilotToCsarQueues(pilotObj, preferredTimestamp)
@@ -100669,9 +101605,9 @@ end
 				local overWater = surfaceType == land.SurfaceType.WATER
 				local enemyZone = not pvpEnabled and not overWater and enemy and self.battleCommander:getZoneOfPoint(point) or nil
 				local skipRestore, nearestEnemyName, nearestEnemyNm
-				if pvpEnabled and not overWater then
+				if pvpEnabled and not overWater and not entry.fieldDropped then
 					skipRestore, nearestEnemyName, nearestEnemyNm = self.battleCommander:_restorePointTooFarFromEnemy(point, 120, side)
-				elseif not overWater and not enemy then
+				elseif not overWater and not enemy and not entry.fieldDropped then
 					skipRestore, nearestEnemyName, nearestEnemyNm = self.battleCommander:_restorePointTooFarFromEnemy(point, 120)
 				end
 				if overWater then
@@ -100680,7 +101616,8 @@ end
 				elseif not pvpEnabled and enemy and enemyZone and enemyZone.side == coalition.side.BLUE then
 					capturedEnemies = capturedEnemies + 1
 					trigger.action.outTextForCoalition(2, L10N:Format("CSAR_ENEMY_CAPTURED_IN_ZONE", enemyZone.zone), 10)
-				elseif not pvpEnabled and enemy and self:_isEnemyCsarNearHome(point, enemyZone) then
+				elseif not pvpEnabled and enemy and (not entry.fieldDropped or enemyZone)
+					and self:_isEnemyCsarNearHome(point, enemyZone) then
 					env.info(string.format("[CSAR-RESTORE] skip enemy pilot timestamp=%s inside or near Red home", tostring(entry.timestamp)))
 				elseif skipRestore then
 					env.info(string.format("[CSAR-RESTORE] skip pilot timestamp=%s nearestEnemy=%s dist=%.1fNm limit=120.0Nm",
@@ -100722,11 +101659,14 @@ end
 								timestamp = index - #toRestore - 1,
 								hasPilotData = entry.hasPilotData == true,
 								enemyAmbush = (pvpEnabled or enemy) and entry.enemyAmbush or nil,
+								fieldDropped = entry.fieldDropped,
+								rescueRewardPaid = entry.rescueRewardPaid,
+								rescueCareerRecorded = entry.rescueCareerRecorded,
 							}
 							local pid = pilotObj:getObjectID()
 							self:_bindPilotDataToObject(pid, pilotData)
 							self:_enqueueCsarPilotResolved(pilotObj, pilotData.timestamp, pid, pilotData, actualPoint)
-							if (pvpEnabled or not enemy) and pilotObj:isExist() then
+							if not pilotData.fieldDropped and (pvpEnabled or not enemy) and pilotObj:isExist() then
 								local zoneSide, zoneName = pointInActiveZone(actualPoint)
 								self:_startCsarHomeForPilot(pilotObj, pilotData, zoneSide, zoneName)
 							end
@@ -100768,33 +101708,16 @@ end
 					keep = false
 				end
 				if keep then
-					local ejectedPilotTable = {
-						playerName = "Unknown",
-						lostCredits = 0
-					}
 					local objectID = self.ejectedPilotPidByObj[v]
 					local pilotData = (landedPilotOwners and landedPilotOwners[objectID]) or self.csarPilotDataByObject[objectID] or (ejectedPilotOwners and ejectedPilotOwners[objectID])
 					local timestamp = self:_trackCsarPilotTimestamp(v, nil, objectID, pilotData)
-					if pilotData then
-						ejectedPilotTable.playerName = pilotData.player or "Unknown"
-						ejectedPilotTable.player = pilotData.player
-						ejectedPilotTable.playerOrigin = pvpEnabled and pilotData.playerOrigin == true or nil
-						ejectedPilotTable.lostCredits = pilotData.lostCredits or 0
-						ejectedPilotTable.coalition = pilotData.coalition or coalition.side.BLUE
-						-- Share this record so approach-time consumption is reflected in the current save snapshot.
-						ejectedPilotTable.enemyAmbush = pilotData.enemyAmbush
-					end
-					ejectedPilotTable.timestamp = timestamp
-					ejectedPilotTable.hasPilotData = self:_csarHasPriorityPilotData(pilotData)
 					local point = v:getPoint()
 					pilotObservations[v] = { data = pilotData, point = point }
-					ejectedPilotTable._savePoint = point
 					local rescuePilot = self.redCsar and self.redCsar.pilots[objectID]
 					if rescuePilot and (rescuePilot.point.x ~= point.x or rescuePilot.point.z ~= point.z) then
 						self:_positionRedCsarPilot(rescuePilot,point)
 					end
-					if pilotData then pilotData._groundSaveRow = ejectedPilotTable end
-					table.insert(self.ejectedPilotsState, ejectedPilotTable)
+					self:_recordCsarGroundSaveRow(pilotData, timestamp, point, pvpEnabled)
 				end
 				else
 					tocleanup[#tocleanup + 1] = i
@@ -100867,7 +101790,8 @@ end
 
 		local function boardPilot(pilotObj, heliUnit, groupid, fromScheduler, pid, pilotData, pp, hp, playerName, unitType, observations, knownDistance, ownerSide, menuToken, knownGroup, knownPilotIndex)
 			local T = L10N:ForGroup(groupid)
-			if not pilotObj:isExist() or pilotObj:getLife() <= 0 or not heliUnit:isExist() then
+			if not pilotObj:isExist() or pilotObj:getLife() <= 0 or not heliUnit:isExist()
+				or (pilotData and pilotData._fieldDropTransportId and pilotData._fieldDropTransportId == heliUnit.id_) then
 				if self.csarHoverStatus[pid] then self.csarHoverStatus[pid][groupid] = nil end
 				return false
 			end
@@ -101037,25 +101961,26 @@ end
 			self.carriedPilots[groupid] = current + 1
 			self.carriedPilotData[groupid] = self.carriedPilotData[groupid] or {}
 			self.carriedPilotData[groupid].transportObjectId = heliUnit.id_
-			if pilotData then table.insert(self.carriedPilotData[groupid], pilotData) end
+			local passenger = pilotData or { coalition = heliUnit:getCoalition(), hasPilotData = false }
+			table.insert(self.carriedPilotData[groupid], passenger)
 			trigger.action.setUnitInternalCargo(heliUnit:getName(), (self.carriedPilots[groupid] or 0) * (LogisticCommander.PilotWeight or 80))
 			playerName = playerName or heliUnit:getPlayerName()
-			if playerName and not enemy then
-				self.battleCommander:recordCareerPlayerAircraftStat(playerName, heliUnit, self.battleCommander.CAREER_STAT.PilotRescues, self.battleCommander.CAREER_AIRCRAFT_METRIC.PilotRescues, 1)
+			if playerName and not enemy and not (passenger.fieldDropped and passenger.rescueCareerRecorded) then
+				local _, _, careerRecord = self.battleCommander:recordCareerPlayerAircraftStat(playerName, heliUnit, self.battleCommander.CAREER_STAT.PilotRescues, self.battleCommander.CAREER_AIRCRAFT_METRIC.PilotRescues, 1)
+				if careerRecord then passenger.rescueCareerRecorded = true end
 			end
 			local pickupReward=0
-			if not enemy and self.battleCommander.playerRewardsOn and playerName and bc.playerContributions[pvpEnabled and ownerSide or 2][playerName] ~= nil then
+			if not enemy and not (passenger.fieldDropped and passenger.rescueRewardPaid)
+				and self.battleCommander.playerRewardsOn and playerName and bc.playerContributions[pvpEnabled and ownerSide or 2][playerName] ~= nil then
 				local restoreAmount = (pilotData and pilotData.lostCredits) or 0
 				local totalReward = (self.battleCommander.rewards.rescue or 0) + restoreAmount
 				if totalReward>0 then
 					bc:addContribution(playerName, pvpEnabled and ownerSide or 2, totalReward)
 					self.battleCommander:addTempStat(playerName,'Pilot Rescue',1)
 					pickupReward=totalReward
-					if pilotData then
-						pilotData.rescueRewardPaid=true
-						pilotData.rescueRewardPaidAmount=totalReward
-						pilotData.lostCredits=0
-					end
+					passenger.rescueRewardPaid = true
+					passenger.rescueRewardPaidAmount = totalReward
+					passenger.lostCredits = 0
 				end
 			end
 			if playerName and not enemy then
@@ -101199,6 +102124,10 @@ end
 		end
 
 		local function handleRunnerContact(pid, pilotObj, heliUnit, dist, gid, pilotData, pilotPoint, heliPoint, ownerSide)
+			if pilotData and pilotData._fieldDropTransportId and pilotData._fieldDropTransportId == heliUnit.id_ then
+				if dist <= self.csarExtractDistance then return true, false end
+				pilotData._fieldDropTransportId = nil
+			end
 			local state = self.csarHomeByPilot and self.csarHomeByPilot[pid]
 			if not state then return false, false end
 			if state.status == "paused" then return false, true end
@@ -101549,6 +102478,33 @@ end
 		end
 
 	end
+
+function LogisticCommander:_recordCsarGroundSaveRow(pilotData, timestamp, point, pvpEnabled)
+	local row = {
+		playerName = "Unknown",
+		lostCredits = 0,
+		timestamp = timestamp,
+		hasPilotData = self:_csarHasPriorityPilotData(pilotData),
+		_savePoint = point,
+	}
+	if pilotData then
+		row.playerName = pilotData.player or "Unknown"
+		row.player = pilotData.player
+		row.playerOrigin = pvpEnabled and pilotData.playerOrigin == true or nil
+		row.lostCredits = pilotData.lostCredits or 0
+		row.coalition = pilotData.coalition or coalition.side.BLUE
+		-- Approach-time consumption is reflected in the current save snapshot.
+		row.enemyAmbush = pilotData.enemyAmbush
+		if pilotData.fieldDropped == true then
+			row.fieldDropped = true
+			row.rescueRewardPaid = pilotData.rescueRewardPaid == true or nil
+			row.rescueCareerRecorded = pilotData.rescueCareerRecorded == true or nil
+		end
+		pilotData._groundSaveRow = row
+	end
+	self.ejectedPilotsState = self.ejectedPilotsState or {}
+	table.insert(self.ejectedPilotsState, row)
+end
 
 playerZoneSpawn = {}
 MissionsRootMenus = {}
@@ -102072,6 +103028,9 @@ function LogisticCommander:_handleBirth(event, un, player, unitName, groupObj, g
 								missionCommands.addCommandForGroup(groupid, T:Get('CSAR_INFO_CLOSEST_ENEMY_PILOT'), csar, self.infoEnemyPilot, self, groupname)
 								missionCommands.addCommandForGroup(groupid, T:Get('CSAR_DEPLOY_SMOKE_CLOSEST_ENEMY'), csar, self.markEnemyPilot, self, groupname)
 							end
+							missionCommands.addCommandForGroup(groupid, T:Get("CSAR_UNLOAD_PILOTS"), csar, function()
+								self:unloadPilot(groupname, groupid, csar)
+							end)
 					else
 						self.csarGroupMenus[groupid] = nil
 					end
@@ -102380,27 +103339,14 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 
 			local function spawnDownedPilot(spawnPoint, aliasSuffix, spawnCoalition, hideFromEnemyAI)
 				local side = spawnCoalition or coalitionSide
-				local templateName = side == coalition.side.RED and 'RedDownedPilot' or 'Downed Pilot'
 				local coord = spawnPoint or pilotPoint
 				if not coord then return nil end
-				local spawnCoord = COORDINATE:NewFromVec3(coord)
-				if not spawnCoord then return nil end
 				local alias = "FOOTHOLD_CSAR_"..tostring(aircraftID or math.random(1000,9999)).."_"..tostring(pilotObjectID or math.random(1000,9999))
 				if aliasSuffix and aliasSuffix ~= '' then
 					alias = alias.."_"..aliasSuffix
 				end
-				local sp = SPAWN:NewWithAlias(templateName, alias)
-				if sp.InitCoalition then
-					sp = sp:InitCoalition(side)
-				end
-				local spawned = sp:SpawnFromPointVec3(spawnCoord)
+				local object, actualPoint, spawned = self:_spawnCsarGroundPilot(coord, alias, side, hideFromEnemyAI)
 				if not spawned then return nil end
-				if hideFromEnemyAI then
-					spawned:GetDCSObject():getController():setCommand({ id = 'SetInvisible', params = { value = true } })
-				end
-				local unitWrapper = spawned:GetUnit(1)
-				local object = unitWrapper and unitWrapper:GetDCSObject() or nil
-				local actualPoint = object and object:getPoint()
 				if object and isWaterPoint(actualPoint) then
 					object:destroy()
 					return nil
@@ -102430,13 +103376,24 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 						trigger.action.outTextForCoalition(2, L10N:Format("CSAR_ENEMY_CAPTURED_IN_ZONE", zone.zone), 10)
 						SCHEDULER:New(nil, BattleCommander._debriefEnemyPilots, {self.battleCommander, 1}, math.random(10, 60), 0)
 					elseif not self:_isEnemyCsarNearHome(pilotPoint, zone) then
-						local enemyPilot, actualPoint = spawnDownedPilot(pilotPoint)
-						if enemyPilot then
-							pilotData = pilotData or { coalition = 1, hasPilotData = false }
-							pilotData.coalition = 1
-							local enemyID = enemyPilot:getObjectID()
-							self:_bindPilotDataToObject(enemyID, pilotData)
-							self:_enqueueCsarPilotResolved(enemyPilot, pilotData.timestamp, enemyID, pilotData, actualPoint)
+						local playerAircraft = self.battleCommander.csarPlayerAircraftByAircraft
+						local trackByAircraft = aircraftID and not hadOwnerRecord
+							and not (playerAircraft and playerAircraft[aircraftID])
+						local existingPilot = trackByAircraft and self.csarPilotByAircraft and self.csarPilotByAircraft[aircraftID]
+						if not existingPilot or not existingPilot:isExist() then
+							local enemyPilot, actualPoint = spawnDownedPilot(pilotPoint)
+							if enemyPilot then
+								pilotData = pilotData or { coalition = 1, hasPilotData = false }
+								pilotData.coalition = 1
+								local enemyID = enemyPilot:getObjectID()
+								self:_bindPilotDataToObject(enemyID, pilotData)
+								self:_enqueueCsarPilotResolved(enemyPilot, pilotData.timestamp, enemyID, pilotData, actualPoint)
+								if trackByAircraft and self.ejectedPilotPidByObj[enemyPilot] == enemyID then
+									self.csarPilotByAircraft = self.csarPilotByAircraft or {}
+									self.csarPilotByAircraft[aircraftID] = enemyPilot
+									pilotData._redCsarSourceAircraftId = aircraftID
+								end
+							end
 						end
 					end
 				end
@@ -102758,10 +103715,7 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 					local passengerCount = #carriedRescuedPilots
 					local passengerBaseHeading = passengerHeadingBase or 0
 					for i, passengerData in ipairs(carriedRescuedPilots) do
-						local passengerRadius = math.min(5, 2 + i)
-						local passengerHeading = (passengerBaseHeading + ((i - 1) * (360 / passengerCount))) % 360
-						local passengerCoord = mainPilotCoord:Translate(passengerRadius, passengerHeading, true)
-						local passengerPoint = passengerCoord and passengerCoord.GetVec3 and passengerCoord:GetVec3() or mainPilotPoint
+						local passengerPoint = self:_csarPassengerPoint(mainPilotCoord, passengerBaseHeading, i, passengerCount) or mainPilotPoint
 						if isWaterPoint(passengerPoint) then
 							passengerPoint = mainPilotPoint
 						end
@@ -102792,11 +103746,36 @@ function LogisticCommander:_handleLandingAfterEjection(event, pilot, aircraftID,
 			end
 		end
 
+function LogisticCommander:_csarPassengerPoint(anchor, baseHeading, index, count)
+	local radius = math.min(5, 2 + index)
+	local heading = (baseHeading + ((index - 1) * (360 / count))) % 360
+	local coord = anchor:Translate(radius, heading, true)
+	return coord and coord:GetVec3() or nil
+end
+
+function LogisticCommander:_spawnCsarGroundPilot(point, alias, side, hideFromEnemyAI)
+	local template = side == coalition.side.RED and "RedDownedPilot" or "Downed Pilot"
+	local spawnCoord = COORDINATE:NewFromVec3(point)
+	if not spawnCoord then return nil end
+	local spawner = SPAWN:NewWithAlias(template, alias)
+	if spawner.InitCoalition then spawner = spawner:InitCoalition(side) end
+	local group = spawner:SpawnFromPointVec3(spawnCoord)
+	if not group then return nil end
+	if hideFromEnemyAI then
+		group:GetDCSObject():getController():setCommand({ id = 'SetInvisible', params = { value = true } })
+	end
+	local unit = group:GetUnit(1)
+	local pilot = unit and unit:GetDCSObject() or nil
+	return pilot, pilot and pilot:getPoint() or nil, group
+end
+
 -- Red PvE CSAR flights are independent of the zone supply FSM.
 do
 	local maxRange = 40 * 1852
 	local chainRange = 10 * 1852
 	local clearance = 5 * 1852
+	local cruiseAltitudeM = UTILS.FeetToMeters(ExternalHeloCargoRoute.DefaultSupplyCruiseAltitudeFeet)
+	local cruiseSpeedKmh = 250
 
 	local function distanceSq(a, b)
 		local dx, dz = a.x - b.x, a.z - b.z
@@ -102815,21 +103794,6 @@ do
 			previous = vertex
 		end
 		return false
-	end
-
-	function LogisticCommander:_positionRedCsarPilot(pilot, point)
-		pilot.point = point
-		pilot.origins = {}
-		for _, origin in ipairs(self.redCsar.origins) do
-			if distanceSq(point,origin.point) <= maxRange^2 then pilot.origins[#pilot.origins+1] = origin end
-		end
-		pilot.nearZones = {}
-		for _, zone in ipairs(self.battleCommander.zones) do
-			local shape = zone._cz or CustomZone:getByName(zone.zone)
-			if shape and withinBuffer(shape, point) then
-				pilot.nearZones[#pilot.nearZones+1] = zone
-			end
-		end
 	end
 
 	local function clearOfBlue(pilot)
@@ -102879,6 +103843,24 @@ do
 		return origins
 	end
 
+	function LogisticCommander:_positionRedCsarPilot(pilot, point)
+		local rescue = self.redCsar
+		-- Setups build the -land pools after LogisticCommander:init().
+		if not rescue.origins then rescue.origins = cacheOrigins(self.battleCommander) end
+		pilot.point = point
+		pilot.origins = {}
+		for _, origin in ipairs(rescue.origins) do
+			if distanceSq(point,origin.point) <= maxRange^2 then pilot.origins[#pilot.origins+1] = origin end
+		end
+		pilot.nearZones = {}
+		for _, zone in ipairs(self.battleCommander.zones) do
+			local shape = zone._cz or CustomZone:getByName(zone.zone)
+			if shape and withinBuffer(shape, point) then
+				pilot.nearZones[#pilot.nearZones+1] = zone
+			end
+		end
+	end
+
 	local function nearFlight(pilot, slots)
 		for _, slot in ipairs(slots) do
 			if slot.target and distanceSq(slot.anchor, pilot.point) <= chainRange^2 and distanceSq(slot.home, pilot.point) <= maxRange^2 then return true end
@@ -102920,18 +103902,28 @@ do
 		if pilot then pilot.slot = slot end
 	end
 
-	local function routeToPilot(slot, pos)
+	local function appendTransit(route, pos, approachX, approachZ, approachLegM, slowdownM)
+		if approachLegM <= 1 then return end
+		local fraction = 1 - math.min(slowdownM / approachLegM, 0.5)
+		local x = pos.x + (approachX - pos.x) * fraction
+		local z = pos.z + (approachZ - pos.z) * fraction
+		route[#route+1] = ExternalHeloCargoRoute.AirWaypoint(x, z, cruiseAltitudeM, cruiseSpeedKmh, {}, "CSAR Transit", "RADIO")
+	end
+
+	local function appendPilotRoute(route, slot, pos)
 		local pilot = slot.target
 		local p = pilot.point
-		local offset = math.min(1.3*1852, math.sqrt(distanceSq(pos, p))*0.85)
+		local distance = math.sqrt(distanceSq(pos, p))
+		local offset = math.min(0.6*1852, distance*0.85)
 		local x, z = ExternalHeloCargoRoute.PointBefore(p.x, p.z, pos.x, pos.z, offset)
+		appendTransit(route, pos, x, z, distance-offset, 1852)
 		local flag = {id="WrappedAction", enabled=true, auto=false, number=1, params={action={
 			id="Script", params={command=string.format("bc.logisticCommander:_redCsarApproach(%d,%d)", slot.index, slot.generation)}
 		}}}
 		local follow = {id="Follow", enabled=true, auto=false, number=2, params={
 			groupId=pilot.unit:getGroup():getID(), pos={x=0,y=45.72,z=0}, lastWptIndexFlag=false, lastWptIndexFlagChangedManually=true
 		}}
-		return ExternalHeloCargoRoute.AirWaypoint(x, z, 45.72, 145, {flag,follow}, "CSAR Follow")
+		route[#route+1] = ExternalHeloCargoRoute.AirWaypoint(x, z, 45.72, 145, {flag,follow}, "CSAR Follow")
 	end
 
 	function LogisticCommander:_redCsarApproach(index, generation)
@@ -102939,22 +103931,26 @@ do
 		if slot.target and slot.generation == generation then slot.approachReached = true end
 	end
 
-	local function launch(rescue, slot, pilot, site)
+	local function launch(rescue, slot, pilot, site, now)
 		assign(slot, pilot)
 		slot.home, slot.anchor = site, pilot.point
 		local name = string.format("Foothold Red CSAR %d-%d",slot.index,slot.generation)
 		local first = ExternalHeloCargoRoute.AirWaypoint(site.x,site.z,0,0,{},"CSAR ground start")
 		first.type, first.action = "TakeOffGroundHot", "From Ground Area Hot"
+		addPreferVerticalOptionToWaypoint(first)
 		local unit = UTILS.DeepCopy(rescue.template.Template.units[1])
 		unit.x, unit.y, unit.name, unit.unitId = site.x, site.z, name.."-1", nil
 		unit.alt, unit.alt_type = land.getHeight({x=site.x,y=site.z}), "BARO"
 		unit.parking, unit.parking_id = nil, nil
+		local route = {first}
+		appendPilotRoute(route,slot,site)
 		local group = coalition.addGroup(rescue.template.CountryID, Group.Category.HELICOPTER, {
 			name=name, task="Transport", x=site.x, y=site.z, units={unit},
-			route={points={first,routeToPilot(slot,site)}}
+			route={points=route}
 		})
 		if group then
 			slot.group = group
+			slot.takeoffDeadline = now + GlobalSettings.blockedDespawnTime
 			group:getController():setOption(AI.Option.Air.id.ROE,AI.Option.Air.val.ROE.WEAPON_HOLD)
 		else
 			assign(slot,nil)
@@ -102977,16 +103973,27 @@ do
 			end
 		end
 		assign(slot, nearest)
-		local nextWaypoint
+		local route = {ExternalHeloCargoRoute.BuildSupplyCurrentWaypoint(pos, cruiseAltitudeM, cruiseSpeedKmh)}
 		if nearest then
-			nextWaypoint = routeToPilot(slot,pos)
+			appendPilotRoute(route,slot,pos)
 		else
 			local home = slot.home
-			local landTask = {id="Land", number=1, enabled=true, auto=false, params={point={x=home.x,y=home.z},durationFlag=false}}
-			nextWaypoint = ExternalHeloCargoRoute.AirWaypoint((pos.x+home.x)/2,(pos.z+home.z)/2,80,140,{landTask},"CSAR return")
+			local distance = math.sqrt(distanceSq(pos, home))
+			local offset = distance > 1 and math.min(2*1852, distance*0.85) or 0
+			local x, z = ExternalHeloCargoRoute.PointBefore(home.x, home.z, pos.x, pos.z, offset)
+			if offset > 0 then
+				route[#route+1] = COORDINATE:New(x, cruiseAltitudeM, z):WaypointAirTurningPoint("RADIO", cruiseSpeedKmh)
+			end
+			ExternalHeloCargoRoute.AppendCoordinateLandingWaypoints(route, {
+				destx = home.x,
+				desty = home.z,
+				apx = x,
+				apy = z,
+				routeApproach = true,
+				landingApproachM = math.min(0.6*1852, offset*0.5),
+			}, cruiseSpeedKmh, false)
 		end
-		local first = ExternalHeloCargoRoute.AirWaypoint(pos.x,pos.z,45.72,145,{},"Current")
-		slot.group:getController():setTask({id="Mission",params={route={points={first,nextWaypoint}}}})
+		slot.group:getController():setTask({id="Mission",params={airborne=true,route={points=route}}})
 	end
 
 	function LogisticCommander:_removeRedCsarPilot(pid)
@@ -103029,7 +104036,7 @@ do
 
 	local function markLost(slot, now)
 		assign(slot,nil)
-		slot.group, slot.readyAt = nil, now + 1800
+		slot.group, slot.takeoffDeadline, slot.readyAt = nil, nil, now + 1800
 	end
 
 	function LogisticCommander:_saveRedCsarCooldowns()
@@ -103047,15 +104054,20 @@ do
 		local justLaunchedFrom
 		local noLaunchCandidate = false
 		for _, slot in ipairs(rescue.slots) do
-			if slot.group then
+			local group = slot.group
+			if group then
 				local lead = liveLead(slot)
+				local airborne = lead and lead:inAir()
+				if airborne then slot.takeoffDeadline = nil end
 				if not lead then
 					markLost(slot,now)
-				elseif not slot.target then
-					if not lead:inAir() and distanceSq(lead:getPoint(),slot.home) <= 150^2 then
-						slot.group:destroy()
-						slot.group = nil
-					end
+				elseif not airborne and Utils.isLanded(lead)
+					and (not slot.takeoffDeadline or now >= slot.takeoffDeadline or not slot.target
+						or not group:getController():hasTask())
+				then
+					if slot.target then assign(slot,nil) end
+					slot.group, slot.takeoffDeadline = nil, nil
+					group:destroy()
 				elseif slot.approachReached and not clearOfBlue(slot.target) then
 					advance(rescue,slot,lead:getPoint())
 				elseif slot.approachReached and not slot.confirming and hoverReady(slot,lead,lead:getPoint()) then
@@ -103065,7 +104077,7 @@ do
 			elseif not noLaunchCandidate and now >= slot.readyAt and next(rescue.pilots) then
 				local pilot, home = chooseLaunch(rescue,self.battleCommander,justLaunchedFrom)
 				if pilot then
-					launch(rescue,slot,pilot,home)
+					launch(rescue,slot,pilot,home,now)
 					if slot.group then justLaunchedFrom = home end
 				else
 					noLaunchCandidate = true
@@ -103078,7 +104090,7 @@ do
 		for _, name in ipairs(HeloSupplyTemplate or {}) do
 			local tpl = _DATABASE.Templates.Groups[name]
 			if tpl and tpl.CoalitionID == coalition.side.RED and tpl.Template.units[1].type == "Mi-8MT" then
-				local rescue = {pilots={},slots={},template=tpl,origins=cacheOrigins(self.battleCommander)}
+				local rescue = {pilots={},slots={},template=tpl}
 				for i=1,2 do
 					rescue.slots[i] = {index=i,generation=0,readyAt=0}
 				end
@@ -107228,6 +108240,32 @@ function DynamicSupportNative:ReportMissionComplete(groupName, knownSpawnIndex)
     end
 end
 
+function DynamicSupportNative:ReportRunwayDestroyed(zone)
+    if not BomberGroup then return end
+    local record = self.groups[BomberGroup:GetName()]
+    if not record or record.runwayTarget ~= zone or not record.isActive() then return end
+    if not record.missionStartedReported then record.runwayEgress = nil end
+    record.runwayTarget = nil
+    record.missionStartedReported = true
+    self:ReportMissionComplete(record.groupName)
+    if record.winchesterReported then return end
+    record.winchesterReported = true
+    local group = record.group
+    local exists = group:isExist()
+    if exists then
+        for _, unit in ipairs(group:getUnits()) do
+            if unit:isExist() and unit:inAir() then
+                record.onWinchester(unit:getPoint())
+                return
+            end
+        end
+    end
+    self:Unregister(record.groupName, false, nil, record)
+    record.clearActive()
+    if exists then group:destroy() end
+    buildCapControlMenu()
+end
+
 function DynamicSupportNative:HandleTakeoff(record, knownGroup)
     if GlobalSettings.pvpEnabled == true and (self.groups[record.groupName] ~= record or knownGroup ~= record.group) then return false end
     if record.startAmmoOnTakeoff then
@@ -110215,7 +111253,7 @@ function despawnBomber(ownerSide, knownRecord)
 end
 
 
-function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase,knownDefinition,knownSourceZone,knownTargetZone)
+function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase,knownDefinition,knownSourceZone,knownTargetZone,knownRunwayAirbase)
     local pvpBomber = GlobalSettings.pvpEnabled == true
     local definition, sourceZone, targetCommander, bomberRuntime, selectedTemplateRow
     if pvpBomber then
@@ -110228,10 +111266,15 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
             or targetCommander.suspended then return false end
         selectedTemplateRow = definition.flightTemplatesBySide[ownerSide]
         if not selectedTemplateRow then return false end
-    elseif bomberActive then return end
+    elseif bomberActive then
+        if knownRunwayAirbase then return false end
+        return
+    end
+    if knownRunwayAirbase and (pvpBomber or not knownTargetZone or bc.indexedZones[targetZoneName] ~= knownTargetZone
+        or bc:isRunwayPlaneSpawnBlocked(targetZoneName)) then return false end
     local zone = ZONE:FindByName(zoneName)
     local targetZone = ZONE:FindByName(targetZoneName)
-    if not zone or not targetZone then if pvpBomber then return false end return end
+    if not zone or not targetZone then if pvpBomber or knownRunwayAirbase then return false end return end
     local coord = zone:GetCoordinate()
 	local SpawnCords = coord
 	coord:SetAltitude(7620)
@@ -110240,7 +111283,7 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
 	if offsetNM and offsetNM > 0 then
 	coord = coord:Translate(UTILS.NMToMeters(offsetNM), heading + 180, true)
 	end
-    local selectedTemplate = pvpBomber and selectedTemplateRow.GroupName or bombTemplate
+    local selectedTemplate = pvpBomber and selectedTemplateRow.GroupName or (knownRunwayAirbase and StructureTemplate or bombTemplate)
     if pvpBomber then
         bomberRuntime = {side=ownerSide, flightRole='BOMBER', shopItem=definition, active=false, spawnIndex=bombSpawnIndex+1}
         definition.flightBySide[ownerSide] = bomberRuntime
@@ -110254,6 +111297,14 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
 	    	spawnedGroup, dcsGroup = _resolveDynamicSupportSpawnGroup(spawnedGroupLike)
 	    end
 	    if not spawnedGroup then if pvpBomber then bomberRuntime.clearActive() end return end
+        if knownRunwayAirbase and (bc.indexedZones[targetZoneName] ~= knownTargetZone
+            or not knownTargetZone.active or knownTargetZone.isHidden or knownTargetZone.side ~= coalition.side.RED
+            or knownTargetZone.suspended or bc:isRunwayPlaneSpawnBlocked(targetZoneName)) then
+            clearBomberActiveState()
+            if dcsGroup:isExist() then dcsGroup:destroy() end
+            buildCapControlMenu()
+            return
+        end
         if pvpBomber then
             if definition.flightBySide[ownerSide] ~= bomberRuntime or dcsGroup:getCoalition() ~= ownerSide
                 or bc.indexedZones[zoneName] ~= sourceZone or sourceZone.side ~= ownerSide or not sourceZone.active
@@ -110270,7 +111321,7 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
 	    flightGroup:SetOptionRadioSilence(true)
 	    local homebase = forcedHomebase or select(1, SpawnCords:GetClosestAirbase(0, pvpBomber and ownerSide or 2))
 	    local originLabel = _getDynamicSupportOriginLabel(zoneName, forcedHomebase)
-	    local zn = pvpBomber and targetCommander or bc.indexedZones[targetZoneName]
+	    local zn = pvpBomber and targetCommander or (knownRunwayAirbase and knownTargetZone or bc.indexedZones[targetZoneName])
 	    local groupName = flightGroup:GetName()
 	    local controller = dcsGroup:getController()
 	    flightGroup:OptionROEReturnFire()
@@ -110353,6 +111404,7 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
 		    side = 2,
 		    isActive = function() return bomberActive == true and BomberGroup == spawnedGroup end,
 		    clearActive = clearBomberActiveState,
+		    runwayTarget = knownRunwayAirbase and zn or nil,
 		    airborneMessage = L10N:Format("DYNAMIC_SUPPORT_AIRBORNE_INGRESS", "Bomber", targetZoneName),
 		    onMissionStarted = function()
 			    if BomberGroup == spawnedGroup then
@@ -110361,20 +111413,28 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
 				    if hasStaticTargets then spawnedGroup:SetOption(AI.Option.Air.id.FORMATION, 131074) end
 			    end
 		    end,
-		    onWinchester = function()
+		    onWinchester = function(knownPoint)
 			    if BomberGroup == spawnedGroup then
 				    spawnedGroup:OptionROEOpenFire()
-				    local point = dcsGroup:getUnit(1):getPoint()
+				    local point = knownPoint or dcsGroup:getUnit(1):getPoint()
 				    local speedKmh = UTILS.KnotsToKmph(300)
 				    local routePoints = {
 					    COORDINATE:New(point.x, point.y, point.z):WaypointAirTurningPoint("BARO", speedKmh, {}, "Bomber RTB"),
 					    homebase:GetCoordinate():WaypointAirLanding(speedKmh, homebase, {}, "Bomber RTB Land"),
 				    }
+				    local egress = supportRecord.runwayEgress
+				    if egress then
+					    table.insert(routePoints, 2, egress:WaypointAirTurningPoint("BARO", speedKmh, {}, "Egress"))
+				    end
 				    if GlobalSettings.idleZoneSuspendEnabled then
-					    local landing = routePoints[2]
+					    local landing = routePoints[#routePoints]
 					    bc:_wakeIdleMissionZones(supportRecord, bc:getZoneOfPoint({ x=landing.x, z=landing.y }), routePoints, nil, nil, true)
 				    end
-				    spawnedGroup:Route(routePoints, 1)
+				    if knownPoint then
+					    controller:setTask({ id = "Mission", params = { route = { points = routePoints } } })
+				    else
+					    spawnedGroup:Route(routePoints, 1)
+				    end
 			    end
 		    end,
 		    winchesterMessage = L10N:Get("DYNAMIC_SUPPORT_BOMBER_RTB"),
@@ -110409,7 +111469,8 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
                     buildCapControlMenu()
                     return nil
                 end
-            elseif BomberGroup ~= group or not bomberActive or DynamicSupportNative.groups[groupName] ~= supportRecord then return nil end
+            elseif BomberGroup ~= group or not bomberActive or DynamicSupportNative.groups[groupName] ~= supportRecord
+                or (knownRunwayAirbase and not supportRecord.runwayTarget) then return nil end
 		    local taskOptions = {
 			    idleMissionOwner = supportRecord,
 			    bomberGroup = dcsGroup,
@@ -110430,7 +111491,8 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
 			    homeAirbaseName = homebase:GetName(),
 			    rtbApproachDistanceNm = 30,
 			    missionStartTask = missionStartTask,
-			    rtbMessageTask = completionTask,
+			    rtbMessageTask = not knownRunwayAirbase and completionTask or nil,
+			    runwayAirbase = knownRunwayAirbase,
 			    attackWaypointFlyOver = true,
 			    staticsLast = true,
 		    }
@@ -110462,14 +111524,14 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
 	        trigger.action.outTextForCoalition(pvpBomber and ownerSide or 2, L10N:Format("DYNAMIC_SUPPORT_BOMBER_LAUNCHED", zoneName, targetZoneName), 15)
 	    end
     end
-    local bombSpawnName = selectedTemplate .. tostring(bombSpawnIndex)
+    local bombSpawnName = selectedTemplate .. (knownRunwayAirbase and '_Runway_' or '') .. tostring(bombSpawnIndex)
 	local expectedSpawnIndex = bombSpawnIndex + 1
 	local function spawnBomberAirFallback()
 	    local g
         if pvpBomber then
             g = Respawn.SpawnAtPoint(selectedTemplate, coord, heading, 5, 27000, nil, nil, bombSpawnName, nil, nil, selectedTemplateRow.CountryID, selectedTemplateRow)
         else
-	        g = Respawn.SpawnAtPoint(bombTemplate, coord, heading, 5, 27000, nil, nil, bombSpawnName)
+	        g = Respawn.SpawnAtPoint(selectedTemplate, coord, heading, 5, 27000, nil, nil, bombSpawnName)
         end
 		if not g then return false end
 	    timer.scheduleFunction(function(group, time)
@@ -110499,10 +111561,14 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
     if pvpBomber then
         spawned = _spawnDynamicSupportFromGround(selectedTemplate, bombSpawnName, SpawnCords, setupBomber, nil, AIRBASE.TerminalType.OpenMedOrBig, sourceZone.airbaseName, ownerSide, selectedTemplateRow)
     else
-        spawned = _spawnDynamicSupportFromGround(bombTemplate, bombSpawnName, SpawnCords, setupBomber, nil, AIRBASE.TerminalType.OpenMedOrBig, bc.indexedZones[zoneName].airbaseName)
+        spawned = _spawnDynamicSupportFromGround(selectedTemplate, bombSpawnName, SpawnCords, setupBomber, nil, AIRBASE.TerminalType.OpenMedOrBig, bc.indexedZones[zoneName].airbaseName)
     end
     local usedGroundSpawn = spawned ~= nil
-	if not spawned and not spawnBomberAirFallback() then if pvpBomber then bomberRuntime.clearActive() return false end return end
+	if not spawned and not spawnBomberAirFallback() then
+		if pvpBomber then bomberRuntime.clearActive() return false end
+		if knownRunwayAirbase then return false end
+		return
+	end
 	_completeDynamicSupportSpawn("Bomber", usedGroundSpawn, {
         record = bomberRuntime,
 		isActive = pvpBomber and bomberRuntime.isActive or function() return bomberActive == true and bombSpawnIndex == expectedSpawnIndex end,
@@ -110518,6 +111584,7 @@ function spawnBomberAt(zoneName, targetZoneName,offsetNM,ownerSide,knownPurchase
 	})
 	bombSpawnIndex = bombSpawnIndex + 1
     if pvpBomber then return {deferredShopPurchase=true} end
+    if knownRunwayAirbase then return true end
 end
 
 StructureActive = false
@@ -113283,6 +114350,9 @@ WEAPONSLIST.Items = {
         'weapons.missiles.AGM_154',
         'weapons.missiles.AGM_154A',
         'weapons.missiles.AGM_154B',
+		'weapons.missiles.POBIT_F16V_AGM154C',
+        'weapons.missiles.POBIT_F16V_AGM84H',
+        'weapons.missiles.POBIT_F16V_AGM88F',
         'weapons.missiles.AGM_45A',
         'weapons.missiles.AGM_45B',
         'weapons.missiles.AGM_65A',
@@ -113799,9 +114869,12 @@ WEAPONSLIST.Items = {
 		{4,15,47,3204},
 		{4,15,47,3205},
         -- Hercules baseline equipment and cargo
+		"weapons.containers.HB_F-4E_AIM-7E_Inert",
+		"weapons.containers.F-104_ZELL_ROCKET",
 		"weapons.containers.AN_AAQ16D",
 		"weapons.containers.F16V_aaq13_pod_5L",
 		"weapons.containers.F16V_aux_pod",
+		"weapons.containers.POBIT_F16V_AWW13",
 		"weapons.containers.F16V_pids_plus_POBIT_F16V_PIDS_FIT_0001",
 		"weapons.containers.Hercules_Battle_Station_TGP",
 		"weapons.containers.{Herc_GAU_23A_Chain_Gun}",
@@ -115650,6 +116723,9 @@ restrictedWeapons = restrictedWeapons or {
     -- Apache Radar
     "weapons.containers.ah-64d_radar",
     -- Missiles
+	"weapons.missiles.POBIT_F16V_AGM154C",
+	"weapons.missiles.POBIT_F16V_AGM84H",
+	"weapons.missiles.POBIT_F16V_AGM88F",
     "weapons.missiles.AIM_120C",
     "weapons.missiles.AIM_120",
     "weapons.missiles.AGM_154",
